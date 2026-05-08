@@ -150,6 +150,10 @@ export const defaultConfig: VoxAgentsConfig = {
         toolMiddleware: 'prompt'
       }
     },
+    'openai-compatible/DeepSeek-V4': {
+      provider: 'openai-compatible',
+      name: 'DeepSeek-V4'
+    },
     'openai-compatible/Kimi-K2-Thinking': {
       provider: 'openai-compatible',
       name: 'Kimi-K2-Thinking',
@@ -162,6 +166,13 @@ export const defaultConfig: VoxAgentsConfig = {
       name: 'Kimi-K2.5',
       options: {
         toolMiddleware: 'prompt'
+      }
+    },
+    'openai-compatible/claude-opus-4-7': {
+      provider: 'anthropic',
+      name: 'claude-opus-4-7',
+      options: {
+        concurrencyLimit: 1
       }
     },
     'openai-compatible/Kimi-K2.6': {
