@@ -7,17 +7,34 @@
  * crash recovery scenarios.
  */
 
-import { spawn, exec } from 'child_process';
+import { spawn } from 'child_process';
 import { join } from 'path';
-import { promisify } from 'util';
 import { setTimeout } from 'node:timers/promises'
 import { readFile, writeFile } from 'fs/promises';
-import { homedir } from 'os';
 import { createLogger } from '../utils/logger.js';
+import type { RandomSeedsConfig } from '../types/config.js';
+import {
+  readCivConfigSeedsContent,
+  updateCivConfigSeedsContent,
+  updateCivUserSettingsSkipAnimationsContent
+} from '../utils/civ5-ini.js';
+import { getCiv5UserFilePath } from '../utils/civ5-user-files.js';
+import { hasRandomSeeds } from '../utils/random-seeds.js';
+import {
+  findProcessByImageName,
+  isProcessRunning as isWindowsProcessRunning,
+  killProcess
+} from '../utils/windows-process.js';
 
 const logger = createLogger('VoxCivilization');
-const execAsync = promisify(exec);
 type ExitCallback = (code: number | null) => void;
+
+interface SeedRestoreState {
+  path: string;
+  sync: string;
+  map: string;
+}
+
 
 /**
  * Controls Civilization V game instance.
@@ -42,6 +59,9 @@ export class VoxCivilization {
   private externalProcessPid: number | null = null;
   private pollInterval: NodeJS.Timeout | null = null;
   private aiObserverEnabled = false;
+  // Previous config.ini seed values are captured so each launch can restore the
+  // user's normal Civ behavior after the game has read the startup settings.
+  private seedRestoreState?: SeedRestoreState;
 
   /**
    * Finds and binds to an existing CivilizationV.exe process.
@@ -50,7 +70,7 @@ export class VoxCivilization {
    * @returns True if found and bound successfully, false otherwise
    */
   private async bindToExistingProcess(): Promise<boolean> {
-    const pid = await this.findCivilizationProcess();
+    const pid = await findProcessByImageName('CivilizationV.exe');
     if (pid) {
       logger.info(`Found existing CivilizationV.exe process (PID: ${pid})`);
       this.externalProcessPid = pid;
@@ -60,33 +80,6 @@ export class VoxCivilization {
     } else {
       return false;
     }
-  }
-
-  /**
-   * Finds CivilizationV.exe process using Windows tasklist.
-   *
-   * @private
-   * @returns Process ID if found, null otherwise
-   */
-  private async findCivilizationProcess(): Promise<number | null> {
-    try {
-      const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq CivilizationV.exe" /FO CSV');
-      const lines = stdout.trim().split('\n');
-
-      // Skip header line, look for process
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(',');
-        if (parts[0]?.includes('CivilizationV.exe')) {
-          const pid = parseInt(parts[1].replace(/"/g, ''), 10);
-          if (!isNaN(pid)) {
-            return pid;
-          }
-        }
-      }
-    } catch (error) {
-      // Command failed, no process found
-    }
-    return null;
   }
 
   /**
@@ -103,7 +96,7 @@ export class VoxCivilization {
     // Poll every 5 seconds to check if process still exists
     this.pollInterval = setInterval(async () => {
       if (this.externalProcessPid) {
-        const stillRunning = await this.isProcessRunning(this.externalProcessPid);
+        const stillRunning = await isWindowsProcessRunning(this.externalProcessPid);
         if (!stillRunning) {
           logger.info(`Process ${this.externalProcessPid} is no longer running`);
           this.handleGameExit(0);
@@ -120,26 +113,6 @@ export class VoxCivilization {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
-    }
-  }
-
-  /**
-   * Checks if a process with given PID is running
-   */
-  private async isProcessRunning(pid: number): Promise<boolean> {
-    try {
-      const { stdout } = await execAsync(`tasklist /FI "PID eq ${pid}" /FO CSV`);
-      const lines = stdout.trim().split('\n');
-      // Check if we have more than just the header line and the PID is present
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i].includes(`"${pid}"`)) {
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      logger.error(`Error checking if process ${pid} is running:`, error);
-      return false;
     }
   }
 
@@ -236,30 +209,13 @@ export class VoxCivilization {
 
   /**
    * Updates SinglePlayerQuickCombatEnabled and SinglePlayerQuickMovementEnabled in
-   * the user's Civ5 UserSettings.ini. Uses PowerShell to resolve the real Documents
-   * folder (handles OneDrive-redirected paths).
+   * the user's Civ5 UserSettings.ini.
    *
    * @param skipEnabled - true enables quick-skip (value 1); false disables it (value 0)
    */
   async updateSkipAnimations(skipEnabled: boolean): Promise<void> {
     const value = skipEnabled ? '1' : '0';
-    let documentsPath: string;
-    try {
-      const { stdout } = await execAsync(
-        'powershell -Command "[Environment]::GetFolderPath(\'MyDocuments\')"'
-      );
-      documentsPath = stdout.trim();
-    } catch {
-      documentsPath = join(homedir(), 'Documents');
-    }
-
-    const settingsPath = join(
-      documentsPath,
-      'My Games',
-      "Sid Meier's Civilization 5",
-      'UserSettings.ini'
-    );
-
+    const settingsPath = await getCiv5UserFilePath('UserSettings.ini');
     let content: string;
     try {
       content = await readFile(settingsPath, 'utf-8');
@@ -268,12 +224,70 @@ export class VoxCivilization {
       return;
     }
 
-    const updated = content
-      .replace(/^(SinglePlayerQuickCombatEnabled\s*=\s*)\d/m, `$1${value}`)
-      .replace(/^(SinglePlayerQuickMovementEnabled\s*=\s*)\d/m, `$1${value}`);
+    const updated = updateCivUserSettingsSkipAnimationsContent(content, skipEnabled);
 
     await writeFile(settingsPath, updated, 'utf-8');
     logger.info(`Set SinglePlayerQuickCombat/Movement to ${value} in UserSettings.ini`);
+  }
+
+  /**
+   * Write requested random seeds into Civ's config.ini before launching a game.
+   *
+   * Civ reads `SyncRandSeed` and `MapRandSeed` during pregame initialization.
+   * If one side is omitted, we write `0` for that side, preserving Civ's own
+   * "pick a random/default seed" behavior while fixing the requested side.
+   */
+  async applyRandomSeeds(seeds?: RandomSeedsConfig): Promise<void> {
+    if (!hasRandomSeeds(seeds)) return;
+
+    const configPath = await getCiv5UserFilePath('config.ini');
+    let content: string;
+    try {
+      content = await readFile(configPath, 'utf-8');
+    } catch {
+      throw new Error(`config.ini not found at ${configPath}`);
+    }
+
+    const original = readCivConfigSeedsContent(content);
+    if (!this.seedRestoreState) {
+      this.seedRestoreState = {
+        path: configPath,
+        sync: original.sync ?? '0',
+        map: original.map ?? '0'
+      };
+    }
+
+    const updated = updateCivConfigSeedsContent(content, {
+      sync: seeds?.sync ?? 0,
+      map: seeds?.map ?? 0
+    });
+    await writeFile(configPath, updated, 'utf-8');
+    logger.info(`Set Civ V random seeds in config.ini (sync=${seeds?.sync ?? 0}, map=${seeds?.map ?? 0})`);
+  }
+
+  /**
+   * Restore config.ini seed values captured before `applyRandomSeeds`.
+   *
+   * Restoration happens after Civ has launched/read config.ini, so repeated Vox
+   * runs can be reproducible without permanently changing the user's Civ setup.
+   */
+  async restoreRandomSeeds(): Promise<void> {
+    if (!this.seedRestoreState) return;
+
+    const restoreState = this.seedRestoreState;
+    this.seedRestoreState = undefined;
+
+    try {
+      const content = await readFile(restoreState.path, 'utf-8');
+      const restored = updateCivConfigSeedsContent(content, {
+        sync: restoreState.sync,
+        map: restoreState.map
+      });
+      await writeFile(restoreState.path, restored, 'utf-8');
+      logger.info('Restored Civ V random seeds in config.ini');
+    } catch (error) {
+      logger.warn('Failed to restore Civ V random seeds in config.ini:', error);
+    }
   }
 
   /**
@@ -294,33 +308,39 @@ export class VoxCivilization {
    * @param playerCount - Optional number of players for StartGame.lua (generates from template)
    * @returns True if game started successfully, false if already running
    */
-  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, obsMode?: boolean): Promise<boolean> {
+  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, obsMode?: boolean, randomSeeds?: RandomSeedsConfig): Promise<boolean> {
     // Check if game is already running
     if (await this.bindToExistingProcess() || this.isGameRunning()) {
       logger.info('Game instance already exists, monitoring it...');
       return true;
     }
 
-    // Generate temp Lua scripts from templates with required mods
-    let actualLuaName = luaName;
-    if (luaName === 'StartGame.lua' && playerCount !== undefined) {
-      await this.generateStartGameLua(playerCount);
-      actualLuaName = 'StartGame.temp.lua';
-    } else if (luaName === 'LoadGame.lua') {
-      await this.generateFromTemplate('LoadGame.template.lua', 'LoadGame.temp.lua', {
-        REQUIRED_MODS: this.buildRequiredModsLua(),
-      });
-      actualLuaName = 'LoadGame.temp.lua';
-    } else if (luaName === 'LoadMods.lua') {
-      await this.generateFromTemplate('LoadMods.template.lua', 'LoadMods.temp.lua', {
-        REQUIRED_MODS: this.buildRequiredModsLua(),
-      });
-      actualLuaName = 'LoadMods.temp.lua';
-    }
-
-    const scriptPath = join('scripts', 'launch-civ5.cmd');
-
     try {
+      // Only a brand-new game reads pregame seeds from config.ini. Wait/load
+      // modes bind to an existing setup and should not rewrite user settings.
+      if (luaName === 'StartGame.lua') {
+        await this.applyRandomSeeds(randomSeeds);
+      }
+
+      // Generate temp Lua scripts from templates with required mods
+      let actualLuaName = luaName;
+      if (luaName === 'StartGame.lua' && playerCount !== undefined) {
+        await this.generateStartGameLua(playerCount);
+        actualLuaName = 'StartGame.temp.lua';
+      } else if (luaName === 'LoadGame.lua') {
+        await this.generateFromTemplate('LoadGame.template.lua', 'LoadGame.temp.lua', {
+          REQUIRED_MODS: this.buildRequiredModsLua(),
+        });
+        actualLuaName = 'LoadGame.temp.lua';
+      } else if (luaName === 'LoadMods.lua') {
+        await this.generateFromTemplate('LoadMods.template.lua', 'LoadMods.temp.lua', {
+          REQUIRED_MODS: this.buildRequiredModsLua(),
+        });
+        actualLuaName = 'LoadMods.temp.lua';
+      }
+
+      const scriptPath = join('scripts', 'launch-civ5.cmd');
+
       logger.info(`Launching Civilization V with script: ${actualLuaName}${obsMode ? " in OBS mode" : ""}`);
 
       // Launch the cmd script and wait for it to complete
@@ -357,6 +377,7 @@ export class VoxCivilization {
       return await this.bindToExistingProcess();
     } catch (error) {
       logger.error('Failed to launch game:', error);
+      await this.restoreRandomSeeds();
       return false;
     }
   }
@@ -424,7 +445,7 @@ export class VoxCivilization {
 
     try {
       logger.info(`Killing game process with PID: ${this.externalProcessPid}`);
-      await execAsync(`taskkill /F /PID ${this.externalProcessPid}`);
+      await killProcess(this.externalProcessPid);
 
       // Wait a bit for the process to terminate
       await setTimeout(5000);

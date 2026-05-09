@@ -101,7 +101,10 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     }
 
     // Register game exit handler for crash recovery
-    await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production));
+    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.config.randomSeeds);
+    if (!started) {
+      throw new Error('Failed to start Civilization V');
+    }
 
     // Connect to MCP server
     await mcpClient.connect();
@@ -162,11 +165,15 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       await voxCivilization.killGame();
     });
 
-      // Wait for victory or shutdown
+      // Wait for victory, shutdown, or a fatal setup validation failure.
       await this.finishPromise;
+      if (this.state === 'error') {
+        throw new Error(this.errorMessage ?? 'Strategist session failed');
+      }
     } catch (error) {
       logger.error('Session failed with error:', error);
       this.onStateChange('error', (error as Error).message);
+      await voxCivilization.restoreRandomSeeds();
       sessionRegistry.unregister(this.id);
       throw error;
     }
@@ -237,6 +244,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     await mcpClient.disconnect();
 
     // Cleanup VoxCivilization
+    await voxCivilization.restoreRandomSeeds();
     voxCivilization.destroy();
 
     // Resolve victory promise if still pending
@@ -299,6 +307,13 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     }
     this.activePlayers.clear();
 
+    // The MCP store records Civ's authoritative pregame seed values before it
+    // emits GameSwitched. Verify before creating players or starting autoplay so
+    // a bad experiment never produces usable-looking data.
+    if (!await this.verifyRandomSeeds()) return;
+
+    await this.writeConfiguredSeedMetadata();
+
     // Resolve seating map (identity or randomized)
     this.seatingMap = await this.resolveSeatingMap();
 
@@ -336,6 +351,76 @@ Game.SetAIAutoPlay(2000, -1);`
 
   private async handleDLLConnected(_params: GameEventNotification): Promise<void> {
     await this.recoverGame();
+  }
+
+  /**
+   * Persist the requested seeds beside the observed seeds for auditability.
+   *
+   * Only explicitly fixed seeds are written. If a seed was omitted, Civ was
+   * allowed to choose it and the observed `*RandSeed` metadata is enough.
+   */
+  private async writeConfiguredSeedMetadata(): Promise<void> {
+    if (this.config.randomSeeds?.sync !== undefined) {
+      await mcpClient.callTool("set-metadata", {
+        Key: "configuredSyncRandSeed",
+        Value: String(this.config.randomSeeds.sync)
+      });
+    }
+    if (this.config.randomSeeds?.map !== undefined) {
+      await mcpClient.callTool("set-metadata", {
+        Key: "configuredMapRandSeed",
+        Value: String(this.config.randomSeeds.map)
+      });
+    }
+  }
+
+  /**
+   * Compare configured fixed seeds with Civ's observed pregame seeds.
+   *
+   * This intentionally reads `syncRandSeed`/`mapRandSeed` metadata rather than
+   * live RNG state. The live map/game RNGs can advance during setup, while the
+   * pregame values are the stable reproducibility contract.
+   */
+  private async verifyRandomSeeds(): Promise<boolean> {
+    const expected = this.config.randomSeeds;
+    if (expected?.sync === undefined && expected?.map === undefined) return true;
+
+    const [observedSyncText, observedMapText] = await Promise.all([
+      this.readMetadata("syncRandSeed"),
+      this.readMetadata("mapRandSeed")
+    ]);
+    const observedSync = Number(observedSyncText);
+    const observedMap = Number(observedMapText);
+
+    const mismatches: string[] = [];
+    if (expected.sync !== undefined && observedSync !== expected.sync) {
+      mismatches.push(`sync expected ${expected.sync}, observed ${observedSyncText || "(missing)"}`);
+    }
+    if (expected.map !== undefined && observedMap !== expected.map) {
+      mismatches.push(`map expected ${expected.map}, observed ${observedMapText || "(missing)"}`);
+    }
+
+    if (mismatches.length === 0) {
+      logger.info('Verified Civ V random seeds', {
+        expected,
+        observed: { sync: observedSyncText, map: observedMapText }
+      });
+      return true;
+    }
+
+    const message = `Civ V random seed verification failed: ${mismatches.join('; ')}`;
+    logger.error(message);
+    this.onStateChange('error', message);
+    this.abortController.abort();
+    await voxCivilization.killGame();
+    this.victoryResolve?.();
+    return false;
+  }
+
+  private async readMetadata(key: string): Promise<string> {
+    const result = await mcpClient.callTool("get-metadata", { Key: key }) as Record<string, unknown>;
+    const content = result.content as Array<{ type: string; text: string }> | undefined;
+    return content?.[0]?.text ?? "";
   }
 
   private async recoverGame(): Promise<void> {
@@ -519,7 +604,7 @@ Game.SetAIAutoPlay(2000, -1);`
     } else {
       logger.info(`Starting Civilization V with ${luaScript} to recover from crash...`);
     }
-    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production));
+    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.config.randomSeeds);
 
     if (!started) {
       logger.error('Failed to restart the game');

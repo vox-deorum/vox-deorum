@@ -28,6 +28,7 @@ import { getPlayerPersona } from './getters/player-persona.js';
 import { getPlayerOpinions } from './getters/player-opinions.js';
 import { getPlayerSummaries } from './getters/player-summary.js';
 import { getCityInformations } from './getters/city-information.js';
+import { getRandomSeeds } from './getters/random-seeds.js';
 import { setTimeout } from 'node:timers/promises';
 import PQueue from 'p-queue';
 
@@ -88,6 +89,20 @@ export class KnowledgeStore {
     // Store game ID in metadata
     await this.setMetadata('gameId', gameId);
     await this.setMetadata('lastSync', Date.now().toString());
+
+    // Store Civ's authoritative pregame seed values for reproducibility audits.
+    // These are captured before strategist autoplay begins and are later used by
+    // vox-agents to verify that config.ini seed locking actually took effect.
+    try {
+      const seeds = await getRandomSeeds();
+      if (seeds) {
+        await this.setMetadata('syncRandSeed', seeds.SyncRandSeed.toString());
+        await this.setMetadata('mapRandSeed', seeds.MapRandSeed.toString());
+      }
+    } catch (error) {
+      logger.warn('Failed to retrieve or store random seed metadata:', error);
+      // Continue initialization; unseeded sessions should still be observable.
+    }
 
     // Retrieve and store player information as public knowledge
     try {

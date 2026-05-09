@@ -12,6 +12,7 @@ import createGetPlayersTool from "./knowledge/get-players.js";
 import createGetOpinionsTool from "./knowledge/get-opinions.js";
 import createGetCitiesTool from "./knowledge/get-cities.js";
 import createGetGameSettingsTool from "./knowledge/get-game-settings.js";
+import createGetRandomSeedsTool from "./knowledge/get-random-seeds.js";
 import createGetMetadataTool from "./knowledge/get-metadata.js";
 import createSetStrategyTool from "./actions/set-strategy.js";
 import createSetPersonaTool from "./actions/set-persona.js";
@@ -39,6 +40,7 @@ const toolFactories = {
     calculator: createCalculatorTool,
     luaExecutor: createLuaExecutorTool,
     getGameSettings: createGetGameSettingsTool,
+    getRandomSeeds: createGetRandomSeedsTool,
     getMetadata: createGetMetadataTool,
     setMetadata: createSetMetadataTool,
     searchDatabase: createSearchDatabaseTool,

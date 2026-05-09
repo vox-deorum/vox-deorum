@@ -18,6 +18,7 @@ import * as readline from 'node:readline';
 import * as path from 'node:path';
 import { startWebServer } from "../web/server.js";
 import { processManager } from "../infra/process-manager.js";
+import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds } from "../utils/random-seeds.js";
 
 const logger = createLogger('Strategists');
 
@@ -55,6 +56,9 @@ const { values, positionals } = parseArgs({
     repetition: {
       type: 'string',
       short: 'r'
+    },
+    seed: {
+      type: 'string'
     }
   },
   strict: false,
@@ -79,6 +83,7 @@ const defaultConfig: StrategistSessionConfig = {
 
 // Build command line overrides
 const cmdOverrides: Partial<StrategistSessionConfig> = {};
+let seedOverride: StrategistSessionConfig['randomSeeds'] | undefined;
 
 if (isLoadMode) {
   cmdOverrides.gameMode = 'load';
@@ -119,12 +124,32 @@ if (values.repetition !== undefined) {
   }
 }
 
+if (values.seed !== undefined) {
+  try {
+    // CLI seed values are parsed separately so each side can override the file
+    // config independently: `--seed 1:` changes only sync, `--seed :2` only map.
+    seedOverride = parseSeedArgument(values.seed as string);
+  } catch (error) {
+    logger.error(`Invalid --seed argument: ${(error as Error).message}`);
+    process.exit(1);
+  }
+}
+
 // Load configuration from file with command line overrides
 const sessionConfig: StrategistSessionConfig = loadConfigFromFile(
   path.join(getConfigsDir(), configFile),
   defaultConfig,
   cmdOverrides
 );
+
+try {
+  // Validate config-file seeds before applying CLI overrides. This catches bad
+  // saved configs even when the CLI only overrides one of the two fields.
+  sessionConfig.randomSeeds = mergeRandomSeeds(validateRandomSeeds(sessionConfig.randomSeeds), seedOverride);
+} catch (error) {
+  logger.error(`Invalid random seed configuration: ${(error as Error).message}`);
+  process.exit(1);
+}
 
 // Ensure the config has a name (use filename without extension if not set)
 if (!sessionConfig.name) {

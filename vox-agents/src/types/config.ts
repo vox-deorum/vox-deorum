@@ -137,6 +137,16 @@ export interface SessionConfig {
 }
 
 /**
+ * Optional Civilization V random seed controls.
+ * `sync` maps to config.ini's SyncRandSeed, `map` maps to MapRandSeed.
+ * Omitted values are written as 0 when launching a new game so Civ chooses them.
+ */
+export interface RandomSeedsConfig {
+  sync?: number;
+  map?: number;
+}
+
+/**
  * Player-specific configuration for LLM control
  */
 export interface PlayerConfig {
@@ -215,6 +225,9 @@ export interface StrategistSessionConfig extends SessionConfig {
 
   /** When true, randomize the mapping between config slots and actual game player indices each game */
   randomizeSeating?: boolean;
+
+  /** Optional fixed Civ V random seeds for reproducible starts */
+  randomSeeds?: RandomSeedsConfig;
 
   /** Production mode controlling animations and OBS integration */
   production?: ProductionMode;
