@@ -132,8 +132,13 @@ export interface SessionConfig {
   /** How to start the game session */
   gameMode: 'start' | 'load' | 'wait';
 
-  /** Number of games to play in sequence (optional) */
-  repetition?: number;
+  /**
+   * Number of games to play in sequence (optional).
+   * Pass `"auto"` to run until the current seating × seed cycle is fully completed
+   * (each cell consumed by a successful run). Useful with `randomizeSeating: true`
+   * and/or a `randomSeeds` array.
+   */
+  repetition?: number | "auto";
 }
 
 /**
@@ -226,8 +231,14 @@ export interface StrategistSessionConfig extends SessionConfig {
   /** When true, randomize the mapping between config slots and actual game player indices each game */
   randomizeSeating?: boolean;
 
-  /** Optional fixed Civ V random seeds for reproducible starts */
-  randomSeeds?: RandomSeedsConfig;
+  /**
+   * Optional fixed Civ V random seeds for reproducible starts.
+   * Single object: applied to every game.
+   * Array: each entry becomes a seed-set in the cycle — the seating cycle expands to
+   * `playerCount × randomSeeds.length` cells, so every (seat-rotation, seed-set) pair
+   * is exercised once per cycle.
+   */
+  randomSeeds?: RandomSeedsConfig | RandomSeedsConfig[];
 
   /** Production mode controlling animations and OBS integration */
   production?: ProductionMode;

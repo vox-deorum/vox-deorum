@@ -13,11 +13,13 @@ import { voxCivilization } from "../infra/vox-civilization.js";
 import { setTimeout } from 'node:timers/promises';
 import { VoxSession } from "../infra/vox-session.js";
 import { sessionRegistry } from "../infra/session-registry.js";
-import { StrategistSessionConfig, isVisualMode, isObsMode } from "../types/config.js";
+import { StrategistSessionConfig, isVisualMode, isObsMode, RandomSeedsConfig } from "../types/config.js";
 import { obsManager } from "../infra/obs-manager.js";
 import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
 import { SessionStatus } from "../types/api.js";
+import { SeatingStateManager, type SeatingClaim } from "../utils/seating-state.js";
+import { validateRandomSeedsList } from "../utils/random-seeds.js";
 
 const logger = createLogger('StrategistSession');
 
@@ -40,11 +42,23 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private production?: ProductionController;
   private readonly MAX_RECOVERY_ATTEMPTS = 3;
 
+  /** Normalized seed-set list — length M (>= 1). Drives the seedCount of the cycle. */
+  private readonly seedSets: Array<RandomSeedsConfig | undefined>;
+  /** Lazily constructed when the cycle is enabled (randomizeSeating or seedCount > 1). */
+  private seatingManager?: SeatingStateManager;
+  /** The current cell claim, if any. Refreshed on each (re-)claim during recovery. */
+  private seatingClaim?: SeatingClaim;
+  /** Tracks whether the active claim has already been released, so shutdown() doesn't double-release. */
+  private claimReleased = false;
+  /** Set on PlayerVictory so shutdown() releases the claim as success. */
+  private claimSucceeded = false;
+
   constructor(config: StrategistSessionConfig) {
     super(config);
     this.finishPromise = new Promise((resolve) => {
       this.victoryResolve = resolve;
     });
+    this.seedSets = validateRandomSeedsList(config.randomSeeds);
     voxCivilization.onGameExit(this.handleGameExit.bind(this));
   }
 
@@ -70,6 +84,11 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
           logger.info(`Calculated player count: ${playerCount} from player IDs: ${playerIds.join(', ')}`);
         }
       }
+
+      // Claim a cell from the seating × seed cycle (no-op if neither randomizeSeating
+      // nor a multi-seed array is configured). This must happen before startGame so
+      // the cycle's chosen seed is what Civ launches with.
+      await this.ensureSeatingClaim(playerCount);
 
       logger.info(`Starting strategist session ${this.id} in ${this.config.gameMode} mode`, this.config);
 
@@ -100,8 +119,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       logger.warn('The session will automatically continue when the game is loaded.');
     }
 
-    // Register game exit handler for crash recovery
-    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.config.randomSeeds);
+    // The seed set is normally chosen per-cell by the seating cycle (see
+    // resolveSeatingMap). For the very first launch we don't have a claim yet,
+    // so use the first seed set — it will be reconciled when handleGameSwitched
+    // claims the cycle's actual cell.
+    const initialSeeds = this.seatingClaim?.seeds ?? this.seedSets[0];
+    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), initialSeeds);
     if (!started) {
       throw new Error('Failed to start Civilization V');
     }
@@ -247,6 +270,11 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     await voxCivilization.restoreRandomSeeds();
     voxCivilization.destroy();
 
+    // Release the cycle cell back to the scheduler. claimSucceeded is set by
+    // handlePlayerVictory; otherwise this is a crash/abort and the cell goes
+    // back to pending so it can be retried.
+    await this.releaseSeatingClaim(this.claimSucceeded);
+
     // Resolve victory promise if still pending
     if (this.victoryResolve) {
       this.victoryResolve();
@@ -314,8 +342,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
     await this.writeConfiguredSeedMetadata();
 
-    // Resolve seating map (identity or randomized)
-    this.seatingMap = await this.resolveSeatingMap();
+    // Seating map was claimed in start() (or fell back to identity). Persist it
+    // (and the cycle coordinates, if any) into the per-game telemetry metadata.
+    if (!this.seatingMap) {
+      this.seatingMap = this.identitySeatingMap();
+    }
+    await this.writeSeatingMetadata();
 
     // Create new players using the seating map
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
@@ -354,22 +386,32 @@ Game.SetAIAutoPlay(2000, -1);`
   }
 
   /**
+   * The seed set the current game was launched with. Resolves through the
+   * active cycle claim when the cycle is enabled; otherwise falls back to the
+   * single-object form derived from `config.randomSeeds`.
+   */
+  private get activeSeeds(): RandomSeedsConfig | undefined {
+    return this.seatingClaim?.seeds ?? this.seedSets[0];
+  }
+
+  /**
    * Persist the requested seeds beside the observed seeds for auditability.
    *
    * Only explicitly fixed seeds are written. If a seed was omitted, Civ was
    * allowed to choose it and the observed `*RandSeed` metadata is enough.
    */
   private async writeConfiguredSeedMetadata(): Promise<void> {
-    if (this.config.randomSeeds?.sync !== undefined) {
+    const seeds = this.activeSeeds;
+    if (seeds?.sync !== undefined) {
       await mcpClient.callTool("set-metadata", {
         Key: "configuredSyncRandSeed",
-        Value: String(this.config.randomSeeds.sync)
+        Value: String(seeds.sync)
       });
     }
-    if (this.config.randomSeeds?.map !== undefined) {
+    if (seeds?.map !== undefined) {
       await mcpClient.callTool("set-metadata", {
         Key: "configuredMapRandSeed",
-        Value: String(this.config.randomSeeds.map)
+        Value: String(seeds.map)
       });
     }
   }
@@ -382,7 +424,7 @@ Game.SetAIAutoPlay(2000, -1);`
    * pregame values are the stable reproducibility contract.
    */
   private async verifyRandomSeeds(): Promise<boolean> {
-    const expected = this.config.randomSeeds;
+    const expected = this.activeSeeds;
     if (expected?.sync === undefined && expected?.map === undefined) return true;
 
     const [observedSyncText, observedMapText] = await Promise.all([
@@ -443,6 +485,12 @@ Game.SetAIAutoPlay(2000, -1);`
   private async handlePlayerVictory(params: GameEventNotification): Promise<void> {
     logger.warn(`Player ${params.playerID} has won the game on turn ${params.turn}!`);
 
+    // Mark the active cycle cell as a success — shutdown() will persist this
+    // when it releases the claim. We don't release here because the game still
+    // needs to wind down (and the existing claim is the source of truth until
+    // released, including for any further crash-recovery during shutdown).
+    this.claimSucceeded = true;
+
     // Stop the game when autoplay
     if (this.config.autoPlay) {
       this.onStateChange('stopping');
@@ -479,56 +527,100 @@ Game.SetAIAutoPlay(2000, -1);`
   }
 
   /**
-   * Resolve the seating map for the current game.
-   * When randomizeSeating is enabled, loads an existing map from the DB or generates a new permutation.
-   * When disabled, returns identity mapping (config slot N -> player ID N).
+   * Identity seating map: configSlot N → player ID N. Used when neither
+   * `randomizeSeating` nor a multi-seed array is configured.
    */
-  private async resolveSeatingMap(): Promise<Record<string, number>> {
-    const configSlots = Object.keys(this.config.llmPlayers).map(Number).sort((a, b) => a - b);
+  private identitySeatingMap(): Record<string, number> {
+    const identity: Record<string, number> = {};
+    for (const slot of Object.keys(this.config.llmPlayers).map(Number)) {
+      identity[String(slot)] = slot;
+    }
+    return identity;
+  }
 
-    // Without randomization, use identity mapping
-    if (!this.config.randomizeSeating) {
-      const identity: Record<string, number> = {};
-      for (const slot of configSlots) {
-        identity[String(slot)] = slot;
-      }
-      return identity;
+  /**
+   * Claim a cell from the persistent seating × seed cycle, populating
+   * `this.seatingClaim` and `this.seatingMap`. No-op (identity map) when
+   * neither `randomizeSeating` nor a multi-seed array is configured.
+   *
+   * Idempotent within a single session — safe to call again during crash
+   * recovery; the manager's own-runner reclaim returns the same cell.
+   *
+   * @param playerCount - resolved game-slot count from `start()`. Used only when
+   *   the cycle is enabled (otherwise a single virtual cell suffices).
+   */
+  private async ensureSeatingClaim(playerCount?: number): Promise<void> {
+    const cycleEnabled = !!this.config.randomizeSeating || this.seedSets.length > 1;
+    if (!cycleEnabled) {
+      this.seatingMap = this.identitySeatingMap();
+      return;
     }
 
-    // Try to load existing seating map from DB
+    // For modes that don't compute playerCount (load/wait), fall back to the
+    // configured slot ceiling so the cycle still has a sensible N.
+    const configSlots = Object.keys(this.config.llmPlayers).map(Number);
+    const totalSeats = playerCount ?? Math.max(...configSlots) + 1;
+
+    if (!this.seatingManager) {
+      this.seatingManager = new SeatingStateManager({
+        configName: this.config.name,
+        configSlots,
+        totalSeats,
+        seedCount: this.seedSets.length,
+        seedSets: this.seedSets
+      });
+    }
+
+    const claim = await this.seatingManager.claimNextCell();
+    this.seatingClaim = claim;
+    this.seatingMap = claim.seatingMap;
+    this.claimReleased = false;
+    this.claimSucceeded = false;
+
+    logger.info(
+      `Cycle cell claimed: rotation=${claim.rotation} seedIndex=${claim.seedIndex} ` +
+      `seatingMap=${JSON.stringify(claim.seatingMap)}`
+    );
+  }
+
+  /**
+   * Persist the resolved seating map (and cycle coordinates, if any) into the
+   * per-game telemetry metadata for audit. Replaces the legacy
+   * `resolveSeatingMap` write that doubled as scheduling state.
+   */
+  private async writeSeatingMetadata(): Promise<void> {
+    if (this.seatingMap) {
+      await mcpClient.callTool("set-metadata", {
+        Key: "seatingMap",
+        Value: JSON.stringify(this.seatingMap)
+      });
+    }
+    if (this.seatingClaim) {
+      await mcpClient.callTool("set-metadata", {
+        Key: "seatingRotation",
+        Value: String(this.seatingClaim.rotation)
+      });
+      await mcpClient.callTool("set-metadata", {
+        Key: "seatingSeedIndex",
+        Value: String(this.seatingClaim.seedIndex)
+      });
+    }
+  }
+
+  /**
+   * Release the active claim back to the cycle exactly once. `success === true`
+   * marks the cell completed; `false` returns it to pending so it can be
+   * retried by us or another runner. Idempotent (the `claimReleased` guard
+   * prevents double-release between the victory and shutdown paths).
+   */
+  private async releaseSeatingClaim(success: boolean): Promise<void> {
+    if (!this.seatingManager || !this.seatingClaim || this.claimReleased) return;
+    this.claimReleased = true;
     try {
-      const result = await mcpClient.callTool("get-metadata", { Key: "seatingMap" }) as Record<string, unknown>;
-      const content = result.content as Array<{ type: string; text: string }>;
-      const text = content?.[0]?.text;
-      if (text) {
-        const savedMap = JSON.parse(text) as Record<string, number>;
-        logger.info('Loaded existing seating map from database', savedMap);
-        return savedMap;
-      }
-    } catch {
-      logger.debug('No existing seating map found, will generate new one');
+      await this.seatingManager.releaseCell(this.seatingClaim, success);
+    } catch (err) {
+      logger.warn(`Failed to release seating claim: ${(err as Error).message}`);
     }
-
-    // Generate new random permutation using Fisher-Yates shuffle
-    const playerIDs = [...configSlots];
-    for (let i = playerIDs.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [playerIDs[i], playerIDs[j]] = [playerIDs[j], playerIDs[i]];
-    }
-
-    const seatingMap: Record<string, number> = {};
-    for (let i = 0; i < configSlots.length; i++) {
-      seatingMap[String(configSlots[i])] = playerIDs[i];
-    }
-
-    // Persist to DB
-    await mcpClient.callTool("set-metadata", {
-      Key: "seatingMap",
-      Value: JSON.stringify(seatingMap)
-    });
-
-    logger.warn('Generated and saved new seating map', seatingMap);
-    return seatingMap;
   }
 
   /**
@@ -604,7 +696,11 @@ Game.SetAIAutoPlay(2000, -1);`
     } else {
       logger.info(`Starting Civilization V with ${luaScript} to recover from crash...`);
     }
-    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.config.randomSeeds);
+    // Reuse the seeds from the active claim so the recovered run stays on the
+    // same cycle cell (the claim's seed and seating map remain valid across
+    // the crash/recovery boundary).
+    const recoverySeeds = this.seatingClaim?.seeds ?? this.seedSets[0];
+    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), recoverySeeds);
 
     if (!started) {
       logger.error('Failed to restart the game');

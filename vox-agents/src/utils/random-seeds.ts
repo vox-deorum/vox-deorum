@@ -94,3 +94,22 @@ export function mergeRandomSeeds(
 export function hasRandomSeeds(seeds?: RandomSeedsConfig): boolean {
   return seeds?.sync !== undefined || seeds?.map !== undefined;
 }
+
+/**
+ * Normalize `randomSeeds` (single object, array, or undefined) into an array of
+ * length ≥ 1 for cycle scheduling. Returns `[undefined]` (one entry, no fixed
+ * seeds — Civ chooses) when input is missing/empty.
+ *
+ * Throws if the array is given but empty, or any entry fails validation.
+ */
+export function validateRandomSeedsList(
+  seeds?: RandomSeedsConfig | RandomSeedsConfig[]
+): Array<RandomSeedsConfig | undefined> {
+  if (Array.isArray(seeds)) {
+    if (seeds.length === 0) {
+      throw new Error('randomSeeds array must contain at least one entry');
+    }
+    return seeds.map(entry => validateRandomSeeds(entry));
+  }
+  return [validateRandomSeeds(seeds)];
+}

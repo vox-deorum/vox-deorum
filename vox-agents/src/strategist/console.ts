@@ -18,7 +18,9 @@ import * as readline from 'node:readline';
 import * as path from 'node:path';
 import { startWebServer } from "../web/server.js";
 import { processManager } from "../infra/process-manager.js";
-import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds } from "../utils/random-seeds.js";
+import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds, validateRandomSeedsList } from "../utils/random-seeds.js";
+import { SeatingStateManager } from "../utils/seating-state.js";
+import type { RandomSeedsConfig } from "../types/config.js";
 
 const logger = createLogger('Strategists');
 
@@ -83,7 +85,7 @@ const defaultConfig: StrategistSessionConfig = {
 
 // Build command line overrides
 const cmdOverrides: Partial<StrategistSessionConfig> = {};
-let seedOverride: StrategistSessionConfig['randomSeeds'] | undefined;
+let seedOverride: RandomSeedsConfig | undefined;
 
 if (isLoadMode) {
   cmdOverrides.gameMode = 'load';
@@ -118,9 +120,14 @@ if (values.autoPlay !== undefined) {
 }
 
 if (values.repetition !== undefined) {
-  const rep = parseInt(values.repetition as string);
-  if (!isNaN(rep)) {
-    cmdOverrides.repetition = rep;
+  const raw = String(values.repetition).trim();
+  if (raw === 'auto') {
+    cmdOverrides.repetition = 'auto';
+  } else {
+    const rep = parseInt(raw);
+    if (!isNaN(rep)) {
+      cmdOverrides.repetition = rep;
+    }
   }
 }
 
@@ -145,7 +152,23 @@ const sessionConfig: StrategistSessionConfig = loadConfigFromFile(
 try {
   // Validate config-file seeds before applying CLI overrides. This catches bad
   // saved configs even when the CLI only overrides one of the two fields.
-  sessionConfig.randomSeeds = mergeRandomSeeds(validateRandomSeeds(sessionConfig.randomSeeds), seedOverride);
+  // Array-form `randomSeeds` is preserved as-is unless the CLI passes --seed,
+  // in which case the override collapses the array to a single seed set
+  // (the cycle's seed dimension is effectively disabled for that run).
+  const fileSeeds = sessionConfig.randomSeeds;
+  if (Array.isArray(fileSeeds)) {
+    if (seedOverride !== undefined) {
+      logger.warn(
+        `--seed override collapses configured randomSeeds array (${fileSeeds.length} entries) to a single set`
+      );
+      sessionConfig.randomSeeds = mergeRandomSeeds(undefined, seedOverride);
+    } else {
+      // Validate each entry early so bad seeds fail before launching Civ.
+      validateRandomSeedsList(fileSeeds);
+    }
+  } else {
+    sessionConfig.randomSeeds = mergeRandomSeeds(validateRandomSeeds(fileSeeds), seedOverride);
+  }
 } catch (error) {
   logger.error(`Invalid random seed configuration: ${(error as Error).message}`);
   process.exit(1);
@@ -216,9 +239,45 @@ process.stdin.on('data', (key) => {
  */
 async function main() {
   logger.info(`Starting in ${sessionConfig.gameMode} mode`);
+
+  // Resolve repetition. "auto" means "run until the seating × seed cycle
+  // completes" — only meaningful when the cycle is actually enabled. We poll
+  // the same SeatingStateManager the session will claim from, which is safe
+  // because both go through the file lock.
+  const isAutoRepetition = sessionConfig.repetition === 'auto';
+  let cycleWatcher: SeatingStateManager | undefined;
+  if (isAutoRepetition) {
+    const cycleEnabled =
+      !!sessionConfig.randomizeSeating ||
+      (Array.isArray(sessionConfig.randomSeeds) && sessionConfig.randomSeeds.length > 1);
+    if (!cycleEnabled) {
+      logger.warn(`repetition: "auto" requires randomizeSeating or a multi-entry randomSeeds; falling back to 1 run`);
+    } else {
+      const configSlots = Object.keys(sessionConfig.llmPlayers).map(Number);
+      const totalSeats = Math.max(...configSlots) + 1;
+      const seedSets = validateRandomSeedsList(sessionConfig.randomSeeds);
+      cycleWatcher = new SeatingStateManager({
+        configName: sessionConfig.name,
+        configSlots,
+        totalSeats,
+        seedCount: seedSets.length,
+        seedSets
+      });
+      logger.info(`Auto repetition: cycle = ${totalSeats} seats × ${seedSets.length} seeds = ${totalSeats * seedSets.length} cells`);
+    }
+  }
+
+  const fixedCount = isAutoRepetition && cycleWatcher
+    ? Number.POSITIVE_INFINITY
+    : (typeof sessionConfig.repetition === 'number' ? sessionConfig.repetition : 1);
+
   try {
-    for (var I = 0; I < (sessionConfig.repetition ?? 1); I++) {
+    for (var I = 0; I < fixedCount; I++) {
       if (processManager.isShuttingDown || shuttingdownAfter) break;
+      if (cycleWatcher && await cycleWatcher.isCycleComplete()) {
+        logger.info(`Seating × seed cycle complete after ${I} session(s); exiting auto loop`);
+        break;
+      }
       // Start a new session
       session = new StrategistSession(sessionConfig);
       await session.start();
