@@ -50,6 +50,29 @@ const dialogTitle = computed(() =>
 
 const isEditMode = computed(() => props.mode === 'edit');
 
+// Backend allows `number | "auto"`; the UI splits this into a numeric input plus an "Auto" checkbox.
+const isRepetitionAuto = computed<boolean>({
+  get: () => localConfig.value.repetition === 'auto',
+  set: (val) => {
+    if (val) {
+      localConfig.value.repetition = 'auto';
+    } else {
+      delete localConfig.value.repetition;
+    }
+  }
+});
+
+const repetitionValue = computed<number | null>({
+  get: () => (typeof localConfig.value.repetition === 'number' ? localConfig.value.repetition : null),
+  set: (val) => {
+    if (val == null) {
+      delete localConfig.value.repetition;
+    } else {
+      localConfig.value.repetition = val;
+    }
+  }
+});
+
 // Watch for prop changes to update local state
 watch(() => props.visible, (newVal) => {
   if (newVal) {
@@ -224,12 +247,23 @@ onMounted(() => {
               <label for="repetition">Repetitions:</label>
               <InputNumber
                 id="repetition"
-                v-model="localConfig.repetition"
+                v-model="repetitionValue"
                 :min="1"
                 :max="100"
-                placeholder="# of auto-repeated games (for research only)"
+                :disabled="isRepetitionAuto"
+                placeholder="# of repeated games (research only)"
                 class="field-input"
               />
+              <div class="checkbox-wrapper">
+                <Checkbox
+                  id="repetitionAuto"
+                  v-model="isRepetitionAuto"
+                  :binary="true"
+                />
+                <label for="repetitionAuto" class="checkbox-label">
+                  Auto (run until seating × seed cycle completes)
+                </label>
+              </div>
             </div>
           </div>
         </template>
