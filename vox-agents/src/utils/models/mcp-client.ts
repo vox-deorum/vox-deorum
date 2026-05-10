@@ -11,7 +11,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Tool, NotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 import { createLogger } from '../logger.js';
-import { config, loadVersionInfo } from '../config.js';
+import { config } from '../config.js';
+import { loadVersionInfo } from '../config/version.js';
 import { Dispatcher, fetch, Pool, RetryAgent } from 'undici';
 import { URL } from 'node:url';
 import { setTimeout } from 'node:timers/promises';

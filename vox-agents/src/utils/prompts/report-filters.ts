@@ -3,8 +3,8 @@
  * Provides elegant cherry-pick and discard operations on game data structures.
  */
 
-import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
-import type { CitiesReport } from '../../../mcp-server/dist/tools/knowledge/get-cities.js';
+import type { PlayersReport } from '../../../../mcp-server/dist/tools/knowledge/get-players.js';
+import type { CitiesReport } from '../../../../mcp-server/dist/tools/knowledge/get-cities.js';
 
 /**
  * Extract the PlayerData type from PlayersReport

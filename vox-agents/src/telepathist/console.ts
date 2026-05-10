@@ -25,7 +25,7 @@ import {
 } from './telepathist-parameters.js';
 import {
   parseDatabaseIdentifier,
-} from '../utils/identifier-parser.js';
+} from '../utils/telemetry/identifier-parser.js';
 import { contextRegistry } from '../infra/context-registry.js';
 import { StreamingEventCallback, EnvoyThread } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';

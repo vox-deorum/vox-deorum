@@ -27,7 +27,7 @@ import {
   createTelepathistParameters,
   type TelepathistParameters
 } from '../../src/telepathist/telepathist-parameters.js';
-import { parseDatabaseIdentifier } from '../../src/utils/identifier-parser.js';
+import { parseDatabaseIdentifier } from '../../src/utils/telemetry/identifier-parser.js';
 import { TelepathistTool } from '../../src/telepathist/telepathist-tool.js';
 import { GetSituationTool } from '../../src/telepathist/tools/get-situation.js';
 import { GetDecisionTool } from '../../src/telepathist/tools/get-decision.js';

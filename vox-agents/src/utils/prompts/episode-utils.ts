@@ -1,5 +1,5 @@
 /**
- * @module utils/episode-utils
+ * @module utils/prompts/episode-utils
  *
  * Composable functions for episode retrieval from both live game state and telemetry.
  * Provides three main capabilities:
@@ -9,16 +9,16 @@
  */
 
 import { Kysely } from 'kysely';
-import { createLogger } from './logger.js';
-import { buildLiveGameStateVector } from '../archivist/pipeline/game-state-vector.js';
-import { parseDiplomatics, findEpisodes } from '../archivist/index.js';
-import type { EpisodeQuery, EpisodeResult } from '../archivist/index.js';
-import type { GameState, StrategistParameters } from '../strategist/strategy-parameters.js';
-import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
-import type { CitiesReport } from '../../../mcp-server/dist/tools/knowledge/get-cities.js';
-import type { VictoryProgressReport } from '../../../mcp-server/dist/tools/knowledge/get-victory-progress.js';
-import type { TelemetryDatabase } from './telemetry/schema.js';
-import type { TelepathistDatabase } from '../telepathist/telepathist-parameters.js';
+import { createLogger } from '../logger.js';
+import { buildLiveGameStateVector } from '../../archivist/pipeline/game-state-vector.js';
+import { parseDiplomatics, findEpisodes } from '../../archivist/index.js';
+import type { EpisodeQuery, EpisodeResult } from '../../archivist/index.js';
+import type { GameState, StrategistParameters } from '../../strategist/strategy-parameters.js';
+import type { PlayersReport } from '../../../../mcp-server/dist/tools/knowledge/get-players.js';
+import type { CitiesReport } from '../../../../mcp-server/dist/tools/knowledge/get-cities.js';
+import type { VictoryProgressReport } from '../../../../mcp-server/dist/tools/knowledge/get-victory-progress.js';
+import type { TelemetryDatabase } from '../telemetry/schema.js';
+import type { TelepathistDatabase } from '../../telepathist/telepathist-parameters.js';
 
 const logger = createLogger('EpisodeUtils');
 

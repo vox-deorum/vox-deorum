@@ -17,7 +17,7 @@ import fs from 'fs/promises';
 import {
   parseContextIdentifier,
   parseDatabaseIdentifier,
-} from '../../utils/identifier-parser.js';
+} from '../../utils/telemetry/identifier-parser.js';
 import { StrategistParameters, getRecentGameState, ensureGameState } from '../../strategist/strategy-parameters.js';
 import { createTelepathistParameters, TelepathistParameters } from '../../telepathist/telepathist-parameters.js';
 import {

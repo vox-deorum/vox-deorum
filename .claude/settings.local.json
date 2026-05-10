@@ -63,7 +63,9 @@
       "WebFetch(domain:obsproject.com)",
       "Bash(git mv:*)",
       "Bash(echo \"exit: $?\")",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(cd /f/vox-deorum/vox-deorum && find vox-agents/src/utils -maxdepth 3 -type f -name \"*.ts\" | xargs wc -l | sort -rn | head -25)",
+      "Read(//f/f/vox-deorum/vox-deorum/vox-agents/src/**)"
     ],
     "deny": [
       "Read(**/.env*)",

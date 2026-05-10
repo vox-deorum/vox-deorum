@@ -14,11 +14,11 @@ import { getModelConfig } from "../utils/models/models.js";
 import { Model } from "../types/index.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
-import { getOffsetedTurn } from "../utils/game-speed.js";
+import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { SimpleBriefer } from "./simple-briefer.js";
 import { briefingInstructionKeys } from "./briefing-utils.js";
-import { filterEventsByCategory, EventCategory } from "../utils/event-filters.js";
-import { pickPlayerFields, omitPlayerFields, pickCityFields, omitCityFields } from "../utils/report-filters.js";
+import { filterEventsByCategory, EventCategory } from "../utils/prompts/event-filters.js";
+import { pickPlayerFields, omitPlayerFields, pickCityFields, omitCityFields } from "../utils/prompts/report-filters.js";
 import type { ConsolidatedEventsReport } from '../../../mcp-server/dist/tools/knowledge/get-events.js';
 import { SimpleStrategistBase } from "../strategist/agents/simple-strategist-base.js";
 

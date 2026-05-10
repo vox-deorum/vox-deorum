@@ -18,7 +18,7 @@ import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
 import dotenv from 'dotenv';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
-import { toolRescueMiddleware } from './tool-rescue.js';
+import { toolRescueMiddleware } from './tool-rescue/middleware.js';
 import { Agent } from 'undici';
 
 dotenv.config();

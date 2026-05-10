@@ -3,7 +3,7 @@ import {
   readCivConfigSeedsContent,
   updateCivConfigSeedsContent,
   updateCivUserSettingsSkipAnimationsContent
-} from '../../src/utils/civ5-ini.js';
+} from '../../src/utils/game/civ5-ini.js';
 
 describe('Civ config.ini seed updates', () => {
   it('reads existing CONFIG seed values', () => {

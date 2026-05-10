@@ -11,7 +11,7 @@ import Database from 'better-sqlite3';
 import { AgentParameters } from '../infra/vox-agent.js';
 import { createLogger } from '../utils/logger.js';
 import type { TelemetryDatabase } from '../utils/telemetry/schema.js';
-import type { GameIdentifierInfo } from '../utils/identifier-parser.js';
+import type { GameIdentifierInfo } from '../utils/telemetry/identifier-parser.js';
 
 const logger = createLogger('TelepathistParameters');
 

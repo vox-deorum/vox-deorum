@@ -3,7 +3,7 @@ import {
   mergeRandomSeeds,
   parseSeedArgument,
   validateRandomSeeds
-} from '../../src/utils/random-seeds.js';
+} from '../../src/utils/game/random-seeds.js';
 
 describe('random seed parsing', () => {
   it('parses both CLI seeds', () => {

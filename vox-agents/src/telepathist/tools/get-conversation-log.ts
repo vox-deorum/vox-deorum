@@ -9,7 +9,7 @@
 import { z } from 'zod';
 import { TelepathistTool, inquiryField } from '../telepathist-tool.js';
 import { TelepathistParameters } from '../telepathist-parameters.js';
-import { cleanToolArtifacts, formatToolCallText, formatToolResultText } from '../../utils/text-cleaning.js';
+import { cleanToolArtifacts, formatToolCallText, formatToolResultText } from '../../utils/models/text-cleaning.js';
 import type { Span } from '../../utils/telemetry/schema.js';
 
 const inputSchema = z.object({

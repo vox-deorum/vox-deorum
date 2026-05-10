@@ -1,4 +1,4 @@
-import type { RandomSeedsConfig } from '../types/config.js';
+import type { RandomSeedsConfig } from '../../types/config.js';
 
 const UINT32_MAX = 0xffffffff;
 

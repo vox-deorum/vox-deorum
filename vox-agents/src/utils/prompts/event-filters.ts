@@ -1,5 +1,5 @@
 /**
- * @module utils/event-filters
+ * @module utils/prompts/event-filters
  *
  * Event filtering utilities for categorizing and filtering game events by type.
  * Loads event category mappings from the MCP server's event categories definition.
@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { ConsolidatedEventsReport } from '../../../mcp-server/dist/tools/knowledge/get-events.js';
+import type { ConsolidatedEventsReport } from '../../../../mcp-server/dist/tools/knowledge/get-events.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,7 +37,7 @@ function loadEventCategories(): Record<string, EventCategory[]> {
 
   try {
     // Load from mcp-server/docs/events/event-categories.json
-    const categoriesPath = join(__dirname, '../../../mcp-server/docs/strategies/event-categories.json');
+    const categoriesPath = join(__dirname, '../../../../mcp-server/docs/strategies/event-categories.json');
     const categoriesData = readFileSync(categoriesPath, 'utf-8');
     eventCategoriesCache = JSON.parse(categoriesData);
     return eventCategoriesCache!;

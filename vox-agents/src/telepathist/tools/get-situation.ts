@@ -9,7 +9,7 @@
 import { z } from 'zod';
 import { TelepathistTool, inquiryField } from '../telepathist-tool.js';
 import { TelepathistParameters } from '../telepathist-parameters.js';
-import { cleanToolArtifacts } from '../../utils/text-cleaning.js';
+import { cleanToolArtifacts } from '../../utils/models/text-cleaning.js';
 
 /** Maps category names to MCP tool names */
 const categoryToolMap: Record<string, string> = {

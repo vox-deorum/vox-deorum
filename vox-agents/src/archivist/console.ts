@@ -23,7 +23,7 @@ import { parseArgs } from 'node:util';
 import { config } from '../utils/config.js';
 import { getEpisodeDbInstance } from './episode-db.js';
 import { createLogger } from '../utils/logger.js';
-import { openReadonlyGameDb, getWinner } from '../utils/knowledge-db.js';
+import { openReadonlyGameDb, getWinner } from '../utils/telemetry/knowledge-db.js';
 import { scanArchive } from './pipeline/scanner.js';
 import { EpisodeWriter } from './pipeline/writer.js';
 import type { ArchiveEntry } from './types.js';

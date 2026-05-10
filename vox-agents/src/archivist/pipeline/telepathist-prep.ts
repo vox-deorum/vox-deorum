@@ -8,7 +8,7 @@
  */
 
 import { createLogger } from '../../utils/logger.js';
-import type { GameIdentifierInfo } from '../../utils/identifier-parser.js';
+import type { GameIdentifierInfo } from '../../utils/telemetry/identifier-parser.js';
 import { VoxContext } from '../../infra/vox-context.js';
 import { prepareTurnSummaries } from '../../telepathist/preparation/turn-preparation.js';
 import { createTelepathistParameters, TelepathistParameters } from '../../telepathist/telepathist-parameters.js';

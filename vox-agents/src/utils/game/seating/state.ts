@@ -1,5 +1,5 @@
 /**
- * @module utils/seating-state
+ * @module utils/game/seating/state
  *
  * Persistent, distributed-safe scheduler for the seating × seed cycle used by
  * the strategist session.
@@ -43,9 +43,14 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { createLogger } from './logger.js';
-import { getConfigsDir } from './config.js';
-import type { RandomSeedsConfig } from '../types/config.js';
+import { createLogger } from '../../logger.js';
+import { getConfigsDir } from '../../config.js';
+import type {
+  CellEntry,
+  SeatingClaim,
+  SeatingState,
+  SeatingStateManagerOptions,
+} from './types.js';
 
 const logger = createLogger('SeatingState');
 
@@ -63,65 +68,6 @@ const LOCK_STALE_THRESHOLD_MS = 60 * 1000; // 60 seconds — well above any norm
 const LOCK_INITIAL_DELAY_MS = 50;
 const LOCK_MAX_DELAY_MS = 1000;
 const LOCK_MAX_ATTEMPTS = 20;
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type CellStatus = 'pending' | 'in-progress' | 'completed';
-
-/** Persistent record of a single (rotation, seedIndex) cell. */
-export interface CellEntry {
-  status: CellStatus;
-  /** ISO timestamp when the cell was claimed. Present only for `in-progress`. */
-  claimedAt?: string;
-  /** `${hostname}#${pid}` of the claiming runner. Present only for `in-progress`. */
-  claimedBy?: string;
-}
-
-/** On-disk schema for a config's seating cycle state. */
-export interface SeatingState {
-  totalSeats: number;
-  /** Sorted ascending. The configured `llmPlayers` keys. */
-  configSlots: number[];
-  seedCount: number;
-  /** Random permutation of `[0..totalSeats-1]`. */
-  basePerm: number[];
-  /** Shuffled order of all `(r, s)` cells; consumed front-to-back. */
-  consumeOrder: Array<{ r: number; s: number }>;
-  /** Two-level map: `cells[String(r)][String(s)] = entry`. Missing keys = pending. */
-  cells: Record<string, Record<string, CellEntry>>;
-  /** How many cycles have fully completed (each = N*M successful games). */
-  completedCycles: number;
-}
-
-/** Result of a successful claim — pass to `releaseCell` when the game ends. */
-export interface SeatingClaim {
-  rotation: number;
-  seedIndex: number;
-  /** Mapping configSlot (string) → actual game player ID for this game. */
-  seatingMap: Record<string, number>;
-  /** Seed set for this game; undefined if no fixed seeds were configured for this index. */
-  seeds?: RandomSeedsConfig;
-  /** ISO timestamp recorded on the cell at claim time; used to detect drift on release. */
-  claimedAt: string;
-}
-
-/** Constructor parameters for `SeatingStateManager`. */
-export interface SeatingStateManagerOptions {
-  configName: string;
-  /** The `Object.keys(llmPlayers).map(Number)` set — order-insensitive. */
-  configSlots: number[];
-  /** N — total game player slots (typically `max(configSlot) + 1`). */
-  totalSeats: number;
-  /** M — number of seed sets to cycle through (always equal to `seedSets.length`). */
-  seedCount: number;
-  /**
-   * The seed sets to associate with each seedIndex. `undefined` entries mean
-   * "let Civ choose" for that index. Length must equal `seedCount`.
-   */
-  seedSets: Array<RandomSeedsConfig | undefined>;
-}
 
 // ---------------------------------------------------------------------------
 // Module-private utilities
@@ -175,7 +121,7 @@ export class SeatingStateManager {
   private readonly configSlotsSorted: number[];
   private readonly totalSeats: number;
   private readonly seedCount: number;
-  private readonly seedSets: Array<RandomSeedsConfig | undefined>;
+  private readonly seedSets: SeatingStateManagerOptions['seedSets'];
   private readonly statePath: string;
   private readonly lockPath: string;
 

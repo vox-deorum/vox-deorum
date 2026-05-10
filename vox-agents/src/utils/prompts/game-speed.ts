@@ -2,7 +2,7 @@
  * Utility functions for handling game speed calculations
  */
 
-import type { StrategistParameters } from "../strategist/strategy-parameters.js";
+import type { StrategistParameters } from "../../strategist/strategy-parameters.js";
 
 /**
  * Game speed multipliers based on Civilization V standard settings

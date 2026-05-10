@@ -1,7 +1,7 @@
 import { homedir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
-import { getCiv5UserFilePath } from '../../src/utils/civ5-user-files.js';
+import { getCiv5UserFilePath } from '../../src/utils/game/civ5-user-files.js';
 
 describe.skipIf(process.platform !== 'win32')('Civ5 user file paths', () => {
   it('uses the OS Documents path when it can be resolved', async () => {

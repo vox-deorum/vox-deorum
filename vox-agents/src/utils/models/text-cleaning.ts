@@ -1,10 +1,10 @@
 /**
- * @module utils/text-cleaning
+ * @module utils/models/text-cleaning
  *
  * Text cleaning and formatting utilities for tool call/result text representations.
  */
 
-import { jsonToMarkdown } from './tools/json-to-markdown.js';
+import { jsonToMarkdown } from '../tools/json-to-markdown.js';
 
 /** Minimal interface for tool result parts accepted by formatting functions. */
 interface ToolResultLike {

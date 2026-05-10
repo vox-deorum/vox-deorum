@@ -13,7 +13,7 @@ import { Model } from "../types/index.js";
 import { VoxContext } from "./vox-context.js";
 import { getModelConfig } from "../utils/models/models.js";
 import { hasOnlyTerminalCalls } from "../utils/tools/terminal-tools.js";
-import { buildRescuePrompt } from "../utils/text-cleaning.js";
+import { buildRescuePrompt } from "../utils/models/text-cleaning.js";
 // @ts-ignore - jaison doesn't have type definitions
 import jaison from 'jaison';
 

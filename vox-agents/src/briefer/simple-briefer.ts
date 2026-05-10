@@ -14,7 +14,7 @@ import { getModelConfig } from "../utils/models/models.js";
 import { Model } from "../types/index.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
-import { getOffsetedTurn } from "../utils/game-speed.js";
+import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { SimpleStrategistBase } from "../strategist/agents/simple-strategist-base.js";
 import { briefingInstructionKeys } from "./briefing-utils.js";
 

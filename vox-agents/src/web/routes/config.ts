@@ -10,7 +10,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
 import { createLogger } from '../../utils/logger.js';
-import { defaultConfig, loadVoxConfig, computeConfigDiff, refreshConfig } from '../../utils/config.js';
+import { loadVoxConfig, refreshConfig } from '../../utils/config.js';
+import { defaultConfig } from '../../utils/config/defaults.js';
+import { computeConfigDiff } from '../../utils/config/diff.js';
 import type { ConfigResponse, ErrorResponse, VoxAgentsConfig } from '../../types/index.js';
 
 const logger = createLogger('config', 'webui');

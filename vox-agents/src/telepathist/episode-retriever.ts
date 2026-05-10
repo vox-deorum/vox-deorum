@@ -9,7 +9,7 @@
 import { VoxAgent } from '../infra/vox-agent.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
 import { EnvoyThread } from '../types/index.js';
-import { requestEpisodesFromTelemetry, formatEpisodeResults } from '../utils/episode-utils.js';
+import { requestEpisodesFromTelemetry, formatEpisodeResults } from '../utils/prompts/episode-utils.js';
 import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('EpisodeRetriever');

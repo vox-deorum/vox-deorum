@@ -11,7 +11,7 @@ import path from 'path';
 import multer from 'multer';
 import { createLogger } from '../../utils/logger.js';
 import { sqliteExporter } from '../../instrumentation.js';
-import { parseDatabaseIdentifier, parseContextIdentifier } from '../../utils/identifier-parser.js';
+import { parseDatabaseIdentifier, parseContextIdentifier } from '../../utils/telemetry/identifier-parser.js';
 import type {
   TelemetryDatabasesResponse,
   TelemetryMetadata,

@@ -19,7 +19,7 @@ import {
   resolveKnowledgePath,
   getWinner,
   getPlayerStrategistMetadata,
-} from '../../utils/knowledge-db.js';
+} from '../../utils/telemetry/knowledge-db.js';
 import { agentRegistry } from '../../infra/agent-registry.js';
 import type { Strategist } from '../../strategist/strategist.js';
 import { NarratorWorkspace } from '../workspace.js';

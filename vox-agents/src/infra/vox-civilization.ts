@@ -17,14 +17,14 @@ import {
   readCivConfigSeedsContent,
   updateCivConfigSeedsContent,
   updateCivUserSettingsSkipAnimationsContent
-} from '../utils/civ5-ini.js';
-import { getCiv5UserFilePath } from '../utils/civ5-user-files.js';
-import { hasRandomSeeds } from '../utils/random-seeds.js';
+} from '../utils/game/civ5-ini.js';
+import { getCiv5UserFilePath } from '../utils/game/civ5-user-files.js';
+import { hasRandomSeeds } from '../utils/game/random-seeds.js';
 import {
   findProcessByImageName,
   isProcessRunning as isWindowsProcessRunning,
   killProcess
-} from '../utils/windows-process.js';
+} from '../utils/game/windows-process.js';
 
 const logger = createLogger('VoxCivilization');
 type ExitCallback = (code: number | null) => void;

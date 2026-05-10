@@ -1,5 +1,5 @@
 /**
- * @module utils/knowledge-db
+ * @module utils/telemetry/knowledge-db
  *
  * Shared helpers for opening, discovering, and querying Civilization V
  * "knowledge" SQLite databases produced by the game/MCP pipeline.
@@ -15,8 +15,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { Kysely, SqliteDialect, ParseJSONResultsPlugin } from 'kysely';
-import { createLogger } from './logger.js';
-import type { KnowledgeDatabase } from '../../../mcp-server/dist/knowledge/schema/index.js';
+import { createLogger } from '../logger.js';
+import type { KnowledgeDatabase } from '../../../../mcp-server/dist/knowledge/schema/index.js';
 
 const logger = createLogger('KnowledgeDb');
 

@@ -1,5 +1,5 @@
 /**
- * @module utils/identifier-parser
+ * @module utils/telemetry/identifier-parser
  *
  * Utility functions for parsing game and player identifiers from various formats.
  * Handles context IDs, database filenames, and telemetry session IDs.

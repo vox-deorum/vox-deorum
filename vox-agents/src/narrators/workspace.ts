@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Kysely } from 'kysely';
 import type { KnowledgeDatabase } from '../../../mcp-server/dist/knowledge/schema/index.js';
-import { openReadonlyGameDb } from '../utils/knowledge-db.js';
+import { openReadonlyGameDb } from '../utils/telemetry/knowledge-db.js';
 import { createLogger } from '../utils/logger.js';
 import type { NarratorContext, Episodes } from './types.js';
 

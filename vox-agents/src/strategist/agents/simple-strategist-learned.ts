@@ -13,7 +13,7 @@ import { SimpleStrategistStaffed } from "./simple-strategist-staffed.js";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { requestEpisodes, formatEpisodeResults } from "../../utils/episode-utils.js";
+import { requestEpisodes, formatEpisodeResults } from "../../utils/prompts/episode-utils.js";
 import { createSimpleTool } from "../../utils/tools/simple-tools.js";
 
 /** Working memory key for storing a pending episode request between turns */

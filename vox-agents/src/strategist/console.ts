@@ -18,8 +18,8 @@ import * as readline from 'node:readline';
 import * as path from 'node:path';
 import { startWebServer } from "../web/server.js";
 import { processManager } from "../infra/process-manager.js";
-import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds, validateRandomSeedsList } from "../utils/random-seeds.js";
-import { SeatingStateManager } from "../utils/seating-state.js";
+import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds, validateRandomSeedsList } from "../utils/game/random-seeds.js";
+import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { RandomSeedsConfig } from "../types/config.js";
 
 const logger = createLogger('Strategists');

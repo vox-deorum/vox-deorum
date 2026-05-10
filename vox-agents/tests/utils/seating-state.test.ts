@@ -16,11 +16,8 @@ vi.mock('../../src/utils/config.js', async (importOriginal) => {
 });
 
 // Imports come AFTER vi.mock so the mocked module is used by SeatingStateManager.
-import {
-  SeatingStateManager,
-  type SeatingClaim,
-  type SeatingState
-} from '../../src/utils/seating-state.js';
+import { SeatingStateManager } from '../../src/utils/game/seating/state.js';
+import type { SeatingClaim, SeatingState } from '../../src/utils/game/seating/types.js';
 
 let testCounter = 0;
 function uniqueConfigName(label: string): string {

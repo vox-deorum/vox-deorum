@@ -12,7 +12,7 @@ import { VoxContext } from "../../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys } from "../../briefer/briefing-utils.js";
-import { getStrategicPlayersReport } from "../../utils/report-filters.js";
+import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
 
 /**
  * A staffed strategist agent that uses specialized briefers for comprehensive analysis.

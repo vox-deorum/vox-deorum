@@ -18,8 +18,9 @@ import { obsManager } from "../infra/obs-manager.js";
 import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
 import { SessionStatus } from "../types/api.js";
-import { SeatingStateManager, type SeatingClaim } from "../utils/seating-state.js";
-import { validateRandomSeedsList } from "../utils/random-seeds.js";
+import { SeatingStateManager } from "../utils/game/seating/state.js";
+import type { SeatingClaim } from "../utils/game/seating/types.js";
+import { validateRandomSeedsList } from "../utils/game/random-seeds.js";
 
 const logger = createLogger('StrategistSession');
 

@@ -1,5 +1,5 @@
 /**
- * @module utils/token-counter
+ * @module utils/models/token-counter
  *
  * Local token counting utility using tiktoken for accurate token estimation.
  * Provides consistent token counting across different model types without relying on API responses.
@@ -7,7 +7,7 @@
 
 import { get_encoding } from 'tiktoken';
 import { ModelMessage } from 'ai';
-import { createLogger } from './logger.js';
+import { createLogger } from '../logger.js';
 
 const logger = createLogger('TokenCounter');
 

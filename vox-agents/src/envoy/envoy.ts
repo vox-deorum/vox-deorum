@@ -9,7 +9,7 @@ import { ModelMessage, StepResult, Tool } from "ai";
 import { VoxAgent, AgentParameters } from "../infra/vox-agent.js";
 import { EnvoyThread, MessageWithMetadata, SpecialMessageConfig } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { formatToolResultOutput, stripTurnMarker } from "../utils/text-cleaning.js";
+import { formatToolResultOutput, stripTurnMarker } from "../utils/models/text-cleaning.js";
 
 /**
  * Generic base envoy agent that can chat with the user.

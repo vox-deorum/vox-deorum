@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createLogger } from '../../utils/logger.js';
-import { GAME_DB_REGEX, openReadonlyGameDb } from '../../utils/knowledge-db.js';
+import { GAME_DB_REGEX, openReadonlyGameDb } from '../../utils/telemetry/knowledge-db.js';
 import type { ArchiveEntry, PlayerEntry } from '../types.js';
 
 const logger = createLogger('ArchivistScanner');

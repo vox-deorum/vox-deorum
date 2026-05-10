@@ -4,7 +4,7 @@ import {
   isProcessRunning,
   killProcess,
   type CommandRunner
-} from '../../src/utils/windows-process.js';
+} from '../../src/utils/game/windows-process.js';
 
 describe.skipIf(process.platform !== 'win32')('Windows process utilities', () => {
   it('parses a matching tasklist CSV process ID', async () => {
