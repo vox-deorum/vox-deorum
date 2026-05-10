@@ -5,6 +5,7 @@
 import { expect } from 'vitest';
 import request from 'supertest';
 import { Application } from 'express';
+import { setTimeout } from 'node:timers/promises';
 import bridgeService from '../../src/service';
 import { TEST_TIMEOUTS } from './constants';
 import { pauseManager } from '../../src/services/pause-manager.js';
@@ -53,7 +54,7 @@ export function waitForEvent<T = any>(
   filter?: (data: any) => boolean
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
+    const timer = globalThis.setTimeout(() => {
       emitter.off(eventName, handler);
       reject(new Error(`Timeout waiting for event: ${eventName}`));
     }, timeout);
@@ -81,7 +82,7 @@ export function logSuccess(message: string): void {
  * Delay helper for async operations
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return setTimeout(ms);
 }
 
 /**

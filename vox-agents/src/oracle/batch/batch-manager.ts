@@ -21,6 +21,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../utils/logger.js';
 import { exponentialRetry } from '../../utils/retry.js';
 import { BatchDb } from './batch-db.js';
@@ -445,7 +446,7 @@ class BatchManager {
 
     while (true) {
       // Wait before polling (delay-first so the batch has time to process)
-      await new Promise(resolve => setTimeout(resolve, this.pollInterval));
+      await setTimeout(this.pollInterval);
 
       try {
         const statusResult = await provider.getBatchStatus(batchId);

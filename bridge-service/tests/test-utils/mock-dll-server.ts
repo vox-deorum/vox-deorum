@@ -7,6 +7,7 @@
 
 import ipc from 'node-ipc';
 import { EventEmitter } from 'events';
+import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../src/utils/logger.js';
 import {
   IPCMessage,
@@ -171,7 +172,7 @@ export class MockDLLServer extends EventEmitter {
 
       // Simulate processing delay
       if (this.config.simulateDelay && this.config.responseDelay) {
-        await new Promise(resolve => setTimeout(resolve, this.config.responseDelay));
+        await setTimeout(this.config.responseDelay);
       }
 
       // Route based on message type
@@ -533,7 +534,7 @@ export class MockDLLServer extends EventEmitter {
     for (const chunk of chunks) {
       this.sendRawData(chunk);
       if (delayMs > 0) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await setTimeout(delayMs);
       }
     }
   }

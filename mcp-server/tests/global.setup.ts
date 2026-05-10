@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from 'child_process';
+import { setTimeout } from 'node:timers/promises';
 import path from 'path';
 
 let bridgeServiceProcess: ChildProcess | null = null;
@@ -32,7 +33,7 @@ async function waitForBridgeService(): Promise<boolean> {
     if (await checkBridgeConnection()) {
       return true;
     }
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await setTimeout(500);
   }
 
   return false;
@@ -127,7 +128,7 @@ async function stopBridgeService(): Promise<void> {
       bridgeServiceProcess.kill('SIGTERM');
 
       // Give it 2 seconds to gracefully shut down
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await setTimeout(2000);
 
       // Force kill if still running
       if (!bridgeServiceProcess.killed) {

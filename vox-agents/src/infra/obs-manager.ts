@@ -18,6 +18,7 @@
 
 import OBSWebSocket from 'obs-websocket-js';
 import { spawn, execSync } from 'child_process';
+import { setTimeout } from 'node:timers/promises';
 import fs from 'fs';
 import path from 'path';
 import { createLogger } from '../utils/logger.js';
@@ -43,7 +44,7 @@ class ObsManager {
   private obsConfig?: ObsConfig;
   private connected = false;
   private productionActive = false;
-  private healthTimer?: ReturnType<typeof setTimeout>;
+  private healthTimer?: ReturnType<typeof globalThis.setTimeout>;
   private recovering = false;
   private backoffMs = HEALTH_POLL_INTERVAL;
   private processManagerRegistered = false;
@@ -506,7 +507,7 @@ class ObsManager {
   /** Schedule the next health check after the current backoff interval. */
   private scheduleHealthCheck(): void {
     if (this.healthTimer) return; // already scheduled
-    this.healthTimer = setTimeout(async () => {
+    this.healthTimer = globalThis.setTimeout(async () => {
       this.healthTimer = undefined;
       await this.healthCheck();
       this.scheduleHealthCheck();
@@ -659,7 +660,7 @@ class ObsManager {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return setTimeout(ms);
   }
 }
 

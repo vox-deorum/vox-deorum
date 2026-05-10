@@ -7,6 +7,7 @@ import { beforeAll, afterAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { setTimeout } from 'node:timers/promises';
 import { startHttpServer } from '../src/http.js';
 import { MCPServer } from '../src/server.js';
 import config from '../src/utils/config.js';
@@ -46,14 +47,14 @@ beforeAll(async () => {
   }
   server = MCPServer.getInstance();
   // Delay 5s to allow loading database, etc.
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await setTimeout(5000);
 }, 15000); // 15 second timeout for service startup
 
 // Global test teardown - stop bridge service
 afterAll(async () => {
   await closeTransport();
   // Delay 1s to allow cleanup
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await setTimeout(1000);
 });
 
 // Export utilities for tests

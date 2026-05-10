@@ -3,6 +3,7 @@
  */
 
 import express from 'express';
+import { setTimeout } from 'node:timers/promises';
 
 export class MockExternalService {
   private app: express.Application;
@@ -23,7 +24,7 @@ export class MockExternalService {
       this.lastRequest = req.body;
       
       if (this.responseDelay > 0) {
-        await new Promise(resolve => setTimeout(resolve, this.responseDelay));
+        await setTimeout(this.responseDelay);
       }
       
       if (this.shouldFail) {

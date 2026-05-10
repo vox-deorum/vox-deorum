@@ -6,6 +6,7 @@
  */
 
 import { Logger } from "winston";
+import { setTimeout } from 'node:timers/promises';
 
 /** Pattern matching context-length-exceeded errors from LLM providers. */
 const contextLengthPattern = /input.*tokens.*is longer than.*context.length|token limit|context length|maximum input|maximum context|ContextWindowExceeded|max_tokens/i;
@@ -68,7 +69,7 @@ export async function exponentialRetry<T>(
         }
         if (completed) isTimedOut = true;
         if (!isTimedOut && !hasCompleted) {
-          timeoutHandle = setTimeout(() => {
+          timeoutHandle = globalThis.setTimeout(() => {
             if (isTimedOut || hasCompleted) return;
             isTimedOut = true;
             // Build the message
@@ -131,7 +132,7 @@ export async function exponentialRetry<T>(
 
       // Log retry attempt
       logger.warn(`[${source}] Retry attempt ${attempt + 1}/${maxRetries} after error, delaying ${Math.round(totalDelay)}ms`, lastError);
-      await new Promise(resolve => setTimeout(resolve, totalDelay));
+      await setTimeout(totalDelay);
 
       // Increase delay for next attempt
       delay *= backoffFactor;

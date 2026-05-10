@@ -8,6 +8,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import OBSWebSocket from 'obs-websocket-js';
+import { setTimeout } from 'node:timers/promises';
 import config from '../../src/utils/config.js';
 
 // Read OBS connection settings from config (which loads dotenv)
@@ -37,7 +38,7 @@ const PAUSE_SCENE = 'Vox Deorum - Paused';
 const TEST_GAME_ID = 'test-game-001';
 
 /** Short delay to let OBS propagate state changes after commands. */
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => setTimeout(ms);
 
 /** Parse a JSONL file into an array of objects. */
 function parseJsonl(content: string): any[] {

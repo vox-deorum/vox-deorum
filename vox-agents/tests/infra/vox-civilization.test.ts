@@ -7,6 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { VoxCivilization } from '../../src/infra/vox-civilization.js';
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
+import { setTimeout } from 'node:timers/promises';
 
 const execAsync = promisify(exec);
 
@@ -50,7 +51,7 @@ async function killAllCivilizationProcesses(): Promise<void> {
     console.log('No existing CivilizationV.exe process found (or failed to kill)');
   }
   // Wait a bit for process to fully terminate
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  await setTimeout(3000);
 }
 
 /**
@@ -111,7 +112,7 @@ describe('VoxCivilization Integration Test', () => {
       }
 
       // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await setTimeout(3000);
     } else {
       console.log('No existing process detected by VoxCivilization');
     }
@@ -166,7 +167,7 @@ describe('VoxCivilization Integration Test', () => {
 
     // Monitor for the specified duration
     while (Date.now() - startTime < MONITOR_DURATION_MS) {
-      await new Promise(resolve => setTimeout(resolve, CHECK_INTERVAL_MS));
+      await setTimeout(CHECK_INTERVAL_MS);
       checkCount++;
 
       const elapsed = Math.round((Date.now() - startTime) / 1000);

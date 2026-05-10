@@ -5,6 +5,7 @@
 
 import { Kysely, SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
+import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../utils/logger.js';
 import path from 'path';
 import fs from 'fs/promises';
@@ -81,7 +82,7 @@ export class DatabaseManager {
         logger.info('Connected to localization database');
 
         // Sanity check: Wait 10s for VD to load, then for GreatPersons table to exist
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await setTimeout(10000);
         await this.waitForTable('GreatPersons');
 
         // Wait for policy descriptions to be localized before reading mappings
@@ -94,7 +95,7 @@ export class DatabaseManager {
         return;
       } catch (error) {
         logger.error('Failed to load database, retrying in 5 seconds...', error);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await setTimeout(5000);
       }
     }
   }
@@ -316,7 +317,7 @@ export class DatabaseManager {
       } catch (error) {
         hadToWait = true;
         logger.warn(`Table ${tableName} not found yet, waiting for the game and mod to load...`);
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await setTimeout(10000);
       }
     }
   }
@@ -363,7 +364,7 @@ export class DatabaseManager {
 
       hadToWait = true;
       logger.warn(`${unresolved.length} policy descriptions not yet in localization DB, waiting...`);
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await setTimeout(10000);
     }
   }
 

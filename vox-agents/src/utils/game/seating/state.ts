@@ -43,6 +43,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../logger.js';
 import { getConfigsDir } from '../../config.js';
 import type {
@@ -76,10 +77,6 @@ const LOCK_MAX_ATTEMPTS = 20;
 /** Identifier embedded in `claimedBy` so we can distinguish our own crashes from others'. */
 function runnerId(): string {
   return `${os.hostname()}#${process.pid}`;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /** In-place-safe Fisher-Yates shuffle returning a new array. */
@@ -315,7 +312,7 @@ export class SeatingStateManager {
             `Failed to acquire seating-state lock after ${attempt} attempts: ${this.lockPath}`
           );
         }
-        await delay(delayMs);
+        await setTimeout(delayMs);
         delayMs = Math.min(delayMs * 2, LOCK_MAX_DELAY_MS);
       }
     }
