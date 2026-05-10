@@ -49,6 +49,7 @@ import { getConfigsDir } from '../../config.js';
 import type {
   CellEntry,
   SeatingClaim,
+  SeatingCycleCell,
   SeatingState,
   SeatingStateManagerOptions,
 } from './types.js';
@@ -201,20 +202,24 @@ export class SeatingStateManager {
         throw new Error(`No claimable cell in seating state "${this.configName}"`);
       }
 
-      const { r, s } = pick;
+      const { rotation, seedIndex } = pick;
       const claimedAt = new Date(now).toISOString();
-      this.setCell(state, r, s, { status: 'in-progress', claimedAt, claimedBy: ourId });
+      this.setCell(state, rotation, seedIndex, {
+        status: 'in-progress',
+        claimedAt,
+        claimedBy: ourId
+      });
       this.writeStateUnlocked(state);
 
-      const seatingMap = this.buildSeatingMap(state.basePerm, r);
-      const seeds = this.seedSets[s];
+      const seatingMap = this.buildSeatingMap(state.basePerm, rotation);
+      const seeds = this.seedSets[seedIndex];
 
       logger.info(
-        `Claimed seating cell r=${r} s=${s} for "${this.configName}" ` +
+        `Claimed seating cell rotation=${rotation} seedIndex=${seedIndex} for "${this.configName}" ` +
         `(seatingMap=${JSON.stringify(seatingMap)}, completedCycles=${state.completedCycles})`
       );
 
-      return { rotation: r, seedIndex: s, seatingMap, seeds, claimedAt };
+      return { rotation, seedIndex, seatingMap, seeds, claimedAt };
     });
   }
 
@@ -239,7 +244,7 @@ export class SeatingStateManager {
       const cell = this.getCell(existing, claim.rotation, claim.seedIndex);
       if (cell.status !== 'in-progress' || cell.claimedAt !== claim.claimedAt) {
         logger.warn(
-          `Skipping release for "${this.configName}" cell r=${claim.rotation} s=${claim.seedIndex}: ` +
+          `Skipping release for "${this.configName}" cell rotation=${claim.rotation} seedIndex=${claim.seedIndex}: ` +
           `state has status=${cell.status} claimedAt=${cell.claimedAt} ` +
           `(expected in-progress @ ${claim.claimedAt})`
         );
@@ -250,7 +255,7 @@ export class SeatingStateManager {
       });
       this.writeStateUnlocked(existing);
       logger.info(
-        `Released cell r=${claim.rotation} s=${claim.seedIndex} for "${this.configName}" ` +
+        `Released cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}" ` +
         `as ${success ? 'completed' : 'pending'}`
       );
     });
@@ -420,10 +425,10 @@ export class SeatingStateManager {
   /** Build a fresh cycle: random `basePerm`, shuffled `consumeOrder`, no cells set. */
   private buildFreshState(completedCycles: number): SeatingState {
     const basePerm = fisherYates(Array.from({ length: this.totalSeats }, (_, i) => i));
-    const allCells: Array<{ r: number; s: number }> = [];
-    for (let r = 0; r < this.totalSeats; r++) {
-      for (let s = 0; s < this.seedCount; s++) {
-        allCells.push({ r, s });
+    const allCells: SeatingCycleCell[] = [];
+    for (let rotation = 0; rotation < this.totalSeats; rotation++) {
+      for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
+        allCells.push({ rotation, seedIndex });
       }
     }
     return {
@@ -440,10 +445,10 @@ export class SeatingStateManager {
   /** Regenerate `basePerm` and `consumeOrder` in place; bump `completedCycles`. */
   private resetCycleInPlace(state: SeatingState): void {
     state.basePerm = fisherYates(Array.from({ length: this.totalSeats }, (_, i) => i));
-    const allCells: Array<{ r: number; s: number }> = [];
-    for (let r = 0; r < this.totalSeats; r++) {
-      for (let s = 0; s < this.seedCount; s++) {
-        allCells.push({ r, s });
+    const allCells: SeatingCycleCell[] = [];
+    for (let rotation = 0; rotation < this.totalSeats; rotation++) {
+      for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
+        allCells.push({ rotation, seedIndex });
       }
     }
     state.consumeOrder = fisherYates(allCells);
@@ -452,15 +457,20 @@ export class SeatingStateManager {
   }
 
   /** Read a cell, treating missing inner/outer keys as `pending`. */
-  private getCell(state: SeatingState, r: number, s: number): CellEntry {
-    return state.cells[String(r)]?.[String(s)] ?? { status: 'pending' };
+  private getCell(state: SeatingState, rotation: number, seedIndex: number): CellEntry {
+    return state.cells[String(rotation)]?.[String(seedIndex)] ?? { status: 'pending' };
   }
 
   /** Write a cell, lazily creating the inner record. */
-  private setCell(state: SeatingState, r: number, s: number, entry: CellEntry): void {
-    const rk = String(r);
-    if (!state.cells[rk]) state.cells[rk] = {};
-    state.cells[rk][String(s)] = entry;
+  private setCell(
+    state: SeatingState,
+    rotation: number,
+    seedIndex: number,
+    entry: CellEntry
+  ): void {
+    const rotationKey = String(rotation);
+    if (!state.cells[rotationKey]) state.cells[rotationKey] = {};
+    state.cells[rotationKey][String(seedIndex)] = entry;
   }
 
   private isCellPending(entry: CellEntry): boolean {
@@ -476,11 +486,11 @@ export class SeatingStateManager {
     return now - Date.parse(entry.claimedAt) > STALE_THRESHOLD_MS;
   }
 
-  /** True iff every (r, s) cell is `completed`. */
+  /** True iff every (rotation, seedIndex) cell is `completed`. */
   private allCompleted(state: SeatingState): boolean {
-    for (let r = 0; r < this.totalSeats; r++) {
-      for (let s = 0; s < this.seedCount; s++) {
-        if (this.getCell(state, r, s).status !== 'completed') return false;
+    for (let rotation = 0; rotation < this.totalSeats; rotation++) {
+      for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
+        if (this.getCell(state, rotation, seedIndex).status !== 'completed') return false;
       }
     }
     return true;
@@ -495,18 +505,24 @@ export class SeatingStateManager {
     state: SeatingState,
     ourId: string,
     now: number
-  ): { r: number; s: number } | null {
+  ): SeatingCycleCell | null {
     // Priority 1: own in-progress (own crash recovery).
-    for (const { r, s } of state.consumeOrder) {
-      if (this.isCellOwnInProgress(this.getCell(state, r, s), ourId)) return { r, s };
+    for (const { rotation, seedIndex } of state.consumeOrder) {
+      if (this.isCellOwnInProgress(this.getCell(state, rotation, seedIndex), ourId)) {
+        return { rotation, seedIndex };
+      }
     }
     // Priority 2: stale in-progress from someone else.
-    for (const { r, s } of state.consumeOrder) {
-      if (this.isCellStaleInProgress(this.getCell(state, r, s), now)) return { r, s };
+    for (const { rotation, seedIndex } of state.consumeOrder) {
+      if (this.isCellStaleInProgress(this.getCell(state, rotation, seedIndex), now)) {
+        return { rotation, seedIndex };
+      }
     }
     // Priority 3: next pending cell in shuffled consumeOrder.
-    for (const { r, s } of state.consumeOrder) {
-      if (this.isCellPending(this.getCell(state, r, s))) return { r, s };
+    for (const { rotation, seedIndex } of state.consumeOrder) {
+      if (this.isCellPending(this.getCell(state, rotation, seedIndex))) {
+        return { rotation, seedIndex };
+      }
     }
     return null;
   }

@@ -18,17 +18,25 @@ export interface CellEntry {
   claimedBy?: string;
 }
 
+/** Coordinate of one scheduled seating rotation and seed set pairing. */
+export interface SeatingCycleCell {
+  rotation: number;
+  seedIndex: number;
+}
+
 /** On-disk schema for a config's seating cycle state. */
 export interface SeatingState {
+  /** Total number of seats. */
   totalSeats: number;
   /** Sorted ascending. The configured `llmPlayers` keys. */
   configSlots: number[];
+  /** Total number of seeds. */
   seedCount: number;
   /** Random permutation of `[0..totalSeats-1]`. */
   basePerm: number[];
-  /** Shuffled order of all `(r, s)` cells; consumed front-to-back. */
-  consumeOrder: Array<{ r: number; s: number }>;
-  /** Two-level map: `cells[String(r)][String(s)] = entry`. Missing keys = pending. */
+  /** Shuffled order of all cycle cells; consumed front-to-back. */
+  consumeOrder: SeatingCycleCell[];
+  /** Two-level map: `cells[String(rotation)][String(seedIndex)] = entry`. Missing keys = pending. */
   cells: Record<string, Record<string, CellEntry>>;
   /** How many cycles have fully completed (each = N*M successful games). */
   completedCycles: number;

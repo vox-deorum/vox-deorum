@@ -65,6 +65,10 @@ describe('SeatingStateManager — single seed', () => {
     expect(state.basePerm.length).toBe(8);
     expect(new Set(state.basePerm)).toEqual(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
     expect(state.consumeOrder.length).toBe(8);
+    expect(state.consumeOrder[0]).toHaveProperty('rotation');
+    expect(state.consumeOrder[0]).toHaveProperty('seedIndex');
+    expect(Object.prototype.hasOwnProperty.call(state.consumeOrder[0], 'r')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(state.consumeOrder[0], 's')).toBe(false);
   });
 
   it('covers all 8 seats exactly once across one full cycle', async () => {
