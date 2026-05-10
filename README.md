@@ -2,7 +2,7 @@
 
 Play Civilization V with AI-enhanced opponents powered by GPT, Claude, and other large language models. Built on [Community Patch + Vox Populi](https://github.com/LoneGazebo/Community-Patch-DLL).
 
-**Version 0.9.0 - Beta**
+**Version 0.10.0 - Beta**
 
 ![Replay](https://github.com/CIVITAS-John/vox-deorum-replay/blob/gh-pages/examples/replay-demo.gif)
 
