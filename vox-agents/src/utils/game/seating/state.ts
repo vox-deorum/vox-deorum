@@ -38,69 +38,45 @@
  * pointed at the same shared `CONFIGS_DIR` cooperate via an exclusive-create
  * lock file (`*.seating.json.lock`). All read-modify-write is atomic under the
  * lock. Stale-lock recovery and stale-claim reclaim handle dead processes.
+ *
+ * # Code layout
+ *
+ * This file is intentionally thin — it's the public manager class. The actual
+ * mechanics live in three sibling modules:
+ *   - [`./cycle.js`](cycle.ts) — pure cycle math (shuffles, fresh-state, reset).
+ *   - [`./cells.js`](cells.ts) — pure cell ops (pickCell, get/setCell, status checks).
+ *   - [`./io.js`](io.ts)       — file lock + atomic state read/write + load/init.
  */
 
-import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../logger.js';
 import { getConfigsDir } from '../../config.js';
+import { resetCycleInPlace } from './cycle.js';
+import {
+  allCompleted,
+  buildSeatingMap,
+  getCell,
+  pickCell,
+  setCell,
+} from './cells.js';
+import {
+  loadOrInit,
+  readStateUnlocked,
+  withLock,
+  writeStateUnlocked,
+} from './io.js';
 import type {
-  CellEntry,
   SeatingClaim,
-  SeatingCycleCell,
-  SeatingState,
   SeatingStateManagerOptions,
 } from './types.js';
 
 const logger = createLogger('SeatingState');
 
-// ---------------------------------------------------------------------------
-// Tunables (module-private)
-// ---------------------------------------------------------------------------
-
-/** How long another runner's in-progress claim can sit before we steal it. */
-const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
-
-/** How long a `.lock` file can exist before we treat it as orphaned. */
-const LOCK_STALE_THRESHOLD_MS = 60 * 1000; // 60 seconds — well above any normal RMW
-
-/** Lock acquisition retry tuning (exponential backoff capped at LOCK_MAX_DELAY_MS). */
-const LOCK_INITIAL_DELAY_MS = 50;
-const LOCK_MAX_DELAY_MS = 1000;
-const LOCK_MAX_ATTEMPTS = 20;
-
-// ---------------------------------------------------------------------------
-// Module-private utilities
-// ---------------------------------------------------------------------------
-
 /** Identifier embedded in `claimedBy` so we can distinguish our own crashes from others'. */
 function runnerId(): string {
   return `${os.hostname()}#${process.pid}`;
 }
-
-/** In-place-safe Fisher-Yates shuffle returning a new array. */
-function fisherYates<T>(arr: T[]): T[] {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
-function arraysEqual(a: number[], b: number[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
-// ---------------------------------------------------------------------------
-// SeatingStateManager
-// ---------------------------------------------------------------------------
 
 /**
  * Manages the persistent seating × seed cycle for one strategist config.
@@ -160,17 +136,13 @@ export class SeatingStateManager {
     this.lockPath = `${this.statePath}.lock`;
   }
 
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
-
   /**
    * Atomically pick the next cell to run and mark it `in-progress`.
    *
    * Selection priority (under file lock):
    *   1. Own in-progress cell (claimedBy === ourId) — i.e. we crashed before
    *      releasing; resume on the same cell.
-   *   2. Stale in-progress cell (older than {@link STALE_THRESHOLD_MS}) — assumed
+   *   2. Stale in-progress cell (older than the stale threshold) — assumed
    *      abandoned by some other runner; we steal it.
    *   3. Next pending cell in the shuffled `consumeOrder`.
    *   4. If every cell is `completed`, reset the cycle (regenerate `basePerm`
@@ -181,20 +153,26 @@ export class SeatingStateManager {
    *   start the game (resolved seating map, seed set, claim metadata).
    */
   async claimNextCell(): Promise<SeatingClaim> {
-    return this.withLock(() => {
-      const state = this.loadOrInit();
-      const ourId = runnerId();
+    const ourId = runnerId();
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const state = loadOrInit({
+        statePath: this.statePath,
+        configName: this.configName,
+        totalSeats: this.totalSeats,
+        seedCount: this.seedCount,
+        configSlotsSorted: this.configSlotsSorted,
+      });
       const now = Date.now();
 
-      let pick = this.pickCell(state, ourId, now);
+      let pick = pickCell(state, ourId, now);
       if (!pick) {
         // No claimable cell means the cycle is fully completed — start a new one.
-        if (this.allCompleted(state)) {
-          this.resetCycleInPlace(state);
+        if (allCompleted(state)) {
+          resetCycleInPlace(state);
           logger.warn(
             `Seating cycle "${this.configName}" completed (cycle #${state.completedCycles}); regenerated for next cycle`
           );
-          pick = this.pickCell(state, ourId, now);
+          pick = pickCell(state, ourId, now);
         }
       }
       if (!pick) {
@@ -204,14 +182,14 @@ export class SeatingStateManager {
 
       const { rotation, seedIndex } = pick;
       const claimedAt = new Date(now).toISOString();
-      this.setCell(state, rotation, seedIndex, {
+      setCell(state, rotation, seedIndex, {
         status: 'in-progress',
         claimedAt,
         claimedBy: ourId
       });
-      this.writeStateUnlocked(state);
+      writeStateUnlocked(this.statePath, state);
 
-      const seatingMap = this.buildSeatingMap(state.basePerm, rotation);
+      const seatingMap = buildSeatingMap(state.basePerm, rotation, this.configSlotsSorted);
       const seeds = this.seedSets[seedIndex];
 
       logger.info(
@@ -235,13 +213,14 @@ export class SeatingStateManager {
    * release (logs a warning and returns).
    */
   async releaseCell(claim: SeatingClaim, success: boolean): Promise<void> {
-    return this.withLock(() => {
-      const existing = this.readStateUnlocked();
+    const ourId = runnerId();
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const existing = readStateUnlocked(this.statePath);
       if (!existing) {
         logger.warn(`State file for "${this.configName}" missing on release; ignoring`);
         return;
       }
-      const cell = this.getCell(existing, claim.rotation, claim.seedIndex);
+      const cell = getCell(existing, claim.rotation, claim.seedIndex);
       if (cell.status !== 'in-progress' || cell.claimedAt !== claim.claimedAt) {
         logger.warn(
           `Skipping release for "${this.configName}" cell rotation=${claim.rotation} seedIndex=${claim.seedIndex}: ` +
@@ -250,10 +229,10 @@ export class SeatingStateManager {
         );
         return;
       }
-      this.setCell(existing, claim.rotation, claim.seedIndex, {
+      setCell(existing, claim.rotation, claim.seedIndex, {
         status: success ? 'completed' : 'pending'
       });
-      this.writeStateUnlocked(existing);
+      writeStateUnlocked(this.statePath, existing);
       logger.info(
         `Released cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}" ` +
         `as ${success ? 'completed' : 'pending'}`
@@ -267,280 +246,16 @@ export class SeatingStateManager {
    * through the lock to avoid observing a torn state mid-write.
    */
   async isCycleComplete(): Promise<boolean> {
-    return this.withLock(() => {
-      const state = this.loadOrInit();
-      return this.allCompleted(state);
+    const ourId = runnerId();
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const state = loadOrInit({
+        statePath: this.statePath,
+        configName: this.configName,
+        totalSeats: this.totalSeats,
+        seedCount: this.seedCount,
+        configSlotsSorted: this.configSlotsSorted,
+      });
+      return allCompleted(state);
     });
-  }
-
-  // -------------------------------------------------------------------------
-  // Lock helpers
-  // -------------------------------------------------------------------------
-
-  /**
-   * Acquire the per-config file lock via exclusive create. If the lock file
-   * exists but is older than {@link LOCK_STALE_THRESHOLD_MS}, assume the
-   * previous holder died and steal it. Otherwise retry with exponential
-   * backoff up to {@link LOCK_MAX_ATTEMPTS}.
-   */
-  private async acquireLock(): Promise<void> {
-    let attempt = 0;
-    let delayMs = LOCK_INITIAL_DELAY_MS;
-
-    while (true) {
-      try {
-        const fd = fs.openSync(this.lockPath, 'wx');
-        fs.writeSync(fd, runnerId());
-        fs.closeSync(fd);
-        return;
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST') throw err;
-
-        // Stale-lock recovery: if the existing lock is older than threshold,
-        // its holder probably died without cleanup — remove and retry.
-        try {
-          const stat = fs.statSync(this.lockPath);
-          if (Date.now() - stat.mtimeMs > LOCK_STALE_THRESHOLD_MS) {
-            logger.warn(`Removing stale lock file ${this.lockPath}`);
-            fs.unlinkSync(this.lockPath);
-            continue;
-          }
-        } catch {
-          // Lock disappeared between EEXIST and stat — retry the open immediately.
-          continue;
-        }
-
-        attempt++;
-        if (attempt >= LOCK_MAX_ATTEMPTS) {
-          throw new Error(
-            `Failed to acquire seating-state lock after ${attempt} attempts: ${this.lockPath}`
-          );
-        }
-        await setTimeout(delayMs);
-        delayMs = Math.min(delayMs * 2, LOCK_MAX_DELAY_MS);
-      }
-    }
-  }
-
-  /** Best-effort lock release; tolerates the file already being gone. */
-  private releaseLock(): void {
-    try {
-      fs.unlinkSync(this.lockPath);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT') {
-        logger.warn(`Failed to release lock for ${this.configName}: ${(err as Error).message}`);
-      }
-    }
-  }
-
-  /** Run `fn` while holding the file lock. The lock is always released. */
-  private async withLock<T>(fn: () => T | Promise<T>): Promise<T> {
-    await this.acquireLock();
-    try {
-      return await fn();
-    } finally {
-      this.releaseLock();
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // State I/O (must be called under the file lock)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Read state from disk, or return null on missing/corrupt files. A corrupt
-   * file is logged and treated as missing so we can recover gracefully.
-   */
-  private readStateUnlocked(): SeatingState | null {
-    try {
-      const raw = fs.readFileSync(this.statePath, 'utf8');
-      return JSON.parse(raw) as SeatingState;
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT') return null;
-      logger.warn(
-        `Failed to read seating state ${this.statePath}: ${(err as Error).message}; treating as fresh`
-      );
-      return null;
-    }
-  }
-
-  /** Atomic write via temp file + rename — readers never see a torn JSON. */
-  private writeStateUnlocked(state: SeatingState): void {
-    const tmp = `${this.statePath}.tmp`;
-    fs.mkdirSync(path.dirname(this.statePath), { recursive: true });
-    fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
-    fs.renameSync(tmp, this.statePath);
-  }
-
-  /**
-   * Load state and validate it matches the manager's `(totalSeats, configSlots,
-   * seedCount)` shape. If the shape has drifted (config edited between runs)
-   * or the file is malformed, regenerate a fresh cycle while preserving
-   * `completedCycles` (so cumulative cycle counts remain meaningful).
-   */
-  private loadOrInit(): SeatingState {
-    const existing = this.readStateUnlocked();
-
-    if (
-      existing &&
-      existing.totalSeats === this.totalSeats &&
-      existing.seedCount === this.seedCount &&
-      Array.isArray(existing.configSlots) &&
-      arraysEqual(existing.configSlots, this.configSlotsSorted)
-    ) {
-      // Defensive check: the schema shape may match but the contents could be
-      // truncated (e.g., from an earlier crash mid-write before atomic rename
-      // existed). Fall through to a fresh build if anything looks off.
-      if (
-        Array.isArray(existing.basePerm) &&
-        existing.basePerm.length === this.totalSeats &&
-        Array.isArray(existing.consumeOrder) &&
-        existing.consumeOrder.length === this.totalSeats * this.seedCount &&
-        typeof existing.completedCycles === 'number'
-      ) {
-        if (!existing.cells || typeof existing.cells !== 'object') existing.cells = {};
-        return existing;
-      }
-      logger.warn(`Seating state for "${this.configName}" is malformed; regenerating`);
-    } else if (existing) {
-      logger.warn(
-        `Seating state for "${this.configName}" is stale ` +
-        `(totalSeats=${existing.totalSeats}/${this.totalSeats}, ` +
-        `seedCount=${existing.seedCount}/${this.seedCount}, ` +
-        `configSlots=${JSON.stringify(existing.configSlots)}/${JSON.stringify(this.configSlotsSorted)}); ` +
-        `regenerating`
-      );
-    }
-
-    return this.buildFreshState(existing?.completedCycles ?? 0);
-  }
-
-  // -------------------------------------------------------------------------
-  // Cycle logic (pure operations on `SeatingState`)
-  // -------------------------------------------------------------------------
-
-  /** Build a fresh cycle: random `basePerm`, shuffled `consumeOrder`, no cells set. */
-  private buildFreshState(completedCycles: number): SeatingState {
-    const basePerm = fisherYates(Array.from({ length: this.totalSeats }, (_, i) => i));
-    const allCells: SeatingCycleCell[] = [];
-    for (let rotation = 0; rotation < this.totalSeats; rotation++) {
-      for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
-        allCells.push({ rotation, seedIndex });
-      }
-    }
-    return {
-      totalSeats: this.totalSeats,
-      configSlots: [...this.configSlotsSorted],
-      seedCount: this.seedCount,
-      basePerm,
-      consumeOrder: fisherYates(allCells),
-      cells: {},
-      completedCycles
-    };
-  }
-
-  /** Regenerate `basePerm` and `consumeOrder` in place; bump `completedCycles`. */
-  private resetCycleInPlace(state: SeatingState): void {
-    state.basePerm = fisherYates(Array.from({ length: this.totalSeats }, (_, i) => i));
-    const allCells: SeatingCycleCell[] = [];
-    for (let rotation = 0; rotation < this.totalSeats; rotation++) {
-      for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
-        allCells.push({ rotation, seedIndex });
-      }
-    }
-    state.consumeOrder = fisherYates(allCells);
-    state.cells = {};
-    state.completedCycles += 1;
-  }
-
-  /** Read a cell, treating missing inner/outer keys as `pending`. */
-  private getCell(state: SeatingState, rotation: number, seedIndex: number): CellEntry {
-    return state.cells[String(rotation)]?.[String(seedIndex)] ?? { status: 'pending' };
-  }
-
-  /** Write a cell, lazily creating the inner record. */
-  private setCell(
-    state: SeatingState,
-    rotation: number,
-    seedIndex: number,
-    entry: CellEntry
-  ): void {
-    const rotationKey = String(rotation);
-    if (!state.cells[rotationKey]) state.cells[rotationKey] = {};
-    state.cells[rotationKey][String(seedIndex)] = entry;
-  }
-
-  private isCellPending(entry: CellEntry): boolean {
-    return entry.status === 'pending';
-  }
-
-  private isCellOwnInProgress(entry: CellEntry, ourId: string): boolean {
-    return entry.status === 'in-progress' && entry.claimedBy === ourId;
-  }
-
-  private isCellStaleInProgress(entry: CellEntry, now: number): boolean {
-    if (entry.status !== 'in-progress' || !entry.claimedAt) return false;
-    return now - Date.parse(entry.claimedAt) > STALE_THRESHOLD_MS;
-  }
-
-  /** True iff every (rotation, seedIndex) cell is `completed`. */
-  private allCompleted(state: SeatingState): boolean {
-    for (let rotation = 0; rotation < this.totalSeats; rotation++) {
-      for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
-        if (this.getCell(state, rotation, seedIndex).status !== 'completed') return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Implementation of the priority-ordered cell selection documented in
-   * {@link claimNextCell}. Returns null if no cell is claimable (caller
-   * decides whether to reset the cycle).
-   */
-  private pickCell(
-    state: SeatingState,
-    ourId: string,
-    now: number
-  ): SeatingCycleCell | null {
-    // Priority 1: own in-progress (own crash recovery).
-    for (const { rotation, seedIndex } of state.consumeOrder) {
-      if (this.isCellOwnInProgress(this.getCell(state, rotation, seedIndex), ourId)) {
-        return { rotation, seedIndex };
-      }
-    }
-    // Priority 2: stale in-progress from someone else.
-    for (const { rotation, seedIndex } of state.consumeOrder) {
-      if (this.isCellStaleInProgress(this.getCell(state, rotation, seedIndex), now)) {
-        return { rotation, seedIndex };
-      }
-    }
-    // Priority 3: next pending cell in shuffled consumeOrder.
-    for (const { rotation, seedIndex } of state.consumeOrder) {
-      if (this.isCellPending(this.getCell(state, rotation, seedIndex))) {
-        return { rotation, seedIndex };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Build the configSlot → seat map for a given rotation.
-   *
-   * For rotation `r`, the i-th configured slot (in sorted order) is assigned
-   * `basePerm[(r + i) mod N]`. Across rotations 0..N-1 this gives every
-   * configured slot a turn at every seat — the Latin-square coverage guarantee.
-   */
-  private buildSeatingMap(basePerm: number[], rotation: number): Record<string, number> {
-    const N = basePerm.length;
-    const seatingMap: Record<string, number> = {};
-    for (let i = 0; i < this.configSlotsSorted.length; i++) {
-      const seat = basePerm[(rotation + i) % N];
-      seatingMap[String(this.configSlotsSorted[i])] = seat;
-    }
-    return seatingMap;
   }
 }
