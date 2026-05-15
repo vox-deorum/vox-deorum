@@ -194,7 +194,8 @@ export class MCPServer {
   }
 
   private eventsForNotification = [
-    "GameSwitched", "PlayerDoneTurn", "PlayerVictory", "DLLConnected", "DLLDisconnected",
+    "GameSwitched", "PlayerDoneTurn", "PlayerVictory", "GameArchived",
+    "DLLConnected", "DLLDisconnected",
     "PlayerPanelSwitch", "AnimationStarted",
   ];
   /**

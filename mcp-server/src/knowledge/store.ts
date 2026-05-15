@@ -321,7 +321,7 @@ export class KnowledgeStore {
               knowledgeManager.getTurn(),
               id,
               {
-                gameId: archivedGameId,
+                gameID: archivedGameId,
                 success: result !== null,
                 savePath: result?.savePath,
                 dbPath: result?.dbPath,

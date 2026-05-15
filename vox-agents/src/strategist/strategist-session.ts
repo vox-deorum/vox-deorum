@@ -190,8 +190,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
             break;
           case "GameArchived":
             // Predicate the awaiter ourselves: only resolve when the
-            // notification's gameId matches the session's current run.
-            if (this.gameID && String(params.gameId ?? '') === this.gameID) {
+            // notification's gameID matches the session's current run.
+            if (this.gameID && String(params.gameID ?? '') === this.gameID) {
               this.archiveAwaiter.resolve(Boolean(params.success));
             }
             break;
