@@ -247,8 +247,11 @@ async function main() {
   const isAutoRepetition = sessionConfig.repetition === 'auto';
   let cycleWatcher: SeatingStateManager | undefined;
   if (isAutoRepetition) {
+    // `randomizeSeating: 0` is a valid seed (truthy-as-seed), not "disabled".
+    const seatingEnabled =
+      sessionConfig.randomizeSeating !== undefined && sessionConfig.randomizeSeating !== false;
     const cycleEnabled =
-      !!sessionConfig.randomizeSeating ||
+      seatingEnabled ||
       (Array.isArray(sessionConfig.randomSeeds) && sessionConfig.randomSeeds.length > 1);
     if (!cycleEnabled) {
       logger.warn(`repetition: "auto" requires randomizeSeating or a multi-entry randomSeeds; falling back to 1 run`);
@@ -261,7 +264,12 @@ async function main() {
         configSlots,
         totalSeats,
         seedCount: seedSets.length,
-        seedSets
+        seedSets,
+        // Mirror the session's manager so the drift check in `loadOrInit`
+        // accepts the same on-disk state — a numeric `randomizeSeating` is the
+        // seating seed, `true` is the legacy unseeded path, anything else is
+        // unseeded.
+        randomizeSeating: sessionConfig.randomizeSeating,
       });
       logger.info(`Auto repetition: cycle = ${totalSeats} seats × ${seedSets.length} seeds = ${totalSeats * seedSets.length} cells`);
     }

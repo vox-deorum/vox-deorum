@@ -131,9 +131,12 @@ export function writeStateUnlocked(statePath: string, state: SeatingState): void
 
 /**
  * Load state and validate it matches the expected `(totalSeats, configSlots,
- * seedCount)` shape. If the shape has drifted (config edited between runs) or
- * the file is malformed, regenerate a fresh cycle while preserving
- * `completedCycles` (so cumulative cycle counts remain meaningful).
+ * seedCount, seatingSeed)` shape. If the shape has drifted (config edited
+ * between runs) or the file is malformed, regenerate a fresh cycle while
+ * preserving `completedCycles` (so cumulative cycle counts remain meaningful).
+ *
+ * `seatingSeed` mismatch is treated as drift: the persisted cycle would no
+ * longer reflect the configured seed.
  */
 export function loadOrInit(opts: {
   statePath: string;
@@ -141,14 +144,16 @@ export function loadOrInit(opts: {
   totalSeats: number;
   seedCount: number;
   configSlotsSorted: number[];
+  seatingSeed: number;
 }): SeatingState {
-  const { statePath, configName, totalSeats, seedCount, configSlotsSorted } = opts;
+  const { statePath, configName, totalSeats, seedCount, configSlotsSorted, seatingSeed } = opts;
   const existing = readStateUnlocked(statePath);
 
   if (
     existing &&
     existing.totalSeats === totalSeats &&
     existing.seedCount === seedCount &&
+    existing.seatingSeed === seatingSeed &&
     Array.isArray(existing.configSlots) &&
     arraysEqual(existing.configSlots, configSlotsSorted)
   ) {
@@ -171,7 +176,8 @@ export function loadOrInit(opts: {
       `Seating state for "${configName}" is stale ` +
       `(totalSeats=${existing.totalSeats}/${totalSeats}, ` +
       `seedCount=${existing.seedCount}/${seedCount}, ` +
-      `configSlots=${JSON.stringify(existing.configSlots)}/${JSON.stringify(configSlotsSorted)}); ` +
+      `configSlots=${JSON.stringify(existing.configSlots)}/${JSON.stringify(configSlotsSorted)}, ` +
+      `seatingSeed=${existing.seatingSeed}/${seatingSeed}); ` +
       `regenerating`
     );
   }
@@ -181,5 +187,6 @@ export function loadOrInit(opts: {
     seedCount,
     configSlotsSorted,
     completedCycles: existing?.completedCycles ?? 0,
+    seatingSeed,
   });
 }

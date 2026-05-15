@@ -32,7 +32,7 @@ Civ 5 ↔ DLL ↔ Bridge Service ↔ MCP Server ↔ Vox Agents → LLM
 
 ## Cross-Cutting Code Rules
 - **ESM everywhere** — all TS modules use `"type": "module"` with `.js` import extensions
-- **npm workspaces** — root package.json manages deps; `npm install` / `npm run build:all` / `npm run test:all`
+- **npm workspaces** — root `package.json` owns shared dependencies. Always `npm install <pkg>` from the repo root, not from a workspace (`vox-agents/`, `bridge-service/`, `mcp-server/`). Sub-package `package.json` files stay minimal — workspace hoisting resolves the dep. Use `npm install` / `npm run build:all` / `npm run test:all` from root.
 - **Vitest** for all TypeScript testing
 - **camelCase for exported constants** (e.g., `export const apiKeyFields`, not `API_KEY_FIELDS`)
 - **Winston logger only** — never `console.log/error/warn` in production code (OK in tests)

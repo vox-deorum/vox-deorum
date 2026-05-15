@@ -228,8 +228,19 @@ export interface StrategistSessionConfig extends SessionConfig {
   /** Map of player IDs to their LLM configurations */
   llmPlayers: Record<number, PlayerConfig>;
 
-  /** When true, randomize the mapping between config slots and actual game player indices each game */
-  randomizeSeating?: boolean;
+  /**
+   * Controls randomization of the mapping between config slots and actual game
+   * player indices.
+   *
+   * - `false` / `undefined`: identity seating — configSlot N → seat N.
+   * - `true`: alias for `0` — engages the seeded cycle with seed `0`.
+   * - `<uint32>`: deterministic seeded cycle. Both the seating permutation
+   *   and the cycle's consumption order are derived from this seed via
+   *   `seedrandom`, so the same config reproduces the same cycle on every
+   *   machine. Across cycle resets the seed advances so cycle #2 isn't
+   *   identical to cycle #1.
+   */
+  randomizeSeating?: boolean | number;
 
   /**
    * Optional fixed Civ V random seeds for reproducible starts.

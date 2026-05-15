@@ -453,3 +453,176 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
     expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(true);
   });
 });
+
+describe('SeatingStateManager — seeded randomizeSeating', () => {
+  /** Run a full N-cycle and return the sequence of (rotation, seedIndex, seat) tuples in order. */
+  async function runFullCycle(mgr: SeatingStateManager, totalSeats: number, configSlot: number) {
+    const sequence: Array<{ rotation: number; seedIndex: number; seat: number }> = [];
+    for (let i = 0; i < totalSeats; i++) {
+      const claim = await mgr.claimNextCell();
+      sequence.push({
+        rotation: claim.rotation,
+        seedIndex: claim.seedIndex,
+        seat: claim.seatingMap[String(configSlot)]
+      });
+      await mgr.releaseCell(claim, true);
+    }
+    return sequence;
+  }
+
+  it('two managers with the same seed produce the same basePerm and claim sequence', async () => {
+    const cfgA = uniqueConfigName('seeded-determinism-a');
+    const cfgB = uniqueConfigName('seeded-determinism-b');
+    const optsBase = {
+      configSlots: [7],
+      totalSeats: 8,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: 12345
+    };
+
+    const mgrA = new SeatingStateManager({ configName: cfgA, ...optsBase });
+    const mgrB = new SeatingStateManager({ configName: cfgB, ...optsBase });
+
+    const seqA = await runFullCycle(mgrA, 8, 7);
+    const seqB = await runFullCycle(mgrB, 8, 7);
+
+    expect(seqA).toEqual(seqB);
+
+    // basePerm itself should also be byte-identical between the two state files.
+    const stateA = readState(cfgA);
+    const stateB = readState(cfgB);
+    expect(stateA.basePerm).toEqual(stateB.basePerm);
+    expect(stateA.consumeOrder).toEqual(stateB.consumeOrder);
+    expect(stateA.seatingSeed).toBe(12345);
+  });
+
+  it('different seeds produce at least one different claim', async () => {
+    const cfgA = uniqueConfigName('seeded-different-a');
+    const cfgB = uniqueConfigName('seeded-different-b');
+
+    const mgrA = new SeatingStateManager({
+      configName: cfgA, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 1
+    });
+    const mgrB = new SeatingStateManager({
+      configName: cfgB, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 2
+    });
+
+    const seqA = await runFullCycle(mgrA, 8, 7);
+    const seqB = await runFullCycle(mgrB, 8, 7);
+
+    // Each sequence still covers all 8 seats exactly once.
+    expect(new Set(seqA.map(s => s.seat))).toEqual(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
+    expect(new Set(seqB.map(s => s.seat))).toEqual(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
+    // But the order differs.
+    expect(seqA).not.toEqual(seqB);
+  });
+
+  it('changing the seed regenerates state while preserving completedCycles', async () => {
+    const cfg = uniqueConfigName('seeded-drift');
+
+    const mgrA = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 100
+    });
+    for (let i = 0; i < 8; i++) {
+      const c = await mgrA.claimNextCell();
+      await mgrA.releaseCell(c, true);
+    }
+    // Trigger reset → completedCycles bumps to 1.
+    const ninth = await mgrA.claimNextCell();
+    await mgrA.releaseCell(ninth, true);
+    const before = readState(cfg);
+    expect(before.completedCycles).toBe(1);
+    expect(before.seatingSeed).toBe(100);
+    const basePermBefore = [...before.basePerm];
+
+    // Reopen with a different seed — state must regenerate, completedCycles preserved.
+    const mgrB = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 999
+    });
+    await mgrB.claimNextCell();
+    const after = readState(cfg);
+    expect(after.seatingSeed).toBe(999);
+    expect(after.completedCycles).toBe(1);
+    expect(after.basePerm).not.toEqual(basePermBefore);
+  });
+
+  it('treats `randomizeSeating: true` as seed 0 and regenerates when transitioning from a numeric seed', async () => {
+    const cfg = uniqueConfigName('true-aliases-zero');
+
+    const mgrSeeded = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 42
+    });
+    await mgrSeeded.claimNextCell();
+    expect(readState(cfg).seatingSeed).toBe(42);
+
+    // `true` is an alias for seed 0 → drift detected against persisted 42.
+    const mgrTrue = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: true
+    });
+    await mgrTrue.claimNextCell();
+    expect(readState(cfg).seatingSeed).toBe(0);
+  });
+
+  it('cycle rollover advances the seed: cycle #2 basePerm differs from cycle #1 but stays reproducible', async () => {
+    const cfgA = uniqueConfigName('seed-advance-a');
+    const cfgB = uniqueConfigName('seed-advance-b');
+    const opts = {
+      configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined],
+      randomizeSeating: 777
+    };
+
+    const mgrA = new SeatingStateManager({ configName: cfgA, ...opts });
+    // Run a full cycle + one extra claim to trigger the reset.
+    for (let i = 0; i < 8; i++) {
+      const c = await mgrA.claimNextCell();
+      await mgrA.releaseCell(c, true);
+    }
+    const cycle1BasePerm = [...readState(cfgA).basePerm];
+    await mgrA.claimNextCell(); // forces resetCycleInPlace
+    const cycle2BasePerm = [...readState(cfgA).basePerm];
+    expect(readState(cfgA).completedCycles).toBe(1);
+    expect(cycle2BasePerm).not.toEqual(cycle1BasePerm);
+
+    // A second manager run from scratch with the same seed should reproduce
+    // the same cycle #2 basePerm once it crosses the reset boundary.
+    const mgrB = new SeatingStateManager({ configName: cfgB, ...opts });
+    for (let i = 0; i < 8; i++) {
+      const c = await mgrB.claimNextCell();
+      await mgrB.releaseCell(c, true);
+    }
+    await mgrB.claimNextCell();
+    expect(readState(cfgB).basePerm).toEqual(cycle2BasePerm);
+  });
+
+  it('accepts randomizeSeating: 0 as an explicit seed', () => {
+    const mgr = new SeatingStateManager({
+      configName: uniqueConfigName('seed-zero'),
+      configSlots: [0],
+      totalSeats: 8,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: 0
+    });
+    // randomizeSeating: 0 is truthy-as-seed → cycle engaged, NOT trivial.
+    return expect(mgr.claimNextCell()).resolves.toBeDefined();
+  });
+
+  it('rejects non-integer randomizeSeating', () => {
+    expect(() => new SeatingStateManager({
+      configName: 'x',
+      configSlots: [0],
+      totalSeats: 8,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: 1.5
+    })).toThrow(/randomizeSeating/);
+  });
+});

@@ -96,7 +96,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       totalSeats: configSlots.length > 0 ? Math.max(...configSlots) + 1 : 1,
       seedCount: seedSets.length,
       seedSets,
-      randomizeSeating: !!config.randomizeSeating,
+      randomizeSeating: config.randomizeSeating,
     });
 
     voxCivilization.onGameExit(this.handleGameExit.bind(this));

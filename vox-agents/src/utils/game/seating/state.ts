@@ -114,6 +114,12 @@ export class SeatingStateManager {
   private readonly seedCount: number;
   private readonly seedSets: SeatingStateManagerOptions['seedSets'];
   private readonly maxCellFailures: number;
+  /**
+   * Deterministic seed for `basePerm` / `consumeOrder`. Normalized to `0` for
+   * `randomizeSeating: true` (and for the trivial/falsy path, where it's
+   * never read). Validated as a non-negative uint32 in the constructor.
+   */
+  private readonly seatingSeed: number;
   private readonly statePath: string;
   private readonly lockPath: string;
   /**
@@ -161,6 +167,12 @@ export class SeatingStateManager {
         `SeatingStateManager: maxCellFailures must be >= 1, got ${opts.maxCellFailures}`
       );
     }
+    if (typeof opts.randomizeSeating === 'number') {
+      const s = opts.randomizeSeating;
+      if (!Number.isInteger(s) || s < 0 || s > 0xffffffff) {
+        throw new Error(`SeatingStateManager: randomizeSeating must be a uint32 integer, got ${s}`);
+      }
+    }
 
     this.configName = opts.configName;
     this.configSlotsSorted = [...opts.configSlots].sort((a, b) => a - b);
@@ -168,9 +180,16 @@ export class SeatingStateManager {
     this.seedCount = opts.seedCount;
     this.seedSets = opts.seedSets;
     this.maxCellFailures = opts.maxCellFailures ?? DEFAULT_MAX_CELL_FAILURES;
+    // `true` is an alias for seed 0. When seating is disabled (`false` /
+    // `undefined`) the manager may still run a cycle for multi-seed configs;
+    // in that case seatingSeed defaults to 0 and is never observed by callers.
+    this.seatingSeed = typeof opts.randomizeSeating === 'number' ? opts.randomizeSeating : 0;
     this.statePath = path.join(getConfigsDir(), `${this.configName}.seating.json`);
     this.lockPath = `${this.statePath}.lock`;
-    this.trivial = !opts.randomizeSeating && opts.seedCount === 1;
+    // Only literal `false`/`undefined` disable the cycle; `0` is a valid seed
+    // that engages the cycle, same as any other number.
+    const seatingDisabled = opts.randomizeSeating === undefined || opts.randomizeSeating === false;
+    this.trivial = seatingDisabled && opts.seedCount === 1;
   }
 
   /**
@@ -232,6 +251,7 @@ export class SeatingStateManager {
         totalSeats: this.totalSeats,
         seedCount: this.seedCount,
         configSlotsSorted: this.configSlotsSorted,
+        seatingSeed: this.seatingSeed,
       });
       const now = Date.now();
       const { pick, before, failureCount } = this.selectClaimable(state, ourId, now);
@@ -393,6 +413,7 @@ export class SeatingStateManager {
         totalSeats: this.totalSeats,
         seedCount: this.seedCount,
         configSlotsSorted: this.configSlotsSorted,
+        seatingSeed: this.seatingSeed,
       });
       return cycleFinishedHelper(state);
     });
@@ -413,6 +434,7 @@ export class SeatingStateManager {
         totalSeats: this.totalSeats,
         seedCount: this.seedCount,
         configSlotsSorted: this.configSlotsSorted,
+        seatingSeed: this.seatingSeed,
       });
       return allCompleted(state);
     });
@@ -433,6 +455,7 @@ export class SeatingStateManager {
         totalSeats: this.totalSeats,
         seedCount: this.seedCount,
         configSlotsSorted: this.configSlotsSorted,
+        seatingSeed: this.seatingSeed,
       });
       return countsHelper(state);
     });

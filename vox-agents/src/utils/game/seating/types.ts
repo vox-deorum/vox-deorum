@@ -54,6 +54,12 @@ export interface SeatingState {
   configSlots: number[];
   /** Total number of seeds. */
   seedCount: number;
+  /**
+   * Seed used to derive `basePerm` and `consumeOrder` deterministically.
+   * On every cycle reset the effective seed is `seatingSeed + completedCycles`,
+   * so cycles vary while remaining reproducible from the original config seed.
+   */
+  seatingSeed: number;
   /** Random permutation of `[0..totalSeats-1]`. */
   basePerm: number[];
   /** Shuffled order of all cycle cells; consumed front-to-back. */
@@ -98,11 +104,16 @@ export interface SeatingStateManagerOptions {
   /**
    * Whether the configured slots should be randomized across seats.
    *
-   * When `false` AND `seedSets.length === 1`, the cycle is trivial — there's
-   * nothing to schedule. The manager returns an in-memory identity claim and
-   * skips all filesystem persistence (no `*.seating.json`, no lock). When
-   * `true`, or when `seedSets.length > 1`, the persistent cycle kicks in as
-   * usual. Defaults to `false`.
+   * - `false` / `undefined` AND `seedSets.length === 1`: cycle is trivial —
+   *   the manager returns an in-memory identity claim and skips all filesystem
+   *   persistence (no `*.seating.json`, no lock).
+   * - `true`: alias for `0` — engages the cycle with seed `0`.
+   * - `<uint32>`: engages the cycle with that seed. Both `basePerm` and
+   *   `consumeOrder` are derived from `seedrandom(seed + completedCycles)`,
+   *   so the cycle is reproducible across machines and advances across
+   *   cycle resets.
+   *
+   * Defaults to `false`.
    */
-  randomizeSeating?: boolean;
+  randomizeSeating?: boolean | number;
 }
