@@ -13,7 +13,7 @@ import { voxCivilization } from "../infra/vox-civilization.js";
 import { setTimeout } from 'node:timers/promises';
 import { VoxSession } from "../infra/vox-session.js";
 import { sessionRegistry } from "../infra/session-registry.js";
-import { StrategistSessionConfig, isVisualMode, isObsMode, RandomSeedsConfig } from "../types/config.js";
+import { StrategistSessionConfig, isVisualMode, isObsMode } from "../types/config.js";
 import { obsManager } from "../infra/obs-manager.js";
 import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
@@ -21,8 +21,18 @@ import { SessionStatus } from "../types/api.js";
 import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { SeatingClaim } from "../utils/game/seating/types.js";
 import { validateRandomSeedsList } from "../utils/game/random-seeds.js";
+import { getMetadata, setMetadata } from "../utils/game/metadata.js";
+import { OneShotAwaiter } from "../utils/async/one-shot-awaiter.js";
 
 const logger = createLogger('StrategistSession');
+
+/**
+ * How long shutdown will wait for the MCP `GameArchived` notification before
+ * giving up and treating the run as not-archived. MCP's own timing after a
+ * `PlayerVictory` is ~15-20s (5s + saveKnowledge + 10s + archive copy), so
+ * 60s provides comfortable slack for large saves.
+ */
+const ARCHIVE_WAIT_TIMEOUT_MS = 60_000;
 
 /**
  * Concrete implementation of VoxSession for Strategist game sessions.
@@ -39,27 +49,56 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private crashRecoveryAttempts = 0;
   private mcpKillCounter = 0;
   private dllConnected = false;
-  private seatingMap?: Record<string, number>;
   private production?: ProductionController;
   private readonly MAX_RECOVERY_ATTEMPTS = 3;
 
-  /** Normalized seed-set list — length M (>= 1). Drives the seedCount of the cycle. */
-  private readonly seedSets: Array<RandomSeedsConfig | undefined>;
-  /** Lazily constructed when the cycle is enabled (randomizeSeating or seedCount > 1). */
-  private seatingManager?: SeatingStateManager;
-  /** The current cell claim, if any. Refreshed on each (re-)claim during recovery. */
+  /**
+   * Single owner of seeding + seed-cycle state, always constructed. In the
+   * trivial case (no `randomizeSeating` and a single seed set) it produces an
+   * in-memory identity claim without touching the filesystem; otherwise it
+   * runs the full persistent cycle.
+   */
+  private readonly seatingManager: SeatingStateManager;
+  /** The current cell claim, set by `ensureSeatingClaim` before the game launches. */
   private seatingClaim?: SeatingClaim;
   /** Tracks whether the active claim has already been released, so shutdown() doesn't double-release. */
   private claimReleased = false;
-  /** Set on PlayerVictory so shutdown() releases the claim as success. */
-  private claimSucceeded = false;
+  /** Set on PlayerVictory — the session observed a win. Does NOT by itself mean "succeeded"; archival must also confirm. */
+  private victoryObserved = false;
+  /** Set after `archiveAwaiter.wait()` in shutdown — whether the MCP archive succeeded for this run. */
+  private archived = false;
+  /** Resolved by the `GameArchived` MCP notification; shutdown waits on it. One per session. */
+  private archiveAwaiter = new OneShotAwaiter<boolean>();
 
+  /**
+   * Wire the session: prepare the victory promise, build the seating manager
+   * (always — trivial-mode handling lives inside the manager), and register
+   * the game-exit hook for crash-recovery.
+   */
   constructor(config: StrategistSessionConfig) {
     super(config);
     this.finishPromise = new Promise((resolve) => {
       this.victoryResolve = resolve;
     });
-    this.seedSets = validateRandomSeedsList(config.randomSeeds);
+
+    // SeatingStateManager is the single source of truth for both the seating
+    // map AND the active seed set, even when the cycle is trivial (one seed,
+    // no randomization). Construction is cheap and never touches disk — that
+    // only happens when the trivial-mode short-circuits don't kick in.
+    const configSlots = Object.keys(config.llmPlayers).map(Number);
+    const seedSets = validateRandomSeedsList(config.randomSeeds);
+    this.seatingManager = new SeatingStateManager({
+      configName: config.name,
+      configSlots,
+      // For 'start' mode this matches `computePlayerCount` (max(playerIds)+1);
+      // for load/wait modes there's no authoritative count at construction
+      // time so we use the same fallback the old `ensureSeatingClaim` used.
+      totalSeats: configSlots.length > 0 ? Math.max(...configSlots) + 1 : 1,
+      seedCount: seedSets.length,
+      seedSets,
+      randomizeSeating: !!config.randomizeSeating,
+    });
+
     voxCivilization.onGameExit(this.handleGameExit.bind(this));
   }
 
@@ -74,120 +113,123 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       sessionRegistry.register(this);
 
       const luaScript = this.config.gameMode === 'start' ? 'StartGame.lua' :
-                        this.config.gameMode === 'wait' ? 'LoadMods.lua' : 'LoadGame.lua';
+        this.config.gameMode === 'wait' ? 'LoadMods.lua' : 'LoadGame.lua';
 
-      // Calculate player count from llmPlayers configuration
-      let playerCount: number | undefined;
-      if (this.config.gameMode === 'start' && luaScript === 'StartGame.lua') {
+      const playerCount = this.computePlayerCount(luaScript);
+      if (playerCount !== undefined) {
         const playerIds = Object.keys(this.config.llmPlayers).map(Number);
-        if (playerIds.length > 0) {
-          playerCount = Math.max(...playerIds) + 1;
-          logger.info(`Calculated player count: ${playerCount} from player IDs: ${playerIds.join(', ')}`);
-        }
+        logger.info(`Calculated player count: ${playerCount} from player IDs: ${playerIds.join(', ')}`);
       }
 
-      // Claim a cell from the seating × seed cycle (no-op if neither randomizeSeating
-      // nor a multi-seed array is configured). This must happen before startGame so
-      // the cycle's chosen seed is what Civ launches with.
-      await this.ensureSeatingClaim(playerCount);
+      // Claim a cell from the seating × seed cycle. In trivial mode (no
+      // `randomizeSeating` and a single seed set) this returns an in-memory
+      // identity claim. Must happen before startGame so the chosen seed is
+      // what Civ launches with.
+      await this.ensureSeatingClaim();
 
       logger.info(`Starting strategist session ${this.id} in ${this.config.gameMode} mode`, this.config);
 
-    // Configure animation skipping based on mode (skip in interactive mode)
-    if (isVisualMode(this.config.production)) {
-      await voxCivilization.updateSkipAnimations(false);   // animations play for viewers
-    } else if (!this.isInteractiveMode) {
-      await voxCivilization.updateSkipAnimations(true);    // skip animations in full-auto mode
-    }
-
-    // Initialize OBS for recording/livestreaming (before game launch so scenes are ready)
-    const obsReady = await this.obsCall('initialize',
-      () => obsManager.initialize(this.config.production!, config.obs)
-    );
-    if (obsReady) {
-      this.production = new ProductionController(obsManager, this.config.production!);
-      logger.info('OBS initialized successfully for production mode');
-    } else if (isObsMode(this.config.production)) {
-      logger.warn('OBS initialization failed — session will continue without recording');
-    }
-
-    // Enable AI Observer mod in non-interactive mode
-    voxCivilization.setAiObserver(!this.isInteractiveMode);
-
-    // In wait mode, prompt the user to start the game manually
-    if (this.config.gameMode === 'wait') {
-      logger.warn('WAIT MODE: Please manually start or load your game.');
-      logger.warn('The session will automatically continue when the game is loaded.');
-    }
-
-    // The seed set is normally chosen per-cell by the seating cycle (see
-    // resolveSeatingMap). For the very first launch we don't have a claim yet,
-    // so use the first seed set — it will be reconciled when handleGameSwitched
-    // claims the cycle's actual cell.
-    const initialSeeds = this.seatingClaim?.seeds ?? this.seedSets[0];
-    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), initialSeeds);
-    if (!started) {
-      throw new Error('Failed to start Civilization V');
-    }
-
-    // Connect to MCP server
-    await mcpClient.connect();
-
-    // Set production mode on the DLL (enables AI turn cooldown for visual modes)
-    await mcpClient.callTool('set-production-mode', {
-      enabled: isVisualMode(this.config.production)
-    });
-
-    // Register notification handler for game events
-    mcpClient.onNotification(async (params) => {
-      if (this.abortController.signal.aborted) return;
-
-      // The notification now has 'event' field instead of 'message'
-      switch (params.event) {
-        case "PlayerDoneTurn":
-          await this.handlePlayerDoneTurn(params);
-          break;
-        case "GameSwitched":
-          await this.handleGameSwitched(params);
-          break;
-        case "PlayerVictory":
-          await this.handlePlayerVictory(params);
-          break;
-        case "DLLConnected":
-          this.dllConnected = true;
-          // Transition to running state when DLL connects (game is initialized)
-          await this.handleDLLConnected(params);
-          break;
-        case "DLLDisconnected":
-          this.dllConnected = false;
-          // Kill the game when the game hangs
-          logger.warn(`The DLL is no longer connected. Waiting for 60 seconds...`);
-          await setTimeout(60000);
-          if (!this.dllConnected && this.state === 'running') {
-            this.onStateChange('error');
-            logger.warn(`The DLL is no longer connected. Trying to restart the game...`);
-            await voxCivilization.killGame();
-          }
-          break;
-        case "PlayerPanelSwitch":
-        case "AnimationStarted":
-          await this.obsCall('handleRenderEvent',
-            () => this.production!.handleRenderEvent(params.event, params));
-          break;
-        default:
-          logger.info(`Received game event notification: ${params.event}`, params);
-          break;
+      // Configure animation skipping based on mode (skip in interactive mode)
+      if (isVisualMode(this.config.production)) {
+        await voxCivilization.updateSkipAnimations(false);   // animations play for viewers
+      } else if (!this.isInteractiveMode) {
+        await voxCivilization.updateSkipAnimations(true);    // skip animations in full-auto mode
       }
-    });
 
-    const mcpKillCounter = this.mcpKillCounter;
-    // Register tool error handler to kill game on critical MCP tool errors
-    mcpClient.onToolError(async ({ toolName, error }) => {
-      if (this.abortController.signal.aborted || mcpKillCounter !== this.mcpKillCounter) return;
-      this.mcpKillCounter++;
-      logger.error(`Critical MCP tool error in ${toolName}, killing game process`, error);
-      await voxCivilization.killGame();
-    });
+      // Initialize OBS for recording/livestreaming (before game launch so scenes are ready)
+      const obsReady = await this.obsCall('initialize',
+        () => obsManager.initialize(this.config.production!, config.obs)
+      );
+      if (obsReady) {
+        this.production = new ProductionController(obsManager, this.config.production!);
+        logger.info('OBS initialized successfully for production mode');
+      } else if (isObsMode(this.config.production)) {
+        logger.warn('OBS initialization failed — session will continue without recording');
+      }
+
+      // Enable AI Observer mod in non-interactive mode
+      voxCivilization.setAiObserver(!this.isInteractiveMode);
+
+      // In wait mode, prompt the user to start the game manually
+      if (this.config.gameMode === 'wait') {
+        logger.warn('WAIT MODE: Please manually start or load your game.');
+        logger.warn('The session will automatically continue when the game is loaded.');
+      }
+
+      // The seed set comes from the (always-present) seating claim; trivial
+      // mode supplies seedSets[0] directly, cycle mode picks per cell.
+      const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.seatingClaim?.seeds);
+      if (!started) {
+        throw new Error('Failed to start Civilization V');
+      }
+
+      // Connect to MCP server
+      await mcpClient.connect();
+
+      // Set production mode on the DLL (enables AI turn cooldown for visual modes)
+      await mcpClient.callTool('set-production-mode', {
+        enabled: isVisualMode(this.config.production)
+      });
+
+      // Register notification handler for game events
+      mcpClient.onNotification(async (params) => {
+        // `GameArchived` is the one event we must still process during shutdown —
+        // shutdown() is actively waiting on the awaiter it resolves.
+        if (params.event !== "GameArchived" && this.abortController.signal.aborted) return;
+
+        // The notification now has 'event' field instead of 'message'
+        switch (params.event) {
+          case "PlayerDoneTurn":
+            await this.handlePlayerDoneTurn(params);
+            break;
+          case "GameSwitched":
+            await this.handleGameSwitched(params);
+            break;
+          case "PlayerVictory":
+            await this.handlePlayerVictory(params);
+            break;
+          case "GameArchived":
+            // Predicate the awaiter ourselves: only resolve when the
+            // notification's gameId matches the session's current run.
+            if (this.gameID && String(params.gameId ?? '') === this.gameID) {
+              this.archiveAwaiter.resolve(Boolean(params.success));
+            }
+            break;
+          case "DLLConnected":
+            this.dllConnected = true;
+            // Transition to running state when DLL connects (game is initialized)
+            await this.handleDLLConnected(params);
+            break;
+          case "DLLDisconnected":
+            this.dllConnected = false;
+            // Kill the game when the game hangs
+            logger.warn(`The DLL is no longer connected. Waiting for 60 seconds...`);
+            await setTimeout(60000);
+            if (!this.dllConnected && this.state === 'running') {
+              this.onStateChange('error');
+              logger.warn(`The DLL is no longer connected. Trying to restart the game...`);
+              await voxCivilization.killGame();
+            }
+            break;
+          case "PlayerPanelSwitch":
+          case "AnimationStarted":
+            await this.obsCall('handleRenderEvent',
+              () => this.production!.handleRenderEvent(params.event, params));
+            break;
+          default:
+            logger.info(`Received game event notification: ${params.event}`, params);
+            break;
+        }
+      });
+
+      const mcpKillCounter = this.mcpKillCounter;
+      // Register tool error handler to kill game on critical MCP tool errors
+      mcpClient.onToolError(async ({ toolName, error }) => {
+        if (this.abortController.signal.aborted || mcpKillCounter !== this.mcpKillCounter) return;
+        this.mcpKillCounter++;
+        logger.error(`Critical MCP tool error in ${toolName}, killing game process`, error);
+        await voxCivilization.killGame();
+      });
 
       // Wait for victory, shutdown, or a fatal setup validation failure.
       await this.finishPromise;
@@ -233,65 +275,118 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       contexts,
       gameID: this.gameID,
       turn: this.turn,
-      error: this.errorMessage
+      error: this.errorMessage,
+      succeeded: this.succeeded,
+      archived: this.archived,
     };
   }
 
   /**
-   * Shuts down the session gracefully.
-   * Aborts all players, disconnects from MCP, and cleans up resources.
+   * Shuts down the session gracefully — idempotent and archive-aware.
+   *
+   * Called from three places:
+   *   - `handlePlayerVictory` (autoplay): victory observed, drive cleanup.
+   *   - `handleGameExit` (max retries exceeded): crash, no archive expected.
+   *   - `console.ts` post-`start()` and process-manager hooks: belt-and-braces.
+   *
+   * When a victory was observed (`this.victoryObserved`), shutdown blocks on
+   * the MCP `GameArchived` notification (bounded by {@link
+   * ARCHIVE_WAIT_TIMEOUT_MS}) so the seating release and the session's
+   * {@link succeeded} flag both reflect the real archival outcome — never
+   * "victory but no archive".
    */
   async shutdown(): Promise<void> {
+    if (this.state === 'stopping' || this.state === 'stopped') return;
     logger.info('Shutting down strategist session...');
 
-    // Update state
+    const wasVictory = this.victoryObserved;
     this.onStateChange('stopping');
-
-    // Signal abort to stop processing new events
     this.abortController.abort();
 
-    // Abort all active players and wait for their contexts to shutdown
+    // Abort all active players; on victory we mark them successful so their
+    // contexts flush as completed rather than aborted.
     for (const [playerID, player] of this.activePlayers.entries()) {
       logger.debug(`Aborting player ${playerID}`);
-      player.abort(false);
-      // Note: VoxPlayer.execute() will call context.shutdown() in its finally block
+      player.abort(wasVictory);
     }
     this.activePlayers.clear();
 
-    // Wait for players to finish their cleanup (callTool metadata + context.shutdown)
-    await setTimeout(8000);
+    try {
+      // For a clean autoplay victory, ask Civ to close itself first so the
+      // replay/save files are written before MCP copies them into the archive.
+      if (wasVictory && this.config.autoPlay) {
+        await this.requestVoluntaryGameShutdown();
+      } else {
+        // No autoplay victory path — give in-flight player work a chance to flush
+        // (callTool metadata + context.shutdown happen in VoxPlayer.execute finally).
+        await setTimeout(8000);
+      }
 
-    // Stop production controller (obsManager.destroy() called by ProcessManager on exit)
-    await this.obsCall('stopProduction', () => this.production!.stop());
+      // Block on the MCP `GameArchived` notification when we expect one. MCP
+      // only emits it on `PlayerVictory`, so crashes / non-victory shutdowns
+      // skip the wait.
+      if (wasVictory) {
+        this.archived = await this.archiveAwaiter.wait(ARCHIVE_WAIT_TIMEOUT_MS, false);
+        if (this.archived) logger.info(`Game ${this.gameID} archived successfully`);
+        else logger.error(`Game ${this.gameID}: victory observed but archive failed/timed out`);
+      }
 
-    // Disconnect from MCP server
-    await mcpClient.disconnect();
+      await this.obsCall('stopProduction', () => this.production!.stop());
+      await mcpClient.disconnect().catch((err) => {
+        logger.warn(`mcpClient.disconnect failed (non-fatal): ${(err as Error).message}`);
+      });
 
-    // Cleanup VoxCivilization
-    await voxCivilization.restoreRandomSeeds();
-    voxCivilization.destroy();
+      await voxCivilization.restoreRandomSeeds().catch(() => { });
+      voxCivilization.destroy();
 
-    // Release the cycle cell back to the scheduler. claimSucceeded is set by
-    // handlePlayerVictory; otherwise this is a crash/abort and the cell goes
-    // back to pending so it can be retried.
-    await this.releaseSeatingClaim(this.claimSucceeded);
-
-    // Resolve victory promise if still pending
-    if (this.victoryResolve) {
-      this.victoryResolve();
+      // Single source of truth for "did this run succeed" — the seating
+      // release mirrors the session outcome (no-op when no manager configured).
+      await this.releaseSeatingClaim(this.victoryObserved, this.archived);
+    } finally {
+      sessionRegistry.unregister(this.id);
+      this.victoryResolve?.();
+      this.onStateChange('stopped');
+      logger.info(`Strategist session shutdown complete (succeeded=${this.succeeded})`);
     }
-
-    // Unregister from session registry and update state
-    sessionRegistry.unregister(this.id);
-    this.onStateChange('stopped');
-
-    logger.info('Strategist session shutdown complete');
   }
 
+  /**
+   * Whether this session completed successfully: victory was observed AND
+   * MCP archival was confirmed. Only meaningful once `state === 'stopped'`.
+   */
+  get succeeded(): boolean {
+    return this.victoryObserved && this.archived;
+  }
+
+  /**
+   * The autoplay-victory game-shutdown ritual: stop autoplay → ask Civ to
+   * close → kill the process. Extracted from `handlePlayerVictory` so the
+   * unified `shutdown` owns the one canonical teardown path.
+   */
+  private async requestVoluntaryGameShutdown(): Promise<void> {
+    mcpClient.callTool("lua-executor", { Script: `Game.SetAIAutoPlay(-1);` }).catch(() => null);
+    await setTimeout(5000);
+    logger.info(`Requesting voluntary shutdown of the game...`);
+    mcpClient.callTool("lua-executor", { Script: `Events.UserRequestClose();` }).catch(() => null);
+    await setTimeout(5000);
+    const killed = await voxCivilization.killGame();
+    logger.info(`Sent killing signals to the game: ${killed}`);
+  }
+
+  /**
+   * True when a human is driving the game (no autoplay). Gates which Lua
+   * controls the session sends after a fresh launch or crash recovery.
+   */
   private get isInteractiveMode(): boolean {
     return !this.config.autoPlay;
   }
 
+  /**
+   * Wrap an OBS-side call so the strategist can stay agnostic of whether OBS
+   * is configured. Returns `undefined` (and logs a non-fatal warning) when
+   * OBS isn't active or the underlying call throws — the session must keep
+   * running regardless of recording/streaming state.
+   */
   private async obsCall<T>(operation: string, fn: () => Promise<T>): Promise<T | undefined> {
     if (!isObsMode(this.config.production)) return undefined;
     try {
@@ -302,6 +397,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     }
   }
 
+  /**
+   * Forward a per-player turn notification to the matching VoxPlayer and
+   * update the session's running turn counter. Also opportunistically
+   * decays the crash-recovery counter on real progress so transient hangs
+   * don't permanently exhaust the recovery budget.
+   */
   private async handlePlayerDoneTurn(params: GameEventNotification): Promise<void> {
     await this.recoverGame();
     if (this.turn !== params.turn) {
@@ -314,6 +415,13 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     }
   }
 
+  /**
+   * Reconcile the session with a new game context: bind the gameId to the
+   * seating cell, verify seeds, write per-game audit metadata, spin up fresh
+   * VoxPlayers using the seating map, and kick off autoplay if configured.
+   * Triggered by Civ's `GameSwitched` notification on first launch and after
+   * every crash-recovery relaunch.
+   */
   private async handleGameSwitched(params: GameEventNotification): Promise<void> {
     // If nothing is changing, ignore this
     if (!params.gameID || params.gameID === this.lastGameID) return;
@@ -325,6 +433,13 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     this.gameID = params.gameID;  // Update current game ID
     this.turn = params.turn;  // Update current turn
     logger.warn(`Game context switching to ${params.gameID} at turn ${params.turn}`);
+
+    // Bind the gameId to the current seating-cycle attempt so operators can
+    // correlate cells to archive files. Idempotent across crash-recoveries:
+    // each relaunch overwrites with the new gameId. No-op in trivial mode.
+    if (this.seatingClaim) {
+      await this.seatingManager.attachGameId(this.seatingClaim, params.gameID);
+    }
 
     // Set OBS game ID for recording directory organization
     await this.obsCall('setGameID', () => obsManager.setGameID(params.gameID!));
@@ -343,23 +458,24 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
     await this.writeConfiguredSeedMetadata();
 
-    // Seating map was claimed in start() (or fell back to identity). Persist it
-    // (and the cycle coordinates, if any) into the per-game telemetry metadata.
-    if (!this.seatingMap) {
-      this.seatingMap = this.identitySeatingMap();
-    }
+    // Persist the resolved seating map (and cycle coordinates, if any) into
+    // the per-game telemetry metadata. The seating claim is guaranteed to
+    // exist here because `ensureSeatingClaim()` ran before startGame.
+    const seatingMap = this.seatingClaim!.seatingMap;
     await this.writeSeatingMetadata();
 
     // Create new players using the seating map
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
-      const actualPlayerID = this.seatingMap[configSlotStr] ?? parseInt(configSlotStr);
+      const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
       const player = new VoxPlayer(actualPlayerID, playerConfig, params.gameID, params.turn);
       await player.context.registerTools();
       this.activePlayers.set(actualPlayerID, player);
       player.execute();
     }
 
-    await mcpClient.callTool("set-metadata", { Key: `experiment`, Value: this.config.name });
+    // `experiment` key — consumed by the archivist pipeline to group runs of
+    // the same StrategistSessionConfig together for outcome analysis.
+    await setMetadata("experiment", this.config.name);
     await setTimeout(3000);
 
     if (this.config.autoPlay && params.turn === 0) {
@@ -382,17 +498,13 @@ Game.SetAIAutoPlay(2000, -1);`
     await this.obsCall('startProduction', () => this.production!.start());
   }
 
+  /**
+   * The DLL re-attached after a (re)launch. Drives recovery if we were
+   * in the `recovering` state, otherwise no-op — the initial connect is
+   * handled by `handleGameSwitched`.
+   */
   private async handleDLLConnected(_params: GameEventNotification): Promise<void> {
     await this.recoverGame();
-  }
-
-  /**
-   * The seed set the current game was launched with. Resolves through the
-   * active cycle claim when the cycle is enabled; otherwise falls back to the
-   * single-object form derived from `config.randomSeeds`.
-   */
-  private get activeSeeds(): RandomSeedsConfig | undefined {
-    return this.seatingClaim?.seeds ?? this.seedSets[0];
   }
 
   /**
@@ -402,18 +514,12 @@ Game.SetAIAutoPlay(2000, -1);`
    * allowed to choose it and the observed `*RandSeed` metadata is enough.
    */
   private async writeConfiguredSeedMetadata(): Promise<void> {
-    const seeds = this.activeSeeds;
+    const seeds = this.seatingClaim?.seeds;
     if (seeds?.sync !== undefined) {
-      await mcpClient.callTool("set-metadata", {
-        Key: "configuredSyncRandSeed",
-        Value: String(seeds.sync)
-      });
+      await setMetadata("configuredSyncRandSeed", seeds.sync);
     }
     if (seeds?.map !== undefined) {
-      await mcpClient.callTool("set-metadata", {
-        Key: "configuredMapRandSeed",
-        Value: String(seeds.map)
-      });
+      await setMetadata("configuredMapRandSeed", seeds.map);
     }
   }
 
@@ -425,12 +531,15 @@ Game.SetAIAutoPlay(2000, -1);`
    * pregame values are the stable reproducibility contract.
    */
   private async verifyRandomSeeds(): Promise<boolean> {
-    const expected = this.activeSeeds;
+    const expected = this.seatingClaim?.seeds;
     if (expected?.sync === undefined && expected?.map === undefined) return true;
 
+    // `syncRandSeed`/`mapRandSeed` are written by the MCP store from Civ's
+    // pregame seed values before `GameSwitched` fires; they're the stable
+    // reproducibility contract across runs.
     const [observedSyncText, observedMapText] = await Promise.all([
-      this.readMetadata("syncRandSeed"),
-      this.readMetadata("mapRandSeed")
+      getMetadata("syncRandSeed"),
+      getMetadata("mapRandSeed")
     ]);
     const observedSync = Number(observedSyncText);
     const observedMap = Number(observedMapText);
@@ -460,12 +569,13 @@ Game.SetAIAutoPlay(2000, -1);`
     return false;
   }
 
-  private async readMetadata(key: string): Promise<string> {
-    const result = await mcpClient.callTool("get-metadata", { Key: key }) as Record<string, unknown>;
-    const content = result.content as Array<{ type: string; text: string }> | undefined;
-    return content?.[0]?.text ?? "";
-  }
-
+  /**
+   * Finalize crash recovery once the relaunched game has reconnected: flip
+   * state back to `running`, resume any paused OBS production, reset model
+   * identity on existing VoxPlayers so they re-send it to the fresh game,
+   * and re-issue the autoplay/strategic-view Lua. No-op when not in
+   * `recovering` state.
+   */
   private async recoverGame(): Promise<void> {
     if (this.state === 'recovering') {
       logger.warn(`Game successfully recovered from crash, resuming play... (autoplay: ${this.config.autoPlay})`);
@@ -483,142 +593,77 @@ Game.SetAIAutoPlay(2000, -1);`
     }
   }
 
+  /**
+   * Handle Civ's `PlayerVictory` notification. Records that a victory was
+   * observed (the actual `succeeded` flag is gated on archive confirmation
+   * inside `shutdown`). In autoplay mode this drives the whole shutdown
+   * ritual; in interactive mode it just unblocks `start()` and lets the
+   * caller (or process manager) drive teardown.
+   */
   private async handlePlayerVictory(params: GameEventNotification): Promise<void> {
     logger.warn(`Player ${params.playerID} has won the game on turn ${params.turn}!`);
 
-    // Mark the active cycle cell as a success — shutdown() will persist this
-    // when it releases the claim. We don't release here because the game still
-    // needs to wind down (and the existing claim is the source of truth until
-    // released, including for any further crash-recovery during shutdown).
-    this.claimSucceeded = true;
+    // Mark victory observed — shutdown() decides whether this counts as a
+    // success once it has the archive notification in hand.
+    this.victoryObserved = true;
 
-    // Stop the game when autoplay
     if (this.config.autoPlay) {
-      this.onStateChange('stopping');
-      // Abort all existing players
-      for (const player of this.activePlayers.values()) {
-        player.abort(true);
-      }
-      this.activePlayers.clear();
-
-      // Stop autoplay
-      mcpClient.callTool("lua-executor", { Script: `Game.SetAIAutoPlay(-1);` }).catch((any) => null);
-      this.onStateChange('stopping');
-
-      // Stop the game
-      await setTimeout(5000);
-      logger.info(`Requesting voluntary shutdown of the game...`);
-      mcpClient.callTool("lua-executor", { Script: `Events.UserRequestClose();` }).catch((any) => null);
-      await setTimeout(5000);
-
-      // Stop production before killing the game
-      await this.obsCall('stopProduction', () => this.production!.stop());
-
-      // Kill the process
-      const killed = await voxCivilization.killGame();
-      logger.info(`Sent killing signals to the game: ${killed}`);
-      this.onStateChange('stopped');
-    }
-
-    // Resolve the victory promise to complete the session
-    if (this.victoryResolve) {
+      // Unified shutdown handles voluntary game close, archive wait, MCP
+      // disconnect, seating release, and state→stopped. Idempotent, so the
+      // post-`start()` shutdown call from console.ts is a no-op.
+      await this.shutdown();
+    } else {
+      // Non-autoplay: caller (or process manager) drives the actual shutdown.
+      // We just let start() return.
       logger.info(`Finishing the run...`);
-      this.victoryResolve();
+      this.victoryResolve?.();
     }
   }
 
   /**
-   * Identity seating map: configSlot N → player ID N. Used when neither
-   * `randomizeSeating` nor a multi-seed array is configured.
+   * Claim a cell from `seatingManager` and stash it on the session. In trivial
+   * mode the manager returns an in-memory identity claim (no filesystem I/O);
+   * in cycle mode it returns the next pending cell. Idempotent within a
+   * session — safe to call again during crash recovery; the manager's
+   * own-runner reclaim returns the same cell.
    */
-  private identitySeatingMap(): Record<string, number> {
-    const identity: Record<string, number> = {};
-    for (const slot of Object.keys(this.config.llmPlayers).map(Number)) {
-      identity[String(slot)] = slot;
-    }
-    return identity;
-  }
-
-  /**
-   * Claim a cell from the persistent seating × seed cycle, populating
-   * `this.seatingClaim` and `this.seatingMap`. No-op (identity map) when
-   * neither `randomizeSeating` nor a multi-seed array is configured.
-   *
-   * Idempotent within a single session — safe to call again during crash
-   * recovery; the manager's own-runner reclaim returns the same cell.
-   *
-   * @param playerCount - resolved game-slot count from `start()`. Used only when
-   *   the cycle is enabled (otherwise a single virtual cell suffices).
-   */
-  private async ensureSeatingClaim(playerCount?: number): Promise<void> {
-    const cycleEnabled = !!this.config.randomizeSeating || this.seedSets.length > 1;
-    if (!cycleEnabled) {
-      this.seatingMap = this.identitySeatingMap();
-      return;
-    }
-
-    // For modes that don't compute playerCount (load/wait), fall back to the
-    // configured slot ceiling so the cycle still has a sensible N.
-    const configSlots = Object.keys(this.config.llmPlayers).map(Number);
-    const totalSeats = playerCount ?? Math.max(...configSlots) + 1;
-
-    if (!this.seatingManager) {
-      this.seatingManager = new SeatingStateManager({
-        configName: this.config.name,
-        configSlots,
-        totalSeats,
-        seedCount: this.seedSets.length,
-        seedSets: this.seedSets
-      });
-    }
-
+  private async ensureSeatingClaim(): Promise<void> {
     const claim = await this.seatingManager.claimNextCell();
     this.seatingClaim = claim;
-    this.seatingMap = claim.seatingMap;
     this.claimReleased = false;
-    this.claimSucceeded = false;
 
     logger.info(
-      `Cycle cell claimed: rotation=${claim.rotation} seedIndex=${claim.seedIndex} ` +
+      `Seating claim acquired: rotation=${claim.rotation} seedIndex=${claim.seedIndex} ` +
       `seatingMap=${JSON.stringify(claim.seatingMap)}`
     );
   }
 
   /**
-   * Persist the resolved seating map (and cycle coordinates, if any) into the
-   * per-game telemetry metadata for audit. Replaces the legacy
-   * `resolveSeatingMap` write that doubled as scheduling state.
+   * Persist the resolved seating map and cycle coordinates into the per-game
+   * telemetry metadata for audit. Replaces the legacy `resolveSeatingMap`
+   * write that doubled as scheduling state.
    */
   private async writeSeatingMetadata(): Promise<void> {
-    if (this.seatingMap) {
-      await mcpClient.callTool("set-metadata", {
-        Key: "seatingMap",
-        Value: JSON.stringify(this.seatingMap)
-      });
-    }
-    if (this.seatingClaim) {
-      await mcpClient.callTool("set-metadata", {
-        Key: "seatingRotation",
-        Value: String(this.seatingClaim.rotation)
-      });
-      await mcpClient.callTool("set-metadata", {
-        Key: "seatingSeedIndex",
-        Value: String(this.seatingClaim.seedIndex)
-      });
-    }
+    const claim = this.seatingClaim;
+    if (!claim) return;
+    await setMetadata("seatingMap", JSON.stringify(claim.seatingMap));
+    await setMetadata("seatingRotation", claim.rotation);
+    await setMetadata("seatingSeedIndex", claim.seedIndex);
   }
 
   /**
-   * Release the active claim back to the cycle exactly once. `success === true`
-   * marks the cell completed; `false` returns it to pending so it can be
-   * retried by us or another runner. Idempotent (the `claimReleased` guard
-   * prevents double-release between the victory and shutdown paths).
+   * Release the active claim back to the cycle exactly once. The cell only
+   * becomes `completed` when both `success` (victory) and `archived` (MCP
+   * archive confirmed) are true — any other combination is a retry-or-fail
+   * release inside `SeatingStateManager.releaseCell`. Idempotent (the
+   * `claimReleased` guard prevents double-release between the victory and
+   * shutdown paths).
    */
-  private async releaseSeatingClaim(success: boolean): Promise<void> {
-    if (!this.seatingManager || !this.seatingClaim || this.claimReleased) return;
+  private async releaseSeatingClaim(success: boolean, archived: boolean): Promise<void> {
+    if (!this.seatingClaim || this.claimReleased) return;
     this.claimReleased = true;
     try {
-      await this.seatingManager.releaseCell(this.seatingClaim, success);
+      await this.seatingManager.releaseCell(this.seatingClaim, success, archived);
     } catch (err) {
       logger.warn(`Failed to release seating claim: ${(err as Error).message}`);
     }
@@ -632,7 +677,7 @@ Game.SetAIAutoPlay(2000, -1);`
     const result: Record<number, { strategist: string; model?: string; configSlot: number }> = {};
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
       const configSlot = parseInt(configSlotStr);
-      const actualPlayerID = this.seatingMap?.[configSlotStr] ?? configSlot;
+      const actualPlayerID = this.seatingClaim?.seatingMap[configSlotStr] ?? configSlot;
       const mainModel = playerConfig.llms?.[playerConfig.strategist];
       result[actualPlayerID] = {
         strategist: playerConfig.strategist,
@@ -659,26 +704,17 @@ Game.SetAIAutoPlay(2000, -1);`
 
     // If the game wasn't initialized, use the appropriate script based on mode
     const luaScript = this.config.gameMode === 'start' && this.state === 'starting' ? 'StartGame.lua' :
-                      this.config.gameMode === 'wait' ? 'LoadMods.lua' : 'LoadGame.lua';
-
-    // Calculate player count for recovery (same as in start())
-    let playerCount: number | undefined;
-    if (this.config.gameMode === 'start' && luaScript === 'StartGame.lua') {
-      const playerIds = Object.keys(this.config.llmPlayers).map(Number);
-      if (playerIds.length > 0) {
-        playerCount = Math.max(...playerIds) + 1;
-      }
-    }
+      this.config.gameMode === 'wait' ? 'LoadMods.lua' : 'LoadGame.lua';
+    const playerCount = this.computePlayerCount(luaScript);
 
     // Game crashed unexpectedly
     logger.error(`Game process crashed with exit code: ${exitCode}`);
     await this.obsCall('suspendProduction', () => this.production!.suspend());
     this.onStateChange('error');
 
-    // Check if we've exceeded recovery attempts
+    // Bounded retries — shutdown() handles stopProduction internally.
     if (this.crashRecoveryAttempts >= this.MAX_RECOVERY_ATTEMPTS) {
       logger.error(`Maximum recovery attempts (${this.MAX_RECOVERY_ATTEMPTS}) exceeded. Shutting down session.`);
-      await this.obsCall('stopProduction', () => this.production!.stop());
       await this.shutdown();
       return;
     }
@@ -697,16 +733,27 @@ Game.SetAIAutoPlay(2000, -1);`
     } else {
       logger.info(`Starting Civilization V with ${luaScript} to recover from crash...`);
     }
-    // Reuse the seeds from the active claim so the recovered run stays on the
-    // same cycle cell (the claim's seed and seating map remain valid across
-    // the crash/recovery boundary).
-    const recoverySeeds = this.seatingClaim?.seeds ?? this.seedSets[0];
-    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), recoverySeeds);
+    // The active claim's seeds stay valid across the crash/recovery boundary,
+    // so the recovered run stays on the same cycle cell.
+    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.seatingClaim?.seeds);
 
     if (!started) {
       logger.error('Failed to restart the game');
       await this.shutdown();
       return;
     }
+  }
+
+  /**
+   * Derive the launch player count from the `llmPlayers` config. Returns
+   * `undefined` outside the fresh-start path (LoadGame / LoadMods inherit
+   * the player count from the save file). Single source of truth for the
+   * calculation shared by `start()` and `handleGameExit()`.
+   */
+  private computePlayerCount(luaScript: string): number | undefined {
+    if (this.config.gameMode !== 'start' || luaScript !== 'StartGame.lua') return undefined;
+    const playerIds = Object.keys(this.config.llmPlayers).map(Number);
+    if (playerIds.length === 0) return undefined;
+    return Math.max(...playerIds) + 1;
   }
 }

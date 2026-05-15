@@ -20,11 +20,13 @@ import { SeatingStateManager } from '../../src/utils/game/seating/state.js';
 import type { SeatingClaim, SeatingState } from '../../src/utils/game/seating/types.js';
 
 let testCounter = 0;
+/** Produce a per-test unique config name so parallel state files never collide. */
 function uniqueConfigName(label: string): string {
   testCounter++;
   return `${label}-${process.pid}-${testCounter}`;
 }
 
+/** Read and parse the on-disk state file for assertions about persistence. */
 function readState(configName: string): SeatingState {
   const raw = fs.readFileSync(path.join(tmpRoot, `${configName}.seating.json`), 'utf8');
   return JSON.parse(raw) as SeatingState;
@@ -49,7 +51,8 @@ describe('SeatingStateManager — single seed', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
 
     const claim = await mgr.claimNextCell();
@@ -78,7 +81,8 @@ describe('SeatingStateManager — single seed', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
 
     const seatsHit: number[] = [];
@@ -102,7 +106,8 @@ describe('SeatingStateManager — single seed', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
 
     for (let i = 0; i < 8; i++) {
@@ -126,7 +131,8 @@ describe('SeatingStateManager — single seed', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
 
     const first = await mgr.claimNextCell();
@@ -146,7 +152,8 @@ describe('SeatingStateManager — single seed', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
     const first = await mgr1.claimNextCell();
 
@@ -157,7 +164,8 @@ describe('SeatingStateManager — single seed', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
     const reclaimed = await mgr2.claimNextCell();
     expect(reclaimed.rotation).toBe(first.rotation);
@@ -226,7 +234,8 @@ describe('SeatingStateManager — config drift', () => {
       configSlots: [3],
       totalSeats: 4,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
     for (let i = 0; i < 4; i++) {
       const c = await mgrA.claimNextCell();
@@ -243,7 +252,8 @@ describe('SeatingStateManager — config drift', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
     const claim = await mgrB.claimNextCell();
     expect(claim.seatingMap['7']).toBeGreaterThanOrEqual(0);
@@ -269,7 +279,8 @@ describe('SeatingStateManager — file lock serializes claims', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
 
     const seenCells = new Set<string>();
@@ -294,7 +305,8 @@ describe('SeatingStateManager — release safety', () => {
       configSlots: [7],
       totalSeats: 8,
       seedCount: 1,
-      seedSets: [undefined]
+      seedSets: [undefined],
+      randomizeSeating: true
     });
 
     const claim = await mgr.claimNextCell();
@@ -350,5 +362,94 @@ describe('SeatingStateManager — constructor validation', () => {
       seedCount: 2,
       seedSets: [undefined]
     })).toThrow(/seedSets\.length/);
+  });
+});
+
+describe('SeatingStateManager — trivial mode (no randomization, single seed)', () => {
+  it('returns an identity claim without touching disk', async () => {
+    const cfg = uniqueConfigName('trivial-identity');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [0, 2, 5],
+      totalSeats: 8,
+      seedCount: 1,
+      seedSets: [{ sync: 42 }],
+      randomizeSeating: false,
+    });
+
+    const claim = await mgr.claimNextCell();
+
+    // configSlot N → seat N — no permutation.
+    expect(claim.rotation).toBe(0);
+    expect(claim.seedIndex).toBe(0);
+    expect(claim.seatingMap).toEqual({ '0': 0, '2': 2, '5': 5 });
+    expect(claim.seeds).toEqual({ sync: 42 });
+
+    // No state file should have been written.
+    expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(false);
+  });
+
+  it('treats releaseCell and attachGameId as no-ops in trivial mode', async () => {
+    const cfg = uniqueConfigName('trivial-noop');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [3],
+      totalSeats: 4,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: false,
+    });
+
+    const claim = await mgr.claimNextCell();
+
+    // Both methods should resolve without throwing and without creating a state file.
+    await mgr.releaseCell(claim, true, true);
+    await mgr.attachGameId(claim, 'game-abc');
+
+    expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(false);
+  });
+
+  it('isCycleFinished and isCycleComplete are false (loops never auto-exit in trivial mode)', async () => {
+    const mgr = new SeatingStateManager({
+      configName: uniqueConfigName('trivial-cycle-state'),
+      configSlots: [0],
+      totalSeats: 1,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: false,
+    });
+
+    expect(await mgr.isCycleFinished()).toBe(false);
+    expect(await mgr.isCycleComplete()).toBe(false);
+  });
+
+  it('still uses persistent state when randomizeSeating is true even with seedCount=1', async () => {
+    const cfg = uniqueConfigName('trivial-disabled-by-randomize');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [0],
+      totalSeats: 4,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: true,
+    });
+
+    await mgr.claimNextCell();
+    expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(true);
+  });
+
+  it('still uses persistent state when seedCount > 1 even without randomizeSeating', async () => {
+    const cfg = uniqueConfigName('trivial-disabled-by-seedcount');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [0],
+      totalSeats: 4,
+      seedCount: 2,
+      seedSets: [undefined, { sync: 1 }],
+      randomizeSeating: false,
+    });
+
+    await mgr.claimNextCell();
+    expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(true);
   });
 });

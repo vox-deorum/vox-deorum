@@ -44,7 +44,13 @@ export function isCellStaleInProgress(entry: CellEntry, now: number): boolean {
   return now - Date.parse(entry.claimedAt) > STALE_THRESHOLD_MS;
 }
 
-/** True iff every (rotation, seedIndex) cell is `completed`. */
+/**
+ * True iff every (rotation, seedIndex) cell is strictly `completed`.
+ *
+ * This is the gate for the auto-reset path in `claimNextCell`: a cycle only
+ * resets when every cell finished successfully. Mixed completed-and-failed
+ * states must be resolved by the operator (terminal cells are sticky).
+ */
 export function allCompleted(state: SeatingState): boolean {
   for (let rotation = 0; rotation < state.totalSeats; rotation++) {
     for (let seedIndex = 0; seedIndex < state.seedCount; seedIndex++) {
@@ -55,12 +61,53 @@ export function allCompleted(state: SeatingState): boolean {
 }
 
 /**
+ * True iff every (rotation, seedIndex) cell is in a terminal state
+ * (`completed` or `failed`).
+ *
+ * Used by the auto-repetition loop to exit cleanly when the cycle has run as
+ * far as it can — strict completion may never trigger if any cell is failed.
+ */
+export function isCycleFinished(state: SeatingState): boolean {
+  for (let rotation = 0; rotation < state.totalSeats; rotation++) {
+    for (let seedIndex = 0; seedIndex < state.seedCount; seedIndex++) {
+      const status = getCell(state, rotation, seedIndex).status;
+      if (status !== 'completed' && status !== 'failed') return false;
+    }
+  }
+  return true;
+}
+
+export interface CellStatusCounts {
+  completed: number;
+  failed: number;
+  pending: number;
+  inProgress: number;
+}
+
+/** Aggregate cell counts by status across the current cycle. */
+export function getCellStatusCounts(state: SeatingState): CellStatusCounts {
+  const counts: CellStatusCounts = { completed: 0, failed: 0, pending: 0, inProgress: 0 };
+  for (let rotation = 0; rotation < state.totalSeats; rotation++) {
+    for (let seedIndex = 0; seedIndex < state.seedCount; seedIndex++) {
+      const status = getCell(state, rotation, seedIndex).status;
+      if (status === 'completed') counts.completed++;
+      else if (status === 'failed') counts.failed++;
+      else if (status === 'in-progress') counts.inProgress++;
+      else counts.pending++;
+    }
+  }
+  return counts;
+}
+
+/**
  * Priority-ordered cell selection used by `SeatingStateManager.claimNextCell`:
  *   1. Own in-progress (own crash recovery).
  *   2. Stale in-progress from someone else.
  *   3. Next pending cell in the shuffled `consumeOrder`.
  *
- * Returns null if no cell is claimable (caller decides whether to reset the cycle).
+ * `completed` and `failed` cells are skipped implicitly — each priority's
+ * status check excludes them. Returns null if no cell is claimable (caller
+ * decides whether to reset the cycle).
  */
 export function pickCell(
   state: SeatingState,

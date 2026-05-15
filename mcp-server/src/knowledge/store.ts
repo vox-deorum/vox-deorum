@@ -309,7 +309,24 @@ export class KnowledgeStore {
             await this.saveKnowledge();
             // Try waiting again
             await setTimeout(10000);
-            await archiveGameData();
+            const archivedGameId = knowledgeManager.getGameId() ?? "";
+            const result = await archiveGameData();
+            // Signal archival outcome so listeners (notably the strategist
+            // session) can gate seating-cell completion on it. The notification
+            // travels on the same vox-deorum/game-event channel as other
+            // events; params are pass-through so we just attach the result.
+            MCPServer.getInstance().sendNotification(
+              "GameArchived",
+              data.PlayerID,
+              knowledgeManager.getTurn(),
+              id,
+              {
+                gameId: archivedGameId,
+                success: result !== null,
+                savePath: result?.savePath,
+                dbPath: result?.dbPath,
+              }
+            );
           }
         }
       } else {

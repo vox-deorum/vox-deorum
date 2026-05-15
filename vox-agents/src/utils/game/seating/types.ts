@@ -7,15 +7,37 @@
 
 import type { RandomSeedsConfig } from '../../../types/config.js';
 
-export type CellStatus = 'pending' | 'in-progress' | 'completed';
+export type CellStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
 
-/** Persistent record of a single (rotation, seedIndex) cell. */
+/**
+ * Persistent record of a single (rotation, seedIndex) cell.
+ *
+ * The optional fields below carry per-cell history that lets operators trace
+ * archive mismatches and lets the manager enforce a bounded retry budget. A
+ * cell only ever completes with one gameId (the one that was successfully
+ * archived); the field is overwritten on each new GameSwitched so re-claims
+ * and crash-recoveries simply replace it.
+ */
 export interface CellEntry {
   status: CellStatus;
   /** ISO timestamp when the cell was claimed. Present only for `in-progress`. */
   claimedAt?: string;
   /** `${hostname}#${pid}` of the claiming runner. Present only for `in-progress`. */
   claimedBy?: string;
+  /**
+   * Civ V gameId associated with this cell:
+   *   - `in-progress`: the current attempt's gameId (set via `attachGameId` on GameSwitched).
+   *   - `completed`:   the gameId whose archive succeeded.
+   *   - `failed`/`pending`: the last attempted gameId (for forensics).
+   */
+  gameId?: string;
+  /**
+   * Total crashes / archive-misses observed on this cell since the cycle began.
+   * Reaching `maxCellFailures` flips the cell to terminal `failed`.
+   */
+  failureCount?: number;
+  /** ISO timestamp of the successful archive notification. Set together with `status='completed'`. */
+  archivedAt?: string;
 }
 
 /** Coordinate of one scheduled seating rotation and seed set pairing. */
@@ -68,4 +90,19 @@ export interface SeatingStateManagerOptions {
    * "let Civ choose" for that index. Length must equal `seedCount`.
    */
   seedSets: Array<RandomSeedsConfig | undefined>;
+  /**
+   * Total crashes / archive-misses tolerated per cell before it becomes
+   * terminal `failed` (and is excluded from `pickCell`). Defaults to 5.
+   */
+  maxCellFailures?: number;
+  /**
+   * Whether the configured slots should be randomized across seats.
+   *
+   * When `false` AND `seedSets.length === 1`, the cycle is trivial — there's
+   * nothing to schedule. The manager returns an in-memory identity claim and
+   * skips all filesystem persistence (no `*.seating.json`, no lock). When
+   * `true`, or when `seedSets.length > 1`, the persistent cycle kicks in as
+   * usual. Defaults to `false`.
+   */
+  randomizeSeating?: boolean;
 }

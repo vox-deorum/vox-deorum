@@ -27,10 +27,17 @@
  *
  * # Failure handling
  *
- * Cells track per-cell status (`pending`, `in-progress`, `completed`) rather
- * than a single monotonic counter. A crashed/aborted game releases its cell
- * back to `pending` so it can be retried — the cycle therefore reflects N×M
- * **successful** runs, not N×M starts.
+ * Cells track per-cell status (`pending`, `in-progress`, `completed`, `failed`)
+ * plus a `failureCount`. A crashed game / missing-archive game releases its
+ * cell back to `pending` so it can be retried — but only up to
+ * `maxCellFailures` total tries; past that the cell is marked `failed` and
+ * excluded from future picks (terminal until a human edits the JSON). The
+ * stale-steal path also bumps `failureCount`, so silent crashes (where the
+ * runner died without releasing) count toward the budget.
+ *
+ * Completion is gated on archive success: `releaseCell` only marks a cell
+ * `completed` when both `success` (victory observed) and `archived` (archive
+ * notification was successful) are true.
  *
  * # Distributed cooperation
  *
@@ -57,8 +64,11 @@ import {
   allCompleted,
   buildSeatingMap,
   getCell,
+  getCellStatusCounts as countsHelper,
+  isCycleFinished as cycleFinishedHelper,
   pickCell,
   setCell,
+  type CellStatusCounts,
 } from './cells.js';
 import {
   loadOrInit,
@@ -67,11 +77,18 @@ import {
   writeStateUnlocked,
 } from './io.js';
 import type {
+  CellEntry,
+  CellStatus,
   SeatingClaim,
+  SeatingCycleCell,
+  SeatingState,
   SeatingStateManagerOptions,
 } from './types.js';
 
 const logger = createLogger('SeatingState');
+
+/** Default per-cell failure budget when `maxCellFailures` isn't configured. */
+const DEFAULT_MAX_CELL_FAILURES = 5;
 
 /** Identifier embedded in `claimedBy` so we can distinguish our own crashes from others'. */
 function runnerId(): string {
@@ -96,9 +113,22 @@ export class SeatingStateManager {
   private readonly totalSeats: number;
   private readonly seedCount: number;
   private readonly seedSets: SeatingStateManagerOptions['seedSets'];
+  private readonly maxCellFailures: number;
   private readonly statePath: string;
   private readonly lockPath: string;
+  /**
+   * True when the cycle has nothing to schedule — neither seat randomization
+   * is requested nor multiple seed sets are configured. In this mode the
+   * manager produces an in-memory identity claim per `claimNextCell()` call
+   * and never touches the filesystem.
+   */
+  private readonly trivial: boolean;
 
+  /**
+   * Validate options and pre-compute paths + the trivial-mode flag. No disk
+   * I/O — the state file is only touched on the first non-trivial public
+   * call (`claimNextCell` / `releaseCell` / ...).
+   */
   constructor(opts: SeatingStateManagerOptions) {
     if (opts.totalSeats <= 0) {
       throw new Error(`SeatingStateManager: totalSeats must be > 0, got ${opts.totalSeats}`);
@@ -126,33 +156,74 @@ export class SeatingStateManager {
         `SeatingStateManager: seedSets.length (${opts.seedSets.length}) must equal seedCount (${opts.seedCount})`
       );
     }
+    if (opts.maxCellFailures !== undefined && opts.maxCellFailures < 1) {
+      throw new Error(
+        `SeatingStateManager: maxCellFailures must be >= 1, got ${opts.maxCellFailures}`
+      );
+    }
 
     this.configName = opts.configName;
     this.configSlotsSorted = [...opts.configSlots].sort((a, b) => a - b);
     this.totalSeats = opts.totalSeats;
     this.seedCount = opts.seedCount;
     this.seedSets = opts.seedSets;
+    this.maxCellFailures = opts.maxCellFailures ?? DEFAULT_MAX_CELL_FAILURES;
     this.statePath = path.join(getConfigsDir(), `${this.configName}.seating.json`);
     this.lockPath = `${this.statePath}.lock`;
+    this.trivial = !opts.randomizeSeating && opts.seedCount === 1;
+  }
+
+  /**
+   * Sentinel `claimedAt` returned for trivial-mode claims. Distinct from any
+   * real ISO timestamp so a stray `releaseCell` against a trivial claim would
+   * be detectable in logs if persistence were ever turned on later.
+   */
+  private static readonly TRIVIAL_CLAIMED_AT = 'trivial';
+
+  /**
+   * Synthesize the identity claim used in trivial mode. configSlot N is
+   * placed at seat N (no permutation), and the single configured seed set is
+   * returned as-is.
+   */
+  private buildTrivialClaim(): SeatingClaim {
+    const seatingMap: Record<string, number> = {};
+    for (const slot of this.configSlotsSorted) {
+      seatingMap[String(slot)] = slot;
+    }
+    return {
+      rotation: 0,
+      seedIndex: 0,
+      seatingMap,
+      seeds: this.seedSets[0],
+      claimedAt: SeatingStateManager.TRIVIAL_CLAIMED_AT,
+    };
   }
 
   /**
    * Atomically pick the next cell to run and mark it `in-progress`.
    *
    * Selection priority (under file lock):
-   *   1. Own in-progress cell (claimedBy === ourId) — i.e. we crashed before
-   *      releasing; resume on the same cell.
+   *   1. Own in-progress cell — i.e. we crashed before releasing; resume on the same cell.
    *   2. Stale in-progress cell (older than the stale threshold) — assumed
-   *      abandoned by some other runner; we steal it.
+   *      abandoned by some other runner; we steal it. Stealing counts as a
+   *      silent crash: `failureCount` is incremented, and if it crosses
+   *      `maxCellFailures` the cell is marked `failed` (skipped) instead.
    *   3. Next pending cell in the shuffled `consumeOrder`.
-   *   4. If every cell is `completed`, reset the cycle (regenerate `basePerm`
-   *      and `consumeOrder`, increment `completedCycles`) and pick the first
-   *      cell of the new cycle.
+   *   4. If every cell is strictly `completed`, reset the cycle (regenerate
+   *      `basePerm` and `consumeOrder`, increment `completedCycles`) and pick
+   *      the first cell of the new cycle. Failed cells block this reset so
+   *      they remain visible until the operator intervenes.
    *
    * @returns A {@link SeatingClaim} carrying everything the session needs to
    *   start the game (resolved seating map, seed set, claim metadata).
    */
   async claimNextCell(): Promise<SeatingClaim> {
+    if (this.trivial) {
+      // No persistent state in trivial mode — every call returns the same
+      // identity claim. Callers can still `releaseCell`/`attachGameId` on it;
+      // those are no-ops below.
+      return this.buildTrivialClaim();
+    }
     const ourId = runnerId();
     return withLock(this.lockPath, ourId, this.configName, () => {
       const state = loadOrInit({
@@ -163,29 +234,18 @@ export class SeatingStateManager {
         configSlotsSorted: this.configSlotsSorted,
       });
       const now = Date.now();
-
-      let pick = pickCell(state, ourId, now);
-      if (!pick) {
-        // No claimable cell means the cycle is fully completed — start a new one.
-        if (allCompleted(state)) {
-          resetCycleInPlace(state);
-          logger.warn(
-            `Seating cycle "${this.configName}" completed (cycle #${state.completedCycles}); regenerated for next cycle`
-          );
-          pick = pickCell(state, ourId, now);
-        }
-      }
-      if (!pick) {
-        // Defensive — every fresh cycle has pending cells.
-        throw new Error(`No claimable cell in seating state "${this.configName}"`);
-      }
+      const { pick, before, failureCount } = this.selectClaimable(state, ourId, now);
 
       const { rotation, seedIndex } = pick;
       const claimedAt = new Date(now).toISOString();
       setCell(state, rotation, seedIndex, {
         status: 'in-progress',
         claimedAt,
-        claimedBy: ourId
+        claimedBy: ourId,
+        // Preserve last gameId until GameSwitched calls attachGameId with the
+        // relaunched game's id; useful audit data if we crash before then.
+        gameId: before.gameId,
+        failureCount,
       });
       writeStateUnlocked(this.statePath, state);
 
@@ -194,7 +254,8 @@ export class SeatingStateManager {
 
       logger.info(
         `Claimed seating cell rotation=${rotation} seedIndex=${seedIndex} for "${this.configName}" ` +
-        `(seatingMap=${JSON.stringify(seatingMap)}, completedCycles=${state.completedCycles})`
+        `(seatingMap=${JSON.stringify(seatingMap)}, completedCycles=${state.completedCycles}, ` +
+        `failureCount=${failureCount ?? 0}/${this.maxCellFailures})`
       );
 
       return { rotation, seedIndex, seatingMap, seeds, claimedAt };
@@ -202,18 +263,28 @@ export class SeatingStateManager {
   }
 
   /**
-   * Atomically release a claim. On success the cell becomes `completed`;
-   * otherwise it returns to `pending` so the same cycle can retry it.
+   * Atomically release a claim.
+   *
+   * The cell becomes `completed` only when both `success` (a `PlayerVictory`
+   * was observed) and `archived` (the MCP archive succeeded) are true. Any
+   * other combination is treated as a failed attempt: `failureCount` is
+   * incremented and the cell goes back to `pending`, or to terminal `failed`
+   * once the count reaches `maxCellFailures`.
    *
    * If the on-disk cell has been overwritten since we claimed it (claimedAt
    * mismatch) the release is a no-op — another runner has already taken the
-   * slot, and trampling them would corrupt the cycle.
+   * slot, and trampling them would corrupt the cycle. Safe to call even if
+   * the state file has been deleted between claim and release.
    *
-   * Safe to call even if the state file has been deleted between claim and
-   * release (logs a warning and returns).
+   * @param archived  Whether the MCP `GameArchived` notification reported
+   *   success. When omitted, defaults to `success` for backward compatibility
+   *   with call sites that pre-date the archive-gating change.
    */
-  async releaseCell(claim: SeatingClaim, success: boolean): Promise<void> {
+  async releaseCell(claim: SeatingClaim, success: boolean, archived?: boolean): Promise<void> {
+    if (this.trivial) return;
     const ourId = runnerId();
+    const isArchived = archived ?? success;
+
     return withLock(this.lockPath, ourId, this.configName, () => {
       const existing = readStateUnlocked(this.statePath);
       if (!existing) {
@@ -229,23 +300,111 @@ export class SeatingStateManager {
         );
         return;
       }
+
+      if (success && isArchived) {
+        setCell(existing, claim.rotation, claim.seedIndex, {
+          status: 'completed',
+          gameId: cell.gameId,
+          // failureCount is preserved as audit history — resetting would hide
+          // chronic offenders that ultimately succeeded.
+          failureCount: cell.failureCount,
+          archivedAt: new Date().toISOString(),
+        });
+        writeStateUnlocked(this.statePath, existing);
+        logger.info(
+          `Released cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}" ` +
+          `as completed (gameId=${cell.gameId ?? 'unknown'}, failureCount=${cell.failureCount ?? 0})`
+        );
+        return;
+      }
+
+      // Failure branch (also covers victory-but-archive-missing).
+      if (success && !isArchived) {
+        logger.warn(
+          `Cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}": ` +
+          `victory observed but archive missing; treating as failure for retry`
+        );
+      }
+
+      const newFailureCount = (cell.failureCount ?? 0) + 1;
+      const newStatus: CellStatus = newFailureCount >= this.maxCellFailures ? 'failed' : 'pending';
       setCell(existing, claim.rotation, claim.seedIndex, {
-        status: success ? 'completed' : 'pending'
+        status: newStatus,
+        gameId: cell.gameId, // preserve last attempted gameId for forensics
+        failureCount: newFailureCount,
       });
       writeStateUnlocked(this.statePath, existing);
       logger.info(
         `Released cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}" ` +
-        `as ${success ? 'completed' : 'pending'}`
+        `as ${newStatus} (failureCount=${newFailureCount}/${this.maxCellFailures})`
       );
     });
   }
 
   /**
-   * Returns true iff every cell of the current cycle is `completed`. Used by
-   * the auto-repetition loop to know when to stop. Read-only but still goes
-   * through the lock to avoid observing a torn state mid-write.
+   * Bind the gameId reported by Civ's `GameSwitched` to the in-progress cell
+   * holding the supplied claim. Idempotent (re-setting the same gameId is a
+   * no-op); crash-recovery within the same claim simply overwrites with the
+   * relaunched game's id.
+   *
+   * No-ops with a warning if the cell has been stolen since the claim
+   * (claimedAt mismatch) or if the state file has gone missing.
+   */
+  async attachGameId(claim: SeatingClaim, gameId: string): Promise<void> {
+    if (this.trivial) return;
+    const ourId = runnerId();
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const state = readStateUnlocked(this.statePath);
+      if (!state) {
+        logger.warn(`State file for "${this.configName}" missing on attachGameId; ignoring`);
+        return;
+      }
+      const cell = getCell(state, claim.rotation, claim.seedIndex);
+      if (cell.status !== 'in-progress' || cell.claimedAt !== claim.claimedAt) {
+        logger.warn(
+          `Skipping attachGameId for "${this.configName}" cell rotation=${claim.rotation} seedIndex=${claim.seedIndex}: ` +
+          `state has status=${cell.status} claimedAt=${cell.claimedAt} ` +
+          `(expected in-progress @ ${claim.claimedAt})`
+        );
+        return;
+      }
+      if (cell.gameId === gameId) return; // idempotent — skip the write
+      setCell(state, claim.rotation, claim.seedIndex, { ...cell, gameId });
+      writeStateUnlocked(this.statePath, state);
+      logger.info(
+        `Attached gameId=${gameId} to seating cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}"`
+      );
+    });
+  }
+
+  /**
+   * Returns true iff every cell of the current cycle is in a terminal state
+   * (`completed` or `failed`). Used by the auto-repetition loop to exit cleanly
+   * when failed cells block strict completion. Read-only but still goes through
+   * the lock to avoid observing a torn state mid-write.
+   */
+  async isCycleFinished(): Promise<boolean> {
+    if (this.trivial) return false;
+    const ourId = runnerId();
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const state = loadOrInit({
+        statePath: this.statePath,
+        configName: this.configName,
+        totalSeats: this.totalSeats,
+        seedCount: this.seedCount,
+        configSlotsSorted: this.configSlotsSorted,
+      });
+      return cycleFinishedHelper(state);
+    });
+  }
+
+  /**
+   * Returns true iff every cell of the current cycle is strictly `completed`.
+   * Retained for the auto-repetition loop in `console.ts` until it's switched
+   * to the more permissive {@link isCycleFinished}.
    */
   async isCycleComplete(): Promise<boolean> {
+    if (this.trivial) return false;
     const ourId = runnerId();
     return withLock(this.lockPath, ourId, this.configName, () => {
       const state = loadOrInit({
@@ -257,5 +416,78 @@ export class SeatingStateManager {
       });
       return allCompleted(state);
     });
+  }
+
+  /** Aggregate cell counts by status across the current cycle — used for operator summaries. */
+  async getCellStatusCounts(): Promise<CellStatusCounts> {
+    if (this.trivial) {
+      // No persistent cells in trivial mode — report a single perpetually-pending
+      // cell so operator summaries don't surface a zero state.
+      return { completed: 0, failed: 0, pending: 1, inProgress: 0 };
+    }
+    const ourId = runnerId();
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const state = loadOrInit({
+        statePath: this.statePath,
+        configName: this.configName,
+        totalSeats: this.totalSeats,
+        seedCount: this.seedCount,
+        configSlotsSorted: this.configSlotsSorted,
+      });
+      return countsHelper(state);
+    });
+  }
+
+  /**
+   * Walks the pick priorities and returns the cell to claim plus the previous
+   * `CellEntry` (so the caller can preserve `gameId` / `failureCount`) and the
+   * `failureCount` value to record on the new in-progress claim.
+   *
+   * Stale steals from other runners count toward the failure budget: if a
+   * steal would push the count to `maxCellFailures`, the cell is marked
+   * `failed` instead and the next candidate is picked. Mutations to `state`
+   * during stale-steal resolution stay in memory until the caller's final
+   * `writeStateUnlocked`.
+   */
+  private selectClaimable(
+    state: SeatingState,
+    ourId: string,
+    now: number,
+  ): { pick: SeatingCycleCell; before: CellEntry; failureCount: number | undefined } {
+    while (true) {
+      let pick = pickCell(state, ourId, now);
+      if (!pick && allCompleted(state)) {
+        resetCycleInPlace(state);
+        logger.warn(
+          `Seating cycle "${this.configName}" completed (cycle #${state.completedCycles}); regenerated for next cycle`
+        );
+        pick = pickCell(state, ourId, now);
+      }
+      if (!pick) {
+        throw new Error(`No claimable cell in seating state "${this.configName}"`);
+      }
+
+      const before = getCell(state, pick.rotation, pick.seedIndex);
+      const isStaleSteal = before.status === 'in-progress' && before.claimedBy !== ourId;
+
+      if (!isStaleSteal) {
+        return { pick, before, failureCount: before.failureCount };
+      }
+
+      const incremented = (before.failureCount ?? 0) + 1;
+      if (incremented >= this.maxCellFailures) {
+        setCell(state, pick.rotation, pick.seedIndex, {
+          status: 'failed',
+          gameId: before.gameId,
+          failureCount: incremented,
+        });
+        logger.warn(
+          `Marking seating cell rotation=${pick.rotation} seedIndex=${pick.seedIndex} for "${this.configName}" ` +
+          `as failed (silent-crash budget exhausted at ${incremented}/${this.maxCellFailures})`
+        );
+        continue;
+      }
+      return { pick, before, failureCount: incremented };
+    }
   }
 }
