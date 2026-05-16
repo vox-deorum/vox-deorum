@@ -12,7 +12,7 @@
 import type { CellEntry, SeatingCycleCell, SeatingState } from './types.js';
 
 /** How long another runner's in-progress claim can sit before we steal it. */
-export const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+export const STALE_THRESHOLD_MS = 72 * 60 * 60 * 1000; // 72 hours
 
 /** Read a cell, treating missing inner/outer keys as `pending`. */
 export function getCell(state: SeatingState, rotation: number, seedIndex: number): CellEntry {
