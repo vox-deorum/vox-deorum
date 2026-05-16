@@ -29,10 +29,12 @@ const logger = createLogger('StrategistSession');
 /**
  * How long shutdown will wait for the MCP `GameArchived` notification before
  * giving up and treating the run as not-archived. MCP's own timing after a
- * `PlayerVictory` is ~15-20s (5s + saveKnowledge + 10s + archive copy), so
- * 60s provides comfortable slack for large saves.
+ * `PlayerVictory` is ~15-20s (5s + saveKnowledge + 10s + archive copy); 120s
+ * provides ~2 minutes of slack for large saves and slow disks, and shrinks
+ * the window where a late-arriving notification gets dropped (which would
+ * otherwise mark an archived game as a failure in the seating state).
  */
-const ARCHIVE_WAIT_TIMEOUT_MS = 60_000;
+const ARCHIVE_WAIT_TIMEOUT_MS = 120_000;
 
 /**
  * Concrete implementation of VoxSession for Strategist game sessions.
@@ -416,7 +418,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   }
 
   /**
-   * Reconcile the session with a new game context: bind the gameId to the
+   * Reconcile the session with a new game context: bind the gameID to the
    * seating cell, verify seeds, write per-game audit metadata, spin up fresh
    * VoxPlayers using the seating map, and kick off autoplay if configured.
    * Triggered by Civ's `GameSwitched` notification on first launch and after
@@ -434,11 +436,11 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     this.turn = params.turn;  // Update current turn
     logger.warn(`Game context switching to ${params.gameID} at turn ${params.turn}`);
 
-    // Bind the gameId to the current seating-cycle attempt so operators can
+    // Bind the gameID to the current seating-cycle attempt so operators can
     // correlate cells to archive files. Idempotent across crash-recoveries:
-    // each relaunch overwrites with the new gameId. No-op in trivial mode.
+    // each relaunch overwrites with the new gameID. No-op in trivial mode.
     if (this.seatingClaim) {
-      await this.seatingManager.attachGameId(this.seatingClaim, params.gameID);
+      await this.seatingManager.attachGameID(this.seatingClaim, params.gameID);
     }
 
     // Set OBS game ID for recording directory organization

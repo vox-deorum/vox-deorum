@@ -124,6 +124,52 @@ describe('SeatingStateManager — single seed', () => {
     expect(after.cells[String(ninth.rotation)][String(ninth.seedIndex)].status).toBe('in-progress');
   });
 
+  it('records completedBy on successful release and on archive-miss release', async () => {
+    const cfg = uniqueConfigName('completed-by');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [7],
+      totalSeats: 8,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: true,
+    });
+
+    const expectedRunner = `${os.hostname()}#${process.pid}`;
+
+    // Success + archived: cell completed, completedBy recorded.
+    const okClaim = await mgr.claimNextCell();
+    await mgr.releaseCell(okClaim, true, true);
+    let state = readState(cfg);
+    let okCell = state.cells[String(okClaim.rotation)][String(okClaim.seedIndex)];
+    expect(okCell.status).toBe('completed');
+    expect(okCell.completedBy).toBe(expectedRunner);
+
+    // Victory observed but archive missing: cell goes back to pending, but
+    // completedBy is still recorded for forensics.
+    const missClaim = await mgr.claimNextCell();
+    await mgr.releaseCell(missClaim, true, false);
+    state = readState(cfg);
+    const missCell = state.cells[String(missClaim.rotation)][String(missClaim.seedIndex)];
+    expect(missCell.status).toBe('pending');
+    expect(missCell.completedBy).toBe(expectedRunner);
+
+    // Non-victory failure on a fresh cell: completedBy is NOT recorded (nothing completed).
+    // The missClaim cell is still the highest-priority pending one, so explicitly
+    // release it as completed first to advance past it, then test a fresh cell.
+    const drainClaim = await mgr.claimNextCell();
+    expect(drainClaim.rotation).toBe(missClaim.rotation);
+    expect(drainClaim.seedIndex).toBe(missClaim.seedIndex);
+    await mgr.releaseCell(drainClaim, true, true);
+
+    const crashClaim = await mgr.claimNextCell();
+    await mgr.releaseCell(crashClaim, false);
+    state = readState(cfg);
+    const crashCell = state.cells[String(crashClaim.rotation)][String(crashClaim.seedIndex)];
+    expect(crashCell.status).toBe('pending');
+    expect(crashCell.completedBy).toBeUndefined();
+  });
+
   it('returns the same cell after release-fail (cell goes back to pending)', async () => {
     const cfg = uniqueConfigName('release-fail');
     const mgr = new SeatingStateManager({
@@ -389,7 +435,7 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
     expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(false);
   });
 
-  it('treats releaseCell and attachGameId as no-ops in trivial mode', async () => {
+  it('treats releaseCell and attachGameID as no-ops in trivial mode', async () => {
     const cfg = uniqueConfigName('trivial-noop');
     const mgr = new SeatingStateManager({
       configName: cfg,
@@ -404,7 +450,7 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
 
     // Both methods should resolve without throwing and without creating a state file.
     await mgr.releaseCell(claim, true, true);
-    await mgr.attachGameId(claim, 'game-abc');
+    await mgr.attachGameID(claim, 'game-abc');
 
     expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(false);
   });

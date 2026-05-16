@@ -239,7 +239,7 @@ export class SeatingStateManager {
   async claimNextCell(): Promise<SeatingClaim> {
     if (this.trivial) {
       // No persistent state in trivial mode — every call returns the same
-      // identity claim. Callers can still `releaseCell`/`attachGameId` on it;
+      // identity claim. Callers can still `releaseCell`/`attachGameID` on it;
       // those are no-ops below.
       return this.buildTrivialClaim();
     }
@@ -262,9 +262,13 @@ export class SeatingStateManager {
         status: 'in-progress',
         claimedAt,
         claimedBy: ourId,
-        // Preserve last gameId until GameSwitched calls attachGameId with the
+        // Preserve last gameID until GameSwitched calls attachGameID with the
         // relaunched game's id; useful audit data if we crash before then.
-        gameId: before.gameId,
+        gameID: before.gameID,
+        // Preserve `completedBy` from a prior victory-but-no-archive attempt
+        // so the attribution survives the retry; cleared once the new attempt
+        // releases (either with success or with a non-victory failure).
+        completedBy: before.completedBy,
         failureCount,
       });
       writeStateUnlocked(this.statePath, state);
@@ -324,22 +328,24 @@ export class SeatingStateManager {
       if (success && isArchived) {
         setCell(existing, claim.rotation, claim.seedIndex, {
           status: 'completed',
-          gameId: cell.gameId,
+          gameID: cell.gameID,
           // failureCount is preserved as audit history — resetting would hide
           // chronic offenders that ultimately succeeded.
           failureCount: cell.failureCount,
           archivedAt: new Date().toISOString(),
+          completedBy: ourId,
         });
         writeStateUnlocked(this.statePath, existing);
         logger.info(
           `Released cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}" ` +
-          `as completed (gameId=${cell.gameId ?? 'unknown'}, failureCount=${cell.failureCount ?? 0})`
+          `as completed (gameID=${cell.gameID ?? 'unknown'}, completedBy=${ourId}, failureCount=${cell.failureCount ?? 0})`
         );
         return;
       }
 
       // Failure branch (also covers victory-but-archive-missing).
-      if (success && !isArchived) {
+      const archiveMiss = success && !isArchived;
+      if (archiveMiss) {
         logger.warn(
           `Cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}": ` +
           `victory observed but archive missing; treating as failure for retry`
@@ -350,8 +356,12 @@ export class SeatingStateManager {
       const newStatus: CellStatus = newFailureCount >= this.maxCellFailures ? 'failed' : 'pending';
       setCell(existing, claim.rotation, claim.seedIndex, {
         status: newStatus,
-        gameId: cell.gameId, // preserve last attempted gameId for forensics
+        gameID: cell.gameID, // preserve last attempted gameID for forensics
         failureCount: newFailureCount,
+        // Record the runner on the archive-miss path so we keep attribution
+        // for the next retry; clear it on non-victory failures (the cell will
+        // be re-attempted from scratch and there's no completion to attribute).
+        completedBy: archiveMiss ? ourId : cell.completedBy,
       });
       writeStateUnlocked(this.statePath, existing);
       logger.info(
@@ -362,37 +372,37 @@ export class SeatingStateManager {
   }
 
   /**
-   * Bind the gameId reported by Civ's `GameSwitched` to the in-progress cell
-   * holding the supplied claim. Idempotent (re-setting the same gameId is a
+   * Bind the gameID reported by Civ's `GameSwitched` to the in-progress cell
+   * holding the supplied claim. Idempotent (re-setting the same gameID is a
    * no-op); crash-recovery within the same claim simply overwrites with the
    * relaunched game's id.
    *
    * No-ops with a warning if the cell has been stolen since the claim
    * (claimedAt mismatch) or if the state file has gone missing.
    */
-  async attachGameId(claim: SeatingClaim, gameId: string): Promise<void> {
+  async attachGameID(claim: SeatingClaim, gameID: string): Promise<void> {
     if (this.trivial) return;
     const ourId = runnerId();
     return withLock(this.lockPath, ourId, this.configName, () => {
       const state = readStateUnlocked(this.statePath);
       if (!state) {
-        logger.warn(`State file for "${this.configName}" missing on attachGameId; ignoring`);
+        logger.warn(`State file for "${this.configName}" missing on attachGameID; ignoring`);
         return;
       }
       const cell = getCell(state, claim.rotation, claim.seedIndex);
       if (cell.status !== 'in-progress' || cell.claimedAt !== claim.claimedAt) {
         logger.warn(
-          `Skipping attachGameId for "${this.configName}" cell rotation=${claim.rotation} seedIndex=${claim.seedIndex}: ` +
+          `Skipping attachGameID for "${this.configName}" cell rotation=${claim.rotation} seedIndex=${claim.seedIndex}: ` +
           `state has status=${cell.status} claimedAt=${cell.claimedAt} ` +
           `(expected in-progress @ ${claim.claimedAt})`
         );
         return;
       }
-      if (cell.gameId === gameId) return; // idempotent — skip the write
-      setCell(state, claim.rotation, claim.seedIndex, { ...cell, gameId });
+      if (cell.gameID === gameID) return; // idempotent — skip the write
+      setCell(state, claim.rotation, claim.seedIndex, { ...cell, gameID });
       writeStateUnlocked(this.statePath, state);
       logger.info(
-        `Attached gameId=${gameId} to seating cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}"`
+        `Attached gameID=${gameID} to seating cell rotation=${claim.rotation} seedIndex=${claim.seedIndex} for "${this.configName}"`
       );
     });
   }
@@ -463,7 +473,7 @@ export class SeatingStateManager {
 
   /**
    * Walks the pick priorities and returns the cell to claim plus the previous
-   * `CellEntry` (so the caller can preserve `gameId` / `failureCount`) and the
+   * `CellEntry` (so the caller can preserve `gameID` / `failureCount`) and the
    * `failureCount` value to record on the new in-progress claim.
    *
    * Stale steals from other runners count toward the failure budget: if a
@@ -501,8 +511,11 @@ export class SeatingStateManager {
       if (incremented >= this.maxCellFailures) {
         setCell(state, pick.rotation, pick.seedIndex, {
           status: 'failed',
-          gameId: before.gameId,
+          gameID: before.gameID,
           failureCount: incremented,
+          // Preserve attribution from a prior victory-but-no-archive attempt;
+          // we don't have a completion of our own to record on a stale-steal.
+          completedBy: before.completedBy,
         });
         logger.warn(
           `Marking seating cell rotation=${pick.rotation} seedIndex=${pick.seedIndex} for "${this.configName}" ` +

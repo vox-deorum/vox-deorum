@@ -14,7 +14,7 @@ export type CellStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
  *
  * The optional fields below carry per-cell history that lets operators trace
  * archive mismatches and lets the manager enforce a bounded retry budget. A
- * cell only ever completes with one gameId (the one that was successfully
+ * cell only ever completes with one gameID (the one that was successfully
  * archived); the field is overwritten on each new GameSwitched so re-claims
  * and crash-recoveries simply replace it.
  */
@@ -25,12 +25,12 @@ export interface CellEntry {
   /** `${hostname}#${pid}` of the claiming runner. Present only for `in-progress`. */
   claimedBy?: string;
   /**
-   * Civ V gameId associated with this cell:
-   *   - `in-progress`: the current attempt's gameId (set via `attachGameId` on GameSwitched).
-   *   - `completed`:   the gameId whose archive succeeded.
-   *   - `failed`/`pending`: the last attempted gameId (for forensics).
+   * Civ V gameID associated with this cell:
+   *   - `in-progress`: the current attempt's gameID (set via `attachGameID` on GameSwitched).
+   *   - `completed`:   the gameID whose archive succeeded.
+   *   - `failed`/`pending`: the last attempted gameID (for forensics).
    */
-  gameId?: string;
+  gameID?: string;
   /**
    * Total crashes / archive-misses observed on this cell since the cycle began.
    * Reaching `maxCellFailures` flips the cell to terminal `failed`.
@@ -38,6 +38,15 @@ export interface CellEntry {
   failureCount?: number;
   /** ISO timestamp of the successful archive notification. Set together with `status='completed'`. */
   archivedAt?: string;
+  /**
+   * `${hostname}#${pid}` of the runner that completed the game on this cell.
+   * Set whenever the underlying game reached `PlayerVictory` (regardless of
+   * archive outcome — both the `completed` branch and the archive-but-missing
+   * failure branch record it). Lets operators attribute games across machines
+   * in a shared cycle, and preserves attribution when an otherwise-successful
+   * game gets retried due to a missed archive notification.
+   */
+  completedBy?: string;
 }
 
 /** Coordinate of one scheduled seating rotation and seed set pairing. */
