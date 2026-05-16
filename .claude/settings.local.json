@@ -68,7 +68,8 @@
       "Read(//f/f/vox-deorum/vox-deorum/vox-agents/src/**)",
       "Bash(npm --prefix vox-agents run lint)",
       "Bash(npm --prefix vox-agents run type-check)",
-      "Bash(npm --prefix vox-agents run test:unit -- seating-state)"
+      "Bash(npm --prefix vox-agents run test:unit -- seating-state)",
+      "Bash(npm --prefix vox-agents run test:unit -- seating-state --reporter=basic)"
     ],
     "deny": [
       "Read(**/.env*)",

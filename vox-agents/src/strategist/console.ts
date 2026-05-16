@@ -11,6 +11,7 @@ import { sqliteExporter } from "../instrumentation.js";
 import { createLogger } from "../utils/logger.js";
 import { loadConfigFromFile, getConfigsDir } from "../utils/config.js";
 import { StrategistSession } from "./strategist-session.js";
+import { runStrategistLoop } from "./loop.js";
 import { StrategistSessionConfig } from "../types/config.js";
 import { setTimeout } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
@@ -19,7 +20,6 @@ import * as path from 'node:path';
 import { startWebServer } from "../web/server.js";
 import { processManager } from "../infra/process-manager.js";
 import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds, validateRandomSeedsList } from "../utils/game/random-seeds.js";
-import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { RandomSeedsConfig } from "../types/config.js";
 
 const logger = createLogger('Strategists');
@@ -241,11 +241,10 @@ async function main() {
   logger.info(`Starting in ${sessionConfig.gameMode} mode`);
 
   // Resolve repetition. "auto" means "run until the seating × seed cycle
-  // completes" — only meaningful when the cycle is actually enabled. We poll
-  // the same SeatingStateManager the session will claim from, which is safe
-  // because both go through the file lock.
+  // completes" — only meaningful when the cycle is actually enabled. The loop
+  // itself terminates on `claimNextCell() === null` (cycle finished), so all
+  // we do here is set the cap.
   const isAutoRepetition = sessionConfig.repetition === 'auto';
-  let cycleWatcher: SeatingStateManager | undefined;
   if (isAutoRepetition) {
     // `randomizeSeating: 0` is a valid seed (truthy-as-seed), not "disabled".
     const seatingEnabled =
@@ -255,46 +254,20 @@ async function main() {
       (Array.isArray(sessionConfig.randomSeeds) && sessionConfig.randomSeeds.length > 1);
     if (!cycleEnabled) {
       logger.warn(`repetition: "auto" requires randomizeSeating or a multi-entry randomSeeds; falling back to 1 run`);
-    } else {
-      const configSlots = Object.keys(sessionConfig.llmPlayers).map(Number);
-      const totalSeats = Math.max(...configSlots) + 1;
-      const seedSets = validateRandomSeedsList(sessionConfig.randomSeeds);
-      cycleWatcher = new SeatingStateManager({
-        configName: sessionConfig.name,
-        configSlots,
-        totalSeats,
-        seedCount: seedSets.length,
-        seedSets,
-        // Mirror the session's manager so the drift check in `loadOrInit`
-        // accepts the same on-disk state — a numeric `randomizeSeating` is the
-        // seating seed, `true` is the legacy unseeded path, anything else is
-        // unseeded.
-        randomizeSeating: sessionConfig.randomizeSeating,
-      });
-      logger.info(`Auto repetition: cycle = ${totalSeats} seats × ${seedSets.length} seeds = ${totalSeats * seedSets.length} cells`);
     }
   }
 
-  const fixedCount = isAutoRepetition && cycleWatcher
+  const maxRepetitions = isAutoRepetition
     ? Number.POSITIVE_INFINITY
     : (typeof sessionConfig.repetition === 'number' ? sessionConfig.repetition : 1);
 
   try {
-    for (var I = 0; I < fixedCount; I++) {
-      if (processManager.isShuttingDown || shuttingdownAfter) break;
-      if (cycleWatcher && await cycleWatcher.isCycleComplete()) {
-        logger.info(`Seating × seed cycle complete after ${I} session(s); exiting auto loop`);
-        break;
-      }
-      // Start a new session
-      session = new StrategistSession(sessionConfig);
-      await session.start();
-      sessionConfig.gameMode = "start";
-      logger.info(`Session ${I} completed successfully`);
-      // Shut down the session
-      await session.shutdown();
-      if (processManager.isShuttingDown || shuttingdownAfter) break;
-    }
+    await runStrategistLoop({
+      config: sessionConfig,
+      maxRepetitions,
+      onSession: (s) => { session = s; },
+      shouldStop: () => shuttingdownAfter,
+    });
   } catch (error) {
     logger.error('Session failed:', error);
     process.exit(1);

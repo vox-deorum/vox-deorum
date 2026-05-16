@@ -336,10 +336,14 @@ export interface StartSessionRequest {
  * POST /api/session/start response
  */
 export interface StartSessionResponse {
-  /** The new session ID */
-  sessionId: string;
-  /** Session status */
-  status: SessionStatus;
+  /**
+   * The new session ID, if a session has been created synchronously. With the
+   * shared strategist loop, the first session is built asynchronously after
+   * the cycle's seating cell is claimed, so this may be omitted.
+   */
+  sessionId?: string;
+  /** Session status snapshot, if available. Poll `/api/session/status` for the live state. */
+  status?: SessionStatus;
 }
 
 /**

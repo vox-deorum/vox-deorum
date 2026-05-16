@@ -57,8 +57,10 @@
 
 import os from 'os';
 import path from 'path';
+import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../logger.js';
 import { getConfigsDir } from '../../config.js';
+import { processManager } from '../../../infra/process-manager.js';
 import { resetCycleInPlace } from './cycle.js';
 import {
   allCompleted,
@@ -89,6 +91,13 @@ const logger = createLogger('SeatingState');
 
 /** Default per-cell failure budget when `maxCellFailures` isn't configured. */
 const DEFAULT_MAX_CELL_FAILURES = 5;
+
+/**
+ * How long `claimNextCell` sleeps between attempts when no cell is claimable
+ * right now (peers are still mid-game; nothing pending, nothing stale enough
+ * to steal). The wait ends sooner if `processManager.isShuttingDown` flips.
+ */
+const SEATING_WAIT_RETRY_MS = 60_000;
 
 /** Identifier embedded in `claimedBy` so we can distinguish our own crashes from others'. */
 function runnerId(): string {
@@ -223,20 +232,28 @@ export class SeatingStateManager {
    *
    * Selection priority (under file lock):
    *   1. Own in-progress cell — i.e. we crashed before releasing; resume on the same cell.
-   *   2. Stale in-progress cell (older than the stale threshold) — assumed
-   *      abandoned by some other runner; we steal it. Stealing counts as a
-   *      silent crash: `failureCount` is incremented, and if it crosses
-   *      `maxCellFailures` the cell is marked `failed` (skipped) instead.
-   *   3. Next pending cell in the shuffled `consumeOrder`.
+   *   2. Next pending cell in the shuffled `consumeOrder`.
+   *   3. Stale in-progress cell from someone else (last-resort steal). Stealing
+   *      counts as a silent crash: `failureCount` is incremented, and if it
+   *      crosses `maxCellFailures` the cell is marked `failed` (skipped) instead.
    *   4. If every cell is strictly `completed`, reset the cycle (regenerate
    *      `basePerm` and `consumeOrder`, increment `completedCycles`) and pick
-   *      the first cell of the new cycle. Failed cells block this reset so
-   *      they remain visible until the operator intervenes.
+   *      the first cell of the new cycle.
+   *
+   * Returns `null` when the cycle is *finished* — every cell is terminal
+   * (`completed` or `failed`) and at least one is `failed`, so it can never
+   * auto-reset. Callers treat `null` as "stop calling me; we're done".
+   *
+   * When no cell is pickable *right now* but the cycle isn't finished (peers
+   * are still mid-game), this method sleeps for {@link SEATING_WAIT_RETRY_MS}
+   * and retries — peers' releases will eventually surface a `pending` cell.
+   * The wait short-circuits when `processManager.isShuttingDown` flips, in
+   * which case we also return `null` so the caller exits cleanly.
    *
    * @returns A {@link SeatingClaim} carrying everything the session needs to
-   *   start the game (resolved seating map, seed set, claim metadata).
+   *   start the game, or `null` if the cycle is finished / we're shutting down.
    */
-  async claimNextCell(): Promise<SeatingClaim> {
+  async claimNextCell(): Promise<SeatingClaim | null> {
     if (this.trivial) {
       // No persistent state in trivial mode — every call returns the same
       // identity claim. Callers can still `releaseCell`/`attachGameID` on it;
@@ -244,46 +261,76 @@ export class SeatingStateManager {
       return this.buildTrivialClaim();
     }
     const ourId = runnerId();
-    return withLock(this.lockPath, ourId, this.configName, () => {
-      const state = loadOrInit({
-        statePath: this.statePath,
-        configName: this.configName,
-        totalSeats: this.totalSeats,
-        seedCount: this.seedCount,
-        configSlotsSorted: this.configSlotsSorted,
-        seatingSeed: this.seatingSeed,
+    let loggedWait = false;
+
+    while (!processManager.isShuttingDown) {
+      const outcome = await withLock(this.lockPath, ourId, this.configName, () => {
+        const state = loadOrInit({
+          statePath: this.statePath,
+          configName: this.configName,
+          totalSeats: this.totalSeats,
+          seedCount: this.seedCount,
+          configSlotsSorted: this.configSlotsSorted,
+          seatingSeed: this.seatingSeed,
+        });
+        const now = Date.now();
+        const selected = this.selectClaimable(state, ourId, now);
+
+        if (!selected) {
+          return cycleFinishedHelper(state)
+            ? { kind: 'finished' as const }
+            : { kind: 'wait' as const };
+        }
+
+        const { pick, before, failureCount } = selected;
+        const { rotation, seedIndex } = pick;
+        const claimedAt = new Date(now).toISOString();
+        setCell(state, rotation, seedIndex, {
+          status: 'in-progress',
+          claimedAt,
+          claimedBy: ourId,
+          // Preserve last gameID until GameSwitched calls attachGameID with the
+          // relaunched game's id; useful audit data if we crash before then.
+          gameID: before.gameID,
+          // Preserve `completedBy` from a prior victory-but-no-archive attempt
+          // so the attribution survives the retry; cleared once the new attempt
+          // releases (either with success or with a non-victory failure).
+          completedBy: before.completedBy,
+          failureCount,
+        });
+        writeStateUnlocked(this.statePath, state);
+
+        const seatingMap = buildSeatingMap(state.basePerm, rotation, this.configSlotsSorted);
+        const seeds = this.seedSets[seedIndex];
+
+        logger.info(
+          `Claimed seating cell rotation=${rotation} seedIndex=${seedIndex} for "${this.configName}" ` +
+          `(seatingMap=${JSON.stringify(seatingMap)}, completedCycles=${state.completedCycles}, ` +
+          `failureCount=${failureCount ?? 0}/${this.maxCellFailures})`
+        );
+
+        const claim: SeatingClaim = { rotation, seedIndex, seatingMap, seeds, claimedAt };
+        return { kind: 'claimed' as const, claim };
       });
-      const now = Date.now();
-      const { pick, before, failureCount } = this.selectClaimable(state, ourId, now);
 
-      const { rotation, seedIndex } = pick;
-      const claimedAt = new Date(now).toISOString();
-      setCell(state, rotation, seedIndex, {
-        status: 'in-progress',
-        claimedAt,
-        claimedBy: ourId,
-        // Preserve last gameID until GameSwitched calls attachGameID with the
-        // relaunched game's id; useful audit data if we crash before then.
-        gameID: before.gameID,
-        // Preserve `completedBy` from a prior victory-but-no-archive attempt
-        // so the attribution survives the retry; cleared once the new attempt
-        // releases (either with success or with a non-victory failure).
-        completedBy: before.completedBy,
-        failureCount,
-      });
-      writeStateUnlocked(this.statePath, state);
+      if (outcome.kind === 'claimed') return outcome.claim;
+      if (outcome.kind === 'finished') {
+        logger.info(`Seating cycle "${this.configName}" is finished — no more cells to claim`);
+        return null;
+      }
+      // outcome.kind === 'wait'
+      if (!loggedWait) {
+        logger.info(
+          `No claimable seating cell for "${this.configName}" yet (peers active); ` +
+          `retrying every ${SEATING_WAIT_RETRY_MS / 1000}s`
+        );
+        loggedWait = true;
+      }
+      await setTimeout(SEATING_WAIT_RETRY_MS);
+    }
 
-      const seatingMap = buildSeatingMap(state.basePerm, rotation, this.configSlotsSorted);
-      const seeds = this.seedSets[seedIndex];
-
-      logger.info(
-        `Claimed seating cell rotation=${rotation} seedIndex=${seedIndex} for "${this.configName}" ` +
-        `(seatingMap=${JSON.stringify(seatingMap)}, completedCycles=${state.completedCycles}, ` +
-        `failureCount=${failureCount ?? 0}/${this.maxCellFailures})`
-      );
-
-      return { rotation, seedIndex, seatingMap, seeds, claimedAt };
-    });
+    // Shutting down — treat as finished so the caller exits its loop.
+    return null;
   }
 
   /**
@@ -476,6 +523,9 @@ export class SeatingStateManager {
    * `CellEntry` (so the caller can preserve `gameID` / `failureCount`) and the
    * `failureCount` value to record on the new in-progress claim.
    *
+   * Returns `null` when no cell is currently pickable (caller decides whether
+   * to treat that as `finished` or `wait` based on `isCycleFinished`).
+   *
    * Stale steals from other runners count toward the failure budget: if a
    * steal would push the count to `maxCellFailures`, the cell is marked
    * `failed` instead and the next candidate is picked. Mutations to `state`
@@ -486,7 +536,7 @@ export class SeatingStateManager {
     state: SeatingState,
     ourId: string,
     now: number,
-  ): { pick: SeatingCycleCell; before: CellEntry; failureCount: number | undefined } {
+  ): { pick: SeatingCycleCell; before: CellEntry; failureCount: number | undefined } | null {
     while (true) {
       let pick = pickCell(state, ourId, now);
       if (!pick && allCompleted(state)) {
@@ -496,9 +546,7 @@ export class SeatingStateManager {
         );
         pick = pickCell(state, ourId, now);
       }
-      if (!pick) {
-        throw new Error(`No claimable cell in seating state "${this.configName}"`);
-      }
+      if (!pick) return null;
 
       const before = getCell(state, pick.rotation, pick.seedIndex);
       const isStaleSteal = before.status === 'in-progress' && before.claimedBy !== ourId;

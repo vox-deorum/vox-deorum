@@ -20,7 +20,6 @@ import { config } from "../utils/config.js";
 import { SessionStatus } from "../types/api.js";
 import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { SeatingClaim } from "../utils/game/seating/types.js";
-import { validateRandomSeedsList } from "../utils/game/random-seeds.js";
 import { getMetadata, setMetadata } from "../utils/game/metadata.js";
 import { OneShotAwaiter } from "../utils/async/one-shot-awaiter.js";
 
@@ -73,33 +72,19 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private archiveAwaiter = new OneShotAwaiter<boolean>();
 
   /**
-   * Wire the session: prepare the victory promise, build the seating manager
-   * (always — trivial-mode handling lives inside the manager), and register
-   * the game-exit hook for crash-recovery.
+   * Wire the session against a pre-fetched seating claim and the manager that
+   * produced it (so `attachGameID` / `releaseCell` / `refreshClaim` write back
+   * to the same on-disk cycle state). The repetition loop ([./loop.ts]) owns
+   * the manager and the cycle progression; the session just runs the game.
    */
-  constructor(config: StrategistSessionConfig) {
+  constructor(config: StrategistSessionConfig, seatingManager: SeatingStateManager, seatingClaim: SeatingClaim) {
     super(config);
     this.finishPromise = new Promise((resolve) => {
       this.victoryResolve = resolve;
     });
 
-    // SeatingStateManager is the single source of truth for both the seating
-    // map AND the active seed set, even when the cycle is trivial (one seed,
-    // no randomization). Construction is cheap and never touches disk — that
-    // only happens when the trivial-mode short-circuits don't kick in.
-    const configSlots = Object.keys(config.llmPlayers).map(Number);
-    const seedSets = validateRandomSeedsList(config.randomSeeds);
-    this.seatingManager = new SeatingStateManager({
-      configName: config.name,
-      configSlots,
-      // For 'start' mode this matches `computePlayerCount` (max(playerIds)+1);
-      // for load/wait modes there's no authoritative count at construction
-      // time so we use the same fallback the old `ensureSeatingClaim` used.
-      totalSeats: configSlots.length > 0 ? Math.max(...configSlots) + 1 : 1,
-      seedCount: seedSets.length,
-      seedSets,
-      randomizeSeating: config.randomizeSeating,
-    });
+    this.seatingManager = seatingManager;
+    this.seatingClaim = seatingClaim;
 
     voxCivilization.onGameExit(this.handleGameExit.bind(this));
   }
@@ -123,13 +108,14 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         logger.info(`Calculated player count: ${playerCount} from player IDs: ${playerIds.join(', ')}`);
       }
 
-      // Claim a cell from the seating × seed cycle. In trivial mode (no
-      // `randomizeSeating` and a single seed set) this returns an in-memory
-      // identity claim. Must happen before startGame so the chosen seed is
-      // what Civ launches with.
-      await this.ensureSeatingClaim();
-
-      logger.info(`Starting strategist session ${this.id} in ${this.config.gameMode} mode`, this.config);
+      // Seating claim is supplied by the constructor — the loop fetched it
+      // already so this method can launch the game immediately.
+      logger.info(
+        `Starting strategist session ${this.id} in ${this.config.gameMode} mode; ` +
+        `seating rotation=${this.seatingClaim!.rotation} seedIndex=${this.seatingClaim!.seedIndex} ` +
+        `seatingMap=${JSON.stringify(this.seatingClaim!.seatingMap)}`,
+        this.config
+      );
 
       // Configure animation skipping based on mode (skip in interactive mode)
       if (isVisualMode(this.config.production)) {
@@ -620,24 +606,6 @@ Game.SetAIAutoPlay(2000, -1);`
       logger.info(`Finishing the run...`);
       this.victoryResolve?.();
     }
-  }
-
-  /**
-   * Claim a cell from `seatingManager` and stash it on the session. In trivial
-   * mode the manager returns an in-memory identity claim (no filesystem I/O);
-   * in cycle mode it returns the next pending cell. Idempotent within a
-   * session — safe to call again during crash recovery; the manager's
-   * own-runner reclaim returns the same cell.
-   */
-  private async ensureSeatingClaim(): Promise<void> {
-    const claim = await this.seatingManager.claimNextCell();
-    this.seatingClaim = claim;
-    this.claimReleased = false;
-
-    logger.info(
-      `Seating claim acquired: rotation=${claim.rotation} seedIndex=${claim.seedIndex} ` +
-      `seatingMap=${JSON.stringify(claim.seatingMap)}`
-    );
   }
 
   /**

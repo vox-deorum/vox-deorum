@@ -8,6 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { sessionRegistry } from '../../infra/session-registry.js';
 import { StrategistSession } from '../../strategist/strategist-session.js';
+import { runStrategistLoop } from '../../strategist/loop.js';
 import { SessionConfig, StrategistSessionConfig } from '../../types/config.js';
 import { createLogger } from '../../utils/logger.js';
 import { getConfigsDir } from '../../utils/config.js';
@@ -139,20 +140,24 @@ export function createSessionRoutes(): Router {
         return;
       }
 
-      // Create and start session
-      const session = new StrategistSession(strategistConfig);
+      // Resolve repetition the same way console.ts does: 'auto' means run
+      // until the seating × seed cycle is finished, otherwise honor a numeric
+      // count, defaulting to a single run.
+      const maxRepetitions = strategistConfig.repetition === 'auto'
+        ? Number.POSITIVE_INFINITY
+        : (typeof strategistConfig.repetition === 'number' ? strategistConfig.repetition : 1);
 
-      // Start in background - don't await
-      session.start().catch(error => {
-        logger.error('Session failed to start', { error });
-        // Session will unregister itself on error
+      // Kick off the loop in the background — sessions appear in
+      // `sessionRegistry` as the loop creates them (the session lifecycle
+      // self-registers/unregisters), so the client polls `/api/session/status`.
+      runStrategistLoop({
+        config: strategistConfig,
+        maxRepetitions,
+      }).catch(error => {
+        logger.error('Strategist loop failed', { error });
       });
 
-      // Return session info immediately
-      const response: StartSessionResponse = {
-        sessionId: session.id,
-        status: session.getStatus()
-      };
+      const response: StartSessionResponse = {};
       res.json(response);
     } catch (error) {
       logger.error('Failed to start session', { error });

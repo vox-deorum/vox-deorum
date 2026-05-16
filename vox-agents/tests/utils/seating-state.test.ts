@@ -26,6 +26,16 @@ function uniqueConfigName(label: string): string {
   return `${label}-${process.pid}-${testCounter}`;
 }
 
+/**
+ * Unwrap `claimNextCell` for setups where a claim is always expected. Tests
+ * that need to assert the `null` (finished) path call `claimNextCell` directly.
+ */
+async function mustClaim(m: SeatingStateManager): Promise<SeatingClaim> {
+  const c = await m.claimNextCell();
+  if (!c) throw new Error('expected a claim, got null (cycle finished)');
+  return c;
+}
+
 /** Read and parse the on-disk state file for assertions about persistence. */
 function readState(configName: string): SeatingState {
   const raw = fs.readFileSync(path.join(tmpRoot, `${configName}.seating.json`), 'utf8');
@@ -55,7 +65,7 @@ describe('SeatingStateManager — single seed', () => {
       randomizeSeating: true
     });
 
-    const claim = await mgr.claimNextCell();
+    const claim = await mustClaim(mgr);
     expect(claim.seedIndex).toBe(0);
     expect(claim.rotation).toBeGreaterThanOrEqual(0);
     expect(claim.rotation).toBeLessThan(8);
@@ -87,7 +97,7 @@ describe('SeatingStateManager — single seed', () => {
 
     const seatsHit: number[] = [];
     for (let i = 0; i < 8; i++) {
-      const claim = await mgr.claimNextCell();
+      const claim = await mustClaim(mgr);
       seatsHit.push(claim.seatingMap['7']);
       await mgr.releaseCell(claim, true);
     }
@@ -111,13 +121,13 @@ describe('SeatingStateManager — single seed', () => {
     });
 
     for (let i = 0; i < 8; i++) {
-      const c = await mgr.claimNextCell();
+      const c = await mustClaim(mgr);
       await mgr.releaseCell(c, true);
     }
     const before = readState(cfg);
     expect(before.completedCycles).toBe(0);
 
-    const ninth = await mgr.claimNextCell();
+    const ninth = await mustClaim(mgr);
     const after = readState(cfg);
     expect(after.completedCycles).toBe(1);
     // Ninth claim is the first of the new cycle (cells reset).
@@ -138,7 +148,7 @@ describe('SeatingStateManager — single seed', () => {
     const expectedRunner = `${os.hostname()}#${process.pid}`;
 
     // Success + archived: cell completed, completedBy recorded.
-    const okClaim = await mgr.claimNextCell();
+    const okClaim = await mustClaim(mgr);
     await mgr.releaseCell(okClaim, true, true);
     let state = readState(cfg);
     let okCell = state.cells[String(okClaim.rotation)][String(okClaim.seedIndex)];
@@ -147,7 +157,7 @@ describe('SeatingStateManager — single seed', () => {
 
     // Victory observed but archive missing: cell goes back to pending, but
     // completedBy is still recorded for forensics.
-    const missClaim = await mgr.claimNextCell();
+    const missClaim = await mustClaim(mgr);
     await mgr.releaseCell(missClaim, true, false);
     state = readState(cfg);
     const missCell = state.cells[String(missClaim.rotation)][String(missClaim.seedIndex)];
@@ -157,12 +167,12 @@ describe('SeatingStateManager — single seed', () => {
     // Non-victory failure on a fresh cell: completedBy is NOT recorded (nothing completed).
     // The missClaim cell is still the highest-priority pending one, so explicitly
     // release it as completed first to advance past it, then test a fresh cell.
-    const drainClaim = await mgr.claimNextCell();
+    const drainClaim = await mustClaim(mgr);
     expect(drainClaim.rotation).toBe(missClaim.rotation);
     expect(drainClaim.seedIndex).toBe(missClaim.seedIndex);
     await mgr.releaseCell(drainClaim, true, true);
 
-    const crashClaim = await mgr.claimNextCell();
+    const crashClaim = await mustClaim(mgr);
     await mgr.releaseCell(crashClaim, false);
     state = readState(cfg);
     const crashCell = state.cells[String(crashClaim.rotation)][String(crashClaim.seedIndex)];
@@ -181,10 +191,10 @@ describe('SeatingStateManager — single seed', () => {
       randomizeSeating: true
     });
 
-    const first = await mgr.claimNextCell();
+    const first = await mustClaim(mgr);
     await mgr.releaseCell(first, false);
 
-    const second = await mgr.claimNextCell();
+    const second = await mustClaim(mgr);
     // The same cell is reclaimable since it went back to pending.
     expect(second.rotation).toBe(first.rotation);
     expect(second.seedIndex).toBe(first.seedIndex);
@@ -201,7 +211,7 @@ describe('SeatingStateManager — single seed', () => {
       seedSets: [undefined],
       randomizeSeating: true
     });
-    const first = await mgr1.claimNextCell();
+    const first = await mustClaim(mgr1);
 
     // Simulate a restart by constructing a fresh manager with the same configName
     // (same hostname#pid because we're in one process).
@@ -213,7 +223,7 @@ describe('SeatingStateManager — single seed', () => {
       seedSets: [undefined],
       randomizeSeating: true
     });
-    const reclaimed = await mgr2.claimNextCell();
+    const reclaimed = await mustClaim(mgr2);
     expect(reclaimed.rotation).toBe(first.rotation);
     expect(reclaimed.seedIndex).toBe(first.seedIndex);
   });
@@ -233,7 +243,7 @@ describe('SeatingStateManager — multi-seed', () => {
 
     const pairs = new Set<string>();
     for (let i = 0; i < 24; i++) {
-      const claim = await mgr.claimNextCell();
+      const claim = await mustClaim(mgr);
       pairs.add(`${claim.seatingMap['7']}:${claim.seedIndex}`);
       // Each seedIndex should resolve to the matching seedSets entry.
       expect(claim.seeds).toEqual(seedSets[claim.seedIndex]);
@@ -241,7 +251,7 @@ describe('SeatingStateManager — multi-seed', () => {
     }
     expect(pairs.size).toBe(24);
 
-    const next = await mgr.claimNextCell();
+    const next = await mustClaim(mgr);
     expect(next).toBeDefined();
     const state = readState(cfg);
     expect(state.completedCycles).toBe(1);
@@ -260,7 +270,7 @@ describe('SeatingStateManager — multi-seed', () => {
 
     const triples = new Set<string>();
     for (let i = 0; i < 16; i++) {
-      const claim = await mgr.claimNextCell();
+      const claim = await mustClaim(mgr);
       const a = claim.seatingMap['3'];
       const b = claim.seatingMap['5'];
       expect(a).not.toBe(b);
@@ -284,11 +294,11 @@ describe('SeatingStateManager — config drift', () => {
       randomizeSeating: true
     });
     for (let i = 0; i < 4; i++) {
-      const c = await mgrA.claimNextCell();
+      const c = await mustClaim(mgrA);
       await mgrA.releaseCell(c, true);
     }
     // Trigger cycle reset to bump completedCycles to 1.
-    const fifth = await mgrA.claimNextCell();
+    const fifth = await mustClaim(mgrA);
     await mgrA.releaseCell(fifth, true);
     expect(readState(cfg).completedCycles).toBe(1);
 
@@ -301,7 +311,7 @@ describe('SeatingStateManager — config drift', () => {
       seedSets: [undefined],
       randomizeSeating: true
     });
-    const claim = await mgrB.claimNextCell();
+    const claim = await mustClaim(mgrB);
     expect(claim.seatingMap['7']).toBeGreaterThanOrEqual(0);
     expect(claim.seatingMap['7']).toBeLessThan(8);
     const state = readState(cfg);
@@ -332,7 +342,7 @@ describe('SeatingStateManager — file lock serializes claims', () => {
     const seenCells = new Set<string>();
     await Promise.all(
       Array.from({ length: 8 }, async () => {
-        const claim = await mgr.claimNextCell();
+        const claim = await mustClaim(mgr);
         seenCells.add(`${claim.rotation}:${claim.seedIndex}`);
         await mgr.releaseCell(claim, true);
       })
@@ -355,7 +365,7 @@ describe('SeatingStateManager — release safety', () => {
       randomizeSeating: true
     });
 
-    const claim = await mgr.claimNextCell();
+    const claim = await mustClaim(mgr);
     // Forge a stale claim object — pretend our `claimedAt` is from before.
     const staleClaim: SeatingClaim = {
       ...claim,
@@ -366,6 +376,135 @@ describe('SeatingStateManager — release safety', () => {
     // Cell should remain in-progress (not completed or pending).
     const state = readState(cfg);
     expect(state.cells[String(claim.rotation)][String(claim.seedIndex)].status).toBe('in-progress');
+  });
+});
+
+describe('SeatingStateManager — pick priority (pending beats stale steal)', () => {
+  /** Overwrite the state file in place. Used to forge foreign/stale claims. */
+  function writeStateFile(configName: string, state: SeatingState): void {
+    fs.writeFileSync(
+      path.join(tmpRoot, `${configName}.seating.json`),
+      JSON.stringify(state, null, 2)
+    );
+  }
+
+  it('prefers a pending cell over stealing a stale foreign in-progress claim', async () => {
+    const cfg = uniqueConfigName('prefer-pending');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [7],
+      totalSeats: 8,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: true,
+    });
+
+    // Make the manager write a valid state file with one cell in-progress,
+    // then re-attribute that cell to a foreign runner with a stale claimedAt.
+    const claimed = await mustClaim(mgr);
+    const state = readState(cfg);
+    const r = String(claimed.rotation);
+    const s = String(claimed.seedIndex);
+    state.cells[r][s] = {
+      ...state.cells[r][s],
+      claimedBy: 'foreign-host#9999',
+      claimedAt: new Date(Date.now() - 80 * 60 * 60 * 1000).toISOString(), // 80h ago — stale
+    };
+    writeStateFile(cfg, state);
+
+    // Next claim should pick a different pending cell, not steal the stale one.
+    const next = await mustClaim(mgr);
+    expect(`${next.rotation}:${next.seedIndex}`).not.toBe(`${claimed.rotation}:${claimed.seedIndex}`);
+
+    // The stale foreign cell must be left alone — claimedBy unchanged, no failure bump.
+    const after = readState(cfg);
+    const foreign = after.cells[r][s];
+    expect(foreign.status).toBe('in-progress');
+    expect(foreign.claimedBy).toBe('foreign-host#9999');
+    expect(foreign.failureCount ?? 0).toBe(0);
+  });
+
+  it('steals a stale foreign in-progress claim when no pending cells remain', async () => {
+    const cfg = uniqueConfigName('steal-fallback');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [3],
+      totalSeats: 4,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: true,
+    });
+
+    // Drain the cycle: claim+complete the first 3 of 4 cells.
+    const cellsClaimed: Array<{ rotation: number; seedIndex: number }> = [];
+    for (let i = 0; i < 3; i++) {
+      const c = await mustClaim(mgr);
+      cellsClaimed.push({ rotation: c.rotation, seedIndex: c.seedIndex });
+      await mgr.releaseCell(c, true, true);
+    }
+
+    // Claim the 4th cell, then forge it as a stale foreign in-progress claim.
+    const fourth = await mustClaim(mgr);
+    const r = String(fourth.rotation);
+    const s = String(fourth.seedIndex);
+    const state = readState(cfg);
+    state.cells[r][s] = {
+      status: 'in-progress',
+      claimedBy: 'foreign-host#9999',
+      claimedAt: new Date(Date.now() - 80 * 60 * 60 * 1000).toISOString(),
+      failureCount: 2,
+    };
+    writeStateFile(cfg, state);
+
+    // No pending cells remain — only the stale foreign one is claimable.
+    const stolen = await mustClaim(mgr);
+    expect(stolen.rotation).toBe(fourth.rotation);
+    expect(stolen.seedIndex).toBe(fourth.seedIndex);
+
+    // The steal must flip claimedBy back to us and bump failureCount by 1.
+    const after = readState(cfg);
+    const cell = after.cells[r][s];
+    const expectedRunner = `${os.hostname()}#${process.pid}`;
+    expect(cell.status).toBe('in-progress');
+    expect(cell.claimedBy).toBe(expectedRunner);
+    expect(cell.failureCount).toBe(3);
+  });
+});
+
+describe('SeatingStateManager — no-claim outcomes', () => {
+  it('claimNextCell returns null when every cell is terminal with at least one failed', async () => {
+    const cfg = uniqueConfigName('finished-with-failures');
+    // Tiny cycle (4 cells) with a zero-tolerance failure budget so the very
+    // first non-success release flips a cell to `failed`.
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [3],
+      totalSeats: 4,
+      seedCount: 1,
+      seedSets: [undefined],
+      randomizeSeating: true,
+      maxCellFailures: 1,
+    });
+
+    // First claim → release as failure → that cell is now terminal `failed`.
+    const failing = await mustClaim(mgr);
+    await mgr.releaseCell(failing, false);
+    const failedCellStatus = readState(cfg)
+      .cells[String(failing.rotation)][String(failing.seedIndex)].status;
+    expect(failedCellStatus).toBe('failed');
+
+    // Complete the remaining three cells. After this every cell is terminal —
+    // 3 `completed` + 1 `failed` — and the cycle can't auto-reset (failed
+    // blocks `allCompleted`).
+    for (let i = 0; i < 3; i++) {
+      const c = await mustClaim(mgr);
+      await mgr.releaseCell(c, true, true);
+    }
+
+    // No more work. claimNextCell should return null instead of blocking or
+    // throwing.
+    const next = await mgr.claimNextCell();
+    expect(next).toBeNull();
   });
 });
 
@@ -423,7 +562,7 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
       randomizeSeating: false,
     });
 
-    const claim = await mgr.claimNextCell();
+    const claim = await mustClaim(mgr);
 
     // configSlot N → seat N — no permutation.
     expect(claim.rotation).toBe(0);
@@ -446,7 +585,7 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
       randomizeSeating: false,
     });
 
-    const claim = await mgr.claimNextCell();
+    const claim = await mustClaim(mgr);
 
     // Both methods should resolve without throwing and without creating a state file.
     await mgr.releaseCell(claim, true, true);
@@ -480,7 +619,7 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
       randomizeSeating: true,
     });
 
-    await mgr.claimNextCell();
+    await mustClaim(mgr);
     expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(true);
   });
 
@@ -495,7 +634,7 @@ describe('SeatingStateManager — trivial mode (no randomization, single seed)',
       randomizeSeating: false,
     });
 
-    await mgr.claimNextCell();
+    await mustClaim(mgr);
     expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(true);
   });
 });
@@ -505,7 +644,7 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
   async function runFullCycle(mgr: SeatingStateManager, totalSeats: number, configSlot: number) {
     const sequence: Array<{ rotation: number; seedIndex: number; seat: number }> = [];
     for (let i = 0; i < totalSeats; i++) {
-      const claim = await mgr.claimNextCell();
+      const claim = await mustClaim(mgr);
       sequence.push({
         rotation: claim.rotation,
         seedIndex: claim.seedIndex,
@@ -574,11 +713,11 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
       seedCount: 1, seedSets: [undefined], randomizeSeating: 100
     });
     for (let i = 0; i < 8; i++) {
-      const c = await mgrA.claimNextCell();
+      const c = await mustClaim(mgrA);
       await mgrA.releaseCell(c, true);
     }
     // Trigger reset → completedCycles bumps to 1.
-    const ninth = await mgrA.claimNextCell();
+    const ninth = await mustClaim(mgrA);
     await mgrA.releaseCell(ninth, true);
     const before = readState(cfg);
     expect(before.completedCycles).toBe(1);
@@ -590,7 +729,7 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
       configName: cfg, configSlots: [7], totalSeats: 8,
       seedCount: 1, seedSets: [undefined], randomizeSeating: 999
     });
-    await mgrB.claimNextCell();
+    await mustClaim(mgrB);
     const after = readState(cfg);
     expect(after.seatingSeed).toBe(999);
     expect(after.completedCycles).toBe(1);
@@ -604,7 +743,7 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
       configName: cfg, configSlots: [7], totalSeats: 8,
       seedCount: 1, seedSets: [undefined], randomizeSeating: 42
     });
-    await mgrSeeded.claimNextCell();
+    await mustClaim(mgrSeeded);
     expect(readState(cfg).seatingSeed).toBe(42);
 
     // `true` is an alias for seed 0 → drift detected against persisted 42.
@@ -612,7 +751,7 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
       configName: cfg, configSlots: [7], totalSeats: 8,
       seedCount: 1, seedSets: [undefined], randomizeSeating: true
     });
-    await mgrTrue.claimNextCell();
+    await mustClaim(mgrTrue);
     expect(readState(cfg).seatingSeed).toBe(0);
   });
 
@@ -628,11 +767,11 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
     const mgrA = new SeatingStateManager({ configName: cfgA, ...opts });
     // Run a full cycle + one extra claim to trigger the reset.
     for (let i = 0; i < 8; i++) {
-      const c = await mgrA.claimNextCell();
+      const c = await mustClaim(mgrA);
       await mgrA.releaseCell(c, true);
     }
     const cycle1BasePerm = [...readState(cfgA).basePerm];
-    await mgrA.claimNextCell(); // forces resetCycleInPlace
+    await mustClaim(mgrA); // forces resetCycleInPlace
     const cycle2BasePerm = [...readState(cfgA).basePerm];
     expect(readState(cfgA).completedCycles).toBe(1);
     expect(cycle2BasePerm).not.toEqual(cycle1BasePerm);
@@ -641,10 +780,10 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
     // the same cycle #2 basePerm once it crosses the reset boundary.
     const mgrB = new SeatingStateManager({ configName: cfgB, ...opts });
     for (let i = 0; i < 8; i++) {
-      const c = await mgrB.claimNextCell();
+      const c = await mustClaim(mgrB);
       await mgrB.releaseCell(c, true);
     }
-    await mgrB.claimNextCell();
+    await mustClaim(mgrB);
     expect(readState(cfgB).basePerm).toEqual(cycle2BasePerm);
   });
 
@@ -658,7 +797,7 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
       randomizeSeating: 0
     });
     // randomizeSeating: 0 is truthy-as-seed → cycle engaged, NOT trivial.
-    return expect(mgr.claimNextCell()).resolves.toBeDefined();
+    return expect(mgr.claimNextCell()).resolves.not.toBeNull();
   });
 
   it('rejects non-integer randomizeSeating', () => {
