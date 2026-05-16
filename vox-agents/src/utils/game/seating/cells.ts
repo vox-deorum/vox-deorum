@@ -102,8 +102,15 @@ export function getCellStatusCounts(state: SeatingState): CellStatusCounts {
 /**
  * Priority-ordered cell selection used by `SeatingStateManager.claimNextCell`:
  *   1. Own in-progress (own crash recovery).
- *   2. Stale in-progress from someone else.
- *   3. Next pending cell in the shuffled `consumeOrder`.
+ *   2. Next pending cell in the shuffled `consumeOrder`.
+ *   3. Stale in-progress from someone else (last-resort steal).
+ *
+ * Pending beats stealing on purpose: when peers' games legitimately outlive
+ * the stale threshold (multi-day Civ V games), stealing a still-active claim
+ * misattributes work and burns its failure budget. As long as there's a
+ * pending cell to take instead, we take it — stealing only kicks in once
+ * every other cell in the cycle is ours-in-progress (handled), terminal, or
+ * in-progress by a peer with no pending alternatives left.
  *
  * `completed` and `failed` cells are skipped implicitly — each priority's
  * status check excludes them. Returns null if no cell is claimable (caller
@@ -120,15 +127,15 @@ export function pickCell(
       return { rotation, seedIndex };
     }
   }
-  // Priority 2: stale in-progress from someone else.
+  // Priority 2: next pending cell in shuffled consumeOrder.
   for (const { rotation, seedIndex } of state.consumeOrder) {
-    if (isCellStaleInProgress(getCell(state, rotation, seedIndex), now)) {
+    if (isCellPending(getCell(state, rotation, seedIndex))) {
       return { rotation, seedIndex };
     }
   }
-  // Priority 3: next pending cell in shuffled consumeOrder.
+  // Priority 3: stale in-progress from someone else (last-resort steal).
   for (const { rotation, seedIndex } of state.consumeOrder) {
-    if (isCellPending(getCell(state, rotation, seedIndex))) {
+    if (isCellStaleInProgress(getCell(state, rotation, seedIndex), now)) {
       return { rotation, seedIndex };
     }
   }
