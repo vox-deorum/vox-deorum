@@ -67,11 +67,14 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Set production mode via marker file next to the proxy DLL
+:: Set visual production mode via marker file next to the proxy DLL
 :: (env vars are lost when Steam re-parents the process)
-set "OBS_MODE=%~2"
+set "PRODUCTION_MODE=%~2"
 set "MARKER=!CIV5_PATH!\vox_deorum_production"
-if /i "!OBS_MODE!"=="obs" (
+if /i "!PRODUCTION_MODE!"=="production" (
+    echo.> "!MARKER!"
+    echo Production mode enabled (marker file created)
+) else if /i "!PRODUCTION_MODE!"=="obs" (
     echo.> "!MARKER!"
     echo Production mode enabled (marker file created)
 ) else (

@@ -308,7 +308,7 @@ export class VoxCivilization {
    * @param playerCount - Optional number of players for StartGame.lua (generates from template)
    * @returns True if game started successfully, false if already running
    */
-  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, obsMode?: boolean, randomSeeds?: RandomSeedsConfig): Promise<boolean> {
+  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, visualMode?: boolean, randomSeeds?: RandomSeedsConfig): Promise<boolean> {
     // Check if game is already running
     if (await this.bindToExistingProcess() || this.isGameRunning()) {
       logger.info('Game instance already exists, monitoring it...');
@@ -341,11 +341,11 @@ export class VoxCivilization {
 
       const scriptPath = join('scripts', 'launch-civ5.cmd');
 
-      logger.info(`Launching Civilization V with script: ${actualLuaName}${obsMode ? " in OBS mode" : ""}`);
+      logger.info(`Launching Civilization V with script: ${actualLuaName}${visualMode ? " in visual production mode" : ""}`);
 
       // Launch the cmd script and wait for it to complete
       const args = ['/c', scriptPath, actualLuaName];
-      if (obsMode) args.push('obs');
+      if (visualMode) args.push('production');
 
       await new Promise<void>((resolve, reject) => {
         const cmdProcess = spawn('cmd', args, {

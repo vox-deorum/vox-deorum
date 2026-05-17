@@ -146,7 +146,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
       // The seed set comes from the (always-present) seating claim; trivial
       // mode supplies seedSets[0] directly, cycle mode picks per cell.
-      const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.seatingClaim?.seeds);
+      const started = await voxCivilization.startGame(luaScript, playerCount, isVisualMode(this.config.production), this.seatingClaim?.seeds);
       if (!started) {
         throw new Error('Failed to start Civilization V');
       }
@@ -705,7 +705,7 @@ Game.SetAIAutoPlay(2000, -1);`
     }
     // The active claim's seeds stay valid across the crash/recovery boundary,
     // so the recovered run stays on the same cycle cell.
-    const started = await voxCivilization.startGame(luaScript, playerCount, isObsMode(this.config.production), this.seatingClaim?.seeds);
+    const started = await voxCivilization.startGame(luaScript, playerCount, isVisualMode(this.config.production), this.seatingClaim?.seeds);
 
     if (!started) {
       logger.error('Failed to restart the game');
