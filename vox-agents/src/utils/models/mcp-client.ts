@@ -124,7 +124,16 @@ export class MCPClient extends EventEmitter {
       });
     } else if (transportConfig.type === 'http') {
       if (this.connectionPool) this.connectionPool.close();
-      this.connectionPool = new Pool(new URL(transportConfig.endpoint!).origin, { connections: 50 });
+      this.connectionPool = new Pool(new URL(transportConfig.endpoint!).origin, {
+        connections: 50,
+        // undici defaults bodyTimeout/headersTimeout to 300s (5 min). The MCP
+        // server can legitimately stall the SSE write while Civ V is busy
+        // (e.g. Game.SaveReplay during a victory cinematic), and the resulting
+        // `TypeError: terminated` kills any in-flight notification. Push to
+        // 10 min so a single hung Lua call doesn't tear down the stream.
+        bodyTimeout: 600_000,
+        headersTimeout: 600_000,
+      });
       this.dispatcher = new RetryAgent(
         this.connectionPool,
         {
@@ -157,7 +166,18 @@ export class MCPClient extends EventEmitter {
           init = init ?? {};
           init.dispatcher = this.dispatcher;
           return fetch(url, init);
-        }
+        },
+        // SDK default maxRetries is 2, which is far too aggressive given Civ V
+        // sessions routinely run for hours. We let the transport reconnect
+        // effectively forever with a constant 1s delay (growFactor 1 disables
+        // exponential backoff). The application-level onerror handler below
+        // covers the case where the SDK still ends up surfacing an error.
+        reconnectionOptions: {
+          maxRetries: 1_000_000,
+          initialReconnectionDelay: 1000,
+          maxReconnectionDelay: 1000,
+          reconnectionDelayGrowFactor: 1,
+        },
       });
       logger.info('Created HTTP transport', { url: mcpUrl.toString() });
     } else {
@@ -179,14 +199,21 @@ export class MCPClient extends EventEmitter {
    */
   private setupErrorHandlers(): void {
     this.transport.onerror = async (error: Error) => {
-      if (error.message.indexOf("Bad Request") !== -1) {
-        if (this.isConnected) {
-          logger.warn('MCP server has restarted. Reconnecting...', error);
-          await this.disconnect();
-          await this.connect();
-        }
-      } else {
-        throw error;
+      // The `isConnected` guard prevents recursive reconnects: `disconnect()`
+      // re-initializes the transport, which would re-attach onerror, and any
+      // error during that path could otherwise feedback-loop. It also avoids
+      // racing with an in-flight reconnect that hasn't flipped the flag yet.
+      if (!this.isConnected) return;
+      const msg = error.message ?? String(error);
+      logger.warn(`MCP transport error, reconnecting: ${msg}`);
+      try {
+        await this.disconnect();
+        await this.connect();
+      } catch (err) {
+        // Swallow — rethrowing makes this an unhandledRejection, which is
+        // exactly what we're trying to escape. callTool's retry loop will
+        // wait on `isConnected` and trigger another attempt when needed.
+        logger.error('MCP reconnect failed:', err);
       }
     };
   }
