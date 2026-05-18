@@ -260,11 +260,18 @@ export class KnowledgeStore {
 
         // Handle special events for notification
         if (typeof data.PlayerID === "number") {
-          // Special: Victory
+          // Special: Victory. The PlayerVictory notification is held until
+          // after the full archive flow completes — that way receipt of
+          // PlayerVictory is itself the archive-completion signal on the
+          // client side (no separate GameArchived needed). A standalone
+          // heartbeat is sent first to reset undici's bodyTimeout on the
+          // SSE channel before the (potentially 5+ minute) replay save.
           if (type == "PlayerVictory") {
+            MCPServer.getInstance().sendHeartbeat();
             await this.setMetadata("victoryPlayerID", data.PlayerID);
             await this.setMetadata("victoryType", data.VictoryType);
             await this.saveKnowledge();
+            MCPServer.getInstance().sendHeartbeat();
 
             // Save replay before archiving
             logger.info('Victory detected - saving replay and archiving game data');
@@ -278,6 +285,21 @@ export class KnowledgeStore {
             } catch (error) {
               logger.error('Error during victory archiving:', error);
             }
+
+            // Wait for downstream to send last bit of things
+            await setTimeout(5000);
+            // Try saving again
+            await this.saveKnowledge();
+            MCPServer.getInstance().sendHeartbeat();
+            // Try waiting again
+            await setTimeout(10000);
+            MCPServer.getInstance().sendHeartbeat();
+            await archiveGameData();
+
+            // Send PlayerVictory only now that the archive is on disk; clients
+            // can treat this notification as "victory observed AND archived".
+            MCPServer.getInstance().sendNotification(type, data.PlayerID, knowledgeManager.getTurn(), id);
+            return;
           }
           // Track active player on turn events
           if (type === "PlayerDoTurn") {
@@ -301,33 +323,6 @@ export class KnowledgeStore {
             knowledgeManager.updateActivePlayer(data.NextPlayerID);
           }
           MCPServer.getInstance().sendNotification(type, data.PlayerID, knowledgeManager.getTurn(), id);
-          // Try to archive the game a bit after
-          if (type == "PlayerVictory") {
-            // Wait for downstream to send last bit of things
-            await setTimeout(5000);
-            // Try saving again
-            await this.saveKnowledge();
-            // Try waiting again
-            await setTimeout(10000);
-            const archivedGameId = knowledgeManager.getGameId() ?? "";
-            const result = await archiveGameData();
-            // Signal archival outcome so listeners (notably the strategist
-            // session) can gate seating-cell completion on it. The notification
-            // travels on the same vox-deorum/game-event channel as other
-            // events; params are pass-through so we just attach the result.
-            MCPServer.getInstance().sendNotification(
-              "GameArchived",
-              data.PlayerID,
-              knowledgeManager.getTurn(),
-              id,
-              {
-                gameID: archivedGameId,
-                success: result !== null,
-                savePath: result?.savePath,
-                dbPath: result?.dbPath,
-              }
-            );
-          }
         }
       } else {
         logger.warn(`Invalid ${type} event:`, {

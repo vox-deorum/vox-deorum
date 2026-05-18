@@ -21,19 +21,8 @@ import { SessionStatus } from "../types/api.js";
 import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { SeatingClaim } from "../utils/game/seating/types.js";
 import { getMetadata, setMetadata } from "../utils/game/metadata.js";
-import { OneShotAwaiter } from "../utils/async/one-shot-awaiter.js";
 
 const logger = createLogger('StrategistSession');
-
-/**
- * How long shutdown will wait for the MCP `GameArchived` notification before
- * giving up and treating the run as not-archived. MCP's own timing after a
- * `PlayerVictory` is ~15-20s (5s + saveKnowledge + 10s + archive copy); 120s
- * provides ~2 minutes of slack for large saves and slow disks, and shrinks
- * the window where a late-arriving notification gets dropped (which would
- * otherwise mark an archived game as a failure in the seating state).
- */
-const ARCHIVE_WAIT_TIMEOUT_MS = 120_000;
 
 /**
  * Concrete implementation of VoxSession for Strategist game sessions.
@@ -64,12 +53,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private seatingClaim?: SeatingClaim;
   /** Tracks whether the active claim has already been released, so shutdown() doesn't double-release. */
   private claimReleased = false;
-  /** Set on PlayerVictory — the session observed a win. Does NOT by itself mean "succeeded"; archival must also confirm. */
+  /** Set on PlayerVictory — the MCP server only sends this after the game archive is on disk, so it's the single "succeeded" signal. */
   private victoryObserved = false;
-  /** Set after `archiveAwaiter.wait()` in shutdown — whether the MCP archive succeeded for this run. */
-  private archived = false;
-  /** Resolved by the `GameArchived` MCP notification; shutdown waits on it. One per session. */
-  private archiveAwaiter = new OneShotAwaiter<boolean>();
 
   /**
    * Wire the session against a pre-fetched seating claim and the manager that
@@ -161,9 +146,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
       // Register notification handler for game events
       mcpClient.onNotification(async (params) => {
-        // `GameArchived` is the one event we must still process during shutdown —
-        // shutdown() is actively waiting on the awaiter it resolves.
-        if (params.event !== "GameArchived" && this.abortController.signal.aborted) return;
+        if (this.abortController.signal.aborted) return;
 
         // The notification now has 'event' field instead of 'message'
         switch (params.event) {
@@ -175,13 +158,6 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
             break;
           case "PlayerVictory":
             await this.handlePlayerVictory(params);
-            break;
-          case "GameArchived":
-            // Predicate the awaiter ourselves: only resolve when the
-            // notification's gameID matches the session's current run.
-            if (this.gameID && String(params.gameID ?? '') === this.gameID) {
-              this.archiveAwaiter.resolve(Boolean(params.success));
-            }
             break;
           case "DLLConnected":
             this.dllConnected = true;
@@ -265,23 +241,20 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       turn: this.turn,
       error: this.errorMessage,
       succeeded: this.succeeded,
-      archived: this.archived,
     };
   }
 
   /**
-   * Shuts down the session gracefully — idempotent and archive-aware.
+   * Shuts down the session gracefully — idempotent.
    *
    * Called from three places:
    *   - `handlePlayerVictory` (autoplay): victory observed, drive cleanup.
    *   - `handleGameExit` (max retries exceeded): crash, no archive expected.
    *   - `console.ts` post-`start()` and process-manager hooks: belt-and-braces.
    *
-   * When a victory was observed (`this.victoryObserved`), shutdown blocks on
-   * the MCP `GameArchived` notification (bounded by {@link
-   * ARCHIVE_WAIT_TIMEOUT_MS}) so the seating release and the session's
-   * {@link succeeded} flag both reflect the real archival outcome — never
-   * "victory but no archive".
+   * The MCP server defers `PlayerVictory` until after the game archive is on
+   * disk, so by the time `victoryObserved` is set the archive has already
+   * succeeded — no separate wait is needed here.
    */
   async shutdown(): Promise<void> {
     if (this.state === 'stopping' || this.state === 'stopped') return;
@@ -310,15 +283,6 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         await setTimeout(8000);
       }
 
-      // Block on the MCP `GameArchived` notification when we expect one. MCP
-      // only emits it on `PlayerVictory`, so crashes / non-victory shutdowns
-      // skip the wait.
-      if (wasVictory) {
-        this.archived = await this.archiveAwaiter.wait(ARCHIVE_WAIT_TIMEOUT_MS, false);
-        if (this.archived) logger.info(`Game ${this.gameID} archived successfully`);
-        else logger.error(`Game ${this.gameID}: victory observed but archive failed/timed out`);
-      }
-
       await this.obsCall('stopProduction', () => this.production!.stop());
       await mcpClient.disconnect().catch((err) => {
         logger.warn(`mcpClient.disconnect failed (non-fatal): ${(err as Error).message}`);
@@ -329,7 +293,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
       // Single source of truth for "did this run succeed" — the seating
       // release mirrors the session outcome (no-op when no manager configured).
-      await this.releaseSeatingClaim(this.victoryObserved, this.archived);
+      await this.releaseSeatingClaim(this.victoryObserved);
     } finally {
       sessionRegistry.unregister(this.id);
       this.victoryResolve?.();
@@ -339,11 +303,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   }
 
   /**
-   * Whether this session completed successfully: victory was observed AND
-   * MCP archival was confirmed. Only meaningful once `state === 'stopped'`.
+   * Whether this session completed successfully. PlayerVictory from MCP is
+   * deferred until after archival is on disk, so observing it is sufficient.
+   * Only meaningful once `state === 'stopped'`.
    */
   get succeeded(): boolean {
-    return this.victoryObserved && this.archived;
+    return this.victoryObserved;
   }
 
   /**
@@ -582,22 +547,20 @@ Game.SetAIAutoPlay(2000, -1);`
   }
 
   /**
-   * Handle Civ's `PlayerVictory` notification. Records that a victory was
-   * observed (the actual `succeeded` flag is gated on archive confirmation
-   * inside `shutdown`). In autoplay mode this drives the whole shutdown
-   * ritual; in interactive mode it just unblocks `start()` and lets the
-   * caller (or process manager) drive teardown.
+   * Handle Civ's `PlayerVictory` notification. MCP holds this notification
+   * until after the game archive is on disk, so receiving it means both
+   * "victory observed" and "archived". In autoplay mode this drives the whole
+   * shutdown ritual; in interactive mode it just unblocks `start()` and lets
+   * the caller (or process manager) drive teardown.
    */
   private async handlePlayerVictory(params: GameEventNotification): Promise<void> {
     logger.warn(`Player ${params.playerID} has won the game on turn ${params.turn}!`);
 
-    // Mark victory observed — shutdown() decides whether this counts as a
-    // success once it has the archive notification in hand.
     this.victoryObserved = true;
 
     if (this.config.autoPlay) {
-      // Unified shutdown handles voluntary game close, archive wait, MCP
-      // disconnect, seating release, and state→stopped. Idempotent, so the
+      // Unified shutdown handles voluntary game close, MCP disconnect,
+      // seating release, and state→stopped. Idempotent, so the
       // post-`start()` shutdown call from console.ts is a no-op.
       await this.shutdown();
     } else {
@@ -622,18 +585,18 @@ Game.SetAIAutoPlay(2000, -1);`
   }
 
   /**
-   * Release the active claim back to the cycle exactly once. The cell only
-   * becomes `completed` when both `success` (victory) and `archived` (MCP
-   * archive confirmed) are true — any other combination is a retry-or-fail
-   * release inside `SeatingStateManager.releaseCell`. Idempotent (the
-   * `claimReleased` guard prevents double-release between the victory and
-   * shutdown paths).
+   * Release the active claim back to the cycle exactly once. The cell becomes
+   * `completed` when `success` is true (PlayerVictory now implies archived,
+   * since MCP defers the notification until after disk archive) — any other
+   * outcome is a retry-or-fail release inside `SeatingStateManager.releaseCell`.
+   * Idempotent (the `claimReleased` guard prevents double-release between the
+   * victory and shutdown paths).
    */
-  private async releaseSeatingClaim(success: boolean, archived: boolean): Promise<void> {
+  private async releaseSeatingClaim(success: boolean): Promise<void> {
     if (!this.seatingClaim || this.claimReleased) return;
     this.claimReleased = true;
     try {
-      await this.seatingManager.releaseCell(this.seatingClaim, success, archived);
+      await this.seatingManager.releaseCell(this.seatingClaim, success);
     } catch (err) {
       logger.warn(`Failed to release seating claim: ${(err as Error).message}`);
     }

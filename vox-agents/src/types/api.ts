@@ -294,16 +294,11 @@ export interface SessionStatus {
   error?: string;
 
   /**
-   * Whether the session completed successfully (victory was observed AND
-   * MCP archival was confirmed). Only meaningful once `state === 'stopped'`.
+   * Whether the session completed successfully. MCP defers `PlayerVictory`
+   * until the game archive is on disk, so observing it is sufficient. Only
+   * meaningful once `state === 'stopped'`.
    */
   succeeded?: boolean;
-
-  /**
-   * Whether the MCP `GameArchived` notification reported success for the
-   * most recent game. Mirrors the archive outcome that gated `succeeded`.
-   */
-  archived?: boolean;
 }
 
 /**

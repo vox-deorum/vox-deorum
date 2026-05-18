@@ -194,7 +194,7 @@ export class MCPServer {
   }
 
   private eventsForNotification = [
-    "GameSwitched", "PlayerDoneTurn", "PlayerVictory", "GameArchived",
+    "GameSwitched", "PlayerDoneTurn", "PlayerVictory",
     "DLLConnected", "DLLDisconnected",
     "PlayerPanelSwitch", "AnimationStarted",
   ];
@@ -228,6 +228,23 @@ export class MCPServer {
         ...param
       }
     }).catch((_error: unknown) => { })
+  }
+
+  /**
+   * One-off heartbeat ping. Distinct method from `vox-deorum/game-event` so
+   * clients don't need to filter it — the MCP SDK silently drops notifications
+   * without a registered handler. Used to reset undici's bodyTimeout on the
+   * SSE channel before a long synchronous block (e.g. the victory archive
+   * flow).
+   */
+  public sendHeartbeat(): void {
+    logger.info(`Broadcasting heartbeat to ${this.servers.size} MCP clients.`);
+    this.servers.forEach((server) => {
+      server.server.notification({
+        method: "vox-deorum/heartbeat",
+        params: { ts: Date.now() }
+      }).catch((_error: unknown) => { });
+    });
   }
 
   /**
