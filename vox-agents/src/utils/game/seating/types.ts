@@ -111,6 +111,12 @@ export interface SeatingStateManagerOptions {
    */
   maxCellFailures?: number;
   /**
+   * Whether a strictly completed cycle should be regenerated on the next
+   * claim. Defaults to true so explicit numeric repetitions can continue into
+   * a fresh cycle; auto-repetition disables this to stop after one cycle.
+   */
+  resetCompletedCycles?: boolean;
+  /**
    * Whether the configured slots should be randomized across seats.
    *
    * - `false` / `undefined` AND `seedSets.length === 1`: cycle is trivial —

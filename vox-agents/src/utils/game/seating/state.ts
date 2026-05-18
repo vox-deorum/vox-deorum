@@ -123,6 +123,7 @@ export class SeatingStateManager {
   private readonly seedCount: number;
   private readonly seedSets: SeatingStateManagerOptions['seedSets'];
   private readonly maxCellFailures: number;
+  private readonly resetCompletedCycles: boolean;
   /**
    * Deterministic seed for `basePerm` / `consumeOrder`. Normalized to `0` for
    * `randomizeSeating: true` (and for the trivial/falsy path, where it's
@@ -189,6 +190,7 @@ export class SeatingStateManager {
     this.seedCount = opts.seedCount;
     this.seedSets = opts.seedSets;
     this.maxCellFailures = opts.maxCellFailures ?? DEFAULT_MAX_CELL_FAILURES;
+    this.resetCompletedCycles = opts.resetCompletedCycles ?? true;
     // `true` is an alias for seed 0. When seating is disabled (`false` /
     // `undefined`) the manager may still run a cycle for multi-seed configs;
     // in that case seatingSeed defaults to 0 and is never observed by callers.
@@ -236,13 +238,15 @@ export class SeatingStateManager {
    *   3. Stale in-progress cell from someone else (last-resort steal). Stealing
    *      counts as a silent crash: `failureCount` is incremented, and if it
    *      crosses `maxCellFailures` the cell is marked `failed` (skipped) instead.
-   *   4. If every cell is strictly `completed`, reset the cycle (regenerate
-   *      `basePerm` and `consumeOrder`, increment `completedCycles`) and pick
-   *      the first cell of the new cycle.
+   *   4. If every cell is strictly `completed`, either reset the cycle
+   *      (regenerate `basePerm` and `consumeOrder`, increment
+   *      `completedCycles`) and pick the first cell of the new cycle, or
+   *      return `null` when `resetCompletedCycles` is disabled.
    *
-   * Returns `null` when the cycle is *finished* — every cell is terminal
-   * (`completed` or `failed`) and at least one is `failed`, so it can never
-   * auto-reset. Callers treat `null` as "stop calling me; we're done".
+   * Returns `null` when the cycle is *finished* — either every cell is
+   * terminal and at least one is `failed`, or every cell completed while
+   * `resetCompletedCycles` is disabled. Callers treat `null` as "stop calling
+   * me; we're done".
    *
    * When no cell is pickable *right now* but the cycle isn't finished (peers
    * are still mid-game), this method sleeps for {@link SEATING_WAIT_RETRY_MS}
@@ -540,6 +544,7 @@ export class SeatingStateManager {
     while (true) {
       let pick = pickCell(state, ourId, now);
       if (!pick && allCompleted(state)) {
+        if (!this.resetCompletedCycles) return null;
         resetCycleInPlace(state);
         logger.warn(
           `Seating cycle "${this.configName}" completed (cycle #${state.completedCycles}); regenerated for next cycle`

@@ -142,9 +142,15 @@ export function createSessionRoutes(): Router {
 
       // Resolve repetition the same way console.ts does: 'auto' means run
       // until the seating × seed cycle is finished, otherwise honor a numeric
-      // count, defaulting to a single run.
-      const maxRepetitions = strategistConfig.repetition === 'auto'
-        ? Number.POSITIVE_INFINITY
+      // count, defaulting to a single run. If no cycle is enabled, auto is one run.
+      const isAutoRepetition = strategistConfig.repetition === 'auto';
+      const seatingEnabled =
+        strategistConfig.randomizeSeating !== undefined && strategistConfig.randomizeSeating !== false;
+      const cycleEnabled =
+        seatingEnabled ||
+        (Array.isArray(strategistConfig.randomSeeds) && strategistConfig.randomSeeds.length > 1);
+      const maxRepetitions = isAutoRepetition
+        ? (cycleEnabled ? Number.POSITIVE_INFINITY : 1)
         : (typeof strategistConfig.repetition === 'number' ? strategistConfig.repetition : 1);
 
       // Kick off the loop in the background — sessions appear in
@@ -153,6 +159,7 @@ export function createSessionRoutes(): Router {
       runStrategistLoop({
         config: strategistConfig,
         maxRepetitions,
+        stopAfterCurrentCycle: isAutoRepetition && cycleEnabled,
       }).catch(error => {
         logger.error('Strategist loop failed', { error });
       });

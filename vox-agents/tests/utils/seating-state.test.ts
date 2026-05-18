@@ -472,6 +472,30 @@ describe('SeatingStateManager — pick priority (pending beats stale steal)', ()
 });
 
 describe('SeatingStateManager — no-claim outcomes', () => {
+  it('claimNextCell returns null after a fully completed cycle when rollover is disabled', async () => {
+    const cfg = uniqueConfigName('finished-no-rollover');
+    const mgr = new SeatingStateManager({
+      configName: cfg,
+      configSlots: [3],
+      totalSeats: 4,
+      seedCount: 2,
+      seedSets: [{ sync: 1, map: 1 }, { sync: 2, map: 2 }],
+      randomizeSeating: true,
+      resetCompletedCycles: false,
+    });
+
+    for (let i = 0; i < 8; i++) {
+      const c = await mustClaim(mgr);
+      await mgr.releaseCell(c, true, true);
+    }
+
+    const next = await mgr.claimNextCell();
+    expect(next).toBeNull();
+
+    const state = readState(cfg);
+    expect(state.completedCycles).toBe(0);
+  });
+
   it('claimNextCell returns null when every cell is terminal with at least one failed', async () => {
     const cfg = uniqueConfigName('finished-with-failures');
     // Tiny cycle (4 cells) with a zero-tolerance failure budget so the very

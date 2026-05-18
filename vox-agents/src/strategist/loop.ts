@@ -27,6 +27,8 @@ export interface StrategistLoopOptions {
   config: StrategistSessionConfig;
   /** Caps iterations; pass `Number.POSITIVE_INFINITY` for auto-repetition. */
   maxRepetitions: number;
+  /** Stop when the current seating x seed cycle is complete instead of rolling over. */
+  stopAfterCurrentCycle?: boolean;
   /**
    * Optional hook so the embedding layer (console or web) can track the
    * currently-active session — e.g. so SIGINT or `/api/session/stop` can call
@@ -43,7 +45,10 @@ export interface StrategistLoopOptions {
 }
 
 export async function runStrategistLoop(opts: StrategistLoopOptions): Promise<void> {
-  const seatingManager = new SeatingStateManager(buildSeatingManagerOptions(opts.config));
+  const seatingManager = new SeatingStateManager({
+    ...buildSeatingManagerOptions(opts.config),
+    resetCompletedCycles: !opts.stopAfterCurrentCycle,
+  });
 
   for (let i = 0; i < opts.maxRepetitions; i++) {
     if (processManager.isShuttingDown || opts.shouldStop?.()) break;
