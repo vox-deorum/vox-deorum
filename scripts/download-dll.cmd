@@ -61,9 +61,15 @@ if exist "%CACHE_TAG_FILE%" (
     if "!CACHED_TAG!"=="%RELEASE_TAG%" (
         echo [CACHE] Release tag matches cached version
         if exist "%OUTPUT_DIR%\CvGameCore_Expansion2.dll" (
-            echo [CACHE] DLL already downloaded and up to date
-            echo [OK] Using cached DLLs from %OUTPUT_DIR%
-            exit /b 0
+            set "CACHE_METADATA_READY=0"
+            if exist "%CACHE_DIR%\version.txt" if exist "%CACHE_DIR%\release-tag.txt" set "CACHE_METADATA_READY=1"
+            if "!CACHE_METADATA_READY!"=="1" (
+                echo [CACHE] DLL already downloaded and up to date
+                echo [OK] Using cached DLLs from %OUTPUT_DIR%
+                exit /b 0
+            ) else (
+                echo [CACHE] DLL is cached but version metadata is missing, refreshing...
+            )
         ) else (
             echo [CACHE] Tag matches but DLL missing, re-downloading...
         )
@@ -84,6 +90,8 @@ if "%BUILD_MODE%"=="debug" (
     set "DLL_NAME=CvGameCore_Expansion2-Release.dll"
     set "PDB_NAME=CvGameCore_Expansion2-Release.pdb"
 )
+set "VERSION_NAME=version.txt"
+if exist "%TEMP_DIR%\%VERSION_NAME%" del "%TEMP_DIR%\%VERSION_NAME%"
 
 :: Try using gh CLI first
 where gh >nul 2>&1
@@ -98,6 +106,14 @@ if !errorlevel! equ 0 (
         --clobber
 
     if !errorlevel! equ 0 (
+        gh release download "%RELEASE_TAG%" ^
+            --repo "%REPO%" ^
+            --pattern "%VERSION_NAME%" ^
+            --dir "%TEMP_DIR%" ^
+            --clobber >nul 2>&1
+        if !errorlevel! neq 0 (
+            echo   [WARN] Failed to download %VERSION_NAME% (VP version metadata)
+        )
         echo   [OK] Downloaded via GitHub CLI
         goto :copy_files
     ) else (
@@ -110,16 +126,22 @@ echo   Using direct download...
 set "RELEASE_URL=https://github.com/%REPO%/releases/download/%RELEASE_TAG%"
 
 echo   Downloading %DLL_NAME%...
-curl -L -o "%TEMP_DIR%\%DLL_NAME%" "%RELEASE_URL%/%DLL_NAME%"
+curl -f -L -o "%TEMP_DIR%\%DLL_NAME%" "%RELEASE_URL%/%DLL_NAME%"
 if !errorlevel! neq 0 (
     echo   Error: Failed to download %DLL_NAME%
     exit /b 1
 )
 
 echo   Downloading %PDB_NAME%...
-curl -L -o "%TEMP_DIR%\%PDB_NAME%" "%RELEASE_URL%/%PDB_NAME%"
+curl -f -L -o "%TEMP_DIR%\%PDB_NAME%" "%RELEASE_URL%/%PDB_NAME%"
 if !errorlevel! neq 0 (
     echo   [WARN] Failed to download %PDB_NAME% (debug symbols)
+)
+
+echo   Downloading %VERSION_NAME%...
+curl -f -L -o "%TEMP_DIR%\%VERSION_NAME%" "%RELEASE_URL%/%VERSION_NAME%"
+if !errorlevel! neq 0 (
+    echo   [WARN] Failed to download %VERSION_NAME% (VP version metadata)
 )
 
 :copy_files
@@ -149,15 +171,28 @@ if exist "%TEMP_DIR%\%PDB_NAME%" (
     )
 )
 
+if exist "%TEMP_DIR%\%VERSION_NAME%" (
+    copy /Y "%TEMP_DIR%\%VERSION_NAME%" "%CACHE_DIR%\version.txt" >nul 2>&1
+    if !errorlevel! equ 0 (
+        echo   [OK] Cached VP version metadata
+    ) else (
+        echo   [WARN] Failed to cache VP version metadata
+    )
+) else (
+    echo   [WARN] VP version metadata not found in release assets
+)
+
 :: Update cache tag
 echo.
 echo [3/3] Updating cache...
 echo %RELEASE_TAG%>"%CACHE_TAG_FILE%"
+echo %RELEASE_TAG%>"%CACHE_DIR%\release-tag.txt"
 echo   [OK] Cache updated
 
 :: Cleanup
 if exist "%TEMP_DIR%\%DLL_NAME%" del "%TEMP_DIR%\%DLL_NAME%"
 if exist "%TEMP_DIR%\%PDB_NAME%" del "%TEMP_DIR%\%PDB_NAME%"
+if exist "%TEMP_DIR%\%VERSION_NAME%" del "%TEMP_DIR%\%VERSION_NAME%"
 
 echo.
 echo =========================================

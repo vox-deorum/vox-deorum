@@ -31,6 +31,7 @@ import { getCityInformations } from './getters/city-information.js';
 import { getRandomSeeds } from './getters/random-seeds.js';
 import { setTimeout } from 'node:timers/promises';
 import PQueue from 'p-queue';
+import { readVpVersionMetadata } from '../utils/vp-version.js';
 
 const logger = createLogger('KnowledgeStore');
 
@@ -89,6 +90,22 @@ export class KnowledgeStore {
     // Store game ID in metadata
     await this.setMetadata('gameId', gameId);
     await this.setMetadata('lastSync', Date.now().toString());
+
+    try {
+      const versionMetadata = await readVpVersionMetadata();
+      if (versionMetadata.vpVersion) {
+        await this.setMetadata('vpVersion', versionMetadata.vpVersion);
+      } else {
+        logger.warn('VP version metadata not found in scripts/.dll-cache/version.txt');
+      }
+      if (versionMetadata.vpDllVersion) {
+        await this.setMetadata('vpDllVersion', versionMetadata.vpDllVersion);
+      } else {
+        logger.warn('VP DLL version metadata not found in scripts/.dll-cache/release-tag.txt');
+      }
+    } catch (error) {
+      logger.warn('Failed to retrieve or store VP version metadata:', error);
+    }
 
     // Store Civ's authoritative pregame seed values for reproducibility audits.
     // These are captured before strategist autoplay begins and are later used by

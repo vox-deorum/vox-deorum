@@ -2,16 +2,13 @@
   "name": "observe-null-ai",
   "llmPlayers": {
     "1": {
-      "strategist": "null-strategist",
-      "mode": "Strategy"
+      "strategist": "null-strategist"
     },
     "2": {
-      "strategist": "null-strategist",
-      "mode": "Strategy"
+      "strategist": "null-strategist"
     },
     "3": {
-      "strategist": "null-strategist",
-      "mode": "Strategy"
+      "strategist": "null-strategist"
     }
   },
   "autoPlay": true,
