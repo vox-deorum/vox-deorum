@@ -50,6 +50,10 @@ export const defaultConfig: VoxAgentsConfig = {
       provider: 'google',
       name: 'gemini-3.1-pro-preview'
     },
+    'google/Gemini-3.5-Flash': {
+      provider: 'google',
+      name: 'gemini-3.5-flash'
+    },
     'google/Gemini-3.1-Flash-Lite': {
       provider: 'google',
       name: 'gemini-3.1-flash-lite-preview'
