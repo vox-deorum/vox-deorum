@@ -113,8 +113,8 @@ export async function runReplay(config: OracleConfig, rows?: RetrievedRow[]): Pr
     });
   });
 
-  // Sort by repetition so rounds interleave: a1, b1, a2, b2, a3, b3
-  tasks.sort((a, b) => (a.repetition ?? 0) - (b.repetition ?? 0));
+  // Removed interleave to increase cache hit rate
+  // tasks.sort((a, b) => (a.repetition ?? 0) - (b.repetition ?? 0));
 
   logger.info(`Replaying ${tasks.length} tasks (${rows.length} rows × models)`);
 
