@@ -1,4 +1,4 @@
-# agents.md
+# AGENTS.md
 
 ## Tool-Calling Rules (reduces unnecessary permission prompts)
 - **Use built-in tools instead of bash equivalents** — Read not `cat`/`head`/`tail`, Edit not `sed`/`awk`, Write not `echo >`, Grep not `grep`/`rg`, Glob not `find`/`ls`
@@ -8,7 +8,7 @@
 
 ## Workflow Rules
 - Delegate to sub-agents for complex/multi-step features **with tool-calling rules in the prompt**
-- **Read the relevant submodule's CLAUDE.md before working in that directory**
+- **Read the relevant submodule's AGENTS.md before working in that directory**
 - Don't present action plans until requested; don't change test scripts unless asked
 - **Release notes:** Read `release.txt` for last version tag, then `git log <tag>..HEAD --oneline --no-merges` and `git diff --stat <tag>..HEAD`. Output short grouped bullets to console (don't write files).
 
@@ -16,7 +16,7 @@
 Vox Deorum — LLM-Enhanced AI for Civilization V (Community Patch framework).
 
 ### Architecture
-Each component has its own CLAUDE.md with detailed patterns.
+Each component has its own AGENTS.md with detailed patterns.
 
 1. **Community Patch DLL** (`civ5-dll/`) — C++ DLL with named pipe IPC
    - Build & Deploy: `powershell -Command "& .\build-and-copy.bat"` (from `civ5-dll/`)
@@ -45,4 +45,4 @@ Civ 5 ↔ DLL ↔ Bridge Service ↔ MCP Server ↔ Vox Agents → LLM
 
 
 ## Key Files
-`protocol.md` | `*/CLAUDE.md` | `*/tests/setup.ts` | `*/src/config.ts` | `*/vitest.config.ts`
+`protocol.md` | `*/AGENTS.md` | `*/tests/setup.ts` | `*/src/config.ts` | `*/vitest.config.ts`

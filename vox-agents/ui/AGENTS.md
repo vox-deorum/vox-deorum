@@ -1,4 +1,4 @@
-# CLAUDE.md - Vox Agents UI
+# AGENTS.md - Vox Agents UI
 
 Vue 3 + TypeScript UI. Follow existing patterns, don't reinvent.
 

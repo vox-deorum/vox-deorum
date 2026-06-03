@@ -63,7 +63,7 @@ npm run build:all
 
 ### Documentation
 
-- [CLAUDE.md](CLAUDE.md) - Development guidelines
+- [AGENTS.md](AGENTS.md) - Development guidelines
 - [PROTOCOL.md](bridge-service/PROTOCOL.md) - IPC protocol
 - Component docs in each subdirectory
 - [Database Schema](civ5-dll/docs/db.md) - Civ V database

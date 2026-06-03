@@ -1,6 +1,6 @@
-# CLAUDE.md - Vox Agents
+# AGENTS.md - Vox Agents
 
-Backend LLM agent framework. For UI development, see `ui/CLAUDE.md`.
+Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 ## Critical Conventions
 
@@ -137,7 +137,7 @@ Wraps ObsManager to add segment-based recording driven by game render events.
 ## Documentation Maintenance
 
 After each successful implementation, update relevant docs:
-- **CLAUDE.md** — if new patterns or conventions were introduced
+- **AGENTS.md** — if new patterns or conventions were introduced
 - **README.md** — if public-facing interface changed
 - Keep docs concise — describe what exists, not implementation details that get outdated
 

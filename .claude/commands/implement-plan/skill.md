@@ -14,7 +14,7 @@ Present the user with a numbered list of all stages/phases from the plan, indica
 
 Before writing any code, study the selected stage in detail:
 
-1. **Research the codebase** — Read all files referenced by the stage. Understand existing patterns, imports, utilities, and conventions. Check the relevant submodule's CLAUDE.md for component-specific guidance.
+1. **Research the codebase** — Read all files referenced by the stage. Understand existing patterns, imports, utilities, and conventions. Check the relevant submodule's AGENTS.md for component-specific guidance.
 2. **Identify dependencies** — What does this stage depend on? Are those dependencies already implemented? What files need to exist first?
 3. **Write a detailed implementation plan** — Break the stage into concrete sub-tasks: which files to create/modify, what functions to write, what types to define, what tests to add. Be specific about imports, patterns to follow, and edge cases.
 4. **Ask clarifying questions** — If anything is ambiguous, unclear, or requires a design decision, ask the user. Do NOT guess on architectural decisions.
@@ -25,7 +25,7 @@ Before writing any code, study the selected stage in detail:
 Once the user approves the detailed plan:
 
 1. Implement each sub-task methodically, following the approved plan
-2. Follow all project conventions (check CLAUDE.md files, use existing patterns)
+2. Follow all project conventions (check AGENTS.md files, use existing patterns)
 3. Run tests if applicable to verify the implementation
 4. If you encounter unexpected issues during implementation, pause and discuss with the user rather than making unplanned architectural decisions
 

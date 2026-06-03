@@ -1,4 +1,4 @@
-# CLAUDE.md - MCP Server Development Guide
+# AGENTS.md - MCP Server Development Guide
 
 This guide provides essential patterns and conventions for the MCP Server that aren't covered in the README.
 

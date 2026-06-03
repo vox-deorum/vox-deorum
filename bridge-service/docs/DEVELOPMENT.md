@@ -203,7 +203,7 @@ autocannon -c 100 -d 30 http://127.0.0.1:5000/health
 
 ## Contributing
 
-1. Follow code style in [CLAUDE.md](../CLAUDE.md)
+1. Follow code style in [AGENTS.md](../AGENTS.md)
 2. Add tests for new features
 3. Update documentation
 4. Ensure tests pass: `npm test`

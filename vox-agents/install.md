@@ -104,6 +104,6 @@ If TypeScript compilation fails:
 ## Next Steps
 
 1. Read the [README](README.md) for usage details
-2. Check [CLAUDE.md](CLAUDE.md) for development patterns
+2. Check [AGENTS.md](AGENTS.md) for development patterns
 3. Review example configurations in `configs/`
 4. Monitor agent behavior in the console

@@ -1,4 +1,4 @@
-# CLAUDE.md - Bridge Service Development Guide
+# AGENTS.md - Bridge Service Development Guide
 
 This guide provides essential patterns and conventions for the Bridge Service that aren't covered in the README.
 

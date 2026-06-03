@@ -182,7 +182,7 @@ The test suite includes:
 - Efficient SSE client management
 - Request queuing with overflow protection
 
-**Implementation patterns:** [CLAUDE.md](CLAUDE.md)
+**Implementation patterns:** [AGENTS.md](AGENTS.md)
 
 ## Development
 
@@ -253,7 +253,7 @@ Or in `config.json`:
 - **[Error Handling](docs/ERROR-HANDLING.md)** - Error codes and recovery strategies
 - **[Protocol](docs/PROTOCOL.md)** - Communication protocol flows
 - **[Event Pipe](docs/EVENT-PIPE.md)** - Named pipe event broadcasting
-- **[Development Patterns](CLAUDE.md)** - Internal development conventions
+- **[Development Patterns](AGENTS.md)** - Internal development conventions
 
 ## Security Considerations
 
