@@ -42,11 +42,8 @@ export class VoxPlayer {
     initialTurn: number
   ) {
     this.logger = createLogger(`VoxPlayer-${playerID}`);
+    // Throws on an unknown interruption name so misconfiguration fails fast.
     this.pacing = normalizePacing(playerConfig.pacing);
-    const requestedInterruption = playerConfig.pacing?.interruption;
-    if (requestedInterruption && requestedInterruption !== this.pacing.interruption) {
-      this.logger.warn(`Unknown pacing interruption "${requestedInterruption}", falling back to "${this.pacing.interruption}"`);
-    }
 
     const id = `${gameID}-player-${playerID}`
     VoxSpanExporter.getInstance().createContext(id, this.playerConfig.strategist);
@@ -168,10 +165,13 @@ export class VoxPlayer {
                   { GameID: this.parameters.gameID, PlayerID: this.parameters.playerID }
                 );
                 // Re-apply the current AI settings without recording a decision,
-                // preventing VPAI from retaking control during paced skips.
+                // preventing VPAI from retaking control during paced skips. The
+                // "[skipped]" sentinel tells keep-status-quo to refresh without
+                // recording a strategic decision.
                 await this.context.callTool("keep-status-quo", {
                   PlayerID: this.playerID,
-                  Mode: this.parameters.mode
+                  Mode: this.parameters.mode,
+                  Rationale: "[skipped]"
                 }, this.parameters);
 
                 this.running = false;

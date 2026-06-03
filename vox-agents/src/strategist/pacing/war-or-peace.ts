@@ -17,11 +17,15 @@ export class WarOrPeacePacingInterruption implements PacingInterruptionStrategy 
     const ownTeamID = getPlayerTeamID(state.players, playerID);
     if (ownTeamID === undefined) return false;
 
-    // Civ V war/peace events are team-targeted, so target checks compare
-    // against TeamID while originating checks still use the player ID.
     for (const event of flattenEvents(state.events)) {
       if (event.Type !== "DeclareWar" && event.Type !== "MakePeace") continue;
-      if (event.OriginatingPlayerID === playerID) return true;
+      // Compare both sides in team space: resolve the originating player's team
+      // (so teammate-initiated wars also count) and the target team. This avoids
+      // mixing player-ID and team-ID spaces. Self-origination is covered because
+      // the player resolves to its own team.
+      const originatingPlayerID = event.OriginatingPlayerID;
+      if (typeof originatingPlayerID === "number" &&
+          getPlayerTeamID(state.players, originatingPlayerID) === ownTeamID) return true;
       if (event.TargetTeamID === ownTeamID) return true;
     }
     return false;

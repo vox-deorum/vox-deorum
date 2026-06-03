@@ -5,6 +5,9 @@
  */
 
 import type { GameState } from "../strategy-parameters.js";
+// Canonical, serializable metadata type lives in the shared types layer so the
+// web API and UI consume the same shape. Re-exported here for strategist code.
+import type { PacingInterruptionInfo } from "../../types/api.js";
 
 /**
  * Inputs handed to a strategy when deciding whether to force an off-cadence decision.
@@ -14,18 +17,6 @@ export interface PacingInterruptionContext {
   state: GameState;
   /** The player the pacing decision is being made for. */
   playerID: number;
-}
-
-/**
- * Serializable metadata describing an interruption strategy, surfaced to the API/UI.
- */
-export interface PacingInterruptionInfo {
-  /** Registry key used in PlayerConfig.pacing.interruption. */
-  name: string;
-  /** Human-readable label for config UI controls. */
-  label: string;
-  /** Optional description of when the interruption fires. */
-  description?: string;
 }
 
 /**

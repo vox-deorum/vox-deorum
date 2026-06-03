@@ -67,16 +67,12 @@ class PacingInterruptionRegistry {
   }
 
   /**
-   * Remove all registered strategies. Pass `includeDefaults` to also reset the
-   * defaults guard so {@link initializeDefaults} will re-register built-ins.
-   * Note: with `includeDefaults` false, the guard stays set and built-ins are
-   * NOT restored by a subsequent {@link initializeDefaults} call.
+   * Remove all registered strategies and reset the defaults guard so a later
+   * {@link initializeDefaults} call re-registers the built-ins.
    */
-  clear(includeDefaults: boolean = false): void {
+  clear(): void {
     this.strategies.clear();
-    if (includeDefaults) {
-      this.defaultsInitialized = false;
-    }
+    this.defaultsInitialized = false;
   }
 
   /**

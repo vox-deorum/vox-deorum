@@ -17,11 +17,9 @@ describe("strategist pacing", () => {
     expect(pacingInterruptionRegistry.getNames()).toContain("warOrPeace");
   });
 
-  it("falls back to none for unknown interruption config", () => {
-    expect(normalizePacing({ interruption: "future-but-not-installed" })).toEqual({
-      everyTurns: 1,
-      interruption: "none"
-    });
+  it("throws for an unknown interruption config", () => {
+    expect(() => normalizePacing({ interruption: "future-but-not-installed" }))
+      .toThrow(/Unknown pacing interruption/);
   });
 
   it("runs first turn and then on cadence", () => {
@@ -58,6 +56,39 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         events: [{ Type: "MakePeace", OriginatingPlayerID: 2, TargetTeamID: 7 }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("interrupts when the player itself declares war", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "warOrPeace" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        // Player 1 (team 7) is the originator; target team is someone else.
+        events: [{ Type: "DeclareWar", OriginatingPlayerID: 1, TargetTeamID: 3 }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("interrupts when a teammate declares war on the player's behalf", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "warOrPeace" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 },
+        "5": { Civilization: "Greece", Leader: "Alexander", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        // Player 5 shares team 7 with player 1, so this counts for player 1.
+        events: [{ Type: "DeclareWar", OriginatingPlayerID: 5, TargetTeamID: 3 }]
       } as any
     }, 1, pacing)).toBe(true);
   });

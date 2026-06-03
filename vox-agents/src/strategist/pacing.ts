@@ -27,20 +27,27 @@ export const DEFAULT_PACING: NormalizedPacingConfig = {
 };
 
 /**
- * Fill missing pacing config with defaults and fall unknown interruption names
- * back to "none" so typoed configs do not crash the game loop.
+ * Fill missing pacing config with defaults. An omitted interruption defaults to
+ * "none"; an explicitly-provided but unregistered interruption name throws so
+ * misconfiguration surfaces at session start rather than degrading silently.
+ *
+ * @throws if `config.interruption` names a strategy not in the registry.
  */
 export function normalizePacing(config?: PacingConfig): NormalizedPacingConfig {
   const everyTurns = config?.everyTurns;
   const interruption = config?.interruption ?? DEFAULT_PACING.interruption;
 
+  if (!pacingInterruptionRegistry.has(interruption)) {
+    throw new Error(
+      `Unknown pacing interruption "${interruption}". Registered: ${pacingInterruptionRegistry.getNames().join(", ")}`
+    );
+  }
+
   return {
     everyTurns: Number.isInteger(everyTurns) && everyTurns! > 0
       ? everyTurns!
       : DEFAULT_PACING.everyTurns,
-    interruption: pacingInterruptionRegistry.has(interruption)
-      ? interruption
-      : DEFAULT_PACING.interruption,
+    interruption,
   };
 }
 
