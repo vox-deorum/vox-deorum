@@ -13,7 +13,7 @@ import Checkbox from 'primevue/checkbox';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
-import type { StrategistSessionConfig, AgentInfo } from '../utils/types';
+import type { PacingInterruption, StrategistSessionConfig } from '../utils/types';
 import { apiClient } from '../api/client';
 
 // Props
@@ -42,6 +42,11 @@ const localConfig = ref<StrategistSessionConfig>({
 const localName = ref('');
 const strategistOptions = ref<{ label: string; value: string }[]>([]);
 const loadingStrategists = ref(false);
+const interruptionOptions = ref<{ label: string; value: PacingInterruption }[]>([
+  { label: 'None', value: 'none' }
+]);
+const loadingInterruptions = ref(false);
+const interruptionOptionsLoaded = ref(false);
 
 // Computed properties
 const dialogTitle = computed(() =>
@@ -91,6 +96,7 @@ watch(() => props.visible, (newVal) => {
     } else if (props.config) {
       // Copy config for editing
       localConfig.value = JSON.parse(JSON.stringify(props.config));
+      hydratePacing(localConfig.value);
       localName.value = props.configName || props.config.name;
     }
   }
@@ -145,6 +151,10 @@ function addPlayer() {
   const defaultStrategist = strategistOptions.value[0]?.value || '';
   localConfig.value.llmPlayers[nextId] = {
     strategist: defaultStrategist,
+    pacing: {
+      everyTurns: 1,
+      interruption: 'none'
+    },
     llms: {}
   };
 }
@@ -160,12 +170,15 @@ function removePlayer(playerId: number) {
  * Handle save action
  */
 function handleSave() {
+  const configToSave: StrategistSessionConfig = JSON.parse(JSON.stringify(localConfig.value));
+  cleanDefaultPacing(configToSave);
+
   // Update the config name from the input (only in add mode)
   if (props.mode === 'add') {
-    localConfig.value.name = localName.value;
+    configToSave.name = localName.value;
   }
 
-  emit('save', localName.value, localConfig.value);
+  emit('save', localName.value, configToSave);
 }
 
 /**
@@ -200,9 +213,61 @@ async function loadStrategistOptions() {
   }
 }
 
+async function loadPacingInterruptionOptions() {
+  loadingInterruptions.value = true;
+  try {
+    const response = await apiClient.getPacingInterruptions();
+    // The backend registry is the source of truth so future strategies appear
+    // in the dialog without adding more hardcoded dropdown options here.
+    interruptionOptions.value = response.interruptions.map(interruption => ({
+      label: interruption.description
+        ? `${interruption.label} - ${interruption.description}`
+        : interruption.label,
+      value: interruption.name
+    }));
+    interruptionOptionsLoaded.value = true;
+    hydratePacing(localConfig.value);
+  } catch (error) {
+    console.error('Failed to load pacing interruption options:', error);
+  } finally {
+    loadingInterruptions.value = false;
+  }
+}
+
+function hydratePacing(config: StrategistSessionConfig) {
+  for (const player of Object.values(config.llmPlayers)) {
+    const interruption = player.pacing?.interruption ?? 'none';
+    const knownInterruption = interruptionOptions.value.some(option => option.value === interruption);
+    // Bind the UI to explicit defaults even when older configs omit pacing.
+    player.pacing = {
+      everyTurns: player.pacing?.everyTurns ?? 1,
+      interruption: interruptionOptionsLoaded.value && !knownInterruption ? 'none' : interruption
+    };
+  }
+}
+
+function cleanDefaultPacing(config: StrategistSessionConfig) {
+  for (const player of Object.values(config.llmPlayers)) {
+    const everyTurns = player.pacing?.everyTurns ?? 1;
+    const interruption = player.pacing?.interruption ?? 'none';
+    const pacing: NonNullable<typeof player.pacing> = {};
+
+    // Keep saved config files compact; missing pacing means backend defaults.
+    if (everyTurns !== 1) pacing.everyTurns = everyTurns;
+    if (interruption !== 'none') pacing.interruption = interruption;
+
+    if (Object.keys(pacing).length === 0) {
+      delete player.pacing;
+    } else {
+      player.pacing = pacing;
+    }
+  }
+}
+
 // Load strategist options on mount
 onMounted(() => {
   loadStrategistOptions();
+  loadPacingInterruptionOptions();
 });
 </script>
 
@@ -303,6 +368,27 @@ onMounted(() => {
                 :loading="loadingStrategists"
                 class="strategist-input"
               />
+              <div v-if="player.pacing" class="pacing-controls">
+                <label :for="`pacing-turns-${playerId}`">Every turns</label>
+                <InputNumber
+                  :id="`pacing-turns-${playerId}`"
+                  v-model="player.pacing.everyTurns"
+                  :min="1"
+                  :max="100"
+                  showButtons
+                  class="pacing-input"
+                />
+                <label :for="`pacing-interruption-${playerId}`">Interruption</label>
+                <Dropdown
+                  :id="`pacing-interruption-${playerId}`"
+                  v-model="player.pacing.interruption"
+                  :options="interruptionOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :loading="loadingInterruptions"
+                  class="interruption-input"
+                />
+              </div>
               <Button
                 icon="pi pi-trash"
                 severity="danger"
@@ -344,5 +430,17 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.pacing-controls {
+  align-items: center;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: auto 8rem auto 10rem;
+}
+
+.pacing-input,
+.interruption-input {
+  width: 100%;
 }
 </style>

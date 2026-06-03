@@ -95,7 +95,9 @@ export async function refreshGameState(
   // Get the information
   const [players, events, cities, options, victory, military] = await Promise.all([
     context.callTool<PlayersReport>("get-players", {}, parameters),
-    context.callTool<EventsReport>("get-events", {}, parameters),
+    // Cache only this turn's raw events. Decision turns merge these cached
+    // per-turn reports so skipped turns still contribute context.
+    context.callTool<EventsReport>("get-events", { Turn: parameters.turn, Original: true }, parameters),
     context.callTool<CitiesReport>("get-cities", {}, parameters),
     context.callTool<OptionsReport>("get-options", { Mode: parameters.mode }, parameters),
     context.callTool<VictoryProgressReport>("get-victory-progress", {}, parameters),
@@ -238,4 +240,49 @@ export function getRecentGameState(
   }
 
   return mostRecentTurn !== undefined ? parameters.gameStates[mostRecentTurn] : undefined;
+}
+
+/**
+ * Merge cached turn-local event reports into the current decision window.
+ * The merged report uses the original `get-events` shape so interruption checks
+ * and strategist prompts can inspect exact event payload fields.
+ */
+export function mergeCachedEvents(
+  parameters: StrategistParameters,
+  fromTurn: number,
+  toTurn: number
+): EventsReport {
+  const events: Record<string, unknown>[] = [];
+
+  for (let turn = fromTurn; turn <= toTurn; turn++) {
+    const report = parameters.gameStates[turn]?.events;
+    if (!report) continue;
+    events.push(...flattenEventsReport(report, turn));
+  }
+
+  return { events } as EventsReport;
+}
+
+/**
+ * Normalize a single turn's cached event report into a flat array of event records.
+ * Handles both the original `{ events: [...] }` shape and the turn-keyed
+ * consolidated shape, stamping each event with its `Turn` (the report key when
+ * numeric, otherwise `fallbackTurn`).
+ */
+function flattenEventsReport(report: EventsReport, fallbackTurn: number): Record<string, unknown>[] {
+  if (typeof report !== "object" || report === null) return [];
+
+  if ("events" in report && Array.isArray((report as { events?: unknown }).events)) {
+    return (report as { events: Record<string, unknown>[] }).events;
+  }
+
+  return Object.entries(report as Record<string, unknown>)
+    .flatMap(([turn, value]) => {
+      if (!Array.isArray(value)) return [];
+      const numericTurn = Number(turn);
+      const eventTurn = Number.isFinite(numericTurn) ? numericTurn : fallbackTurn;
+      return value
+        .filter(event => event !== null && typeof event === "object")
+        .map(event => ({ Turn: eventTurn, ...(event as Record<string, unknown>) }));
+    });
 }

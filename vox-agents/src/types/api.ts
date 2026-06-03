@@ -198,6 +198,26 @@ export interface ListAgentsResponse {
 }
 
 /**
+ * Information about an available strategist pacing interruption.
+ */
+export interface PacingInterruptionInfo {
+  /** Registry key used in PlayerConfig.pacing.interruption */
+  name: string;
+  /** Human-readable label for config UI controls */
+  label: string;
+  /** Optional description of when the interruption fires */
+  description?: string;
+}
+
+/**
+ * Response containing registered strategist pacing interruptions.
+ */
+export interface ListPacingInterruptionsResponse {
+  /** Array of available pacing interruption strategies */
+  interruptions: PacingInterruptionInfo[];
+}
+
+/**
  * Request to create a new chat thread
  */
 export interface CreateChatRequest {

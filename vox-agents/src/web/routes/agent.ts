@@ -9,6 +9,7 @@
 import { Router, Request, Response } from 'express';
 import { agentRegistry } from '../../infra/agent-registry.js';
 import { contextRegistry } from '../../infra/context-registry.js';
+import { pacingInterruptionRegistry } from '../../strategist/pacing/registry.js';
 import { VoxContext } from '../../infra/vox-context.js';
 import { createLogger } from '../../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,6 +23,7 @@ import { StrategistParameters, getRecentGameState, ensureGameState } from '../..
 import { createTelepathistParameters, TelepathistParameters } from '../../telepathist/telepathist-parameters.js';
 import {
   ListAgentsResponse,
+  ListPacingInterruptionsResponse,
   CreateChatRequest,
   CreateChatResponse,
   ListChatsResponse,
@@ -64,6 +66,24 @@ export function createAgentRoutes(): Router {
     } catch (error) {
       logger.error('Failed to list agents', { error });
       res.status(500).json({ error: 'Failed to list agents' });
+    }
+  });
+
+  /**
+   * GET /api/agents/pacing-interruptions - List registered strategist pacing interruptions
+   */
+  router.get('/agents/pacing-interruptions', (_req: Request, res: Response<ListPacingInterruptionsResponse | ErrorResponse>) => {
+    try {
+      const interruptions = pacingInterruptionRegistry.getAll().map(strategy => ({
+        name: strategy.name,
+        label: strategy.label,
+        description: strategy.description
+      }));
+
+      res.json({ interruptions });
+    } catch (error) {
+      logger.error('Failed to list pacing interruptions', { error });
+      res.status(500).json({ error: 'Failed to list pacing interruptions' });
     }
   });
 

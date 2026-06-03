@@ -12,9 +12,10 @@ import { createLogger } from "../utils/logger.js";
 import { setTimeout } from 'node:timers/promises';
 import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
-import { ensureGameState, StrategistParameters } from "./strategy-parameters.js";
+import { ensureGameState, mergeCachedEvents, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
 import { PlayerConfig } from "../types/config.js";
+import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
 
 /**
  * Manages a single player's strategist execution within a game session.
@@ -31,6 +32,8 @@ export class VoxPlayer {
   private aborted = false;
   private running = false;
   private successful = false;
+  private readonly pacing: NormalizedPacingConfig;
+  private lastDecisionTurn?: number;
 
   constructor(
     public readonly playerID: number,
@@ -39,6 +42,11 @@ export class VoxPlayer {
     initialTurn: number
   ) {
     this.logger = createLogger(`VoxPlayer-${playerID}`);
+    this.pacing = normalizePacing(playerConfig.pacing);
+    const requestedInterruption = playerConfig.pacing?.interruption;
+    if (requestedInterruption && requestedInterruption !== this.pacing.interruption) {
+      this.logger.warn(`Unknown pacing interruption "${requestedInterruption}", falling back to "${this.pacing.interruption}"`);
+    }
 
     const id = `${gameID}-player-${playerID}`
     VoxSpanExporter.getInstance().createContext(id, this.playerConfig.strategist);
@@ -124,10 +132,6 @@ export class VoxPlayer {
           const startingInput = this.context.inputTokens;
           const startingReasoning = this.context.reasoningTokens;
           const startingOutput = this.context.outputTokens;
-          this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${this.parameters.turn}`, {
-              GameID: this.parameters.gameID,
-              PlayerID: this.parameters.playerID
-            });
 
           // Start a new trace for each turn (no parent)
           const turnSpan = tracer.startSpan(`strategist.turn.${this.parameters.turn}`, {
@@ -138,7 +142,10 @@ export class VoxPlayer {
               'game.turn': String(this.parameters.turn),
               'event.before': String(this.parameters.before),
               'event.after': String(this.parameters.after),
-              'strategist.type': this.playerConfig.strategist
+              'strategist.type': this.playerConfig.strategist,
+              'pacing.every_turns': String(this.pacing.everyTurns),
+              'pacing.interruption': this.pacing.interruption,
+              'pacing.last_decision_turn': this.lastDecisionTurn === undefined ? "" : String(this.lastDecisionTurn)
             }
           });
 
@@ -146,8 +153,55 @@ export class VoxPlayer {
             // Create a new root context for this turn's trace
             await context.with(trace.setSpan(context.active(), turnSpan), async () => {
               // Refresh all strategy parameters
-              await ensureGameState(this.context, this.parameters)
+              const cullLimit = Math.max(10, this.pacing.everyTurns + 1);
+              const state = await ensureGameState(this.context, this.parameters, cullLimit);
               await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
+
+              const scheduled = isScheduledDecision(this.parameters.turn, this.lastDecisionTurn, this.pacing);
+              const interrupted = shouldInterruptDecision(state, this.playerID, this.pacing);
+              const shouldDecide = scheduled || interrupted;
+
+              if (!shouldDecide) {
+                this.logger.info(
+                  `Skipping ${this.playerConfig.strategist} on Turn ${this.parameters.turn} ` +
+                  `(lastDecisionTurn=${this.lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
+                  { GameID: this.parameters.gameID, PlayerID: this.parameters.playerID }
+                );
+                // Re-apply the current AI settings without recording a decision,
+                // preventing VPAI from retaking control during paced skips.
+                await this.context.callTool("keep-status-quo", {
+                  PlayerID: this.playerID,
+                  Mode: this.parameters.mode
+                }, this.parameters);
+
+                this.running = false;
+                await this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
+
+                turnSpan.setAttributes({
+                  'completed': true,
+                  'pacing.skipped': true,
+                  'pacing.interrupted': false,
+                  'tokens.input': 0,
+                  'tokens.reasoning': 0,
+                  'tokens.output': 0
+                });
+                turnSpan.setStatus({ code: SpanStatusCode.OK });
+                return;
+              }
+
+              const eventFromTurn = this.lastDecisionTurn === undefined
+                ? this.parameters.turn
+                : this.lastDecisionTurn + 1;
+              // Replace the current turn's event slice with the full window
+              // since the last strategist decision.
+              state.events = mergeCachedEvents(this.parameters, eventFromTurn, this.parameters.turn);
+
+              this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${this.parameters.turn}`, {
+                GameID: this.parameters.gameID,
+                PlayerID: this.parameters.playerID,
+                scheduled,
+                interrupted
+              });
 
               // Without strategists, we just fake one
               let contextLengthExceeded = false;
@@ -165,6 +219,7 @@ export class VoxPlayer {
 
               // Finalizing
               this.parameters.after = turnData.latestID;
+              this.lastDecisionTurn = this.parameters.turn;
 
               // Recording the tokens and resume the game
               this.running = false;
@@ -173,6 +228,8 @@ export class VoxPlayer {
               // Update the status
               turnSpan.setAttributes({
                 'completed': true,
+                'pacing.skipped': false,
+                'pacing.interrupted': interrupted,
                 'tokens.input': this.context.inputTokens - startingInput,
                 'tokens.reasoning': this.context.reasoningTokens - startingReasoning,
                 'tokens.output': this.context.outputTokens - startingOutput

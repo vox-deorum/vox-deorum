@@ -32,6 +32,7 @@ import type {
   Span,
   // Agent chat types
   ListAgentsResponse,
+  ListPacingInterruptionsResponse,
   CreateChatRequest,
   CreateChatResponse,
   ListChatsResponse,
@@ -471,6 +472,15 @@ class ApiClient {
   async getAgents(): Promise<ListAgentsResponse> {
     return this.fetchJson<ListAgentsResponse>(
       `${this.baseUrl}/api/agents`
+    );
+  }
+
+  /**
+   * Get registered strategist pacing interruption strategies
+   */
+  async getPacingInterruptions(): Promise<ListPacingInterruptionsResponse> {
+    return this.fetchJson<ListPacingInterruptionsResponse>(
+      `${this.baseUrl}/api/agents/pacing-interruptions`
     );
   }
 

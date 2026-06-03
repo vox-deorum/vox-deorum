@@ -152,6 +152,21 @@ export interface RandomSeedsConfig {
 }
 
 /**
+ * Event-based interruption strategies for strategist pacing.
+ */
+export type PacingInterruption = string;
+
+/**
+ * Controls how often a strategist makes a full LLM decision.
+ */
+export interface PacingConfig {
+  /** Number of turns between full strategist decisions. Defaults to 1. */
+  everyTurns?: number;
+  /** Event strategy that can force an off-cadence decision. Defaults to "none". */
+  interruption?: PacingInterruption;
+}
+
+/**
  * Player-specific configuration for LLM control
  */
 export interface PlayerConfig {
@@ -159,6 +174,8 @@ export interface PlayerConfig {
   strategist: string;
   /** Strategist's decision-making mode */
   mode?: StrategyDecisionType;
+  /** Strategist pacing and interruption behavior */
+  pacing?: PacingConfig;
   /** Optional LLM model overrides per voxcontext (e.g., per agent name) */
   llms?: Record<string, Model | string>;
 }

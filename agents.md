@@ -1,4 +1,4 @@
-# CLAUDE.md
+# agents.md
 
 ## Tool-Calling Rules (reduces unnecessary permission prompts)
 - **Use built-in tools instead of bash equivalents** — Read not `cat`/`head`/`tail`, Edit not `sed`/`awk`, Write not `echo >`, Grep not `grep`/`rg`, Glob not `find`/`ls`
@@ -41,6 +41,7 @@ Civ 5 ↔ DLL ↔ Bridge Service ↔ MCP Server ↔ Vox Agents → LLM
 - Backend sends complete data; frontend decides formatting
 - Use `// Vox Deorum:` prefix for C++ modifications outside CvConnectionService
 - Update existing docs after implementation; never create docs proactively; no concrete code in docs
+- **Comment everywhere** - Every function, at least, needs to be commented
 
 
 ## Key Files

@@ -32,7 +32,7 @@ class KeepStatusQuoTool extends ActionTool<boolean> {
   readonly inputSchema = z.object({
     PlayerID: z.number().min(0).max(MaxMajorCivs - 1).describe("ID of the player"),
     Mode: ModeEnum.describe("'Flavor' to reapply custom flavors, 'Strategy' to reapply strategies (default)"),
-    Rationale: z.string().describe("Briefly explain why the current strategic direction should be maintained")
+    Rationale: z.string().optional().describe("Briefly explain why the current strategic direction should be maintained")
   }).extend(sourceTurnField);
 
   /**
@@ -86,13 +86,17 @@ class KeepStatusQuoTool extends ActionTool<boolean> {
   async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
     // Trim rationale
     const { Rationale: rawRationale, Turn: _sourceTurn, ...otherArgs } = args;
-    const Rationale = this.trimRationale(rawRationale);
+    const Rationale = rawRationale === undefined ? undefined : this.trimRationale(rawRationale);
     const turn = this.resolveSourceTurn(args);
 
     // Call the Lua function to refresh strategies or flavors
     const result = await super.call(otherArgs.PlayerID, otherArgs.Mode);
 
     if (result.Success) {
+      // Pacing skips call this without a rationale: refresh the in-game AI
+      // settings, but do not create a recorded strategic decision.
+      if (Rationale === undefined) return result;
+
       const store = this.getStore();
 
       if (otherArgs.Mode === "Flavor") {

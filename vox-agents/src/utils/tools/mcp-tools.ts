@@ -78,9 +78,13 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
         if ((tool._meta as any)?.autoComplete) {
           ((tool._meta as any)?.autoComplete as string[]).forEach(
             key => {
+              // Manual callers may intentionally override auto-filled fields
+              // such as Turn/Before/Mode; keep those explicit values.
+              if (args[key] !== undefined) return;
               var camelKey = camelCase(key);
               if (camelKey.endsWith("Id")) camelKey = camelKey.substring(0, camelKey.length - 2) + "ID";
-              args[key] = (options.experimental_context as any)[camelKey];
+              const value = (options.experimental_context as any)[camelKey];
+              if (value !== undefined) args[key] = value;
               // console.log(`${key} => ${camelKey} => ${(options.experimental_context as any)[camelKey]}`)
             }
           )
