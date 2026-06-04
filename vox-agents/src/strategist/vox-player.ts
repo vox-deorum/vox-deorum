@@ -7,12 +7,12 @@
  */
 
 import { VoxContext } from "../infra/vox-context.js";
-import { trace, SpanStatusCode, context } from '@opentelemetry/api';
+import { trace, SpanStatusCode, context, type Span } from '@opentelemetry/api';
 import { createLogger } from "../utils/logger.js";
 import { setTimeout } from 'node:timers/promises';
 import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
-import { ensureGameState, mergeCachedEvents, StrategistParameters } from "./strategy-parameters.js";
+import { ensureGameState, getDecisionEventWindows, mergeCachedEvents, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
 import { PlayerConfig } from "../types/config.js";
 import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
@@ -197,10 +197,6 @@ export class VoxPlayer {
               const eventFromTurn = this.lastDecisionTurn === undefined
                 ? this.parameters.turn
                 : this.lastDecisionTurn + 1;
-              // Replace the current turn's event slice with the full window
-              // since the last strategist decision.
-              state.events = mergeCachedEvents(this.parameters, eventFromTurn, this.parameters.turn);
-
               this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${this.parameters.turn}`, {
                 GameID: this.parameters.gameID,
                 PlayerID: this.parameters.playerID,
@@ -208,19 +204,7 @@ export class VoxPlayer {
                 interrupted
               });
 
-              // Without strategists, we just fake one
-              let contextLengthExceeded = false;
-              if (this.playerConfig.strategist == "none") {
-                await setTimeout(2000);
-              } else {
-                await this.context.execute(this.playerConfig.strategist, this.parameters, undefined, undefined, undefined, () => {
-                  contextLengthExceeded = true;
-                });
-              }
-
-              if (contextLengthExceeded) {
-                this.logger.warn(`Context length exceeded on turn ${this.parameters.turn}, skipping turn.`);
-              }
+              await this.executeDecisionWithEventFallback(state, eventFromTurn, turnSpan);
 
               // Finalizing (the event cursor was already advanced after the refresh)
               this.lastDecisionTurn = this.parameters.turn;
@@ -318,5 +302,54 @@ export class VoxPlayer {
    */
   getContextId(): string | undefined {
     return this.context?.id;
+  }
+
+  /**
+   * Execute a strategist decision, narrowing the event window one turn at a
+   * time when the model context is exceeded. If even the current turn alone is
+   * too large, the caller still finalizes the turn and drops that event window.
+   */
+  private async executeDecisionWithEventFallback(
+    state: GameState,
+    eventFromTurn: number,
+    turnSpan: Span
+  ): Promise<void> {
+    const eventWindows = getDecisionEventWindows(eventFromTurn, this.parameters.turn);
+
+    for (const eventWindow of eventWindows) {
+      state.events = mergeCachedEvents(this.parameters, eventWindow.fromTurn, eventWindow.toTurn);
+      turnSpan.setAttributes({
+        event_from: eventWindow.fromTurn,
+        event_to: eventWindow.toTurn
+      });
+
+      // Without strategists, we just fake one.
+      if (this.playerConfig.strategist == "none") {
+        await setTimeout(2000);
+        return;
+      }
+
+      let contextLengthExceeded = false;
+      await this.context.execute(this.playerConfig.strategist, this.parameters, undefined, undefined, undefined, () => {
+        contextLengthExceeded = true;
+      });
+
+      if (!contextLengthExceeded) return;
+
+      this.logger.warn(
+        `Context length exceeded on turn ${this.parameters.turn}; retrying with a narrower event window.`,
+        {
+          GameID: this.parameters.gameID,
+          PlayerID: this.parameters.playerID,
+          EventFrom: eventWindow.fromTurn,
+          EventTo: eventWindow.toTurn
+        }
+      );
+    }
+
+    this.logger.warn(`Context length exceeded on turn ${this.parameters.turn}; dropping the decision event window.`, {
+      GameID: this.parameters.gameID,
+      PlayerID: this.parameters.playerID
+    });
   }
 }

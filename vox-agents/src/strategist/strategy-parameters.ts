@@ -59,7 +59,10 @@ export interface GameState {
  * @returns True if the result indicates an error
  */
 function isErrorResult(result: unknown): boolean {
-  return result != null && typeof result === 'object' && 'isError' in result && (result as Record<string, unknown>).isError === true;
+  return result == null ||
+    (typeof result === 'object' &&
+      'isError' in result &&
+      (result as Record<string, unknown>).isError === true);
 }
 
 /**
@@ -68,6 +71,7 @@ function isErrorResult(result: unknown): boolean {
  * @returns A string description of the error
  */
 function extractErrorText(result: unknown): string {
+  if (result == null) return 'No result returned';
   if (result != null && typeof result === 'object') {
     const obj = result as Record<string, unknown>;
     if (obj.error) return String(obj.error);
@@ -264,6 +268,20 @@ export function mergeCachedEvents(
   }
 
   return { events } as EventsReport;
+}
+
+/**
+ * Return progressively narrower event windows for context-length retries.
+ * Each retry drops the oldest remaining turn while keeping the current turn.
+ */
+export function getDecisionEventWindows(fromTurn: number, toTurn: number): Array<{ fromTurn: number; toTurn: number }> {
+  if (fromTurn > toTurn) return [];
+
+  const windows: Array<{ fromTurn: number; toTurn: number }> = [];
+  for (let turn = fromTurn; turn <= toTurn; turn++) {
+    windows.push({ fromTurn: turn, toTurn });
+  }
+  return windows;
 }
 
 /**

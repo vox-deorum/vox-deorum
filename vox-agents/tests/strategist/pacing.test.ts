@@ -5,7 +5,7 @@ import {
   shouldInterruptDecision,
 } from "../../src/strategist/pacing.js";
 import { pacingInterruptionRegistry } from "../../src/strategist/pacing/registry.js";
-import { mergeCachedEvents, type StrategistParameters } from "../../src/strategist/strategy-parameters.js";
+import { getDecisionEventWindows, mergeCachedEvents, type StrategistParameters } from "../../src/strategist/strategy-parameters.js";
 
 describe("strategist pacing", () => {
   it("normalizes missing config to every turn with no interruption", () => {
@@ -153,5 +153,15 @@ describe("mergeCachedEvents", () => {
         { ID: 30, Turn: 3, Type: "DeclareWar" }
       ]
     });
+  });
+});
+
+describe("getDecisionEventWindows", () => {
+  it("drops the oldest event turn on each retry", () => {
+    expect(getDecisionEventWindows(1, 3)).toEqual([
+      { fromTurn: 1, toTurn: 3 },
+      { fromTurn: 2, toTurn: 3 },
+      { fromTurn: 3, toTurn: 3 }
+    ]);
   });
 });
