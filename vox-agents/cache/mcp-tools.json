@@ -1037,7 +1037,7 @@
         },
         "Rationale": {
           "type": "string",
-          "description": "Briefly explain why the current strategic direction should be maintained"
+          "description": "Briefly explain why the current strategic direction should be maintained."
         },
         "Turn": {
           "default": -1,

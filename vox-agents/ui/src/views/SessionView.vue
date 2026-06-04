@@ -20,7 +20,9 @@ import {
   stopSession,
   cleanup
 } from '../stores/session';
-import type { SessionConfig, SessionConfigsResponse, StrategistSessionConfig } from '../utils/types';
+import type { SessionConfig, StrategistSessionConfig } from '../utils/types';
+
+type ConfigDialogMode = 'add' | 'edit' | 'duplicate';
 
 /**
  * Session Control view for managing game sessions and configurations
@@ -30,11 +32,10 @@ import type { SessionConfig, SessionConfigsResponse, StrategistSessionConfig } f
 const configs = ref<SessionConfig[]>([]);
 const loadingConfigs = ref(false);
 const configError = ref<string | null>(null);
-const selectedConfig = ref<SessionConfig | null>(null);
 
 // Dialog state
 const showConfigDialog = ref(false);
-const configDialogMode = ref<'add' | 'edit'>('add');
+const configDialogMode = ref<ConfigDialogMode>('add');
 const editingConfig = ref<StrategistSessionConfig | undefined>(undefined);
 const editingConfigName = ref('');
 
@@ -84,24 +85,6 @@ function getMapSize(config: SessionConfig): string {
   if (playerCount <= 10) return 'Large';
   return 'Huge';
 }
-
-/**
- * Get state color based on session state
- */
-const stateColor = computed(() => {
-  if (!sessionStatus.value?.session) return 'gray';
-
-  const state = sessionStatus.value.session.state;
-  switch (state) {
-    case 'starting': return 'blue';
-    case 'running': return 'green';
-    case 'recovering': return 'orange';
-    case 'stopping': return 'yellow';
-    case 'stopped': return 'gray';
-    case 'error': return 'red';
-    default: return 'gray';
-  }
-});
 
 /**
  * Get state severity for PrimeVue components
@@ -272,18 +255,45 @@ function confirmDeleteConfig(config: SessionConfig) {
 /**
  * Open the configuration dialog for adding or editing
  */
-function openConfigDialog(mode: 'add' | 'edit', config?: SessionConfig) {
+function openConfigDialog(mode: ConfigDialogMode, config?: SessionConfig, configName?: string) {
   configDialogMode.value = mode;
 
-  if (mode === 'edit' && config) {
+  if ((mode === 'edit' || mode === 'duplicate') && config) {
     editingConfig.value = config as StrategistSessionConfig;
-    editingConfigName.value = config.name;
+    editingConfigName.value = configName || config.name;
   } else {
     editingConfig.value = undefined;
     editingConfigName.value = '';
   }
 
   showConfigDialog.value = true;
+}
+
+/**
+ * Open the configuration dialog with an unsaved copy of an existing config.
+ */
+function duplicateConfig(config: SessionConfig) {
+  const duplicate = JSON.parse(JSON.stringify(config)) as StrategistSessionConfig;
+  const duplicateName = getUniqueDuplicateName(config.name);
+  duplicate.name = duplicateName;
+  openConfigDialog('duplicate', duplicate, duplicateName);
+}
+
+/**
+ * Generate a unique copy name from the existing config list.
+ */
+function getUniqueDuplicateName(sourceName: string): string {
+  const existingNames = new Set(configs.value.map(config => config.name));
+  const baseName = `${sourceName}-copy`;
+  let candidate = baseName;
+  let suffix = 2;
+
+  while (existingNames.has(candidate)) {
+    candidate = `${baseName}-${suffix}`;
+    suffix++;
+  }
+
+  return candidate;
 }
 
 /**
@@ -463,7 +473,7 @@ onUnmounted(() => {
           <div class="col-fixed-100">Players</div>
           <div class="col-fixed-100">Map</div>
           <div class="col-fixed-80">Observe</div>
-          <div class="col-fixed-200">Actions</div>
+          <div class="col-fixed-250">Actions</div>
         </div>
 
         <!-- Table rows -->
@@ -482,7 +492,7 @@ onUnmounted(() => {
             <div class="col-fixed-80">
               <i :class="config.autoPlay ? 'pi pi-check text-green-500' : 'pi pi-times text-red-500'"></i>
             </div>
-            <div class="col-fixed-200">
+            <div class="col-fixed-250">
               <div class="flex gap-2">
                 <Button
                   icon="pi pi-play"
@@ -501,6 +511,14 @@ onUnmounted(() => {
                   rounded
                   v-tooltip="'Edit Config'"
                   @click="openConfigDialog('edit', config)"
+                />
+                <Button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  size="small"
+                  rounded
+                  v-tooltip="'Duplicate Config'"
+                  @click="duplicateConfig(config)"
                 />
                 <Button
                   icon="pi pi-trash"
