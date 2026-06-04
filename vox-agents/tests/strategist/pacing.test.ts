@@ -14,7 +14,7 @@ describe("strategist pacing", () => {
 
   it("registers built-in interruption strategies", () => {
     expect(pacingInterruptionRegistry.getNames()).toContain("none");
-    expect(pacingInterruptionRegistry.getNames()).toContain("warOrPeace");
+    expect(pacingInterruptionRegistry.getNames()).toContain("importantEvents");
   });
 
   it("throws for an unknown interruption config", () => {
@@ -46,7 +46,7 @@ describe("strategist pacing", () => {
   });
 
   it("interrupts for war or peace involving the player's team", () => {
-    const pacing = normalizePacing({ everyTurns: 10, interruption: "warOrPeace" });
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
 
     expect(shouldInterruptDecision({
       turn: 4,
@@ -61,7 +61,7 @@ describe("strategist pacing", () => {
   });
 
   it("interrupts when the player itself declares war", () => {
-    const pacing = normalizePacing({ everyTurns: 10, interruption: "warOrPeace" });
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
 
     expect(shouldInterruptDecision({
       turn: 4,
@@ -77,7 +77,7 @@ describe("strategist pacing", () => {
   });
 
   it("interrupts when a teammate declares war on the player's behalf", () => {
-    const pacing = normalizePacing({ everyTurns: 10, interruption: "warOrPeace" });
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
 
     expect(shouldInterruptDecision({
       turn: 4,
@@ -93,8 +93,8 @@ describe("strategist pacing", () => {
     }, 1, pacing)).toBe(true);
   });
 
-  it("ignores unrelated war or peace events", () => {
-    const pacing = normalizePacing({ interruption: "warOrPeace" });
+  it("interrupts when the player's team completes research", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
 
     expect(shouldInterruptDecision({
       turn: 4,
@@ -103,7 +103,71 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "DeclareWar", OriginatingPlayerID: 2, TargetTeamID: 3 }]
+        events: [{ Type: "TeamTechResearched", TeamID: 7, TechID: 12, ChangeAmount: 1 }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("interrupts when the player's team gains a technology", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        events: [{ Type: "TeamSetHasTech", TeamID: 7, TechID: 12, HasTech: true }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("ignores technology loss events", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        events: [{ Type: "TeamSetHasTech", TeamID: 7, TechID: 12, HasTech: 0 }]
+      } as any
+    }, 1, pacing)).toBe(false);
+  });
+
+  it("interrupts when the player adopts culture", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        events: [{ Type: "PlayerAdoptPolicy", PlayerID: 1, PolicyID: 25 }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("ignores unrelated important events", () => {
+    const pacing = normalizePacing({ interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        events: [
+          { Type: "DeclareWar", OriginatingPlayerID: 2, TargetTeamID: 3 },
+          { Type: "TeamTechResearched", TeamID: 3, TechID: 12, ChangeAmount: 1 },
+          { Type: "PlayerAdoptPolicyBranch", PlayerID: 2, BranchType: 4 }
+        ]
       } as any
     }, 1, pacing)).toBe(false);
   });

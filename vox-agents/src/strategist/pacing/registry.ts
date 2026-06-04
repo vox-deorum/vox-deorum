@@ -5,9 +5,9 @@
  */
 
 import { createLogger } from "../../utils/logger.js";
+import { ImportantEventsPacingInterruption } from "./important-events.js";
 import { NonePacingInterruption } from "./none.js";
 import type { PacingInterruptionStrategy } from "./types.js";
-import { WarOrPeacePacingInterruption } from "./war-or-peace.js";
 
 /**
  * In-memory registry mapping interruption names to their strategy objects.
@@ -83,7 +83,7 @@ class PacingInterruptionRegistry {
     if (this.defaultsInitialized) return;
 
     this.register(new NonePacingInterruption());
-    this.register(new WarOrPeacePacingInterruption());
+    this.register(new ImportantEventsPacingInterruption());
 
     this.defaultsInitialized = true;
   }
