@@ -152,6 +152,11 @@ export class VoxPlayer {
               // Refresh all strategy parameters
               const cullLimit = Math.max(10, this.pacing.everyTurns + 1);
               const state = await ensureGameState(this.context, this.parameters, cullLimit);
+              // Advance the event cursor: we've now fetched events through this turn.
+              // The next refresh fetches from here, so a turn dropped before it was
+              // processed folds its events into the following fetch (nothing is lost).
+              // Runs for both skip and decision paths, giving clean per-turn slices.
+              this.parameters.after = this.parameters.before;
               await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
 
               const scheduled = isScheduledDecision(this.parameters.turn, this.lastDecisionTurn, this.pacing);
@@ -217,8 +222,7 @@ export class VoxPlayer {
                 this.logger.warn(`Context length exceeded on turn ${this.parameters.turn}, skipping turn.`);
               }
 
-              // Finalizing
-              this.parameters.after = turnData.latestID;
+              // Finalizing (the event cursor was already advanced after the refresh)
               this.lastDecisionTurn = this.parameters.turn;
 
               // Recording the tokens and resume the game
@@ -243,8 +247,9 @@ export class VoxPlayer {
               code: SpanStatusCode.ERROR,
               message: error instanceof Error ? error.message : String(error)
             });
-            // Still need to resume the game to avoid a total block.
-            this.parameters.after = turnData.latestID;
+            // Still need to resume the game to avoid a total block. The event
+            // cursor is left as-is: if the refresh succeeded it already advanced;
+            // if it failed the cursor stays put so the next turn re-fetches the gap.
             this.running = false;
             await this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
           } finally {

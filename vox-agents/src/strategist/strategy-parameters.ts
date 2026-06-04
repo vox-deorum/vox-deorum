@@ -95,9 +95,12 @@ export async function refreshGameState(
   // Get the information
   const [players, events, cities, options, victory, military] = await Promise.all([
     context.callTool<PlayersReport>("get-players", {}, parameters),
-    // Cache only this turn's raw events. Decision turns merge these cached
-    // per-turn reports so skipped turns still contribute context.
-    context.callTool<EventsReport>("get-events", { Turn: parameters.turn, Original: true }, parameters),
+    // Fetch every event since the last fetched ID (parameters.after is the cursor,
+    // advanced one turn per processed turn by the strategist loop). A turn that was
+    // dropped before it could be processed folds its events into this window, so
+    // nothing is lost. Decision turns reassemble these per-turn slices via
+    // mergeCachedEvents.
+    context.callTool<EventsReport>("get-events", { After: parameters.after, Before: parameters.before, Original: true }, parameters),
     context.callTool<CitiesReport>("get-cities", {}, parameters),
     context.callTool<OptionsReport>("get-options", { Mode: parameters.mode }, parameters),
     context.callTool<VictoryProgressReport>("get-victory-progress", {}, parameters),
