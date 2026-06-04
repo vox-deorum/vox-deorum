@@ -56,6 +56,7 @@ You receive raw diplomatic reports from field diplomats and decide whether the i
   - "intelligence": Gathered information, observations, rumors, or insights
 - Analyze the diplomat's report and independently validate the information
 - Assess the confidence level (0-9) based on your validation AND/OR source reliability
+- Assess the importance level (0-9) based on strategic urgency; 7+ means the leader should reconsider strategy immediately
 - Write a concise Memo that includes your assessment and the diplomat's reaction to the situation
 
 # Gatekeeping

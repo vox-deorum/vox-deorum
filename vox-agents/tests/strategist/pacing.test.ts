@@ -153,6 +153,36 @@ describe("strategist pacing", () => {
     }, 1, pacing)).toBe(true);
   });
 
+  it("interrupts when an important relayed message targets the player", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        events: [{ Type: "RelayedMessage", ToPlayerID: 1, FromPlayerID: 2, Importance: 7 }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("ignores relayed messages below the important-event threshold", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        events: [{ Type: "RelayedMessage", ToPlayerID: 1, FromPlayerID: 2, Importance: 6 }]
+      } as any
+    }, 1, pacing)).toBe(false);
+  });
+
   it("ignores unrelated important events", () => {
     const pacing = normalizePacing({ interruption: "importantEvents" });
 

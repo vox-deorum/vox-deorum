@@ -1061,7 +1061,7 @@
   },
   {
     "name": "relay-message",
-    "description": "Relay a message from a diplomat to the leader, stored as a game event. Supports diplomatic messages and intelligence reports.",
+    "description": "Relay a message from a diplomat to the leader, stored as a game event. Supports diplomatic messages and intelligence reports, with Importance 7+ interrupting important-event pacing.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1097,6 +1097,12 @@
           "maximum": 9,
           "description": "Reliability assessment (0 = unreliable rumor, 9 = authoritative leader statement)"
         },
+        "Importance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 9,
+          "description": "Strategic urgency (0 = background information, 9 = leader must reconsider strategy immediately; 7+ triggers important-event pacing)"
+        },
         "Categories": {
           "minItems": 1,
           "type": "array",
@@ -1118,6 +1124,7 @@
         "Message",
         "Content",
         "Confidence",
+        "Importance",
         "Categories",
         "Memo"
       ],

@@ -73,7 +73,7 @@ AI Agents ← MCP Protocol → MCP Server ← HTTP/SSE → Bridge Service ← Na
 - `set-research` - Set next research technology
 - `set-policy` - Set next policy selection
 - `keep-status-quo` - Maintain current strategy with documented rationale
-- `relay-message` - Relay diplomatic or intelligence message as game event
+- `relay-message` - Relay diplomatic or intelligence message as game event, with high-importance relays interrupting pacing
 
 ### Game Control Tools (2)
 - `pause-game` - Pause game during a player's turn

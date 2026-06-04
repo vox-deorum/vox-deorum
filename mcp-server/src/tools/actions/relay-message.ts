@@ -22,6 +22,8 @@ const RelayMessageInputSchema = z.object({
     .describe('The message content'),
   Confidence: z.number().min(0).max(9)
     .describe('Reliability assessment (0 = unreliable rumor, 9 = authoritative leader statement)'),
+  Importance: z.number().min(0).max(9)
+    .describe('Strategic urgency (0 = background information, 9 = leader must reconsider strategy immediately; 7+ is considered important)'),
   Categories: z.array(z.string()).min(1)
     .describe('Searchable categories (e.g., "Military", "Economic", "Diplomacy")'),
   Memo: z.string().min(1).max(500)
@@ -57,6 +59,7 @@ class MessageRelayTool extends DynamicEventTool {
       Message: args.Message,
       Content: args.Content,
       Confidence: `${args.Confidence}/9`,
+      Importance: args.Importance,
       Categories: args.Categories,
       Memo: `Our analyst: ${args.Memo}`
     };

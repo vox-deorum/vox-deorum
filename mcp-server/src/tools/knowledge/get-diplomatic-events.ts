@@ -267,10 +267,11 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
     playerIdFields: ["ToPlayerID", "FromPlayerID"],
     toMarkdown: (e, ctx) => ({
       Title: `${ctx.player(e.FromPlayerID)} → ${ctx.player(e.ToPlayerID)}`,
-      Type: e.Type === "intelligence" ? "Intelligence" : "Diplomatic message",
+      Type: e.Message === "Intelligence" ? "Intelligence" : "Diplomatic message",
       Confidence: e.Confidence,
+      Importance: e.Importance,
       Categories: Array.isArray(e.Categories) ? e.Categories.join(", ") : "",
-      Message: e.Message,
+      Message: e.Content,
       Memo: e.Memo
     })
   }

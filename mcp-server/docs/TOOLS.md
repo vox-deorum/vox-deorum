@@ -61,7 +61,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `set-research` | Set next research technology by name | `PlayerID`, `Technology`, `Rationale` |
 | `set-policy` | Set next policy or branch selection by name | `PlayerID`, `Policy`, `Rationale` |
 | `keep-status-quo` | Maintain current strategy/flavors with documented rationale | `PlayerID`, `Mode?`: "Flavor" or "Strategy", `Rationale` |
-| `relay-message` | Relay diplomatic or intelligence message as a game event | `PlayerID`, `FromPlayerID`, `Type`: "diplomatic"/"intelligence", `Message`, `Confidence` (0-9), `Categories`, `Memo`, `VisibleTo?` |
+| `relay-message` | Relay diplomatic or intelligence message as a game event; `Importance` 7+ interrupts important-event pacing | `PlayerID`, `FromPlayerID`, `Message`: "Diplomatic"/"Intelligence", `Content`, `Confidence` (0-9), `Importance` (0-9), `Categories`, `Memo`, `VisibleTo?` |
 
 ## Game Control Tools (2)
 

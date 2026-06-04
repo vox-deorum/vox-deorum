@@ -8,6 +8,8 @@ import type { PacingInterruptionContext, PacingInterruptionStrategy } from "./ty
 const warOrPeaceEventTypes = new Set(["DeclareWar", "MakePeace"]);
 const researchEventTypes = new Set(["TeamTechResearched", "TeamSetHasTech"]);
 const cultureEventTypes = new Set(["PlayerAdoptPolicy", "PlayerAdoptPolicyBranch", "IdeologyAdopted"]);
+const relayedMessageEventType = "RelayedMessage";
+const relayedMessageImportanceThreshold = 7;
 
 /**
  * Forces a decision when the player reaches an event that can change priorities.
@@ -15,16 +17,21 @@ const cultureEventTypes = new Set(["PlayerAdoptPolicy", "PlayerAdoptPolicyBranch
 export class ImportantEventsPacingInterruption implements PacingInterruptionStrategy {
   readonly name = "importantEvents";
   readonly label = "Important events";
-  readonly description = "Force a decision when this player enters war or peace, completes research, or adopts culture.";
+  readonly description = "Force a decision when this player enters war or peace, completes research, adopts culture, or receives a high-importance relay.";
 
   /**
    * Return true when the cached event stream includes an important event for this player.
    */
   shouldInterrupt({ state, playerID }: PacingInterruptionContext): boolean {
+    const events = flattenEvents(state.events);
+    for (const event of events) {
+      if (isImportantRelayedMessageForPlayer(event, playerID)) return true;
+    }
+
     const ownTeamID = getPlayerTeamID(state.players, playerID);
     if (ownTeamID === undefined) return false;
 
-    for (const event of flattenEvents(state.events)) {
+    for (const event of events) {
       if (isWarOrPeaceForTeam(event, ownTeamID, state.players)) return true;
       if (isResearchCompletedForTeam(event, ownTeamID)) return true;
       if (isCultureAdoptedForPlayer(event, playerID)) return true;
@@ -75,4 +82,14 @@ function isCultureAdoptedForPlayer(event: Record<string, unknown>, playerID: num
   return typeof event.Type === "string" &&
     cultureEventTypes.has(event.Type) &&
     event.PlayerID === playerID;
+}
+
+/**
+ * Return true for analyst-relayed messages marked urgent enough for a new decision.
+ */
+function isImportantRelayedMessageForPlayer(event: Record<string, unknown>, playerID: number): boolean {
+  return event.Type === relayedMessageEventType &&
+    event.ToPlayerID === playerID &&
+    typeof event.Importance === "number" &&
+    event.Importance >= relayedMessageImportanceThreshold;
 }

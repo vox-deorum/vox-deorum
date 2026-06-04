@@ -8,12 +8,14 @@ import type { GameState } from "../strategy-parameters.js";
 
 export interface EventRecord extends Record<string, unknown> {
   Type?: unknown;
+  ToPlayerID?: unknown;
   OriginatingPlayerID?: unknown;
   TargetTeamID?: unknown;
   TeamID?: unknown;
   PlayerID?: unknown;
   ChangeAmount?: unknown;
   HasTech?: unknown;
+  Importance?: unknown;
 }
 
 /**
