@@ -79,7 +79,7 @@ export function createSessionRoutes(): Router {
       // Filter and parse JSON config files
       const configs = (await Promise.all(
         files
-          .filter(f => f.endsWith('.json'))
+          .filter(f => f.endsWith('.json') && !f.endsWith('.seating.json'))
           .map(async filename => {
             try {
               const filePath = path.join(configDir, filename);

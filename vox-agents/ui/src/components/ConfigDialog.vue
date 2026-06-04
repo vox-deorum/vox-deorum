@@ -110,6 +110,10 @@ const seatingCycleSeedError = computed(() => {
   return null;
 });
 
+const seatingCycleSeedSuffix = computed(() =>
+  seatingCycleSeed.value === -1 ? ' (disabled)' : ' (enabled)'
+);
+
 const seedValidationError = computed(() => validateControlledSeedInputs());
 
 const hasRunControlError = computed(() =>
@@ -605,10 +609,10 @@ onMounted(() => {
                 v-model="seatingCycleSeed"
                 :min="-1"
                 :max="UINT32_MAX"
+                :suffix="seatingCycleSeedSuffix"
                 showButtons
                 class="detail-input"
               />
-              <small class="field-hint">-1 disables seating cycling; 0+ enables it.</small>
             </div>
 
             <div class="repetition-group">
@@ -898,7 +902,7 @@ onMounted(() => {
     "production seating repetition"
     "map map game"
     "error error error";
-  grid-template-columns: minmax(14rem, 1.4fr) 9rem minmax(16rem, 1fr);
+  grid-template-columns: minmax(14rem, 1.4fr) 13rem minmax(16rem, 1fr);
 }
 
 .production-field {
@@ -931,6 +935,10 @@ onMounted(() => {
   width: 4.5rem;
 }
 
+.seating-field :deep(.p-inputnumber-input) {
+  width: 8.5rem;
+}
+
 .seed-field {
   grid-column: auto;
 }
@@ -941,11 +949,6 @@ onMounted(() => {
 
 .game-seed-field {
   grid-area: game;
-}
-
-.field-hint {
-  color: var(--p-text-muted-color);
-  font-size: 0.75rem;
 }
 
 .field-error {
