@@ -71,7 +71,9 @@
       "Bash(npm --prefix vox-agents run test:unit -- seating-state)",
       "Bash(npm --prefix vox-agents run test:unit -- seating-state --reporter=basic)",
       "Bash(Select-String -Pattern \"vox-player\" -Context 0,0)",
-      "Bash(echo \"---exit:$?---\")"
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(ls tests/briefer)",
+      "Bash(ls tests/strategist)"
     ],
     "deny": [
       "Read(**/.env*)",

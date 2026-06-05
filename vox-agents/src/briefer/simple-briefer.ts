@@ -9,14 +9,14 @@ import { ModelMessage, Tool } from "ai";
 import { z } from "zod";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { getGameState, getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
+import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { getModelConfig } from "../utils/models/models.js";
 import { Model } from "../types/index.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { SimpleStrategistBase } from "../strategist/agents/simple-strategist-base.js";
-import { briefingInstructionKeys } from "./briefing-utils.js";
+import { briefingInstructionKeys, getLastBriefingState } from "./briefing-utils.js";
 
 /**
  * A simple briefer agent that analyzes the game state and produces a concise briefing.
@@ -163,11 +163,12 @@ You are writing a strategic briefing for ${parameters.metadata?.YouAre!.Leader},
 
 ${input}`.trim()
     }];
-    // Send in the past briefing
-    var lastState = getGameState(parameters, getOffsetedTurn(parameters, -5));
+    // Send in the past briefing from the closest prior decision point (a turn that actually
+    // has a briefing), so pacing's skipped turns don't render an "undefined" comparison.
+    var lastState = getLastBriefingState(parameters, getOffsetedTurn(parameters, -5), ["briefing"]);
     if (lastState) {
       messages.push({
-        role: "user", 
+        role: "user",
         content: `# Past Briefing
 Past Briefing: your past briefing from ${parameters.turn - lastState.turn} turns ago (turn ${lastState.turn}) for comparison.
 ${lastState.reports["briefing"]}`

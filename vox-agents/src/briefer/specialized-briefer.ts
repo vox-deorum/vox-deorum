@@ -9,14 +9,14 @@ import { ModelMessage, Tool } from "ai";
 import { z } from "zod";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { getGameState, getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
+import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { getModelConfig } from "../utils/models/models.js";
 import { Model } from "../types/index.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { SimpleBriefer } from "./simple-briefer.js";
-import { briefingInstructionKeys } from "./briefing-utils.js";
+import { briefingInstructionKeys, getLastBriefingState } from "./briefing-utils.js";
 import { filterEventsByCategory, EventCategory } from "../utils/prompts/event-filters.js";
 import { pickPlayerFields, omitPlayerFields, pickCityFields, omitCityFields } from "../utils/prompts/report-filters.js";
 import type { ConsolidatedEventsReport } from '../../../mcp-server/dist/tools/knowledge/get-events.js';
@@ -331,10 +331,11 @@ You are writing a ${config.eventCategory.toLowerCase()} briefing for ${parameter
 ${input.instruction}`.trim()
     }];
 
-    // Add past briefing if available
-    const lastState = getGameState(parameters, getOffsetedTurn(parameters, -5));
+    // Add past briefing from the closest prior decision point (a turn that actually has a
+    // matching briefing), so pacing's skipped turns don't drop the comparison.
     const reportKey = config.getReportKey(input.mode);
-    if (lastState && (lastState.reports[reportKey] || lastState.reports["briefing"])) {
+    const lastState = getLastBriefingState(parameters, getOffsetedTurn(parameters, -5), [reportKey, "briefing"]);
+    if (lastState) {
       messages.push({
         role: "user",
         content: `# Past Briefing

@@ -12,7 +12,7 @@ import { createLogger } from "../utils/logger.js";
 import { setTimeout } from 'node:timers/promises';
 import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
-import { ensureGameState, getDecisionEventWindows, mergeCachedEvents, type GameState, StrategistParameters } from "./strategy-parameters.js";
+import { ensureGameState, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
 import { PlayerConfig } from "../types/config.js";
 import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
@@ -325,10 +325,7 @@ export class VoxPlayer {
     eventFromTurn: number,
     turnSpan: Span
   ): Promise<boolean> {
-    const eventWindows = getDecisionEventWindows(eventFromTurn, this.parameters.turn);
-
-    for (const eventWindow of eventWindows) {
-      state.events = mergeCachedEvents(this.parameters, eventWindow.fromTurn, eventWindow.toTurn);
+    const decided = await withEventWindowFallback(this.parameters, state, eventFromTurn, async (eventWindow) => {
       turnSpan.setAttributes({
         event_from: eventWindow.fromTurn,
         event_to: eventWindow.toTurn
@@ -356,15 +353,19 @@ export class VoxPlayer {
           EventTo: eventWindow.toTurn
         }
       );
+      return false;
+    });
+
+    if (!decided) {
+      this.logger.warn(
+        `Context length exceeded on turn ${this.parameters.turn}; abandoning the decision to retry next turn.`,
+        {
+          GameID: this.parameters.gameID,
+          PlayerID: this.parameters.playerID
+        }
+      );
     }
 
-    this.logger.warn(
-      `Context length exceeded on turn ${this.parameters.turn}; abandoning the decision to retry next turn.`,
-      {
-        GameID: this.parameters.gameID,
-        PlayerID: this.parameters.playerID
-      }
-    );
-    return false;
+    return decided;
   }
 }

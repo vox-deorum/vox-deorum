@@ -10,7 +10,7 @@ import { z } from "zod";
 import { Tool } from "ai";
 import type { BriefingMode, SpecializedBrieferInput } from "./specialized-briefer.js";
 import type { StrategistParameters, GameState } from "../strategist/strategy-parameters.js";
-import { getGameState } from "../strategist/strategy-parameters.js";
+import { getGameState, withEventWindowFallback } from "../strategist/strategy-parameters.js";
 import type { VoxContext } from "../infra/vox-context.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 
@@ -33,6 +33,46 @@ export const briefingInstructionKeys: Record<BriefingMode | "combined", string> 
   Economy: "briefer-instruction-economy",
   Diplomacy: "briefer-instruction-diplomacy"
 };
+
+/**
+ * Find the briefing-bearing game state closest to a target turn — i.e. the nearest past
+ * decision point. Only turns strictly before the current turn whose `reports` contain one of
+ * `reportKeys` are considered; the one minimizing `|turn - targetTurn|` is returned.
+ *
+ * This replaces a fixed `turn - 5` lookback that, under pacing, lands on skipped turns with no
+ * briefing (rendering `undefined` into prompts and silently dropping the comparison). By
+ * snapping to the closest turn that actually has a briefing, it works for any pacing cadence
+ * and is still ≈ `turn - 5` when a briefing exists every turn.
+ *
+ * @param parameters - Strategy parameters holding the per-turn game states
+ * @param targetTurn - The ideal lookback turn (e.g. game-speed adjusted `turn - 5`)
+ * @param reportKeys - Report keys to look for, in precedence order (e.g. `["briefing-military", "briefing"]`)
+ * @returns The closest matching past state, or undefined when no prior briefing exists yet
+ */
+export function getLastBriefingState(
+  parameters: StrategistParameters,
+  targetTurn: number,
+  reportKeys: string[]
+): GameState | undefined {
+  let best: GameState | undefined;
+  let bestDistance = Infinity;
+
+  for (const turnStr of Object.keys(parameters.gameStates)) {
+    const turn = Number(turnStr);
+    if (turn >= parameters.turn) continue;
+
+    const state = parameters.gameStates[turn];
+    if (!reportKeys.some((key) => state.reports[key])) continue;
+
+    const distance = Math.abs(turn - targetTurn);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = state;
+    }
+  }
+
+  return best;
+}
 
 /**
  * Requests a single briefing with promise-based deduplication.
@@ -90,7 +130,7 @@ export async function requestBriefing(
     ? instruction
     : { mode, instruction } as SpecializedBrieferInput;
 
-  const promise = context.callAgent<string>(agentName, input, parameters);
+  const promise = generateBriefing(agentName, input, state, context, parameters);
 
   // Track and clean up the promise
   const tracked = promise.finally(() => {
@@ -101,6 +141,50 @@ export async function requestBriefing(
 
   state._pendingBriefings[reportKey] = tracked;
   return tracked;
+}
+
+/**
+ * Invoke a briefer agent, narrowing the event window on context-length overflow.
+ *
+ * The first attempt uses `state.events` exactly as the caller populated it, preserving the
+ * existing behavior of strategist (full decision window) and on-demand envoy/analyst callers.
+ * Only when the briefer overflows the model context does it retry against progressively
+ * narrower windows via {@link withEventWindowFallback} — mirroring the strategist's own
+ * `executeDecisionWithEventFallback` so pacing's large multi-turn windows no longer lose a turn.
+ */
+async function generateBriefing(
+  agentName: string,
+  input: unknown,
+  state: GameState,
+  context: VoxContext<StrategistParameters>,
+  parameters: StrategistParameters
+): Promise<string | undefined> {
+  let result: string | undefined;
+  let contextLengthExceeded = false;
+
+  const attempt = async (): Promise<boolean> => {
+    contextLengthExceeded = false;
+    const output = await context.callAgent<string>(agentName, input, parameters, () => {
+      contextLengthExceeded = true;
+    });
+    if (output) {
+      result = output;
+      return true;
+    }
+    return false;
+  };
+
+  // First attempt with the caller-populated event window.
+  if (await attempt()) return result;
+
+  // Only narrow on a genuine context-length overflow; other failures won't be helped by it.
+  if (!contextLengthExceeded) return result;
+
+  const eventFromTurn = parameters.lastDecisionTurn === undefined
+    ? parameters.turn
+    : parameters.lastDecisionTurn + 1;
+  await withEventWindowFallback(parameters, state, eventFromTurn, attempt);
+  return result;
 }
 
 /**

@@ -298,6 +298,44 @@ export function getDecisionEventWindows(fromTurn: number, toTurn: number): Array
 }
 
 /**
+ * Run `attempt` against progressively narrower event windows (from `eventFromTurn`
+ * through `parameters.turn`), dropping the oldest remaining turn on each retry. Before
+ * each try, `state.events` is set to the merged window via {@link mergeCachedEvents}.
+ *
+ * Stops and returns `true` at the first window where `attempt` resolves `true` (success).
+ * Returns `false` if every window was exhausted without success — including the case where
+ * the window is empty (`eventFromTurn > parameters.turn`), in which case `attempt` is never
+ * called and the caller should fall back to whatever it does when no decision is produced.
+ *
+ * Shared by the strategist decision loop (raw-event strategists) and the briefer
+ * (`requestBriefing`), both of which need to shrink an oversized paced event window.
+ */
+export async function withEventWindowFallback(
+  parameters: StrategistParameters,
+  state: GameState,
+  eventFromTurn: number,
+  attempt: (window: { fromTurn: number; toTurn: number }) => Promise<boolean>
+): Promise<boolean> {
+  const windows = getDecisionEventWindows(eventFromTurn, parameters.turn);
+
+  // `state` is normally the current turn's cached entry (gameStates[parameters.turn]), so
+  // assigning `state.events = mergeCachedEvents(...)` clobbers that turn's raw per-turn slice.
+  // Each window ends at parameters.turn, so without restoring the raw slice the next (narrower)
+  // merge would re-read the already-merged events and grow instead of shrink. Snapshot the raw
+  // current-turn slice and restore it before every merge so narrowing genuinely narrows.
+  const currentEntry = parameters.gameStates[parameters.turn];
+  const rawCurrentEvents = currentEntry?.events;
+
+  for (const window of windows) {
+    if (currentEntry) currentEntry.events = rawCurrentEvents;
+    state.events = mergeCachedEvents(parameters, window.fromTurn, window.toTurn);
+    if (await attempt(window)) return true;
+  }
+
+  return false;
+}
+
+/**
  * Normalize a single turn's cached event report into a flat array of event records.
  * Handles both the original `{ events: [...] }` shape and the turn-keyed
  * consolidated shape, stamping each event with its `Turn` (the report key when
