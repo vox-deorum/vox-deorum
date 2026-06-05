@@ -276,21 +276,36 @@ export function mergeCachedEvents(
   fromTurn: number,
   toTurn: number
 ): EventsReport {
-  const merged: Record<string, unknown[]> = {};
+  const merged: Record<string, unknown> = {};
+
+  const appendTurn = (key: string, items: unknown[]) => {
+    const existing = merged[key];
+    if (Array.isArray(existing)) existing.push(...items);
+    else merged[key] = [...items];
+  };
 
   for (let turn = fromTurn; turn <= toTurn; turn++) {
-    const report = parameters.gameStates[turn]?.events;
+    const report = parameters.gameStates[turn]?.events as Record<string, unknown> | undefined;
     if (!report || typeof report !== "object") continue;
+
+    // Carry over the get-events `_markdownConfig` (attached by callTool from the tool's
+    // markdownConfig metadata) so jsonToMarkdown renders the merged report with the same
+    // "Turn {key}" heading guidance as a direct tool call. It is identical across slices,
+    // so the first one wins.
+    if (merged._markdownConfig === undefined && report._markdownConfig !== undefined) {
+      merged._markdownConfig = report._markdownConfig;
+    }
 
     // Defensive: tolerate a legacy flat `{ events: [...] }` slice by keying it
     // under its loop turn so it still merges cleanly.
-    if (Array.isArray((report as { events?: unknown }).events)) {
-      (merged[String(turn)] ??= []).push(...(report as { events: unknown[] }).events);
+    if (Array.isArray(report.events)) {
+      appendTurn(String(turn), report.events as unknown[]);
       continue;
     }
 
-    for (const [key, value] of Object.entries(report as Record<string, unknown>)) {
-      if (Array.isArray(value)) (merged[key] ??= []).push(...value);
+    for (const [key, value] of Object.entries(report)) {
+      if (key === "_markdownConfig") continue;
+      if (Array.isArray(value)) appendTurn(key, value);
     }
   }
 

@@ -247,6 +247,30 @@ describe("mergeCachedEvents", () => {
       "3": [{ Type: "DeclareWar" }]
     });
   });
+
+  it("carries over the get-events markdown config so the merge renders with headings", () => {
+    const markdownConfig = { configs: [{ format: "Turn {key}" }, { format: "{key}" }] };
+    const parameters = {
+      gameStates: {
+        2: {
+          turn: 2,
+          reports: {},
+          events: { "2": [{ Type: "BuildFinished" }], _markdownConfig: markdownConfig }
+        },
+        3: {
+          turn: 3,
+          reports: {},
+          events: { "3": [{ Type: "DeclareWar" }], _markdownConfig: markdownConfig }
+        }
+      }
+    } as unknown as StrategistParameters;
+
+    expect(mergeCachedEvents(parameters, 2, 3)).toEqual({
+      _markdownConfig: markdownConfig,
+      "2": [{ Type: "BuildFinished" }],
+      "3": [{ Type: "DeclareWar" }]
+    });
+  });
 });
 
 describe("getDecisionEventWindows", () => {
