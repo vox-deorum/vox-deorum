@@ -205,10 +205,17 @@ export class VoxPlayer {
                 interrupted
               });
 
-              await this.executeDecisionWithEventFallback(state, eventFromTurn, turnSpan);
+              const decided = await this.executeDecisionWithEventFallback(state, eventFromTurn, turnSpan);
 
-              // Finalizing (the event cursor was already advanced after the refresh)
-              this.lastDecisionTurn = this.parameters.turn;
+              // Finalizing (the event cursor was already advanced after the refresh).
+              // Only record a completed decision when one was actually made. If the
+              // decision was abandoned because even the current turn alone exceeded the
+              // model context, leave lastDecisionTurn untouched so this turn still counts
+              // as scheduled next turn — we retry next turn rather than waiting until the
+              // next paced decision point.
+              if (decided) {
+                this.lastDecisionTurn = this.parameters.turn;
+              }
 
               // Recording the tokens and resume the game
               this.running = false;
@@ -218,6 +225,7 @@ export class VoxPlayer {
               turnSpan.setAttributes({
                 'completed': true,
                 'pacing.skipped': false,
+                'pacing.decided': decided,
                 'pacing.interrupted': interrupted,
                 'tokens.input': this.context.inputTokens - startingInput,
                 'tokens.reasoning': this.context.reasoningTokens - startingReasoning,
@@ -307,14 +315,16 @@ export class VoxPlayer {
 
   /**
    * Execute a strategist decision, narrowing the event window one turn at a
-   * time when the model context is exceeded. If even the current turn alone is
-   * too large, the caller still finalizes the turn and drops that event window.
+   * time when the model context is exceeded. Returns true once a decision is
+   * made (including the no-op "none" strategist). If even the current turn alone
+   * is too large, returns false so the caller can retry next turn instead of
+   * recording a completed decision.
    */
   private async executeDecisionWithEventFallback(
     state: GameState,
     eventFromTurn: number,
     turnSpan: Span
-  ): Promise<void> {
+  ): Promise<boolean> {
     const eventWindows = getDecisionEventWindows(eventFromTurn, this.parameters.turn);
 
     for (const eventWindow of eventWindows) {
@@ -327,7 +337,7 @@ export class VoxPlayer {
       // Without strategists, we just fake one.
       if (this.playerConfig.strategist == "none") {
         await setTimeout(2000);
-        return;
+        return true;
       }
 
       let contextLengthExceeded = false;
@@ -335,7 +345,7 @@ export class VoxPlayer {
         contextLengthExceeded = true;
       });
 
-      if (!contextLengthExceeded) return;
+      if (!contextLengthExceeded) return true;
 
       this.logger.warn(
         `Context length exceeded on turn ${this.parameters.turn}; retrying with a narrower event window.`,
@@ -348,9 +358,13 @@ export class VoxPlayer {
       );
     }
 
-    this.logger.warn(`Context length exceeded on turn ${this.parameters.turn}; dropping the decision event window.`, {
-      GameID: this.parameters.gameID,
-      PlayerID: this.parameters.playerID
-    });
+    this.logger.warn(
+      `Context length exceeded on turn ${this.parameters.turn}; abandoning the decision to retry next turn.`,
+      {
+        GameID: this.parameters.gameID,
+        PlayerID: this.parameters.playerID
+      }
+    );
+    return false;
   }
 }

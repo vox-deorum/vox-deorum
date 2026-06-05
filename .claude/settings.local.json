@@ -69,7 +69,9 @@
       "Bash(npm --prefix vox-agents run lint)",
       "Bash(npm --prefix vox-agents run type-check)",
       "Bash(npm --prefix vox-agents run test:unit -- seating-state)",
-      "Bash(npm --prefix vox-agents run test:unit -- seating-state --reporter=basic)"
+      "Bash(npm --prefix vox-agents run test:unit -- seating-state --reporter=basic)",
+      "Bash(Select-String -Pattern \"vox-player\" -Context 0,0)",
+      "Bash(echo \"---exit:$?---\")"
     ],
     "deny": [
       "Read(**/.env*)",
