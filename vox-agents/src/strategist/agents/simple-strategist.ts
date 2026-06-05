@@ -9,7 +9,7 @@
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
-import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
+import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import { SimpleBriefer } from "../../briefer/simple-briefer.js";
 
@@ -119,7 +119,7 @@ Events: events since you last made a decision.
 
 ${jsonToMarkdown(state.events)}
 
-You, ${parameters.metadata?.YouAre!.Leader} (leader of ${parameters.metadata?.YouAre!.Name}, Player ${parameters.playerID ?? 0}), are making strategic decisions after turn ${parameters.turn}.
+${getDecisionTurnContext(parameters)}
 `.trim()
     }];
   }

@@ -25,6 +25,8 @@ export interface StrategistParameters extends AgentParameters {
   gameStates: Record<number, GameState>;
   /** Decision type the strategist is going to make. */
   mode: StrategyDecisionType;
+  /** Last turn where this player completed strategic decision-making. */
+  lastDecisionTurn?: number;
   /** Internal: in-flight game state refresh promise for deduplication (not serialized) */
   _pendingRefresh?: Promise<GameState>;
 }
@@ -247,6 +249,17 @@ export function getRecentGameState(
   }
 
   return mostRecentTurn !== undefined ? parameters.gameStates[mostRecentTurn] : undefined;
+}
+
+/**
+ * Build the turn-context sentence for a strategist decision prompt.
+ */
+export function getDecisionTurnContext(parameters: StrategistParameters): string {
+  const lastDecisionClause = parameters.lastDecisionTurn !== undefined && parameters.lastDecisionTurn !== parameters.turn - 1
+    ? ` (last decision made at turn ${parameters.lastDecisionTurn})`
+    : "";
+
+  return `You, ${parameters.metadata?.YouAre!.Leader} (leader of ${parameters.metadata?.YouAre!.Name}, Player ${parameters.playerID ?? 0}), are making strategic decisions after turn ${parameters.turn}${lastDecisionClause}.`;
 }
 
 /**

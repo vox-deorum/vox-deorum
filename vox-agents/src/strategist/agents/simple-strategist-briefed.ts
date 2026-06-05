@@ -9,7 +9,7 @@
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
-import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
+import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
@@ -116,7 +116,7 @@ ${jsonToMarkdown(state.victory)}
 # Briefings
 ${assembleBriefings(briefing, instruction)}
 
-You, ${parameters.metadata?.YouAre!.Leader} (leader of ${parameters.metadata?.YouAre!.Name}, Player ${parameters.playerID ?? 0}), are making strategic decisions after turn ${parameters.turn}.
+${getDecisionTurnContext(parameters)}
 `.trim()
     }];
   }

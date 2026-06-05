@@ -5,7 +5,7 @@ import {
   shouldInterruptDecision,
 } from "../../src/strategist/pacing.js";
 import { pacingInterruptionRegistry } from "../../src/strategist/pacing/registry.js";
-import { getDecisionEventWindows, mergeCachedEvents, type StrategistParameters } from "../../src/strategist/strategy-parameters.js";
+import { getDecisionEventWindows, getDecisionTurnContext, mergeCachedEvents, type StrategistParameters } from "../../src/strategist/strategy-parameters.js";
 
 describe("strategist pacing", () => {
   it("normalizes missing config to every turn with no interruption", () => {
@@ -257,5 +257,32 @@ describe("getDecisionEventWindows", () => {
       { fromTurn: 2, toTurn: 3 },
       { fromTurn: 3, toTurn: 3 }
     ]);
+  });
+});
+
+describe("getDecisionTurnContext", () => {
+  const baseParameters = {
+    playerID: 2,
+    turn: 37,
+    metadata: {
+      YouAre: {
+        Leader: "Wu Zetian",
+        Name: "China"
+      }
+    }
+  } as unknown as StrategistParameters;
+
+  it("omits the last decision turn when it was the previous turn", () => {
+    expect(getDecisionTurnContext({
+      ...baseParameters,
+      lastDecisionTurn: 36
+    })).toBe("You, Wu Zetian (leader of China, Player 2), are making strategic decisions after turn 37.");
+  });
+
+  it("includes the last decision turn when there was a skipped gap", () => {
+    expect(getDecisionTurnContext({
+      ...baseParameters,
+      lastDecisionTurn: 32
+    })).toBe("You, Wu Zetian (leader of China, Player 2), are making strategic decisions after turn 37 (last decision made at turn 32).");
   });
 });
