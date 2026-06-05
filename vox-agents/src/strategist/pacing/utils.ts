@@ -9,8 +9,15 @@ import type { GameState } from "../strategy-parameters.js";
 export interface EventRecord extends Record<string, unknown> {
   Type?: unknown;
   // Field names match the consolidated `get-events` shape, where `cleanEventData`
-  // rewrites raw `XxxID` keys to `Xxx`. `ToPlayerID`/`Importance` survive consolidation
-  // unchanged (the resolved `ToPlayer` string sibling blocks the rename).
+  // rewrites raw `XxxID` keys to `Xxx`. Player and team references are NOT bare
+  // numbers in the consolidated form:
+  //   - Player fields (`OriginatingPlayer`, `Player`) render as a `"<id>: <Civ>"`
+  //     string when the player resolves, or a bare number when unresolved/empty.
+  //   - Team fields (`TargetTeam`, `Team`) render as an object carrying an embedded
+  //     `.ID` when team members resolve, or a bare number when the team object is empty.
+  // Use `extractPlayerID`/`extractTeamID` to read them. `ToPlayerID`/`Importance`
+  // survive consolidation unchanged (the resolved `ToPlayer` string sibling blocks
+  // the `…ID` → `…` rename).
   ToPlayerID?: unknown;
   OriginatingPlayer?: unknown;
   TargetTeam?: unknown;
@@ -19,6 +26,34 @@ export interface EventRecord extends Record<string, unknown> {
   ChangeAmount?: unknown;
   HasTech?: unknown;
   Importance?: unknown;
+}
+
+/**
+ * Extract a numeric player ID from a consolidated player field. `cleanEventData`
+ * renders these as either a `"<id>: <Civilization>"` string (resolved) or a bare
+ * number (unresolved/empty player object).
+ */
+export function extractPlayerID(value: unknown): number | undefined {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const id = Number.parseInt(value, 10);
+    return Number.isNaN(id) ? undefined : id;
+  }
+  return undefined;
+}
+
+/**
+ * Extract a numeric team ID from a consolidated team field. `cleanEventData`
+ * embeds the team ID into the resolved member object as `.ID`, or leaves a bare
+ * number when the team object was empty.
+ */
+export function extractTeamID(value: unknown): number | undefined {
+  if (typeof value === "number") return value;
+  if (value && typeof value === "object") {
+    const id = (value as Record<string, unknown>).ID;
+    return typeof id === "number" ? id : undefined;
+  }
+  return undefined;
 }
 
 /**

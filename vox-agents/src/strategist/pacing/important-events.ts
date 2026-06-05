@@ -2,7 +2,7 @@
  * @module strategist/pacing/important-events
  */
 
-import { flattenEvents, getPlayerTeamID } from "./utils.js";
+import { extractPlayerID, extractTeamID, flattenEvents, getPlayerTeamID } from "./utils.js";
 import type { PacingInterruptionContext, PacingInterruptionStrategy } from "./types.js";
 
 const warOrPeaceEventTypes = new Set(["DeclareWar", "MakePeace"]);
@@ -43,9 +43,11 @@ export class ImportantEventsPacingInterruption implements PacingInterruptionStra
 /**
  * Return true for war or peace events involving the player's team.
  *
- * Reads the consolidated `get-events` field names: `cleanEventData` rewrites the raw
- * `OriginatingPlayerID`/`TargetTeamID` to `OriginatingPlayer`/`TargetTeam` (numeric
- * values preserved).
+ * Reads the consolidated `get-events` shape: `cleanEventData` rewrites the raw
+ * `OriginatingPlayerID`/`TargetTeamID` to `OriginatingPlayer`/`TargetTeam`, but those
+ * are NOT bare numbers — `OriginatingPlayer` is a `"<id>: <Civ>"` string (or a number
+ * when unresolved) and `TargetTeam` is an object with an embedded `.ID` (or a number
+ * when the team object is empty). Use the extraction helpers to read either form.
  */
 function isWarOrPeaceForTeam(
   event: Record<string, unknown>,
@@ -54,28 +56,30 @@ function isWarOrPeaceForTeam(
 ): boolean {
   if (typeof event.Type !== "string" || !warOrPeaceEventTypes.has(event.Type)) return false;
 
-  const originatingPlayerID = event.OriginatingPlayer;
+  const originatingPlayerID = extractPlayerID(event.OriginatingPlayer);
   if (
-    typeof originatingPlayerID === "number" &&
+    originatingPlayerID !== undefined &&
     getPlayerTeamID(players, originatingPlayerID) === ownTeamID
   ) {
     return true;
   }
 
-  return event.TargetTeam === ownTeamID;
+  return extractTeamID(event.TargetTeam) === ownTeamID;
 }
 
 /**
  * Return true for technology completion or gain events involving the player's team.
  *
- * Reads the consolidated `get-events` field names: `TeamID` becomes `Team`. For
- * `TeamSetHasTech`, `HasTech` is present only when `true` (a `false`/`0` loss is
- * dropped by `cleanEventData`). For `TeamTechResearched`, a tech-loss `ChangeAmount`
- * of `-1` is likewise dropped, so completion requires a positive numeric amount.
+ * Reads the consolidated `get-events` shape: `TeamID` becomes `Team`, which is an
+ * object with an embedded `.ID` (or a bare number when the team object is empty), so
+ * `extractTeamID` is used. For `TeamSetHasTech`, `HasTech` is present only when `true`
+ * (a `false`/`0` loss is dropped by `cleanEventData`). For `TeamTechResearched`, a
+ * tech-loss `ChangeAmount` of `-1` is likewise dropped, so completion requires a
+ * positive numeric amount.
  */
 function isResearchCompletedForTeam(event: Record<string, unknown>, ownTeamID: number): boolean {
   if (typeof event.Type !== "string" || !researchEventTypes.has(event.Type)) return false;
-  if (event.Team !== ownTeamID) return false;
+  if (extractTeamID(event.Team) !== ownTeamID) return false;
 
   if (event.Type === "TeamSetHasTech") {
     return event.HasTech === true || event.HasTech === 1;
@@ -87,12 +91,13 @@ function isResearchCompletedForTeam(event: Record<string, unknown>, ownTeamID: n
 /**
  * Return true for culture adoption events performed by this player.
  *
- * Reads the consolidated `get-events` field name: `PlayerID` becomes `Player`.
+ * Reads the consolidated `get-events` shape: `PlayerID` becomes `Player`, which is a
+ * `"<id>: <Civ>"` string (or a number when unresolved), so `extractPlayerID` is used.
  */
 function isCultureAdoptedForPlayer(event: Record<string, unknown>, playerID: number): boolean {
   return typeof event.Type === "string" &&
     cultureEventTypes.has(event.Type) &&
-    event.Player === playerID;
+    extractPlayerID(event.Player) === playerID;
 }
 
 /**

@@ -55,7 +55,9 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        "4": [{ Type: "MakePeace", OriginatingPlayer: 2, TargetTeam: 7 }]
+        // Consolidated shape: OriginatingPlayer is a "<id>: <Civ>" string, TargetTeam
+        // is an object carrying an embedded numeric .ID.
+        "4": [{ Type: "MakePeace", OriginatingPlayer: "2: Babylon", TargetTeam: { Player_3: "Oda Nobunaga", ID: 7 } }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -71,7 +73,7 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         // Player 1 (team 7) is the originator; target team is someone else.
-        "4": [{ Type: "DeclareWar", OriginatingPlayer: 1, TargetTeam: 3 }]
+        "4": [{ Type: "DeclareWar", OriginatingPlayer: "1: Rome", TargetTeam: { ID: 3 } }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -88,7 +90,7 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         // Player 5 shares team 7 with player 1, so this counts for player 1.
-        "4": [{ Type: "DeclareWar", OriginatingPlayer: 5, TargetTeam: 3 }]
+        "4": [{ Type: "DeclareWar", OriginatingPlayer: "5: Greece", TargetTeam: { ID: 3 } }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -103,7 +105,25 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        "4": [{ Type: "TeamTechResearched", Team: 7, Tech: 12, ChangeAmount: 1 }]
+        // Consolidated shape: Team is an object carrying an embedded numeric .ID,
+        // Tech is a localized string.
+        "4": [{ Type: "TeamTechResearched", Team: { Player_1: "Caesar", ID: 7 }, Tech: "Writing", ChangeAmount: 1 }]
+      } as any
+    }, 1, pacing)).toBe(true);
+  });
+
+  it("interrupts when a team with no resolved members (numeric Team) completes research", () => {
+    const pacing = normalizePacing({ everyTurns: 10, interruption: "importantEvents" });
+
+    expect(shouldInterruptDecision({
+      turn: 4,
+      reports: {},
+      players: {
+        "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
+      } as any,
+      events: {
+        // When the team object is empty, cleanEventData leaves Team as a bare number.
+        "4": [{ Type: "TeamTechResearched", Team: 7, Tech: "Writing", ChangeAmount: 1 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -118,7 +138,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        "4": [{ Type: "TeamSetHasTech", Team: 7, Tech: 12, HasTech: true }]
+        "4": [{ Type: "TeamSetHasTech", Team: { Player_1: "Caesar", ID: 7 }, Tech: "Writing", HasTech: true }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -134,7 +154,7 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         // A tech loss has HasTech=false, which cleanEventData drops entirely.
-        "4": [{ Type: "TeamSetHasTech", Team: 7, Tech: 12 }]
+        "4": [{ Type: "TeamSetHasTech", Team: { Player_1: "Caesar", ID: 7 }, Tech: "Writing" }]
       } as any
     }, 1, pacing)).toBe(false);
   });
@@ -149,7 +169,8 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        "4": [{ Type: "PlayerAdoptPolicy", Player: 1, Policy: 25 }]
+        // Consolidated shape: Player is a "<id>: <Civ>" string, Policy is a localized name.
+        "4": [{ Type: "PlayerAdoptPolicy", Player: "1: Rome", Policy: "Organization" }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -195,9 +216,9 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         "4": [
-          { Type: "DeclareWar", OriginatingPlayer: 2, TargetTeam: 3 },
-          { Type: "TeamTechResearched", Team: 3, Tech: 12, ChangeAmount: 1 },
-          { Type: "PlayerAdoptPolicyBranch", Player: 2, Branch: 4 }
+          { Type: "DeclareWar", OriginatingPlayer: "2: Babylon", TargetTeam: { ID: 3 } },
+          { Type: "TeamTechResearched", Team: { Player_2: "Hammurabi", ID: 3 }, Tech: "Writing", ChangeAmount: 1 },
+          { Type: "PlayerAdoptPolicyBranch", Player: "2: Babylon", Branch: "Authority" }
         ]
       } as any
     }, 1, pacing)).toBe(false);
