@@ -96,7 +96,7 @@ describe("withEventWindowFallback", () => {
   } {
     const gameStates: Record<number, GameState> = {};
     for (let t = fromTurn; t <= turn; t++) {
-      gameStates[t] = { turn: t, reports: {}, events: { events: [{ Type: `E${t}` }] } as any };
+      gameStates[t] = { turn: t, reports: {}, events: { [t]: [{ Type: `E${t}` }] } as any };
     }
     const state = gameStates[turn];
     return { parameters: makeParameters(turn, gameStates), state };
@@ -118,8 +118,8 @@ describe("withEventWindowFallback", () => {
       { fromTurn: 11, toTurn: 12 },
       { fromTurn: 12, toTurn: 12 },
     ]);
-    // state.events reflects the final (successful) single-turn window.
-    expect((state.events as any).events.map((e: any) => e.Type)).toEqual(["E12"]);
+    // state.events reflects the final (successful) single-turn window (turn-keyed).
+    expect((state.events as any)["12"].map((e: any) => e.Type)).toEqual(["E12"]);
   });
 
   it("returns false when every window fails, after trying them all", async () => {

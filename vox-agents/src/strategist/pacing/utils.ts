@@ -8,11 +8,14 @@ import type { GameState } from "../strategy-parameters.js";
 
 export interface EventRecord extends Record<string, unknown> {
   Type?: unknown;
+  // Field names match the consolidated `get-events` shape, where `cleanEventData`
+  // rewrites raw `XxxID` keys to `Xxx`. `ToPlayerID`/`Importance` survive consolidation
+  // unchanged (the resolved `ToPlayer` string sibling blocks the rename).
   ToPlayerID?: unknown;
-  OriginatingPlayerID?: unknown;
-  TargetTeamID?: unknown;
-  TeamID?: unknown;
-  PlayerID?: unknown;
+  OriginatingPlayer?: unknown;
+  TargetTeam?: unknown;
+  Team?: unknown;
+  Player?: unknown;
   ChangeAmount?: unknown;
   HasTech?: unknown;
   Importance?: unknown;

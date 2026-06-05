@@ -105,8 +105,10 @@ export async function refreshGameState(
     // advanced one turn per processed turn by the strategist loop). A turn that was
     // dropped before it could be processed folds its events into this window, so
     // nothing is lost. Decision turns reassemble these per-turn slices via
-    // mergeCachedEvents.
-    context.callTool<EventsReport>("get-events", { After: parameters.after, Before: parameters.before, Original: true }, parameters),
+    // mergeCachedEvents. We fetch the consolidated (optimized) format so strategists
+    // and briefers get the compact turn-keyed report; pacing interruption checks
+    // parse that same consolidated shape.
+    context.callTool<EventsReport>("get-events", { After: parameters.after, Before: parameters.before }, parameters),
     context.callTool<CitiesReport>("get-cities", {}, parameters),
     context.callTool<OptionsReport>("get-options", { Mode: parameters.mode }, parameters),
     context.callTool<VictoryProgressReport>("get-victory-progress", {}, parameters),
@@ -264,23 +266,35 @@ export function getDecisionTurnContext(parameters: StrategistParameters): string
 
 /**
  * Merge cached turn-local event reports into the current decision window.
- * The merged report uses the original `get-events` shape so interruption checks
- * and strategist prompts can inspect exact event payload fields.
+ * Each per-turn slice is the consolidated (optimized) turn-keyed `get-events`
+ * report, so merging is a union of the turn keys. The result keeps that
+ * consolidated shape so strategist prompts, briefers (`filterEventsByCategory`),
+ * and pacing interruption checks all see the optimized format.
  */
 export function mergeCachedEvents(
   parameters: StrategistParameters,
   fromTurn: number,
   toTurn: number
 ): EventsReport {
-  const events: Record<string, unknown>[] = [];
+  const merged: Record<string, unknown[]> = {};
 
   for (let turn = fromTurn; turn <= toTurn; turn++) {
     const report = parameters.gameStates[turn]?.events;
-    if (!report) continue;
-    events.push(...flattenEventsReport(report, turn));
+    if (!report || typeof report !== "object") continue;
+
+    // Defensive: tolerate a legacy flat `{ events: [...] }` slice by keying it
+    // under its loop turn so it still merges cleanly.
+    if (Array.isArray((report as { events?: unknown }).events)) {
+      (merged[String(turn)] ??= []).push(...(report as { events: unknown[] }).events);
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(report as Record<string, unknown>)) {
+      if (Array.isArray(value)) (merged[key] ??= []).push(...value);
+    }
   }
 
-  return { events } as EventsReport;
+  return merged as EventsReport;
 }
 
 /**
@@ -319,42 +333,18 @@ export async function withEventWindowFallback(
   const windows = getDecisionEventWindows(eventFromTurn, parameters.turn);
 
   // `state` is normally the current turn's cached entry (gameStates[parameters.turn]), so
-  // assigning `state.events = mergeCachedEvents(...)` clobbers that turn's raw per-turn slice.
-  // Each window ends at parameters.turn, so without restoring the raw slice the next (narrower)
-  // merge would re-read the already-merged events and grow instead of shrink. Snapshot the raw
+  // assigning `state.events = mergeCachedEvents(...)` clobbers that turn's cached per-turn slice.
+  // Each window ends at parameters.turn, so without restoring the slice the next (narrower)
+  // merge would re-read the already-merged events and grow instead of shrink. Snapshot the
   // current-turn slice and restore it before every merge so narrowing genuinely narrows.
   const currentEntry = parameters.gameStates[parameters.turn];
-  const rawCurrentEvents = currentEntry?.events;
+  const cachedCurrentEvents = currentEntry?.events;
 
   for (const window of windows) {
-    if (currentEntry) currentEntry.events = rawCurrentEvents;
+    if (currentEntry) currentEntry.events = cachedCurrentEvents;
     state.events = mergeCachedEvents(parameters, window.fromTurn, window.toTurn);
     if (await attempt(window)) return true;
   }
 
   return false;
-}
-
-/**
- * Normalize a single turn's cached event report into a flat array of event records.
- * Handles both the original `{ events: [...] }` shape and the turn-keyed
- * consolidated shape, stamping each event with its `Turn` (the report key when
- * numeric, otherwise `fallbackTurn`).
- */
-function flattenEventsReport(report: EventsReport, fallbackTurn: number): Record<string, unknown>[] {
-  if (typeof report !== "object" || report === null) return [];
-
-  if ("events" in report && Array.isArray((report as { events?: unknown }).events)) {
-    return (report as { events: Record<string, unknown>[] }).events;
-  }
-
-  return Object.entries(report as Record<string, unknown>)
-    .flatMap(([turn, value]) => {
-      if (!Array.isArray(value)) return [];
-      const numericTurn = Number(turn);
-      const eventTurn = Number.isFinite(numericTurn) ? numericTurn : fallbackTurn;
-      return value
-        .filter(event => event !== null && typeof event === "object")
-        .map(event => ({ Turn: eventTurn, ...(event as Record<string, unknown>) }));
-    });
 }

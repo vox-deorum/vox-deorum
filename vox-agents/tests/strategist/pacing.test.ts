@@ -40,7 +40,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true }
       } as any,
       events: {
-        events: [{ Type: "DeclareWar", OriginatingPlayerID: 2, TargetTeamID: 1 }]
+        "4": [{ Type: "DeclareWar", OriginatingPlayer: 2, TargetTeam: 1 }]
       } as any
     }, 1, pacing)).toBe(false);
   });
@@ -55,7 +55,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "MakePeace", OriginatingPlayerID: 2, TargetTeamID: 7 }]
+        "4": [{ Type: "MakePeace", OriginatingPlayer: 2, TargetTeam: 7 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -71,7 +71,7 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         // Player 1 (team 7) is the originator; target team is someone else.
-        events: [{ Type: "DeclareWar", OriginatingPlayerID: 1, TargetTeamID: 3 }]
+        "4": [{ Type: "DeclareWar", OriginatingPlayer: 1, TargetTeam: 3 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -88,7 +88,7 @@ describe("strategist pacing", () => {
       } as any,
       events: {
         // Player 5 shares team 7 with player 1, so this counts for player 1.
-        events: [{ Type: "DeclareWar", OriginatingPlayerID: 5, TargetTeamID: 3 }]
+        "4": [{ Type: "DeclareWar", OriginatingPlayer: 5, TargetTeam: 3 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -103,7 +103,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "TeamTechResearched", TeamID: 7, TechID: 12, ChangeAmount: 1 }]
+        "4": [{ Type: "TeamTechResearched", Team: 7, Tech: 12, ChangeAmount: 1 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -118,7 +118,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "TeamSetHasTech", TeamID: 7, TechID: 12, HasTech: true }]
+        "4": [{ Type: "TeamSetHasTech", Team: 7, Tech: 12, HasTech: true }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -133,7 +133,8 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "TeamSetHasTech", TeamID: 7, TechID: 12, HasTech: 0 }]
+        // A tech loss has HasTech=false, which cleanEventData drops entirely.
+        "4": [{ Type: "TeamSetHasTech", Team: 7, Tech: 12 }]
       } as any
     }, 1, pacing)).toBe(false);
   });
@@ -148,7 +149,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "PlayerAdoptPolicy", PlayerID: 1, PolicyID: 25 }]
+        "4": [{ Type: "PlayerAdoptPolicy", Player: 1, Policy: 25 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -163,7 +164,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "RelayedMessage", ToPlayerID: 1, FromPlayerID: 2, Importance: 7 }]
+        "4": [{ Type: "RelayedMessage", ToPlayerID: 1, FromPlayerID: 2, Importance: 7 }]
       } as any
     }, 1, pacing)).toBe(true);
   });
@@ -178,7 +179,7 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [{ Type: "RelayedMessage", ToPlayerID: 1, FromPlayerID: 2, Importance: 6 }]
+        "4": [{ Type: "RelayedMessage", ToPlayerID: 1, FromPlayerID: 2, Importance: 6 }]
       } as any
     }, 1, pacing)).toBe(false);
   });
@@ -193,10 +194,10 @@ describe("strategist pacing", () => {
         "1": { Civilization: "Rome", Leader: "Caesar", IsMajor: true, TeamID: 7 }
       } as any,
       events: {
-        events: [
-          { Type: "DeclareWar", OriginatingPlayerID: 2, TargetTeamID: 3 },
-          { Type: "TeamTechResearched", TeamID: 3, TechID: 12, ChangeAmount: 1 },
-          { Type: "PlayerAdoptPolicyBranch", PlayerID: 2, BranchType: 4 }
+        "4": [
+          { Type: "DeclareWar", OriginatingPlayer: 2, TargetTeam: 3 },
+          { Type: "TeamTechResearched", Team: 3, Tech: 12, ChangeAmount: 1 },
+          { Type: "PlayerAdoptPolicyBranch", Player: 2, Branch: 4 }
         ]
       } as any
     }, 1, pacing)).toBe(false);
@@ -231,21 +232,19 @@ describe("mergeCachedEvents", () => {
         2: {
           turn: 2,
           reports: {},
-          events: { events: [{ ID: 20, Turn: 2, Type: "BuildFinished" }] }
+          events: { "2": [{ Type: "BuildFinished" }] }
         },
         3: {
           turn: 3,
           reports: {},
-          events: { events: [{ ID: 30, Turn: 3, Type: "DeclareWar" }] }
+          events: { "3": [{ Type: "DeclareWar" }] }
         }
       }
     } as unknown as StrategistParameters;
 
     expect(mergeCachedEvents(parameters, 2, 3)).toEqual({
-      events: [
-        { ID: 20, Turn: 2, Type: "BuildFinished" },
-        { ID: 30, Turn: 3, Type: "DeclareWar" }
-      ]
+      "2": [{ Type: "BuildFinished" }],
+      "3": [{ Type: "DeclareWar" }]
     });
   });
 });

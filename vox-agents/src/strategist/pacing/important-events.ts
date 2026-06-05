@@ -42,6 +42,10 @@ export class ImportantEventsPacingInterruption implements PacingInterruptionStra
 
 /**
  * Return true for war or peace events involving the player's team.
+ *
+ * Reads the consolidated `get-events` field names: `cleanEventData` rewrites the raw
+ * `OriginatingPlayerID`/`TargetTeamID` to `OriginatingPlayer`/`TargetTeam` (numeric
+ * values preserved).
  */
 function isWarOrPeaceForTeam(
   event: Record<string, unknown>,
@@ -50,7 +54,7 @@ function isWarOrPeaceForTeam(
 ): boolean {
   if (typeof event.Type !== "string" || !warOrPeaceEventTypes.has(event.Type)) return false;
 
-  const originatingPlayerID = event.OriginatingPlayerID;
+  const originatingPlayerID = event.OriginatingPlayer;
   if (
     typeof originatingPlayerID === "number" &&
     getPlayerTeamID(players, originatingPlayerID) === ownTeamID
@@ -58,30 +62,37 @@ function isWarOrPeaceForTeam(
     return true;
   }
 
-  return event.TargetTeamID === ownTeamID;
+  return event.TargetTeam === ownTeamID;
 }
 
 /**
  * Return true for technology completion or gain events involving the player's team.
+ *
+ * Reads the consolidated `get-events` field names: `TeamID` becomes `Team`. For
+ * `TeamSetHasTech`, `HasTech` is present only when `true` (a `false`/`0` loss is
+ * dropped by `cleanEventData`). For `TeamTechResearched`, a tech-loss `ChangeAmount`
+ * of `-1` is likewise dropped, so completion requires a positive numeric amount.
  */
 function isResearchCompletedForTeam(event: Record<string, unknown>, ownTeamID: number): boolean {
   if (typeof event.Type !== "string" || !researchEventTypes.has(event.Type)) return false;
-  if (event.TeamID !== ownTeamID) return false;
+  if (event.Team !== ownTeamID) return false;
 
   if (event.Type === "TeamSetHasTech") {
     return event.HasTech === true || event.HasTech === 1;
   }
 
-  return typeof event.ChangeAmount !== "number" || event.ChangeAmount > 0;
+  return typeof event.ChangeAmount === "number" && event.ChangeAmount > 0;
 }
 
 /**
  * Return true for culture adoption events performed by this player.
+ *
+ * Reads the consolidated `get-events` field name: `PlayerID` becomes `Player`.
  */
 function isCultureAdoptedForPlayer(event: Record<string, unknown>, playerID: number): boolean {
   return typeof event.Type === "string" &&
     cultureEventTypes.has(event.Type) &&
-    event.PlayerID === playerID;
+    event.Player === playerID;
 }
 
 /**
