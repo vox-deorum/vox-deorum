@@ -179,17 +179,17 @@ export const defaultConfig: VoxAgentsConfig = {
         toolMiddleware: 'prompt'
       }
     },
-    'openai-compatible/Minimax-M2.5': {
+    'openai-compatible/MiniMax-M2.5': {
       provider: 'openai-compatible',
-      name: 'Minimax-M2.5',
+      name: 'MiniMax-M2.5',
       options: {
         toolMiddleware: 'prompt',
         thinkMiddleware: 'think'
       }
     },
-    'openai-compatible/Minimax-M2.7': {
+    'openai-compatible/MiniMax-M2.7': {
       provider: 'openai-compatible',
-      name: 'Minimax-M2.7',
+      name: 'MiniMax-M2.7',
       options: {
         toolMiddleware: 'prompt',
         thinkMiddleware: 'think'
