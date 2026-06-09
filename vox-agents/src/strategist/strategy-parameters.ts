@@ -27,6 +27,8 @@ export interface StrategistParameters extends AgentParameters {
   mode: StrategyDecisionType;
   /** Last turn where this player completed strategic decision-making. */
   lastDecisionTurn?: number;
+  /** Pre-defined sync random seed (RandomSeedsConfig.sync) configured in vox-agents, if fixed. */
+  syncSeed?: number;
   /** Internal: in-flight game state refresh promise for deduplication (not serialized) */
   _pendingRefresh?: Promise<GameState>;
 }

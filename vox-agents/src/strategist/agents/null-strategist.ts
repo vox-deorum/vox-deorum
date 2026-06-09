@@ -12,7 +12,6 @@
 import { Strategist } from "../strategist.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { StrategistParameters, ensureGameState } from "../strategy-parameters.js";
-import { getMetadata } from "../../utils/game/metadata.js";
 import { seededIndex } from "../../utils/random.js";
 
 /**
@@ -29,22 +28,13 @@ export class NullStrategist extends Strategist {
   readonly description = "Baseline agent that resets VPAI to defaults: empty strategies (Strategy mode) or balanced flavors (Flavor mode), with no grand strategy override";
 
   /**
-   * Per-game cache of the resolved sync seed (or `null` when unseeded). The
-   * sync seed is fixed for the life of a game, so it's read from MCP metadata
-   * once per `gameID` rather than every turn. This singleton is shared across
-   * all players/games; storing the in-flight promise dedupes the concurrent
-   * first reads from the multiple players that share a game.
-   */
-  private readonly syncSeedCache = new Map<string, Promise<number | null>>();
-
-  /**
    * Programmatically resets VPAI to baseline defaults, then returns empty
    * string to skip the LLM execution loop entirely.
    */
   public async getSystem(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<string> {
     const rationale = "Null agent baseline — letting VPAI decide on its own";
     const gameState = await ensureGameState(context, parameters);
-    const syncSeed = await this.getSyncSeed(parameters);
+    const syncSeed = parameters.syncSeed ?? null;
 
     if (parameters.mode === "Flavor") {
       // Build balanced flavors from the game state's available flavor keys
@@ -121,30 +111,6 @@ export class NullStrategist extends Strategist {
     }, parameters);
 
     return "";
-  }
-
-  /**
-   * Resolve Civ's pregame sync seed for the current game, reading MCP metadata
-   * at most once per `gameID` (the value is fixed for the life of a game).
-   * Returns `null` when no usable fixed seed exists (missing/empty, or `"0"` —
-   * Civ's sentinel for "choose a random seed" — or any non-positive/non-integer
-   * value), in which case callers fall back to `Math.random` for
-   * non-reproducible picks.
-   *
-   * When a seed was configured, the session's `verifyRandomSeeds` guarantees
-   * this observed value equals it, so keying off it honors the pre-defined seed.
-   */
-  private getSyncSeed(parameters: StrategistParameters): Promise<number | null> {
-    const gameID = parameters.gameID;
-    let pending = this.syncSeedCache.get(gameID);
-    if (!pending) {
-      pending = getMetadata("syncRandSeed").then((text) => {
-        const value = Number(text);
-        return !text || !Number.isInteger(value) || value <= 0 ? null : value;
-      });
-      this.syncSeedCache.set(gameID, pending);
-    }
-    return pending;
   }
 
   /**

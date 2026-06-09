@@ -39,7 +39,8 @@ export class VoxPlayer {
     public readonly playerID: number,
     private readonly playerConfig: PlayerConfig,
     gameID: string,
-    initialTurn: number
+    initialTurn: number,
+    syncSeed?: number
   ) {
     this.logger = createLogger(`VoxPlayer-${playerID}`);
     // Throws on an unknown interruption name so misconfiguration fails fast.
@@ -60,7 +61,8 @@ export class VoxPlayer {
       before: 0,
       workingMemory: {},
       gameStates: {},
-      mode: playerConfig.strategist === "none-strategist" ? "Strategy" : (playerConfig.mode ?? "Flavor")
+      mode: playerConfig.strategist === "none-strategist" ? "Strategy" : (playerConfig.mode ?? "Flavor"),
+      syncSeed
     };
   }
 
