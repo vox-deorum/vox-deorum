@@ -73,7 +73,8 @@
       "Bash(Select-String -Pattern \"vox-player\" -Context 0,0)",
       "Bash(echo \"---exit:$?---\")",
       "Bash(ls tests/briefer)",
-      "Bash(ls tests/strategist)"
+      "Bash(ls tests/strategist)",
+      "Bash(Select-Object -Last 30)"
     ],
     "deny": [
       "Read(**/.env*)",
