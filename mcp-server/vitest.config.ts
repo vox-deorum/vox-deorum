@@ -6,6 +6,12 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     setupFiles: ['./tests/setup.ts'],
     globalSetup: ['./tests/global.setup.ts'],
+    // Bind the test server to a dedicated port so it never collides with a live
+    // production mcp-server on the default 4000 (e.g. while Civ V is running).
+    // Read at config load via process.env.MCP_PORT; override with MCP_TEST_PORT.
+    env: {
+      MCP_PORT: process.env.MCP_TEST_PORT || '4100',
+    },
     coverage: {
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts'],
