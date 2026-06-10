@@ -36,6 +36,18 @@ describe('detectChanges', () => {
       expect(detectChanges({ Leader: null } as any, { Leader: undefined } as any)).toEqual([]);
     });
 
+    it('should treat falsy-but-present values (0, "") as distinct from null', () => {
+      expect(detectChanges({ Gold: 0 } as any, { Gold: null } as any)).toEqual(['Gold']);
+      expect(detectChanges({ Name: '' } as any, { Name: null } as any)).toEqual(['Name']);
+      expect(detectChanges({ Gold: 0 }, { Gold: 0 })).toEqual([]);
+    });
+
+    it('should not detect fields absent from the new data', () => {
+      // Detection iterates newData keys only: versioned rows always carry the
+      // full column set, so a "removed" field must arrive as an explicit null.
+      expect(detectChanges({ Gold: 100, Name: 'Rome' } as any, { Name: 'Rome' } as any)).toEqual([]);
+    });
+
     it('should deep-compare JSON object fields', () => {
       const oldData = { Cities: { Rome: { pop: 5 } } };
       const sameData = { Cities: { Rome: { pop: 5 } } };

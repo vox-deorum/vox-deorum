@@ -41,4 +41,12 @@ describe('sortBySchema', () => {
     expect(sorted.Dyn).toBe(data.Dyn);
     expect(sorted.Score).toBe(0);
   });
+
+  it('should return a new object without mutating the input', () => {
+    const data = { Score: 50, Name: 'Test' };
+    const sorted = sortBySchema(data, schema as any);
+    expect(sorted).not.toBe(data);
+    // Original insertion order must survive, since callers may reuse the input
+    expect(Object.keys(data)).toEqual(['Score', 'Name']);
+  });
 });

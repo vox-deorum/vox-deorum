@@ -24,14 +24,11 @@ describe('composeVisibility', () => {
     expect(visibility[MaxMajorCivs - 1]).toBe(0);
   });
 
-  it('should ignore out-of-range player IDs', () => {
-    const visibility = composeVisibility([-1, MaxMajorCivs, MaxMajorCivs + 5]);
-    expect(visibility.every(v => v === 0)).toBe(true);
-  });
-
-  it('should include the last valid player slot', () => {
-    const visibility = composeVisibility([MaxMajorCivs - 1]);
+  it('should ignore out-of-range player IDs but accept the last valid slot', () => {
+    // MaxMajorCivs - 1 is in range; MaxMajorCivs itself is the off-by-one trap
+    const visibility = composeVisibility([-1, MaxMajorCivs - 1, MaxMajorCivs, MaxMajorCivs + 5]);
     expect(visibility[MaxMajorCivs - 1]).toBe(2);
+    expect(visibility.filter(v => v !== 0)).toEqual([2]);
   });
 });
 

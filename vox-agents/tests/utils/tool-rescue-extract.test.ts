@@ -134,11 +134,16 @@ describe('rescueToolCallsFromText', () => {
       expect(result.toolCalls).toHaveLength(1);
     });
 
-    it('should reject lenient-only JSON in strict mode', () => {
-      // Trailing comma is invalid strict JSON
-      const text = 'no json here at all';
-      const result = rescueToolCallsFromText(text, tools, false);
-      expect(result.toolCalls).toEqual([]);
+    it('should reject lenient-only JSON in strict mode but rescue it in lenient mode', () => {
+      // Trailing comma: invalid for JSON.parse, repairable by jaison
+      const text = '{"name": "get-data", "parameters": {"a": 1,}}';
+      const strict = rescueToolCallsFromText(text, tools, false);
+      expect(strict.toolCalls).toEqual([]);
+      expect(strict.remainingText).toBe(text);
+
+      const lenient = rescueToolCallsFromText(text, tools, true);
+      expect(lenient.toolCalls).toHaveLength(1);
+      expect(JSON.parse(lenient.toolCalls[0].input)).toEqual({ a: 1 });
     });
   });
 

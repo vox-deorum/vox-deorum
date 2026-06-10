@@ -115,6 +115,8 @@ describe('mergeConfigWithDefaults', () => {
     expect(merged.llms.fancy).toBeUndefined();
     expect(merged.llms.custom).toEqual({ provider: 'google', name: 'gemini' });
     expect(merged.llms.default).toBe('openrouter/some-model');
+    // The deletion must apply to the cloned llms, never the shared defaults
+    expect(defaults.llms.fancy).toEqual({ provider: 'openai', name: 'gpt-4' });
   });
 
   it('should round-trip: merge(diff(full)) reconstructs the full config', () => {

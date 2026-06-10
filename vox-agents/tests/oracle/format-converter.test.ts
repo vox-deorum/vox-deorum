@@ -52,6 +52,8 @@ describe('convertToStepResult', () => {
       const { steps } = convertToStepResult(response);
       expect(steps[0].text).toBe('');
       expect(steps[0].content).toEqual([]);
+      // With no content parts, the assistant message falls back to plain text
+      expect(steps[0].response.messages[0].content).toBe('');
     });
 
     it('should map usage token counts', () => {

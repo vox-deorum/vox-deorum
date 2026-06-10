@@ -17,15 +17,9 @@ import {
 } from '../../src/archivist/utils/math.js';
 
 describe('clamp', () => {
-  it('should return the value when within range', () => {
+  it('should clamp to the inclusive [min, max] range', () => {
     expect(clamp(0.5, 0, 1)).toBe(0.5);
-  });
-
-  it('should clamp values below the minimum', () => {
     expect(clamp(-5, 0, 1)).toBe(0);
-  });
-
-  it('should clamp values above the maximum', () => {
     expect(clamp(7, 0, 1)).toBe(1);
   });
 });

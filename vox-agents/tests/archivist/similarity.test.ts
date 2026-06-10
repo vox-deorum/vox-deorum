@@ -102,6 +102,14 @@ describe('compositeSimilarity', () => {
     const other: VectorBundle = { gameStateVector: [1, 0], neighborVector: [1, 0], embedding: null };
     expect(compositeSimilarity(base, other, weights)).toBeCloseTo(1);
   });
+
+  it('should skip the embedding term when explicit weights demand it but an embedding is missing', () => {
+    // Explicit weights bypass the no-embedding fallback, so the embedding
+    // contribution silently drops to 0 rather than being redistributed.
+    const noEmb: VectorBundle = { gameStateVector: [1, 0], neighborVector: [0, 1], embedding: null };
+    const weights = { gameState: 0, neighbor: 0, embedding: 1 };
+    expect(compositeSimilarity(base, noEmb, weights)).toBe(0);
+  });
 });
 
 describe('buildSimilaritySql', () => {
