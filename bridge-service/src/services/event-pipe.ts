@@ -88,23 +88,6 @@ export class EventPipe extends EventEmitter {
   }
 
   /**
-   * Broadcast a single event to all connected clients
-   */
-  broadcast(event: GameEvent): void {
-    if (!config.eventpipe.enabled || !this.isServing || this.shuttingDown) {
-      return;
-    }
-
-    try {
-      // Broadcast single event using raw buffer format
-      const message = JSON.stringify(event) + '!@#$%^!';
-      ipc.server.broadcast(message);
-    } catch (error) {
-      logger.error('Error broadcasting event:', error);
-    }
-  }
-
-  /**
    * Broadcast a batch of events to all connected clients
    */
   broadcastBatch(events: GameEvent[]): void {

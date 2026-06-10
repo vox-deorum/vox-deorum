@@ -10,10 +10,9 @@
     "vox-agents"
   ],
   "scripts": {
-    "install:all": "npm install",
     "build:all": "npm run build -ws",
     "test:all": "npm run test -ws",
-    "clean:all": "npm run clean -ws"
+    "clean:all": "npm run clean -ws --if-present"
   },
   "author": "John Chen",
   "license": "CC-BY-NC-SA-4.0",

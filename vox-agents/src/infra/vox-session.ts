@@ -80,24 +80,4 @@ export abstract class VoxSession<TConfig extends SessionConfig = SessionConfig> 
     // Additional cleanup can be added here as needed
   }
 
-  /**
-   * Get the current session state.
-   */
-  getState(): SessionState {
-    return this.state;
-  }
-
-  /**
-   * Check if the session is currently running.
-   */
-  isRunning(): boolean {
-    return this.state === 'running';
-  }
-
-  /**
-   * Check if the session can be stopped.
-   */
-  canStop(): boolean {
-    return this.state === 'starting' || this.state === 'running' || this.state === 'recovering';
-  }
 }

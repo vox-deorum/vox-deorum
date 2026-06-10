@@ -11,7 +11,6 @@
 
 import { EventEmitter } from 'events';
 import { createLogger } from './utils/logger.js';
-import { config } from './utils/config.js';
 import { dllConnector } from './services/dll-connector.js';
 import { luaManager } from './services/lua-manager.js';
 import { externalManager } from './services/external-manager.js';
@@ -162,7 +161,7 @@ export class BridgeService extends EventEmitter {
    * const stats = bridgeService.getServiceStats();
    * console.log('DLL connected:', stats.dll.connected);
    * console.log('Lua functions:', stats.lua.registeredFunctions);
-   * console.log('Memory usage:', stats.memory.heapUsed, 'MB');
+   * console.log('Memory usage:', stats.memory.used, 'MB');
    * ```
    */
   public getServiceStats(): {
@@ -187,8 +186,6 @@ export class BridgeService extends EventEmitter {
     memory: {
       used: number;
       total: number;
-      heapUsed: number;
-      heapTotal: number;
     };
   } {
     const uptime = Math.floor((Date.now() - this.startTime.getTime()) / 1000);
@@ -202,9 +199,7 @@ export class BridgeService extends EventEmitter {
       eventPipe: eventPipe.getStats(),
       memory: {
         used: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
-        total: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
-        heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
-        heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) // MB
+        total: Math.round(memUsage.heapTotal / 1024 / 1024) // MB
       }
     };
   }
@@ -221,21 +216,6 @@ export class BridgeService extends EventEmitter {
     return this.isRunning;
   }
 
-  /**
-   * Get service configuration
-   *
-   * @description
-   * Returns the current service configuration including start time and running state.
-   *
-   * @returns Object containing service configuration
-   */
-  public getConfig() {
-    return {
-      ...config,
-      startTime: this.startTime,
-      isRunning: this.isRunning
-    };
-  }
 }
 
 // Export singleton instance

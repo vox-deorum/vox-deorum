@@ -92,12 +92,3 @@ export function countMessagesTokens(messages: ModelMessage[], reasoningOnly: boo
 
   return totalTokens;
 }
-
-/**
- * Token usage statistics
- */
-export interface TokenUsage {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-}

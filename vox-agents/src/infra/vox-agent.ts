@@ -346,12 +346,14 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
           break;
       }
 
-      // Pass 2: add messages up to the last assistant interaction
-      for (let i = messages.length - 1; i > lastUserIndex; i++) {
-        const message = messages[i];
-        filteredMessages.push(message);
-        if (message.role === "assistant") break;
+      // Pass 2: find the start of the last assistant round, then add it in order
+      let roundStart = messages.length;
+      for (let i = messages.length - 1; i > lastUserIndex; i--) {
+        roundStart = i;
+        if (messages[i].role === "assistant") break;
       }
+      for (let i = roundStart; i < messages.length; i++)
+        filteredMessages.push(messages[i]);
 
       config.messages = filteredMessages;
     }

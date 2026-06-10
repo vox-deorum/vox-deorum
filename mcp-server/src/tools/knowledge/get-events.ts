@@ -185,7 +185,10 @@ const blockedKeys: string[] = [
   "RevealedToTeam", "RevealedToTeamID", "RevealedByTeam", "RevealedByTeamID", "IsFirstDiscovery", 
   "DefenderMaxHp", "AttackerMaxHp" ];
 
-function hideDealMadeTradeItems(payload: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Strips the TradedItems detail from DealMade event payloads before output
+ */
+export function hideDealMadeTradeItems(payload: Record<string, unknown>): Record<string, unknown> {
   const cleaned = { ...payload };
   delete cleaned.TradedItems;
   return cleaned;

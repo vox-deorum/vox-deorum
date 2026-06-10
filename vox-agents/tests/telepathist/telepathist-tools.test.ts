@@ -19,8 +19,6 @@ vi.mock('../../src/infra/agent-registry.js', () => ({
     has: () => false,
     initializeDefaults: () => {},
     getAll: () => [],
-    getNames: () => [],
-    size: () => 0,
   }
 }));
 import {

@@ -11,9 +11,8 @@ import { z } from "zod";
 import { ModelMessage, Tool } from "ai";
 import { VoxAgent } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { StrategistParameters, getGameState } from "../strategist/strategy-parameters.js";
+import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 
 /** Base input type for all analysts — fields provided by the calling agent */
 export interface AnalystInput {
@@ -71,35 +70,9 @@ export abstract class Analyst<TInput extends AnalystInput = AnalystInput> extend
 
   /**
    * Returns game context messages: civilization identity, players, and strategies.
-   * Mirrors the LiveEnvoy.getContextMessages() pattern so analysts have the same
-   * baseline information access as envoys.
+   * Shared with LiveEnvoy so analysts have the same baseline information access as envoys.
    */
   protected getContextMessages(parameters: StrategistParameters): ModelMessage[] {
-    const state = getGameState(parameters, parameters.turn);
-    if (!state) {
-      throw new Error(`No game state available near turn ${parameters.turn}`);
-    }
-    const { YouAre, ...SituationData } = parameters.metadata || {};
-    const { Options, ...Strategy } = state.options || {};
-
-    return [{
-      role: "system",
-      content: `
-# Situation
-${jsonToMarkdown(SituationData)}
-
-# Your Civilization
-${jsonToMarkdown(YouAre)}
-
-# Players
-Players: summary reports about visible players in the world.
-
-${jsonToMarkdown(state.players)}
-
-# Strategies
-Strategies: existing strategic decisions from your leader.
-
-${jsonToMarkdown(Strategy)}`.trim()
-    }];
+    return buildGameContextMessages(parameters);
   }
 }

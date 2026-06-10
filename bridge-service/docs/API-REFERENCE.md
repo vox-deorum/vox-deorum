@@ -483,10 +483,8 @@ Get detailed service statistics including connection info, function counts, even
       "pipeName": string
     },
     "memory": {
-      "used": number,             // RSS in MB
-      "total": number,            // RSS in MB
-      "heapUsed": number,         // Heap used in MB
-      "heapTotal": number         // Heap total in MB
+      "used": number,             // Heap used in MB
+      "total": number             // Heap total in MB
     },
     "sse": {
       "activeClients": number,

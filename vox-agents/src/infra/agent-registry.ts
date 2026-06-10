@@ -62,24 +62,6 @@ class AgentRegistry {
   }
 
   /**
-   * Unregister an agent from the registry.
-   *
-   * @param name - The name of the agent to unregister
-   * @returns true if the agent was found and unregistered, false otherwise
-   */
-  public unregister(name: string): boolean {
-    const wasDeleted = this.agents.delete(name);
-
-    if (wasDeleted) {
-      this.logger.info(`Unregistered agent ${name} (remaining agents: ${this.agents.size})`);
-    } else {
-      this.logger.warn(`Attempted to unregister non-existent agent ${name}`);
-    }
-
-    return wasDeleted;
-  }
-
-  /**
    * Get an agent from the registry by name.
    *
    * @param name - The name of the agent to retrieve
@@ -113,15 +95,6 @@ class AgentRegistry {
   }
 
   /**
-   * Get all registered agent names.
-   *
-   * @returns Array of all registered agent names
-   */
-  public getNames(): string[] {
-    return Array.from(this.agents.keys());
-  }
-
-  /**
    * Check if an agent is currently registered.
    *
    * @param name - The name of the agent to check
@@ -129,32 +102,6 @@ class AgentRegistry {
    */
   public has(name: string): boolean {
     return this.agents.has(name);
-  }
-
-  /**
-   * Get the count of registered agents.
-   *
-   * @returns The number of registered agents
-   */
-  public size(): number {
-    return this.agents.size;
-  }
-
-  /**
-   * Clear all registered agents.
-   * Primarily useful for testing.
-   *
-   * @param includeDefaults - If true, also reset the defaults initialization flag
-   */
-  public clear(includeDefaults: boolean = false): void {
-    const count = this.agents.size;
-    this.agents.clear();
-
-    if (includeDefaults) {
-      this.defaultsInitialized = false;
-    }
-
-    this.logger.info(`Cleared ${count} agents from registry${includeDefaults ? ' (including defaults flag)' : ''}`);
   }
 
   /**
@@ -200,15 +147,6 @@ class AgentRegistry {
 
     this.defaultsInitialized = true;
     this.logger.info(`Default agents initialized: ${this.agents.size} agents registered`);
-  }
-
-  /**
-   * Check if default agents have been initialized.
-   *
-   * @returns true if defaults have been initialized, false otherwise
-   */
-  public areDefaultsInitialized(): boolean {
-    return this.defaultsInitialized;
   }
 }
 

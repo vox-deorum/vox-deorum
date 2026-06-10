@@ -8,10 +8,9 @@
 
 import { ModelMessage, StepResult, Tool } from "ai";
 import { Envoy } from "./envoy.js";
-import { StrategistParameters, getGameState } from "../strategist/strategy-parameters.js";
-import { EnvoyThread, MessageWithMetadata, SpecialMessageConfig } from "../types/index.js";
+import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
+import { EnvoyThread } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
 
 /**
@@ -99,78 +98,14 @@ ${specialConfig.prompt}`.trim()
     return config;
   }
 
-  // Special message detection
-
-  /**
-   * Checks if the current interaction is in special message mode.
-   * Returns true when the last message is a recognized special message token.
-   */
-  protected isSpecialMode(input: EnvoyThread): boolean {
-    return this.findLastSpecialMessage(input) !== undefined;
-  }
-
-  /**
-   * Checks if the very last message in the thread is a special message.
-   * Returns the config if it is, undefined otherwise.
-   */
-  private findLastSpecialMessage(input: EnvoyThread): SpecialMessageConfig | undefined {
-    if (input.messages.length === 0) return undefined;
-    const last = input.messages[input.messages.length - 1];
-    if (typeof last.message.content === 'string') {
-      return this.getSpecialMessages()[last.message.content];
-    }
-    return undefined;
-  }
-
-  /**
-   * Filters out special messages from message history before sending to LLM.
-   * Ensures special message tokens don't appear as visible conversation turns.
-   */
-  protected filterSpecialMessages(messages: MessageWithMetadata[]): MessageWithMetadata[] {
-    const specialMessages = this.getSpecialMessages();
-    return messages.filter(msg => {
-      if (msg.message.role === 'user' && typeof msg.message.content === 'string') {
-        return !(msg.message.content in specialMessages);
-      }
-      return true;
-    });
-  }
-
   // Game context assembly
 
   /**
    * Returns the game context messages: civilization identity, players, and strategies.
    * Briefings are fetched on-demand via the get-briefing tool rather than injected here.
    */
-  protected getContextMessages(parameters: StrategistParameters, input: EnvoyThread): ModelMessage[] {
-    const state = getGameState(parameters, parameters.turn);
-    if (!state) {
-      throw new Error(`No game state available near turn ${parameters.turn}`);
-    }
-    const { YouAre, ...SituationData } = parameters.metadata || {};
-    const { Options, ...Strategy } = state.options || {};
-
-    const messages: ModelMessage[] = [{
-      role: "system",
-      content: `
-# Situation
-${jsonToMarkdown(SituationData)}
-
-# Your Civilization
-${jsonToMarkdown(YouAre)}
-
-# Players
-Players: summary reports about visible players in the world.
-
-${jsonToMarkdown(state.players)}
-
-# Strategies
-Strategies: existing strategic decisions from your leader.
-
-${jsonToMarkdown(Strategy)}`.trim()
-    }];
-
-    return messages;
+  protected getContextMessages(parameters: StrategistParameters, _input: EnvoyThread): ModelMessage[] {
+    return buildGameContextMessages(parameters);
   }
 
   // Abstract methods

@@ -1,5 +1,7 @@
+import { ModelMessage } from "ai";
 import { AgentParameters } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
+import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
 import type { PlayersReport } from "../../../mcp-server/dist/tools/knowledge/get-players.js";
 import type { EventsReport } from "../../../mcp-server/dist/tools/knowledge/get-events.js";
@@ -231,6 +233,42 @@ export function getGameState(
   }
 
   return closestTurn !== undefined ? parameters.gameStates[closestTurn] : undefined;
+}
+
+/**
+ * Builds the shared game context system message: situation, civilization identity,
+ * visible players, and current strategies. Used by LiveEnvoy and Analyst subclasses
+ * so both have the same baseline information access.
+ * @param parameters - The strategy parameters containing metadata and game states
+ * @returns A single system message with the assembled game context
+ */
+export function buildGameContextMessages(parameters: StrategistParameters): ModelMessage[] {
+  const state = getGameState(parameters, parameters.turn);
+  if (!state) {
+    throw new Error(`No game state available near turn ${parameters.turn}`);
+  }
+  const { YouAre, ...SituationData } = parameters.metadata || {};
+  const { Options, ...Strategy } = state.options || {};
+
+  return [{
+    role: "system",
+    content: `
+# Situation
+${jsonToMarkdown(SituationData)}
+
+# Your Civilization
+${jsonToMarkdown(YouAre)}
+
+# Players
+Players: summary reports about visible players in the world.
+
+${jsonToMarkdown(state.players)}
+
+# Strategies
+Strategies: existing strategic decisions from your leader.
+
+${jsonToMarkdown(Strategy)}`.trim()
+  }];
 }
 
 /**

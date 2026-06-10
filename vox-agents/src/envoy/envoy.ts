@@ -85,10 +85,38 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
   protected abstract getSpecialMessages(): Record<string, SpecialMessageConfig>;
 
   /**
-   * Checks if a message string is a registered special message token.
+   * Checks if the current interaction is in special message mode.
+   * Returns true when the last message is a recognized special message token.
    */
-  protected isSpecialMessage(message: string): boolean {
-    return message in this.getSpecialMessages();
+  protected isSpecialMode(input: EnvoyThread): boolean {
+    return this.findLastSpecialMessage(input) !== undefined;
+  }
+
+  /**
+   * Checks if the very last message in the thread is a special message.
+   * Returns the config if it is, undefined otherwise.
+   */
+  protected findLastSpecialMessage(input: EnvoyThread): SpecialMessageConfig | undefined {
+    if (input.messages.length === 0) return undefined;
+    const last = input.messages[input.messages.length - 1];
+    if (typeof last.message.content === 'string') {
+      return this.getSpecialMessages()[last.message.content];
+    }
+    return undefined;
+  }
+
+  /**
+   * Filters out special messages from message history before sending to LLM.
+   * Ensures special message tokens don't appear as visible conversation turns.
+   */
+  protected filterSpecialMessages(messages: MessageWithMetadata[]): MessageWithMetadata[] {
+    const specialMessages = this.getSpecialMessages();
+    return messages.filter(msg => {
+      if (msg.message.role === 'user' && typeof msg.message.content === 'string') {
+        return !(msg.message.content in specialMessages);
+      }
+      return true;
+    });
   }
 
   /**

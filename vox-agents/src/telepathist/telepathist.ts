@@ -15,7 +15,7 @@ import { GetSituationTool } from './tools/get-situation.js';
 import { GetDecisionTool } from './tools/get-decision.js';
 import { GetConversationLogTool } from './tools/get-conversation-log.js';
 import { runPreparation } from './preparation/index.js';
-import { EnvoyThread, SpecialMessageConfig, MessageWithMetadata, Model } from '../types/index.js';
+import { EnvoyThread, Model } from '../types/index.js';
 import { VoxContext } from '../infra/vox-context.js';
 import { createLogger } from '../utils/logger.js';
 import { hasOnlyTerminalCalls } from '../utils/tools/terminal-tools.js';
@@ -170,37 +170,11 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
 
   // --- Special message handling ---
 
-  /** Checks if the current interaction is in special message mode */
-  protected isSpecialMode(input: EnvoyThread): boolean {
-    return this.findLastSpecialMessage(input) !== undefined;
-  }
-
-  /** Checks if the last message is a registered special message token */
-  private findLastSpecialMessage(input: EnvoyThread): SpecialMessageConfig | undefined {
-    if (input.messages.length === 0) return undefined;
-    const last = input.messages[input.messages.length - 1];
-    if (typeof last.message.content === 'string') {
-      return this.getSpecialMessages()[last.message.content];
-    }
-    return undefined;
-  }
-
   /** Checks if the last message is the {{{Initialize}}} message */
   private isInitializeMessage(input: EnvoyThread): boolean {
     if (input.messages.length === 0) return false;
     const last = input.messages[input.messages.length - 1];
     return typeof last.message.content === 'string' && last.message.content === '{{{Initialize}}}';
-  }
-
-  /** Filters out special messages from message history */
-  protected filterSpecialMessages(messages: MessageWithMetadata[]): MessageWithMetadata[] {
-    const specialMessages = this.getSpecialMessages();
-    return messages.filter(msg => {
-      if (msg.message.role === 'user' && typeof msg.message.content === 'string') {
-        return !(msg.message.content in specialMessages);
-      }
-      return true;
-    });
   }
 
   // --- Database context assembly ---

@@ -215,7 +215,7 @@ export function formatEpisodeResults(results: EpisodeResult[]): string {
     if (ind.citiesShare != null) indParts.push(`citiesShare: ${ind.citiesShare.toFixed(1)}x`);
     if (ind.minorAlliesShare != null) indParts.push(`minorAlliesShare: ${ind.minorAlliesShare.toFixed(1)}x`);
     if (ind.religionPercentage != null) indParts.push(`religionShare: ${(ind.religionPercentage * 100).toFixed(0)}%`);
-    if (ind.warWeariness != null) indParts.push(`warWeariness: ${(ind.religionPercentage * 100).toFixed(0)}%`);
+    if (ind.warWeariness != null) indParts.push(`warWeariness: ${ind.warWeariness.toFixed(0)}%`);
     if (ind.activeWars != null) indParts.push(`Wars: ${ind.activeWars}`);
     if (ind.truces != null) indParts.push(`Truces: ${ind.truces}`);
     if (indParts.length > 0) parts.push(`- **Indicators**: ${indParts.join(' | ')}`);

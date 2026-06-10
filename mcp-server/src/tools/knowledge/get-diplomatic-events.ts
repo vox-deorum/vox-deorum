@@ -13,7 +13,7 @@ import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { getCityInformations } from "../../knowledge/getters/city-information.js";
 import { retrieveEnumName } from "../../utils/knowledge/enum.js";
-import { cleanEventData } from "./get-events.js";
+import { cleanEventData, hideDealMadeTradeItems } from "./get-events.js";
 import { Selectable } from "kysely";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
 
@@ -55,12 +55,6 @@ function getDealExpirySuffix(payload: Record<string, any>, currentTurn: number):
   const expiryTurn = payload.StartTurn + turnsRemaining;
   if (currentTurn > expiryTurn) return ` (expired at turn ${expiryTurn})`;
   return ` (will expire at turn ${expiryTurn})`;
-}
-
-function hideDealMadeTradeItems(payload: Record<string, any>): Record<string, any> {
-  const cleaned = { ...payload };
-  delete cleaned.TradedItems;
-  return cleaned;
 }
 
 // ─── Diplomatic Event Configuration ───────────────────────────────────
