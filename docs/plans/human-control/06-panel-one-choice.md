@@ -4,12 +4,19 @@
 
 ## Objective
 
-Make one real choice end to end. **First explore whether Civ's native in-game research (tech tree) and social policy screens can be reused — "hijacked" — for the NEXT research/policy choice** rather than re-rendering option lists ourselves. The native screens already know the real game IDs, descriptive text, prerequisites, and costs; reusing them is less work, far more familiar to a participant who knows Civilization V, and sidesteps the `get-options` display-name munging (the `" (Branch)"` / `" (Policy)"` suffix that `set-policy` would otherwise need stripped).
+Make one real choice end to end. **First explore whether Civ's native in-game research (tech tree) and social policy screens can be reused — "hijacked" — for the NEXT research/policy choice** rather than re-rendering option lists ourselves. The native screens already know the real game IDs, descriptive text, prerequisites, and costs, and are far more familiar to a participant who knows Civilization V.
 
-## Approach / spike
+## Approach / spike — verified starting facts
 
-- Investigate the native tech-tree and social-policy screens (Community Patch / EUI UI sources): under autoplay, with the human civ AI-controlled, can they be opened for the human civ and a selection captured? The likely shape: the panel offers "Choose Research" / "Choose Policy" buttons that open the native screen; the panel listens for the selection (the `ChooseResearch` / `ChoosePolicy`-type hooks) and folds the picked ID into the `HumanDecision` payload — feeding `set-research` / `set-policy` a real ID.
-- **Fallback** if the native hijack proves impractical under autoplay: render a single-select list for Next Research in the panel from the `present-decision` payload, and strip the policy display-name suffix in the human-strategist mapping (mirroring what `null-strategist` does before calling `set-policy`).
+Three things are already verified in the code, so the spike starts from them instead of re-discovering:
+
+- **Under autoplay the active player IS the observer slot.** `Game.SetAIAutoPlay` activation calls `setActivePlayer(iObserver, ...)` (`CvGame.cpp`); the observer-UI override mirrors visibility and notifications but does not change `Game.GetActivePlayer()`.
+- **The native screens key off the active player.** `TechTree.lua` (`g_activePlayerID = Game.GetActivePlayer()`) and `SocialPolicyPopup.lua` (`Players[Game.GetActivePlayer()]`) would render the *observer's* empty research/policy state, not the human civ's. Launches load Vox Populi + EUI, so the EUI variants (`civ5-dll/UI_bc1/...`) are the ones in effect.
+- **Selections commit as direct game actions.** The screens commit via `Network.SendResearch` / `Network.SendUpdatePolicies` on the active player; there is no LuaEvent hook to capture a choice in passing.
+
+So a hijack cannot be "open the screen and listen" — it means **forking the native screen Lua into `civ5-mod`** as a chooser: player references re-pointed at the human's playerID, the `Network.Send*` commit replaced by a LuaEvent back to the panel, which folds the picked ID into the `HumanDecision` payload feeding `set-research` / `set-policy`. The spike weighs that fork — size and upstream-maintenance cost of the EUI screens, and whether they render correctly for a non-active player — against the fallback.
+
+- **Fallback** if the fork proves impractical: render a single-select list for Next Research in the panel from the `present-decision` payload. (Either way, no display-name stripping is needed in the human-strategist mapping: `set-policy` strips parenthetical suffixes like `" (New Branch)"` / `" (Policy)"` server-side.)
 
 ## Work items
 

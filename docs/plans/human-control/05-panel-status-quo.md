@@ -9,7 +9,7 @@ Prove the real end-to-end pipeline through the actual game UI with the smallest 
 ## Work items
 
 1. **`civ5-mod/UI/VoxDeorumHumanPanel.xml` + `civ5-mod/Lua/VoxDeorumHumanPanel.lua`** (new) — a minimal panel following the approved mockup and the Community Patch `EventChoicePopup` conventions (`ContextPtr`/`Controls`/`InstanceManager`). The panel is dormant until it receives `LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson)`; on Submit it fires `Game.BroadcastEvent("HumanDecision", { PlayerID, Turn, keepStatusQuo = true, Rationale })` and shows the submission-accepted state.
-2. **`civ5-mod/VoxDeorum.modinfo`** — register the new Lua and XML files and add an `InGameUIAddin` entry point, mirroring the existing `VoxDeorumTest` entry. The addin always loads but stays dormant until the LuaEvent arrives — **no mod-side mode flag**; all human-only behaviors are launcher-side from stage 1.
+2. **`civ5-mod/VoxDeorum.modinfo`** — register the new Lua and XML files and add an `InGameUIAddin` entry point, mirroring the existing `VoxDeorumTest` entry; run `civ5-mod/update_md5.py` to regenerate the per-file md5 entries. The addin always loads but stays dormant until the LuaEvent arrives — **no mod-side mode flag**; all human-only behaviors are launcher-side from stage 1.
 3. **`civ5-mod/Text/VoxDeorum_Text.xml`** — plain-language localization keys (no identifiers — spec §2).
 
 ## Reuse
