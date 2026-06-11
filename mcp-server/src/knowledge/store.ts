@@ -339,7 +339,7 @@ export class KnowledgeStore {
             }
             knowledgeManager.updateActivePlayer(data.NextPlayerID);
           }
-          MCPServer.getInstance().sendNotification(type, data.PlayerID, knowledgeManager.getTurn(), id);
+          MCPServer.getInstance().sendNotification(type, data.PlayerID, knowledgeManager.getTurn(), id, data);
         }
       } else {
         logger.warn(`Invalid ${type} event:`, {

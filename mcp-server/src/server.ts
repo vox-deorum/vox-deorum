@@ -20,6 +20,13 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 const logger = createLogger('Server');
 
 /**
+ * Always-on server-side keepalive interval. Kept comfortably under the MCP
+ * client's 600-second undici body timeout so the SSE channel survives an
+ * unbounded human pause in human-control mode.
+ */
+const HEARTBEAT_INTERVAL_MS = 90_000;
+
+/**
  * MCP Server manager that handles resource and tool registration
  */
 export class MCPServer {
@@ -30,6 +37,7 @@ export class MCPServer {
   private bridgeManager: BridgeManager;
   private databaseManager: DatabaseManager;
   private knowledgeManager: KnowledgeManager;
+  private heartbeatTimer?: ReturnType<typeof setInterval>;
 
   /**
    * Private constructor for MCPServer
@@ -197,6 +205,7 @@ export class MCPServer {
     "GameSwitched", "PlayerDoneTurn", "PlayerVictory",
     "DLLConnected", "DLLDisconnected",
     "PlayerPanelSwitch", "AnimationStarted",
+    "HumanDecision",
   ];
   /**
    * Send a notification to all clients through MCP notification protocol.
@@ -279,7 +288,13 @@ export class MCPServer {
     // Register all tools
     const tools = getTools();
     Object.values(tools).forEach(tool => this.registerTool(tool));
-    
+
+    // Start the always-on keepalive heartbeat. Without it, a long human pause
+    // (human-control mode) could let the MCP client's 600s body timeout lapse
+    // and drop the SSE channel. unref() so it never holds the process open.
+    this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), HEARTBEAT_INTERVAL_MS);
+    this.heartbeatTimer.unref?.();
+
     this.initialized = true;
   }
 
@@ -309,7 +324,13 @@ export class MCPServer {
    */
   public async close(): Promise<void> {
     logger.info('Shutting down MCP server');
-    
+
+    // Stop the keepalive heartbeat
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
+    }
+
     // Shutdown databases
     await this.knowledgeManager.shutdown();
     await this.databaseManager.close();

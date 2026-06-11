@@ -13,7 +13,7 @@ A human participant sits at the game client of a session running in the same aut
 ### 1. Role parity: human as strategist, not as player
 
 - The human occupies a strategist seat: their decisions are *influence* over the in-game AI (see the MCP server's influence model), never direct orders to units or cities.
-- The action space available to the human is exactly the action space available to LLM strategists — the same actions that `simple-strategist` issues through the MCP action tools, including the explicit `keep-status-quo`. Both decision modes the framework supports (`Strategy` and `Flavor`) should be expressible, with the session config choosing which one the experiment runs, same as for LLMs.
+- The action space available to the human is exactly the action space available to LLM strategists — the same actions that `simple-strategist` issues through the MCP action tools, including the explicit `keep-status-quo`. Human decision-makers run in **Flavor mode** only; the framework's legacy `Strategy` mode is outdated and is **not supported** for human control. (LLM seats may still run either mode, but the human panel and `human-strategist` target Flavor mode.)
 - The human's civilization is auto-played by the in-game AI like every other civ; the human never gets a normal "your turn" prompt for unit moves or city choices.
 
 ### 2. Interface: in-game, on observe-mode machinery, without the observer UI

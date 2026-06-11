@@ -29,6 +29,7 @@ import createGetOptionsTool from "./knowledge/get-options.js";
 import createSetResearchTool from "./actions/set-research.js";
 import createSetPolicyTool from "./actions/set-policy.js";
 import createRelayMessageTool from "./actions/relay-message.js";
+import createPresentDecisionTool from "./actions/present-decision.js";
 import createGetVictoryProgressTool from "./knowledge/get-victory-progress.js";
 import createGetMilitaryReportTool from "./knowledge/get-military-report.js";
 import createSearchDatabaseTool from "./general/search-database.js";
@@ -68,6 +69,7 @@ const toolFactories = {
     setPolicy: createSetPolicyTool,
     keepStatusQuo: createKeepStatusQuoTool,
     relayMessage: createRelayMessageTool,
+    presentDecision: createPresentDecisionTool,
     pauseGame: createPauseGameTool,
     resumeGame: createResumeGameTool,
     setProductionMode: createSetProductionModeTool,

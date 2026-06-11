@@ -14,7 +14,7 @@ const logger = createLogger('PlayerActions');
  * Strip control characters that could break C++ JSON parsing.
  * Preserves tabs (\t), newlines (\n), and carriage returns (\r).
  */
-function sanitize(text: string): string {
+export function sanitize(text: string): string {
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 

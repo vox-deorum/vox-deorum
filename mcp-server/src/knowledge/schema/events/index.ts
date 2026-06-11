@@ -56,6 +56,7 @@ import { GovernmentCooldownChanges } from './GovernmentCooldownChanges.js';
 import { GovernmentCooldownRateChanges } from './GovernmentCooldownRateChanges.js';
 import { GreatPersonExpended } from './GreatPersonExpended.js';
 import { GreatWorkCreated } from './GreatWorkCreated.js';
+import { HumanDecision } from './HumanDecision.js';
 import { IdeologyAdopted } from './IdeologyAdopted.js';
 import { IdeologySwitched } from './IdeologySwitched.js';
 import { LoyaltyStateChanged } from './LoyaltyStateChanged.js';
@@ -191,6 +192,7 @@ export const eventSchemas = {
   'GovernmentCooldownRateChanges': GovernmentCooldownRateChanges,
   'GreatPersonExpended': GreatPersonExpended,
   'GreatWorkCreated': GreatWorkCreated,
+  'HumanDecision': HumanDecision,
   'IdeologyAdopted': IdeologyAdopted,
   'IdeologySwitched': IdeologySwitched,
   'LoyaltyStateChanged': LoyaltyStateChanged,
