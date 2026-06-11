@@ -235,6 +235,16 @@ export function isObsMode(mode?: ProductionMode): boolean {
 }
 
 /**
+ * Returns true when the session has a human-control seat — i.e. a player whose
+ * strategist is the `human-strategist`. The human seat is identified purely by
+ * seat assignment in `llmPlayers` (no dedicated config flag), keeping "one
+ * config, one command" (human-control spec §6).
+ */
+export function isHumanControl(config: StrategistSessionConfig): boolean {
+  return Object.values(config.llmPlayers).some(p => p.strategist === "human-strategist");
+}
+
+/**
  * Configuration specific to Strategist sessions.
  * Extends base config with player-specific LLM settings.
  */

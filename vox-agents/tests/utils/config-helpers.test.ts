@@ -4,8 +4,19 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { isVisualMode, isObsMode } from '../../src/types/config.js';
-import type { ProductionMode } from '../../src/types/config.js';
+import { isVisualMode, isObsMode, isHumanControl } from '../../src/types/config.js';
+import type { ProductionMode, StrategistSessionConfig } from '../../src/types/config.js';
+
+/** Minimal strategist config builder for the human-control helper tests. */
+function makeConfig(llmPlayers: StrategistSessionConfig['llmPlayers']): StrategistSessionConfig {
+  return {
+    name: 'test',
+    type: 'strategist',
+    autoPlay: true,
+    gameMode: 'start',
+    llmPlayers,
+  };
+}
 
 describe('isVisualMode', () => {
   it('should return true for test mode', () => {
@@ -56,6 +67,30 @@ describe('isObsMode', () => {
 
   it('should return false when called without arguments', () => {
     expect(isObsMode()).toBe(false);
+  });
+});
+
+describe('isHumanControl', () => {
+  it('should return true when a seat uses the human-strategist', () => {
+    expect(isHumanControl(makeConfig({ 7: { strategist: 'human-strategist', mode: 'Strategy' } }))).toBe(true);
+  });
+
+  it('should return true when a human seat is mixed with other strategists', () => {
+    expect(isHumanControl(makeConfig({
+      0: { strategist: 'null-strategist' },
+      7: { strategist: 'human-strategist' },
+    }))).toBe(true);
+  });
+
+  it('should return false when no seat uses the human-strategist', () => {
+    expect(isHumanControl(makeConfig({
+      0: { strategist: 'null-strategist' },
+      1: { strategist: 'simple-strategist' },
+    }))).toBe(false);
+  });
+
+  it('should return false for an empty seating', () => {
+    expect(isHumanControl(makeConfig({}))).toBe(false);
   });
 });
 

@@ -13,7 +13,7 @@ import { voxCivilization } from "../infra/vox-civilization.js";
 import { setTimeout } from 'node:timers/promises';
 import { VoxSession } from "../infra/vox-session.js";
 import { sessionRegistry } from "../infra/session-registry.js";
-import { StrategistSessionConfig, isVisualMode, isObsMode } from "../types/config.js";
+import { StrategistSessionConfig, isVisualMode, isObsMode, isHumanControl } from "../types/config.js";
 import { obsManager } from "../infra/obs-manager.js";
 import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
@@ -102,6 +102,19 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         this.config
       );
 
+      // Human-control sessions ride the existing visual-mode gating: animations
+      // on, no strategic-view toggle, and the DLL AI-turn cooldown. Normalize an
+      // unset/'none' production to 'test' so all of that engages from one config.
+      // Explicit 'livestream'/'recording' pass through (recording a human session
+      // is legitimate). See docs/plans/human-control/01-launcher.md.
+      if (isHumanControl(this.config) && !isVisualMode(this.config.production)) {
+        logger.warn(
+          `Human-control session: normalizing production mode from '${this.config.production ?? 'none'}' to 'test' ` +
+          `(animations on, normal view, no observer UI).`
+        );
+        this.config.production = 'test';
+      }
+
       // Configure animation skipping based on mode (skip in interactive mode)
       if (isVisualMode(this.config.production)) {
         await voxCivilization.updateSkipAnimations(false);   // animations play for viewers
@@ -120,8 +133,10 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         logger.warn('OBS initialization failed — session will continue without recording');
       }
 
-      // Enable AI Observer mod in non-interactive mode
-      voxCivilization.setAiObserver(!this.isInteractiveMode);
+      // Enable AI Observer mod in non-interactive mode, but never for human
+      // control: the human watches the plain client through their civ's fog of
+      // war, with no observer overlays (human-control spec §3).
+      voxCivilization.setAiObserver(!this.isInteractiveMode && !isHumanControl(this.config));
 
       // In wait mode, prompt the user to start the game manually
       if (this.config.gameMode === 'wait') {
@@ -335,6 +350,23 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   }
 
   /**
+   * The actual game playerID of the human-control seat, or `undefined` when no
+   * seat uses the `human-strategist`. Resolves the config slot through the
+   * seating map the same way `handleGameSwitched` does when it creates
+   * VoxPlayers, so it honors `randomizeSeating`. Used to pin the observer-UI
+   * override to the human's civ.
+   */
+  private get humanPlayerID(): number | undefined {
+    const seatingMap = this.seatingClaim?.seatingMap;
+    for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
+      if (playerConfig.strategist === "human-strategist") {
+        return seatingMap?.[configSlotStr] ?? parseInt(configSlotStr);
+      }
+    }
+    return undefined;
+  }
+
+  /**
    * Wrap an OBS-side call so the strategist can stay agnostic of whether OBS
    * is configured. Returns `undefined` (and logs a non-fatal warning) when
    * OBS isn't active or the underlying call throws — the session must keep
@@ -432,12 +464,16 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     await setTimeout(3000);
 
     if (this.config.autoPlay && params.turn === 0) {
-      // Autoplay
+      // Autoplay. For human control, pin the observer UI to the human's civ
+      // *before* SetAIAutoPlay — the team-visibility copy happens only at
+      // autoplay activation, so ordering matters (human-control spec §2).
+      const humanID = this.humanPlayerID;
+      const overrideLine = humanID !== undefined ? `Game.SetObserverUIOverridePlayer(${humanID});\n` : "";
       await mcpClient.callTool("lua-executor", {
         Script: `
 Events.LoadScreenClose();
 Game.SetPausePlayer(-1);
-Game.SetAIAutoPlay(2000, -1);`
+${overrideLine}Game.SetAIAutoPlay(2000, -1);`
       });
     } else {
       await mcpClient.callTool("lua-executor", { Script: `Events.LoadScreenClose(); Game.SetPausePlayer(-1);` });
@@ -539,6 +575,13 @@ Game.SetAIAutoPlay(2000, -1);`
         player.context.resetModelIdentity();
       }
       await mcpClient.callTool("lua-executor", { Script: `Events.LoadScreenClose(); Game.SetPausePlayer(-1);` });
+      // Re-pin the observer UI to the human's civ. Defensive: the override —
+      // like autoplay itself, which recovery also doesn't re-issue — is
+      // serialized in saves, so a recovered human game already has it.
+      const humanID = this.humanPlayerID;
+      if (humanID !== undefined) {
+        await mcpClient.callTool("lua-executor", { Script: `Game.SetObserverUIOverridePlayer(${humanID});` });
+      }
       if (this.config.autoPlay && !isVisualMode(this.config.production)) {
         await setTimeout(3000);
         await mcpClient.callTool("lua-executor", { Script: `ToggleStrategicView();` });

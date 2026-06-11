@@ -1,6 +1,15 @@
-# Stage 1 — Launcher human-control mode + stub `human-strategist`
+# Stage 1 — Launcher human-control mode + stub `human-strategist` ✅ DONE
 
 > Part of the human-control plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
+
+> **Status: implemented.** All four work items landed plus an example config. Type-check passes; `isHumanControl` unit tests added to `config-helpers.test.ts` (18 pass); the `human-strategist` registers correctly. What was built:
+> - [`vox-agents/src/strategist/agents/human-strategist.ts`](../../../vox-agents/src/strategist/agents/human-strategist.ts) — `NullStrategist`-style stub. `getSystem` calls `keep-status-quo` with `parameters.mode` and a real rationale, then returns `""` (skips the LLM loop via `VoxContext` line 354).
+> - [`agent-registry.ts`](../../../vox-agents/src/infra/agent-registry.ts) — registered after `NullStrategist`.
+> - [`config.ts`](../../../vox-agents/src/types/config.ts) — `isHumanControl(config)` scans `llmPlayers` for `strategist === "human-strategist"`.
+> - [`strategist-session.ts`](../../../vox-agents/src/strategist/strategist-session.ts) — production normalized to `'test'` early in `start()` (mutates `this.config.production`, which all the existing `isVisualMode` gating reads live); `humanPlayerID` getter (seating-mapped); `setAiObserver(!isInteractiveMode && !isHumanControl)`; `Game.SetObserverUIOverridePlayer(<id>)` prepended before `Game.SetAIAutoPlay` in the `turn === 0` autoplay block; re-issued defensively in `recoverGame`.
+> - [`configs/human-control-test.json`](../../../vox-agents/configs/human-control-test.json) — one `human-strategist` seat (slot 7 → 8-player game, rest VPAI), `production` left unset to exercise the `'test'` normalization. *(Added on request; not in the original work items.)*
+>
+> **Deviations / notes:** (1) the `"human-strategist"` name is a hardcoded literal in both the agent and `isHumanControl`, matching the existing convention (`vox-player.ts` hardcodes `"none-strategist"`) rather than a shared constant; (2) because the stub returns `""` and its name includes `-strategist`, `VoxContext` records the per-turn model metadata as `"VPAI"` — accurate for keep-status-quo behavior, and stage 3 will set a real rationale path; (3) in-game launch verification (pinned view, animations, no overlays) still requires running Civ V manually — out of automated scope.
 
 ## Objective
 
