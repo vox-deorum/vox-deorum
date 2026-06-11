@@ -23,7 +23,7 @@ The REST API is served by an Express app defined in `bridge-service/src/index.ts
 - **External functions and game control** (`bridge-service/src/routes/external.ts`) — registering and listing outbound functions (`/external/register`, `/external/functions`), and pausing the game (`/external/pause`, `/external/resume`, `/external/pause-player/:id`, `/external/paused-players`, `/external/production-mode`).
 - **Event streaming** (`bridge-service/src/routes/events.ts`) — `GET /events`, a long-lived Server-Sent Events connection.
 
-The exact request and response bodies for every endpoint are in the kept reference, `bridge-service/docs/API-REFERENCE.md`. Every endpoint returns the same envelope: a `success` flag, a `result` on success, or a structured `error` on failure. Error codes and recovery are covered in [error-handling.md](error-handling.md).
+The exact request and response bodies for every endpoint are in the kept reference, `bridge-service/docs/api-reference.md`. Every endpoint returns the same envelope: a `success` flag, a `result` on success, or a structured `error` on failure. Error codes and recovery are covered in [error-handling.md](error-handling.md).
 
 ## Lifecycle and orchestration
 
@@ -49,9 +49,9 @@ Below the bridge is the [civ5-dll](../civ5-dll/) connection service, which is th
 
 Following the project's documentation rule, this folder explains *what and why* in prose, while exact reference data stays inside the component:
 
-- `bridge-service/docs/API-REFERENCE.md` — every HTTP endpoint, with request and response shapes.
-- `bridge-service/docs/MESSAGE-TYPES.md` — the JSON message types on the pipe.
-- `bridge-service/docs/EVENT-PIPE.md` — the event-pipe wire format and a client example.
-- `bridge-service/docs/PROTOCOL.md` — sequence diagrams for the message flows.
+- `bridge-service/docs/api-reference.md` — every HTTP endpoint, with request and response shapes.
+- `bridge-service/docs/message-types.md` — the JSON message types on the pipe.
+- `bridge-service/docs/event-pipe.md` — the event-pipe wire format and a client example.
+- `bridge-service/docs/protocol.md` — sequence diagrams for the message flows.
 
 For settings, see [configuration.md](configuration.md). For failure modes and recovery, see [error-handling.md](error-handling.md).

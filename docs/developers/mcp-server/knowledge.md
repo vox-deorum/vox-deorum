@@ -28,7 +28,7 @@ Not all game data has the same shape, so the store models it in four tiers, each
 
 - **Mutable knowledge** is versioned, change-tracked data — the things that evolve turn over turn: player summaries, the diplomatic-opinion matrix, detailed city information, and the running record of strategy, policy, research, persona, flavor, and relationship decisions, plus victory progress. Each of these is stored with a version history rather than overwritten.
 
-The exact list of tables and their tier assignments is reference data; the current set is documented in `mcp-server/docs/KNOWLEDGE.md`.
+The exact list of tables and their tier assignments is reference data; the current set is documented in `mcp-server/docs/knowledge.md`.
 
 ### How versioning works
 
@@ -48,4 +48,4 @@ Getters are not run on every event — that would hammer the game. Instead the s
 
 ## Where the details live
 
-This page is the prose. The exact table list, schema columns, and tier assignments stay in `mcp-server/docs/KNOWLEDGE.md`. The knowledge-query tools that read this store are listed in `mcp-server/docs/TOOLS.md` and described in [tools.md](tools.md).
+This page is the prose. The exact table list, schema columns, and tier assignments stay in `mcp-server/docs/knowledge.md`. The knowledge-query tools that read this store are listed in `mcp-server/docs/tools.md` and described in [tools.md](tools.md).

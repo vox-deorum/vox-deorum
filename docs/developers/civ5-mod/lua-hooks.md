@@ -38,4 +38,4 @@ This is why the mod is required even though it is small: it is the in-game end o
 
 ## Reference
 
-For the precise observer-event contract, see `../../../civ5-mod/docs/observer-api.md`. For low-level Lua debugging inside the gamecore (reading the Lua stack from a Windows debugger), the mod keeps `../../../civ5-mod/docs/lua_c_debug.md`.
+For the precise observer-event contract, see `../../../civ5-mod/docs/observer-api.md`. For low-level Lua debugging inside the gamecore (reading the Lua stack from a Windows debugger), the mod keeps `../../../civ5-mod/docs/lua-c-debug.md`.

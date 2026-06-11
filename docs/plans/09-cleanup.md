@@ -24,7 +24,7 @@ Keep `AGENTS.md` (agent/contributor working rules) and `LICENSE.md`. The per-com
 - `bridge-service/docs/ERROR-HANDLING.md` (Stage 4)
 - `bridge-service/docs/DEVELOPMENT.md` (Stage 4)
 - `mcp-server/docs/DEVELOPMENT.md` (Stage 5)
-- `mcp-server/docs/KNOWLEDGE.md` (Stage 5) — delete **unless** it carries exact reference data
+- `mcp-server/docs/knowledge.md` (Stage 5) — delete **unless** it carries exact reference data
 - `vox-agents/docs/obs.md` (Stage 6)
 - `vox-agents/docs/oracle.md` (Stage 6)
 - `vox-agents/docs/plans/telepathist.md` (Stage 6)

@@ -1,6 +1,6 @@
 # mcp-server — Tools
 
-Tools are the only part of the MCP server an agent ever sees. Each one is a named, schema-validated capability: it declares what it takes in, what it returns, and a description the agent reads to decide when to use it. This page explains how the tools are organized and how the framework behind them works. The exact per-tool parameter listings — every field of every tool — live in `mcp-server/docs/TOOLS.md`, which stays as reference and is not duplicated here.
+Tools are the only part of the MCP server an agent ever sees. Each one is a named, schema-validated capability: it declares what it takes in, what it returns, and a description the agent reads to decide when to use it. This page explains how the tools are organized and how the framework behind them works. The exact per-tool parameter listings — every field of every tool — live in `mcp-server/docs/tools.md`, which stays as reference and is not duplicated here.
 
 ## The four categories
 
@@ -14,7 +14,7 @@ The roughly three dozen tools fall into four groups, by what they touch. The spl
 
 - **Action tools** change the game rather than read it. Some steer the AI (set strategies, flavors, personas, diplomatic relationships, next research, next policy), some record agent decisions into the knowledge store (set metadata, relay a message, keep the status quo), and a couple control pacing directly (pause and resume a player's turn). The ones that steer the AI are the subject of [influence.md](influence.md).
 
-For the complete list and every tool's parameters, see `mcp-server/docs/TOOLS.md`.
+For the complete list and every tool's parameters, see `mcp-server/docs/tools.md`.
 
 ## How a tool is built
 

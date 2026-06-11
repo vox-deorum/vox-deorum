@@ -101,7 +101,7 @@ Controls OBS Studio for recording/livestreaming via `obs-websocket-js` (WebSocke
 - Lifecycle: `initialize()` → `setGameID()` → `startProduction()` → `pauseProduction()`/`resumeProduction()` → `stopProduction()` → `destroy()`
 - Creates game capture scenes, organizes recordings under `{baseRecordDir}/{gameID}/`
 - Health monitoring with bounded recovery (max 3 attempts). Self-registers with ProcessManager
-- See `docs/obs.md` for full documentation
+- See [media.md](../docs/developers/vox-agents/media.md) for OBS capture and the narrators pipeline
 
 ### ProductionController (`src/infra/production-controller.ts`)
 Wraps ObsManager to add segment-based recording driven by game render events.

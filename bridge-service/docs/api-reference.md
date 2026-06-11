@@ -409,7 +409,7 @@ events.onerror = () => {
 - Keep-alive messages sent every 5 seconds
 - Connection automatically reconnects on network issues
 - Events are batched (50ms timeout or 100 events max) before delivery
-- See [PROTOCOL.md](PROTOCOL.md) for complete event list and formats
+- See [protocol.md](protocol.md) for complete event list and formats
 
 ## Health & Monitoring
 
@@ -505,7 +505,7 @@ curl http://127.0.0.1:5000/stats
 
 ## Error Codes
 
-All errors include a `code` field from the `ErrorCode` enum. See [ERROR-HANDLING.md](ERROR-HANDLING.md) for complete error documentation.
+All errors include a `code` field from the `ErrorCode` enum. See [error-handling.md](../../docs/developers/bridge-service/error-handling.md) for complete error documentation.
 
 Common error codes:
 - `DLL_DISCONNECTED` - Bridge lost connection to game DLL

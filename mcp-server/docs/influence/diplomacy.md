@@ -2,7 +2,7 @@
 
 How `set-persona` and `set-relationship` steer the in-game diplomatic AI.
 
-For tool schemas and arguments, see [TOOLS.md](../TOOLS.md).
+For tool schemas and arguments, see [tools.md](../tools.md).
 
 ---
 

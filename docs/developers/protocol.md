@@ -60,8 +60,8 @@ No layer assumes the one below it stays up. The DLL is the pipe **server** and w
 
 This page is the narrative; the precise wire-level reference stays with the bridge service, which owns the pipe format:
 
-- `bridge-service/docs/PROTOCOL.md` — sequence diagrams for each flow.
-- `bridge-service/docs/MESSAGE-TYPES.md` — every JSON message type on the pipe (`lua_call`, `lua_execute`, `game_event`, external calls, registry notifications).
-- `bridge-service/docs/EVENT-PIPE.md` — the event-pipe wire format and a client example.
-- `bridge-service/docs/API-REFERENCE.md` — every bridge HTTP endpoint, with request and response shapes.
+- `bridge-service/docs/protocol.md` — sequence diagrams for each flow.
+- `bridge-service/docs/message-types.md` — every JSON message type on the pipe (`lua_call`, `lua_execute`, `game_event`, external calls, registry notifications).
+- `bridge-service/docs/event-pipe.md` — the event-pipe wire format and a client example.
+- `bridge-service/docs/api-reference.md` — every bridge HTTP endpoint, with request and response shapes.
 - `mcp-server/docs/events/` — per-event schemas.

@@ -2,7 +2,7 @@
 
 How `set-flavors`, `unset-flavors`, `set-strategy`, and `keep-status-quo` steer the in-game AI through the flavor system.
 
-For tool schemas and arguments, see [TOOLS.md](../TOOLS.md). For per-flavor deep dives, see [flavors/](../flavors/).
+For tool schemas and arguments, see [tools.md](../tools.md). For per-flavor deep dives, see [flavors/](../flavors/).
 
 ---
 

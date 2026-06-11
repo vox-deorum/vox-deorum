@@ -2,7 +2,7 @@
 
 This guide provides essential patterns and conventions for the MCP Server that aren't covered in the README.
 
-**Additional documentation in `docs/`:** [DEVELOPMENT.md](docs/DEVELOPMENT.md) (dev guide), [TOOLS.md](docs/TOOLS.md) (tool reference), [KNOWLEDGE.md](docs/KNOWLEDGE.md) (knowledge system). Reference data: `docs/events/`, `docs/flavors/`, `docs/strategies/`.
+**Developer guide:** [mcp-server overview](../docs/developers/mcp-server/overview.md) (role, modes, how tools are organized) and [setup.md](../docs/developers/setup.md) (build and run). **Reference in `docs/`:** [tools.md](docs/tools.md) (tool reference), [knowledge.md](docs/knowledge.md) (knowledge system). Reference data: `docs/events/`, `docs/flavors/`, `docs/strategies/`.
 
 ## MCP Protocol Implementation
 
@@ -180,7 +180,7 @@ Scripts are executed within the game context via BridgeManager
 - Located in `src/bridge/manager.ts`
 - **Do NOT use direct fetch/HTTP calls** to the Bridge Service
 - BridgeManager provides methods for Lua script execution, function calls, and SSE handling
-- Follow PROTOCOL.md specifications
+- Follow protocol.md specifications
 
 ### Queue-Based Request Management
 - Process batches of up to 50 Lua calls

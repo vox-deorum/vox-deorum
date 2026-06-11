@@ -414,14 +414,14 @@ All response messages (lua_response, external_response) follow the standard erro
 {
   "success": false,
   "error": {
-    "code": ErrorCode,     // See ERROR-HANDLING.md
+    "code": ErrorCode,     // See error-handling.md
     "message"?: string,
     "details"?: string
   }
 }
 ```
 
-See [ERROR-HANDLING.md](ERROR-HANDLING.md) for complete error code documentation.
+See [error-handling.md](../../docs/developers/bridge-service/error-handling.md) for complete error code documentation.
 
 ## Message Batching
 

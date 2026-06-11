@@ -1,6 +1,6 @@
 # bridge-service — Lua Execution and External Functions
 
-Lua is how the bridge actually reaches into the game. There are two directions, and the bridge has a manager for each: external services calling *into* the game's Lua (the [Lua manager](#calling-into-the-game)), and the game's Lua calling *out* to external services (the [external manager](#calling-out-of-the-game)). Both ride the same DLL connection described in [connection.md](connection.md); this page covers what each manager does with it. Exact request and response shapes are in the kept reference, `bridge-service/docs/API-REFERENCE.md`.
+Lua is how the bridge actually reaches into the game. There are two directions, and the bridge has a manager for each: external services calling *into* the game's Lua (the [Lua manager](#calling-into-the-game)), and the game's Lua calling *out* to external services (the [external manager](#calling-out-of-the-game)). Both ride the same DLL connection described in [connection.md](connection.md); this page covers what each manager does with it. Exact request and response shapes are in the kept reference, `bridge-service/docs/api-reference.md`.
 
 ## Calling into the game
 
@@ -29,6 +29,6 @@ Because the DLL forgets its bindings whenever the pipe drops, the external manag
 ## See also
 
 - [connection.md](connection.md) — message framing, the request queue, timeouts, and reconnection.
-- `bridge-service/docs/API-REFERENCE.md` — exact endpoint request/response shapes.
-- `bridge-service/docs/MESSAGE-TYPES.md` — the `lua_call`, `lua_execute`, and external message types on the pipe.
+- `bridge-service/docs/api-reference.md` — exact endpoint request/response shapes.
+- `bridge-service/docs/message-types.md` — the `lua_call`, `lua_execute`, and external message types on the pipe.
 - The MCP server's `bridge.md` (written later) — how the primary consumer drives these endpoints.

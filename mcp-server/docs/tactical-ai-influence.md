@@ -2,7 +2,7 @@
 
 How MCP tools reach the Civilization V tactical AI. This doc answers: **which in-game AI decisions does each tool actually shift, and can a non-LLM civ feel the effect?**
 
-For tool schemas and arguments, see [TOOLS.md](TOOLS.md). For the knowledge persistence layer, see [KNOWLEDGE.md](KNOWLEDGE.md). For per-flavor deep dives, see [flavors/](flavors/).
+For tool schemas and arguments, see [tools.md](tools.md). For the knowledge persistence layer, see [knowledge.md](knowledge.md). For per-flavor deep dives, see [flavors/](flavors/).
 
 ---
 

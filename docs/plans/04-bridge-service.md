@@ -24,9 +24,9 @@ Create and write `docs/developers/bridge-service/`: the REST/SSE bridge between 
 | `bridge-service/docs/DEVELOPMENT.md` | Fold into `overview.md`; lift Lua-registry/execution prose into `lua.md`; some setup detail also feeds Stage 7 `setup.md`. Delete original in Stage 9. |
 | `bridge-service/docs/CONFIGURATION.md` | Move prose into `configuration.md`. Delete original in Stage 9. |
 | `bridge-service/docs/ERROR-HANDLING.md` | Move prose into `error-handling.md`. Delete original in Stage 9. |
-| `bridge-service/docs/PROTOCOL.md`, `MESSAGE-TYPES.md`, `EVENT-PIPE.md` | Lift the **named-pipe connection story** into `connection.md`. The exact message/format reference **stays** in `bridge-service/docs/`. (The end-to-end narrative is written later in Stage 7 `protocol.md`.) |
+| `bridge-service/docs/protocol.md`, `message-types.md`, `event-pipe.md` | Lift the **named-pipe connection story** into `connection.md`. The exact message/format reference **stays** in `bridge-service/docs/`. (The end-to-end narrative is written later in Stage 7 `protocol.md`.) |
 | `src/services/` modules | Write `connection.md` and `lua.md` from source. |
-| `bridge-service/docs/API-REFERENCE.md`, `api/` | Keep (reference). |
+| `bridge-service/docs/api-reference.md`, `api/` | Keep (reference). |
 
 ## Feeds forward
 

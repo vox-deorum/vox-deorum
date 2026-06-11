@@ -96,7 +96,7 @@ events.onmessage = (e) => {
 };
 ```
 
-**Complete API documentation:** [docs/API-REFERENCE.md](docs/API-REFERENCE.md)
+**Complete API documentation:** [docs/api-reference.md](docs/api-reference.md)
 
 ### Runtime Shutdown URL File
 
@@ -132,7 +132,7 @@ Create `config.json` in the bridge-service root:
 }
 ```
 
-**Configuration details:** [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+**Configuration details:** [configuration.md](../docs/developers/bridge-service/configuration.md)
 
 ### Key Settings
 
@@ -155,7 +155,7 @@ The test suite includes:
 - Extended timeouts for async operations
 - Comprehensive error scenario coverage
 
-**Testing guide:** [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#testing)
+**Testing guide:** [testing.md](../docs/developers/testing.md)
 
 ## Key Implementation Details
 
@@ -220,7 +220,7 @@ Or in `config.json`:
 - Check network proxy settings
 - Monitor client reconnection
 
-**Troubleshooting guide:** [docs/ERROR-HANDLING.md](docs/ERROR-HANDLING.md)
+**Troubleshooting guide:** [error-handling.md](../docs/developers/bridge-service/error-handling.md)
 
 ## Integration Points
 
@@ -242,17 +242,17 @@ Or in `config.json`:
 - Configurable timeouts per function
 - Automatic retry on network failures
 
-**Protocol details:** [docs/PROTOCOL.md](docs/PROTOCOL.md)
+**Protocol details:** [docs/protocol.md](docs/protocol.md)
 
 ## Documentation
 
-- **[API Reference](docs/API-REFERENCE.md)** - Complete HTTP API documentation
-- **[Configuration](docs/CONFIGURATION.md)** - Configuration options and examples
-- **[Development Guide](docs/DEVELOPMENT.md)** - Development workflow, testing, debugging
-- **[Message Types](docs/MESSAGE-TYPES.md)** - IPC message format reference
-- **[Error Handling](docs/ERROR-HANDLING.md)** - Error codes and recovery strategies
-- **[Protocol](docs/PROTOCOL.md)** - Communication protocol flows
-- **[Event Pipe](docs/EVENT-PIPE.md)** - Named pipe event broadcasting
+- **[API Reference](docs/api-reference.md)** - Complete HTTP API documentation
+- **[Configuration](../docs/developers/bridge-service/configuration.md)** - Configuration options and examples
+- **[Developer Overview](../docs/developers/bridge-service/overview.md)** - Role, endpoints, development workflow
+- **[Message Types](docs/message-types.md)** - IPC message format reference
+- **[Error Handling](../docs/developers/bridge-service/error-handling.md)** - Error codes and recovery strategies
+- **[Protocol](docs/protocol.md)** - Communication protocol flows
+- **[Event Pipe](docs/event-pipe.md)** - Named pipe event broadcasting
 - **[Development Patterns](AGENTS.md)** - Internal development conventions
 
 ## Security Considerations

@@ -2,7 +2,7 @@
 
 How `set-research` and `set-policy` override the AI's normal tech and policy selection.
 
-For tool schemas and arguments, see [TOOLS.md](../TOOLS.md).
+For tool schemas and arguments, see [tools.md](../tools.md).
 
 ---
 

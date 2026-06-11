@@ -116,16 +116,16 @@ The rule of thumb: `/docs/developers/` explains *what and why* in prose; compone
 
 | Current | Action |
 |---|---|
-| `bridge-service/docs/PROTOCOL.md`, `MESSAGE-TYPES.md`, `EVENT-PIPE.md` | Distill the end-to-end story into `docs/developers/protocol.md`; lift the named-pipe connection story into `docs/developers/bridge-service/connection.md`; keep the exact message/format reference in `bridge-service/docs/` |
+| `bridge-service/docs/protocol.md`, `message-types.md`, `event-pipe.md` | Distill the end-to-end story into `docs/developers/protocol.md`; lift the named-pipe connection story into `docs/developers/bridge-service/connection.md`; keep the exact message/format reference in `bridge-service/docs/` |
 | `bridge-service/docs/CONFIGURATION.md` | Move prose to `docs/developers/bridge-service/configuration.md`; delete original |
 | `bridge-service/docs/ERROR-HANDLING.md` | Move prose to `docs/developers/bridge-service/error-handling.md`; delete original |
 | `bridge-service/docs/DEVELOPMENT.md` | Fold into `docs/developers/bridge-service/overview.md` and `docs/developers/setup.md`; lift Lua-registry/execution prose into `docs/developers/bridge-service/lua.md`; delete original |
 | (no single source) | Write `docs/developers/bridge-service/connection.md` (DLL connector lifecycle) and `lua.md` (Lua function registry and execution queue) from the `src/services/` modules |
-| `bridge-service/docs/API-REFERENCE.md`, `api/` | Keep (reference) |
+| `bridge-service/docs/api-reference.md`, `api/` | Keep (reference) |
 | `mcp-server/docs/DEVELOPMENT.md` | Fold into `docs/developers/mcp-server/overview.md` and `setup.md`; delete original |
-| `mcp-server/docs/TOOLS.md` | Move the "how tools are organized" prose to `docs/developers/mcp-server/tools.md`; exact per-tool listings stay in `mcp-server/docs/` |
-| `mcp-server/docs/KNOWLEDGE.md` | Move prose to `docs/developers/mcp-server/knowledge.md`; delete original unless it carries exact reference data |
-| `mcp-server/docs/TACTICAL_AI_INFLUENCE.md` | Lift the "how it works" prose into `docs/developers/mcp-server/influence.md`; keep any exact reference (tables, formulas) in place |
+| `mcp-server/docs/tools.md` | Move the "how tools are organized" prose to `docs/developers/mcp-server/tools.md`; exact per-tool listings stay in `mcp-server/docs/` |
+| `mcp-server/docs/knowledge.md` | Move prose to `docs/developers/mcp-server/knowledge.md`; delete original unless it carries exact reference data |
+| `mcp-server/docs/tactical-ai-influence.md` | Lift the "how it works" prose into `docs/developers/mcp-server/influence.md`; keep any exact reference (tables, formulas) in place |
 | (no single source) | Write `docs/developers/mcp-server/events.md` (event pipeline: how game events arrive, are schema-validated, and reach agents; per-event schemas stay in `docs/events/`) and `bridge.md` (queued Lua execution and SSE/event-pipe consumption) from the `src/knowledge/` and `src/bridge/` modules |
 | `mcp-server/docs/events/`, `flavors/`, `strategies/`, `enums/`, `diplomacy/`, `influence/`, `database/`, `api/` | Keep (component-specific reference) |
 | `vox-agents/docs/obs.md` | Move prose to `docs/developers/vox-agents/media.md` (OBS capture + narrators pipeline); delete original |

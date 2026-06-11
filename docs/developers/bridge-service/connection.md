@@ -1,6 +1,6 @@
 # bridge-service — DLL Connection
 
-This page describes the bridge's end of the named-pipe link to the game. It is the mirror image of [civ5-dll/connection.md](../civ5-dll/connection.md): there the DLL is the **server** that creates the pipe and waits; here the bridge is the **sole client** that connects to it. The two share one wire format and one pipe name, so they should be read together. The exact message types that travel over the pipe stay in the component reference, `bridge-service/docs/MESSAGE-TYPES.md`; this page covers the lifecycle — connecting, framing, tracking responses, and recovering from disconnects — all owned by the DLL connector in `bridge-service/src/services/dll-connector.ts`.
+This page describes the bridge's end of the named-pipe link to the game. It is the mirror image of [civ5-dll/connection.md](../civ5-dll/connection.md): there the DLL is the **server** that creates the pipe and waits; here the bridge is the **sole client** that connects to it. The two share one wire format and one pipe name, so they should be read together. The exact message types that travel over the pipe stay in the component reference, `bridge-service/docs/message-types.md`; this page covers the lifecycle — connecting, framing, tracking responses, and recovering from disconnects — all owned by the DLL connector in `bridge-service/src/services/dll-connector.ts`.
 
 ## The pipe
 
@@ -47,11 +47,11 @@ Shutting down is distinct from an unexpected drop. The connector sets a shutting
 
 Alongside the request/response pipe to the DLL, the bridge can run a *second*, outbound-only named pipe to broadcast game events to local subscribers — an alternative to Server-Sent Events for processes that prefer a pipe. It is implemented by `bridge-service/src/services/event-pipe.ts`, is off by default, and is enabled with `eventpipe.enabled` (see [configuration.md](configuration.md)).
 
-Here the bridge is the **server**: it listens, accepts any number of clients, sends each a welcome message on connect and a goodbye on shutdown, and broadcasts batched events to all of them. It uses the same `node-ipc` raw-buffer transport and the same `!@#$%^!` delimiter as the DLL pipe, so a client buffers and splits incoming bytes exactly as the bridge does for the DLL. Events are batched on the same 50 ms / 100-event window the SSE stream uses, with status changes flushed immediately. The wire format and a complete client example live in `bridge-service/docs/EVENT-PIPE.md`.
+Here the bridge is the **server**: it listens, accepts any number of clients, sends each a welcome message on connect and a goodbye on shutdown, and broadcasts batched events to all of them. It uses the same `node-ipc` raw-buffer transport and the same `!@#$%^!` delimiter as the DLL pipe, so a client buffers and splits incoming bytes exactly as the bridge does for the DLL. Events are batched on the same 50 ms / 100-event window the SSE stream uses, with status changes flushed immediately. The wire format and a complete client example live in `bridge-service/docs/event-pipe.md`.
 
 ## See also
 
 - [civ5-dll/connection.md](../civ5-dll/connection.md) — the server end of the same pipe; keep it open alongside this page.
-- `bridge-service/docs/MESSAGE-TYPES.md` — the exact JSON message types.
-- `bridge-service/docs/PROTOCOL.md` — sequence diagrams for each flow.
+- `bridge-service/docs/message-types.md` — the exact JSON message types.
+- `bridge-service/docs/protocol.md` — sequence diagrams for each flow.
 - [protocol.md](../protocol.md) — the end-to-end narrative across all layers.

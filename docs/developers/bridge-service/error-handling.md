@@ -1,6 +1,6 @@
 # bridge-service — Error Handling
 
-The bridge sits between a game that can crash or be closed at any moment and external services that may be slow or unreachable. Its error handling is built around that reality: keep the connection to the game alive at all costs, fail individual requests cleanly rather than hanging, and report failures back to callers in a consistent shape. This page explains the failure modes and how the bridge recovers from them. The full enumerated list of error codes is kept as reference in `bridge-service/docs/ERROR-HANDLING.md`; what follows is the behavior behind it.
+The bridge sits between a game that can crash or be closed at any moment and external services that may be slow or unreachable. Its error handling is built around that reality: keep the connection to the game alive at all costs, fail individual requests cleanly rather than hanging, and report failures back to callers in a consistent shape. This page explains the failure modes and how the bridge recovers from them. The full enumerated list of error codes is the `ErrorCode` enum in `bridge-service/src/types/api.ts`; what follows is the behavior behind it.
 
 ## The error envelope
 
@@ -40,6 +40,6 @@ Defensive parsing runs throughout the connector. Incoming pipe data has unescape
 
 ## See also
 
-- `bridge-service/docs/ERROR-HANDLING.md` — the complete error-code reference and troubleshooting checklist.
+- `bridge-service/src/types/api.ts` — the `ErrorCode` enum, the authoritative list of error codes.
 - [connection.md](connection.md) — the reconnection and request-tracking machinery behind these guarantees.
 - [configuration.md](configuration.md) — where the timeout, retry, and logging settings come from.

@@ -6,72 +6,25 @@ Play Civilization V with AI-enhanced opponents powered by GPT, Claude, and other
 
 ![Replay](https://github.com/CIVITAS-John/vox-deorum-replay/blob/gh-pages/examples/replay-demo.gif)
 
-## Quick Start
+Vox Deorum gives Civ V's AI civilizations a language model brain. They reason about strategy in natural language, adapt to what you do, and can speak for themselves — you can chat with any LLM-enhanced player in the game.
 
-### Prerequisites
-- Windows 10/11
-- Civilization V (Only tested with both expansion packs)
-- An API key from your favorite LLM provider
+## Play
 
-### Installation
+New here? Start with **[Getting Started](docs/players/getting-started.md)** — prerequisites, the installer, and your first launch. From there the [player guide](docs/README.md) covers playing, configuring your LLM provider, reviewing sessions with the replayer, and troubleshooting.
 
-1. **Download the installer**: Get the installer from our [releases page](https://github.com/CIVITAS-John/vox-deorum/releases)
-2. **Run the installer**: The setup wizard should handle everything automatically
-3. **Run Vox Deorum**: 
-- "Vox Deorum" in Start Menu
-- Or, manually open `scripts\vox-deorum.cmd`
+## Develop
 
-### Features
+Want to understand or change the code? Start with **[Architecture](docs/developers/architecture.md)** — the components, how data flows between them, and why each layer exists. The [developer guide](docs/README.md) continues into setup, the end-to-end protocol, testing, releasing, and a folder per component.
 
-- **LLM-enhanced AI Opponent**: Play with your favorite LLM - local models supported
-- **Chat with LLM Spokespersons**: Chat with any LLM-enhanced player in the game!
-- **Session Replay**: Review your (and LLM's) gameplay with the [Vox Deorum Replayer](https://github.com/CIVITAS-John/vox-deorum-replay)
+## Documentation
 
-## For Developers
-
-### Architecture
-
-```
-Civ 5 ↔ Community Patch DLL ↔ Bridge Service ↔ MCP Server ↔ Vox Agents → LLM
-         (Named Pipe)         (REST/SSE)       (MCP/HTTP)   (LLMs)
-```
-
-**Components:**
-- [Community Patch DLL](civ5-dll/) - Modified game DLL for IPC
-- [Bridge Service](bridge-service/) - REST API & game communication
-- [MCP Server](mcp-server/) - Game state tools via Model Context Protocol
-- [Vox Agents](vox-agents/) - LLM decision engine
-- [Civ 5 Mod](civ5-mod/) - Lua integration scripts
-
-### Building from Source
-
-**Prerequisites:** Node.js ≥20, Windows 10/11, Python 3.x, Visual Studio Build Tools, Git with LFS
-
-```bash
-# Clone and setup
-git clone --recursive https://github.com/CIVITAS-John/vox-deorum.git
-cd vox-deorum
-npm install --include=dev
-
-# Build DLL (Windows)
-cd civ5-dll
-build-and-copy
-
-# Build TypeScript modules
-npm run build:all
-```
-
-### Documentation
-
-- [AGENTS.md](AGENTS.md) - Development guidelines
-- [PROTOCOL.md](bridge-service/PROTOCOL.md) - IPC protocol
-- Component docs in each subdirectory
-- [Database Schema](civ5-dll/docs/db.md) - Civ V database
+All documentation lives under **[docs/](docs/README.md)** — pick the player door or the developer door from the index. Working rules for contributors and agents are in [AGENTS.md](AGENTS.md).
 
 ## License
 
 Author: John Chen (with assistance from Claude Code).
 Assistant Professor, University of Arizona, College of Information Science
+
 Different licenses are used for submodules:
 
 - `civ5-dll` - GPL 3.0 (following the upstream license)

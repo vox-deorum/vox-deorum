@@ -41,4 +41,4 @@ Events don't only flow inward. Action tools built on `DynamicEventTool` (see [to
 
 ## Where the details live
 
-The per-event schemas and descriptions are reference data and stay in the component: `mcp-server/docs/events/md/` (human-readable) and `mcp-server/docs/events/json/` (machine-readable), with category tags in `mcp-server/docs/strategies/event-categories.json`. The events surfaced to agents through the knowledge-query tools (`get-events`, `get-diplomatic-events`) are listed in `mcp-server/docs/TOOLS.md`.
+The per-event schemas and descriptions are reference data and stay in the component: `mcp-server/docs/events/md/` (human-readable) and `mcp-server/docs/events/json/` (machine-readable), with category tags in `mcp-server/docs/strategies/event-categories.json`. The events surfaced to agents through the knowledge-query tools (`get-events`, `get-diplomatic-events`) are listed in `mcp-server/docs/tools.md`.

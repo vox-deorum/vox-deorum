@@ -48,7 +48,7 @@ Below is the [bridge-service](../bridge-service/overview.md), which the MCP serv
 
 Following the project's documentation rule, this folder explains *what and why* in prose, while exact reference data stays inside the component under `mcp-server/docs/`:
 
-- `docs/TOOLS.md` — every tool, with its category and input parameters.
+- `docs/tools.md` — every tool, with its category and input parameters.
 - `docs/events/` — per-event schemas and descriptions (`md/` and `json/`).
 - `docs/flavors/` — per-flavor deep dives into which AI subsystems each flavor steers.
 - `docs/strategies/` — the economic, military, grand, and flavor strategy reference data.

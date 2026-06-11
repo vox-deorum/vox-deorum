@@ -15,7 +15,7 @@ The Bridge Service acts as a communication hub using three primary channels:
 - **Message Format**: JSON messages delimited by `!@#$%^!`
 - **Batching**: Multiple messages can be sent in a single pipe write, separated by the delimiter
 
-For complete message type reference, see [MESSAGE-TYPES.md](MESSAGE-TYPES.md).
+For complete message type reference, see [message-types.md](message-types.md).
 
 ## Protocol Flows
 
@@ -42,9 +42,9 @@ External Service                Bridge Service                  Community Patch 
 ```
 
 **Message Details:**
-- Request format: See [API-REFERENCE.md](API-REFERENCE.md#execute-single-function)
-- IPC messages: See [MESSAGE-TYPES.md](MESSAGE-TYPES.md#lua-operations)
-- Error codes: See [ERROR-HANDLING.md](ERROR-HANDLING.md)
+- Request format: See [api-reference.md](api-reference.md#execute-single-function)
+- IPC messages: See [message-types.md](message-types.md#lua-operations)
+- Error codes: See [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
 
 #### Batch Function Calls Flow
 
@@ -147,7 +147,7 @@ Game Lua Code                   Community Patch DLL              Bridge Service 
 **Timeout Handling:**
 - Default: 5 seconds (configurable per function)
 - On timeout: Returns error to Lua, function remains registered
-- See [ERROR-HANDLING.md](ERROR-HANDLING.md#call_timeout)
+- See [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
 
 ### 3. Game Event Streaming
 
@@ -178,7 +178,7 @@ Game Event Handler              Community Patch DLL              Bridge Service 
 - Sequence resets each turn, persists across saves
 
 **Blacklisted Events:**
-High-frequency or low-value events are filtered. See [MESSAGE-TYPES.md](MESSAGE-TYPES.md#game-event) for complete list.
+High-frequency or low-value events are filtered. See [message-types.md](message-types.md#game-event) for complete list.
 
 ### 4. Game Pause Control
 
@@ -219,7 +219,7 @@ External Service                Bridge Service                  Community Patch 
 - DLL auto-clears paused players on disconnect (prevents stuck game)
 - Bridge clears paused players on DLL disconnect
 
-See [PROTOCOL.md](#auto-pause-on-player-turn-events) for detailed pause logic.
+See [protocol.md](#auto-pause-on-player-turn-events) for detailed pause logic.
 
 ### Auto-Pause on Player Turn Events
 
@@ -259,7 +259,7 @@ When the DLL receives pause/unpause messages, it maintains an internal set of pa
 
 ## HTTP API Responses
 
-All API endpoints use standardized response format. See [API-REFERENCE.md](API-REFERENCE.md#response-format) for details.
+All API endpoints use standardized response format. See [api-reference.md](api-reference.md#response-format) for details.
 
 ### Success Response
 ```json
@@ -285,7 +285,7 @@ All API endpoints use standardized response format. See [API-REFERENCE.md](API-R
 
 ### Error Codes
 
-Complete error code documentation: [ERROR-HANDLING.md](ERROR-HANDLING.md)
+Complete error code documentation: [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
 
 Quick reference:
 - **DLL_DISCONNECTED**: Bridge lost connection to game DLL
@@ -325,13 +325,13 @@ Quick reference:
 3. Service remains registered for future calls
 4. No automatic retry (handled by calling Lua code)
 
-For detailed recovery strategies, see [ERROR-HANDLING.md](ERROR-HANDLING.md#connection-recovery).
+For detailed recovery strategies, see [error-handling.md](../../docs/developers/bridge-service/error-handling.md).
 
 ## Additional Documentation
 
-- **API Endpoints**: [API-REFERENCE.md](API-REFERENCE.md)
-- **Message Formats**: [MESSAGE-TYPES.md](MESSAGE-TYPES.md)
-- **Configuration**: [CONFIGURATION.md](CONFIGURATION.md)
-- **Error Handling**: [ERROR-HANDLING.md](ERROR-HANDLING.md)
-- **Development**: [DEVELOPMENT.md](DEVELOPMENT.md)
-- **Event Pipe**: [EVENT-PIPE.md](EVENT-PIPE.md)
+- **API Endpoints**: [api-reference.md](api-reference.md)
+- **Message Formats**: [message-types.md](message-types.md)
+- **Configuration**: [configuration.md](../../docs/developers/bridge-service/configuration.md)
+- **Error Handling**: [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
+- **Development**: [bridge-service overview](../../docs/developers/bridge-service/overview.md)
+- **Event Pipe**: [event-pipe.md](event-pipe.md)

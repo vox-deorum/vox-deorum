@@ -1,6 +1,6 @@
 # Stage 5 — Component: mcp-server ✅ DONE
 
-> **Status:** Complete. Wrote all seven pages under `docs/developers/mcp-server/` (`overview.md`, `tools.md`, `knowledge.md`, `database.md`, `events.md`, `influence.md`, `bridge.md`) in prose. Folded `README.md`/`DEVELOPMENT.md` into `overview.md`, `TOOLS.md` prose into `tools.md`, `KNOWLEDGE.md` prose into `knowledge.md`, and `TACTICAL_AI_INFLUENCE.md` "how it works" prose into `influence.md`; wrote `database.md`, `events.md`, and `bridge.md` from `src/`. All reference subfolders (`events/`, `flavors/`, `strategies/`, `enums/`, `diplomacy/`, `influence/`, `database/`, `api/`) and exact per-tool/per-event data left in place and linked, not duplicated. `bridge.md` cross-links the bridge-service `connection.md`/`lua.md` counterparts. Forward references to the not-yet-written `vox-agents/` folder kept as prose (no hyperlink) per the bridge-service convention. All relative links verified. Original source files left for Stage 9 deletion. Note: the auto-pause/resume backlog threshold was described qualitatively ("when the backlog stays large") rather than with the exact in-code number, to follow the no-over-detail writing principle.
+> **Status:** Complete. Wrote all seven pages under `docs/developers/mcp-server/` (`overview.md`, `tools.md`, `knowledge.md`, `database.md`, `events.md`, `influence.md`, `bridge.md`) in prose. Folded `README.md`/`DEVELOPMENT.md` into `overview.md`, `tools.md` prose into `tools.md`, `knowledge.md` prose into `knowledge.md`, and `tactical-ai-influence.md` "how it works" prose into `influence.md`; wrote `database.md`, `events.md`, and `bridge.md` from `src/`. All reference subfolders (`events/`, `flavors/`, `strategies/`, `enums/`, `diplomacy/`, `influence/`, `database/`, `api/`) and exact per-tool/per-event data left in place and linked, not duplicated. `bridge.md` cross-links the bridge-service `connection.md`/`lua.md` counterparts. Forward references to the not-yet-written `vox-agents/` folder kept as prose (no hyperlink) per the bridge-service convention. All relative links verified. Original source files left for Stage 9 deletion. Note: the auto-pause/resume backlog threshold was described qualitatively ("when the backlog stays large") rather than with the exact in-code number, to follow the no-over-detail writing principle.
 >
 > Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
 >
@@ -26,9 +26,9 @@ Create and write `docs/developers/mcp-server/`: the MCP tools and game-data acce
 |---|---|
 | `mcp-server/README.md` | Fold into `overview.md`. |
 | `mcp-server/docs/DEVELOPMENT.md` | Fold into `overview.md`; setup detail also feeds Stage 7 `setup.md`. Delete original in Stage 9. |
-| `mcp-server/docs/TOOLS.md` | Move "how tools are organized" prose into `tools.md`; exact per-tool listings **stay** in `mcp-server/docs/`. |
-| `mcp-server/docs/KNOWLEDGE.md` | Move prose into `knowledge.md`. Delete original in Stage 9 unless it carries exact reference data. |
-| `mcp-server/docs/TACTICAL_AI_INFLUENCE.md` | Lift "how it works" prose into `influence.md`; keep exact reference (tables, formulas) in place. |
+| `mcp-server/docs/tools.md` | Move "how tools are organized" prose into `tools.md`; exact per-tool listings **stay** in `mcp-server/docs/`. |
+| `mcp-server/docs/knowledge.md` | Move prose into `knowledge.md`. Delete original in Stage 9 unless it carries exact reference data. |
+| `mcp-server/docs/tactical-ai-influence.md` | Lift "how it works" prose into `influence.md`; keep exact reference (tables, formulas) in place. |
 | `src/knowledge/`, `src/bridge/` modules | Write `events.md` (per-event schemas stay in `docs/events/`) and `bridge.md` (queued Lua, SSE/event-pipe consumption). |
 | `database.md` | Write game-data access via SQLite/Kysely from source. |
 | `mcp-server/docs/events/`, `flavors/`, `strategies/`, `enums/`, `diplomacy/`, `influence/`, `database/`, `api/` | Keep (component-specific reference). |

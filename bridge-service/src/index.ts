@@ -158,7 +158,7 @@ app.get('/', async (_req: Request, res: Response) => {
         },
         events: 'GET /events (Server-Sent Events)'
       },
-      documentation: 'See README.md and PROTOCOL.md for detailed API documentation'
+      documentation: 'See README.md and protocol.md for detailed API documentation'
     });
   });
 });

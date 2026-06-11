@@ -79,7 +79,7 @@ AI Agents ← MCP Protocol → MCP Server ← HTTP/SSE → Bridge Service ← Na
 - `pause-game` - Pause game during a player's turn
 - `resume-game` - Resume game during a player's turn
 
-> See [docs/TOOLS.md](docs/TOOLS.md) for detailed parameter reference.
+> See [docs/tools.md](docs/tools.md) for detailed parameter reference.
 
 ## Quick Start
 
@@ -168,7 +168,7 @@ Hardcoded settings:
 - Automatic 30s interval saves
 - Event-based knowledge updates from game events
 
-> See [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md) for architecture details.
+> See [docs/knowledge.md](docs/knowledge.md) for architecture details.
 
 ### Error Handling
 - MCP-compliant error responses
@@ -190,7 +190,7 @@ Tests include:
 - Bridge mock responses
 - Database query verification
 
-> See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for testing patterns and debugging.
+> See [testing.md](../docs/developers/testing.md) for testing patterns and debugging.
 
 ## Integration Points
 
@@ -242,10 +242,9 @@ mcp-server/
 │   └── utils/              # Utilities (logger, config, etc.)
 ├── lua/                    # Lua scripts for in-game execution
 ├── tests/                  # Vitest test suite
-├── docs/                   # Documentation
-│   ├── DEVELOPMENT.md      # Development guide
-│   ├── TOOLS.md            # Tool reference
-│   ├── KNOWLEDGE.md        # Knowledge system architecture
+├── docs/                   # Reference documentation
+│   ├── tools.md            # Tool reference
+│   ├── knowledge.md        # Knowledge system architecture
 │   ├── events/             # Game event documentation
 │   ├── flavors/            # AI flavor documentation
 │   ├── strategies/         # Strategy reference data

@@ -26,15 +26,15 @@ The subtle question is leakage: when an agent steers the civilization it speaks 
 
 ## The invariants the analysis rests on
 
-The reference analysis is only valid while a set of structural assumptions hold — for example, that every mutating tool's schema carries an explicit, clamped `PlayerID`; that batched Lua scripts touch a single player rather than iterating all of them; that the Vox Deorum setters don't fire game-event hooks; and that the bridge runs on localhost without auth, which is what makes `lua-executor` and the global pause acceptable. These invariants are written out in `mcp-server/docs/TACTICAL_AI_INFLUENCE.md`; if a change to the server or the DLL violates one, the downstream impact claims need revisiting, and that file is where to check.
+The reference analysis is only valid while a set of structural assumptions hold — for example, that every mutating tool's schema carries an explicit, clamped `PlayerID`; that batched Lua scripts touch a single player rather than iterating all of them; that the Vox Deorum setters don't fire game-event hooks; and that the bridge runs on localhost without auth, which is what makes `lua-executor` and the global pause acceptable. These invariants are written out in `mcp-server/docs/tactical-ai-influence.md`; if a change to the server or the DLL violates one, the downstream impact claims need revisiting, and that file is where to check.
 
 ## Where the details live
 
 This page is the conceptual map. The exact reference — impact matrix, per-tool propagation, per-flavor subsystem tables, thresholds, formulas, and invariants — stays inside the component:
 
-- `mcp-server/docs/TACTICAL_AI_INFLUENCE.md` — the impact matrix and the invariants.
+- `mcp-server/docs/tactical-ai-influence.md` — the impact matrix and the invariants.
 - `mcp-server/docs/influence/` — the per-family deep dives (flavors, diplomacy, forced choices).
 - `mcp-server/docs/flavors/` — one file per flavor, naming the subsystems it steers.
 - `mcp-server/docs/diplomacy/` — diplomacy mechanics (deal impossibility, war planning) the relationship tools interact with.
 
-The tools themselves are described in [tools.md](tools.md) and listed with their parameters in `mcp-server/docs/TOOLS.md`.
+The tools themselves are described in [tools.md](tools.md) and listed with their parameters in `mcp-server/docs/tools.md`.
