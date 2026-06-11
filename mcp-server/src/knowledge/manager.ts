@@ -86,7 +86,7 @@ export class KnowledgeManager {
           // Forward render events as MCP notifications for downstream consumers (e.g., OBS segment recording)
           MCPServer.getInstance().sendNotification(
             renderEvent.event,
-            renderEvent.payload.playerID as number ?? -1,
+            typeof renderEvent.payload.playerID === "number" ? renderEvent.payload.playerID : -1,
             renderEvent.turn,
             -1,
             renderEvent.payload

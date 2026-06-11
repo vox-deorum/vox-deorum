@@ -72,7 +72,7 @@ describe('isObsMode', () => {
 
 describe('isHumanControl', () => {
   it('should return true when a seat uses the human-strategist', () => {
-    expect(isHumanControl(makeConfig({ 7: { strategist: 'human-strategist', mode: 'Strategy' } }))).toBe(true);
+    expect(isHumanControl(makeConfig({ 7: { strategist: 'human-strategist', mode: 'Flavor' } }))).toBe(true);
   });
 
   it('should return true when a human seat is mixed with other strategists', () => {

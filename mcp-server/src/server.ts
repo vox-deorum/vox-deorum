@@ -210,19 +210,19 @@ export class MCPServer {
   /**
    * Send a notification to all clients through MCP notification protocol.
    */
-  public sendNotification(event: string, playerID: number, turn: number, latestID: number, param: Record<string, any> = {}) {
+  public sendNotification(event: string, playerID: number, turn: number, latestID: number, data: Record<string, any> = {}) {
     if (this.eventsForNotification.indexOf(event) !== -1) {
       logger.info(`Sending server-side notification to ${this.servers.size} MCP clients about ${event} (Player ${playerID}) at turn ${turn}.`)
       // Send notification to all connected servers
       this.servers.forEach((server) => {
-        this.sendNotificationTo(server, event, playerID, turn, latestID, param);
+        this.sendNotificationTo(server, event, playerID, turn, latestID, data);
       });
     }
   }
   /**
    * Send a notification to a client through MCP notification protocol.
    */
-  public sendNotificationTo(server: McpServer, event: string, playerID: number, turn: number, latestID: number, param: Record<string, any> = {}) {
+  public sendNotificationTo(server: McpServer, event: string, playerID: number, turn: number, latestID: number, data: Record<string, any> = {}) {
     const rawServer = server.server;
 
     // Use the MCP notification protocol instead of elicitInput
@@ -234,7 +234,7 @@ export class MCPServer {
         playerID: playerID,
         turn: turn,
         latestID: latestID,
-        ...param
+        data: data
       }
     }).catch((_error: unknown) => { })
   }

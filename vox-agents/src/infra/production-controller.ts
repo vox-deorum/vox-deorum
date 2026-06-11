@@ -101,20 +101,33 @@ export class ProductionController {
 
   /**
    * Handle a game render event for segment control.
+   * Expects the MCP notification shape: canonical turn/player metadata at the
+   * top level and event-specific render fields nested under `data`.
    * - Recording: drives start/stop of OBS recording segments.
    * - Livestream: no-op for now (may add scene switching later).
    */
   async handleRenderEvent(event: string, payload: Record<string, unknown>): Promise<void> {
     if (this.mode !== 'recording' || !this.active || !this.obs.isOperational()) return;
 
-    const turn = typeof payload.turn === 'number' ? payload.turn : this.lastTurn;
-    const playerID = typeof payload.playerID === 'number' ? payload.playerID : this.lastPlayerID;
+    if (!payload.data || typeof payload.data !== 'object' || Array.isArray(payload.data)) {
+      throw new Error(`Invalid render event payload for ${event}: expected data object`);
+    }
+    if (typeof payload.turn !== 'number') {
+      throw new Error(`Invalid render event payload for ${event}: expected numeric turn`);
+    }
+    if (typeof payload.playerID !== 'number') {
+      throw new Error(`Invalid render event payload for ${event}: expected numeric playerID`);
+    }
+
+    const eventData = payload.data as Record<string, unknown>;
+    const turn = payload.turn;
+    const playerID = payload.playerID;
 
     // Minor civs (and barbarians, flagged as minor by the Lua listener) don't drive
     // segment state transitions — but we still log their PlayerPanelSwitch inside an
     // active segment so the log reflects who appeared on-screen. Nothing else: no
     // grace extension, no segment start/stop, no lastTurn/lastPlayerID mutation.
-    if (payload.isMinorCiv === true) {
+    if (eventData?.isMinorCiv === true) {
       if (this.segmentActive && event === 'PlayerPanelSwitch') {
         this.logEntry({ event: 'switch', turn, playerID, at: Date.now() });
       }

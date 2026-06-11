@@ -32,6 +32,7 @@ const GameEventNotificationSchema = NotificationSchema.extend({
     turn: z.number(),
     latestID: z.number(),
     gameID: z.string().optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
   }).passthrough()
 });
 
@@ -53,6 +54,7 @@ export interface GameEventNotification extends GameStateNotification {
   turn: number;
   latestID: number;
   gameID?: string;
+  data?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -232,11 +234,14 @@ export class MCPClient extends EventEmitter {
 
       const params = notification.params;
       const { event, playerID, turn } = params;
+      const data = params.data;
+      const gameID = params.gameID ?? (typeof data?.gameID === 'string' ? data.gameID : undefined);
 
       // Trigger the appropriate handler based on event type
       if (event && playerID !== undefined && turn !== undefined) {
         this.emit('notification', {
           ...params,
+          gameID,
           PlayerID: playerID,  // Keep backward compatibility with capitalized field name
           Turn: turn
         });
