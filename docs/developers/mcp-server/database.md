@@ -9,7 +9,7 @@ Civilization V ships its rules as SQLite, and the game writes a debug copy plus 
 - **The main database** (`Civ5DebugDatabase.db`) holds the structured game data — the tables of units, buildings, technologies, policies, strategies, and the rest.
 - **The localization database** (`Localization-Merged.db`) holds the human-readable text for every language, keyed by `TXT_KEY_*` tags.
 
-The server never writes to either; they are the game's data, and the server is purely a consumer. The `DatabaseManager` (`database/manager.ts`) owns both connections, caches them for the life of the session, and is the single point through which database-query tools reach the data. Kysely gives those queries full type-safety against a generated schema definition (`database/database.d.ts`, regenerated with `npm run codegen`).
+The server never writes to either; they are the game's data, and the server is purely a consumer. The `DatabaseManager` (`database/manager.ts`) owns both connections, caches them for the life of the session, and is the single point through which database-query tools reach the data. Kysely gives those queries full type-safety against generated schema definitions — `database/database.d.ts` for the main database and `database/localization.d.ts` for the localization one, both produced by `kysely-codegen` (`npm run codegen` regenerates the localization schema).
 
 ## Localization and TXT_KEY resolution
 

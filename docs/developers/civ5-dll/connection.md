@@ -26,7 +26,7 @@ Every message in either direction is a JSON object with a `type` field that name
 - **`lua_execute`** — run a Lua script string inside the game and return its result, tagged with a caller-supplied `id`.
 - **`lua_call`** — call a previously registered Lua function by name with a JSON array of arguments.
 - **`game_event`** — emitted outward whenever the game fires an event the bridge cares about; each carries a unique event id derived from the current turn and a running sequence number.
-- **External function registration and calls** — the game can register the names of functions the bridge implements, then call out to them (synchronously or asynchronously) and receive results back through the same channel; `echo` and `lua_register`/`lua_unregister` notifications round out the protocol.
+- **External function registration and calls** — the game can register the names of functions the bridge implements, then call out to them (synchronously or asynchronously) and receive results back through the same channel; `lua_register`/`lua_unregister` notifications round out the protocol. Any message whose `type` matches no handler is bounced straight back as an `echo_response`, which doubles as a connectivity check.
 
 Outgoing messages are assembled into a write buffer, serialized, and queued for the pipe thread; incoming messages are deserialized into a read buffer for handling. One sharp edge worth knowing when reading the code: the JSON library returns pointers that alias these shared buffers, so handlers copy any strings they need into stable locals before doing work that might re-enter `RouteMessage` — the comments in the source call this out at each such site.
 

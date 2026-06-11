@@ -43,7 +43,7 @@ Three global registries tie the process together: `agentRegistry` holds every av
 
 Model definitions live in `vox-agents/config.json` under `llms`: each entry maps a key like `openai/gpt-5-mini` to a provider and model name, with a `default` alias and an `embedder` alias for embedding models. The framework is provider-agnostic — OpenRouter, OpenAI, Anthropic, Google, AWS Bedrock, and OpenAI-compatible endpoints are supported, with API keys supplied via `.env` (see `src/utils/models/models.ts`). Agents resolve their model through `getModel()`, so a config can assign different models to different agents, or different strategists to different players in the same game.
 
-Two pieces of middleware sit between agents and providers. Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking, and the tool-rescue middleware (`src/utils/models/tool-rescue.ts`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
+Two pieces of middleware sit between agents and providers. Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking, and the tool-rescue middleware (`src/utils/models/tool-rescue/`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
 
 ## Where this sits in the stack
 

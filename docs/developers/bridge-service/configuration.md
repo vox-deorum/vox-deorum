@@ -8,7 +8,7 @@ A `config.json` looks like this:
 {
   "rest": { "port": 5000, "host": "127.0.0.1" },
   "gamepipe": { "id": "vox-deorum-bridge", "retry": 5000 },
-  "eventpipe": { "enabled": true, "name": "vox-deorum-events" },
+  "eventpipe": { "enabled": false, "name": "vox-deorum-events" },
   "logging": { "level": "info" }
 }
 ```

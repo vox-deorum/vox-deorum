@@ -39,7 +39,7 @@ Features:
 - JSON serialization plugin for complex data types
 - Write serialization via PQueue (concurrency: 1) to prevent conflicts
 - Event validation against Zod schemas
-- Event name remapping (e.g., "PlayerBuilt" → "UnitBuildStart")
+- Event name remapping (e.g., "PlayerBuilt" → "UnitBuildCompleted")
 - Resync handling: drops duplicate events after DLL reconnect
 
 ## Data Types

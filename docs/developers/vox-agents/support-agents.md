@@ -21,7 +21,7 @@ The one concrete analyst today is **`diplomatic-analyst`**, the gatekeeper betwe
 
 ## Librarians: researching the rules
 
-Librarians (`src/librarian/`) answer "what does this thing do?" questions from Civilization V's own rules database, via the MCP server's [database tools](../mcp-server/database.md). **`keyword-librarian`** works in two phases: the LLM reads the briefing contexts it is given and proposes a handful of search keywords (as plain JSON text — no tool calling), then the agent programmatically runs each keyword set through the `search-database` MCP tool and formats the hits. Helper utilities (`src/utils/librarian-utils.ts`) extract suitable search contexts from a player's current briefings, so a librarian can enrich a strategist's view with the game-rule details its situation touches.
+Librarians (`src/librarian/`) answer "what does this thing do?" questions from Civilization V's own rules database, via the MCP server's [database tools](../mcp-server/database.md). **`keyword-librarian`** works in two phases: the LLM reads the briefing contexts it is given and proposes a handful of search keywords (as plain JSON text — no tool calling), then the agent programmatically runs each keyword set through the `search-database` MCP tool and formats the hits. Helper utilities (`src/librarian/librarian-utils.ts`) extract suitable search contexts from a player's current briefings, so a librarian can enrich a strategist's view with the game-rule details its situation touches.
 
 ## How agents call each other
 

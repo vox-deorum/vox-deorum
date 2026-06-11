@@ -37,8 +37,8 @@ const logger = createLogger('KnowledgeStore');
 
 // List of event types renamed for better understanding
 const renamedEventTypes: Record<string, string> = {
-  "PlayerBuilt": "UnitBuildStart",
-  "PlayerBuilding": "UnitBuildCompleted",
+  "PlayerBuilt": "UnitBuildCompleted",
+  "PlayerBuilding": "UnitBuildStart",
   "UnitSetXY": "UnitMoved",
   "EspionageNotificationData": "EspionageResult",
   "CityExtendsWLTKD": "CityExtendsWeLoveKingDay"
