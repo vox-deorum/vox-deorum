@@ -176,9 +176,9 @@ export class HumanStrategist extends Strategist {
       }, parameters);
     }
 
-    // Persona and relationships are forward-looking: their panel sections land
-    // in a later stage, so these only fire once the submission carries them
-    // (spec §2 — the same action space LLM strategists use).
+    // Persona and relationships, like every category above, fire only when the
+    // panel actually submitted them (spec §2 — the same action space LLM
+    // strategists use).
     if (submission.Persona !== undefined) {
       await context.callTool("set-persona", {
         PlayerID: playerID,

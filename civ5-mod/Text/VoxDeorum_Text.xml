@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <GameData>
 	<Language_en_US>
-		<!-- Human-control decision panel (stage 5). Plain language, no identifiers. -->
+		<!-- Human-control decision panel (stages 5-7). Plain language, no identifiers. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_TITLE">
 			<Text>Make Your Decisions</Text>
 		</Row>
@@ -16,18 +16,15 @@
 			<Text>A strategic decision is due. Click to open your decision panel - this starts your deliberation. The game stays paused until you submit.</Text>
 		</Row>
 		<!-- Auto-playing chip: shown between decisions, reporting the last one. -->
-		<Row Tag="TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP">
-			<Text>Auto-playing - last decision T{1_Num}: kept the status quo</Text>
-		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP_RESEARCH">
-			<Text>Auto-playing - last decision T{1_Num}: research set to {2_Str}</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP_DECISION">
+			<Text>Auto-playing - last decision T{1_Num}: {2_Str}</Text>
 		</Row>
 		<!-- Hide button in the dialog title bar. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_HIDE">
 			<Text>Hide</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_HIDE_TT">
-			<Text>Hide this panel to look around. The game stays paused, your typed rationale is kept, and the button above the minimap brings it back.</Text>
+			<Text>Hide this panel to look around. The game stays paused, your staged changes and typed rationale are kept, and the button above the minimap brings it back.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_STATUS_PENDING">
 			<Text>Turn {1_Num} - the game is paused, waiting on your decision.</Text>
@@ -35,34 +32,179 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT">
 			<Text>Why are you making this decision? One rationale covers the whole turn.</Text>
 		</Row>
-		<!-- Next Research category (stage 6). The list, help text, and current tag
-		     all come from the OptionsReport the strategist hands the panel. -->
-		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_HEADER">
+
+		<!-- The six category names: left-nav titles, pane headers, and the
+		     prefixes used in change summaries. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_CAT_STRATEGY">
+			<Text>Grand Strategy</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_CAT_FLAVORS">
+			<Text>Flavors</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_CAT_RESEARCH">
 			<Text>Next Research</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_CAT_POLICY">
+			<Text>Next Policy</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_CAT_PERSONA">
+			<Text>Persona</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_CAT_RELATIONS">
+			<Text>Relationships</Text>
+		</Row>
+
+		<!-- Pane intros. Option help text itself comes from the OptionsReport -
+		     the same descriptive text the LLM strategists receive. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_STRATEGY_INTRO">
+			<Text>The grand strategy sets your civilization's overall direction - the in-game AI weighs all its choices toward this goal. The descriptions below are the same guidance the LLM strategists receive.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_FLAVORS_INTRO">
+			<Text>Flavors tune how the in-game AI runs your empire: 0 forbids an activity, 30 keeps it minimal, 50 is balanced, 70 prioritizes it, 100 makes it an emergency focus. Change only what you mean to change - everything else stays as it is.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_INTRO">
 			<Text>Pick what your scientists research next - the in-game AI handles the rest. This is the same help text the LLM strategists receive.</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_CURRENT_TAG">
+		<Row Tag="TXT_KEY_VD_HUMAN_POLICY_INTRO">
+			<Text>Choose the next social policy your culture will adopt. Opening a new branch commits you to its theme; continuing a branch deepens it. Leave this category unchanged to keep the current choice.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_INTRO">
+			<Text>Persona shapes how your civilization behaves diplomatically - how bold, loyal, forgiving, or competitive the in-game AI acts on your behalf. Values run 1 (low) to 10 (high).</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RELATIONS_INTRO">
+			<Text>Your stance toward each civilization you have met. Public is the stance your diplomats show openly; Private steers how your empire actually treats them. Values run -100 (hostile) to +100 (devoted).</Text>
+		</Row>
+
+		<!-- Shared option-list furniture. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_CURRENT_TAG">
 			<Text>[COLOR_POSITIVE_TEXT](current)[ENDCOLOR]</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_EARLIER_RATIONALE">
+		<Row Tag="TXT_KEY_VD_HUMAN_EARLIER_RATIONALE">
 			<Text>[COLOR_GREY]Your earlier rationale: "{1_Str}"[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PANE_EMPTY">
+			<Text>No options are available in this category right now. You can keep the status quo.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_EMPTY">
 			<Text>No research choices are available right now. You can keep the status quo.</Text>
 		</Row>
+
+		<!-- Collapsible groups (panel-only readability; the LLM sees flat lists). -->
+		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_DOCTRINE">
+			<Text>Military Doctrine</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_COMPOSITION">
+			<Text>Military Composition</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_ECONOMY">
+			<Text>Economy and Development</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_COMPETITIVENESS">
+			<Text>Competitiveness and Ambition</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_WAR">
+			<Text>War and Peace</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_DIPLOMACY">
+			<Text>Diplomacy and Cooperation</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_MINOR">
+			<Text>City-State Relations</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_PERSONALITY">
+			<Text>Personality</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_GROUP_OTHER">
+			<Text>Other</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_GROUP_META_CHANGED">
+			<Text>{1_Num} changed</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_GROUP_META_COUNT">
+			<Text>{1_Num} settings</Text>
+		</Row>
+
+		<!-- Slider furniture: semantic tick labels and the reset button. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_FLAVOR">
+			<Text>[COLOR_GREY]0 forbid, 30 enough, 50 balanced, 70 prioritize, 100 emergency[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_PERSONA">
+			<Text>[COLOR_GREY]1 low, 5 moderate, 10 high[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_REL">
+			<Text>[COLOR_GREY]-100 hostile, 0 neutral, +100 devoted[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RESET">
+			<Text>Reset</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RESET_TT">
+			<Text>Reset this value to what it currently is, removing the staged change.</Text>
+		</Row>
+
+		<!-- Left-nav one-line summaries. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_CHANGES">
+			<Text>{1_Num} changes staged</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_FLAVORS">
+			<Text>{1_Num} priorities, {2_Num} customized</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_PERSONA">
+			<Text>{1_Num} diplomatic traits</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_RELATIONS">
+			<Text>{1_Num} civilizations met</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_RELATIONS_CHANGED">
+			<Text>{1_Num} civilizations changed</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_NONE_QUEUED">
+			<Text>None queued</Text>
+		</Row>
+
+		<!-- Relationships pane. Met leaders' names/portraits are recognition
+		     aids only; the values shown are the human's own stance. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_REL_PUBLIC">
+			<Text>Public Stance</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_REL_PRIVATE">
+			<Text>Private Stance</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_REL_NOTE">
+			<Text>[COLOR_GREY]Set on turn {1_Num}: "{2_Str}"[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_REL_NOTE_NONE">
+			<Text>[COLOR_GREY]No stance set yet - both values neutral.[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_REL_EMPTY">
+			<Text>You have not met any other civilizations yet.</Text>
+		</Row>
+
+		<!-- Footer: the wrapping staged-changes summary. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_STAGED_NONE">
+			<Text>[COLOR_GREY]No changes staged yet - submitting now would keep the status quo.[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_STAGED_SOME">
+			<Text>Staged changes ({1_Num}): {2_Str}</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_STAGED_MORE">
+			<Text>(+{1_Num} more)</Text>
+		</Row>
+
+		<!-- Action buttons. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO">
 			<Text>Keep Status Quo</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT">
-			<Text>Keep everything as it is. This is recorded as a real decision with your rationale - last turn's is filled in by default; edit it if you like.</Text>
+			<Text>Keep everything as it is. This is recorded as a real decision with your rationale - last turn's is filled in by default; edit it if you like. If you have staged changes, a second click confirms discarding them.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_SQ_CONFIRM">
+			<Text>Discard {1_Num} changes?</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_SUBMIT">
 			<Text>Submit Decision</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_SUBMIT_TT">
-			<Text>Submit your chosen research with your rationale. Enabled once you pick a technology different from the current one and type a rationale.</Text>
+			<Text>Submit your staged changes with your rationale. Enabled once at least one change is staged and a rationale is typed.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED">
 			<Text>Decision submitted</Text>
@@ -70,8 +212,153 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED_SUB">
 			<Text>Your civilization resumes auto-play.</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED_SUB_RESEARCH">
-			<Text>Next research set to {1_Str}. Your civilization resumes auto-play.</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED_SUB_DECISION">
+			<Text>{1_Str}. Your civilization resumes auto-play.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_STATUS_QUO">
+			<Text>Kept the status quo</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_BIT_FLAVORS">
+			<Text>{1_Num} flavors</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_BIT_PERSONA">
+			<Text>{1_Num} persona traits</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUM_BIT_RELS">
+			<Text>{1_Num} relationships</Text>
+		</Row>
+
+		<!-- Leader context row (the human civ only). -->
+		<Row Tag="TXT_KEY_VD_HUMAN_UNIQUE_REPLACES">
+			<Text>{1_Str} (replaces {2_Str})</Text>
+		</Row>
+
+		<!-- Plain-language display names where de-PascalCasing a report key is
+		     not enough (spec section 2: no identifiers to memorize). Looked up
+		     dynamically as TXT_KEY_VD_HUMAN_NAME_<UPPERCASED KEY>. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_USENUKE">
+			<Text>Use Nuclear Weapons</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_ANTIAIR">
+			<Text>Anti-Air</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_AIRCARRIER">
+			<Text>Aircraft Carriers</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_WATERCONNECTION">
+			<Text>Water Connections</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_UNITEDNATIONS">
+			<Text>United Nations (Diplomacy)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_MINORCIVCOMPETITIVENESS">
+			<Text>City-State Competitiveness</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_MINORCIVFRIENDLYBIAS">
+			<Text>City-State Friendly Bias</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_MINORCIVNEUTRALBIAS">
+			<Text>City-State Neutral Bias</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_MINORCIVHOSTILEBIAS">
+			<Text>City-State Hostile Bias</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_MINORCIVWARBIAS">
+			<Text>City-State War Bias</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_WORKWITHWILLINGNESS">
+			<Text>Willingness to Work With Others</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_WORKAGAINSTWILLINGNESS">
+			<Text>Willingness to Work Against Others</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_NAME_DENOUNCEWILLINGNESS">
+			<Text>Willingness to Denounce</Text>
+		</Row>
+
+		<!-- Persona descriptions - copied VERBATIM from the set-persona tool's
+		     field descriptions (vox mcp-server), which is the same text the LLM
+		     strategists see. The OptionsReport does not carry these (and adding
+		     them would change the LLM's context), so they live here. Keep in
+		     sync with mcp-server/src/tools/actions/set-persona.ts. Looked up
+		     dynamically as TXT_KEY_VD_HUMAN_PERSONA_<UPPERCASED KEY>. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_VICTORYCOMPETITIVENESS">
+			<Text>How aggressively the AI reacts to others pursuing victories (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_WONDERCOMPETITIVENESS">
+			<Text>How aggressively the AI reacts to others competing for wonders (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_MINORCIVCOMPETITIVENESS">
+			<Text>How aggressively the AI reacts to others competing for city-state influence (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_BOLDNESS">
+			<Text>Military risk-taking, territorial claim, and conquest desire (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_WARBIAS">
+			<Text>Likelihood to plan for or declare offensive war (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_HOSTILEBIAS">
+			<Text>Tendency toward hostile relationships without direct wars (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_WARMONGERHATE">
+			<Text>How negatively AI reacts to warlike behaviors (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_NEUTRALBIAS">
+			<Text>Tendency toward neutral relationships (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_FRIENDLYBIAS">
+			<Text>Tendency toward friendly relationships (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GUARDEDBIAS">
+			<Text>Tendency to be guarded or cautiously defensive in diplomacy (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_AFRAIDBIAS">
+			<Text>Tendency to be afraid of stronger civs (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_DIPLOMATICBALANCE">
+			<Text>Increases relationship with non-competitive civilizations and peaceful resolution of wars (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_FRIENDLINESS">
+			<Text>Desire for friendship declarations and increases maximum DoFs (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_WORKWITHWILLINGNESS">
+			<Text>Tendency to support or collaborate with allies. Increase opinions to shared friends (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_WORKAGAINSTWILLINGNESS">
+			<Text>Tendency to bond over shared enemies and jointly act against them (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_LOYALTY">
+			<Text>Loyalty to allies. Lower values allow for backstabbing (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_MINORCIVFRIENDLYBIAS">
+			<Text>Tendency to be friendly with city-states (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_MINORCIVNEUTRALBIAS">
+			<Text>Tendency to be neutral with city-states (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_MINORCIVHOSTILEBIAS">
+			<Text>Tendency to be hostile with city-states (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_MINORCIVWARBIAS">
+			<Text>Likelihood to attack city-states (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_DENOUNCEWILLINGNESS">
+			<Text>Readiness to denounce other civs (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_FORGIVENESS">
+			<Text>How quickly to forgive past transgressions (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_MEANNESS">
+			<Text>Aggressiveness in general. Demanding/bullying more while less likely to accept peace (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_NEEDINESS">
+			<Text>Desire for support from friends (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_CHATTINESS">
+			<Text>How often they initiate diplomatic contact (1-10)</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_DECEPTIVEBIAS">
+			<Text>Tendency to be deceptively friendly (1-10)</Text>
 		</Row>
 	</Language_en_US>
 </GameData>
