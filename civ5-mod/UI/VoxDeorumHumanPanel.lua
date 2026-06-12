@@ -155,17 +155,19 @@ end
 -- ====================================================== category definitions
 
 -- Panel-only readability grouping; the LLM receives flavors as a flat list.
--- Groups follow the three blocks in mcp-server/docs/strategies/flavors.json.
+-- Groups are organized by human decision intent.
 local FLAVOR_GROUPS = {
-	{ titleKey = "TXT_KEY_VD_HUMAN_FLAVOR_GROUP_DOCTRINE",
-	  keys = { "Offense", "Defense", "UseNuke", "CityDefense", "MilitaryTraining" } },
-	{ titleKey = "TXT_KEY_VD_HUMAN_FLAVOR_GROUP_COMPOSITION",
-	  keys = { "Mobilization", "Recon", "Ranged", "Mobile", "Nuke", "Naval", "NavalRecon",
-	           "Air", "AirCarrier", "Antiair", "Airlift" } },
+	{ titleKey = "TXT_KEY_VD_HUMAN_FLAVOR_GROUP_EXPANSION",
+	  keys = { "Expansion", "Growth", "TileImprovement", "Infrastructure", "NavalGrowth",
+	           "NavalTileImprovement", "WaterConnection" } },
 	{ titleKey = "TXT_KEY_VD_HUMAN_FLAVOR_GROUP_ECONOMY",
-	  keys = { "NavalGrowth", "NavalTileImprovement", "Expansion", "Growth", "TileImprovement",
-	           "Infrastructure", "Production", "Gold", "Science", "Culture", "WaterConnection",
-	           "Happiness", "GreatPeople", "Wonder", "Religion", "Diplomacy", "Spaceship", "Espionage" } },
+	  keys = { "Production", "Gold", "Science", "Culture", "Happiness", "GreatPeople",
+	           "Wonder", "Religion", "Diplomacy", "Spaceship", "Espionage" } },
+	{ titleKey = "TXT_KEY_VD_HUMAN_FLAVOR_GROUP_DOCTRINE",
+	  keys = { "Mobilization", "Offense", "Defense", "CityDefense", "MilitaryTraining", "UseNuke" } },
+	{ titleKey = "TXT_KEY_VD_HUMAN_FLAVOR_GROUP_COMPOSITION",
+	  keys = { "Recon", "Ranged", "Mobile", "Nuke", "Naval", "NavalRecon",
+	           "Air", "AirCarrier", "Antiair", "Airlift" } },
 }
 
 -- Persona groups follow the section comments in set-persona's schema.

@@ -203,11 +203,12 @@ const MOCKUP_DISPLAY = {
   grandStrategyIcons: { "Conquest": "🗡️", "Culture": "🎭", "UnitedNations": "🕊️", "Spaceship": "🚀" },
 
   // Panel-only readability grouping (the LLM receives flavors as a flat list).
-  // Groups follow the three blocks in mcp-server/docs/strategies/flavors.json.
+  // Groups are organized by human decision intent.
   flavorGroups: [
-    { title: "Military Doctrine", keys: ["Offense", "Defense", "UseNuke", "CityDefense", "MilitaryTraining"] },
-    { title: "Military Composition", keys: ["Mobilization", "Recon", "Ranged", "Mobile", "Nuke", "Naval", "NavalRecon", "Air", "AirCarrier", "Antiair", "Airlift"] },
-    { title: "Economy & Development", keys: ["NavalGrowth", "NavalTileImprovement", "Expansion", "Growth", "TileImprovement", "Infrastructure", "Production", "Gold", "Science", "Culture", "WaterConnection", "Happiness", "GreatPeople", "Wonder", "Religion", "Diplomacy", "Spaceship", "Espionage"] }
+    { title: "Expansion and Development", keys: ["Expansion", "Growth", "TileImprovement", "Infrastructure", "NavalGrowth", "NavalTileImprovement", "WaterConnection"] },
+    { title: "Economy Priority", keys: ["Production", "Gold", "Science", "Culture", "Happiness", "GreatPeople", "Wonder", "Religion", "Diplomacy", "Spaceship", "Espionage"] },
+    { title: "Military Doctrine", keys: ["Mobilization", "Offense", "Defense", "CityDefense", "MilitaryTraining", "UseNuke"] },
+    { title: "Military Composition", keys: ["Recon", "Ranged", "Mobile", "Nuke", "Naval", "NavalRecon", "Air", "AirCarrier", "Antiair", "Airlift"] }
   ],
 
   // Persona groups follow the section comments in set-persona's schema.

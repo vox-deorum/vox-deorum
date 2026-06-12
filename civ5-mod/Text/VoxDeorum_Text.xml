@@ -87,6 +87,9 @@
 		</Row>
 
 		<!-- Collapsible groups (panel-only readability; the LLM sees flat lists). -->
+		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_EXPANSION">
+			<Text>Expansion and Development</Text>
+		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_DOCTRINE">
 			<Text>Military Doctrine</Text>
 		</Row>
@@ -94,7 +97,7 @@
 			<Text>Military Composition</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_ECONOMY">
-			<Text>Economy and Development</Text>
+			<Text>Economy Priority</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_COMPETITIVENESS">
 			<Text>Competitiveness and Ambition</Text>
