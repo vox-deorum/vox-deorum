@@ -54,22 +54,22 @@
 		<!-- Pane intros. Option help text itself comes from the OptionsReport -
 		     the same descriptive text the LLM strategists receive. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_STRATEGY_INTRO">
-			<Text>The grand strategy sets your civilization's overall direction - the in-game AI weighs all its choices toward this goal. The descriptions below are the same guidance the LLM strategists receive.</Text>
+			<Text>Your civilization's overall direction - the in-game AI weighs its choices toward this goal.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_FLAVORS_INTRO">
-			<Text>Flavors tune how the in-game AI runs your empire: 0 forbids an activity, 30 keeps it minimal, 50 is balanced, 70 prioritizes it, 100 makes it an emergency focus. Change only what you mean to change - everything else stays as it is.</Text>
+			<Text>Tune how the in-game AI runs your empire: 0 forbids, 50 is balanced, 100 is an emergency focus. Change only what you mean to.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_INTRO">
-			<Text>Pick what your scientists research next - the in-game AI handles the rest. This is the same help text the LLM strategists receive.</Text>
+			<Text>Pick what your scientists research next - the in-game AI handles the rest.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_POLICY_INTRO">
-			<Text>Choose the next social policy your culture will adopt. Opening a new branch commits you to its theme; continuing a branch deepens it. Leave this category unchanged to keep the current choice.</Text>
+			<Text>Choose the next social policy to adopt. A new branch commits to its theme; continuing one deepens it.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_INTRO">
-			<Text>Persona shapes how your civilization behaves diplomatically - how bold, loyal, forgiving, or competitive the in-game AI acts on your behalf. Values run 1 (low) to 10 (high).</Text>
+			<Text>How your civilization behaves diplomatically - how bold, loyal, forgiving, or competitive the AI acts. Values run 1 (low) to 10 (high).</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_RELATIONS_INTRO">
-			<Text>Your stance toward each civilization you have met. Public is the stance your diplomats show openly; Private steers how your empire actually treats them. Values run -100 (hostile) to +100 (devoted).</Text>
+			<Text>Your stance toward each civilization you have met. Public is shown openly; Private steers how your empire treats them. Range -100 to +100.</Text>
 		</Row>
 
 		<!-- Shared option-list furniture. -->
@@ -99,20 +99,20 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_FLAVOR_GROUP_ECONOMY">
 			<Text>Economy Priority</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_COMPETITIVENESS">
-			<Text>Competitiveness and Ambition</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_AMBITION">
+			<Text>Strategic Ambition</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_WAR">
-			<Text>War and Peace</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_MAJOR_APPROACH">
+			<Text>Major-Civ Approach</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_DIPLOMACY">
-			<Text>Diplomacy and Cooperation</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_TRUST">
+			<Text>Cooperation and Trust</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_MINOR">
-			<Text>City-State Relations</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_CITY_STATE">
+			<Text>City-State Policy</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_PERSONALITY">
-			<Text>Personality</Text>
+		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_GROUP_TEMPERAMENT">
+			<Text>Temperament and Pressure</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_GROUP_OTHER">
 			<Text>Other</Text>
@@ -126,13 +126,13 @@
 
 		<!-- Slider furniture: semantic tick labels and the reset button. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_FLAVOR">
-			<Text>[COLOR_GREY]0 forbid, 30 enough, 50 balanced, 70 prioritize, 100 emergency[ENDCOLOR]</Text>
+			<Text>[COLOR_GREY]50 (balanced)[ENDCOLOR]</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_PERSONA">
-			<Text>[COLOR_GREY]1 low, 5 moderate, 10 high[ENDCOLOR]</Text>
+			<Text>[COLOR_GREY]5 (balanced)[ENDCOLOR]</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_REL">
-			<Text>[COLOR_GREY]-100 hostile, 0 neutral, +100 devoted[ENDCOLOR]</Text>
+			<Text>[COLOR_GREY]0 (neutral)[ENDCOLOR]</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_RESET">
 			<Text>Reset</Text>

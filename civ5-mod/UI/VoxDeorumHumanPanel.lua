@@ -170,18 +170,19 @@ local FLAVOR_GROUPS = {
 	           "Air", "AirCarrier", "Antiair", "Airlift" } },
 }
 
--- Persona groups follow the section comments in set-persona's schema.
+-- Panel-only readability grouping; the LLM receives persona as a flat list.
+-- Groups are organized by human decision intent.
 local PERSONA_GROUPS = {
-	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_COMPETITIVENESS",
+	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_AMBITION",
 	  keys = { "VictoryCompetitiveness", "WonderCompetitiveness", "MinorCivCompetitiveness", "Boldness" } },
-	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_WAR",
-	  keys = { "WarBias", "HostileBias", "WarmongerHate", "NeutralBias", "FriendlyBias", "GuardedBias", "AfraidBias" } },
-	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_DIPLOMACY",
-	  keys = { "DiplomaticBalance", "Friendliness", "WorkWithWillingness", "WorkAgainstWillingness", "Loyalty" } },
-	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_MINOR",
+	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_MAJOR_APPROACH",
+	  keys = { "WarBias", "HostileBias", "NeutralBias", "FriendlyBias", "GuardedBias", "AfraidBias" } },
+	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_TRUST",
+	  keys = { "DiplomaticBalance", "Friendliness", "WorkWithWillingness", "WorkAgainstWillingness", "Loyalty", "DeceptiveBias" } },
+	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_CITY_STATE",
 	  keys = { "MinorCivFriendlyBias", "MinorCivNeutralBias", "MinorCivHostileBias", "MinorCivWarBias" } },
-	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_PERSONALITY",
-	  keys = { "DenounceWillingness", "Forgiveness", "Meanness", "Neediness", "Chattiness", "DeceptiveBias" } },
+	{ titleKey = "TXT_KEY_VD_HUMAN_PERSONA_GROUP_TEMPERAMENT",
+	  keys = { "WarmongerHate", "DenounceWillingness", "Forgiveness", "Meanness", "Neediness", "Chattiness" } },
 }
 
 local TICKS_FLAVOR = "TXT_KEY_VD_HUMAN_TICKS_FLAVOR"
@@ -641,6 +642,23 @@ end
 
 -- ============================================================== pane renderers
 
+-- The great-person whose portrait stands in for each grand strategy / victory
+-- type, keyed by the report's enum name. Vox Populi's Great Diplomat marks the
+-- diplomatic (United Nations) path. Rendered into the row's icon slot like the
+-- research/policy icons; an unmapped or missing unit just shows no icon.
+local GRAND_STRATEGY_UNITS = {
+	Conquest      = "UNIT_GREAT_GENERAL",
+	Culture       = "UNIT_ARTIST",
+	UnitedNations = "UNIT_GREAT_DIPLOMAT",
+	Spaceship     = "UNIT_SCIENTIST",
+}
+
+local function greatPersonIconHook(unitType)
+	local row = unitType ~= nil and GameInfo.Units[unitType] or nil
+	if row == nil or IconHookup == nil then return nil end
+	return function(icon) return IconHookup(row.PortraitIndex, 45, row.IconAtlas, icon) end
+end
+
 local function renderStrategyPane()
 	addText(Locale.ConvertTextKey("TXT_KEY_VD_HUMAN_STRATEGY_INTRO"))
 	local strategy = m_options and m_options.Strategy
@@ -665,6 +683,7 @@ local function renderStrategyPane()
 			key = name,
 			name = displayNameFor(name),
 			help = toMarkup(grandStrategies[name]),
+			hookIcon = greatPersonIconHook(GRAND_STRATEGY_UNITS[name]),
 		})
 	end
 	addOptionList(entries, currentGrandStrategy(), m_staged.GrandStrategy, function(key)
@@ -715,8 +734,8 @@ local function renderFlavorsPane()
 		group.applyVisibility()
 	end
 
-	for index, group in ipairs(FLAVOR_GROUPS) do
-		addFlavorGroup(group.titleKey, group.keys, index == 1)
+	for _, group in ipairs(FLAVOR_GROUPS) do
+		addFlavorGroup(group.titleKey, group.keys, true)
 	end
 	local leftovers = {}
 	for key in pairs(descriptions) do
@@ -724,7 +743,7 @@ local function renderFlavorsPane()
 	end
 	table.sort(leftovers)
 	if #leftovers > 0 then
-		addFlavorGroup("TXT_KEY_VD_HUMAN_GROUP_OTHER", leftovers, false)
+		addFlavorGroup("TXT_KEY_VD_HUMAN_GROUP_OTHER", leftovers, true)
 	end
 end
 
@@ -861,8 +880,8 @@ local function renderPersonaPane()
 		group.applyVisibility()
 	end
 
-	for index, group in ipairs(PERSONA_GROUPS) do
-		addPersonaGroup(group.titleKey, group.keys, index == 1)
+	for _, group in ipairs(PERSONA_GROUPS) do
+		addPersonaGroup(group.titleKey, group.keys, true)
 	end
 	local leftovers = {}
 	for key, value in pairs(persona) do
@@ -870,7 +889,7 @@ local function renderPersonaPane()
 	end
 	table.sort(leftovers)
 	if #leftovers > 0 then
-		addPersonaGroup("TXT_KEY_VD_HUMAN_GROUP_OTHER", leftovers, false)
+		addPersonaGroup("TXT_KEY_VD_HUMAN_GROUP_OTHER", leftovers, true)
 	end
 end
 
@@ -1005,24 +1024,27 @@ local function populateLeaderContext()
 		local civ = GameInfo.Civilizations[player:GetCivilizationType()]
 		local leader = GameInfo.Leaders[player:GetLeaderType()]
 
-		Controls.LeaderName:SetText(Locale.ConvertTextKey("TXT_KEY_RANDOM_LEADER_CIV",
-			Locale.Lookup(leader.Description), Locale.Lookup(civ.ShortDescription)))
+		local leaderLine = Locale.ConvertTextKey("TXT_KEY_RANDOM_LEADER_CIV",
+			Locale.Lookup(leader.Description), Locale.Lookup(civ.ShortDescription))
 
 		local hasPortrait = IconHookup ~= nil
 			and IconHookup(leader.PortraitIndex, 64, leader.IconAtlas, Controls.LeaderPortrait) or false
 		Controls.LeaderPortrait:SetHide(not hasPortrait)
 
+		-- Fold the trait's short name onto the leader line (saving a row); the
+		-- full trait description sits directly beneath it.
 		local traitLink = GameInfo.Leader_Traits{ LeaderType = leader.Type }()
 		local trait = traitLink ~= nil and GameInfo.Traits[traitLink.TraitType] or nil
 		if trait ~= nil then
-			Controls.LeaderTraitName:SetText("[COLOR_POSITIVE_TEXT]" .. Locale.Lookup(trait.ShortDescription) .. "[ENDCOLOR]")
+			leaderLine = leaderLine .. "  [COLOR_POSITIVE_TEXT]"
+				.. Locale.Lookup(trait.ShortDescription) .. "[ENDCOLOR]"
 			local desc = Locale.Lookup(trait.Description)
 			Controls.LeaderTraitDesc:SetText(desc)
 			Controls.LeaderTraitDesc:SetToolTipString(desc)
 		else
-			Controls.LeaderTraitName:SetText("")
 			Controls.LeaderTraitDesc:SetText("")
 		end
+		Controls.LeaderName:SetText(leaderLine)
 
 		-- Unique unit/building/improvement icons with hover tooltips, like the
 		-- pre-game leader dialog (PopulateUniques.lua's queries, via GameInfo).
@@ -1070,7 +1092,6 @@ local function populateLeaderContext()
 	end)
 	if not ok then
 		Controls.LeaderName:SetText("")
-		Controls.LeaderTraitName:SetText("")
 		Controls.LeaderTraitDesc:SetText("")
 		Controls.LeaderPortrait:SetHide(true)
 	end

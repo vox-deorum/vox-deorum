@@ -48,10 +48,13 @@ game is paused on) and accepted overlay carry the rest.
 
 - Flavors (0–100): slider with semantic tick labels (0 forbid / 30 enough / 50 balanced /
   70 prioritize / 100 emergency) plus −/+ steppers (step 5) — full-range parity with the LLM's
-  action space. Grouped under collapsible subheaders following `flavors.json`'s three blocks:
-  Military Doctrine, Military Composition, Economy & Development (panel-only readability — the
-  LLM sees a flat list).
-- Persona (1–10): same control, step 1, grouped per the `set-persona` schema sections.
+  action space. Grouped under collapsible subheaders by human decision intent: Expansion and
+  Development, Economy Priority, Military Doctrine, and Military Composition (panel-only
+  readability — the LLM sees a flat list).
+- Persona (1–10): same control, step 1, grouped by human decision intent: Strategic Ambition,
+  Major-Civ Approach, Cooperation and Trust, City-State Policy, and Temperament and Pressure.
+  Flavor and persona groups start expanded, while manual collapse state is remembered during
+  pane re-renders.
 - Relationships (−100..+100): per met civ, leader portrait + Public and Private sliders.
 - Grand Strategy / Research / Policy: single-select lists with icons and help text; the current
   selection is tagged and shows its previous rationale. The policy list offers only adoptable

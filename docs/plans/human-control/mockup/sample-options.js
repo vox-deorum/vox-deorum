@@ -211,13 +211,13 @@ const MOCKUP_DISPLAY = {
     { title: "Military Composition", keys: ["Recon", "Ranged", "Mobile", "Nuke", "Naval", "NavalRecon", "Air", "AirCarrier", "Antiair", "Airlift"] }
   ],
 
-  // Persona groups follow the section comments in set-persona's schema.
+  // Persona groups are organized by human decision intent.
   personaGroups: [
-    { title: "Competitiveness & Ambition", keys: ["VictoryCompetitiveness", "WonderCompetitiveness", "MinorCivCompetitiveness", "Boldness"] },
-    { title: "War & Peace", keys: ["WarBias", "HostileBias", "WarmongerHate", "NeutralBias", "FriendlyBias", "GuardedBias", "AfraidBias"] },
-    { title: "Diplomacy & Cooperation", keys: ["DiplomaticBalance", "Friendliness", "WorkWithWillingness", "WorkAgainstWillingness", "Loyalty"] },
-    { title: "City-State Relations", keys: ["MinorCivFriendlyBias", "MinorCivNeutralBias", "MinorCivHostileBias", "MinorCivWarBias"] },
-    { title: "Personality", keys: ["DenounceWillingness", "Forgiveness", "Meanness", "Neediness", "Chattiness", "DeceptiveBias"] }
+    { title: "Strategic Ambition", keys: ["VictoryCompetitiveness", "WonderCompetitiveness", "MinorCivCompetitiveness", "Boldness"] },
+    { title: "Major-Civ Approach", keys: ["WarBias", "HostileBias", "NeutralBias", "FriendlyBias", "GuardedBias", "AfraidBias"] },
+    { title: "Cooperation and Trust", keys: ["DiplomaticBalance", "Friendliness", "WorkWithWillingness", "WorkAgainstWillingness", "Loyalty", "DeceptiveBias"] },
+    { title: "City-State Policy", keys: ["MinorCivFriendlyBias", "MinorCivNeutralBias", "MinorCivHostileBias", "MinorCivWarBias"] },
+    { title: "Temperament and Pressure", keys: ["WarmongerHate", "DenounceWillingness", "Forgiveness", "Meanness", "Neediness", "Chattiness"] }
   ],
 
   // Verbatim from the set-persona tool's field descriptions (what the LLM sees).

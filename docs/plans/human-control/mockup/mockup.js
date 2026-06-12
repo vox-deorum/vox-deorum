@@ -333,7 +333,7 @@
     const ticks = ["0 forbid", "30 enough", "50 balanced", "70 prioritize", "100 emergency"];
     for (let g = 0; g < display.flavorGroups.length; g++) {
       const groupCfg = display.flavorGroups[g];
-      const group = makeGroup(groupCfg.title, isGroupOpen(groupCfg.title, g === 0), "");
+      const group = makeGroup(groupCfg.title, isGroupOpen(groupCfg.title, true), "");
       const refreshMeta = () => {
         const changed = groupCfg.keys.filter(k => state.staged.Flavors[k] !== undefined).length;
         group.meta.textContent = changed > 0 ? `● ${changed} changed` : `${groupCfg.keys.length} flavors`;
@@ -393,7 +393,7 @@
     const ticks = ["1 low", "5 moderate", "10 high"];
     for (let g = 0; g < display.personaGroups.length; g++) {
       const groupCfg = display.personaGroups[g];
-      const group = makeGroup(groupCfg.title, isGroupOpen(groupCfg.title, g === 0), "");
+      const group = makeGroup(groupCfg.title, isGroupOpen(groupCfg.title, true), "");
       const refreshMeta = () => {
         const changed = groupCfg.keys.filter(k => state.staged.Persona[k] !== undefined).length;
         group.meta.textContent = changed > 0 ? `● ${changed} changed` : `${groupCfg.keys.length} traits`;
