@@ -9,13 +9,20 @@ load; use the mockup controls to replay the cycle.
 
 **Interaction model — Civ-native action prompt.** When the strategist calls `present-decision`,
 a pulsing **"⚖ Strategic Decision" button appears above the minimap** — the same slot Civ uses for
-"Choose Production" / "Activate next unit" — and the dialog opens. The game is paused throughout
-(the existing pause machinery; no timeout). **Hide** (or Esc, or clicking the map) closes the
-dialog to inspect the world without losing staged edits; the button stays until the decision is
-submitted, then disappears and a small "auto-playing" chip takes its place. Session state stays
-legible from this corner widget alone (spec §6): the button shows the turn and that the game is
-paused waiting on you, the chip shows auto-play plus the last decision, and the dialog's accepted
-overlay confirms submission.
+"Choose Production" / "Activate next unit". The dialog does **not** pop open on its own: the human
+**clicks the trigger to open it**, and that click is what starts their deliberation timer (so the
+clock measures active engagement, not the moment the decision was surfaced — see spec §4). The game
+is paused throughout (the existing pause machinery; no timeout). **Hide** (or Esc, or clicking the
+map) closes the dialog to inspect the world without losing staged edits; the trigger stays until the
+decision is submitted, then disappears and a small "auto-playing" chip takes its place. Session
+state stays legible from this corner widget alone (spec §6): the button shows the turn and that the
+game is paused waiting on you, the chip shows auto-play plus the last decision, and the dialog's
+accepted overlay confirms submission.
+
+> **Note (in-game, the native end-turn button isn't hijacked).** Truly replacing Civ's "PLEASE
+> WAIT" button would mean re-forking Community Patch's `ActionInfoPanel` (a separate UI context an
+> addin can't reach, already overridden by Vox Populi). The in-game panel therefore renders its own
+> trigger widget in that bottom-right slot, as this mockup does — see stage 5.
 
 **Dialog — master-detail, Civ-style.**
 

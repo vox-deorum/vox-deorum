@@ -5,6 +5,28 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_TITLE">
 			<Text>Make Your Decisions</Text>
 		</Row>
+		<!-- Corner trigger button (bottom-right action slot): opens the dialog and
+		     starts the human's deliberation. Shown while a decision is pending. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_TITLE">
+			<Text>Strategic Decision</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_SUB">
+			<Text>Turn {1_Num} - game paused, click to decide</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_TT">
+			<Text>A strategic decision is due. Click to open your decision panel - this starts your deliberation. The game stays paused until you submit.</Text>
+		</Row>
+		<!-- Auto-playing chip: shown between decisions, reporting the last one. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP">
+			<Text>Auto-playing - last decision T{1_Num}: kept the status quo</Text>
+		</Row>
+		<!-- Hide button in the dialog title bar. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_HIDE">
+			<Text>Hide</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_HIDE_TT">
+			<Text>Hide this panel to look around. The game stays paused, your typed rationale is kept, and the button above the minimap brings it back.</Text>
+		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_STATUS_PENDING">
 			<Text>Turn {1_Num} - the game is paused, waiting on your decision.</Text>
 		</Row>

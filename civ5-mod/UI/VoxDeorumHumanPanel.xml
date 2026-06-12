@@ -1,22 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Vox Deorum human-control decision panel — stage 5 (keep-status-quo only).
+  Vox Deorum human-control decision panel — stage 5 (keep-status-quo only),
+  revised to the approved mockup's trigger-button + hidable-dialog model.
 
-  Modeled on Community Patch's EventChoicePopup.xml (a centered modal Grid over a
-  dimmed top-bar backdrop). The same-named VoxDeorumHumanPanel.lua auto-binds to
-  this context. The panel is hidden on load and shown when the strategist fires
-  LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson). Stage 5 renders
-  only the rationale field and the keep-status-quo action; option categories
+  The same-named VoxDeorumHumanPanel.lua auto-binds to this context. The whole
+  context is hidden on load. When the strategist fires
+  LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson) the corner
+  widget's trigger button appears in the bottom-right action slot — standing in
+  for the native "PLEASE WAIT" button — instead of the dialog popping up. The
+  human clicks the trigger to open the dialog; that click starts their
+  deliberation (the later-plans decision timer). The dialog is hidable (Hide
+  button or Esc) so the human can inspect the world without losing the typed
+  rationale; the trigger stays until a decision is submitted, after which a
+  small "auto-playing" chip reports the last decision. Option categories
   (Submit) arrive in stages 6-7.
 -->
 <Context Font="TwCenMT14" FontStyle="Base" Color="Beige" Color1="Black">
-	<!-- Dim the screen behind the dialog (clears the top bar). -->
-	<Box Style="BGBlock_ClearTopBar"/>
-	<Grid Size="560,360" ID="MainGrid" Anchor="C,C" Offset="0,0" Padding="0,0" Style="Grid9DetailFive140" ConsumeMouse="1">
+
+	<!-- ===== Corner widget: bottom-right action slot, above the minimap ===== -->
+	<!-- This is our own widget rather than a fork of Community Patch's
+	     ActionInfoPanel (the native EndTurnButton/"PLEASE WAIT"): that button
+	     lives in a separate UI context an addin cannot reach and is already
+	     overridden by Vox Populi. The offsets lift the widget above the ~200px
+	     minimap; tune in-game if the placement needs nudging. -->
+	<Box ID="CornerWidget" Anchor="R,B" Offset="10,252" Size="300,88" ConsumeMouse="0">
+		<!-- Pulsing-by-presence decision trigger: clicking it opens the dialog
+		     and starts the human's deliberation. Visible while a decision is
+		     pending; hidden once a decision is submitted. -->
+		<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Style="SmallButton" Size="300,88" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
+			<Label Anchor="C,T" Offset="0,14" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+			<Label Anchor="C,T" Offset="0,52" WrapWidth="284" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="TriggerSub"/>
+		</GridButton>
+		<!-- Auto-playing chip: the game is auto-playing between decisions; shows
+		     the last decision for session-state legibility (spec section 6). -->
+		<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Size="300,38" Color="0,0,0,150" ConsumeMouse="0">
+			<Label Anchor="C,C" Offset="0,0" WrapWidth="288" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="AutoplayChipLabel"/>
+		</Box>
+	</Box>
+
+	<!-- ===== Decision dialog (hidden until the trigger is clicked) ===== -->
+	<!-- The dim backdrop and the grid are toggled together by the Lua (they are
+	     not wrapped in a sized container so each still anchors to the screen). -->
+	<Box ID="DialogDim" Hidden="1" Style="BGBlock_ClearTopBar"/>
+	<Grid Hidden="1" Size="560,360" ID="MainGrid" Anchor="C,C" Offset="0,0" Padding="0,0" Style="Grid9DetailFive140" ConsumeMouse="1">
 		<!-- Side treatments + title, matching the native popup framing. -->
 		<Box Style="MenuLeftSideTreatment"/>
 		<Box Style="MenuRightSideTreatment"/>
-		<Label Style="MenuTitleCaption" TruncateWidth="500" String="TXT_KEY_VD_HUMAN_TITLE" ID="TitleLabel"/>
+		<Label Style="MenuTitleCaption" TruncateWidth="440" String="TXT_KEY_VD_HUMAN_TITLE" ID="TitleLabel"/>
+
+		<!-- Hide: close the dialog to look around. The game stays paused, the
+		     typed rationale is kept, and the trigger button reopens it. -->
+		<GridButton ID="HideButton" Anchor="R,T" Offset="20,16" Size="92,28" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_HIDE_TT">
+			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_HIDE" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+		</GridButton>
 
 		<!-- Status line: whose turn / that a decision is pending (spec section 6). -->
 		<Label Anchor="L,T" Offset="30,52" WrapWidth="500" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="StatusLabel"/>

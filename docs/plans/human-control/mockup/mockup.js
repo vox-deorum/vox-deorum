@@ -44,6 +44,7 @@
     turn: display.session.turn,
     lastDecision: { ...display.session.lastDecision },
     dialogOpen: false,
+    deliberationStarted: false,   // has the human opened the dialog this turn?
     activeCategory: "strategy",
     // Staged (not yet submitted) changes — deltas against the report.
     staged: {
@@ -563,14 +564,22 @@
     $("dev-turn").textContent = state.phase === "pending" ? state.turn : state.lastDecision.turn + 4;
   }
 
-  /** A decision arrives from the strategist (present-decision → LuaEvent). */
+  /**
+   * A decision arrives from the strategist (present-decision → LuaEvent). This
+   * surfaces the trigger button but does NOT open the dialog: the human opens it
+   * themselves by clicking the trigger, and that click is what starts their
+   * deliberation timer (so the clock measures active engagement, not the moment
+   * the decision was merely surfaced). Re-arriving while already pending is a
+   * no-op for the same reason.
+   */
   function decisionArrives() {
     if (state.phase === "accepted") return; // accepted animation still playing
-    if (state.phase === "pending") { setDialogOpen(true); return; }
+    if (state.phase === "pending") return;  // trigger already up; human opens it
     state.turn = state.lastDecision.turn === display.session.lastDecision.turn && state.lastDecision.summary === display.session.lastDecision.summary
       ? display.session.turn
       : state.lastDecision.turn + 4;
     state.phase = "pending";
+    state.deliberationStarted = false;
     clearStaged();
     $("rationale").value = "";
     $("accepted-overlay").classList.add("hidden");
@@ -578,6 +587,15 @@
     updateCorner();
     renderPane();
     updateShell();
+  }
+
+  /** Open the dialog from the trigger; the first open starts deliberation. */
+  function openFromTrigger() {
+    if (!state.deliberationStarted) {
+      state.deliberationStarted = true;
+      // Later plans: this is where the in-game panel signals the strategist that
+      // the human began deliberating, anchoring the recorded decision timer.
+    }
     setDialogOpen(true);
   }
 
@@ -715,7 +733,7 @@
       uniques.appendChild(chip);
     }
 
-    $("trigger-btn").addEventListener("click", () => setDialogOpen(true));
+    $("trigger-btn").addEventListener("click", openFromTrigger);
     $("hide-btn").addEventListener("click", () => setDialogOpen(false));
     $("dialog-backdrop").addEventListener("click", () => setDialogOpen(false));
     document.addEventListener("keydown", (e) => {
