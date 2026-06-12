@@ -4,41 +4,20 @@
 
 ## Objective
 
-Make one real choice end to end: render **Next Research** as a single-select list inside the panel,
-fed by the `present-decision` payload, and submit it through `HumanDecision` → `set-research`.
+Make one real choice end to end: render **Next Research** as a single-select list inside the panel, fed by the `present-decision` payload, and submit it through `HumanDecision` → `set-research`.
 
 ## Native-vs-custom: settled in stage 4
 
-The approved mockup ([mockup/](mockup/README.md)) renders **all option categories in the panel**;
-the native tech-tree/policy-screen hijack this stage originally planned to spike is **dropped**.
-What the spike pre-work had already verified, recorded here as the rationale:
+The approved mockup ([mockup/](mockup/README.md)) renders **all option categories in the panel**; the native tech-tree/policy-screen hijack this stage originally planned to spike is **dropped**. What the spike pre-work had already verified, recorded here as the rationale:
 
-- **Under autoplay the active player IS the observer slot.** `Game.SetAIAutoPlay` activation calls
-  `setActivePlayer(iObserver, ...)` (`CvGame.cpp`); the observer-UI override mirrors visibility and
-  notifications but does not change `Game.GetActivePlayer()`.
-- **The native screens key off the active player.** `TechTree.lua`
-  (`g_activePlayerID = Game.GetActivePlayer()`) and `SocialPolicyPopup.lua`
-  (`Players[Game.GetActivePlayer()]`) would render the *observer's* empty research/policy state,
-  not the human civ's. Launches load Vox Populi + EUI, so the EUI variants (`civ5-dll/UI_bc1/...`)
-  are the ones in effect.
-- **Selections commit as direct game actions.** The screens commit via `Network.SendResearch` /
-  `Network.SendUpdatePolicies` on the active player; there is no LuaEvent hook to capture a choice
-  in passing.
-
-A hijack would therefore mean forking the EUI screens into `civ5-mod` (re-pointing player
-references, replacing the `Network.Send*` commit with a LuaEvent) — an upstream-maintenance cost
-with no parity benefit: the in-panel list shows the **same descriptive help text the LLM
-receives**, which the native screens would not. (Either way, no display-name stripping is needed
-in the human-strategist mapping: `set-policy` strips parenthetical suffixes like `" (New Branch)"`
-/ `" (Policy)"` server-side.)
+- **Under autoplay the active player IS the observer slot.** `Game.SetAIAutoPlay` activation calls `setActivePlayer(iObserver, ...)` (`CvGame.cpp`); the observer-UI override mirrors visibility and notifications but does not change `Game.GetActivePlayer()`.
+- **The native screens key off the active player.** `TechTree.lua`(`g_activePlayerID = Game.GetActivePlayer()`) and `SocialPolicyPopup.lua`(`Players[Game.GetActivePlayer()]`) would render the *observer's* empty research/policy state, not the human civ's. Launches load Vox Populi + EUI, so the EUI variants (`civ5-dll/UI_bc1/...`) are the ones in effect.
+- **Selections commit as direct game actions.** The screens commit via `Network.SendResearch` / `Network.SendUpdatePolicies` on the active player; there is no LuaEvent hook to capture a choice in passing.
 
 ## Work items
 
-- `civ5-mod/Lua/VoxDeorumHumanPanel.lua` / `.xml` — render the Next Research single-select list
-  per the mockup (option rows with icon, name, help text from the `OptionsReport`, and a tag on
-  the current selection), and fold the picked option into the `HumanDecision` payload.
-- `vox-agents/src/strategist/agents/human-strategist.ts` — map the newly submitted field onto its
-  action tool.
+- `civ5-mod/Lua/VoxDeorumHumanPanel.lua` / `.xml` — render the Next Research single-select list per the mockup (option rows with icon, name, help text from the `OptionsReport`, and a tag on the current selection), and fold the picked option into the `HumanDecision` payload.
+- `vox-agents/src/strategist/agents/human-strategist.ts` — map the newly submitted field onto its action tool.
 - Localization additions.
 
 ## Verify
