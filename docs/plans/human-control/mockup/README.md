@@ -8,21 +8,23 @@ load; use the mockup controls to replay the cycle.
 ## The approved design
 
 **Interaction model — Civ-native action prompt.** When the strategist calls `present-decision`,
-a pulsing **"⚖ Strategic Decision" button appears above the minimap** — the same slot Civ uses for
-"Choose Production" / "Activate next unit". The dialog does **not** pop open on its own: the human
+a pulsing **single-line "⚖ Strategic Decision" button appears in the native end-turn ("PLEASE WAIT")
+slot above the minimap, overriding it**. The dialog does **not** pop open on its own: the human
 **clicks the trigger to open it**, and that click is what starts their deliberation timer (so the
 clock measures active engagement, not the moment the decision was surfaced — see spec §4). The game
 is paused throughout (the existing pause machinery; no timeout). **Hide** (or Esc, or clicking the
 map) closes the dialog to inspect the world without losing staged edits; the trigger stays until the
 decision is submitted, then disappears and a small "auto-playing" chip takes its place. Session
-state stays legible from this corner widget alone (spec §6): the button shows the turn and that the
-game is paused waiting on you, the chip shows auto-play plus the last decision, and the dialog's
-accepted overlay confirms submission.
+state stays legible from this corner widget alone (spec §6): the button signals a decision is
+pending, the chip shows auto-play plus the last decision, and the dialog's status line (the turn the
+game is paused on) and accepted overlay carry the rest.
 
-> **Note (in-game, the native end-turn button isn't hijacked).** Truly replacing Civ's "PLEASE
-> WAIT" button would mean re-forking Community Patch's `ActionInfoPanel` (a separate UI context an
-> addin can't reach, already overridden by Vox Populi). The in-game panel therefore renders its own
-> trigger widget in that bottom-right slot, as this mockup does — see stage 5.
+> **Note (in-game, the trigger lands in the native end-turn slot by copying its geometry).** An
+> addin can't reach Community Patch's `ActionInfoPanel` (a separate UI context, already overridden
+> by Vox Populi), so the in-game panel renders its own trigger widget and, at decision time, looks
+> up the native "PLEASE WAIT" `EndTurnButton` and copies its live size/offset onto the trigger
+> (`alignToEndTurnButton`) — overriding that slot without forking the upstream file, with the
+> mockup's static geometry as the fallback. See stage 5.
 
 **Dialog — master-detail, Civ-style.**
 
@@ -37,8 +39,10 @@ accepted overlay confirms submission.
 - Right pane: the selected category's editor, pre-filled from the `OptionsReport`, every option
   carrying the **same descriptive text the LLM prompts receive**.
 - Footer: staged-changes chips with per-change undo, the **single rationale** field (one rationale
-  covers the whole turn — spec §2), **Keep Status Quo**, and **Submit** (enabled once ≥1 change is
-  staged and a rationale is typed; Keep Status Quo also requires a rationale).
+  covers the whole turn — spec §2; **pre-filled with last turn's rationale** so Keep Status Quo
+  isn't blocked on retyping one each turn — the human can edit or replace it), **Keep Status Quo**,
+  and **Submit** (enabled once ≥1 change is staged and a rationale is present; Keep Status Quo also
+  requires a non-empty rationale).
 
 **Controls.**
 

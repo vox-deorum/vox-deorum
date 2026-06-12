@@ -5,13 +5,11 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_TITLE">
 			<Text>Make Your Decisions</Text>
 		</Row>
-		<!-- Corner trigger button (bottom-right action slot): opens the dialog and
-		     starts the human's deliberation. Shown while a decision is pending. -->
+		<!-- Corner trigger button: a single line in the native end-turn ("PLEASE
+		     WAIT") slot above the minimap. Opens the dialog and starts the
+		     human's deliberation. Shown while a decision is pending. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_TITLE">
 			<Text>Strategic Decision</Text>
-		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_SUB">
-			<Text>Turn {1_Num} - game paused, click to decide</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_TT">
 			<Text>A strategic decision is due. Click to open your decision panel - this starts your deliberation. The game stays paused until you submit.</Text>
@@ -37,7 +35,7 @@
 			<Text>Keep Status Quo</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT">
-			<Text>Keep everything as it is. This is recorded as a real decision with your rationale. Type a rationale first.</Text>
+			<Text>Keep everything as it is. This is recorded as a real decision with your rationale - last turn's is filled in by default; edit it if you like.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_SUBMIT">
 			<Text>Submit Decision</Text>

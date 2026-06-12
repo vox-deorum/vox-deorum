@@ -29,12 +29,10 @@
   </div>
 
   <!-- Bottom-right corner: minimap with the decision trigger button above it,
-       in the same slot Civ uses for "Choose Production" / "Activate next unit". -->
+       in the native end-turn ("PLEASE WAIT") slot it stands in for. One short
+       line of text, sized like that button. -->
   <div id="corner">
-    <button id="trigger-btn" class="hidden" type="button">
-      <span class="trigger-title">⚖ Strategic Decision</span>
-      <span class="trigger-sub">Turn <span id="trigger-turn">142</span> — game paused, click to decide</span>
-    </button>
+    <button id="trigger-btn" class="hidden" type="button" title="A strategic decision is due — click to open your decision panel (the game stays paused until you submit)">⚖ Strategic Decision</button>
     <div id="autoplay-chip">▶ Auto-playing · <span id="autoplay-last">last decision T138: Research → Currency ✓</span></div>
     <div class="fake-minimap">
       <div class="fake-minimap-label">MINIMAP</div>

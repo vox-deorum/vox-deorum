@@ -17,25 +17,28 @@
 -->
 <Context Font="TwCenMT14" FontStyle="Base" Color="Beige" Color1="Black">
 
-	<!-- ===== Corner widget: bottom-right action slot, above the minimap ===== -->
-	<!-- This is our own widget rather than a fork of Community Patch's
-	     ActionInfoPanel (the native EndTurnButton/"PLEASE WAIT"): that button
-	     lives in a separate UI context an addin cannot reach and is already
-	     overridden by Vox Populi. The offsets lift the widget above the ~200px
-	     minimap; tune in-game if the placement needs nudging. -->
-	<Box ID="CornerWidget" Anchor="R,B" Offset="10,252" Size="300,88" ConsumeMouse="0">
-		<!-- Pulsing-by-presence decision trigger: clicking it opens the dialog
-		     and starts the human's deliberation. Visible while a decision is
-		     pending; hidden once a decision is submitted. -->
-		<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Style="SmallButton" Size="300,88" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
-			<Label Anchor="C,T" Offset="0,14" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-			<Label Anchor="C,T" Offset="0,52" WrapWidth="284" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="TriggerSub"/>
-		</GridButton>
-		<!-- Auto-playing chip: the game is auto-playing between decisions; shows
-		     the last decision for session-state legibility (spec section 6). -->
-		<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Size="300,38" Color="0,0,0,150" ConsumeMouse="0">
-			<Label Anchor="C,C" Offset="0,0" WrapWidth="288" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="AutoplayChipLabel"/>
-		</Box>
+	<!-- ===== Corner widget: the native end-turn ("PLEASE WAIT") slot ===== -->
+	<!-- Our own widget rather than a fork of Community Patch's ActionInfoPanel:
+	     the native EndTurnButton lives in a separate UI context an addin cannot
+	     reach and is already overridden by Vox Populi. Instead the trigger and
+	     chip anchor to the bottom-right exactly like that button, and the Lua
+	     copies the live native EndTurnButton size/offset (alignToEndTurnButton)
+	     so the trigger lands in that slot above the minimap and effectively
+	     overrides the "PLEASE WAIT" button. The static geometry below is the
+	     fallback when the native button can't be reached; tune it in-game if the
+	     placement needs nudging. The trigger and chip share the slot (only one is
+	     shown at a time). -->
+	<!-- Pulsing-by-presence decision trigger: clicking it opens the dialog and
+	     starts the human's deliberation. Visible while a decision is pending;
+	     hidden once a decision is submitted. One short line of text, matching the
+	     native button it stands in for. -->
+	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="10,205" Size="204,46" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
+		<Label Anchor="C,C" Offset="0,0" TruncateWidth="190" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+	</GridButton>
+	<!-- Auto-playing chip: shown in the same slot once a decision is submitted;
+	     reports the last decision for session-state legibility (spec section 6). -->
+	<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Offset="10,205" Size="204,38" Color="0,0,0,150" ConsumeMouse="0">
+		<Label Anchor="C,C" Offset="0,0" WrapWidth="196" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="AutoplayChipLabel"/>
 	</Box>
 
 	<!-- ===== Decision dialog (hidden until the trigger is clicked) ===== -->

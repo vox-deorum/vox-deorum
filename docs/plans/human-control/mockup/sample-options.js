@@ -285,9 +285,11 @@ const MOCKUP_DISPLAY = {
     "DenounceWillingness": "Willingness to Denounce"
   },
 
-  // Session context for the status line (spec §6).
+  // Session context for the status line (spec §6). lastRationale pre-fills the
+  // rationale box on the next decision turn so Keep Status Quo is not blocked.
   session: {
     turn: 142,
-    lastDecision: { turn: 138, summary: "Research → Currency" }
+    lastDecision: { turn: 138, summary: "Research → Currency" },
+    lastRationale: "Stay on the science track and keep trade routes flowing while we are at peace."
   }
 };

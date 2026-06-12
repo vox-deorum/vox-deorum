@@ -43,6 +43,7 @@
     phase: "autoplay",            // autoplay | pending | accepted
     turn: display.session.turn,
     lastDecision: { ...display.session.lastDecision },
+    lastRationale: display.session.lastRationale || "",  // pre-filled next turn
     dialogOpen: false,
     deliberationStarted: false,   // has the human opened the dialog this turn?
     activeCategory: "strategy",
@@ -559,7 +560,6 @@
     $("trigger-btn").classList.toggle("hidden", !pending);
     $("autoplay-chip").classList.toggle("hidden", pending);
     $("autoplay-last").textContent = `last decision T${state.lastDecision.turn}: ${state.lastDecision.summary} ✓`;
-    $("trigger-turn").textContent = state.turn;
     $("topbar-turn").textContent = state.turn;
     $("dev-turn").textContent = state.phase === "pending" ? state.turn : state.lastDecision.turn + 4;
   }
@@ -581,7 +581,9 @@
     state.phase = "pending";
     state.deliberationStarted = false;
     clearStaged();
-    $("rationale").value = "";
+    // Pre-fill last turn's rationale so Keep Status Quo is not blocked on
+    // retyping one each turn; the human can edit or replace it.
+    $("rationale").value = state.lastRationale;
     $("accepted-overlay").classList.add("hidden");
     state.activeCategory = "strategy";
     updateCorner();
@@ -682,6 +684,7 @@
 
     applyToReport(payload);
     state.lastDecision = { turn: state.turn, summary };
+    state.lastRationale = payload.Rationale;   // pre-fills the next decision turn
     state.phase = "accepted";
 
     $("accepted-summary").textContent = summary + ` — “${payload.Rationale}”`;
