@@ -4,7 +4,7 @@ import { HumanDecisionBus, type HumanDecisionSubmission } from "../../src/strate
 describe("HumanDecisionBus", () => {
   it("resolves a pending request with the submission", async () => {
     const bus = new HumanDecisionBus();
-    const submission: HumanDecisionSubmission = { PlayerID: 7, Rationale: "go tall", StatusQuo: true };
+    const submission: HumanDecisionSubmission = { PlayerID: 7, Rationale: "go tall", DeliberationMs: 1234, StatusQuo: true };
 
     const waiting = bus.request(7);
     expect(bus.isPending(7)).toBe(true);

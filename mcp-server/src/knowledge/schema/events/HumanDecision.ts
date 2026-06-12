@@ -6,9 +6,9 @@ import { z } from 'zod';
  * Fired by the human-control panel (via `Game.BroadcastEvent("HumanDecision", ...)`)
  * to carry a human strategist's decision back to vox-agents. Deliberately
  * permissive: only a numeric `PlayerID` — which is what routes the stored event
- * onward to a notification — and a `Rationale` are required. Everything else is
- * optional and loosely typed so the panel's payload can evolve without events
- * being silently dropped at the schema gate. The store validates with
+ * onward to a notification — plus `Rationale` and `DeliberationMs` are required.
+ * Decision fields are optional and loosely typed so the panel's payload can evolve
+ * without events being silently dropped at the schema gate. The store validates with
  * `.passthrough()`, so any additional fields ride along untouched.
  */
 export const HumanDecision = z.object({
@@ -18,6 +18,8 @@ export const HumanDecision = z.object({
   Rationale: z.string(),
   /** Source turn the decision was made on */
   Turn: z.number().optional(),
+  /** Milliseconds from first opening the decision dialog to submission, measured in-game */
+  DeliberationMs: z.number(),
   /** Explicit keep-status-quo: maintain the current direction (recorded as a real decision) */
   StatusQuo: z.boolean().optional(),
   /** Chosen grand strategy name (part of Flavor mode) */

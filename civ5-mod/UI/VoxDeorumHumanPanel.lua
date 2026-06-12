@@ -40,6 +40,7 @@ local m_turn = -1
 local m_options = nil                -- the turn's OptionsReport (Lua table)
 local m_acceptedTimer = nil          -- nil when not animating the accepted state
 local m_deliberationStarted = false  -- has the human opened the dialog this turn?
+local m_deliberationSeconds = 0      -- seconds from first dialog open to submit
 local m_lastRationale = ""           -- last submitted rationale, pre-filled next turn
 local m_sqArmed = false              -- Keep Status Quo two-click confirm state
 local ACCEPTED_HOLD_SECONDS = 2.5    -- how long the "submitted" overlay lingers
@@ -58,6 +59,7 @@ local m_activeCategory = "strategy"
 local m_navItems = {}                -- { { id, ctrl }, ... } built once per decision
 local m_groupOpen = {}               -- collapsible-group open state, by title key
 local m_groupMetaRefreshers = {}     -- per-render group meta refresh closures
+local onUpdate                       -- forward declaration; openDialog starts it
 
 -- Lazily-built maps from a localized display name to its GameInfo row (for
 -- icon art). The report keys techs/policies by the same localized name
@@ -1106,13 +1108,12 @@ local function setDialogShown(shown)
 end
 
 -- Open the dialog. The first open of a decision turn marks the start of the
--- human's deliberation -- the decision timer the later plans record. The
--- strategist-side wiring lands with those plans; this is the explicit start
--- point (and is intentionally separate from the decision merely being surfaced).
+-- human's deliberation. The update loop accumulates that time locally and the
+-- HumanDecision payload reports it back to the strategist.
 local function openDialog()
 	if not m_deliberationStarted then
 		m_deliberationStarted = true
-		-- Later plans: signal deliberation start to the strategist here.
+		ContextPtr:SetUpdate(onUpdate)
 	end
 	disarmStatusQuo()
 	setDialogShown(true)
@@ -1127,7 +1128,10 @@ end
 
 -- Per-frame timer that retires the accepted overlay, swaps the trigger for the
 -- auto-playing chip, and returns the participant to the auto-playing game.
-local function onUpdate(fDTime)
+function onUpdate(fDTime)
+	if m_deliberationStarted and m_acceptedTimer == nil then
+		m_deliberationSeconds = m_deliberationSeconds + fDTime
+	end
 	if m_acceptedTimer == nil then return end
 	m_acceptedTimer = m_acceptedTimer - fDTime
 	if m_acceptedTimer <= 0 then
@@ -1168,6 +1172,7 @@ local function buildPayload(statusQuo)
 		PlayerID  = m_playerID,
 		Turn      = m_turn,
 		Rationale = Controls.RationaleBox:GetText(),
+		DeliberationMs = math.floor((m_deliberationSeconds * 1000) + 0.5),
 	}
 	if statusQuo then
 		payload.StatusQuo = true
@@ -1297,6 +1302,7 @@ local function showPending(playerID, turn, options)
 	m_options = options
 	m_acceptedTimer = nil
 	m_deliberationStarted = false
+	m_deliberationSeconds = 0
 	m_sqArmed = false
 	clearStaged()
 	ContextPtr:ClearUpdate()

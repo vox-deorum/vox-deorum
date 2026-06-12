@@ -10,7 +10,7 @@
  * The decision round-trip (stage 3): present the turn's options to the in-game
  * panel via `present-decision`, block on the per-session {@link HumanDecisionBus}
  * until the human submits, map that submission onto the regular MCP action tools
- * (Flavor mode), and record wall-clock deliberation time. The game stays paused
+ * (Flavor mode), and record in-game measured deliberation time. The game stays paused
  * across the wait — `VoxPlayer.execute` paused it before running us — so an
  * unbounded `await` here simply holds that pause (spec §4, no timeout).
  *
@@ -68,7 +68,6 @@ export class HumanStrategist extends Strategist {
       return "";
     }
 
-    const requestedAt = Date.now();
     const submissionPromise = bus.request(playerID);
     this.logger.warn(`Presenting decision to the human for player ${playerID} on turn ${parameters.turn}; awaiting submission...`, {
       GameID: parameters.gameID,
@@ -102,8 +101,9 @@ export class HumanStrategist extends Strategist {
       throw reason;
     }
 
-    // 4. Wall-clock deliberation time (spec §4 — no foreground/active-time accounting).
-    const deliberationMs = Date.now() - requestedAt;
+    // 4. Deliberation time comes from the panel's active-engagement timer:
+    //    first dialog open -> submission.
+    const deliberationMs = this.resolveDeliberationMs(submission);
     this.logger.warn(`Human decision received for player ${playerID} after ${deliberationMs}ms`, {
       GameID: parameters.gameID,
       PlayerID: playerID,
@@ -202,7 +202,17 @@ export class HumanStrategist extends Strategist {
   }
 
   /**
-   * Record wall-clock deliberation time in both telemetry slots, paralleling
+   * Resolve the panel-reported deliberation time, failing loudly if the event
+   * does not include a valid timer.
+   */
+  private resolveDeliberationMs(submission: HumanDecisionSubmission): number {
+    const reported = Number(submission.DeliberationMs);
+    if (Number.isFinite(reported) && reported >= 0) return Math.round(reported);
+    throw new Error("HumanDecision is missing a valid DeliberationMs value.");
+  }
+
+  /**
+   * Record deliberation time in both telemetry slots, paralleling
    * how token usage is recorded:
    *
    * 1. Per-turn: stashed in `workingMemory` so `VoxPlayer` can write a

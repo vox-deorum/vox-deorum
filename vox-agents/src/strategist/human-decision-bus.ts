@@ -22,9 +22,9 @@ const logger = createLogger("HumanDecisionBus");
 /**
  * A human strategist's submitted decision, as carried by the `HumanDecision`
  * notification's `data` payload. Mirrors the deliberately permissive mcp-server
- * `HumanDecision` event schema: only `Rationale` is guaranteed, and every
- * decision field is optional so the panel's payload can grow over later stages
- * without breaking the bus. Human control runs in Flavor mode only.
+ * `HumanDecision` event schema: `Rationale` and `DeliberationMs` are guaranteed,
+ * and every decision field is optional so the panel's payload can grow over
+ * later stages without breaking the bus. Human control runs in Flavor mode only.
  */
 export interface HumanDecisionSubmission {
   /** The human strategist's player ID (routing field; mirrors the notification). */
@@ -33,6 +33,8 @@ export interface HumanDecisionSubmission {
   Rationale: string;
   /** Source turn the decision was made on. */
   Turn?: number;
+  /** Milliseconds from first opening the decision dialog to submission, measured in-game. */
+  DeliberationMs: number;
   /** Explicit keep-status-quo: maintain the current direction (recorded as a real decision). */
   StatusQuo?: boolean;
   /** Chosen grand strategy name (Flavor mode). */
