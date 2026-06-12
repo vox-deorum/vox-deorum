@@ -5,11 +5,12 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_TITLE">
 			<Text>Make Your Decisions</Text>
 		</Row>
-		<!-- Corner trigger button: a single line in the native end-turn ("PLEASE
-		     WAIT") slot above the minimap. Opens the dialog and starts the
-		     human's deliberation. Shown while a decision is pending. -->
+		<!-- Corner trigger button: fills the native end-turn ("PLEASE WAIT")
+		     button slot above the minimap, overriding it entirely. All-caps to
+		     match that button's style. Opens the dialog and starts the human's
+		     deliberation. Shown while a decision is pending. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_TITLE">
-			<Text>Strategic Decision</Text>
+			<Text>MAKE STRATEGIC DECISION</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_TRIGGER_TT">
 			<Text>A strategic decision is due. Click to open your decision panel - this starts your deliberation. The game stays paused until you submit.</Text>

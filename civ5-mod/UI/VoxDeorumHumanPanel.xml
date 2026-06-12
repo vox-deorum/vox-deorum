@@ -59,7 +59,9 @@
 	     placement needs nudging. The trigger and chip share the slot (only one is
 	     shown at a time). -->
 	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="10,205" Size="204,46" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
-		<Label Anchor="C,C" Offset="0,0" TruncateWidth="190" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+		<!-- WrapWidth (not TruncateWidth) so the longer caption wraps within the
+		     button rather than being clipped to "MAKE STRATEGIC...". -->
+		<Label Anchor="C,C" Offset="0,0" WrapWidth="190" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 	</GridButton>
 	<!-- Auto-playing chip: shown in the same slot once a decision is submitted;
 	     reports the last decision for session-state legibility (spec section 6). -->
