@@ -1,0 +1,396 @@
+/* Human-control decision panel mockup — Civ-flavored styling.
+   The fake game screen is backdrop only; the dialog + trigger button are the
+   design under review. */
+
+* { box-sizing: border-box; }
+
+:root {
+  --panel-bg: #211a12;
+  --panel-bg-2: #2b2218;
+  --panel-bg-3: #352a1d;
+  --gold: #c9a85c;
+  --gold-dim: #8a7340;
+  --text: #e8dcc0;
+  --text-dim: #b0a283;
+  --accent: #6fae62;
+  --changed: #e0b341;
+  --danger: #c4584d;
+  --serif: Georgia, "Times New Roman", serif;
+  --sans: "Segoe UI", Tahoma, sans-serif;
+}
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  font-family: var(--sans);
+  color: var(--text);
+  background: #0d0b08;
+  overflow: hidden;
+}
+
+/* ======================= Fake game screen ======================= */
+
+#game-screen { position: fixed; inset: 0; }
+
+.fake-map {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 40% 35% at 22% 30%, #3f5d33 0%, transparent 70%),
+    radial-gradient(ellipse 35% 30% at 70% 60%, #4a6b3a 0%, transparent 70%),
+    radial-gradient(ellipse 28% 22% at 48% 25%, #6b6243 0%, transparent 70%),
+    radial-gradient(ellipse 30% 28% at 85% 20%, #3f5d33 0%, transparent 70%),
+    linear-gradient(160deg, #1d3a52 0%, #234a66 45%, #1b3950 100%);
+  filter: saturate(0.85) brightness(0.9);
+}
+
+.fake-topbar {
+  position: absolute; top: 0; left: 0; right: 0; height: 30px;
+  display: flex; align-items: center; gap: 18px; padding: 0 14px;
+  background: linear-gradient(#1b150e, #241c12);
+  border-bottom: 1px solid var(--gold-dim);
+  font-size: 13px; color: var(--text-dim);
+}
+.fake-topbar-turn { margin-left: auto; color: var(--text); }
+
+/* Bottom-right corner: trigger button sits above the minimap, the same slot
+   Civ uses for "Choose Production" / "Activate next unit" prompts. */
+#corner {
+  position: absolute; right: 14px; bottom: 14px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  width: 252px;
+}
+
+.fake-minimap {
+  height: 150px;
+  border: 2px solid var(--gold-dim); border-radius: 4px;
+  background:
+    radial-gradient(ellipse 45% 40% at 30% 40%, #4a6b3a 0%, transparent 70%),
+    radial-gradient(ellipse 35% 35% at 72% 55%, #3f5d33 0%, transparent 70%),
+    linear-gradient(160deg, #16314575 0%, #1d425c 100%), #16314f;
+  position: relative;
+}
+.fake-minimap-label {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #ffffff22; font-size: 18px; letter-spacing: 6px; font-family: var(--serif);
+}
+
+#trigger-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 12px;
+  font-family: var(--serif);
+  background: linear-gradient(#3d2f1c, #2b2113);
+  color: var(--text);
+  border: 2px solid var(--gold); border-radius: 6px;
+  cursor: pointer;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+#trigger-btn:hover { background: linear-gradient(#4a3a22, #332817); }
+.trigger-title { font-size: 16px; color: var(--gold); }
+.trigger-sub { font-size: 11.5px; color: var(--text-dim); }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 4px 1px #c9a85c55; }
+  50%      { box-shadow: 0 0 14px 4px #c9a85caa; }
+}
+
+#autoplay-chip {
+  padding: 6px 10px; text-align: center;
+  font-size: 11.5px; color: var(--text-dim);
+  background: #1b150ecc; border: 1px solid #5a4b2c; border-radius: 6px;
+}
+
+/* Dev controls (mockup-only) */
+#dev-controls {
+  position: absolute; left: 14px; bottom: 14px; width: 320px;
+  padding: 8px 10px;
+  background: #11203acc; border: 1px dashed #4a6e9e; border-radius: 6px;
+  font-size: 12px;
+}
+.dev-title { color: #7fa3d4; margin-bottom: 6px; font-style: italic; }
+#dev-controls button {
+  margin: 0 6px 6px 0; padding: 4px 8px; font-size: 12px;
+  background: #1d3354; color: #cfe0f5; border: 1px solid #4a6e9e; border-radius: 4px;
+  cursor: pointer;
+}
+#dev-controls button:hover { background: #27416b; }
+#dev-log summary { cursor: pointer; color: #7fa3d4; }
+#dev-log pre {
+  max-height: 220px; overflow: auto; margin: 6px 0 0;
+  padding: 6px; background: #0b1525; border-radius: 4px;
+  font-size: 11px; white-space: pre-wrap; word-break: break-word;
+}
+
+/* ======================= The decision dialog ======================= */
+
+#dialog-backdrop {
+  position: fixed; inset: 0; background: #00000066;
+}
+
+#decision-dialog {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(1080px, 94vw); height: min(760px, 92vh);
+  display: flex; flex-direction: column;
+  background: var(--panel-bg);
+  border: 3px solid var(--gold); border-radius: 8px;
+  box-shadow: 0 12px 60px #000000cc;
+}
+
+.hidden { display: none !important; }
+
+/* Title bar */
+#dialog-titlebar {
+  display: flex; align-items: center;
+  padding: 10px 14px;
+  background: linear-gradient(#3a2d1a, #2b2113);
+  border-bottom: 2px solid var(--gold-dim);
+  border-radius: 5px 5px 0 0;
+}
+#dialog-title {
+  flex: 1; text-align: center;
+  font-family: var(--serif); font-size: 22px; letter-spacing: 1px;
+  color: var(--gold);
+}
+#hide-btn {
+  padding: 4px 12px; font-size: 13px;
+  background: #221a10; color: var(--text-dim);
+  border: 1px solid var(--gold-dim); border-radius: 4px; cursor: pointer;
+}
+#hide-btn:hover { color: var(--text); border-color: var(--gold); }
+
+/* Leader context row — same content as the EUI leader-choose dialog at pre-game
+   (leader trait + unique components). The colors below are the mockup's own
+   palette; the in-game panel should instead fit EUI/Civ 5 styling — leader-trait
+   text formatting and IconHookup unit/building/improvement icons — not these. */
+#leader-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 16px;
+  background: var(--panel-bg-2);
+  border-bottom: 1px solid var(--gold-dim);
+}
+.portrait {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-family: var(--serif); font-weight: bold; color: #f3ead2;
+  border: 2px solid var(--gold);
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px #000c;
+}
+.portrait-lg { width: 56px; height: 56px; font-size: 26px; }
+.portrait-sm { width: 38px; height: 38px; font-size: 17px; }
+#leader-text { flex: 1; min-width: 0; }
+#leader-name { font-family: var(--serif); font-size: 18px; color: var(--text); }
+#leader-trait-name { font-family: var(--serif); font-size: 14px; color: var(--gold); margin-top: 3px; }
+#leader-trait-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 1px; line-height: 1.45; }
+
+/* Unique unit/building/improvement chips — icon + name, full help on hover (the
+   `title` tooltip). The pre-game leader dialog lays these out the same way. */
+#leader-uniques { display: flex; gap: 8px; flex-shrink: 0; padding-top: 2px; }
+.unique-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; width: 66px;
+  padding: 6px 4px;
+  background: var(--panel-bg-3);
+  border: 1px solid var(--gold-dim); border-radius: 6px;
+  cursor: help;
+}
+.unique-chip:hover { border-color: var(--gold); }
+.unique-name { font-size: 11px; color: var(--text); text-align: center; line-height: 1.2; }
+.unique-kind { font-size: 9px; color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.4px; }
+
+/* Master-detail body */
+#dialog-body { flex: 1; display: flex; min-height: 0; }
+
+#category-nav {
+  width: 248px; flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--panel-bg-2);
+  border-right: 2px solid var(--gold-dim);
+  padding: 8px 0;
+}
+.nav-item {
+  display: block; width: 100%; text-align: left;
+  padding: 10px 14px;
+  background: none; border: none; border-left: 4px solid transparent;
+  color: var(--text); cursor: pointer;
+}
+.nav-item:hover { background: #3a2d1a66; }
+.nav-item.active { background: var(--panel-bg-3); border-left-color: var(--gold); }
+.nav-item-title {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--serif); font-size: 15.5px;
+}
+.nav-badge { color: var(--changed); font-size: 13px; }
+.nav-item-summary {
+  font-size: 11.5px; color: var(--text-dim); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+#category-pane {
+  flex: 1; overflow-y: auto; padding: 14px 18px;
+  scrollbar-gutter: stable;
+}
+
+.pane-intro { font-size: 12.5px; color: var(--text-dim); margin: 0 0 12px; line-height: 1.5; }
+
+/* Collapsible groups (flavors, persona) */
+details.group { margin-bottom: 10px; border: 1px solid #4a3d26; border-radius: 6px; }
+details.group > summary {
+  cursor: pointer; list-style: none;
+  padding: 8px 12px;
+  font-family: var(--serif); font-size: 15px; color: var(--gold);
+  background: var(--panel-bg-3); border-radius: 5px;
+  display: flex; align-items: center; gap: 8px;
+}
+details.group > summary::before { content: "►"; font-size: 10px; color: var(--gold-dim); }
+details.group[open] > summary::before { content: "▼"; }
+details.group > summary .group-meta { margin-left: auto; font-family: var(--sans); font-size: 11.5px; color: var(--text-dim); }
+details.group > summary .group-meta .nav-badge { margin-right: 4px; }
+.group-body { padding: 4px 12px 10px; }
+
+/* Value rows (flavors / persona / relationships) */
+.value-row {
+  padding: 10px 4px 8px;
+  border-bottom: 1px solid #3a2f1e;
+}
+.value-row:last-child { border-bottom: none; }
+.value-row-head { display: flex; align-items: baseline; gap: 8px; }
+.value-name { font-size: 14px; color: var(--text); }
+.value-name .nav-badge { margin-left: 2px; }
+.value-numbers { margin-left: auto; font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+.value-numbers .new-value { color: var(--changed); font-weight: bold; }
+.value-desc { font-size: 12px; color: var(--text-dim); margin: 2px 0 6px; line-height: 1.45; }
+
+.slider-line { display: flex; align-items: center; gap: 8px; }
+.slider-line input[type="range"] { flex: 1; accent-color: var(--gold); cursor: pointer; }
+.stepper {
+  width: 26px; height: 24px; line-height: 1;
+  background: var(--panel-bg-3); color: var(--text);
+  border: 1px solid var(--gold-dim); border-radius: 4px; cursor: pointer;
+  font-size: 14px;
+}
+.stepper:hover { border-color: var(--gold); }
+.reset-btn {
+  width: 26px; height: 24px; line-height: 1;
+  background: none; color: var(--text-dim);
+  border: 1px solid transparent; border-radius: 4px; cursor: pointer;
+  font-size: 13px; visibility: hidden;
+}
+.value-row.changed .reset-btn { visibility: visible; }
+.reset-btn:hover { color: var(--text); border-color: var(--gold-dim); }
+
+.tick-labels {
+  display: flex; justify-content: space-between;
+  margin: 2px 60px 0 34px;
+  font-size: 10px; color: var(--gold-dim);
+}
+.tick-labels span { flex: 1; text-align: center; }
+.tick-labels span:first-child { text-align: left; }
+.tick-labels span:last-child { text-align: right; }
+
+/* Radio option lists (grand strategy, research, policy) */
+.option-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 10px; margin-bottom: 6px;
+  background: var(--panel-bg-2);
+  border: 1px solid #4a3d26; border-radius: 6px;
+  cursor: pointer;
+}
+.option-row:hover { border-color: var(--gold-dim); background: #32281a; }
+.option-row.selected { border-color: var(--gold); background: var(--panel-bg-3); }
+.option-radio { margin-top: 3px; accent-color: var(--gold); pointer-events: none; }
+.option-icon { font-size: 20px; width: 26px; text-align: center; flex-shrink: 0; }
+.option-text { flex: 1; min-width: 0; }
+.option-name { font-size: 14.5px; color: var(--text); }
+.option-name .current-tag {
+  margin-left: 8px; padding: 1px 7px;
+  font-size: 10.5px; color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 8px;
+  vertical-align: 1px;
+}
+.option-name .rationale-tag { font-size: 11.5px; color: var(--text-dim); font-style: italic; }
+.option-desc { font-size: 12px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; white-space: pre-line; }
+
+/* Relationships */
+.rel-card {
+  display: flex; gap: 12px;
+  padding: 10px 12px; margin-bottom: 8px;
+  background: var(--panel-bg-2);
+  border: 1px solid #4a3d26; border-radius: 6px;
+}
+.rel-card.changed { border-color: var(--changed); }
+.rel-left { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 92px; flex-shrink: 0; }
+.rel-leader { font-size: 12.5px; color: var(--text); text-align: center; }
+.rel-civ { font-size: 11px; color: var(--text-dim); text-align: center; }
+.rel-right { flex: 1; min-width: 0; }
+.rel-note { font-size: 11.5px; color: var(--text-dim); font-style: italic; margin-bottom: 4px; line-height: 1.4; }
+.rel-row-label { font-size: 12px; color: var(--text); width: 52px; flex-shrink: 0; }
+
+/* Footer */
+#dialog-footer {
+  border-top: 2px solid var(--gold-dim);
+  background: var(--panel-bg-2);
+  padding: 8px 14px 12px;
+  border-radius: 0 0 5px 5px;
+}
+#changes-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  min-height: 26px; margin-bottom: 8px;
+  font-size: 12px;
+}
+#changes-label { color: var(--text-dim); flex-shrink: 0; }
+.no-changes { color: var(--text-dim); font-style: italic; }
+.change-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  background: var(--panel-bg-3);
+  border: 1px solid var(--changed); border-radius: 12px;
+  color: var(--text); font-size: 11.5px;
+}
+.chip-undo {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 12px; padding: 0 2px;
+}
+.chip-undo:hover { color: var(--danger); }
+
+#footer-actions { display: flex; gap: 12px; align-items: stretch; }
+#rationale {
+  flex: 1; resize: none;
+  background: #1b150e; color: var(--text);
+  border: 1px solid var(--gold-dim); border-radius: 6px;
+  padding: 7px 10px; font-family: var(--sans); font-size: 13px;
+}
+#rationale:focus { outline: none; border-color: var(--gold); }
+#footer-buttons { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
+#footer-buttons button {
+  padding: 8px 18px;
+  font-family: var(--serif); font-size: 14.5px;
+  border-radius: 6px; cursor: pointer;
+}
+#status-quo-btn {
+  background: var(--panel-bg-3); color: var(--text);
+  border: 1px solid var(--gold-dim);
+}
+#status-quo-btn:hover:not(:disabled) { border-color: var(--gold); }
+#submit-btn {
+  background: linear-gradient(#5a7a3c, #46602e); color: #f3ead2;
+  border: 1px solid #7da45a;
+}
+#submit-btn:hover:not(:disabled) { background: linear-gradient(#67894a, #527036); }
+#footer-buttons button:disabled {
+  opacity: 0.45; cursor: not-allowed;
+}
+
+/* Submission-accepted overlay */
+#accepted-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: #211a12f2; border-radius: 6px;
+  text-align: center;
+}
+.accepted-check {
+  width: 84px; height: 84px; line-height: 84px; border-radius: 50%;
+  font-size: 46px; color: #f3ead2;
+  background: radial-gradient(#6fae62, #46602e);
+  border: 3px solid #9bcf8a;
+}
+.accepted-title { font-family: var(--serif); font-size: 26px; color: var(--gold); }
+.accepted-sub { font-size: 13.5px; color: var(--text); max-width: 70%; line-height: 1.6; }
+.accepted-note { font-size: 12.5px; color: var(--text-dim); font-style: italic; }

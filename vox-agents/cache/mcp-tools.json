@@ -1137,6 +1137,36 @@
     }
   },
   {
+    "name": "present-decision",
+    "description": "Present a turn's strategic options to the in-game human-control panel (fetches get-options and fires VoxDeorumHumanDecision into the game).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "PlayerID": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 21,
+          "description": "ID of the human strategist's player"
+        },
+        "Turn": {
+          "default": -1,
+          "description": "Turn the decision is for (-1 = use server's current turn)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "PlayerID"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "autoComplete": [
+        "PlayerID",
+        "Turn"
+      ]
+    }
+  },
+  {
     "name": "pause-game",
     "description": "Pause the game during the turn of a specific player",
     "inputSchema": {

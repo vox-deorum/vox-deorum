@@ -1,4 +1,4 @@
-# Stage 3 — vox-agents: flesh out `human-strategist` + per-session decision bus
+# Stage 3 — vox-agents: flesh out `human-strategist` + per-session decision bus ✅ DONE
 
 > Part of the human-control plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 

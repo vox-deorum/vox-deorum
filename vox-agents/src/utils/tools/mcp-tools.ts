@@ -19,6 +19,52 @@ import { HeadingConfig } from './json-to-markdown.js';
 const tracer = trace.getTracer('vox-tools');
 
 /**
+ * Return true when the value is a plain object record.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Convert MCP CallToolResult wrappers back into the primitive or structured
+ * value callers expect. The MCP server wraps primitive booleans/strings as a
+ * single text content item, while object and array results ride in
+ * structuredContent.
+ */
+export function unwrapMCPResult(rawResult: unknown): unknown {
+  if (!isRecord(rawResult)) return rawResult;
+  if (rawResult.isError === true) return rawResult;
+
+  if (rawResult.structuredContent !== undefined) {
+    return rawResult.structuredContent;
+  }
+
+  const content = rawResult.content;
+  if (!Array.isArray(content) || content.length !== 1) return rawResult;
+
+  const item = content[0];
+  if (!isRecord(item) || item.type !== "text" || typeof item.text !== "string") {
+    return rawResult;
+  }
+
+  if (item.text === "true") return true;
+  if (item.text === "false") return false;
+  return item.text;
+}
+
+/**
+ * Normalize an MCP tool response all the way to the value returned to
+ * VoxContext.callTool and AI SDK tool callers.
+ */
+export function normalizeMCPToolResult(rawResult: unknown): unknown {
+  const unwrapped = unwrapMCPResult(rawResult);
+  if (isRecord(unwrapped)) {
+    return unwrapped.Result ?? unwrapped;
+  }
+  return unwrapped;
+}
+
+/**
  * Wrap a MCP tool for Vercel AI SDK.
  * Handles schema filtering and parameter injection,
  * and markdown conversion of results.
@@ -97,10 +143,8 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
         logger.info(`Calling tool ${tool.name}...`, args);
 
         // Call the tool
-        var rawResult = await mcpClient.callTool(tool.name, args) as Record<string, unknown>;
-        const structuredResult = rawResult.structuredContent as Record<string, unknown> | undefined;
-        var result: Record<string, unknown> = (structuredResult ?? rawResult) as Record<string, unknown>;
-        result = (result.Result as Record<string, unknown>) ?? result;
+        const rawResult = await mcpClient.callTool(tool.name, args);
+        const result = normalizeMCPToolResult(rawResult);
         logger.debug(`Tool call completed: ${tool.name}`);
 
         span.setAttributes({
@@ -109,7 +153,7 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
         span.setStatus({ code: SpanStatusCode.OK });
 
         // Return results
-        if (typeof(result) === "object" && result !== null) {
+        if (isRecord(result)) {
           const config = (tool._meta as Record<string, unknown>)?.markdownConfig;
           if (Array.isArray(config)) {
             result._markdownConfig = {

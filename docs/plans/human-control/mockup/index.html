@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--
+  Human-control decision panel — stage 4 HTML mockup.
+
+  Open this file directly in a browser (no server, no build step). The page
+  fakes the Civ 5 game screen (map + minimap) purely as a backdrop; everything
+  inside the dialog and the trigger button above the minimap is the design
+  being approved for the in-game panel (stages 5-7).
+
+  See README.md in this folder for the approved design summary, and
+  sample-options.js for the OptionsReport the panel renders.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vox Deorum — Human Decision Panel (Mockup)</title>
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+
+<!-- ======= Fake game screen (backdrop only — not part of the design) ======= -->
+<div id="game-screen">
+  <div class="fake-map"></div>
+
+  <!-- Fake top bar, to anchor the screen visually -->
+  <div class="fake-topbar">
+    <span>🔬 +14</span><span>🪙 102 (+6)</span><span>😀 12</span><span>🎵 +9</span><span>✝ +4</span>
+    <span class="fake-topbar-turn">Turn <span id="topbar-turn">142</span> · 425 AD</span>
+  </div>
+
+  <!-- Bottom-right corner: minimap with the decision trigger button above it,
+       in the same slot Civ uses for "Choose Production" / "Activate next unit". -->
+  <div id="corner">
+    <button id="trigger-btn" class="hidden" type="button">
+      <span class="trigger-title">⚖ Strategic Decision</span>
+      <span class="trigger-sub">Turn <span id="trigger-turn">142</span> — game paused, click to decide</span>
+    </button>
+    <div id="autoplay-chip">▶ Auto-playing · <span id="autoplay-last">last decision T138: Research → Currency ✓</span></div>
+    <div class="fake-minimap">
+      <div class="fake-minimap-label">MINIMAP</div>
+    </div>
+  </div>
+
+  <!-- Dev controls: mockup-only, simulates the session driving the panel -->
+  <div id="dev-controls">
+    <div class="dev-title">mockup controls (not part of the panel)</div>
+    <button id="dev-arrive" type="button">📨 Decision arrives (Turn <span id="dev-turn">142</span>)</button>
+    <button id="dev-reset" type="button">↺ Reset mockup</button>
+    <details id="dev-log">
+      <summary>Game.BroadcastEvent log</summary>
+      <pre id="dev-log-body">— nothing broadcast yet —</pre>
+    </details>
+  </div>
+</div>
+
+<!-- ======= The decision dialog (the design under review) ======= -->
+<div id="dialog-backdrop" class="hidden"></div>
+
+<div id="decision-dialog" class="hidden" role="dialog" aria-labelledby="dialog-title">
+  <!-- Civ-style title bar -->
+  <div id="dialog-titlebar">
+    <span id="dialog-title">Make Your Decisions</span>
+    <button id="hide-btn" type="button" title="Hide this panel — the game stays paused and the button above the minimap brings it back">Hide ▾</button>
+  </div>
+
+  <!-- Leader context row. Same content the EUI leader-choose dialog shows at
+       pre-game (game setup): leader portrait + name, the leader/civ trait (its
+       name and descriptive help), and the civ's unique unit/building/improvement
+       icons with a hover tooltip each. All of it is read from the game's
+       text/civ database (Traits, *_UnitClassOverrides, etc.) exactly as that
+       dialog does; the visible text/icons below are placeholders filled from
+       MOCKUP_DISPLAY.human in sample-options.js. -->
+  <div id="leader-row">
+    <div id="leader-portrait" class="portrait portrait-lg"></div>
+    <div id="leader-text">
+      <div id="leader-name"></div>
+      <div id="leader-trait-name"></div>
+      <div id="leader-trait-desc"></div>
+    </div>
+    <div id="leader-uniques"></div>
+  </div>
+
+  <!-- Master-detail body -->
+  <div id="dialog-body">
+    <nav id="category-nav"></nav>
+    <section id="category-pane"></section>
+  </div>
+
+  <!-- Footer: staged changes, rationale, actions -->
+  <div id="dialog-footer">
+    <div id="changes-row">
+      <span id="changes-label">This turn's changes:</span>
+      <span id="changes-chips"><span class="no-changes">none yet — submitting now would keep the status quo</span></span>
+    </div>
+    <div id="footer-actions">
+      <textarea id="rationale" rows="2" placeholder="Why are you making this decision? One rationale covers the whole turn (it is recorded with every change)."></textarea>
+      <div id="footer-buttons">
+        <button id="status-quo-btn" type="button" title="Keep everything as it is — recorded as a real decision with your rationale">Keep Status Quo</button>
+        <button id="submit-btn" type="button" disabled>Submit Decision</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submission-accepted overlay -->
+  <div id="accepted-overlay" class="hidden">
+    <div class="accepted-check">✓</div>
+    <div class="accepted-title">Decision submitted</div>
+    <div class="accepted-sub" id="accepted-summary"></div>
+    <div class="accepted-note">Rome resumes auto-play…</div>
+  </div>
+</div>
+
+<script src="sample-options.js"></script>
+<script src="mockup.js"></script>
+</body>
+</html>
