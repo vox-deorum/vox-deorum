@@ -1157,6 +1157,8 @@ local function alignToEndTurnButton()
 		local w, h = endTurn:GetSizeVal()
 		local x, y = endTurn:GetOffsetVal()
 		if not w or not h or w <= 0 or h <= 0 then return end
+		local fallbackW = Controls.TriggerButton:GetSizeVal()
+		if fallbackW ~= nil and w < fallbackW then w = fallbackW end
 		Controls.TriggerButton:SetSizeVal(w, h)
 		Controls.TriggerButton:SetOffsetVal(x, y)
 		Controls.AutoplayChip:SetSizeVal(w, 38)
@@ -1322,8 +1324,6 @@ local function showPending(playerID, turn, options)
 	else
 		Controls.RationaleBox:ClearString()
 	end
-	Controls.StatusLabel:LocalizeAndSetText("TXT_KEY_VD_HUMAN_STATUS_PENDING", turn)
-
 	selectCategory("strategy")
 	updateShell()
 	setDialogShown(false)

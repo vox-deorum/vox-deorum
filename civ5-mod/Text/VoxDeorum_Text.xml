@@ -26,9 +26,6 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_HIDE_TT">
 			<Text>Hide this panel to look around. The game stays paused, your staged changes and typed rationale are kept, and the button above the minimap brings it back.</Text>
 		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_STATUS_PENDING">
-			<Text>Turn {1_Num} - the game is paused, waiting on your decision.</Text>
-		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT">
 			<Text>Why are you making this decision? One rationale covers the whole turn.</Text>
 		</Row>
