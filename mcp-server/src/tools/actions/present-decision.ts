@@ -7,9 +7,11 @@
  * presentHumanDecision Lua util (LuaEvents.VoxDeorumHumanDecision). Fetching
  * server-side keeps the strongly-typed get-options output intact end to end: the
  * caller doesn't marshal the report back across the MCP wire just to have it
- * re-serialized here. The game is paused across a human decision and get-options
- * reads cached knowledge, so this is the same snapshot the strategist's context
- * was built from.
+ * re-serialized here. The report is handed to the Lua util as a structured
+ * object; the bridge serializes it for transport and the DLL rebuilds it as a
+ * Lua table for the panel (no JSON parsing in Lua). The game is paused across a
+ * human decision and get-options reads cached knowledge, so this is the same
+ * snapshot the strategist's context was built from.
  *
  * It records no game decision — the human's actual submission rides back in on the
  * HumanDecision event and is enacted through the regular action tools.
@@ -54,9 +56,10 @@ class PresentDecisionTool extends ToolBase {
     if (!getOptions) throw new Error("get-options tool is not registered");
     const report = await getOptions.execute({ PlayerID: args.PlayerID, Mode: "Flavor" });
 
-    const optionsJson = JSON.stringify(report);
-
-    const response = await presentHumanDecision(args.PlayerID, turn, optionsJson);
+    // Hand the report off as a structured object. The bridge JSON-serializes it
+    // for transport and the DLL converts it to a Lua table for the panel, so the
+    // panel reads its fields directly rather than parsing JSON in Lua.
+    const response = await presentHumanDecision(args.PlayerID, turn, report);
     return response.success;
   }
 }

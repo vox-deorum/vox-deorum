@@ -26,12 +26,12 @@
   <Blocks />
   <Files>
     <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
-    <File md5="FA71A5289399994E49BBA74697D7F2B5" import="0">Text/VoxDeorum_Text.xml</File>
+    <File md5="E275D2B56B53585F27A49F0D40F6119E" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
-    <File md5="206D62599B53E339A71A7B70DAAD85B8" import="1">UI/VoxDeorumHumanPanel.lua</File>
-    <File md5="D9218CB58170AC10E7D4237B1697C86B" import="0">UI/VoxDeorumHumanPanel.xml</File>
+    <File md5="EA54B67F450F18602153364F39FBC92A" import="1">UI/VoxDeorumHumanPanel.lua</File>
+    <File md5="CE39678DF3705DA33E2840EC7506DFFE" import="0">UI/VoxDeorumHumanPanel.xml</File>
   </Files>
   <Actions>
     <OnModActivated>

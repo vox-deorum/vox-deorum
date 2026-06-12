@@ -18,6 +18,9 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP">
 			<Text>Auto-playing - last decision T{1_Num}: kept the status quo</Text>
 		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP_RESEARCH">
+			<Text>Auto-playing - last decision T{1_Num}: research set to {2_Str}</Text>
+		</Row>
 		<!-- Hide button in the dialog title bar. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_HIDE">
 			<Text>Hide</Text>
@@ -31,6 +34,23 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT">
 			<Text>Why are you making this decision? One rationale covers the whole turn.</Text>
 		</Row>
+		<!-- Next Research category (stage 6). The list, help text, and current tag
+		     all come from the OptionsReport the strategist hands the panel. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_HEADER">
+			<Text>Next Research</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_INTRO">
+			<Text>Pick what your scientists research next - the in-game AI handles the rest. This is the same help text the LLM strategists receive.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_CURRENT_TAG">
+			<Text>[COLOR_POSITIVE_TEXT](current)[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_EARLIER_RATIONALE">
+			<Text>[COLOR_GREY]Your earlier rationale: "{1_Str}"[ENDCOLOR]</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RESEARCH_EMPTY">
+			<Text>No research choices are available right now. You can keep the status quo.</Text>
+		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO">
 			<Text>Keep Status Quo</Text>
 		</Row>
@@ -41,13 +61,16 @@
 			<Text>Submit Decision</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_SUBMIT_TT">
-			<Text>Submit your staged changes. Choosing among options arrives in a later version of the panel; for now, use Keep Status Quo.</Text>
+			<Text>Submit your chosen research with your rationale. Enabled once you pick a technology different from the current one and type a rationale.</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED">
 			<Text>Decision submitted</Text>
 		</Row>
 		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED_SUB">
 			<Text>Your civilization resumes auto-play.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED_SUB_RESEARCH">
+			<Text>Next research set to {1_Str}. Your civilization resumes auto-play.</Text>
 		</Row>
 	</Language_en_US>
 </GameData>

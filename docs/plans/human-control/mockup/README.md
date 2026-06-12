@@ -64,8 +64,12 @@ tech-tree/policy-screen hijack explored in stage 6's spike is **not** part of th
 
 ## What the panel receives and emits
 
-- **In:** `LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson)` where `optionsJson` is
+- **In:** `LuaEvents.VoxDeorumHumanDecision(playerID, turn, options)` where `options` is
   the Flavor-mode `OptionsReport` from `get-options`, fetched server-side by `present-decision`.
+  (Implemented in stage 6 as a native Lua table — `present-decision` hands the report off as a
+  structured object and the DLL converts it from the bridge's JSON to a table, so the panel reads
+  `options.Options.Technologies` etc. directly, with no JSON parsing in Lua. The mockup itself uses
+  a plain JS object, [sample-options.js](sample-options.js), which mirrors the same shape.)
   [sample-options.js](sample-options.js) carries a realistic mid-game report with the real
   descriptive text (copied from `mcp-server/docs/strategies/*.json` and the `set-persona` field
   descriptions). `MOCKUP_DISPLAY` in the same file holds what the real panel gets from the game

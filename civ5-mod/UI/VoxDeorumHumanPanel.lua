@@ -1,36 +1,36 @@
--- Vox Deorum human-control decision panel -- stage 5 (keep-status-quo only),
--- revised to the approved mockup's trigger-button + hidable-dialog model.
+-- Vox Deorum human-control decision panel -- stage 6 (one real option category:
+-- Next Research), building on stage 5's trigger-button + hidable-dialog model.
 --
 -- Auto-binds to VoxDeorumHumanPanel.xml. The addin always loads but stays
 -- dormant until the strategist's present-decision tool fires
--- LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson).
+-- LuaEvents.VoxDeorumHumanDecision(playerID, turn, options). `options` is the
+-- Flavor-mode OptionsReport delivered as a Lua table: present-decision hands the
+-- report to the bridge as a structured value and the DLL converts it to a table
+-- (ConvertJsonToLuaValue), so we read options.Options.Technologies and
+-- options.Technology directly -- no JSON parsing in Lua.
 --
 -- The decision does NOT pop the dialog open. Instead a single-line trigger
 -- button appears in the native end-turn ("PLEASE WAIT") slot above the minimap,
 -- standing in for that button. We use our own widget rather than forking
 -- Community Patch's ActionInfoPanel/EndTurnButton: that button lives in a
 -- separate UI context an addin cannot reach and is already overridden by Vox
--- Populi, so replacing it would mean re-forking an upstream file (the cost stage
--- 6 rejected for the native screens). Instead alignToEndTurnButton copies the
--- native button's live size/offset onto our trigger so it lands in exactly that
--- slot. The human clicks the trigger to OPEN the dialog; that click
--- is the start of their deliberation -- the decision timer the later plans
--- record (spec section 4's wall-clock starts when the human chooses to engage,
--- not merely when the decision is surfaced). The strategist-side telemetry
--- wiring lands with those plans; here the trigger is the explicit start point.
+-- Populi, so replacing it would mean re-forking an upstream file. Instead
+-- alignToEndTurnButton copies the native button's live size/offset onto our
+-- trigger so it lands in exactly that slot. The human clicks the trigger to OPEN
+-- the dialog; that click is the start of their deliberation (spec section 4's
+-- wall-clock starts when the human chooses to engage). The strategist-side
+-- telemetry wiring lands with a later plan; here the trigger is the start point.
 --
--- The dialog is hidable (Hide button or Esc) so the human can inspect the world
--- without losing the typed rationale; the trigger stays until a decision is
--- submitted. On a keep-status-quo submission it fires
--- Game.BroadcastEvent("HumanDecision", {...}) -- the same fire-and-forget idiom
--- VoxDeorumTest.lua uses -- shows the accepted overlay, then retires the dialog
--- and trigger for a small "auto-playing" chip reporting the last decision.
---
--- Stage 5 ignores optionsJson (no option categories yet); the rationale field
--- and the keep-status-quo action are the whole panel. Submit is wired but stays
--- disabled until later stages add stage-able option categories. The rationale
--- field pre-fills with last turn's rationale, so Keep Status Quo is not blocked
--- on retyping one each turn (the human can still edit or replace it).
+-- The dialog renders the Next Research single-select list, pre-filled from the
+-- report and tagged on the current selection. Picking a technology different
+-- from the current one stages a change and enables Submit, which fires
+-- Game.BroadcastEvent("HumanDecision", { Technology = ... }). Keep Status Quo is
+-- still available for "no change". A non-empty rationale is required before
+-- either action; the rationale pre-fills with last turn's so Keep Status Quo is
+-- not blocked on retyping one each turn. The dialog is hidable (Hide button or
+-- Esc) without discarding the typed rationale; the trigger reopens it.
+
+include("IconSupport")  -- IconHookup, for the per-technology icons
 
 local m_playerID = -1
 local m_turn = -1
@@ -39,23 +39,172 @@ local m_deliberationStarted = false  -- has the human opened the dialog this tur
 local m_lastRationale = ""           -- last submitted rationale, pre-filled next turn
 local ACCEPTED_HOLD_SECONDS = 2.5    -- how long the "submitted" overlay lingers
 
+-- Research selection state for the current decision turn.
+local m_currentTech = nil   -- the player's current forced research (display name), or nil
+local m_selectedTech = nil  -- the row the human currently has highlighted, or nil
+local m_techButtons = {}    -- { { name = displayName, ctrl = instanceControls }, ... }
+
+-- Lazily-built map from a technology's localized display name to its
+-- GameInfo.Technologies row (for icon art). The report keys techs by the same
+-- localized name (mcp-server's get-options uses the DB Description), so matching
+-- on Locale.Lookup(row.Description) lines them up.
+local m_nameToTech = nil
+
 -- Dormant on load: nothing shows until a decision turn.
 ContextPtr:SetHide(true)
 
--- A rationale is required: keeping the status quo is recorded as a real decision
--- with the human's rationale (never the "[skipped]" sentinel), so it must be
--- annotated like any other.
+-- A rationale is required: keeping the status quo (or choosing research) is
+-- recorded as a real decision with the human's rationale (never the "[skipped]"
+-- sentinel), so it must be annotated like any other.
 local function hasRationale()
 	local text = Controls.RationaleBox:GetText()
 	return text ~= nil and string.match(text, "%S") ~= nil
 end
 
+-- The staged research change, or nil when the highlighted row is the current
+-- selection (or nothing is highlighted) -- i.e. nothing to submit.
+local function stagedTech()
+	if m_selectedTech ~= nil and m_selectedTech ~= m_currentTech then
+		return m_selectedTech
+	end
+	return nil
+end
+
 local function refreshButtons()
-	Controls.StatusQuoButton:SetDisabled(not hasRationale())
-	-- No option categories exist in stage 5, so there is nothing to stage and
-	-- submit; the button is present (per the approved mockup) but inert until
-	-- stages 6-7 add the categories.
-	Controls.SubmitButton:SetDisabled(true)
+	local rationale = hasRationale()
+	-- Keep Status Quo records a real decision, so it only needs a rationale.
+	Controls.StatusQuoButton:SetDisabled(not rationale)
+	-- Submit needs a staged change (a different technology) and a rationale.
+	Controls.SubmitButton:SetDisabled(not (stagedTech() ~= nil and rationale))
+end
+
+-- Highlight a research row (single-select): show its pulse, hide the others, and
+-- recompute the buttons. Picking the current selection again leaves nothing
+-- staged (handled by stagedTech), so Submit stays disabled.
+local function selectTech(name)
+	m_selectedTech = name
+	for _, entry in ipairs(m_techButtons) do
+		entry.ctrl.SelectionAnim:SetHide(entry.name ~= name)
+	end
+	refreshButtons()
+end
+
+-- Build the display-name -> GameInfo.Technologies row map once, for icon lookup.
+local function buildTechMap()
+	if m_nameToTech ~= nil then return end
+	m_nameToTech = {}
+	for row in GameInfo.Technologies() do
+		local label = Locale.Lookup(row.Description)
+		if label ~= nil and label ~= "" then
+			m_nameToTech[label] = row
+		end
+	end
+end
+
+-- Tear down the previous turn's option rows.
+local function clearResearchList()
+	Controls.ResearchStack:DestroyAllChildren()
+	m_techButtons = {}
+end
+
+-- Render the Next Research single-select list from the report. Defensive: a nil
+-- or empty options table shows the "no options, keep status quo" note rather
+-- than breaking the panel, so the human can always at least keep the status quo.
+local function populateResearch(options)
+	clearResearchList()
+	m_currentTech = nil
+	m_selectedTech = nil
+
+	local techs = options and options.Options and options.Options.Technologies
+	local current = options and options.Technology or nil
+	local currentNext = current and current.Next or nil
+	local currentRationale = current and current.Rationale or nil
+	if currentNext ~= nil and currentNext ~= "None" then
+		m_currentTech = currentNext
+	end
+
+	-- Collect the available technology names (JSON-object keys arrive as an
+	-- unordered Lua table, so gather then sort for a stable display).
+	local names = {}
+	if type(techs) == "table" then
+		for name in pairs(techs) do
+			table.insert(names, name)
+		end
+	end
+
+	if #names == 0 then
+		Controls.ResearchScroll:SetHide(true)
+		Controls.ResearchEmpty:SetHide(false)
+		return
+	end
+	Controls.ResearchEmpty:SetHide(true)
+	Controls.ResearchScroll:SetHide(false)
+
+	buildTechMap()
+
+	-- Order by tech-tree column (era progression), then name, so the list reads
+	-- early -> late like the tech tree rather than in hash order.
+	table.sort(names, function(a, b)
+		local ra, rb = m_nameToTech[a], m_nameToTech[b]
+		local ga = ra and ra.GridX or 999
+		local gb = rb and rb.GridX or 999
+		if ga ~= gb then return ga < gb end
+		return a < b
+	end)
+
+	for _, name in ipairs(names) do
+		local row = m_nameToTech[name]
+		local ctrl = {}
+		ContextPtr:BuildInstanceForControl("ResearchInstance", ctrl, Controls.ResearchStack)
+
+		-- Icon (real tech art; hide gracefully if the lookup fails).
+		local hasIcon = false
+		if row ~= nil and IconHookup ~= nil then
+			hasIcon = IconHookup(row.PortraitIndex, 45, row.IconAtlas, ctrl.Icon)
+		end
+		ctrl.Icon:SetHide(not hasIcon)
+
+		-- Name, with a "current" tag on the player's current selection.
+		local nameText = name
+		if name == m_currentTech then
+			nameText = nameText .. " " .. Locale.Lookup("TXT_KEY_VD_HUMAN_RESEARCH_CURRENT_TAG")
+		end
+		ctrl.Name:SetText(nameText)
+
+		-- Help text (the same the LLM receives). Convert real newlines from the
+		-- report into the markup the label renders, and prepend the earlier
+		-- rationale on the current selection.
+		local help = tostring(techs[name] or ""):gsub("[\r\n]+", "[NEWLINE]")
+		if name == m_currentTech and currentRationale ~= nil and currentRationale ~= "" then
+			help = Locale.Lookup("TXT_KEY_VD_HUMAN_RESEARCH_EARLIER_RATIONALE", currentRationale)
+				.. "[NEWLINE]" .. help
+		end
+		ctrl.Help:SetText(help)
+
+		-- Size the row (and its highlights) to fit the wrapped help text.
+		local rowH = math.max(58, 32 + ctrl.Help:GetSizeY() + 8)
+		ctrl.Box:SetSizeY(rowH)
+		ctrl.Button:SetSizeY(rowH)
+		ctrl.SelectionAnim:SetSizeY(rowH)
+		ctrl.SelectionAnimHL:SetSizeY(rowH)
+		ctrl.MouseOverAnim:SetSizeY(rowH)
+		ctrl.MouseOverAnimHL:SetSizeY(rowH)
+		ctrl.SelectionAnim:SetHide(true)
+
+		local techName = name
+		ctrl.Button:RegisterCallback(Mouse.eLClick, function() selectTech(techName) end)
+
+		table.insert(m_techButtons, { name = name, ctrl = ctrl })
+	end
+
+	Controls.ResearchStack:CalculateSize()
+	Controls.ResearchStack:ReprocessAnchoring()
+	Controls.ResearchScroll:CalculateInternalSize()
+
+	-- Pre-select the current research (radio-style), if it is in the list.
+	if m_currentTech ~= nil then
+		selectTech(m_currentTech)
+	end
 end
 
 -- Show/hide the dialog (dim backdrop + grid) as a unit, leaving the corner
@@ -118,9 +267,9 @@ local function alignToEndTurnButton()
 	end)
 end
 
--- A decision is due: reset to the pending state and show the trigger button
--- (NOT the dialog -- the human opens it themselves, starting the timer).
-local function showPending(playerID, turn)
+-- A decision is due: reset to the pending state, render the options, and show
+-- the trigger button (NOT the dialog -- the human opens it, starting the timer).
+local function showPending(playerID, turn, options)
 	m_playerID = playerID
 	m_turn = turn
 	m_acceptedTimer = nil
@@ -128,6 +277,7 @@ local function showPending(playerID, turn)
 	ContextPtr:ClearUpdate()
 	Controls.AcceptedOverlay:SetHide(true)
 	Controls.AutoplayChip:SetHide(true)
+	populateResearch(options)
 	-- Pre-fill last turn's rationale so Keep Status Quo is not blocked on
 	-- retyping a rationale every turn; the human can edit or replace it. The
 	-- first decision (no prior rationale) starts empty and must be typed once.
@@ -142,6 +292,14 @@ local function showPending(playerID, turn)
 	alignToEndTurnButton()
 	Controls.TriggerButton:SetHide(false)
 	ContextPtr:SetHide(false)
+end
+
+-- Show the accepted confirmation, then retire to the auto-playing chip. Callers
+-- set the chip label and the overlay's sub-line for the specific decision first.
+local function enterAcceptedState()
+	Controls.AcceptedOverlay:SetHide(false)
+	m_acceptedTimer = ACCEPTED_HOLD_SECONDS
+	ContextPtr:SetUpdate(onUpdate)
 end
 
 local function submitStatusQuo()
@@ -161,25 +319,45 @@ local function submitStatusQuo()
 		Rationale = m_lastRationale,
 	}, true)
 
-	-- Pre-fill the chip the participant returns to once the overlay clears.
+	-- Pre-fill the chip / overlay the participant returns to once it clears.
 	Controls.AutoplayChipLabel:LocalizeAndSetText("TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP", m_turn)
-
-	-- Show the accepted confirmation, then retire to the auto-playing chip.
-	Controls.AcceptedOverlay:SetHide(false)
-	m_acceptedTimer = ACCEPTED_HOLD_SECONDS
-	ContextPtr:SetUpdate(onUpdate)
+	Controls.AcceptedSub:LocalizeAndSetText("TXT_KEY_VD_HUMAN_ACCEPTED_SUB")
+	enterAcceptedState()
 end
 
--- Inbound: the strategist (via present-decision) signals a pending decision.
-LuaEvents.VoxDeorumHumanDecision.Add(function(playerID, turn, optionsJson)
-	showPending(playerID, turn)
+local function submitDecision()
+	local tech = stagedTech()
+	if tech == nil or not hasRationale() then return end
+
+	-- Remember this rationale so the next decision turn pre-fills it.
+	m_lastRationale = Controls.RationaleBox:GetText()
+
+	-- Fire the chosen research back as a HumanDecision; the human-strategist maps
+	-- Technology onto set-research with this rationale. generateId = true for the
+	-- same reason as keep-status-quo above.
+	Game.BroadcastEvent("HumanDecision", {
+		PlayerID  = m_playerID,
+		Turn      = m_turn,
+		Technology = tech,
+		Rationale = m_lastRationale,
+	}, true)
+
+	Controls.AutoplayChipLabel:LocalizeAndSetText("TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP_RESEARCH", m_turn, tech)
+	Controls.AcceptedSub:LocalizeAndSetText("TXT_KEY_VD_HUMAN_ACCEPTED_SUB_RESEARCH", tech)
+	enterAcceptedState()
+end
+
+-- Inbound: the strategist (via present-decision) signals a pending decision and
+-- hands over the turn's options as a Lua table.
+LuaEvents.VoxDeorumHumanDecision.Add(function(playerID, turn, options)
+	showPending(playerID, turn, options)
 end)
 
 -- The rationale EditBox change callback fires as the participant types; enabling
--- Keep Status Quo only once a rationale is present.
+-- the action buttons only once a rationale is present.
 Controls.RationaleBox:RegisterCallback(function() refreshButtons() end)
 Controls.StatusQuoButton:RegisterCallback(Mouse.eLClick, submitStatusQuo)
-Controls.SubmitButton:RegisterCallback(Mouse.eLClick, submitStatusQuo)
+Controls.SubmitButton:RegisterCallback(Mouse.eLClick, submitDecision)
 Controls.TriggerButton:RegisterCallback(Mouse.eLClick, openDialog)
 Controls.HideButton:RegisterCallback(Mouse.eLClick, hideDialog)
 

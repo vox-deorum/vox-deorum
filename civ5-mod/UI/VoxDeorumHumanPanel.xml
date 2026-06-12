@@ -1,21 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Vox Deorum human-control decision panel — stage 5 (keep-status-quo only),
-  revised to the approved mockup's trigger-button + hidable-dialog model.
+  Vox Deorum human-control decision panel — stage 6 (one real option category:
+  Next Research), building on stage 5's trigger-button + hidable-dialog model.
 
   The same-named VoxDeorumHumanPanel.lua auto-binds to this context. The whole
   context is hidden on load. When the strategist fires
-  LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson) the corner
-  widget's trigger button appears in the bottom-right action slot — standing in
-  for the native "PLEASE WAIT" button — instead of the dialog popping up. The
-  human clicks the trigger to open the dialog; that click starts their
-  deliberation (the later-plans decision timer). The dialog is hidable (Hide
-  button or Esc) so the human can inspect the world without losing the typed
-  rationale; the trigger stays until a decision is submitted, after which a
-  small "auto-playing" chip reports the last decision. Option categories
-  (Submit) arrive in stages 6-7.
+  LuaEvents.VoxDeorumHumanDecision(playerID, turn, options) the corner widget's
+  trigger button appears in the bottom-right action slot — standing in for the
+  native "PLEASE WAIT" button — instead of the dialog popping up. `options` is the
+  Flavor-mode OptionsReport delivered as a Lua table (the DLL converts it from the
+  JSON the bridge carried), so the panel reads options.Options.Technologies /
+  options.Technology directly with no JSON parsing.
+
+  The human clicks the trigger to open the dialog; that click starts their
+  deliberation (the later-plans decision timer). The dialog now renders the Next
+  Research single-select list, pre-filled from the report and tagged on the
+  current selection. Picking a different technology enables Submit, which fires
+  the choice back as a HumanDecision; Keep Status Quo remains for "no change".
+  The dialog is hidable (Hide button or Esc) so the human can inspect the world
+  without losing the typed rationale; the trigger stays until a decision is
+  submitted, after which a small "auto-playing" chip reports the last decision.
 -->
 <Context Font="TwCenMT14" FontStyle="Base" Color="Beige" Color1="Black">
+
+	<!-- ===== Research option row template (instantiated by the Lua) ===== -->
+	<!-- One row per available technology: icon, name (+ a "current" tag on the
+	     player's current selection), and the same help text the LLM receives.
+	     The SelectionAnim highlight marks the picked row; the Lua resizes the row
+	     and highlights to fit the wrapped help text. Modeled on Community Patch's
+	     EventChoicePopup ItemInstance. -->
+	<Instance Name="ResearchInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="470,58" Color="255,255,255,0">
+			<Button ID="Button" Anchor="L,T" Size="470,58" Offset="0,0" StateOffsetIncrement="0,0">
+				<ShowOnMouseOver>
+					<AlphaAnim ID="MouseOverAnim" Anchor="L,C" Size="470,58" Offset="0,0" Pause="0" Cycle="Bounce" Speed="1" AlphaStart="2" AlphaEnd="1">
+						<Grid ID="MouseOverAnimHL" Size="470,58" Offset="0,0" Padding="0,0" Style="Grid9FrameTurnsHL"/>
+					</AlphaAnim>
+				</ShowOnMouseOver>
+				<AlphaAnim ID="SelectionAnim" Hidden="1" Anchor="L,C" Size="470,58" Offset="0,0" Pause="0" Cycle="Bounce" Speed="1" AlphaStart="2" AlphaEnd="1">
+					<Grid ID="SelectionAnimHL" Size="470,58" Offset="0,0" Padding="0,0" Style="Grid9FrameTurnsHL"/>
+				</AlphaAnim>
+				<Image ID="Icon" Anchor="L,T" Offset="6,7" Size="45,45" Hidden="1"/>
+				<Label ID="Name" Anchor="L,T" Offset="58,7" WrapWidth="400" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+				<Label ID="Help" Anchor="L,T" Offset="58,32" WrapWidth="400" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			</Button>
+		</Box>
+	</Instance>
 
 	<!-- ===== Corner widget: the native end-turn ("PLEASE WAIT") slot ===== -->
 	<!-- Our own widget rather than a fork of Community Patch's ActionInfoPanel:
@@ -28,10 +58,6 @@
 	     fallback when the native button can't be reached; tune it in-game if the
 	     placement needs nudging. The trigger and chip share the slot (only one is
 	     shown at a time). -->
-	<!-- Pulsing-by-presence decision trigger: clicking it opens the dialog and
-	     starts the human's deliberation. Visible while a decision is pending;
-	     hidden once a decision is submitted. One short line of text, matching the
-	     native button it stands in for. -->
 	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="10,205" Size="204,46" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
 		<Label Anchor="C,C" Offset="0,0" TruncateWidth="190" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 	</GridButton>
@@ -45,7 +71,7 @@
 	<!-- The dim backdrop and the grid are toggled together by the Lua (they are
 	     not wrapped in a sized container so each still anchors to the screen). -->
 	<Box ID="DialogDim" Hidden="1" Style="BGBlock_ClearTopBar"/>
-	<Grid Hidden="1" Size="560,360" ID="MainGrid" Anchor="C,C" Offset="0,0" Padding="0,0" Style="Grid9DetailFive140" ConsumeMouse="1">
+	<Grid Hidden="1" Size="560,560" ID="MainGrid" Anchor="C,C" Offset="0,0" Padding="0,0" Style="Grid9DetailFive140" ConsumeMouse="1">
 		<!-- Side treatments + title, matching the native popup framing. -->
 		<Box Style="MenuLeftSideTreatment"/>
 		<Box Style="MenuRightSideTreatment"/>
@@ -58,25 +84,39 @@
 		</GridButton>
 
 		<!-- Status line: whose turn / that a decision is pending (spec section 6). -->
-		<Label Anchor="L,T" Offset="30,52" WrapWidth="500" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="StatusLabel"/>
+		<Label Anchor="L,T" Offset="30,50" WrapWidth="500" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="StatusLabel"/>
+
+		<!-- Next Research category header + one-line guidance. -->
+		<Label Anchor="L,T" Offset="30,78" WrapWidth="500" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_RESEARCH_HEADER" ID="ResearchHeader"/>
+		<Label Anchor="L,T" Offset="30,106" WrapWidth="500" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" String="TXT_KEY_VD_HUMAN_RESEARCH_INTRO" ID="ResearchIntro"/>
+
+		<!-- The single-select research list (option rows added by the Lua). -->
+		<ScrollPanel Anchor="L,T" Offset="30,150" Size="500,236" AutoScrollBar="1" Vertical="1" ID="ResearchScroll">
+			<ScrollBar ID="ScrollBar" Style="VertSlider" Length="200" Offset="2,18" Anchor="R,T" AnchorSide="O,I"/>
+			<UpButton ID="ScrollBarU" Offset="2,0" Style="ScrollBarUp" Anchor="R,T" AnchorSide="O,I"/>
+			<DownButton ID="ScrollBarD" Offset="2,0" Style="ScrollBarDown" Anchor="R,B" AnchorSide="O,I"/>
+			<Stack Anchor="L,T" Offset="0,0" Padding="4" StackGrowth="Bottom" ID="ResearchStack"/>
+		</ScrollPanel>
+		<!-- Shown instead of the list when no research options are available. -->
+		<Label Hidden="1" Anchor="L,T" Offset="30,156" WrapWidth="500" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_RESEARCH_EMPTY" ID="ResearchEmpty"/>
 
 		<!-- Rationale prompt + single free-text field (one rationale per turn, spec section 2). -->
-		<Label Anchor="L,T" Offset="30,96" WrapWidth="500" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT" ID="RationalePrompt"/>
-		<Box Anchor="L,T" Offset="30,150" Size="500,40" Color="0,0,0,140">
+		<Label Anchor="L,T" Offset="30,398" WrapWidth="500" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT" ID="RationalePrompt"/>
+		<Box Anchor="L,T" Offset="30,426" Size="500,38" Color="0,0,0,140">
 			<EditBox CallOnChar="1" Anchor="L,C" Offset="8,0" Size="484,28" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" ID="RationaleBox" MaxLength="200"/>
 		</Box>
 
-		<!-- Actions. Keep Status Quo submits a status-quo decision; Submit is shown
-		     but stays disabled in stage 5 (no option categories to stage yet). -->
-		<GridButton Anchor="L,B" Style="SmallButton" Size="170,32" Offset="30,40" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
+		<!-- Actions. Keep Status Quo submits a status-quo decision; Submit fires the
+		     chosen research once a different technology is staged and a rationale is typed. -->
+		<GridButton Anchor="L,B" Style="SmallButton" Size="170,32" Offset="30,36" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		</GridButton>
-		<GridButton Anchor="R,B" Style="SmallButton" Size="170,32" Offset="30,40" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
+		<GridButton Anchor="R,B" Style="SmallButton" Size="170,32" Offset="30,36" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_SUBMIT" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		</GridButton>
 
 		<!-- Submission-accepted overlay (shown briefly after a decision is sent). -->
-		<Box ID="AcceptedOverlay" Hidden="1" Anchor="C,C" Offset="0,0" Size="560,360" Color="0,0,0,210" ConsumeMouse="1">
+		<Box ID="AcceptedOverlay" Hidden="1" Anchor="C,C" Offset="0,0" Size="560,560" Color="0,0,0,210" ConsumeMouse="1">
 			<Label Anchor="C,C" Offset="0,-16" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_ACCEPTED" ID="AcceptedTitle"/>
 			<Label Anchor="C,C" Offset="0,22" WrapWidth="460" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_ACCEPTED_SUB" ID="AcceptedSub"/>
 		</Box>
