@@ -9,6 +9,7 @@
 import { createLogger } from "../utils/logger.js";
 import { mcpClient, type GameEventNotification } from "../utils/models/mcp-client.js";
 import { VoxPlayer } from "./vox-player.js";
+import { HumanDecisionBus, type HumanDecisionSubmission } from "./human-decision-bus.js";
 import { voxCivilization } from "../infra/vox-civilization.js";
 import { setTimeout } from 'node:timers/promises';
 import { VoxSession } from "../infra/vox-session.js";
@@ -41,6 +42,14 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private dllConnected = false;
   private production?: ProductionController;
   private readonly MAX_RECOVERY_ATTEMPTS = 3;
+
+  /**
+   * Per-session bridge between the in-game human-control panel and the waiting
+   * human-strategist seat (if any). Owned here — not a module global — and
+   * threaded into every VoxPlayer; only the human strategist reads it. The
+   * `HumanDecision` notification resolves it; shutdown / game-switch cancel it.
+   */
+  private readonly humanDecisionBus = new HumanDecisionBus();
 
   /**
    * Single owner of seeding + seed-cycle state, always constructed. In the
@@ -174,6 +183,9 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
           case "PlayerVictory":
             await this.handlePlayerVictory(params);
             break;
+          case "HumanDecision":
+            this.handleHumanDecision(params);
+            break;
           case "DLLConnected":
             this.dllConnected = true;
             // Transition to running state when DLL connects (game is initialized)
@@ -280,7 +292,9 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     this.abortController.abort();
 
     // Abort all active players; on victory we mark them successful so their
-    // contexts flush as completed rather than aborted.
+    // contexts flush as completed rather than aborted. Reject any pending
+    // human-decision wait so a blocked human-strategist unwinds cleanly.
+    this.humanDecisionBus.cancelAll(new Error("Session shutting down"));
     for (const [playerID, player] of this.activePlayers.entries()) {
       logger.debug(`Aborting player ${playerID}`);
       player.abort(wasVictory);
@@ -430,7 +444,11 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     await this.obsCall('setGameID', () => obsManager.setGameID(params.gameID!));
     if (this.state === 'starting') this.onStateChange('running');
 
-    // Abort all existing players
+    // Abort all existing players. Cancel any pending human-decision wait so the
+    // old strategist run rejects cleanly instead of awaiting a bus the new
+    // VoxPlayers no longer drive — the fresh human-strategist re-presents the
+    // decision (crash recovery, spec §6).
+    this.humanDecisionBus.cancelAll(new Error("Game context switched; players recreated"));
     for (const player of this.activePlayers.values()) {
       player.abort(false);
     }
@@ -452,7 +470,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     // Create new players using the seating map
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
       const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
-      const player = new VoxPlayer(actualPlayerID, playerConfig, params.gameID, params.turn, this.seatingClaim?.seeds?.sync);
+      const player = new VoxPlayer(actualPlayerID, playerConfig, params.gameID, params.turn, this.humanDecisionBus, this.seatingClaim?.seeds?.sync);
       await player.context.registerTools();
       this.activePlayers.set(actualPlayerID, player);
       player.execute();
@@ -611,6 +629,25 @@ ${overrideLine}Game.SetAIAutoPlay(2000, -1);`
       // We just let start() return.
       logger.info(`Finishing the run...`);
       this.victoryResolve?.();
+    }
+  }
+
+  /**
+   * Route an inbound `HumanDecision` event to the waiting human-strategist by
+   * resolving the per-session decision bus for the notifying player. The event
+   * payload (the human's choices) rides in the notification's top-level `data`
+   * object (mcp-server forwards whitelisted event data there). A decision with
+   * no pending request — e.g. one that races a crash-recovery cancel — is a
+   * harmless no-op; the re-presented request will await the next submission.
+   */
+  private handleHumanDecision(params: GameEventNotification): void {
+    const playerID = params.playerID;
+    const submission = (params.data ?? {}) as HumanDecisionSubmission;
+    const resolved = this.humanDecisionBus.resolve(playerID, submission);
+    if (resolved) {
+      logger.warn(`Human decision submitted for player ${playerID} on turn ${params.turn}`, params.data);
+    } else {
+      logger.warn(`Received a HumanDecision for player ${playerID} with no pending request; ignoring.`);
     }
   }
 

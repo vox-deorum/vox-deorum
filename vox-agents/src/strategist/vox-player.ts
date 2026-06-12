@@ -15,6 +15,7 @@ import { config } from "../utils/config.js";
 import { ensureGameState, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
 import { PlayerConfig } from "../types/config.js";
+import { HumanDecisionBus } from "./human-decision-bus.js";
 import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
 
 /**
@@ -40,6 +41,7 @@ export class VoxPlayer {
     private readonly playerConfig: PlayerConfig,
     gameID: string,
     initialTurn: number,
+    humanDecisionBus: HumanDecisionBus,
     syncSeed?: number
   ) {
     this.logger = createLogger(`VoxPlayer-${playerID}`);
@@ -62,7 +64,10 @@ export class VoxPlayer {
       workingMemory: {},
       gameStates: {},
       mode: playerConfig.strategist === "none-strategist" ? "Strategy" : (playerConfig.mode ?? "Flavor"),
-      syncSeed
+      syncSeed,
+      // Populated for every seat; only the human strategist reads it (to block
+      // on and receive the in-game panel's submission).
+      _humanDecisionBus: humanDecisionBus
     };
   }
 
@@ -191,7 +196,9 @@ export class VoxPlayer {
                   'pacing.interrupted': false,
                   'tokens.input': 0,
                   'tokens.reasoning': 0,
-                  'tokens.output': 0
+                  'tokens.output': 0,
+                  // No deliberation on a paced skip (the strategist never ran).
+                  'deliberation.ms': 0
                 });
                 turnSpan.setStatus({ code: SpanStatusCode.OK });
                 return;
@@ -231,7 +238,10 @@ export class VoxPlayer {
                 'pacing.interrupted': interrupted,
                 'tokens.input': this.context.inputTokens - startingInput,
                 'tokens.reasoning': this.context.reasoningTokens - startingReasoning,
-                'tokens.output': this.context.outputTokens - startingOutput
+                'tokens.output': this.context.outputTokens - startingOutput,
+                // Human deliberation time for this turn (the human strategist
+                // stashes it in workingMemory; 0/absent for non-human seats).
+                'deliberation.ms': Number(this.parameters.workingMemory["deliberationMs"] ?? "0")
               });
               turnSpan.setStatus({ code: SpanStatusCode.OK });
             });
@@ -342,7 +352,7 @@ export class VoxPlayer {
       let contextLengthExceeded = false;
       await this.context.execute(this.playerConfig.strategist, this.parameters, undefined, undefined, undefined, () => {
         contextLengthExceeded = true;
-      });
+      }, { throwOnError: true });
 
       if (!contextLengthExceeded) return true;
 

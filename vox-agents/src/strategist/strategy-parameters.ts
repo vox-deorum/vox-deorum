@@ -10,6 +10,7 @@ import type { OptionsReport } from "../../../mcp-server/dist/tools/knowledge/get
 import type { VictoryProgressReport } from "../../../mcp-server/dist/tools/knowledge/get-victory-progress.js";
 import type { GameMetadata } from "../../../mcp-server/dist/tools/knowledge/get-game-settings.js"
 import { StrategyDecisionType } from "../types/config.js";
+import type { HumanDecisionBus } from "./human-decision-bus.js";
 
 /**
  * Parameters for the strategist agent
@@ -33,6 +34,10 @@ export interface StrategistParameters extends AgentParameters {
   syncSeed?: number;
   /** Internal: in-flight game state refresh promise for deduplication (not serialized) */
   _pendingRefresh?: Promise<GameState>;
+  /** Internal: the session's per-game human-decision bus (not serialized). Populated
+   * for every seat by VoxPlayer, but only the human strategist reads it to block on
+   * and receive the panel's submission. */
+  _humanDecisionBus?: HumanDecisionBus;
 }
 
 /**

@@ -36,6 +36,12 @@ export interface ExecuteTokenOutput {
   outputTokens: number;
 }
 
+/** Optional controls for a single agent execution. */
+export interface ExecuteOptions {
+  /** Re-throw non-context-length agent errors after recording telemetry. */
+  throwOnError?: boolean;
+}
+
 /**
  * Runtime context for executing Vox Agents.
  * Manages agent registration, tool availability, and execution flow.
@@ -311,7 +317,8 @@ export class VoxContext<TParameters extends AgentParameters> {
     input: unknown,
     callback?: StreamingEventCallback,
     tokenOutput?: ExecuteTokenOutput,
-    onContextLengthError?: () => void
+    onContextLengthError?: () => void,
+    options: ExecuteOptions = {}
   ): Promise<unknown> {
     const agent = agentRegistry.get<TParameters>(agentName);
     if (!agent) {
@@ -432,8 +439,12 @@ export class VoxContext<TParameters extends AgentParameters> {
           code: SpanStatusCode.ERROR,
           message: error instanceof Error ? error.message : String(error)
         });
-        if (onContextLengthError && isContextLengthError(error)) {
+        const contextLengthError = isContextLengthError(error);
+        if (onContextLengthError && contextLengthError) {
           onContextLengthError();
+        }
+        if (options.throwOnError && !contextLengthError) {
+          throw error;
         }
         return undefined;
       } finally {
