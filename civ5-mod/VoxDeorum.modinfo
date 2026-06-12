@@ -26,10 +26,12 @@
   <Blocks />
   <Files>
     <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
-    <File md5="3847BD8F67C81B24B13D5DB36F8F737B" import="0">Text/VoxDeorum_Text.xml</File>
+    <File md5="DFE0DD0672A751A85F30E78D35751ABC" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
-    <File md5="8C78E947BF2B4E2FD82BEEE252B9A236" import="0">Lua/VoxDeorumTest.lua</File>
+    <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
+    <File md5="6DDE34211B31817083502000E7C62842" import="1">UI/VoxDeorumHumanPanel.lua</File>
+    <File md5="BFC1BC665811BC1E086C85A57A9EBDA0" import="0">UI/VoxDeorumHumanPanel.xml</File>
   </Files>
   <Actions>
     <OnModActivated>
@@ -46,6 +48,10 @@
     <EntryPoint type="InGameUIAddin" file="Lua/VoxDeorumTest.lua">
       <Name>VoxDeorumTest</Name>
       <Description>Test listener for Vox Deorum observer API events</Description>
+    </EntryPoint>
+    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumHumanPanel.xml">
+      <Name>VoxDeorumHumanPanel</Name>
+      <Description>Human-control decision panel (dormant until a decision is presented)</Description>
     </EntryPoint>
   </EntryPoints>
 </Mod>

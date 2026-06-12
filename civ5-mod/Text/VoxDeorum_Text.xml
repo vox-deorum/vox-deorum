@@ -1,5 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <GameData>
 	<Language_en_US>
+		<!-- Human-control decision panel (stage 5). Plain language, no identifiers. -->
+		<Row Tag="TXT_KEY_VD_HUMAN_TITLE">
+			<Text>Make Your Decisions</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_STATUS_PENDING">
+			<Text>Turn {1_Num} - the game is paused, waiting on your decision.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT">
+			<Text>Why are you making this decision? One rationale covers the whole turn.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO">
+			<Text>Keep Status Quo</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT">
+			<Text>Keep everything as it is. This is recorded as a real decision with your rationale. Type a rationale first.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUBMIT">
+			<Text>Submit Decision</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_SUBMIT_TT">
+			<Text>Submit your staged changes. Choosing among options arrives in a later version of the panel; for now, use Keep Status Quo.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED">
+			<Text>Decision submitted</Text>
+		</Row>
+		<Row Tag="TXT_KEY_VD_HUMAN_ACCEPTED_SUB">
+			<Text>Your civilization resumes auto-play.</Text>
+		</Row>
 	</Language_en_US>
 </GameData>

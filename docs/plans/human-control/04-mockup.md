@@ -1,4 +1,4 @@
-# Stage 4 — UI design: HTML mockup first
+# Stage 4 — UI design: HTML mockup first ✅ DONE
 
 > Part of the human-control plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 
