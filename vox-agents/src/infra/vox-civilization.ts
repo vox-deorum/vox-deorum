@@ -19,7 +19,6 @@ import {
   updateCivUserSettingsSkipAnimationsContent
 } from '../utils/game/civ5-ini.js';
 import { getCiv5UserFilePath } from '../utils/game/civ5-user-files.js';
-import { hasRandomSeeds } from '../utils/game/random-seeds.js';
 import {
   findProcessByImageName,
   isProcessRunning as isWindowsProcessRunning,
@@ -231,15 +230,13 @@ export class VoxCivilization {
   }
 
   /**
-   * Write requested random seeds into Civ's config.ini before launching a game.
+   * Prepare Civ's config.ini random seed settings before launching a game.
    *
    * Civ reads `SyncRandSeed` and `MapRandSeed` during pregame initialization.
-   * If one side is omitted, we write `0` for that side, preserving Civ's own
-   * "pick a random/default seed" behavior while fixing the requested side.
+   * If the config omits one or both sides, write `0` for those sides so stale
+   * fixed seeds in config.ini do not leak into an unseeded run.
    */
   async applyRandomSeeds(seeds?: RandomSeedsConfig): Promise<void> {
-    if (!hasRandomSeeds(seeds)) return;
-
     const configPath = await getCiv5UserFilePath('config.ini');
     let content: string;
     try {
