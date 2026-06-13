@@ -453,6 +453,52 @@ local function recalcPane()
 	Controls.PaneScroll:CalculateInternalSize()
 end
 
+-- ===================================================== adaptive dialog height
+
+-- The dialog is authored at a fixed 744px height (VoxDeorumHumanPanel.xml); these
+-- baselines mirror that XML so the runtime can stretch the grid to the screen and
+-- hand every gained pixel to the main section. The header stays at the top and
+-- the footer is pinned to the grid bottom (the Footer container), so the extra
+-- height only grows the right-hand option pane and the nav/pane divider.
+local DIALOG_DESIGN_H     = 744   -- MainGrid baseline height
+local DIALOG_MARGIN       = 40    -- min gap kept above AND below the centered grid
+local PANE_SCROLL_BASE_H  = 370   -- PaneScroll baseline height
+local SCROLLBAR_BASE_LEN  = 332   -- PaneScroll ScrollBar baseline length
+local PANE_DIVIDER_BASE_H = 394   -- nav/pane vertical divider baseline height
+
+-- Stretch the dialog to the screen height (never shorter than the design height,
+-- never taller than the screen) and give all the gained height to the main
+-- section. Idempotent: every value is re-derived from the baselines, so re-running
+-- it on a resolution change just recomputes the correct layout.
+local function layoutDialog()
+	local _, screenH = UIManager:GetScreenSizeVal()
+	local targetH = math.max(DIALOG_DESIGN_H, screenH - 2 * DIALOG_MARGIN)
+	local extra = targetH - DIALOG_DESIGN_H
+
+	Controls.PaneScroll:SetSizeY(PANE_SCROLL_BASE_H + extra)
+	Controls.ScrollBar:SetSizeY(SCROLLBAR_BASE_LEN + extra)
+	Controls.PaneDivider1:SetSizeY(PANE_DIVIDER_BASE_H + extra)
+	Controls.PaneDivider2:SetSizeY(PANE_DIVIDER_BASE_H + extra)
+
+	Controls.MainGrid:SetSizeY(targetH)
+	Controls.AcceptedOverlay:SetSizeY(targetH)
+
+	-- Reflow the bottom-anchored Footer + action buttons to the new grid bottom,
+	-- then resettle the scroll panel's internal size for its taller viewport.
+	Controls.MainGrid:ReprocessAnchoring()
+	recalcPane()
+end
+
+-- Open the in-game Civilopedia for a localized entry name. The native pedia
+-- search resolves the entry from its display text, the same way base-game/VP
+-- panels link icons and rows to the pedia via right-click.
+local function openPedia(searchString)
+	if searchString == nil or searchString == "" then return end
+	if Events ~= nil and Events.SearchForPediaEntry ~= nil then
+		Events.SearchForPediaEntry(searchString)
+	end
+end
+
 -- Plain wrapped-text row (intros, notes, empty states).
 local function addText(text)
 	local ctrl = {}
@@ -515,6 +561,13 @@ local function addOptionList(entries, currentKey, stagedKey, setStaged)
 			applySelection(key)
 			updateShell()
 		end)
+
+		-- Right-click opens the entry in the Civilopedia (independent of the
+		-- left-click that stages the selection).
+		if entry.pediaName ~= nil and entry.pediaName ~= "" then
+			local pediaName = entry.pediaName
+			ctrl.Button:RegisterCallback(Mouse.eRClick, function() openPedia(pediaName) end)
+		end
 
 		table.insert(rows, { key = key, ctrl = ctrl })
 	end
@@ -854,6 +907,24 @@ local function policyIconHook(displayKey)
 	end
 end
 
+-- Localized pedia name for a policy option, mirroring policyIconHook's lookup
+-- order: the policy/branch row resolved from the (suffix-stripped, canonical)
+-- display key. Returns nil when nothing resolves so no right-click is attached.
+local function policyPediaName(displayKey)
+	buildPolicyMaps()
+	local base = stripSuffix(displayKey)
+	local canonicalBase = canonicalLabel(base)
+	local canonicalDisplay = canonicalLabel(displayKey)
+	local row = m_nameToPolicy[base]
+		or (canonicalBase ~= nil and m_nameToPolicy[canonicalBase] or nil)
+		or m_nameToPolicy[displayKey]
+		or (canonicalDisplay ~= nil and m_nameToPolicy[canonicalDisplay] or nil)
+		or m_nameToPolicyBranch[base]
+		or (canonicalBase ~= nil and m_nameToPolicyBranch[canonicalBase] or nil)
+	if row == nil or row.Description == nil then return nil end
+	return Locale.Lookup(row.Description)
+end
+
 -- ============================================================== pane renderers
 
 -- The great-person whose portrait stands in for each grand strategy / victory
@@ -993,7 +1064,9 @@ local function renderResearchPane()
 			help = Locale.Lookup("TXT_KEY_VD_HUMAN_EARLIER_RATIONALE", currentRationale)
 				.. "[NEWLINE]" .. help
 		end
-		table.insert(entries, { key = name, name = name, help = help, hookIcon = techIconHook(name) })
+		local techRow = m_nameToTech[name]
+		local pediaName = techRow ~= nil and Locale.Lookup(techRow.Description) or name
+		table.insert(entries, { key = name, name = name, help = help, hookIcon = techIconHook(name), pediaName = pediaName })
 	end
 	addOptionList(entries, current, m_staged.Technology, function(key)
 		m_staged.Technology = key
@@ -1043,7 +1116,7 @@ local function renderPolicyPane()
 			help = Locale.Lookup("TXT_KEY_VD_HUMAN_EARLIER_RATIONALE", currentRationale)
 				.. "[NEWLINE]" .. help
 		end
-		table.insert(entries, { key = name, name = name, help = help, hookIcon = policyIconHook(name) })
+		table.insert(entries, { key = name, name = name, help = help, hookIcon = policyIconHook(name), pediaName = policyPediaName(name) })
 	end
 	addOptionList(entries, currentKey, m_staged.Policy, function(key)
 		m_staged.Policy = key
@@ -1121,6 +1194,10 @@ local function renderRelationsPane()
 			local leader = GameInfo.Leaders[Players[civ.targetID]:GetLeaderType()]
 			if leader ~= nil and IconHookup ~= nil then
 				hasPortrait = IconHookup(leader.PortraitIndex, 64, leader.IconAtlas, ctrl.Portrait)
+			end
+			if leader ~= nil and leader.Description ~= nil then
+				local leaderName = Locale.Lookup(leader.Description)
+				ctrl.Portrait:RegisterCallback(Mouse.eRClick, function() openPedia(leaderName) end)
 			end
 		end)
 		ctrl.Portrait:SetHide(not hasPortrait)
@@ -1300,6 +1377,10 @@ local function populateLeaderContext()
 		local hasPortrait = IconHookup ~= nil
 			and IconHookup(leader.PortraitIndex, 64, leader.IconAtlas, Controls.LeaderPortrait) or false
 		Controls.LeaderPortrait:SetHide(not hasPortrait)
+		if leader.Description ~= nil then
+			local leaderName = Locale.Lookup(leader.Description)
+			Controls.LeaderPortrait:RegisterCallback(Mouse.eRClick, function() openPedia(leaderName) end)
+		end
 
 		-- Fold the trait's short name onto the leader line (saving a row); the
 		-- full trait description sits directly beneath it.
@@ -1326,6 +1407,10 @@ local function populateLeaderContext()
 				and IconHookup(item.PortraitIndex, UNIQUE_ICON_SIZE, item.IconAtlas, ctrl.Icon) or false
 			ctrl.Icon:SetHide(not hasIcon)
 			ctrl.Icon:SetToolTipString(uniqueTooltip(item, replacesName, uniqueKind))
+			if item.Description ~= nil then
+				local pediaName = Locale.Lookup(item.Description)
+				ctrl.Icon:RegisterCallback(Mouse.eRClick, function() openPedia(pediaName) end)
+			end
 		end
 
 		for row in GameInfo.Civilization_UnitClassOverrides{ CivilizationType = civ.Type } do
@@ -1648,6 +1733,14 @@ Controls.StatusQuoButton:RegisterCallback(Mouse.eLClick, onStatusQuoClicked)
 Controls.SubmitButton:RegisterCallback(Mouse.eLClick, onSubmitClicked)
 Controls.HideButton:RegisterCallback(Mouse.eLClick, hideDialog)
 LuaEvents.VoxDeorumHumanOpenPanel.Add(openDialog)
+
+-- Size the dialog to the screen on load, and again whenever the resolution
+-- changes, so the main option pane gets as much vertical space as the display
+-- allows (the header stays put and the footer stays pinned to the bottom).
+layoutDialog()
+Events.SystemUpdateUI.Add(function(uiType)
+	if uiType == SystemUpdateUIType.ScreenResize then layoutDialog() end
+end)
 
 -- Keep child controls synchronized if the context is hidden externally.
 ContextPtr:SetShowHideHandler(function(isHide, isInit)
