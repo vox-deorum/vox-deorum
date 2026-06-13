@@ -20,8 +20,11 @@ local function alignToEndTurnButton()
 		if not w or not h or w <= 0 or h <= 0 then return end
 		local fallbackW = Controls.TriggerButton:GetSizeVal()
 		if fallbackW ~= nil and w < fallbackW then w = fallbackW end
-		Controls.TriggerButton:SetSizeVal(w, h)
-		Controls.TriggerButton:SetOffsetVal(x + 32, y - 24)
+		-- Bleed 2px over the native end-turn button so our SmallButton frame fully
+		-- covers it (the 9-grid renders ~1px inset, leaving the native frame
+		-- peeking out otherwise); shift the offset 1px to keep the bleed centered.
+		Controls.TriggerButton:SetSizeVal(w + 2, h + 2)
+		Controls.TriggerButton:SetOffsetVal(x + 31, y - 23)
 		Controls.AutoplayChip:SetSizeVal(w, 38)
 		Controls.AutoplayChip:SetOffsetVal(x + 32, y - 24)
 	end)

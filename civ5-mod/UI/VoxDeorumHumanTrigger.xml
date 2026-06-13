@@ -11,7 +11,7 @@
 	<!-- Native end-turn ("PLEASE WAIT") slot replacement. The Lua copies the
 	     live EndTurnButton geometry when possible; this is only the fallback. -->
 	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="16,200" Size="320,36" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
-		<Label Anchor="C,C" Offset="0,0" TruncateWidth="300" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+		<Label Anchor="C,C" Offset="0,0" TruncateWidth="300" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT24" Color="250,228,120,255" FontStyle="Shadow"/>
 	</GridButton>
 
 	<!-- Shown in the same slot after a decision is accepted. -->

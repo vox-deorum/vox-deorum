@@ -501,10 +501,10 @@ local function addSliderRow(cfg)
 	else
 		ctrl.Desc:SetHide(true)
 	end
-	ctrl.MinusButton:SetOffsetVal(6, lineY)
+	ctrl.MinusButton:SetOffsetVal(6, lineY + 4)
 	ctrl.ValueSlider:SetOffsetVal(44, lineY + 4)
-	ctrl.PlusButton:SetOffsetVal(474, lineY)
-	ctrl.ResetButton:SetOffsetVal(508, lineY)
+	ctrl.PlusButton:SetOffsetVal(474, lineY + 4)
+	ctrl.ResetButton:SetOffsetVal(508, lineY + 4)
 	ctrl.Box:SetSizeY(lineY + 32)
 
 	local updating = false
@@ -632,48 +632,65 @@ local function buildPolicyMaps()
 	if m_nameToPolicy ~= nil then return end
 	m_nameToPolicy = {}
 	m_nameToPolicyBranch = {}
+	-- Key by the localized display name (what the report sends, suffix-stripped),
+	-- but also by a lowercased variant and the raw Type, so a stray whitespace/
+	-- case difference or a Type-keyed report still resolves to the right art.
+	local function register(map, name, row)
+		if name == nil or name == "" or row == nil then return end
+		map[name] = row
+		map[string.lower(name)] = row
+	end
 	for row in GameInfo.Policies() do
-		local label = Locale.Lookup(row.Description)
-		if label ~= nil and label ~= "" then
-			m_nameToPolicy[label] = row
-		end
+		register(m_nameToPolicy, Locale.Lookup(row.Description), row)
+		register(m_nameToPolicy, row.Type, row)
 	end
 	for branch in GameInfo.PolicyBranchTypes() do
-		local label = Locale.Lookup(branch.Description)
-		if label ~= nil and label ~= "" and branch.FreePolicy ~= nil then
+		if branch.FreePolicy ~= nil then
 			local opener = GameInfo.Policies[branch.FreePolicy]
-			m_nameToPolicyBranch[label] = opener
+			register(m_nameToPolicyBranch, Locale.Lookup(branch.Description), opener)
+			register(m_nameToPolicyBranch, branch.Type, opener)
 			if opener ~= nil then
-				local openerLabel = Locale.Lookup(opener.Description)
-				if openerLabel ~= nil and openerLabel ~= "" then
-					m_nameToPolicyBranch[openerLabel] = opener
-				end
+				register(m_nameToPolicyBranch, Locale.Lookup(opener.Description), opener)
+				register(m_nameToPolicyBranch, opener.Type, opener)
 			end
 		end
 	end
 end
 
--- All option-row icons hook at this size. The atlases the report draws from
--- (tech, policy, unit) every define a 64 entry, but the base-game POLICY atlases
--- do NOT define 45 -- VP's own SocialPolicyPopup hooks policies at 64 -- so the
--- old 45 request silently failed IconHookup and dropped every policy icon. The
--- OptionInstance icon slot in the XML is sized to match.
-local OPTION_ICON_SIZE = 64
+-- Option-row icons render into a 64x64 slot, but IconHookup only succeeds when
+-- the row's atlas actually declares a matching IconSize, and the various atlases
+-- the report draws from do not all declare the same set: the tech atlas has 64,
+-- but the base-game and expansion POLICY atlases (POLICY_ATLAS, POLICY_ATLAS_EXP2,
+-- ...) declare different sizes, so a single hard-coded request silently fails and
+-- drops every policy icon. Try the sizes Civ atlases commonly define, largest-ish
+-- first (they scale down cleanly into the 64x64 Image), stopping at the first the
+-- atlas provides. The XML icon slot stays 64x64 regardless.
+local ICON_HOOK_SIZES = { 64, 80, 128, 256, 45, 32 }
+local function hookIconAnySize(row, icon)
+	if row == nil or IconHookup == nil then return false end
+	for _, size in ipairs(ICON_HOOK_SIZES) do
+		if IconHookup(row.PortraitIndex, size, row.IconAtlas, icon) then
+			return true
+		end
+	end
+	return false
+end
 
 local function techIconHook(name)
 	buildTechMap()
 	local row = m_nameToTech[name]
-	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return IconHookup(row.PortraitIndex, OPTION_ICON_SIZE, row.IconAtlas, icon) end
+	if row == nil then return nil end
+	return function(icon) return hookIconAnySize(row, icon) end
 end
 
 local function policyIconHook(displayKey)
 	buildPolicyMaps()
 	local base = stripSuffix(displayKey)
-	local row = m_nameToPolicy[base] or m_nameToPolicyBranch[base] or m_nameToPolicy[displayKey]
-	if row == nil then row = GameInfo.Policies["POLICY_TRADITION"] or GameInfo.Policies[0] end
+	local row = m_nameToPolicy[base] or m_nameToPolicyBranch[base]
+		or m_nameToPolicy[displayKey]
+		or (base ~= nil and m_nameToPolicy[string.lower(base)])
 	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return IconHookup(row.PortraitIndex, OPTION_ICON_SIZE, row.IconAtlas, icon) end
+	return function(icon) return hookIconAnySize(row, icon) end
 end
 
 -- ============================================================== pane renderers
@@ -692,7 +709,7 @@ local GRAND_STRATEGY_UNITS = {
 local function greatPersonIconHook(unitType)
 	local row = unitType ~= nil and GameInfo.Units[unitType] or nil
 	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return IconHookup(row.PortraitIndex, OPTION_ICON_SIZE, row.IconAtlas, icon) end
+	return function(icon) return hookIconAnySize(row, icon) end
 end
 
 local function renderStrategyPane()
