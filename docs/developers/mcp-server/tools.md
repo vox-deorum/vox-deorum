@@ -12,7 +12,7 @@ The roughly three dozen tools fall into four groups, by what they touch. The spl
 
 - **Knowledge-query tools** answer "what is happening in *this* game right now?" — recent events, player summaries, diplomatic opinions, cities, victory progress, available strategic options. They read the per-game knowledge store, which means their answers are already filtered by what the asking player can see. See [knowledge.md](knowledge.md).
 
-- **Action tools** change the game rather than read it. Some steer the AI (set strategies, flavors, personas, diplomatic relationships, next research, next policy), some record agent decisions into the knowledge store (set metadata, relay a message, keep the status quo), and a couple control pacing directly (pause and resume a player's turn). The ones that steer the AI are the subject of [influence.md](influence.md).
+- **Action tools** change the game rather than read it. Some steer the AI (set strategies, flavors, personas, diplomatic relationships, next research, next policy), some record agent decisions into the knowledge store (set metadata, relay a message, keep the status quo), and a couple control pacing directly (pause and resume a player's turn). One — `present-decision`, used by the [human-control mode](../vox-agents/strategist.md#human-control-mode) — pushes the current option landscape into the in-game decision panel rather than touching the AI. The ones that steer the AI are the subject of [influence.md](influence.md).
 
 For the complete list and every tool's parameters, see `mcp-server/docs/tools.md`.
 

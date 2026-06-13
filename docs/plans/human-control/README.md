@@ -1,5 +1,7 @@
 # Human Control — Staged Implementation Plan
 
+**DONE, Archived.**
+
 This folder holds the human-control condition: the specification ([specs.md](specs.md)) and this staged implementation plan. Each numbered file is a self-contained stage: objective, work items, what it reuses, and how to verify it. Implement in order — each stage is independently verifiable, and the panel stages (5–7) are gated by the approved mockup (stage 4).
 
 The goal in one line: a person occupies a strategist seat — a `human-strategist` registered in the agent registry and assignable in `llmPlayers` like any other — and steers one civ through the *same* influence-level action space the LLM strategists use, landing in the same telemetry, replay, and `game_outcomes` databases so human and LLM games are analyzed by the same tools.

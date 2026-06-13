@@ -1,5 +1,7 @@
 # Documentation Revamp — Staged Plans
 
+**DONE, Archived.**
+
 This folder breaks the documentation revamp (see [`../plan.md`](../plan.md)) into independently implementable stages. Each numbered file is a self-contained plan: objective, work items, sources, and outputs.
 
 **The ordering is deliberately bottom-up.** After the scaffold, each of the five components gets its own early stage, written directly from its source. Only then do the cross-cutting pages (architecture, protocol, setup) and the player docs get written — as **synthesis** stages that summarize and link the already-written component folders rather than re-reading source. The components are sequenced along the data flow (DLL → mod → bridge → MCP → agents) so that each "feeds forward" into the next and into the synthesis stages. Implement in order; each stage's "Feeds forward" / "Sources" sections name exactly what it consumes from earlier stages.

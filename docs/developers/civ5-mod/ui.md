@@ -1,6 +1,6 @@
 # civ5-mod — In-Game UI
 
-This page is about what Vox Deorum looks like from *inside* the game: how an AI player's reasoning surfaces on screen, and how an observer can tap that stream. The mod itself is deliberately thin on UI — it ships no custom windows — so most of the "interface" is the game's existing surfaces (the replay log, the top panel) being driven by decisions that arrive from outside. The conversational, spokesperson-facing chat experience is produced by the agents, not the mod; this page describes the mod's side of it and points to where the rest lives.
+This page is about what Vox Deorum looks like from *inside* the game: how an AI player's reasoning surfaces on screen, and how an observer can tap that stream. The mod is deliberately thin on UI — most of the "interface" is the game's existing surfaces (the replay log, the top panel) being driven by decisions that arrive from outside. The one custom window it ships is the **human decision panel**, loaded only in [human-control mode](#the-human-decision-panel) so a person can take a strategist seat. The conversational, spokesperson-facing chat experience is produced by the agents, not the mod; this page describes the mod's side of it and points to where the rest lives.
 
 ## What a player sees
 
@@ -15,6 +15,14 @@ Two of the game's built-in surfaces carry Vox Deorum's presence in-game:
 The chat-with-a-spokesperson experience — talking to a civilization's envoy and getting answers in character — is **driven by the [vox-agents](../vox-agents/) framework, not by this mod.** The envoy and diplomat agents there generate the spokesperson's words; the strategist agents generate the per-turn decisions and rationale. This mod's role is only to give those words a way into the game: the strategic decisions become in-game `LuaEvents` and replay entries through the observer path described in [lua-hooks.md](lua-hooks.md). When reading or changing the player-facing chat, keep the terminology aligned with the agents' own `envoy.md` and `ui.md` pages — the "spokesperson" is an agent concept that this layer renders the output of.
 
 For the player's-eye view of holding those conversations and what to expect on screen, see the players' guide to [playing](../../players/playing.md).
+
+## The human decision panel
+
+In **human-control mode** — when a session assigns the [`human-strategist`](../vox-agents/strategist.md#human-control-mode) to a seat — the mod loads a custom in-game panel (`UI/VoxDeorumHumanPanel.lua` and `.xml`, with a small `VoxDeorumHumanTrigger` to surface it) that lets a person occupy a strategist seat. The game auto-plays every civ as in observe mode, but pauses at the human's decision turns until they submit. The panel is dormant otherwise; the addins are always present in the mod but stay hidden until a decision is due.
+
+The panel holds **no game logic**. On each decision turn it is handed the turn's option landscape by the [`present-decision`](../mcp-server/tools.md) tool — the same `get-options` payload and descriptive text the LLM's context is built from — as a `VoxDeorumHumanDecision(playerID, turn, options)` LuaEvent, and it renders exactly that: the valid grand strategy, flavors, research, policy, persona, and relationship options for the human's own civ, plus a single free-text rationale field. When the human submits (or explicitly keeps the status quo), the panel measures wall-clock deliberation time and fires a fire-and-forget `Game.BroadcastEvent("HumanDecision", …)` carrying the choices, the rationale, and the deliberation time back out through the existing DLL → bridge → MCP path to the waiting strategist. It also reports session state — whose turn the game is waiting on, that a decision is pending, the last decision, and submission confirmation.
+
+**Fairness by omission.** Human-control mode does not load the observer-facing UI (the AI Observer mod), so the replay overlays, rationale displays, and top-panel auto-switch that surface *other* players' reasoning in observe mode simply never render — the `VoxDeorumAction` / `VoxDeorumPlayerInfo` events still fire but reach no consumer. The decision panel itself renders only the human civ's own data, and the observer-UI override (`Game.SetObserverUIOverridePlayer`) pins the view to the human's civ rather than auto-switching to whoever just acted. The full design lives in `docs/plans/human-control/`.
 
 ## The observer API
 

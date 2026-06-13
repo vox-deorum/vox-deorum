@@ -91,14 +91,14 @@
 			<Label ID="Name" Anchor="L,T" Offset="6,4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			<Label ID="Numbers" Anchor="R,T" Offset="34,6" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 			<Label ID="Desc" Anchor="L,T" Offset="6,24" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
-			<GridButton ID="MinusButton" Anchor="L,T" Offset="6,52" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<GridButton ID="MinusButton" Anchor="L,T" Offset="6,54" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" Offset="0,0" String="-" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
 			<Slider ID="ValueSlider" Anchor="L,T" Offset="44,48" Length="420" Style="Slider" WheelSteps="10"/>
-			<GridButton ID="PlusButton" Anchor="L,T" Offset="474,52" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<GridButton ID="PlusButton" Anchor="L,T" Offset="474,54" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" Offset="0,0" String="+" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
-			<GridButton ID="ResetButton" Anchor="L,T" Offset="508,52" Size="100,26" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_RESET_TT">
+			<GridButton ID="ResetButton" Anchor="L,T" Offset="508,54" Size="100,26" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_RESET_TT">
 				<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_RESET" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
 		</Box>
