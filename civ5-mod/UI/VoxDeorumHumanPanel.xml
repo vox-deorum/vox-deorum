@@ -29,7 +29,7 @@
   without losing staged edits; the trigger stays until a decision is submitted,
   after which a small "auto-playing" chip reports the last decision.
 -->
-<Context Font="TwCenMT14" FontStyle="Base" Color="Beige" Color1="Black">
+<Context Font="TwCenMT16" FontStyle="Base" Color="Beige" Color1="Black">
 
 	<!-- ===== Single-select option row template (instantiated by the Lua) ===== -->
 	<!-- One row per option in the Grand Strategy / Next Research / Next Policy
@@ -49,8 +49,8 @@
 					<Grid ID="SelectionAnimHL" Size="620,58" Offset="0,0" Padding="0,0" Style="Grid9FrameTurnsHL"/>
 				</AlphaAnim>
 				<Image ID="Icon" Anchor="L,T" Offset="6,7" Size="45,45" Hidden="1"/>
-				<Label ID="Name" Anchor="L,T" Offset="58,7" WrapWidth="545" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-				<Label ID="Help" Anchor="L,T" Offset="58,32" WrapWidth="545" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+				<Label ID="Name" Anchor="L,T" Offset="58,7" WrapWidth="545" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+				<Label ID="Help" Anchor="L,T" Offset="58,32" WrapWidth="545" LeadingOffset="-4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 			</Button>
 		</Box>
 	</Instance>
@@ -58,7 +58,7 @@
 	<!-- ===== Plain text row (pane intros, notes, empty states) ===== -->
 	<Instance Name="TextInstance">
 		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="620,24" Color="255,255,255,0">
-			<Label ID="Text" Anchor="L,T" Offset="6,0" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			<Label ID="Text" Anchor="L,T" Offset="6,0" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 		</Box>
 	</Instance>
 
@@ -76,7 +76,7 @@
 				</ShowOnMouseOver>
 				<Label ID="Arrow" Anchor="L,C" Offset="8,0" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 				<Label ID="GroupTitle" Anchor="L,C" Offset="28,0" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-				<Label ID="GroupMeta" Anchor="R,C" Offset="10,0" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+				<Label ID="GroupMeta" Anchor="R,C" Offset="10,0" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 			</Button>
 		</Box>
 	</Instance>
@@ -89,16 +89,16 @@
 	<Instance Name="SliderInstance">
 		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="620,76" Color="255,255,255,0">
 			<Label ID="Name" Anchor="L,T" Offset="6,4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-			<Label ID="Numbers" Anchor="R,T" Offset="34,6" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			<Label ID="Numbers" Anchor="R,T" Offset="34,6" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 			<Label ID="Desc" Anchor="L,T" Offset="6,24" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
-			<GridButton ID="MinusButton" Anchor="L,T" Offset="6,44" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<GridButton ID="MinusButton" Anchor="L,T" Offset="6,48" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" Offset="0,0" String="-" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
 			<Slider ID="ValueSlider" Anchor="L,T" Offset="44,48" Length="420" Style="Slider" WheelSteps="10"/>
 			<GridButton ID="PlusButton" Anchor="L,T" Offset="474,44" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" Offset="0,0" String="+" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
-			<GridButton ID="ResetButton" Anchor="L,T" Offset="508,44" Size="100,26" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_RESET_TT">
+			<GridButton ID="ResetButton" Anchor="L,T" Offset="508,48" Size="100,26" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_RESET_TT">
 				<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_RESET" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
 		</Box>
@@ -113,7 +113,7 @@
 		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="620,76" Color="255,255,255,0">
 			<Image ID="Portrait" Anchor="L,T" Offset="6,6" Size="64,64" Hidden="1"/>
 			<Label ID="Leader" Anchor="L,T" Offset="82,6" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-			<Label ID="Note" Anchor="L,T" Offset="82,32" WrapWidth="525" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			<Label ID="Note" Anchor="L,T" Offset="82,32" WrapWidth="525" LeadingOffset="-4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 		</Box>
 	</Instance>
 
@@ -129,8 +129,8 @@
 					</AlphaAnim>
 				</ShowOnMouseOver>
 				<Grid ID="ActiveHL" Hidden="1" Size="220,54" Offset="0,0" Padding="0,0" Style="Grid9FrameTurnsHL"/>
-				<Label ID="NavTitle" Anchor="L,T" Offset="10,6" TruncateWidth="200" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-				<Label ID="NavSummary" Anchor="L,T" Offset="10,30" TruncateWidth="200" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+				<Label ID="NavTitle" Anchor="L,T" Offset="10,6" TruncateWidth="200" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+				<Label ID="NavSummary" Anchor="L,T" Offset="10,30" TruncateWidth="200" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 			</Button>
 		</Box>
 	</Instance>
@@ -163,7 +163,7 @@
 		     pre-game, read from the game database. Only the human's own civ. -->
 		<Image ID="LeaderPortrait" Anchor="L,T" Offset="30,52" Size="56,56" Hidden="1"/>
 		<Label ID="LeaderName" Anchor="L,T" Offset="96,54" TruncateWidth="630" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-		<Label ID="LeaderTraitDesc" Anchor="L,T" Offset="96,78" WrapWidth="630" LeadingOffset="-5" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+		<Label ID="LeaderTraitDesc" Anchor="L,T" Offset="96,78" WrapWidth="630" LeadingOffset="-5" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 		<Stack ID="UniquesStack" Anchor="R,T" Offset="30,58" StackGrowth="Right" Padding="4"/>
 
 		<!-- Decorative rules separate the header, chooser, staged summary, and
@@ -205,17 +205,17 @@
 		<!-- Actions. Keep Status Quo submits a status-quo decision (two-click
 		     confirm when changes are staged — the Lua swaps the label); Submit
 		     fires the staged changes once ≥1 change and a rationale are present. -->
-		<GridButton Anchor="L,B" Style="SmallButton" Size="260,32" Offset="30,36" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
+		<GridButton Anchor="L,B" Style="SmallButton" Size="260,32" Offset="30,42" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="StatusQuoLabel"/>
 		</GridButton>
-		<GridButton Anchor="R,B" Style="SmallButton" Size="200,32" Offset="30,36" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
+		<GridButton Anchor="R,B" Style="SmallButton" Size="200,32" Offset="30,42" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_SUBMIT" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		</GridButton>
 
 		<!-- Submission-accepted overlay (shown briefly after a decision is sent). -->
 		<Box ID="AcceptedOverlay" Hidden="1" Anchor="C,C" Offset="0,0" Size="1000,744" Color="0,0,0,210" ConsumeMouse="1">
 			<Label Anchor="C,C" Offset="0,-16" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_ACCEPTED" ID="AcceptedTitle"/>
-			<Label Anchor="C,C" Offset="0,22" WrapWidth="700" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_ACCEPTED_SUB" ID="AcceptedSub"/>
+			<Label Anchor="C,C" Offset="0,22" WrapWidth="700" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_ACCEPTED_SUB" ID="AcceptedSub"/>
 		</Box>
 	</Grid>
 </Context>
