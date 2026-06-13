@@ -1,0 +1,34 @@
+# Stage 6 — civ5-dll + mcp-server: `EnactAgentDeal` (the only gameplay change)
+
+> Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
+
+## Objective
+
+Flip on **real enactment**: an agreed deal — ordinary **trade items** and the **nine promises** — is enacted for real in the game, bypassing the AI's political refusal while honoring structural legality (specs §3, §4). This is the **only gameplay code change** in the feature and the last piece of human↔LLM Web v1. A new additive, `MOD_ACTIVE_DIPLOMACY`-gated DLL entrypoint does the work; the normal in-game deal pathway and `CvDealAI` valuation are left **completely untouched**.
+
+## Approach: a new additive entrypoint, sibling of the existing accept path
+
+The existing human-trade enactment path (`AreAllTradeItemsValid()` → `FinalizeDealValidAndAccepted` → `ActivateDeal`) does not call `CvDealAI` at all — acceptance is a parameter the caller passes in. The feature adds a sibling Lua-exposed function that builds the agreed `CvDeal`, validates it structurally **as human-to-human**, and activates it with acceptance pre-decided — then applies the deal's promise commitments directly. We **add** an entrypoint; we do not branch inside the existing ones.
+
+## Work items
+
+1. **`civ5-dll/.../Lua/CvLuaDeal.cpp`** — `lEnactAgentDeal`, registered in `PushMethods`, gated behind `MOD_ACTIVE_DIPLOMACY`:
+   - builds the `CvDeal` of ordinary trade items via the existing `lAdd*Trade` constructors;
+   - validates with `AreAllTradeItemsValid()`, classifying both sides as human (`bHumanToHuman = true`) so AI-only structural restrictions (one city per player, no peacetime selling of self-founded cities, the `DEALAI_DISABLE_CITY_TRADES` toggle) don't gate agent deals, while the always-on guards (ownership, quantity, capital, duplicate-luxury, banned luxuries, embassy-for-city, sapped/damaged cities) still apply (specs §4);
+   - activates via `FinalizeDealValidAndAccepted` / `ActivateDeal` with acceptance pre-decided — **never** invoking `CvDealAI`.
+2. **Promise commitments — same call** (`CvDiplomacyAI.*`): for the eight standing promises, call `SetXxxPromiseState(recipient, PROMISE_STATE_MADE)` + `SetXxxPromiseTurn`, preserving existing side-effects — Spy → `EvaluateSpiesAssignedToTargetPlayer`; No-Convert / No-Digging → `SetPlayerAskedNotToConvert` / `SetPlayerAskedNotToDig`. For **Coop War** (three-party), call `SetCoopWarState(ally, target, COOP_WAR_STATE_PREPARING)` instead of a promise-state setter. Because every promise writes state the game already persists, **no new save fields** are introduced, and honoring/expiry is governed by the game's existing `CvDiplomacyAI` timers and break-detection (e.g. a later DoW breaks the military promise).
+3. **Light promise legality check in the entrypoint** (not via `IsPossibleToTradeItem`, since promises aren't `TradeableItems`): distinct living major civs; not already `PROMISE_STATE_MADE` for that pair; Coop War needs a valid target.
+4. **No enum/save change; version bump.** No `TradeableItems` addition, no serialization change, no new acceptability/valuation logic. Bump the DLL version and rebuild (`scripts/release.py`, `CustomMods.h` `MOD_DLL_VERSION_NUMBER`); confirm the `CvConnectionService.cpp` `lua_call` args buffer has headroom for the largest deal payload.
+5. **`mcp-server`** — an `inspect-deal`-adjacent **`enact-agent-deal`** tool (non-read-only, `ActionTool` + a `LuaFunction` wrapper) that calls `EnactAgentDeal` with the trade items **and** the promise commitment list, and records the enactment (replay/action). Register the factory in `tools/index.ts`. Wire the stage-4 Accept action and the stage-5 negotiator's accept path to it.
+
+## Reuse
+
+`AreAllTradeItemsValid()` / `FinalizeDealValidAndAccepted` / `ActivateDeal` and the `bHumanToHuman` branch (`CvDealClasses.cpp`); the `lAdd*Trade` constructors and `PushMethods` registration (`CvLuaDeal.cpp`); the eight `SetXxxPromiseState` / `SetXxxPromiseTurn` setters + their side-effects and `SetCoopWarState` / `COOP_WAR_STATE_PREPARING` (`CvDiplomacyAI.*`, `CvDiplomacyAIEnums.h`); `MOD_ACTIVE_DIPLOMACY` (`CustomMods.h`); the `ActionTool` + `LuaFunction` pattern and `tools/index.ts` (mcp-server).
+
+## Verify
+
+Via `lua-executor` and end to end through stages 2–5: enact a deal the **stock AI would refuse on political grounds** — items change hands for real. A structurally-illegal item is rejected with a reason (the always-on `IsPossibleToTradeItem` guards still apply). A deal carrying a promise (and one carrying Coop War against a third party) writes real diplomacy state, and the promise thereafter **behaves like an in-game promise** — e.g. broken by a later declaration of war. The **normal in-game deal pathway and AI valuation behave exactly as before**; the agent path is a separate entrypoint with no `TradeableItems`/save-format change.
+
+## Done when
+
+Both sides agreeing in a Web conversation results in the deal being **enacted for real** — trade items and any of the nine promises — through the additive, `MOD_ACTIVE_DIPLOMACY`-gated entrypoint, with structurally-illegal items still rejected and the stock pathway untouched. **This completes human↔LLM Web v1** (specs § Success criteria).

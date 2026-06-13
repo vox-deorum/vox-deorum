@@ -1,0 +1,25 @@
+# Stage 9 — Static additivity / comparability review
+
+> Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
+
+## Objective
+
+Confirm by **static review of the merged code** that the feature is purely additive — the normal in-game deal pathway and the `CvDealAI` valuation behave exactly as before, and the new agent path honors the rule boundary in specs §4. Live end-to-end play (full human↔LLM games) is run separately by a human per the [specs.md](specs.md) success criteria and is not part of this review.
+
+## Review checklist
+
+- **Additive entrypoint only.** `EnactAgentDeal` is a new sibling of the accept path; the existing `AreAllTradeItemsValid()` → `FinalizeDealValidAndAccepted` → `ActivateDeal` functions and the entire `CvDealAI` valuation are **not branched or modified**. The normal in-game deal screen is untouched.
+- **Rule boundary honored.** Everything in `CvDeal::IsPossibleToTradeItem` is honored (always-on structural guards still apply); everything in `CvDealAI` is bypassed *for acceptance* on the agent path, but read **read-only** to produce the value estimates surfaced to agents. The valuation-layer anti-exploit guards (last strategic resource, last luxury while unhappy) are bypassed by design.
+- **No enum/save change.** No `TradeableItems` value added; no new save fields; promises write only state the game already persists (`SetXxxPromiseState`/`SetXxxPromiseTurn`, `SetCoopWarState`); no new `IsXxxAcceptable`/valuation logic — DLL stays merge-compatible with upstream Vox Populi. The whole entrypoint is gated behind `MOD_ACTIVE_DIPLOMACY`.
+- **Promise behavior parity.** An enacted promise is governed thereafter by the game's existing `CvDiplomacyAI` timers and break-detection — not by any deal-item duration — exactly as a promise made through normal diplomacy.
+- **Durable transcripts, live deals.** Conversation transcripts persist in the mcp-server (one conversation per civ pair, no thread/status table) and survive a restart; the Web reads them **through vox-agents** (no direct Web→mcp channel); deals are **fetched live**, with only an opaque reference in the transcript — never a frozen copy.
+- **Per-seat agent resolution.** A conversation against an LLM civ resolves **that target seat's** configured diplomat/negotiator (and model) from the seat config, not a client-supplied agent name; each LLM seat can use different diplomat/negotiator agents.
+- **Estimates never gate enactment.** Per-term value/agreeability estimates are advisory only on the agent path; acceptance is decided by the negotiation, and the game never refuses a deal on valuation grounds for an agent deal.
+
+## Verify
+
+Each checklist item is verified against the merged code, with findings (and any fixes) written into this file — mirroring human-control's stage 8 review.
+
+## Done when
+
+Every checklist item is confirmed against merged code with written findings; the remaining validation — full human↔LLM games and, in later phases, LLM↔LLM games — is run by a human per the success criteria in [specs.md](specs.md).
