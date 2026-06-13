@@ -63,7 +63,8 @@ local m_groupMetaRefreshers = {}     -- per-render group meta refresh closures
 local onUpdate                       -- forward declaration; openDialog starts it
 local m_lastSubmissionSummary = nil  -- summary shown after the accepted overlay
 local UNIQUE_ICON_SIZE = 64           -- matches the native/VP unique-bonus icon size
-local m_dialogQueued = false         -- true while this context owns the popup stack
+local m_dialogQueued = false         -- true while this context is shown as a modal panel
+local m_dialogShown = false          -- true while the popup should show panel UI
 
 -- Lazily-built maps from a localized display name to its GameInfo row (for
 -- icon art). The report keys techs/policies by the same localized name
@@ -72,6 +73,7 @@ local m_dialogQueued = false         -- true while this context owns the popup s
 local m_nameToTech = nil
 local m_nameToPolicy = nil
 local m_nameToPolicyBranch = nil
+local m_nameToPolicyBranchTexture = nil
 
 -- Dormant on load: nothing shows until a decision turn.
 ContextPtr:SetHide(true)
@@ -109,6 +111,40 @@ end
 local function stripSuffix(name)
 	if name == nil then return nil end
 	return (string.gsub(name, "%s*%(.-%)%s*$", ""))
+end
+
+-- Canonical label used for matching server-localized option names against
+-- Civ's in-game Locale.Lookup strings. The server strips markup tags before
+-- sending names; this removes Civ color/icon/link tags and normalizes spacing
+-- before lowercasing, so harmless localization formatting cannot hide icons.
+local function canonicalLabel(name)
+	if name == nil then return nil end
+	local text = tostring(name)
+	text = string.gsub(text, "%[COLOR_[^%]]*%]", "")
+	text = string.gsub(text, "%[ENDCOLOR%]", "")
+	text = string.gsub(text, "%[ICON_[^%]]*%]", "")
+	text = string.gsub(text, "%[LINK=[^%]]*%]", "")
+	text = string.gsub(text, "%[\\LINK%]", "")
+	text = string.gsub(text, "%[NEWLINE%]", " ")
+	text = string.gsub(text, "%[SPACE%]", " ")
+	text = string.gsub(text, "%s+", " ")
+	text = string.gsub(text, "^%s+", "")
+	text = string.gsub(text, "%s+$", "")
+	if text == "" then return nil end
+	return string.lower(text)
+end
+
+-- Extract the branch label from a decorated option like
+-- "Sovereignty (Continuing Tradition Branch)".
+local function continuingBranchLabel(name)
+	if name == nil then return nil end
+	return string.match(name, "%(Continuing%s+(.+)%s+Branch%)")
+end
+
+-- True when a policy option represents opening a whole branch rather than
+-- adopting a specific policy inside an already-open branch.
+local function isNewBranchOption(name)
+	return name ~= nil and string.find(name, "%(New Branch%)") ~= nil
 end
 
 -- Report newlines -> the markup Civ labels render.
@@ -627,31 +663,61 @@ local function buildTechMap()
 end
 
 -- Display-name -> GameInfo.Policies row, plus branch display-name -> the
--- branch's free policy row (whose icon is the branch art), for policy icons.
+-- branch's free policy row and native branch background texture, for policy
+-- icons.
 local function buildPolicyMaps()
 	if m_nameToPolicy ~= nil then return end
 	m_nameToPolicy = {}
 	m_nameToPolicyBranch = {}
+	m_nameToPolicyBranchTexture = {}
 	-- Key by the localized display name (what the report sends, suffix-stripped),
 	-- but also by a lowercased variant and the raw Type, so a stray whitespace/
 	-- case difference or a Type-keyed report still resolves to the right art.
 	local function register(map, name, row)
 		if name == nil or name == "" or row == nil then return end
 		map[name] = row
-		map[string.lower(name)] = row
+		local canonical = canonicalLabel(name)
+		if canonical ~= nil then map[canonical] = row end
 	end
+	local function registerValue(map, name, value)
+		if name == nil or name == "" or value == nil then return end
+		map[name] = value
+		local canonical = canonicalLabel(name)
+		if canonical ~= nil then map[canonical] = value end
+	end
+	local branchTextures = {
+		POLICY_BRANCH_TRADITION  = "Assets/UI/Art/Icons/SocialPoliciesTradition.dds",
+		POLICY_BRANCH_LIBERTY    = "Assets/UI/Art/Icons/SocialPoliciesLiberty.dds",
+		POLICY_BRANCH_HONOR      = "Assets/UI/Art/Icons/SocialPoliciesHonor.dds",
+		POLICY_BRANCH_PIETY      = "SocialPoliciesPiety.dds",
+		POLICY_BRANCH_PATRONAGE  = "SocialPoliciesPatronage.dds",
+		POLICY_BRANCH_AESTHETICS = "PolicyBranch_Aesthetics.dds",
+		POLICY_BRANCH_COMMERCE   = "SocialPoliciesIndustry.dds",
+		POLICY_BRANCH_EXPLORATION = "PolicyBranch_Exploration.dds",
+		POLICY_BRANCH_RATIONALISM = "SocialPoliciesRationalism.dds",
+	}
 	for row in GameInfo.Policies() do
 		register(m_nameToPolicy, Locale.Lookup(row.Description), row)
+		register(m_nameToPolicy, row.Description, row)
 		register(m_nameToPolicy, row.Type, row)
 	end
 	for branch in GameInfo.PolicyBranchTypes() do
+		local branchTexture = branchTextures[branch.Type]
+		registerValue(m_nameToPolicyBranchTexture, Locale.Lookup(branch.Description), branchTexture)
+		registerValue(m_nameToPolicyBranchTexture, branch.Description, branchTexture)
+		registerValue(m_nameToPolicyBranchTexture, branch.Type, branchTexture)
 		if branch.FreePolicy ~= nil then
 			local opener = GameInfo.Policies[branch.FreePolicy]
 			register(m_nameToPolicyBranch, Locale.Lookup(branch.Description), opener)
+			register(m_nameToPolicyBranch, branch.Description, opener)
 			register(m_nameToPolicyBranch, branch.Type, opener)
 			if opener ~= nil then
 				register(m_nameToPolicyBranch, Locale.Lookup(opener.Description), opener)
+				register(m_nameToPolicyBranch, opener.Description, opener)
 				register(m_nameToPolicyBranch, opener.Type, opener)
+				registerValue(m_nameToPolicyBranchTexture, Locale.Lookup(opener.Description), branchTexture)
+				registerValue(m_nameToPolicyBranchTexture, opener.Description, branchTexture)
+				registerValue(m_nameToPolicyBranchTexture, opener.Type, branchTexture)
 			end
 		end
 	end
@@ -666,14 +732,52 @@ end
 -- first (they scale down cleanly into the 64x64 Image), stopping at the first the
 -- atlas provides. The XML icon slot stays 64x64 regardless.
 local ICON_HOOK_SIZES = { 64, 80, 128, 256, 45, 32 }
-local function hookIconAnySize(row, icon)
+local POLICY_ICON_DEBUG = true
+
+local function logPolicyIcon(message)
+	if POLICY_ICON_DEBUG then print("[VoxDeorumHumanPanel] policy icon: " .. message) end
+end
+
+local function describeIconRow(row)
+	if row == nil then return "row=nil" end
+	return "type=" .. tostring(row.Type)
+		.. ", desc=" .. tostring(row.Description)
+		.. ", portrait=" .. tostring(row.PortraitIndex)
+		.. ", atlas=" .. tostring(row.IconAtlas)
+		.. ", branch=" .. tostring(row.PolicyBranchType)
+end
+
+local function hookIconAnySize(row, icon, debugLabel)
 	if row == nil or IconHookup == nil then return false end
+	if row.IconAtlas == nil then
+		if debugLabel ~= nil then
+			logPolicyIcon(debugLabel .. " has no IconAtlas (" .. describeIconRow(row) .. ")")
+		end
+		return false
+	end
 	for _, size in ipairs(ICON_HOOK_SIZES) do
 		if IconHookup(row.PortraitIndex, size, row.IconAtlas, icon) then
+			if debugLabel ~= nil then
+				logPolicyIcon(debugLabel .. " hooked at size " .. tostring(size)
+					.. " (" .. describeIconRow(row) .. ")")
+			end
 			return true
 		end
 	end
+	if debugLabel ~= nil then
+		logPolicyIcon(debugLabel .. " failed every size (" .. describeIconRow(row) .. ")")
+	end
 	return false
+end
+
+local function hookTexture(texture, icon, debugLabel)
+	if texture == nil or icon == nil then return false end
+	icon:SetTexture(texture)
+	icon:SetTextureOffsetVal(0, 0)
+	if debugLabel ~= nil then
+		logPolicyIcon(debugLabel .. " hooked texture " .. tostring(texture))
+	end
+	return true
 end
 
 local function techIconHook(name)
@@ -686,11 +790,68 @@ end
 local function policyIconHook(displayKey)
 	buildPolicyMaps()
 	local base = stripSuffix(displayKey)
-	local row = m_nameToPolicy[base] or m_nameToPolicyBranch[base]
-		or m_nameToPolicy[displayKey]
-		or (base ~= nil and m_nameToPolicy[string.lower(base)])
-	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return hookIconAnySize(row, icon) end
+	local branch = continuingBranchLabel(displayKey)
+	local canonicalBase = canonicalLabel(base)
+	local canonicalDisplay = canonicalLabel(displayKey)
+	local canonicalBranch = canonicalLabel(branch)
+	if isNewBranchOption(displayKey) then
+		local textureCandidates = {
+			{ label = "branch texture base", texture = m_nameToPolicyBranchTexture[base] },
+			{ label = "branch texture canonical base", texture = canonicalBase ~= nil and m_nameToPolicyBranchTexture[canonicalBase] or nil },
+			{ label = "branch texture display", texture = m_nameToPolicyBranchTexture[displayKey] },
+			{ label = "branch texture canonical display", texture = canonicalDisplay ~= nil and m_nameToPolicyBranchTexture[canonicalDisplay] or nil },
+		}
+		local textures = {}
+		for _, candidate in ipairs(textureCandidates) do
+			if candidate.texture ~= nil then table.insert(textures, candidate) end
+		end
+		logPolicyIcon("option='" .. tostring(displayKey)
+			.. "', base='" .. tostring(base)
+			.. "', canonicalBase='" .. tostring(canonicalBase)
+			.. "', branchTextures=" .. tostring(#textures)
+			.. ", firstTexture=" .. tostring(textures[1] ~= nil and textures[1].texture or nil))
+		if #textures > 0 then
+			return function(icon)
+				for _, candidate in ipairs(textures) do
+					if hookTexture(candidate.texture, icon, "option '" .. tostring(displayKey) .. "' via " .. candidate.label) then
+						return true
+					end
+				end
+				return false
+			end
+		end
+	end
+	local candidates = {
+		{ label = "branch base", row = m_nameToPolicyBranch[base] },
+		{ label = "branch canonical base", row = canonicalBase ~= nil and m_nameToPolicyBranch[canonicalBase] or nil },
+		{ label = "policy base", row = m_nameToPolicy[base] },
+		{ label = "policy canonical base", row = canonicalBase ~= nil and m_nameToPolicy[canonicalBase] or nil },
+		{ label = "policy display", row = m_nameToPolicy[displayKey] },
+		{ label = "policy canonical display", row = canonicalDisplay ~= nil and m_nameToPolicy[canonicalDisplay] or nil },
+		{ label = "branch canonical continuing", row = canonicalBranch ~= nil and m_nameToPolicyBranch[canonicalBranch] or nil },
+	}
+	local renderCandidates = {}
+	for _, candidate in ipairs(candidates) do
+		if candidate.row ~= nil then
+			table.insert(renderCandidates, candidate)
+		end
+	end
+	logPolicyIcon("option='" .. tostring(displayKey)
+		.. "', base='" .. tostring(base)
+		.. "', continuingBranch='" .. tostring(branch)
+		.. "', canonicalBase='" .. tostring(canonicalBase)
+		.. "', canonicalBranch='" .. tostring(canonicalBranch)
+		.. "', candidates=" .. tostring(#renderCandidates)
+		.. ", first=" .. describeIconRow(renderCandidates[1] ~= nil and renderCandidates[1].row or nil))
+	if #renderCandidates == 0 or IconHookup == nil then return nil end
+	return function(icon)
+		for _, candidate in ipairs(renderCandidates) do
+			if hookIconAnySize(candidate.row, icon, "option '" .. tostring(displayKey) .. "' via " .. candidate.label) then
+				return true
+			end
+		end
+		return false
+	end
 end
 
 -- ============================================================== pane renderers
@@ -852,11 +1013,8 @@ local function renderPolicyPane()
 	end
 
 	-- Continuing-a-branch options first, then new branches; alphabetical inside.
-	local function isNewBranch(name)
-		return string.find(name, "%(New Branch%)") ~= nil
-	end
 	table.sort(names, function(a, b)
-		local na, nb = isNewBranch(a), isNewBranch(b)
+		local na, nb = isNewBranchOption(a), isNewBranchOption(b)
 		if na ~= nb then return nb end
 		return a < b
 	end)
@@ -1229,30 +1387,37 @@ end
 
 -- Show/hide the dialog controls as a unit. The trigger lives in a separate
 -- context so this modal context can be fully hidden when minimized.
+local function syncDialogControls()
+	local visible = m_dialogShown and not ContextPtr:IsHidden()
+	Controls.DialogDim:SetHide(not visible)
+	Controls.MainGrid:SetHide(not visible)
+	Controls.AcceptedOverlay:SetHide(not (visible and m_acceptedTimer ~= nil))
+end
+
 local function setDialogShown(shown)
-	Controls.DialogDim:SetHide(not shown)
-	Controls.MainGrid:SetHide(not shown)
+	m_dialogShown = shown
+	syncDialogControls()
 end
 
--- Put the dialog context on Civ's popup stack while it is actually visible.
+-- Show the dialog context while it is actually visible. Do not use Civ's popup
+-- stack here: hidden QueuePopup contexts can sit at the front of UIManager and
+-- make Tech/Policy/Demographics queue silently behind them.
 local function queueDialog()
-	if m_dialogQueued then return end
-	if UIManager ~= nil and UIManager.QueuePopup ~= nil then
-		pcall(function()
-			UIManager:QueuePopup(ContextPtr, PopupPriority.InGameUtmost)
-		end)
-	end
+	if m_dialogQueued then return true end
+	ContextPtr:SetHide(false)
 	m_dialogQueued = true
+	syncDialogControls()
+	return true
 end
 
--- Release the dialog context from Civ's popup stack when it is hidden.
+-- Hide the dialog context when minimized/submitted. Since this panel is not on
+-- UIManager's popup stack, hiding it cannot leave native popups queued behind it.
 local function releaseDialog()
-	if UIManager ~= nil and UIManager.DequeuePopup ~= nil then
-		pcall(function()
-			UIManager:DequeuePopup(ContextPtr)
-		end)
-	end
+	local released = m_dialogQueued
 	m_dialogQueued = false
+	ContextPtr:SetHide(true)
+	syncDialogControls()
+	return released
 end
 
 -- Open the dialog. The first open of a decision turn marks the start of the
@@ -1260,15 +1425,18 @@ end
 -- HumanDecision payload reports it back to the strategist.
 local function openDialog()
 	if m_options == nil or m_acceptedTimer ~= nil then return end
-	if not m_deliberationStarted then
-		m_deliberationStarted = true
-		ContextPtr:SetUpdate(onUpdate)
-	end
+	local startDeliberation = not m_deliberationStarted
 	disarmStatusQuo()
-	ContextPtr:SetHide(false)
 	setDialogShown(true)
-	queueDialog()
-	LuaEvents.VoxDeorumHumanPanelOpened()
+	if queueDialog() then
+		if startDeliberation then
+			m_deliberationStarted = true
+			ContextPtr:SetUpdate(onUpdate)
+		end
+		LuaEvents.VoxDeorumHumanPanelOpened()
+	else
+		setDialogShown(false)
+	end
 end
 
 -- Hide the dialog without discarding staged edits or the typed rationale; the
@@ -1277,9 +1445,9 @@ end
 local function hideDialog()
 	disarmStatusQuo()
 	setDialogShown(false)
-	releaseDialog()
-	ContextPtr:SetHide(true)
-	LuaEvents.VoxDeorumHumanPanelHidden()
+	if releaseDialog() then
+		LuaEvents.VoxDeorumHumanPanelHidden()
+	end
 end
 
 -- Per-frame timer that retires the accepted overlay, swaps the trigger for the
@@ -1294,10 +1462,9 @@ function onUpdate(fDTime)
 		m_acceptedTimer = nil
 		ContextPtr:ClearUpdate()
 		setDialogShown(false)
-		Controls.AcceptedOverlay:SetHide(true)
-		releaseDialog()
-		ContextPtr:SetHide(true)
-		LuaEvents.VoxDeorumHumanPanelSubmitted(m_turn, m_lastSubmissionSummary or "")
+		if releaseDialog() then
+			LuaEvents.VoxDeorumHumanPanelSubmitted(m_turn, m_lastSubmissionSummary or "")
+		end
 	end
 end
 
@@ -1387,8 +1554,8 @@ local function enterAcceptedState(summary)
 	m_lastSubmissionSummary = summary
 	LuaEvents.VoxDeorumHumanPanelSubmitting()
 	Controls.AcceptedSub:LocalizeAndSetText("TXT_KEY_VD_HUMAN_ACCEPTED_SUB_DECISION", summary)
-	Controls.AcceptedOverlay:SetHide(false)
 	m_acceptedTimer = ACCEPTED_HOLD_SECONDS
+	setDialogShown(true)
 	ContextPtr:SetUpdate(onUpdate)
 end
 
@@ -1465,6 +1632,7 @@ local function showPending(playerID, turn, options)
 	setDialogShown(false)
 	releaseDialog()
 	ContextPtr:SetHide(true)
+	syncDialogControls()
 end
 
 -- Inbound: the strategist (via present-decision) signals a pending decision and
@@ -1480,6 +1648,11 @@ Controls.StatusQuoButton:RegisterCallback(Mouse.eLClick, onStatusQuoClicked)
 Controls.SubmitButton:RegisterCallback(Mouse.eLClick, onSubmitClicked)
 Controls.HideButton:RegisterCallback(Mouse.eLClick, hideDialog)
 LuaEvents.VoxDeorumHumanOpenPanel.Add(openDialog)
+
+-- Keep child controls synchronized if the context is hidden externally.
+ContextPtr:SetShowHideHandler(function(isHide, isInit)
+	syncDialogControls()
+end)
 
 -- Escape hides the open dialog (back to the trigger) instead of falling through
 -- to the game menu; while a submission is animating it is swallowed; and when
