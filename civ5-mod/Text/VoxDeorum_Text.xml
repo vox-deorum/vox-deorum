@@ -124,16 +124,8 @@
 			<Text>{1_Num} settings</Text>
 		</Row>
 
-		<!-- Slider furniture: semantic tick labels and the reset button. -->
-		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_FLAVOR">
-			<Text>[COLOR_GREY]50 (balanced)[ENDCOLOR]</Text>
-		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_PERSONA">
-			<Text>[COLOR_GREY]5 (balanced)[ENDCOLOR]</Text>
-		</Row>
-		<Row Tag="TXT_KEY_VD_HUMAN_TICKS_REL">
-			<Text>[COLOR_GREY]0 (neutral)[ENDCOLOR]</Text>
-		</Row>
+		<!-- Slider furniture: the reset button. Semantic labels are rendered
+		     beside the live value in Lua so each row can stay compact. -->
 		<Row Tag="TXT_KEY_VD_HUMAN_RESET">
 			<Text>Reset</Text>
 		</Row>

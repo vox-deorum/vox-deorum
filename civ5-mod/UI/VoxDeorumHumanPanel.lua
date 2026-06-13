@@ -9,10 +9,10 @@
 -- report to the bridge as a structured value and the DLL converts it to a table
 -- (ConvertJsonToLuaValue), so we read its fields directly -- no JSON parsing.
 --
--- The decision does NOT pop the dialog open. Instead a single-line trigger
--- button appears in the native end-turn ("PLEASE WAIT") slot above the minimap
--- (alignToEndTurnButton copies that button's live geometry); the human clicks it
--- to OPEN the dialog, which marks the start of their deliberation.
+-- The decision does NOT pop the dialog open. A separate lightweight trigger
+-- context owns the native end-turn-slot button above the minimap; clicking it
+-- fires LuaEvents.VoxDeorumHumanOpenPanel, which opens this modal panel and
+-- marks the start of the human's deliberation.
 --
 -- The dialog is the approved mockup's master-detail layout: a leader context row
 -- (the human civ only), a left nav of the six Flavor-mode categories -- Grand
@@ -60,6 +60,7 @@ local m_navItems = {}                -- { { id, ctrl }, ... } built once per dec
 local m_groupOpen = {}               -- collapsible-group open state, by title key
 local m_groupMetaRefreshers = {}     -- per-render group meta refresh closures
 local onUpdate                       -- forward declaration; openDialog starts it
+local m_lastSubmissionSummary = nil  -- summary shown after the accepted overlay
 
 -- Lazily-built maps from a localized display name to its GameInfo row (for
 -- icon art). The report keys techs/policies by the same localized name
@@ -185,9 +186,9 @@ local PERSONA_GROUPS = {
 	  keys = { "WarmongerHate", "DenounceWillingness", "Forgiveness", "Meanness", "Neediness", "Chattiness" } },
 }
 
-local TICKS_FLAVOR = "TXT_KEY_VD_HUMAN_TICKS_FLAVOR"
-local TICKS_PERSONA = "TXT_KEY_VD_HUMAN_TICKS_PERSONA"
-local TICKS_REL = "TXT_KEY_VD_HUMAN_TICKS_REL"
+local VALUE_KIND_FLAVOR = "flavor"
+local VALUE_KIND_PERSONA = "persona"
+local VALUE_KIND_REL = "relationship"
 
 -- =========================================================== staging plumbing
 
@@ -482,17 +483,17 @@ end
 -- Slider row used for flavors (0-100 step 5), persona (1-10 step 1), and
 -- relationship dimensions (-100..100 step 5). Updates itself in place so
 -- dragging is never interrupted by a re-render. cfg: { name, desc, min, max,
--- step, ticksKey, getCurrent, getStaged, setStaged }.
+-- step, valueKind, getCurrent, getStaged, setStaged }.
 local function addSliderRow(cfg)
 	local ctrl = {}
 	ContextPtr:BuildInstanceForControl("SliderInstance", ctrl, Controls.PaneStack)
 
 	-- Lay the slider line under the wrapped description (or directly under the
 	-- name when there is none) and size the row to fit.
-	local lineY = 26
+	local lineY = 22
 	if cfg.desc ~= nil and cfg.desc ~= "" then
 		ctrl.Desc:SetText(cfg.desc)
-		lineY = 26 + ctrl.Desc:GetSizeY() + 4
+		lineY = 22 + ctrl.Desc:GetSizeY() + 2
 	else
 		ctrl.Desc:SetHide(true)
 	end
@@ -500,9 +501,7 @@ local function addSliderRow(cfg)
 	ctrl.ValueSlider:SetOffsetVal(44, lineY + 4)
 	ctrl.PlusButton:SetOffsetVal(474, lineY)
 	ctrl.ResetButton:SetOffsetVal(508, lineY)
-	ctrl.Ticks:SetOffsetVal(44, lineY + 28)
-	ctrl.Ticks:LocalizeAndSetText(cfg.ticksKey)
-	ctrl.Box:SetSizeY(lineY + 48)
+	ctrl.Box:SetSizeY(lineY + 32)
 
 	local updating = false
 	local span = cfg.max - cfg.min
@@ -514,6 +513,24 @@ local function addSliderRow(cfg)
 		return cfg.getCurrent()
 	end
 
+	-- Attach the old tick semantics to the live value, keeping the row compact.
+	local function formatValue(value)
+		if cfg.valueKind == VALUE_KIND_FLAVOR then
+			if value == 0 then return "0 (forbid)" end
+			if value == 30 then return "30 (enough)" end
+			if value == 50 then return "50 (balanced)" end
+			if value == 70 then return "70 (prioritize)" end
+			if value == 100 then return "100 (emergency)" end
+		elseif cfg.valueKind == VALUE_KIND_PERSONA then
+			if value == 1 then return "1 (low)" end
+			if value == 5 then return "5 (balanced)" end
+			if value == 10 then return "10 (high)" end
+		elseif cfg.valueKind == VALUE_KIND_REL then
+			if value == 0 then return "0 (neutral)" end
+		end
+		return tostring(value)
+	end
+
 	local function refresh()
 		local cur = cfg.getCurrent()
 		local staged = cfg.getStaged()
@@ -521,10 +538,10 @@ local function addSliderRow(cfg)
 		ctrl.ValueSlider:SetValue((shownValue() - cfg.min) / span)
 		updating = false
 		if staged ~= nil then
-			ctrl.Numbers:SetText(cur .. " -> [COLOR_POSITIVE_TEXT]" .. staged .. "[ENDCOLOR]")
+			ctrl.Numbers:SetText(formatValue(cur) .. " -> [COLOR_POSITIVE_TEXT]" .. formatValue(staged) .. "[ENDCOLOR]")
 			ctrl.Name:SetText(cfg.name .. " [COLOR_POSITIVE_TEXT][ICON_BULLET][ENDCOLOR]")
 		else
-			ctrl.Numbers:SetText(tostring(cur))
+			ctrl.Numbers:SetText(formatValue(cur))
 			ctrl.Name:SetText(cfg.name)
 		end
 	end
@@ -620,7 +637,14 @@ local function buildPolicyMaps()
 	for branch in GameInfo.PolicyBranchTypes() do
 		local label = Locale.Lookup(branch.Description)
 		if label ~= nil and label ~= "" and branch.FreePolicy ~= nil then
-			m_nameToPolicyBranch[label] = GameInfo.Policies[branch.FreePolicy]
+			local opener = GameInfo.Policies[branch.FreePolicy]
+			m_nameToPolicyBranch[label] = opener
+			if opener ~= nil then
+				local openerLabel = Locale.Lookup(opener.Description)
+				if openerLabel ~= nil and openerLabel ~= "" then
+					m_nameToPolicyBranch[openerLabel] = opener
+				end
+			end
 		end
 	end
 end
@@ -635,7 +659,8 @@ end
 local function policyIconHook(displayKey)
 	buildPolicyMaps()
 	local base = stripSuffix(displayKey)
-	local row = m_nameToPolicy[base] or m_nameToPolicyBranch[base]
+	local row = m_nameToPolicy[base] or m_nameToPolicyBranch[base] or m_nameToPolicy[displayKey]
+	if row == nil then row = GameInfo.Policies["POLICY_TRADITION"] or GameInfo.Policies[0] end
 	if row == nil or IconHookup == nil then return nil end
 	return function(icon) return IconHookup(row.PortraitIndex, 45, row.IconAtlas, icon) end
 end
@@ -721,7 +746,7 @@ local function renderFlavorsPane()
 			local row = addSliderRow({
 				name = displayNameFor(flavorKey),
 				desc = toMarkup(descriptions[flavorKey]),
-				min = 0, max = 100, step = 5, ticksKey = TICKS_FLAVOR,
+				min = 0, max = 100, step = 5, valueKind = VALUE_KIND_FLAVOR,
 				getCurrent = function() return currentFlavor(flavorKey) end,
 				getStaged = function() return m_staged.Flavors[flavorKey] end,
 				setStaged = function(v)
@@ -867,7 +892,7 @@ local function renderPersonaPane()
 			local row = addSliderRow({
 				name = displayNameFor(personaKey),
 				desc = personaDescFor(personaKey),
-				min = 1, max = 10, step = 1, ticksKey = TICKS_PERSONA,
+				min = 1, max = 10, step = 1, valueKind = VALUE_KIND_PERSONA,
 				getCurrent = function() return currentPersona(personaKey) end,
 				getStaged = function() return m_staged.Persona[personaKey] end,
 				setStaged = function(v)
@@ -934,7 +959,7 @@ local function renderRelationsPane()
 				name = Locale.ConvertTextKey(dimKey == "Public"
 					and "TXT_KEY_VD_HUMAN_REL_PUBLIC" or "TXT_KEY_VD_HUMAN_REL_PRIVATE"),
 				desc = "",
-				min = -100, max = 100, step = 5, ticksKey = TICKS_REL,
+				min = -100, max = 100, step = 5, valueKind = VALUE_KIND_REL,
 				getCurrent = function() return currentRelationship(civName)[dimKey] end,
 				getStaged = function()
 					local rel = m_staged.Relationships[targetID]
@@ -1123,8 +1148,8 @@ end
 
 -- ============================================================ submission path
 
--- Show/hide the dialog (dim backdrop + grid) as a unit, leaving the corner
--- trigger in place so a hidden dialog can be reopened.
+-- Show/hide the dialog controls as a unit. The trigger lives in a separate
+-- context so this modal context can be fully hidden when minimized.
 local function setDialogShown(shown)
 	Controls.DialogDim:SetHide(not shown)
 	Controls.MainGrid:SetHide(not shown)
@@ -1134,19 +1159,25 @@ end
 -- human's deliberation. The update loop accumulates that time locally and the
 -- HumanDecision payload reports it back to the strategist.
 local function openDialog()
+	if m_options == nil or m_acceptedTimer ~= nil then return end
 	if not m_deliberationStarted then
 		m_deliberationStarted = true
 		ContextPtr:SetUpdate(onUpdate)
 	end
 	disarmStatusQuo()
+	ContextPtr:SetHide(false)
 	setDialogShown(true)
+	LuaEvents.VoxDeorumHumanPanelOpened()
 end
 
 -- Hide the dialog without discarding staged edits or the typed rationale; the
--- trigger button remains so the human can reopen it. The game stays paused.
+-- separate trigger context remains so the human can reopen it. Hiding the whole
+-- context releases the normal popup stack for other Civ/VP dialogs.
 local function hideDialog()
 	disarmStatusQuo()
 	setDialogShown(false)
+	ContextPtr:SetHide(true)
+	LuaEvents.VoxDeorumHumanPanelHidden()
 end
 
 -- Per-frame timer that retires the accepted overlay, swaps the trigger for the
@@ -1162,31 +1193,9 @@ function onUpdate(fDTime)
 		ContextPtr:ClearUpdate()
 		setDialogShown(false)
 		Controls.AcceptedOverlay:SetHide(true)
-		Controls.TriggerButton:SetHide(true)
-		Controls.AutoplayChip:SetHide(false)
+		ContextPtr:SetHide(true)
+		LuaEvents.VoxDeorumHumanPanelSubmitted(m_turn, m_lastSubmissionSummary or "")
 	end
-end
-
--- Drop our trigger into the native end-turn ("PLEASE WAIT") button's slot. EUI
--- repositions that button whenever the minimap resizes (MiniMapPanel.lua), so
--- rather than hardcode pixels we copy its live size and offset onto our widget,
--- effectively overriding it. The XML geometry is the fallback when the native
--- button can't be reached (non-EUI layout, or the cross-context lookup fails).
--- Wrapped in pcall so a missing control or method never breaks the panel.
-local function alignToEndTurnButton()
-	pcall(function()
-		local endTurn = ContextPtr:LookUpControl("../WorldView/ActionInfoPanel/EndTurnButton")
-		if endTurn == nil then return end
-		local w, h = endTurn:GetSizeVal()
-		local x, y = endTurn:GetOffsetVal()
-		if not w or not h or w <= 0 or h <= 0 then return end
-		local fallbackW = Controls.TriggerButton:GetSizeVal()
-		if fallbackW ~= nil and w < fallbackW then w = fallbackW end
-		Controls.TriggerButton:SetSizeVal(w, h)
-		Controls.TriggerButton:SetOffsetVal(x, y)
-		Controls.AutoplayChip:SetSizeVal(w, 38)
-		Controls.AutoplayChip:SetOffsetVal(x, y)
-	end)
 end
 
 -- Build the HumanDecision payload: required PlayerID/Turn/Rationale plus only
@@ -1272,7 +1281,8 @@ end
 
 -- Show the accepted confirmation, then retire to the auto-playing chip.
 local function enterAcceptedState(summary)
-	Controls.AutoplayChipLabel:LocalizeAndSetText("TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP_DECISION", m_turn, summary)
+	m_lastSubmissionSummary = summary
+	LuaEvents.VoxDeorumHumanPanelSubmitting()
 	Controls.AcceptedSub:LocalizeAndSetText("TXT_KEY_VD_HUMAN_ACCEPTED_SUB_DECISION", summary)
 	Controls.AcceptedOverlay:SetHide(false)
 	m_acceptedTimer = ACCEPTED_HOLD_SECONDS
@@ -1329,10 +1339,10 @@ local function showPending(playerID, turn, options)
 	m_deliberationStarted = false
 	m_deliberationSeconds = 0
 	m_sqArmed = false
+	m_lastSubmissionSummary = nil
 	clearStaged()
 	ContextPtr:ClearUpdate()
 	Controls.AcceptedOverlay:SetHide(true)
-	Controls.AutoplayChip:SetHide(true)
 	Controls.StatusQuoLabel:LocalizeAndSetText("TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO")
 
 	buildMetCivs()
@@ -1350,9 +1360,7 @@ local function showPending(playerID, turn, options)
 	selectCategory("strategy")
 	updateShell()
 	setDialogShown(false)
-	alignToEndTurnButton()
-	Controls.TriggerButton:SetHide(false)
-	ContextPtr:SetHide(false)
+	ContextPtr:SetHide(true)
 end
 
 -- Inbound: the strategist (via present-decision) signals a pending decision and
@@ -1366,8 +1374,8 @@ end)
 Controls.RationaleBox:RegisterCallback(function() refreshButtons() end)
 Controls.StatusQuoButton:RegisterCallback(Mouse.eLClick, onStatusQuoClicked)
 Controls.SubmitButton:RegisterCallback(Mouse.eLClick, onSubmitClicked)
-Controls.TriggerButton:RegisterCallback(Mouse.eLClick, openDialog)
 Controls.HideButton:RegisterCallback(Mouse.eLClick, hideDialog)
+LuaEvents.VoxDeorumHumanOpenPanel.Add(openDialog)
 
 -- Escape hides the open dialog (back to the trigger) instead of falling through
 -- to the game menu; while a submission is animating it is swallowed; and when

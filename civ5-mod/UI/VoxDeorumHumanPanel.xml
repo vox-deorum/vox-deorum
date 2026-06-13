@@ -13,8 +13,11 @@
   JSON the bridge carried), so the panel reads its fields directly with no JSON
   parsing.
 
-  The human clicks the trigger to open the dialog; that click starts their
-  deliberation. The dialog is the approved mockup's master-detail layout: a
+  A separate lightweight trigger context owns the bottom-right reopen button; the
+  human clicks it to open this dialog, and that click starts their deliberation.
+  Keeping the trigger out of this context lets Hide fully release this modal
+  panel so other Civ/VP dialogs can appear. The dialog is the approved mockup's
+  master-detail layout: a
   leader context row (the human civ only — spec section 3), a left nav of the six
   Flavor-mode categories (Grand Strategy, Flavors, Next Research, Next Policy,
   Persona, Relationships) each with a one-line summary and a staged-edits badge,
@@ -80,25 +83,24 @@
 
 	<!-- ===== Slider row (flavors 0-100, persona 1-10, relationships -100..100) ===== -->
 	<!-- Name + current->staged numbers, the option's descriptive text, then a
-	     minus / slider / plus / reset line with semantic tick labels below. The
+	     minus / slider / plus / reset line. The
 	     Lua positions the slider line under the wrapped description and sizes the
 	     row to fit. -->
 	<Instance Name="SliderInstance">
-		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="620,96" Color="255,255,255,0">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="620,76" Color="255,255,255,0">
 			<Label ID="Name" Anchor="L,T" Offset="6,4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			<Label ID="Numbers" Anchor="R,T" Offset="34,6" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
-			<Label ID="Desc" Anchor="L,T" Offset="6,26" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
-			<GridButton ID="MinusButton" Anchor="L,T" Offset="6,50" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label ID="Desc" Anchor="L,T" Offset="6,24" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			<GridButton ID="MinusButton" Anchor="L,T" Offset="6,44" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" Offset="0,0" String="-" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
-			<Slider ID="ValueSlider" Anchor="L,T" Offset="44,54" Length="420" Style="Slider" WheelSteps="10"/>
-			<GridButton ID="PlusButton" Anchor="L,T" Offset="474,50" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Slider ID="ValueSlider" Anchor="L,T" Offset="44,48" Length="420" Style="Slider" WheelSteps="10"/>
+			<GridButton ID="PlusButton" Anchor="L,T" Offset="474,44" Size="26,26" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" Offset="0,0" String="+" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
-			<GridButton ID="ResetButton" Anchor="L,T" Offset="508,50" Size="100,26" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_RESET_TT">
+			<GridButton ID="ResetButton" Anchor="L,T" Offset="508,44" Size="100,26" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_RESET_TT">
 				<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_RESET" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			</GridButton>
-			<Label ID="Ticks" Anchor="L,T" Offset="44,78" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
 		</Box>
 	</Instance>
 
@@ -140,28 +142,6 @@
 		</Box>
 	</Instance>
 
-	<!-- ===== Corner widget: the native end-turn ("PLEASE WAIT") slot ===== -->
-	<!-- Our own widget rather than a fork of Community Patch's ActionInfoPanel:
-	     the native EndTurnButton lives in a separate UI context an addin cannot
-	     reach and is already overridden by Vox Populi. Instead the trigger and
-	     chip anchor to the bottom-right exactly like that button, and the Lua
-	     copies the live native EndTurnButton size/offset (alignToEndTurnButton)
-	     so the trigger lands in that slot above the minimap and effectively
-	     overrides the "PLEASE WAIT" button. The static geometry below is the
-	     fallback when the native button can't be reached; tune it in-game if the
-	     placement needs nudging. The trigger and chip share the slot (only one is
-	     shown at a time). -->
-	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="10,205" Size="320,46" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
-		<!-- Match the wide native "PLEASE WAIT" slot so the trigger fully covers
-		     it even when the live EndTurnButton lookup is unavailable. -->
-		<Label Anchor="C,C" Offset="0,0" TruncateWidth="300" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-	</GridButton>
-	<!-- Auto-playing chip: shown in the same slot once a decision is submitted;
-	     reports the last decision for session-state legibility (spec section 6). -->
-	<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Offset="10,205" Size="320,38" Color="0,0,0,150" ConsumeMouse="0">
-		<Label Anchor="C,C" Offset="0,0" WrapWidth="312" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="AutoplayChipLabel"/>
-	</Box>
-
 	<!-- ===== Decision dialog (hidden until the trigger is clicked) ===== -->
 	<!-- The dim backdrop and the grid are toggled together by the Lua (they are
 	     not wrapped in a sized container so each still anchors to the screen). -->
@@ -181,54 +161,54 @@
 		<!-- Leader context row: the human civ's leader portrait, trait, and unique
 		     components — the same data the EUI leader-choose dialog shows at
 		     pre-game, read from the game database. Only the human's own civ. -->
-		<Image ID="LeaderPortrait" Anchor="L,T" Offset="30,56" Size="64,64" Hidden="1"/>
-		<Label ID="LeaderName" Anchor="L,T" Offset="104,58" TruncateWidth="620" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-		<Label ID="LeaderTraitDesc" Anchor="L,T" Offset="104,84" WrapWidth="620" LeadingOffset="-5" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
-		<Stack ID="UniquesStack" Anchor="R,T" Offset="30,62" StackGrowth="Right" Padding="4"/>
+		<Image ID="LeaderPortrait" Anchor="L,T" Offset="30,52" Size="56,56" Hidden="1"/>
+		<Label ID="LeaderName" Anchor="L,T" Offset="96,54" TruncateWidth="630" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+		<Label ID="LeaderTraitDesc" Anchor="L,T" Offset="96,78" WrapWidth="630" LeadingOffset="-5" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+		<Stack ID="UniquesStack" Anchor="R,T" Offset="30,58" StackGrowth="Right" Padding="4"/>
 
 		<!-- Decorative rules separate the header, chooser, staged summary, and
 		     rationale/action areas while keeping the native popup treatment. -->
-		<Box Anchor="L,T" Offset="30,140" Size="940,1" Color="204,170,90,180"/>
-		<Box Anchor="L,T" Offset="30,141" Size="940,1" Color="0,0,0,150"/>
-		<Box Anchor="L,T" Offset="260,156" Size="1,394" Color="204,170,90,110"/>
-		<Box Anchor="L,T" Offset="261,156" Size="1,394" Color="0,0,0,120"/>
+		<Box Anchor="L,T" Offset="30,126" Size="940,1" Color="204,170,90,180"/>
+		<Box Anchor="L,T" Offset="30,127" Size="940,1" Color="0,0,0,150"/>
+		<Box Anchor="L,T" Offset="260,142" Size="1,394" Color="204,170,90,110"/>
+		<Box Anchor="L,T" Offset="261,142" Size="1,394" Color="0,0,0,120"/>
 
 		<!-- Left nav: the six Flavor-mode categories. -->
-		<Stack ID="NavStack" Anchor="L,T" Offset="30,156" Padding="4" StackGrowth="Bottom"/>
+		<Stack ID="NavStack" Anchor="L,T" Offset="30,142" Padding="4" StackGrowth="Bottom"/>
 
 		<!-- Right pane: the selected category, rebuilt on category switch. -->
-		<Label ID="CategoryHeader" Anchor="L,T" Offset="280,154" TruncateWidth="670" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-		<ScrollPanel Anchor="L,T" Offset="280,184" Size="690,370" AutoScrollBar="1" Vertical="1" ID="PaneScroll">
+		<Label ID="CategoryHeader" Anchor="L,T" Offset="280,140" TruncateWidth="670" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+		<ScrollPanel Anchor="L,T" Offset="280,170" Size="690,370" AutoScrollBar="1" Vertical="1" ID="PaneScroll">
 			<ScrollBar ID="ScrollBar" Style="VertSlider" Length="332" Offset="2,18" Anchor="R,T" AnchorSide="O,I"/>
 			<UpButton ID="ScrollBarU" Offset="2,0" Style="ScrollBarUp" Anchor="R,T" AnchorSide="O,I"/>
 			<DownButton ID="ScrollBarD" Offset="2,0" Style="ScrollBarDown" Anchor="R,B" AnchorSide="O,I"/>
 			<Stack Anchor="L,T" Offset="0,0" Padding="4" StackGrowth="Bottom" ID="PaneStack"/>
 		</ScrollPanel>
 
-		<Box Anchor="L,T" Offset="30,566" Size="940,1" Color="204,170,90,150"/>
-		<Box Anchor="L,T" Offset="30,567" Size="940,1" Color="0,0,0,140"/>
+		<Box Anchor="L,T" Offset="30,552" Size="940,1" Color="204,170,90,150"/>
+		<Box Anchor="L,T" Offset="30,553" Size="940,1" Color="0,0,0,140"/>
 
 		<!-- Staged-changes summary: a wrapping multi-line list of every staged
 		     change (undo happens where each change was made — sliders have Reset,
 		     lists unstage by re-picking the current option). -->
-		<Label ID="StagedLabel" Anchor="L,T" Offset="30,574" WrapWidth="940" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+		<Label ID="StagedLabel" Anchor="L,T" Offset="30,560" WrapWidth="940" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
 
-		<Box Anchor="L,T" Offset="30,606" Size="940,1" Color="204,170,90,120"/>
-		<Box Anchor="L,T" Offset="30,607" Size="940,1" Color="0,0,0,130"/>
+		<Box Anchor="L,T" Offset="30,592" Size="940,1" Color="204,170,90,120"/>
+		<Box Anchor="L,T" Offset="30,593" Size="940,1" Color="0,0,0,130"/>
 
 		<!-- Rationale prompt + single free-text field (one rationale per turn, spec section 2). -->
-		<Label Anchor="L,T" Offset="30,614" WrapWidth="940" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT" ID="RationalePrompt"/>
-		<Box Anchor="L,T" Offset="30,638" Size="940,30" Color="0,0,0,140">
+		<Label Anchor="L,T" Offset="30,600" WrapWidth="940" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" String="TXT_KEY_VD_HUMAN_RATIONALE_PROMPT" ID="RationalePrompt"/>
+		<Box Anchor="L,T" Offset="30,624" Size="940,30" Color="0,0,0,140">
 			<EditBox CallOnChar="1" Anchor="L,C" Offset="8,0" Size="924,24" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" ID="RationaleBox" MaxLength="300"/>
 		</Box>
 
 		<!-- Actions. Keep Status Quo submits a status-quo decision (two-click
 		     confirm when changes are staged — the Lua swaps the label); Submit
 		     fires the staged changes once ≥1 change and a rationale are present. -->
-		<GridButton Anchor="L,B" Style="SmallButton" Size="260,32" Offset="30,22" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
+		<GridButton Anchor="L,B" Style="SmallButton" Size="260,32" Offset="30,36" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="StatusQuoLabel"/>
 		</GridButton>
-		<GridButton Anchor="R,B" Style="SmallButton" Size="200,32" Offset="30,22" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
+		<GridButton Anchor="R,B" Style="SmallButton" Size="200,32" Offset="30,36" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_SUBMIT" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		</GridButton>
 
