@@ -111,7 +111,9 @@
 	     aids, no foreign reasoning (spec section 3). -->
 	<Instance Name="RelationInstance">
 		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="620,76" Color="255,255,255,0">
-			<Image ID="Portrait" Anchor="L,T" Offset="6,6" Size="64,64" Hidden="1"/>
+			<!-- Button (not Image) so the Lua can attach a right-click -> Civilopedia
+			     callback; NoStateChange keeps it showing only the hooked portrait. -->
+			<Button ID="Portrait" Anchor="L,T" Offset="6,6" Size="64,64" Hidden="1" NoStateChange="1"/>
 			<Label ID="Leader" Anchor="L,T" Offset="82,6" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 			<Label ID="Note" Anchor="L,T" Offset="82,32" WrapWidth="525" LeadingOffset="-4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 		</Box>
@@ -138,7 +140,9 @@
 	<!-- ===== Unique unit/building/improvement icon (leader context row) ===== -->
 	<Instance Name="UniqueInstance">
 		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="64,64" Color="255,255,255,0">
-			<Image ID="Icon" Anchor="L,T" Offset="0,0" Size="64,64"/>
+			<!-- Button (not Image) so the Lua can attach a right-click -> Civilopedia
+			     callback; NoStateChange keeps it showing only the hooked icon. -->
+			<Button ID="Icon" Anchor="L,T" Offset="0,0" Size="64,64" NoStateChange="1"/>
 		</Box>
 	</Instance>
 
@@ -161,7 +165,9 @@
 		<!-- Leader context row: the human civ's leader portrait, trait, and unique
 		     components — the same data the EUI leader-choose dialog shows at
 		     pre-game, read from the game database. Only the human's own civ. -->
-		<Image ID="LeaderPortrait" Anchor="L,T" Offset="30,52" Size="56,56" Hidden="1"/>
+		<!-- Button (not Image) so the Lua can attach a right-click -> Civilopedia
+		     callback; NoStateChange keeps it showing only the hooked portrait. -->
+		<Button ID="LeaderPortrait" Anchor="L,T" Offset="30,52" Size="56,56" Hidden="1" NoStateChange="1"/>
 		<Label ID="LeaderName" Anchor="L,T" Offset="96,54" TruncateWidth="630" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		<Label ID="LeaderTraitDesc" Anchor="L,T" Offset="96,78" WrapWidth="630" LeadingOffset="-5" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
 		<Stack ID="UniquesStack" Anchor="R,T" Offset="30,58" StackGrowth="Right" Padding="2"/>
@@ -188,7 +194,7 @@
 		<!-- Footer: pinned to the grid bottom (Anchor B) so growing the grid only
 		     enlarges the main section above it. The children keep their original
 		     top-anchored layout, rebased to the container top (XML Y minus 552). -->
-		<Box ID="Footer" Anchor="L,B" Offset="0,0" Size="1000,192">
+		<Box ID="Footer" Anchor="L,B" Offset="0,0" Size="1000,192" Color="255,255,255,0">
 			<Box Anchor="L,T" Offset="30,0" Size="940,1" Color="204,170,90,150"/>
 			<Box Anchor="L,T" Offset="30,1" Size="940,1" Color="0,0,0,140"/>
 
