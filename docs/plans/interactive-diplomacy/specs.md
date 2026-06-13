@@ -2,19 +2,21 @@
 
 This plan adds **interactive diplomacy** to Vox Deorum:
 
-- A human, always seated as a civilization, can open a diplomatic **conversation** with an LLM player.
-- Within that conversation they can **negotiate a deal** that — when both sides agree — is enacted for real in the game.
+- Two major civilizations — each voiced by a **human** or an **LLM** — can open a diplomatic **conversation** with each other.
+- Within that conversation either side can **negotiate a deal** that — when both sides agree — is enacted for real in the game.
 - Conversations are durable and visible on the Web.
-- Each LLM player is voiced by a **diplomat** agent, with a **negotiator** agent handling deal mechanics behind it.
-- The same machinery is designed to support LLM→human and LLM→LLM diplomacy as well.
+- Whenever a side is an LLM, it is voiced by a **diplomat** agent, with a **negotiator** agent handling deal mechanics behind it.
+- The machinery is **direction-agnostic** — human→LLM, LLM→human, and LLM→LLM are one system (§5) — and implementation **starts from human→LLM**.
 
 This document is the specification: *what* we want and the constraints that make it coherent. Design and staged implementation plans come after, in this folder.
 
 ## The feature in one paragraph
 
-- **Who talks.** A human participant — whether playing the game directly or steering a civ in human-control mode — is always bound to one civilization.
-- **How they start.** From the Web interface (the first surface; an in-game panel comes later) they open a conversation thread with another civilization.
-- **Who answers.** That civ's side is voiced by the seat's configured LLM **diplomat** agent — the human's only conversational counterpart, exchanging free-text messages.
+This walks through the **first phase, human→LLM**; the same flow runs in any direction (§5).
+
+- **Who talks.** Two major civilizations, each voiced by a human or an LLM participant. Every participant is bound to one civilization — a human to their seat whether playing directly or steering a civ in human-control mode.
+- **How they start.** From the Web interface (the first surface; an in-game panel comes later) one side opens a conversation thread with the other civilization.
+- **Who answers.** When a side is an LLM, that civ's side is voiced by the seat's configured **diplomat** agent — the counterpart's only conversational interlocutor, exchanging free-text messages.
 - **When a deal appears.** When a **deal** is put on the table — because the human proposes one, or the diplomat decides to — the diplomat **hands off to that seat's negotiator** agent: a deal specialist equipped with the deal tools that never handles human input directly. The default flow is a **diplomat⇔negotiator loop** behind the conversation.
 - **What a deal is.** A structured proposal shaped exactly like the game's diplomatic trade screen — a list of trade items each side gives (gold, gold-per-turn, resources, cities, open borders, peace, third-party terms, votes, techs, and so on).
 - **How it resolves.** The recipient may **accept as-is, present a counter-deal, or reject**. When both sides accept, the deal is enacted for real through a new DLL entrypoint that:
@@ -25,14 +27,15 @@ This document is the specification: *what* we want and the constraints that make
 
 ## What we want to achieve
 
-### 1. Conversation: humans talk directly to LLM players
+### 1. Conversation: civilizations talk directly to each other
 
-- A human seated as a civilization can initiate a free-text diplomatic conversation with another major civilization played by an LLM. The conversation **reuses and extends** existing systems rather than introducing a parallel one:
+- Interactive diplomacy is a **free-text diplomatic conversation between two major civilizations**, each of which may be voiced by a **human** or an **LLM**. The conversation **reuses and extends** existing systems rather than introducing a parallel one:
   - the **Envoy** system (`LiveEnvoy` / `Diplomat` / `Spokesperson`, `EnvoyThread`), and
   - the existing web chat surface (`/api/agents/chat`, `/api/agents/message`, the Vue chat components).
-- The human is **always bound to a player/civ** — in both regular human play (full control) and human-control mode (strategist seat). Diplomacy is therefore inherently civ-to-civ: the human speaks *as* their civilization to *another* civilization.
+- Every participant — human or LLM — is **always bound to a player/civ**. Diplomacy is therefore inherently civ-to-civ: each side speaks *as* its civilization to *another* civilization. A human is bound to their seat in both regular human play (full control) and human-control mode (strategist seat).
+- The design is **direction-agnostic** — human→LLM, LLM→human, and LLM→LLM run through the same machinery (§5) — but the build is phased. **We start from human→LLM**: a human opens a conversation with an LLM-played civ, the easiest direction to build and debug end to end.
 - The first surface is the **Web** — the easiest place to build and debug the full conversation and deal flow. An in-game diplomacy panel is a later phase (§9), not a separate system.
-- The LLM's side of every conversation is voiced by a **diplomat agent** chosen by that seat's config (§7), not by whatever agent name the client requests — so the LLM speaks with its configured persona and setup. Deal mechanics are handled by a separate **negotiator agent** behind the diplomat (§3, §7).
+- Whenever a side is an LLM, its side of the conversation is voiced by a **diplomat agent** chosen by that seat's config (§7), not by whatever agent name the client requests — so the LLM speaks with its configured persona and setup. Deal mechanics are handled by a separate **negotiator agent** behind the diplomat (§3, §7).
 
 ### 2. Identity and seating
 

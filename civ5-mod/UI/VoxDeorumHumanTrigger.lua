@@ -5,37 +5,64 @@
 -- reopening the panel without sitting on top of normal Civ/VP popup dialogs.
 
 local m_turn = -1
+local m_embeddedInActionInfo = false
+local m_triggerFallbackW = Controls.TriggerButton:GetSizeVal()
 
 ContextPtr:SetHide(true)
 
+-- Move the live controls into the native ActionInfoPanel. The addin context is
+-- loaded above WorldView, so leaving it visible while a decision is pending can
+-- interfere with normal popup routing even though it only draws one button.
+local function embedInActionInfoPanel()
+	if m_embeddedInActionInfo then return true end
+	local actionInfo = ContextPtr:LookUpControl("/InGame/WorldView/ActionInfoPanel")
+	if actionInfo == nil then return false end
+	local ok = pcall(function()
+		Controls.TriggerButton:ChangeParent(actionInfo)
+		Controls.AutoplayChip:ChangeParent(actionInfo)
+	end)
+	if not ok then return false end
+	m_embeddedInActionInfo = true
+	ContextPtr:SetHide(true)
+	return true
+end
+
 -- Drop the trigger into the native end-turn ("PLEASE WAIT") button's slot. EUI
 -- repositions that button whenever the minimap resizes, so copy its live
--- geometry and apply the same local correction used by the panel fallback.
+-- geometry. When embedded, both controls share ActionInfoPanel coordinates; the
+-- older addin-context fallback keeps its historical local correction.
 local function alignToEndTurnButton()
+	local embedded = embedInActionInfoPanel()
 	pcall(function()
-		local endTurn = ContextPtr:LookUpControl("../WorldView/ActionInfoPanel/EndTurnButton")
+		local endTurn = ContextPtr:LookUpControl("/InGame/WorldView/ActionInfoPanel/EndTurnButton")
 		if endTurn == nil then return end
 		local w, h = endTurn:GetSizeVal()
 		local x, y = endTurn:GetOffsetVal()
 		if not w or not h or w <= 0 or h <= 0 then return end
-		local fallbackW = Controls.TriggerButton:GetSizeVal()
+		local fallbackW = m_triggerFallbackW
 		if fallbackW ~= nil and w < fallbackW then w = fallbackW end
 		-- Bleed 2px over the native end-turn button so our SmallButton frame fully
 		-- covers it (the 9-grid renders ~1px inset, leaving the native frame
 		-- peeking out otherwise); shift the offset 1px to keep the bleed centered.
 		Controls.TriggerButton:SetSizeVal(w + 2, h + 2)
-		Controls.TriggerButton:SetOffsetVal(x + 31, y - 23)
 		Controls.AutoplayChip:SetSizeVal(w, 38)
-		Controls.AutoplayChip:SetOffsetVal(x + 32, y - 24)
+		if embedded then
+			Controls.TriggerButton:SetOffsetVal(x - 1, y - 1)
+			Controls.AutoplayChip:SetOffsetVal(x, y)
+		else
+			Controls.TriggerButton:SetOffsetVal(x + 31, y - 23)
+			Controls.AutoplayChip:SetOffsetVal(x + 32, y - 24)
+		end
 	end)
+	return embedded
 end
 
 -- Show the pending-decision trigger in the end-turn slot.
 local function showTrigger()
-	alignToEndTurnButton()
+	local embedded = alignToEndTurnButton()
 	Controls.AutoplayChip:SetHide(true)
 	Controls.TriggerButton:SetHide(false)
-	ContextPtr:SetHide(false)
+	ContextPtr:SetHide(embedded)
 end
 
 -- Hide this tiny context while the full decision panel is open or submitting.
@@ -48,11 +75,11 @@ end
 -- Show the last-decision chip after the panel's accepted overlay retires.
 local function showAutoplayChip(turn, summary)
 	m_turn = turn or m_turn
-	alignToEndTurnButton()
+	local embedded = alignToEndTurnButton()
 	Controls.TriggerButton:SetHide(true)
 	Controls.AutoplayChipLabel:LocalizeAndSetText("TXT_KEY_VD_HUMAN_AUTOPLAY_CHIP_DECISION", m_turn, summary or "")
 	Controls.AutoplayChip:SetHide(false)
-	ContextPtr:SetHide(false)
+	ContextPtr:SetHide(embedded)
 end
 
 -- A decision is pending; the main panel stores the report while this context
