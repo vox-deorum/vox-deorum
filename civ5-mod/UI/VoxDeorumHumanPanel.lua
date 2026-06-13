@@ -462,8 +462,9 @@ local function addOptionList(entries, currentKey, stagedKey, setStaged)
 		-- Help text (the same the LLM receives).
 		ctrl.Help:SetText(entry.help or "")
 
-		-- Size the row (and its highlights) to fit the wrapped help text.
-		local rowH = math.max(58, 32 + ctrl.Help:GetSizeY() + 8)
+		-- Size the row (and its highlights) to fit the wrapped help text, and to
+		-- clear the icon when one is shown (the icon slot is 64 tall).
+		local rowH = math.max(hasIcon and 76 or 58, 32 + ctrl.Help:GetSizeY() + 8)
 		ctrl.Box:SetSizeY(rowH)
 		ctrl.Button:SetSizeY(rowH)
 		ctrl.SelectionAnim:SetSizeY(rowH)
@@ -652,11 +653,18 @@ local function buildPolicyMaps()
 	end
 end
 
+-- All option-row icons hook at this size. The atlases the report draws from
+-- (tech, policy, unit) every define a 64 entry, but the base-game POLICY atlases
+-- do NOT define 45 -- VP's own SocialPolicyPopup hooks policies at 64 -- so the
+-- old 45 request silently failed IconHookup and dropped every policy icon. The
+-- OptionInstance icon slot in the XML is sized to match.
+local OPTION_ICON_SIZE = 64
+
 local function techIconHook(name)
 	buildTechMap()
 	local row = m_nameToTech[name]
 	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return IconHookup(row.PortraitIndex, 45, row.IconAtlas, icon) end
+	return function(icon) return IconHookup(row.PortraitIndex, OPTION_ICON_SIZE, row.IconAtlas, icon) end
 end
 
 local function policyIconHook(displayKey)
@@ -665,7 +673,7 @@ local function policyIconHook(displayKey)
 	local row = m_nameToPolicy[base] or m_nameToPolicyBranch[base] or m_nameToPolicy[displayKey]
 	if row == nil then row = GameInfo.Policies["POLICY_TRADITION"] or GameInfo.Policies[0] end
 	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return IconHookup(row.PortraitIndex, 45, row.IconAtlas, icon) end
+	return function(icon) return IconHookup(row.PortraitIndex, OPTION_ICON_SIZE, row.IconAtlas, icon) end
 end
 
 -- ============================================================== pane renderers
@@ -684,7 +692,7 @@ local GRAND_STRATEGY_UNITS = {
 local function greatPersonIconHook(unitType)
 	local row = unitType ~= nil and GameInfo.Units[unitType] or nil
 	if row == nil or IconHookup == nil then return nil end
-	return function(icon) return IconHookup(row.PortraitIndex, 45, row.IconAtlas, icon) end
+	return function(icon) return IconHookup(row.PortraitIndex, OPTION_ICON_SIZE, row.IconAtlas, icon) end
 end
 
 local function renderStrategyPane()
