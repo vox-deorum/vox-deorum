@@ -10,12 +10,12 @@
 <Context Font="TwCenMT14" FontStyle="Base" Color="Beige" Color1="Black">
 	<!-- Native end-turn ("PLEASE WAIT") slot replacement. The Lua copies the
 	     live EndTurnButton geometry when possible; this is only the fallback. -->
-	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="30,200" Size="320,36" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
+	<GridButton ID="TriggerButton" Hidden="1" Anchor="R,B" Offset="30,181" Size="320,36" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_TRIGGER_TT">
 		<Label Anchor="C,C" Offset="0,0" TruncateWidth="300" String="TXT_KEY_VD_HUMAN_TRIGGER_TITLE" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 	</GridButton>
 
 	<!-- Shown in the same slot after a decision is accepted. -->
-	<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Offset="30,200" Size="320,36" Color="0,0,0,150" ConsumeMouse="0">
+	<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Offset="30,181" Size="320,36" Color="0,0,0,150" ConsumeMouse="0">
 		<Label Anchor="C,C" Offset="0,0" WrapWidth="312" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="AutoplayChipLabel"/>
 	</Box>
 </Context>

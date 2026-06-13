@@ -30,10 +30,10 @@
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
-    <File md5="846E76F891085D51CE27B8131D2D0385" import="1">UI/VoxDeorumHumanPanel.lua</File>
-    <File md5="041CFE4A1BBB9CB9A177E5942A3158B0" import="0">UI/VoxDeorumHumanPanel.xml</File>
+    <File md5="4961B8E4E582874BFFBE588E5F3481C9" import="1">UI/VoxDeorumHumanPanel.lua</File>
+    <File md5="6A2F4667CEC6532A758964ADFA17263E" import="0">UI/VoxDeorumHumanPanel.xml</File>
     <File md5="79ED2E7E483834B1E8573E7E9BEFC63C" import="1">UI/VoxDeorumHumanTrigger.lua</File>
-    <File md5="583EA9AAEC06D0111AF6889353D885C8" import="0">UI/VoxDeorumHumanTrigger.xml</File>
+    <File md5="607762D66C00E6A08256A849AA4EBBF9" import="0">UI/VoxDeorumHumanTrigger.xml</File>
   </Files>
   <Actions>
     <OnModActivated>

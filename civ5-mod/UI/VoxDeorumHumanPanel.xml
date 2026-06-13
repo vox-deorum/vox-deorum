@@ -137,8 +137,8 @@
 
 	<!-- ===== Unique unit/building/improvement icon (leader context row) ===== -->
 	<Instance Name="UniqueInstance">
-		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="45,45" Color="255,255,255,0">
-			<Image ID="Icon" Anchor="L,T" Offset="0,0" Size="45,45"/>
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="64,64" Color="255,255,255,0">
+			<Image ID="Icon" Anchor="L,T" Offset="0,0" Size="64,64"/>
 		</Box>
 	</Instance>
 
@@ -164,7 +164,7 @@
 		<Image ID="LeaderPortrait" Anchor="L,T" Offset="30,52" Size="56,56" Hidden="1"/>
 		<Label ID="LeaderName" Anchor="L,T" Offset="96,54" TruncateWidth="630" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		<Label ID="LeaderTraitDesc" Anchor="L,T" Offset="96,78" WrapWidth="630" LeadingOffset="-5" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
-		<Stack ID="UniquesStack" Anchor="R,T" Offset="30,58" StackGrowth="Right" Padding="4"/>
+		<Stack ID="UniquesStack" Anchor="R,T" Offset="30,58" StackGrowth="Right" Padding="2"/>
 
 		<!-- Decorative rules separate the header, chooser, staged summary, and
 		     rationale/action areas while keeping the native popup treatment. -->
@@ -205,10 +205,10 @@
 		<!-- Actions. Keep Status Quo submits a status-quo decision (two-click
 		     confirm when changes are staged — the Lua swaps the label); Submit
 		     fires the staged changes once ≥1 change and a rationale are present. -->
-		<GridButton Anchor="L,B" Style="SmallButton" Size="260,32" Offset="30,42" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
+		<GridButton Anchor="L,B" Style="SmallButton" Size="260,32" Offset="30,44" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO_TT" ID="StatusQuoButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_KEEP_STATUS_QUO" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="StatusQuoLabel"/>
 		</GridButton>
-		<GridButton Anchor="R,B" Style="SmallButton" Size="200,32" Offset="30,42" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
+		<GridButton Anchor="R,B" Style="SmallButton" Size="200,32" Offset="30,44" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_HUMAN_SUBMIT_TT" ID="SubmitButton">
 			<Label Anchor="C,C" Offset="0,0" String="TXT_KEY_VD_HUMAN_SUBMIT" Font="TwCenMT18" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
 		</GridButton>
 

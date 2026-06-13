@@ -33,7 +33,8 @@
 -- rationale. The panel renders nothing about civs other than the human's own
 -- beyond met leaders' names/portraits with the human's OWN stance values.
 
-include("IconSupport")  -- IconHookup, for tech/policy/leader/unique icons
+include("IconSupport")         -- IconHookup, for tech/policy/leader/unique icons
+include("InfoTooltipInclude")  -- GetHelpTextFor*, for EUI-style unique tooltips
 
 local m_playerID = -1
 local m_turn = -1
@@ -61,6 +62,8 @@ local m_groupOpen = {}               -- collapsible-group open state, by title k
 local m_groupMetaRefreshers = {}     -- per-render group meta refresh closures
 local onUpdate                       -- forward declaration; openDialog starts it
 local m_lastSubmissionSummary = nil  -- summary shown after the accepted overlay
+local UNIQUE_ICON_SIZE = 64           -- matches the native/VP unique-bonus icon size
+local m_dialogQueued = false         -- true while this context owns the popup stack
 
 -- Lazily-built maps from a localized display name to its GameInfo row (for
 -- icon art). The report keys techs/policies by the same localized name
@@ -1038,6 +1041,65 @@ end
 
 -- ====================================================== leader context row
 
+-- Localized description for a database row, with a blank fallback for partial
+-- rows returned by compatibility mods.
+local function localizedRowDescription(item)
+	if item == nil or item.Description == nil then return "" end
+	return Locale.Lookup(item.Description)
+end
+
+-- Append a localized help field to a tooltip fallback when it exists.
+local function appendOptionalHelp(parts, item, fieldName)
+	if item == nil or item[fieldName] == nil then return end
+	local text = Locale.Lookup(item[fieldName])
+	if text ~= nil and text ~= "" and text ~= item[fieldName] then
+		table.insert(parts, text)
+	end
+end
+
+-- Ask the same Civ/VP tooltip helpers used by the leader chooser for the full
+-- unique component text, falling back gracefully if a helper is unavailable.
+local function richUniqueHelp(item, uniqueKind)
+	if item == nil or item.ID == nil then return nil end
+	local helper = nil
+	local args = nil
+	if uniqueKind == "unit" and GetHelpTextForUnit ~= nil then
+		helper = GetHelpTextForUnit
+		args = { item.ID, true }
+	elseif uniqueKind == "building" and GetHelpTextForBuilding ~= nil then
+		helper = GetHelpTextForBuilding
+		args = { item.ID }
+	elseif uniqueKind == "improvement" and GetHelpTextForImprovement ~= nil then
+		helper = GetHelpTextForImprovement
+		args = { item.ID }
+	end
+	if helper == nil then return nil end
+	local ok, text = pcall(helper, unpack(args))
+	if ok and text ~= nil and text ~= "" then
+		return Locale.ConvertTextKey(text)
+	end
+	return nil
+end
+
+-- Tooltip text for a unique component: prefer the full InfoTooltipInclude
+-- output, then add replacement context and any row help not covered by it.
+local function uniqueTooltip(item, replacesName, uniqueKind)
+	local parts = {}
+	local richHelp = richUniqueHelp(item, uniqueKind)
+	if richHelp ~= nil then
+		table.insert(parts, richHelp)
+	else
+		table.insert(parts, localizedRowDescription(item))
+		appendOptionalHelp(parts, item, "Help")
+		appendOptionalHelp(parts, item, "Strategy")
+	end
+	if replacesName ~= nil then
+		table.insert(parts, Locale.ConvertTextKey("TXT_KEY_VD_HUMAN_UNIQUE_REPLACES",
+			localizedRowDescription(item), replacesName))
+	end
+	return table.concat(parts, "[NEWLINE][NEWLINE]")
+end
+
 -- The human civ's leader portrait, trait, and unique components -- the same
 -- data the EUI leader-choose dialog shows at pre-game, read from the game
 -- database (only the human's own civ -- spec section 3). Wrapped in pcall so a
@@ -1073,24 +1135,14 @@ local function populateLeaderContext()
 
 		-- Unique unit/building/improvement icons with hover tooltips, like the
 		-- pre-game leader dialog (PopulateUniques.lua's queries, via GameInfo).
-		local function addUnique(item, replacesName)
+		local function addUnique(item, replacesName, uniqueKind)
 			if item == nil then return end
 			local ctrl = {}
 			ContextPtr:BuildInstanceForControl("UniqueInstance", ctrl, Controls.UniquesStack)
 			local hasIcon = IconHookup ~= nil
-				and IconHookup(item.PortraitIndex, 45, item.IconAtlas, ctrl.Icon) or false
+				and IconHookup(item.PortraitIndex, UNIQUE_ICON_SIZE, item.IconAtlas, ctrl.Icon) or false
 			ctrl.Icon:SetHide(not hasIcon)
-			local tip = Locale.Lookup(item.Description)
-			if replacesName ~= nil then
-				tip = Locale.ConvertTextKey("TXT_KEY_VD_HUMAN_UNIQUE_REPLACES", tip, replacesName)
-			end
-			if item.Help ~= nil then
-				local help = Locale.Lookup(item.Help)
-				if help ~= nil and help ~= "" and help ~= item.Help then
-					tip = tip .. "[NEWLINE]" .. help
-				end
-			end
-			ctrl.Icon:SetToolTipString(tip)
+			ctrl.Icon:SetToolTipString(uniqueTooltip(item, replacesName, uniqueKind))
 		end
 
 		for row in GameInfo.Civilization_UnitClassOverrides{ CivilizationType = civ.Type } do
@@ -1099,7 +1151,8 @@ local function populateLeaderContext()
 				local defaultUnit = unitClass ~= nil and unitClass.DefaultUnit ~= nil
 					and GameInfo.Units[unitClass.DefaultUnit] or nil
 				addUnique(GameInfo.Units[row.UnitType],
-					defaultUnit ~= nil and Locale.Lookup(defaultUnit.Description) or nil)
+					defaultUnit ~= nil and Locale.Lookup(defaultUnit.Description) or nil,
+					"unit")
 			end
 		end
 		for row in GameInfo.Civilization_BuildingClassOverrides{ CivilizationType = civ.Type } do
@@ -1108,11 +1161,12 @@ local function populateLeaderContext()
 				local defaultBuilding = buildingClass ~= nil and buildingClass.DefaultBuilding ~= nil
 					and GameInfo.Buildings[buildingClass.DefaultBuilding] or nil
 				addUnique(GameInfo.Buildings[row.BuildingType],
-					defaultBuilding ~= nil and Locale.Lookup(defaultBuilding.Description) or nil)
+					defaultBuilding ~= nil and Locale.Lookup(defaultBuilding.Description) or nil,
+					"building")
 			end
 		end
 		for row in GameInfo.Improvements{ CivilizationType = civ.Type } do
-			addUnique(row, nil)
+			addUnique(row, nil, "improvement")
 		end
 	end)
 	if not ok then
@@ -1155,6 +1209,27 @@ local function setDialogShown(shown)
 	Controls.MainGrid:SetHide(not shown)
 end
 
+-- Put the dialog context on Civ's popup stack while it is actually visible.
+local function queueDialog()
+	if m_dialogQueued then return end
+	if UIManager ~= nil and UIManager.QueuePopup ~= nil then
+		pcall(function()
+			UIManager:QueuePopup(ContextPtr, PopupPriority.InGameUtmost)
+		end)
+	end
+	m_dialogQueued = true
+end
+
+-- Release the dialog context from Civ's popup stack when it is hidden.
+local function releaseDialog()
+	if UIManager ~= nil and UIManager.DequeuePopup ~= nil then
+		pcall(function()
+			UIManager:DequeuePopup(ContextPtr)
+		end)
+	end
+	m_dialogQueued = false
+end
+
 -- Open the dialog. The first open of a decision turn marks the start of the
 -- human's deliberation. The update loop accumulates that time locally and the
 -- HumanDecision payload reports it back to the strategist.
@@ -1167,6 +1242,7 @@ local function openDialog()
 	disarmStatusQuo()
 	ContextPtr:SetHide(false)
 	setDialogShown(true)
+	queueDialog()
 	LuaEvents.VoxDeorumHumanPanelOpened()
 end
 
@@ -1176,6 +1252,7 @@ end
 local function hideDialog()
 	disarmStatusQuo()
 	setDialogShown(false)
+	releaseDialog()
 	ContextPtr:SetHide(true)
 	LuaEvents.VoxDeorumHumanPanelHidden()
 end
@@ -1193,6 +1270,7 @@ function onUpdate(fDTime)
 		ContextPtr:ClearUpdate()
 		setDialogShown(false)
 		Controls.AcceptedOverlay:SetHide(true)
+		releaseDialog()
 		ContextPtr:SetHide(true)
 		LuaEvents.VoxDeorumHumanPanelSubmitted(m_turn, m_lastSubmissionSummary or "")
 	end
@@ -1360,6 +1438,7 @@ local function showPending(playerID, turn, options)
 	selectCategory("strategy")
 	updateShell()
 	setDialogShown(false)
+	releaseDialog()
 	ContextPtr:SetHide(true)
 end
 
