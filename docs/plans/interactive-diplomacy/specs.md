@@ -23,7 +23,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - honors all *structural* legality (you can only trade what you actually own; peace must be mutual), but
   - **bypasses the AI's political refusal** — the `CvDealAI` valuation that would otherwise make many deals "impossible."
 - **What stays untouched.** The normal in-game deal pathway is left completely untouched.
-- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time value or agreeability snapshots for the two ordered players. Human-side values are left undefined. Current legality is always fetched live from the game; successful enactment is recorded as a `deal-enacted` transcript message for orchestration/audit, not as DLL state.
+- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time per-item trade-item value snapshots (item id → value) for the two ordered players. Human-side values are left undefined. Current legality is always fetched live from the game; successful enactment is recorded as a `deal-enacted` transcript message for orchestration/audit, not as DLL state.
 
 ## What we want to achieve
 
@@ -103,7 +103,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - **recreates that screen on the Web** for the first phase — showing both sides' item tables and, per item, whether it is structurally legal and (if not) why (sourced from `IsPossibleToTradeItem` / `GetReasonsItemUntradeable`).
 - Deals are **stored as proposals, checked as live game state**:
   - the transcript stores the proposed terms directly in `Payload.Deal`;
-  - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the value or agreeability snapshot seen by player 1 and player 2 when the proposal was made; human-side values are undefined;
+  - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the per-item trade-item value snapshot (item id → value) seen by player 1 and player 2 when the proposal was made; human-side values are undefined;
   - the transcript does not store legality or live DLL state. For display, a proposal is simply a proposal that exists in the conversation; when current legality matters, the deal is reconstructed and inspected in the game on demand (§6). `deal-enacted` records that orchestration succeeded for a proposal; it does not replace live game inspection.
 
 ### 4. Rule boundary: bypass political refusal, honor structural legality
