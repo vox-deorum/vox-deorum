@@ -94,6 +94,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - **Accept as-is** — both sides have now agreed; the deal is enacted (§4).
   - **Counter** — present a modified deal back, which the other side then accepts, counters, or rejects.
   - **Reject** — the proposal is declined; the conversation continues.
+- These moves are transcript messages, not hidden state. A proposal or counter carries its structured terms in `Payload.Deal`; an accept or reject references the proposal message ID it answers. The current deal state is derived by reducing the ordered transcript, keeping the store append-only and status-free.
 
 #### Where deals are shown and stored
 
@@ -188,6 +189,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - a message is keyed by the game and a **player pair ordered by `playerID`** (`Player1ID = min(playerID)`, `Player2ID = max(playerID)`), plus the speaker for each row;
   - the conversation *is* the ordered list of messages between them.
 - This persists across restarts and is what the Web reads. It does **not** store LLM internals (reasoning, agent scratch state, tool traces), which stay transient in vox-agents and may be lost between restarts. Deal proposal messages carry `Payload.Deal` and may carry `Payload.Value1` / `Payload.Value2`, but not legality or enacted-deal state.
+- Both participant visibility flags are set on every transcript row. The transcript is private to the two civs, but either side can read the same ordered conversation.
 
 #### Threads live only in vox-agents
 
