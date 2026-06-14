@@ -494,11 +494,16 @@ end
 -- panels link icons and rows to the pedia via right-click.
 local function openPedia(searchString)
 	if searchString == nil or searchString == "" then return end
-	-- Just fire the pedia search. The trigger context's global SearchForPediaEntry
-	-- listener catches this (cross-context Events delivery works) and pokes to
-	-- flush the queued screen -- no manual cross-context request needed.
+	-- Event processing is halted while frozen, so firing the pedia search is not
+	-- enough on its own -- it must be followed by a manual diplo refresh. Fire the
+	-- search to queue it, then ask the trigger context (which owns the poke) to
+	-- refresh; force=true bypasses its gate/popup-up checks.
+	print("[VDFlush] panel openPedia: '" .. tostring(searchString) .. "'")
 	if Events ~= nil and Events.SearchForPediaEntry ~= nil then
 		Events.SearchForPediaEntry(searchString)
+	end
+	if LuaEvents ~= nil and LuaEvents.VoxDeorumHumanRequestFlush ~= nil then
+		LuaEvents.VoxDeorumHumanRequestFlush(true)
 	end
 end
 

@@ -228,43 +228,142 @@ LuaEvents.VoxDeorumHumanRequestFlush.Add(function(force)
 	vdScheduleFlush(force)
 end)
 
--- Read-only overview screens reachable while the human is observing. All of
--- these are opened via Events.SerialEventGameMessagePopup with a ButtonPopupType
--- (from the native top panel, an F-key hotkey, or Game.DoControl).
-local VD_FLUSH_TYPES = {
-	[ButtonPopupTypes.BUTTONPOPUP_DEMOGRAPHICS]         = true,
-	[ButtonPopupTypes.BUTTONPOPUP_TECH_TREE]            = true,
-	[ButtonPopupTypes.BUTTONPOPUP_CHOOSEPOLICY]         = true,
-	[ButtonPopupTypes.BUTTONPOPUP_ECONOMIC_OVERVIEW]    = true,
-	[ButtonPopupTypes.BUTTONPOPUP_MILITARY_OVERVIEW]    = true,
-	[ButtonPopupTypes.BUTTONPOPUP_RELIGION_OVERVIEW]    = true,
-	[ButtonPopupTypes.BUTTONPOPUP_DIPLOMATIC_OVERVIEW]  = true,
-	[ButtonPopupTypes.BUTTONPOPUP_VICTORY_INFO]         = true,
-	[ButtonPopupTypes.BUTTONPOPUP_WHOS_WINNING]         = true,
-	[ButtonPopupTypes.BUTTONPOPUP_LEAGUE_OVERVIEW]      = true,
-	[ButtonPopupTypes.BUTTONPOPUP_CULTURE_OVERVIEW]     = true,
-	[ButtonPopupTypes.BUTTONPOPUP_TRADE_ROUTE_OVERVIEW] = true,
-	[ButtonPopupTypes.BUTTONPOPUP_ESPIONAGE_OVERVIEW]   = true,
+-- LOG-ONLY diagnostics. Event processing is halted while frozen, so listening for
+-- popup events is NOT a reliable trigger (these only fire when a refresh happens
+-- to be in flight). We keep these purely to trace whether/when the events fire --
+-- the actual mechanism is the explicit fire+poke in vdOpenScreen below. Do NOT
+-- poke from here.
+Events.SerialEventGameMessagePopup.Add(function(popupInfo)
+	vdLog("trace SerialEventGameMessagePopup: Type=" .. tostring(popupInfo and popupInfo.Type))
+end)
+Events.SearchForPediaEntry.Add(function(...)
+	vdLog("trace SearchForPediaEntry fired")
+end)
+
+-- ===================================================== Strategist screen buttons
+-- EUI's top-panel buttons are input-dead while frozen, so these are OUR working
+-- buttons over the top bar. Each one fires the screen's native popup event to
+-- queue it, then immediately pokes the diplo refresh (force=true) to process and
+-- promote it -- no reliance on the (halted) event pipeline.
+-- Context name of the screen we currently have open, so we can CLOSE it before
+-- opening the next (you must leave a modal before entering it). We close by direct
+-- UIManager:DequeuePopup -- a synchronous call that works while the event pipeline
+-- is halted, and (unlike re-firing the toggle) is NOT undone when the poke's
+-- leaderhead momentarily hides the screen (a hidden screen's Data1=1 toggle
+-- RE-OPENS it, which is why the toggle approach failed).
+local m_vdOpenCtx = nil
+
+local function vdCloseScreen(ctxName)
+	if ctxName == nil then return end
+	local ctx = ContextPtr:LookUpControl("/InGame/" .. ctxName)
+	if ctx ~= nil then
+		pcall(function() UIManager:DequeuePopup(ctx) end)
+		vdLog("  closed previous: /InGame/" .. ctxName)
+	else
+		vdLog("  previous ctx NOT FOUND: /InGame/" .. ctxName)
+	end
+end
+
+local function vdOpenScreen(label, fire, ctxName)
+	vdLog("vdOpenScreen: " .. tostring(label))
+	local reopening = (m_vdOpenCtx ~= nil and m_vdOpenCtx == ctxName)
+	if m_vdOpenCtx ~= nil then vdCloseScreen(m_vdOpenCtx); m_vdOpenCtx = nil end
+	if reopening then return end  -- clicking the open screen just closes it
+	pcall(fire)
+	m_vdOpenCtx = ctxName
+	vdScheduleFlush(true)
+end
+
+-- Observer-aware args, copied from EUI ImprovedTopPanel/TopPanel.lua. The override
+-- player (the civ the human is observing) is whose data each screen should show.
+local function vdOverride()
+	local o = Game.GetObserverUIOverridePlayer()
+	if o == nil or o < 0 then o = Game.GetActivePlayer() end
+	return o
+end
+local function vdIsObserver()
+	local p = Players[Game.GetActivePlayer()]
+	return (p ~= nil and p:IsObserver()) and 1 or 0
+end
+
+-- control ID -> { label, fire, ctxName }. fire() raises the screen's popup event;
+-- ctxName is the screen context's path under /InGame, used to dequeue it on close.
+local VD_SCREENS = {
+	VDScreenPedia        = { "Civilopedia",  function() Events.SearchForPediaEntry("") end, "CivilopediaScreen" },
+	VDScreenDemographics = { "Demographics", function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_DEMOGRAPHICS, Data1 = 1 } end, "Demographics" },
+	VDScreenTech         = { "Tech Tree",    function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_TECH_TREE, Data1 = 1, Data2 = -1, Data4 = vdIsObserver(), Data5 = vdOverride() } end, "TechTree" },
+	VDScreenPolicy       = { "Policies",     function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_CHOOSEPOLICY, Data1 = 1, Data3 = vdIsObserver(), Data4 = vdOverride() } end, "SocialPolicyPopup" },
+	VDScreenEconomic     = { "Economic",     function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_ECONOMIC_OVERVIEW, Data1 = 1 } end, "EconomicOverview" },
+	VDScreenMilitary     = { "Military",     function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_MILITARY_OVERVIEW, Data1 = 1 } end, "MilitaryOverview" },
+	VDScreenReligion     = { "Religion",     function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_RELIGION_OVERVIEW, Data1 = 1 } end, "ReligionOverview" },
+	VDScreenCulture      = { "Culture",      function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_CULTURE_OVERVIEW, Data1 = 1, Data2 = 4 } end, "CultureOverview" },
+	VDScreenTrade        = { "Trade Routes", function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_TRADE_ROUTE_OVERVIEW, Data1 = 1 } end, "TradeRouteOverview" },
+	VDScreenCorp         = { "Corporations", function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_MODDER_5, Data1 = 1 } end, "CorporationsOverview" },
+	VDScreenEspionage    = { "Espionage",    function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_ESPIONAGE_OVERVIEW, Data1 = 1 } end, "EspionageOverview" },
+	VDScreenDiplo        = { "Diplomacy",    function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_DIPLOMATIC_OVERVIEW, Data1 = 1 } end, "DiploRelationships" },
+	VDScreenVassal       = { "Vassals",      function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_MODDER_11, Data1 = 1 } end, "VassalageOverview" },
+	VDScreenVictory      = { "Victory",      function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_VICTORY_INFO, Data1 = 1 } end, "VictoryProgress" },
+	VDScreenLeague       = { "League",       function() Events.SerialEventGameMessagePopup{ Type = ButtonPopupTypes.BUTTONPOPUP_LEAGUE_OVERVIEW, Data1 = 1 } end, "LeagueOverview" },
 }
 
--- A whitelisted screen popup was fired; flush it. Our flush (RequestLeaveLeader)
--- runs later, on the next AILeaderMessage frame, so it always lands after the
--- screen's synchronous QueuePopup regardless of listener order. The poke raises
--- AILeaderMessage (not SerialEventGameMessagePopup), so it never re-arms us.
-Events.SerialEventGameMessagePopup.Add(function(popupInfo)
-	local ptype = popupInfo and popupInfo.Type
-	local whitelisted = (popupInfo ~= nil) and (VD_FLUSH_TYPES[popupInfo.Type] == true)
-	vdLog("SerialEventGameMessagePopup: Type=" .. tostring(ptype)
-		.. " whitelisted=" .. tostring(whitelisted))
-	if whitelisted then
-		vdScheduleFlush()
+for id, def in pairs(VD_SCREENS) do
+	local ctrl = Controls[id]
+	if ctrl ~= nil then
+		ctrl:RegisterCallback(Mouse.eLClick, function() vdOpenScreen(def[1], def[2], def[3]) end)
 	end
-end)
+end
 
--- Civilopedia opens via SearchForPediaEntry rather than a ButtonPopupType.
-Events.SearchForPediaEntry.Add(function(...)
-	vdLog("SearchForPediaEntry fired")
-	vdScheduleFlush()
-end)
+-- Reparent the strip INTO the EUI top-panel context so it sits above that
+-- context's own frame (which otherwise occludes/consumes clicks for a strip
+-- parented under it on WorldView) and shares the top panel's input layer. Also
+-- hide EUI's right-side button cluster (TopPanelDiploStack) -- those are the dead
+-- "old panel" buttons our strip replaces; the left-side data readouts stay.
+-- The top panel does not exist when this addin's Lua first runs, so retry.
+local m_vdScreenBarEmbedded = false
+local function vdEnsureScreenBar()
+	if m_vdScreenBarEmbedded then return true end
+	local topPanel = ContextPtr:LookUpControl("/InGame/TopPanel")
+	local parent = topPanel or ContextPtr:LookUpControl("/InGame/WorldView")
+	if parent == nil then return false end
+	local ok = pcall(function() Controls.VDScreenBar:ChangeParent(parent) end)
+	if ok then
+		m_vdScreenBarEmbedded = true
+		vdLog("screen bar embedded onto " .. (topPanel ~= nil and "/InGame/TopPanel" or "/InGame/WorldView"))
+		-- Hide EUI's round overview-launcher buttons (DiploCorner's button stack:
+		-- Diplomacy/Vassal/League/Espionage/etc.) which our strip replaces. Keep the
+		-- menu (TopPanel) and the met-civ leader icons (DiploList, a sibling) -- so
+		-- hide the stack, NOT the whole DiploCorner context. Best-effort: the stack
+		-- sits under unnamed wrappers, so if the path does not resolve this is a
+		-- no-op and the buttons stay (report and we hide them another way).
+		pcall(function()
+			local stack = ContextPtr:LookUpControl("/InGame/WorldView/DiploCorner/DiploCornerStack")
+			if stack ~= nil then stack:SetHide(true); vdLog("hid EUI DiploCornerStack") else vdLog("DiploCornerStack not found by path") end
+		end)
+	end
+	return ok
+end
+vdEnsureScreenBar()
+if Events ~= nil and Events.LoadScreenClose ~= nil then
+	Events.LoadScreenClose.Add(vdEnsureScreenBar)
+end
 
-vdLog("auto-flush module loaded")
+-- Show the strip only during the strategist freeze (the same state vdNeedsFlush
+-- gates the poke on); hide it otherwise so it never clutters ordinary play.
+local function vdShowScreenBar()
+	vdEnsureScreenBar()
+	Controls.VDScreenBar:SetHide(not vdNeedsFlush())
+end
+local function vdHideScreenBar()
+	Controls.VDScreenBar:SetHide(true)
+end
+
+-- Mirror the trigger's own show/hide lifecycle: the strip is available whenever
+-- the trigger/chip is (strategist mode), and tucked away while the modal panel is
+-- open or submitting so it does not sit over the dialog.
+LuaEvents.VoxDeorumHumanDecision.Add(function() vdShowScreenBar() end)
+LuaEvents.VoxDeorumHumanPanelHidden.Add(vdShowScreenBar)
+LuaEvents.VoxDeorumHumanPanelSubmitted.Add(function() vdShowScreenBar() end)
+LuaEvents.VoxDeorumHumanPanelOpened.Add(vdHideScreenBar)
+LuaEvents.VoxDeorumHumanPanelSubmitting.Add(vdHideScreenBar)
+
+vdLog("strategist screen buttons loaded")

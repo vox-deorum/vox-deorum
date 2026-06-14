@@ -18,4 +18,33 @@
 	<Box ID="AutoplayChip" Hidden="1" Anchor="R,B" Offset="16,200" Size="320,36" Color="0,0,0,150" ConsumeMouse="0">
 		<Label Anchor="C,C" Offset="0,0" WrapWidth="312" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="AutoplayChipLabel"/>
 	</Box>
+
+	<!-- Strategist screen-access strip. EUI's top-panel buttons are input-dead
+	     while the game is frozen in observer mode, so these are OUR working
+	     buttons: each fires the screen's popup event and then pokes the diplo
+	     refresh to promote it. Round 45x45 icon buttons matching EUI's DiploCorner
+	     style (whose own overview buttons we hide). The Lua reparents this stack
+	     into the top-panel context and right-anchors it in the second row. -->
+	<Stack ID="VDScreenBar" Hidden="1" Anchor="R,T" Offset="4,34" StackGrowth="Left" Padding="0" ConsumeMouse="1">
+		<!-- Right-anchored, grows LEFT, so the first child is rightmost. The strip
+		     reads (right -> left): info, then EUI top-panel yield order (Tech, Policy,
+		     Religion, Economic, Military, Culture, Trade), then the economy extra
+		     (Corp), then the diplo-corner cluster (Espionage, Diplomacy, League), then
+		     Victory. -->
+		<Button ID="VDScreenPedia"        ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_Generic.dds"            ToolTip="Civilopedia"/>
+		<Button ID="VDScreenLeague"       ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_WorldCongress.dds"      ToolTip="World Congress / League"/>
+		<Button ID="VDScreenVictory"      ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_VictoryProgress.dds"    ToolTip="Victory Progress"/>
+		<Button ID="VDScreenReligion"     ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_ReligionOverview.dds"   ToolTip="Religion Overview"/>
+		<Button ID="VDScreenPolicy"       ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_Culture.dds"            ToolTip="Social Policies"/>
+		<Button ID="VDScreenCulture"      ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_Greatworks.dds"         ToolTip="Culture Overview"/>
+		<Button ID="VDScreenTech"         ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_TechTree.dds"           ToolTip="Technology Tree"/>
+		<Button ID="VDScreenEspionage"    ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_EspionageOverview.dds"  ToolTip="Espionage Overview"/>
+		<Button ID="VDScreenMilitary"     ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_MilitaryOverview.dds"   ToolTip="Military Overview"/>
+		<Button ID="VDScreenVassal"       ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_VassalOverview.dds"     ToolTip="Vassal Overview"/>
+		<Button ID="VDScreenDiplo"        ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_DiplomacyOverview.dds"  ToolTip="Diplomatic Overview"/>
+		<Button ID="VDScreenDemographics" ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_Demographics.dds"       ToolTip="Demographics"/>
+		<Button ID="VDScreenCorp"         ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_Corporations.dds"      ToolTip="Corporations Overview"/>
+		<Button ID="VDScreenTrade"        ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_TradeRouteOverview.dds" ToolTip="Trade Routes"/>
+		<Button ID="VDScreenEconomic"     ConsumeMouse="1" Anchor="C,T" Size="45,45" Texture="DC45_EconomicOverview.dds"   ToolTip="Economic Overview"/>
+	</Stack>
 </Context>
