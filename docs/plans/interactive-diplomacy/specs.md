@@ -16,14 +16,14 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 - **Who talks.** Two major civilizations, each voiced by a human or an LLM participant. Every participant is bound to one civilization — a human to their seat whether playing directly or steering a civ in human-control mode.
 - **How they start.** From the Web interface (the first surface; an in-game panel comes later) one side opens a conversation thread with the other civilization.
-- **Who answers.** When a side is an LLM, that civ's side is voiced by the seat's configured **diplomat** agent — the counterpart's only conversational interlocutor, exchanging free-text messages.
+- **Who answers.** When a side is an LLM, that civ's side defaults to the seat's configured **diplomat** agent — the counterpart's only conversational interlocutor, exchanging free-text messages. Because the Web is a local single-operator game/debug surface, the operator may override the voicing agent when opening the conversation.
 - **When a deal appears.** When a **deal** is put on the table — because the human proposes one, or the diplomat decides to — the diplomat **hands off to that seat's negotiator** agent: a deal specialist equipped with the deal tools that never handles human input directly. The default flow is a **diplomat⇔negotiator loop** behind the conversation.
 - **What a deal is.** A structured proposal shaped exactly like the game's diplomatic trade screen — a list of trade items each side gives (gold, gold-per-turn, resources, cities, open borders, peace, third-party terms, votes, techs, and so on).
 - **How it resolves.** The recipient may **accept as-is, present a counter-deal, or reject**. When both sides accept, the deal is enacted for real through a new DLL entrypoint that:
   - honors all *structural* legality (you can only trade what you actually own; peace must be mutual), but
   - **bypasses the AI's political refusal** — the `CvDealAI` valuation that would otherwise make many deals "impossible."
 - **What stays untouched.** The normal in-game deal pathway is left completely untouched.
-- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time value or agreeability snapshots for the two ordered players. Human-side values are left undefined. Current legality and enactment state are always fetched live from the game.
+- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time value or agreeability snapshots for the two ordered players. Human-side values are left undefined. Current legality is always fetched live from the game; successful enactment is recorded as a `deal-enacted` transcript message for orchestration/audit, not as DLL state.
 
 ## What we want to achieve
 
@@ -35,7 +35,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - Every participant — human or LLM — is **always bound to a player/civ**. Diplomacy is therefore inherently civ-to-civ: each side speaks *as* its civilization to *another* civilization. A human is bound to their seat in both regular human play (full control) and human-control mode (strategist seat).
 - The design is **direction-agnostic** — human→LLM, LLM→human, and LLM→LLM run through the same machinery (§5) — but the build is phased. **We start from human→LLM**: a human opens a conversation with an LLM-played civ, the easiest direction to build and debug end to end.
 - The first surface is the **Web** — the easiest place to build and debug the full conversation and deal flow. An in-game diplomacy panel is a later phase (§9), not a separate system.
-- Whenever a side is an LLM, its side of the conversation is voiced by a **diplomat agent** chosen by that seat's config (§7), not by whatever agent name the client requests — so the LLM speaks with its configured persona and setup. Deal mechanics are handled by a separate **negotiator agent** behind the diplomat (§3, §7).
+- Whenever a side is an LLM, its side of the conversation defaults to the **diplomat agent** chosen by that seat's config (§7), so the LLM normally speaks with its configured persona and setup. Because this is a local single-operator game/debug surface, the Web may allow an explicit voicing-agent override. Deal mechanics are handled by a separate **negotiator agent** behind the diplomat (§3, §7), again defaulting from seat config.
 
 ### 2. Identity and seating
 
@@ -43,7 +43,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - Actor → player mapping (one rule covering human→LLM, LLM→human, and LLM→LLM symmetrically):
   - a **human** actor maps to their seat's `playerID`;
   - an **LLM** actor maps to the `playerID` whose seat config names the diplomat and negotiator.
-- Today's `EnvoyThread` carries a single `playerID` plus a `userIdentity` describing the other party. A conversation keyed by a symmetric initiator/target *player pair* generalizes this: the thread must carry **both endpoint `playerID`s explicitly** so either side can be human or LLM. This generalization is part of the vox-agents work (§ Component impact).
+- Today's `EnvoyThread` carries a single `playerID` plus a `userIdentity` describing the other party. A conversation keyed by a symmetric initiator/target *player pair* generalizes this: the thread must carry **both endpoint `playerID`s explicitly** so either side can be human or LLM. This requires a coordinated vox-agents refactor of `EnvoyThread`, chat routes, endpoint labeling, context/parameter resolution, and `getPlayerAssignments` so diplomacy and ordinary envoy/telepathist chats share one endpoint-pair model. Non-diplomacy chats use `-1` as the observer/no-seat endpoint sentinel; durable diplomatic transcript storage remains major-civ-only.
 
 ### 3. Deals: structured, like the game's trade screen
 
@@ -94,7 +94,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - **Accept as-is** — both sides have now agreed; the deal is enacted (§4).
   - **Counter** — present a modified deal back, which the other side then accepts, counters, or rejects.
   - **Reject** — the proposal is declined; the conversation continues.
-- These moves are transcript messages, not hidden state. A proposal or counter carries its structured terms in `Payload.Deal`; an accept or reject references the proposal message ID it answers. The current deal state is derived by reducing the ordered transcript, keeping the store append-only and status-free.
+- These moves are transcript messages, not hidden state. A proposal or counter carries its structured terms in `Payload.Deal`; an accept or reject references the proposal message ID it answers. A successful enactment is recorded as a special `deal-enacted` message carrying `Payload.ProposalMessageID`. The current deal state is derived by reducing the append-ordered transcript, keeping the store append-only and status-free.
 
 #### Where deals are shown and stored
 
@@ -104,7 +104,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - Deals are **stored as proposals, checked as live game state**:
   - the transcript stores the proposed terms directly in `Payload.Deal`;
   - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the value or agreeability snapshot seen by player 1 and player 2 when the proposal was made; human-side values are undefined;
-  - the transcript does not store legality or enactment state. For display, a proposal is simply a proposal that exists in the conversation; when current legality matters, the deal is reconstructed and inspected in the game on demand (§6).
+  - the transcript does not store legality or live DLL state. For display, a proposal is simply a proposal that exists in the conversation; when current legality matters, the deal is reconstructed and inspected in the game on demand (§6). `deal-enacted` records that orchestration succeeded for a proposal; it does not replace live game inspection.
 
 ### 4. Rule boundary: bypass political refusal, honor structural legality
 
@@ -148,7 +148,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 - The enactment path the human trade screen already uses (`AreAllTradeItemsValid()` → `FinalizeDealValidAndAccepted` → `ActivateDeal`) does **not** call `CvDealAI` at all — acceptance is a parameter the caller passes in.
 - The feature adds a new Lua-exposed function, a sibling of the existing accept path, that:
-  - builds the agreed `CvDeal`,
+  - takes a complete structured deal object and builds a `CvDeal`,
   - validates it structurally by calling `AreAllTradeItemsValid(bTreatAsHumanToHuman = true)` (the defaulted override above), and
   - activates it with acceptance already decided.
 - **The `CvDealAI` valuation logic is left completely untouched, and the normal in-game deal pathway behaves exactly as before.** The shared-function change is the *defaulted* `bTreatAsHumanToHuman` parameter on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` and the matching inspection/reason path, with the default reproducing the prior computation. We add an entrypoint; we do not change the behavior of the existing ones.
@@ -187,9 +187,11 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - **Conversation transcripts are durable and live in the mcp-server.** The mcp-server stores *only the messages* — content, speaker, participant roles, turn, timestamp, and optional message payload.
 - There is exactly **one conversation per pair of major-civ players** in a game, so the store needs **no thread identity, no thread table, and no status column**:
   - a message is keyed by the game and a **player pair ordered by `playerID`** (`Player1ID = min(playerID)`, `Player2ID = max(playerID)`), plus the speaker for each row;
-  - the conversation *is* the ordered list of messages between them.
-- This persists across restarts and is what the Web reads. It does **not** store LLM internals (reasoning, agent scratch state, tool traces), which stay transient in vox-agents and may be lost between restarts. Deal proposal messages carry `Payload.Deal` and may carry `Payload.Value1` / `Payload.Value2`, but not legality or enacted-deal state.
+  - the conversation *is* the ID-ordered list of appended messages between them.
+- The transcript message type enum is exactly: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, `deal-enacted`.
+- This persists across restarts and is what the Web reads. It does **not** store LLM internals (reasoning, agent scratch state, tool traces), which stay transient in vox-agents and may be lost between restarts. Deal proposal messages carry `Payload.Deal` and may carry `Payload.Value1` / `Payload.Value2`, but not legality or live DLL state.
 - Both participant visibility flags are set on every transcript row. The transcript is private to the two civs, but either side can read the same ordered conversation.
+- `append-message` is an archival write only. It does not stream responses, notify clients, run agents, enact deals, or decide whether a deal is current/accepted. Web and agent orchestration layers perform those actions separately, then append the resulting transcript messages.
 
 #### Threads live only in vox-agents
 
@@ -199,7 +201,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 #### Deal proposals are stored; current checks are fetched
 
 - Because game state can move on, the current deal view is read on demand from civ5-dll via a new mcp-server tool that reconstructs and inspects `Payload.Deal`.
-- Storage holds the proposal terms in `Payload.Deal` and optional proposal-time `Payload.Value1` / `Payload.Value2` snapshots only. It does not store legality, reasons, or enacted state.
+- Storage holds the proposal terms in `Payload.Deal` and optional proposal-time `Payload.Value1` / `Payload.Value2` snapshots only. It does not store legality or reasons. Successful orchestration appends `deal-enacted` with `Payload.ProposalMessageID`, while current game state remains live.
 
 #### No real-time Web⇄game sync
 
@@ -230,10 +232,10 @@ Each LLM player's diplomacy is handled by **two cooperating agents**, both exten
 
 #### Per-seat agent selection
 
-- **Each LLM seat chooses its diplomat and negotiator agents the same way it chooses its strategist today**, and those agents may have **different agentic setups** — different prompts, tools, even different models via the existing per-agent model-override map.
+- **Each LLM seat chooses its default diplomat and negotiator agents the same way it chooses its strategist today**, and those agents may have **different agentic setups** — different prompts, tools, even different models via the existing per-agent model-override map. The local Web debug surface may override the voicing agent for a conversation, but seat config remains the displayed/default choice.
 - This is the same per-seat selection model as strategists, and is expected to require a **refactor that generalizes per-seat agent assignment** beyond just the strategist:
   - adding `diplomat` / `negotiator` fields to the seat config;
-  - resolving the *target* seat's configured agents from the conversation, instead of trusting a client-supplied agent name.
+  - resolving the *target* seat's configured agents from the conversation as the default, while honoring the local operator override.
 
 #### Authority lives in the agent
 
@@ -264,14 +266,14 @@ Each LLM player's diplomacy is handled by **two cooperating agents**, both exten
 
 Durable transcript storage and the deal bridge:
 
-- A single new **messages** table in the per-game knowledge store, keyed by `Player1ID` / `Player2ID` ordered by `playerID`, plus `Player1Role` / `Player2Role` and a speaker column (no thread table or status column — one conversation per major-civ player pair, §6).
-- Tools to **append a message** (including the close-conversation special message) and **read the transcript** between two civs.
+- A single new **messages** table in the per-game knowledge store, keyed by `Player1ID` / `Player2ID` ordered by `playerID`, plus `Player1Role` / `Player2Role` and a speaker column (no thread table or status column — one conversation per major-civ player pair, §6). Transcript order is append `ID`, with `Turn` retained as metadata.
+- Tools to **append a message** (including `close` and `deal-enacted` special messages) and **read the transcript** between two civs. `append-message` is archival only and defaults `Turn` to the current server turn when omitted.
 - A single read-only **inspect-deal** tool that constructs and queries a proposed deal in the game and returns, **per term in one call**:
   - structural legality and reasons (for trade items), computed under the same `bTreatAsHumanToHuman = true` semantics as enactment;
   - the **AI value estimate both directions** (for trade items, via the new `GetTradeItemValue` getter);
   - **agreeability factors** (for promises, assembled from existing diplomacy/opinion getters).
   - Legality and estimation are unified here — there is no separate estimate tool.
-- A non-read-only **enact-agent-deal** tool that calls the new DLL `EnactAgentDeal` function, passing both the trade items **and the promise commitment list**.
+- A non-read-only **enact-agent-deal** tool that calls the new DLL `EnactAgentDeal` function with a complete deal object, passing both the trade items **and the promise commitment list**. The tool is stateless: callers reduce the transcript, guard duplicate UI actions, call enactment, and append `deal-enacted` on success.
 - Tools follow the existing `ToolBase` / `LuaFunctionTool` pattern and registry (`tools/index.ts`).
 
 ### `vox-agents`
@@ -281,7 +283,7 @@ The diplomat and negotiator agents and the per-seat config generalization:
 - A **diplomat envoy** extended with **propose-deal**, **forward-deal** (forward a human-proposed/countered deal to the negotiator with a context briefing), and **close-conversation** tools; it also reads the same per-term `inspect-deal` estimates so it can voice deals and brief accurately.
 - A new deal-aware **negotiator envoy** invoked by the diplomat as an agent-tool (the diplomat⇔negotiator loop); both registered in the agent registry. Its deal artifact is **promise-aware** (trade items + promise commitments); it fetches per-term **value/agreeability estimates** via the unified mcp-server `inspect-deal` tool, receives the diplomat's briefing with each forwarded deal, and carries **`get-briefing`** / **`get-diplomatic-events`** tools to read game and diplomatic state directly.
 - `diplomat` / `negotiator` fields on `PlayerConfig`.
-- Resolving the *target* seat's configured agents from a conversation (`getPlayerAssignments`) instead of trusting the client.
+- Refactoring `EnvoyThread`, chat routes, endpoint labeling, context/parameter resolution, and `getPlayerAssignments` together so the target seat's configured diplomat/negotiator can be shown as defaults while still allowing local operator override.
 - Rewiring the web chat routes to persist transcripts through the mcp-server tools (the in-memory thread becomes a write-through cache).
 - The diplomacy-config surface for which initiation directions are enabled.
 
@@ -323,10 +325,10 @@ The *only* gameplay code change:
 
 ## Success criteria
 
-- From the Web, a human seated as a civilization can open a conversation with an LLM-played civ, exchange messages, and the LLM responds in the voice of that seat's configured diplomat agent.
+- From the Web, a human seated as a civilization can open a conversation with an LLM-played civ, exchange messages, and the LLM responds in the voice of that seat's configured diplomat agent by default, with a local operator override available for debugging.
 - Either side can present a structured deal mirroring the game's trade screen; the recipient can accept, counter, or reject; and a deal accepted by both sides is **enacted for real in the game** — items change hands — for deals the stock AI would have refused on political grounds, while structurally-illegal items are still rejected with a reason.
 - A deal may include **any of the nine promises** (Coop War targeting a third party); an accepted promise is written to real diplomacy state and thereafter **behaves like an in-game promise** — honored and broken by the game's existing rules (e.g. broken by a later declaration of war).
 - Both the negotiator and the diplomat see **per-term value and agreeability estimates** for a deal under discussion; these inform their reasoning and briefing but **never gate enactment** on the agent path.
 - The normal in-game deal pathway and AI valuation behave exactly as before; the agent path is a separate entrypoint, and no `TradeableItems` or save-format change is introduced.
-- Conversation transcripts persist in the mcp-server and survive a restart; the Web reads them through vox-agents; proposal messages store `Payload.Deal`, while current legality and enactment are fetched live from the game.
+- Conversation transcripts persist in the mcp-server and survive a restart; the Web reads them through vox-agents; proposal messages store `Payload.Deal`, `deal-enacted` records successful orchestration, and current legality/game state are fetched live from the game.
 - Each LLM seat can be configured to use a different diplomat and negotiator agent (and model), and initiation can be enabled or disabled per direction — human↔LLM and, in later phases, LLM↔LLM.
