@@ -43,7 +43,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - Actor → player mapping (one rule covering human→LLM, LLM→human, and LLM→LLM symmetrically):
   - a **human** actor maps to their seat's `playerID`;
   - an **LLM** actor maps to the `playerID` whose seat config names the diplomat and negotiator.
-- Today's `EnvoyThread` carries a single `playerID` plus a `userIdentity` describing the other party. A conversation keyed by a symmetric initiator/target *player pair* generalizes this: the thread must carry **both endpoint `playerID`s explicitly** so either side can be human or LLM. This requires a coordinated vox-agents refactor of `EnvoyThread`, chat routes, endpoint labeling, context/parameter resolution, and `getPlayerAssignments` so diplomacy and ordinary envoy/telepathist chats share one endpoint-pair model. Non-diplomacy chats use `-1` as the observer/no-seat endpoint sentinel; durable diplomatic transcript storage remains major-civ-only.
+- Today's `EnvoyThread` carries a single `playerID` plus a `userIdentity` describing the other party. A conversation keyed by a symmetric initiator/target *player pair* generalizes this: the thread must carry **both endpoint `playerID`s explicitly** so either side can be human or LLM. This requires a coordinated vox-agents refactor of `EnvoyThread`, chat routes, endpoint labeling, context/parameter resolution, and `getPlayerAssignments` so diplomacy and ordinary envoy/telepathist chats share one endpoint-pair model. Non-diplomacy chats use `-1` as the observer/no-seat endpoint sentinel; storage handles `-1` as a **special case** — the observer side is stored (not rejected), sorts to `Player1ID`, carries the `observer` role, and sets visibility only for the real civ endpoint, so ordinary envoy/telepathist chats persist through the same store.
 
 ### 3. Deals: structured, like the game's trade screen
 
@@ -267,13 +267,13 @@ Each LLM player's diplomacy is handled by **two cooperating agents**, both exten
 Durable transcript storage and the deal bridge:
 
 - A single new **messages** table in the per-game knowledge store, keyed by `Player1ID` / `Player2ID` ordered by `playerID`, plus `Player1Role` / `Player2Role` and a speaker column (no thread table or status column — one conversation per major-civ player pair, §6). Transcript order is append `ID`, with `Turn` retained as metadata.
-- Tools to **append a message** (including `close` and `deal-enacted` special messages) and **read the transcript** between two civs. `append-message` is archival only and defaults `Turn` to the current server turn when omitted.
+- Tools to **append a message** (including the `close` special message) and **read the transcript** between two civs. `append-message` is archival only and defaults `Turn` to the current server turn when omitted. The `deal-enacted` record is emitted by `enact-agent-deal` itself (via the same store path), so the idempotency check and the record are one operation rather than a generic client append.
 - A single read-only **inspect-deal** tool that constructs and queries a proposed deal in the game and returns, **per term in one call**:
   - structural legality and reasons (for trade items), computed under the same `bTreatAsHumanToHuman = true` semantics as enactment;
   - the **AI value estimate both directions** (for trade items, via the new `GetTradeItemValue` getter);
   - **agreeability factors** (for promises, assembled from existing diplomacy/opinion getters).
   - Legality and estimation are unified here — there is no separate estimate tool.
-- A non-read-only **enact-agent-deal** tool that calls the new DLL `EnactAgentDeal` function with a complete deal object, passing both the trade items **and the promise commitment list**. The tool is stateless: callers reduce the transcript, guard duplicate UI actions, call enactment, and append `deal-enacted` on success.
+- A non-read-only **enact-agent-deal** tool that calls the new DLL `EnactAgentDeal` function with a complete deal object, passing both the trade items **and the promise commitment list**. The DLL function is stateless; the tool is transcript-aware — it takes the proposal message ID, checks for a prior `deal-enacted` on it (idempotent), enacts, and records `deal-enacted` on success. Callers reduce the transcript only to choose the proposal to enact.
 - Tools follow the existing `ToolBase` / `LuaFunctionTool` pattern and registry (`tools/index.ts`).
 
 ### `vox-agents`
