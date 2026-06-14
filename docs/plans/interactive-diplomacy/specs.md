@@ -23,7 +23,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - honors all *structural* legality (you can only trade what you actually own; peace must be mutual), but
   - **bypasses the AI's political refusal** — the `CvDealAI` valuation that would otherwise make many deals "impossible."
 - **What stays untouched.** The normal in-game deal pathway is left completely untouched.
-- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deals themselves are live game state, fetched from the game on demand rather than copied into storage.
+- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time value or agreeability snapshots for the two ordered players. Human-side values are left undefined. Current legality and enactment state are always fetched live from the game.
 
 ## What we want to achieve
 
@@ -100,9 +100,10 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - The deal surface:
   - **reuses the game's existing diplomatic deal screen in-game** (a later phase), and
   - **recreates that screen on the Web** for the first phase — showing both sides' item tables and, per item, whether it is structurally legal and (if not) why (sourced from `IsPossibleToTradeItem` / `GetReasonsItemUntradeable`).
-- Deals are **live game state, not stored conversation data**:
-  - a deal under discussion is constructed and inspected in the game on demand (§6);
-  - the transcript records only that a proposal was made, plus an opaque reference to it — never a frozen copy.
+- Deals are **stored as proposals, checked as live game state**:
+  - the transcript stores the proposed terms directly in `Payload.Deal`;
+  - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the value or agreeability snapshot seen by player 1 and player 2 when the proposal was made; human-side values are undefined;
+  - the transcript does not store legality or enactment state. For display, a proposal is simply a proposal that exists in the conversation; when current legality matters, the deal is reconstructed and inspected in the game on demand (§6).
 
 ### 4. Rule boundary: bypass political refusal, honor structural legality
 
@@ -124,11 +125,12 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 #### Validated as human-to-human
 
-- Today `CvDeal::IsPossibleToTradeItem` computes `bHumanToHuman` internally from `isHuman(ISHUMAN_AI_DIPLOMACY)` for both players — so an agent deal with an AI-played seat would *not* be treated as human↔human. The feature **exposes that internal classification as a caller-controlled override**: `IsPossibleToTradeItem` and `AreAllTradeItemsValid` each gain a **defaulted `bHumanToHuman` parameter**. Left at its default the function reproduces the existing computed value — so every stock caller (the normal deal screen) is byte-for-byte unchanged — while the agent entrypoint passes `true`, evaluating the structural guards that branch on `isHuman` in their *most permissive* form.
+- Today `CvDeal::IsPossibleToTradeItem` computes `bHumanToHuman` internally from `isHuman(ISHUMAN_AI_DIPLOMACY)` for both players — so an agent deal with an AI-played seat would *not* be treated as human↔human. The feature **exposes that internal classification as a caller-controlled override**: `IsPossibleToTradeItem` and `AreAllTradeItemsValid` each gain a **defaulted `bTreatAsHumanToHuman` parameter**. Left at its default the function reproduces the existing computed value — so every stock caller (the normal deal screen) is unchanged — while the agent entrypoint passes `true`, evaluating the structural guards that branch on `isHuman` in their *most permissive* form.
 - This means the AI-only structural restrictions do **not** apply to agent deals (including LLM↔LLM):
   - one city per player per deal,
   - no peacetime selling of self-founded cities,
-  - the `DEALAI_DISABLE_CITY_TRADES` mod toggle.
+  - the `DEALAI_DISABLE_CITY_TRADES` mod toggle,
+  - and other `!bHumanToHuman` gates that live in `IsPossibleToTradeItem`, such as denouncement-based blocks where the stock screen applies them.
 - Every agent deal thus gets the same latitude a human↔human deal would have. The always-on structural guards above (duplicate-luxury import, banned luxuries, capital, ownership, quantity, etc.) still apply regardless.
 
 #### Bypassed: everything in `CvDealAI`
@@ -146,9 +148,9 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - The enactment path the human trade screen already uses (`AreAllTradeItemsValid()` → `FinalizeDealValidAndAccepted` → `ActivateDeal`) does **not** call `CvDealAI` at all — acceptance is a parameter the caller passes in.
 - The feature adds a new Lua-exposed function, a sibling of the existing accept path, that:
   - builds the agreed `CvDeal`,
-  - validates it structurally by calling `AreAllTradeItemsValid(bHumanToHuman = true)` (the defaulted override above), and
+  - validates it structurally by calling `AreAllTradeItemsValid(bTreatAsHumanToHuman = true)` (the defaulted override above), and
   - activates it with acceptance already decided.
-- **The `CvDealAI` valuation logic is left completely untouched, and the normal in-game deal pathway behaves exactly as before.** The only change to an existing function is the *defaulted* `bHumanToHuman` parameter on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` — no logic is branched, and because the default reproduces the prior computation, every stock caller is unaffected. We add an entrypoint; we do not change the behavior of the existing ones.
+- **The `CvDealAI` valuation logic is left completely untouched, and the normal in-game deal pathway behaves exactly as before.** The shared-function change is the *defaulted* `bTreatAsHumanToHuman` parameter on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` and the matching inspection/reason path, with the default reproducing the prior computation. We add an entrypoint; we do not change the behavior of the existing ones.
 - `EnactAgentDeal` does two things in one call:
   - finalizes the `CvDeal` of ordinary trade items (as above), **and**
   - applies the deal's **promise commitments** by calling the diplomacy setters directly — `SetXxxPromiseState` / `SetXxxPromiseTurn` for the eight standing promises and `SetCoopWarState` for Coop War.
@@ -181,21 +183,21 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 #### Durable transcripts in the mcp-server
 
-- **Conversation transcripts are durable and live in the mcp-server.** The mcp-server stores *only the messages* — role, content, speaker, turn, and timestamp.
-- There is exactly **one conversation per pair of major civs** in a game, so the store needs **no thread identity, no thread table, and no status column**:
-  - a message is keyed simply by the game and the two participant `playerID`s;
+- **Conversation transcripts are durable and live in the mcp-server.** The mcp-server stores *only the messages* — content, speaker, participant roles, turn, timestamp, and optional message payload.
+- There is exactly **one conversation per pair of major-civ players** in a game, so the store needs **no thread identity, no thread table, and no status column**:
+  - a message is keyed by the game and a **player pair ordered by `playerID`** (`Player1ID = min(playerID)`, `Player2ID = max(playerID)`), plus the speaker for each row;
   - the conversation *is* the ordered list of messages between them.
-- This persists across restarts and is what the Web reads. It does **not** store LLM internals (reasoning, agent scratch state, tool traces), which stay transient in vox-agents and may be lost between restarts.
+- This persists across restarts and is what the Web reads. It does **not** store LLM internals (reasoning, agent scratch state, tool traces), which stay transient in vox-agents and may be lost between restarts. Deal proposal messages carry `Payload.Deal` and may carry `Payload.Value1` / `Payload.Value2`, but not legality or enacted-deal state.
 
 #### Threads live only in vox-agents
 
 - The `EnvoyThread`-style working structure — thread id, open/closed bookkeeping, agent scratch — stays in vox-agents.
 - vox-agents treats the mcp-server message store as the source of truth for the transcript, writing each message through mcp-server tools rather than holding chat only in memory — replacing today's in-memory `chatSessions` map.
 
-#### Deals are fetched, not stored
+#### Deal proposals are stored; current checks are fetched
 
-- Because a deal is live game state, the deal shown in a conversation is read on demand from civ5-dll via a new mcp-server tool that constructs and inspects a proposal and returns per-item legality and reasons.
-- Storage holds only an opaque reference, never a copy.
+- Because game state can move on, the current deal view is read on demand from civ5-dll via a new mcp-server tool that reconstructs and inspects `Payload.Deal`.
+- Storage holds the proposal terms in `Payload.Deal` and optional proposal-time `Payload.Value1` / `Payload.Value2` snapshots only. It does not store legality, reasons, or enacted state.
 
 #### No real-time Web⇄game sync
 
@@ -260,10 +262,10 @@ Each LLM player's diplomacy is handled by **two cooperating agents**, both exten
 
 Durable transcript storage and the deal bridge:
 
-- A single new **messages** table in the per-game knowledge store, keyed by the game and a pair of `playerID`s (no thread table or status column — one conversation per civ pair, §6).
+- A single new **messages** table in the per-game knowledge store, keyed by `Player1ID` / `Player2ID` ordered by `playerID`, plus `Player1Role` / `Player2Role` and a speaker column (no thread table or status column — one conversation per major-civ player pair, §6).
 - Tools to **append a message** (including the close-conversation special message) and **read the transcript** between two civs.
 - A single read-only **inspect-deal** tool that constructs and queries a proposed deal in the game and returns, **per term in one call**:
-  - structural legality and reasons (for trade items);
+  - structural legality and reasons (for trade items), computed under the same `bTreatAsHumanToHuman = true` semantics as enactment;
   - the **AI value estimate both directions** (for trade items, via the new `GetTradeItemValue` getter);
   - **agreeability factors** (for promises, assembled from existing diplomacy/opinion getters).
   - Legality and estimation are unified here — there is no separate estimate tool.
@@ -287,11 +289,11 @@ The *only* gameplay code change:
 
 - A new Lua-exposed entrypoint (an `EnactAgentDeal` method exposed in `CvLuaDeal.cpp`) that:
   - builds a `CvDeal`;
-  - validates it with `AreAllTradeItemsValid(bHumanToHuman = true)` for structural legality — using the **defaulted `bHumanToHuman` override** added to `IsPossibleToTradeItem` / `AreAllTradeItemsValid` (default reproduces today's computed value, so stock callers are unchanged), so AI-only structural restrictions don't gate agent deals — §4;
+  - validates it with `AreAllTradeItemsValid(bTreatAsHumanToHuman = true)` for structural legality — using the **defaulted override** added to `IsPossibleToTradeItem` / `AreAllTradeItemsValid` (default reproduces today's computed value, so stock callers are unchanged), so AI-only structural restrictions don't gate agent deals — §4;
   - activates it via the existing `FinalizeDealValidAndAccepted` / `ActivateDeal` with acceptance pre-decided — **without** invoking `CvDealAI`;
   - then **applies the deal's promise commitments** by calling the diplomacy setters directly — `SetXxxPromiseState` / `SetXxxPromiseTurn` (plus existing side-effects) for the eight standing promises, and `SetCoopWarState` for Coop War — all gated behind `MOD_ACTIVE_DIPLOMACY`.
-- Inspection reuses `lIsPossibleToTradeItem` / `lGetReasonsItemUntradeable`, which already exist on the Lua-exposed `CvDeal` (`CvLuaDeal.cpp`) but are not yet wrapped by mcp-server — **plus a new read-only getter** that wraps `CvDealAI::GetTradeItemValue` per item, both directions, for the value estimates. The legality wrapper passes the same `bHumanToHuman = true` override (below) so the screen's per-term legality matches what enactment will allow.
-- The **defaulted `bHumanToHuman` override** on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` (§4): a backward-compatible signature extension whose default reproduces the existing computed value, so the stock deal screen and AI paths are byte-for-byte unchanged. This is the *only* edit to an existing function; `CvDealAI` is untouched.
+- Inspection reuses `lIsPossibleToTradeItem` / `lGetReasonsItemUntradeable`, which already exist on the Lua-exposed `CvDeal` (`CvLuaDeal.cpp`) but are not yet wrapped by mcp-server — **plus a new read-only getter** that wraps `CvDealAI::GetTradeItemValue` per item, both directions, for the value estimates. The legality/reason wrapper passes the same `bTreatAsHumanToHuman = true` override so the screen's per-term legality matches what enactment will allow.
+- The **defaulted `bTreatAsHumanToHuman` override** on `IsPossibleToTradeItem` / `AreAllTradeItemsValid`, plus the matching inspection/reason wrapper path (§4): a backward-compatible signature extension whose default reproduces the existing computed value, so the stock deal screen and AI paths are unchanged. `CvDealAI` is untouched.
 - **No `TradeableItems` enum change, no new save fields, and no new acceptability/valuation logic** (promise agreeability is factor-based reasoning in the agent, § Deal valuation visible to both agents). Requires a DLL rebuild and a version bump; the normal pathway behaves exactly as before.
 
 ### Web UI (`vox-agents/ui`)
@@ -311,8 +313,8 @@ The *only* gameplay code change:
 
 - A **real-time synchronization** layer between the Web and the in-game client. They share storage and infrastructure; they do not mirror each other live.
 - **Diplomacy with City-States or other non-major civs.** The agent layer is major-civ-only.
-- **Relaxing the always-on structural guards inside `IsPossibleToTradeItem`** (duplicate-luxury import, banned luxuries, capital, ownership, quantity, embassy-for-city, sapped/damaged cities, and similar). v1 honors these as structural and unchanged; relaxing a specific one would require threading an override flag through the function — a larger, riskier change deferred beyond v1. (The valuation-layer anti-exploit guards — last strategic-resource copy, last luxury while unhappy — are *not* in this category: they live in `CvDealAI` and are bypassed by design, per §4.)
-- **Changing or branching the normal in-game deal or AI-valuation pathway.** The feature is additive apart from one backward-compatible signature extension: a *defaulted* `bHumanToHuman` parameter on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` whose default reproduces the existing computation, so no stock caller's behavior changes and `CvDealAI` is untouched. No logic is branched inside the existing functions.
+- **Relaxing the always-on structural guards inside `IsPossibleToTradeItem`** (duplicate-luxury import, banned luxuries, capital, ownership, quantity, embassy-for-city, sapped/damaged cities, and similar). v1 honors these as structural and unchanged; relaxing a specific one would require threading a new override through the function — a larger, riskier change deferred beyond v1. (The valuation-layer anti-exploit guards — last strategic-resource copy, last luxury while unhappy — are *not* in this category: they live in `CvDealAI` and are bypassed by design, per §4.)
+- **Changing or branching the normal in-game deal or AI-valuation pathway.** The feature is additive apart from backward-compatible inspection/enactment signature extensions: a *defaulted* `bTreatAsHumanToHuman` parameter on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` and the matching reason/inspection path whose default reproduces the existing computation, so no stock caller's behavior changes and `CvDealAI` is untouched. No stock-path logic is branched.
 - **The in-game diplomacy panel**, which is phased later — explicitly planned, not abandoned, but not delivered in v1.
 - **New DLL acceptability or valuation logic for promises.** Promises are *enacted* through existing setters, but their "agreeability" is **factor-based reasoning by the negotiator agent**, not a new in-game verdict — keeping the DLL merge-compatible with upstream Vox Populi.
 - **Representing promises as `TradeableItems`.** Promises are deal terms applied directly at enactment, not `CvTradedItem`s; the trade-item enum, its serialization, and the stock deal screen are untouched.
@@ -324,5 +326,5 @@ The *only* gameplay code change:
 - A deal may include **any of the nine promises** (Coop War targeting a third party); an accepted promise is written to real diplomacy state and thereafter **behaves like an in-game promise** — honored and broken by the game's existing rules (e.g. broken by a later declaration of war).
 - Both the negotiator and the diplomat see **per-term value and agreeability estimates** for a deal under discussion; these inform their reasoning and briefing but **never gate enactment** on the agent path.
 - The normal in-game deal pathway and AI valuation behave exactly as before; the agent path is a separate entrypoint, and no `TradeableItems` or save-format change is introduced.
-- Conversation transcripts persist in the mcp-server and survive a restart; the Web reads them through vox-agents; deals are fetched live from the game rather than stored.
+- Conversation transcripts persist in the mcp-server and survive a restart; the Web reads them through vox-agents; proposal messages store `Payload.Deal`, while current legality and enactment are fetched live from the game.
 - Each LLM seat can be configured to use a different diplomat and negotiator agent (and model), and initiation can be enabled or disabled per direction — human↔LLM and, in later phases, LLM↔LLM.

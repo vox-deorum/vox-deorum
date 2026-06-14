@@ -20,11 +20,11 @@ Real enactment still lands in stage 6, so the milestone here is **a deal both si
    - **`forward-deal`** — when the human proposes/counters, pass that deal to the negotiator **with a short briefing** of the conversational context (the negotiator otherwise can't see the thread).
    The diplomat **sees the deal at every step** — the human's proposal, the negotiator's counters, and the per-term estimates — so it relays each move faithfully and keeps gathering intelligence.
 3. **The diplomat⇔negotiator loop** — the diplomat relays the human's intent (with a briefing) in; the negotiator returns its move out; the diplomat voices it. Register both agents in `vox-agents/src/infra/agent-registry.ts` (the `initializeDefaults` idiom), resolving the **target seat's** configured `negotiator` from the seat config (the `negotiator` field added in stage 2). **Author the loop so it does not assume a blocking, human-paced exchange:** the human→LLM path naturally rides the existing pause (specs §8), but stage 8's LLM↔LLM peers must run alongside continued auto-play without blocking the turn loop. Keep the loop driver agnostic to whether either endpoint is human so stage 8 reuses it rather than forking it.
-4. **Deal references in the transcript** — a proposal rides the conversation as a message carrying an **opaque deal reference** (stage 1's `DealRef`); the deal is (re)constructed and fetched live via `inspect-deal`, never stored as a frozen copy (specs §6).
+4. **Stored deal proposals in the transcript** — a proposal rides the conversation as a message carrying the proposed terms in `Payload.Deal`, plus optional proposal-time `Payload.Value1` / `Payload.Value2` snapshots. Current legality and enactment checks still come from fresh `inspect-deal` / `enact-agent-deal` calls.
 
 ## Reuse
 
-`LiveEnvoy` / `Envoy` and the existing `Diplomat` (`src/envoy/*.ts`); the agent-as-tool invocation pattern already used for `call-diplomatic-analyst`; `createBriefingTool` and `get-diplomatic-events`; stage-3 `inspect-deal`; stage-2's deal-reference flow and the Web deal screen (stage 4) as the human's proposal/counter surface.
+`LiveEnvoy` / `Envoy` and the existing `Diplomat` (`src/envoy/*.ts`); the agent-as-tool invocation pattern already used for `call-diplomatic-analyst`; `createBriefingTool` and `get-diplomatic-events`; stage-3 `inspect-deal`; stage-2's deal-message flow and the Web deal screen (stage 4) as the human's proposal/counter surface.
 
 ## Verify
 
@@ -32,4 +32,4 @@ In a live session: (a) **diplomat-decided path** — the diplomat calls `propose
 
 ## Done when
 
-Both the diplomat-decided and human-forwarded paths run the full loop end to end — the negotiator inspects, values, and counters/accepts via `inspect-deal`, the diplomat voices every move with its per-term estimates, and the two sides reach an agreed deal referenced (not stored) in the transcript — with real enactment the only thing still pending.
+Both the diplomat-decided and human-forwarded paths run the full loop end to end — the negotiator inspects, values, and counters/accepts via `inspect-deal`, the diplomat voices every move with its per-term estimates, and the two sides reach an agreed deal stored in the transcript as `Payload.Deal` — with real enactment the only thing still pending.
