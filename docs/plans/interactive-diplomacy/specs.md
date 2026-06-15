@@ -23,7 +23,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - honors all *structural* legality (you can only trade what you actually own; peace must be mutual), but
   - **bypasses the AI's political refusal** — the `CvDealAI` valuation that would otherwise make many deals "impossible."
 - **What stays untouched.** The normal in-game deal pathway is left completely untouched.
-- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time per-item trade-item value snapshots (item id → value) for the two ordered players. Human-side values are left undefined. Current legality is always fetched live from the game; successful enactment is recorded as a `deal-enacted` transcript message for orchestration/audit, not as DLL state.
+- **What persists.** Conversation transcripts persist in the mcp-server so the Web (and, later, the game) can read them across restarts. Deal proposal messages store the proposed deal directly in `Payload.Deal`, plus optional `Payload.Value1` / `Payload.Value2` proposal-time per-item trade-item value snapshots (item id → value) for the two ordered players (a human side's items are valued by the VP AI too, so its map may be present). Current legality is always fetched live from the game; successful enactment is recorded as a `deal-enacted` transcript message for orchestration/audit, not as DLL state.
 
 ## What we want to achieve
 
@@ -103,7 +103,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - **recreates that screen on the Web** for the first phase — showing both sides' item tables and, per item, whether it is structurally legal and (if not) why (sourced from `IsPossibleToTradeItem` / `GetReasonsItemUntradeable`).
 - Deals are **stored as proposals, checked as live game state**:
   - the transcript stores the proposed terms directly in `Payload.Deal`;
-  - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the per-item trade-item value snapshot (item id → value) seen by player 1 and player 2 when the proposal was made; human-side values are undefined;
+  - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the per-item trade-item value snapshot (item id → value) seen by player 1 and player 2 when the proposal was made (a human side's items are valued by the VP AI too, so its map may be present); the **other side's total value balance** shown on the trade screen is derived by summing these per-item values, recomputed live as the deal is edited — it is not stored;
   - the transcript does not store legality or live DLL state. For display, a proposal is simply a proposal that exists in the conversation; when current legality matters, the deal is reconstructed and inspected in the game on demand (§6). `deal-enacted` records that orchestration succeeded for a proposal; it does not replace live game inspection.
 
 ### 4. Rule boundary: bypass political refusal, honor structural legality
@@ -184,7 +184,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 #### Durable transcripts in the mcp-server
 
-- **Conversation transcripts are durable and live in the mcp-server.** The mcp-server stores *only the messages* — content, speaker, participant roles, turn, timestamp, and optional message payload.
+- **Conversation transcripts are durable and live in the mcp-server.** The mcp-server stores *only the messages* — content, speaker, per-endpoint **role descriptors**, turn, timestamp, and optional message payload. The roles are free-form, following the Envoy tradition (the `agent` name for an LLM-voiced side, `UserIdentity.role` for a human side, `observer` for the observer endpoint); they drive display and transcript filtering and do **not** encode human-vs-LLM.
 - There is exactly **one conversation per pair of major-civ players** in a game, so the store needs **no thread identity, no thread table, and no status column**:
   - a message is keyed by the game and a **player pair ordered by `playerID`** (`Player1ID = min(playerID)`, `Player2ID = max(playerID)`), plus the speaker for each row;
   - the conversation *is* the ID-ordered list of appended messages between them.
@@ -266,8 +266,8 @@ Each LLM player's diplomacy is handled by **two cooperating agents**, both exten
 
 Durable transcript storage and the deal bridge:
 
-- A single new **messages** table in the per-game knowledge store, keyed by `Player1ID` / `Player2ID` ordered by `playerID`, plus `Player1Role` / `Player2Role` and a speaker column (no thread table or status column — one conversation per major-civ player pair, §6). Transcript order is append `ID`, with `Turn` retained as metadata.
-- Tools to **append a message** (including the `close` special message) and **read the transcript** between two civs. `append-message` is archival only and defaults `Turn` to the current server turn when omitted. The `deal-enacted` record is emitted by `enact-agent-deal` itself (via the same store path), so the idempotency check and the record are one operation rather than a generic client append.
+- A single new **messages** table in the per-game knowledge store, keyed by `Player1ID` / `Player2ID` ordered by `playerID`, plus free-form `Player1Role` / `Player2Role` descriptors (Envoy `agent` / `UserIdentity.role` convention; for display and filtering, not human-vs-LLM) and a speaker column (no thread table or status column — one conversation per major-civ player pair, §6). Transcript order is append `ID`, with `Turn` retained as metadata.
+- Tools to **append a message** (including the `close` special message) and **read the transcript** between two civs (the read tool can filter by message type and by speaker role). `append-message` is archival only and defaults `Turn` to the current server turn when omitted. The `deal-enacted` record is emitted by `enact-agent-deal` itself (via the same store path), so the idempotency check and the record are one operation rather than a generic client append.
 - A single read-only **inspect-deal** tool that constructs and queries a proposed deal in the game and returns, **per term in one call**:
   - structural legality and reasons (for trade items), computed under the same `bTreatAsHumanToHuman = true` semantics as enactment;
   - the **AI value estimate both directions** (for trade items, via the new `GetTradeItemValue` getter);

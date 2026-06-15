@@ -34,6 +34,8 @@ import createGetVictoryProgressTool from "./knowledge/get-victory-progress.js";
 import createGetMilitaryReportTool from "./knowledge/get-military-report.js";
 import createSearchDatabaseTool from "./general/search-database.js";
 import createGetDiplomaticEventsTool from "./knowledge/get-diplomatic-events.js";
+import createAppendMessageTool from "./actions/append-message.js";
+import createReadTranscriptTool from "./knowledge/read-transcript.js";
 
 // Tool factory configuration - one line per tool
 const toolFactories = {
@@ -54,6 +56,7 @@ const toolFactories = {
     getMilitaryReport: createGetMilitaryReportTool,
     getEvents: createGetEventsTool,
     getDiplomaticEvents: createGetDiplomaticEventsTool,
+    readTranscript: createReadTranscriptTool,
     getPlayers: createGetPlayersTool,
     getOpinions: createGetOpinionsTool,
     getCities: createGetCitiesTool,
@@ -69,6 +72,7 @@ const toolFactories = {
     setPolicy: createSetPolicyTool,
     keepStatusQuo: createKeepStatusQuoTool,
     relayMessage: createRelayMessageTool,
+    appendMessage: createAppendMessageTool,
     presentDecision: createPresentDecisionTool,
     pauseGame: createPauseGameTool,
     resumeGame: createResumeGameTool,

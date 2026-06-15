@@ -1,0 +1,100 @@
+/**
+ * Tool for reading a durable diplomatic conversation transcript.
+ *
+ * Takes two endpoints, derives the canonical ordered player pair (Player1ID = min,
+ * Player2ID = max, with the observer sentinel -1 sorting to Player1ID), and returns
+ * every message between the pair ordered by append ID. Because there is exactly one
+ * conversation per pair, A→B and B→A read as a single thread regardless of argument
+ * order. The query filters by the player pair rather than by a single speaker's
+ * visibility.
+ */
+
+import { ToolBase } from "../base.js";
+import * as z from "zod";
+import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import { getDiplomaticMessages } from "../../knowledge/getters/diplomatic-messages.js";
+
+/** Message vocabulary, for the optional MessageType filter. */
+const MESSAGE_TYPES = [
+  "text",
+  "close",
+  "deal-proposal",
+  "deal-counter",
+  "deal-accept",
+  "deal-reject",
+  "deal-enacted",
+] as const;
+
+/** Input schema for the read-transcript tool. */
+const ReadTranscriptInputSchema = z.object({
+  PlayerAID: z.number().int().min(-1).describe("One endpoint's playerID (or -1 for the observer)"),
+  PlayerBID: z.number().int().min(-1).describe("The other endpoint's playerID (or -1 for the observer)"),
+  MessageType: z.enum(MESSAGE_TYPES).optional().describe("Optional: only return messages of this type"),
+  Role: z.string().optional().describe("Optional: only return messages whose speaker holds this free-form role (e.g. 'diplomat')"),
+});
+
+/** Schema for a single transcript message. */
+const TranscriptMessageSchema = z.object({
+  ID: z.number(),
+  Player1ID: z.number(),
+  Player2ID: z.number(),
+  Player1Role: z.string(),
+  Player2Role: z.string(),
+  SpeakerID: z.number(),
+  MessageType: z.string(),
+  Content: z.string(),
+  Payload: z.record(z.string(), z.any()),
+  Turn: z.number(),
+  CreatedAt: z.number(),
+});
+
+/** Output schema: the ordered list of messages. */
+const ReadTranscriptOutputSchema = z.array(TranscriptMessageSchema);
+
+/**
+ * Tool that reads the ordered transcript between two players.
+ */
+class ReadTranscriptTool extends ToolBase {
+  readonly name = "read-transcript";
+
+  readonly description = "Read the durable conversation between two players (ordered by playerID) as one append-ID-ordered thread.";
+
+  readonly inputSchema = ReadTranscriptInputSchema;
+
+  readonly outputSchema = ReadTranscriptOutputSchema;
+
+  readonly annotations: ToolAnnotations = { readOnlyHint: true };
+
+  readonly metadata = {
+    autoComplete: ["PlayerAID", "PlayerBID", "MessageType", "Role"],
+  };
+
+  async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
+    const messages = await getDiplomaticMessages(args.PlayerAID, args.PlayerBID, {
+      messageType: args.MessageType,
+      speakerRole: args.Role,
+    });
+
+    // Project to the public message shape, dropping per-player visibility columns.
+    return messages.map((m) => ({
+      ID: m.ID,
+      Player1ID: m.Player1ID,
+      Player2ID: m.Player2ID,
+      Player1Role: m.Player1Role,
+      Player2Role: m.Player2Role,
+      SpeakerID: m.SpeakerID,
+      MessageType: m.MessageType,
+      Content: m.Content,
+      Payload: (m.Payload ?? {}) as Record<string, unknown>,
+      Turn: m.Turn,
+      CreatedAt: m.CreatedAt,
+    }));
+  }
+}
+
+/**
+ * Creates a new instance of the read-transcript tool.
+ */
+export default function createReadTranscriptTool() {
+  return new ReadTranscriptTool();
+}

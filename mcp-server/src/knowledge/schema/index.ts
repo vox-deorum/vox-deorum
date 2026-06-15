@@ -11,7 +11,7 @@ export type { KnowledgeDatabase, GameMetadata, MutableKnowledge, PlayerVisibilit
 export { MaxMajorCivs } from './base.js';
 
 // Timed/mutable entity types
-export type { PlayerSummary, CityInformation, VictoryProgress, StrategyChange, FlavorChange } from './timed.js';
+export type { PlayerSummary, CityInformation, VictoryProgress, StrategyChange, FlavorChange, DiplomaticMessage } from './timed.js';
 
 // Public (static) entity types
 export type { PlayerInformation } from './public.js';

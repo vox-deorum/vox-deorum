@@ -440,6 +440,62 @@ export class KnowledgeStore {
   }
 
   /**
+   * Store a single TimedKnowledge entry and return its inserted row ID.
+   *
+   * Like storeTimedKnowledgeBatch but for exactly one row, returning the new ID via
+   * RETURNING so the caller does not have to re-query (which would be racy under
+   * concurrent appends). The insert runs through the same single-writer queue.
+   *
+   * @param tableName - The table name in the database (must be a key of KnowledgeDatabase)
+   * @param item - The item to store (data, optional extra/visibility/turn)
+   * @returns The inserted row's ID
+   */
+  async storeTimedKnowledge<
+    TTable extends keyof KnowledgeDatabase,
+    TData extends Partial<Selectable<KnowledgeDatabase[TTable]> | Insertable<KnowledgeDatabase[TTable]>>
+  >(
+    tableName: TTable,
+    item: {
+      extra?: Record<string, any>;
+      data: TData;
+      visibilityFlags?: number[];
+      turn?: number;
+    }
+  ): Promise<number> {
+    const db = this.getDatabase();
+    const defaultTurn = knowledgeManager.getTurn();
+    const { extra, data, visibilityFlags, turn: itemTurn } = item;
+    const turn = itemTurn !== undefined && itemTurn >= 0 ? itemTurn : defaultTurn;
+
+    // Prepare the new entry with TimedKnowledge fields
+    const newEntry: any = {
+      ...data,
+      ...extra,
+      Turn: turn
+    };
+    if (!newEntry.Payload)
+      newEntry.Payload = {};
+
+    // Apply visibility flags if provided
+    if (visibilityFlags !== undefined)
+      applyVisibility(newEntry, visibilityFlags);
+
+    try {
+      const inserted = await this.writeQueue.add(() => db
+        .insertInto(tableName)
+        .values(newEntry)
+        .returning('ID' as any)
+        .executeTakeFirstOrThrow());
+
+      logger.debug(`Stored ${tableName} entry #${(inserted as any).ID} - Turn: ${turn}`);
+      return (inserted as any).ID as number;
+    } catch (error) {
+      logger.error(`Error storing TimedKnowledge in ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Batch store multiple MutableKnowledge entries in a single transaction
    * Handles versioning, change tracking, and visibility automatically for each item
    *

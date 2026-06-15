@@ -341,5 +341,28 @@ export async function setupKnowledgeDatabase(
   // Create indexes for TacticalZones table
   await createTimedKnowledgeIndexes(db, 'TacticalZones', 'PlayerID');
 
+  // Create DiplomaticMessages table (TimedKnowledge implementation)
+  // One conversation per ordered player pair: no thread table, no status column.
+  // Player1ID = min(playerID), Player2ID = max(playerID); -1 (observer) sorts to Player1ID.
+  // Transcript order is the append ID; Turn is metadata.
+  await createTimedKnowledgeTable(db, 'DiplomaticMessages')
+    .addColumn('Player1ID', 'integer', (col) => col.notNull())
+    .addColumn('Player2ID', 'integer', (col) => col.notNull())
+    .addColumn('Player1Role', 'text', (col) => col.notNull())
+    .addColumn('Player2Role', 'text', (col) => col.notNull())
+    .addColumn('SpeakerID', 'integer', (col) => col.notNull())
+    .addColumn('MessageType', 'text', (col) => col.notNull())
+    .addColumn('Content', 'text', (col) => col.notNull())
+    .execute();
+  // Create standard timed indexes for DiplomaticMessages table
+  await createTimedKnowledgeIndexes(db, 'DiplomaticMessages');
+  // Extra player-pair index for transcript reads (one conversation per pair, ordered by ID)
+  await db.schema
+    .createIndex('idx_diplomaticmessages_pair')
+    .on('DiplomaticMessages')
+    .columns(['Player1ID', 'Player2ID', 'ID'])
+    .ifNotExists()
+    .execute();
+
   return db;
 }

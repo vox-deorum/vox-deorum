@@ -18,7 +18,8 @@ import {
   FlavorChange,
   PlayerOptions,
   VictoryProgress,
-  TacticalZones
+  TacticalZones,
+  DiplomaticMessage
 } from './timed';
 import { PlayerInformation } from './public';
 
@@ -112,6 +113,7 @@ export interface KnowledgeDatabase {
   GameEvents: GameEvent;
   PlayerOptions: PlayerOptions;
   TacticalZones: TacticalZones;
+  DiplomaticMessages: DiplomaticMessage;
   // Mutable Knowledge
   PlayerSummaries: PlayerSummary;
   PlayerOpinions: PlayerOpinions;

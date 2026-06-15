@@ -507,3 +507,38 @@ export interface TacticalZones extends TimedKnowledge {
   Neighbors: JSONColumnType<number[]>; // Array of neighboring zone IDs
   Units: JSONColumnType<Record<string, Record<string, number>>>; // Unit assignments: Civ name -> Unit type -> Count
 }
+
+/**
+ * A single message in a durable diplomatic conversation between two endpoints.
+ *
+ * There is exactly one conversation per ordered player pair, so the conversation
+ * itself *is* the append-ID-ordered list of these rows — there is no thread table
+ * and no status column. The two endpoints are stored ordered by playerID:
+ * Player1ID = min, Player2ID = max. The observer sentinel (-1) sorts to Player1ID.
+ *
+ * Player1Role / Player2Role are free-form role descriptors following the EnvoyThread
+ * tradition: an agent name for an LLM-voiced side (`diplomat`, `spokesperson`,
+ * `negotiator`, `diplomatic-analyst`, …), the `UserIdentity.role` text for a human
+ * side (`the leader`, `an ambassador`, …), or `observer` for the observer endpoint.
+ * They are used for display and for filtering the transcript. They do NOT encode
+ * human-vs-LLM — that is a game fact, not stored here.
+ *
+ * The row holds only the message — never LLM internals (reasoning, scratch state,
+ * tool traces), which stay transient in vox-agents. Optional message metadata lives
+ * in the inherited `Payload`:
+ *   - deal-proposal / deal-counter: `Payload.Deal` holds the proposed terms, with
+ *     optional proposal-time `Payload.Value1` / `Payload.Value2` snapshots for the
+ *     two ordered players (undefined for human participants).
+ *   - deal-accept / deal-reject / deal-enacted: `Payload.ProposalMessageID` points
+ *     at the proposal/counter message they answer or record as enacted.
+ * Legality and live DLL state are never stored.
+ */
+export interface DiplomaticMessage extends TimedKnowledge {
+  Player1ID: number; // min(playerID) of the pair, or -1 for the observer sentinel
+  Player2ID: number; // max(playerID) of the pair
+  Player1Role: string; // Free-form role descriptor for Player1ID (agent name / UserIdentity.role / 'observer'); does NOT encode human-vs-LLM
+  Player2Role: string; // Free-form role descriptor for Player2ID (agent name / UserIdentity.role / 'observer'); does NOT encode human-vs-LLM
+  SpeakerID: number; // The endpoint that authored this message (one of the two players)
+  MessageType: string; // 'text' | 'close' | 'deal-proposal' | 'deal-counter' | 'deal-accept' | 'deal-reject' | 'deal-enacted'
+  Content: string; // Free-text message body
+}
