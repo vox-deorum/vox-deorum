@@ -48,30 +48,29 @@ export interface MessageWithMetadata {
 }
 
 /**
- * Represents the user's identity in a conversation.
- * Describes who is talking to the agent and their affiliation.
- */
-export interface UserIdentity {
-  /** The user's role in the conversation (e.g., "a diplomat", "the leader") */
-  role: string;
-
-  /** Player ID the user is representing (undefined for observer) */
-  playerID?: number;
-
-  /** Display name for the user's affiliation (e.g., "Bismarck of Germany") */
-  displayName?: string;
-}
-
-/**
  * Represents a chat thread for the Envoy agent.
- * Contains all the metadata and messages for a conversation.
+ *
+ * The thread mirrors the mcp-server `DiplomaticMessage` transcript schema as closely as
+ * possible (interactive-diplomacy stage 2): the player pair is stored **ordered by
+ * `playerID`** (`player1ID = min`, `player2ID = max`) with free-form `player1Role` /
+ * `player2Role` descriptors, exactly like the store. Positions carry no caller-vs-voiced or
+ * human-vs-LLM meaning.
+ *
+ * `agent` is the **playerID of the agent-voiced (LLM) seat** — the civ an agent speaks *as*
+ * and whose VoxContext is executed. That seat's role descriptor *is* the executable agent
+ * name (the stage-1 pinned contract: "the agent name for an LLM-voiced side"), so the agent
+ * name is `roleOf(thread, thread.agent)` and the audience is the other endpoint. `SpeakerID`
+ * is per-message (resolved at send time), not thread state, so it is not stored here. The
+ * voiced participant's identity (civ/leader) is derived from the agent's typed parameters,
+ * not stored on the thread.
  */
 export interface EnvoyThread {
-  /** Unique identifier for this thread */
+  /** Unique identifier for this thread. For diplomacy threads this is the deterministic
+   *  key `dipl:${gameID}:${min(playerID)}:${max(playerID)}` so reopen hydrates the same thread. */
   id: string;
 
-  /** Agent used in this thread */
-  agent: string;
+  /** PlayerID of the agent-voiced (LLM) seat; its role descriptor is the executable agent name. */
+  agent: number;
 
   /** Title of this thread */
   title?: string;
@@ -79,19 +78,25 @@ export interface EnvoyThread {
   /** Game ID this thread is associated with */
   gameID: string;
 
-  /** Player ID this thread is associated with */
-  playerID: number;
+  /** Lower playerID of the pair (= min), mirroring the store's Player1ID. May be -1 (observer). */
+  player1ID: number;
 
-  /** Civilization name for the thread's player (e.g., "Germany") */
-  civilizationName?: string;
+  /** Higher playerID of the pair (= max), mirroring the store's Player2ID. */
+  player2ID: number;
 
-  /** The user's identity for this conversation */
-  userIdentity?: UserIdentity;
+  /** Free-form role descriptor for player1 (agent name for an LLM side, human role, or "observer"). */
+  player1Role?: string;
+
+  /** Free-form role descriptor for player2 (agent name for an LLM side, human role, or "observer"). */
+  player2Role?: string;
+
+  /** True when this is a civ↔civ diplomacy conversation (both endpoints are real seats). */
+  diplomacy?: boolean;
 
   /** Type of context: live VoxContext or database */
   contextType: 'live' | 'database';
 
-  /** VoxContext ID for live sessions */
+  /** VoxContext ID for live sessions. The voiced seat's context: `${gameID}-player-${agent}`. */
   contextId: string;
 
   /** Database file path for database sessions */
@@ -99,6 +104,10 @@ export interface EnvoyThread {
 
   /** The conversation messages in this thread with metadata */
   messages: MessageWithMetadata[];
+
+  /** Turn of the latest `close` special message, if the conversation has been closed.
+   *  vox-agents derives open/closed status (and the same-turn resume lock) from this. */
+  closeTurn?: number;
 
   /** Optional metadata for the thread */
   metadata?: {

@@ -7,6 +7,7 @@
  */
 
 import { VoxContext } from "../infra/vox-context.js";
+import type { VoxSession } from "../infra/vox-session.js";
 import { trace, SpanStatusCode, context, type Span } from '@opentelemetry/api';
 import { createLogger } from "../utils/logger.js";
 import { setTimeout } from 'node:timers/promises';
@@ -42,7 +43,8 @@ export class VoxPlayer {
     gameID: string,
     initialTurn: number,
     humanDecisionBus: HumanDecisionBus,
-    syncSeed?: number
+    syncSeed?: number,
+    session?: VoxSession
   ) {
     this.logger = createLogger(`VoxPlayer-${playerID}`);
     // Throws on an unknown interruption name so misconfiguration fails fast.
@@ -54,6 +56,8 @@ export class VoxPlayer {
     // Pass model overrides to VoxContext
     // Agents are now registered globally in agent-registry.ts
     this.context = new VoxContext(playerConfig.llms || {}, id);
+    // Let the context reach its owning session for authoritative state (e.g. the live turn).
+    this.context.session = session;
 
     this.parameters = {
       playerID,

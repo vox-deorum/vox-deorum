@@ -45,7 +45,7 @@ export class Spokesperson extends LiveEnvoy {
    * Gets the system prompt defining the spokesperson persona
    */
   public async getSystem(
-    _parameters: StrategistParameters,
+    parameters: StrategistParameters,
     input: EnvoyThread,
     _context: VoxContext<StrategistParameters>
   ): Promise<string> {
@@ -71,7 +71,7 @@ You represent your government's interests with diplomatic tact and strategic amb
     }
 
     sections.push(communicationStyle);
-    sections.push(audienceSection(this.formatUserDescription(input)));
+    sections.push(audienceSection(this.formatUserDescription(parameters, input)));
 
     return sections.join('\n\n').trim();
   }
@@ -81,9 +81,8 @@ You represent your government's interests with diplomatic tact and strategic amb
    * Used as sole context in special message mode, and appended to game state in normal mode.
    */
   protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
-    const leader = parameters.metadata!.YouAre!.Leader;
-    const civName = parameters.metadata!.YouAre!.Name;
-    return `**HINT**: You represent ${civName} on the world stage. You are speaking to ${this.formatUserDescription(input)}. Every response reflects on ${leader}'s leadership and your civilization's standing. The time is at turn ${parameters.turn}.`;
+    const { name: civName, leader } = this.getSelfIdentity(parameters);
+    return `**HINT**: You represent ${civName} on the world stage. You are speaking to ${this.formatUserDescription(parameters, input)}. Every response reflects on ${leader}'s leadership and your civilization's standing. The time is at turn ${parameters.turn}.`;
   }
 
   /**

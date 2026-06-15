@@ -124,10 +124,15 @@ async function main() {
   // Build thread with Initialize message to trigger bootstrapping
   const thread: EnvoyThread = {
     id: uuidv4(),
-    agent: agentName,
+    // The telepathist voices this player; its role descriptor is the agent name.
+    agent: identifierInfo.playerID,
     gameID: identifierInfo.gameID,
-    playerID: identifierInfo.playerID,
-    civilizationName: params.civilizationName,
+    // Ordered pair: observer (-1) sorts to player1; the voiced civ is player2.
+    player1ID: -1,
+    player2ID: identifierInfo.playerID,
+    player1Role: 'observer',
+    player2Role: agentName,
+    diplomacy: false,
     contextType: 'database',
     contextId,
     databasePath,

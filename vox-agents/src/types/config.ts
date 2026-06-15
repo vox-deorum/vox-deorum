@@ -172,6 +172,17 @@ export interface PacingConfig {
 export interface PlayerConfig {
   /** Strategist type to use for this player */
   strategist: string;
+  /**
+   * Diplomat agent voicing this seat's side of interactive-diplomacy conversations.
+   * Selected the same way `strategist` is; may carry its own model override via `llms`.
+   * Defaults to the built-in `diplomat` agent when omitted.
+   */
+  diplomat?: string;
+  /**
+   * Negotiator agent handling this seat's deal mechanics behind the diplomat.
+   * Declared now for complete seat config; unused until stage 5 of interactive-diplomacy.
+   */
+  negotiator?: string;
   /** Strategist's decision-making mode */
   mode?: StrategyDecisionType;
   /** Strategist pacing and interruption behavior */

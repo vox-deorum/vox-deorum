@@ -527,6 +527,21 @@ class ApiClient {
   }
 
   /**
+   * Close a diplomacy conversation. Writes the `close` special message and locks the
+   * conversation for the rest of the current turn. Returns the updated thread.
+   */
+  async closeAgentChat(chatId: string, message?: string): Promise<GetChatResponse> {
+    return this.fetchJson<GetChatResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/close`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      }
+    );
+  }
+
+  /**
    * Send a message to an agent and stream the response
    */
   streamAgentMessage(

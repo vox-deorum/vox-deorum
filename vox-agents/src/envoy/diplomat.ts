@@ -6,11 +6,13 @@
  * to the analyst for assessment via the call-analyst agent-tool.
  */
 
+import { ModelMessage, StepResult, Tool } from "ai";
 import { LiveEnvoy } from "./live-envoy.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
 import { EnvoyThread, SpecialMessageConfig } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection, greetingSpecialMessages } from "./envoy-prompts.js";
+import { createCloseConversationTool } from "./close-conversation-tool.js";
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.
@@ -36,17 +38,47 @@ export class Diplomat extends LiveEnvoy {
   public tags = ["active-game", "diplomatic"];
 
   /**
-   * Extends LiveEnvoy's tool set with diplomatic events and analyst reporting
+   * Extends LiveEnvoy's tool set with diplomatic events, analyst reporting, and — for
+   * civ↔civ diplomacy conversations — the close-conversation tool.
    */
   public override getActiveTools(_parameters: StrategistParameters): string[] | undefined {
-    return ["get-briefing", "get-diplomatic-events", "call-diplomatic-analyst"];
+    return ["get-briefing", "get-diplomatic-events", "call-diplomatic-analyst", "close-conversation"];
+  }
+
+  /**
+   * Provides the close-conversation tool alongside LiveEnvoy's get-briefing tool.
+   */
+  public override getExtraTools(context: VoxContext<StrategistParameters>): Record<string, Tool> {
+    return {
+      ...super.getExtraTools(context),
+      "close-conversation": createCloseConversationTool(context),
+    };
+  }
+
+  /**
+   * Gates close-conversation to civ↔civ diplomacy threads — it is meaningless for an
+   * observer chat (endpoint A = -1), and special-message (greeting) mode needs no tools.
+   */
+  public override async prepareStep(
+    parameters: StrategistParameters,
+    input: EnvoyThread,
+    lastStep: StepResult<Record<string, Tool>> | null,
+    allSteps: StepResult<Record<string, Tool>>[],
+    messages: ModelMessage[],
+    context: VoxContext<StrategistParameters>
+  ) {
+    const config = await super.prepareStep(parameters, input, lastStep, allSteps, messages, context);
+    if (!input.diplomacy && config.activeTools) {
+      config.activeTools = config.activeTools.filter((t) => t !== "close-conversation");
+    }
+    return config;
   }
 
   /**
    * Gets the system prompt defining the diplomat persona
    */
   public async getSystem(
-    _parameters: StrategistParameters,
+    parameters: StrategistParameters,
     input: EnvoyThread,
     _context: VoxContext<StrategistParameters>
   ): Promise<string> {
@@ -77,7 +109,7 @@ You represent your government's interests and gather intelligence through diplom
     }
 
     sections.push(communicationStyle);
-    sections.push(audienceSection(this.formatUserDescription(input)));
+    sections.push(audienceSection(this.formatUserDescription(parameters, input)));
 
     return sections.join('\n\n').trim();
   }
@@ -86,9 +118,8 @@ You represent your government's interests and gather intelligence through diplom
    * Returns the contextual hint that anchors the LLM on its identity and audience.
    */
   protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
-    const leader = parameters.metadata!.YouAre!.Leader;
-    const civName = parameters.metadata!.YouAre!.Name;
-    return `**HINT**: You are a diplomat for ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(input)}. Gather intelligence and relay important information to the analyst. The time is at turn ${parameters.turn}.`;
+    const { name: civName, leader } = this.getSelfIdentity(parameters);
+    return `**HINT**: You are a diplomat for ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(parameters, input)}. Gather intelligence and relay important information to the analyst. The time is at turn ${parameters.turn}.`;
   }
 
   /**

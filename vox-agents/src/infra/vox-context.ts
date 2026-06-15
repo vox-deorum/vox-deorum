@@ -25,6 +25,7 @@ import { cleanToolArtifacts } from "../utils/models/text-cleaning.js";
 import { isContextLengthError } from "../utils/retry.js";
 import { agentRegistry } from "./agent-registry.js";
 import { contextRegistry } from "./context-registry.js";
+import type { VoxSession } from "./vox-session.js";
 import { createAgentTool } from "../utils/tools/agent-tools.js";
 import { wrapMCPTools } from "../utils/tools/mcp-tools.js";
 import winston from "winston";
@@ -100,6 +101,13 @@ export class VoxContext<TParameters extends AgentParameters> {
   public lastParameter?: TParameters;
 
   /**
+   * The input of the currently-executing agent (e.g. the EnvoyThread for a chat).
+   * Set at the top of execute() so context-registered extra tools (such as the
+   * diplomat's close-conversation tool) can read the active conversation's identity.
+   */
+  public currentInput?: unknown;
+
+  /**
    * Tracks the last model short name sent via set-metadata, to avoid duplicate updates
    */
   private lastModelName?: string;
@@ -110,6 +118,14 @@ export class VoxContext<TParameters extends AgentParameters> {
    * to send progress messages to the client.
    */
   public streamProgress?: (message: string) => void;
+
+  /**
+   * The session that owns this context, when it was created within one (e.g. a VoxPlayer's
+   * context inside a StrategistSession). Lets context consumers reach authoritative session
+   * state — notably the live game turn (`session.getTurn()`) — without going through the
+   * session registry. Undefined for standalone contexts (telepathist, oracle, archivist).
+   */
+  public session?: VoxSession;
 
   /**
    * Resets the cached model identity so it will be re-sent on the next strategist execution.
@@ -327,6 +343,14 @@ export class VoxContext<TParameters extends AgentParameters> {
     }
 
     this.lastParameter = parameters;
+    // Save the parent's input so a nested execute() (e.g. an agent-tool such as
+    // call-diplomatic-analyst, which runs on this same VoxContext) does not permanently
+    // clobber it. Restored in finally so tools that read `currentInput` later in the parent's
+    // tool loop (e.g. close-conversation) still see the parent's EnvoyThread rather than the
+    // sub-agent's input. (`lastParameter` is intentionally NOT restored — it is persistent
+    // context state that downstream readers expect to reflect the latest execution.)
+    const prevInput = this.currentInput;
+    this.currentInput = input;
 
     const span = this.tracer.startSpan(`agent.${agentName}`, {
       attributes: {
@@ -449,6 +473,8 @@ export class VoxContext<TParameters extends AgentParameters> {
         return undefined;
       } finally {
         span.end();
+        // Restore the parent's input (no-op at the top level, where prev is undefined).
+        this.currentInput = prevInput;
       }
     });
   }

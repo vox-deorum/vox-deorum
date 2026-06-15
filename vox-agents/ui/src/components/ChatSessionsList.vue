@@ -57,11 +57,19 @@ function handleDeleteClick(sessionId: string) {
 const sessionCount = computed(() => props.sessions.length);
 
 /**
+ * The agent name voicing this session = the agent seat's role descriptor.
+ */
+function agentNameOf(session: EnvoyThread): string {
+  const role = session.agent === session.player1ID ? session.player1Role : session.player2Role;
+  return role ?? 'agent';
+}
+
+/**
  * Format session title or fallback
  */
 function getSessionTitle(session: EnvoyThread): string {
   if (session.title) return session.title;
-  return `Chat with ${session.agent} - Game ${session.gameID}`;
+  return `Chat with ${agentNameOf(session)} - Game ${session.gameID}`;
 }
 </script>
 
@@ -99,13 +107,13 @@ function getSessionTitle(session: EnvoyThread): string {
             {{ getSessionTitle(session) }}
           </div>
           <div class="col-fixed-120">
-            {{ session.agent }}
+            {{ agentNameOf(session) }}
           </div>
           <div class="col-fixed-250">
             {{ session.gameID }}
           </div>
           <div class="col-fixed-60">
-            {{ session.playerID }}
+            {{ session.agent }}
           </div>
           <div v-if="showActions" class="col-fixed-150">
             <Button label="Resume" icon="pi pi-play" text size="small"

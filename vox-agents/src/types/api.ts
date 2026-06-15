@@ -6,7 +6,7 @@
  */
 
 import type { Span, TelemetryMetadata, TelemetrySession } from './telemetry.js';
-import type { EnvoyThread, UserIdentity } from './chat.js';
+import type { EnvoyThread } from './chat.js';
 import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
 
 // Re-export types that are used in API responses
@@ -218,26 +218,60 @@ export interface ListPacingInterruptionsResponse {
 }
 
 /**
- * Request to create a new chat thread
+ * Request to create a new chat thread.
+ *
+ * Two shapes share this endpoint:
+ * - **Observer / ordinary chat** (`mode` omitted): the operator picks a `contextId`
+ *   (or `databasePath`) — its player becomes the voiced endpoint B — plus a free-form
+ *   caller role/affiliation describing endpoint A (`callerRole` / `callerPlayerID`,
+ *   the latter `-1`/omitted for the observer).
+ * - **Diplomacy** (`mode: 'diplomacy'`): a civ↔civ conversation between two seats.
+ *   `targetPlayerID` is the LLM-voiced seat (endpoint B), `initiatorPlayerID` the caller
+ *   seat (endpoint A). `agentName` is an optional voice override; when omitted the server
+ *   defaults to the target seat's configured diplomat.
  */
 export interface CreateChatRequest {
-  /** Name of the agent to use */
-  agentName: string;
-  /** Context ID for live sessions */
+  /** Name of the agent to use. Optional in diplomacy mode (server defaults to the target diplomat). */
+  agentName?: string;
+  /** Context ID for live sessions (resolves gameID; its player is endpoint B for observer chats). */
   contextId?: string;
   /** Database path for telepathist mode */
   databasePath?: string;
   /** Current game turn */
   turn?: number;
-  /** User's identity for the conversation */
-  userIdentity?: UserIdentity;
+
+  /** Conversation mode. Omit for ordinary observer/telepathist chat. */
+  mode?: 'diplomacy';
+  /** Diplomacy: the LLM-voiced target seat (endpoint B). */
+  targetPlayerID?: number;
+  /** Diplomacy: the initiating caller seat (endpoint A). Defaults to the human-control seat. */
+  initiatorPlayerID?: number;
+  /** Free-form role of the caller (endpoint A), e.g. "the leader". */
+  callerRole?: string;
+  /** Caller's player affiliation for an observer/ordinary chat (-1 or omitted = observer). */
+  callerPlayerID?: number;
 }
 
 /**
- * Response after creating a new chat thread
- * Returns the full EnvoyThread object
+ * Display enrichment attached to chat responses. The thread stores only the store-aligned
+ * pair (player1/2 + roles + `agent` playerID); the server resolves human-readable civ
+ * labels from the live parameters once and attaches them here so the UI need not derive them.
  */
-export type CreateChatResponse = EnvoyThread;
+export interface ChatResponseEnrichment {
+  /** Current game turn from the live context, for stale-turn / close-lock detection. */
+  currentTurn?: number;
+  /** PlayerID of the agent-voiced seat (= thread.agent), echoed for convenience. */
+  voicedID?: number;
+  /** Display name of the voiced civ, e.g. "Bismarck of Germany". */
+  voicedCiv?: string;
+  /** Display name of the audience civ (the other endpoint), if any. */
+  audienceCiv?: string;
+}
+
+/**
+ * Response after creating a new chat thread: the full EnvoyThread plus display enrichment.
+ */
+export type CreateChatResponse = EnvoyThread & ChatResponseEnrichment;
 
 /**
  * Response containing list of chat threads
@@ -248,12 +282,9 @@ export interface ListChatsResponse {
 }
 
 /**
- * Response containing a single chat thread with optional current game turn
+ * Response containing a single chat thread with display enrichment.
  */
-export type GetChatResponse = EnvoyThread & {
-  /** Current game turn from the live context, for stale-turn detection */
-  currentTurn?: number;
-};
+export type GetChatResponse = EnvoyThread & ChatResponseEnrichment;
 
 /**
  * Request to send a chat message
@@ -409,6 +440,28 @@ export interface StopSessionResponse {
 export interface PlayersSummaryResponse {
   /** Players report containing all major player data */
   players: PlayersReport;
-  /** Map of actual player ID to their AI assignment (strategist type, model, and original config slot) */
-  assignments?: Record<number, { strategist: string; model?: string; configSlot: number }>;
+  /** Map of actual player ID to their AI assignment (strategist/diplomat/negotiator agents,
+   *  their models, and the original config slot). */
+  assignments?: Record<number, PlayerAssignment>;
+}
+
+/**
+ * Per-seat agent assignment, reported by the active session for the players-summary UI
+ * and used server-side to resolve the default diplomat voice for a diplomacy conversation.
+ */
+export interface PlayerAssignment {
+  /** Strategist agent name. */
+  strategist: string;
+  /** Strategist model short name, if overridden. */
+  model?: string;
+  /** Resolved diplomat agent name (configured `diplomat`, or the built-in default). */
+  diplomat?: string;
+  /** Diplomat model short name, if overridden. */
+  diplomatModel?: string;
+  /** Resolved negotiator agent name, if configured (stage 5). */
+  negotiator?: string;
+  /** Negotiator model short name, if overridden. */
+  negotiatorModel?: string;
+  /** Original config slot this seat was assigned from. */
+  configSlot: number;
 }

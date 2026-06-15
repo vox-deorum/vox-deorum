@@ -59,6 +59,15 @@ export abstract class VoxSession<TConfig extends SessionConfig = SessionConfig> 
   abstract getStatus(): SessionStatus;
 
   /**
+   * The session's current game turn — updated from the game's own PlayerDoneTurn /
+   * GameSwitched notifications, so it tracks live game progression rather than a
+   * decision-point snapshot. Undefined before the first turn notification.
+   */
+  getTurn(): number | undefined {
+    return this.turn;
+  }
+
+  /**
    * Called when session state changes.
    * @param newState - The new session state
    * @param error - Optional error message if transitioning to error state

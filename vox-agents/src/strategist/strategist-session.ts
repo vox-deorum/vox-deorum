@@ -18,7 +18,7 @@ import { StrategistSessionConfig, isVisualMode, isObsMode, isHumanControl } from
 import { obsManager } from "../infra/obs-manager.js";
 import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
-import { SessionStatus } from "../types/api.js";
+import { SessionStatus, PlayerAssignment } from "../types/api.js";
 import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { SeatingClaim } from "../utils/game/seating/types.js";
 import { getMetadata, setMetadata } from "../utils/game/metadata.js";
@@ -470,7 +470,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     // Create new players using the seating map
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
       const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
-      const player = new VoxPlayer(actualPlayerID, playerConfig, params.gameID, params.turn, this.humanDecisionBus, this.seatingClaim?.seeds?.sync);
+      const player = new VoxPlayer(actualPlayerID, playerConfig, params.gameID, params.turn, this.humanDecisionBus, this.seatingClaim?.seeds?.sync, this);
       await player.context.registerTools();
       this.activePlayers.set(actualPlayerID, player);
       player.execute();
@@ -686,15 +686,29 @@ ${overrideLine}Game.SetAIAutoPlay(2000, -1);`
    * Get the current player assignments mapping actual player IDs to their strategist config.
    * Used by the API to expose which AI controls which player.
    */
-  getPlayerAssignments(): Record<number, { strategist: string; model?: string; configSlot: number }> {
-    const result: Record<number, { strategist: string; model?: string; configSlot: number }> = {};
+  getPlayerAssignments(): Record<number, PlayerAssignment> {
+    /** Short model name for an agent's per-agent override, if any. */
+    const modelOf = (playerConfig: typeof this.config.llmPlayers[number], agent?: string): string | undefined => {
+      if (!agent) return undefined;
+      const m = playerConfig.llms?.[agent];
+      return typeof m === 'string' ? m : m?.name;
+    };
+
+    const result: Record<number, PlayerAssignment> = {};
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
       const configSlot = parseInt(configSlotStr);
       const actualPlayerID = this.seatingClaim?.seatingMap[configSlotStr] ?? configSlot;
-      const mainModel = playerConfig.llms?.[playerConfig.strategist];
+      // The diplomat defaults to the built-in `diplomat` agent when a seat doesn't name one,
+      // so the conversation route always has a voice to resolve. The negotiator stays optional
+      // (unused until stage 5).
+      const diplomat = playerConfig.diplomat ?? "diplomat";
       result[actualPlayerID] = {
         strategist: playerConfig.strategist,
-        model: typeof mainModel === 'string' ? mainModel : mainModel?.name,
+        model: modelOf(playerConfig, playerConfig.strategist),
+        diplomat,
+        diplomatModel: modelOf(playerConfig, diplomat),
+        negotiator: playerConfig.negotiator,
+        negotiatorModel: modelOf(playerConfig, playerConfig.negotiator),
         configSlot
       };
     }

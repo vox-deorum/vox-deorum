@@ -14,7 +14,8 @@ import Tag from 'primevue/tag';
 import ProgressSpinner from 'primevue/progressspinner';
 import AutoComplete from 'primevue/autocomplete';
 import Select from 'primevue/select';
-import type { AgentInfo, Span, UserIdentity, CreateChatRequest } from '@/utils/types';
+import SelectButton from 'primevue/selectbutton';
+import type { AgentInfo, Span, CreateChatRequest, PlayerAssignment } from '@/utils/types';
 import { userRoleSuggestions } from '@/utils/types';
 import { apiClient } from '@/api/client';
 
@@ -52,12 +53,36 @@ const isCreatingSession = ref(false);
 // Step management
 const currentStep = ref<'agent' | 'identity'>('agent');
 
+/** Conversation type for active-game contexts: observer chat or civ↔civ diplomacy. */
+const conversationMode = ref<'observer' | 'diplomacy'>('observer');
+const conversationModeOptions = [
+  { label: 'Observer chat', value: 'observer' },
+  { label: 'Diplomacy (civ↔civ)', value: 'diplomacy' },
+];
+
 // Identity form state
 const userRole = ref('');
 const filteredRoles = ref<string[]>([]);
 const selectedPlayerOption = ref<PlayerOption | null>(null);
 const playersLoading = ref(false);
 const playerOptions = ref<PlayerOption[]>([]);
+
+// Diplomacy form state
+const assignments = ref<Record<number, PlayerAssignment>>({});
+const diplomacyTarget = ref<PlayerOption | null>(null);
+const diplomacyInitiator = ref<PlayerOption | null>(null);
+const voiceOverride = ref<AgentInfo | null>(null);
+const initiatorRole = ref('the leader');
+
+/** Major-civ player options (no observer) for the diplomacy selectors. */
+const civPlayerOptions = computed(() => playerOptions.value.filter(o => o.value !== 'observer'));
+
+/** Whether the diplomacy form is complete enough to open a conversation. */
+const canStartDiplomacy = computed(() =>
+  diplomacyTarget.value !== null &&
+  diplomacyInitiator.value !== null &&
+  diplomacyTarget.value.value !== diplomacyInitiator.value.value
+);
 
 // Computed properties
 const dialogVisible = computed({
@@ -156,6 +181,14 @@ async function loadPlayerOptions() {
 
     options.push(observerOption);
     playerOptions.value = options;
+    assignments.value = response.assignments ?? {};
+
+    // Default the diplomacy initiator to the human-control seat when one exists.
+    const humanSeat = Object.entries(assignments.value)
+      .find(([, a]) => a.strategist === 'human-strategist');
+    if (humanSeat) {
+      diplomacyInitiator.value = options.find(o => o.value === parseInt(humanSeat[0])) ?? null;
+    }
   } catch (err) {
     console.error('Failed to load players:', err);
     // Gracefully degrade: show only observer
@@ -165,12 +198,61 @@ async function loadPlayerOptions() {
   }
 }
 
+/** When the target civ changes, default the voice to that seat's configured diplomat. */
+function onDiplomacyTargetChange() {
+  const target = diplomacyTarget.value;
+  if (!target || target.value === 'observer') return;
+  const diplomatName = assignments.value[target.value as number]?.diplomat;
+  voiceOverride.value = diplomatName
+    ? (agents.value.find(a => a.name === diplomatName) ?? null)
+    : null;
+}
+
+/** Open (or reopen) a civ↔civ diplomacy conversation. */
+async function confirmDiplomacy() {
+  if (!canStartDiplomacy.value || !props.contextId) return;
+
+  isCreatingSession.value = true;
+  error.value = null;
+  try {
+    const request: CreateChatRequest = {
+      mode: 'diplomacy',
+      contextId: props.contextId,
+      targetPlayerID: diplomacyTarget.value!.value as number,
+      initiatorPlayerID: diplomacyInitiator.value!.value as number,
+      callerRole: initiatorRole.value.trim() || undefined,
+    };
+    // Only send an explicit voice when the operator overrode the seat's default diplomat.
+    if (voiceOverride.value) request.agentName = voiceOverride.value.name;
+
+    const turn = props.span?.attributes?.turn || props.span?.turn || props.turn;
+    if (turn !== undefined) request.turn = turn;
+
+    const session = await apiClient.createAgentChat(request);
+    router.push({ name: 'chat-detail', params: { sessionId: session.id } });
+    closeDialog();
+  } catch (err) {
+    console.error('Failed to open diplomacy conversation:', err);
+    error.value = err instanceof Error ? err.message : 'Failed to open conversation';
+  } finally {
+    isCreatingSession.value = false;
+  }
+}
+
 /** Filter role suggestions for autocomplete */
 function searchRoles(event: { query: string }) {
   const query = event.query.toLowerCase();
   filteredRoles.value = userRoleSuggestions.filter(
     role => role.toLowerCase().includes(query)
   );
+}
+
+/** React to a conversation-mode switch by loading players for the diplomacy selectors. */
+function onConversationModeChange() {
+  error.value = null;
+  if (conversationMode.value === 'diplomacy' && civPlayerOptions.value.length === 0) {
+    loadPlayerOptions();
+  }
 }
 
 /** Proceed from Step 1 to Step 2, or skip for database contexts */
@@ -193,8 +275,13 @@ function closeDialog() {
   dialogVisible.value = false;
   selectedAgent.value = null;
   currentStep.value = 'agent';
+  conversationMode.value = 'observer';
   userRole.value = '';
   selectedPlayerOption.value = null;
+  diplomacyTarget.value = null;
+  diplomacyInitiator.value = null;
+  voiceOverride.value = null;
+  initiatorRole.value = 'the leader';
   error.value = null;
 }
 
@@ -227,17 +314,13 @@ async function confirmSelection() {
       request.turn = turn;
     }
 
-    // Build user identity
-    const identity: UserIdentity = {
-      role: userRole.value.trim()
-    };
+    // Caller identity (endpoint A): a real seat or the observer sentinel.
+    request.callerRole = userRole.value.trim();
     if (selectedPlayerOption.value && selectedPlayerOption.value.value !== 'observer') {
-      identity.playerID = selectedPlayerOption.value.value as number;
-      identity.displayName = selectedPlayerOption.value.label;
+      request.callerPlayerID = selectedPlayerOption.value.value as number;
     } else {
-      identity.displayName = 'Observer';
+      request.callerPlayerID = -1;
     }
-    request.userIdentity = identity;
 
     // Create the chat thread
     const session = await apiClient.createAgentChat(request);
@@ -292,6 +375,18 @@ onMounted(() => {
 
     <!-- Step 1: Agent Selection -->
     <template v-if="currentStep === 'agent'">
+      <!-- Conversation type toggle (active game only) -->
+      <div v-if="props.contextId" class="mode-toggle">
+        <SelectButton
+          v-model="conversationMode"
+          :options="conversationModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          @change="onConversationModeChange"
+        />
+      </div>
+
       <!-- Loading State -->
       <div v-if="loading" class="loading-container">
         <ProgressSpinner />
@@ -305,7 +400,53 @@ onMounted(() => {
         <Button label="Retry" @click="loadAgents" />
       </div>
 
-      <!-- Agent Table -->
+      <!-- Diplomacy form -->
+      <div v-else-if="conversationMode === 'diplomacy'" class="identity-step">
+        <div class="identity-form">
+          <label for="dipl-target">Target civilization (LLM-voiced)</label>
+          <Select
+            id="dipl-target"
+            v-model="diplomacyTarget"
+            :options="civPlayerOptions"
+            optionLabel="label"
+            placeholder="Select the civilization to talk to..."
+            :loading="playersLoading"
+            @change="onDiplomacyTargetChange"
+          />
+
+          <label for="dipl-initiator">Speaking as (your seat)</label>
+          <Select
+            id="dipl-initiator"
+            v-model="diplomacyInitiator"
+            :options="civPlayerOptions"
+            optionLabel="label"
+            placeholder="Select your seat..."
+            :loading="playersLoading"
+          />
+
+          <label for="dipl-role">Your role</label>
+          <AutoComplete
+            id="dipl-role"
+            v-model="initiatorRole"
+            :suggestions="filteredRoles"
+            @complete="searchRoles"
+            placeholder="e.g., the leader, a diplomat..."
+            :dropdown="true"
+          />
+
+          <label for="dipl-voice">Voice (defaults to the target seat's diplomat)</label>
+          <Select
+            id="dipl-voice"
+            v-model="voiceOverride"
+            :options="filteredAgents"
+            optionLabel="name"
+            placeholder="Use the configured diplomat"
+            showClear
+          />
+        </div>
+      </div>
+
+      <!-- Agent Table (observer chat) -->
       <div v-else class="data-table">
         <!-- Header row -->
         <div class="table-header">
@@ -384,6 +525,14 @@ onMounted(() => {
           @click="closeDialog"
         />
         <Button
+          v-if="conversationMode === 'diplomacy'"
+          :label="isCreatingSession ? 'Opening...' : 'Start Conversation'"
+          :disabled="!canStartDiplomacy || isCreatingSession"
+          :loading="isCreatingSession"
+          @click="confirmDiplomacy"
+        />
+        <Button
+          v-else
           :label="props.contextId ? 'Next' : 'Start Chat'"
           :disabled="!selectedAgent"
           @click="proceedToIdentity"
@@ -416,6 +565,12 @@ onMounted(() => {
 .context-tags {
   display: flex;
   gap: 0.5rem;
+}
+
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
 }
 
 .selected {
