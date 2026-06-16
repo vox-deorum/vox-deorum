@@ -9,6 +9,12 @@
 import { describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import type { EnvoyThread } from '../../../src/types/index.js';
+import {
+  worldContext,
+  noDecisionPower,
+  communicationStyle,
+  audienceSection,
+} from '../../../src/envoy/envoy-prompts.js';
 
 const diplomat = agentRegistry.get('diplomat') as any;
 const spokesperson = agentRegistry.get('spokesperson') as any;
@@ -86,5 +92,53 @@ describe('getHint', () => {
     const hint = spokesperson.getHint(params, thread());
     expect(hint).toContain('Germany');
     expect(hint).toContain('Bismarck');
+  });
+});
+
+describe('Spokesperson.getSystem', () => {
+  it('assembles the imported prompt sections by reference', async () => {
+    const system = await spokesperson.getSystem(params, thread(), undefined);
+    // Imported section constants are included verbatim (by reference), not paraphrased.
+    expect(system).toContain(worldContext);
+    expect(system).toContain(noDecisionPower);
+    expect(system).toContain(communicationStyle);
+  });
+
+  it('includes the audienceSection built from the dynamic audience description', async () => {
+    const system = await spokesperson.getSystem(params, thread(), undefined);
+    // The thread audience is seat 1 with role "the leader"; no visible civ identity for it
+    // in these parameters, so the description falls back to the bare role.
+    expect(system).toContain(audienceSection('the leader'));
+  });
+
+  it('reflects a counterpart civ identity in the audience section when visible', async () => {
+    // Seed the most-recent game state so the audience (seat 1) resolves a civ identity.
+    const identityParams = {
+      ...params,
+      gameStates: {
+        5: {
+          turn: 5,
+          reports: {},
+          players: { '1': { Civilization: 'France', Leader: 'Napoleon' } },
+        },
+      },
+    };
+    const system = await spokesperson.getSystem(identityParams, thread(), undefined);
+    expect(system).toContain(audienceSection('the leader representing Napoleon of France'));
+  });
+
+  it('includes the stable tool IDs in normal mode', async () => {
+    const system = await spokesperson.getSystem(params, thread(), undefined);
+    expect(system).toContain('# Available Tools');
+    expect(system).toContain('get-briefing');
+    expect(system).toContain('get-diplomatic-events');
+  });
+
+  it('omits the tool section in special (greeting) mode', async () => {
+    const system = await spokesperson.getSystem(params, greetingThread(), undefined);
+    expect(system).not.toContain('# Available Tools');
+    // The audience section is still assembled by reference in special mode.
+    expect(system).toContain(audienceSection('the leader'));
+    expect(system).toContain(communicationStyle);
   });
 });

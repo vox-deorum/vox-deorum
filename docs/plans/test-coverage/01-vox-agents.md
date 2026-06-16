@@ -2,6 +2,33 @@
 
 > See [README.md](README.md) for shared context, conventions, and shared-fixture prerequisites.
 
+> **✅ DONE (2026-06-16).** All proposed test files implemented (plus the `fake-vox-context.ts` fixture).
+> Full `npm run test:mock` is green: **57 files / 667 passed, 20 skipped** (up from 32 mock files), and
+> `npm run type-check` (src only) is clean. New files: fixture
+> [tests/helpers/fake-vox-context.ts](../../../vox-agents/tests/helpers/fake-vox-context.ts);
+> analyst (`diplomatic-analyst`, `analyst-base`); librarian (`keyword-librarian`, `librarian-utils`);
+> envoy (`live-envoy` + extended `diplomat-prompts`); telepathist (`summarizer`, `episode-retriever`);
+> oracle (`replayer`, `retriever`, `schema-tools`, `prompt-extractor`, `output`); archivist
+> (`extractor`, `selector`, `transformer`, `writer`, `game-state-vector`, `vectors`, `sql`); narrators
+> (`world-congress`, `workspace`); infra (`vox-civilization`); utils (`text-cleaning`, `agent-tools`);
+> strategist (`strategy-parameters`). Each subsystem follows the assertion-stability rule.
+>
+> **Deviations worth noting for future work:**
+> - **Tests are excluded from `tsconfig` (`exclude: ["tests"]`)**, so `tsc --noEmit` does not type-check
+>   them — Vitest transpiles via esbuild and the green runtime run is the authority. Test type errors
+>   won't surface in `type-check`.
+> - **`infra/vox-civilization.ts` has no crash-recovery *attempt counter*.** "Crash-recovery attempt
+>   handling" was covered as the two real flows: launch-failure → seed restore, and the monitoring poll
+>   detecting a dead process and firing the exit callback.
+> - **`telepathist/summarizer.ts`** must be loaded after `agent-registry.js` in tests to avoid a
+>   circular-import TDZ; `summarizerGuidelines`/`buildToolSummaryInstruction`/`summarizeWithCache` are
+>   module-level exports (not reachable through the agent handle).
+> - **Archivist game-state vector is 35-dimensional** (neighbor vector 32-d); the era slot is range
+>   `[0,2]`, other slots `[0,1]`. Tests assert dimensions/ranges, not full-array snapshots.
+> - **Oracle `loadToolSchemaCache`** uses a hardcoded cwd-relative `cache/mcp-tools.json`; its tests
+>   `process.chdir` into a temp dir. DuckDB temp files can linger on Windows (`EBUSY`), so writer-test
+>   cleanup is best-effort.
+
 vox-agents has the largest body of untested business logic. Coverage today is good for pure utils and a few prompt-composition tests; it is thin for the analyst/librarian/oracle/archivist pipelines that produce the actual game behavior. Reuse [mock-mcp-client.ts](../../../vox-agents/tests/helpers/mock-mcp-client.ts) and a new `tests/helpers/fake-vox-context.ts` (spyable `callTool` + `StrategistParameters` builder).
 
 ## Assertion stability rule
