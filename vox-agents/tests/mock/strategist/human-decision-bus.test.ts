@@ -20,18 +20,18 @@ describe("HumanDecisionBus", () => {
     const a = bus.request(3);
     const b = bus.request(7);
 
-    bus.resolve(7, { PlayerID: 7, Rationale: "seven" });
+    bus.resolve(7, { PlayerID: 7, Rationale: "seven", DeliberationMs: 0 });
     await expect(b).resolves.toMatchObject({ Rationale: "seven" });
     // Player 3's wait is untouched.
     expect(bus.isPending(3)).toBe(true);
 
-    bus.resolve(3, { PlayerID: 3, Rationale: "three" });
+    bus.resolve(3, { PlayerID: 3, Rationale: "three", DeliberationMs: 0 });
     await expect(a).resolves.toMatchObject({ Rationale: "three" });
   });
 
   it("reports resolve on a player with no pending request as a no-op", () => {
     const bus = new HumanDecisionBus();
-    expect(bus.resolve(7, { PlayerID: 7, Rationale: "nobody waiting" })).toBe(false);
+    expect(bus.resolve(7, { PlayerID: 7, Rationale: "nobody waiting", DeliberationMs: 0 })).toBe(false);
   });
 
   it("cancel rejects the pending wait and clears the entry", async () => {
@@ -55,7 +55,7 @@ describe("HumanDecisionBus", () => {
     await expect(stale).rejects.toThrow(/Superseded/);
     expect(bus.isPending(7)).toBe(true);
 
-    bus.resolve(7, { PlayerID: 7, Rationale: "re-presented" });
+    bus.resolve(7, { PlayerID: 7, Rationale: "re-presented", DeliberationMs: 0 });
     await expect(fresh).resolves.toMatchObject({ Rationale: "re-presented" });
   });
 

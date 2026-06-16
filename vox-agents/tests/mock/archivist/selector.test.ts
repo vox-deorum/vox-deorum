@@ -85,7 +85,7 @@ describe('selectLandmarks', () => {
       const result = await selectLandmarks(writer, 'g1');
 
       expect(markLandmarks).toHaveBeenCalledTimes(1);
-      const [gameId, keys] = markLandmarks.mock.calls[0] as [string, Array<{ turn: number; playerId: number }>];
+      const [gameId, keys] = markLandmarks.mock.calls[0] as unknown as [string, Array<{ turn: number; playerId: number }>];
       expect(gameId).toBe('g1');
       // The reported totalLandmarks equals the number of marked keys.
       expect(keys).toHaveLength(result!.totalLandmarks);
@@ -111,7 +111,7 @@ describe('selectLandmarks', () => {
       const { writer, markLandmarks } = makeFakeWriter(rows);
       const result = await selectLandmarks(writer, 'g1');
 
-      const [, keys] = markLandmarks.mock.calls[0] as [string, Array<{ turn: number; playerId: number }>];
+      const [, keys] = markLandmarks.mock.calls[0] as unknown as [string, Array<{ turn: number; playerId: number }>];
       expect(keys.every(k => k.turn !== 0)).toBe(true);
       // Filtered candidates exclude turn 0, so reported episodes for player 0 is 3.
       const p0 = result!.players.find(p => p.playerId === 0)!;
@@ -124,7 +124,7 @@ describe('selectLandmarks', () => {
       const { writer, markLandmarks } = makeFakeWriter(rows);
       const result = await selectLandmarks(writer, 'g1');
 
-      const [, keys] = markLandmarks.mock.calls[0] as [string, Array<{ turn: number; playerId: number }>];
+      const [, keys] = markLandmarks.mock.calls[0] as unknown as [string, Array<{ turn: number; playerId: number }>];
       const p0 = result!.players.find(p => p.playerId === 0)!;
       expect(p0.episodes).toBe(1);
       expect(keys).toEqual([{ turn: 0, playerId: 0 }]);

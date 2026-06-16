@@ -233,7 +233,7 @@ describe("strategy-parameters", () => {
               Options: ["expand"],
               CurrentStrategy: "Conquest",
             },
-          } as Parameters<typeof makeGameState>[1]),
+          } as unknown as Parameters<typeof makeGameState>[1]),
         },
       });
 

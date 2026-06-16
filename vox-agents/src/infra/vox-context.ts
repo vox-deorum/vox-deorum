@@ -592,7 +592,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         if (reasoningTokens === 0) {
           reasoningTokens = countMessagesTokens(stepResponse.response.messages, true);
           if (reasoningTokens > 0) {
-            reasoningTokens = Math.max(reasoningTokens, stepResponse.usage.outputTokens ?? 0 - outputTokens);
+            reasoningTokens = Math.max(reasoningTokens, (stepResponse.usage.outputTokens ?? 0) - outputTokens);
           }
         }
 

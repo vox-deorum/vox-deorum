@@ -47,11 +47,6 @@ const TEST_GAME_ID = 'test-game-001';
 /** Short delay to let OBS propagate state changes after commands. */
 const delay = (ms: number) => setTimeout(ms);
 
-/** Parse a JSONL file into an array of objects. */
-function parseJsonl(content: string): any[] {
-  return content.trim().split('\n').map(line => JSON.parse(line));
-}
-
 /** Remove test scenes from OBS, ignoring errors. */
 async function removeTestScenes(obs: OBSWebSocket): Promise<void> {
   try {
@@ -107,7 +102,7 @@ describe.skipIf(!obsAvailable)('ObsManager (requires running OBS)', () => {
 
   it('should initialize and connect to OBS in recording mode', async () => {
     const obsManager = obsManagerModule!.obsManager;
-    const result = await obsManager.initialize('recording', { wsPort: obsPort, wsPassword: obsPassword }, 'test-config');
+    const result = await obsManager.initialize('recording', { wsPort: obsPort, wsPassword: obsPassword });
     expect(result).toBe(true);
     expect(obsManager.isOperational()).toBe(true);
   }, 30000);
@@ -155,56 +150,13 @@ describe.skipIf(!obsAvailable)('ObsManager (requires running OBS)', () => {
 
     expect(obsManager.isProductionActive()).toBe(false);
 
-    // Verify recording files were tracked
-    const files = obsManager.getRecordingFiles();
-    expect(files.length).toBeGreaterThan(0);
-
-    const lastFile = files[files.length - 1];
-    expect(lastFile.path).toBeTruthy();
-    expect(lastFile.startedAt).toBeInstanceOf(Date);
-    expect(lastFile.stoppedAt).toBeInstanceOf(Date);
-    expect(lastFile.logPath).toMatch(/events\.jsonl$/);
-
-    // Verify recording was saved under game ID folder
-    expect(lastFile.path).toContain(TEST_GAME_ID);
+    // Verify the recording directory is organized under the game ID folder.
+    // (Per-segment recording files and the JSONL log moved to ProductionController —
+    // see tests/mock/infra/production-controller.test.ts.)
+    const dir = obsManager.getRecordingDirectory();
+    expect(dir).toBeTruthy();
+    expect(dir).toContain(TEST_GAME_ID);
   }, 30000);
-
-  it('should write live JSONL event log alongside recording', async () => {
-    const obsManager = obsManagerModule!.obsManager;
-    const files = obsManager.getRecordingFiles();
-    expect(files.length).toBeGreaterThan(0);
-
-    const lastFile = files[files.length - 1];
-    const { default: fs } = await import('fs');
-    expect(fs.existsSync(lastFile.logPath)).toBe(true);
-
-    const lines = parseJsonl(fs.readFileSync(lastFile.logPath, 'utf-8'));
-    expect(lines.length).toBeGreaterThan(0);
-
-    // First line should be session_start header
-    const header = lines[0];
-    expect(header.type).toBe('session_start');
-    expect(header.configName).toBe('test-config');
-    expect(header.productionMode).toBe('recording');
-    expect(header.gameID).toBe(TEST_GAME_ID);
-    expect(typeof header.at).toBe('number');
-
-    // All events should have numeric timestamps
-    for (const line of lines) {
-      expect(typeof line.at).toBe('number');
-    }
-
-    const eventTypes = lines.map((e: any) => e.type);
-    expect(eventTypes).toContain('recording_started');
-    expect(eventTypes).toContain('recording_stopped');
-    expect(eventTypes).toContain('recording_file');
-
-    // recording_file event should have the video filename (basename only)
-    const fileEvent = lines.find((e: any) => e.type === 'recording_file');
-    expect(fileEvent.details).toBeTruthy();
-    expect(fileEvent.details).not.toContain('\\');
-    expect(fileEvent.details).not.toContain('/');
-  });
 
   it('should pause and resume recording', async () => {
     await stopAnyRecording(verifyObs);
@@ -232,12 +184,6 @@ describe.skipIf(!obsAvailable)('ObsManager (requires running OBS)', () => {
     const obsManager = obsManagerModule!.obsManager;
     expect(obsManager.isOperational()).toBe(true);
   });
-
-  it('should not throw when addEvent is called without open log', () => {
-    const obsManager = obsManagerModule!.obsManager;
-    expect(() => obsManager.addEvent('test_event', 'test details')).not.toThrow();
-    expect(() => obsManager.addEvent('another_event')).not.toThrow();
-  });
 });
 
 describe.skipIf(!obsAvailable)('ObsManager livestream scene switching (requires running OBS)', () => {
@@ -250,7 +196,7 @@ describe.skipIf(!obsAvailable)('ObsManager livestream scene switching (requires 
     // Bare CreateScene calls don't register scenes with the OBS v31 canvas;
     // setupScenes() creates scenes with inputs which associates them correctly.
     const obsManager = obsManagerModule!.obsManager;
-    await obsManager.initialize('livestream', { wsPort: obsPort, wsPassword: obsPassword }, 'test-config');
+    await obsManager.initialize('livestream', { wsPort: obsPort, wsPassword: obsPassword });
   }, 30000);
 
   afterAll(async () => {
