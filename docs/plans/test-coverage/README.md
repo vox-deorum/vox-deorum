@@ -2,9 +2,9 @@
 
 ## Context
 
-The Vox Deorum monorepo (vox-agents, mcp-server, bridge-service, vox-agents/ui) has **73 existing Vitest test files** organized into a clean tier structure (`tests/mock` → `tests/real` → `tests/live`). Coverage is strong for *pure utilities* (random seeds, config diff, INI parsing, similarity math, transcript reconciliation) and for *bridge-service connection/route/service* logic, but thin for the **agent/pipeline business logic** that drives the game loop and for **mcp-server tools and the knowledge store**. Several large, complex modules (game orchestration, intelligence filtering, batch replay, multi-source extraction, the in-memory knowledge store) have **no tests at all** — where silent regressions are most likely as the diplomacy/conversation system evolves (the focus of recent commits).
+The Vox Deorum monorepo (the three npm workspaces plus the nested `vox-agents/ui` app) has **73 existing Vitest test files** organized into a clean tier structure (`tests/mock` -> `tests/real` -> `tests/live`). Coverage is strong for *pure utilities* (random seeds, config diff, INI parsing, similarity math, transcript reconciliation) and for *bridge-service connection/route/service* logic, but thin for the **agent/pipeline business logic** that drives the game loop and for **mcp-server tools and the knowledge store**. Several large, complex modules (game orchestration, intelligence filtering, batch replay, multi-source extraction, the in-memory knowledge store) have little or no mock-tier coverage, which is where silent regressions are most likely as the diplomacy/conversation system evolves.
 
-These documents propose a **comprehensive set of new mock-tier unit tests** across all four packages. They are **plans only** — no test files are written yet. Each proposal names the new test file, the source under test, the cases to cover, and the mocking strategy, all following conventions already present in the repo.
+These documents propose a **comprehensive set of new mock-tier unit tests** across the four code areas. They are **plans only** — no test files are written yet. Each proposal names the new test file, the source under test, the cases to cover, and the mocking strategy, all following conventions already present in the repo.
 
 ## Documents
 
@@ -23,29 +23,31 @@ All named source targets were re-verified to exist. The following mischaracteriz
 - `infra/vox-civilization.ts` is the **Civ5 process-lifecycle manager** (spawn/kill/crash-recovery/seed save+restore), *not* a player/civ metadata accessor, and it is already exercised by the live test [tests/live/game/vox-civilization.test.ts](../../../vox-agents/tests/live/game/vox-civilization.test.ts). See 01 for the corrected mock scope.
 - `telepathist/summarizer.ts` is a `VoxAgent` **prompt builder** (system prompt + hash-based caching), not a pure data aggregator. See 01.
 - `oracle/replayer.ts` is already partly covered by [replayer-cache.test.ts](../../../vox-agents/tests/mock/oracle/replayer-cache.test.ts); the new `replayer.test.ts` must scope to the non-cache paths. See 01.
-- The UI has **no `ConversationPanel` / `DecisionPanel` and no human-decision component** — the conversation surface is the `ui/src/components/chat/` set; nothing in `ui/src` consumes present-decision. See 04 for real component names.
+- The UI has **no `ConversationPanel` / `DecisionPanel` and no human-decision component** — the conversation surface is the `ui/src/components/chat/` set; nothing in `ui/src` consumes present-decision. Dispatch happens in `ChatMessage.vue`; `ChatMessages.vue` owns list/empty/scroll behavior. See 04 for real component names.
+- `vox-agents/src/web/sse-manager.ts` manages raw Express `Response` clients, not `better-sse` channels/sessions.
 
-Before writing any proposed test, re-confirm the target is actually uncovered (grep `tests/` for the module name) and skim the source to confirm its real shape — the survey had several such false positives.
+Before writing any proposed test, re-confirm the target is actually uncovered (search `tests/` for the module name) and skim the source to confirm its real shape — the survey had several such false positives.
 
 ## Testing conventions to reuse (do not reinvent)
 
 All new tests must match existing patterns:
 
-- **Framework**: Vitest, ESM, `*.test.ts`, placed under `tests/mock/<area>/` per package. Default command `npm run test:mock`.
-- **vox-agents MCP mocking**: use the shared fixture [mock-mcp-client.ts](../../../vox-agents/tests/helpers/mock-mcp-client.ts) — `installMockMcpClient()`, `respondWith(tool, result)`, `mcp.calls(tool)`, `structuredResult(...)`, and `mockMcpClientModule()` via `vi.mock('../../../src/utils/models/mcp-client.js', ...)`. See [transcript-io.test.ts](../../../vox-agents/tests/mock/diplomacy/transcript-io.test.ts) for the canonical shape.
+- **Framework**: Vitest, ESM, `*.test.ts`, placed under `tests/mock/<area>/` per package. Use each package's `test:mock` script; the UI uses `npm --prefix vox-agents/ui run test:mock`.
+- **vox-agents MCP mocking**: use the shared fixture [mock-mcp-client.ts](../../../vox-agents/tests/helpers/mock-mcp-client.ts) — `installMockMcpClient()`, `respondWith(tool, result)`, `mcp.calls(tool)`, `structuredResult(...)`, and `mockMcpClientModule()` via `vi.mock(.../src/utils/models/mcp-client.js, ...)` with the relative path adjusted from the test file. See [transcript-io.test.ts](../../../vox-agents/tests/mock/diplomacy/transcript-io.test.ts) for the canonical shape.
 - **mcp-server store mocking**: use the in-memory-SQLite fixture pattern in [helpers.ts](../../../mcp-server/tests/mock/diplomacy/helpers.ts) — `setupDiplomacyStore(turn)` builds a real `KnowledgeStore` on `:memory:` and redirects the `knowledgeManager` singleton; `seedPlayer(...)` seeds rows. This runs the *real* store path with no bridge/DLL. Generalize it into a shared `mcp-server/tests/mock/helpers.ts` for store/getter/action tests.
 - **bridge-service mocking**: use `tests/test-utils/` (`mock-dll-server.ts`, `isolated-mock.ts`, `helpers.ts`). Single-fork pool is required.
+- **vox-agents web/UI mocking**: `SSEManager` tests should stub Express `Response` (`setHeader`, `write`, `end`, `on('close')`). UI SSE tests should stub `apiClient.streamLogs`/`streamSessionEvents`/`streamAgentMessage` or explicitly replace `EventSource`/`SSE`; the setup shim is intentionally inert.
 - **LLM-agent classes**: these are mostly prompt builders. Test their *pure* methods directly (instantiate the class, call `getSystem`/`getInitialMessages`/`getOutput`/`getModel`) with a stub `StrategistParameters` and a fake `VoxContext` — do **not** invoke a real model. See [diplomat-prompts.test.ts](../../../vox-agents/tests/mock/envoy/diplomat-prompts.test.ts).
 - **Stable assertions only**: do not snapshot or compare whole prompts, whole markdown output, or mutable prose. For prompt builders, import shared prompt-section constants/builders and assert the assembled prompt includes those referenced outputs, dynamic input values, stable tool IDs, and branch-specific sections. For formatters, assert key facts/fields and parsed behavior rather than exact wording or whitespace.
 
 ## Shared-fixture work (do this first, before any package's tests)
 
-1. Promote `setupDiplomacyStore`/`seedPlayer` to a package-level `mcp-server/tests/mock/helpers.ts`.
+1. Promote `setupDiplomacyStore`/`seedPlayer` to a package-level `mcp-server/tests/mock/helpers.ts` and update the existing diplomacy tests to import the promoted helper.
 2. Add `vox-agents/tests/helpers/fake-vox-context.ts` — a spyable `VoxContext` (stub `callTool`) plus a `StrategistParameters` builder.
 
 ## Cross-package verification
 
-- Per package: `npm run test:mock` must stay green (single-fork pool preserved).
-- Coverage deltas: `npm run test:coverage` in each package; compare the v8 `text` summary before/after. mcp-server already emits HTML under `mcp-server/coverage/`; generate the same for vox-agents and bridge-service (currently empty).
+- Per package: mock tests must stay green, preserving the configured single-fork pool. From the repo root, use `npm --workspace vox-agents run test:mock`, `npm --workspace mcp-server run test:mock`, `npm --workspace bridge-service run test:mock`, and `npm --prefix vox-agents/ui run test:mock` as applicable.
+- Coverage deltas: run the touched package's `test:coverage` script and compare the v8 `text` summary before/after. The backend package Vitest configs already request `text`, `lcov`, and `html`; use the generated `coverage/` output when useful, but do not depend on a pre-existing coverage directory.
 - No test may reach a live game/OBS/DLL — every new test is mock-tier (in-memory store, mocked `node-ipc`, mocked MCP client, fake VoxContext). No `tests/real`/`tests/live` additions.
-- `npm run build` (tsc) and ESLint stay clean for new `*.test.ts` files.
+- Run the relevant build/type-check script for touched TypeScript packages (`npm --workspace <pkg> run build` or `type-check`; UI uses `npm --prefix vox-agents/ui run type-check`). There is no repo-level lint script in package.json today, so rely on TypeScript plus focused test runs unless a lint script is added.

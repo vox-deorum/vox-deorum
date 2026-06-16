@@ -2,14 +2,14 @@
 
 > See [README.md](README.md) for shared context, conventions, and shared-fixture prerequisites.
 
-mcp-server has 320 source files but only ~16 test files. The store, getters, and action tools (which mutate game state) are largely untested. The good news: the diplomacy tests already established a **real in-memory `KnowledgeStore`** fixture ([helpers.ts](../../../mcp-server/tests/mock/diplomacy/helpers.ts)) that runs the real store path with no bridge/DLL. Promote it to `mcp-server/tests/mock/helpers.ts` and build on it.
+mcp-server has 320 source files but only ~16 test files. Many of those source files are generated event schemas and enum references, so the highest-value gap is narrower than the raw count: the store, getters, and action tools that mutate game state are largely untested. The good news: the diplomacy tests already established a **real in-memory `KnowledgeStore`** fixture ([helpers.ts](../../../mcp-server/tests/mock/diplomacy/helpers.ts)) that runs the real store path with no bridge/DLL. Promote it to `mcp-server/tests/mock/helpers.ts` and build on it.
 
 ## Knowledge store & manager
 
 | New test file | Target | Cases | Mocking |
 |---|---|---|---|
-| `tests/mock/knowledge/store.test.ts` | [knowledge/store.ts](../../../mcp-server/src/knowledge/store.ts) | `storePublicKnowledge`/`storeMutableKnowledge`/`getMutableKnowledge` round-trips, change-ignore fields, turn stamping, event broadcast on write, visibility filtering | Real in-memory store |
-| `tests/mock/knowledge/manager.test.ts` | [knowledge/manager.ts](../../../mcp-server/src/knowledge/manager.ts) | Store lifecycle, `getTurn`, cache invalidation | In-memory store |
+| `tests/mock/knowledge/store.test.ts` | [knowledge/store.ts](../../../mcp-server/src/knowledge/store.ts) | `storePublicKnowledge`/`getPublicKnowledge` round-trips; `storeMutableKnowledge`/`getMutableKnowledge` versioning, `IsLatest`, change-ignore fields, no-op update when there are no changes, turn stamping, visibility filtering; `storeTimedKnowledge`/`insertRenderEvent` minimal persistence; `handleGameEvent` validates known schemas and sends MCP notifications in a narrow mocked case | Real in-memory store; mock bridge/gameDatabase/MCP notifications only for event-handling cases |
+| `tests/mock/knowledge/manager.test.ts` | [knowledge/manager.ts](../../../mcp-server/src/knowledge/manager.ts) | `extractRenderEventForStorage`; load/save/shutdown lifecycle with a temp DB; `getTurn`/`getActivePlayerId` defaults and updates; `updateTurn` ignores backwards turns; `updateActivePlayer` only changes when a game identity exists | In-memory/temp store; mock `syncGameIdentity`, bridge events, and timers |
 
 ## Getters (one test file each)
 
@@ -35,7 +35,7 @@ Target dir: [knowledge/getters/](../../../mcp-server/src/knowledge/getters/). Ea
 
 ## Action tools (state mutation)
 
-Action tools call Lua via the bridge, then post-process and write to the store. **Mock the bridge Lua call** (`super.call` / `BridgeManager`) returning a canned result, and assert the store-write + change-detection + replay-push logic. Start with `set-strategy` — it has the richest post-processing.
+Action tools call Lua via `LuaFunctionTool.call`, then post-process and write to the store. **Mock the Lua boundary** (usually `LuaFunction.prototype.execute`, or an equivalent direct spy on the tool's call path) returning a canned result; do not boot the bridge. Assert the store-write + change-detection + replay-push logic. Start with `set-strategy` — it has the richest post-processing.
 
 | New test file | Target | Cases |
 |---|---|---|
@@ -57,11 +57,11 @@ Action tools call Lua via the bridge, then post-process and write to the store. 
 | New test file | Target | Cases | Mocking |
 |---|---|---|---|
 | `tests/mock/knowledge/get-diplomatic-events.test.ts` | [get-diplomatic-events.ts](../../../mcp-server/src/tools/knowledge/get-diplomatic-events.ts) | Diplomatic-history filtering by player pair, ordering, visibility (critical for the new diplomacy system) | In-memory store |
-| `tests/mock/tools/abstract/action.test.ts` | [tools/abstract/action.ts](../../../mcp-server/src/tools/abstract/action.ts) | `resolveSourceTurn`, `trimRationale`, `pushAction`, schema-validation contract shared by all action tools | Stub store/bridge |
+| `tests/mock/tools/abstract/action.test.ts` | [tools/abstract/action.ts](../../../mcp-server/src/tools/abstract/action.ts) | `sourceTurnField` default contract, `resolveSourceTurn`, `trimRationale`, `pushAction` delegation, shared annotations/metadata. Schema validation belongs to registration/tool-runner coverage or concrete tool tests, not this abstract helper | Test subclass + stub `knowledgeManager`/`pushPlayerAction` |
 | `tests/mock/tools/abstract/database-query.test.ts` | tools/abstract/database-query.ts | DB-abstraction lookup contract | Seeded DB |
-| `tests/mock/tools/search-database.test.ts` | [general/search-database.ts](../../../mcp-server/src/tools/general/search-database.ts) | Fuzzy search ranking, MaxResults, formatting | Seeded DB |
+| `tests/mock/tools/search-database.test.ts` | [general/search-database.ts](../../../mcp-server/src/tools/general/search-database.ts) | Fuzzy search ranking, cross-tool reciprocal-rank fusion, `MaxResults`, result keys/relevance/field preservation, empty keyword/tool-error tolerance | Mock `getTool(...)` database tool summaries first; add a seeded-DB variant only if needed |
 | `tests/mock/databases/get-strategies-flavors.test.ts` | get-economic/military-strategy, get-flavors | DB-lookup formatting | Existing real-tier DB fixture |
-| `tests/mock/bridge/manager.test.ts` | [bridge/manager.ts](../../../mcp-server/src/bridge/manager.ts) | HTTP client lifecycle to bridge-service, request shaping, error/retry | Mock axios |
+| `tests/mock/bridge/manager.test.ts` | [bridge/manager.ts](../../../mcp-server/src/bridge/manager.ts) | HTTP client lifecycle to bridge-service, health/script/pause/resume request shaping, queued Lua batch success/error mapping, event-pipe delimiter parsing and SSE fallback/retry | Fake `HttpClient`/`EventSource`/`net.createConnection`; use fake timers and call `shutdown()` to stop the queue loop |
 
 ## Suggested order
 

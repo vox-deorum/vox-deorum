@@ -25,8 +25,6 @@ import type {
   PlayersSummaryResponse,
   SessionConfig,
   // Config types
-  ConfigFile,
-  ConfigListResponse,
   ErrorResponse,
   UploadResponse,
   Span,
@@ -368,62 +366,6 @@ class ApiClient {
 
     this.sseConnections.set(key, eventSource);
     return () => this.closeSseConnection(key);
-  }
-
-  // ============= Config API Methods =============
-
-  /**
-   * List all configuration files
-   */
-  async getConfigs(): Promise<ConfigListResponse> {
-    return this.fetchJson<ConfigListResponse>(`${this.baseUrl}/api/configs`);
-  }
-
-  /**
-   * Get a specific configuration file
-   */
-  async getConfig(name: string): Promise<ConfigFile> {
-    return this.fetchJson<ConfigFile>(
-      `${this.baseUrl}/api/configs/${encodeURIComponent(name)}`
-    );
-  }
-
-  /**
-   * Save a configuration file
-   */
-  async saveConfig(name: string, content: Record<string, any>): Promise<{ success: boolean }> {
-    return this.fetchJson<{ success: boolean }>(
-      `${this.baseUrl}/api/configs/${encodeURIComponent(name)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(content)
-      }
-    );
-  }
-
-  /**
-   * Delete a configuration file
-   */
-  async deleteConfig(name: string): Promise<{ success: boolean }> {
-    return this.fetchJson<{ success: boolean }>(
-      `${this.baseUrl}/api/configs/${encodeURIComponent(name)}`,
-      { method: 'DELETE' }
-    );
-  }
-
-  /**
-   * Validate configuration JSON
-   */
-  async validateConfig(content: Record<string, any>): Promise<{ valid: boolean; errors?: string[] }> {
-    return this.fetchJson<{ valid: boolean; errors?: string[] }>(
-      `${this.baseUrl}/api/configs/validate`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(content)
-      }
-    );
   }
 
   // ============= Global Config API Methods =============

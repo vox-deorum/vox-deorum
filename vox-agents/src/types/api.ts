@@ -69,14 +69,6 @@ export interface LogEntry {
 // ============================================================================
 
 /**
- * Response containing a list of available configuration files
- */
-export interface ConfigListResponse {
-  /** Array of configuration filenames */
-  configs: string[];
-}
-
-/**
  * API response for configuration endpoint
  */
 export interface ConfigResponse {

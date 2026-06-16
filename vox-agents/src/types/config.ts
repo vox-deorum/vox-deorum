@@ -94,18 +94,6 @@ export interface AgentMapping {
   model: string;
 }
 
-/**
- * Represents a configuration file for Vox Agents
- */
-export interface ConfigFile {
-  /** Configuration filename */
-  name: string;
-  /** Configuration content as JSON object */
-  content: Record<string, any>;
-  /** ISO timestamp of last modification */
-  lastModified?: string;
-}
-
 /** All supported session types */
 export type SessionType =
   | 'strategist'
