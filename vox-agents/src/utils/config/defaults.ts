@@ -179,6 +179,13 @@ export const defaultConfig: VoxAgentsConfig = {
         toolMiddleware: 'prompt'
       }
     },
+    'openai-compatible/Kimi-K2.7': {
+      provider: 'openai-compatible',
+      name: 'Kimi-K2.7',
+      options: {
+        toolMiddleware: 'prompt'
+      }
+    },
     'openai-compatible/MiniMax-M2.5': {
       provider: 'openai-compatible',
       name: 'MiniMax-M2.5',
