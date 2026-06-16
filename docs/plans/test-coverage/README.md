@@ -36,6 +36,7 @@ All new tests must match existing patterns:
 - **mcp-server store mocking**: use the in-memory-SQLite fixture pattern in [helpers.ts](../../../mcp-server/tests/mock/diplomacy/helpers.ts) — `setupDiplomacyStore(turn)` builds a real `KnowledgeStore` on `:memory:` and redirects the `knowledgeManager` singleton; `seedPlayer(...)` seeds rows. This runs the *real* store path with no bridge/DLL. Generalize it into a shared `mcp-server/tests/mock/helpers.ts` for store/getter/action tests.
 - **bridge-service mocking**: use `tests/test-utils/` (`mock-dll-server.ts`, `isolated-mock.ts`, `helpers.ts`). Single-fork pool is required.
 - **LLM-agent classes**: these are mostly prompt builders. Test their *pure* methods directly (instantiate the class, call `getSystem`/`getInitialMessages`/`getOutput`/`getModel`) with a stub `StrategistParameters` and a fake `VoxContext` — do **not** invoke a real model. See [diplomat-prompts.test.ts](../../../vox-agents/tests/mock/envoy/diplomat-prompts.test.ts).
+- **Stable assertions only**: do not snapshot or compare whole prompts, whole markdown output, or mutable prose. For prompt builders, import shared prompt-section constants/builders and assert the assembled prompt includes those referenced outputs, dynamic input values, stable tool IDs, and branch-specific sections. For formatters, assert key facts/fields and parsed behavior rather than exact wording or whitespace.
 
 ## Shared-fixture work (do this first, before any package's tests)
 
