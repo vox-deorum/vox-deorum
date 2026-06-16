@@ -438,6 +438,57 @@
     }
   },
   {
+    "name": "read-transcript",
+    "description": "Read the durable conversation between two players (ordered by playerID) as one append-ID-ordered thread.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "PlayerAID": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9007199254740991,
+          "description": "One endpoint's playerID (or -1 for the observer)"
+        },
+        "PlayerBID": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9007199254740991,
+          "description": "The other endpoint's playerID (or -1 for the observer)"
+        },
+        "MessageType": {
+          "description": "Optional: only return messages of this type",
+          "type": "string",
+          "enum": [
+            "text",
+            "close",
+            "deal-proposal",
+            "deal-counter",
+            "deal-accept",
+            "deal-reject",
+            "deal-enacted"
+          ]
+        },
+        "Role": {
+          "description": "Optional: only return messages whose speaker holds this free-form role (e.g. 'diplomat')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "PlayerAID",
+        "PlayerBID"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "autoComplete": [
+        "PlayerAID",
+        "PlayerBID",
+        "MessageType",
+        "Role"
+      ]
+    }
+  },
+  {
     "name": "get-players",
     "description": "Retrieves a list of in-game players and their summary information",
     "inputSchema": {
@@ -1133,6 +1184,88 @@
     "_meta": {
       "autoComplete": [
         "PlayerID"
+      ]
+    }
+  },
+  {
+    "name": "append-message",
+    "description": "Append one message to the durable conversation between two players (ordered by playerID). Archival only — no streaming, notifications, agents, or deal enactment.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "PlayerAID": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9007199254740991,
+          "description": "One endpoint's playerID (or -1 for the observer)"
+        },
+        "PlayerBID": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9007199254740991,
+          "description": "The other endpoint's playerID (or -1 for the observer)"
+        },
+        "PlayerARole": {
+          "description": "Free-form role of PlayerA (agent name, UserIdentity.role, or 'observer'). Defaults to 'observer' for the -1 endpoint.",
+          "type": "string"
+        },
+        "PlayerBRole": {
+          "description": "Free-form role of PlayerB (agent name, UserIdentity.role, or 'observer'). Defaults to 'observer' for the -1 endpoint.",
+          "type": "string"
+        },
+        "SpeakerID": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9007199254740991,
+          "description": "The endpoint authoring this message (must be one of the two players)"
+        },
+        "MessageType": {
+          "type": "string",
+          "enum": [
+            "text",
+            "close",
+            "deal-proposal",
+            "deal-counter",
+            "deal-accept",
+            "deal-reject",
+            "deal-enacted"
+          ],
+          "description": "Message type"
+        },
+        "Content": {
+          "type": "string",
+          "description": "Free-text message body"
+        },
+        "Payload": {
+          "description": "Optional message metadata (Deal/Value1/Value2 for proposals, ProposalMessageID for responses)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "Turn": {
+          "description": "Game turn (defaults to the server's current turn; Web callers should omit)",
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "PlayerAID",
+        "PlayerBID",
+        "SpeakerID",
+        "MessageType",
+        "Content"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "autoComplete": [
+        "PlayerAID",
+        "PlayerBID",
+        "SpeakerID",
+        "MessageType"
       ]
     }
   },
