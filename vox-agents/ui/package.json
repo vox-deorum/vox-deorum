@@ -10,7 +10,12 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "test:unit": "vitest",
+    "test": "cross-env USE_MOCK=true vitest run",
+    "test:mock": "cross-env USE_MOCK=true vitest run",
+    "test:real": "cross-env USE_MOCK=false vitest run",
+    "test:watch": "cross-env USE_MOCK=true vitest",
+    "test:coverage": "cross-env USE_MOCK=true vitest run --coverage",
+    "test:unit": "cross-env USE_MOCK=true vitest run",
     "build-only": "vite build",
     "type-check": "vue-tsc --build"
   },

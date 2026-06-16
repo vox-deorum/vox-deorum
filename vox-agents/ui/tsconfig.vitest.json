@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.app.json",
-  "include": ["src/**/__tests__/*", "env.d.ts"],
+  "include": ["src/**/__tests__/*", "tests/mock/**/*.ts", "tests/setup.ts", "tests/helpers/**/*.ts", "env.d.ts"],
+  "comment": "tests/real/** is intentionally excluded: it imports the vox-agents backend (@vox/web) which is a separate TS project with its own config; type-checking it here would pull the whole backend into the UI build. It still runs under vitest (esbuild).",
   "exclude": [],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.vitest.tsbuildinfo",

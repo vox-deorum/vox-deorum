@@ -11,7 +11,9 @@
   ],
   "scripts": {
     "build:all": "npm run build -ws",
-    "test:all": "npm run test -ws",
+    "test:all": "npm run test -ws && npm --prefix vox-agents/ui run test:mock",
+    "test:all:real": "npm --prefix vox-agents/ui run test:real",
+    "_comment:test:all:real": "Aggregates only the verified CI-able real tier (ui: in-process backend + mock MCP). mcp-server has its real tier wired (USE_MOCK=false, tests/real/**, tests/real.setup.ts spawns the start:mock bridge) but its existing integration suites were written for a live game and need adaptation to the mock-DLL bottom before they pass — run `npm --prefix mcp-server run test:real` to iterate. vox-agents's out-of-process real tier (real MCP client -> real mcp-server -> mock bridge) is not yet wired; its CI-able real coverage currently lives in the ui package above. bridge-service's real tier is the live-Civ-V tier and is not CI-able by design.",
     "clean:all": "npm run clean -ws --if-present"
   },
   "author": "John Chen",
@@ -89,6 +91,7 @@
     "@vitest/ui": "^3.2.4",
     "cross-env": "^10.1.0",
     "eslint": "^8.54.0",
+    "jsdom": "^27.4.0",
     "kysely-codegen": "^0.18.5",
     "npm-run-all": "^4.1.5",
     "rimraf": "^5.0.5",

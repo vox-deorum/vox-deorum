@@ -1,12 +1,14 @@
 import { defineConfig } from 'vitest/config'
 
+// Unified convention: tests/mock/** is the default (in-process mock DLL); set
+// USE_MOCK=false to run tests/real/** against a live Civ V DLL. Bridge-service
+// is the game boundary, so its "real" tier is the live-game tier (not CI).
 const useMock = process.env.USE_MOCK !== 'false'
 
 export default defineConfig({
   test: {
     environment: 'node',
-    include: useMock ? ['tests/**/*.test.ts'] : ['tests/**/*.real.test.ts'],
-    exclude: useMock ? ['tests/**/*.real.test.ts'] : [],
+    include: [`tests/${useMock ? 'mock' : 'real'}/**/*.test.ts`],
     setupFiles: ['./tests/setup.ts'],
     coverage: {
       include: ['src/**/*.ts'],

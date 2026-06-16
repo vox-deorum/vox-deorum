@@ -9,6 +9,7 @@
     "build": "node ../node_modules/typescript/bin/tsc",
     "start": "npm run build && npm run start:dist",
     "start:dist": "node dist/index.js",
+    "start:mock": "cross-env USE_MOCK=true tsx tests/test-utils/start-mock-bridge.ts",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist",
     "test": "cross-env USE_MOCK=true vitest run",
