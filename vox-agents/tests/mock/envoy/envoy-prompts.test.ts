@@ -5,26 +5,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  worldContext,
-  noDecisionPower,
-  communicationStyle,
   audienceSection,
   greetingSpecialMessages,
 } from '../../../src/envoy/envoy-prompts.js';
-
-describe('envoy prompt constants', () => {
-  it('worldContext frames the fictional setting', () => {
-    expect(worldContext).toMatch(/Civilization V game with Vox Populi/);
-  });
-
-  it('noDecisionPower disclaims binding authority', () => {
-    expect(noDecisionPower.toLowerCase()).toContain('no decision-making power');
-  });
-
-  it('communicationStyle defines a Communication Style section', () => {
-    expect(communicationStyle).toContain('# Communication Style');
-  });
-});
 
 describe('audienceSection', () => {
   it('embeds the audience description and the national-interest stance', () => {

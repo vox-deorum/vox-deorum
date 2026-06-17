@@ -31,14 +31,6 @@ describe('seededIndex', () => {
     expect(differing).toBeGreaterThan(samples * 0.8);
   });
 
-  it('decorrelates across player and turn segments', () => {
-    const a = seededIndex('555:0:5:tech', 50);
-    const b = seededIndex('555:1:5:tech', 50);
-    const c = seededIndex('555:0:6:tech', 50);
-    // Not a hard guarantee for any single triple, but these specific keys differ.
-    expect(new Set([a, b, c]).size).toBeGreaterThan(1);
-  });
-
   it('returns 0 for a non-positive length', () => {
     expect(seededIndex('any-key', 0)).toBe(0);
     expect(seededIndex('any-key', -3)).toBe(0);

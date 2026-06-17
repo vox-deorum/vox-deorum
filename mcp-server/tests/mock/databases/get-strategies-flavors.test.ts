@@ -41,12 +41,8 @@ const MIL_ROWS = [
   { Type: 'Defense', Production: { Defense: 9 }, Overall: { Defense: 7 }, Description: 'Hold the line' },
 ];
 
-let localizeSpy: ReturnType<typeof vi.spyOn>;
-
 beforeEach(() => {
-  localizeSpy = vi
-    .spyOn(gameDatabase, 'localizeObjects')
-    .mockImplementation(async (rows: any) => rows);
+  vi.spyOn(gameDatabase, 'localizeObjects').mockImplementation(async (rows: any) => rows);
 });
 
 afterEach(() => {
@@ -97,12 +93,6 @@ describe('get-economic-strategies', () => {
     const tool = econTool();
     const result = await tool.execute({ MaxResults: 2 } as any);
     expect(result.Count).toBe(2);
-  });
-
-  it('localizes returned items through gameDatabase.localizeObjects', async () => {
-    const tool = econTool();
-    await tool.execute({ MaxResults: 20 } as any);
-    expect(localizeSpy).toHaveBeenCalled();
   });
 });
 

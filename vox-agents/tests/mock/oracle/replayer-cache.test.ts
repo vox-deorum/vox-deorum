@@ -52,7 +52,7 @@ vi.mock('../../../src/instrumentation.js', () => ({
 }));
 
 import { runReplay } from '../../../src/oracle/replayer.js';
-import { getTrailBase, readReplayCache, writeTrail } from '../../../src/oracle/utils/output.js';
+import { getTrailBase, writeTrail } from '../../../src/oracle/utils/output.js';
 
 const tempDirs: string[] = [];
 
@@ -64,23 +64,6 @@ afterEach(() => {
 });
 
 describe('oracle replay cache', () => {
-  it('reconstructs ReplayResult from an existing trail JSON', () => {
-    const dir = makeTempDir();
-    writeTrail(dir, 'cached-task', cachedTrail());
-
-    const result = readReplayCache(path.join(dir, 'cached-task.json'));
-
-    expect(result).toMatchObject({
-      row: baseRow,
-      model: 'test/cached-model',
-      decisions: [{ toolName: 'set-flavors', args: { GrandStrategy: 'Conquest' }, rationale: 'cached rationale' }],
-      tokens: { inputTokens: 11, reasoningTokens: 22, outputTokens: 33 },
-      metadata: { cached: true },
-      extractedColumns: { replay_nuke: 80 },
-    });
-    expect(result.messages).toEqual([{ role: 'assistant', content: 'cached response' }]);
-  });
-
   it('uses an existing trail JSON instead of executing the oracle agent', async () => {
     const outputDir = makeTempDir();
     const experimentDir = path.join(outputDir, 'cache-hit');

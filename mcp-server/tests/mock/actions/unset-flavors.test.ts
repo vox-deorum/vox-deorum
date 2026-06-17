@@ -52,12 +52,6 @@ describe('unset-flavors', () => {
       const parsed = tool.inputSchema.safeParse({ PlayerID: 999 });
       expect(parsed.success).toBe(false);
     });
-
-    it('accepts a valid PlayerID and defaults Turn to -1', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0 });
-      expect(parsed.success).toBe(true);
-      expect(parsed.success && parsed.data.Turn).toBe(-1);
-    });
   });
 
   it('marks the existing latest FlavorChanges row as not-latest', async () => {

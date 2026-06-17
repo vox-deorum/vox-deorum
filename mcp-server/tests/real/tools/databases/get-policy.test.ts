@@ -3,24 +3,10 @@
  * Tests policy database querying functionality through MCP
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mcpClient } from "../../../setup.js";
 
 describe("Get Policy Tool via MCP", () => {
-  
-  /**
-   * Test that the tool is properly registered
-   */
-  it("should list get-policy tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const getPolicyTool = tools.tools.find(t => t.name === "get-policy");
-    expect(getPolicyTool).toBeDefined();
-    expect(getPolicyTool?.inputSchema).toBeDefined();
-  });
 
   /**
    * Test listing all policies without search

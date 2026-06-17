@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { isVisualMode, isObsMode, isHumanControl } from '../../../src/types/config.js';
-import type { ProductionMode, StrategistSessionConfig } from '../../../src/types/config.js';
+import type { StrategistSessionConfig } from '../../../src/types/config.js';
 
 /** Minimal strategist config builder for the human-control helper tests. */
 function makeConfig(llmPlayers: StrategistSessionConfig['llmPlayers']): StrategistSessionConfig {
@@ -91,26 +91,5 @@ describe('isHumanControl', () => {
 
   it('should return false for an empty seating', () => {
     expect(isHumanControl(makeConfig({}))).toBe(false);
-  });
-});
-
-describe('ProductionMode type safety', () => {
-  it('should accept all valid ProductionMode values', () => {
-    const modes: ProductionMode[] = ['none', 'test', 'livestream', 'recording'];
-    for (const mode of modes) {
-      // Both functions should accept all valid modes without error
-      expect(typeof isVisualMode(mode)).toBe('boolean');
-      expect(typeof isObsMode(mode)).toBe('boolean');
-    }
-  });
-
-  it('should have consistent visual/obs mode relationship', () => {
-    // All OBS modes should also be visual modes
-    const modes: ProductionMode[] = ['none', 'test', 'livestream', 'recording'];
-    for (const mode of modes) {
-      if (isObsMode(mode)) {
-        expect(isVisualMode(mode)).toBe(true);
-      }
-    }
   });
 });

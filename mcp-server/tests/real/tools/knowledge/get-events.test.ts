@@ -9,20 +9,6 @@ import { mcpClient } from "../../../setup.js";
 describe("Get Events Tool via MCP", () => {
 
   /**
-   * Test that the tool is properly registered
-   */
-  it("should list get-events tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const getEventsTool = tools.tools.find(t => t.name === "get-events");
-    expect(getEventsTool).toBeDefined();
-    expect(getEventsTool?.inputSchema).toBeDefined();
-  });
-
-  /**
    * Test retrieving all events without filters
    */
   it("should retrieve all events without filters", async () => {

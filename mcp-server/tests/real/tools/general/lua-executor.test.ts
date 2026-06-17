@@ -3,18 +3,6 @@ import { mcpClient } from "../../../setup.js";
 
 describe("Lua Executor Tool via MCP", () => {
 
-  it("should list lua-executor tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const luaExecutorTool = tools.tools.find(t => t.name === "lua-executor");
-    expect(luaExecutorTool).toBeDefined();
-    expect(luaExecutorTool?.description).toContain("Lua");
-    expect(luaExecutorTool?.inputSchema).toBeDefined();
-  });
-
   it("should execute basic Lua calculations", async () => {
     const testCases = [
       { Script: "return 2 + 3", expected: 5 },

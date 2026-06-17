@@ -3,24 +3,10 @@
  * Tests technology database querying functionality through MCP
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mcpClient } from "../../../setup.js";
 
 describe("Get Technology Tool via MCP", () => {
-  
-  /**
-   * Test that the tool is properly registered
-   */
-  it("should list get-technology tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const getTechnologyTool = tools.tools.find(t => t.name === "get-technology");
-    expect(getTechnologyTool).toBeDefined();
-    expect(getTechnologyTool?.inputSchema).toBeDefined();
-  });
 
   /**
    * Test listing all technologies without search

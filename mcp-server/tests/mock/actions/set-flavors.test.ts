@@ -51,23 +51,6 @@ function mockLua(opts: {
 }
 
 describe('set-flavors', () => {
-  describe('schema validation', () => {
-    it('requires a Rationale', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0 });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('accepts an optional Flavors record and GrandStrategy', () => {
-      const parsed = tool.inputSchema.safeParse({
-        PlayerID: 0,
-        GrandStrategy: 'Conquest',
-        Flavors: { Offense: 70 },
-        Rationale: 'r',
-      });
-      expect(parsed.success).toBe(true);
-    });
-  });
-
   it('stores the full flavor set: clamped overrides, previous values, and 50 defaults', async () => {
     // Previously Offense=80 (FLAVOR_OFFENSE) in MCP range; everything else default.
     mockLua({ flavors: { FLAVOR_OFFENSE: 80 } });

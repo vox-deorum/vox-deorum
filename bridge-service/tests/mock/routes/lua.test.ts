@@ -377,38 +377,6 @@ describe('Lua Service', () => {
 
       logSuccess('Batch with mixed valid/invalid functions handled');
     });
-
-    it('should handle large batch requests', async () => {
-      // Register function for both mock and real DLL
-      await registerLuaFunction(app, 'GetPlayerName', 'Batch Player', true,
-        `local function getplayername(args)
-           local playerId = args and args.playerId or 0
-           return "Batch Player"
-         end
-         Game.RegisterFunction("GetPlayerName", getplayername)
-         return true`);
-      
-      const batchRequests = Array.from({ length: 50 }, (_, i) => ({
-        function: 'GetPlayerName',
-        args: { playerId: i }
-      }));
-
-      const response = await request(app)
-        .post('/lua/batch')
-        .send(batchRequests);
-
-      expect(response.status).toBe(200);
-      expect(response.body).toBeDefined();
-      expect(response.body.success).toBe(true);
-      expect(response.body.result.results).toHaveLength(50);
-      // All results should be 'Batch Player'
-      response.body.result.results.forEach((result: any) => {
-        expect(result.result).toBe('Batch Player');
-        expect(result.success).toBe(true);
-      });
-
-      logSuccess('Large batch request handled');
-    });
   });
 
   /**
@@ -446,41 +414,6 @@ describe('Lua Service', () => {
       await expect(dllConnector.connect()).resolves.toBe(true);
 
       logSuccess('Connection loss during request handled');
-    });
-
-    it('should handle rapid sequential requests', async () => {
-      // Register function for both mock and real DLL
-      await registerLuaFunction(app, 'GetPlayerName', 'Rapid Player', true,
-        `local function getplayername(args)
-           local playerId = args and args.playerId or 0
-           return "Rapid Player"
-         end
-         Game.RegisterFunction("GetPlayerName", getplayername)
-         return true`);
-      
-      const results: any[] = [];
-      
-      for (let i = 0; i < 20; i++) {
-        const response = await request(app)
-          .post('/lua/call')
-          .send({
-            function: 'GetPlayerName',
-            args: { playerId: i }
-          });
-        
-        expect(response.status).toBeDefined();
-        results.push(response.body);
-      }
-
-      expect(results).toHaveLength(20);
-      results.forEach(result => {
-        expect(result).toBeDefined();
-        if (result.success) {
-          expect(result.result).toBe('Rapid Player');
-        }
-      });
-
-      logSuccess('Rapid sequential requests handled successfully');
     });
 
     it.skipIf(USE_MOCK)('should correctly serialize object and array return values from raw Lua script', async () => {

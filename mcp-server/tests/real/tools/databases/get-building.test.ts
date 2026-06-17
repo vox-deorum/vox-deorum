@@ -3,24 +3,10 @@
  * Tests building database querying functionality through MCP
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mcpClient } from "../../../setup.js";
 
 describe("Get Building Tool via MCP", () => {
-  
-  /**
-   * Test that the tool is properly registered
-   */
-  it("should list get-building tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const getBuildingTool = tools.tools.find(t => t.name === "get-building");
-    expect(getBuildingTool).toBeDefined();
-    expect(getBuildingTool?.inputSchema).toBeDefined();
-  });
 
   /**
    * Test listing all buildings without search

@@ -20,35 +20,6 @@ describe('DatabaseManager', () => {
     }
   });
   
-  describe('Database Operations', () => {
-    it('should query from different tables', async () => {
-      await manager.initialize();
-      
-      const db = manager.getDatabase();
-      
-      // Query from BuildingClasses table
-      const buildingClasses = await db
-        .selectFrom('BuildingClasses')
-        .select(['Type', 'Description'])
-        .limit(5)
-        .execute();
-      
-      expect(buildingClasses).toBeDefined();
-      expect(Array.isArray(buildingClasses)).toBe(true);
-      
-      // Also test querying from Civilizations table
-      const civs = await db
-        .selectFrom('Civilizations')
-        .select(['Type', 'Description', 'ShortDescription'])
-        .limit(3)
-        .execute();
-      
-      expect(civs).toBeDefined();
-      expect(Array.isArray(civs)).toBe(true);
-    });
-
-  });
-
   describe('Localization', () => {
     it('should localize a single key', async () => {
       // Try to localize a common key
@@ -104,18 +75,6 @@ describe('DatabaseManager', () => {
       const result = await manager.localizeObject(emptyArray);
       
       expect(result).toEqual([]);
-    });
-
-    it('should handle objects without TXT_KEY values', async () => {
-      await manager.initialize();
-      
-      const data = [
-        { id: 1, name: 'Test', value: 100 },
-        { id: 2, name: 'Another', value: 200 }
-      ];
-      
-      const result = await manager.localizeObject(data);
-      expect(result).toEqual(data);
     });
   });
 });

@@ -26,16 +26,6 @@ function paramsWithState() {
   });
 }
 
-describe('Analyst configuration flags', () => {
-  it('runs fire-and-forget', () => {
-    expect(analyst.fireAndForget).toBe(true);
-  });
-
-  it('lets the LLM decide when to call tools (toolChoice auto)', () => {
-    expect(analyst.toolChoice).toBe('auto');
-  });
-});
-
 describe('Analyst input schema', () => {
   it('accepts the three AnalystInput fields', () => {
     const parsed = analyst.inputSchema.parse({

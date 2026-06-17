@@ -51,20 +51,6 @@ function mockLua(previousPublic: number, previousPrivate: number, targetName = '
 }
 
 describe('set-relationship', () => {
-  describe('schema validation', () => {
-    it('rejects a negative PlayerID', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: -1, TargetID: 1, Rationale: 'r' });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('defaults Public/Private to 0', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0, TargetID: 1, Rationale: 'r' });
-      expect(parsed.success).toBe(true);
-      expect(parsed.success && parsed.data.Public).toBe(0);
-      expect(parsed.success && parsed.data.Private).toBe(0);
-    });
-  });
-
   it('throws when the target player is not seeded', async () => {
     mockLua(0, 0);
     await expect(

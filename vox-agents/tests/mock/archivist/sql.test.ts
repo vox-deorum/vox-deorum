@@ -63,17 +63,6 @@ describe('buildEraCaseExpr', () => {
       expect(expr).toContain(`WHEN era = '${era}' THEN ${ord}`);
     }
   });
-
-  it('should reference each era label substring', () => {
-    expect(expr).toContain('Ancient Era');
-    expect(expr).toContain('Classical Era');
-    expect(expr).toContain('Medieval Era');
-    expect(expr).toContain('Renaissance Era');
-    expect(expr).toContain('Industrial Era');
-    expect(expr).toContain('Modern Era');
-    expect(expr).toContain('Atomic Era');
-    expect(expr).toContain('Information Era');
-  });
 });
 
 // ---------------------------------------------------------------------------

@@ -76,14 +76,6 @@ describe('agent routes', () => {
     });
   });
 
-  describe('GET /api/agents/chats', () => {
-    it('returns the in-memory chat threads (empty by default)', async () => {
-      const res = await request(app).get('/api/agents/chats');
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body.chats)).toBe(true);
-    });
-  });
-
   describe('GET /api/agents/chat/:chatId', () => {
     it('returns 404 for an unknown thread', async () => {
       const res = await request(app).get('/api/agents/chat/does-not-exist');

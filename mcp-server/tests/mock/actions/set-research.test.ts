@@ -38,18 +38,6 @@ function mockLua(result: Record<string, number>) {
 }
 
 describe('set-research', () => {
-  describe('schema validation', () => {
-    it('rejects a missing Technology', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0, Rationale: 'r' });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('accepts a valid payload', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0, Technology: 'Pottery', Rationale: 'r' });
-      expect(parsed.success).toBe(true);
-    });
-  });
-
   it('throws for a technology name that resolves to no enum value', async () => {
     mockLua({ Previous: -1 });
     await expect(

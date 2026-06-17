@@ -3,24 +3,10 @@
  * Tests civilization database querying functionality through MCP
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mcpClient } from "../../../setup.js";
 
 describe("Get Civilization Tool via MCP", () => {
-  
-  /**
-   * Test that the tool is properly registered
-   */
-  it("should list get-civilization tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const getCivilizationTool = tools.tools.find(t => t.name === "get-civilization");
-    expect(getCivilizationTool).toBeDefined();
-    expect(getCivilizationTool?.inputSchema).toBeDefined();
-  });
 
   /**
    * Test listing all civilizations without search

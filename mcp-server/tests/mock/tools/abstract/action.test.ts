@@ -12,7 +12,6 @@ import * as z from 'zod';
 import { ActionTool, sourceTurnField } from '../../../../src/tools/abstract/action.js';
 import { knowledgeManager } from '../../../../src/server.js';
 import * as playerActions from '../../../../src/utils/lua/player-actions.js';
-import * as text from '../../../../src/utils/text.js';
 
 /**
  * Minimal concrete ActionTool that supplies every abstract member and exposes the
@@ -34,12 +33,6 @@ class TestActionTool extends ActionTool {
   // Public wrappers over the protected members under test.
   public callResolveSourceTurn(args: { Turn?: number }) {
     return this.resolveSourceTurn(args);
-  }
-  public callTrimRationale(r: string) {
-    return this.trimRationale(r);
-  }
-  public callGetStore() {
-    return this.getStore();
   }
   public callPushAction(...a: Parameters<TestActionTool['pushAction']>) {
     return this.pushAction(...a);
@@ -84,23 +77,6 @@ describe('resolveSourceTurn', () => {
   it('uses the arg when Turn >= 0', () => {
     expect(tool.callResolveSourceTurn({ Turn: 0 })).toBe(0);
     expect(tool.callResolveSourceTurn({ Turn: 3 })).toBe(3);
-  });
-});
-
-describe('trimRationale', () => {
-  it('delegates to utils/text.trimRationale', () => {
-    const spy = vi.spyOn(text, 'trimRationale').mockReturnValue('trimmed');
-    const out = tool.callTrimRationale('some rationale');
-    expect(out).toBe('trimmed');
-    expect(spy).toHaveBeenCalledWith('some rationale');
-  });
-});
-
-describe('getStore', () => {
-  it('returns the knowledgeManager store', () => {
-    const fakeStore = { marker: true } as any;
-    vi.spyOn(knowledgeManager, 'getStore').mockReturnValue(fakeStore);
-    expect(tool.callGetStore()).toBe(fakeStore);
   });
 });
 

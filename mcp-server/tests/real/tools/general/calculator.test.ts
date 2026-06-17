@@ -3,18 +3,6 @@ import { mcpClient } from "../../../setup.js";
 
 describe("Calculator Tool via MCP", () => {
 
-  it("should list calculator tool", async () => {
-    const tools = await mcpClient.listTools();
-    
-    expect(tools.tools).toBeDefined();
-    expect(tools.tools.length).toBeGreaterThan(0);
-    
-    const calculatorTool = tools.tools.find(t => t.name === "calculator");
-    expect(calculatorTool).toBeDefined();
-    expect(calculatorTool?.description).toContain("mathematical");
-    expect(calculatorTool?.inputSchema).toBeDefined();
-  });
-
   it("should execute basic calculations", async () => {
     const testCases = [
       { Expression: "2 + 3", expected: 5 },

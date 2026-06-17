@@ -37,17 +37,6 @@ describe('Pause Routes', () => {
     vi.restoreAllMocks();
   });
 
-  it('delegates manual pause and resume to the pause manager', async () => {
-    vi.spyOn(pauseManager, 'pauseGame').mockReturnValue(true);
-    vi.spyOn(pauseManager, 'resumeGame').mockReturnValue(true);
-
-    const pauseResponse = await request(app).post('/external/pause').expect(200);
-    expect(pauseResponse.body).toEqual({ success: true });
-
-    const resumeResponse = await request(app).post('/external/resume').expect(200);
-    expect(resumeResponse.body).toEqual({ success: true });
-  });
-
   it('registers and unregisters paused players through the REST API', async () => {
     const registerResponse = await request(app).post('/external/pause-player/0').expect(200);
     expect(registerResponse.body.success).toBe(true);

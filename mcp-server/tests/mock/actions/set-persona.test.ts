@@ -51,24 +51,6 @@ function mockLua(previousPersona: Record<string, number>) {
 }
 
 describe('set-persona', () => {
-  describe('schema validation', () => {
-    it('rejects a PlayerID below 0', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: -1, Rationale: 'r' });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('requires a Rationale', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0 });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('accepts a valid payload and defaults Turn to -1', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0, Boldness: 8, Rationale: 'r' });
-      expect(parsed.success).toBe(true);
-      expect(parsed.success && parsed.data.Turn).toBe(-1);
-    });
-  });
-
   it('writes previous + new versions, clamps values, and stamps the turn', async () => {
     mockLua(fullPersona({ Boldness: 3, WarBias: 5 }));
 

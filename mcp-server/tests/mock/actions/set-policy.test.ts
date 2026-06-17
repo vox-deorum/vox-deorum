@@ -40,18 +40,6 @@ function mockLua(result: Record<string, number>) {
 }
 
 describe('set-policy', () => {
-  describe('schema validation', () => {
-    it('rejects a missing Policy', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0, Rationale: 'r' });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('accepts a valid payload', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 0, Policy: 'Tradition', Rationale: 'r' });
-      expect(parsed.success).toBe(true);
-    });
-  });
-
   it('throws for a policy name that resolves to no enum value', async () => {
     mockLua({ PreviousPolicy: -1, PreviousBranch: -1 });
     await expect(

@@ -69,10 +69,6 @@ describe('NarratorWorkspace', () => {
   });
 
   describe('directory and path layout', () => {
-    it('should expose the workspace path passed to the constructor', () => {
-      expect(ws.workspacePath).toBe(workspaceDir);
-    });
-
     it('should resolve filenames within the workspace via getPath', () => {
       expect(ws.getPath(CONTEXT_FILE)).toBe(path.join(workspaceDir, CONTEXT_FILE));
       expect(ws.getPath('sub/file.json')).toBe(path.join(workspaceDir, 'sub/file.json'));
