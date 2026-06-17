@@ -36,6 +36,7 @@ import createSearchDatabaseTool from "./general/search-database.js";
 import createGetDiplomaticEventsTool from "./knowledge/get-diplomatic-events.js";
 import createAppendMessageTool from "./actions/append-message.js";
 import createReadTranscriptTool from "./knowledge/read-transcript.js";
+import createInspectDealTool from "./knowledge/inspect-deal.js";
 import type { MCPServer } from "../server.js";
 
 // Tool factory configuration - one line per tool
@@ -58,6 +59,7 @@ const toolFactories = {
     getEvents: createGetEventsTool,
     getDiplomaticEvents: createGetDiplomaticEventsTool,
     readTranscript: createReadTranscriptTool,
+    inspectDeal: createInspectDealTool,
     getPlayers: createGetPlayersTool,
     getOpinions: createGetOpinionsTool,
     getCities: createGetCitiesTool,

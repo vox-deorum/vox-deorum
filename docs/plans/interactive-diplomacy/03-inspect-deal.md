@@ -2,6 +2,24 @@
 
 > Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 
+## ✅ DONE
+
+Built as specified. What landed:
+
+- **DLL (read-only, needs rebuild; no version bump per request):**
+  - `CvDeal::IsPossibleToTradeItem` gained a defaulted trailing `bTreatAsHumanToHuman` (default `false` reproduces the computed value exactly; OR-ed into `bHumanToHuman`). Exposed through `lIsPossibleToTradeItem` (optional 9th Lua arg).
+  - `CvDeal::GetReasonsItemUntradeable` gained the same defaulted `bTreatAsHumanToHuman`, threaded **only into its internal `IsPossibleToTradeItem` call** (minimal-param decision) so it never reports a stale reason for an item the agent path allows. Exposed through `lGetReasonsItemUntradeable` (optional 9th arg).
+  - New read-only `lGetTradeItemValue` (`CvLuaDeal.cpp`/`.h`, registered in `PushMethods`) wrapping `CvDealAI::GetTradeItemValue` and returning **both directions** in one call: value to the giver (`bFromMe=true`) and value to the receiver (`bFromMe=false`). Anti-exploit `INT_MAX` sentinels surface but gate nothing.
+  - **Deferred to stage 6:** the `AreAllTradeItemsValid(bTreatAsHumanToHuman)` override — only enactment needs it; nothing read-only calls it.
+- **mcp-server:**
+  - `src/utils/deal-schema.ts` — pinned `Payload.Deal` (`version:1`, `items`, `promises`), `Payload.Value1/Value2` per-item value-map shape, and the `TRADE_ITEM_TYPES` / `PROMISE_TYPES` vocabularies. Shared contract for stages 4–6.
+  - `lua/inspect-deal.lua` — builds a transient `UI.GetScratchDeal()` (never activated), evaluates each proposed term directly (legality under `bTreatAsHumanToHuman=true`, reason, both-direction value), uses scratch-deal context for terms the stock add helpers accept, and enumerates the **full tradable range per side** (gold, GPT, resources, cities, techs, maps, open borders, embassy, defensive pact, research agreement, peace, DoF, third-party peace/war, **vassalage + revoke**). Vote-commitment enumeration is omitted from the *range* (needs live World Congress context) but vote commitments are fully supported as explicit proposed terms.
+  - `src/utils/lua/inspect-deal.ts` — `LuaFunction` wrapper (structured-arg transport, modeled on `present-decision.ts`).
+  - `src/tools/knowledge/inspect-deal.ts` — read tool `{ PlayerAID, PlayerBID, ProposedDeal? }` returning per-term `{ legality, reasons, valueIfIGive, valueIfIReceive }`, per-promise `{ agreeabilityFactors }` (assembled from `get-opinions` / `get-diplomatic-events`, cached per promiser; no DLL verdict), and the tradable range per side. Registered in `tools/index.ts`. Empty stock reasons fall back to a structured message (the minimal-param + wrapper-fallback decision).
+  - `tests/mock/knowledge/inspect-deal.test.ts` — 8 mocked-bridge tests (all green; full mock suite 262 passing).
+
+**Verify** still requires a DLL rebuild + a running game (per the section below). The TypeScript side is unit-tested; the live legality/value path is validated manually in-game.
+
 ## Objective
 
 A single **read-only** tool exposes everything the deal screen (stage 4) and the agents (stage 5) need to reason about a deal — with **no write path yet**. For a given pair of major civs and an **optional constructed deal (including an empty deal)**, `inspect-deal` returns, in one call (specs §3, §6):
