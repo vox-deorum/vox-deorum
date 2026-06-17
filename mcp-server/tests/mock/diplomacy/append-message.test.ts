@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
 import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
-import { setupDiplomacyStore, seedPlayer } from './helpers.js';
+import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 
 // The cache-empty branch falls back to a live Lua fetch; stub it to [] so no bridge is needed.

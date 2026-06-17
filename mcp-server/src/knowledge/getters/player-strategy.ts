@@ -11,7 +11,9 @@ import { composeVisibility } from "../../utils/knowledge/visibility.js";
 const logger = createLogger("ReadPlayerStrategies");
 
 // Create a reusable LuaFunction for reading player strategies
-const readPlayerStrategiesFunction = new LuaFunction(
+let readPlayerStrategiesFunctionInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const readPlayerStrategiesFunction = () => (readPlayerStrategiesFunctionInstance ??= new LuaFunction(
   "readPlayerStrategies",
   ["playerId"],
   `
@@ -31,7 +33,7 @@ const readPlayerStrategiesFunction = new LuaFunction(
       MilitaryStrategies = militaryStrategies
     }
   `
-);
+));
 
 /**
  * Reads the current strategy of a player and stores it in the knowledge database
@@ -46,7 +48,7 @@ export async function getPlayerStrategy(playerId: number): Promise<{
   MilitaryStrategies: string[];
 } | null> {
   // Execute the registered Lua function to get current strategies
-  const result = await readPlayerStrategiesFunction.execute(playerId);
+  const result = await readPlayerStrategiesFunction().execute(playerId);
 
   if (!result || !result.success || !result.result) {
     logger.error(`Failed to read strategies for player ${playerId}`);

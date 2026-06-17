@@ -163,11 +163,13 @@ async function filterBuildings(allBuildings: string[]): Promise<string[]> {
 /**
  * Lua function that extracts city information from the game
  */
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'get-city-information.lua',
   'getCityInformation',
   []
-);
+));
 
 /**
  * Get all city information from the current game
@@ -176,7 +178,7 @@ const luaFunc = LuaFunction.fromFile(
  * @returns Array of CityInformation objects for all cities
  */
 export async function getCityInformations(): Promise<Selectable<CityInformation>[]> {
-  const response = await luaFunc.execute();
+  const response = await luaFunc().execute();
   if (!response.success) {
     logger.error('Failed to get city information from Lua', response);
     return [];

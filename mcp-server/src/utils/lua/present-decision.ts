@@ -21,14 +21,16 @@ const logger = createLogger('PresentDecision');
  * panel. The OptionsReport travels as the structured argument `options`, which
  * arrives in Lua as a table (converted from JSON by the DLL).
  */
-const presentDecisionFunction = new LuaFunction(
+let presentDecisionFunctionInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const presentDecisionFunction = () => (presentDecisionFunctionInstance ??= new LuaFunction(
   "presentHumanDecision",
   ["playerID", "turn", "options"],
   `
     LuaEvents.VoxDeorumHumanDecision(playerID, turn, options)
     return true
   `
-);
+));
 
 /**
  * Present a decision to the human-control panel: fires
@@ -44,7 +46,7 @@ export async function presentHumanDecision(
   turn: number,
   options: object
 ): Promise<LuaResponse> {
-  const response = await presentDecisionFunction.execute(playerID, turn, options);
+  const response = await presentDecisionFunction().execute(playerID, turn, options);
 
   if (response.success) {
     logger.debug(`[Turn ${turn}] Presented decision to player ${playerID}`);

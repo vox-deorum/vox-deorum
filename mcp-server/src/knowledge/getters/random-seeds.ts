@@ -19,14 +19,16 @@ export const RandomSeedsSchema = z.object({
 
 export type RandomSeeds = z.infer<typeof RandomSeedsSchema>;
 
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'get-random-seeds.lua',
   'getRandomSeeds',
   []
-);
+));
 
 export async function getRandomSeeds(): Promise<RandomSeeds | undefined> {
-  const response = await luaFunc.execute();
+  const response = await luaFunc().execute();
   if (!response.success) {
     logger.warn('Failed to retrieve Civ random seeds', response.error);
     return undefined;

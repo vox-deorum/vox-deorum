@@ -7,6 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { MCPServer } from './server.js';
+import { registerDefaultTools } from './tools/index.js';
 import { createLogger } from './utils/logger.js';
 import { config } from './utils/config.js';
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -203,6 +204,8 @@ export async function startHttpServer(setupSignalHandlers = true): Promise<() =>
   try {
     await writeShutdownUrlFile(host, port);
     await mcpServer.initialize();
+    // Register the tool catalog (kept out of server.ts's import graph; see tools/index.ts)
+    registerDefaultTools(mcpServer);
 
     httpServer.keepAliveTimeout = 3600000;
     httpServer.listen(port, host, () => {

@@ -5,6 +5,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { MCPServer } from './server.js';
+import { registerDefaultTools } from './tools/index.js';
 import { createLogger } from './utils/logger.js';
 
 const logger = createLogger('stdio');
@@ -35,6 +36,8 @@ export async function startStdioServer(setupSignalHandlers = true): Promise<() =
 
   try {
     await mcpServer.initialize();
+    // Register the tool catalog (kept out of server.ts's import graph; see tools/index.ts)
+    registerDefaultTools(mcpServer);
     // Create a new McpServer instance for stdio
     mcpServer.createServer(serverId);
     // Connect the server to the transport

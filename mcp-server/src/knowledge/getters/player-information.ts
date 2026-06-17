@@ -13,11 +13,13 @@ const logger = createLogger('PlayerInformation');
 /**
  * Lua function that extracts player information from the game
  */
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'get-player-information.lua',
   'getPlayerInformation',
   []
-);
+));
 
 /**
  * Get all player information from the current game and store it
@@ -26,7 +28,7 @@ const luaFunc = LuaFunction.fromFile(
  * @returns Array of PlayerInformation objects for all active players
  */
 export async function getPlayerInformations(saving: boolean = true): Promise<Selectable<PlayerInformation>[]> {
-  const response = await luaFunc.execute();
+  const response = await luaFunc().execute();
   if (!response.success) {
     return [];
   }

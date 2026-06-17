@@ -12,11 +12,13 @@ import { stripTags } from '../../utils/database/localized.js';
 /**
  * Lua function that extracts victory progress information from the game
  */
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'get-victory-progress.lua',
   'getVictoryProgress',
   []
-);
+));
 
 /**
  * Get victory progress from the current game
@@ -25,7 +27,7 @@ const luaFunc = LuaFunction.fromFile(
  * @returns A single VictoryProgress object
  */
 export async function getVictoryProgress(saving: boolean = true): Promise<Partial<Selectable<VictoryProgress>> | null> {
-  const response = await luaFunc.execute();
+  const response = await luaFunc().execute();
   if (!response.success || !response.result || response.result.length === 0)
     return null;
 

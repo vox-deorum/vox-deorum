@@ -10,7 +10,7 @@ import {
   orderPlayerPair,
   getDiplomaticMessageById,
 } from '../../../src/knowledge/getters/diplomatic-messages.js';
-import { setupDiplomacyStore, seedPlayer } from './helpers.js';
+import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 
 const append = createAppendMessageTool();

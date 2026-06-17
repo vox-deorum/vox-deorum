@@ -21,11 +21,13 @@ export interface GameIdentity {
 /**
  * Lua function that analyzes game identity
  */
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'game-identity.lua',
   'syncGameIdentity',
   ['time', 'uuid']
-);
+));
 
 /**
  * Get or create a unique game ID for the current game session
@@ -33,7 +35,7 @@ const luaFunc = LuaFunction.fromFile(
  * @returns The unique game ID and current turn number
  */
 export async function syncGameIdentity(): Promise<GameIdentity | undefined> {
-  const response = await luaFunc.execute(Date.now(), crypto.randomUUID());
+  const response = await luaFunc().execute(Date.now(), crypto.randomUUID());
   if (!response.success) {
     logger.warn("Sync identity failed!", response.error);
     return undefined;

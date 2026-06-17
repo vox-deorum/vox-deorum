@@ -36,6 +36,7 @@ import createSearchDatabaseTool from "./general/search-database.js";
 import createGetDiplomaticEventsTool from "./knowledge/get-diplomatic-events.js";
 import createAppendMessageTool from "./actions/append-message.js";
 import createReadTranscriptTool from "./knowledge/read-transcript.js";
+import type { MCPServer } from "../server.js";
 
 // Tool factory configuration - one line per tool
 const toolFactories = {
@@ -110,4 +111,18 @@ export const getTool = <K extends keyof typeof toolFactories>(
 ): ReturnType<typeof toolFactories[K]> | undefined => {
     const tools = getTools();
     return tools[name];
+};
+
+/**
+ * Register every tool in the catalog with the given server.
+ *
+ * Tool registration lives here (driven by the transport bootstrap) rather than inside
+ * MCPServer.initialize() so that server.ts never imports the concrete tool graph. The
+ * tools import server.js, so a static import the other way would close the cycle and make
+ * module-evaluation order fragile. The `MCPServer` import above is type-only (erased at
+ * runtime), so this module adds no runtime dependency on server.ts.
+ */
+export const registerDefaultTools = (server: MCPServer): void => {
+    const tools = getTools();
+    Object.values(tools).forEach(tool => server.registerTool(tool));
 };

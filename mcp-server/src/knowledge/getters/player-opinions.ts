@@ -13,11 +13,13 @@ import { composeVisibility } from '../../utils/knowledge/visibility.js';
 /**
  * Lua function that retrieves player opinions to all major civs
  */
-const getPlayerOpinionsFunc = LuaFunction.fromFile(
+let getPlayerOpinionsFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const getPlayerOpinionsFunc = () => (getPlayerOpinionsFuncInstance ??= LuaFunction.fromFile(
   'get-player-opinions.lua',
   'getAllPlayerOpinions',
   ['firstPlayer']
-);
+));
 
 
 /**
@@ -28,7 +30,7 @@ const getPlayerOpinionsFunc = LuaFunction.fromFile(
  */
 export async function getPlayerOpinions(firstPlayer?: number, saving: boolean = true): Promise<Partial<Selectable<PlayerOpinions>> | undefined> {
   if (firstPlayer === undefined) return undefined;
-  const response = await getPlayerOpinionsFunc.execute(firstPlayer);
+  const response = await getPlayerOpinionsFunc().execute(firstPlayer);
   if (!response.success || typeof response.result !== 'object') {
     return undefined;
   }

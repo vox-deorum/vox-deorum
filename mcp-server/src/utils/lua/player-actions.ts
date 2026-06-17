@@ -23,7 +23,9 @@ export function sanitize(text: string): string {
  * Parameters are passed as JSON-serialized values via the bridge batch queue.
  * replayPrefix: false = no replay, "" = replay without prefix, "X" = replay with prefix "X: "
  */
-const actionFunction = new LuaFunction(
+let actionFunctionInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const actionFunction = () => (actionFunctionInstance ??= new LuaFunction(
   "registerAction",
   ["playerID", "actionType", "summary", "rationale", "replayPrefix", "turn"],
   `
@@ -44,19 +46,21 @@ const actionFunction = new LuaFunction(
 
     return true
   `
-);
+));
 
 /**
  * Preregistered Lua function for player info events.
  */
-const playerInfoFunction = new LuaFunction(
+let playerInfoFunctionInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const playerInfoFunction = () => (playerInfoFunctionInstance ??= new LuaFunction(
   "setPlayerInfo",
   ["playerID", "label"],
   `
     LuaEvents.VoxDeorumPlayerInfo(playerID, label)
     return true
   `
-);
+));
 
 /**
  * Push a player action: fires a LuaEvent for observer mods and optionally writes a replay message.
@@ -80,7 +84,7 @@ export async function pushPlayerAction(
 ): Promise<void> {
   const effectiveTurn = turn !== undefined && turn >= 0 ? turn : knowledgeManager.getTurn();
   // Pass false for no replay (Lua falsy), or the prefix string (Lua truthy, including "")
-  const response = await actionFunction.execute(
+  const response = await actionFunction().execute(
     playerID,
     sanitize(actionType),
     sanitize(summary),
@@ -106,7 +110,7 @@ export async function pushPlayerInfo(
   playerID: number,
   label: string
 ): Promise<void> {
-  const response = await playerInfoFunction.execute(playerID, sanitize(label));
+  const response = await playerInfoFunction().execute(playerID, sanitize(label));
 
   if (response.success) {
     logger.debug(`Pushed player info for player ${playerID}: ${label}`);

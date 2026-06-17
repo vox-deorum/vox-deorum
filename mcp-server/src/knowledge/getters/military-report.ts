@@ -14,11 +14,13 @@ const logger = createLogger("getMilitaryReport");
 /**
  * Lua function that extracts military report from the game
  */
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'get-military-report.lua',
   'getMilitaryReport',
   ['playerID']
-);
+));
 
 /**
  * Get military report for a specific player
@@ -32,7 +34,7 @@ export async function getMilitaryReport(
   playerID: number,
   saving: boolean = true
 ): Promise<{ units: any; zones: any } | null> {
-  const response = await luaFunc.execute(playerID);
+  const response = await luaFunc().execute(playerID);
   if (!response.success || !response.result || response.result.length < 2)
     return null;
 

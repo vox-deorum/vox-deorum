@@ -11,7 +11,9 @@ import { composeVisibility } from "../../utils/knowledge/visibility.js";
 const logger = createLogger("ReadPlayerPersona");
 
 // Create a reusable LuaFunction for reading player persona values
-const readPlayerPersonaFunction = new LuaFunction(
+let readPlayerPersonaFunctionInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const readPlayerPersonaFunction = () => (readPlayerPersonaFunctionInstance ??= new LuaFunction(
   "readPlayerPersona",
   ["playerId"],
   `
@@ -26,7 +28,7 @@ const readPlayerPersonaFunction = new LuaFunction(
     -- Return the entire persona table
     return persona
   `
-);
+));
 
 /**
  * Reads the AI persona values of a player and stores them in the knowledge database
@@ -36,7 +38,7 @@ const readPlayerPersonaFunction = new LuaFunction(
  */
 export async function getPlayerPersona(playerId: number): Promise<Partial<PersonaChange> | null> {
   // Execute the registered Lua function to get persona values
-  const result = await readPlayerPersonaFunction.execute(playerId);
+  const result = await readPlayerPersonaFunction().execute(playerId);
 
   if (!result || !result.success || !result.result) {
     logger.error(`Failed to read persona for player ${playerId}`);

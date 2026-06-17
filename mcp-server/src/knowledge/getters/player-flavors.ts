@@ -14,7 +14,9 @@ import { retrieveEnumName } from "../../utils/knowledge/enum.js";
 const logger = createLogger("ReadPlayerFlavors");
 
 // Create a reusable LuaFunction for reading player custom flavors and grand strategy
-const readPlayerFlavorsFunction = new LuaFunction(
+let readPlayerFlavorsFunctionInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const readPlayerFlavorsFunction = () => (readPlayerFlavorsFunctionInstance ??= new LuaFunction(
   "readPlayerFlavors",
   ["playerId"],
   `
@@ -32,7 +34,7 @@ const readPlayerFlavorsFunction = new LuaFunction(
       GrandStrategy = grandStrategy
     }
   `
-);
+));
 
 /**
  * Reads the current custom flavor values and grand strategy, stores them in the knowledge database
@@ -42,7 +44,7 @@ const readPlayerFlavorsFunction = new LuaFunction(
  */
 export async function getPlayerFlavors(playerId: number): Promise<FlavorChange | null> {
   // Execute the Lua function to get custom flavors and grand strategy
-  const result = await readPlayerFlavorsFunction.execute(playerId);
+  const result = await readPlayerFlavorsFunction().execute(playerId);
 
   if (!result || !result.success || !result.result) {
     logger.error(`Failed to read flavors for player ${playerId}`);

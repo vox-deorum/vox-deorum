@@ -13,11 +13,13 @@ import { composeVisibility } from '../../utils/knowledge/visibility.js';
 /**
  * Lua function that extracts player options information from the game
  */
-const luaFunc = LuaFunction.fromFile(
+let luaFuncInstance: LuaFunction | undefined;
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+const luaFunc = () => (luaFuncInstance ??= LuaFunction.fromFile(
   'get-player-options.lua',
   'getPlayerOptions',
   []
-);
+));
 
 /**
  * Convert array of IDs to localized names using the appropriate enum
@@ -47,7 +49,7 @@ function convertToName(id: number | null | undefined, enumType: string): string 
  * @returns Array of PlayerOptions objects for all active players
  */
 export async function getPlayerOptions(saving: boolean = true): Promise<Partial<Selectable<PlayerOptions>>[]> {
-  const response = await luaFunc.execute();
+  const response = await luaFunc().execute();
   if (!response.success)
     return [];
   const store = knowledgeManager.getStore();

@@ -8,7 +8,6 @@ import { createLogger } from './utils/logger.js';
 import { config } from './utils/config.js';
 import { wrapResults } from './utils/mcp.js';
 import { ToolBase } from './tools/base.js';
-import { getTools } from './tools/index.js';
 import { BridgeManager } from './bridge/manager.js';
 import { DatabaseManager } from './database/manager.js';
 import { KnowledgeManager } from './knowledge/manager.js';
@@ -285,9 +284,12 @@ export class MCPServer {
       throw new Error('Failed to connect to Bridge Service: ' + (error instanceof Error ? error.message : "unknown error"), { cause: error });
     }
     
-    // Register all tools
-    const tools = getTools();
-    Object.values(tools).forEach(tool => this.registerTool(tool));
+    // Tool registration is performed by the transport bootstrap (stdio.ts / http.ts) via
+    // registerDefaultTools(), not here: server.ts deliberately does not import the concrete
+    // tool graph. That graph's ActionTool/LuaFunctionTool subclasses import server.js,
+    // closing an import cycle; a static `import { getTools }` here made module evaluation
+    // order-sensitive (a tool's `extends ActionTool` could run while the base was still
+    // undefined). Keeping the catalog out of server.ts's import graph breaks that edge.
 
     // Start the always-on keepalive heartbeat. Without it, a long human pause
     // (human-control mode) could let the MCP client's 600s body timeout lapse
@@ -343,16 +345,63 @@ export class MCPServer {
 }
 
 /**
+ * Lazily resolve a manager singleton on first property access.
+ *
+ * These three managers used to be constructed eagerly at module-evaluation time
+ * (`MCPServer.getInstance()` at import). Because server.ts and the manager / lua-function
+ * modules form an import cycle, that made the whole graph order-sensitive: importing a
+ * cycle member before server.ts had finished evaluating would run `getInstance()` while a
+ * collaborator class was still `undefined`, throwing "X is not a constructor". Deferring
+ * construction to first access removes that hazard while keeping every
+ * `import { knowledgeManager } from '../server.js'` call site (and object identity)
+ * unchanged. Methods are bound to the resolved instance so `this`/private fields behave
+ * exactly as on the raw object.
+ */
+function lazyManager<T extends object>(resolve: () => T): T {
+  let instance: T | undefined;
+  const get = () => (instance ??= resolve());
+  return new Proxy(Object.create(null), {
+    get(_t, prop) {
+      const target = get() as any;
+      const value = target[prop];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    set(_t, prop, value) {
+      (get() as any)[prop] = value;
+      return true;
+    },
+    has(_t, prop) {
+      return prop in (get() as object);
+    },
+    getPrototypeOf() {
+      return Object.getPrototypeOf(get());
+    },
+    getOwnPropertyDescriptor(_t, prop) {
+      const descriptor = Object.getOwnPropertyDescriptor(get(), prop);
+      if (descriptor) descriptor.configurable = true;
+      return descriptor;
+    },
+    defineProperty(_t, prop, descriptor) {
+      Object.defineProperty(get(), prop, descriptor);
+      return true;
+    },
+    ownKeys() {
+      return Reflect.ownKeys(get());
+    },
+  }) as T;
+}
+
+/**
  * Export singleton bridge manager for easy access
  */
-export const bridgeManager = MCPServer.getInstance().getBridgeManager();
+export const bridgeManager = lazyManager(() => MCPServer.getInstance().getBridgeManager());
 
 /**
  * Export singleton database manager for easy access
  */
-export const gameDatabase = MCPServer.getInstance().getDatabaseManager();
+export const gameDatabase = lazyManager(() => MCPServer.getInstance().getDatabaseManager());
 
 /**
  * Export singleton knowledge manager for easy access
  */
-export const knowledgeManager = MCPServer.getInstance().getKnowledgeManager();
+export const knowledgeManager = lazyManager(() => MCPServer.getInstance().getKnowledgeManager());
