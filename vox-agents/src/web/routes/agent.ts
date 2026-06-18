@@ -59,6 +59,24 @@ import {
   appendTranscriptMessage,
   appendCloseMessage,
 } from '../../utils/diplomacy/transcript.js';
+import {
+  inspectDeal,
+  appendDealProposal,
+  appendDealReject,
+  readDealMessages,
+  validateDealForThread,
+} from '../../utils/diplomacy/deal.js';
+// Pinned deal contract — validate request bodies against the same schema mcp-server uses.
+import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import type {
+  InspectDealRequest,
+  InspectDealResponse,
+  DealProposalRequest,
+  DealRejectRequest,
+  DealAcceptRequest,
+  DealActionResponse,
+  DealMessagesResponse,
+} from '../../types/index.js';
 
 const logger = createLogger('webui:agent-routes');
 
@@ -429,6 +447,159 @@ export function createAgentRoutes(): Router {
     } catch (error) {
       logger.error('Failed to close conversation', { error });
       return res.status(500).json({ error: 'Failed to close conversation' });
+    }
+  });
+
+  // ============================================================================
+  // Typed deal-action routes (interactive-diplomacy stage 4)
+  //
+  // Structured deal endpoints — distinct from the plain-text /api/agents/message path.
+  // The Web reaches mcp-server only through these routes (specs §6, no direct Web→mcp
+  // channel). In preview mode the human builds and round-trips proposal/counter (and may
+  // reject/retract); acceptance is wired but deferred to the enactment route (stage 6).
+  // ============================================================================
+
+  /** Resolve a diplomacy thread for a deal action, or send the appropriate error and return undefined. */
+  const resolveDealThread = (chatId: string, res: Response): EnvoyThread | undefined => {
+    const thread = chatSessions.get(chatId);
+    if (!thread) {
+      res.status(404).json({ error: 'Chat thread not found' });
+      return undefined;
+    }
+    if (!thread.diplomacy) {
+      res.status(400).json({ error: 'Only diplomacy conversations support deal actions' });
+      return undefined;
+    }
+    return thread;
+  };
+
+  /** True (and sends a 409) when the conversation is closed-locked for the current turn. */
+  const isDealLocked = (thread: EnvoyThread, res: Response): boolean => {
+    const voxContext = contextRegistry.get<StrategistParameters>(thread.contextId);
+    const currentTurn = currentTurnOf(voxContext) ?? thread.metadata?.turn ?? 0;
+    if (isClosedThisTurn(thread.closeTurn, currentTurn)) {
+      res.status(409).json({ error: 'This conversation was closed this turn and cannot accept deal actions until a later turn.' });
+      return true;
+    }
+    return false;
+  };
+
+  /**
+   * POST /api/agents/chat/:chatId/deal/inspect - Read-only inspection of a (possibly empty)
+   * deal against live game state. Drives the trade screen's tradable range, per-term legality,
+   * value estimates, and live re-evaluation as the human edits the deal. Advisory only (§4).
+   */
+  router.post('/agents/chat/:chatId/deal/inspect', async (req: Request<{ chatId: string }, {}, InspectDealRequest>, res: Response<InspectDealResponse | ErrorResponse>): Promise<Response> => {
+    const thread = resolveDealThread(req.params.chatId, res);
+    if (!thread) return res;
+
+    let deal: InspectDealRequest['deal'];
+    if (req.body?.deal !== undefined) {
+      const parsed = DealPayloadSchema.safeParse(req.body.deal);
+      if (!parsed.success) {
+        return res.status(400).json({ error: `Invalid deal payload: ${parsed.error.message}` });
+      }
+      deal = parsed.data;
+    }
+
+    try {
+      const result = await inspectDeal(thread.player1ID, thread.player2ID, deal);
+      return res.json(result);
+    } catch (error) {
+      logger.error('Failed to inspect deal', { error });
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to inspect deal' });
+    }
+  });
+
+  /**
+   * POST /api/agents/chat/:chatId/deal/propose - Present a deal (deal-proposal).
+   * POST /api/agents/chat/:chatId/deal/counter - Counter a deal (deal-counter).
+   * Both archive the proposed terms (Payload.Deal) plus proposal-time per-item value
+   * snapshots through the durable store. In preview mode the author is the human (audience).
+   */
+  const handleProposal = (messageType: 'deal-proposal' | 'deal-counter') =>
+    async (req: Request<{ chatId: string }, {}, DealProposalRequest>, res: Response<DealActionResponse | ErrorResponse>): Promise<Response> => {
+      const thread = resolveDealThread(req.params.chatId, res);
+      if (!thread) return res;
+      if (isDealLocked(thread, res)) return res;
+
+      const parsed = DealPayloadSchema.safeParse(req.body?.deal);
+      if (!parsed.success) {
+        return res.status(400).json({ error: `Invalid deal payload: ${parsed.error.message}` });
+      }
+      try {
+        validateDealForThread(thread, parsed.data);
+      } catch (error) {
+        return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid deal participants' });
+      }
+
+      const verb = messageType === 'deal-counter' ? 'countered' : 'proposed';
+      const content = req.body?.content?.trim() || `A deal was ${verb}.`;
+      try {
+        const { id, turn } = await appendDealProposal(thread, audienceID(thread), messageType, content, parsed.data);
+        return res.json({ id, messageType, turn });
+      } catch (error) {
+        logger.error(`Failed to append ${messageType}`, { error });
+        return res.status(502).json({ error: error instanceof Error ? error.message : `Failed to append ${messageType}` });
+      }
+    };
+  router.post('/agents/chat/:chatId/deal/propose', handleProposal('deal-proposal'));
+  router.post('/agents/chat/:chatId/deal/counter', handleProposal('deal-counter'));
+
+  /**
+   * POST /api/agents/chat/:chatId/deal/reject - Decline or retract a proposal (deal-reject).
+   * Either endpoint may speak it; in preview the human declines a proposal or retracts its own.
+   */
+  router.post('/agents/chat/:chatId/deal/reject', async (req: Request<{ chatId: string }, {}, DealRejectRequest>, res: Response<DealActionResponse | ErrorResponse>): Promise<Response> => {
+    const thread = resolveDealThread(req.params.chatId, res);
+    if (!thread) return res;
+    if (isDealLocked(thread, res)) return res;
+
+    const proposalMessageID = req.body?.proposalMessageID;
+    if (typeof proposalMessageID !== 'number') {
+      return res.status(400).json({ error: 'proposalMessageID (number) is required' });
+    }
+    const content = req.body?.content?.trim() || 'The deal was rejected.';
+    try {
+      const { id, turn } = await appendDealReject(thread, audienceID(thread), content, proposalMessageID);
+      return res.json({ id, messageType: 'deal-reject', turn });
+    } catch (error) {
+      logger.error('Failed to append deal-reject', { error });
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to append deal-reject' });
+    }
+  });
+
+  /**
+   * POST /api/agents/chat/:chatId/deal/accept - Accept a proposal.
+   *
+   * Wired here, but deferred: acceptance is recorded only by the enactment route
+   * (enact-agent-deal, stage 6), the sole writer of deal-accept / deal-enacted (pinned
+   * contract). In stage-4 preview this acknowledges the intent without a durable write.
+   */
+  router.post('/agents/chat/:chatId/deal/accept', async (req: Request<{ chatId: string }, {}, DealAcceptRequest>, res: Response<ErrorResponse>): Promise<Response> => {
+    const thread = resolveDealThread(req.params.chatId, res);
+    if (!thread) return res;
+    if (typeof req.body?.proposalMessageID !== 'number') {
+      return res.status(400).json({ error: 'proposalMessageID (number) is required' });
+    }
+    return res.status(501).json({
+      error: 'Deal enactment is available from stage 6 (enact-agent-deal). Acceptance is wired but deferred in preview mode.',
+    });
+  });
+
+  /**
+   * GET /api/agents/chat/:chatId/deals - List the conversation's deal messages in append
+   * order. The Web reduces these client-side into the latest active proposal (work item 4).
+   */
+  router.get('/agents/chat/:chatId/deals', async (req: Request<{ chatId: string }>, res: Response<DealMessagesResponse | ErrorResponse>): Promise<Response> => {
+    const thread = resolveDealThread(req.params.chatId, res);
+    if (!thread) return res;
+    try {
+      const messages = await readDealMessages(thread.player1ID, thread.player2ID);
+      return res.json({ messages: messages as DealMessagesResponse['messages'] });
+    } catch (error) {
+      logger.error('Failed to read deal messages', { error });
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to read deal messages' });
     }
   });
 

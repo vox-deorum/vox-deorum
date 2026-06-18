@@ -36,7 +36,15 @@ import type {
   ListChatsResponse,
   GetChatResponse,
   DeleteChatResponse,
-  ChatMessageRequest
+  ChatMessageRequest,
+  // Typed deal-action API (stage 4)
+  InspectDealRequest,
+  InspectDealResponse,
+  DealProposalRequest,
+  DealRejectRequest,
+  DealAcceptRequest,
+  DealActionResponse,
+  DealMessagesResponse
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
 
@@ -480,6 +488,94 @@ class ApiClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message })
       }
+    );
+  }
+
+  // ============= Typed Deal-Action API (interactive-diplomacy stage 4) =============
+
+  /**
+   * Inspect a (possibly empty) deal against live game state. Omit `deal` to get the
+   * tradable range only; pass a constructed deal for per-term legality + value estimates
+   * and per-promise agreeability. Used for the initial trade screen and for live
+   * re-evaluation as the human edits the deal. Advisory only — it gates nothing.
+   */
+  async inspectDeal(chatId: string, request: InspectDealRequest = {}): Promise<InspectDealResponse> {
+    return this.fetchJson<InspectDealResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/inspect`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      }
+    );
+  }
+
+  /**
+   * Present a deal (deal-proposal). The proposed terms round-trip through the durable
+   * store with proposal-time per-item value snapshots computed server-side.
+   */
+  async proposeDeal(chatId: string, request: DealProposalRequest): Promise<DealActionResponse> {
+    return this.fetchJson<DealActionResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/propose`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      }
+    );
+  }
+
+  /**
+   * Counter a deal (deal-counter) — a modified deal presented back to the other side.
+   */
+  async counterDeal(chatId: string, request: DealProposalRequest): Promise<DealActionResponse> {
+    return this.fetchJson<DealActionResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/counter`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      }
+    );
+  }
+
+  /**
+   * Reject (decline or retract) a proposal by the message ID it answers (deal-reject).
+   */
+  async rejectDeal(chatId: string, request: DealRejectRequest): Promise<DealActionResponse> {
+    return this.fetchJson<DealActionResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/reject`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      }
+    );
+  }
+
+  /**
+   * Accept a proposal. Wired in stage 4 but deferred: enactment (and the durable
+   * deal-accept record) arrives with the enactment route in stage 6, so this currently
+   * resolves to a 501 the UI surfaces as "enactment available from stage 6".
+   */
+  async acceptDeal(chatId: string, request: DealAcceptRequest): Promise<DealActionResponse> {
+    return this.fetchJson<DealActionResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/accept`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      }
+    );
+  }
+
+  /**
+   * List the conversation's deal messages (proposal/counter/accept/reject/enacted) in
+   * append order, for client-side reduction into the latest active proposal.
+   */
+  async getDealMessages(chatId: string): Promise<DealMessagesResponse> {
+    return this.fetchJson<DealMessagesResponse>(
+      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deals`
     );
   }
 

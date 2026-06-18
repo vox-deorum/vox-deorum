@@ -88,7 +88,7 @@ export interface PublicKnowledge extends Knowledge {
 export interface TimedKnowledge extends Knowledge, PlayerVisibility {
   Turn: number;
   Payload: JSONColumnType<Record<string, unknown>>;
-  CreatedAt: Generated<number>; // Unix timestamp in milliseconds
+  CreatedAt: Generated<number>; // Unix timestamp in seconds (SQLite unixepoch())
 }
 
 /**

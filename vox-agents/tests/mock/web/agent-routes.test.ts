@@ -135,4 +135,38 @@ describe('agent routes', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe('typed deal-action endpoints on unknown threads', () => {
+    const emptyDeal = { version: 1, items: [], promises: [] };
+
+    it('inspect returns 404', async () => {
+      const res = await request(app).post('/api/agents/chat/missing/deal/inspect').send({});
+      expect(res.status).toBe(404);
+    });
+
+    it('propose returns 404', async () => {
+      const res = await request(app).post('/api/agents/chat/missing/deal/propose').send({ deal: emptyDeal });
+      expect(res.status).toBe(404);
+    });
+
+    it('counter returns 404', async () => {
+      const res = await request(app).post('/api/agents/chat/missing/deal/counter').send({ deal: emptyDeal });
+      expect(res.status).toBe(404);
+    });
+
+    it('reject returns 404', async () => {
+      const res = await request(app).post('/api/agents/chat/missing/deal/reject').send({ proposalMessageID: 1 });
+      expect(res.status).toBe(404);
+    });
+
+    it('accept returns 404', async () => {
+      const res = await request(app).post('/api/agents/chat/missing/deal/accept').send({ proposalMessageID: 1 });
+      expect(res.status).toBe(404);
+    });
+
+    it('list deals returns 404', async () => {
+      const res = await request(app).get('/api/agents/chat/missing/deals');
+      expect(res.status).toBe(404);
+    });
+  });
 });

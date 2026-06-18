@@ -90,7 +90,7 @@ describe('diplomacy transcript helpers', () => {
   describe('hydrateMessages', () => {
     it('should keep text/close and map roles by the voiced seat', () => {
       const transcript = [
-        row({ ID: 1, SpeakerID: 1, Content: 'A speaks', MessageType: 'text', Turn: 5 }),
+        row({ ID: 1, SpeakerID: 1, Content: 'A speaks', MessageType: 'text', Turn: 5, CreatedAt: 2 }),
         row({ ID: 2, SpeakerID: 3, Content: 'B replies', MessageType: 'text', Turn: 5 }),
         row({ ID: 3, SpeakerID: 3, Content: 'farewell', MessageType: 'close', Turn: 6 }),
         row({ ID: 4, SpeakerID: 3, Content: 'deal', MessageType: 'deal-proposal', Turn: 6 }),
@@ -99,6 +99,7 @@ describe('diplomacy transcript helpers', () => {
       expect(result.map(m => m.message.role)).toEqual(['user', 'assistant', 'assistant']);
       expect(result.map(m => m.message.content)).toEqual(['A speaks', 'B replies', 'farewell']);
       expect(result[0].metadata.turn).toBe(5);
+      expect(result[0].metadata.datetime.getTime()).toBe(2000);
     });
   });
 

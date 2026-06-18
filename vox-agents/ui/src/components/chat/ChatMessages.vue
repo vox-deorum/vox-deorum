@@ -14,7 +14,23 @@
       @scroll="handleScroll"
     >
       <template #default="{ item, index }">
+        <DealMessageCard
+          v-if="item.deal"
+          :key="`deal-${item.deal.ID}`"
+          :deal="item.deal"
+          :you-i-d="youID ?? -1"
+          :them-i-d="themID ?? -1"
+          :you-label="userLabel ?? 'You'"
+          :them-label="agentLabel ?? 'Them'"
+          :is-active="item.deal.ID === activeDealID"
+          :status="dealStatus"
+          :locked="dealLocked"
+          @accept="$emit('deal-accept', $event)"
+          @reject="$emit('deal-reject', $event)"
+          @counter="$emit('deal-counter', $event)"
+        />
         <ChatMessage
+          v-else
           :key="`${item.message.role}-${index}`"
           :message="item.message"
           :metadata="item.metadata"
@@ -29,21 +45,39 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from 'vue';
 import { VList } from 'virtua/vue';
-import type { MessageWithMetadata } from '../../utils/types';
 import ChatMessage from './ChatMessage.vue';
+import DealMessageCard from '../deal/DealMessageCard.vue';
+import type { RenderedThreadItem } from '../deal/deal-thread';
+import type { DealStatus } from '../deal/deal-reduce';
 
 interface Props {
-  messages: MessageWithMetadata[];
+  /** Rendered stream items: ordinary chat messages plus interleaved inline deal cards. */
+  messages: RenderedThreadItem[];
   autoScroll?: boolean;
   scrollTrigger?: number;
   userLabel?: string;
   agentLabel?: string;
+  /** Deal-card context: the viewer ("you") and the voiced ("them") endpoint IDs. */
+  youID?: number;
+  themID?: number;
+  /** The latest proposal's message ID — its card shows the live status / actions. */
+  activeDealID?: number;
+  /** Status of the latest proposal: `open` offers actions, else it renders rejected/enacted. */
+  dealStatus?: DealStatus;
+  /** Closed-this-turn lock disables deal-card actions. */
+  dealLocked?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   autoScroll: true,
   scrollTrigger: 0
 });
+
+defineEmits<{
+  (e: 'deal-accept', id: number): void;
+  (e: 'deal-reject', id: number): void;
+  (e: 'deal-counter', id: number): void;
+}>();
 
 // Template refs
 const virtualScroller = ref<InstanceType<typeof VList>>();

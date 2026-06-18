@@ -8,9 +8,12 @@
 import type { Span, TelemetryMetadata, TelemetrySession } from './telemetry.js';
 import type { EnvoyThread } from './chat.js';
 import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
+// Pinned deal contract shared across interactive-diplomacy stages 4–6.
+import type { DealPayload, PerItemValueMap } from '../../../mcp-server/dist/utils/deal-schema.js';
 
 // Re-export types that are used in API responses
 export type { PlayersReport };
+export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap } from '../../../mcp-server/dist/utils/deal-schema.js';
 
 // ============================================================================
 // Core API Response Types
@@ -294,6 +297,104 @@ export interface ChatMessageRequest {
 export interface DeleteChatResponse {
   /** Whether the deletion was successful */
   success: boolean;
+}
+
+// ============================================================================
+// Typed deal-action API (interactive-diplomacy stage 4)
+//
+// These are explicit structured deal endpoints, distinct from the plain-text
+// `/api/agents/message` path. Each lives under `/api/agents/chat/:chatId/deal/*`.
+// In preview mode the human builds and round-trips proposal/counter (and may reject
+// or retract); acceptance is wired but deferred to the enactment route (stage 6).
+// ============================================================================
+
+/**
+ * Request to inspect a (possibly empty) deal against live game state. Omit `deal` to get
+ * the tradable range only; pass a constructed deal for per-term legality + value and
+ * per-promise agreeability. Everything returned is advisory (specs §4).
+ */
+export interface InspectDealRequest {
+  /** Optional constructed deal to evaluate; omit for the tradable range only. */
+  deal?: DealPayload;
+}
+
+/** One inspected trade term (index-aligned with the proposed deal's items). */
+export interface InspectedTradeItem {
+  fromPlayerID: number;
+  toPlayerID: number;
+  itemType: string;
+  /** Structural legality under the same human-to-human semantics as enactment. */
+  legality: boolean;
+  /** Reasons it is untradeable (empty when legal). */
+  reasons: string[];
+  /** Advisory AI value to the giver of parting with it (may be a large sentinel). */
+  valueIfIGive: number;
+  /** Advisory AI value to the receiver of gaining it (may be a large sentinel). */
+  valueIfIReceive: number;
+}
+
+/** The `inspect-deal` result surfaced to the deal screen. */
+export interface InspectDealResponse {
+  /** Per-term legality + both-direction value for the proposed trade items. */
+  items: InspectedTradeItem[];
+  /** Per-promise agreeability factors (advisory raw decision inputs). */
+  promises: unknown[];
+  /** Per side (keyed by player ID as string): the full tradable range it could put on the table. */
+  tradableRange: Record<string, unknown>;
+}
+
+/**
+ * Request to present a deal (`deal-proposal`) or counter (`deal-counter`). The proposed
+ * terms are carried in `deal`; the server computes and stores the proposal-time per-item
+ * value snapshots. `content` is an optional free-text framing line for the transcript.
+ */
+export interface DealProposalRequest {
+  deal: DealPayload;
+  content?: string;
+}
+
+/** Request to reject (decline or retract) an earlier proposal/counter by its message ID. */
+export interface DealRejectRequest {
+  proposalMessageID: number;
+  content?: string;
+}
+
+/** Request to accept an earlier proposal (wired in stage 4, enacted from stage 6). */
+export interface DealAcceptRequest {
+  proposalMessageID: number;
+}
+
+/** Response after a deal-action write: the stored row's id, type, and server-stamped turn. */
+export interface DealActionResponse {
+  id: number;
+  messageType: string;
+  turn?: number;
+}
+
+/** One deal-related transcript message, returned for client-side reduction. */
+export interface DealTranscriptMessage {
+  ID: number;
+  Player1ID: number;
+  Player2ID: number;
+  Player1Role: string;
+  Player2Role: string;
+  SpeakerID: number;
+  MessageType: string;
+  Content: string;
+  Payload: {
+    Deal?: DealPayload;
+    Value1?: PerItemValueMap;
+    Value2?: PerItemValueMap;
+    ProposalMessageID?: number;
+    [key: string]: unknown;
+  };
+  Turn: number;
+  CreatedAt: number;
+}
+
+/** Response listing a conversation's deal messages in append order, for reduction. */
+export interface DealMessagesResponse {
+  messages: DealTranscriptMessage[];
 }
 
 // ============================================================================

@@ -86,7 +86,8 @@ export function hydrateMessages(transcript: TranscriptMessage[], voicedID: numbe
     .filter((m) => CONVERSATION_TYPES.has(m.MessageType))
     .map((m) => ({
       message: { role: speakerRole(m.SpeakerID, voicedID), content: m.Content } as ModelMessage,
-      metadata: { datetime: new Date(m.CreatedAt), turn: m.Turn },
+      // SQLite's unixepoch() stores whole seconds; JavaScript Date expects milliseconds.
+      metadata: { datetime: new Date(m.CreatedAt * 1000), turn: m.Turn },
     }));
 }
 

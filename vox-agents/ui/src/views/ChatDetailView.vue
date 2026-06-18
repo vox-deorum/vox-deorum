@@ -27,6 +27,13 @@ Purpose: Main chat interface for interacting with agents
       </div>
       <div class="page-header-controls">
         <Button
+          v-if="thread?.diplomacy"
+          label="Propose deal"
+          icon="pi pi-briefcase"
+          text
+          @click="showDeal = true"
+        />
+        <Button
           v-if="thread?.diplomacy && !closedThisTurn"
           label="Close conversation"
           icon="pi pi-times-circle"
@@ -49,16 +56,46 @@ Purpose: Main chat interface for interacting with agents
     <div class="messages-wrapper">
       <ChatMessages
         v-if="thread"
-        :messages="visibleMessages"
+        :messages="renderedItems"
         :scroll-trigger="newChunkEvent"
         :user-label="userLabel"
         :agent-label="agentLabel"
+        :you-i-d="audiencePlayerID"
+        :them-i-d="thread.agent"
+        :active-deal-i-d="activeDealID"
+        :deal-status="dealStatus"
+        :deal-locked="closedThisTurn"
+        @deal-accept="onDealAccept"
+        @deal-reject="onDealReject"
+        @deal-counter="onDealCounter"
       />
       <div v-else class="loading-container">
         <ProgressSpinner />
         <p>Loading chat session...</p>
       </div>
     </div>
+
+    <!-- Deal screen: in-game trade-screen replica, shown as a modal over the conversation -->
+    <Dialog
+      v-if="thread?.diplomacy"
+      v-model:visible="showDeal"
+      modal
+      maximizable
+      header="Propose deal"
+      :style="{ width: '92vw', maxWidth: '1100px' }"
+      :draggable="false"
+    >
+      <DealScreen
+        v-if="audiencePlayerID !== undefined"
+        :chatId="sessionId"
+        :leftID="audiencePlayerID"
+        :rightID="thread.agent"
+        :leftLabel="userLabel"
+        :rightLabel="agentLabel"
+        :locked="closedThisTurn"
+        @changed="loadDealMessages"
+      />
+    </Dialog>
 
     <!-- Closed-this-turn notice -->
     <div v-if="closedThisTurn" class="closed-notice">
@@ -101,12 +138,16 @@ import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
+import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { api } from '../api/client';
-import type { EnvoyThread } from '../utils/types';
+import type { EnvoyThread, DealTranscriptMessage } from '../utils/types';
 import ChatMessages from '../components/chat/ChatMessages.vue';
 import DeleteSessionDialog from '../components/DeleteSessionDialog.vue';
+import DealScreen from '../components/deal/DealScreen.vue';
+import { mergeThreadItems, reviveMessageDates } from '../components/deal/deal-thread';
+import { deriveActiveProposal } from '../components/deal/deal-reduce';
 import { useThreadMessages } from '../composables/useThreadMessages';
 
 const route = useRoute();
@@ -122,6 +163,8 @@ const inputMessage = ref('');
 const isStreaming = ref(false);
 const isClosing = ref(false);
 const showDeleteDialog = ref(false);
+const showDeal = ref(false);
+const dealMessages = ref<DealTranscriptMessage[]>([]);
 let sseCleanup: (() => void) | null = null;
 
 // Event emitter for new chunks
@@ -134,12 +177,17 @@ const capitalize = (s?: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) :
 const roleOf = (t: EnvoyThread, id: number) => (id === t.player1ID ? t.player1Role : t.player2Role);
 /** The agent-voiced seat's role IS the executable agent name. */
 const agentName = computed(() => (thread.value ? roleOf(thread.value, thread.value.agent) : undefined));
+/** The audience endpoint's playerID = the non-voiced seat (the human/caller in preview). */
+const audiencePlayerID = computed(() => {
+  const t = thread.value;
+  if (!t) return undefined;
+  return t.player1ID === t.agent ? t.player2ID : t.player1ID;
+});
 /** The audience = the other endpoint. */
 const audienceRole = computed(() => {
   const t = thread.value;
-  if (!t) return undefined;
-  const audienceID = t.player1ID === t.agent ? t.player2ID : t.player1ID;
-  return roleOf(t, audienceID);
+  if (!t || audiencePlayerID.value === undefined) return undefined;
+  return roleOf(t, audiencePlayerID.value);
 });
 /** Label for the caller / audience. */
 const userLabel = computed(() => {
@@ -172,6 +220,18 @@ const visibleMessages = computed(() => {
   });
 });
 
+/** The reduced deal state (latest active proposal + status) from the conversation's deal messages. */
+const dealReduction = computed(() => deriveActiveProposal(dealMessages.value));
+/** The latest proposal's message ID — its card carries the live status (actions only when open). */
+const activeDealID = computed(() => dealReduction.value.active?.ID);
+/** Status of the latest proposal, so its inline card can show open actions vs. rejected/enacted. */
+const dealStatus = computed(() => dealReduction.value.status);
+/** The rendered stream: visible chat messages with deal-message cards interleaved by time. */
+const renderedItems = computed(() => {
+  if (!thread.value) return [];
+  return mergeThreadItems(visibleMessages.value, dealMessages.value, thread.value.agent);
+});
+
 // Use the thread messages composable
 const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
   thread,
@@ -190,12 +250,18 @@ const goBack = () => {
 
 const loadSession = async () => {
   const response = await api.getAgentChat(sessionId.value);
+  // Server-hydrated history carries ISO-string datetimes; revive them to Date so the thread's
+  // timestamps match live-streamed messages (and merge/sort cleanly with deal cards).
+  if (response?.messages) response.messages = reviveMessageDates(response.messages);
   thread.value = response;
   currentTurn.value = response.currentTurn;
   voicedCiv.value = response.voicedCiv;
   audienceCiv.value = response.audienceCiv;
 
   if (!thread.value) return;
+
+  // Load the conversation's deal messages so proposals render inline in the thread.
+  if (thread.value.diplomacy) await loadDealMessages();
 
   // Auto-greet on empty thread or when last message is from a previous game turn
   if (shouldRequestGreeting(thread.value, response.currentTurn)) {
@@ -238,11 +304,48 @@ const confirmDelete = () => {
   showDeleteDialog.value = true;
 };
 
+/** Fetch the conversation's deal messages for inline rendering (diplomacy threads only). */
+const loadDealMessages = async () => {
+  if (!thread.value?.diplomacy) return;
+  try {
+    const res = await api.getDealMessages(sessionId.value);
+    dealMessages.value = res.messages;
+  } catch (err) {
+    console.error('Failed to load deal messages:', err);
+  }
+};
+
+/** Accept the active proposal (wired; enactment deferred to stage 6 — surfaced as a notice). */
+const onDealAccept = async (id: number) => {
+  try {
+    await api.acceptDeal(sessionId.value, { proposalMessageID: id });
+    await loadDealMessages();
+  } catch (err) {
+    toast.add({ severity: 'info', summary: 'Acceptance deferred', detail: err instanceof Error ? err.message : 'Enactment arrives in stage 6', life: 4000 });
+  }
+};
+
+/** Reject (decline or retract) the active proposal from its inline card. */
+const onDealReject = async (id: number) => {
+  try {
+    await api.rejectDeal(sessionId.value, { proposalMessageID: id });
+    await loadDealMessages();
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Failed to reject', detail: err instanceof Error ? err.message : 'Unknown error', life: 4000 });
+  }
+};
+
+/** Counter opens the deal dialog, which loads the active proposal for editing. */
+const onDealCounter = (_id: number) => {
+  showDeal.value = true;
+};
+
 const closeConversation = async () => {
   if (!thread.value || isClosing.value) return;
   isClosing.value = true;
   try {
     const updated = await api.closeAgentChat(sessionId.value);
+    if (updated?.messages) updated.messages = reviveMessageDates(updated.messages);
     thread.value = updated;
     currentTurn.value = updated.currentTurn;
     voicedCiv.value = updated.voicedCiv;
