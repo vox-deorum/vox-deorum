@@ -15,6 +15,10 @@ wired but enactment is deferred to stage 6.
     </div>
 
     <template v-if="isProposal">
+      <div v-if="dealMessage" class="deal-card-message">“{{ dealMessage }}”</div>
+      <div v-if="dealRationale" class="deal-card-rationale" v-tooltip.bottom="dealRationale">
+        <i class="pi pi-comment" /> rationale
+      </div>
       <div class="deal-card-side">
         <span class="deal-card-side-label">{{ youLabel }} give:</span>
         <span class="deal-card-terms">{{ youGiveText }}</span>
@@ -106,6 +110,10 @@ const headline = computed(() => {
   }
 });
 
+/** The one-sentence outward line and inward rationale carried on the draft deal. */
+const dealMessage = computed(() => props.deal.Payload?.Deal?.message ?? '');
+const dealRationale = computed(() => props.deal.Payload?.Deal?.rationale ?? '');
+
 const items = computed<TradeItem[]>(() => props.deal.Payload?.Deal?.items ?? []);
 const labelsFor = (sideID: number) => sideGives(items.value, sideID).map(({ item }) => formatItemLabel(item)).join(', ') || '—';
 const youGiveText = computed(() => labelsFor(props.youID));
@@ -147,6 +155,8 @@ const valueText = computed(() => {
 .deal-card-side { display: flex; gap: 0.4rem; padding: 0.1rem 0; }
 .deal-card-side-label { color: var(--p-text-muted-color); min-width: 7rem; }
 .deal-card-terms { flex: 1; }
+.deal-card-message { font-style: italic; margin-bottom: 0.3rem; }
+.deal-card-rationale { font-size: 0.75rem; color: var(--p-text-muted-color); margin-bottom: 0.3rem; cursor: help; }
 .deal-card-value { font-size: 0.8rem; color: var(--p-text-muted-color); margin-top: 0.25rem; }
 .deal-card-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
 .deal-card-superseded { font-size: 0.75rem; color: var(--p-text-muted-color); margin-top: 0.35rem; font-style: italic; }

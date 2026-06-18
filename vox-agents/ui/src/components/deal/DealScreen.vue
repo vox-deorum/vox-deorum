@@ -144,6 +144,11 @@ acceptance is wired but deferred to enactment (stage 6).
         </div>
       </section>
 
+      <!-- Optional one-sentence note voiced alongside the deal (stored on Payload.Deal.message). -->
+      <div class="deal-message" v-if="!locked">
+        <InputText v-model="dealMessage" class="deal-message-input" placeholder="A line to send with the deal (optional)…" />
+      </div>
+
       <!-- Accept / Counter / Reject against the current proposal -->
       <div class="deal-actions">
         <span v-if="locked" class="deal-muted">Conversation closed this turn — deal actions are locked.</span>
@@ -164,6 +169,7 @@ import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
 import { api } from '@/api/client';
@@ -199,6 +205,8 @@ const toast = useToast();
 
 const emptyDeal = (): DealPayload => ({ version: 1, items: [], promises: [] });
 const workingDeal = ref<DealPayload>(emptyDeal());
+/** Optional one-sentence note the human attaches to the deal (Payload.Deal.message). */
+const dealMessage = ref('');
 const inspection = ref<InspectDealResponse | null>(null);
 const reduction = ref<DealReduction>({ active: null, status: 'none', proposals: [] });
 const inspecting = ref(false);
@@ -432,6 +440,7 @@ const reloadDeals = async () => {
     // Load the active proposal's terms into the editor as the starting point.
     if (reduction.value.active?.Payload?.Deal) {
       workingDeal.value = clone(reduction.value.active.Payload.Deal);
+      dealMessage.value = reduction.value.active.Payload.Deal.message ?? '';
     }
     await runInspect();
   } catch (e) {
@@ -441,10 +450,18 @@ const reloadDeals = async () => {
 
 const afterWrite = async () => { await reloadDeals(); emit('changed'); };
 
+/** Clone the working deal and attach the human's one-sentence note (Payload.Deal.message). */
+const draftToSend = (): DealPayload => {
+  const deal = clone(workingDeal.value);
+  const note = dealMessage.value.trim();
+  if (note) deal.message = note;
+  return deal;
+};
+
 const doPropose = async () => {
   busy.value = true;
   try {
-    await api.proposeDeal(props.chatId, { deal: clone(workingDeal.value) });
+    await api.proposeDeal(props.chatId, { deal: draftToSend() });
     toast.add({ severity: 'success', summary: 'Proposal sent', life: 2500 });
     await afterWrite();
   } catch (e) { actionError(e); } finally { busy.value = false; }
@@ -452,7 +469,7 @@ const doPropose = async () => {
 const doCounter = async () => {
   busy.value = true;
   try {
-    await api.counterDeal(props.chatId, { deal: clone(workingDeal.value) });
+    await api.counterDeal(props.chatId, { deal: draftToSend() });
     toast.add({ severity: 'success', summary: 'Counter sent', life: 2500 });
     await afterWrite();
   } catch (e) { actionError(e); } finally { busy.value = false; }
@@ -521,5 +538,7 @@ onUnmounted(() => {
 .deal-add { display: flex; flex-direction: column; gap: 0.35rem; }
 .deal-add-row { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
 .deal-toggles { flex-wrap: wrap; }
+.deal-message { margin-top: 0.75rem; }
+.deal-message-input { width: 100%; }
 .deal-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
 </style>

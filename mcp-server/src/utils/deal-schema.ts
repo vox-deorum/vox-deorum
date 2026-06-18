@@ -118,6 +118,8 @@ export const DealPayloadSchema = z.object({
   version: z.literal(1).describe("Deal payload schema version"),
   items: z.array(TradeItemSchema).default([]).describe("Ordinary trade terms"),
   promises: z.array(PromiseTermSchema).default([]).describe("Promise commitment terms"),
+  rationale: z.string().optional().describe("Inward reasoning for the proposing diplomat — not game state; ignored by inspect-deal"),
+  message: z.string().optional().describe("One-sentence outward line accompanying the deal — not game state; ignored by inspect-deal"),
 });
 export type DealPayload = z.infer<typeof DealPayloadSchema>;
 

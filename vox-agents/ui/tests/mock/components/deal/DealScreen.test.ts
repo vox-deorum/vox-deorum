@@ -55,6 +55,7 @@ const stubs = {
   Tag: { props: ['value'], template: '<span class="tag">{{ value }}</span>' },
   Select: { props: ['options', 'modelValue'], template: '<span class="select-stub"></span>' },
   InputNumber: { props: ['modelValue'], template: '<span class="number-stub"></span>' },
+  InputText: { props: ['modelValue'], template: '<input class="text-stub" />' },
   Message: { props: ['severity'], template: '<div class="message"><slot /></div>' },
 };
 

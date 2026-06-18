@@ -84,17 +84,18 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 #### Presenting, accepting, countering, rejecting
 
-- A deal enters the conversation through the **diplomat**, never around it, by one of two paths:
-  - **Human proposes or counter-proposes** → the diplomat **sees it first** and **forwards it to the negotiator** with a short **briefing** framing the conversational context — what the human is after, the tenor of the exchange, anything the negotiator (which never reads the free-text thread) would otherwise miss.
-  - **Diplomat itself decides** to put a deal on the table → it **proposes** one to the negotiator directly.
-- Either way, the negotiator inspects, values, and shapes the deal with its tools, then returns its move to the diplomat, which surfaces it to the human.
-  - The negotiator never reads or replies to human free-text.
+- A deal enters the conversation through the **diplomat**, never around it — but the diplomat **only relays context**; the **negotiator is the sole decider of deal terms** (only it has the deal tools and the tradable-item/valuation picture). Two paths:
+  - **Human proposes or counter-proposes** → the diplomat **sees it first** and **relays that on-the-table deal to the negotiator** (`forward-deal`) with a short **briefing** framing the conversational context — what the human is after, the tenor of the exchange, anything the negotiator (which never reads the free-text thread) would otherwise miss.
+  - **Diplomat decides it is time to negotiate** → it **relays the strategic intent + briefing** to the negotiator (`request-deal`) **with no terms**; the negotiator constructs the opening terms.
+- Either way, the negotiator inspects, values, and **shapes** the deal, then returns its move to the diplomat, which surfaces it to the human.
+  - The negotiator never reads or replies to human free-text, and the diplomat never authors deal terms.
+  - A proposal/counter may carry an optional inward **`rationale`** (for the diplomat to reason over) and a one-sentence outward **`message`** (to voice) on its draft deal — the human attaches the `message` alongside the deal; the negotiator writes both.
   - The **diplomat sees every deal as it moves back and forth** — including the negotiator's counters and the per-term estimates — so it can voice each move faithfully and keep its running intelligence current.
 - Either side may, at any point, **present a deal**. The recipient may:
   - **Accept as-is** — both sides have now agreed; the deal is enacted (§4).
   - **Counter** — present a modified deal back, which the other side then accepts, counters, or rejects.
   - **Reject** — the proposal is declined; the conversation continues.
-- These moves are transcript messages, not hidden state. A proposal or counter carries its structured terms in `Payload.Deal`; an accept or reject references the proposal message ID it answers. A successful enactment is recorded as a special `deal-enacted` message carrying `Payload.ProposalMessageID`. The current deal state is derived by reducing the append-ordered transcript, keeping the store append-only and status-free.
+- These moves are transcript messages, not hidden state. A proposal or counter carries its structured terms in `Payload.Deal` (with optional `rationale` / one-sentence `message`); an accept or reject references the proposal message ID it answers. A successful enactment is recorded as a special `deal-enacted` message carrying `Payload.ProposalMessageID`. The current deal state is derived by reducing the append-ordered transcript, keeping the store append-only and status-free.
 
 #### Where deals are shown and stored
 
@@ -102,7 +103,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - **reuses the game's existing diplomatic deal screen in-game** (a later phase), and
   - **recreates that screen on the Web** for the first phase — showing both sides' item tables and, per item, whether it is structurally legal and (if not) why (sourced from `IsPossibleToTradeItem` / `GetReasonsItemUntradeable`).
 - Deals are **stored as proposals, checked as live game state**:
-  - the transcript stores the proposed terms directly in `Payload.Deal`;
+  - the transcript stores the proposed terms directly in `Payload.Deal` (which may also carry an optional `rationale` and one-sentence `message`);
   - proposal messages may also store `Payload.Value1` / `Payload.Value2`, the per-item trade-item value snapshot (item id → value) seen by player 1 and player 2 when the proposal was made (a human side's items are valued by the VP AI too, so its map may be present); the **other side's total value balance** shown on the trade screen is derived by summing these per-item values, recomputed live as the deal is edited — it is not stored;
   - the transcript does not store legality or live DLL state. For display, a proposal is simply a proposal that exists in the conversation; when current legality matters, the deal is reconstructed and inspected in the game on demand (§6). `deal-enacted` records that orchestration succeeded for a proposal; it does not replace live game inspection.
 
@@ -216,19 +217,20 @@ Each LLM player's diplomacy is handled by **two cooperating agents**, both exten
 
 - A **diplomat** — the human's only conversational counterpart, extending the existing `Diplomat` envoy.
   - It exchanges free-text messages, owns the thread, and (as today) gathers intelligence from the conversation as it goes.
-  - Beyond its existing conversational tools (`get-briefing`, `get-diplomatic-events`, and the like), it gains **three new tools**:
-    - **propose-deal** — hand a deal the diplomat itself decided on off to the negotiator;
-    - **forward-deal** — when the human proposes or counter-proposes, pass that deal to the negotiator together with a short briefing of the conversational context;
+  - It **only relays context** to the negotiator and **never authors deal terms**. Beyond its existing conversational tools (`get-briefing`, `get-diplomatic-events`, and the like), it gains **three new tools** — two of them context-relays:
+    - **forward-deal** — when the human proposes or counter-proposes, relay that on-the-table deal to the negotiator together with a short briefing of the conversational context;
+    - **request-deal** — when the diplomat decides it is *time* to pursue a deal, relay the strategic intent + briefing to the negotiator **with no terms**; the negotiator constructs them;
     - **close-conversation** — end the exchange.
-  - It **sees the deal at every step** — the human's proposal, the negotiator's counters, and the per-term estimates (§ Deal valuation visible to both agents) — so it can relay each move faithfully and keep gathering intelligence.
+  - It **sees the deal at every step** — the human's proposal, the negotiator's counters, and the per-term estimates (§ Deal valuation visible to both agents) — so it can voice each move faithfully (elaborating around the negotiator's one-sentence `message`, reasoning from its `rationale`) and keep gathering intelligence.
   - Closing is recorded as a **special message** in the transcript rather than a status flag, and carries a game implication: once the diplomat closes, the conversation **cannot be reopened on the same turn** — the counterpart must wait until a later turn to talk again, giving an LLM diplomat a real way to walk away from a fruitless or hostile exchange.
-- A **negotiator** — a deal specialist equipped with the deal tools: inspect a proposed deal against the civ's strategy and persona, present a counter, accept, or reject, and drive enactment.
-  - To inspect, it fetches **per-term value and agreeability estimates** from the unified mcp-server **inspect-deal** tool (which now returns legality + estimates in one call, § Deal valuation visible to both agents) and weighs them against the civ's strategy.
-  - Because it never reads the conversation, it is grounded two ways:
-    - it receives the diplomat's **briefing** with each forwarded deal;
-    - it carries its own **`get-briefing`** and **`get-diplomatic-events`** tools so it can read the same game and diplomatic state the diplomat sees.
+- A **negotiator** — a deal specialist equipped with the deal tools and the **sole decider of deal terms**: it inspects a proposed deal against the civ's strategy and persona, then presents a counter, accepts, or rejects, and drives enactment.
+  - It is grounded by **three contexts** (it never reads the conversation):
+    - **(1) general game context + strategy/persona** — its own **`get-briefing`** / **`get-diplomatic-events`** tools (the same game and diplomatic state the diplomat sees) plus the diplomat's **briefing** with each relayed deal;
+    - **(2) what is possible to trade and each item's value** — the full tradable range + **per-term legality, value, and agreeability estimates**, run by the loop via **inspect-deal** and placed in the negotiator's context upfront (it does not call the tool itself — § Deal valuation visible to both agents);
+    - **(3) what is on the table** (when not proposing outright) — the active proposal the diplomat relays.
+  - It chooses **exactly one** of **three terminal tools** per invocation, each returning to the diplomat: **accept the deal as-is** (inward `rationale`), **propose / counter a new deal** (inward `rationale` + a one-sentence outward `message`, both stored on the draft deal), or **reject the deal as-is** (inward `rationale`). The `rationale` is the negotiator's reasoning *for the diplomat*; the one-sentence `message` is the ready-to-voice line (only on propose/counter — the diplomat composes the outward wording for accept/reject).
   - It is invoked *by the diplomat* as an agent-tool and **never handles human free-text directly.**
-  - The default runtime shape is a **diplomat⇔negotiator loop**: the diplomat relays the human's intent (with a briefing) in; the negotiator returns its move out.
+  - The default runtime shape is a **diplomat⇔negotiator loop**: the diplomat relays context (with a briefing) in; the negotiator returns one of its three moves out.
 
 #### Per-seat agent selection
 
@@ -280,8 +282,8 @@ Durable transcript storage and the deal bridge:
 
 The diplomat and negotiator agents and the per-seat config generalization:
 
-- A **diplomat envoy** extended with **propose-deal**, **forward-deal** (forward a human-proposed/countered deal to the negotiator with a context briefing), and **close-conversation** tools; it also reads the same per-term `inspect-deal` estimates so it can voice deals and brief accurately.
-- A new deal-aware **negotiator envoy** invoked by the diplomat as an agent-tool (the diplomat⇔negotiator loop); both registered in the agent registry. Its deal artifact is **promise-aware** (trade items + promise commitments); it fetches per-term **value/agreeability estimates** via the unified mcp-server `inspect-deal` tool, receives the diplomat's briefing with each forwarded deal, and carries **`get-briefing`** / **`get-diplomatic-events`** tools to read game and diplomatic state directly.
+- A **diplomat envoy** extended with two context-relay tools — **forward-deal** (relay a human-proposed/countered deal to the negotiator with a context briefing) and **request-deal** (relay strategic intent + briefing, no terms) — plus **close-conversation**. It never authors deal terms, but reads the per-term `inspect-deal` estimates so it can voice deals and brief accurately.
+- A new deal-aware **negotiator envoy**, the sole decider of deal terms, invoked by the diplomat as an agent-tool (the diplomat⇔negotiator loop); both registered in the agent registry. Its deal artifact is **promise-aware** (trade items + promise commitments); per-term **value/agreeability estimates** from `inspect-deal` are run by the loop and placed in its context upfront (it does not call the tool); it receives the diplomat's briefing and carries **`get-briefing`** / **`get-diplomatic-events`** tools to read state directly. It chooses **exactly one** of three terminal tools (accept / propose-or-counter / reject), each returning an inward `rationale`, and propose/counter also a one-sentence outward `message` — both stored on the draft deal.
 - `diplomat` / `negotiator` fields on `PlayerConfig`.
 - Refactoring `EnvoyThread`, chat routes, endpoint labeling, context/parameter resolution, and `getPlayerAssignments` together so the target seat's configured diplomat/negotiator can be shown as defaults while still allowing local operator override.
 - Rewiring the web chat routes to persist transcripts through the mcp-server tools (the in-memory thread becomes a write-through cache).

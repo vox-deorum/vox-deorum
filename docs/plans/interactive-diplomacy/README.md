@@ -4,17 +4,17 @@ This folder holds the interactive-diplomacy feature: the specification ([specs.m
 
 The goal in one line: two major civilizations — each voiced by a human or an LLM — can hold a durable, Web-visible **conversation** and, within it, **negotiate a structured deal** (trade items + diplomatic promises) that, once both sides agree, is **enacted for real** through a new additive DLL entrypoint that honors structural legality but bypasses the AI's political refusal. Implementation **starts from human→LLM on the Web** (§5, §9).
 
-| Stage | Plan | Objective |
-|---|---|---|
-| 1 | [01-transcript-store.md](01-transcript-store.md) | Durable conversation transcript store in mcp-server (messages keyed by game + player pair, ordered by id). |
-| 2 | [02-conversation.md](02-conversation.md) | **Core MVP:** human↔LLM civ-to-civ free-text conversation on the Web, write-through to the store. |
-| 3 | [03-inspect-deal.md](03-inspect-deal.md) | Read-only `inspect-deal`: full tradable range per side + per-term legality + value/agreeability evaluation of any deal (incl. empty); ships the read-only `GetTradeItemValue` Lua getter. |
-| 4 | [04-deal-screen.md](04-deal-screen.md) | Vue deal screen replicating the in-game trade-screen layout, driven by `inspect-deal`. |
-| 5 | [05-negotiator.md](05-negotiator.md) | Negotiator agent + diplomat deal tools + diplomat⇔negotiator loop; both sides reach agreement. |
-| 6 | [06-dll-enact-deal.md](06-dll-enact-deal.md) | **Only gameplay change:** DLL `EnactAgentDeal` (trade items + all nine promises, including Coop War) + the `enact-agent-deal` MCP tool — real enactment flips on. |
-| 7 | [07-ingame-panel.md](07-ingame-panel.md) | *(later phase)* In-game diplomacy panel addon modeled on the human-control panel. |
-| 8 | [08-directions.md](08-directions.md) | *(later phase)* LLM→human + LLM→LLM directions and per-direction config gating. |
-| 9 | [09-additivity-review.md](09-additivity-review.md) | Static review for additivity/comparability (the normal pathway and AI valuation stay untouched). |
+| Stage | Plan | Status | Objective |
+|---|---|---|---|
+| 1 | [01-transcript-store.md](01-transcript-store.md) | ✅ Done | Durable conversation transcript store in mcp-server (messages keyed by game + player pair, ordered by id). |
+| 2 | [02-conversation.md](02-conversation.md) | ✅ Done | **Core MVP:** human↔LLM civ-to-civ free-text conversation on the Web, write-through to the store. |
+| 3 | [03-inspect-deal.md](03-inspect-deal.md) | ✅ Done | Read-only `inspect-deal`: full tradable range per side + per-term legality + value/agreeability evaluation of any deal (incl. empty); ships the read-only `GetTradeItemValue` Lua getter. |
+| 4 | [04-deal-screen.md](04-deal-screen.md) | ✅ Done | Vue deal screen replicating the in-game trade-screen layout, driven by `inspect-deal`. |
+| 5 | [05-negotiator.md](05-negotiator.md) | Next | Negotiator agent + diplomat deal tools + diplomat⇔negotiator loop; both sides reach agreement. |
+| 6 | [06-dll-enact-deal.md](06-dll-enact-deal.md) | Planned | **Only gameplay change:** DLL `EnactAgentDeal` (trade items + all nine promises, including Coop War) + the `enact-agent-deal` MCP tool — real enactment flips on. |
+| 7 | [07-ingame-panel.md](07-ingame-panel.md) | *Later phase* | In-game diplomacy panel addon modeled on the human-control panel. |
+| 8 | [08-directions.md](08-directions.md) | *Later phase* | LLM→human + LLM→LLM directions and per-direction config gating. |
+| 9 | [09-additivity-review.md](09-additivity-review.md) | Planned | Static review for additivity/comparability (the normal pathway and AI valuation stay untouched). |
 
 **Preview-then-enact shape.** Stages 1–2 deliver the conversation MVP. Stages 3–5 build the *entire* deal **inspection + UI + negotiation** experience in a **preview/inspect mode** against live game state — deals can be browsed, constructed, evaluated, countered, and *agreed*, but not yet enacted. Stage 6 — the single, late, isolated DLL **write path** — flips on real enactment and completes the human↔LLM Web v1. Stages 7–8 are the explicitly-deferred later phases (in-game panel, LLM-initiated directions); stage 9 is the closing review.
 
@@ -45,7 +45,7 @@ This MVP-first ordering means no stage leaves a large untested chunk for the end
 
 ## Pinned contracts
 
-- **Deal payload shape** is pinned in stage 3: `Payload.Deal` has `version: 1`, ordinary `items`, and `promises`. Proposal messages may also store `Payload.Value1` / `Payload.Value2` — a per-item value map (item id → value) for each ordered player, the proposal-time `GetTradeItemValue` of each trade item (shape pinned in stage 3), present for a human side as well — but never legality, live DLL state, or a precomputed total (the other-side total value balance is summed on the client from these per-item values).
+- **Deal payload shape** is pinned in stage 3: `Payload.Deal` has `version: 1`, ordinary `items`, `promises`, and the two optional free-text fields `rationale` (inward, for the diplomat) and `message` (a one-sentence outward line). Proposal messages may also store `Payload.Value1` / `Payload.Value2` — a per-item value map (item id → value) for each ordered player, the proposal-time `GetTradeItemValue` of each trade item (shape pinned in stage 3), present for a human side as well — but never legality, live DLL state, or a precomputed total (the other-side total value balance is summed on the client from these per-item values).
 - **Deal message vocabulary** is pinned in stage 1: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, and `deal-enacted`. Proposal/counter messages carry `Payload.Deal`; accept/reject/enacted messages carry `Payload.ProposalMessageID`. **Writer split:** the public `append-message` tool emits everything *except* `deal-accept` and `deal-enacted`, which are written only by the enactment route (`enact-agent-deal`, stage 6). `deal-reject` is emitted by `append-message` and may be spoken by either endpoint (counterparty decline or proposer retraction — there is no separate `deal-retract` type).
 - **Endpoint roles are free-form descriptors** is pinned in stage 1: `Player1Role` / `Player2Role` are free-form strings following the Envoy tradition (`agent` name for an LLM-voiced side, `UserIdentity.role` for a human side, `observer` for the observer endpoint). They are for display and for filtering the transcript by speaker role — they do not encode human-vs-LLM, which is a live game fact.
 - **Agreement and enactment are derived, not stored as status.** Stages 4–6 reduce the append-ordered transcript to find the current active proposal, whether it has been accepted, and whether `enact-agent-deal` already recorded `deal-enacted` for it. There is no status column or thread table; `enact-agent-deal` reads the transcript only to enforce single-enactment (the `deal-enacted` message is the idempotency key) and writes the `deal-enacted` record itself on success.
@@ -54,4 +54,3 @@ This MVP-first ordering means no stage leaves a large untested chunk for the end
 
 - **Per-direction config flags** (stage 8): the exact shape that lets a seat/session enable or disable initiating diplomacy, accepting incoming diplomacy, and each of the three directions — none hard-wired (specs §5).
 - **Negotiator authority** (stage 5): whether anything beyond "authority is baked into the chosen negotiator agent" (specs §7) is needed; the plan assumes no separate ratification-threshold knob.
-- **Web deal-screen parity with the in-game trade screen** (stage 4): the layout is a replica of the in-game screen; settle the exact column/section mapping (both sides' tables, promise terms, per-term legality + estimate) as the component is built — no separate mockup gate.
