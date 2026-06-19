@@ -36,7 +36,8 @@ export async function readTranscript(playerAID: number, playerBID: number): Prom
     PlayerBID: playerBID,
   });
   const raw = result as Record<string, unknown>;
-  const arr = (raw.structuredContent ?? raw) as unknown;
+  const structured = (raw.structuredContent ?? raw) as Record<string, unknown>;
+  const arr = structured?.messages as unknown;
   return Array.isArray(arr) ? (arr as TranscriptMessage[]) : [];
 }
 

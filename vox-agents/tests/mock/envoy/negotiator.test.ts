@@ -30,7 +30,7 @@ import { sessionRegistry } from '../../../src/infra/session-registry.js';
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {
   mcp = installMockMcpClient();
-  mcp.respondWith('read-transcript', structuredResult([]));
+  mcp.respondWith('read-transcript', structuredResult({ messages: [] }));
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -81,7 +81,7 @@ function setOpenProposal(
   speakerID = 1,
   deal = { version: 1 as const, items: [], promises: [] }
 ) {
-  mcp.respondWith('read-transcript', structuredResult([
+  mcp.respondWith('read-transcript', structuredResult({ messages: [
     {
       ID: id,
       Player1ID: 1,
@@ -95,7 +95,7 @@ function setOpenProposal(
       Turn: 5,
       CreatedAt: 0,
     },
-  ]));
+  ] }));
 }
 
 describe('accept-deal', () => {

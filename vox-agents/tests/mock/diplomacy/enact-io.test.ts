@@ -63,11 +63,11 @@ describe('enactAgentDeal', () => {
 
 describe('readActiveProposal', () => {
   it('reads the transcript and reduces to the latest active proposal', async () => {
-    mcp.respondWith('read-transcript', structuredResult([
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
       { ID: 1, MessageType: 'text', Payload: {} },
       { ID: 2, MessageType: 'deal-proposal', Payload: { Deal: { version: 1, items: [], promises: [] } } },
       { ID: 3, MessageType: 'deal-counter', Payload: { Deal: { version: 1, items: [], promises: [] } } },
-    ]));
+    ] }));
     const r = await readActiveProposal(1, 3);
     expect(r.active?.ID).toBe(3);
     expect(r.status).toBe('open');

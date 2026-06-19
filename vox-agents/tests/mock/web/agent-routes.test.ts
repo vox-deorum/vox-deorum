@@ -182,7 +182,7 @@ describe('agent routes', () => {
     /** Open a diplomacy thread backed by the supplied transcript. */
     async function openDiplomacyThread(transcript: unknown[], execute = vi.fn()) {
       const mcp = installMockMcpClient();
-      mcp.respondWith('read-transcript', structuredResult(transcript));
+      mcp.respondWith('read-transcript', structuredResult({ messages: transcript }));
       vi.spyOn(contextRegistry, 'get').mockReturnValue({
         lastParameter: {
           turn: 5,

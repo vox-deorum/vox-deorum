@@ -266,7 +266,7 @@ const DEAL_MESSAGE_TYPES = new Set([
  */
 export async function readDealMessages(playerAID: number, playerBID: number): Promise<TranscriptMessage[]> {
   const result = await mcpClient.callTool("read-transcript", { PlayerAID: playerAID, PlayerBID: playerBID });
-  const arr = unwrap<unknown>(result);
+  const arr = unwrap<{ messages?: unknown }>(result)?.messages;
   if (!Array.isArray(arr)) return [];
   return (arr as TranscriptMessage[]).filter((m) => DEAL_MESSAGE_TYPES.has(m.MessageType));
 }

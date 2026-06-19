@@ -44,7 +44,7 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
 describe('readTranscript', () => {
   it('passes both endpoints and unwraps structuredContent', async () => {
     const rows = [{ ID: 1, Content: 'hi' }];
-    mcp.respondWith('read-transcript', structuredResult(rows));
+    mcp.respondWith('read-transcript', structuredResult({ messages: rows }));
 
     const result = await readTranscript(3, 1);
 
@@ -52,14 +52,14 @@ describe('readTranscript', () => {
     expect(mcp.calls('read-transcript')[0].args).toEqual({ PlayerAID: 3, PlayerBID: 1 });
   });
 
-  it('accepts a bare-array response (no structuredContent wrapper)', async () => {
+  it('accepts a bare object response (no structuredContent wrapper)', async () => {
     const rows = [{ ID: 2 }];
-    mcp.respondWith('read-transcript', rows);
+    mcp.respondWith('read-transcript', { messages: rows });
     expect(await readTranscript(1, 3)).toEqual(rows);
   });
 
-  it('returns [] when the response is not an array', async () => {
-    mcp.respondWith('read-transcript', structuredResult({ not: 'an array' }));
+  it('returns [] when messages is not an array', async () => {
+    mcp.respondWith('read-transcript', structuredResult({ messages: { not: 'an array' } }));
     expect(await readTranscript(1, 3)).toEqual([]);
   });
 });

@@ -160,12 +160,12 @@ describe('appendDealReject', () => {
 
 describe('readDealMessages', () => {
   it('filters the transcript to deal-related message types only', async () => {
-    mcp.respondWith('read-transcript', structuredResult([
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
       { ID: 1, MessageType: 'text' },
       { ID: 2, MessageType: 'deal-proposal' },
       { ID: 3, MessageType: 'close' },
       { ID: 4, MessageType: 'deal-reject' },
-    ]));
+    ] }));
     const out = await readDealMessages(1, 3);
     expect(out.map((m) => m.ID)).toEqual([2, 4]);
   });

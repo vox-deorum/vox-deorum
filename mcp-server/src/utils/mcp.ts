@@ -95,11 +95,14 @@ export function wrapResults(result: unknown): CallToolResult {
     };
   }
 
-  // Handle arrays - call recursively on each element
+  // Handle arrays - call recursively on each element. The MCP spec requires
+  // `structuredContent` to be a record, so a root-level array is omitted from it
+  // (a non-conforming array there fails client-side validation and, for the
+  // strategist, kills the game process). Tools that need structured output should
+  // wrap their list in an object, e.g. `{ messages: [...] }`.
   if (Array.isArray(result)) {
     return {
-      content: result.flatMap(item => wrapResults(item).content), 
-      structuredContent: result as any
+      content: result.flatMap(item => wrapResults(item).content)
     };
   } else if (typeof result === 'object') {
     // Handle objects - serialize to JSON

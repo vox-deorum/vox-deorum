@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { defineComponent } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import AgentSelectDialog from '@/components/AgentSelectDialog.vue'
 
@@ -34,7 +35,7 @@ const AutoComplete = {
   emits: ['update:modelValue', 'complete'],
   template: `<input class="p-autocomplete" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" />`,
 }
-const Select = {
+const Select = defineComponent({
   props: ['modelValue', 'options', 'optionLabel'],
   emits: ['update:modelValue', 'change'],
   methods: {
@@ -47,8 +48,8 @@ const Select = {
     },
   },
   template: `<div class="p-select"><button v-for="(o, i) in options" :key="i" class="opt" @click="pick(o)">{{ label(o) }}</button></div>`,
-}
-const SelectButton = {
+})
+const SelectButton = defineComponent({
   props: ['modelValue', 'options', 'optionLabel', 'optionValue'],
   emits: ['update:modelValue', 'change'],
   methods: {
@@ -59,7 +60,7 @@ const SelectButton = {
     },
   },
   template: `<div class="p-selectbutton"><button v-for="(o, i) in options" :key="i" class="mode-opt" @click="pick(o)">{{ o[optionLabel] }}</button></div>`,
-}
+})
 
 const stubs = { Dialog, Tag, Button, ProgressSpinner, AutoComplete, Select, SelectButton }
 

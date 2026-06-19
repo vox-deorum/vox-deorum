@@ -60,8 +60,8 @@ describe('read-transcript', () => {
   });
 
   it('returns only the requested pair, ordered by ID, regardless of argument order', async () => {
-    const forward = await read.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
-    const reverse = await read.execute({ PlayerAID: 3, PlayerBID: 1 } as any);
+    const forward = (await read.execute({ PlayerAID: 1, PlayerBID: 3 } as any)).messages;
+    const reverse = (await read.execute({ PlayerAID: 3, PlayerBID: 1 } as any)).messages;
 
     expect(forward.map((m) => m.Content)).toEqual(['A', 'B', 'deal']);
     expect(reverse.map((m) => m.Content)).toEqual(['A', 'B', 'deal']);
@@ -70,18 +70,18 @@ describe('read-transcript', () => {
   });
 
   it('filters by MessageType (pushed to SQL)', async () => {
-    const texts = await read.execute({ PlayerAID: 1, PlayerBID: 3, MessageType: 'text' } as any);
+    const texts = (await read.execute({ PlayerAID: 1, PlayerBID: 3, MessageType: 'text' } as any)).messages;
     expect(texts.map((m) => m.Content)).toEqual(['A', 'B']);
   });
 
   it('filters by speaker Role (applied per row)', async () => {
-    const byDiplomat = await read.execute({ PlayerAID: 1, PlayerBID: 3, Role: 'diplomat' } as any);
+    const byDiplomat = (await read.execute({ PlayerAID: 1, PlayerBID: 3, Role: 'diplomat' } as any)).messages;
     // Only messages whose speaker (3) holds the diplomat role.
     expect(byDiplomat.map((m) => m.Content)).toEqual(['A', 'deal']);
   });
 
   it('projects the public message shape (Payload/Turn/CreatedAt, no PlayerN columns)', async () => {
-    const [first] = await read.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const [first] = (await read.execute({ PlayerAID: 1, PlayerBID: 3 } as any)).messages;
     expect(first).toHaveProperty('Payload');
     expect(first).toHaveProperty('Turn', 10);
     expect(first).toHaveProperty('CreatedAt');

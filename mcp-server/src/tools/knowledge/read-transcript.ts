@@ -48,8 +48,11 @@ const TranscriptMessageSchema = z.object({
   CreatedAt: z.number(),
 });
 
-/** Output schema: the ordered list of messages. */
-const ReadTranscriptOutputSchema = z.array(TranscriptMessageSchema);
+/** Output schema: the ordered list of messages, wrapped in an object so the MCP
+ * `structuredContent` is a record (the SDK rejects a root-level array). */
+const ReadTranscriptOutputSchema = z.object({
+  messages: z.array(TranscriptMessageSchema),
+});
 
 /**
  * Tool that reads the ordered transcript between two players.
@@ -76,19 +79,21 @@ class ReadTranscriptTool extends ToolBase {
     });
 
     // Project to the public message shape, dropping per-player visibility columns.
-    return messages.map((m) => ({
-      ID: m.ID,
-      Player1ID: m.Player1ID,
-      Player2ID: m.Player2ID,
-      Player1Role: m.Player1Role,
-      Player2Role: m.Player2Role,
-      SpeakerID: m.SpeakerID,
-      MessageType: m.MessageType,
-      Content: m.Content,
-      Payload: (m.Payload ?? {}) as Record<string, unknown>,
-      Turn: m.Turn,
-      CreatedAt: m.CreatedAt,
-    }));
+    return {
+      messages: messages.map((m) => ({
+        ID: m.ID,
+        Player1ID: m.Player1ID,
+        Player2ID: m.Player2ID,
+        Player1Role: m.Player1Role,
+        Player2Role: m.Player2Role,
+        SpeakerID: m.SpeakerID,
+        MessageType: m.MessageType,
+        Content: m.Content,
+        Payload: (m.Payload ?? {}) as Record<string, unknown>,
+        Turn: m.Turn,
+        CreatedAt: m.CreatedAt,
+      })),
+    };
   }
 }
 
