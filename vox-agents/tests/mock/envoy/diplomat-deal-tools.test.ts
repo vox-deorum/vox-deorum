@@ -65,4 +65,34 @@ describe('formatDealContext', () => {
     expect(out).not.toContain('They will accept because they are weak.');
     expect(out).toContain('Let us make this trade.');
   });
+
+  it('surfaces promise agreeability estimates when present', () => {
+    const deal = {
+      version: 1 as const,
+      items: [],
+      promises: [{ promiserID: 3, recipientID: 1, promiseType: 'SPY' as const }],
+      message: 'We will stop spying if this settles the matter.',
+    };
+    const reduction = deriveActiveProposal([
+      msg('deal-counter', { Deal: deal }, 7),
+    ]);
+
+    const out = formatDealContext(reduction, 3, {
+      items: [],
+      promises: [{
+        promiserID: 3,
+        recipientID: 1,
+        promiseType: 'SPY',
+        agreeabilityFactors: {
+          promiserOpinionOfRecipient: ['FRIENDLY'],
+          note: 'Promise context note',
+        },
+      }],
+      tradableRange: {},
+    })!;
+
+    expect(out).toContain('Promise agreeability estimates');
+    expect(out).toContain('Promise context note');
+    expect(out).toContain('FRIENDLY');
+  });
 });

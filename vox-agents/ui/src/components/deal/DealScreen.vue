@@ -153,10 +153,10 @@ acceptance is wired but deferred to enactment (stage 6).
       <div class="deal-actions">
         <span v-if="locked" class="deal-muted">Conversation closed this turn — deal actions are locked.</span>
         <template v-else>
-          <Button label="Propose" icon="pi pi-send" :loading="busy" :disabled="!hasTerms" @click="doPropose" />
-          <Button v-if="reduction.active" label="Counter" icon="pi pi-replay" severity="secondary" :loading="busy" :disabled="!hasTerms" @click="doCounter" />
-          <Button v-if="reduction.active && reduction.status === 'open'" label="Accept" icon="pi pi-check" severity="success" :loading="busy" @click="doAccept" />
-          <Button v-if="reduction.active && reduction.status === 'open'" label="Reject" icon="pi pi-times-circle" severity="danger" :loading="busy" @click="doReject" />
+          <Button v-if="!hasOpenProposal" label="Propose" icon="pi pi-send" :loading="busy" :disabled="!canPropose" @click="doPropose" />
+          <Button v-if="hasOpenProposal" label="Counter" icon="pi pi-replay" severity="secondary" :loading="busy" :disabled="!canCounter" @click="doCounter" />
+          <Button v-if="hasOpenProposal && !activeAuthoredByViewer" label="Accept" icon="pi pi-check" severity="success" :loading="busy" :disabled="!canAccept" @click="doAccept" />
+          <Button v-if="hasOpenProposal" :label="activeAuthoredByViewer ? 'Retract' : 'Reject'" icon="pi pi-times-circle" severity="danger" :loading="busy" :disabled="!canReject" @click="doReject" />
         </template>
       </div>
     </div>
@@ -279,6 +279,22 @@ const voteModeOptions = [
 ];
 
 const hasTerms = computed(() => workingDeal.value.items.length > 0 || workingDeal.value.promises.length > 0);
+/** The current reducer state says there is one open proposal awaiting a response. */
+const hasOpenProposal = computed(() => reduction.value.active !== null && reduction.value.status === 'open');
+/** The active open offer was authored by the local viewer, so it can be retracted but not accepted. */
+const activeAuthoredByViewer = computed(() => reduction.value.active?.SpeakerID === props.leftID);
+/** State-only guard for opening a fresh proposal; `busy` is layered on for button disabling. */
+const mayPropose = computed(() => hasTerms.value && !hasOpenProposal.value);
+/** State-only guard for answering an open proposal with a counter. */
+const mayCounter = computed(() => hasTerms.value && hasOpenProposal.value);
+/** State-only guard for accepting an incoming open proposal. */
+const mayAccept = computed(() => hasOpenProposal.value && !activeAuthoredByViewer.value);
+/** State-only guard for rejecting or retracting the current open proposal. */
+const mayReject = computed(() => hasOpenProposal.value);
+const canPropose = computed(() => !busy.value && mayPropose.value);
+const canCounter = computed(() => !busy.value && mayCounter.value);
+const canAccept = computed(() => !busy.value && mayAccept.value);
+const canReject = computed(() => !busy.value && mayReject.value);
 
 // ---- range / inspection accessors -------------------------------------------------------
 const rangeFor = (id: number): SideRange | undefined => inspection.value?.tradableRange[String(id)] as SideRange | undefined;
@@ -433,22 +449,34 @@ watch(workingDeal, () => {
 // ---- deal-message round-trip ------------------------------------------------------------
 const clone = (deal: DealPayload): DealPayload => JSON.parse(JSON.stringify(deal));
 
-const reloadDeals = async () => {
+/** Refresh the active proposal reducer, optionally loading the active terms into the editor. */
+const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean> => {
   try {
     const res = await api.getDealMessages(props.chatId);
     reduction.value = deriveActiveProposal(res.messages);
     // Load the active proposal's terms into the editor as the starting point.
-    if (reduction.value.active?.Payload?.Deal) {
+    if (loadActiveIntoEditor && reduction.value.active?.Payload?.Deal) {
       workingDeal.value = clone(reduction.value.active.Payload.Deal);
       dealMessage.value = reduction.value.active.Payload.Deal.message ?? '';
     }
     await runInspect();
+    return true;
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load deal messages';
+    return false;
   }
 };
 
+const reloadDeals = async () => { await refreshDealState(true); };
 const afterWrite = async () => { await reloadDeals(); emit('changed'); };
+
+/** Refresh deal state immediately before a write and report whether the action is still valid. */
+const ensureActionStillValid = async (allowed: () => boolean, summary: string): Promise<boolean> => {
+  if (!(await refreshDealState(false))) return false;
+  if (allowed()) return true;
+  toast.add({ severity: 'warn', summary, detail: 'The deal state changed; review the current proposal first.', life: 3500 });
+  return false;
+};
 
 /** Clone the working deal and attach the human's one-sentence note (Payload.Deal.message). */
 const draftToSend = (): DealPayload => {
@@ -459,8 +487,10 @@ const draftToSend = (): DealPayload => {
 };
 
 const doPropose = async () => {
+  if (busy.value || !mayPropose.value) return;
   busy.value = true;
   try {
+    if (!(await ensureActionStillValid(() => mayPropose.value, 'Cannot propose yet'))) return;
     const result = await api.proposeDeal(props.chatId, { deal: draftToSend() });
     toast.add(result.agentResponded === false
       ? { severity: 'warn', summary: 'Proposal sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
@@ -469,8 +499,10 @@ const doPropose = async () => {
   } catch (e) { actionError(e); } finally { busy.value = false; }
 };
 const doCounter = async () => {
+  if (busy.value || !mayCounter.value) return;
   busy.value = true;
   try {
+    if (!(await ensureActionStillValid(() => mayCounter.value, 'Cannot counter yet'))) return;
     const result = await api.counterDeal(props.chatId, { deal: draftToSend() });
     toast.add(result.agentResponded === false
       ? { severity: 'warn', summary: 'Counter sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
@@ -479,18 +511,22 @@ const doCounter = async () => {
   } catch (e) { actionError(e); } finally { busy.value = false; }
 };
 const doReject = async () => {
-  if (!reduction.value.active) return;
+  if (busy.value || !mayReject.value) return;
   busy.value = true;
   try {
+    if (!(await ensureActionStillValid(() => mayReject.value, activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot reject yet'))) return;
+    if (!reduction.value.active) return;
     await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
-    toast.add({ severity: 'info', summary: 'Proposal rejected', life: 2500 });
+    toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal rejected', life: 2500 });
     await afterWrite();
   } catch (e) { actionError(e); } finally { busy.value = false; }
 };
 const doAccept = async () => {
-  if (!reduction.value.active) return;
+  if (busy.value || !mayAccept.value) return;
   busy.value = true;
   try {
+    if (!(await ensureActionStillValid(() => mayAccept.value, 'Cannot accept yet'))) return;
+    if (!reduction.value.active) return;
     await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
     await afterWrite();
   } catch (e) {

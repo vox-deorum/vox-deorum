@@ -16,7 +16,7 @@
  *    (pinned contract). The accept endpoint is wired in stage 4 but deferred.
  *
  * The per-item value snapshots stored on a proposal (`Payload.Value1` / `Payload.Value2`)
- * are computed here from a fresh `inspect-deal` at proposal time, so the stored snapshot
+ * are computed here from a fresh `inspect-deal` before archival, so the stored snapshot
  * reflects the live `GetTradeItemValue` of each item to each ordered player. The trade
  * screen's other-side total balance is summed from these on the client — never stored as a
  * precomputed total (specs §3, deal-schema PerItemValueMap).
@@ -53,10 +53,26 @@ export interface InspectedTradeItem {
   valueIfIReceive: number;
 }
 
+/** One inspected promise term as `inspect-deal` returns it (index-aligned with promises). */
+export interface InspectedPromise {
+  promiserID: number;
+  recipientID: number;
+  promiseType: string;
+  targetPlayerID?: number;
+  duration?: number;
+  agreeabilityFactors?: {
+    promiserOpinionOfRecipient?: string[];
+    recipientOpinionOfPromiser?: string[];
+    recentDiplomaticEvents?: unknown;
+    note?: string;
+    [key: string]: unknown;
+  };
+}
+
 /** The full `inspect-deal` result for a pair + (optional) proposed deal. */
 export interface InspectDealResult {
   items: InspectedTradeItem[];
-  promises: unknown[];
+  promises: InspectedPromise[];
   /** Per side (keyed by player ID as string): the full tradable range it could put on the table. */
   tradableRange: Record<string, unknown>;
 }
@@ -151,8 +167,9 @@ export function computeValueMaps(
 
 /**
  * Append a `deal-proposal` / `deal-counter` to the durable store, computing and attaching
- * the proposal-time per-item value snapshots from a fresh inspection. The speaker is the
- * endpoint authoring the move (the human/caller in stage-4 preview).
+ * the proposal-time per-item value snapshots from a fresh inspection before the archival
+ * write. The speaker is the endpoint authoring the move (the human/caller in stage-4
+ * preview).
  *
  * @returns the stored row's append ID and server-stamped turn (the values `read-transcript`
  *          will later report), plus the proposal-time inspection when available so an agent
@@ -168,21 +185,22 @@ export async function appendDealProposal(
   // Transcript-shape validation is not best-effort: malformed terms must never be archived.
   validateDealForThread(thread, deal);
 
-  // Best-effort value snapshot: a fresh inspection at proposal time (specs §3). If the game
-  // can't be inspected right now we still archive the proposal — the value maps are optional.
-  let value1: PerItemValueMap | undefined;
-  let value2: PerItemValueMap | undefined;
-  let inspection: InspectDealResult | undefined;
+  // Required value/agreement snapshot: if the game can't inspect this proposal right now,
+  // do not archive a deal the diplomat/negotiator cannot evaluate faithfully.
+  let inspection: InspectDealResult;
   try {
     inspection = await inspectDeal(thread.player1ID, thread.player2ID, deal);
-    ({ value1, value2 } = computeValueMaps(inspection, thread.player1ID, thread.player2ID));
   } catch (error) {
-    logger.warn("Could not compute proposal-time value snapshots; archiving without them", { error });
+    logger.error("Could not inspect proposal before archival", { error });
+    throw new Error(
+      `Could not inspect deal before storing proposal: ${error instanceof Error ? error.message : "unknown error"}`
+    );
   }
+  const { value1, value2 } = computeValueMaps(inspection, thread.player1ID, thread.player2ID);
 
   const payload: Record<string, unknown> = { Deal: deal };
-  if (value1) payload.Value1 = value1;
-  if (value2) payload.Value2 = value2;
+  payload.Value1 = value1;
+  payload.Value2 = value2;
 
   const stored = await appendRaw(thread, speakerID, messageType, content, payload);
   return { ...stored, inspection };

@@ -110,11 +110,38 @@ describe('DealScreen', () => {
     expect(api.proposeDeal).toHaveBeenCalledTimes(1);
     const arg = api.proposeDeal.mock.calls[0]![1];
     expect(arg.deal.items[0]).toMatchObject({ fromPlayerID: 0, toPlayerID: 1, itemType: 'OPEN_BORDERS' });
-    // Reloads after the write.
-    expect(api.getDealMessages).toHaveBeenCalledTimes(2);
+    // Initial load, pre-submit freshness check, then reload after the write.
+    expect(api.getDealMessages).toHaveBeenCalledTimes(3);
   });
 
   it('surfaces an active proposal and offers accept/reject', async () => {
+    api.getDealMessages.mockResolvedValue({
+      messages: [
+        {
+          ID: 9,
+          Player1ID: 0,
+          Player2ID: 1,
+          Player1Role: 'the leader',
+          Player2Role: 'diplomat',
+          SpeakerID: 1,
+          MessageType: 'deal-proposal',
+          Content: '',
+          Payload: { Deal: { version: 1, items: [], promises: [] } },
+          Turn: 1,
+          CreatedAt: 1,
+        },
+      ],
+    });
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    const labels = wrapper.findAll('button').map((b) => b.text());
+    expect(labels).toContain('Accept');
+    expect(labels).toContain('Reject');
+    expect(labels).toContain('Counter');
+  });
+
+  it('offers retract instead of accept for the viewer’s own active proposal', async () => {
     api.getDealMessages.mockResolvedValue({
       messages: [
         {
@@ -136,8 +163,8 @@ describe('DealScreen', () => {
     await flushPromises();
 
     const labels = wrapper.findAll('button').map((b) => b.text());
-    expect(labels).toContain('Accept');
-    expect(labels).toContain('Reject');
+    expect(labels).not.toContain('Accept');
+    expect(labels).toContain('Retract');
     expect(labels).toContain('Counter');
   });
 

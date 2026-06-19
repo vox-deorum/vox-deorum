@@ -108,16 +108,12 @@ describe('appendDealProposal', () => {
     expect((append.args.Payload as Record<string, unknown>).Value2).toEqual({ '0': 25 });
   });
 
-  it('still archives the proposal when inspection fails (value maps optional)', async () => {
+  it('does not archive the proposal when inspection fails', async () => {
     mcp.failWith('inspect-deal', 'game busy');
-    mcp.respondWith('append-message', structuredResult({ ID: 8, Turn: 5 }));
 
-    const out = await appendDealProposal(thread(), 1, 'deal-proposal', 'Offer', emptyDeal);
-    expect(out.id).toBe(8);
-    const payload = mcp.calls('append-message')[0]!.args.Payload as Record<string, unknown>;
-    expect(payload.Deal).toEqual(emptyDeal);
-    expect(payload.Value1).toBeUndefined();
-    expect(payload.Value2).toBeUndefined();
+    await expect(appendDealProposal(thread(), 1, 'deal-proposal', 'Offer', emptyDeal))
+      .rejects.toThrow('Could not inspect deal before storing proposal');
+    expect(mcp.calls('append-message')).toHaveLength(0);
   });
 
   it('rejects terms outside the conversation pair before inspection or archival', async () => {

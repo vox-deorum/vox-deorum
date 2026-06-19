@@ -65,6 +65,7 @@ Purpose: Main chat interface for interacting with agents
         :active-deal-i-d="activeDealID"
         :deal-status="dealStatus"
         :deal-locked="closedThisTurn"
+        :deal-action-busy="dealActionBusy"
         @deal-accept="onDealAccept"
         @deal-reject="onDealReject"
         @deal-counter="onDealCounter"
@@ -165,6 +166,7 @@ const isClosing = ref(false);
 const showDeleteDialog = ref(false);
 const showDeal = ref(false);
 const dealMessages = ref<DealTranscriptMessage[]>([]);
+const dealActionBusy = ref(false);
 let sseCleanup: (() => void) | null = null;
 
 // Event emitter for new chunks
@@ -322,21 +324,29 @@ const loadDealMessages = async () => {
 
 /** Accept the active proposal (wired; enactment deferred to stage 6 — surfaced as a notice). */
 const onDealAccept = async (id: number) => {
+  if (dealActionBusy.value) return;
+  dealActionBusy.value = true;
   try {
     await api.acceptDeal(sessionId.value, { proposalMessageID: id });
-    await loadDealMessages();
+    await refreshConversation();
   } catch (err) {
     toast.add({ severity: 'info', summary: 'Acceptance deferred', detail: err instanceof Error ? err.message : 'Enactment arrives in stage 6', life: 4000 });
+  } finally {
+    dealActionBusy.value = false;
   }
 };
 
 /** Reject (decline or retract) the active proposal from its inline card. */
 const onDealReject = async (id: number) => {
+  if (dealActionBusy.value) return;
+  dealActionBusy.value = true;
   try {
     await api.rejectDeal(sessionId.value, { proposalMessageID: id });
-    await loadDealMessages();
+    await refreshConversation();
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Failed to reject', detail: err instanceof Error ? err.message : 'Unknown error', life: 4000 });
+  } finally {
+    dealActionBusy.value = false;
   }
 };
 

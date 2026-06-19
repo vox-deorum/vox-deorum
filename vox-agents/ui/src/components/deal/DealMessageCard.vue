@@ -39,13 +39,13 @@ wired but enactment is deferred to stage 6.
     <template v-if="isProposal && isActive">
       <div v-if="status === 'open' && !locked" class="deal-card-actions">
         <template v-if="mine">
-          <Button label="Counter" size="small" outlined icon="pi pi-replay" @click="$emit('counter', deal.ID)" />
-          <Button label="Retract" size="small" text severity="danger" icon="pi pi-times-circle" @click="$emit('reject', deal.ID)" />
+          <Button label="Counter" size="small" outlined icon="pi pi-replay" :disabled="busy" @click="$emit('counter', deal.ID)" />
+          <Button label="Retract" size="small" text severity="danger" icon="pi pi-times-circle" :disabled="busy" @click="$emit('reject', deal.ID)" />
         </template>
         <template v-else>
-          <Button label="Accept" size="small" severity="success" icon="pi pi-check" @click="$emit('accept', deal.ID)" />
-          <Button label="Counter" size="small" outlined icon="pi pi-replay" @click="$emit('counter', deal.ID)" />
-          <Button label="Reject" size="small" text severity="danger" icon="pi pi-times-circle" @click="$emit('reject', deal.ID)" />
+          <Button label="Accept" size="small" severity="success" icon="pi pi-check" :disabled="busy" @click="$emit('accept', deal.ID)" />
+          <Button label="Counter" size="small" outlined icon="pi pi-replay" :disabled="busy" @click="$emit('counter', deal.ID)" />
+          <Button label="Reject" size="small" text severity="danger" icon="pi pi-times-circle" :disabled="busy" @click="$emit('reject', deal.ID)" />
         </template>
       </div>
       <div v-else-if="statusNote" class="deal-card-status" :class="statusClass">{{ statusNote }}</div>
@@ -75,7 +75,9 @@ const props = withDefaults(defineProps<{
   status?: DealStatus;
   /** Closed-this-turn lock disables actions. */
   locked?: boolean;
-}>(), { status: 'open' });
+  /** Another deal action is already in flight from this conversation surface. */
+  busy?: boolean;
+}>(), { status: 'open', busy: false });
 
 defineEmits<{ (e: 'accept', id: number): void; (e: 'reject', id: number): void; (e: 'counter', id: number): void }>();
 

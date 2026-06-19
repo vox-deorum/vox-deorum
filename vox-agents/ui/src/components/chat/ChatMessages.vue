@@ -25,6 +25,7 @@
           :is-active="item.deal.ID === activeDealID"
           :status="dealStatus"
           :locked="dealLocked"
+          :busy="dealActionBusy"
           @accept="$emit('deal-accept', $event)"
           @reject="$emit('deal-reject', $event)"
           @counter="$emit('deal-counter', $event)"
@@ -66,6 +67,8 @@ interface Props {
   dealStatus?: DealStatus;
   /** Closed-this-turn lock disables deal-card actions. */
   dealLocked?: boolean;
+  /** A deal action is currently in flight from the parent view. */
+  dealActionBusy?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {

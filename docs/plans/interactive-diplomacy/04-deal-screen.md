@@ -16,7 +16,7 @@ At this stage the screen runs in **preview mode**: the live counterpart that pro
 All under `/api/agents/chat/:chatId/deal/*` ([web/routes/agent.ts](../../../vox-agents/src/web/routes/agent.ts)), distinct from the plain-text `/api/agents/message` path. Closed-this-turn conversations reject deal writes with 409.
 
 - `POST …/deal/inspect` — proxies the read-only `inspect-deal` (Web→vox-agents→mcp-server only); drives the tradable range, per-term legality/value, and live re-evaluation.
-- `POST …/deal/propose` + `…/deal/counter` — archive `deal-proposal` / `deal-counter` through `append-message` carrying `Payload.Deal`; the route computes and attaches proposal-time `Payload.Value1` / `Value2` per-item snapshots from a fresh inspection (best-effort — archives without them if the game can't be inspected).
+- `POST …/deal/propose` + `…/deal/counter` — archive `deal-proposal` / `deal-counter` through `append-message` carrying `Payload.Deal`; the route first runs a fresh inspection and attaches proposal-time `Payload.Value1` / `Value2` per-item snapshots, failing the write if the game cannot inspect the proposal.
 - `POST …/deal/reject` — archives `deal-reject` with `Payload.ProposalMessageID` (either endpoint may decline or retract).
 - `POST …/deal/accept` — wired but **returns 501**: acceptance is recorded only by the enactment route (`enact-agent-deal`, stage 6), the sole writer of `deal-accept` / `deal-enacted` (pinned contract).
 - `GET …/deals` — lists the conversation's deal messages in append order for client-side reduction.
