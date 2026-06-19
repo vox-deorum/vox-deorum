@@ -201,6 +201,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ (e: 'changed'): void }>();
+/**
+ * Whether a deal write is in flight. A two-way model so the parent view shares ONE busy flag
+ * across both deal surfaces (this screen and the inline message-card actions): any in-flight
+ * action disables the controls on both. Defaults to a local-only flag when mounted standalone.
+ */
+const busy = defineModel<boolean>('busy', { default: false });
 const toast = useToast();
 
 const emptyDeal = (): DealPayload => ({ version: 1, items: [], promises: [] });
@@ -210,7 +216,6 @@ const dealMessage = ref('');
 const inspection = ref<InspectDealResponse | null>(null);
 const reduction = ref<DealReduction>({ active: null, status: 'none', proposals: [] });
 const inspecting = ref(false);
-const busy = ref(false);
 const error = ref('');
 
 /** The two sides, in display order: you (left) then them (right). */
@@ -470,10 +475,20 @@ const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean>
 const reloadDeals = async () => { await refreshDealState(true); };
 const afterWrite = async () => { await reloadDeals(); emit('changed'); };
 
-/** Refresh deal state immediately before a write and report whether the action is still valid. */
-const ensureActionStillValid = async (allowed: () => boolean, summary: string): Promise<boolean> => {
+/**
+ * Refresh deal state immediately before a write and report whether the action is still valid.
+ * When `expectedActiveID` is given, the action also aborts if the active proposal changed
+ * identity under us — a counter/reject/accept must target the very proposal the human saw,
+ * not a newer one that arrived between render and submit.
+ */
+const ensureActionStillValid = async (
+  allowed: () => boolean,
+  summary: string,
+  expectedActiveID?: number
+): Promise<boolean> => {
   if (!(await refreshDealState(false))) return false;
-  if (allowed()) return true;
+  const sameTarget = expectedActiveID === undefined || reduction.value.active?.ID === expectedActiveID;
+  if (allowed() && sameTarget) return true;
   toast.add({ severity: 'warn', summary, detail: 'The deal state changed; review the current proposal first.', life: 3500 });
   return false;
 };
@@ -496,25 +511,28 @@ const doPropose = async () => {
       ? { severity: 'warn', summary: 'Proposal sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
       : { severity: 'success', summary: 'Proposal sent', life: 2500 });
     await afterWrite();
-  } catch (e) { actionError(e); } finally { busy.value = false; }
+  } catch (e) { retryableError(e, 'Could not send proposal'); } finally { busy.value = false; }
 };
 const doCounter = async () => {
   if (busy.value || !mayCounter.value) return;
+  // The counter must answer the proposal currently shown; abort if a newer one slips in.
+  const targetID = reduction.value.active?.ID;
   busy.value = true;
   try {
-    if (!(await ensureActionStillValid(() => mayCounter.value, 'Cannot counter yet'))) return;
+    if (!(await ensureActionStillValid(() => mayCounter.value, 'Cannot counter yet', targetID))) return;
     const result = await api.counterDeal(props.chatId, { deal: draftToSend() });
     toast.add(result.agentResponded === false
       ? { severity: 'warn', summary: 'Counter sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
       : { severity: 'success', summary: 'Counter sent', life: 2500 });
     await afterWrite();
-  } catch (e) { actionError(e); } finally { busy.value = false; }
+  } catch (e) { retryableError(e, 'Could not send counter'); } finally { busy.value = false; }
 };
 const doReject = async () => {
   if (busy.value || !mayReject.value) return;
+  const targetID = reduction.value.active?.ID;
   busy.value = true;
   try {
-    if (!(await ensureActionStillValid(() => mayReject.value, activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot reject yet'))) return;
+    if (!(await ensureActionStillValid(() => mayReject.value, activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot reject yet', targetID))) return;
     if (!reduction.value.active) return;
     await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
     toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal rejected', life: 2500 });
@@ -523,9 +541,10 @@ const doReject = async () => {
 };
 const doAccept = async () => {
   if (busy.value || !mayAccept.value) return;
+  const targetID = reduction.value.active?.ID;
   busy.value = true;
   try {
-    if (!(await ensureActionStillValid(() => mayAccept.value, 'Cannot accept yet'))) return;
+    if (!(await ensureActionStillValid(() => mayAccept.value, 'Cannot accept yet', targetID))) return;
     if (!reduction.value.active) return;
     await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
     await afterWrite();
@@ -536,6 +555,15 @@ const doAccept = async () => {
 };
 const actionError = (e: unknown) => {
   toast.add({ severity: 'error', summary: 'Deal action failed', detail: e instanceof Error ? e.message : 'Unknown error', life: 4000 });
+};
+/**
+ * A write that failed transiently (e.g. the game could not be inspected at proposal time) but
+ * left the working draft intact, so the human can resubmit. The buttons re-enable on `busy`
+ * reset — this just tells them the action is safe to retry.
+ */
+const retryableError = (e: unknown, summary: string) => {
+  const reason = e instanceof Error ? e.message : 'Unknown error';
+  toast.add({ severity: 'error', summary, detail: `${reason} — your draft is intact, try again.`, life: 5000 });
 };
 
 onMounted(reloadDeals);

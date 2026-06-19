@@ -48,6 +48,7 @@ import {
 } from "../utils/diplomacy/deal.js";
 import { activeProposalDeal } from "../utils/diplomacy/deal-reduce.js";
 import { resolveNegotiator } from "../utils/diplomacy/resolve-negotiator.js";
+import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import {
   TradeItemSchema,
   PromiseTermSchema,
@@ -113,14 +114,15 @@ function formatInspection(inspection: InspectDealResult): string {
     sections.push(`### On-the-table trade items (per-term legality + AI value, advisory)\n${lines.join("\n")}`);
   }
 
+  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
   if (inspection.promises.length > 0) {
     sections.push(
-      `### On-the-table promises (agreeability factors, advisory)\n${JSON.stringify(inspection.promises, null, 2)}`
+      `### On-the-table promises (agreeability factors, advisory)\n${jsonToMarkdown(inspection.promises)}`
     );
   }
 
   sections.push(
-    `### Tradable range per side (what each civ could put on the table)\n${JSON.stringify(inspection.tradableRange, null, 2)}`
+    `### Tradable range per side (what each civ could put on the table)\n${jsonToMarkdown(inspection.tradableRange)}`
   );
 
   return sections.join("\n\n");
@@ -128,19 +130,19 @@ function formatInspection(inspection: InspectDealResult): string {
 
 /** Format the on-the-table proposed terms (context 3) for the model. */
 function formatActiveProposal(active: ActiveProposalContext): string {
-  return `### The deal on the table (proposal message #${active.messageID})\n${JSON.stringify(
-    { items: active.deal.items, promises: active.deal.promises, message: active.deal.message },
-    null,
-    2
+  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
+  return `### The deal on the table (proposal message #${active.messageID})\n${jsonToMarkdown(
+    { items: active.deal.items, promises: active.deal.promises, message: active.deal.message }
   )}`;
 }
 
 /** Render a newly authored deal's terms and proposal-time estimates for the diplomat. */
 function summarizeAuthoredDeal(move: Extract<NegotiatorMove, { type: "propose" | "counter" }>): string {
-  const lines = [`Terms: ${JSON.stringify({ items: move.deal.items, promises: move.deal.promises })}`];
+  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
+  const lines = [`Terms:\n${jsonToMarkdown({ items: move.deal.items, promises: move.deal.promises })}`];
   if (move.inspection) {
     lines.push(
-      `Proposal-time estimates: ${JSON.stringify({ items: move.inspection.items, promises: move.inspection.promises })}`
+      `Proposal-time estimates:\n${jsonToMarkdown({ items: move.inspection.items, promises: move.inspection.promises })}`
     );
   } else {
     lines.push("Proposal-time estimates were unavailable; describe the stored terms without inventing values.");

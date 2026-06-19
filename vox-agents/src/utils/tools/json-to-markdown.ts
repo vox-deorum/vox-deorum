@@ -3,6 +3,13 @@
  *
  * Utility for transforming JSON objects into markdown format with configurable heading levels.
  * Supports custom formatters, heading levels, and nested list generation for complex data structures.
+ *
+ * CONVENTION: this is the one converter for rendering structured data into MODEL CONTEXT.
+ * Never feed `JSON.stringify` output to a model (system prompts, user turns, tool-result text,
+ * briefings) — models read markdown far better than brace-and-quote JSON, and we have an
+ * automatic converter for it. Reserve `JSON.stringify` for machine-facing sinks only:
+ * telemetry/span attributes, log lines, file/cache persistence, SSE frames, request bodies,
+ * and the literal JSON tool-call format taught to models without native tool calling.
  */
 
 /**

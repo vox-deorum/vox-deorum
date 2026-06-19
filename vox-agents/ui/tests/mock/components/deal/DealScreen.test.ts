@@ -168,6 +168,29 @@ describe('DealScreen', () => {
     expect(labels).toContain('Counter');
   });
 
+  it('does not counter when the active proposal changed identity before submit', async () => {
+    const proposal = (id: number) => ({
+      ID: id, Player1ID: 0, Player2ID: 1, Player1Role: 'the leader', Player2Role: 'diplomat',
+      SpeakerID: 1, MessageType: 'deal-proposal', Content: '',
+      Payload: { Deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS' }], promises: [] } },
+      Turn: 1, CreatedAt: 1,
+    });
+    // Initial render shows proposal #9; the pre-submit freshness check sees a newer #10 arrive.
+    api.getDealMessages
+      .mockResolvedValueOnce({ messages: [proposal(9)] })
+      .mockResolvedValueOnce({ messages: [proposal(9), proposal(10)] });
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    const counterBtn = wrapper.findAll('button').find((b) => b.text() === 'Counter');
+    expect(counterBtn).toBeTruthy();
+    await counterBtn!.trigger('click');
+    await flushPromises();
+
+    // The counter targeted #9 but #10 is now active — abort rather than answer the wrong proposal.
+    expect(api.counterDeal).not.toHaveBeenCalled();
+  });
+
   it('renders third-party and explicit vote-commitment controls', async () => {
     api.inspectDeal.mockResolvedValue({
       items: [],

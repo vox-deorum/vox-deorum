@@ -12,6 +12,7 @@ import type { EnvoyThread } from "../types/index.js";
 import { deriveActiveProposal, type DealReduction } from "../utils/diplomacy/deal-reduce.js";
 import { inspectDeal, readDealMessages, type InspectDealResult } from "../utils/diplomacy/deal.js";
 import { createLogger } from "../utils/logger.js";
+import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import type { DealPayload, PerItemValueMap } from "../../../mcp-server/dist/utils/deal-schema.js";
 
 const logger = createLogger("diplomat-deal-tools");
@@ -27,7 +28,8 @@ function formatValueMap(label: string, map: PerItemValueMap | undefined): string
 function formatPromiseAgreeability(deal: DealPayload, inspection: InspectDealResult | undefined): string | undefined {
   if (deal.promises.length === 0) return undefined;
   if (!inspection) return "Promise agreeability estimates are unavailable right now.";
-  return `Promise agreeability estimates: ${JSON.stringify(inspection.promises)}`;
+  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
+  return `Promise agreeability estimates:\n${jsonToMarkdown(inspection.promises)}`;
 }
 
 /**
@@ -51,7 +53,8 @@ export function formatDealContext(
 
   const lines: string[] = [
     `# Deal on the table (${active.MessageType}, message #${active.ID}, status: ${reduction.status})`,
-    `Terms: ${JSON.stringify({ items: deal.items, promises: deal.promises })}`,
+    // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
+    `Terms:\n${jsonToMarkdown({ items: deal.items, promises: deal.promises })}`,
   ];
   if (active.SpeakerID === viewerID && deal.rationale) {
     lines.push(`Your negotiator's rationale (for you, do not quote): ${deal.rationale}`);

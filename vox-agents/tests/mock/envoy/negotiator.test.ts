@@ -392,7 +392,7 @@ describe('getOutput', () => {
     const out = await negotiator.getOutput({} as any, input, '');
     expect(out).toContain('PROPOSAL');
     expect(out).toContain('deal message #11');
-    expect(out).toContain('"itemType":"GOLD"');
+    expect(out).toContain('itemType: GOLD');
   });
 
   it('returns undefined when no terminal tool recorded a move', async () => {

@@ -94,6 +94,7 @@ Purpose: Main chat interface for interacting with agents
         :leftLabel="userLabel"
         :rightLabel="agentLabel"
         :locked="closedThisTurn"
+        v-model:busy="dealActionBusy"
         @changed="refreshConversation"
       />
     </Dialog>

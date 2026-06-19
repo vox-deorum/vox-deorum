@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { TelepathistTool, inquiryField } from '../telepathist-tool.js';
 import { TelepathistParameters } from '../telepathist-parameters.js';
 import { cleanToolArtifacts, formatToolCallText, formatToolResultText } from '../../utils/models/text-cleaning.js';
+import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
 import type { Span } from '../../utils/telemetry/schema.js';
 
 const inputSchema = z.object({
@@ -158,7 +159,8 @@ export class GetConversationLogTool extends TelepathistTool<GetConversationLogIn
             } else if (part.type === 'tool-call') {
               textParts.push(formatToolCallText(part.toolName, part.args));
             } else if (part.type === 'tool-result') {
-              const resultText = typeof part.result === 'string' ? part.result : JSON.stringify(part.result);
+              // Model context — render object results as markdown, never JSON (see json-to-markdown).
+              const resultText = typeof part.result === 'string' ? part.result : jsonToMarkdown(part.result);
               textParts.push(formatToolResultText(part.toolName ?? 'unknown', resultText));
             }
           }
