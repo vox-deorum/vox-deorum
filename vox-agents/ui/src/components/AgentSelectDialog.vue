@@ -6,7 +6,7 @@
  * Used in ChatView, TelemetrySessionView, TelemetryDatabaseView, and TelemetryTraceView.
  */
 
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
@@ -66,10 +66,11 @@ const filteredRoles = ref<string[]>([]);
 const selectedPlayerOption = ref<PlayerOption | null>(null);
 const playersLoading = ref(false);
 const playerOptions = ref<PlayerOption[]>([]);
+/** Civilization name per player id, used to title the dialog after the chosen seat. */
+const playerCivs = ref<Record<number, string>>({});
 
 // Diplomacy form state
 const assignments = ref<Record<number, PlayerAssignment>>({});
-const diplomacyTarget = ref<PlayerOption | null>(null);
 const diplomacyInitiator = ref<PlayerOption | null>(null);
 const voiceOverride = ref<AgentInfo | null>(null);
 const initiatorRole = ref('the leader');
@@ -77,11 +78,27 @@ const initiatorRole = ref('the leader');
 /** Major-civ player options (no observer) for the diplomacy selectors. */
 const civPlayerOptions = computed(() => playerOptions.value.filter(o => o.value !== 'observer'));
 
+/**
+ * The LLM-voiced target seat is the civ whose session the operator chose — encoded as the
+ * trailing player id of the contextId (`{gameID}-player-{playerID}`). It is not a free choice.
+ */
+const derivedTargetPlayerID = computed<number | null>(() => {
+  if (!props.contextId) return null;
+  const id = parseInt(props.contextId.split('-').pop() ?? '', 10);
+  return Number.isNaN(id) ? null : id;
+});
+
+/** Bare civilization name of the chosen seat (e.g. "Rome"), empty until players load. */
+const targetCivName = computed(() => {
+  const id = derivedTargetPlayerID.value;
+  return id === null ? '' : (playerCivs.value[id] ?? '');
+});
+
 /** Whether the diplomacy form is complete enough to open a conversation. */
 const canStartDiplomacy = computed(() =>
-  diplomacyTarget.value !== null &&
+  derivedTargetPlayerID.value !== null &&
   diplomacyInitiator.value !== null &&
-  diplomacyTarget.value.value !== diplomacyInitiator.value.value
+  derivedTargetPlayerID.value !== diplomacyInitiator.value.value
 );
 
 // Computed properties
@@ -91,7 +108,9 @@ const dialogVisible = computed({
 });
 
 const dialogTitle = computed(() => {
-  return currentStep.value === 'agent' ? 'Select Agent' : 'Your Identity';
+  if (currentStep.value === 'identity') return 'Your Identity';
+  if (props.contextId && targetCivName.value) return `Chat with ${targetCivName.value}`;
+  return 'Select Agent';
 });
 
 const contextType = computed(() => {
@@ -101,9 +120,7 @@ const contextType = computed(() => {
 });
 
 const contextName = computed(() => {
-  if (props.contextId) {
-    return props.contextId;
-  } else if (props.databasePath) {
+  if (props.databasePath) {
     return props.databasePath.split(/[/\\]/).pop() || props.databasePath;
   }
   return '';
@@ -139,6 +156,12 @@ const filteredAgents = computed(() => {
   });
 });
 
+/**
+ * Agents offered for direct chat or as a diplomacy voice. Excludes behind-the-scenes
+ * specialists like the negotiator, which work for the diplomat and never address you.
+ */
+const chattableAgents = computed(() => filteredAgents.value.filter(a => a.name !== 'negotiator'));
+
 // Methods
 async function loadAgents() {
   loading.value = true;
@@ -169,15 +192,19 @@ async function loadPlayerOptions() {
   try {
     const response = await apiClient.getPlayersSummary();
     const options: PlayerOption[] = [];
+    const civs: Record<number, string> = {};
 
     for (const [playerId, data] of Object.entries(response.players)) {
       if (typeof data === 'object' && data !== null) {
+        const id = parseInt(playerId);
         options.push({
           label: `${data.Leader} of ${data.Civilization}`,
-          value: parseInt(playerId)
+          value: id
         });
+        civs[id] = data.Civilization;
       }
     }
+    playerCivs.value = civs;
 
     options.push(observerOption);
     playerOptions.value = options;
@@ -189,6 +216,9 @@ async function loadPlayerOptions() {
     if (humanSeat) {
       diplomacyInitiator.value = options.find(o => o.value === parseInt(humanSeat[0])) ?? null;
     }
+
+    // Default the voice to the (derived) target seat's configured diplomat.
+    applyTargetVoiceDefault();
   } catch (err) {
     console.error('Failed to load players:', err);
     // Gracefully degrade: show only observer
@@ -198,11 +228,11 @@ async function loadPlayerOptions() {
   }
 }
 
-/** When the target civ changes, default the voice to that seat's configured diplomat. */
-function onDiplomacyTargetChange() {
-  const target = diplomacyTarget.value;
-  if (!target || target.value === 'observer') return;
-  const diplomatName = assignments.value[target.value as number]?.diplomat;
+/** Default the voice to the derived target seat's configured diplomat. */
+function applyTargetVoiceDefault() {
+  const target = derivedTargetPlayerID.value;
+  if (target === null) return;
+  const diplomatName = assignments.value[target]?.diplomat;
   voiceOverride.value = diplomatName
     ? (agents.value.find(a => a.name === diplomatName) ?? null)
     : null;
@@ -218,7 +248,7 @@ async function confirmDiplomacy() {
     const request: CreateChatRequest = {
       mode: 'diplomacy',
       contextId: props.contextId,
-      targetPlayerID: diplomacyTarget.value!.value as number,
+      targetPlayerID: derivedTargetPlayerID.value!,
       initiatorPlayerID: diplomacyInitiator.value!.value as number,
       callerRole: initiatorRole.value.trim() || undefined,
     };
@@ -278,10 +308,11 @@ function closeDialog() {
   conversationMode.value = 'observer';
   userRole.value = '';
   selectedPlayerOption.value = null;
-  diplomacyTarget.value = null;
   diplomacyInitiator.value = null;
   voiceOverride.value = null;
   initiatorRole.value = 'the leader';
+  // Drop the cached seat civ so reopening for a different session re-resolves the title.
+  playerCivs.value = {};
   error.value = null;
 }
 
@@ -352,6 +383,17 @@ async function confirmSelection() {
 onMounted(() => {
   loadAgents();
 });
+
+// Resolve the chosen seat's civilization as soon as the dialog opens so the header can
+// title itself "Chat with {civ}" regardless of conversation mode.
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && props.contextId && Object.keys(playerCivs.value).length === 0) {
+      loadPlayerOptions();
+    }
+  }
+);
 </script>
 
 <template>
@@ -367,7 +409,7 @@ onMounted(() => {
       <h2>{{ dialogTitle }}</h2>
       <div class="context-tags">
         <Tag :value="contextType" severity="info" />
-        <Tag v-if="contextName" :value="contextName" />
+        <Tag v-if="!props.contextId && contextName" :value="contextName" />
         <Tag v-if="contextTurn !== undefined" :value="`Turn ${contextTurn}`" severity="secondary" />
         <Tag v-if="contextSpanName" :value="contextSpanName" severity="contrast" />
       </div>
@@ -403,17 +445,6 @@ onMounted(() => {
       <!-- Diplomacy form -->
       <div v-else-if="conversationMode === 'diplomacy'" class="identity-step">
         <div class="identity-form">
-          <label for="dipl-target">Target civilization (LLM-voiced)</label>
-          <Select
-            id="dipl-target"
-            v-model="diplomacyTarget"
-            :options="civPlayerOptions"
-            optionLabel="label"
-            placeholder="Select the civilization to talk to..."
-            :loading="playersLoading"
-            @change="onDiplomacyTargetChange"
-          />
-
           <label for="dipl-initiator">Speaking as (your seat)</label>
           <Select
             id="dipl-initiator"
@@ -438,7 +469,7 @@ onMounted(() => {
           <Select
             id="dipl-voice"
             v-model="voiceOverride"
-            :options="filteredAgents"
+            :options="chattableAgents"
             optionLabel="name"
             placeholder="Use the configured diplomat"
             showClear
@@ -457,12 +488,12 @@ onMounted(() => {
 
         <!-- Table body -->
         <div class="table-body">
-          <div v-if="filteredAgents.length === 0" class="table-empty">
+          <div v-if="chattableAgents.length === 0" class="table-empty">
             <i class="pi pi-inbox"></i>
             <p>No agents available</p>
           </div>
           <div
-            v-for="agent in filteredAgents"
+            v-for="agent in chattableAgents"
             :key="agent.name"
             class="table-row clickable"
             :class="{ 'selected': selectedAgent?.name === agent.name }"

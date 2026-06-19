@@ -489,6 +489,228 @@
     }
   },
   {
+    "name": "inspect-deal",
+    "description": "Read-only inspection of a draft deal and potential options between two major civs, including evaluated values.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "PlayerAID": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21,
+          "description": "One major-civ player ID"
+        },
+        "PlayerBID": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21,
+          "description": "The other major-civ player ID"
+        },
+        "ProposedDeal": {
+          "description": "Optional constructed deal to evaluate (items + promises). Omit or pass an empty deal to get the tradable range only.",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1,
+              "description": "Deal payload schema version"
+            },
+            "items": {
+              "default": [],
+              "description": "Ordinary trade terms",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fromPlayerID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side giving this item"
+                  },
+                  "toPlayerID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side receiving this item"
+                  },
+                  "itemType": {
+                    "type": "string",
+                    "enum": [
+                      "GOLD",
+                      "GOLD_PER_TURN",
+                      "MAPS",
+                      "RESOURCES",
+                      "CITIES",
+                      "OPEN_BORDERS",
+                      "DEFENSIVE_PACT",
+                      "RESEARCH_AGREEMENT",
+                      "PEACE_TREATY",
+                      "THIRD_PARTY_PEACE",
+                      "THIRD_PARTY_WAR",
+                      "ALLOW_EMBASSY",
+                      "DECLARATION_OF_FRIENDSHIP",
+                      "VOTE_COMMITMENT",
+                      "TECHS",
+                      "VASSALAGE",
+                      "VASSALAGE_REVOKE"
+                    ],
+                    "description": "Trade item type"
+                  },
+                  "amount": {
+                    "description": "Gold or gold-per-turn amount",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "duration": {
+                    "description": "Duration in turns (defaults to the game's deal duration)",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "resourceID": {
+                    "description": "RESOURCES: the resource type ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "quantity": {
+                    "description": "RESOURCES: quantity per turn",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "cityID": {
+                    "description": "CITIES: the giver's city ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "thirdPartyTeamID": {
+                    "description": "THIRD_PARTY_PEACE/WAR: the third-party team ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "techID": {
+                    "description": "TECHS: the technology ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "resolutionID": {
+                    "description": "VOTE_COMMITMENT: the World Congress resolution ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "voteChoice": {
+                    "description": "VOTE_COMMITMENT: the vote choice",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "numVotes": {
+                    "description": "VOTE_COMMITMENT: number of votes",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "repeal": {
+                    "description": "VOTE_COMMITMENT: true to repeal rather than enact",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "fromPlayerID",
+                  "toPlayerID",
+                  "itemType"
+                ]
+              }
+            },
+            "promises": {
+              "default": [],
+              "description": "Promise commitment terms",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "promiserID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side making the pledge"
+                  },
+                  "recipientID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side the pledge is made toward"
+                  },
+                  "promiseType": {
+                    "type": "string",
+                    "enum": [
+                      "MILITARY",
+                      "EXPANSION",
+                      "BORDER",
+                      "NO_CONVERT",
+                      "NO_DIGGING",
+                      "SPY",
+                      "BULLY_CITY_STATE",
+                      "ATTACK_CITY_STATE",
+                      "COOP_WAR"
+                    ],
+                    "description": "Promise type"
+                  },
+                  "targetPlayerID": {
+                    "description": "Third party for Coop War / city-state-related promises",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "duration": {
+                    "description": "Optional duration in turns",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "promiserID",
+                  "recipientID",
+                  "promiseType"
+                ]
+              }
+            },
+            "rationale": {
+              "description": "Inward reasoning for the proposing diplomat — not game state; ignored by inspect-deal",
+              "type": "string"
+            },
+            "message": {
+              "description": "One-sentence outward line accompanying the deal — not game state; ignored by inspect-deal",
+              "type": "string"
+            }
+          },
+          "required": [
+            "version"
+          ]
+        }
+      },
+      "required": [
+        "PlayerAID",
+        "PlayerBID"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "autoComplete": [
+        "PlayerAID",
+        "PlayerBID"
+      ]
+    }
+  },
+  {
     "name": "get-players",
     "description": "Retrieves a list of in-game players and their summary information",
     "inputSchema": {
@@ -1267,6 +1489,228 @@
         "SpeakerID",
         "MessageType"
       ]
+    }
+  },
+  {
+    "name": "enact-agent-deal",
+    "description": "Enact an agreed agent deal by proposal message ID, recording acceptance and enactment in the transcript. STUB: does not yet apply in-game effects (DLL enactment arrives in stage 6).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ProposalMessageID": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991,
+          "description": "Append ID of the deal-proposal / deal-counter being enacted"
+        },
+        "Deal": {
+          "description": "Optional complete deal object. Omit to enact the terms stored on the referenced proposal. (Stage 6 uses this for DLL enactment.)",
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "number",
+              "const": 1,
+              "description": "Deal payload schema version"
+            },
+            "items": {
+              "default": [],
+              "description": "Ordinary trade terms",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fromPlayerID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side giving this item"
+                  },
+                  "toPlayerID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side receiving this item"
+                  },
+                  "itemType": {
+                    "type": "string",
+                    "enum": [
+                      "GOLD",
+                      "GOLD_PER_TURN",
+                      "MAPS",
+                      "RESOURCES",
+                      "CITIES",
+                      "OPEN_BORDERS",
+                      "DEFENSIVE_PACT",
+                      "RESEARCH_AGREEMENT",
+                      "PEACE_TREATY",
+                      "THIRD_PARTY_PEACE",
+                      "THIRD_PARTY_WAR",
+                      "ALLOW_EMBASSY",
+                      "DECLARATION_OF_FRIENDSHIP",
+                      "VOTE_COMMITMENT",
+                      "TECHS",
+                      "VASSALAGE",
+                      "VASSALAGE_REVOKE"
+                    ],
+                    "description": "Trade item type"
+                  },
+                  "amount": {
+                    "description": "Gold or gold-per-turn amount",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "duration": {
+                    "description": "Duration in turns (defaults to the game's deal duration)",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "resourceID": {
+                    "description": "RESOURCES: the resource type ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "quantity": {
+                    "description": "RESOURCES: quantity per turn",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "cityID": {
+                    "description": "CITIES: the giver's city ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "thirdPartyTeamID": {
+                    "description": "THIRD_PARTY_PEACE/WAR: the third-party team ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "techID": {
+                    "description": "TECHS: the technology ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "resolutionID": {
+                    "description": "VOTE_COMMITMENT: the World Congress resolution ID",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "voteChoice": {
+                    "description": "VOTE_COMMITMENT: the vote choice",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "numVotes": {
+                    "description": "VOTE_COMMITMENT: number of votes",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "repeal": {
+                    "description": "VOTE_COMMITMENT: true to repeal rather than enact",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "fromPlayerID",
+                  "toPlayerID",
+                  "itemType"
+                ]
+              }
+            },
+            "promises": {
+              "default": [],
+              "description": "Promise commitment terms",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "promiserID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side making the pledge"
+                  },
+                  "recipientID": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The side the pledge is made toward"
+                  },
+                  "promiseType": {
+                    "type": "string",
+                    "enum": [
+                      "MILITARY",
+                      "EXPANSION",
+                      "BORDER",
+                      "NO_CONVERT",
+                      "NO_DIGGING",
+                      "SPY",
+                      "BULLY_CITY_STATE",
+                      "ATTACK_CITY_STATE",
+                      "COOP_WAR"
+                    ],
+                    "description": "Promise type"
+                  },
+                  "targetPlayerID": {
+                    "description": "Third party for Coop War / city-state-related promises",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "duration": {
+                    "description": "Optional duration in turns",
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "promiserID",
+                  "recipientID",
+                  "promiseType"
+                ]
+              }
+            },
+            "rationale": {
+              "description": "Inward reasoning for the proposing diplomat — not game state; ignored by inspect-deal",
+              "type": "string"
+            },
+            "message": {
+              "description": "One-sentence outward line accompanying the deal — not game state; ignored by inspect-deal",
+              "type": "string"
+            }
+          },
+          "required": [
+            "version"
+          ]
+        },
+        "AccepterID": {
+          "description": "The endpoint accepting/enacting the deal. Defaults to the proposal's recipient (the endpoint that did not author it).",
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "Content": {
+          "description": "Optional outward line recorded with the acceptance.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ProposalMessageID"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "autoComplete": []
     }
   },
   {

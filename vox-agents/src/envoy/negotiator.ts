@@ -370,7 +370,7 @@ export class Negotiator extends VoxAgent<StrategistParameters, NegotiatorInput, 
   readonly description =
     "A deal specialist who inspects, values, and decides deal terms behind the diplomat — accepting, countering/proposing, or rejecting a deal.";
 
-  public tags = ["active-game", "diplomatic"];
+  public tags = ["diplomatic"];
 
   public override toolDescription =
     "Hand the conversational context to your negotiator. It inspects the game, decides whether to respond to the deal currently on the table or open a new one, records its move, and returns a summary for you to voice.";
