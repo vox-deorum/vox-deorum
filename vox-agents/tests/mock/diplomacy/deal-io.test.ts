@@ -88,17 +88,18 @@ describe('computeValueMaps', () => {
 
 describe('appendDealProposal', () => {
   it('inspects for value snapshots, then appends deal-proposal with Deal + Value maps', async () => {
-    mcp.respondWith('inspect-deal', structuredResult({
+    const inspection: InspectDealResult = {
       items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: true, reasons: [], valueIfIGive: 30, valueIfIReceive: 25 }],
       promises: [],
       tradableRange: {},
-    }));
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
     mcp.respondWith('append-message', structuredResult({ ID: 7, Turn: 4 }));
 
     const deal = { version: 1 as const, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }], promises: [] };
     const out = await appendDealProposal(thread(), 1, 'deal-proposal', 'Here is my offer', deal);
 
-    expect(out).toEqual({ id: 7, turn: 4 });
+    expect(out).toEqual({ id: 7, turn: 4, inspection });
     const append = mcp.calls('append-message')[0]!;
     expect(append.args.MessageType).toBe('deal-proposal');
     expect(append.args.SpeakerID).toBe(1);

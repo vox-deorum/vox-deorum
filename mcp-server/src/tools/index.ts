@@ -35,6 +35,7 @@ import createGetMilitaryReportTool from "./knowledge/get-military-report.js";
 import createSearchDatabaseTool from "./general/search-database.js";
 import createGetDiplomaticEventsTool from "./knowledge/get-diplomatic-events.js";
 import createAppendMessageTool from "./actions/append-message.js";
+import createEnactAgentDealTool from "./actions/enact-agent-deal.js";
 import createReadTranscriptTool from "./knowledge/read-transcript.js";
 import createInspectDealTool from "./knowledge/inspect-deal.js";
 import type { MCPServer } from "../server.js";
@@ -76,6 +77,7 @@ const toolFactories = {
     keepStatusQuo: createKeepStatusQuoTool,
     relayMessage: createRelayMessageTool,
     appendMessage: createAppendMessageTool,
+    enactAgentDeal: createEnactAgentDealTool,
     presentDecision: createPresentDecisionTool,
     pauseGame: createPauseGameTool,
     resumeGame: createResumeGameTool,

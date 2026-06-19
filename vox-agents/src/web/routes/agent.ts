@@ -65,6 +65,8 @@ import {
   appendDealReject,
   readDealMessages,
   validateDealForThread,
+  enactAgentDeal,
+  requireCurrentOpenProposal,
 } from '../../utils/diplomacy/deal.js';
 // Pinned deal contract — validate request bodies against the same schema mcp-server uses.
 import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
@@ -570,21 +572,41 @@ export function createAgentRoutes(): Router {
   });
 
   /**
-   * POST /api/agents/chat/:chatId/deal/accept - Accept a proposal.
+   * POST /api/agents/chat/:chatId/deal/accept - Accept a proposal, routing through the
+   * enactment route (enact-agent-deal), the sole writer of deal-accept / deal-enacted.
    *
-   * Wired here, but deferred: acceptance is recorded only by the enactment route
-   * (enact-agent-deal, stage 6), the sole writer of deal-accept / deal-enacted (pinned
-   * contract). In stage-4 preview this acknowledges the intent without a durable write.
+   * Stage 5: the route records the agreement in the transcript (so it reduces to an agreed
+   * deal) but does NOT yet apply in-game effects — the DLL enactment lands in stage 6. The
+   * accepter defaults server-side to the proposal's recipient (the non-authoring endpoint).
    */
-  router.post('/agents/chat/:chatId/deal/accept', async (req: Request<{ chatId: string }, {}, DealAcceptRequest>, res: Response<ErrorResponse>): Promise<Response> => {
+  router.post('/agents/chat/:chatId/deal/accept', async (req: Request<{ chatId: string }, {}, DealAcceptRequest>, res: Response<DealActionResponse | ErrorResponse>): Promise<Response> => {
     const thread = resolveDealThread(req.params.chatId, res);
     if (!thread) return res;
+    if (isDealLocked(thread, res)) return res;
     if (typeof req.body?.proposalMessageID !== 'number') {
       return res.status(400).json({ error: 'proposalMessageID (number) is required' });
     }
-    return res.status(501).json({
-      error: 'Deal enactment is available from stage 6 (enact-agent-deal). Acceptance is wired but deferred in preview mode.',
-    });
+    const accepterID = audienceID(thread);
+    try {
+      await requireCurrentOpenProposal(thread, req.body.proposalMessageID, accepterID);
+    } catch (error) {
+      return res.status(409).json({ error: error instanceof Error ? error.message : 'Proposal is not open for acceptance' });
+    }
+    try {
+      const result = await enactAgentDeal(req.body.proposalMessageID, { accepterID });
+      return res.json({ id: result.enactedMessageID, messageType: 'deal-enacted', turn: result.turn });
+    } catch (error) {
+      // The pre-check passed, so a failure here usually means the proposal state changed
+      // under us (countered/rejected/enacted) between the check and the authoritative write.
+      // Re-derive to map that race to a 409 conflict; a still-open proposal is a genuine 502.
+      try {
+        await requireCurrentOpenProposal(thread, req.body.proposalMessageID, accepterID);
+      } catch (conflict) {
+        return res.status(409).json({ error: conflict instanceof Error ? conflict.message : 'Proposal is no longer open for acceptance' });
+      }
+      logger.error('Failed to enact deal', { error });
+      return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to enact deal' });
+    }
   });
 
   /**

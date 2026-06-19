@@ -17,6 +17,7 @@ import { NullStrategist } from "../strategist/agents/null-strategist.js";
 import { HumanStrategist } from "../strategist/agents/human-strategist.js";
 import { Spokesperson } from "../envoy/spokesperson.js";
 import { Diplomat } from "../envoy/diplomat.js";
+import { Negotiator } from "../envoy/negotiator.js";
 import { DiplomaticAnalyst } from "../analyst/diplomatic-analyst.js";
 import { SimpleStrategistStaffed } from "../strategist/agents/simple-strategist-staffed.js";
 import { SimpleStrategistLearned } from "../strategist/agents/simple-strategist-learned.js";
@@ -137,6 +138,7 @@ class AgentRegistry {
     // Register envoy agents
     this.register(new Spokesperson());
     this.register(new Diplomat());
+    this.register(new Negotiator());
     this.register(new DiplomaticAnalyst());
 
     // Register telepathist agents

@@ -13,6 +13,7 @@ import { StrategistParameters } from "../strategist/strategy-parameters.js";
 import { EnvoyThread, SpecialMessageConfig } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection, greetingSpecialMessages } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
+import { buildDealContextMessage } from "./diplomat-deal-tools.js";
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.
@@ -42,11 +43,18 @@ export class Diplomat extends LiveEnvoy {
    * civ↔civ diplomacy conversations — the close-conversation tool.
    */
   public override getActiveTools(_parameters: StrategistParameters): string[] | undefined {
-    return ["get-briefing", "get-diplomatic-events", "call-diplomatic-analyst", "close-conversation"];
+    return [
+      "get-briefing",
+      "get-diplomatic-events",
+      "call-diplomatic-analyst",
+      "close-conversation",
+      "call-negotiator",
+    ];
   }
 
   /**
-   * Provides the close-conversation tool alongside LiveEnvoy's get-briefing tool.
+   * Provides the close-conversation tool alongside LiveEnvoy's get-briefing tool. The negotiator
+   * is reached through the auto-registered `call-negotiator` handoff (no bespoke relay tools).
    */
   public override getExtraTools(context: VoxContext<StrategistParameters>): Record<string, Tool> {
     return {
@@ -56,8 +64,9 @@ export class Diplomat extends LiveEnvoy {
   }
 
   /**
-   * Gates close-conversation to civ↔civ diplomacy threads — it is meaningless for an
-   * observer chat (endpoint A = -1), and special-message (greeting) mode needs no tools.
+   * Gates close-conversation and the negotiator handoff to civ↔civ diplomacy threads — they are
+   * meaningless for an observer chat (endpoint A = -1), and special-message (greeting) mode
+   * needs no tools.
    */
   public override async prepareStep(
     parameters: StrategistParameters,
@@ -69,9 +78,31 @@ export class Diplomat extends LiveEnvoy {
   ) {
     const config = await super.prepareStep(parameters, input, lastStep, allSteps, messages, context);
     if (!input.diplomacy && config.activeTools) {
-      config.activeTools = config.activeTools.filter((t) => t !== "close-conversation");
+      const diplomacyOnly = new Set(["close-conversation", "call-negotiator"]);
+      config.activeTools = config.activeTools.filter((t) => !diplomacyOnly.has(t));
     }
     return config;
+  }
+
+  /**
+   * Adds the on-the-table deal to the diplomat's context so it "sees the deal at every step"
+   * (specs §7) — the active proposal's terms, the negotiator's rationale/message, and the
+   * per-item value snapshots — so it can voice each move faithfully and keep its intelligence
+   * current. Skipped in special-message (greeting) mode and for non-diplomacy chats.
+   */
+  public override async getInitialMessages(
+    parameters: StrategistParameters,
+    input: EnvoyThread,
+    context: VoxContext<StrategistParameters>
+  ): Promise<ModelMessage[]> {
+    const messages = await super.getInitialMessages(parameters, input, context);
+    if (input.diplomacy && !this.isSpecialMode(input)) {
+      const dealContext = await buildDealContextMessage(input);
+      if (dealContext) {
+        messages.push({ role: "user", content: dealContext });
+      }
+    }
+    return messages;
   }
 
   /**
@@ -91,7 +122,8 @@ You represent your government's interests and gather intelligence through diplom
 - You engage in diplomatic dialogue on behalf of your leader
 - You gather intelligence and relay important information back to your leader using the \`call-diplomatic-analyst\` tool
 - You assess the situation and provide context in your reports to help the analyst
-- You do NOT make binding decisions or agreements: you report back and let your leader decide`,
+- You do NOT make binding decisions or agreements: you report back and let your leader decide
+- You do NOT author deal terms yourself — your negotiator decides them. You only relay context to it and voice its moves.`,
     ];
 
     if (!this.isSpecialMode(input)) {
@@ -105,7 +137,15 @@ You represent your government's interests and gather intelligence through diplom
   - Report gathered information, rumors, observations, or strategic insights
   - The analyst will assess reliability, categorize the information, and relay it to the leader
   - Include your reaction and contextual observations in the report to aid documentation
-  - Do NOT report trivial pleasantries or small talk — only actionable information`);
+  - Do NOT report trivial pleasantries or small talk — only actionable information
+
+# Negotiating Deals
+- Your negotiator is the SOLE decider of deal terms. You never write trade items or promises yourself.
+- Use the \`call-negotiator\` tool to hand it the conversational context. Always pass a short \`Briefing\` (what the counterpart wants, the tenor of the exchange, anything it should know); add an \`Intent\` when you want to OPEN a deal (what you hope it achieves — but NO terms).
+- The negotiator reads the game itself and decides what to do: if a deal from the counterpart is on the table it will accept, counter, or reject it; otherwise it constructs an opening proposal. It returns its move for you to voice.
+- If you authored the proposal that is currently on the table, await the counterpart's reply rather than calling the negotiator again.
+- After the tool returns, voice the negotiator's move in your own words: elaborate around its one-sentence line for a counter/proposal, and reason from its rationale (never quote the rationale verbatim).
+- Validate and reason against current game state — a conversation can outlive the moment it began, so do not assume the world is frozen.`);
     }
 
     sections.push(communicationStyle);

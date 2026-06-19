@@ -26,8 +26,13 @@ import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
 import { createLogger } from "../logger.js";
+import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 // Pinned deal contract — the single source of truth shared across stages 4–6.
-import type { DealPayload, PerItemValueMap } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import {
+  DealPayloadSchema,
+  type DealPayload,
+  type PerItemValueMap,
+} from "../../../../mcp-server/dist/utils/deal-schema.js";
 
 const logger = createLogger("diplomacy:deal");
 
@@ -150,7 +155,8 @@ export function computeValueMaps(
  * endpoint authoring the move (the human/caller in stage-4 preview).
  *
  * @returns the stored row's append ID and server-stamped turn (the values `read-transcript`
- *          will later report), so the UI can reference this proposal without re-reading.
+ *          will later report), plus the proposal-time inspection when available so an agent
+ *          caller can immediately brief the diplomat without re-reading or re-inspecting.
  */
 export async function appendDealProposal(
   thread: EnvoyThread,
@@ -158,7 +164,7 @@ export async function appendDealProposal(
   messageType: DealProposalType,
   content: string,
   deal: DealPayload
-): Promise<{ id: number; turn?: number }> {
+): Promise<{ id: number; turn?: number; inspection?: InspectDealResult }> {
   // Transcript-shape validation is not best-effort: malformed terms must never be archived.
   validateDealForThread(thread, deal);
 
@@ -166,8 +172,9 @@ export async function appendDealProposal(
   // can't be inspected right now we still archive the proposal — the value maps are optional.
   let value1: PerItemValueMap | undefined;
   let value2: PerItemValueMap | undefined;
+  let inspection: InspectDealResult | undefined;
   try {
-    const inspection = await inspectDeal(thread.player1ID, thread.player2ID, deal);
+    inspection = await inspectDeal(thread.player1ID, thread.player2ID, deal);
     ({ value1, value2 } = computeValueMaps(inspection, thread.player1ID, thread.player2ID));
   } catch (error) {
     logger.warn("Could not compute proposal-time value snapshots; archiving without them", { error });
@@ -177,7 +184,8 @@ export async function appendDealProposal(
   if (value1) payload.Value1 = value1;
   if (value2) payload.Value2 = value2;
 
-  return appendRaw(thread, speakerID, messageType, content, payload);
+  const stored = await appendRaw(thread, speakerID, messageType, content, payload);
+  return { ...stored, inspection };
 }
 
 /**
@@ -243,4 +251,111 @@ export async function readDealMessages(playerAID: number, playerBID: number): Pr
   const arr = unwrap<unknown>(result);
   if (!Array.isArray(arr)) return [];
   return (arr as TranscriptMessage[]).filter((m) => DEAL_MESSAGE_TYPES.has(m.MessageType));
+}
+
+/**
+ * Read the conversation's deal messages and reduce them into the latest active proposal +
+ * status (work item 4). Used by the diplomat (to see the on-the-table deal), the negotiator
+ * loop (to forward it), and the accept route (to find the proposal to enact).
+ */
+export async function readActiveProposal(playerAID: number, playerBID: number): Promise<DealReduction> {
+  const messages = await readDealMessages(playerAID, playerBID);
+  return deriveActiveProposal(messages);
+}
+
+/** A validated open proposal plus its canonical stored deal terms. */
+export interface OpenProposal {
+  message: TranscriptMessage;
+  deal: DealPayload;
+}
+
+/**
+ * Require a specific proposal to still be the open active offer for `responderID`.
+ *
+ * This is intentionally called immediately before agent terminal writes so a long inspection
+ * or LLM turn cannot silently act on a proposal that was countered, rejected, or enacted.
+ */
+export async function requireCurrentOpenProposal(
+  thread: EnvoyThread,
+  proposalMessageID: number,
+  responderID: number
+): Promise<OpenProposal> {
+  const reduction = await readActiveProposal(thread.player1ID, thread.player2ID);
+  if (!reduction.active || reduction.active.ID !== proposalMessageID) {
+    throw new Error(`Proposal ${proposalMessageID} is no longer the active proposal`);
+  }
+  if (reduction.status !== "open") {
+    throw new Error(`Proposal ${proposalMessageID} is no longer open (status: ${reduction.status})`);
+  }
+  if (reduction.active.SpeakerID === responderID) {
+    throw new Error(`Player ${responderID} cannot respond to its own proposal`);
+  }
+
+  const parsed = DealPayloadSchema.safeParse(
+    (reduction.active.Payload as Record<string, unknown> | undefined)?.Deal
+  );
+  if (!parsed.success) {
+    throw new Error(`Proposal ${proposalMessageID} has invalid stored deal terms`);
+  }
+  return { message: reduction.active, deal: parsed.data };
+}
+
+/**
+ * Require that no proposal is currently open before an agent authors an opening proposal.
+ */
+export async function requireNoOpenProposal(thread: EnvoyThread): Promise<void> {
+  const reduction = await readActiveProposal(thread.player1ID, thread.player2ID);
+  if (reduction.active && reduction.status === "open") {
+    throw new Error(`Proposal ${reduction.active.ID} is already open and must be answered first`);
+  }
+}
+
+/** The result of the (stage-5 stub) enactment route. */
+export interface EnactDealResult {
+  proposalMessageID: number;
+  acceptMessageID?: number;
+  enactedMessageID: number;
+  alreadyEnacted: boolean;
+  /** Whether in-game effects were applied (always false in the stage-5 stub). */
+  enacted: boolean;
+  turn?: number;
+}
+
+/**
+ * Enact an agreed deal through the mcp-server `enact-agent-deal` route — the sole writer of
+ * `deal-accept` / `deal-enacted` (pinned writer-split). In stage 5 this records the agreement
+ * in the transcript without applying in-game effects (the DLL entrypoint lands in stage 6);
+ * it is idempotent on the proposal's `deal-enacted` record.
+ *
+ * @param proposalMessageID The deal-proposal / deal-counter being enacted.
+ * @param options.accepterID The endpoint accepting (defaults server-side to the recipient).
+ * @param options.content    Optional outward line recorded with the acceptance.
+ */
+export async function enactAgentDeal(
+  proposalMessageID: number,
+  options: { accepterID?: number; content?: string } = {}
+): Promise<EnactDealResult> {
+  const args: Record<string, unknown> = { ProposalMessageID: proposalMessageID };
+  if (options.accepterID !== undefined) args.AccepterID = options.accepterID;
+  if (options.content !== undefined) args.Content = options.content;
+  const result = await mcpClient.callTool("enact-agent-deal", args);
+  const row = unwrap<{
+    ProposalMessageID?: number;
+    AcceptMessageID?: number;
+    EnactedMessageID?: number;
+    AlreadyEnacted?: boolean;
+    Enacted?: boolean;
+    Turn?: number;
+  }>(result);
+  if (typeof row?.EnactedMessageID !== "number") {
+    throw new Error("enact-agent-deal did not return a numeric EnactedMessageID");
+  }
+  return {
+    proposalMessageID: row.ProposalMessageID ?? proposalMessageID,
+    acceptMessageID: typeof row.AcceptMessageID === "number" ? row.AcceptMessageID : undefined,
+    enactedMessageID: row.EnactedMessageID,
+    alreadyEnacted: !!row.AlreadyEnacted,
+    enacted: !!row.Enacted,
+    turn: typeof row.Turn === "number" ? row.Turn : undefined,
+  };
 }

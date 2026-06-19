@@ -9,9 +9,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import { installMockMcpClient, structuredResult } from '../../helpers/mock-mcp-client.js';
+
+vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+  const helper = await import('../../helpers/mock-mcp-client.js');
+  return helper.mockMcpClientModule();
+});
 
 import { createAgentRoutes } from '../../../src/web/routes/agent.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { pacingInterruptionRegistry } from '../../../src/strategist/pacing/registry.js';
 
 function makeApp() {
@@ -25,6 +32,7 @@ const app = makeApp();
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  installMockMcpClient();
 });
 
 describe('agent routes', () => {
@@ -167,6 +175,90 @@ describe('agent routes', () => {
     it('list deals returns 404', async () => {
       const res = await request(app).get('/api/agents/chat/missing/deals');
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/agents/chat/:chatId/deal/accept', () => {
+    /** Open a diplomacy thread backed by the supplied transcript. */
+    async function openDiplomacyThread(transcript: unknown[]) {
+      const mcp = installMockMcpClient();
+      mcp.respondWith('read-transcript', structuredResult(transcript));
+      vi.spyOn(contextRegistry, 'get').mockReturnValue({
+        lastParameter: { turn: 5, gameID: 'g', playerID: 3, gameStates: {} },
+      } as any);
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({
+        name: 'diplomat',
+        description: 'Diplomat',
+        tags: [],
+      } as any);
+
+      const response = await request(app).post('/api/agents/chat').send({
+        mode: 'diplomacy',
+        contextId: 'g-player-3',
+        initiatorPlayerID: 1,
+        targetPlayerID: 3,
+      });
+      expect(response.status).toBe(200);
+      return mcp;
+    }
+
+    it('rejects an ID that is not the chat current open proposal', async () => {
+      const transcript = [{
+        ID: 7,
+        Player1ID: 1,
+        Player2ID: 3,
+        Player1Role: 'the leader',
+        Player2Role: 'diplomat',
+        SpeakerID: 3,
+        MessageType: 'deal-proposal',
+        Content: 'Offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } },
+        Turn: 5,
+        CreatedAt: 0,
+      }];
+      const mcp = await openDiplomacyThread(transcript);
+
+      const response = await request(app)
+        .post('/api/agents/chat/dipl:g:1:3/deal/accept')
+        .send({ proposalMessageID: 99 });
+
+      expect(response.status).toBe(409);
+      expect(mcp.calls('enact-agent-deal')).toHaveLength(0);
+    });
+
+    it('accepts only as the human audience endpoint', async () => {
+      const transcript = [{
+        ID: 8,
+        Player1ID: 1,
+        Player2ID: 3,
+        Player1Role: 'the leader',
+        Player2Role: 'diplomat',
+        SpeakerID: 3,
+        MessageType: 'deal-proposal',
+        Content: 'Offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } },
+        Turn: 5,
+        CreatedAt: 0,
+      }];
+      const mcp = await openDiplomacyThread(transcript);
+      mcp.respondWith('enact-agent-deal', structuredResult({
+        ProposalMessageID: 8,
+        AcceptMessageID: 9,
+        EnactedMessageID: 10,
+        AlreadyEnacted: false,
+        Enacted: false,
+        Turn: 5,
+      }));
+
+      const response = await request(app)
+        .post('/api/agents/chat/dipl:g:1:3/deal/accept')
+        .send({ proposalMessageID: 8 });
+
+      expect(response.status).toBe(200);
+      expect(mcp.calls('enact-agent-deal')[0]!.args).toMatchObject({
+        ProposalMessageID: 8,
+        AccepterID: 1,
+      });
     });
   });
 });

@@ -10,8 +10,8 @@ The goal in one line: two major civilizations — each voiced by a human or an L
 | 2 | [02-conversation.md](02-conversation.md) | ✅ Done | **Core MVP:** human↔LLM civ-to-civ free-text conversation on the Web, write-through to the store. |
 | 3 | [03-inspect-deal.md](03-inspect-deal.md) | ✅ Done | Read-only `inspect-deal`: full tradable range per side + per-term legality + value/agreeability evaluation of any deal (incl. empty); ships the read-only `GetTradeItemValue` Lua getter. |
 | 4 | [04-deal-screen.md](04-deal-screen.md) | ✅ Done | Vue deal screen replicating the in-game trade-screen layout, driven by `inspect-deal`. |
-| 5 | [05-negotiator.md](05-negotiator.md) | Next | Negotiator agent + diplomat deal tools + diplomat⇔negotiator loop; both sides reach agreement. |
-| 6 | [06-dll-enact-deal.md](06-dll-enact-deal.md) | Planned | **Only gameplay change:** DLL `EnactAgentDeal` (trade items + all nine promises, including Coop War) + the `enact-agent-deal` MCP tool — real enactment flips on. |
+| 5 | [05-negotiator.md](05-negotiator.md) | ✅ Done | Negotiator agent + diplomat deal context + the single `call-negotiator` handoff (self-contained negotiator; per-seat dispatch); both sides reach agreement (recorded via a **stub** `enact-agent-deal` that stores the transcript, no in-game effect). |
+| 6 | [06-dll-enact-deal.md](06-dll-enact-deal.md) | Next | **Only gameplay change:** DLL `EnactAgentDeal` (trade items + all nine promises, including Coop War) wired into the **existing** `enact-agent-deal` MCP tool (stubbed in stage 5) — real enactment flips on. |
 | 7 | [07-ingame-panel.md](07-ingame-panel.md) | *Later phase* | In-game diplomacy panel addon modeled on the human-control panel. |
 | 8 | [08-directions.md](08-directions.md) | *Later phase* | LLM→human + LLM→LLM directions and per-direction config gating. |
 | 9 | [09-additivity-review.md](09-additivity-review.md) | Planned | Static review for additivity/comparability (the normal pathway and AI valuation stay untouched). |

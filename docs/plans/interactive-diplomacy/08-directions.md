@@ -15,7 +15,7 @@ Enable the two initiation directions beyond human→LLM, gated by configuration 
 
 - **Direction config surface** (`vox-agents/src/types/config.ts` + session config): per-seat/session flags to enable or disable initiating diplomacy, accepting incoming diplomacy, and each of the three directions — **none hard-wired on or off** (specs §5). Exact flag shape is an open item in [README.md](README.md).
 - **LLM→human initiation** — a diplomat **tool** the LLM may choose to use (subject to config) that opens a conversation / sends a proposal toward a human seat and raises a notification; consistent with how agents already opt into actions via tools (specs §5). Surface incoming conversations and proposals on the Web (`vox-agents/ui` — an inbox/notification surface and the stage-4 deal screen for the incoming proposal).
-- **LLM→LLM** — peer diplomat⇔negotiator bargaining that runs **alongside continued auto-play** and must **not block the turn loop or pause the game** (specs §8); reuses the same loop (stage 5) and enactment (stage 6) with both endpoints LLM.
+- **LLM→LLM** — peer diplomat→negotiator bargaining that runs **alongside continued auto-play** and must **not block the turn loop or pause the game** (specs §8); reuses the same `call-negotiator` handoff (stage 5) and enactment (stage 6) with both endpoints LLM.
 - Pacing/lifecycle per specs §8: human↔LLM rides the existing pause; LLM↔LLM does not pause; a conversation ends explicitly via `close-conversation`, not as a side effect of a deal.
 
 ## Verify

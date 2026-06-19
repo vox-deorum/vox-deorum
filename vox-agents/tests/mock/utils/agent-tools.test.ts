@@ -15,6 +15,9 @@ function fakeAgent(overrides: Record<string, unknown> = {}): any {
   return {
     name: 'test-agent',
     fireAndForget: false,
+    // Mirror VoxAgent's defaults: pass the caller args through and execute this agent itself.
+    resolveHandoffInput: (callerArgs: unknown) => callerArgs,
+    resolveHandoffTarget(this: { name: string }) { return this.name; },
     ...overrides,
   };
 }
@@ -51,6 +54,42 @@ describe('createAgentTool', () => {
       const inputSchema = z.object({ Foo: z.number() });
       const tool = createAgentTool(fakeAgent({ inputSchema }), ctx.asContext(), () => ({} as any));
       expect(tool.inputSchema).toBe(inputSchema);
+    });
+
+    it('prefers the caller-facing handoffSchema over inputSchema', () => {
+      const handoffSchema = z.object({ Briefing: z.string() });
+      const inputSchema = z.object({ Foo: z.number() });
+      const tool = createAgentTool(fakeAgent({ handoffSchema, inputSchema }), ctx.asContext(), () => ({} as any));
+      expect(tool.inputSchema).toBe(handoffSchema);
+    });
+  });
+
+  describe('handoff input enrichment', () => {
+    it('maps the caller args through resolveHandoffInput before executing', async () => {
+      ctx.execute.mockResolvedValue('ok');
+      const params = { playerID: 1, gameID: 'g', turn: 5 } as any;
+      const context = ctx.asContext();
+      // Enrich the caller args with ambient context (here: a constant) before execution.
+      const resolveHandoffInput = vi.fn((args: any) => ({ ...args, enriched: true }));
+
+      const tool = createAgentTool(fakeAgent({ name: 'worker', resolveHandoffInput }), context, () => params);
+      await tool.execute!({ Briefing: 'hi' }, { toolCallId: 'x', messages: [] });
+
+      expect(resolveHandoffInput).toHaveBeenCalledWith({ Briefing: 'hi' }, context);
+      expect(ctx.execute).toHaveBeenCalledWith('worker', params, { Briefing: 'hi', enriched: true });
+    });
+
+    it('executes the agent named by resolveHandoffTarget (per-seat dispatch)', async () => {
+      ctx.execute.mockResolvedValue('ok');
+      const params = { playerID: 1, gameID: 'g', turn: 5 } as any;
+      // The bound tool is `call-base`, but the handoff dispatches to a context-resolved variant.
+      const resolveHandoffTarget = vi.fn(() => 'seat-variant');
+
+      const tool = createAgentTool(fakeAgent({ name: 'base', resolveHandoffTarget }), ctx.asContext(), () => params);
+      await tool.execute!({ Prompt: 'p' }, { toolCallId: 'x', messages: [] });
+
+      expect(resolveHandoffTarget).toHaveBeenCalledTimes(1);
+      expect(ctx.execute).toHaveBeenCalledWith('seat-variant', params, { Prompt: 'p' });
     });
   });
 

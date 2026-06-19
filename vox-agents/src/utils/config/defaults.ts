@@ -112,9 +112,9 @@ export const defaultConfig: VoxAgentsConfig = {
         toolMiddleware: 'prompt'
       }
     },
-    'openai-compatible/GLM-5.1': {
+    'openai-compatible/GLM-5.2': {
       provider: 'openai-compatible',
-      name: 'GLM-5.1'
+      name: 'GLM-5.2'
     },
     'openai-compatible/Qwen-3.5': {
       provider: 'openai-compatible',

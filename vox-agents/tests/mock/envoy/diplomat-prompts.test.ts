@@ -46,12 +46,13 @@ function greetingThread(): EnvoyThread {
 const params = { playerID: 3, turn: 5, metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck' } }, gameStates: {} };
 
 describe('Diplomat tool set', () => {
-  it('includes close-conversation alongside the briefing/events/analyst tools', () => {
+  it('includes close-conversation and the negotiator handoff alongside briefing/events/analyst', () => {
     expect(diplomat.getActiveTools(params)).toEqual([
       'get-briefing',
       'get-diplomatic-events',
       'call-diplomatic-analyst',
       'close-conversation',
+      'call-negotiator',
     ]);
   });
 });

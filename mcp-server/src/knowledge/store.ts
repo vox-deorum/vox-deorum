@@ -3,7 +3,7 @@
  * Provides type-safe CRUD operations using Kysely query builder
  */
 
-import { Kysely, ParseJSONResultsPlugin, SqliteDialect, Selectable, Updateable, Insertable } from 'kysely';
+import { Kysely, ParseJSONResultsPlugin, SqliteDialect, Selectable, Updateable, Insertable, Transaction } from 'kysely';
 import Database from 'better-sqlite3';
 import { createLogger } from '../utils/logger.js';
 import { JsonSerializePlugin } from '../utils/json-serialize-plugin.js';
@@ -493,6 +493,20 @@ export class KnowledgeStore {
       logger.error(`Error storing TimedKnowledge in ${tableName}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Run a write operation inside the store's single-writer queue and one SQLite transaction.
+   *
+   * Callers must use the provided transaction directly rather than invoking another store
+   * write method from the callback, which would attempt to re-enter the same queue.
+   */
+  async runWriteTransaction<TResult>(
+    operation: (transaction: Transaction<KnowledgeDatabase>) => Promise<TResult>
+  ): Promise<TResult> {
+    const db = this.getDatabase();
+    const result = await this.writeQueue.add(() => db.transaction().execute(operation));
+    return result as TResult;
   }
 
   /**

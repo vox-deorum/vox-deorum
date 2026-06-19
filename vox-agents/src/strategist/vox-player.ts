@@ -161,7 +161,8 @@ export class VoxPlayer {
           try {
             // Create a new root context for this turn's trace
             await context.with(trace.setSpan(context.active(), turnSpan), async () => {
-              // Refresh all strategy parameters
+              await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
+              // Refresh all strategy parameterss
               const cullLimit = Math.max(10, this.pacing.everyTurns + 1);
               const state = await ensureGameState(this.context, this.parameters, cullLimit);
               // Advance the event cursor: we've now fetched events through this turn.
@@ -169,7 +170,6 @@ export class VoxPlayer {
               // processed folds its events into the following fetch (nothing is lost).
               // Runs for both skip and decision paths, giving clean per-turn slices.
               this.parameters.after = this.parameters.before;
-              await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
 
               const scheduled = isScheduledDecision(this.parameters.turn, this.lastDecisionTurn, this.pacing);
               const interrupted = shouldInterruptDecision(state, this.playerID, this.pacing);

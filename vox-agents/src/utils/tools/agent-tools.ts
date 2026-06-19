@@ -39,7 +39,9 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
 
   // Use a simpler approach to avoid deep type instantiation issues
   const description = agent.toolDescription || `Execute the ${agent.name} agent to handle specialized tasks`;
-  const inputSchema = agent.inputSchema || z.object({
+  // Prefer the caller-facing handoff schema (mapped into the agent's input by
+  // resolveHandoffInput); fall back to the agent's own input schema, then a generic prompt.
+  const inputSchema = agent.handoffSchema || agent.inputSchema || z.object({
     Prompt: z.string().describe("The prompt or task to give to the agent")
   });
 
@@ -63,10 +65,18 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
 
         let parameters = toolsGetter();
 
+        // Map the caller's arguments into the agent's input, enriching with ambient context
+        // (e.g. the caller's currentInput) — still the caller's input at this point, since the
+        // agent-tool runs inside the caller's step before context.execute swaps it.
+        const agentInput = agent.resolveHandoffInput(input, context);
+        // Resolve which concrete agent to run — defaults to this agent, but may dispatch to a
+        // context-resolved variant (e.g. a per-seat custom negotiator) sharing the same input.
+        const targetName = agent.resolveHandoffTarget(context);
+
         // Fire-and-forget: detach from current trace and return immediately
         if (agent.fireAndForget) {
           otelContext.with(ROOT_CONTEXT, () => {
-            context.execute(agent.name, parameters, input).catch(error => {
+            context.execute(targetName, parameters, agentInput).catch(error => {
               logger.error(`Async agent-tool ${agent.name} failed:`, error);
             });
           });
@@ -76,7 +86,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         }
 
         // Execute the agent through the context
-        const result = await context.execute(agent.name, parameters, input);
+        const result = await context.execute(targetName, parameters, agentInput);
         logger.debug(`Agent-tool execution completed: ${agent.name}`);
 
         span.setAttributes({

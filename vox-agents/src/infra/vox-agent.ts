@@ -67,7 +67,15 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * Optional input schema for when this agent is exposed as a tool
    */
   public inputSchema?: z.ZodSchema<TInput>;
-  
+
+  /**
+   * Optional caller-facing schema for this agent's `call-<name>` handoff tool. When set, the
+   * agent-tool exposes THIS to the calling LLM (instead of {@link inputSchema}) and the
+   * validated arguments are mapped into TInput by {@link resolveHandoffInput}. Use this when
+   * the agent's real input carries ambient context the caller should not have to author.
+   */
+  public handoffSchema?: z.ZodTypeAny;
+
   /**
    * Optional output schema for when this agent is exposed as a tool
    */
@@ -241,6 +249,35 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
     output: TOutput
   ): TOutput {
     return output;
+  }
+
+  /**
+   * Maps the caller-authored handoff arguments (validated against {@link handoffSchema}, or
+   * {@link inputSchema} when no handoff schema is set) into this agent's input (TInput) when it
+   * is invoked as a `call-<name>` agent-tool. Override to enrich the arguments with ambient
+   * context such as the caller's own input (`context.currentInput`) — at call time the caller's
+   * input is still current, because the agent-tool runs inside the caller's step before
+   * {@link VoxContext.execute} swaps it. Defaults to passing the arguments through unchanged.
+   *
+   * @param callerArgs - The arguments the calling LLM supplied to the agent-tool
+   * @param context - The VoxContext for this execution (its `currentInput` is the caller's input)
+   * @returns The input to execute this agent with
+   */
+  public resolveHandoffInput(callerArgs: unknown, _context: VoxContext<TParameters>): TInput {
+    return callerArgs as TInput;
+  }
+
+  /**
+   * Resolve which concrete agent the `call-<name>` handoff should execute. Defaults to this
+   * agent. Override to dispatch to a context-resolved variant — e.g. a per-seat custom agent
+   * looked up from the active session. The resolved target MUST accept the same input shape,
+   * since {@link resolveHandoffInput} (this agent's) still maps the caller's arguments.
+   *
+   * @param context - The VoxContext for this execution (its `currentInput` is the caller's input)
+   * @returns The registered name of the agent to execute for this handoff
+   */
+  public resolveHandoffTarget(_context: VoxContext<TParameters>): string {
+    return this.name;
   }
 
   /**
