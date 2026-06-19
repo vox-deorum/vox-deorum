@@ -22,7 +22,6 @@ Purpose: Main chat interface for interacting with agents
             :value="closedThisTurn ? 'Closed this turn' : 'Closed (reopenable)'"
             :severity="closedThisTurn ? 'danger' : 'warn'"
           />
-          <span class="text-sm text-muted">Game: {{ thread.gameID }} | {{ agentLabel }} ↔ {{ userLabel }}</span>
         </div>
       </div>
       <div class="page-header-controls">

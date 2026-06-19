@@ -73,6 +73,13 @@ export class VoxPlayer {
       // on and receive the in-game panel's submission).
       _humanDecisionBus: humanDecisionBus
     };
+
+    // Seed the context with its parameters up front. `lastParameter` is otherwise
+    // only set when an agent first executes (VoxContext.execute), so a diplomat
+    // conversation opened before the strategist's first turn would read `undefined`
+    // and crash on `lastParameter.gameStates`. This is the same object the strategist
+    // mutates in place, so later turns/gameStates updates flow through unchanged.
+    this.context.lastParameter = this.parameters;
   }
 
   /**
