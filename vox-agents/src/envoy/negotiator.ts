@@ -29,7 +29,10 @@ import { VoxAgent } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
-import { createSimpleTool } from "../utils/tools/simple-tools.js";
+import {
+  createSimpleTool,
+  type SimpleToolExecutionOptions,
+} from "../utils/tools/simple-tools.js";
 import { createLogger } from "../utils/logger.js";
 import type { EnvoyThread } from "../types/index.js";
 import {
@@ -183,6 +186,20 @@ function summarizeMove(move: NegotiatorMove): string {
  */
 export function createNegotiatorTerminalTools(context: VoxContext<StrategistParameters>): Record<string, Tool> {
   const input = (): NegotiatorInput | undefined => context.currentInput as NegotiatorInput | undefined;
+  const stepClaims = new WeakMap<object, string>();
+
+  /**
+   * Claim the current model step for its first terminal call. AI SDK executes all calls from
+   * one step concurrently and passes the same messages array to each, giving us a stable
+   * per-step key. Later terminal calls are dropped before they can read or mutate deal state.
+   */
+  const claimStep = (options: SimpleToolExecutionOptions, toolName: string): string | undefined => {
+    const stepKey = options.messages;
+    const claimed = stepClaims.get(stepKey);
+    if (claimed) return claimed;
+    stepClaims.set(stepKey, toolName);
+    return undefined;
+  };
 
   const acceptDeal = createSimpleTool<StrategistParameters>(
     {
@@ -192,9 +209,11 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
       inputSchema: z.object({
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
       }),
-      execute: async (args) => {
+      execute: async (args, _parameters, options) => {
         const ni = input();
         if (!ni) return "No negotiation context is active.";
+        const claimed = claimStep(options, "accept-deal");
+        if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
         if (!ni.activeProposal) return "There is no deal on the table to accept. Use propose-counter-deal instead.";
         try {
           await requireCurrentOpenProposal(
@@ -233,14 +252,15 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         message: z
           .string()
-          .max(280)
-          .describe("A single concise sentence the diplomat will voice to the counterpart. One sentence only."),
+          .describe("One single sentence the diplomat will voice to the counterpart."),
         items: z.array(TradeItemSchema).default([]).describe("Ordinary trade terms (each directed between the two civs)."),
         promises: z.array(PromiseTermSchema).default([]).describe("Promise commitment terms (directed between the two civs)."),
       }),
-      execute: async (args) => {
+      execute: async (args, _parameters, options) => {
         const ni = input();
         if (!ni) return "No negotiation context is active.";
+        const claimed = claimStep(options, "propose-counter-deal");
+        if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
         if (args.items.length === 0 && args.promises.length === 0) {
           return "A proposal must include at least one trade item or promise. Reject instead if you want no deal.";
         }
@@ -296,9 +316,11 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
       inputSchema: z.object({
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
       }),
-      execute: async (args) => {
+      execute: async (args, _parameters, options) => {
         const ni = input();
         if (!ni) return "No negotiation context is active.";
+        const claimed = claimStep(options, "reject-deal");
+        if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
         if (!ni.activeProposal) return "There is no deal on the table to reject.";
         try {
           await requireCurrentOpenProposal(

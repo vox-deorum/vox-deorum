@@ -461,16 +461,20 @@ const draftToSend = (): DealPayload => {
 const doPropose = async () => {
   busy.value = true;
   try {
-    await api.proposeDeal(props.chatId, { deal: draftToSend() });
-    toast.add({ severity: 'success', summary: 'Proposal sent', life: 2500 });
+    const result = await api.proposeDeal(props.chatId, { deal: draftToSend() });
+    toast.add(result.agentResponded === false
+      ? { severity: 'warn', summary: 'Proposal sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
+      : { severity: 'success', summary: 'Proposal sent', life: 2500 });
     await afterWrite();
   } catch (e) { actionError(e); } finally { busy.value = false; }
 };
 const doCounter = async () => {
   busy.value = true;
   try {
-    await api.counterDeal(props.chatId, { deal: draftToSend() });
-    toast.add({ severity: 'success', summary: 'Counter sent', life: 2500 });
+    const result = await api.counterDeal(props.chatId, { deal: draftToSend() });
+    toast.add(result.agentResponded === false
+      ? { severity: 'warn', summary: 'Counter sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
+      : { severity: 'success', summary: 'Counter sent', life: 2500 });
     await afterWrite();
   } catch (e) { actionError(e); } finally { busy.value = false; }
 };

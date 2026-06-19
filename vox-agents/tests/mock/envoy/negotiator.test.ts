@@ -245,6 +245,38 @@ describe('negotiator completion', () => {
       negotiator.stopCheck({} as any, input, failedTerminalStep, [failedTerminalStep], {} as any)
     ).toBe(false);
   });
+
+  it('takes only the first terminal tool call from one model step', async () => {
+    setOpenProposal();
+    mcp.respondWith('enact-agent-deal', structuredResult({
+      EnactedMessageID: 9,
+      AcceptMessageID: 8,
+      AlreadyEnacted: false,
+      Enacted: false,
+      Turn: 5,
+    }));
+    const input = negotiatorInput({
+      activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } },
+    });
+    const tools = createNegotiatorTerminalTools(makeContext(input));
+    const sharedMessages: unknown[] = [];
+
+    const [accepted, dropped] = await Promise.all([
+      tools['accept-deal'].execute!(
+        { rationale: 'Accept it.' },
+        { toolCallId: 'first', messages: sharedMessages } as any
+      ),
+      tools['reject-deal'].execute!(
+        { rationale: 'Reject it.' },
+        { toolCallId: 'second', messages: sharedMessages } as any
+      ),
+    ]);
+
+    expect(accepted).toContain('Accepted proposal #7');
+    expect(dropped).toContain('accept-deal was the first terminal tool call');
+    expect(input.outcome).toMatchObject({ type: 'accept', proposalMessageID: 7 });
+    expect(mcp.calls('append-message')).toHaveLength(0);
+  });
 });
 
 describe('resolveHandoffInput', () => {

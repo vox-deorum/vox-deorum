@@ -369,6 +369,8 @@ export interface DealActionResponse {
   id: number;
   messageType: string;
   turn?: number;
+  /** Whether a human proposal/counter successfully produced and persisted a diplomat reply. */
+  agentResponded?: boolean;
 }
 
 /** One deal-related transcript message, returned for client-side reduction. */

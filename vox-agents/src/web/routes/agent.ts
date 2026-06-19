@@ -164,6 +164,40 @@ function currentTurnOf(context: VoxContext<StrategistParameters> | undefined): n
 }
 
 /**
+ * Run the voiced diplomat after the human places a proposal/counter, then persist its textual
+ * reply. The diplomat sees the freshly archived deal through its deal-context injection and
+ * can hand it to the negotiator without requiring a second human chat message.
+ */
+async function respondToHumanDeal(thread: EnvoyThread): Promise<boolean> {
+  const voxContext = contextRegistry.get<StrategistParameters>(thread.contextId);
+  const parameters = voxContext?.lastParameter;
+  const voice = agentName(thread);
+  if (!voxContext || !parameters || !voice) {
+    throw new Error("Could not resolve the voiced diplomat context for the deal response");
+  }
+
+  if (thread.contextType === "live" && parameters.gameStates && !parameters.gameStates[parameters.turn]) {
+    await ensureGameState(voxContext, parameters);
+  }
+
+  const messagesBefore = thread.messages.length;
+  await voxContext.execute(
+    voice,
+    parameters,
+    thread,
+    undefined,
+    undefined,
+    undefined,
+    { throwOnError: true }
+  );
+
+  const reply = joinAssistantText(thread.messages.slice(messagesBefore));
+  if (!reply) return false;
+  await appendTranscriptMessage(thread, thread.agent, "text", reply);
+  return true;
+}
+
+/**
  * Create agent API routes
  * @returns Express router with agent endpoints
  */
@@ -539,7 +573,15 @@ export function createAgentRoutes(): Router {
       const content = req.body?.content?.trim() || `A deal was ${verb}.`;
       try {
         const { id, turn } = await appendDealProposal(thread, audienceID(thread), messageType, content, parsed.data);
-        return res.json({ id, messageType, turn });
+        let agentResponded = false;
+        try {
+          agentResponded = await respondToHumanDeal(thread);
+        } catch (error) {
+          // The proposal is already durably stored, so do not turn a response failure into an
+          // ambiguous HTTP failure that invites the human to submit the same proposal twice.
+          logger.error(`Diplomat failed to respond to ${messageType}`, { error });
+        }
+        return res.json({ id, messageType, turn, agentResponded });
       } catch (error) {
         logger.error(`Failed to append ${messageType}`, { error });
         return res.status(502).json({ error: error instanceof Error ? error.message : `Failed to append ${messageType}` });

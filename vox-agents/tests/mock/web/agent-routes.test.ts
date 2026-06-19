@@ -180,11 +180,17 @@ describe('agent routes', () => {
 
   describe('POST /api/agents/chat/:chatId/deal/accept', () => {
     /** Open a diplomacy thread backed by the supplied transcript. */
-    async function openDiplomacyThread(transcript: unknown[]) {
+    async function openDiplomacyThread(transcript: unknown[], execute = vi.fn()) {
       const mcp = installMockMcpClient();
       mcp.respondWith('read-transcript', structuredResult(transcript));
       vi.spyOn(contextRegistry, 'get').mockReturnValue({
-        lastParameter: { turn: 5, gameID: 'g', playerID: 3, gameStates: {} },
+        lastParameter: {
+          turn: 5,
+          gameID: 'g',
+          playerID: 3,
+          gameStates: { 5: { options: {}, players: {} } },
+        },
+        execute,
       } as any);
       vi.spyOn(agentRegistry, 'get').mockReturnValue({
         name: 'diplomat',
@@ -201,6 +207,51 @@ describe('agent routes', () => {
       expect(response.status).toBe(200);
       return mcp;
     }
+
+    it('runs the voiced diplomat and persists its reply after a human proposal', async () => {
+      const execute = vi.fn(async (_name, _parameters, input) => {
+        input.messages.push({
+          message: { role: 'assistant', content: 'We will answer this offer.' },
+          metadata: { datetime: new Date(), turn: 5 },
+        });
+        return input;
+      });
+      const mcp = await openDiplomacyThread([], execute);
+      mcp.respondWith('inspect-deal', structuredResult({
+        items: [],
+        promises: [],
+        tradableRange: {},
+      }));
+      let nextID = 20;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const response = await request(app)
+        .post('/api/agents/chat/dipl:g:1:3/deal/propose')
+        .send({
+          deal: {
+            version: 1,
+            items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }],
+            promises: [],
+          },
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.agentResponded).toBe(true);
+      expect(execute).toHaveBeenCalledWith(
+        'diplomat',
+        expect.objectContaining({ playerID: 3 }),
+        expect.objectContaining({ id: 'dipl:g:1:3' }),
+        undefined,
+        undefined,
+        undefined,
+        { throwOnError: true }
+      );
+      expect(mcp.calls('append-message').map((call) => call.args.MessageType)).toEqual([
+        'deal-proposal',
+        'text',
+      ]);
+      expect(mcp.calls('append-message')[1]!.args.Content).toBe('We will answer this offer.');
+    });
 
     it('rejects an ID that is not the chat current open proposal', async () => {
       const transcript = [{

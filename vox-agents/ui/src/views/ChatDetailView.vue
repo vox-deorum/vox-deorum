@@ -93,7 +93,7 @@ Purpose: Main chat interface for interacting with agents
         :leftLabel="userLabel"
         :rightLabel="agentLabel"
         :locked="closedThisTurn"
-        @changed="loadDealMessages"
+        @changed="refreshConversation"
       />
     </Dialog>
 
@@ -248,7 +248,8 @@ const goBack = () => {
   router.push('/chat');
 };
 
-const loadSession = async () => {
+/** Refresh the in-memory conversation and its separately stored deal messages. */
+const refreshConversation = async () => {
   const response = await api.getAgentChat(sessionId.value);
   // Server-hydrated history carries ISO-string datetimes; revive them to Date so the thread's
   // timestamps match live-streamed messages (and merge/sort cleanly with deal cards).
@@ -262,9 +263,13 @@ const loadSession = async () => {
 
   // Load the conversation's deal messages so proposals render inline in the thread.
   if (thread.value.diplomacy) await loadDealMessages();
+};
 
+const loadSession = async () => {
+  await refreshConversation();
+  if (!thread.value) return;
   // Auto-greet on empty thread or when last message is from a previous game turn
-  if (shouldRequestGreeting(thread.value, response.currentTurn)) {
+  if (shouldRequestGreeting(thread.value, currentTurn.value)) {
     const cleanup = await requestGreeting();
     if (cleanup) {
       sseCleanup = cleanup;

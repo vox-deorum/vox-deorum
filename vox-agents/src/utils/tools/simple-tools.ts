@@ -15,13 +15,22 @@ import { VoxContext } from "../../infra/vox-context.js";
 
 const tracer = trace.getTracer('vox-tools');
 
+/** AI SDK execution metadata exposed to simple-tool implementations when they need it. */
+export interface SimpleToolExecutionOptions {
+  /** Unique ID of this tool call. */
+  toolCallId: string;
+  /** Shared prompt-message array for every tool call emitted in the same model step. */
+  messages: unknown[];
+}
+
 /**
  * Function signature for simple tools.
  * Simple tools are regular functions that receive input and agent parameters.
  */
 export type SimpleToolFunction<TParameters extends AgentParameters, TInput = any, TOutput = any> = (
   input: TInput,
-  parameters: TParameters
+  parameters: TParameters,
+  options: SimpleToolExecutionOptions
 ) => Promise<TOutput> | TOutput;
 
 /**
@@ -74,7 +83,7 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
   return dynamicTool({
     description: config.description,
     inputSchema: config.inputSchema as any,
-    execute: async (input) => {
+    execute: async (input, options) => {
       const span = tracer.startSpan(`simple-tool.${config.name}`, {
         attributes: {
           'tool.name': config.name,
@@ -91,7 +100,11 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
         });
 
         // Execute the function with input and parameters
-        const result = await config.execute(input as TInput, context.lastParameter!);
+        const result = await config.execute(
+          input as TInput,
+          context.lastParameter!,
+          options as SimpleToolExecutionOptions
+        );
 
         logger.debug(`Simple tool execution completed: ${config.name}`);
         span.setAttributes({
