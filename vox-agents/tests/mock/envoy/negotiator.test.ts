@@ -135,14 +135,14 @@ describe('accept-deal', () => {
   });
 });
 
-describe('propose-counter-deal', () => {
+describe('propose-deal', () => {
   it('writes a deal-proposal (opening) when nothing is on the table', async () => {
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
     mcp.respondWith('append-message', structuredResult({ ID: 11, Turn: 5 }));
     const input = negotiatorInput({ intent: 'open trade' });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
-    await run(tools['propose-counter-deal'], {
+    await run(tools['propose-deal'], {
       rationale: 'Start modest.',
       message: 'I offer 50 gold for your map.',
       items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 }],
@@ -170,7 +170,7 @@ describe('propose-counter-deal', () => {
     const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
-    await run(tools['propose-counter-deal'], {
+    await run(tools['propose-deal'], {
       rationale: 'Ask for more.',
       message: 'Add open borders and we have a deal.',
       items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'OPEN_BORDERS' }],
@@ -184,7 +184,7 @@ describe('propose-counter-deal', () => {
   it('refuses an empty proposal (no terms)', async () => {
     const input = negotiatorInput();
     const tools = createNegotiatorTerminalTools(makeContext(input));
-    const msg = await run(tools['propose-counter-deal'], { rationale: 'x', message: 'y', items: [], promises: [] });
+    const msg = await run(tools['propose-deal'], { rationale: 'x', message: 'y', items: [], promises: [] });
     expect(msg).toContain('at least one trade item or promise');
     expect(input.outcome).toBeUndefined();
     expect(mcp.calls('append-message')).toHaveLength(0);
@@ -195,7 +195,7 @@ describe('propose-counter-deal', () => {
     const input = negotiatorInput({ intent: 'open trade' });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
-    const msg = await run(tools['propose-counter-deal'], {
+    const msg = await run(tools['propose-deal'], {
       rationale: 'Start modest.',
       message: 'I offer 50 gold.',
       items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 }],

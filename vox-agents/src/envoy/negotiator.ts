@@ -15,7 +15,7 @@
  * It chooses EXACTLY ONE of three terminal tools per invocation, each returning an inward
  * `rationale` (reasoning for the diplomat, never voiced verbatim):
  *  - `accept-deal`        — accept the on-the-table deal as-is (routes through enact-agent-deal);
- *  - `propose-counter-deal` — author a draft deal (counter, or an opening proposal), with a
+ *  - `propose-deal` — author a draft deal (counter, or an opening proposal), with a
  *                            one-sentence outward `message`; stored as deal-counter / deal-proposal;
  *  - `reject-deal`        — decline the on-the-table deal as-is.
  *
@@ -58,7 +58,7 @@ import {
 const logger = createLogger("negotiator");
 
 /** The negotiator's three terminal tool names — exactly one must be called per invocation. */
-export const NEGOTIATOR_TERMINAL_TOOLS = ["accept-deal", "propose-counter-deal", "reject-deal"] as const;
+export const NEGOTIATOR_TERMINAL_TOOLS = ["accept-deal", "propose-deal", "reject-deal"] as const;
 
 /** The on-the-table deal from the counterpart being responded to. Absent when proposing outright. */
 export interface ActiveProposalContext {
@@ -216,7 +216,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
         if (!ni) return "No negotiation context is active.";
         const claimed = claimStep(options, "accept-deal");
         if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
-        if (!ni.activeProposal) return "There is no deal on the table to accept. Use propose-counter-deal instead.";
+        if (!ni.activeProposal) return "There is no deal on the table to accept. Use propose-deal instead.";
         try {
           await requireCurrentOpenProposal(
             ni.thread,
@@ -247,7 +247,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
 
   const proposeCounterDeal = createSimpleTool<StrategistParameters>(
     {
-      name: "propose-counter-deal",
+      name: "propose-deal",
       description:
         "Author the deal terms to present: a counter to the deal on the table, or an opening proposal when none is on the table. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
@@ -261,7 +261,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
       execute: async (args, _parameters, options) => {
         const ni = input();
         if (!ni) return "No negotiation context is active.";
-        const claimed = claimStep(options, "propose-counter-deal");
+        const claimed = claimStep(options, "propose-deal");
         if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
         if (args.items.length === 0 && args.promises.length === 0) {
           return "A proposal must include at least one trade item or promise. Reject instead if you want no deal.";
@@ -354,7 +354,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
 
   return {
     "accept-deal": acceptDeal,
-    "propose-counter-deal": proposeCounterDeal,
+    "propose-deal": proposeCounterDeal,
     "reject-deal": rejectDeal,
   };
 }
@@ -521,7 +521,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
     if (input.activeProposal) {
       sections.push(formatActiveProposal(input.activeProposal));
       sections.push(
-        "Decide on this on-the-table deal: accept-deal, propose-counter-deal (a counter), or reject-deal."
+        "Decide on this on-the-table deal: accept-deal, propose-deal (a counter), or reject-deal."
       );
     } else {
       if (ownPending) {
@@ -531,7 +531,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
       }
       sections.push(`# Strategic Intent\n${input.intent || "(open a deal at your discretion)"}`);
       sections.push(
-        "There is no deal from the counterpart on the table. Construct opening terms with propose-counter-deal (the tradable range and values below are your basis)."
+        "There is no deal from the counterpart on the table. Construct opening terms with propose-deal (the tradable range and values below are your basis)."
       );
     }
 
