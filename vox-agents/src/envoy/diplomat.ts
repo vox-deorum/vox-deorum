@@ -118,7 +118,7 @@ export class Diplomat extends LiveEnvoy {
 ${worldContext}
 You represent your government's interests and gather intelligence through diplomatic conversations. ${noDecisionPower}`,
 
-      `# Your Expectation
+      `# Your Expectations
 - You engage in diplomatic dialogue on behalf of your leader.
 - You gather intelligence and relay important information back to your leader using the \`call-diplomatic-analyst\` tool.
 - You assess the situation and provide context in your reports to help the analyst.
