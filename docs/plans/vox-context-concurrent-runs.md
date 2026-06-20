@@ -76,7 +76,7 @@ forkRun(
 
 Its parameter source is `options.parameters` when supplied, otherwise the context’s `baseParameters`; it throws before entering the run if neither exists. `options.overrides` seeds the run-local side of the composed parameter proxy. Reads and writes of those keys stay in the root run, while all other properties resolve against the selected parameter source. Strategist and chat callers pass their `turn`, `before`, and `after` values through `overrides`. Seat contexts normally omit `parameters` and compose over their base, while concurrent Oracle tasks supply their task-specific parameter object and need no overrides.
 
-`forkRun()` is valid only inside an existing run. It shallow-copies the parent’s composed parameters into a new plain parameter object, copies the progress configuration, creates an independent root cancellation/token scope, starts it without awaiting completion, and logs failures. Top-level values such as `turn`, `before`, and `after` are snapshotted, while nested seat state such as `gameStates`, `workingMemory`, and metadata remains shared by reference. Later top-level writes in either run do not affect the other. Agent tools use it only for `fireAndForget` agents. The analyst keeps the turn and game view from the diplomat that submitted it, but survives cancellation of that diplomat request.
+`forkRun()` is valid only inside an existing run. It shallow-copies the parent’s composed parameters into a new plain parameter object, copies the progress configuration, creates an independent root cancellation/token scope, starts it without awaiting completion, and logs failures. Top-level values such as `turn`, `before`, and `after` — and any other base primitive such as `lastDecisionTurn` — are snapshotted by value into the copy, while nested seat state such as `gameStates`, `workingMemory`, and `metadata` remains shared by reference. Later top-level writes in either run do not affect the other. Agent tools use it only for `fireAndForget` agents. The analyst keeps the turn and game view from the diplomat that submitted it, but survives cancellation of that diplomat request.
 
 `run.abort()` always means cancellation. It aborts the root signal and its synchronous nested work; normal success is represented by the `withRun()` callback resolving and requires no explicit abort or success flag. Context-wide `context.abort(successful?)` may retain its existing lifecycle argument for `VoxPlayer` compatibility, but that flag is context/player completion metadata and is not propagated to individual run handles.
 
@@ -147,7 +147,7 @@ The following remain shared by reference:
 - `gameStates`;
 - `metadata`;
 - `workingMemory`;
-- `lastDecisionTurn` — writes resolve to the base object and are seat-wide. Add a code comment at the proxy/shared-list definition stating that only the strategist root writes `lastDecisionTurn`; a chat root must never write it, since base writes are visible to every concurrent run on the seat.
+- `lastDecisionTurn` — within a `withRun()` proxy root, writes resolve to the base object and are seat-wide. Add a code comment at the proxy/shared-list definition stating that only the strategist root writes `lastDecisionTurn`; a chat root must never write it, since base writes are visible to every concurrent run on the seat. The comment must also note that a `forkRun()` child holds a snapshot copy of this primitive (see the parameter ownership convention above), so the seat-wide guarantee applies only to `withRun()` roots — a forked analyst's write would stay local and must never be relied on; forked analysts do not write it.
 - `_pendingBriefings`;
 - seat identity and configuration such as `playerID`, `gameID`, `mode`, `syncSeed`, and `_humanDecisionBus`.
 
@@ -177,14 +177,17 @@ Every existing `this.abortController.signal` reference in `vox-context.ts` must 
 - [ ] Remove the shared instance `abortController` (constructor init and the recreate-after-abort in `abort()`); the only `AbortController`s now live on root-run objects.
 - [ ] Test: abort one root mid-step and assert a concurrently-running second root's step loop completes unaffected (its signal never observes aborted).
 
-`VoxContext` tracks active roots in a `Map`. `shutdown()` marks the context as closing, aborts all roots, and waits for their completion before flushing telemetry, closing the base parameters, and unregistering the context. New roots are rejected once shutdown begins.
+`VoxContext` tracks active roots in a `Map`. Root runs are terminable through their `AbortController`: every awaited operation in a root, including model generation, receives the root signal, and execution checks that signal before continuing between steps. `shutdown()` marks the context as closing, aborts every active root, and races `Promise.allSettled()` over the root completion promises against the existing five-second teardown timeout. Cancellation and other root failures are ignored; if the timeout wins, shutdown logs the remaining root IDs and proceeds to flush telemetry, close the base parameters, and unregister the context. Shutdown needs roots to stop, not to succeed, and must not wait indefinitely when the process itself may be exiting. New roots are rejected once shutdown begins.
 
-Shutdown does not close run-supplied parameters. It aborts every root and waits for each `withRun()` callback and its caller-owned `finally` cleanup to unwind. This avoids the current bug where `shutdown()` closes whichever `lastParameter` happened to run last (arbitrary under concurrency) without making `VoxContext` guess whether a run parameter object is owned, borrowed, or shares resources with another object.
+Shutdown does not close run-supplied parameters. It aborts every root and gives each `withRun()` callback and its caller-owned `finally` cleanup up to the teardown timeout to unwind. This avoids the current bug where `shutdown()` closes whichever `lastParameter` happened to run last (arbitrary under concurrency) without making `VoxContext` guess whether a run parameter object is owned, borrowed, or shares resources with another object. Once the timeout expires, shutdown deliberately stops waiting and continues best-effort cleanup; a process-exit path cannot guarantee further work by an unresponsive root.
 
 - [ ] `shutdown()` closes only `baseParameters` (the context-owned object), replacing today's `lastParameter?.close?.()`.
 - [ ] Callers that construct resource-bearing parameters for `withRun({ parameters })` retain their existing explicit `finally` cleanup; the run API does not close them.
 - [ ] Oracle per-task `OracleParameters` are resource-free today, so their callers have nothing additional to close.
-- [ ] Test: run several roots concurrently, call `shutdown()`, and assert all roots are aborted and unwound before `shutdown()` resolves, caller-owned cleanup can complete, and base parameters are closed exactly once.
+- [ ] Every root-owned asynchronous operation receives the root abort signal, and execution checks the signal before advancing after awaited work, so `run.abort()` makes the root settle rather than merely recording cancellation.
+- [ ] `shutdown()` aborts every active root and races `Promise.allSettled()` over their completion promises against the existing five-second teardown timeout. Root failures do not reject shutdown; timeout logs outstanding roots and permits cleanup to continue.
+- [ ] Test: run several roots concurrently, call `shutdown()`, and assert roots that respond to abort unwind before `shutdown()` resolves, failed/cancelled roots do not reject shutdown, caller-owned cleanup can complete, and base parameters are closed exactly once.
+- [ ] Test: keep one root pending despite abort, advance the five-second teardown timeout, and assert `shutdown()` logs the outstanding root and completes cleanup without waiting indefinitely.
 
 In the web route, an HTTP disconnect means the browser or client closes the SSE request because of cancellation, navigation, tab closure, or network loss. Register the response-close listener immediately after creating the root and before awaiting refresh or agent work. It calls only `run.abort()`. Track whether the response completed normally so the server’s own `res.end()` does not treat successful completion as a disconnect.
 
@@ -232,7 +235,7 @@ The strategist’s queued turn and the chat’s live turn remain independent eve
 
 Add `mergedEvents?: EventsReport` to `GameState`, alongside `events`.
 
-`GameState.events` remains the immutable per-refresh event slice stored for that turn. `GameState.mergedEvents` is the derived multi-turn pacing window associated with that state’s strategist decision. Keeping the fields separate preserves the original turn slice while allowing the selected decision window to remain available to the strategist and its briefers.
+`GameState.events` is the per-turn live event slice for that turn. It is immutable as a *working window* — pacing and the event-window fallback must never mutate it in place — but a same-turn refresh may replace it with a larger slice for the same turn (see "Game-state cache concurrency"; the report with the larger serialized size wins). It only ever grows toward the largest serialized snapshot seen for that turn and is never repurposed as a multi-turn window. `GameState.mergedEvents` is the derived multi-turn pacing window associated with that state’s strategist decision. Keeping the fields separate preserves the per-turn slice while allowing the selected decision window to remain available to the strategist and its briefers.
 
 `withEventWindowFallback()` computes each candidate with `mergeCachedEvents()` and assigns it to `state.mergedEvents` before invoking the attempt. It does not mutate `state.events`. The first strategist attempt receives the full decision window through `mergedEvents`; narrower retries replace only the derived field on that same `GameState`. The successful window remains on the state for subsequent nested or cached briefer consumption. If every attempt fails, the final attempted window remains for diagnostics and does not affect the immutable event slice.
 
@@ -263,10 +266,11 @@ Remove the single `_pendingRefresh` field and its deduplication. Concurrent cach
 
 When two refreshes target the same turn, the later successful refresh must **update the existing cached `GameState` in place rather than replace the object reference**. Briefing deduplication (`briefing-utils.ts`) closes over the specific `GameState` instance: `requestBriefing()` writes the in-flight promise to `state._pendingBriefings[reportKey]`, and `generateBriefing()` writes the resolved report to that same `state.reports` after the LLM returns. Swapping the map entry for a fresh object would orphan any briefing promise still in flight — it would resolve into the discarded object, its `finally` cleanup would no longer match the live entry (`state._pendingBriefings?.[reportKey] === tracked` becomes false), and the expensive report would be lost. Copying fields forward at swap time does not fix this, because the in-flight closure already captured the old reference.
 
-Therefore the refresh overwrites only the freshly-fetched snapshot fields (`players`, `events`, `cities`, `options`, `military`, `victory`) on the existing object and leaves `reports`, `_pendingBriefings`, and `mergedEvents` untouched. This preserves the immutable per-turn `events` slice semantics, the briefing dedup invariant, and the strategist's selected pacing window simultaneously, with no orphaned references.
+Therefore the refresh updates the freshly-fetched snapshot fields on the existing object and leaves `reports`, `_pendingBriefings`, and `mergedEvents` untouched. The non-event fields (`players`, `cities`, `options`, `military`, `victory`) take the newest fetch. For `events`, **the larger serialized report wins**: compare `JSON.stringify(existingEvents).length` with `JSON.stringify(fetchedEvents).length` and keep the larger value. Concurrent same-turn refreshes can complete in any order, so this is decided by serialized field size, not arrival order — a fuller report supersedes a smaller partial one, while a larger report is never clobbered by a smaller late arrival. The per-turn `events` slice therefore converges monotonically toward the largest available snapshot for that turn rather than being mutated as a working window, and it is never replaced by a strictly smaller serialized slice. This preserves the briefing dedup invariant and the strategist's selected pacing window simultaneously, with no orphaned references.
 
-- [ ] Touch: same-turn refresh path mutates the cached `GameState` fields in place; never reassigns `gameStates[turn]` to a new object when an entry already exists.
+- [ ] Touch: same-turn refresh path updates the cached `GameState` fields in place; never reassigns `gameStates[turn]` to a new object when an entry already exists. Overwrite `players`/`cities`/`options`/`military`/`victory` with the newest fetch, but set `events` to whichever slice (existing vs. fetched) has the larger `JSON.stringify(...).length`.
 - [ ] Test: start a briefing on a cached state, issue a concurrent same-turn refresh, then resolve the briefing; assert the report lands in the live cache entry and dedup cleanup still matches.
+- [ ] Test: issue two same-turn refreshes returning differently-sized serialized `events` slices in both arrival orders; assert the cached `events` is always the larger serialized slice and is never overwritten by the smaller one.
 
 Change state culling so a lagging strategist never deletes a newer chat snapshot. After inserting a state:
 
@@ -343,7 +347,7 @@ Change `getRecentGameState()` consumers that are executing inside a root to pref
 - Call `execute()` and `callAgent()` without a root and assert both reject with the documented programming error.
 - Abort one root and verify the other remains active.
 - Call context-wide abort and verify every active root stops.
-- Verify shutdown rejects new roots and waits for active roots to unwind.
+- Verify shutdown rejects new roots, waits up to five seconds for active roots to unwind, and then continues cleanup if any remain pending.
 
 ### Nested and detached agents
 
@@ -363,9 +367,9 @@ Change `getRecentGameState()` consumers that are executing inside a root to pref
 ### Game-state and pacing safety
 
 - Refresh two different turns concurrently and assert each caller receives and caches its requested turn.
-- Refresh the same turn concurrently and assert the final cache entry is complete and preserves reports and pending briefings.
+- Refresh the same turn concurrently and assert the final cache entry keeps the `events` slice with the larger serialized size regardless of arrival order, and preserves reports and pending briefings.
 - Insert a newer chat state, then refresh a lagging strategist state and assert the newer state is not culled.
-- Run event-window fallback and assert cached `GameState.events` never changes.
+- Run event-window fallback and assert it never mutates cached `GameState.events` (the fallback path only writes `mergedEvents`).
 - Assert each retry updates only `state.mergedEvents`, and the selected/final attempted window remains on that state.
 - Assert simple and specialized briefers consume `state.mergedEvents` when present, while states without a decision window fall back to their immutable `state.events` slice.
 - Assert lagging briefer/librarian helpers do not select a future chat snapshot.
