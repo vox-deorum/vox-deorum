@@ -1,91 +1,333 @@
-# Concurrent runs on a VoxContext — per-run execution state and correct chat turn
+# Concurrent root runs on a VoxContext
 
-> Plan for review. Refactors `VoxContext` so a diplomat chat and a strategist turn can run on the same seat at the same time, and so chats see the correct game turn.
+> Implementation plan. Refactor `VoxContext` so one seat can run a strategist turn, diplomat chats, deal responses, and background analysts concurrently without sharing execution state, while every run sees the correct game turn and event window.
 
 ## Objective
 
-Make a single `VoxContext` safely support **more than one concurrent `execute()` run**, and give chat-side agents (diplomat, negotiator, analyst) the **correct live turn and game state** without disturbing the strategist's decision loop. Two issues, one root cause, one fix.
+A `VoxContext` represents long-lived resources and state for one seat. It must safely support multiple concurrent **root runs**:
 
-## Context
+- one strategist turn;
+- each diplomat chat request;
+- each automatic diplomat response to a deal;
+- each standalone or telepathist request;
+- each fire-and-forget analyst submitted by another agent.
 
-`VoxContext` was built assuming **one `execute()` run at a time per seat**. Interactive diplomacy breaks that: a human can chat or trade with an AI civ while that civ's strategist is mid-turn — both run on the *same* `VoxContext` (`${gameID}-player-${playerID}`). This produces two symptoms:
+A root run owns its cancellation, progress callbacks, token accounting, current turn, and event window. Agents invoked synchronously inside that work, such as negotiators and briefers, are nested executions in the same root run: they inherit its cancellation, parameters, and token accounting while temporarily replacing only the active agent input. An analyst is “detached” because its `fireAndForget` handoff returns immediately and lets the analyst continue in the background; it therefore starts a new root run rather than remaining part of the caller’s run.
 
-1. **Concurrency corruption.** Overlapping runs collide on per-run state stored in single instance slots (active input, abort, token counts), and a disconnecting chat can abort the strategist's turn.
-2. **Wrong turn for chats.** The diplomat runs against the strategist's shared `parameters`, whose `turn` is `-1` at game load and otherwise reflects the strategist's last *decision* turn — not the live turn. So the diplomat reports the wrong turn and fetches the wrong game-state window.
+The refactor must also make chat-side agents use the session’s live turn while preserving the strategist’s queued decision turn. A strategist may legitimately be deciding an older turn while a diplomat speaks on the current live turn.
 
-Both stem from **per-run state living in shared single slots**. The fix separates per-run state from long-lived shared seat state.
+## Current problems
 
-## Verification of the problem (pre-checked against the code)
+`VoxContext` currently stores execution state in shared instance fields:
 
-**Issue 1 — single-run assumption + a real parallel run.**
-- Per-run state in single instance slots on `VoxContext`: `abortController` [vox-context.ts:79](vox-agents/src/infra/vox-context.ts#L79), `currentInput` [:108](vox-agents/src/infra/vox-context.ts#L108), `lastParameter` [:101](vox-agents/src/infra/vox-context.ts#L101), `streamProgress` [:120](vox-agents/src/infra/vox-context.ts#L120), `timeoutRefresh` [:83](vox-agents/src/infra/vox-context.ts#L83), `lastModelName` [:113](vox-agents/src/infra/vox-context.ts#L113), token counters [:88-96](vox-agents/src/infra/vox-context.ts#L88-L96).
-- The diplomat chat is voiced from the **target seat's** context (`${gameID}-player-${targetPlayerID}`, [agent.ts:736](vox-agents/src/web/routes/agent.ts#L736)) — the same object the strategist loop owns. Web `execute()` calls ([agent.ts:416](vox-agents/src/web/routes/agent.ts#L416), [:186](vox-agents/src/web/routes/agent.ts#L186)) are not serialized against the strategist or each other. The Negotiator/Analyst handoffs are *not* the problem (nested-blocking, handled by `currentInput` save/restore). `req.on('close')` → `voxContext.abort()` ([agent.ts:445](vox-agents/src/web/routes/agent.ts#L445)) aborts the whole context's controller — a cross-run kill.
-- Span routing already keys per-span on `vox.context.id`, so telemetry routing is unaffected by concurrency; only **token aggregation** is shared-mutable and gets misattributed. A per-run token sink already exists (`ExecuteTokenOutput`, [vox-context.ts:34/445](vox-agents/src/infra/vox-context.ts#L34)) and is reusable.
+- `abortController`;
+- `currentInput`;
+- `lastParameter`;
+- `streamProgress`;
+- `timeoutRefresh`;
+- cumulative token counters used to derive strategist-turn token usage.
 
-**Issue 2 — stale/`-1` turn + game state.**
-- `turn` starts `-1` ([vox-player.ts:65](vox-agents/src/strategist/vox-player.ts#L65)); only the strategist loop advances it ([:142-144](vox-agents/src/strategist/vox-player.ts#L142-L144), `after` at [:179](vox-agents/src/strategist/vox-player.ts#L179)).
-- The diplomat reads `parameters.turn` in its hint ("The time is at turn …", [live-envoy.ts:110](vox-agents/src/envoy/live-envoy.ts#L110)) and to fetch state ([strategy-parameters.ts:251](vox-agents/src/strategist/strategy-parameters.ts#L251), which throws "No game state available near turn …" if missing). The `get-events` window comes from `before/after` ([strategy-parameters.ts:113](vox-agents/src/strategist/strategy-parameters.ts#L113)).
-- The authoritative live turn already exists: the session sets `this.turn` from the game's `GameSwitched`/`PlayerDoneTurn` notifications ([strategist-session.ts:413/433](vox-agents/src/strategist/strategist-session.ts#L413)), exposed as `session.getTurn()` ([vox-session.ts:44](vox-agents/src/infra/vox-session.ts#L44)). The web layer uses it for *display* (`currentTurnOf`, [agent.ts:165](vox-agents/src/web/routes/agent.ts#L165)) but never injects it into the parameters the diplomat *executes* with.
-- `gameStates` is a shared per-turn cache with refresh dedup `_pendingRefresh` and briefing dedup `_pendingBriefings`; `ensureGameState`/`refreshGameState`/`getRecentGameState` operate on it ([strategy-parameters.ts](vox-agents/src/strategist/strategy-parameters.ts)). The cache should stay shared (both runs benefit); only the turn *cursor* should be per-run.
+Overlapping `execute()` calls overwrite these fields. In particular, the web route calls `voxContext.abort()` when its SSE response closes, which can abort an unrelated strategist or chat. The route also assigns `streamProgress` before calling `execute()`, so moving state only inside `execute()` would be too late to isolate request setup and game-state refresh.
 
-## Design
+The strategist’s shared `StrategistParameters` object causes a second conflict. Its `turn`, `before`, and `after` fields describe the strategist decision loop, not the live game. Chats reuse that object and can therefore see turn `-1` at game load or a stale decision turn. Pacing also merges multi-turn events by temporarily replacing a cached `GameState.events`, allowing concurrent readers to observe the strategist’s mutable working window.
 
-`VoxContext` keeps **long-lived shared seat state + resources**. A per-run `Run` object holds **per-run execution state and the turn window**, created by `execute()` and made ambient via `AsyncLocalStorage` so existing readers migrate with low churn. The `parameters` an agent sees is a **composed view**: the shared seat base with the run's turn window applied, and caches shared *by reference*.
+## Run model and VoxContext API
 
-### What is per-run vs. shared
+Add an `AsyncLocalStorage` store to `VoxContext`. The store represents the current execution frame and points to a root-run object.
 
-| State | Today | Goes to | Why |
-|---|---|---|---|
-| active input (`currentInput`) | `context` slot + save/restore | **Run** | Each run has its own input (thread). Nesting = nested `als.run`. |
-| abort (`abortController`) | `context` slot | **Run** (per-run token) | A disconnect aborts only its own run, never the strategist. |
-| `streamProgress`, `timeoutRefresh` | `context` slots | **Run** | Per-request sinks; set by the web route per call. |
-| token delta (per run) | shared `context` fields | **Run** sink (reuse `ExecuteTokenOutput`) | Strategist's per-turn delta must exclude concurrent chat tokens. |
-| token total (seat cumulative) | shared `context` fields | **Shared**, incremented by **every** run | Seat total counts strategist turns *and* chats (true per-seat cost). |
-| `lastModelName` dedup | shared `context` slot | **Shared** (strategist-only) | Only the strategist broadcasts model identity; low concern. |
-| **`turn`** | shared `parameters` | **Run** | **Strategist = its own decision turn (unchanged); chat = `session.getTurn()`.** They legitimately diverge — see warning. |
-| **`before` / `after`** | shared `parameters` | **Run** | Event window derived from the run's `turn`. |
-| `lastDecisionTurn` | shared `parameters` | **Shared** (persistent) | Must persist across strategist turns; chat never writes it. |
-| `gameStates` (+ `_pendingRefresh`, `_pendingBriefings`) | shared `parameters` | **Shared** cache (by reference) | Expensive cache; both runs read/populate; dedup must span runs. |
-| `workingMemory` | shared `parameters` | **Shared** | Strategist memory; diplomat reads. |
-| `metadata`, `mode`, `playerID`, `gameID`, `syncSeed`, `_humanDecisionBus` | shared `parameters` | **Shared** (static/config) | Per-seat identity/config, not per-run. |
-| `tools`, `mcpToolMap`, `modelOverrides`, `session`, telemetry | `context` | **Shared** (resources) | Long-lived; unchanged. |
+The root-run object contains:
 
-### Correct turn for chats (Issue 2)
+- a unique run ID;
+- the composed parameters for this run;
+- one `AbortController`;
+- run-local `streamProgress` and `timeoutRefresh` callbacks;
+- cumulative input, reasoning, and output token counts for all executions nested in the run;
+- completion state used to make abort and cleanup idempotent.
 
-- **Read the current turn at game load.** The authoritative live turn is established at load — the session sets `this.turn` from `GameSwitched` ([strategist-session.ts:433](vox-agents/src/strategist/strategist-session.ts#L433)), so `session.getTurn()` is valid before any chat opens. Belt-and-suspenders: if `start()`/`recoverGame()` ([:90](vox-agents/src/strategist/strategist-session.ts#L90)/[:586](vox-agents/src/strategist/strategist-session.ts#L586)) can run before the first notification, set `session.turn` there from the game's reported turn so it is never undefined when a chat opens.
-- A chat/diplomat `Run` seeds `turn` from `context.session?.getTurn()` and derives `before`/`after` from it — instead of inheriting the strategist's `-1`/stale cursor. `ensureGameState` then fetches at the live turn into the **shared** `gameStates` cache (dedup still spans both runs), and the diplomat's hint + context show the live turn.
-- **⚠️ The strategist run keeps its own turn, unchanged.** The strategist works the turn from its notification/decision queue ([vox-player.ts:142-144](vox-agents/src/strategist/vox-player.ts#L142-L144)), which may *lag behind* the session's live turn (the game can advance while the strategist is still owed a decision). It must **not** be switched to `session.getTurn()` — that could skip an un-decided turn. Only chat runs adopt the live turn. This divergence is exactly why `turn` must be per-run: strategist and diplomat can correctly be on different turns simultaneously.
+An execution frame contains the root-run reference and the current agent input. Nested `execute()` calls create nested frames with a new input but the same root. `currentInput` therefore resolves from the current frame and naturally returns to the parent input when the nested call completes.
 
-### Execution isolation (Issue 1)
+Expose the following context API:
 
-- `execute()` creates a `Run` and wraps the body in `als.run(run, …)`. Readers resolve the current run via the ALS store instead of `context.currentInput`/`lastParameter`.
-- **Explicitly handle the detached boundary:** the fire-and-forget analyst ([agent-tools.ts:77](vox-agents/src/utils/tools/agent-tools.ts#L77)) detaches the OTEL context but *not* ALS, so it would inherit the parent's store — it must start a fresh `als.run(new Run(...))`.
-- `req.on('close')` aborts via the run's own abort token; the strategist and other chats keep running.
-- The strategist's per-turn token delta reads from its `Run`'s sink ([vox-player.ts:148/250](vox-agents/src/strategist/vox-player.ts#L148)); the seat cumulative total is incremented per-run by **all** runs.
+```ts
+interface VoxRunOptions<TParameters> {
+  parameters?: TParameters;
+  overrides?: Partial<TParameters>;
+  streamProgress?: (message: string) => void;
+}
 
-### Blast radius (readers to migrate)
+interface VoxRunHandle<TParameters> {
+  readonly parameters: TParameters;
+  readonly signal: AbortSignal;
+  readonly tokens: ExecuteTokenOutput;
+  abort(): void;
+}
 
-`currentInput`: [close-conversation-tool.ts:42](vox-agents/src/envoy/close-conversation-tool.ts#L42), [negotiator.ts:190/400/412](vox-agents/src/envoy/negotiator.ts#L400). `lastParameter`: [agent.ts](vox-agents/src/web/routes/agent.ts) (`civIdentity`, `currentTurnOf`, `respondToHumanDeal`, `/message`, deal routes), [simple-tools.ts](vox-agents/src/utils/tools/simple-tools.ts), [mcp-tools.ts](vox-agents/src/utils/tools/mcp-tools.ts), [vox-player.ts:82](vox-agents/src/strategist/vox-player.ts#L82). `streamProgress`/`timeoutRefresh`: web + telepathist (`console.ts`, `phase/turn-preparation.ts`), [concurrency.ts:79/125](vox-agents/src/utils/models/concurrency.ts#L79). Tests: `tests/mock/context/vox-context-current-input.test.ts`, envoy + web-route mocks.
+withRun<TResult>(
+  options: VoxRunOptions<TParameters>,
+  callback: (run: VoxRunHandle<TParameters>) => Promise<TResult>
+): Promise<TResult>;
 
-## Critical files
+forkRun(
+  callback: (run: VoxRunHandle<TParameters>) => Promise<unknown>
+): void;
+```
 
-- [vox-agents/src/infra/vox-context.ts](vox-agents/src/infra/vox-context.ts) — split shared seat state vs. `Run`; ALS; `execute()`.
-- [vox-agents/src/strategist/strategy-parameters.ts](vox-agents/src/strategist/strategy-parameters.ts) — composed parameters view; keep `gameStates` shared.
-- [vox-agents/src/strategist/vox-player.ts](vox-agents/src/strategist/vox-player.ts) — strategist `Run` seeding (turn unchanged) + token deltas.
-- [vox-agents/src/strategist/strategist-session.ts](vox-agents/src/strategist/strategist-session.ts) — ensure live turn is set at load.
-- [vox-agents/src/web/routes/agent.ts](vox-agents/src/web/routes/agent.ts) — seed chat `Run` turn from `session.getTurn()`; per-run abort; `ensureGameState`.
-- [vox-agents/src/utils/tools/agent-tools.ts](vox-agents/src/utils/tools/agent-tools.ts) — nested vs. fire-and-forget `als.run`.
-- [vox-agents/src/envoy/close-conversation-tool.ts](vox-agents/src/envoy/close-conversation-tool.ts), [vox-agents/src/envoy/negotiator.ts](vox-agents/src/envoy/negotiator.ts) — read run from ALS.
+`withRun()` creates and registers a root run, enters its ALS scope, invokes the callback, and unregisters it in `finally`. It covers all work belonging to the operation, including preparation before the first agent executes. The callback receives the run handle so HTTP/SSE code can cancel that specific operation.
+
+Its parameter source is `options.parameters` when supplied, otherwise the context’s `baseParameters`; it throws before entering the run if neither exists. `options.overrides` seeds the run-local side of the composed parameter proxy. Reads and writes of those keys stay in the root run, while all other properties resolve against the selected parameter source. Strategist and chat callers pass their `turn`, `before`, and `after` values through `overrides`. Seat contexts normally omit `parameters` and compose over their base, while concurrent Oracle tasks supply their task-specific parameter object and need no overrides.
+
+`forkRun()` is valid only inside an existing run. It snapshots the parent’s selected parameter source, run-local override object, and progress configuration, creates an independent root cancellation/token scope, starts it without awaiting completion, and logs failures. Later writes to either run’s override object do not affect the other. Agent tools use it only for `fireAndForget` agents. The analyst keeps the turn and game view from the diplomat that submitted it, but survives cancellation of that diplomat request.
+
+`run.abort()` always means cancellation. It aborts the root signal and its synchronous nested work; normal success is represented by the `withRun()` callback resolving and requires no explicit abort or success flag. Context-wide `context.abort(successful?)` may retain its existing lifecycle argument for `VoxPlayer` compatibility, but that flag is context/player completion metadata and is not propagated to individual run handles.
+
+`execute()` behaves as follows:
+
+- it requires an active root run and rejects with `VoxContext.execute requires an active run; call withRun() or forkRun().` when called outside `withRun()` or `forkRun()`;
+- inside a run, it creates only an execution frame and uses the root’s composed parameters;
+- a synchronous nested agent invocation stays in the current root;
+- it never mutates shared execution fields.
+
+Remove the parameter argument from `execute()` because the active root is the single source of execution parameters:
+
+```ts
+execute(
+  agentName: string,
+  input: unknown,
+  callback?: StreamingEventCallback,
+  tokenOutput?: ExecuteTokenOutput,
+  onContextLengthError?: () => void,
+  options?: ExecuteOptions
+): Promise<unknown>;
+```
+
+`callAgent()` follows the same rule and also removes its parameter argument. It checks the active-run precondition before its existing agent-error handling, so the missing-run programming error is never swallowed and calling it outside a root rejects:
+
+```ts
+callAgent<T = unknown>(
+  name: string,
+  input: unknown,
+  onContextLengthError?: () => void
+): Promise<T | undefined>;
+```
+
+Manual `callTool()` continues to accept explicit parameters and does not create or require a root by itself. This preserves setup, shutdown, and non-agent MCP calls that already carry their parameter context explicitly.
+
+## Shared parameters and run-local parameters
+
+Replace `lastParameter` as mutable “most recently executed” state with two explicit concepts:
+
+- `baseParameters`: the stable long-lived parameter object owned by the context;
+- `currentParameters`: the active root’s composed parameter view, falling back to `baseParameters` outside a run.
+
+Add `setBaseParameters()` for `VoxPlayer`, telepathist setup, and other context owners. `execute()` does not replace the base. Context shutdown closes `baseParameters`.
+
+The composed parameter view is a proxy over the base object plus an override object:
+
+- `withRun({ overrides })` copies the supplied top-level entries into a new override object owned by the root;
+- properties present in the override object read and write the override;
+- every other property reads and writes the base object;
+- nested shared objects retain their original references.
+
+For strategist contexts, each root overrides:
+
+- `turn`;
+- `before`;
+- `after`.
+
+The following remain shared by reference:
+
+- `gameStates`;
+- `metadata`;
+- `workingMemory`;
+- `lastDecisionTurn`;
+- `_pendingBriefings`;
+- seat identity and configuration such as `playerID`, `gameID`, `mode`, `syncSeed`, and `_humanDecisionBus`.
+
+Migrate tool wrappers and context consumers from `lastParameter` to `currentParameters`. This includes simple-tool and MCP-tool telemetry, agent-tool parameter lookup, diplomacy helpers, and web-route context reads. Code that needs seat state outside a root uses `baseParameters` explicitly. Accessing `currentParameters` outside a run may still return the base for non-agent tool and display operations, but that fallback never permits `execute()` or `callAgent()`.
+
+## Cancellation and lifecycle
+
+There are two distinct cancellation operations:
+
+- `run.abort()` cancels one root run and everything synchronously nested in it;
+- `context.abort()` cancels every active root run and remains the operation used by `VoxPlayer.abort()`, game switching, and shutdown.
+
+All model calls use the active root’s abort signal. Nested negotiators and briefers stop when their parent root is aborted. A detached analyst has its own signal and is not cancelled by the originating chat, but context-wide abort still cancels it.
+
+`VoxContext` tracks active roots in a `Map`. `shutdown()` marks the context as closing, aborts all roots, waits for their completion with bounded cleanup behavior consistent with the existing shutdown path, then flushes telemetry, closes the base parameters, and unregisters the context. New roots are rejected once shutdown begins.
+
+In the web route, an HTTP disconnect means the browser or client closes the SSE request because of cancellation, navigation, tab closure, or network loss. Register the response-close listener immediately after creating the root and before awaiting refresh or agent work. It calls only `run.abort()`. Track whether the response completed normally so the server’s own `res.end()` does not treat successful completion as a disconnect.
+
+## Token accounting and progress callbacks
+
+Keep the existing context-wide input, reasoning, and output counters as seat totals. Every completed execution atomically adds its tokens to:
+
+1. the current root’s cumulative token sink;
+2. the context-wide seat totals;
+3. an optional per-`execute()` `ExecuteTokenOutput`, preserving Oracle behavior.
+
+Nested negotiators and briefers count toward their parent root. A detached analyst counts toward its own root and the seat total. Concurrent chat or analyst tokens therefore cannot appear in the strategist root’s turn delta.
+
+`VoxPlayer` reads the strategist run handle’s token totals after the turn instead of subtracting context-wide counters.
+
+Move `streamProgress` and `timeoutRefresh` into the active root. Existing context accessors may remain as getters/setters backed by ALS to reduce call-site churn, but assigning them without an active run must either configure an explicit standalone root or fail fast; it must never create shared mutable request state. Telepathist console work and web requests therefore create their run before assigning or consuming progress callbacks.
+
+## Turn and game-state behavior
+
+`StrategistSession.handleGameSwitched()` already sets `session.turn` before creating `VoxPlayer` contexts, so no extra session initialization is needed.
+
+Each strategist turn creates a root around the entire turn operation, including pause, refresh, pacing evaluation, optional LLM decision, and resume. Its run-local values come from the queued turn:
+
+- `turn = turnData.turn`;
+- `before = turnData.turn * 1_000_000 + 999_999`;
+- `after = the strategist’s persistent event cursor`.
+
+`VoxPlayer` supplies those values through `withRun({ overrides: { turn, before, after } })`; the context’s base strategist parameters remain unchanged.
+
+Move the persistent event cursor from shared `StrategistParameters.after` into `VoxPlayer`. Advance it after the game-state refresh succeeds, preserving the existing behavior where a failed refresh leaves the cursor unchanged and a later turn re-fetches the gap.
+
+Each live diplomat chat or deal response creates a root using:
+
+- `turn = context.session.getTurn()`;
+- `before = turn * 1_000_000 + 999_999`;
+- `after = turn * 1_000_000`.
+
+The web route supplies those values through `withRun({ overrides: { turn, before, after }, streamProgress })`.
+
+The chat performs `ensureGameState()` with its composed parameters before executing the envoy. The hint, game context, tools, negotiator, and any detached analyst therefore all use the live turn. If a live session unexpectedly has no turn, the route returns a clear unavailable-state error rather than silently using the strategist’s stale turn. Standalone and database-backed contexts continue to use their supplied parameter turn.
+
+The strategist’s queued turn and the chat’s live turn remain independent even when both roots run concurrently.
+
+## Immutable cached events and pacing windows
+
+Add `mergedEvents?: EventsReport` to `GameState`, alongside `events`.
+
+`GameState.events` remains the immutable per-refresh event slice stored for that turn. `GameState.mergedEvents` is the derived multi-turn pacing window associated with that state’s strategist decision. Keeping the fields separate preserves the original turn slice while allowing the selected decision window to remain available to the strategist and its briefers.
+
+`withEventWindowFallback()` computes each candidate with `mergeCachedEvents()` and assigns it to `state.mergedEvents` before invoking the attempt. It does not mutate `state.events`. The first strategist attempt receives the full decision window through `mergedEvents`; narrower retries replace only the derived field on that same `GameState`. The successful window remains on the state for subsequent nested or cached briefer consumption. If every attempt fails, the final attempted window remains for diagnostics and does not affect the immutable event slice.
+
+Strategists and briefers consume:
+
+```ts
+state.mergedEvents ?? state.events
+```
+
+This applies to simple and specialized briefers and any strategist prompt that reads events. A briefer nested under a strategist reads the current candidate window from the shared state object. An on-demand briefer uses `mergedEvents` when that turn has an established strategist decision window; otherwise it falls back to the immutable live-turn slice.
+
+## Game-state cache concurrency
+
+Keep `gameStates` shared so strategist, diplomat, negotiator, and analyst runs reuse snapshots and reports.
+
+Remove the single `_pendingRefresh` field and its deduplication. Concurrent cache misses may issue independent MCP refreshes; refresh cost is acceptable, and runs for different turns must never receive one another’s promise.
+
+When two refreshes target the same turn, the last successful complete snapshot may replace the earlier equivalent snapshot. Briefing reports, `_pendingBriefings`, and an existing `mergedEvents` decision window must be preserved when replacing it, so a refresh cannot discard expensive LLM output, break briefing deduplication, or erase the strategist’s selected pacing window.
+
+Change state culling so a lagging strategist never deletes a newer chat snapshot. After inserting a state:
+
+1. find the highest cached turn;
+2. delete only turns older than `highestTurn - cullLimit`;
+3. never delete entries because they are later than the refreshing run’s turn.
+
+Keep briefing promise deduplication on each `GameState` because briefing generation is expensive and same-state callers should share it.
+
+Change `getRecentGameState()` consumers that are executing inside a root to prefer the state at `parameters.turn`; “most recent” must not make a lagging strategist accidentally read a newer chat snapshot. Briefer and librarian helpers should use an exact/nearest-at-or-before lookup bounded by the active run turn. Once that state is selected, briefing lookup and generation continue to use the selected state’s shared `reports` and `_pendingBriefings`, so nested briefers still join the same per-state/per-report promise rather than bypassing deduplication.
+
+## Integration changes
+
+### Strategist
+
+- Set the context’s base parameters once in the `VoxPlayer` constructor.
+- Keep queued turn and event cursor in `VoxPlayer`.
+- Change `VoxPlayer.execute()` so each processed turn enters `context.withRun()` before pause, refresh, pacing, or strategist work.
+- Change `executeDecisionWithEventFallback()` to call `context.execute(strategistName, input, ...)` inside that established root, without passing parameters.
+- Pass the run’s composed parameters to refreshes, tools, pacing, strategist execution, and nested briefers.
+- Record turn token telemetry from the run handle.
+
+### Web diplomacy and chat
+
+- Change `/agents/message` in `web/routes/agent.ts` to enter `voxContext.withRun()` around the full request operation, including game-state preparation and programmatic-agent handling; its `voxContext.execute()` call becomes a nested execution with no parameter argument.
+- Pass the SSE progress callback in `VoxRunOptions`.
+- Install per-run disconnect cancellation before asynchronous work starts.
+- Change `respondToHumanDeal()` in the same route to create its own `withRun()` around refresh, diplomat execution, and transcript handling.
+- Keep identity and thread-open display helpers on stable base parameters plus `session.getTurn()` because they run outside an execution root.
+
+### Agent tools
+
+- Change the blocking branch in `utils/tools/agent-tools.ts` to call `execute()` directly inside the caller’s existing root; it must not call `withRun()`.
+- Change the `fireAndForget` branch in that file to call `forkRun()`, detach the OpenTelemetry context inside the fork, and call `execute()` from the forked root.
+- Negotiator and close-conversation tools read `currentInput` from the active execution frame.
+- Simple and MCP tools receive `currentParameters`; MCP timeout refresh resolves from the current root.
+
+### Standalone workflows
+
+- Change `telepathist/console.ts` to set base parameters and wrap initialization, preparation, and the top-level telepathist `execute()` in one `withRun()` carrying the logger progress callback.
+- Change each task in `oracle/replayer.ts` to call `withRun({ parameters })` around the Oracle `execute()`. Every concurrent replay task gets its own root and token sink on the shared Oracle context.
+- Change `archivist/pipeline/telepathist-prep.ts` to set base parameters and wrap `prepareTurnSummaries()` in `withRun()`. Its nested summarizer calls then remain inside that root.
+- Keep `summarizeWithCache()`, briefing generation, and turn/phase preparation on `callAgent()` without creating roots themselves; their strategist, telepathist, or archivist entry point is responsible for the enclosing root.
+- Test fakes expose `baseParameters`, `currentParameters`, run creation, and frame-local input as needed by the code under test.
+
+### Required execute/callAgent migration map
+
+| Current caller | Required change |
+|---|---|
+| `strategist/vox-player.ts` strategist execution | Enclose the complete processed turn in `withRun()`; nested `execute()` only. |
+| `web/routes/agent.ts` `/agents/message` | Enclose the complete request in `withRun()`; use the handle for disconnect abort. |
+| `web/routes/agent.ts` `respondToHumanDeal()` | Create a separate `withRun()` per automatic deal response. |
+| `telepathist/console.ts` | Enclose bootstrap/preparation/execution in `withRun()`. |
+| `oracle/replayer.ts` | Create one `withRun()` per replay task, inside the existing concurrency limiter. |
+| `archivist/pipeline/telepathist-prep.ts` | Enclose `prepareTurnSummaries()` in `withRun()`. |
+| `utils/tools/agent-tools.ts` blocking handoff | Stay in the existing root and call `execute()` directly. |
+| `utils/tools/agent-tools.ts` fire-and-forget handoff | Create an independent root with `forkRun()`, then call `execute()`. |
+| `briefer/briefing-utils.ts` | Continue using nested `callAgent()`; no new root. |
+| `telepathist/summarizer.ts` and preparation helpers | Continue using nested `callAgent()`; no new root. |
+| Direct `VoxContext.execute()` tests | Wrap intended executions in `withRun()` and add an explicit outside-run failure test. |
 
 ## Test plan
 
-- **Concurrency:** drive a strategist turn and a diplomat chat on the same seat simultaneously; assert each sees its own input/turn and neither's tokens leak into the other.
-- **Turn correctness:** at fresh game load (strategist `turn` still `-1`), open a diplomat chat and assert the hint + game context use `session.getTurn()`, not `-1`; assert `gameStates` is populated at the live turn and shared with the strategist.
-- **Turn divergence:** with the live turn ahead of the strategist's pending decision turn, assert the strategist still decides its own (lagging) turn and the diplomat speaks to the live turn.
-- **Abort isolation:** disconnect one chat; the strategist and other chats keep running.
-- **Nesting:** diplomat→negotiator and diplomat→analyst (fire-and-forget) resolve correctly under load.
-- **Regression:** `vox-context-current-input.test.ts`, envoy/web-route tests stay green; run the root TypeScript test and build suites.
+### Run isolation
+
+- Start two root runs on one context and hold them concurrently.
+- Assert each sees its own parameters, input, progress callback, timeout callback, and abort signal.
+- Call `execute()` and `callAgent()` without a root and assert both reject with the documented programming error.
+- Abort one root and verify the other remains active.
+- Call context-wide abort and verify every active root stops.
+- Verify shutdown rejects new roots and waits for active roots to unwind.
+
+### Nested and detached agents
+
+- Run a blocking nested agent and assert it inherits the parent parameters, cancellation, and token sink while seeing its own input.
+- After it returns, assert the parent input is restored.
+- Fork a fire-and-forget analyst and assert it receives the parent turn snapshot but has a different run ID, abort signal, and token sink.
+- Abort the parent chat and verify the analyst continues.
+- Abort the context and verify the analyst stops.
+
+### Turn correctness
+
+- With strategist base turn still `-1`, open a chat after `GameSwitched` and assert the diplomat hint, context, and tools use `session.getTurn()`.
+- Run a lagging strategist turn and a live-turn diplomat concurrently and assert each retains its own turn and event bounds.
+- Verify a missing live session turn produces an explicit route error.
+- Verify a detached analyst keeps the submitting diplomat’s turn even if the session advances afterward.
+
+### Game-state and pacing safety
+
+- Refresh two different turns concurrently and assert each caller receives and caches its requested turn.
+- Refresh the same turn concurrently and assert the final cache entry is complete and preserves reports and pending briefings.
+- Insert a newer chat state, then refresh a lagging strategist state and assert the newer state is not culled.
+- Run event-window fallback and assert cached `GameState.events` never changes.
+- Assert each retry updates only `state.mergedEvents`, and the selected/final attempted window remains on that state.
+- Assert simple and specialized briefers consume `state.mergedEvents` when present, while states without a decision window fall back to their immutable `state.events` slice.
+- Assert lagging briefer/librarian helpers do not select a future chat snapshot.
+
+### Accounting and routes
+
+- Run strategist, chat, and detached analyst roots concurrently with known token usage.
+- Assert strategist turn telemetry contains strategist plus nested briefer/negotiator tokens only.
+- Assert chat and analyst roots have independent totals.
+- Assert context seat totals equal the sum of all executions.
+- Simulate an SSE client disconnect during refresh and generation; assert only that chat root is aborted.
+- Complete an SSE response normally and assert `res.end()` does not trigger cancellation.
+- Run existing envoy, deal-route, strategist pacing, context-input, Oracle, type-check, test, and build suites.
 
 ## Done when
 
-A diplomat chat and a strategist turn run concurrently on one seat without corrupting each other's input, abort, or token accounting; a chat reports and reasons about the **live** turn (correct even at game load) while the strategist independently completes its own (possibly lagging) decision turn; and all existing diplomacy, deal, and strategist behavior continues to pass.
+A strategist turn, multiple diplomat chats, deal responses, and detached analysts can overlap on one seat without sharing input, cancellation, progress callbacks, timeout refresh, token deltas, or turn cursors. Chats always reason at the session’s live turn, strategists finish their queued turn even when it lags, cached per-turn `events` remain immutable, each `GameState` retains its separate derived `mergedEvents` decision window, context-wide shutdown still cancels all work, and seat-wide token totals remain complete.
