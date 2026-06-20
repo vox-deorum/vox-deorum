@@ -56,7 +56,10 @@ export async function getPlayerOptions(saving: boolean = true): Promise<Partial<
 
   // Process and convert numeric IDs to names for all options
   // Note: Strategy blacklisting is now handled in CvLuaPlayer.cpp
-  const processedResults = (response.result as any[]).map((options: any) => {
+  // An empty Lua table serializes to a JSON object ({}), not an array, so
+  // guard against a non-array result before iterating.
+  const rawOptions = Array.isArray(response.result) ? response.result : [];
+  const processedResults = (rawOptions as any[]).map((options: any) => {
     return {
       PlayerID: options.PlayerID,
       EconomicStrategies: convertToNames(options.EconomicStrategies, "EconomicStrategy", "MilitaryStrategy"),

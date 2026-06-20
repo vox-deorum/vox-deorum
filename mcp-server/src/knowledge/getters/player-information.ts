@@ -33,7 +33,9 @@ export async function getPlayerInformations(saving: boolean = true): Promise<Sel
     return [];
   }
 
-  const players = response.result as Selectable<PlayerInformation>[];
+  // An empty Lua table serializes to a JSON object ({}), not an array, so
+  // guard against a non-array result before iterating.
+  const players = (Array.isArray(response.result) ? response.result : []) as Selectable<PlayerInformation>[];
 
   // Store each player's information in the PlayerInformation table
   if (saving) {

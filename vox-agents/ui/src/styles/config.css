@@ -105,6 +105,7 @@
 /* Buttons */
 .delete-btn {
   flex-shrink: 0;
+  width: 2.5rem; /* Match PrimeVue icon-only button so the delete column lines up across rows */
 }
 
 .delete-btn.in-row {

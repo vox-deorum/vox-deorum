@@ -598,4 +598,10 @@ async function saveConfig() {
   align-items: center;
   padding: 0.5rem 0.75rem;
 }
+
+/* Path Settings: widen the label column so the longest label ("Episode
+   Database") fits, keeping both input fields aligned like the API keys table. */
+.field-row label {
+  min-width: 170px;
+}
 </style>

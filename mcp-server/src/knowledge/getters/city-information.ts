@@ -184,7 +184,9 @@ export async function getCityInformations(): Promise<Selectable<CityInformation>
     return [];
   }
 
-  const cities = response.result as Selectable<CityInformation>[];
+  // An empty Lua table serializes to a JSON object ({}), not an array, so
+  // guard against a non-array result before iterating.
+  const cities = (Array.isArray(response.result) ? response.result : []) as Selectable<CityInformation>[];
 
   // Filter building lists to show only most advanced buildings
   for (const city of cities) {
