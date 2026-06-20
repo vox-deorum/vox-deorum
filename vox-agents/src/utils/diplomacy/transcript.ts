@@ -19,6 +19,7 @@ export {
   diplomacyThreadId,
   orderPair,
   roleOf,
+  identityOf,
   voicedID,
   agentName,
   audienceID,

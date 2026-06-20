@@ -26,7 +26,7 @@ export class TalkativeTelepathist extends Telepathist {
     input: EnvoyThread,
     _context: VoxContext<TelepathistParameters>
   ): Promise<string> {
-    const { name, leader } = this.getSelfIdentity(params);
+    const { name, leader } = this.getSelfIdentity(input);
     const sections = [
       `You are a senior analyst who specializes on ${leader} of ${name}, a player in a Civilization V game with Vox Populi mod.
 You have access to the complete historical record: every world state it observed and every decision the leader made.`,
@@ -57,8 +57,8 @@ You have access to the complete historical record: every world state it observed
     return sections.join('\n\n').trim();
   }
 
-  protected getHint(parameters: TelepathistParameters, _input: EnvoyThread): string {
-    const { name, leader } = this.getSelfIdentity(parameters);
+  protected getHint(parameters: TelepathistParameters, input: EnvoyThread): string {
+    const { name, leader } = this.getSelfIdentity(input);
     return `**HINT**: You are analyzing ${leader} of ${name}'s game. Data spans turns ${parameters.availableTurns[0]} to ${parameters.availableTurns[parameters.availableTurns.length - 1]}. If you decide to call tools, follow the EXACT format and generate JSON output.`;
   }
 

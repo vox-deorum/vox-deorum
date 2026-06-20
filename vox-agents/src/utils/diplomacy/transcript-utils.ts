@@ -12,7 +12,7 @@
  */
 
 import type { ModelMessage } from "ai";
-import type { EnvoyThread, MessageWithMetadata } from "../../types/index.js";
+import type { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../../types/index.js";
 
 /** One transcript row as returned by the mcp-server `read-transcript` tool. */
 export interface TranscriptMessage {
@@ -51,6 +51,11 @@ export function orderPair(a: number, b: number): { player1ID: number; player2ID:
 /** The free-form role descriptor stored for `id` in the ordered pair. */
 export function roleOf(thread: EnvoyThread, id: number): string | undefined {
   return id === thread.player1ID ? thread.player1Role : thread.player2Role;
+}
+
+/** The civ/leader identity stored for `id` in the ordered pair, if any. */
+export function identityOf(thread: EnvoyThread, id: number): ParticipantIdentity | undefined {
+  return id === thread.player1ID ? thread.player1Identity : thread.player2Identity;
 }
 
 /** The agent-voiced (LLM) seat — the civ the agent speaks as. */

@@ -8,7 +8,7 @@
  */
 
 import { ModelMessage, StepResult, Tool } from 'ai';
-import { Envoy, ParticipantIdentity } from '../envoy/envoy.js';
+import { Envoy } from '../envoy/envoy.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
 import { TelepathistTool } from './telepathist-tool.js';
 import { GetSituationTool } from './tools/get-situation.js';
@@ -185,7 +185,7 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
    */
   protected async getContextMessages(
     parameters: TelepathistParameters,
-    _input: EnvoyThread
+    input: EnvoyThread
   ): Promise<ModelMessage[]> {
     // Build phase summaries section using narrative field only
     const phaseSummaries = await parameters.telepathistDb
@@ -206,7 +206,7 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
       ? `Turns ${parameters.availableTurns[0]} to ${parameters.availableTurns[parameters.availableTurns.length - 1]}`
       : 'No turns available';
 
-    const { name, leader } = this.getSelfIdentity(parameters);
+    const { name, leader } = this.getSelfIdentity(input);
     return [{
       role: 'system',
       content: `# Player Identity
@@ -214,17 +214,6 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
 - **Leader**: ${leader}
 - **Available Data**: ${turnRange} (${parameters.availableTurns.length} turns)${phaseSummaryText}`.trim()
     }];
-  }
-
-  /**
-   * Identity from the telemetry database metadata. The telepathist voices a single seat;
-   * its counterpart is the observer (no civ identity), so only the self id resolves.
-   */
-  protected getParticipantIdentity(parameters: TelepathistParameters, playerID: number): ParticipantIdentity | undefined {
-    if (playerID === parameters.playerID) {
-      return { name: parameters.civilizationName, leader: parameters.leaderName };
-    }
-    return undefined;
   }
 
   // --- Abstract methods ---

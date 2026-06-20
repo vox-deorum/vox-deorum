@@ -7,8 +7,8 @@
  */
 
 import { ModelMessage, StepResult, Tool } from "ai";
-import { Envoy, ParticipantIdentity } from "./envoy.js";
-import { StrategistParameters, buildGameContextMessages, getRecentGameState } from "../strategist/strategy-parameters.js";
+import { Envoy } from "./envoy.js";
+import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
@@ -106,28 +106,6 @@ ${specialConfig.prompt}`.trim()
    */
   protected getContextMessages(parameters: StrategistParameters, _input: EnvoyThread): ModelMessage[] {
     return buildGameContextMessages(parameters);
-  }
-
-  /**
-   * Identity of a player from the live game state: the agent's own seat from
-   * `metadata.YouAre`, any other visible player from the most recent game state's
-   * players report. Returns undefined when the player has no identity here (e.g. the
-   * observer sentinel, or a counterpart not visible in the current state).
-   */
-  protected getParticipantIdentity(parameters: StrategistParameters, playerID: number): ParticipantIdentity | undefined {
-    if (playerID === parameters.playerID) {
-      const youAre = parameters.metadata?.YouAre;
-      if (youAre?.Name) return { name: youAre.Name, leader: youAre.Leader ?? '' };
-    }
-    const data = getRecentGameState(parameters)?.players?.[playerID.toString()];
-    if (data && typeof data === 'object') {
-      const civ = (data as Record<string, unknown>).Civilization;
-      const leader = (data as Record<string, unknown>).Leader;
-      if (typeof civ === 'string') {
-        return { name: civ, leader: typeof leader === 'string' ? leader : '' };
-      }
-    }
-    return undefined;
   }
 
   // Abstract methods

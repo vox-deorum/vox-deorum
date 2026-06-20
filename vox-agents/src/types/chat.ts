@@ -29,6 +29,14 @@ export interface SpecialMessageConfig {
   prompt: string;
 }
 
+/** Identity (civ + leader) of a conversation participant, resolved once when the thread opens. */
+export interface ParticipantIdentity {
+  /** Civilization name, e.g. "Germany". */
+  name: string;
+  /** Leader name, e.g. "Bismarck". May be empty when unknown. */
+  leader: string;
+}
+
 /**
  * Represents a message with associated metadata.
  * Wraps a ModelMessage with additional context about when and where it was created.
@@ -60,9 +68,13 @@ export interface MessageWithMetadata {
  * and whose VoxContext is executed. That seat's role descriptor *is* the executable agent
  * name (the stage-1 pinned contract: "the agent name for an LLM-voiced side"), so the agent
  * name is `roleOf(thread, thread.agent)` and the audience is the other endpoint. `SpeakerID`
- * is per-message (resolved at send time), not thread state, so it is not stored here. The
- * voiced participant's identity (civ/leader) is derived from the agent's typed parameters,
- * not stored on the thread.
+ * is per-message (resolved at send time), not thread state, so it is not stored here.
+ *
+ * Each seat's identity (civ/leader) is resolved once at open time and stored on the thread
+ * (`player1Identity` / `player2Identity`) rather than re-fetched from live game state on every
+ * prompt: civ/leader is effectively immutable for a game, the durable transcript store has no
+ * civ column to hydrate from, and storing it keeps the thread self-describing for both the
+ * prompt builders and the UI.
  */
 export interface EnvoyThread {
   /** Unique identifier for this thread. For diplomacy threads this is the deterministic
@@ -89,6 +101,12 @@ export interface EnvoyThread {
 
   /** Free-form role descriptor for player2 (agent name for an LLM side, human role, or "observer"). */
   player2Role?: string;
+
+  /** Civ/leader identity of player1, resolved at open time. Undefined for the observer seat. */
+  player1Identity?: ParticipantIdentity;
+
+  /** Civ/leader identity of player2, resolved at open time. Undefined for the observer seat. */
+  player2Identity?: ParticipantIdentity;
 
   /** True when this is a civ↔civ diplomacy conversation (both endpoints are real seats). */
   diplomacy?: boolean;

@@ -19,7 +19,11 @@ import {
 const diplomat = agentRegistry.get('diplomat') as any;
 const spokesperson = agentRegistry.get('spokesperson') as any;
 
-/** Germany(3) ↔ leader(1) thread; the agent voices seat 3. */
+/**
+ * Germany(3) ↔ leader(1) thread; the agent voices seat 3. The voiced seat carries its stored
+ * identity (used by getHint via getSelfIdentity); the audience seat is left without one so the
+ * default audience description is the bare role.
+ */
 function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
   return {
     id: 'dipl:g:1:3',
@@ -29,6 +33,7 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
     player2ID: 3,
     player1Role: 'the leader',
     player2Role: 'diplomat',
+    player2Identity: { name: 'Germany', leader: 'Bismarck' },
     contextType: 'live',
     contextId: 'g-player-3',
     messages: [],
@@ -97,9 +102,19 @@ describe('getHint', () => {
 });
 
 describe('audience description', () => {
-  it('is the audience seat\'s role descriptor, never resolved from game state', async () => {
-    // Even with a visible civ seeded for the audience seat, the audience line stays the bare
-    // role — the prompt\'s game-state context already carries every player\'s identity.
+  it('combines the audience role with its stored civ identity', async () => {
+    // The audience civ comes from the thread (resolved at open time), e.g. "the leader of Rome".
+    const system = await diplomat.getSystem(
+      params,
+      thread({ player1Identity: { name: 'Rome', leader: 'Caesar' } }),
+      undefined,
+    );
+    expect(system).toContain(audienceSection('the leader of Rome'));
+  });
+
+  it('is never resolved from live game state', async () => {
+    // A civ seeded only in game state (not on the thread) must not surface — identity is stored
+    // on the thread, so the audience line stays the bare role.
     const identityParams = {
       ...params,
       gameStates: {
@@ -108,7 +123,7 @@ describe('audience description', () => {
     };
     const system = await diplomat.getSystem(identityParams, thread(), undefined);
     expect(system).toContain(audienceSection('the leader'));
-    expect(system).not.toContain('representing');
+    expect(system).not.toContain('France');
   });
 });
 

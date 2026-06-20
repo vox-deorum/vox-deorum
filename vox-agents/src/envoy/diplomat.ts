@@ -155,7 +155,7 @@ You represent your government's interests and gather intelligence through diplom
    * Returns the contextual hint that anchors the LLM on its identity and audience.
    */
   protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
-    const { name: civName, leader } = this.getSelfIdentity(parameters);
+    const { name: civName, leader } = this.getSelfIdentity(input);
     return `**HINT**: You are a diplomat for ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(input)}. Gather intelligence and relay important information to the analyst. The time is at turn ${parameters.turn}.`;
   }
 

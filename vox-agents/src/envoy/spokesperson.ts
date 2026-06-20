@@ -81,7 +81,7 @@ You represent your government's interests with diplomatic tact and strategic amb
    * Used as sole context in special message mode, and appended to game state in normal mode.
    */
   protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
-    const { name: civName, leader } = this.getSelfIdentity(parameters);
+    const { name: civName, leader } = this.getSelfIdentity(input);
     return `**HINT**: You represent ${civName} on the world stage. You are speaking to ${this.formatUserDescription(input)}. Every response reflects on ${leader}'s leadership and your civilization's standing. The time is at turn ${parameters.turn}.`;
   }
 

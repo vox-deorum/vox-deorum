@@ -7,18 +7,10 @@
 
 import { ModelMessage, StepResult, Tool } from "ai";
 import { VoxAgent, AgentParameters } from "../infra/vox-agent.js";
-import { EnvoyThread, MessageWithMetadata, SpecialMessageConfig } from "../types/index.js";
+import { EnvoyThread, MessageWithMetadata, ParticipantIdentity, SpecialMessageConfig } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { formatToolResultOutput, stripTurnMarker } from "../utils/models/text-cleaning.js";
-import { audienceID, roleOf } from "../utils/diplomacy/transcript-utils.js";
-
-/** Identity (civ + leader) of a conversation participant, derived from typed parameters. */
-export interface ParticipantIdentity {
-  /** Civilization name, e.g. "Germany". */
-  name: string;
-  /** Leader name, e.g. "Bismarck". */
-  leader: string;
-}
+import { audienceID, identityOf, roleOf } from "../utils/diplomacy/transcript-utils.js";
 
 /**
  * Generic base envoy agent that can chat with the user.
@@ -179,26 +171,24 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
 
   /**
    * Describes the audience — the participant the agent is speaking to (the non-voiced
-   * endpoint) — as its free-form role descriptor from the thread (e.g. "the leader",
-   * "a diplomat"). The audience's civ is intentionally NOT resolved from game state; the
-   * prompt's game-state context already carries every player's identity.
+   * endpoint) — combining its free-form role descriptor with its civ identity, both stored on
+   * the thread at open time (e.g. "the leader of Rome"). Falls back to the role alone, then the
+   * civ alone, when only one is known.
    */
   protected formatUserDescription(input: EnvoyThread): string {
-    return roleOf(input, audienceID(input))?.trim() || 'an unknown participant';
+    const id = audienceID(input);
+    const role = roleOf(input, id)?.trim();
+    const civ = identityOf(input, id)?.name?.trim();
+    if (role && civ) return `${role} of ${civ}`;
+    if (role) return role;
+    if (civ) return `a representative of ${civ}`;
+    return 'an unknown participant';
   }
 
   /**
-   * Identity (civ + leader) of a conversation participant by playerID, derived from the
-   * agent's typed parameters ONLY — never from `EnvoyThread.agent` (which is just the
-   * voiced seat's id) or a stored civ field. Returns undefined when the participant has no
-   * civ identity in these parameters (e.g. the observer, or a counterpart not visible).
+   * Convenience: identity of the seat this agent voices (`input.agent`), read from the thread.
    */
-  protected abstract getParticipantIdentity(parameters: TParameters, playerID: number): ParticipantIdentity | undefined;
-
-  /**
-   * Convenience: identity of the seat this agent voices (its own `parameters.playerID`).
-   */
-  protected getSelfIdentity(parameters: TParameters): ParticipantIdentity {
-    return this.getParticipantIdentity(parameters, parameters.playerID) ?? { name: 'Unknown', leader: 'Unknown' };
+  protected getSelfIdentity(input: EnvoyThread): ParticipantIdentity {
+    return identityOf(input, input.agent) ?? { name: 'Unknown', leader: 'Unknown' };
   }
 }

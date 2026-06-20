@@ -43,7 +43,8 @@ import {
   AgentInfo,
   PlayerAssignment,
   StreamingEventCallback,
-  EnvoyThread
+  EnvoyThread,
+  ParticipantIdentity
 } from '../../types/index.js';
 import { VoxSpanExporter } from '../../utils/telemetry/vox-exporter.js';
 import {
@@ -51,6 +52,7 @@ import {
   orderPair,
   agentName,
   audienceID,
+  identityOf,
   readTranscript,
   hydrateMessages,
   deriveCloseTurn,
@@ -108,23 +110,29 @@ function resolveHumanSeat(assignments?: Record<number, PlayerAssignment>): numbe
 }
 
 /**
- * Display name for a player from a live context's most recent game state
- * (e.g. "Bismarck of Germany", or just "Germany"). Undefined when unavailable.
+ * Civ/leader identity for a player from a live context's most recent game state. Undefined when
+ * unavailable (no context, the observer sentinel, telepathist params with no game state, or a
+ * player not yet visible). Resolved once at thread-open time and then stored on the thread.
  */
-function civDisplayName(context: VoxContext<StrategistParameters> | undefined, playerID: number): string | undefined {
+function civIdentity(context: VoxContext<StrategistParameters> | undefined, playerID: number): ParticipantIdentity | undefined {
   const params = context?.lastParameter;
   // Guard against non-strategist (e.g. telepathist) params, which have no gameStates.
   if (!params || playerID < 0 || !params.gameStates) return undefined;
-  const recent = getRecentGameState(params);
-  const data = recent?.players?.[playerID.toString()];
+  const data = getRecentGameState(params)?.players?.[playerID.toString()];
   if (typeof data === 'object' && data !== null) {
     const civ = (data as Record<string, unknown>).Civilization;
     const leader = (data as Record<string, unknown>).Leader;
     if (typeof civ === 'string') {
-      return typeof leader === 'string' ? `${leader} of ${civ}` : civ;
+      return { name: civ, leader: typeof leader === 'string' ? leader : '' };
     }
   }
   return undefined;
+}
+
+/** Human-readable label for an identity (e.g. "Bismarck of Germany", or just "Germany"). */
+function displayIdentity(identity: ParticipantIdentity | undefined): string | undefined {
+  if (!identity) return undefined;
+  return identity.leader ? `${identity.leader} of ${identity.name}` : identity.name;
 }
 
 /**
@@ -134,20 +142,14 @@ function civDisplayName(context: VoxContext<StrategistParameters> | undefined, p
  */
 function enrichChat(thread: EnvoyThread): ChatResponseEnrichment {
   const voxContext = contextRegistry.get<StrategistParameters>(thread.contextId);
-  const params = voxContext?.lastParameter as Record<string, unknown> | undefined;
 
-  // Telepathist (database) contexts carry identity on TelepathistParameters, not game state.
-  let voicedCiv = civDisplayName(voxContext, thread.agent);
-  if (!voicedCiv && typeof params?.civilizationName === 'string') {
-    const leader = params.leaderName;
-    voicedCiv = typeof leader === 'string' ? `${leader} of ${params.civilizationName}` : params.civilizationName;
-  }
-
+  // Identity is resolved at open time and stored on the thread (works for live and telepathist
+  // alike); only the live turn still needs the context.
   return {
     currentTurn: currentTurnOf(voxContext),
     voicedID: thread.agent,
-    voicedCiv,
-    audienceCiv: civDisplayName(voxContext, audienceID(thread)),
+    voicedCiv: displayIdentity(identityOf(thread, thread.agent)),
+    audienceCiv: displayIdentity(identityOf(thread, audienceID(thread))),
   };
 }
 
@@ -745,8 +747,10 @@ async function openDiplomacyChat(
   }
   const audienceRole = callerRole?.trim() || 'the leader';
 
-  const targetCiv = civDisplayName(targetContext, targetPlayerID);
-  const initiatorCiv = civDisplayName(targetContext, initiatorID);
+  const targetIdentity = civIdentity(targetContext, targetPlayerID);
+  const initiatorIdentity = civIdentity(targetContext, initiatorID);
+  const targetCiv = displayIdentity(targetIdentity);
+  const initiatorCiv = displayIdentity(initiatorIdentity);
 
   // Hydrate from the durable store (source of truth for the transcript).
   const transcript = await readTranscript(initiatorID, targetPlayerID);
@@ -767,6 +771,8 @@ async function openDiplomacyChat(
     existing.title = `${targetCiv ?? `Player ${targetPlayerID}`} ↔ ${initiatorCiv ?? `Player ${initiatorID}`}`;
     existing.player1Role = player1ID === targetPlayerID ? voice : audienceRole;
     existing.player2Role = player2ID === targetPlayerID ? voice : audienceRole;
+    existing.player1Identity = player1ID === targetPlayerID ? targetIdentity : initiatorIdentity;
+    existing.player2Identity = player2ID === targetPlayerID ? targetIdentity : initiatorIdentity;
     existing.messages = messages;
     existing.closeTurn = closeTurn;
     existing.metadata!.updatedAt = new Date();
@@ -782,6 +788,8 @@ async function openDiplomacyChat(
     player2ID,
     player1Role: player1ID === targetPlayerID ? voice : audienceRole,
     player2Role: player2ID === targetPlayerID ? voice : audienceRole,
+    player1Identity: player1ID === targetPlayerID ? targetIdentity : initiatorIdentity,
+    player2Identity: player2ID === targetPlayerID ? targetIdentity : initiatorIdentity,
     diplomacy: true,
     contextType: 'live',
     contextId: targetContextId,
@@ -822,6 +830,8 @@ async function openOrdinaryChat(
   let voicedID = 0;
   const contextType = databasePath ? 'database' : 'live';
   let effectiveContextId: string | undefined = contextId;
+  // The voiced seat's identity, resolved once here and stored on the thread.
+  let voicedIdentity: ParticipantIdentity | undefined;
 
   if (contextId) {
     const existingContext = contextRegistry.get<StrategistParameters>(contextId);
@@ -830,6 +840,7 @@ async function openOrdinaryChat(
       const identifierInfo = parseContextIdentifier(contextId);
       gameID = identifierInfo.gameID;
       voicedID = identifierInfo.playerID;
+      voicedIdentity = civIdentity(existingContext, voicedID);
     } else {
       return res.status(400).json({ error: `Connection not found: ${contextId}` });
     }
@@ -850,6 +861,8 @@ async function openOrdinaryChat(
 
       const telepathistParams = await createTelepathistParameters(databasePath, identifierInfo);
       context.lastParameter = telepathistParams;
+      // Telepathist identity comes from the telemetry db metadata, not live game state.
+      voicedIdentity = { name: telepathistParams.civilizationName, leader: telepathistParams.leaderName };
 
       logger.info(`Created new VoxContext for telepathist mode: ${effectiveContextId}`);
     } catch (err) {
@@ -867,6 +880,11 @@ async function openOrdinaryChat(
   const audienceRole = callerRole?.trim() || 'Observer';
   const { player1ID, player2ID } = orderPair(voicedID, callerID);
 
+  // A real caller seat resolves its civ from the live game state; the observer has no identity.
+  const callerIdentity = callerID >= 0
+    ? civIdentity(contextRegistry.get<StrategistParameters>(effectiveContextId!), callerID)
+    : undefined;
+
   const sessionId = uuidv4();
   const thread: EnvoyThread = {
     id: sessionId,
@@ -877,6 +895,8 @@ async function openOrdinaryChat(
     player2ID,
     player1Role: player1ID === voicedID ? agentNameReq : audienceRole,
     player2Role: player2ID === voicedID ? agentNameReq : audienceRole,
+    player1Identity: player1ID === voicedID ? voicedIdentity : callerIdentity,
+    player2Identity: player2ID === voicedID ? voicedIdentity : callerIdentity,
     diplomacy: false,
     contextType,
     contextId: effectiveContextId!,
