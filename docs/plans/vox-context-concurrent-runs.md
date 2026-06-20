@@ -76,9 +76,17 @@ forkRun(
 
 Its parameter source is `options.parameters` when supplied, otherwise the context’s `baseParameters`; it throws before entering the run if neither exists. `options.overrides` seeds the run-local side of the composed parameter proxy. Reads and writes of those keys stay in the root run, while all other properties resolve against the selected parameter source. Strategist and chat callers pass their `turn`, `before`, and `after` values through `overrides`. Seat contexts normally omit `parameters` and compose over their base, while concurrent Oracle tasks supply their task-specific parameter object and need no overrides.
 
-`forkRun()` is valid only inside an existing run. It snapshots the parent’s selected parameter source, run-local override object, and progress configuration, creates an independent root cancellation/token scope, starts it without awaiting completion, and logs failures. Later writes to either run’s override object do not affect the other. Agent tools use it only for `fireAndForget` agents. The analyst keeps the turn and game view from the diplomat that submitted it, but survives cancellation of that diplomat request.
+`forkRun()` is valid only inside an existing run. It shallow-copies the parent’s composed parameters into a new plain parameter object, copies the progress configuration, creates an independent root cancellation/token scope, starts it without awaiting completion, and logs failures. Top-level values such as `turn`, `before`, and `after` are snapshotted, while nested seat state such as `gameStates`, `workingMemory`, and metadata remains shared by reference. Later top-level writes in either run do not affect the other. Agent tools use it only for `fireAndForget` agents. The analyst keeps the turn and game view from the diplomat that submitted it, but survives cancellation of that diplomat request.
 
 `run.abort()` always means cancellation. It aborts the root signal and its synchronous nested work; normal success is represented by the `withRun()` callback resolving and requires no explicit abort or success flag. Context-wide `context.abort(successful?)` may retain its existing lifecycle argument for `VoxPlayer` compatibility, but that flag is context/player completion metadata and is not propagated to individual run handles.
+
+Add a code comment beside the run-construction logic documenting the parameter ownership convention:
+
+- `setBaseParameters()` transfers ownership to `VoxContext`; `shutdown()` closes `baseParameters`.
+- Parameters supplied through `withRun({ parameters })` remain caller-owned. The caller closes them in its own `finally` when they contain resources.
+- The shallow parameter copy created by `forkRun()` is borrowed and never closed by the fork. Its nested resource-bearing objects remain owned by their original base or caller.
+- A caller may fork a run over caller-owned parameters only when it guarantees that the referenced resources outlive the detached child. The current fire-and-forget analyst path forks base-backed seat parameters, whose lifetime is already the context lifetime.
+- `withRun()` and `forkRun()` never infer ownership or invoke `parameters.close()`.
 
 `execute()` behaves as follows:
 
@@ -139,9 +147,15 @@ The following remain shared by reference:
 - `gameStates`;
 - `metadata`;
 - `workingMemory`;
-- `lastDecisionTurn`;
+- `lastDecisionTurn` — writes resolve to the base object and are seat-wide. Add a code comment at the proxy/shared-list definition stating that only the strategist root writes `lastDecisionTurn`; a chat root must never write it, since base writes are visible to every concurrent run on the seat.
 - `_pendingBriefings`;
 - seat identity and configuration such as `playerID`, `gameID`, `mode`, `syncSeed`, and `_humanDecisionBus`.
+
+**Proxy implementation notes.** The composed view was checked against every current consumer of the parameters object (`experimental_context` reads in `mcp-tools.ts`, agent hook calls, `Object.keys(parameters.gameStates)`, the `{ ...parameters, turn }` spreads in `turn-preparation.ts`/`phase-preparation.ts`). It is safe, with these requirements:
+
+- Implement both `get` and `set` traps with override-overlay-on-base semantics (override keys read/write the override object; all others read/write the base).
+- The planned override keys (`turn`, `before`, `after`) always also exist on the base `StrategistParameters`. Spreads/`Object.keys` over the proxy therefore stay correct because the base target enumerates those keys and `get` overlays the override value. To keep this robust if an override-only key is ever added, also implement `ownKeys` and `getOwnPropertyDescriptor` traps so the override keys remain enumerable.
+- The proxy is never identity-compared, `JSON.stringify`-d, or `for…in`-d in current code, so no special handling is needed there; `execute()` stringifies `input`, not parameters.
 
 Migrate tool wrappers and context consumers from `lastParameter` to `currentParameters`. This includes simple-tool and MCP-tool telemetry, agent-tool parameter lookup, diplomacy helpers, and web-route context reads. Code that needs seat state outside a root uses `baseParameters` explicitly. Accessing `currentParameters` outside a run may still return the base for non-agent tool and display operations, but that fallback never permits `execute()` or `callAgent()`.
 
@@ -154,7 +168,23 @@ There are two distinct cancellation operations:
 
 All model calls use the active root’s abort signal. Nested negotiators and briefers stop when their parent root is aborted. A detached analyst has its own signal and is not cancelled by the originating chat, but context-wide abort still cancels it.
 
-`VoxContext` tracks active roots in a `Map`. `shutdown()` marks the context as closing, aborts all roots, waits for their completion with bounded cleanup behavior consistent with the existing shutdown path, then flushes telemetry, closes the base parameters, and unregisters the context. New roots are rejected once shutdown begins.
+Every existing `this.abortController.signal` reference in `vox-context.ts` must be migrated to read the active root's signal from ALS. Run isolation breaks if even one is missed — a chat disconnect would still stop a sibling strategist turn, or vice versa. The exact sites to touch:
+
+- [ ] `execute()` model call: `abortSignal: this.abortController.signal` in `streamTextWithConcurrency` (currently `vox-context.ts:561`).
+- [ ] `executeAgentStep()` post-stream guard: `this.abortController.signal.aborted` (currently `vox-context.ts:581`).
+- [ ] `executeAgentStep()` stop check: `this.abortController.signal.aborted` in the `shouldStop` expression (currently `vox-context.ts:630`).
+- [ ] `executeAgentStep()` empty-steps branch: `this.abortController.signal.aborted` (currently `vox-context.ts:639`).
+- [ ] Remove the shared instance `abortController` (constructor init and the recreate-after-abort in `abort()`); the only `AbortController`s now live on root-run objects.
+- [ ] Test: abort one root mid-step and assert a concurrently-running second root's step loop completes unaffected (its signal never observes aborted).
+
+`VoxContext` tracks active roots in a `Map`. `shutdown()` marks the context as closing, aborts all roots, and waits for their completion before flushing telemetry, closing the base parameters, and unregistering the context. New roots are rejected once shutdown begins.
+
+Shutdown does not close run-supplied parameters. It aborts every root and waits for each `withRun()` callback and its caller-owned `finally` cleanup to unwind. This avoids the current bug where `shutdown()` closes whichever `lastParameter` happened to run last (arbitrary under concurrency) without making `VoxContext` guess whether a run parameter object is owned, borrowed, or shares resources with another object.
+
+- [ ] `shutdown()` closes only `baseParameters` (the context-owned object), replacing today's `lastParameter?.close?.()`.
+- [ ] Callers that construct resource-bearing parameters for `withRun({ parameters })` retain their existing explicit `finally` cleanup; the run API does not close them.
+- [ ] Oracle per-task `OracleParameters` are resource-free today, so their callers have nothing additional to close.
+- [ ] Test: run several roots concurrently, call `shutdown()`, and assert all roots are aborted and unwound before `shutdown()` resolves, caller-owned cleanup can complete, and base parameters are closed exactly once.
 
 In the web route, an HTTP disconnect means the browser or client closes the SSE request because of cancellation, navigation, tab closure, or network loss. Register the response-close listener immediately after creating the root and before awaiting refresh or agent work. It calls only `run.abort()`. Track whether the response completed normally so the server’s own `res.end()` does not treat successful completion as a disconnect.
 
@@ -170,7 +200,7 @@ Nested negotiators and briefers count toward their parent root. A detached analy
 
 `VoxPlayer` reads the strategist run handle’s token totals after the turn instead of subtracting context-wide counters.
 
-Move `streamProgress` and `timeoutRefresh` into the active root. Existing context accessors may remain as getters/setters backed by ALS to reduce call-site churn, but assigning them without an active run must either configure an explicit standalone root or fail fast; it must never create shared mutable request state. Telepathist console work and web requests therefore create their run before assigning or consuming progress callbacks.
+Move `streamProgress` and `timeoutRefresh` into the active root. Existing context accessors may remain as getters/setters backed by ALS to reduce call-site churn. Their getters return the active root callback, or `undefined` when no run is active; their setters require an active run and throw otherwise. They must never create shared mutable request state. Telepathist console work and web requests therefore create their run before assigning progress callbacks, while archivist preparation can capture an absent callback and pass `undefined` to its per-item roots.
 
 ## Turn and game-state behavior
 
@@ -214,13 +244,29 @@ state.mergedEvents ?? state.events
 
 This applies to simple and specialized briefers and any strategist prompt that reads events. A briefer nested under a strategist reads the current candidate window from the shared state object. An on-demand briefer uses `mergedEvents` when that turn has an established strategist decision window; otherwise it falls back to the immutable live-turn slice.
 
+The exhaustive set of `state.events` reader sites, from grepping `.events` over `src`. Each must be classified as a **window reader** (switch to `state.mergedEvents ?? state.events`) or a **slice reader** (deliberately keep `state.events`):
+
+- [ ] `briefer/specialized-briefer.ts` (`filterEventsByCategory(state.events! …)`) — window reader; switch.
+- [ ] `briefer/simple-briefer.ts` (`jsonToMarkdown(state.events)`) — window reader; switch.
+- [ ] `strategist/agents/simple-strategist.ts` (`jsonToMarkdown(state.events)`) — window reader; switch.
+- [ ] `strategist/agents/simple-strategist-staffed.ts` (`JSON.stringify(state.events!)` size gate) — window reader; switch.
+- [ ] `strategist/pacing/important-events.ts` (`flattenEvents(state.events)`) — slice reader; **keep `state.events`**. Pacing computes importance to *decide* the window, so it must read the immutable per-turn slice, not the merged window. Verify and comment this intent.
+- [ ] `strategist/strategy-parameters.ts` `mergeCachedEvents()` (`gameStates[turn]?.events`, `report.events`) — slice reader; **keep `state.events`**. This is the source that *builds* `mergedEvents` from each turn's immutable slice.
+- [ ] `strategist/strategy-parameters.ts` `withEventWindowFallback()` (`state.events = mergeCachedEvents(…)` and the `cachedCurrentEvents` snapshot/restore) — rewrite to assign `state.mergedEvents` and drop the snapshot/restore workaround entirely.
+- [ ] Test: assert window readers pick up `mergedEvents` when present and fall back to `events` when absent; assert slice readers (pacing, `mergeCachedEvents`) are unaffected by a set `mergedEvents`.
+
 ## Game-state cache concurrency
 
 Keep `gameStates` shared so strategist, diplomat, negotiator, and analyst runs reuse snapshots and reports.
 
 Remove the single `_pendingRefresh` field and its deduplication. Concurrent cache misses may issue independent MCP refreshes; refresh cost is acceptable, and runs for different turns must never receive one another’s promise.
 
-When two refreshes target the same turn, the last successful complete snapshot may replace the earlier equivalent snapshot. Briefing reports, `_pendingBriefings`, and an existing `mergedEvents` decision window must be preserved when replacing it, so a refresh cannot discard expensive LLM output, break briefing deduplication, or erase the strategist’s selected pacing window.
+When two refreshes target the same turn, the later successful refresh must **update the existing cached `GameState` in place rather than replace the object reference**. Briefing deduplication (`briefing-utils.ts`) closes over the specific `GameState` instance: `requestBriefing()` writes the in-flight promise to `state._pendingBriefings[reportKey]`, and `generateBriefing()` writes the resolved report to that same `state.reports` after the LLM returns. Swapping the map entry for a fresh object would orphan any briefing promise still in flight — it would resolve into the discarded object, its `finally` cleanup would no longer match the live entry (`state._pendingBriefings?.[reportKey] === tracked` becomes false), and the expensive report would be lost. Copying fields forward at swap time does not fix this, because the in-flight closure already captured the old reference.
+
+Therefore the refresh overwrites only the freshly-fetched snapshot fields (`players`, `events`, `cities`, `options`, `military`, `victory`) on the existing object and leaves `reports`, `_pendingBriefings`, and `mergedEvents` untouched. This preserves the immutable per-turn `events` slice semantics, the briefing dedup invariant, and the strategist's selected pacing window simultaneously, with no orphaned references.
+
+- [ ] Touch: same-turn refresh path mutates the cached `GameState` fields in place; never reassigns `gameStates[turn]` to a new object when an entry already exists.
+- [ ] Test: start a briefing on a cached state, issue a concurrent same-turn refresh, then resolve the briefing; assert the report lands in the live cache entry and dedup cleanup still matches.
 
 Change state culling so a lagging strategist never deletes a newer chat snapshot. After inserting a state:
 
@@ -262,8 +308,11 @@ Change `getRecentGameState()` consumers that are executing inside a root to pref
 
 - Change `telepathist/console.ts` to set base parameters and wrap initialization, preparation, and the top-level telepathist `execute()` in one `withRun()` carrying the logger progress callback.
 - Change each task in `oracle/replayer.ts` to call `withRun({ parameters })` around the Oracle `execute()`. Every concurrent replay task gets its own root and token sink on the shared Oracle context.
-- Change `archivist/pipeline/telepathist-prep.ts` to set base parameters and wrap `prepareTurnSummaries()` in `withRun()`. Its nested summarizer calls then remain inside that root.
-- Keep `summarizeWithCache()`, briefing generation, and turn/phase preparation on `callAgent()` without creating roots themselves; their strategist, telepathist, or archivist entry point is responsible for the enclosing root.
+- Change `archivist/pipeline/telepathist-prep.ts` to set base parameters once. It does **not** wrap itself in a single root, because `prepareTurnSummaries()` fans out concurrent per-turn summaries that each need a different `turn`.
+- Change `telepathist/preparation/turn-preparation.ts`: capture the caller’s current progress callback once before starting the fan-out. Each complete `pLimit(5)` task then runs inside its own `context.withRun({ overrides: { turn }, streamProgress }, async () => { ... })`, replacing `{ ...parameters, turn }`. The root covers the opening progress message, situation/decision reads, retry loop, nested summarizer calls, result progress, and database persistence. Each concurrent turn therefore has its own `turn`, signal, and token sink while composing over the same base parameters.
+- Change `telepathist/preparation/phase-preparation.ts` the same way: capture the progress callback before fan-out, then wrap each complete phase task in `context.withRun({ overrides: { turn: phase.toTurn }, streamProgress }, async () => { ... })`. The root covers progress, input construction, retries, nested summarizer calls, and persistence. Sharing the same logger/SSE callback function across roots is fine; each task stores it in its own root rather than a shared context field.
+- Keep `summarizeWithCache()` and briefing generation on `callAgent()` without creating roots themselves; their telepathist/strategist entry point or the surrounding per-item root is responsible for the enclosing root.
+- Concurrent **same-turn** nested briefers stay nested in the caller's existing root and must **not** get their own roots: the `get-briefing` tool's `Promise.all` over categories (`briefer/briefing-utils.ts`) and `simple-strategist-staffed.ts`'s parallel Military/Economy/Diplomacy briefers all share one `state`/`turn` and parameters. Under the no-parameter `callAgent()`, they correctly resolve the caller root's composed turn and continue to share `_pendingBriefings` dedup. Wrapping them in separate roots would wrongly fork their turn and break dedup.
 - Test fakes expose `baseParameters`, `currentParameters`, run creation, and frame-local input as needed by the code under test.
 
 ### Required execute/callAgent migration map
@@ -275,11 +324,14 @@ Change `getRecentGameState()` consumers that are executing inside a root to pref
 | `web/routes/agent.ts` `respondToHumanDeal()` | Create a separate `withRun()` per automatic deal response. |
 | `telepathist/console.ts` | Enclose bootstrap/preparation/execution in `withRun()`. |
 | `oracle/replayer.ts` | Create one `withRun()` per replay task, inside the existing concurrency limiter. |
-| `archivist/pipeline/telepathist-prep.ts` | Enclose `prepareTurnSummaries()` in `withRun()`. |
+| `archivist/pipeline/telepathist-prep.ts` | Set base parameters; do not wrap in a single root (its fan-out needs per-turn roots). |
+| `telepathist/preparation/turn-preparation.ts` | Enclose each complete concurrent turn task in `withRun({ overrides: { turn } })` (5 roots), including progress, retries, and persistence. |
+| `telepathist/preparation/phase-preparation.ts` | Enclose each complete concurrent phase task in `withRun({ overrides: { turn: phase.toTurn } })`, including progress, retries, and persistence. |
 | `utils/tools/agent-tools.ts` blocking handoff | Stay in the existing root and call `execute()` directly. |
 | `utils/tools/agent-tools.ts` fire-and-forget handoff | Create an independent root with `forkRun()`, then call `execute()`. |
 | `briefer/briefing-utils.ts` | Continue using nested `callAgent()`; no new root. |
-| `telepathist/summarizer.ts` and preparation helpers | Continue using nested `callAgent()`; no new root. |
+| `telepathist/summarizer.ts` (`summarizeWithCache`) | Continue using nested `callAgent()`; no new root (its enclosing per-item root supplies the turn). |
+| `briefer/briefing-utils.ts` `get-briefing` tool, `simple-strategist-staffed.ts` parallel briefers | Keep concurrent same-turn briefers nested in the caller's root; no new roots, preserves `_pendingBriefings` dedup. |
 | Direct `VoxContext.execute()` tests | Wrap intended executions in `withRun()` and add an explicit outside-run failure test. |
 
 ## Test plan
@@ -326,6 +378,7 @@ Change `getRecentGameState()` consumers that are executing inside a root to pref
 - Assert context seat totals equal the sum of all executions.
 - Simulate an SSE client disconnect during refresh and generation; assert only that chat root is aborted.
 - Complete an SSE response normally and assert `res.end()` does not trigger cancellation.
+- Run concurrent turn/phase preparation and assert each fanned-out summary runs in its own root with its own `turn` (no two concurrent summaries observe the same turn override), and that one task's failure or context-length abort does not cancel its siblings.
 - Run existing envoy, deal-route, strategist pacing, context-input, Oracle, type-check, test, and build suites.
 
 ## Done when
