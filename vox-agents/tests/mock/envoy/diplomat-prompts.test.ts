@@ -96,6 +96,22 @@ describe('getHint', () => {
   });
 });
 
+describe('audience description', () => {
+  it('is the audience seat\'s role descriptor, never resolved from game state', async () => {
+    // Even with a visible civ seeded for the audience seat, the audience line stays the bare
+    // role — the prompt\'s game-state context already carries every player\'s identity.
+    const identityParams = {
+      ...params,
+      gameStates: {
+        5: { turn: 5, reports: {}, players: { '1': { Civilization: 'France', Leader: 'Napoleon' } } },
+      },
+    };
+    const system = await diplomat.getSystem(identityParams, thread(), undefined);
+    expect(system).toContain(audienceSection('the leader'));
+    expect(system).not.toContain('representing');
+  });
+});
+
 describe('Spokesperson.getSystem', () => {
   it('assembles the imported prompt sections by reference', async () => {
     const system = await spokesperson.getSystem(params, thread(), undefined);
@@ -105,27 +121,10 @@ describe('Spokesperson.getSystem', () => {
     expect(system).toContain(communicationStyle);
   });
 
-  it('includes the audienceSection built from the dynamic audience description', async () => {
+  it('includes the audienceSection built from the audience role descriptor', async () => {
     const system = await spokesperson.getSystem(params, thread(), undefined);
-    // The thread audience is seat 1 with role "the leader"; no visible civ identity for it
-    // in these parameters, so the description falls back to the bare role.
+    // The thread audience is seat 1 with role "the leader"; the description is that role.
     expect(system).toContain(audienceSection('the leader'));
-  });
-
-  it('reflects a counterpart civ identity in the audience section when visible', async () => {
-    // Seed the most-recent game state so the audience (seat 1) resolves a civ identity.
-    const identityParams = {
-      ...params,
-      gameStates: {
-        5: {
-          turn: 5,
-          reports: {},
-          players: { '1': { Civilization: 'France', Leader: 'Napoleon' } },
-        },
-      },
-    };
-    const system = await spokesperson.getSystem(identityParams, thread(), undefined);
-    expect(system).toContain(audienceSection('the leader representing Napoleon of France'));
   });
 
   it('includes the stable tool IDs in normal mode', async () => {

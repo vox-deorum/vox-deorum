@@ -178,22 +178,13 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
   }
 
   /**
-   * Formats a description of the audience — the participant the agent is speaking to
-   * (the non-voiced endpoint). The role comes from the thread's free-form descriptor;
-   * the civ identity is derived from the typed parameters (never from a stored civ field
-   * or the `agent`). Returns e.g. "a diplomat representing Bismarck of Germany" or, for an
-   * observer with no civ, just the role.
+   * Describes the audience — the participant the agent is speaking to (the non-voiced
+   * endpoint) — as its free-form role descriptor from the thread (e.g. "the leader",
+   * "a diplomat"). The audience's civ is intentionally NOT resolved from game state; the
+   * prompt's game-state context already carries every player's identity.
    */
-  protected formatUserDescription(parameters: TParameters, input: EnvoyThread): string {
-    const audience = audienceID(input);
-    const role = roleOf(input, audience)?.trim();
-    if (!role) return 'an unknown participant';
-    const parts = [role];
-    const identity = this.getParticipantIdentity(parameters, audience);
-    if (identity && identity.name !== 'Observer') {
-      parts.push(`representing ${identity.leader ? `${identity.leader} of ` : ''}${identity.name}`);
-    }
-    return parts.join(' ');
+  protected formatUserDescription(input: EnvoyThread): string {
+    return roleOf(input, audienceID(input))?.trim() || 'an unknown participant';
   }
 
   /**

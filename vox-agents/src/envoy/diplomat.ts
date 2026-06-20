@@ -109,7 +109,7 @@ export class Diplomat extends LiveEnvoy {
    * Gets the system prompt defining the diplomat persona
    */
   public async getSystem(
-    parameters: StrategistParameters,
+    _parameters: StrategistParameters,
     input: EnvoyThread,
     _context: VoxContext<StrategistParameters>
   ): Promise<string> {
@@ -146,7 +146,7 @@ You represent your government's interests and gather intelligence through diplom
     }
 
     sections.push(communicationStyle);
-    sections.push(audienceSection(this.formatUserDescription(parameters, input)));
+    sections.push(audienceSection(this.formatUserDescription(input)));
 
     return sections.join('\n\n').trim();
   }
@@ -156,7 +156,7 @@ You represent your government's interests and gather intelligence through diplom
    */
   protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
     const { name: civName, leader } = this.getSelfIdentity(parameters);
-    return `**HINT**: You are a diplomat for ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(parameters, input)}. Gather intelligence and relay important information to the analyst. The time is at turn ${parameters.turn}.`;
+    return `**HINT**: You are a diplomat for ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(input)}. Gather intelligence and relay important information to the analyst. The time is at turn ${parameters.turn}.`;
   }
 
   /**
