@@ -1,47 +1,111 @@
-# Stage 4 — Web UI: the deal screen (in-game trade-screen replica)
+# Stage 4 — Web UI: redo the deal screen around the in-game trade board
 
-> **✅ Done** (preview mode). vox-agents 737 + ui 86 tests green, both type-checks clean. The live legality/value path needs a built/running game; accept-against-counter, LLM counters, and real enactment arrive in stages 5–6.
-> Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
+> **🔄 Redesign required.** The existing deal workflow functions, but its two generic forms do not replicate the core layout or interaction model of Civilization V's trade screen.
+> Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements live in [specs.md](specs.md).
 
 ## Objective
 
-Recreate the game's diplomatic deal screen on the Web (specs §3, §9) — a **layout** replica of the in-game trade screen, driven entirely by stage-3 `inspect-deal`: both sides' item tables populated from the tradable range, the human building and modifying a deal with live per-term legality + value/agreeability feedback, and Accept / Counter / Reject controls. There is no separate mockup gate — the in-game screen is the reference.
+Replace the current configuring dialog with a layout replica of the core in-game trade board:
 
-At this stage the screen runs in **preview mode**: the live counterpart that produces counters arrives in stage 5 and real enactment in stage 6. So this stage verifies that the screen faithfully renders `inspect-deal` and round-trips deal messages through typed deal-action routes — not that items change hands. Every write stays **archival** (specs §6): `append-message` is the only store touch; route handlers separately drive UI refresh.
+**counterpart inventory | deal on the table | your inventory**
 
-## What was built
+The leader scene, portrait, speech area, background, ornamental textures, and other presentation surrounding the board are not part of this work. The Web screen keeps the existing PrimeVue visual language while reproducing the game's panel geometry, information hierarchy, density, and item-selection workflow.
 
-### vox-agents backend — typed deal-action API
+The screen remains driven by `inspect-deal`. It must preserve the existing proposal, counter, accept, reject, retract, transcript, legality, valuation, and latest-request-wins behavior while replacing the visual and editing model.
 
-All under `/api/agents/chat/:chatId/deal/*` ([web/routes/agent.ts](../../../vox-agents/src/web/routes/agent.ts)), distinct from the plain-text `/api/agents/message` path. Closed-this-turn conversations reject deal writes with 409.
+## Layout and interaction
 
-- `POST …/deal/inspect` — proxies the read-only `inspect-deal` (Web→vox-agents→mcp-server only); drives the tradable range, per-term legality/value, and live re-evaluation.
-- `POST …/deal/propose` + `…/deal/counter` — archive `deal-proposal` / `deal-counter` through `append-message` carrying `Payload.Deal`; the route first runs a fresh inspection and attaches proposal-time `Payload.Value1` / `Value2` per-item snapshots, failing the write if the game cannot inspect the proposal.
-- `POST …/deal/reject` — archives `deal-reject` with `Payload.ProposalMessageID` (either endpoint may decline or retract).
-- `POST …/deal/accept` — wired but **returns 501**: acceptance is recorded only by the enactment route (`enact-agent-deal`, stage 6), the sole writer of `deal-accept` / `deal-enacted` (pinned contract).
-- `GET …/deals` — lists the conversation's deal messages in append order for client-side reduction.
-- **[utils/diplomacy/deal.ts](../../../vox-agents/src/utils/diplomacy/deal.ts)** — the I/O wrappers (`inspectDeal`, `appendDealProposal`, `appendDealReject`, `readDealMessages`) + pure `computeValueMaps` (per-item value keyed by index from each ordered player's perspective), importing the pinned `deal-schema` contract from mcp-server. Request/response types live in `src/types/api.ts`.
+### Three-panel trade board
 
-### Web UI
+- The counterpart's available items occupy a scrollable inventory panel on the left.
+- The human's available items occupy a scrollable **Your Items** panel on the right.
+- The center is the deal on the table, split into aligned **They give** and **You give** columns.
+- The dialog is a wide desktop surface, approximately 1200–1440 pixels, with a fixed minimum width. Narrow viewports may scroll horizontally; the panels do not stack.
+- Each panel scrolls independently so a long inventory does not move the action controls or the other side's list.
 
-A deal has **two surfaces**: the configuring dialog and inline thread cards.
+### Inventory organization
 
-- **[DealScreen.vue](../../../vox-agents/ui/src/components/deal/DealScreen.vue)** — the in-game trade-screen replica, shown as a **modal dialog** (opened by the conversation's "Propose deal" button): both sides' item tables from the tradable range (including third-party peace/war and explicit World Congress fields for vote commitments), a separate **Promises** section (nine promises, requiring a third-party target where applicable), per-term legality (with reason tooltip) and both-direction value, the **other-side value balance** summed live from `inspect-deal`'s per-item values (sentinel-aware), add/remove/modify terms with debounced latest-request-wins re-evaluation, and Accept / Counter / Reject / Propose actions against the current proposal.
-- **[DealMessageCard.vue](../../../vox-agents/ui/src/components/deal/DealMessageCard.vue)** — each `deal-proposal` / `deal-counter` / `deal-reject` rendered as a card **inline in the conversation stream**, in append order, with a you-give/they-give term summary and the proposal-time value to you. Accept / Reject act inline; **Counter opens the dialog** (loading the active proposal). Outgoing offers show Counter / Retract, incoming offers show Accept / Counter / Reject; only the active (open) proposal offers actions.
-- **[deal-thread.ts](../../../vox-agents/ui/src/components/deal/deal-thread.ts)** — pure UI-only merge interleaving deal-message cards with the text/close stream by timestamp (Unix-second → millisecond). Deal cards are **never** added to `thread.messages` (which feeds the diplomat's model context), so the second surface doesn't leak into the LLM transcript.
-- **[deal-reduce.ts](../../../vox-agents/ui/src/components/deal/deal-reduce.ts)** — pure reduction of append-ordered deal messages into the latest active proposal + status (`open` / `rejected` / `accepted` / `enacted`), forward-compatible with stages 5–6.
-- **[deal-helpers.ts](../../../vox-agents/ui/src/components/deal/deal-helpers.ts)** — pure display/value helpers (sentinel handling, item/promise labels, live and stored-snapshot side balance).
-- **[ChatDetailView.vue](../../../vox-agents/ui/src/views/ChatDetailView.vue)** fetches the conversation's deal messages, interleaves the cards into the chat stream, and wires the card/dialog actions (reloading deal state after each write); `ui/src/api/client.ts` gained the typed deal-action calls.
-- **Attached deal message** — `Payload.Deal` carries an optional one-sentence `message` and inward `rationale` (declared on `DealPayloadSchema`, [deal-schema.ts](../../../mcp-server/src/utils/deal-schema.ts), and ignored by `inspect-deal`). `DealScreen.vue` has a message input so the human sends a deal *and* its note in one action (stored on `Payload.Deal.message`), and `DealMessageCard.vue` surfaces `message` and `rationale` on proposal/counter cards (reject cards already show `Content`). The negotiator authors both fields in stage 5; the human attaches only `message`.
+Both inventories follow the in-game screen's category order:
+
+1. Gold and gold per turn
+2. Luxury resources
+3. Strategic resources
+4. Other resources
+5. World Congress
+6. Embassy, open borders, defensive pact, research agreement, declaration of friendship, maps, and peace
+7. Cities and technologies
+8. Third-party peace and war
+9. Promises
+
+Inventory rows are the primary controls. Clicking a simple row adds the term directly to the deal. Rows that need parameters open a compact inline editor for amounts, quantities, durations, targets, or votes. Singleton rows already present in the deal are visibly selected and cannot be added twice.
+
+### Deal on the table
+
+- The optional one-sentence deal message appears above the offer table.
+- Selected terms appear in the center under the side that gives them.
+- Quantitative and targeted terms remain editable from their central rows.
+- A term can be removed directly from the center.
+- A structurally impossible term is shown in red with its reason available as a tooltip.
+- When an existing proposal has become structurally impossible under current game state, retain it in the offer table, mark it red, and prevent acceptance until it is removed or changed.
+- Both-perspective values remain visible as compact secondary information rather than dominating the item label.
+- The live value balance appears immediately below the offer table and clearly marks sentinel estimates.
+- Promises participate in the same two-sided offer layout instead of living in a detached form below the inventories.
+
+### Message and actions
+
+The action row follows the value balance and current proposal state:
+
+- New deal: **Propose**
+- Incoming proposal: **Refuse**, **Counter**, **Accept**
+- Outgoing proposal: **Retract**, **Counter**
+
+Refresh state, inspection progress, errors, and the closed-this-turn lock remain visible as subdued board-level status. The inline conversation cards remain unchanged.
+
+## Data required from `inspect-deal`
+
+`inspect-deal` remains the screen's single source of trade inventory, legality, and valuation data. Extend its response additively so the board can use game-facing labels rather than numeric placeholders:
+
+- Resources include a localized display name and a category: `luxury`, `strategic`, or `bonus`.
+- Technologies include a localized display name.
+- Third-party peace and war entries include a display name for the target team or civilization.
+- Inventory candidates include current structural legality and reasons instead of structurally impossible candidates being omitted from the range.
+- The response includes the game's default deal duration.
+- The response includes eligible promise-target metadata: player ID, team ID, display name, and major/minor kind.
+
+Keep numeric IDs as fallbacks when a localized name cannot be resolved. Structurally impossible inventory rows remain visible, are red, expose their reason, and cannot be added. This is distinct from an advisory `CvDealAI` sentinel value: sentinel valuation remains visible but does not make a structurally legal term unavailable. Replace the UI's loose `Record<string, unknown>` range handling with explicit TypeScript interfaces, including a typed inspected-promise result.
+
+This enrichment does not change `Payload.Deal`, transcript message shapes, or the typed proposal/counter/accept/reject routes.
+
+## Implementation shape
+
+- Keep `DealScreen.vue` responsible for loading, live inspection, proposal freshness, and writes.
+- Extract reusable inventory-panel and central-offer components so the three visual regions do not become another monolith.
+- Move category construction, stable item ordering, selected-state detection, and item-index mapping into pure helpers.
+- Add a shared deal-screen stylesheet for the board layout and responsive minimum-width policy.
+- Update `ChatDetailView.vue` to host the wider, non-stacking board instead of the current maximizable generic-form dialog.
+- Preserve `DealMessageCard.vue`, transcript interleaving, and deal reduction unless a small compatibility adjustment is required.
+- Continue debounced inspection and apply only the newest response.
+
+World Congress resolution enumeration remains outside this redo. Vote commitments continue to use an explicit compact editor and receive normal live inspection after being added.
 
 ## Reuse
 
-The existing Vue chat components and thread view (`ui/src/components/chat/*`, `ChatDetailView.vue`); `ui/src/api/client.ts`; PrimeVue widgets already used in the UI; stage-3 `inspect-deal` as the single data source (the screen holds no deal state of its own beyond the in-progress proposal).
+Reuse the existing typed deal-action API, `Payload.Deal`, `inspect-deal`, transcript reduction, inline deal cards, value helpers, busy-state sharing, and conversation refresh flow. Reuse PrimeVue controls for inputs, tooltips, status, and actions; do not introduce copied Civilization V artwork or decorative assets.
 
-## Verify
+## Test plan
 
-With a live session and a conversation open: the deal screen renders the full tradable range for the two players, mirroring the in-game layout. The human assembles a deal — each added term shows its legality and value/agreeability, an illegal term shows its reason — updating live as terms change. Proposing or countering posts a message carrying `Payload.Deal` that round-trips through the conversation as an inline card. Confirm the plain-text chat route is not required for structured deal actions. (Accept/reject against a negotiator counter, LLM counters, and real enactment are exercised in stages 5–6.)
+- Verify `inspect-deal` enrichment, resource categorization, target metadata, default duration, normalization, and numeric fallbacks.
+- Verify structurally impossible inventory candidates are returned with reasons rather than filtered out.
+- Test pure catalog grouping, category order, selected-state handling, and stable mapping to original deal-item indices.
+- Verify the three-panel orientation and the left/right giver semantics.
+- Verify adding an item from either inventory places it in the correct center column.
+- Verify impossible inventory rows are red and disabled, while structurally legal sentinel-valued rows remain selectable.
+- Verify an existing proposal that is no longer structurally legal remains visible in red and cannot be accepted.
+- Verify editing and removing gold, gold per turn, resources, toggles, cities, technologies, third-party terms, votes, and promises.
+- Preserve coverage for latest-inspection-wins, active-proposal freshness, closed-state locking, and proposal/counter/accept/reject/retract actions.
+- Compare the core board manually with the in-game reference at 1366×768 and 1920×1080.
+- Run the root TypeScript test and build suites.
 
 ## Done when
 
-The Web deal screen faithfully replicates the in-game trade screen's layout and is fully driven by `inspect-deal` — browse the range, build/modify a deal, see per-term legality and estimates live, and round-trip proposal / counter messages through typed deal-action routes — all in preview mode, with the live negotiator and real enactment deferred to stages 5 and 6.
+The Web dialog reads immediately as the core Civilization V trade screen without recreating the leader scene: two categorized inventories flank a central two-sided offer, the deal message sits above that offer, and its live value balance sits immediately below it. Inventory rows add terms, central rows edit or remove them, structurally impossible choices are red and disabled, and stale impossible terms in existing proposals remain visible in red. All existing structured deal actions and transcript behavior continue to work, while resource, technology, third-party, and promise-target choices use meaningful game-facing names.
