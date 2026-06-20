@@ -8,7 +8,7 @@
 
 import { Telepathist } from './telepathist.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
-import { EnvoyThread, SpecialMessageConfig } from '../types/index.js';
+import { EnvoyThread } from '../types/index.js';
 import { VoxContext } from '../infra/vox-context.js';
 
 /**
@@ -62,14 +62,10 @@ You have access to the complete historical record: every world state it observed
     return `**HINT**: You are analyzing ${leader} of ${name}'s game. Data spans turns ${parameters.availableTurns[0]} to ${parameters.availableTurns[parameters.availableTurns.length - 1]}. If you decide to call tools, follow the EXACT format and generate JSON output.`;
   }
 
-  protected getSpecialMessages(): Record<string, SpecialMessageConfig> {
+  protected override getSpecialMessages(): Record<string, string> {
     return {
-      '{{{Initialize}}}': {
-        prompt: 'The session is starting. Introduce yourself as a analyst who has studied the record and invite the user to ask questions.'
-      },
-      '{{{Greeting}}}': {
-        prompt: 'Send a brief greeting acknowledging the history you\'re analyzing. Mention the civilization and invite questions.'
-      }
+      '{{{Initialize}}}': 'The session is starting. Introduce yourself as a analyst who has studied the record and invite the user to ask questions.',
+      '{{{Greeting}}}': 'Send a brief greeting acknowledging the history you\'re analyzing. Mention the civilization and invite questions.'
     };
   }
 }

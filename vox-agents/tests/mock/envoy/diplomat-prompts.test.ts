@@ -93,6 +93,9 @@ describe('getHint', () => {
     expect(hint).toContain('Bismarck');
     expect(hint).toContain('the leader'); // audience role
     expect(hint).toContain('turn 5');
+    // The behavioral nudge moved out of the hint into getDefaultAddon.
+    expect(hint).not.toContain('Gather intelligence');
+    expect(diplomat.getDefaultAddon(params, thread())).toContain('Gather intelligence');
   });
 
   it('Spokesperson anchors on self civ/leader', () => {

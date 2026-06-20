@@ -19,16 +19,6 @@ export interface StreamingEventCallback {
 
 import type { ModelMessage } from "ai";
 
-/**
- * Configuration for a special message type that triggers specific agent behavior.
- * Special messages are triple-brace-enclosed tokens (e.g., "{{{Greeting}}}") sent by the UI
- * to instruct the agent to produce a context-aware response without appearing as user text.
- */
-export interface SpecialMessageConfig {
-  /** The instruction prompt for this special message type */
-  prompt: string;
-}
-
 /** Identity (civ + leader) of a conversation participant, resolved once when the thread opens. */
 export interface ParticipantIdentity {
   /** Civilization name, e.g. "Germany". */

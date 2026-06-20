@@ -7,10 +7,19 @@
 
 import { ModelMessage, StepResult, Tool } from "ai";
 import { VoxAgent, AgentParameters } from "../infra/vox-agent.js";
-import { EnvoyThread, MessageWithMetadata, ParticipantIdentity, SpecialMessageConfig } from "../types/index.js";
+import { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { formatToolResultOutput, stripTurnMarker } from "../utils/models/text-cleaning.js";
 import { audienceID, identityOf, roleOf } from "../utils/diplomacy/transcript-utils.js";
+
+/**
+ * Default special messages shared by all envoy agents. Maps a triple-brace-enclosed
+ * token (e.g., "{{{Greeting}}}") to the instruction prompt that becomes the hint add-on
+ * when that token is the last message. Override `getSpecialMessages` to extend or replace.
+ */
+export const specialMessages: Record<string, string> = {
+  "{{{Greeting}}}": "Send a one-sentence greeting appropriate to your diplomatic relationship, adjusting tone to the situation.",
+};
 
 /**
  * Generic base envoy agent that can chat with the user.
@@ -78,12 +87,23 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
 
   // Special messages
   /**
-   * Returns the map of special message tokens to their configurations.
+   * Returns the map of special message tokens to their instruction prompts.
    * Special messages are triple-brace-enclosed tokens (e.g., "{{{Greeting}}}") that
    * trigger specific agent behavior without appearing as user messages.
-   * Override in concrete subclasses to define supported special messages.
+   * Defaults to the shared greeting; override in subclasses to extend or replace.
    */
-  protected abstract getSpecialMessages(): Record<string, SpecialMessageConfig>;
+  protected getSpecialMessages(): Record<string, string> {
+    return specialMessages;
+  }
+
+  /**
+   * Returns the agent-specific behavioral nudge appended after the always-present hint in
+   * normal mode. In special message mode the special prompt takes its place instead.
+   * Defaults to none; override in concrete subclasses.
+   */
+  protected getDefaultAddon(_parameters: TParameters, _input: EnvoyThread): string {
+    return "";
+  }
 
   /**
    * Checks if the current interaction is in special message mode.
@@ -95,9 +115,9 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
 
   /**
    * Checks if the very last message in the thread is a special message.
-   * Returns the config if it is, undefined otherwise.
+   * Returns its instruction prompt if it is, undefined otherwise.
    */
-  protected findLastSpecialMessage(input: EnvoyThread): SpecialMessageConfig | undefined {
+  protected findLastSpecialMessage(input: EnvoyThread): string | undefined {
     if (input.messages.length === 0) return undefined;
     const last = input.messages[input.messages.length - 1];
     if (typeof last.message.content === 'string') {

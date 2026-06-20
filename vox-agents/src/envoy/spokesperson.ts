@@ -8,8 +8,8 @@
 import { LiveEnvoy } from "./live-envoy.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
-import { EnvoyThread, SpecialMessageConfig } from "../types/index.js";
-import { worldContext, noDecisionPower, communicationStyle, audienceSection, greetingSpecialMessages } from "./envoy-prompts.js";
+import { EnvoyThread } from "../types/index.js";
+import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 
 /**
  * Spokesperson agent that represents the civilization diplomatically.
@@ -77,19 +77,10 @@ You represent your government's interests with diplomatic tact and strategic amb
   }
 
   /**
-   * Returns the contextual hint that anchors the LLM on its identity and audience.
-   * Used as sole context in special message mode, and appended to game state in normal mode.
+   * The spokesperson's normal-mode nudge appended after the hint: every response reflects
+   * on the leader's standing.
    */
-  protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
-    const { name: civName, leader } = this.getSelfIdentity(input);
-    return `**HINT**: You represent ${civName} on the world stage. You are speaking to ${this.formatUserDescription(input)}. Every response reflects on ${leader}'s leadership and your civilization's standing. The time is at turn ${parameters.turn}.`;
-  }
-
-  /**
-   * Returns the special message configurations for the Spokesperson.
-   * Currently supports {{{Greeting}}} for diplomatic introductions.
-   */
-  protected getSpecialMessages(): Record<string, SpecialMessageConfig> {
-    return greetingSpecialMessages;
+  protected override getDefaultAddon(): string {
+    return "Every response reflects on our leader's leadership and your civilization's standing.";
   }
 }

@@ -64,9 +64,10 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
   }
 
   /**
-   * Orchestrates initial messages with special message support.
-   * Handles {{{Initialize}}} for batch summarization + greeting,
-   * and normal messages with database context + conversation history.
+   * Orchestrates initial messages with special message support. The always-present hint
+   * anchors identity and data span in both modes; an add-on follows it — the special
+   * message's prompt in special mode, or the agent's default nudge in normal mode.
+   * The {{{Initialize}}} token additionally runs batch summarization before assembling context.
    */
   public async getInitialMessages(
     parameters: TelepathistParameters,
@@ -74,36 +75,24 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
     context: VoxContext<TelepathistParameters>
   ): Promise<ModelMessage[]> {
     const specialConfig = this.findLastSpecialMessage(input);
-    const messages = await this.getContextMessages(parameters, input);
+    let messages = await this.getContextMessages(parameters, input);
 
-    if (specialConfig) {
-      // Check if this is the Initialize special message
-      if (this.isInitializeMessage(input)) {
-        await runPreparation(parameters, context);
-        // Re-fetch context messages since we may have generated summaries
-        const updatedMessages = await this.getContextMessages(parameters, input);
-        updatedMessages.push({
-          role: 'user',
-          content: `# Special Instruction\n${specialConfig.prompt}`.trim()
-        });
-        return updatedMessages;
-      }
-
-      // Other special messages
-      messages.push({
-        role: 'user',
-        content: `# Special Instruction\n${specialConfig.prompt}`.trim()
-      });
-      return messages;
+    if (specialConfig && this.isInitializeMessage(input)) {
+      await runPreparation(parameters, context);
+      // Re-fetch context messages since we may have generated summaries
+      messages = await this.getContextMessages(parameters, input);
     }
 
-    // Normal mode: add conversation history and hint
-    messages.push(...this.convertToModelMessages(
-      this.filterSpecialMessages(input.messages)
-    ));
+    const addon = specialConfig ?? this.getDefaultAddon(parameters, input);
+    if (!specialConfig) {
+      // Normal mode: include conversation history before the hint
+      messages.push(...this.convertToModelMessages(
+        this.filterSpecialMessages(input.messages)
+      ));
+    }
     messages.push({
       role: 'user',
-      content: this.getHint(parameters, input)
+      content: `${this.getHint(parameters, input)} ${addon}`.trim()
     });
 
     return messages;

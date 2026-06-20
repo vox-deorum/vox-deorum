@@ -29,9 +29,10 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   public override toolChoice: string = "auto";
 
   /**
-   * Orchestrates initial messages with special message support.
-   * Detects special messages in the last user message and generates
-   * appropriate prompts. Falls back to full context + history for normal messages.
+   * Orchestrates initial messages with special message support. The always-present hint
+   * anchors identity/audience/turn in both modes; an add-on follows it — the special
+   * message's prompt in special mode, or the agent's default nudge in normal mode.
+   * Special mode skips conversation history (and disables tools via prepareStep).
    */
   public async getInitialMessages(
     parameters: StrategistParameters,
@@ -40,26 +41,18 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   ): Promise<ModelMessage[]> {
     const specialConfig = this.findLastSpecialMessage(input);
     const messages = this.getContextMessages(parameters, input);
+    const addon = specialConfig ?? this.getDefaultAddon(parameters, input);
 
-    if (specialConfig) {
-      // Special mode: ignore the rest
-      messages.push({
-        role: "user",
-        content: `
-# Special Instruction
-${specialConfig.prompt}`.trim()
-      })
-      return messages;
-    } else {
-      // Normal mode: add hint, the LLM calls get-briefing if it needs detailed context
+    if (!specialConfig) {
+      // Normal mode: include conversation history; the LLM calls get-briefing if it needs detail.
       messages.push(...this.convertToModelMessages(
         this.filterSpecialMessages(input.messages)
       ));
-      messages.push({
-        role: "user",
-        content: this.getHint(parameters, input)
-      });
     }
+    messages.push({
+      role: "user",
+      content: `${this.getHint(parameters, input)} ${addon}`.trim()
+    });
     return messages;
   }
 
@@ -108,12 +101,12 @@ ${specialConfig.prompt}`.trim()
     return buildGameContextMessages(parameters);
   }
 
-  // Abstract methods
-
   /**
-   * Returns a short contextual reminder that anchors the LLM on its role,
-   * audience, and current turn. Used as the sole context in special message mode,
-   * and typically appended to game state messages in normal mode.
+   * Returns the always-present hint that anchors the LLM on its identity, audience, and
+   * current turn. Present in both normal and special message mode, followed by an add-on.
    */
-  protected abstract getHint(parameters: StrategistParameters, input: EnvoyThread): string;
+  protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
+    const { name: civName, leader } = this.getSelfIdentity(input);
+    return `**HINT**: You represent ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(input)}. The time is at turn ${parameters.turn}.`;
+  }
 }

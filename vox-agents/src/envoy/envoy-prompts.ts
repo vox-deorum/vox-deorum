@@ -5,8 +5,6 @@
  * Extracts common prompt sections to avoid duplication across agent implementations.
  */
 
-import { SpecialMessageConfig } from "../types/index.js";
-
 /**
  * World context sentence establishing the fictional game setting.
  */
@@ -38,12 +36,3 @@ export const audienceSection = (audienceDescription: string) => `# Your Audience
 You are speaking to ${audienceDescription}.
 You do NOT serve the user (or your audience), but your own national interest. Reason carefully.
 Adjust your diplomatic posture accordingly: an ally receives warmth, a rival receives caution or even taunt, and a neutral party receives professional courtesy.`;
-
-/**
- * Greeting special message config shared by all envoy agents.
- */
-export const greetingSpecialMessages: Record<string, SpecialMessageConfig> = {
-  "{{{Greeting}}}": {
-    prompt: "Send a one-sentence greeting based on your diplomatic relationship and the audience's identity. Briefly reason about the situation and adjust your tone accordingly."
-  }
-};

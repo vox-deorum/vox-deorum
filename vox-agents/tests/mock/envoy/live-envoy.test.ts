@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../src/types/index.js';
-import { greetingSpecialMessages } from '../../../src/envoy/envoy-prompts.js';
+import { specialMessages } from '../../../src/envoy/envoy.js';
 import { buildGameContextMessages } from '../../../src/strategist/strategy-parameters.js';
 import { createFakeVoxContext } from '../../helpers/fake-vox-context.js';
 
@@ -81,10 +81,12 @@ describe('LiveEnvoy.getInitialMessages', () => {
     const expectedContext = buildGameContextMessages(params as any)[0];
     expect(messages[0]).toEqual(expectedContext);
 
-    // Normal mode appends the hint (anchors on identity/audience/turn) as the last message.
+    // Normal mode appends the hint (anchors on identity/audience/turn) followed by the
+    // agent's default add-on as the last message.
     const last = messages[messages.length - 1];
     expect(last.role).toBe('user');
-    expect(last.content).toBe(spokesperson.getHint(params, input));
+    expect(last.content.startsWith(spokesperson.getHint(params, input))).toBe(true);
+    expect(last.content).toContain(spokesperson.getDefaultAddon(params, input));
 
     // The audience text turn is preserved between context and hint.
     const joined = messages.map((m: any) => (typeof m.content === 'string' ? m.content : '')).join('\n');
@@ -119,10 +121,17 @@ describe('LiveEnvoy.getInitialMessages', () => {
 
     expect(last.role).toBe('user');
     // The exact prompt string comes from the shared greeting config, included verbatim.
-    expect(last.content).toContain(greetingSpecialMessages['{{{Greeting}}}'].prompt);
+    expect(last.content).toContain(specialMessages['{{{Greeting}}}']);
 
-    // Special mode ignores the rest: no normal-mode hint is appended.
+    // The hint is now always present, even in special mode — followed by the greeting prompt.
+    expect(last.content).toContain(spokesperson.getHint(params, input));
     expect(last.content).not.toBe(spokesperson.getHint(params, input));
+  });
+
+  it('exposes the {{{Greeting}}} trigger as a base-class default prompt string', () => {
+    expect(specialMessages).toHaveProperty('{{{Greeting}}}');
+    expect(typeof specialMessages['{{{Greeting}}}']).toBe('string');
+    expect(specialMessages['{{{Greeting}}}']).toBeTruthy();
   });
 });
 

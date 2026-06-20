@@ -10,8 +10,8 @@ import { ModelMessage, StepResult, Tool } from "ai";
 import { LiveEnvoy } from "./live-envoy.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
-import { EnvoyThread, SpecialMessageConfig } from "../types/index.js";
-import { worldContext, noDecisionPower, communicationStyle, audienceSection, greetingSpecialMessages } from "./envoy-prompts.js";
+import { EnvoyThread } from "../types/index.js";
+import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
 import { buildDealContextMessage } from "./diplomat-deal-tools.js";
 
@@ -152,18 +152,9 @@ You represent your government's interests and gather intelligence through diplom
   }
 
   /**
-   * Returns the contextual hint that anchors the LLM on its identity and audience.
+   * The diplomat's normal-mode nudge appended after the hint: gather and relay intelligence.
    */
-  protected getHint(parameters: StrategistParameters, input: EnvoyThread): string {
-    const { name: civName, leader } = this.getSelfIdentity(input);
-    return `**HINT**: You are a diplomat for ${civName}, serving ${leader}. You are speaking to ${this.formatUserDescription(input)}. Gather intelligence and relay important information to the analyst. The time is at turn ${parameters.turn}.`;
-  }
-
-  /**
-   * Returns the special message configurations for the Diplomat.
-   * Supports {{{Greeting}}} for diplomatic introductions.
-   */
-  protected getSpecialMessages(): Record<string, SpecialMessageConfig> {
-    return greetingSpecialMessages;
+  protected override getDefaultAddon(): string {
+    return "Gather intelligence and relay important information to the analyst.";
   }
 }
