@@ -132,6 +132,61 @@ describe('agent routes', () => {
     });
   });
 
+  describe('POST /api/agents/chat - audience identity (dialog-sourced)', () => {
+    // The live context's game state has an empty players map — the fog-of-war condition that
+    // makes server-side civIdentity() return undefined for the audience. The dialog-sent
+    // identity must flow onto the thread regardless, so the diplomat never opens with a
+    // missing audience civ (the production throw).
+    function mockLiveContext() {
+      vi.spyOn(contextRegistry, 'get').mockReturnValue({
+        lastParameter: { turn: 5, gameID: 'g', playerID: 3, gameStates: { 5: { options: {}, players: {} } } },
+        execute: vi.fn(),
+      } as any);
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({ name: 'diplomat', description: 'Diplomat', tags: [] } as any);
+    }
+
+    it('stores the dialog-sent target and initiator identities on a diplomacy thread', async () => {
+      const mcp = installMockMcpClient();
+      mcp.respondWith('read-transcript', structuredResult({ messages: [] }));
+      mockLiveContext();
+
+      const res = await request(app).post('/api/agents/chat').send({
+        mode: 'diplomacy',
+        contextId: 'g-player-3',
+        callerPlayerID: 1,
+        targetPlayerID: 3,
+        targetIdentity: { name: 'Germany', leader: 'Bismarck' },
+        callerIdentity: { name: 'Rome', leader: 'Caesar' },
+      });
+
+      expect(res.status).toBe(200);
+      // orderPair(1, 3): player1 is the initiator/audience seat, player2 the voiced target.
+      // With the empty (FOW) players map neither civ could be re-resolved server-side, so both
+      // must come from the dialog — otherwise the title/self-identity falls back to a bare seat.
+      expect(res.body.player1Identity).toEqual({ name: 'Rome', leader: 'Caesar' });
+      expect(res.body.player2Identity).toEqual({ name: 'Germany', leader: 'Bismarck' });
+      expect(res.body.audienceCiv).toBe('Caesar of Rome');
+      expect(res.body.voicedCiv).toBe('Bismarck of Germany');
+    });
+
+    it('stores the dialog-sent observer identity on an ordinary chat', async () => {
+      mockLiveContext();
+
+      const res = await request(app).post('/api/agents/chat').send({
+        agentName: 'diplomat',
+        contextId: 'g-player-3',
+        callerPlayerID: -1,
+        callerRole: 'Observer',
+        callerIdentity: { name: 'an observer', leader: '' },
+      });
+
+      expect(res.status).toBe(200);
+      // orderPair(3, -1): player1 is the observer/audience seat.
+      expect(res.body.player1Identity).toEqual({ name: 'an observer', leader: '' });
+      expect(res.body.audienceCiv).toBe('an observer');
+    });
+  });
+
   describe('mutating endpoints on unknown threads', () => {
     it('DELETE returns 404', async () => {
       const res = await request(app).delete('/api/agents/chat/missing');
@@ -201,7 +256,7 @@ describe('agent routes', () => {
       const response = await request(app).post('/api/agents/chat').send({
         mode: 'diplomacy',
         contextId: 'g-player-3',
-        initiatorPlayerID: 1,
+        callerPlayerID: 1,
         targetPlayerID: 3,
       });
       expect(response.status).toBe(200);

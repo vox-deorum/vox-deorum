@@ -710,7 +710,7 @@ async function openDiplomacyChat(
   req: Request<{}, {}, CreateChatRequest>,
   res: Response<CreateChatResponse | ErrorResponse>
 ): Promise<Response> {
-  const { contextId, targetPlayerID, initiatorPlayerID, callerRole, agentName: agentOverride, turn } = req.body;
+  const { contextId, targetPlayerID, targetIdentity: sentTargetIdentity, callerPlayerID, callerIdentity: sentInitiatorIdentity, callerRole, agentName: agentOverride, turn } = req.body;
 
   if (!contextId) {
     return res.status(400).json({ error: 'contextId is required to resolve the game for a diplomacy conversation' });
@@ -722,10 +722,11 @@ async function openDiplomacyChat(
   const { gameID } = parseContextIdentifier(contextId);
   const assignments = getActiveAssignments();
 
-  // Initiator defaults to the human-control seat when the operator doesn't specify one.
-  const initiatorID = initiatorPlayerID ?? resolveHumanSeat(assignments);
+  // The caller (audience) seat initiates the ordered pair; defaults to the human-control seat
+  // when the operator doesn't specify one.
+  const initiatorID = callerPlayerID ?? resolveHumanSeat(assignments);
   if (initiatorID === undefined) {
-    return res.status(400).json({ error: 'initiatorPlayerID is required (no human-control seat to default to)' });
+    return res.status(400).json({ error: 'callerPlayerID is required (no human-control seat to default to)' });
   }
   if (initiatorID === targetPlayerID) {
     return res.status(400).json({ error: 'A civilization cannot hold a conversation with itself' });
@@ -747,8 +748,12 @@ async function openDiplomacyChat(
   }
   const audienceRole = callerRole?.trim() || 'the leader';
 
-  const targetIdentity = civIdentity(targetContext, targetPlayerID);
-  const initiatorIdentity = civIdentity(targetContext, initiatorID);
+  // Both identities come from the dialog's non-FOW player summary. The target seat's own live
+  // context can carry a FOW-limited/empty players map, so civIdentity can be undefined even for
+  // the voiced seat itself; the initiator may simply not have been met. Fall back to the live
+  // lookup only for non-dialog callers.
+  const targetIdentity = sentTargetIdentity ?? civIdentity(targetContext, targetPlayerID);
+  const initiatorIdentity = sentInitiatorIdentity ?? civIdentity(targetContext, initiatorID);
   const targetCiv = displayIdentity(targetIdentity);
   const initiatorCiv = displayIdentity(initiatorIdentity);
 
@@ -814,7 +819,7 @@ async function openOrdinaryChat(
   req: Request<{}, {}, CreateChatRequest>,
   res: Response<CreateChatResponse | ErrorResponse>
 ): Promise<Response> {
-  const { agentName: agentNameReq, contextId, databasePath, turn, callerRole, callerPlayerID } = req.body;
+  const { agentName: agentNameReq, contextId, databasePath, turn, callerRole, callerPlayerID, callerIdentity: sentCallerIdentity } = req.body;
 
   if (!agentNameReq) {
     return res.status(400).json({ error: 'Agent name is required' });
@@ -880,10 +885,12 @@ async function openOrdinaryChat(
   const audienceRole = callerRole?.trim() || 'Observer';
   const { player1ID, player2ID } = orderPair(voicedID, callerID);
 
-  // A real caller seat resolves its civ from the live game state; the observer has no identity.
-  const callerIdentity = callerID >= 0
-    ? civIdentity(contextRegistry.get<StrategistParameters>(effectiveContextId!), callerID)
-    : undefined;
+  // The caller's identity comes from the dialog (a real seat's civ, or the hardcoded observer
+  // identity). Fall back to the live lookup only for non-dialog callers with a real seat.
+  const callerIdentity = sentCallerIdentity
+    ?? (callerID >= 0
+      ? civIdentity(contextRegistry.get<StrategistParameters>(effectiveContextId!), callerID)
+      : undefined);
 
   const sessionId = uuidv4();
   const thread: EnvoyThread = {

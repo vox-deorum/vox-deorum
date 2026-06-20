@@ -23,6 +23,6 @@ The Vue app (PrimeVue components, Pinia stores, virtual scrolling for the high-v
 - **Logs** — the process's Winston log stream, live over SSE, filterable by source and level.
 - **Config** — edit model definitions, per-agent model mappings, and API keys without touching files by hand.
 
-For development, the UI dev server (`cd ui && npm run dev`) proxies to the backend; `npm run build` at the module root builds both. The dashboard starts automatically with every console workflow — strategist, telepathist, and friends — so there is always a window into a running session.
+For development, the UI dev server (`cd ui && npm run dev`) proxies to the backend; `npm run build` at the module root builds both. To verify a UI change type-checks, run `npm run type-check` (in `ui/`) — it runs `vue-tsc --build`, which follows the project references and so checks `tests/` as well as `src/`; a bare `vue-tsc --noEmit` can pass while the build fails because it skips the test files. The dashboard starts automatically with every console workflow — strategist, telepathist, and friends — so there is always a window into a running session.
 
 Session review for *players* — rewatching a finished game — is a separate tool, the Vox Deorum Replayer, which lives in its own repository (`vox-deorum-replay`) and is covered in the players' documentation; this dashboard is the developer-facing surface.

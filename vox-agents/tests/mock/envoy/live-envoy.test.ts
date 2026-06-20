@@ -29,6 +29,8 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
     player2ID: 3,
     player1Role: 'the leader',
     player2Role: 'spokesperson',
+    player1Identity: { name: 'Rome', leader: 'Caesar' },
+    player2Identity: { name: 'Germany', leader: 'Bismarck' },
     contextType: 'live',
     contextId: 'g-player-3',
     messages: [],

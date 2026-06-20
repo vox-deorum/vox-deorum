@@ -150,11 +150,43 @@ describe('AgentSelectDialog', () => {
         mode: 'diplomacy',
         contextId: CONTEXT_ID,
         targetPlayerID: 1, // Rome — derived from the contextId, not selected.
-        initiatorPlayerID: 2, // defaulted to the human seat.
+        // Both identities travel from the dialog's non-FOW summary so the backend never re-resolves.
+        targetIdentity: { name: 'Rome', leader: 'Augustus' },
+        callerPlayerID: 2, // the audience seat, defaulted to the human seat.
+        callerIdentity: { name: 'Egypt', leader: 'Cleopatra' },
       })
     )
     expect(push).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'chat-detail', params: { sessionId: 'sess-1' } })
+    )
+  })
+
+  it('sends the hardcoded observer identity for an observer chat', async () => {
+    const wrapper = await openDialog()
+
+    // Step 1: pick the diplomat, advance to the identity step.
+    const row = wrapper.findAll('.table-row').find(r => r.text().includes('diplomat'))!
+    await row.trigger('click')
+    await clickButton(wrapper, 'Next')
+    await flushPromises()
+
+    // Step 2: a role, and the Observer affiliation (last option in the "Representing" select).
+    await wrapper.find('.p-autocomplete').setValue('a journalist')
+    const selects = wrapper.findAll('.p-select')
+    const repSelect = selects[selects.length - 1]!
+    const observerOpt = repSelect.findAll('.opt').find((o: any) => o.text() === 'Observer')!
+    await observerOpt.trigger('click')
+
+    await clickButton(wrapper, 'Start Chat')
+    await flushPromises()
+
+    expect(apiClient.createAgentChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentName: 'diplomat',
+        contextId: CONTEXT_ID,
+        callerPlayerID: -1,
+        callerIdentity: { name: 'an observer', leader: '' },
+      })
     )
   })
 })

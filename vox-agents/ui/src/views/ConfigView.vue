@@ -462,7 +462,15 @@ async function saveConfig() {
               showClear
               class="model-dropdown"
             />
-            <span class="delete-btn" />
+            <Button
+              icon="pi pi-trash"
+              text
+              severity="danger"
+              class="delete-btn"
+              style="visibility: hidden"
+              aria-hidden="true"
+              tabindex="-1"
+            />
           </div>
         </div>
       </template>

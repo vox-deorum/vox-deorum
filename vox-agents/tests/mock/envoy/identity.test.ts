@@ -60,18 +60,18 @@ describe('formatUserDescription', () => {
     expect(diplomat.formatUserDescription(thread())).toBe('the leader of Rome');
   });
 
-  it('falls back to the role alone when the civ is unknown', () => {
-    expect(diplomat.formatUserDescription(thread({ player1Identity: undefined })))
-      .toBe('the leader');
-  });
-
   it('falls back to the civ alone when the role is unknown', () => {
     expect(diplomat.formatUserDescription(thread({ player1Role: undefined })))
       .toBe('a representative of Rome');
   });
 
-  it('falls back to a generic descriptor when neither is known', () => {
-    expect(diplomat.formatUserDescription(thread({ player1Role: undefined, player1Identity: undefined })))
-      .toBe('an unknown participant');
+  it('throws when the audience civ identity is missing (corrupted thread state)', () => {
+    expect(() => diplomat.formatUserDescription(thread({ player1Identity: undefined })))
+      .toThrow(/no civ identity/);
+  });
+
+  it('throws when neither role nor civ is known', () => {
+    expect(() => diplomat.formatUserDescription(thread({ player1Role: undefined, player1Identity: undefined })))
+      .toThrow(/no civ identity/);
   });
 });

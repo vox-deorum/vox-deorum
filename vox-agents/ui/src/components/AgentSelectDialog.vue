@@ -15,7 +15,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import AutoComplete from 'primevue/autocomplete';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
-import type { AgentInfo, Span, CreateChatRequest, PlayerAssignment } from '@/utils/types';
+import type { AgentInfo, Span, CreateChatRequest, PlayerAssignment, ParticipantIdentity } from '@/utils/types';
 import { userRoleSuggestions } from '@/utils/types';
 import { apiClient } from '@/api/client';
 
@@ -43,6 +43,9 @@ interface PlayerOption {
   value: number | 'observer';
 }
 
+/** Hardcoded identity for the observer seat — the dialog is the single source of identities. */
+const OBSERVER_IDENTITY: ParticipantIdentity = { name: 'an observer', leader: '' };
+
 // State
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -68,6 +71,8 @@ const playersLoading = ref(false);
 const playerOptions = ref<PlayerOption[]>([]);
 /** Civilization name per player id, used to title the dialog after the chosen seat. */
 const playerCivs = ref<Record<number, string>>({});
+/** Full civ+leader identity per player id, sent to the backend so it never re-resolves (FOW). */
+const playerIdentities = ref<Record<number, ParticipantIdentity>>({});
 
 // Diplomacy form state
 const assignments = ref<Record<number, PlayerAssignment>>({});
@@ -193,6 +198,7 @@ async function loadPlayerOptions() {
     const response = await apiClient.getPlayersSummary();
     const options: PlayerOption[] = [];
     const civs: Record<number, string> = {};
+    const identities: Record<number, ParticipantIdentity> = {};
 
     for (const [playerId, data] of Object.entries(response.players)) {
       if (typeof data === 'object' && data !== null) {
@@ -202,9 +208,11 @@ async function loadPlayerOptions() {
           value: id
         });
         civs[id] = data.Civilization;
+        identities[id] = { name: data.Civilization, leader: data.Leader };
       }
     }
     playerCivs.value = civs;
+    playerIdentities.value = identities;
 
     options.push(observerOption);
     playerOptions.value = options;
@@ -245,11 +253,17 @@ async function confirmDiplomacy() {
   isCreatingSession.value = true;
   error.value = null;
   try {
+    const initiatorID = diplomacyInitiator.value!.value as number;
+    const targetID = derivedTargetPlayerID.value!;
     const request: CreateChatRequest = {
       mode: 'diplomacy',
       contextId: props.contextId,
-      targetPlayerID: derivedTargetPlayerID.value!,
-      initiatorPlayerID: diplomacyInitiator.value!.value as number,
+      targetPlayerID: targetID,
+      // Both identities travel from the dialog's non-FOW summary so the backend never re-resolves
+      // them (the target seat's live context can carry a FOW-limited/empty players map).
+      targetIdentity: playerIdentities.value[targetID],
+      callerPlayerID: initiatorID,
+      callerIdentity: playerIdentities.value[initiatorID],
       callerRole: initiatorRole.value.trim() || undefined,
     };
     // Only send an explicit voice when the operator overrode the seat's default diplomat.
@@ -311,8 +325,9 @@ function closeDialog() {
   diplomacyInitiator.value = null;
   voiceOverride.value = null;
   initiatorRole.value = 'the leader';
-  // Drop the cached seat civ so reopening for a different session re-resolves the title.
+  // Drop the cached seat civ/identity so reopening for a different session re-resolves them.
   playerCivs.value = {};
+  playerIdentities.value = {};
   error.value = null;
 }
 
@@ -345,12 +360,17 @@ async function confirmSelection() {
       request.turn = turn;
     }
 
-    // Caller identity (endpoint A): a real seat or the observer sentinel.
+    // Caller identity (endpoint A): a real seat or the observer sentinel. The identity is sent
+    // either way so the backend never re-resolves it (a real seat from the non-FOW summary, the
+    // hardcoded observer identity otherwise).
     request.callerRole = userRole.value.trim();
     if (selectedPlayerOption.value && selectedPlayerOption.value.value !== 'observer') {
-      request.callerPlayerID = selectedPlayerOption.value.value as number;
+      const callerID = selectedPlayerOption.value.value as number;
+      request.callerPlayerID = callerID;
+      request.callerIdentity = playerIdentities.value[callerID];
     } else {
       request.callerPlayerID = -1;
+      request.callerIdentity = OBSERVER_IDENTITY;
     }
 
     // Create the chat thread

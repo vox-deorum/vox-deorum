@@ -33,6 +33,7 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
     player2ID: 3,
     player1Role: 'the leader',
     player2Role: 'diplomat',
+    player1Identity: { name: 'Rome', leader: 'Caesar' },
     player2Identity: { name: 'Germany', leader: 'Bismarck' },
     contextType: 'live',
     contextId: 'g-player-3',
@@ -104,17 +105,13 @@ describe('getHint', () => {
 describe('audience description', () => {
   it('combines the audience role with its stored civ identity', async () => {
     // The audience civ comes from the thread (resolved at open time), e.g. "the leader of Rome".
-    const system = await diplomat.getSystem(
-      params,
-      thread({ player1Identity: { name: 'Rome', leader: 'Caesar' } }),
-      undefined,
-    );
+    const system = await diplomat.getSystem(params, thread(), undefined);
     expect(system).toContain(audienceSection('the leader of Rome'));
   });
 
   it('is never resolved from live game state', async () => {
-    // A civ seeded only in game state (not on the thread) must not surface — identity is stored
-    // on the thread, so the audience line stays the bare role.
+    // A civ seeded only in game state must not surface — identity is stored on the thread, so the
+    // audience line reflects the thread identity (Rome), never the game-state one (France).
     const identityParams = {
       ...params,
       gameStates: {
@@ -122,7 +119,7 @@ describe('audience description', () => {
       },
     };
     const system = await diplomat.getSystem(identityParams, thread(), undefined);
-    expect(system).toContain(audienceSection('the leader'));
+    expect(system).toContain(audienceSection('the leader of Rome'));
     expect(system).not.toContain('France');
   });
 });
@@ -136,10 +133,10 @@ describe('Spokesperson.getSystem', () => {
     expect(system).toContain(communicationStyle);
   });
 
-  it('includes the audienceSection built from the audience role descriptor', async () => {
+  it('includes the audienceSection built from the audience role and stored civ', async () => {
     const system = await spokesperson.getSystem(params, thread(), undefined);
-    // The thread audience is seat 1 with role "the leader"; the description is that role.
-    expect(system).toContain(audienceSection('the leader'));
+    // The thread audience is seat 1 — role "the leader", civ Rome — so "the leader of Rome".
+    expect(system).toContain(audienceSection('the leader of Rome'));
   });
 
   it('includes the stable tool IDs in normal mode', async () => {
@@ -153,7 +150,7 @@ describe('Spokesperson.getSystem', () => {
     const system = await spokesperson.getSystem(params, greetingThread(), undefined);
     expect(system).not.toContain('# Available Tools');
     // The audience section is still assembled by reference in special mode.
-    expect(system).toContain(audienceSection('the leader'));
+    expect(system).toContain(audienceSection('the leader of Rome'));
     expect(system).toContain(communicationStyle);
   });
 });

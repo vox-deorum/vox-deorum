@@ -6,7 +6,7 @@
  */
 
 import type { Span, TelemetryMetadata, TelemetrySession } from './telemetry.js';
-import type { EnvoyThread } from './chat.js';
+import type { EnvoyThread, ParticipantIdentity } from './chat.js';
 import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
 // Pinned deal contract shared across interactive-diplomacy stages 4–6.
 import type { DealPayload, PerItemValueMap } from '../../../mcp-server/dist/utils/deal-schema.js';
@@ -221,9 +221,12 @@ export interface ListPacingInterruptionsResponse {
  *   caller role/affiliation describing endpoint A (`callerRole` / `callerPlayerID`,
  *   the latter `-1`/omitted for the observer).
  * - **Diplomacy** (`mode: 'diplomacy'`): a civ↔civ conversation between two seats.
- *   `targetPlayerID` is the LLM-voiced seat (endpoint B), `initiatorPlayerID` the caller
- *   seat (endpoint A). `agentName` is an optional voice override; when omitted the server
- *   defaults to the target seat's configured diplomat.
+ *   `targetPlayerID` is the LLM-voiced seat (endpoint B); the audience seat (endpoint A) is
+ *   described by the shared `caller*` fields. `agentName` is an optional voice override; when
+ *   omitted the server defaults to the target seat's configured diplomat.
+ *
+ * The audience / endpoint A is always described by the `caller*` fields (`callerRole`,
+ * `callerPlayerID`, `callerIdentity`) regardless of mode — there is no separate "initiator".
  */
 export interface CreateChatRequest {
   /** Name of the agent to use. Optional in diplomacy mode (server defaults to the target diplomat). */
@@ -239,12 +242,29 @@ export interface CreateChatRequest {
   mode?: 'diplomacy';
   /** Diplomacy: the LLM-voiced target seat (endpoint B). */
   targetPlayerID?: number;
-  /** Diplomacy: the initiating caller seat (endpoint A). Defaults to the human-control seat. */
-  initiatorPlayerID?: number;
-  /** Free-form role of the caller (endpoint A), e.g. "the leader". */
+  /**
+   * Diplomacy: the voiced (endpoint B) seat's civ+leader, supplied by the dialog from its
+   * non-FOW player summary. Like `callerIdentity`, this is the authoritative source: the target
+   * seat's live context can carry a FOW-limited (or empty) players map, so re-resolving its civ
+   * server-side can yield undefined and leave the thread/title showing a bare "Player N". When
+   * omitted the server falls back to the live lookup off the target context.
+   */
+  targetIdentity?: ParticipantIdentity;
+
+  /** Free-form role of the caller / audience (endpoint A), e.g. "the leader". Shared by both modes. */
   callerRole?: string;
-  /** Caller's player affiliation for an observer/ordinary chat (-1 or omitted = observer). */
+  /**
+   * The caller / audience seat (endpoint A). Observer chat: `-1`/omitted = the observer.
+   * Diplomacy: a real seat; when omitted the server defaults to the human-control seat.
+   */
   callerPlayerID?: number;
+  /**
+   * The audience (endpoint A) seat's civ+leader, supplied by the dialog from its non-FOW player
+   * summary. The authoritative source: the voiced seat may not have met the audience, so it
+   * cannot be reliably re-resolved server-side from game state. For an observer it carries the
+   * dialog's hardcoded observer identity.
+   */
+  callerIdentity?: ParticipantIdentity;
 }
 
 /**

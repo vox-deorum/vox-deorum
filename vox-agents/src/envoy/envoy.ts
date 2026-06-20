@@ -172,17 +172,17 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
   /**
    * Describes the audience — the participant the agent is speaking to (the non-voiced
    * endpoint) — combining its free-form role descriptor with its civ identity, both stored on
-   * the thread at open time (e.g. "the leader of Rome"). Falls back to the role alone, then the
-   * civ alone, when only one is known.
+   * the thread at open time (e.g. "the leader of Rome"). The civ identity is resolved once at
+   * thread-open time and is a hard invariant: its absence means corrupted thread state, so we
+   * throw rather than silently emit a roleless ("the leader") or generic descriptor. The role
+   * is free-form and may legitimately be absent, in which case we fall back to the civ alone.
    */
   protected formatUserDescription(input: EnvoyThread): string {
     const id = audienceID(input);
     const role = roleOf(input, id)?.trim();
     const civ = identityOf(input, id)?.name?.trim();
-    if (role && civ) return `${role} of ${civ}`;
-    if (role) return role;
-    if (civ) return `a representative of ${civ}`;
-    return 'an unknown participant';
+    if (!civ) throw new Error(`Audience seat ${id} on thread ${input.id} has no civ identity`);
+    return role ? `${role} of ${civ}` : `a representative of ${civ}`;
   }
 
   /**

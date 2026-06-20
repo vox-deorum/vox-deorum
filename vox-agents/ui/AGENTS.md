@@ -206,11 +206,18 @@ src/
 ```bash
 cd vox-agents/ui
 npm run dev           # Dev server with HMR
-npm run build         # Production build to ../dist-ui/
+npm run type-check    # Project-wide type-check (vue-tsc --build) — covers src AND tests
+npm run build         # Production build to ../dist-ui/ (runs type-check first)
 
 cd vox-agents
 npm run webui:dev     # Backend + frontend together
 ```
+
+**Type-checking gate**: always verify with `npm run type-check` before considering UI changes
+done. It runs `vue-tsc --build`, which follows the project references and checks `tests/` too.
+Do **not** rely on a bare `vue-tsc --noEmit` — it can pass while the build fails, because it
+skips the test files (test-only errors like `Array.at` or implicit `any` in callbacks only
+surface in the `--build` check).
 
 ## Don'ts
 - Don't use `any` or `unknown` types
