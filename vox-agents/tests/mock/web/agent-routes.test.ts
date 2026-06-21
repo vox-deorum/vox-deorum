@@ -30,6 +30,56 @@ function makeApp() {
 
 const app = makeApp();
 
+/**
+ * A fake VoxContext mirroring the run-model API the agent routes now use (Stage 3): base
+ * parameters, a composed `currentParameters`, and `withRun()` that overlays overrides on the base
+ * and yields a run handle with an observable `abort`. `withRunCalls`/`runHandles` are exposed for
+ * assertions, and context-wide `abort` is a spy so tests can assert the route never calls it.
+ */
+function makeMockContext(opts: {
+  baseParameters?: any;
+  session?: { getTurn: () => number | undefined };
+  execute?: (...args: any[]) => any;
+} = {}) {
+  let base = opts.baseParameters;
+  let current = base;
+  const withRunCalls: any[] = [];
+  const runHandles: any[] = [];
+  const ctx: any = {
+    session: opts.session,
+    execute: opts.execute ?? vi.fn(),
+    abort: vi.fn(),
+    getBaseParameters: () => base,
+    setBaseParameters: (p: any) => { base = p; current = p; },
+    get currentParameters() { return current; },
+    // Stage-1 shim alias kept so any not-yet-migrated read still resolves.
+    get lastParameter() { return current; },
+    withRunCalls,
+    runHandles,
+    async withRun(options: any, cb: any) {
+      withRunCalls.push(options);
+      const composed = options?.overrides ? { ...base, ...options.overrides } : base;
+      const aborter = new AbortController();
+      const handle = {
+        id: `run-${runHandles.length}`,
+        parameters: composed,
+        signal: aborter.signal,
+        tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+        abort: vi.fn(() => aborter.abort()),
+      };
+      runHandles.push(handle);
+      const prev = current;
+      current = composed;
+      try {
+        return await cb(handle);
+      } finally {
+        current = prev;
+      }
+    },
+  };
+  return ctx;
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   installMockMcpClient();
@@ -107,11 +157,9 @@ describe('agent routes', () => {
     });
 
     it('removes the attempted message when a live context has no available turn', async () => {
-      vi.spyOn(contextRegistry, 'get').mockReturnValue({
-        session: { getTurn: () => undefined },
-        lastParameter: undefined,
-        abort: vi.fn(),
-      } as any);
+      vi.spyOn(contextRegistry, 'get').mockReturnValue(
+        makeMockContext({ session: { getTurn: () => undefined } }) as any,
+      );
       vi.spyOn(agentRegistry, 'get').mockReturnValue({
         name: 'diplomat',
         description: 'Diplomat',
@@ -133,6 +181,73 @@ describe('agent routes', () => {
 
       const thread = await request(app).get(`/api/agents/chat/${opened.body.id}`);
       expect(thread.body.messages).toEqual([]);
+    });
+  });
+
+  describe('POST /api/agents/message - run isolation (Stage 3)', () => {
+    function liveBase(turn: number) {
+      return {
+        turn: -1, before: 0, after: 0,
+        gameID: 'g', playerID: 3, mode: 'Flavor', workingMemory: {},
+        gameStates: { [turn]: { options: {}, players: {} } },
+      };
+    }
+
+    /** Open an ordinary live chat over the given mock context and return its thread id. */
+    async function openLiveChat(ctx: ReturnType<typeof makeMockContext>) {
+      vi.spyOn(contextRegistry, 'get').mockReturnValue(ctx as any);
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({ name: 'diplomat', description: 'Diplomat', tags: [] } as any);
+      const opened = await request(app).post('/api/agents/chat').send({ agentName: 'diplomat', contextId: 'g-player-3' });
+      expect(opened.status).toBe(200);
+      return opened.body.id as string;
+    }
+
+    it('opens a run at the live turn with a streamProgress sink and never aborts on normal completion', async () => {
+      const ctx = makeMockContext({ session: { getTurn: () => 7 }, baseParameters: liveBase(7) });
+      ctx.execute = vi.fn(async (_n: string, _p: unknown, input: any) => {
+        input.messages.push({ message: { role: 'assistant', content: 'hello' }, metadata: { datetime: new Date(), turn: 7 } });
+        return input;
+      });
+      const chatId = await openLiveChat(ctx);
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'hi' });
+      expect(res.status).toBe(200);
+
+      // The whole request ran in one root opened at the live turn (7), carrying the SSE progress sink.
+      expect(ctx.withRunCalls).toHaveLength(1);
+      expect(ctx.withRunCalls[0].overrides.turn).toBe(7);
+      expect(typeof ctx.withRunCalls[0].streamProgress).toBe('function');
+      // The diplomat executed as a nested call with the composed live-turn params.
+      expect(ctx.execute).toHaveBeenCalledWith(
+        'diplomat',
+        expect.objectContaining({ turn: 7, playerID: 3 }),
+        expect.anything(),
+        expect.anything(),
+      );
+      // Normal completion must not cancel anything — not the run, not the context.
+      expect(ctx.runHandles[0].abort).not.toHaveBeenCalled();
+      expect(ctx.abort).not.toHaveBeenCalled();
+    });
+
+    it('aborts only the request run (not the context) when the client disconnects mid-generation', async () => {
+      const ctx = makeMockContext({ session: { getTurn: () => 7 }, baseParameters: liveBase(7) });
+      // Hang inside the run until the client drops; the route's close listener calls run.abort().
+      ctx.execute = vi.fn(() => new Promise(() => {}));
+      const chatId = await openLiveChat(ctx);
+
+      const pending = request(app).post('/api/agents/message').send({ chatId, message: 'hi' });
+      // superagent dispatches lazily — attach a handler so the request is actually sent.
+      const settled = pending.then(() => {}, () => {});
+      // Let the request reach the hanging execute, then simulate a client disconnect.
+      await new Promise((r) => setTimeout(r, 60));
+      pending.abort();
+      await settled;
+      // Give the server's 'close' handler a tick to fire.
+      await new Promise((r) => setTimeout(r, 60));
+
+      expect(ctx.runHandles[0].abort).toHaveBeenCalled();
+      // The old behavior aborted the whole context (every sibling run); the new path must not.
+      expect(ctx.abort).not.toHaveBeenCalled();
     });
   });
 
@@ -167,10 +282,11 @@ describe('agent routes', () => {
     // identity must flow onto the thread regardless, so the diplomat never opens with a
     // missing audience civ (the production throw).
     function mockLiveContext() {
-      vi.spyOn(contextRegistry, 'get').mockReturnValue({
-        lastParameter: { turn: 5, gameID: 'g', playerID: 3, gameStates: { 5: { options: {}, players: {} } } },
-        execute: vi.fn(),
-      } as any);
+      vi.spyOn(contextRegistry, 'get').mockReturnValue(
+        makeMockContext({
+          baseParameters: { turn: 5, gameID: 'g', playerID: 3, gameStates: { 5: { options: {}, players: {} } } },
+        }) as any,
+      );
       vi.spyOn(agentRegistry, 'get').mockReturnValue({ name: 'diplomat', description: 'Diplomat', tags: [] } as any);
     }
 
@@ -267,15 +383,16 @@ describe('agent routes', () => {
     async function openDiplomacyThread(transcript: unknown[], execute = vi.fn()) {
       const mcp = installMockMcpClient();
       mcp.respondWith('read-transcript', structuredResult({ messages: transcript }));
-      vi.spyOn(contextRegistry, 'get').mockReturnValue({
-        lastParameter: {
+      const ctx = makeMockContext({
+        baseParameters: {
           turn: 5,
           gameID: 'g',
           playerID: 3,
           gameStates: { 5: { options: {}, players: {} } },
         },
         execute,
-      } as any);
+      });
+      vi.spyOn(contextRegistry, 'get').mockReturnValue(ctx as any);
       vi.spyOn(agentRegistry, 'get').mockReturnValue({
         name: 'diplomat',
         description: 'Diplomat',
@@ -289,7 +406,7 @@ describe('agent routes', () => {
         targetPlayerID: 3,
       });
       expect(response.status).toBe(200);
-      return mcp;
+      return { mcp, ctx };
     }
 
     it('runs the voiced diplomat and persists its reply after a human proposal', async () => {
@@ -300,7 +417,7 @@ describe('agent routes', () => {
         });
         return input;
       });
-      const mcp = await openDiplomacyThread([], execute);
+      const { mcp, ctx } = await openDiplomacyThread([], execute);
       mcp.respondWith('inspect-deal', structuredResult({
         items: [],
         promises: [],
@@ -321,9 +438,12 @@ describe('agent routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.agentResponded).toBe(true);
+      // respondToHumanDeal opens its OWN run at the live turn (base turn 5, no session) and runs
+      // the diplomat as a nested execution inside it.
+      expect(ctx.withRunCalls.some((c: any) => c.overrides?.turn === 5)).toBe(true);
       expect(execute).toHaveBeenCalledWith(
         'diplomat',
-        expect.objectContaining({ playerID: 3 }),
+        expect.objectContaining({ playerID: 3, turn: 5 }),
         expect.objectContaining({ id: 'dipl:g:1:3' }),
         undefined,
         undefined,
@@ -351,7 +471,7 @@ describe('agent routes', () => {
         Turn: 5,
         CreatedAt: 0,
       }];
-      const mcp = await openDiplomacyThread(transcript);
+      const { mcp } = await openDiplomacyThread(transcript);
 
       const response = await request(app)
         .post('/api/agents/chat/dipl:g:1:3/deal/accept')
@@ -375,7 +495,7 @@ describe('agent routes', () => {
         Turn: 5,
         CreatedAt: 0,
       }];
-      const mcp = await openDiplomacyThread(transcript);
+      const { mcp } = await openDiplomacyThread(transcript);
       mcp.respondWith('enact-agent-deal', structuredResult({
         ProposalMessageID: 8,
         AcceptMessageID: 9,

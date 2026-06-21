@@ -115,14 +115,16 @@ function resolveHumanSeat(assignments?: Record<number, PlayerAssignment>): numbe
  * player not yet visible). Resolved once at thread-open time and then stored on the thread.
  */
 function civIdentity(context: VoxContext<StrategistParameters> | undefined, playerID: number): ParticipantIdentity | undefined {
-  const params = context?.lastParameter;
+  const params = context?.getBaseParameters();
   // Guard against non-strategist (e.g. telepathist) params, which have no gameStates.
   if (!params || playerID < 0 || !params.gameStates) return undefined;
-  // This display helper runs outside an execution root, and the strategist's base `turn` is no
-  // longer advanced per turn (turn is a run-local override now), so an explicit unbounded ceiling
-  // is needed to keep the "newest cached snapshot" behavior. Stage 3 will bound this by the live
-  // session turn (`session.getTurn()`).
-  const data = getRecentGameState(params, Number.MAX_SAFE_INTEGER)?.players?.[playerID.toString()];
+  // This display helper runs outside an execution root, so it reads the context's stable base
+  // parameters. The strategist's base `turn` is no longer advanced per turn (turn is a run-local
+  // override now), so bound the "newest cached snapshot" lookup by the live session turn rather
+  // than the stale base turn — a lagging strategist must not surface a civ from a future chat
+  // snapshot. Falls back to an unbounded ceiling for standalone contexts that have no session.
+  const ceiling = currentTurnOf(context) ?? Number.MAX_SAFE_INTEGER;
+  const data = getRecentGameState(params, ceiling)?.players?.[playerID.toString()];
   if (typeof data === 'object' && data !== null) {
     const civ = (data as Record<string, unknown>).Civilization;
     const leader = (data as Record<string, unknown>).Leader;
@@ -166,7 +168,7 @@ function enrichChat(thread: EnvoyThread): ChatResponseEnrichment {
  * (database/telepathist) that have no owning session.
  */
 function currentTurnOf(context: VoxContext<StrategistParameters> | undefined): number | undefined {
-  return context?.session?.getTurn() ?? context?.lastParameter?.turn;
+  return context?.session?.getTurn() ?? context?.getBaseParameters()?.turn;
 }
 
 /**
@@ -176,31 +178,47 @@ function currentTurnOf(context: VoxContext<StrategistParameters> | undefined): n
  */
 async function respondToHumanDeal(thread: EnvoyThread): Promise<boolean> {
   const voxContext = contextRegistry.get<StrategistParameters>(thread.contextId);
-  const parameters = voxContext?.lastParameter;
   const voice = agentName(thread);
-  if (!voxContext || !parameters || !voice) {
+  if (!voxContext || !voice) {
     throw new Error("Could not resolve the voiced diplomat context for the deal response");
   }
 
-  if (thread.contextType === "live" && parameters.gameStates && !parameters.gameStates[parameters.turn]) {
-    await ensureGameState(voxContext, parameters);
+  // The automatic deal response is a live diplomatic interaction: reason at the session's LIVE turn
+  // (specs §8), not the strategist's queued/stale decision turn. Its own root owns cancellation and
+  // token accounting, isolated from any concurrent strategist turn or chat on the same seat.
+  const liveTurn = currentTurnOf(voxContext);
+  if (liveTurn === undefined) {
+    throw new Error("The live game turn is not available for the deal response");
   }
+  const overrides: Partial<StrategistParameters> = {
+    turn: liveTurn,
+    before: liveTurn * 1000000 + 999999,
+    after: liveTurn * 1000000,
+  };
 
-  const messagesBefore = thread.messages.length;
-  await voxContext.execute(
-    voice,
-    parameters,
-    thread,
-    undefined,
-    undefined,
-    undefined,
-    { throwOnError: true }
-  );
+  return await voxContext.withRun({ overrides }, async () => {
+    const parameters = voxContext.currentParameters!;
 
-  const reply = joinAssistantText(thread.messages.slice(messagesBefore));
-  if (!reply) return false;
-  await appendTranscriptMessage(thread, thread.agent, "text", reply);
-  return true;
+    if (thread.contextType === "live" && parameters.gameStates && !parameters.gameStates[parameters.turn]) {
+      await ensureGameState(voxContext, parameters);
+    }
+
+    const messagesBefore = thread.messages.length;
+    await voxContext.execute(
+      voice,
+      parameters,
+      thread,
+      undefined,
+      undefined,
+      undefined,
+      { throwOnError: true }
+    );
+
+    const reply = joinAssistantText(thread.messages.slice(messagesBefore));
+    if (!reply) return false;
+    await appendTranscriptMessage(thread, thread.agent, "text", reply);
+    return true;
+  });
 }
 
 /**
@@ -383,95 +401,111 @@ export function createAgentRoutes(): Router {
     // Remember where this turn's new messages begin so we can capture the LLM reply.
     const messagesBefore = thread.messages.length;
 
-    try {
-      const streamCallback: StreamingEventCallback = {
-        OnChunk: ({ chunk }) => {
-          sendEvent('message', chunk as Record<string, unknown>);
-        }
-      };
-
-      voxContext.streamProgress = (msg: string) => {
-        sendEvent('message', { type: 'text-delta', text: msg + '\n', id: 'progress' });
-      };
-
-      // Compose a run-local view at the session's LIVE turn so the chat reasons at the current
-      // game turn, not the strategist's queued/stale decision turn (specs §8). The spread copies
-      // only the top-level turn/before/after by value; gameStates/workingMemory/metadata stay
-      // shared by reference, so the chat's refresh writes into the same game-state cache the
-      // strategist reads. The coverage-aware ensureGameState then reconciles this narrow live-turn
-      // slice (after = turn * 1e6) with the strategist's wider fetch without either losing events.
-      //
-      // NOTE (Stage 3 follow-up): this manual compose plus the ephemeral-root shim inside execute()
-      // will be replaced by an explicit voxContext.withRun({ overrides: { turn, before, after },
-      // streamProgress }) covering the whole request, together with per-run disconnect cancellation.
-      let params = voxContext.lastParameter!;
-
-      // Only ensure game state for live contexts (not database-backed telepathist sessions).
-      if (thread.contextType === 'live') {
-        const liveTurn = currentTurnOf(voxContext);
-        if (liveTurn === undefined) {
-          // Roll back this request's in-memory message without disturbing a concurrent append.
-          const messageIndex = thread.messages.lastIndexOf(threadMessage);
-          if (messageIndex >= 0) thread.messages.splice(messageIndex, 1);
-          sendEvent('error', { message: 'The live game turn is not available yet. Please retry once the game is running.' });
-          return;
-        }
-        params = {
-          ...params,
-          turn: liveTurn,
-          before: liveTurn * 1000000 + 999999,
-          after: liveTurn * 1000000,
-        };
-        if (params.gameStates && !params.gameStates[params.turn]) {
-          await ensureGameState(voxContext, params);
-        }
+    const streamCallback: StreamingEventCallback = {
+      OnChunk: ({ chunk }) => {
+        sendEvent('message', chunk as Record<string, unknown>);
       }
+    };
 
-      // Resolve the executing VoxAgent: the agent-voiced seat's role descriptor.
-      const voice = agentName(thread);
-      if (!voice) {
-        sendEvent('error', { message: 'Could not resolve the voicing agent for this conversation' });
+    // Run-local progress sink: passed through VoxRunOptions so it lives on this request's root,
+    // never a shared context field. A concurrent strategist turn or sibling chat keeps its own.
+    const streamProgress = (msg: string) => {
+      sendEvent('message', { type: 'text-delta', text: msg + '\n', id: 'progress' });
+    };
+
+    // Determine the run's turn overrides. A live chat reasons at the session's LIVE turn (specs §8),
+    // not the strategist's queued/stale decision turn; database-backed (telepathist) contexts have
+    // no live turn and run over their base parameter turn (no overrides). The overrides seed the
+    // run-local side of the composed parameter view: gameStates/workingMemory/metadata stay shared
+    // by reference, so the chat's refresh writes into the same game-state cache the strategist
+    // reads. The coverage-aware ensureGameState reconciles this narrow live-turn slice
+    // (after = turn * 1e6) with the strategist's wider fetch without either losing events.
+    let overrides: Partial<StrategistParameters> | undefined;
+    if (thread.contextType === 'live') {
+      const liveTurn = currentTurnOf(voxContext);
+      if (liveTurn === undefined) {
+        // Roll back this request's in-memory message without disturbing a concurrent append.
+        const messageIndex = thread.messages.lastIndexOf(threadMessage);
+        if (messageIndex >= 0) thread.messages.splice(messageIndex, 1);
+        sendEvent('error', { message: 'The live game turn is not available yet. Please retry once the game is running.' });
+        res.end();
         return;
       }
+      overrides = {
+        turn: liveTurn,
+        before: liveTurn * 1000000 + 999999,
+        after: liveTurn * 1000000,
+      };
+    }
 
-      // Check if the agent handles messages programmatically (no LLM)
-      const agent = agentRegistry.get(voice);
-      if (agent?.programmatic) {
-        await agent.handleMessage(params, thread, message, (text: string) => {
-          sendEvent('message', { type: 'text-delta', text, id: 'programmatic' });
+    // Track normal completion so the disconnect listener (which also fires after our own res.end())
+    // only cancels the run on a genuine client drop, never on successful/errored completion.
+    let completed = false;
+    try {
+      // One root run per chat request owns this request's cancellation, token sink, progress sink,
+      // and the run-local live turn. It covers game-state preparation, the programmatic/LLM agent,
+      // and reply persistence.
+      await voxContext.withRun({ overrides, streamProgress }, async (run) => {
+        // Per-run disconnect cancellation: register before any await so a client drop during
+        // refresh or generation aborts THIS run only (never a sibling strategist turn or chat).
+        // We listen on the RESPONSE (not the request): `req` 'close' fires when the request body
+        // stream ends, whereas `res` 'close' marks the SSE connection terminating. run.abort() is
+        // idempotent; the `completed` guard skips it after our own res.end() on a normal finish.
+        res.on('close', () => {
+          if (completed) return;
+          logger.info('Chat client disconnected');
+          run.abort();
         });
-      } else {
-        await voxContext.execute(voice, params, thread, streamCallback);
-      }
 
-      // For diplomacy, persist the diplomat's reply (the agent-voiced seat) through the store.
-      if (thread.diplomacy) {
-        const reply = joinAssistantText(thread.messages.slice(messagesBefore));
-        if (reply) {
-          try {
-            await appendTranscriptMessage(thread, thread.agent, 'text', reply);
-          } catch (error) {
-            logger.error('Failed to append diplomat reply to transcript store', { error });
+        const params = run.parameters;
+
+        // Only ensure game state for live contexts (not database-backed telepathist sessions).
+        if (thread.contextType === 'live' && params.gameStates && !params.gameStates[params.turn]) {
+          await ensureGameState(voxContext, params);
+        }
+
+        // Resolve the executing VoxAgent: the agent-voiced seat's role descriptor.
+        const voice = agentName(thread);
+        if (!voice) {
+          sendEvent('error', { message: 'Could not resolve the voicing agent for this conversation' });
+          return;
+        }
+
+        // Check if the agent handles messages programmatically (no LLM)
+        const agent = agentRegistry.get(voice);
+        if (agent?.programmatic) {
+          await agent.handleMessage(params, thread, message, (text: string) => {
+            sendEvent('message', { type: 'text-delta', text, id: 'programmatic' });
+          });
+        } else {
+          await voxContext.execute(voice, params, thread, streamCallback);
+        }
+
+        // For diplomacy, persist the diplomat's reply (the agent-voiced seat) through the store.
+        if (thread.diplomacy) {
+          const reply = joinAssistantText(thread.messages.slice(messagesBefore));
+          if (reply) {
+            try {
+              await appendTranscriptMessage(thread, thread.agent, 'text', reply);
+            } catch (error) {
+              logger.error('Failed to append diplomat reply to transcript store', { error });
+            }
           }
         }
-      }
 
-      sendEvent('done', {
-        sessionId: thread.id,
-        messageCount: thread.messages.length
+        sendEvent('done', {
+          sessionId: thread.id,
+          messageCount: thread.messages.length
+        });
       });
     } catch (error) {
       logger.error('Failed to execute agent', { error });
       const errorMessage = error instanceof Error ? error.message : 'unknown';
       sendEvent('error', { message: `Failed to execute agent: ${errorMessage}` })
     } finally {
+      completed = true;
       res.end();
     }
-
-    req.on('close', () => {
-      logger.info(`Chat client disconnected`);
-      voxContext.abort(false);
-    });
   });
 
   /**
@@ -893,7 +927,7 @@ async function openOrdinaryChat(
       context.registerAgentTools();
 
       const telepathistParams = await createTelepathistParameters(databasePath, identifierInfo);
-      context.lastParameter = telepathistParams;
+      context.setBaseParameters(telepathistParams);
       // Telepathist identity comes from the telemetry db metadata, not live game state.
       voicedIdentity = { name: telepathistParams.civilizationName, leader: telepathistParams.leaderName };
 
