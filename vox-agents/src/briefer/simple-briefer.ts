@@ -156,7 +156,7 @@ ${jsonToMarkdown(state.military)}
 # Events
 Events: events since the last decision-making.
 
-${jsonToMarkdown(state.events)}
+${jsonToMarkdown(state.mergedEvents ?? state.events)}
 
 # Leader's Instruction
 You are writing a strategic briefing for ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}), after turn ${parameters.turn}.

@@ -304,8 +304,13 @@ export class SpecializedBriefer extends Briefer<SpecializedBrieferInput> {
     await Briefer.prototype.getInitialMessages.call(this, parameters, input.instruction, context);
     const { YouAre, ...SituationData } = parameters.metadata || {};
 
-    // Filter events to the appropriate category (state.events is consolidated format by default)
-    const filteredEvents = filterEventsByCategory(state.events! as ConsolidatedEventsReport, config.eventCategory);
+    // Filter events to the appropriate category. Read the decision window (mergedEvents) when an
+    // established strategist window is present, falling back to the immutable per-turn slice.
+    // Both are the consolidated format by default.
+    const filteredEvents = filterEventsByCategory(
+      (state.mergedEvents ?? state.events)! as ConsolidatedEventsReport,
+      config.eventCategory
+    );
 
     const messages: ModelMessage[] = [{
       role: "system",

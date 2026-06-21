@@ -67,8 +67,9 @@ ${SimpleStrategistBase.briefingsResourcePrompt}`.trim()
     const economyInstruction = parameters.workingMemory[briefingInstructionKeys.Economy];
     const diplomacyInstruction = parameters.workingMemory[briefingInstructionKeys.Diplomacy];
 
-    // Check the event length to decide between simple/specialized briefer
-    if (JSON.stringify(state.events!).length <= 5000 || state.turn <= 1) {
+    // Check the event length to decide between simple/specialized briefer. Read the decision
+    // window (mergedEvents) when present, falling back to the immutable per-turn slice.
+    if (JSON.stringify((state.mergedEvents ?? state.events)!).length <= 5000 || state.turn <= 1) {
       // Assemble combined instruction from specialized instructions and store for simple-briefer
       parameters.workingMemory[briefingInstructionKeys.combined] = [
         `- Military: ${militaryInstruction ?? "a general report."}`,

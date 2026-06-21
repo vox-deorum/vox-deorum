@@ -118,7 +118,11 @@ function civIdentity(context: VoxContext<StrategistParameters> | undefined, play
   const params = context?.lastParameter;
   // Guard against non-strategist (e.g. telepathist) params, which have no gameStates.
   if (!params || playerID < 0 || !params.gameStates) return undefined;
-  const data = getRecentGameState(params)?.players?.[playerID.toString()];
+  // This display helper runs outside an execution root, and the strategist's base `turn` is no
+  // longer advanced per turn (turn is a run-local override now), so an explicit unbounded ceiling
+  // is needed to keep the "newest cached snapshot" behavior. Stage 3 will bound this by the live
+  // session turn (`session.getTurn()`).
+  const data = getRecentGameState(params, Number.MAX_SAFE_INTEGER)?.players?.[playerID.toString()];
   if (typeof data === 'object' && data !== null) {
     const civ = (data as Record<string, unknown>).Civilization;
     const leader = (data as Record<string, unknown>).Leader;

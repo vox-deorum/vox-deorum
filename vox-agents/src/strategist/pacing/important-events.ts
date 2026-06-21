@@ -23,6 +23,9 @@ export class ImportantEventsPacingInterruption implements PacingInterruptionStra
    * Return true when the cached event stream includes an important event for this player.
    */
   shouldInterrupt({ state, playerID }: PacingInterruptionContext): boolean {
+    // Deliberately reads the immutable per-turn `state.events` slice, NOT `state.mergedEvents`:
+    // pacing computes importance to *decide* the decision window, so it must look at this turn's
+    // own events, not a merged multi-turn window (which is also not yet established at this point).
     const events = flattenEvents(state.events);
     for (const event of events) {
       if (isImportantRelayedMessageForPlayer(event, playerID)) return true;

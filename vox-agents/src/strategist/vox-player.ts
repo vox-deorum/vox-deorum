@@ -36,6 +36,13 @@ export class VoxPlayer {
   private successful = false;
   private readonly pacing: NormalizedPacingConfig;
   private lastDecisionTurn?: number;
+  /**
+   * Persistent event cursor: the highest event ID fetched so far. Each turn's root reads events
+   * `after` this value and the cursor advances to the turn's `before` only after a successful
+   * refresh, so a failed refresh leaves it put and the next turn re-fetches the gap. Lives on the
+   * player (not the shared parameters) so concurrent chat/analyst runs can't disturb it.
+   */
+  private eventCursor: number;
 
   constructor(
     public readonly playerID: number,
@@ -74,12 +81,15 @@ export class VoxPlayer {
       _humanDecisionBus: humanDecisionBus
     };
 
-    // Seed the context with its parameters up front. `lastParameter` is otherwise
-    // only set when an agent first executes (VoxContext.execute), so a diplomat
-    // conversation opened before the strategist's first turn would read `undefined`
-    // and crash on `lastParameter.gameStates`. This is the same object the strategist
-    // mutates in place, so later turns/gameStates updates flow through unchanged.
-    this.context.lastParameter = this.parameters;
+    // The persistent event cursor starts where the strategist begins fetching.
+    this.eventCursor = initialTurn * 1000000;
+
+    // Install these as the context's stable base parameters. Each strategist turn composes a
+    // run-local view over this object (overriding turn/before/after via withRun), so the base is
+    // never mutated per turn — a diplomat conversation opened before the first strategist turn
+    // still reads valid seat state (gameStates, metadata, …) through it, and concurrent runs keep
+    // their own turn cursor. Shared seat state (gameStates, workingMemory, metadata) lives here.
+    this.context.setBaseParameters(this.parameters);
   }
 
   /**
@@ -137,27 +147,28 @@ export class VoxPlayer {
             continue;
           }
 
-          // Initializing
+          // Initializing. turn/before/after are run-local (passed to withRun as overrides), so the
+          // context's base strategist parameters are never mutated per turn — concurrent diplomat
+          // chats keep their own live turn. `after` starts at the persistent event cursor; the
+          // cursor only advances after a successful refresh (below).
           this.pendingTurn = undefined;
-          this.parameters.turn = turnData.turn;
+          const turn = turnData.turn;
+          const before = turn * 1000000 + 999999;
+          const after = this.eventCursor;
+          // lastDecisionTurn is seat-wide base state read by the strategist prompt; only the
+          // strategist root writes it (a chat root must never).
           this.parameters.lastDecisionTurn = this.lastDecisionTurn;
-          this.parameters.before = turnData.turn * 1000000 + 999999;
           this.running = true;
 
-          // Logging
-          const startingInput = this.context.inputTokens;
-          const startingReasoning = this.context.reasoningTokens;
-          const startingOutput = this.context.outputTokens;
-
           // Start a new trace for each turn (no parent)
-          const turnSpan = tracer.startSpan(`strategist.turn.${this.parameters.turn}`, {
+          const turnSpan = tracer.startSpan(`strategist.turn.${turn}`, {
             root: true, // This makes it a new trace
             attributes: {
               'vox.context.id': this.context.id,
               'player.id': String(this.playerID),
-              'game.turn': String(this.parameters.turn),
-              'event.before': String(this.parameters.before),
-              'event.after': String(this.parameters.after),
+              'game.turn': String(turn),
+              'event.before': String(before),
+              'event.after': String(after),
               'strategist.type': this.playerConfig.strategist,
               'pacing.every_turns': String(this.pacing.everyTurns),
               'pacing.interruption': this.pacing.interruption,
@@ -168,93 +179,101 @@ export class VoxPlayer {
           try {
             // Create a new root context for this turn's trace
             await context.with(trace.setSpan(context.active(), turnSpan), async () => {
-              await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
-              // Refresh all strategy parameterss
-              const cullLimit = Math.max(10, this.pacing.everyTurns + 1);
-              const state = await ensureGameState(this.context, this.parameters, cullLimit);
-              // Advance the event cursor: we've now fetched events through this turn.
-              // The next refresh fetches from here, so a turn dropped before it was
-              // processed folds its events into the following fetch (nothing is lost).
-              // Runs for both skip and decision paths, giving clean per-turn slices.
-              this.parameters.after = this.parameters.before;
+              // One root run per turn owns this turn's cancellation, token sink, and the run-local
+              // turn/before/after. It covers pause, refresh, pacing, the optional LLM decision, and
+              // resume — all the work belonging to this strategist turn.
+              await this.context.withRun({ overrides: { turn, before, after } }, async (run) => {
+                const params = run.parameters;
+                await this.context.callTool("pause-game", { PlayerID: this.playerID }, params);
+                // Refresh all strategy parameters
+                const cullLimit = Math.max(10, this.pacing.everyTurns + 1);
+                const state = await ensureGameState(this.context, params, cullLimit);
+                // Advance the event cursor: we've now fetched events through this turn. The next
+                // refresh fetches from here, so a turn dropped before it was processed folds its
+                // events into the following fetch (nothing is lost). A failed refresh throws above,
+                // leaving the cursor put so the next turn re-fetches the gap.
+                this.eventCursor = before;
 
-              const scheduled = isScheduledDecision(this.parameters.turn, this.lastDecisionTurn, this.pacing);
-              const interrupted = shouldInterruptDecision(state, this.playerID, this.pacing);
-              const shouldDecide = scheduled || interrupted;
+                const scheduled = isScheduledDecision(turn, this.lastDecisionTurn, this.pacing);
+                const interrupted = shouldInterruptDecision(state, this.playerID, this.pacing);
+                const shouldDecide = scheduled || interrupted;
 
-              if (!shouldDecide) {
-                this.logger.info(
-                  `Skipping ${this.playerConfig.strategist} on Turn ${this.parameters.turn} ` +
-                  `(lastDecisionTurn=${this.lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
-                  { GameID: this.parameters.gameID, PlayerID: this.parameters.playerID }
-                );
-                // Re-apply the current AI settings without recording a decision,
-                // preventing VPAI from retaking control during paced skips. The
-                // "[skipped]" sentinel tells keep-status-quo to refresh without
-                // recording a strategic decision.
-                await this.context.callTool("keep-status-quo", {
-                  PlayerID: this.playerID,
-                  Mode: this.parameters.mode,
-                  Rationale: "[skipped]"
-                }, this.parameters);
+                if (!shouldDecide) {
+                  this.logger.info(
+                    `Skipping ${this.playerConfig.strategist} on Turn ${turn} ` +
+                    `(lastDecisionTurn=${this.lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
+                    { GameID: params.gameID, PlayerID: params.playerID }
+                  );
+                  // Re-apply the current AI settings without recording a decision,
+                  // preventing VPAI from retaking control during paced skips. The
+                  // "[skipped]" sentinel tells keep-status-quo to refresh without
+                  // recording a strategic decision.
+                  await this.context.callTool("keep-status-quo", {
+                    PlayerID: this.playerID,
+                    Mode: params.mode,
+                    Rationale: "[skipped]"
+                  }, params);
 
+                  this.running = false;
+                  await this.context.callTool("resume-game", { PlayerID: this.playerID }, params);
+
+                  turnSpan.setAttributes({
+                    'completed': true,
+                    'pacing.skipped': true,
+                    'pacing.interrupted': false,
+                    'tokens.input': 0,
+                    'tokens.reasoning': 0,
+                    'tokens.output': 0,
+                    // No deliberation on a paced skip (the strategist never ran).
+                    'deliberation.ms': 0
+                  });
+                  turnSpan.setStatus({ code: SpanStatusCode.OK });
+                  return;
+                }
+
+                const eventFromTurn = this.lastDecisionTurn === undefined
+                  ? turn
+                  : this.lastDecisionTurn + 1;
+                this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${turn}`, {
+                  GameID: params.gameID,
+                  PlayerID: params.playerID,
+                  scheduled,
+                  interrupted
+                });
+
+                const decided = await this.executeDecisionWithEventFallback(params, state, eventFromTurn, turnSpan);
+
+                // Finalizing (the event cursor was already advanced after the refresh).
+                // Only record a completed decision when one was actually made. If the
+                // decision was abandoned because even the current turn alone exceeded the
+                // model context, leave lastDecisionTurn untouched so this turn still counts
+                // as scheduled next turn — we retry next turn rather than waiting until the
+                // next paced decision point.
+                if (decided) {
+                  this.lastDecisionTurn = turn;
+                }
+
+                // Recording the tokens and resume the game
                 this.running = false;
-                await this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
+                await this.context.callTool("resume-game", { PlayerID: this.playerID }, params);
 
+                // Update the status. Per-turn token usage comes from this run's handle — the
+                // strategist plus its nested briefers/negotiators only, never a concurrent chat's
+                // tokens (those accrue to their own root).
                 turnSpan.setAttributes({
                   'completed': true,
-                  'pacing.skipped': true,
-                  'pacing.interrupted': false,
-                  'tokens.input': 0,
-                  'tokens.reasoning': 0,
-                  'tokens.output': 0,
-                  // No deliberation on a paced skip (the strategist never ran).
-                  'deliberation.ms': 0
+                  'pacing.skipped': false,
+                  'pacing.decided': decided,
+                  'pacing.interrupted': interrupted,
+                  'tokens.input': run.tokens.inputTokens,
+                  'tokens.reasoning': run.tokens.reasoningTokens,
+                  'tokens.output': run.tokens.outputTokens,
+                  // Human deliberation time for this turn (the human strategist
+                  // stashes it in workingMemory; 0/absent for non-human seats).
+                  'deliberation.ms': Number(params.workingMemory["deliberationMs"] ?? "0")
                 });
                 turnSpan.setStatus({ code: SpanStatusCode.OK });
-                return;
-              }
-
-              const eventFromTurn = this.lastDecisionTurn === undefined
-                ? this.parameters.turn
-                : this.lastDecisionTurn + 1;
-              this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${this.parameters.turn}`, {
-                GameID: this.parameters.gameID,
-                PlayerID: this.parameters.playerID,
-                scheduled,
-                interrupted
               });
-
-              const decided = await this.executeDecisionWithEventFallback(state, eventFromTurn, turnSpan);
-
-              // Finalizing (the event cursor was already advanced after the refresh).
-              // Only record a completed decision when one was actually made. If the
-              // decision was abandoned because even the current turn alone exceeded the
-              // model context, leave lastDecisionTurn untouched so this turn still counts
-              // as scheduled next turn — we retry next turn rather than waiting until the
-              // next paced decision point.
-              if (decided) {
-                this.lastDecisionTurn = this.parameters.turn;
-              }
-
-              // Recording the tokens and resume the game
-              this.running = false;
-              await this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
-
-              // Update the status
-              turnSpan.setAttributes({
-                'completed': true,
-                'pacing.skipped': false,
-                'pacing.decided': decided,
-                'pacing.interrupted': interrupted,
-                'tokens.input': this.context.inputTokens - startingInput,
-                'tokens.reasoning': this.context.reasoningTokens - startingReasoning,
-                'tokens.output': this.context.outputTokens - startingOutput,
-                // Human deliberation time for this turn (the human strategist
-                // stashes it in workingMemory; 0/absent for non-human seats).
-                'deliberation.ms': Number(this.parameters.workingMemory["deliberationMs"] ?? "0")
-              });
-              turnSpan.setStatus({ code: SpanStatusCode.OK });
             });
           } catch (error) {
             this.logger.error(`Player ${this.playerID} (${this.parameters.gameID}) execution error:`, error);
@@ -344,11 +363,12 @@ export class VoxPlayer {
    * recording a completed decision.
    */
   private async executeDecisionWithEventFallback(
+    parameters: StrategistParameters,
     state: GameState,
     eventFromTurn: number,
     turnSpan: Span
   ): Promise<boolean> {
-    const decided = await withEventWindowFallback(this.parameters, state, eventFromTurn, async (eventWindow) => {
+    const decided = await withEventWindowFallback(parameters, state, eventFromTurn, async (eventWindow) => {
       turnSpan.setAttributes({
         event_from: eventWindow.fromTurn,
         event_to: eventWindow.toTurn
@@ -360,18 +380,21 @@ export class VoxPlayer {
         return true;
       }
 
+      // Nested execution inside the established turn root: execute() uses the root's composed
+      // parameters (the `parameters` arg is the staging-shim placeholder), inherits its
+      // cancellation, and accrues its tokens to the run handle.
       let contextLengthExceeded = false;
-      await this.context.execute(this.playerConfig.strategist, this.parameters, undefined, undefined, undefined, () => {
+      await this.context.execute(this.playerConfig.strategist, parameters, undefined, undefined, undefined, () => {
         contextLengthExceeded = true;
       }, { throwOnError: true });
 
       if (!contextLengthExceeded) return true;
 
       this.logger.warn(
-        `Context length exceeded on turn ${this.parameters.turn}; retrying with a narrower event window.`,
+        `Context length exceeded on turn ${parameters.turn}; retrying with a narrower event window.`,
         {
-          GameID: this.parameters.gameID,
-          PlayerID: this.parameters.playerID,
+          GameID: parameters.gameID,
+          PlayerID: parameters.playerID,
           EventFrom: eventWindow.fromTurn,
           EventTo: eventWindow.toTurn
         }
@@ -381,10 +404,10 @@ export class VoxPlayer {
 
     if (!decided) {
       this.logger.warn(
-        `Context length exceeded on turn ${this.parameters.turn}; abandoning the decision to retry next turn.`,
+        `Context length exceeded on turn ${parameters.turn}; abandoning the decision to retry next turn.`,
         {
-          GameID: this.parameters.gameID,
-          PlayerID: this.parameters.playerID
+          GameID: parameters.gameID,
+          PlayerID: parameters.playerID
         }
       );
     }

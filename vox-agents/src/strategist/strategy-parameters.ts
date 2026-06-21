@@ -32,8 +32,6 @@ export interface StrategistParameters extends AgentParameters {
   lastDecisionTurn?: number;
   /** Pre-defined sync random seed (RandomSeedsConfig.sync) configured in vox-agents, if fixed. */
   syncSeed?: number;
-  /** Internal: in-flight game state refresh promise for deduplication (not serialized) */
-  _pendingRefresh?: Promise<GameState>;
   /** Internal: the session's per-game human-decision bus (not serialized). Populated
    * for every seat by VoxPlayer, but only the human strategist reads it to block on
    * and receive the panel's submission. */
@@ -48,8 +46,22 @@ export interface GameState {
   turn: number;
   /** Player information including civilizations, leaders, and diplomacy */
   players?: PlayersReport;
-  /** Game events that occurred during this turn */
+  /**
+   * The immutable per-turn event slice for this turn. Pacing and the event-window fallback must
+   * never mutate it in place; a same-turn refresh may only replace it with a *larger* serialized
+   * slice for the same turn (see {@link refreshGameState}). It is never repurposed as a multi-turn
+   * window — that is what {@link GameState.mergedEvents} is for. Slice readers (pacing's
+   * importance check, {@link mergeCachedEvents}) read this field directly.
+   */
   events?: EventsReport;
+  /**
+   * The derived multi-turn pacing window for this state's strategist decision, assembled by
+   * {@link withEventWindowFallback}/{@link mergeCachedEvents}. Kept separate from the immutable
+   * per-turn `events` slice so the selected decision window stays available to the strategist and
+   * its briefers without clobbering the slice. Window readers (strategist prompts, briefers) read
+   * `mergedEvents ?? events`.
+   */
+  mergedEvents?: EventsReport;
   /** Cities data including population, production, and buildings */
   cities?: CitiesReport;
   /** Available strategic and tactical options */
@@ -132,30 +144,53 @@ export async function refreshGameState(
   if (isErrorResult(victory)) throw new Error(`Failed to fetch victory: ${extractErrorText(victory)}`);
   if (isErrorResult(military)) throw new Error(`Failed to fetch military: ${extractErrorText(military)}`);
 
-  // Create the current game state snapshot
-  const currentState: GameState = {
-    players,
-    events,
-    cities,
-    options,
-    military,
-    victory,
-    reports: {},
-    turn: parameters.turn
-  };
+  // Store the freshly-fetched snapshot. When an entry for this turn already exists (a concurrent
+  // same-turn refresh), update its fields IN PLACE rather than replacing the object reference.
+  // Briefing dedup (briefing-utils) and the strategist's selected pacing window close over the
+  // specific GameState instance, so swapping the map entry for a fresh object would orphan any
+  // in-flight briefing promise (its `finally` would no longer match the live entry) and drop the
+  // derived `mergedEvents` decision window. The non-event fields take the newest fetch; for
+  // `events`, the larger serialized report wins, because concurrent same-turn refreshes settle in
+  // any order — a fuller report must never be clobbered by a smaller late arrival. `reports`,
+  // `_pendingBriefings`, and `mergedEvents` are left untouched.
+  const existing = parameters.gameStates[parameters.turn];
+  let currentState: GameState;
+  if (existing) {
+    existing.players = players;
+    existing.cities = cities;
+    existing.options = options;
+    existing.military = military;
+    existing.victory = victory;
+    if (
+      existing.events === undefined ||
+      JSON.stringify(events).length > JSON.stringify(existing.events).length
+    ) {
+      existing.events = events;
+    }
+    currentState = existing;
+  } else {
+    currentState = {
+      players,
+      events,
+      cities,
+      options,
+      military,
+      victory,
+      reports: {},
+      turn: parameters.turn
+    };
+    parameters.gameStates[parameters.turn] = currentState;
+  }
 
-  // Update and return parameters with the new game state stored by turn
-  parameters.gameStates[parameters.turn] = currentState;
-
-  // Cull old game states - keep only states within cullLimit turns before current turn
-  // and remove any future states (after current turn)
-  const currentTurn = parameters.turn;
-  const oldestAllowedTurn = currentTurn - cullLimit;
+  // Cull old game states relative to the HIGHEST cached turn, not this run's turn, so a lagging
+  // strategist refresh never deletes a newer chat snapshot — and never deletes an entry just for
+  // being "later" than this run's turn. Keep only turns within cullLimit of the newest cached turn.
+  const highestTurn = Math.max(...Object.keys(parameters.gameStates).map(Number));
+  const oldestAllowedTurn = highestTurn - cullLimit;
 
   for (const turnStr of Object.keys(parameters.gameStates)) {
     const turn = Number(turnStr);
-    // Remove states that are either in the future or too old
-    if (turn > currentTurn || turn < oldestAllowedTurn) {
+    if (turn < oldestAllowedTurn) {
       delete parameters.gameStates[turn];
     }
   }
@@ -164,9 +199,13 @@ export async function refreshGameState(
 }
 
 /**
- * Returns the game state for the current turn, deduplicating concurrent refresh calls.
- * If the state is already cached, returns immediately. If a refresh is in-flight, awaits it.
- * Otherwise starts a new refresh and registers the promise for deduplication.
+ * Returns the game state for the current turn, refreshing it when not cached.
+ *
+ * There is intentionally NO cross-run deduplication: concurrent cache misses issue independent
+ * MCP refreshes. Refresh cost is acceptable, and runs for different turns must never receive one
+ * another's promise. A same-turn concurrent refresh updates the existing cached entry in place
+ * (see {@link refreshGameState}), so both callers still converge on the same `GameState` object.
+ *
  * @param context - The VoxContext to use for calling tools
  * @param parameters - The strategy parameters to check/refresh
  * @param cullLimit - Number of past turns to keep (default: 10)
@@ -182,21 +221,7 @@ export async function ensureGameState(
     return parameters.gameStates[parameters.turn];
   }
 
-  // Await in-flight refresh if one exists
-  if (parameters._pendingRefresh) {
-    return parameters._pendingRefresh;
-  }
-
-  // Start a new refresh and track the promise
-  const refreshPromise = refreshGameState(context, parameters, cullLimit)
-    .finally(() => {
-      if (parameters._pendingRefresh === refreshPromise) {
-        parameters._pendingRefresh = undefined;
-      }
-    });
-
-  parameters._pendingRefresh = refreshPromise;
-  return refreshPromise;
+  return refreshGameState(context, parameters, cullLimit);
 }
 
 /**
@@ -277,25 +302,33 @@ ${jsonToMarkdown(Strategy)}`.trim()
 }
 
 /**
- * Gets the most recent game state before or at a specific turn
+ * Gets the most recent cached game state at or before a turn bound.
+ *
+ * The bound defaults to the active run's `parameters.turn` so a lagging strategist (or a briefer/
+ * librarian helper running in its root) never reads a newer concurrent chat snapshot: "most
+ * recent" must mean "most recent up to my turn", not "the newest entry on the seat". Callers that
+ * deliberately want the newest snapshot regardless of turn (e.g. out-of-run display helpers) pass
+ * an explicit larger `maxTurn`.
+ *
  * @param parameters - The strategy parameters containing game states
- * @param maxTurn - The maximum turn number to consider
- * @returns The most recent game state at or before maxTurn, or undefined if none found
+ * @param maxTurn - Upper turn bound, inclusive (defaults to `parameters.turn`)
+ * @returns The most recent game state at or before `maxTurn`, or undefined if none found
  */
 export function getRecentGameState(
   parameters: StrategistParameters,
+  maxTurn: number = parameters.turn,
 ): GameState | undefined {
-  let mostRecentTurn: number | undefined;
+  let bestTurn: number | undefined;
 
   for (const turnStr of Object.keys(parameters.gameStates)) {
     const turn = Number(turnStr);
-    // Update if this is the most recent turn we've seen
-    if (mostRecentTurn === undefined || turn > mostRecentTurn) {
-      mostRecentTurn = turn;
+    if (turn > maxTurn) continue;
+    if (bestTurn === undefined || turn > bestTurn) {
+      bestTurn = turn;
     }
   }
 
-  return mostRecentTurn !== undefined ? parameters.gameStates[mostRecentTurn] : undefined;
+  return bestTurn !== undefined ? parameters.gameStates[bestTurn] : undefined;
 }
 
 /**
@@ -374,7 +407,14 @@ export function getDecisionEventWindows(fromTurn: number, toTurn: number): Array
 /**
  * Run `attempt` against progressively narrower event windows (from `eventFromTurn`
  * through `parameters.turn`), dropping the oldest remaining turn on each retry. Before
- * each try, `state.events` is set to the merged window via {@link mergeCachedEvents}.
+ * each try, the candidate window is assigned to the DERIVED `state.mergedEvents` field.
+ *
+ * It never mutates the immutable per-turn `state.events` slice. {@link mergeCachedEvents} builds
+ * each window from the per-turn slices in `gameStates`, so writing `state.mergedEvents` here does
+ * not feed back into the next (narrower) merge — the old snapshot/restore workaround is gone.
+ * Strategists and briefers read `state.mergedEvents ?? state.events`, so the selected window stays
+ * available to nested/cached briefer consumption; on total failure the final attempted window
+ * remains on the state for diagnostics without disturbing the slice.
  *
  * Stops and returns `true` at the first window where `attempt` resolves `true` (success).
  * Returns `false` if every window was exhausted without success — including the case where
@@ -392,17 +432,8 @@ export async function withEventWindowFallback(
 ): Promise<boolean> {
   const windows = getDecisionEventWindows(eventFromTurn, parameters.turn);
 
-  // `state` is normally the current turn's cached entry (gameStates[parameters.turn]), so
-  // assigning `state.events = mergeCachedEvents(...)` clobbers that turn's cached per-turn slice.
-  // Each window ends at parameters.turn, so without restoring the slice the next (narrower)
-  // merge would re-read the already-merged events and grow instead of shrink. Snapshot the
-  // current-turn slice and restore it before every merge so narrowing genuinely narrows.
-  const currentEntry = parameters.gameStates[parameters.turn];
-  const cachedCurrentEvents = currentEntry?.events;
-
   for (const window of windows) {
-    if (currentEntry) currentEntry.events = cachedCurrentEvents;
-    state.events = mergeCachedEvents(parameters, window.fromTurn, window.toTurn);
+    state.mergedEvents = mergeCachedEvents(parameters, window.fromTurn, window.toTurn);
     if (await attempt(window)) return true;
   }
 

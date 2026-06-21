@@ -117,7 +117,7 @@ ${jsonToMarkdown(state.military)}
 # Events
 Events: events since you last made a decision.
 
-${jsonToMarkdown(state.events)}
+${jsonToMarkdown(state.mergedEvents ?? state.events)}
 
 ${getDecisionTurnContext(parameters)}
 `.trim()

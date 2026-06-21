@@ -13,6 +13,7 @@ import {
   refreshGameState,
   ensureGameState,
   getGameState,
+  getRecentGameState,
   buildGameContextMessages,
 } from "../../../src/strategist/strategy-parameters.js";
 import {
@@ -119,25 +120,72 @@ describe("strategy-parameters", () => {
     });
 
     describe("culling", () => {
-      it("prunes states older than cullLimit and any future turns, keeping in-window turns", async () => {
+      it("culls relative to the highest cached turn and keeps newer (future) snapshots", async () => {
         registerReportTools(ctx);
+        // A lagging strategist refreshing turn 30 while a concurrent chat already cached turn 35.
+        const future = makeGameState(35);
         const params = makeStrategistParameters({
           turn: 30,
           gameStates: {
-            10: makeGameState(10), // too old (30 - cullLimit 5 = 25)
-            28: makeGameState(28), // in window
-            29: makeGameState(29), // in window
-            35: makeGameState(35), // future
+            18: makeGameState(18), // older than highest(35) - cullLimit(10) = 25 → culled
+            28: makeGameState(28), // within window
+            29: makeGameState(29), // within window
+            35: future,            // newer chat snapshot → must survive
           },
         });
 
-        await refreshGameState(ctx.asContext(), params, 5);
+        await refreshGameState(ctx.asContext(), params, 10);
 
         const turns = Object.keys(params.gameStates).map(Number).sort((a, b) => a - b);
-        expect(turns).toEqual([28, 29, 30]);
-        expect(params.gameStates[10]).toBeUndefined();
-        expect(params.gameStates[35]).toBeUndefined();
+        expect(turns).toEqual([28, 29, 30, 35]);
+        expect(params.gameStates[18]).toBeUndefined();
+        // The newer snapshot is not deleted just for being later than this run's turn.
+        expect(params.gameStates[35]).toBe(future);
         expect(params.gameStates[30]).toBeDefined();
+      });
+    });
+
+    describe("same-turn in-place update", () => {
+      it("updates the existing GameState in place, keeps the larger serialized events, and preserves reports/pending briefings", async () => {
+        registerReportTools(ctx);
+        ctx.respondWith("get-players", { "1": { Civilization: "Rome (fresh)" } });
+        // Fetched events are a strictly larger serialized slice than the cached one.
+        ctx.respondWith("get-events", { "5": [{ Type: "A" }, { Type: "B" }, { Type: "C" }] });
+
+        const pending = Promise.resolve("briefing-result");
+        const cached = makeGameState(5, {
+          events: { "5": [{ Type: "A" }] },
+          reports: { briefing: "keep-me" },
+          _pendingBriefings: { briefing: pending },
+        } as unknown as Parameters<typeof makeGameState>[1]);
+        const params = makeStrategistParameters({ turn: 5, gameStates: { 5: cached } });
+
+        const result = await refreshGameState(ctx.asContext(), params);
+
+        // Same object reference — briefing dedup closures stay valid.
+        expect(result).toBe(cached);
+        expect(params.gameStates[5]).toBe(cached);
+        // Non-event fields take the newest fetch.
+        expect(cached.players).toEqual({ "1": { Civilization: "Rome (fresh)" } });
+        // Larger serialized events win.
+        expect(cached.events).toEqual({ "5": [{ Type: "A" }, { Type: "B" }, { Type: "C" }] });
+        // reports and pending briefings are untouched.
+        expect(cached.reports).toEqual({ briefing: "keep-me" });
+        expect(cached._pendingBriefings?.briefing).toBe(pending);
+      });
+
+      it("keeps the existing events when the fetched slice is serialized-smaller", async () => {
+        registerReportTools(ctx);
+        ctx.respondWith("get-events", { "5": [{ Type: "A" }] }); // smaller than cached
+        const cached = makeGameState(5, {
+          events: { "5": [{ Type: "A" }, { Type: "B" }, { Type: "C" }] },
+        } as unknown as Parameters<typeof makeGameState>[1]);
+        const params = makeStrategistParameters({ turn: 5, gameStates: { 5: cached } });
+
+        await refreshGameState(ctx.asContext(), params);
+
+        // A smaller late arrival never clobbers the fuller report.
+        expect(cached.events).toEqual({ "5": [{ Type: "A" }, { Type: "B" }, { Type: "C" }] });
       });
     });
   });
@@ -154,31 +202,50 @@ describe("strategy-parameters", () => {
       expect(ctx.calls()).toHaveLength(0);
     });
 
-    it("dedupes concurrent in-flight refreshes into a single fetch", async () => {
-      // Controlled handler so both calls observe the same in-flight promise.
-      let releasePlayers!: (value: unknown) => void;
-      const playersPending = new Promise((resolve) => {
-        releasePlayers = resolve;
-      });
-      ctx.onTool("get-players", () => playersPending);
-      ctx.respondWith("get-events", {});
-      ctx.respondWith("get-cities", {});
-      ctx.respondWith("get-options", {});
-      ctx.respondWith("get-victory-progress", {});
-      ctx.respondWith("get-military-report", {});
+    it("does NOT deduplicate concurrent misses, but converges on one cached entry", async () => {
+      registerReportTools(ctx);
       const params = makeStrategistParameters({ turn: 5 });
 
-      const p1 = ensureGameState(ctx.asContext(), params);
-      const p2 = ensureGameState(ctx.asContext(), params);
+      const [s1, s2] = await Promise.all([
+        ensureGameState(ctx.asContext(), params),
+        ensureGameState(ctx.asContext(), params),
+      ]);
 
-      releasePlayers({ "1": { Civilization: "Rome" } });
-      const [s1, s2] = await Promise.all([p1, p2]);
-
-      // Both resolve to the same single refresh result.
+      // Each concurrent miss issued its own independent refresh (no dedup).
+      expect(ctx.calls("get-players")).toHaveLength(2);
+      // The second refresh updated the first's entry in place, so both converge on one object.
       expect(s1).toBe(s2);
-      expect(ctx.calls("get-players")).toHaveLength(1);
-      // In-flight marker cleared after settle.
-      expect(params._pendingRefresh).toBeUndefined();
+      expect(params.gameStates[5]).toBe(s1);
+    });
+  });
+
+  describe("getRecentGameState", () => {
+    it("returns the most recent state at or before parameters.turn, ignoring newer snapshots", () => {
+      const s3 = makeGameState(3), s5 = makeGameState(5), s8 = makeGameState(8);
+      const params = makeStrategistParameters({ turn: 5, gameStates: { 3: s3, 5: s5, 8: s8 } });
+
+      // turn 8 exists but is a newer (e.g. chat) snapshot the lagging caller must not read.
+      expect(getRecentGameState(params)).toBe(s5);
+    });
+
+    it("falls back to the nearest earlier state when the exact turn is missing", () => {
+      const s3 = makeGameState(3), s8 = makeGameState(8);
+      const params = makeStrategistParameters({ turn: 5, gameStates: { 3: s3, 8: s8 } });
+
+      expect(getRecentGameState(params)).toBe(s3);
+    });
+
+    it("honors an explicit maxTurn bound over parameters.turn", () => {
+      const s3 = makeGameState(3), s8 = makeGameState(8);
+      const params = makeStrategistParameters({ turn: 5, gameStates: { 3: s3, 8: s8 } });
+
+      expect(getRecentGameState(params, Number.MAX_SAFE_INTEGER)).toBe(s8);
+    });
+
+    it("returns undefined when no state is at or before the bound", () => {
+      const params = makeStrategistParameters({ turn: 2, gameStates: { 8: makeGameState(8) } });
+
+      expect(getRecentGameState(params)).toBeUndefined();
     });
   });
 

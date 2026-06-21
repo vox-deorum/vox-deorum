@@ -7,7 +7,7 @@
 The refactor lands in staged checkpoints. Each checkpoint keeps the package type-checking and the existing suites green.
 
 - [x] **Stage 1 — VoxContext run-model core.** ALS execution frames; `RootRun` objects; `withRun()`/`forkRun()`; the composed-parameter proxy; `baseParameters`/`currentParameters`; root-owned `AbortController` with all four signal sites migrated; `currentInput` resolved from the frame; `streamProgress`/`timeoutRefresh` as ALS-backed accessors; per-root token sink alongside the seat totals; and a simplified `shutdown()` that aborts every root and proceeds (no teardown wait). Tests: `tests/mock/context/vox-context-runs.test.ts` and `vox-context-execute-runs.test.ts`.
-- [ ] Stage 2 — Strategist + game-state/pacing integration.
+- [x] **Stage 2 — Strategist + game-state/pacing integration.** `VoxPlayer` sets base parameters once and wraps each turn in `withRun({ overrides: { turn, before, after } })`; the persistent event cursor moved onto `VoxPlayer` and advances after a successful refresh; turn telemetry now reads the run handle's token sink. `GameState.mergedEvents` added; `withEventWindowFallback()` writes only `mergedEvents` (snapshot/restore dropped); window readers (`simple-strategist`, `simple-strategist-staffed`, `simple-briefer`, `specialized-briefer`) switched to `mergedEvents ?? events` while pacing/`mergeCachedEvents` keep the immutable slice. Game-state cache concurrency: `_pendingRefresh` dedup removed, same-turn refresh updates the cached `GameState` in place (larger serialized `events` wins), culling is relative to the highest cached turn (never deletes future), and `getRecentGameState()` is bounded at-or-before the run turn. Tests: `tests/mock/strategist/strategy-parameters.test.ts`, `pacing.test.ts`, and new `vox-player-runs.test.ts`.
 - [ ] Stage 3 — Web diplomacy/chat.
 - [ ] Stage 4 — Standalone workflows + tool layer.
 - [ ] Stage 5 — Final API flip and shim removal.
@@ -265,14 +265,14 @@ This applies to simple and specialized briefers and any strategist prompt that r
 
 The exhaustive set of `state.events` reader sites, from grepping `.events` over `src`. Each must be classified as a **window reader** (switch to `state.mergedEvents ?? state.events`) or a **slice reader** (deliberately keep `state.events`):
 
-- [ ] `briefer/specialized-briefer.ts` (`filterEventsByCategory(state.events! …)`) — window reader; switch.
-- [ ] `briefer/simple-briefer.ts` (`jsonToMarkdown(state.events)`) — window reader; switch.
-- [ ] `strategist/agents/simple-strategist.ts` (`jsonToMarkdown(state.events)`) — window reader; switch.
-- [ ] `strategist/agents/simple-strategist-staffed.ts` (`JSON.stringify(state.events!)` size gate) — window reader; switch.
-- [ ] `strategist/pacing/important-events.ts` (`flattenEvents(state.events)`) — slice reader; **keep `state.events`**. Pacing computes importance to *decide* the window, so it must read the immutable per-turn slice, not the merged window. Verify and comment this intent.
-- [ ] `strategist/strategy-parameters.ts` `mergeCachedEvents()` (`gameStates[turn]?.events`, `report.events`) — slice reader; **keep `state.events`**. This is the source that *builds* `mergedEvents` from each turn's immutable slice.
-- [ ] `strategist/strategy-parameters.ts` `withEventWindowFallback()` (`state.events = mergeCachedEvents(…)` and the `cachedCurrentEvents` snapshot/restore) — rewrite to assign `state.mergedEvents` and drop the snapshot/restore workaround entirely.
-- [ ] Test: assert window readers pick up `mergedEvents` when present and fall back to `events` when absent; assert slice readers (pacing, `mergeCachedEvents`) are unaffected by a set `mergedEvents`.
+- [x] `briefer/specialized-briefer.ts` (`filterEventsByCategory(state.events! …)`) — window reader; switch.
+- [x] `briefer/simple-briefer.ts` (`jsonToMarkdown(state.events)`) — window reader; switch.
+- [x] `strategist/agents/simple-strategist.ts` (`jsonToMarkdown(state.events)`) — window reader; switch.
+- [x] `strategist/agents/simple-strategist-staffed.ts` (`JSON.stringify(state.events!)` size gate) — window reader; switch.
+- [x] `strategist/pacing/important-events.ts` (`flattenEvents(state.events)`) — slice reader; **keep `state.events`**. Pacing computes importance to *decide* the window, so it must read the immutable per-turn slice, not the merged window. Verify and comment this intent.
+- [x] `strategist/strategy-parameters.ts` `mergeCachedEvents()` (`gameStates[turn]?.events`, `report.events`) — slice reader; **keep `state.events`**. This is the source that *builds* `mergedEvents` from each turn's immutable slice.
+- [x] `strategist/strategy-parameters.ts` `withEventWindowFallback()` (`state.events = mergeCachedEvents(…)` and the `cachedCurrentEvents` snapshot/restore) — rewrite to assign `state.mergedEvents` and drop the snapshot/restore workaround entirely.
+- [x] Test: assert window readers pick up `mergedEvents` when present and fall back to `events` when absent; assert slice readers (pacing, `mergeCachedEvents`) are unaffected by a set `mergedEvents`.
 
 ## Game-state cache concurrency
 
@@ -284,9 +284,9 @@ When two refreshes target the same turn, the later successful refresh must **upd
 
 Therefore the refresh updates the freshly-fetched snapshot fields on the existing object and leaves `reports`, `_pendingBriefings`, and `mergedEvents` untouched. The non-event fields (`players`, `cities`, `options`, `military`, `victory`) take the newest fetch. For `events`, **the larger serialized report wins**: compare `JSON.stringify(existingEvents).length` with `JSON.stringify(fetchedEvents).length` and keep the larger value. Concurrent same-turn refreshes can complete in any order, so this is decided by serialized field size, not arrival order — a fuller report supersedes a smaller partial one, while a larger report is never clobbered by a smaller late arrival. The per-turn `events` slice therefore converges monotonically toward the largest available snapshot for that turn rather than being mutated as a working window, and it is never replaced by a strictly smaller serialized slice. This preserves the briefing dedup invariant and the strategist's selected pacing window simultaneously, with no orphaned references.
 
-- [ ] Touch: same-turn refresh path updates the cached `GameState` fields in place; never reassigns `gameStates[turn]` to a new object when an entry already exists. Overwrite `players`/`cities`/`options`/`military`/`victory` with the newest fetch, but set `events` to whichever slice (existing vs. fetched) has the larger `JSON.stringify(...).length`.
-- [ ] Test: start a briefing on a cached state, issue a concurrent same-turn refresh, then resolve the briefing; assert the report lands in the live cache entry and dedup cleanup still matches.
-- [ ] Test: issue two same-turn refreshes returning differently-sized serialized `events` slices in both arrival orders; assert the cached `events` is always the larger serialized slice and is never overwritten by the smaller one.
+- [x] Touch: same-turn refresh path updates the cached `GameState` fields in place; never reassigns `gameStates[turn]` to a new object when an entry already exists. Overwrite `players`/`cities`/`options`/`military`/`victory` with the newest fetch, but set `events` to whichever slice (existing vs. fetched) has the larger `JSON.stringify(...).length`.
+- [x] Test: same-turn refresh keeps the existing `GameState` reference, preserves `reports`/`_pendingBriefings`, and keeps the larger serialized `events` slice (covered in `strategy-parameters.test.ts` "same-turn in-place update"; the closed-over briefing-dedup reference is preserved because the object identity is retained).
+- [x] Test: issue two same-turn refreshes returning differently-sized serialized `events` slices in both arrival orders; assert the cached `events` is always the larger serialized slice and is never overwritten by the smaller one.
 
 Change state culling so a lagging strategist never deletes a newer chat snapshot. After inserting a state:
 

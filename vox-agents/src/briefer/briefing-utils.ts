@@ -146,10 +146,12 @@ export async function requestBriefing(
 /**
  * Invoke a briefer agent, narrowing the event window on context-length overflow.
  *
- * The first attempt uses `state.events` exactly as the caller populated it, preserving the
- * existing behavior of strategist (full decision window) and on-demand envoy/analyst callers.
- * Only when the briefer overflows the model context does it retry against progressively
- * narrower windows via {@link withEventWindowFallback} — mirroring the strategist's own
+ * The first attempt reads the state as the caller left it — the briefer consumes
+ * `state.mergedEvents ?? state.events`, so a strategist that already established a decision window
+ * gets the full window, while an on-demand envoy/analyst caller (no window) gets the immutable
+ * per-turn slice. Only when the briefer overflows the model context does it retry against
+ * progressively narrower windows via {@link withEventWindowFallback}, which rewrites
+ * `state.mergedEvents` (never the slice) — mirroring the strategist's own
  * `executeDecisionWithEventFallback` so pacing's large multi-turn windows no longer lose a turn.
  */
 async function generateBriefing(

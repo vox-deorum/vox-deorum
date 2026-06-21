@@ -5,7 +5,15 @@ import {
   shouldInterruptDecision,
 } from "../../../src/strategist/pacing.js";
 import { pacingInterruptionRegistry } from "../../../src/strategist/pacing/registry.js";
-import { getDecisionEventWindows, getDecisionTurnContext, mergeCachedEvents, type StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
+import {
+  getDecisionEventWindows,
+  getDecisionTurnContext,
+  mergeCachedEvents,
+  withEventWindowFallback,
+  type GameState,
+  type StrategistParameters,
+} from "../../../src/strategist/strategy-parameters.js";
+import { ImportantEventsPacingInterruption } from "../../../src/strategist/pacing/important-events.js";
 
 describe("strategist pacing", () => {
   it("normalizes missing config to every turn with no interruption", () => {
@@ -328,5 +336,85 @@ describe("getDecisionTurnContext", () => {
       ...baseParameters,
       lastDecisionTurn: 32
     })).toBe("You, Wu Zetian (leader of China, Player 2), are making strategic decisions after turn 37 (last decision made at turn 32).");
+  });
+});
+
+describe("withEventWindowFallback", () => {
+  /** Three cached per-turn slices over turns 1–3 plus the current-turn entry as `state`. */
+  function makeParams(): { parameters: StrategistParameters; state: GameState } {
+    const gameStates = {
+      1: { turn: 1, reports: {}, events: { "1": [{ Type: "T1" }] } },
+      2: { turn: 2, reports: {}, events: { "2": [{ Type: "T2" }] } },
+      3: { turn: 3, reports: {}, events: { "3": [{ Type: "T3" }] } },
+    } as unknown as StrategistParameters["gameStates"];
+    const parameters = { turn: 3, gameStates } as unknown as StrategistParameters;
+    return { parameters, state: gameStates[3] };
+  }
+
+  it("writes the merged window to state.mergedEvents and never mutates the immutable events slice", async () => {
+    const { parameters, state } = makeParams();
+    const sliceBefore = state.events;
+
+    const decided = await withEventWindowFallback(parameters, state, 1, async () => true);
+
+    expect(decided).toBe(true);
+    // The full window (turns 1–3) landed on the derived field.
+    expect(state.mergedEvents).toEqual({
+      "1": [{ Type: "T1" }],
+      "2": [{ Type: "T2" }],
+      "3": [{ Type: "T3" }],
+    });
+    // The per-turn slice object is untouched (same reference, same value).
+    expect(state.events).toBe(sliceBefore);
+    expect(state.events).toEqual({ "3": [{ Type: "T3" }] });
+  });
+
+  it("narrows the merged window one turn at a time and leaves the final attempted window in place", async () => {
+    const { parameters, state } = makeParams();
+    const seen: Array<Record<string, unknown>> = [];
+
+    // Always fail so every window is attempted in order.
+    const decided = await withEventWindowFallback(parameters, state, 1, async () => {
+      seen.push({ ...(state.mergedEvents as Record<string, unknown>) });
+      return false;
+    });
+
+    expect(decided).toBe(false);
+    // Successively drops the oldest turn: {1,2,3} → {2,3} → {3}.
+    expect(Object.keys(seen[0])).toEqual(["1", "2", "3"]);
+    expect(Object.keys(seen[1])).toEqual(["2", "3"]);
+    expect(Object.keys(seen[2])).toEqual(["3"]);
+    // The final (narrowest) attempted window remains on the state for diagnostics.
+    expect(state.mergedEvents).toEqual({ "3": [{ Type: "T3" }] });
+    // The immutable slice is still just the current turn.
+    expect(state.events).toEqual({ "3": [{ Type: "T3" }] });
+  });
+});
+
+describe("ImportantEventsPacingInterruption reads the per-turn slice, not the merged window", () => {
+  const interruption = new ImportantEventsPacingInterruption();
+
+  it("interrupts on a war event present in state.events even when mergedEvents is empty", () => {
+    const state = {
+      turn: 5,
+      reports: {},
+      players: { "1": { TeamID: 0 } },
+      events: { "5": [{ Type: "DeclareWar", OriginatingPlayer: "1: Rome", TargetTeam: { ID: 9 } }] },
+      mergedEvents: {},
+    } as unknown as GameState;
+
+    expect(interruption.shouldInterrupt({ state, playerID: 1 })).toBe(true);
+  });
+
+  it("does NOT interrupt when the war event lives only in mergedEvents (slice reader ignores it)", () => {
+    const state = {
+      turn: 5,
+      reports: {},
+      players: { "1": { TeamID: 0 } },
+      events: {},
+      mergedEvents: { "5": [{ Type: "DeclareWar", OriginatingPlayer: "1: Rome", TargetTeam: { ID: 9 } }] },
+    } as unknown as GameState;
+
+    expect(interruption.shouldInterrupt({ state, playerID: 1 })).toBe(false);
   });
 });
