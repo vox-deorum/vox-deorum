@@ -8,7 +8,7 @@
 
 import type { ModelMessage, StepResult, Tool } from 'ai';
 import type { AgentParameters } from '../infra/vox-agent.js';
-import type { ExecuteTokenOutput } from '../infra/vox-context.js';
+import type { ExecuteTokenOutput } from '../infra/vox-run.js';
 import type { Model } from '../types/index.js';
 
 /** A single tool call decision from a replay */

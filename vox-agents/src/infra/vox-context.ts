@@ -4,6 +4,17 @@
  * Runtime context for executing Vox Agents.
  * Manages agent registration, tool availability, and agent execution with observability.
  * Implements the agentic loop with tool calling, step preparation, and stop conditions.
+ *
+ * ## Concurrent root runs
+ *
+ * A VoxContext represents long-lived resources and state for one seat, and must safely support
+ * multiple concurrent **root runs** (a strategist turn, each diplomat chat, each deal response,
+ * each detached analyst). Per-run execution state — cancellation, progress/timeout callbacks,
+ * token accounting, current parameters, and current agent input — lives on a {@link RootRun}
+ * object reached through an {@link AsyncLocalStorage} execution frame, never on shared instance
+ * fields. Open a run with {@link VoxContext.withRun} (awaited) or {@link VoxContext.forkRun}
+ * (detached); agents invoked synchronously inside a run are nested executions that inherit the
+ * same root while temporarily replacing only the active input.
  */
 
 import { Output, Tool, StepResult, ToolSet, ModelMessage } from "ai";
@@ -15,6 +26,7 @@ import { getModel, buildProviderOptions } from "../utils/models/models.js";
 import { Model, StreamingEventCallback } from "../types/index.js";
 import { streamTextWithConcurrency, withModelConfig } from "../utils/models/concurrency.js";
 import { v4 as uuidv4 } from 'uuid';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import path from 'node:path';
 import { trace, SpanStatusCode, context } from '@opentelemetry/api';
@@ -28,20 +40,22 @@ import { contextRegistry } from "./context-registry.js";
 import type { VoxSession } from "./vox-session.js";
 import { createAgentTool } from "../utils/tools/agent-tools.js";
 import { wrapMCPTools } from "../utils/tools/mcp-tools.js";
+import {
+  forkSnapshotParameters,
+  createRootRun,
+  createRunHandle,
+  createExecutionFrame,
+  abortRun,
+} from "./vox-run.js";
+import type {
+  ExecuteTokenOutput,
+  ExecuteOptions,
+  VoxRunOptions,
+  VoxRunHandle,
+  RootRun,
+  ExecutionFrame,
+} from "./vox-run.js";
 import winston from "winston";
-
-/** Mutable object populated by execute() with per-execution token counts */
-export interface ExecuteTokenOutput {
-  inputTokens: number;
-  reasoningTokens: number;
-  outputTokens: number;
-}
-
-/** Optional controls for a single agent execution. */
-export interface ExecuteOptions {
-  /** Re-throw non-context-length agent errors after recording telemetry. */
-  throwOnError?: boolean;
-}
 
 /**
  * Runtime context for executing Vox Agents.
@@ -74,50 +88,50 @@ export class VoxContext<TParameters extends AgentParameters> {
   public modelOverrides: Record<string, Model | string>;
 
   /**
-   * AbortController for managing generation cancellation
+   * Current execution frame for concurrent root runs. The store points at a {@link RootRun}
+   * via an {@link ExecutionFrame}; all per-run execution state (cancellation, parameters,
+   * input, progress/timeout callbacks, token sink) is reached through it rather than shared
+   * instance fields.
    */
-  private abortController: AbortController;
-  /**
-   * A callback for refreshing LLM timeouts
-   */
-  public timeoutRefresh: () => void = () => {};
+  private readonly als = new AsyncLocalStorage<ExecutionFrame<TParameters>>();
 
   /**
-   * Total input tokens
+   * The stable long-lived parameter object owned by the context (the seat's base parameters).
+   * Used as the parameter source for runs that don't supply their own, and closed by shutdown().
+   */
+  private baseParameters?: TParameters;
+
+  /** Active root runs by id, so context-wide abort and shutdown can reach every run. */
+  private readonly activeRuns = new Map<string, RootRun<TParameters>>();
+
+  /** Set once shutdown begins; new runs are rejected. */
+  private closing = false;
+
+  // --- Stage-1 compatibility for progress/timeout callbacks set outside a run -----------------
+  // Some callers (the web route, telepathist console/preparation) still assign these before
+  // opening a run. The getters prefer the active root's callback and fall back to these fields;
+  // the setters store on the active root when one exists, otherwise on the field. These fields
+  // are removed in the final stage once every caller opens its run before assigning callbacks.
+  private _legacyStreamProgress?: (message: string) => void;
+  private _legacyTimeoutRefresh: () => void = () => {};
+
+  /**
+   * Total input tokens (seat-wide, across all runs)
    */
   public inputTokens: number = 0;
   /**
-   * Total reasoning tokens
+   * Total reasoning tokens (seat-wide, across all runs)
    */
   public reasoningTokens: number = 0;
   /**
-   * Total output tokens
+   * Total output tokens (seat-wide, across all runs)
    */
   public outputTokens: number = 0;
-
-  /**
-   * The last executed parameter
-   */
-  public lastParameter?: TParameters;
-
-  /**
-   * The input of the currently-executing agent (e.g. the EnvoyThread for a chat).
-   * Set at the top of execute() so context-registered extra tools (such as the
-   * diplomat's close-conversation tool) can read the active conversation's identity.
-   */
-  public currentInput?: unknown;
 
   /**
    * Tracks the last model short name sent via set-metadata, to avoid duplicate updates
    */
   private lastModelName?: string;
-
-  /**
-   * Optional callback for streaming non-LLM progress updates (e.g., during initialization).
-   * Set by the web route before calling execute(). Reusable for any agent that needs
-   * to send progress messages to the client.
-   */
-  public streamProgress?: (message: string) => void;
 
   /**
    * The session that owns this context, when it was created within one (e.g. a VoxPlayer's
@@ -126,6 +140,65 @@ export class VoxContext<TParameters extends AgentParameters> {
    * session registry. Undefined for standalone contexts (telepathist, oracle, archivist).
    */
   public session?: VoxSession;
+
+  /**
+   * The active root's composed parameters, falling back to baseParameters outside a run.
+   * Non-agent tool and display code may read this outside a run (it returns the base); the
+   * fallback never permits execute()/callAgent(), which require an active run.
+   */
+  public get currentParameters(): TParameters | undefined {
+    return this.als.getStore()?.root.parameters ?? this.baseParameters;
+  }
+
+  /**
+   * @deprecated Stage-1 compatibility alias for {@link currentParameters} (read) and
+   * {@link setBaseParameters} (write). Removed once call sites migrate.
+   */
+  public get lastParameter(): TParameters | undefined {
+    return this.currentParameters;
+  }
+  public set lastParameter(parameters: TParameters | undefined) {
+    if (parameters) this.setBaseParameters(parameters);
+  }
+
+  /**
+   * The input of the currently-executing agent (e.g. the EnvoyThread for a chat), read from the
+   * active execution frame. A nested execute() pushes a new frame, so this naturally returns to
+   * the parent input when the nested call completes. Undefined outside a run.
+   */
+  public get currentInput(): unknown {
+    return this.als.getStore()?.input;
+  }
+
+  /**
+   * Optional callback for streaming non-LLM progress updates. Backed by the active root; falls
+   * back to a context field for callers that still assign it before opening a run (Stage-1 compat).
+   */
+  public get streamProgress(): ((message: string) => void) | undefined {
+    const frame = this.als.getStore();
+    return frame ? frame.root.streamProgress : this._legacyStreamProgress;
+  }
+  public set streamProgress(callback: ((message: string) => void) | undefined) {
+    const frame = this.als.getStore();
+    if (frame) frame.root.streamProgress = callback;
+    else this._legacyStreamProgress = callback;
+  }
+
+  /**
+   * A callback for refreshing LLM timeouts. Backed by the active execution frame (rebound per model
+   * call by the concurrency wrapper, read by MCP tools), so concurrent sibling executions on one
+   * root never refresh each other's timeout. Falls back to a context field outside a run (Stage-1
+   * compat).
+   */
+  public get timeoutRefresh(): () => void {
+    const frame = this.als.getStore();
+    return frame ? frame.timeoutRefresh : this._legacyTimeoutRefresh;
+  }
+  public set timeoutRefresh(callback: () => void) {
+    const frame = this.als.getStore();
+    if (frame) frame.timeoutRefresh = callback;
+    else this._legacyTimeoutRefresh = callback;
+  }
 
   /**
    * Resets the cached model identity so it will be re-sent on the next strategist execution.
@@ -143,7 +216,6 @@ export class VoxContext<TParameters extends AgentParameters> {
   constructor(modelOverrides: Record<string, Model | string> = {}, id?: string) {
     this.id = id || uuidv4();
     this.modelOverrides = modelOverrides;
-    this.abortController = new AbortController();
     this.logger = createLogger(`VoxContext-${this.id}`);
     this.logger.info(`VoxContext initialized with ID: ${this.id}`);
 
@@ -188,7 +260,7 @@ export class VoxContext<TParameters extends AgentParameters> {
       this.tools[`call-${agentName}`] = createAgentTool(
         agent as VoxAgent<TParameters>,
         this,
-        () => this.lastParameter!
+        () => this.currentParameters!
       );
 
       // Register any extra tools provided by the agent
@@ -242,22 +314,141 @@ export class VoxContext<TParameters extends AgentParameters> {
     }
   }
 
+  // ===========================================================================================
+  // Run model
+  //
+  // ## Parameter ownership convention
+  //
+  // - `setBaseParameters()` transfers ownership to VoxContext; `shutdown()` closes
+  //   `baseParameters`.
+  // - Parameters supplied through `withRun({ parameters })` remain caller-owned. The caller
+  //   closes them in its own `finally` when they hold resources.
+  // - The shallow parameter copy created by `forkRun()` is borrowed and never closed by the
+  //   fork. Its nested resource-bearing objects remain owned by their original base or caller.
+  // - A caller may fork a run over caller-owned parameters only when it guarantees that the
+  //   referenced resources outlive the detached child. The fire-and-forget analyst path forks
+  //   base-backed seat parameters, whose lifetime is already the context lifetime.
+  // - `withRun()` and `forkRun()` never infer ownership or invoke `parameters.close()`.
+  // ===========================================================================================
+
   /**
-   * Abort the current generation if one is in progress.
-   * Creates a new AbortController after aborting for future operations.
+   * Set the context's base parameters: the stable, long-lived parameter object owned by the
+   * context. Used by VoxPlayer, telepathist setup, and other context owners. execute() does not
+   * replace the base; shutdown() closes it.
+   */
+  public setBaseParameters(parameters: TParameters): void {
+    this.baseParameters = parameters;
+  }
+
+  /** The context-owned base parameters, if any (seat state usable outside a run). */
+  public getBaseParameters(): TParameters | undefined {
+    return this.baseParameters;
+  }
+
+  // The run-construction primitives — composeParameters, forkSnapshotParameters, createRootRun,
+  // createRunHandle, abortRun — live in ./vox-run.js because they touch only their arguments.
+  // VoxContext composes them with its AsyncLocalStorage store, active-run map, and lifecycle.
+
+  /**
+   * Open a root run, enter its execution scope, invoke the callback, and unregister it in
+   * `finally`. Covers all work belonging to the operation, including preparation before the
+   * first agent executes. The callback receives the run handle so HTTP/SSE code can cancel that
+   * specific operation.
    *
-   * @param successful - Whether the abort is due to successful completion
+   * The parameter source is `options.parameters` when supplied, otherwise `baseParameters`;
+   * throws before entering the run if neither exists. `options.overrides` seeds the run-local
+   * side of the composed parameter proxy.
+   */
+  public async withRun<TResult>(
+    options: VoxRunOptions<TParameters>,
+    callback: (run: VoxRunHandle<TParameters>) => Promise<TResult>
+  ): Promise<TResult> {
+    if (this.closing) {
+      throw new Error('VoxContext is shutting down; new runs are rejected.');
+    }
+    const source = options.parameters ?? this.baseParameters;
+    if (!source) {
+      throw new Error('VoxContext.withRun requires options.parameters or baseParameters set via setBaseParameters().');
+    }
+
+    const run = createRootRun(source, options);
+    const handle = createRunHandle(run);
+    const frame = createExecutionFrame(run, undefined);
+    this.activeRuns.set(run.id, run);
+
+    try {
+      return await this.als.run(frame, () => callback(handle));
+    } finally {
+      run.settled = true;
+      this.activeRuns.delete(run.id);
+    }
+  }
+
+  /**
+   * Start a detached root run from inside an existing run. Shallow-copies the parent's composed
+   * parameters into a new plain object (top-level primitives — turn/before/after/lastDecisionTurn
+   * and any other base primitive — snapshotted by value; nested seat state such as gameStates,
+   * workingMemory, and metadata shared by reference), copies the progress configuration, gives
+   * the child an independent cancellation/token scope, starts it without awaiting completion, and
+   * logs failures. Later top-level writes in either run do not affect the other.
+   *
+   * Used only for `fireAndForget` agents. The detached child keeps the parent's turn and game
+   * view but survives cancellation of the parent run (context-wide abort still cancels it).
+   */
+  public forkRun(callback: (run: VoxRunHandle<TParameters>) => Promise<unknown>): void {
+    const parent = this.als.getStore();
+    if (!parent) {
+      throw new Error('VoxContext.forkRun must be called inside an active run.');
+    }
+    if (this.closing) {
+      this.logger.warn('forkRun ignored: context is shutting down.');
+      return;
+    }
+
+    // Snapshot the composed parent view into a plain object: top-level overrides+base values by
+    // value, nested objects shared by reference. The fork is borrowed (never closed).
+    const snapshot = forkSnapshotParameters(parent.root.parameters);
+    const run = createRootRun(snapshot, { streamProgress: parent.root.streamProgress });
+    const frame = createExecutionFrame(run, undefined);
+    this.activeRuns.set(run.id, run);
+
+    void this.als.run(frame, () => callback(createRunHandle(run)))
+      .catch((error) => this.logger.error(`Forked run ${run.id} failed:`, error))
+      .finally(() => {
+        run.settled = true;
+        this.activeRuns.delete(run.id);
+      });
+  }
+
+  /** The active root's abort signal. Throws when called outside a run (a programming error). */
+  private currentSignal(): AbortSignal {
+    const frame = this.als.getStore();
+    if (!frame) throw new Error('VoxContext: no active run.');
+    return frame.root.abortController.signal;
+  }
+
+  /**
+   * Cancel active root runs.
+   *
+   * Context-wide: aborts every active root (used by VoxPlayer.abort(), game switching, and
+   * shutdown). The `successful` flag is context/player completion metadata retained for
+   * VoxPlayer compatibility; it is not propagated to individual run handles.
+   *
+   * @param successful - Whether the abort is due to successful completion (metadata only)
    */
   public abort(successful: boolean = false): void {
-    this.logger.info(`Aborting current generation (successful: ${successful})`);
-    this.abortController.abort();
-    // Create a new AbortController for future executions
-    this.abortController = new AbortController();
+    this.logger.info(`Context-wide abort (successful: ${successful}); active roots: ${this.activeRuns.size}`);
+    for (const run of this.activeRuns.values()) {
+      abortRun(run);
+    }
   }
 
   /**
    * Call a tool by name with the given arguments.
    * Allows manual tool invocation outside of agent execution loop.
+   *
+   * Manual callTool() carries its parameter context explicitly and does not create or require a
+   * root by itself — preserving setup, shutdown, and non-agent MCP calls.
    *
    * @param name - The name of the tool to call
    * @param args - The arguments to pass to the tool
@@ -321,9 +512,14 @@ export class VoxContext<TParameters extends AgentParameters> {
    * Runs the agent's system prompt, tools, and lifecycle hooks in an iterative loop
    * until the stop condition is met. Tracks token usage and provides observability.
    *
+   * Must run inside a root run. A synchronous nested agent invocation stays in the current root
+   * (inheriting its cancellation, parameters, and token sink) while pushing a new execution
+   * frame that replaces only the active input. Token counts accrue to the active root's sink,
+   * the seat-wide totals, and the optional per-execution {@link ExecuteTokenOutput}.
+   *
    * @param agentName - The name of the agent to execute
    * @param parameters - The parameters to pass to the agent
-   * @param outputSchema - Optional output schema for structured generation
+   * @param input - The agent input (becomes the new execution frame's input)
    * @returns The generated text response from the agent
    * @throws Error if the agent is not found
    */
@@ -336,146 +532,160 @@ export class VoxContext<TParameters extends AgentParameters> {
     onContextLengthError?: () => void,
     options: ExecuteOptions = {}
   ): Promise<unknown> {
+    const frame = this.als.getStore();
+    if (!frame) {
+      // STAGE-1 COMPAT: legacy callers invoke execute() without first opening a run. Wrap the
+      // call in an ephemeral root over the supplied parameters so the run model is always active
+      // during execution. Removed in the final stage, when execute() will require an explicit run
+      // (rejecting otherwise) and drop the `parameters` argument.
+      return this.withRun({ parameters }, () =>
+        this.execute(agentName, parameters, input, callback, tokenOutput, onContextLengthError, options)
+      );
+    }
+
     const agent = agentRegistry.get<TParameters>(agentName);
     if (!agent) {
       this.logger.error(`Agent not found: ${agentName}`);
       throw new Error(`Agent '${agentName}' not found in registry`);
     }
 
-    this.lastParameter = parameters;
-    // Save the parent's input so a nested execute() (e.g. an agent-tool such as
-    // call-diplomatic-analyst, which runs on this same VoxContext) does not permanently
-    // clobber it. Restored in finally so tools that read `currentInput` later in the parent's
-    // tool loop (e.g. close-conversation) still see the parent's EnvoyThread rather than the
-    // sub-agent's input. (`lastParameter` is intentionally NOT restored — it is persistent
-    // context state that downstream readers expect to reflect the latest execution.)
-    const prevInput = this.currentInput;
-    this.currentInput = input;
+    const root = frame.root;
+    // The active root's composed parameters are the single source of execution parameters; the
+    // `parameters` argument only seeds the ephemeral root in the compat branch above.
+    const params = root.parameters;
+    // Push a nested frame so a sub-agent (e.g. an agent-tool such as call-diplomatic-analyst,
+    // running on this same VoxContext) sees its own input. The parent input is restored
+    // automatically when this als.run scope exits, so tools that read currentInput later in the
+    // parent's tool loop (e.g. close-conversation) still see the parent's EnvoyThread.
+    const childFrame = createExecutionFrame(root, input);
 
-    const span = this.tracer.startSpan(`agent.${agentName}`, {
-      attributes: {
-        'vox.context.id': this.id,
-        'game.turn': String(parameters.turn),
-        'agent.name': agentName,
-        'agent.input': input ? JSON.stringify(input) : undefined
-      }
-    });
-
-    return await context.with(trace.setSpan(context.active(), span), async () => {
-      try {
-        // Execute the agent using generateText
-        // Get model config - agent's model or default, with overrides applied
-        const modelConfig = agent.getModel(parameters, input, this.modelOverrides);
-        var system = await agent.getSystem(parameters, input, this);
-
-        // Auto-send model name via set-metadata when the strategist's model changes
-        if (agent.name.includes("-strategist")) {
-          // "VPAI" when no system prompt (in-game AI only), otherwise the LLM short name
-          const shortName = system !== ""
-            ? (modelConfig.name.split("/").pop() || modelConfig.name)
-            : "VPAI";
-          if (shortName !== this.lastModelName) {
-            this.lastModelName = shortName;
-            await this.callTool("set-metadata", {
-              Key: `model-${parameters.playerID}`, Value: shortName
-            }, parameters);
-          }
+    return this.als.run(childFrame, async () => {
+      const span = this.tracer.startSpan(`agent.${agentName}`, {
+        attributes: {
+          'vox.context.id': this.id,
+          'game.turn': String(params.turn),
+          'agent.name': agentName,
+          'agent.input': input ? JSON.stringify(input) : undefined
         }
+      });
 
-        if (system != "") {
-          var shouldStop = false;
-          var messages: ModelMessage[] = [{
-            role: "system",
-            content: system
-          }];
-          
-          const initialMessages = await agent.getInitialMessages(parameters, input, this);
-          messages.push(...initialMessages);
-          var allSteps: StepResult<ToolSet>[] = [];
-          var finalText = "";
-          
-          // Count tokens
-          var inputTokens = 0;
-          var reasoningTokens = 0;
-          var outputTokens = 0;
+      return await context.with(trace.setSpan(context.active(), span), async () => {
+        try {
+          // Execute the agent using generateText
+          // Get model config - agent's model or default, with overrides applied
+          const modelConfig = agent.getModel(params, input, this.modelOverrides);
+          var system = await agent.getSystem(params, input, this);
 
-          // Execute steps in a loop, one at a time
-          for (let stepCount = 0; !shouldStop; stepCount++) {
-            this.logger.info(`Executing ${agentName}'s step ${stepCount + 1}`, {
-              GameID: parameters.gameID,
-              PlayerID: parameters.playerID
+          // Auto-send model name via set-metadata when the strategist's model changes
+          if (agent.name.includes("-strategist")) {
+            // "VPAI" when no system prompt (in-game AI only), otherwise the LLM short name
+            const shortName = system !== ""
+              ? (modelConfig.name.split("/").pop() || modelConfig.name)
+              : "VPAI";
+            if (shortName !== this.lastModelName) {
+              this.lastModelName = shortName;
+              await this.callTool("set-metadata", {
+                Key: `model-${params.playerID}`, Value: shortName
+              }, params);
+            }
+          }
+
+          if (system != "") {
+            var shouldStop = false;
+            var messages: ModelMessage[] = [{
+              role: "system",
+              content: system
+            }];
+
+            const initialMessages = await agent.getInitialMessages(params, input, this);
+            messages.push(...initialMessages);
+            var allSteps: StepResult<ToolSet>[] = [];
+            var finalText = "";
+
+            // Count tokens
+            var inputTokens = 0;
+            var reasoningTokens = 0;
+            var outputTokens = 0;
+
+            // Execute steps in a loop, one at a time
+            for (let stepCount = 0; !shouldStop; stepCount++) {
+              this.logger.info(`Executing ${agentName}'s step ${stepCount + 1}`, {
+                GameID: params.gameID,
+                PlayerID: params.playerID
+              });
+
+              // Execute the step with proper tracing
+              const stepResult = await this.executeAgentStep(
+                agent,
+                params,
+                input,
+                allSteps,
+                stepCount,
+                messages,
+                modelConfig,
+                callback
+              );
+
+              // Update state from step results
+              messages = stepResult.messages;
+              shouldStop = stepResult.shouldStop;
+              finalText = stepResult.finalText ?? "";
+              inputTokens += stepResult.inputTokens;
+              reasoningTokens += stepResult.reasoningTokens;
+              outputTokens += stepResult.outputTokens;
+            }
+
+            this.logger.info(`Agent execution completed: ${agentName} with ${allSteps.length} steps`);
+
+            // Accrue tokens to the active root's sink and the seat-wide totals.
+            root.tokens.inputTokens += inputTokens;
+            root.tokens.reasoningTokens += reasoningTokens;
+            root.tokens.outputTokens += outputTokens;
+            this.inputTokens += inputTokens;
+            this.reasoningTokens += reasoningTokens;
+            this.outputTokens += outputTokens;
+            span.setAttributes({
+              'model': `${modelConfig.provider}/${modelConfig.name}@${modelConfig.options?.["reasoningEffort"] ?? ""}`,
+              'tokens.input': inputTokens,
+              'tokens.reasoning': reasoningTokens,
+              'tokens.output': outputTokens,
             });
+            span.setStatus({ code: SpanStatusCode.OK });
 
-            // Execute the step with proper tracing
-            const stepResult = await this.executeAgentStep(
-              agent,
-              parameters,
-              input,
-              allSteps,
-              stepCount,
-              messages,
-              modelConfig,
-              callback
-            );
+            // Populate optional token output for callers that need per-execution counts
+            if (tokenOutput) {
+              tokenOutput.inputTokens = inputTokens;
+              tokenOutput.reasoningTokens = reasoningTokens;
+              tokenOutput.outputTokens = outputTokens;
+            }
 
-            // Update state from step results
-            messages = stepResult.messages;
-            shouldStop = stepResult.shouldStop;
-            finalText = stepResult.finalText ?? "";
-            inputTokens += stepResult.inputTokens;
-            reasoningTokens += stepResult.reasoningTokens;
-            outputTokens += stepResult.outputTokens;
+            // Convert into the output (now async)
+            const output = await agent.getOutput(params, input, finalText, this);
+            if (!output) return;
+            return agent.postprocessOutput(params, input, output);
+          } else {
+            span.setStatus({ code: SpanStatusCode.OK, message: 'No system prompt' });
+            return undefined;
           }
-
-          this.logger.info(`Agent execution completed: ${agentName} with ${allSteps.length} steps`);
-
-          // Log the conclusion
-          this.inputTokens += inputTokens;
-          this.reasoningTokens += reasoningTokens;
-          this.outputTokens += outputTokens;
-          span.setAttributes({
-            'model': `${modelConfig.provider}/${modelConfig.name}@${modelConfig.options?.["reasoningEffort"] ?? ""}`,
-            'tokens.input': inputTokens,
-            'tokens.reasoning': reasoningTokens,
-            'tokens.output': outputTokens,
+        } catch (error) {
+          this.logger.error(`Error executing agent ${agentName}!`, error);
+          span.recordException(error as Error);
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error)
           });
-          span.setStatus({ code: SpanStatusCode.OK });
-
-          // Populate optional token output for callers that need per-execution counts
-          if (tokenOutput) {
-            tokenOutput.inputTokens = inputTokens;
-            tokenOutput.reasoningTokens = reasoningTokens;
-            tokenOutput.outputTokens = outputTokens;
+          const contextLengthError = isContextLengthError(error);
+          if (onContextLengthError && contextLengthError) {
+            onContextLengthError();
           }
-
-          // Convert into the output (now async)
-          const output = await agent.getOutput(parameters, input, finalText, this);
-          if (!output) return;
-          return agent.postprocessOutput(parameters, input, output);
-        } else {
-          span.setStatus({ code: SpanStatusCode.OK, message: 'No system prompt' });
+          if (options.throwOnError && !contextLengthError) {
+            throw error;
+          }
           return undefined;
+        } finally {
+          span.end();
         }
-      } catch (error) {
-        this.logger.error(`Error executing agent ${agentName}!`, error);
-        span.recordException(error as Error);
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error)
-        });
-        const contextLengthError = isContextLengthError(error);
-        if (onContextLengthError && contextLengthError) {
-          onContextLengthError();
-        }
-        if (options.throwOnError && !contextLengthError) {
-          throw error;
-        }
-        return undefined;
-      } finally {
-        span.end();
-        // Restore the parent's input (no-op at the top level, where prev is undefined).
-        this.currentInput = prevInput;
-      }
+      });
     });
   }
 
@@ -485,15 +695,11 @@ export class VoxContext<TParameters extends AgentParameters> {
    * a single step in an agent's execution flow.
    *
    * @private
-   * @param stepSpan - The OpenTelemetry span for this step
    * @param agent - The agent being executed
-   * @param agentName - The name of the agent
    * @param parameters - The parameters for the agent
    * @param allSteps - All steps executed so far
    * @param messages - The current message history
    * @param model - The model identifier
-   * @param system - The system prompt
-   * @param allTools - All available tools including agent handoff tools
    * @param stepCount - The current step number
    * @returns Updated messages, stop condition, and optional final text
    */
@@ -557,8 +763,9 @@ export class VoxContext<TParameters extends AgentParameters> {
             providerOptions: stepProviderOptions,
             // Disable Vercel AI SDK's internal retry to let our wrapper handle it
             maxRetries: 0,
-            // Abort signal for cancellation
-            abortSignal: this.abortController.signal,
+            // Abort signal for cancellation — the active root's signal, so aborting one root
+            // never stops a sibling root's step.
+            abortSignal: this.currentSignal(),
             // Current messages
             messages: messages,
             // Tools
@@ -578,7 +785,7 @@ export class VoxContext<TParameters extends AgentParameters> {
           this
         );
 
-        if (!result || this.abortController.signal.aborted) throw new Error("Operation aborted.");
+        if (!result || this.currentSignal().aborted) throw new Error("Operation aborted.");
         // Steps are already resolved by streamTextWithConcurrency
         const stepResults = result.steps;
         const stepResponse = stepResults[stepResults.length - 1];
@@ -587,7 +794,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         const inputTokens = Math.max(countMessagesTokens(messages, false), stepResponse.usage.inputTokens ?? 0);
         let reasoningTokens = stepResponse.usage.reasoningTokens ?? 0;
         const outputTokens = countMessagesTokens(stepResponse.response.messages, false);
-        
+
         // Alternatively: estimate reasoning tokens
         if (reasoningTokens === 0) {
           reasoningTokens = countMessagesTokens(stepResponse.response.messages, true);
@@ -627,7 +834,7 @@ export class VoxContext<TParameters extends AgentParameters> {
           messages = messages.concat(stepResponse.response.messages);
 
           // Check stop condition
-          shouldStop = this.abortController.signal.aborted ||
+          shouldStop = this.currentSignal().aborted ||
             agent.stopCheck(parameters, input, stepResponse, allSteps, this);
 
           this.logger.debug(`Stop check for ${agent.name}: ${shouldStop}`, {
@@ -636,9 +843,9 @@ export class VoxContext<TParameters extends AgentParameters> {
           });
         } else {
           this.logger.warn(`Agent execution produced no steps: ${agent.name} at step ${stepCount + 1}.`);
-          shouldStop = this.abortController.signal.aborted;
+          shouldStop = this.currentSignal().aborted;
         }
-        
+
         stepSpan.setAttributes({
           'model': `${stepModel.provider}/${stepModel.name}@${stepModel.options?.["reasoningEffort"] ?? ""}`,
           'tokens.input': inputTokens,
@@ -666,13 +873,22 @@ export class VoxContext<TParameters extends AgentParameters> {
 
   /**
    * Gracefully shutdown the VoxContext.
-   * Flushes telemetry data, closes SQLite databases, and unregisters from the registry.
+   * Marks the context as closing (rejecting new runs), aborts every active root, then flushes
+   * telemetry, closes SQLite databases, closes the base parameters, and unregisters from the
+   * registry.
+   *
+   * Shutdown needs roots to stop, not to succeed: it does not wait for them to unwind. Shutdown
+   * closes only the context-owned baseParameters — run-supplied parameters stay caller-owned —
+   * so there is nothing run-scoped to wait on; aborted roots settle on their own afterwards.
    */
   public async shutdown(): Promise<void> {
     this.logger.info(`Shutting down VoxContext ${this.id}`);
+    this.closing = true;
 
     try {
-      // Abort any ongoing generation
+      // Abort every active root (idempotent). We don't await them: shutdown closes only the
+      // context-owned baseParameters below, never run-supplied parameters, so there is no
+      // run-scoped resource to keep alive while a root unwinds.
       this.abort(true);
 
       // Force flush telemetry data to ensure all spans are written
@@ -681,8 +897,8 @@ export class VoxContext<TParameters extends AgentParameters> {
       // Close the SQLite database for this specific context
       await VoxSpanExporter.getInstance().closeContext(this.id);
 
-      // Close parameter resources (database connections, etc.) if applicable
-      await this.lastParameter?.close?.();
+      // Close the context-owned base parameter resources (database connections, etc.) if applicable
+      await this.baseParameters?.close?.();
 
       // Automatically unregister this context from the registry
       contextRegistry.unregister(this.id);

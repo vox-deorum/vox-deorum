@@ -159,6 +159,27 @@ describe('createAgentTool', () => {
       );
     });
 
+    it('runs the detached execution on a forked root (tracked + reachable by abort), not a nested execute', async () => {
+      // The detached analyst must run on its own root via forkRun — not a bare context.execute,
+      // which would push a child frame on the caller's root and be orphaned once that run settles.
+      ctx.execute.mockResolvedValue('async-result');
+      const params = { playerID: 1, gameID: 'g', turn: 5 } as any;
+      const input = { Prompt: 'async task' };
+
+      const tool = createAgentTool(
+        fakeAgent({ name: 'async-agent', fireAndForget: true }),
+        ctx.asContext(),
+        () => params
+      );
+      await tool.execute!(input, { toolCallId: 'x', messages: [] });
+
+      expect(ctx.forkRun).toHaveBeenCalledTimes(1);
+      // The execute() happens inside the forked run's callback, not as a direct caller-root call.
+      await vi.waitFor(() =>
+        expect(ctx.execute).toHaveBeenCalledWith('async-agent', params, input)
+      );
+    });
+
     it('does not reject even when the detached execution fails', async () => {
       ctx.execute.mockRejectedValue(new Error('background boom'));
 

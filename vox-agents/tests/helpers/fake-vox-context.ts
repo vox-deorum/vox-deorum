@@ -119,8 +119,24 @@ export class FakeVoxContext {
   /** Nested-agent invocation spy (used by e.g. Summarizer.summarizeWithCache). */
   callAgent = vi.fn(async (..._args: unknown[]): Promise<unknown> => undefined);
 
-  /** Direct agent-execution spy (used by the agent-tool wrapper, incl. fire-and-forget). */
+  /** Direct agent-execution spy (used by the agent-tool wrapper). */
   execute = vi.fn(async (..._args: unknown[]): Promise<unknown> => undefined);
+
+  /**
+   * Detached-run spy (used by the agent-tool wrapper for fire-and-forget). Invokes the callback
+   * with a minimal run handle and swallows rejections, mirroring `VoxContext.forkRun` so the
+   * detached `execute()` still runs (and failures don't reject the caller).
+   */
+  forkRun = vi.fn((callback: (run: unknown) => Promise<unknown>): void => {
+    const run = {
+      id: 'fake-fork-run',
+      parameters: {},
+      signal: new AbortController().signal,
+      tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+      abort: () => {},
+    };
+    void Promise.resolve(callback(run)).catch(() => {});
+  });
 
   // ---- controller helpers (test-facing) ----
 
@@ -161,6 +177,7 @@ export class FakeVoxContext {
     this.callTool.mockClear();
     this.callAgent.mockClear();
     this.execute.mockClear();
+    this.forkRun.mockClear();
     this.logger.info.mockClear();
     this.logger.warn.mockClear();
     this.logger.error.mockClear();

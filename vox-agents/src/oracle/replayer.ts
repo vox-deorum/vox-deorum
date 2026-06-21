@@ -9,7 +9,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pLimit from 'p-limit';
-import { VoxContext, type ExecuteTokenOutput } from '../infra/vox-context.js';
+import { VoxContext } from '../infra/vox-context.js';
+import type { ExecuteTokenOutput } from '../infra/vox-run.js';
 import { VoxSpanExporter } from '../utils/telemetry/vox-exporter.js';
 import { mcpClient } from '../utils/models/mcp-client.js';
 import { spanProcessor } from '../instrumentation.js';

@@ -73,12 +73,15 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         // context-resolved variant (e.g. a per-seat custom negotiator) sharing the same input.
         const targetName = agent.resolveHandoffTarget(context);
 
-        // Fire-and-forget: detach from current trace and return immediately
+        // Fire-and-forget: detach from current trace and return immediately. Run on a forked
+        // root, NOT a nested execute() on the caller's root: a nested execute() pushes a child
+        // frame onto the parent root, so when the caller's run settles and is removed from
+        // activeRuns, this still-running work would be orphaned — unreachable by abort()/shutdown().
+        // forkRun() registers its own detached root that outlives the parent and is reachable by
+        // context-wide abort. It snapshots the parent's parameters and logs failures internally.
         if (agent.fireAndForget) {
           otelContext.with(ROOT_CONTEXT, () => {
-            context.execute(targetName, parameters, agentInput).catch(error => {
-              logger.error(`Async agent-tool ${agent.name} failed:`, error);
-            });
+            context.forkRun(() => context.execute(targetName, parameters, agentInput));
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();

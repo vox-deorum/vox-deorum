@@ -2,6 +2,20 @@
 
 > Implementation plan. Refactor `VoxContext` so one seat can run a strategist turn, diplomat chats, deal responses, and background analysts concurrently without sharing execution state, while every run sees the correct game turn and event window.
 
+## Implementation status
+
+The refactor lands in staged checkpoints. Each checkpoint keeps the package type-checking and the existing suites green.
+
+- [x] **Stage 1 — VoxContext run-model core.** ALS execution frames; `RootRun` objects; `withRun()`/`forkRun()`; the composed-parameter proxy; `baseParameters`/`currentParameters`; root-owned `AbortController` with all four signal sites migrated; `currentInput` resolved from the frame; `streamProgress`/`timeoutRefresh` as ALS-backed accessors; per-root token sink alongside the seat totals; and a simplified `shutdown()` that aborts every root and proceeds (no teardown wait). Tests: `tests/mock/context/vox-context-runs.test.ts` and `vox-context-execute-runs.test.ts`.
+- [ ] Stage 2 — Strategist + game-state/pacing integration.
+- [ ] Stage 3 — Web diplomacy/chat.
+- [ ] Stage 4 — Standalone workflows + tool layer.
+- [ ] Stage 5 — Final API flip and shim removal.
+
+**File layout.** The run-model types and pure construction helpers live in `infra/vox-run.ts`: `ExecuteTokenOutput`, `ExecuteOptions`, `VoxRunOptions`, `VoxRunHandle`, the internal `RootRun`/`ExecutionFrame`, and the factories `composeParameters`, `forkSnapshotParameters`, `createRootRun`, `createRunHandle`, `abortRun` (they touch only their arguments). `VoxContext` composes them with its `AsyncLocalStorage` store, active-run map, and lifecycle. Consumers import `ExecuteTokenOutput` from `infra/vox-run.ts`.
+
+**Staging shim (Stages 1–4, removed in Stage 5).** So the run-model core can land and be reviewed before callers migrate, `execute()`/`callAgent()` keep their current signatures (with the `parameters` argument) during the intermediate stages. When called outside an active run they wrap themselves in an *ephemeral root* over the supplied `parameters`, so every existing caller keeps working unchanged. Likewise `lastParameter` remains a getter/setter alias of `currentParameters`/`setBaseParameters`, and `streamProgress`/`timeoutRefresh` keep a context-field fallback for callers that still assign them before opening a run. Stage 5 flips `execute()`/`callAgent()` to *require* an active run (rejecting otherwise), drops the `parameters` argument, and removes the ephemeral-root path, the legacy fields, and `lastParameter`.
+
 ## Objective
 
 A `VoxContext` represents long-lived resources and state for one seat. It must safely support multiple concurrent **root runs**:
@@ -32,6 +46,8 @@ Overlapping `execute()` calls overwrite these fields. In particular, the web rou
 The strategist’s shared `StrategistParameters` object causes a second conflict. Its `turn`, `before`, and `after` fields describe the strategist decision loop, not the live game. Chats reuse that object and can therefore see turn `-1` at game load or a stale decision turn. Pacing also merges multi-turn events by temporarily replacing a cached `GameState.events`, allowing concurrent readers to observe the strategist’s mutable working window.
 
 ## Run model and VoxContext API
+
+The run-model types and pure construction helpers live in `infra/vox-run.ts` (see Implementation status → File layout); `VoxContext` owns the runtime that composes them.
 
 Add an `AsyncLocalStorage` store to `VoxContext`. The store represents the current execution frame and points to a root-run object.
 
@@ -177,17 +193,17 @@ Every existing `this.abortController.signal` reference in `vox-context.ts` must 
 - [ ] Remove the shared instance `abortController` (constructor init and the recreate-after-abort in `abort()`); the only `AbortController`s now live on root-run objects.
 - [ ] Test: abort one root mid-step and assert a concurrently-running second root's step loop completes unaffected (its signal never observes aborted).
 
-`VoxContext` tracks active roots in a `Map`. Root runs are terminable through their `AbortController`: every awaited operation in a root, including model generation, receives the root signal, and execution checks that signal before continuing between steps. `shutdown()` marks the context as closing, aborts every active root, and races `Promise.allSettled()` over the root completion promises against the existing five-second teardown timeout. Cancellation and other root failures are ignored; if the timeout wins, shutdown logs the remaining root IDs and proceeds to flush telemetry, close the base parameters, and unregister the context. Shutdown needs roots to stop, not to succeed, and must not wait indefinitely when the process itself may be exiting. New roots are rejected once shutdown begins.
+`VoxContext` tracks active roots in a `Map`. Root runs are terminable through their `AbortController`: every awaited operation in a root, including model generation, receives the root signal, and execution checks that signal before continuing between steps. `shutdown()` marks the context as closing, aborts every active root, and then proceeds without waiting for the roots to unwind — it flushes telemetry, closes the base parameters, and unregisters the context. Shutdown needs roots to stop, not to succeed; aborted roots settle on their own afterwards. New roots are rejected once shutdown begins.
 
-Shutdown does not close run-supplied parameters. It aborts every root and gives each `withRun()` callback and its caller-owned `finally` cleanup up to the teardown timeout to unwind. This avoids the current bug where `shutdown()` closes whichever `lastParameter` happened to run last (arbitrary under concurrency) without making `VoxContext` guess whether a run parameter object is owned, borrowed, or shares resources with another object. Once the timeout expires, shutdown deliberately stops waiting and continues best-effort cleanup; a process-exit path cannot guarantee further work by an unresponsive root.
+Shutdown does not close run-supplied parameters; it closes only the context-owned `baseParameters`. Because no run-scoped resource is closed during shutdown, there is nothing run-scoped to wait on, so shutdown does not block on root completion at all. This also avoids the current bug where `shutdown()` closes whichever `lastParameter` happened to run last (arbitrary under concurrency) without making `VoxContext` guess whether a run parameter object is owned, borrowed, or shares resources with another object.
 
 - [ ] `shutdown()` closes only `baseParameters` (the context-owned object), replacing today's `lastParameter?.close?.()`.
 - [ ] Callers that construct resource-bearing parameters for `withRun({ parameters })` retain their existing explicit `finally` cleanup; the run API does not close them.
 - [ ] Oracle per-task `OracleParameters` are resource-free today, so their callers have nothing additional to close.
 - [ ] Every root-owned asynchronous operation receives the root abort signal, and execution checks the signal before advancing after awaited work, so `run.abort()` makes the root settle rather than merely recording cancellation.
-- [ ] `shutdown()` aborts every active root and races `Promise.allSettled()` over their completion promises against the existing five-second teardown timeout. Root failures do not reject shutdown; timeout logs outstanding roots and permits cleanup to continue.
-- [ ] Test: run several roots concurrently, call `shutdown()`, and assert roots that respond to abort unwind before `shutdown()` resolves, failed/cancelled roots do not reject shutdown, caller-owned cleanup can complete, and base parameters are closed exactly once.
-- [ ] Test: keep one root pending despite abort, advance the five-second teardown timeout, and assert `shutdown()` logs the outstanding root and completes cleanup without waiting indefinitely.
+- [ ] `shutdown()` aborts every active root (via `abort()`) and proceeds; it does not wait on, or reject for, root completion.
+- [ ] Test: call `shutdown()` while a root is active and assert the root's signal is aborted, base parameters are closed exactly once, and new runs are rejected afterwards.
+- [ ] Test: keep one root pending despite abort and assert `shutdown()` still resolves promptly (it does not wait for the root) and completes cleanup.
 
 In the web route, an HTTP disconnect means the browser or client closes the SSE request because of cancellation, navigation, tab closure, or network loss. Register the response-close listener immediately after creating the root and before awaiting refresh or agent work. It calls only `run.abort()`. Track whether the response completed normally so the server’s own `res.end()` does not treat successful completion as a disconnect.
 
@@ -347,7 +363,7 @@ Change `getRecentGameState()` consumers that are executing inside a root to pref
 - Call `execute()` and `callAgent()` without a root and assert both reject with the documented programming error.
 - Abort one root and verify the other remains active.
 - Call context-wide abort and verify every active root stops.
-- Verify shutdown rejects new roots, waits up to five seconds for active roots to unwind, and then continues cleanup if any remain pending.
+- Verify shutdown rejects new roots, aborts every active root, and proceeds with cleanup without waiting for the roots to unwind.
 
 ### Nested and detached agents
 
