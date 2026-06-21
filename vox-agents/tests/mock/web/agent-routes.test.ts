@@ -105,6 +105,35 @@ describe('agent routes', () => {
         .send({ chatId: 'nope', message: 'hi' });
       expect(res.status).toBe(404);
     });
+
+    it('removes the attempted message when a live context has no available turn', async () => {
+      vi.spyOn(contextRegistry, 'get').mockReturnValue({
+        session: { getTurn: () => undefined },
+        lastParameter: undefined,
+        abort: vi.fn(),
+      } as any);
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({
+        name: 'diplomat',
+        description: 'Diplomat',
+        tags: [],
+      } as any);
+
+      const opened = await request(app).post('/api/agents/chat').send({
+        agentName: 'diplomat',
+        contextId: 'g-player-3',
+      });
+      expect(opened.status).toBe(200);
+
+      const response = await request(app).post('/api/agents/message').send({
+        chatId: opened.body.id,
+        message: 'Do not retain this',
+      });
+      expect(response.status).toBe(200);
+      expect(response.text).toContain('The live game turn is not available yet');
+
+      const thread = await request(app).get(`/api/agents/chat/${opened.body.id}`);
+      expect(thread.body.messages).toEqual([]);
+    });
   });
 
   describe('POST /api/agents/chat guards', () => {

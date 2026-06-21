@@ -48,12 +48,25 @@ export interface GameState {
   players?: PlayersReport;
   /**
    * The immutable per-turn event slice for this turn. Pacing and the event-window fallback must
-   * never mutate it in place; a same-turn refresh may only replace it with a *larger* serialized
-   * slice for the same turn (see {@link refreshGameState}). It is never repurposed as a multi-turn
-   * window — that is what {@link GameState.mergedEvents} is for. Slice readers (pacing's
-   * importance check, {@link mergeCachedEvents}) read this field directly.
+   * never mutate it in place; a same-turn refresh may only replace it with a slice covering a
+   * *wider* event range (or, at equal coverage, a larger serialized slice) for the same turn (see
+   * {@link refreshGameState}). It is never repurposed as a multi-turn window — that is what
+   * {@link GameState.mergedEvents} is for, except that a strategist fetch reaching across a dropped
+   * turn legitimately folds that turn's events in here (nothing else fetches them). Slice readers
+   * (pacing's importance check, {@link mergeCachedEvents}) read this field directly.
    */
   events?: EventsReport;
+  /**
+   * The exclusive lower event-ID bound the cached {@link GameState.events} slice was fetched with
+   * (the `after` passed to `get-events`). A smaller value means a *wider* window. Recorded so
+   * {@link ensureGameState} can detect when a cached entry does NOT cover a wider requested range:
+   * the strategist fetches `after = its event cursor` (which can reach back across a dropped turn),
+   * while a live chat refreshes only the current turn (`after = turn * 1_000_000`). Without this,
+   * a chat-populated narrow entry would let the strategist short-circuit its wider fetch and lose
+   * the dropped turn's events. `undefined` marks a hand-built/legacy entry whose coverage is
+   * treated as sufficient, so existing callers are unaffected.
+   */
+  eventsAfter?: number;
   /**
    * The derived multi-turn pacing window for this state's strategist decision, assembled by
    * {@link withEventWindowFallback}/{@link mergeCachedEvents}. Kept separate from the immutable
@@ -149,10 +162,14 @@ export async function refreshGameState(
   // Briefing dedup (briefing-utils) and the strategist's selected pacing window close over the
   // specific GameState instance, so swapping the map entry for a fresh object would orphan any
   // in-flight briefing promise (its `finally` would no longer match the live entry) and drop the
-  // derived `mergedEvents` decision window. The non-event fields take the newest fetch; for
-  // `events`, the larger serialized report wins, because concurrent same-turn refreshes settle in
-  // any order — a fuller report must never be clobbered by a smaller late arrival. `reports`,
-  // `_pendingBriefings`, and `mergedEvents` are left untouched.
+  // derived `mergedEvents` decision window. The non-event fields take the newest fetch. For
+  // `events` the WIDER-covering slice wins: a smaller `after` covers a wider range, and the
+  // strategist's range (reaching back across a dropped turn) is a superset of a chat's narrow
+  // current-turn range — it must never be clobbered by a later narrow same-turn refresh. At equal
+  // coverage (same `after`, or legacy entries with unknown coverage) the larger serialized report
+  // wins, because concurrent same-turn refreshes settle in any order and a fuller report must
+  // survive a smaller late arrival. `reports`, `_pendingBriefings`, and `mergedEvents` are left
+  // untouched.
   const existing = parameters.gameStates[parameters.turn];
   let currentState: GameState;
   if (existing) {
@@ -161,11 +178,20 @@ export async function refreshGameState(
     existing.options = options;
     existing.military = military;
     existing.victory = victory;
-    if (
-      existing.events === undefined ||
-      JSON.stringify(events).length > JSON.stringify(existing.events).length
-    ) {
+    const prevAfter = existing.eventsAfter;
+    let takeFetched: boolean;
+    if (existing.events === undefined) {
+      takeFetched = true;
+    } else if (prevAfter === undefined || parameters.after === prevAfter) {
+      // Unknown coverage or identical lower bound: keep the larger serialized slice.
+      takeFetched = JSON.stringify(events).length > JSON.stringify(existing.events).length;
+    } else {
+      // Different coverage: the wider window (smaller `after`) wins regardless of serialized size.
+      takeFetched = parameters.after < prevAfter;
+    }
+    if (takeFetched) {
       existing.events = events;
+      existing.eventsAfter = parameters.after;
     }
     currentState = existing;
   } else {
@@ -177,7 +203,8 @@ export async function refreshGameState(
       military,
       victory,
       reports: {},
-      turn: parameters.turn
+      turn: parameters.turn,
+      eventsAfter: parameters.after
     };
     parameters.gameStates[parameters.turn] = currentState;
   }
@@ -206,6 +233,18 @@ export async function refreshGameState(
  * another's promise. A same-turn concurrent refresh updates the existing cached entry in place
  * (see {@link refreshGameState}), so both callers still converge on the same `GameState` object.
  *
+ * The cache hit is COVERAGE-AWARE: a cached entry satisfies the request only when its events slice
+ * covers the requested event range. A live chat refreshes the current turn narrowly
+ * (`after = turn * 1_000_000`) while a lagging strategist refreshes a wider range
+ * (`after = its event cursor`, which can reach back across a turn dropped while it was busy).
+ * Keying the hit on turn alone would let a chat-populated narrow entry short-circuit the
+ * strategist's wider fetch — the strategist would skip the fetch, advance its cursor past the
+ * dropped turn, and those events would be lost forever. A smaller `after` is a wider window, so
+ * the cache covers the request iff `eventsAfter <= parameters.after`. `eventsAfter === undefined`
+ * marks a hand-built/legacy entry whose coverage is treated as sufficient (existing callers
+ * unaffected). When coverage is insufficient we refresh, and the in-place merge keeps the wider
+ * slice (see {@link refreshGameState}).
+ *
  * @param context - The VoxContext to use for calling tools
  * @param parameters - The strategy parameters to check/refresh
  * @param cullLimit - Number of past turns to keep (default: 10)
@@ -216,9 +255,10 @@ export async function ensureGameState(
   parameters: StrategistParameters,
   cullLimit: number = 10
 ): Promise<GameState> {
-  // Return cached state if available
-  if (parameters.gameStates[parameters.turn]) {
-    return parameters.gameStates[parameters.turn];
+  // Return the cached state only when it covers the requested event range (see above).
+  const cached = parameters.gameStates[parameters.turn];
+  if (cached && (cached.eventsAfter === undefined || cached.eventsAfter <= parameters.after)) {
+    return cached;
   }
 
   return refreshGameState(context, parameters, cullLimit);

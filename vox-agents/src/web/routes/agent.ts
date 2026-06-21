@@ -358,10 +358,11 @@ export function createAgentRoutes(): Router {
 
     // Add user message to thread (includes special messages like {{{Greeting}}} for agent detection)
     const userMessage: ModelMessage = { role: 'user', content: message };
-    thread.messages.push({
+    const threadMessage = {
       message: userMessage,
       metadata: { datetime: new Date(), turn: currentTurn }
-    });
+    };
+    thread.messages.push(threadMessage);
     thread.metadata!.updatedAt = new Date();
 
     // Set up SSE stream
@@ -393,13 +394,36 @@ export function createAgentRoutes(): Router {
         sendEvent('message', { type: 'text-delta', text: msg + '\n', id: 'progress' });
       };
 
-      const params = voxContext.lastParameter!;
+      // Compose a run-local view at the session's LIVE turn so the chat reasons at the current
+      // game turn, not the strategist's queued/stale decision turn (specs §8). The spread copies
+      // only the top-level turn/before/after by value; gameStates/workingMemory/metadata stay
+      // shared by reference, so the chat's refresh writes into the same game-state cache the
+      // strategist reads. The coverage-aware ensureGameState then reconciles this narrow live-turn
+      // slice (after = turn * 1e6) with the strategist's wider fetch without either losing events.
+      //
+      // NOTE (Stage 3 follow-up): this manual compose plus the ephemeral-root shim inside execute()
+      // will be replaced by an explicit voxContext.withRun({ overrides: { turn, before, after },
+      // streamProgress }) covering the whole request, together with per-run disconnect cancellation.
+      let params = voxContext.lastParameter!;
 
-      // Only ensure game state for live contexts (not database-backed telepathist sessions)
+      // Only ensure game state for live contexts (not database-backed telepathist sessions).
       if (thread.contextType === 'live') {
-        const stratParams = params as StrategistParameters;
-        if (stratParams.gameStates && !stratParams.gameStates[stratParams.turn]) {
-          await ensureGameState(voxContext as VoxContext<StrategistParameters>, stratParams);
+        const liveTurn = currentTurnOf(voxContext);
+        if (liveTurn === undefined) {
+          // Roll back this request's in-memory message without disturbing a concurrent append.
+          const messageIndex = thread.messages.lastIndexOf(threadMessage);
+          if (messageIndex >= 0) thread.messages.splice(messageIndex, 1);
+          sendEvent('error', { message: 'The live game turn is not available yet. Please retry once the game is running.' });
+          return;
+        }
+        params = {
+          ...params,
+          turn: liveTurn,
+          before: liveTurn * 1000000 + 999999,
+          after: liveTurn * 1000000,
+        };
+        if (params.gameStates && !params.gameStates[params.turn]) {
+          await ensureGameState(voxContext, params);
         }
       }
 

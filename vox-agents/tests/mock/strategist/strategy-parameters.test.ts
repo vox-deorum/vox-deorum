@@ -187,6 +187,52 @@ describe("strategy-parameters", () => {
         // A smaller late arrival never clobbers the fuller report.
         expect(cached.events).toEqual({ "5": [{ Type: "A" }, { Type: "B" }, { Type: "C" }] });
       });
+
+      it("records eventsAfter on a freshly-created entry", async () => {
+        registerReportTools(ctx);
+        const params = makeStrategistParameters({ turn: 6, after: 5_999_999, before: 6_999_999 });
+
+        const state = await refreshGameState(ctx.asContext(), params);
+
+        expect(state.eventsAfter).toBe(5_999_999);
+      });
+
+      it("a wider refresh (smaller after) supersedes a narrow cached slice even when serialized-smaller", async () => {
+        registerReportTools(ctx);
+        // The wider fetch returns a strictly SMALLER serialized slice than the cached narrow one.
+        // (In production a wider window is a superset and thus larger; this isolates the rule that
+        // coverage — not serialized size — decides the winner.)
+        ctx.respondWith("get-events", { "6": [{ Type: "x" }] });
+        const cached = makeGameState(7, {
+          events: { "7": [{ Type: "a" }, { Type: "b" }, { Type: "c" }, { Type: "d" }] },
+          eventsAfter: 7_000_000,
+        });
+        const params = makeStrategistParameters({ turn: 7, after: 5_999_999, gameStates: { 7: cached } });
+
+        await refreshGameState(ctx.asContext(), params);
+
+        // Coverage beats size: the wider slice wins and eventsAfter widens.
+        expect(cached.events).toEqual({ "6": [{ Type: "x" }] });
+        expect(cached.eventsAfter).toBe(5_999_999);
+      });
+
+      it("a narrow late refresh (larger after) never clobbers a wider cached slice, even if serialized-larger", async () => {
+        registerReportTools(ctx);
+        // The narrow late fetch returns a LARGER serialized slice (turn 7 fully populated). This is
+        // exactly the interleaving a size-only rule would mishandle by dropping the folded turn 6.
+        ctx.respondWith("get-events", { "7": [{ Type: "a" }, { Type: "b" }, { Type: "c" }, { Type: "d" }, { Type: "e" }] });
+        const wide = makeGameState(7, {
+          events: { "6": [{ Type: "T6" }], "7": [{ Type: "p" }] },
+          eventsAfter: 5_999_999,
+        });
+        const params = makeStrategistParameters({ turn: 7, after: 7_000_000, gameStates: { 7: wide } });
+
+        await refreshGameState(ctx.asContext(), params);
+
+        // The wider slice (covering dropped turn 6) survives the narrow, larger arrival.
+        expect(wide.events).toEqual({ "6": [{ Type: "T6" }], "7": [{ Type: "p" }] });
+        expect(wide.eventsAfter).toBe(5_999_999);
+      });
     });
   });
 
@@ -216,6 +262,49 @@ describe("strategy-parameters", () => {
       // The second refresh updated the first's entry in place, so both converge on one object.
       expect(s1).toBe(s2);
       expect(params.gameStates[5]).toBe(s1);
+    });
+
+    it("treats a cached entry with unknown coverage (no eventsAfter) as a hit", async () => {
+      registerReportTools(ctx);
+      const legacy = makeGameState(5, { events: { "5": [] } }); // no eventsAfter recorded
+      const params = makeStrategistParameters({ turn: 5, after: 4_999_999, gameStates: { 5: legacy } });
+
+      const result = await ensureGameState(ctx.asContext(), params);
+
+      expect(result).toBe(legacy);
+      expect(ctx.calls()).toHaveLength(0);
+    });
+
+    it("returns the cached state when it already covers the requested range (no refresh)", async () => {
+      registerReportTools(ctx);
+      // The strategist already cached a wide slice for turn 7 (after = 5_999_999).
+      const wide = makeGameState(7, { events: { "6": [], "7": [] }, eventsAfter: 5_999_999 });
+      // A chat then asks for the narrow current-turn window (after = 7_000_000); the wide slice covers it.
+      const params = makeStrategistParameters({ turn: 7, after: 7_000_000, before: 7_999_999, gameStates: { 7: wide } });
+
+      const result = await ensureGameState(ctx.asContext(), params);
+
+      expect(result).toBe(wide);
+      expect(ctx.calls()).toHaveLength(0);
+    });
+
+    it("refreshes (does not short-circuit) when the cached slice does not cover the wider requested range", async () => {
+      // The race: a chat cached turn 7 narrowly while turn 6 was dropped; the strategist must still
+      // fetch its wider window so the dropped turn's events are not lost.
+      registerReportTools(ctx);
+      const chatEntry = makeGameState(7, { events: { "7": [{ Type: "T7" }] }, eventsAfter: 7_000_000 });
+      // The strategist's wider fetch spans the dropped turn 6 and the current turn 7.
+      ctx.respondWith("get-events", { "6": [{ Type: "T6" }], "7": [{ Type: "T7" }] });
+      const params = makeStrategistParameters({ turn: 7, after: 5_999_999, before: 7_999_999, gameStates: { 7: chatEntry } });
+
+      const result = await ensureGameState(ctx.asContext(), params);
+
+      // It refreshed rather than reusing the narrow chat entry.
+      expect(ctx.calls("get-events")).toHaveLength(1);
+      // The wider slice (turns 6 + 7) supersedes the narrow one, in place (same reference).
+      expect(result).toBe(chatEntry);
+      expect(chatEntry.events).toEqual({ "6": [{ Type: "T6" }], "7": [{ Type: "T7" }] });
+      expect(chatEntry.eventsAfter).toBe(5_999_999);
     });
   });
 
