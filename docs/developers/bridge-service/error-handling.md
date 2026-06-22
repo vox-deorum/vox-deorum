@@ -1,6 +1,12 @@
 # bridge-service — Error Handling
 
-The bridge sits between a game that can crash or be closed at any moment and external services that may be slow or unreachable. Its error handling is built around that reality: keep the connection to the game alive at all costs, fail individual requests cleanly rather than hanging, and report failures back to callers in a consistent shape. This page explains the failure modes and how the bridge recovers from them. The full enumerated list of error codes is the `ErrorCode` enum in `bridge-service/src/types/api.ts`; what follows is the behavior behind it.
+The bridge sits between a game that can crash or close at any moment and external services that may be slow or unreachable. Its error handling follows three rules:
+
+- Keep the connection to the game alive at all costs.
+- Fail individual requests cleanly rather than hanging.
+- Report failures back to callers in a consistent shape.
+
+This page explains the failure modes and how the bridge recovers from them. The full enumerated list of error codes is the `ErrorCode` enum in `bridge-service/src/types/api.ts`; what follows is the behavior behind it.
 
 ## The error envelope
 
@@ -19,7 +25,7 @@ Every HTTP endpoint returns the same envelope. On success it carries a `success:
 
 ## Losing the game connection
 
-This is the failure the bridge is most careful about, because it is the most common — players close the game, and the bridge has to be running before the game starts. The connection lifecycle is described in full in [connection.md](connection.md); from an error-handling standpoint the important guarantees are:
+This is the failure the bridge is most careful about, because it is the most common. Players close the game, and the bridge has to be running before the game starts. The connection lifecycle is described in full in [connection.md](connection.md). From an error-handling standpoint, the important guarantees are:
 
 - **No request hangs across a disconnect.** When the pipe drops, every in-flight request is immediately rejected with `DLL_DISCONNECTED` rather than being left to time out. Sends attempted while disconnected fail fast with the same code.
 - **Reconnection is automatic and unbounded.** The bridge retries forever with exponential backoff (roughly 200 ms growing to a 5-second cap), so the game can come and go freely.
@@ -28,15 +34,23 @@ This is the failure the bridge is most careful about, because it is the most com
 
 ## Timeouts
 
-A Lua call that the game never answers is cleaned up after 300 seconds and returned as `CALL_TIMEOUT`; the pending entry is removed so it doesn't leak. If a single Lua call is timing out, the usual cause is that the game is paused — auto-pause holds the game core, and a call issued for a paused player won't be serviced until the game resumes. Outbound external calls have their own, much shorter timeout (5 seconds by default, set per registration), reported the same way.
+A Lua call that the game never answers is cleaned up after 300 seconds and returned as `CALL_TIMEOUT`. The pending entry is removed so it doesn't leak.
+
+If a single Lua call is timing out, the usual cause is that the game is paused. Auto-pause holds the game core, and a call issued for a paused player won't be serviced until the game resumes.
+
+Outbound external calls have their own, much shorter timeout (5 seconds by default, set per registration), reported the same way.
 
 ## When an external service fails
 
-Outbound calls — game Lua reaching out to a registered HTTP endpoint — are treated as the caller's responsibility. If the endpoint returns an error, is unreachable, or times out, the bridge returns the appropriate error code to the game and **leaves the registration in place**. It does not retry on its own. Retry logic, if wanted, belongs in the game's Lua, which can check whether a function is registered and loop on failure. This keeps the bridge stateless about external-service health and avoids it silently swallowing or amplifying failures.
+Outbound calls — game Lua reaching out to a registered HTTP endpoint — are the caller's responsibility. If the endpoint returns an error, is unreachable, or times out, the bridge returns the appropriate error code to the game and **leaves the registration in place**. It does not retry on its own.
+
+Retry logic, if wanted, belongs in the game's Lua, which can check whether a function is registered and loop on failure. This keeps the bridge stateless about external-service health and avoids it silently swallowing or amplifying failures.
 
 ## Malformed messages
 
-Defensive parsing runs throughout the connector. Incoming pipe data has unescaped control characters sanitized before parsing (a workaround for a DLL quirk noted in [connection.md](connection.md)); anything that still fails to parse is logged and dropped rather than crashing the connection. At the HTTP layer, unknown routes return `NOT_FOUND` and any unhandled exception is caught by a global handler that returns `INTERNAL_ERROR` — with the underlying message included only when `NODE_ENV` is `development`.
+Defensive parsing runs throughout the connector. On the pipe, incoming data has unescaped control characters sanitized before parsing (a workaround for a DLL quirk noted in [connection.md](connection.md)). Anything that still fails to parse is logged and dropped rather than crashing the connection.
+
+At the HTTP layer, unknown routes return `NOT_FOUND`. Any unhandled exception is caught by a global handler that returns `INTERNAL_ERROR`, with the underlying message included only when `NODE_ENV` is `development`.
 
 ## See also
 

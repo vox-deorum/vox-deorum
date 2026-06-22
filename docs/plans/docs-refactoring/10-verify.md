@@ -1,6 +1,6 @@
 # Stage 10 — Verify
 
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 >
 > Depends on Stage 9 — final pass after all migration and cleanup.
 
@@ -18,4 +18,4 @@ Confirm the revamp is complete and consistent: no broken links, no stale referen
 
 ## Done when
 
-No broken or stale links remain, paired pages agree, component `docs/` folders are reference-only, and the tree matches the target structure. At this point `../plan.md` describes the standing organization and its "Maintenance" rules take over.
+No broken or stale links remain, paired pages agree, component `docs/` folders are reference-only, and the tree matches the target structure. At this point the [documentation guide](../../agents.md) describes the standing organization and its maintenance rules take over.

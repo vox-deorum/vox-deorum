@@ -1,6 +1,6 @@
 # Stage 4 — Component: bridge-service
 
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 >
 > Depends on Stage 1. Builds on Stage 2 (the DLL named pipe this service connects to).
 

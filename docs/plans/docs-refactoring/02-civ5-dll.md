@@ -1,6 +1,6 @@
 # Stage 2 — Component: civ5-dll
 
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 >
 > Depends on Stage 1. First of the five component stages — these run early and bottom-up (DLL → mod → bridge → MCP → agents) so the synthesis stages (7 developer overview, 8 player docs) can draw from finished component docs.
 

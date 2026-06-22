@@ -1,6 +1,6 @@
 # Stage 1 — Scaffold
 
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 
 ## Objective
 

@@ -1,6 +1,12 @@
 # bridge-service — Configuration
 
-The Bridge Service is configured from three sources, in order of precedence: **environment variables** override a **`config.json`** file in the `bridge-service/` root, which in turn overrides the **built-in defaults**. Loading happens once at startup in `bridge-service/src/utils/config.ts`; missing values fall back to defaults, and an invalid value logs a warning rather than preventing startup.
+The Bridge Service is configured from three sources, in order of precedence:
+
+1. **Environment variables** — highest precedence.
+2. A **`config.json`** file in the `bridge-service/` root.
+3. The **built-in defaults** — lowest precedence.
+
+Loading happens once at startup in `bridge-service/src/utils/config.ts`. Missing values fall back to defaults, and an invalid value logs a warning rather than preventing startup.
 
 A `config.json` looks like this:
 
@@ -27,7 +33,9 @@ A `config.json` looks like this:
 
 ### A note on pipe names
 
-Both `gamepipe.id` and `eventpipe.name` are *identifiers*, not full pipe paths. The bridge uses `node-ipc`, which prepends a `tmp-app.` prefix, so the configured id `vox-deorum-bridge` becomes the actual pipe `\\.\pipe\tmp-app.vox-deorum-bridge`. The game DLL derives its pipe name from the same identifier the same way, which is how the two sides meet without hardcoded coordination. To run several games side by side, give each its own `gamepipe.id`. This is the same name described from the DLL's side in [civ5-dll/connection.md](../civ5-dll/connection.md), and in more detail in [connection.md](connection.md).
+Both `gamepipe.id` and `eventpipe.name` are *identifiers*, not full pipe paths. The bridge uses `node-ipc`, which prepends a `tmp-app.` prefix, so the configured id `vox-deorum-bridge` becomes the actual pipe `\\.\pipe\tmp-app.vox-deorum-bridge`. The game DLL derives its pipe name from the same identifier the same way, which is how the two sides meet without hardcoded coordination.
+
+To run several games side by side, give each its own `gamepipe.id`. This is the same name described from the DLL's side in [civ5-dll/connection.md](../civ5-dll/connection.md), and in more detail in [connection.md](connection.md).
 
 ## Other environment variables
 

@@ -2,7 +2,7 @@
 
 > See [README.md](README.md) for shared context, conventions, and shared-fixture prerequisites.
 
-mcp-server has 320 source files but only ~16 test files. Many of those source files are generated event schemas and enum references, so the highest-value gap is narrower than the raw count: the store, getters, and action tools that mutate game state are largely untested. The good news: the diplomacy tests already established a **real in-memory `KnowledgeStore`** fixture ([helpers.ts](../../../mcp-server/tests/mock/diplomacy/helpers.ts)) that runs the real store path with no bridge/DLL. Promote it to `mcp-server/tests/mock/helpers.ts` and build on it.
+mcp-server has 320 source files but only ~16 test files. Many of those source files are generated event schemas and enum references, so the highest-value gap is narrower than the raw count: the store, getters, and action tools that mutate game state are largely untested. The good news: the diplomacy tests already established a **real in-memory `KnowledgeStore`** fixture ([helpers.ts](../../../mcp-server/tests/mock/helpers.ts)) that runs the real store path with no bridge/DLL. Promote it to `mcp-server/tests/mock/helpers.ts` and build on it.
 
 ## Knowledge store & manager
 

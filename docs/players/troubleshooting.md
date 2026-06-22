@@ -1,25 +1,36 @@
 # Troubleshooting
 
-Common problems and how to fix them, in plain question-and-answer form. If your issue isn't here, the [Configuration](configuration.md) and [Getting Started](getting-started.md) pages cover most setup details.
+Common problems and how to fix them. If your issue isn't here, the [Configuration](configuration.md) and [Getting Started](getting-started.md) pages cover most setup details.
+
+| Symptom | Most likely fix |
+| --- | --- |
+| Dashboard doesn't open | Wait a few seconds, then open `http://localhost:5555` by hand; keep the console window open. |
+| AI does nothing / turn stuck | Make sure the game isn't paused. |
+| Missing or invalid API key error | Set a valid key in the Config view. |
+| AI stops responding mid-game | Let the game finish reloading; Vox Deorum reconnects on its own. |
+| Looks like normal Civ V | Start games from the dashboard's Session view, not Civ V's menu. |
+| Installer can't find Civ V | Install Civilization V through Steam, then re-run the installer. |
+| Slow or costly responses | Switch to a smaller, faster, or local model. |
+| Spokesperson chat doesn't reply | Check your API key, that the game is running, and the console for errors. |
 
 ## The dashboard doesn't open in my browser
 
 When you launch Vox Deorum, a console window opens and starts the background services, then the dashboard should open at `http://localhost:5555`.
 
-- Give it a few seconds — the services take a moment to come up the first time.
+- Give it a few seconds. The services take a moment to come up the first time.
 - If the page never appears, open that address in your browser by hand.
 - **Keep the console window open.** Closing it stops everything. To shut down cleanly, follow the prompt in the console rather than closing the window.
 - If the dashboard still won't load, another program may be using the port, or the services failed to start. Close any leftover Vox Deorum console windows and launch again.
 
-## The AI isn't doing anything / a turn seems stuck
+## The AI isn't doing anything, or a turn seems stuck
 
-The single most common cause is that **the game is paused.** While the game is paused, it can't answer the AI's requests, so the AI looks frozen. Make sure the game is actually running (not sitting on a pause or a blocking pop-up), and it will pick up again.
+The single most common cause is that **the game is paused.** While the game is paused, it can't answer the AI's requests, so the AI looks frozen. Make sure the game is actually running, not sitting on a pause or a blocking pop-up, and it will pick up again.
 
 If it's still stuck:
 
 - Check the console window for errors.
-- Make sure your API key is set and valid (see below) — without a working model, the AI can't make decisions.
-- Larger models simply take longer to think; a slow response isn't always a stuck one.
+- Make sure your API key is set and valid (see below). Without a working model, the AI can't make decisions.
+- Larger models simply take longer to think. A slow response isn't always a stuck one.
 
 ## I get errors about a missing or invalid API key
 
@@ -33,17 +44,17 @@ See [Configuration](configuration.md) for where to get keys and how to choose a 
 
 ## The AI stops responding partway through a game
 
-This usually means Vox Deorum briefly lost its connection to the game — for instance the game was closed, restarted, or was mid-load. Vox Deorum reconnects automatically and keeps retrying, so:
+This usually means Vox Deorum briefly lost its connection to the game, for instance because the game was closed, restarted, or mid-load. Vox Deorum reconnects automatically and keeps retrying, so:
 
-- If you closed or reloaded the game, just let it finish coming back up; play resumes on its own.
+- If you closed or reloaded the game, let it finish coming back up. Play resumes on its own.
 - If the game crashed, relaunch it. The AI picks up roughly where it left off.
-- A persistent disconnect usually points to the game itself having quit — check that Civilization V is still running.
+- A persistent disconnect usually points to the game itself having quit. Check that Civilization V is still running.
 
-## The mod doesn't seem active / it looks like normal Civ V
+## The mod doesn't seem active, or it looks like normal Civ V
 
 Start your games from the dashboard's **Session view**, not from Civ V's main menu. When you start from the dashboard, Vox Deorum launches the game with all the right mods already enabled. Launching the game on its own won't bring in the AI.
 
-If you ran the installer but the game still can't find the mods at all, re-run the installer — it reinstalls the mod files and clears the game's cached data so changes take effect.
+If you ran the installer but the game still can't find the mods at all, re-run the installer. It reinstalls the mod files and clears the game's cached data so changes take effect.
 
 ## The installer couldn't find Civilization V
 
@@ -63,6 +74,6 @@ See [Configuration](configuration.md) for the full rundown on models, cost, and 
 
 Spokesperson replies come from the language model in real time, so they stream in after a short delay. If nothing comes back:
 
-- Confirm your API key is valid (above).
+- Confirm your API key is valid (see above).
 - Make sure the game is running and not paused.
 - Check the console window for provider errors such as an exhausted quota or an unreachable endpoint.

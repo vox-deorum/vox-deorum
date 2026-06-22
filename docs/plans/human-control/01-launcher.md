@@ -7,7 +7,7 @@
 > - [`agent-registry.ts`](../../../vox-agents/src/infra/agent-registry.ts) — registered after `NullStrategist`.
 > - [`config.ts`](../../../vox-agents/src/types/config.ts) — `isHumanControl(config)` scans `llmPlayers` for `strategist === "human-strategist"`, using the same hardcoded-strategist-name convention already used for `"none-strategist"`.
 > - [`strategist-session.ts`](../../../vox-agents/src/strategist/strategist-session.ts) — production normalized to `'test'` early in `start()` (mutates `this.config.production`, which all the existing `isVisualMode` gating reads live); `humanPlayerID` getter (seating-mapped); `setAiObserver(!isInteractiveMode && !isHumanControl)`; `Game.SetObserverUIOverridePlayer(<id>)` prepended before `Game.SetAIAutoPlay` in the `turn === 0` autoplay block; re-issued defensively in `recoverGame`.
-> - [`configs/human-control-test.json`](../../../vox-agents/configs/human-control-test.json) — one `human-strategist` seat in Flavor mode (slot 7 → 8-player game, rest VPAI), `production` left unset to exercise the `'test'` normalization.
+> - [`configs/human-standard-fixed-per-5.json`](../../../vox-agents/configs/human-standard-fixed-per-5.json) — one `human-strategist` seat in Flavor mode (slot 7 → 8-player game, rest VPAI), `production` left unset to exercise the `'test'` normalization.
 
 ## Objective
 

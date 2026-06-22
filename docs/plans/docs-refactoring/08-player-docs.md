@@ -1,6 +1,6 @@
 # Stage 8 — Player docs
 
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 >
 > Depends on Stages 2–6 (component docs) and benefits from Stage 7. A **synthesis** stage: translate the now-documented behavior into plain player-facing prose. Players should never need to read the developer pages this stage draws from.
 

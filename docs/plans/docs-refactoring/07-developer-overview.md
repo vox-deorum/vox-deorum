@@ -1,6 +1,6 @@
 # Stage 7 — Developer overview
 
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 >
 > Depends on Stages 2–6. This is a **synthesis** stage: the five component folders are already written, so build these cross-cutting pages by summarizing and linking them rather than re-reading source.
 

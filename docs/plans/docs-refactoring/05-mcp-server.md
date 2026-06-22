@@ -2,7 +2,7 @@
 
 > **Status:** Complete. Wrote all seven pages under `docs/developers/mcp-server/` (`overview.md`, `tools.md`, `knowledge.md`, `database.md`, `events.md`, `influence.md`, `bridge.md`) in prose. Folded `README.md`/`DEVELOPMENT.md` into `overview.md`, `tools.md` prose into `tools.md`, `knowledge.md` prose into `knowledge.md`, and `tactical-ai-influence.md` "how it works" prose into `influence.md`; wrote `database.md`, `events.md`, and `bridge.md` from `src/`. All reference subfolders (`events/`, `flavors/`, `strategies/`, `enums/`, `diplomacy/`, `influence/`, `database/`, `api/`) and exact per-tool/per-event data left in place and linked, not duplicated. `bridge.md` cross-links the bridge-service `connection.md`/`lua.md` counterparts. Forward references to the not-yet-written `vox-agents/` folder kept as prose (no hyperlink) per the bridge-service convention. All relative links verified. Original source files left for Stage 9 deletion. Note: the auto-pause/resume backlog threshold was described qualitatively ("when the backlog stays large") rather than with the exact in-code number, to follow the no-over-detail writing principle.
 >
-> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md). The full source plan is [`../plan.md`](../plan.md).
+> Part of the documentation revamp. Shared goals, writing principles, and target structure live in [README.md](README.md).
 >
 > Depends on Stage 1. Builds on Stage 4 (the bridge it drives).
 
