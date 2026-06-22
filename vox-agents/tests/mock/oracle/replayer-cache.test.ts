@@ -186,7 +186,7 @@ function cachedTrail() {
 }
 
 function mockFreshExecution(): void {
-  mocks.execute.mockImplementation(async (_agentName, _parameters, input, _callback, tokenOutput) => {
+  mocks.execute.mockImplementation(async (_agentName, input, _callback, tokenOutput) => {
     tokenOutput.inputTokens = 101;
     tokenOutput.reasoningTokens = 202;
     tokenOutput.outputTokens = 303;

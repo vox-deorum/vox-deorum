@@ -129,7 +129,7 @@ export async function summarizeWithCache(
   }
 
   cacheLogger.debug('Summary cache miss, invoking summarizer', { cacheKey: cacheKey.substring(0, 12) });
-  const result = await context.callAgent<string>('summarizer', input, params);
+  const result = await context.callAgent<string>('summarizer', input);
 
   if (result) {
     await params.telepathistDb

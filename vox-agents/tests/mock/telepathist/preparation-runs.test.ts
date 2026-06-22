@@ -111,12 +111,12 @@ describe('prepareTurnSummaries run model', () => {
     // Record the turn the summarizer observed on each call — taken from the run's composed
     // parameters (callAgent is invoked with run.parameters inside each per-turn root).
     const seenTurns: number[] = [];
-    ctx.callAgent.mockImplementation(async (...args: unknown[]) => {
-      const params = args[2] as { turn: number };
-      // The ambient currentParameters (ALS-backed in the fake) must match this task's own turn,
-      // proving per-run isolation under concurrency rather than a shared-field race.
-      expect((ctx.currentParameters as { turn: number }).turn).toBe(params.turn);
-      seenTurns.push(params.turn);
+    ctx.callAgent.mockImplementation(async () => {
+      // callAgent no longer takes a parameters argument; the summarizer's turn comes from the
+      // active run's composed parameters (ALS-backed in the fake). Reading it here proves per-run
+      // isolation under concurrency rather than a shared-field race.
+      const turn = (ctx.currentParameters as { turn: number }).turn;
+      seenTurns.push(turn);
       return 'RAW_SUMMARY';
     });
 
@@ -151,9 +151,9 @@ describe('prepareTurnSummaries run model', () => {
     const ctx = createFakeVoxContext();
     ctx.setBaseParameters(parameters);
 
-    ctx.callAgent.mockImplementation(async (...args: unknown[]) => {
-      const params = args[2] as { turn: number };
-      if (params.turn === 2) {
+    ctx.callAgent.mockImplementation(async () => {
+      const turn = (ctx.currentParameters as { turn: number }).turn;
+      if (turn === 2) {
         const e = new Error('boom') as Error & { isRetryable: boolean };
         e.isRetryable = false; // fail fast — no backoff retries
         throw e;
@@ -186,9 +186,10 @@ describe('prepareTurnSummaries run model', () => {
     ctx.setBaseParameters(parameters);
 
     ctx.callAgent.mockImplementation(async (...args: unknown[]) => {
-      const params = args[2] as { turn: number };
-      const onContextLengthError = args[3] as (() => void) | undefined;
-      if (params.turn === 3) onContextLengthError?.();
+      const turn = (ctx.currentParameters as { turn: number }).turn;
+      // callAgent(name, input, onContextLengthError) — the callback is now the 3rd positional arg.
+      const onContextLengthError = args[2] as (() => void) | undefined;
+      if (turn === 3) onContextLengthError?.();
       return 'RAW_SUMMARY';
     });
 
@@ -222,9 +223,9 @@ describe('preparePhaseSummaries run model', () => {
     ctx.setBaseParameters(parameters);
 
     const seenTurns: number[] = [];
-    ctx.callAgent.mockImplementation(async (...args: unknown[]) => {
-      const params = args[2] as { turn: number };
-      seenTurns.push(params.turn);
+    ctx.callAgent.mockImplementation(async () => {
+      const turn = (ctx.currentParameters as { turn: number }).turn;
+      seenTurns.push(turn);
       return 'RAW_PHASE_SUMMARY';
     });
 

@@ -166,7 +166,7 @@ async function generateBriefing(
 
   const attempt = async (): Promise<boolean> => {
     contextLengthExceeded = false;
-    const output = await context.callAgent<string>(agentName, input, parameters, () => {
+    const output = await context.callAgent<string>(agentName, input, () => {
       contextLengthExceeded = true;
     });
     if (output) {

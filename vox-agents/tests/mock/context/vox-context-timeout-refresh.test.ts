@@ -57,7 +57,7 @@ describe('context.timeoutRefresh is execution-frame scoped', () => {
     await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
       ctx.timeoutRefresh = parentCb;       // writes the top frame's slot
       expect(ctx.timeoutRefresh).toBe(parentCb);
-      await ctx.execute('tr-child', base, {});
+      await ctx.execute('tr-child', {});
       // The nested execution wrote its own frame, so the parent slot is intact.
       expect(ctx.timeoutRefresh).toBe(parentCb);
     });
@@ -83,8 +83,8 @@ describe('context.timeoutRefresh is execution-frame scoped', () => {
 
     await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
       await Promise.all([
-        ctx.execute('tr-conc-a', base, {}),
-        ctx.execute('tr-conc-b', base, {}),
+        ctx.execute('tr-conc-a', {}),
+        ctx.execute('tr-conc-b', {}),
       ]);
     });
 

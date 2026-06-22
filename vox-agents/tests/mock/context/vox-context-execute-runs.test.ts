@@ -68,8 +68,8 @@ class NestingAgent extends VoxAgent<StrategistParameters> {
   async getSystem(): Promise<string> { return 'system'; }
   override getActiveTools(): string[] { return []; }
   override stopCheck(): boolean { return true; }
-  override async getInitialMessages(p: StrategistParameters, _i: unknown, ctx: VoxContext<StrategistParameters>) {
-    await ctx.execute(this.child, p, { kind: 'child-input' });
+  override async getInitialMessages(_p: StrategistParameters, _i: unknown, ctx: VoxContext<StrategistParameters>) {
+    await ctx.execute(this.child, { kind: 'child-input' });
     return [];
   }
 }
@@ -93,7 +93,7 @@ describe('VoxContext.execute token accounting', () => {
     const tokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
 
     await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async run => {
-      const result = await ctx.execute('test-step-a', base, {}, undefined, tokenOutput);
+      const result = await ctx.execute('test-step-a', {}, undefined, tokenOutput);
       expect(result).toBe('done');
       expect(run.tokens.inputTokens).toBe(100);
       expect(run.tokens.reasoningTokens).toBe(10);
@@ -110,7 +110,7 @@ describe('VoxContext.execute token accounting', () => {
     const base = makeStrategistParameters();
 
     await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async run => {
-      await ctx.execute('test-nesting', base, { kind: 'parent-input' });
+      await ctx.execute('test-nesting', { kind: 'parent-input' });
       // The nested child step (100) plus the parent's own step (100) both land in this root.
       expect(run.tokens.inputTokens).toBe(200);
       expect(run.tokens.reasoningTokens).toBe(20);
@@ -126,11 +126,11 @@ describe('VoxContext.execute token accounting', () => {
 
     await Promise.all([
       ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async run => {
-        await ctx.execute('test-step-a', base, {});
+        await ctx.execute('test-step-a', {});
         tokensA.push(run.tokens.inputTokens);
       }),
       ctx.withRun({ parameters: base, overrides: { turn: 2 } }, async run => {
-        await ctx.execute('test-step-b', base, {});
+        await ctx.execute('test-step-b', {});
         tokensB.push(run.tokens.inputTokens);
       }),
     ]);
@@ -158,11 +158,11 @@ describe('VoxContext.execute cancellation isolation', () => {
     let hA!: { signal: AbortSignal; abort(): void }, hB!: { signal: AbortSignal };
     const pA = ctx.withRun({ parameters: base, overrides: { turn: 100 } }, async run => {
       hA = run;
-      return ctx.execute('test-step-a', base, {}, undefined, undefined, undefined, { throwOnError: false });
+      return ctx.execute('test-step-a', {}, undefined, undefined, undefined, { throwOnError: false });
     });
     const pB = ctx.withRun({ parameters: base, overrides: { turn: 200 } }, async run => {
       hB = run;
-      return ctx.execute('test-step-b', base, {});
+      return ctx.execute('test-step-b', {});
     });
 
     // Hold both executions inside the model step.

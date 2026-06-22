@@ -381,10 +381,9 @@ export class VoxPlayer {
       }
 
       // Nested execution inside the established turn root: execute() uses the root's composed
-      // parameters (the `parameters` arg is the staging-shim placeholder), inherits its
-      // cancellation, and accrues its tokens to the run handle.
+      // parameters, inherits its cancellation, and accrues its tokens to the run handle.
       let contextLengthExceeded = false;
-      await this.context.execute(this.playerConfig.strategist, parameters, undefined, undefined, undefined, () => {
+      await this.context.execute(this.playerConfig.strategist, undefined, undefined, undefined, () => {
         contextLengthExceeded = true;
       }, { throwOnError: true });
 

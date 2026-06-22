@@ -17,28 +17,37 @@ import Papa from 'papaparse';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { OracleConfig, RetrievedRow } from '../../../src/oracle/types.js';
 
-const mocks = vi.hoisted(() => ({
-  connect: vi.fn(),
-  createContext: vi.fn(),
-  disconnect: vi.fn(),
-  execute: vi.fn(),
-  // Each replay task opens its own root via withRun({ parameters }); the fake just runs the
-  // callback (which calls execute) and returns its result, so per-task execute still happens.
-  withRun: vi.fn(async (_options: any, cb: (run: unknown) => unknown) =>
-    cb({
-      id: 'oracle-run',
-      parameters: {},
-      signal: new AbortController().signal,
-      tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
-      abort: () => {},
-    })
-  ),
-  forceFlush: vi.fn(),
-  loadToolSchemaCache: vi.fn(() => true),
-  registerTools: vi.fn(),
-  replaceToolsWithSchemaOnly: vi.fn(),
-  shutdown: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  // Holds the parameters of the run currently being opened. execute() no longer receives a
+  // parameters argument (Stage 5), so the execute mock (which stands in for the oracle agent)
+  // reads the active run's parameters from here. Each mock captures it into a local const as its
+  // first synchronous statement, before any await, so concurrent tasks never read each other's.
+  const runState: { parameters: any } = { parameters: undefined };
+  return {
+    connect: vi.fn(),
+    createContext: vi.fn(),
+    disconnect: vi.fn(),
+    execute: vi.fn(),
+    runState,
+    // Each replay task opens its own root via withRun({ parameters }); the fake captures the run's
+    // parameters, runs the callback (which calls execute), and returns its result.
+    withRun: vi.fn(async (options: any, cb: (run: unknown) => unknown) => {
+      runState.parameters = options?.parameters;
+      return cb({
+        id: 'oracle-run',
+        parameters: options?.parameters ?? {},
+        signal: new AbortController().signal,
+        tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+        abort: () => {},
+      });
+    }),
+    forceFlush: vi.fn(),
+    loadToolSchemaCache: vi.fn(() => true),
+    registerTools: vi.fn(),
+    replaceToolsWithSchemaOnly: vi.fn(),
+    shutdown: vi.fn(),
+  };
+});
 
 vi.mock('../../../src/infra/vox-context.js', () => ({
   VoxContext: vi.fn().mockImplementation(() => ({
@@ -129,7 +138,8 @@ function baseConfig(
 
 /** Default execute mock: echoes input.row, reports stable tokens, one decision. */
 function mockFreshExecution(): void {
-  mocks.execute.mockImplementation(async (_agentName, parameters, input, _callback, tokenOutput) => {
+  mocks.execute.mockImplementation(async (_agentName, input, _callback, tokenOutput) => {
+    const parameters = mocks.runState.parameters;
     tokenOutput.inputTokens = 10;
     tokenOutput.reasoningTokens = 20;
     tokenOutput.outputTokens = 30;
@@ -246,7 +256,8 @@ describe('oracle replayer (non-cache paths)', () => {
       const concurrency = 2;
       let active = 0;
       let maxActive = 0;
-      mocks.execute.mockImplementation(async (_agentName, parameters, input, _cb, tokenOutput) => {
+      mocks.execute.mockImplementation(async (_agentName, input, _cb, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
         active++;
         maxActive = Math.max(maxActive, active);
         await new Promise(resolve => setTimeout(resolve, 15));
@@ -287,7 +298,8 @@ describe('oracle replayer (non-cache paths)', () => {
     it('passes original prompt context into modifyPrompt and merges overrides', async () => {
       const outputDir = makeTempDir();
       const captured: any[] = [];
-      mocks.execute.mockImplementation(async (_agentName, parameters, input, _cb, tokenOutput) => {
+      mocks.execute.mockImplementation(async (_agentName, input, _cb, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
         captured.push({ parameters, input });
         tokenOutput.inputTokens = 5;
         return {
@@ -335,7 +347,8 @@ describe('oracle replayer (non-cache paths)', () => {
     it('keeps all originals when modifyPrompt returns an empty object', async () => {
       const outputDir = makeTempDir();
       const captured: any[] = [];
-      mocks.execute.mockImplementation(async (_agentName, parameters, input, _cb, tokenOutput) => {
+      mocks.execute.mockImplementation(async (_agentName, input, _cb, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
         captured.push(input);
         tokenOutput.inputTokens = 1;
         return {
@@ -409,7 +422,8 @@ describe('oracle replayer (non-cache paths)', () => {
 
     it('maps a thrown execution error into an error ReplayResult and continues', async () => {
       const outputDir = makeTempDir();
-      mocks.execute.mockImplementation(async (_agentName, parameters, input, _cb, tokenOutput) => {
+      mocks.execute.mockImplementation(async (_agentName, input, _cb, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
         if (parameters.resolvedModel.name === 'boom') {
           throw new Error('model exploded');
         }

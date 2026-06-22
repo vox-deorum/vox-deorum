@@ -206,7 +206,6 @@ async function respondToHumanDeal(thread: EnvoyThread): Promise<boolean> {
     const messagesBefore = thread.messages.length;
     await voxContext.execute(
       voice,
-      parameters,
       thread,
       undefined,
       undefined,
@@ -478,7 +477,7 @@ export function createAgentRoutes(): Router {
             sendEvent('message', { type: 'text-delta', text, id: 'programmatic' });
           });
         } else {
-          await voxContext.execute(voice, params, thread, streamCallback);
+          await voxContext.execute(voice, thread, streamCallback);
         }
 
         // For diplomacy, persist the diplomat's reply (the agent-voiced seat) through the store.

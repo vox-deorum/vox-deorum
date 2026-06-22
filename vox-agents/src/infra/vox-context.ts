@@ -107,14 +107,6 @@ export class VoxContext<TParameters extends AgentParameters> {
   /** Set once shutdown begins; new runs are rejected. */
   private closing = false;
 
-  // --- Stage-1 compatibility for progress/timeout callbacks set outside a run -----------------
-  // Some callers (the web route, telepathist console/preparation) still assign these before
-  // opening a run. The getters prefer the active root's callback and fall back to these fields;
-  // the setters store on the active root when one exists, otherwise on the field. These fields
-  // are removed in the final stage once every caller opens its run before assigning callbacks.
-  private _legacyStreamProgress?: (message: string) => void;
-  private _legacyTimeoutRefresh: () => void = () => {};
-
   /**
    * Total input tokens (seat-wide, across all runs)
    */
@@ -151,17 +143,6 @@ export class VoxContext<TParameters extends AgentParameters> {
   }
 
   /**
-   * @deprecated Stage-1 compatibility alias for {@link currentParameters} (read) and
-   * {@link setBaseParameters} (write). Removed once call sites migrate.
-   */
-  public get lastParameter(): TParameters | undefined {
-    return this.currentParameters;
-  }
-  public set lastParameter(parameters: TParameters | undefined) {
-    if (parameters) this.setBaseParameters(parameters);
-  }
-
-  /**
    * The input of the currently-executing agent (e.g. the EnvoyThread for a chat), read from the
    * active execution frame. A nested execute() pushes a new frame, so this naturally returns to
    * the parent input when the nested call completes. Undefined outside a run.
@@ -171,33 +152,33 @@ export class VoxContext<TParameters extends AgentParameters> {
   }
 
   /**
-   * Optional callback for streaming non-LLM progress updates. Backed by the active root; falls
-   * back to a context field for callers that still assign it before opening a run (Stage-1 compat).
+   * Optional callback for streaming non-LLM progress updates, backed by the active root. Returns
+   * undefined outside a run; the setter requires an active run and throws otherwise (callers must
+   * open their run before assigning a progress sink — pass it through {@link VoxRunOptions} or set
+   * it inside the run).
    */
   public get streamProgress(): ((message: string) => void) | undefined {
-    const frame = this.als.getStore();
-    return frame ? frame.root.streamProgress : this._legacyStreamProgress;
+    return this.als.getStore()?.root.streamProgress;
   }
   public set streamProgress(callback: ((message: string) => void) | undefined) {
     const frame = this.als.getStore();
-    if (frame) frame.root.streamProgress = callback;
-    else this._legacyStreamProgress = callback;
+    if (!frame) throw new Error('VoxContext.streamProgress can only be set inside an active run.');
+    frame.root.streamProgress = callback;
   }
 
   /**
    * A callback for refreshing LLM timeouts. Backed by the active execution frame (rebound per model
    * call by the concurrency wrapper, read by MCP tools), so concurrent sibling executions on one
-   * root never refresh each other's timeout. Falls back to a context field outside a run (Stage-1
-   * compat).
+   * root never refresh each other's timeout. Returns undefined outside a run; the setter requires
+   * an active run and throws otherwise.
    */
-  public get timeoutRefresh(): () => void {
-    const frame = this.als.getStore();
-    return frame ? frame.timeoutRefresh : this._legacyTimeoutRefresh;
+  public get timeoutRefresh(): (() => void) | undefined {
+    return this.als.getStore()?.timeoutRefresh;
   }
   public set timeoutRefresh(callback: () => void) {
     const frame = this.als.getStore();
-    if (frame) frame.timeoutRefresh = callback;
-    else this._legacyTimeoutRefresh = callback;
+    if (!frame) throw new Error('VoxContext.timeoutRefresh can only be set inside an active run.');
+    frame.timeoutRefresh = callback;
   }
 
   /**
@@ -259,8 +240,7 @@ export class VoxContext<TParameters extends AgentParameters> {
       // Agent as a tool
       this.tools[`call-${agentName}`] = createAgentTool(
         agent as VoxAgent<TParameters>,
-        this,
-        () => this.currentParameters!
+        this
       );
 
       // Register any extra tools provided by the agent
@@ -504,16 +484,22 @@ export class VoxContext<TParameters extends AgentParameters> {
    * Allows manual agent invocation outside of the main execution loop.
    * This is useful for orchestrating multiple agents or calling agents programmatically.
    *
+   * Must run inside a root run; the agent's parameters come from the active root.
+   *
    * @param name - The name of the agent to call
    * @param input - The input to pass to the agent
-   * @param parameters - The parameters to pass to the agent
    * @returns The result of the agent execution, or undefined if agent not found or execution fails
    */
   public async callAgent<T = unknown>(
     name: string,
     input: unknown,
-    parameters: TParameters,
     onContextLengthError?: () => void): Promise<T | undefined> {
+    // Check the active-run precondition before the agent-error handling below, so the missing-run
+    // programming error is never swallowed into an undefined return.
+    if (!this.als.getStore()) {
+      throw new Error('VoxContext.callAgent requires an active run; call withRun() or forkRun().');
+    }
+
     const agent = agentRegistry.get<TParameters>(name);
     if (!agent) {
       this.logger.error(`Agent not found: ${name}`);
@@ -521,7 +507,7 @@ export class VoxContext<TParameters extends AgentParameters> {
     }
 
     try {
-      return await this.execute(name, parameters, input, undefined, undefined, onContextLengthError) as T;
+      return await this.execute(name, input, undefined, undefined, onContextLengthError) as T;
     } catch (error) {
       this.logger.error(`Error calling agent ${name}:`, error);
       return undefined;
@@ -533,20 +519,19 @@ export class VoxContext<TParameters extends AgentParameters> {
    * Runs the agent's system prompt, tools, and lifecycle hooks in an iterative loop
    * until the stop condition is met. Tracks token usage and provides observability.
    *
-   * Must run inside a root run. A synchronous nested agent invocation stays in the current root
-   * (inheriting its cancellation, parameters, and token sink) while pushing a new execution
-   * frame that replaces only the active input. Token counts accrue to the active root's sink,
-   * the seat-wide totals, and the optional per-execution {@link ExecuteTokenOutput}.
+   * Requires an active root run (rejecting otherwise); the active root's composed parameters are
+   * the single source of execution parameters. A synchronous nested agent invocation stays in the
+   * current root (inheriting its cancellation, parameters, and token sink) while pushing a new
+   * execution frame that replaces only the active input. Token counts accrue to the active root's
+   * sink, the seat-wide totals, and the optional per-execution {@link ExecuteTokenOutput}.
    *
    * @param agentName - The name of the agent to execute
-   * @param parameters - The parameters to pass to the agent
    * @param input - The agent input (becomes the new execution frame's input)
    * @returns The generated text response from the agent
-   * @throws Error if the agent is not found
+   * @throws Error if called outside a run, or if the agent is not found
    */
   public async execute(
     agentName: string,
-    parameters: TParameters,
     input: unknown,
     callback?: StreamingEventCallback,
     tokenOutput?: ExecuteTokenOutput,
@@ -555,13 +540,7 @@ export class VoxContext<TParameters extends AgentParameters> {
   ): Promise<unknown> {
     const frame = this.als.getStore();
     if (!frame) {
-      // STAGE-1 COMPAT: legacy callers invoke execute() without first opening a run. Wrap the
-      // call in an ephemeral root over the supplied parameters so the run model is always active
-      // during execution. Removed in the final stage, when execute() will require an explicit run
-      // (rejecting otherwise) and drop the `parameters` argument.
-      return this.withRun({ parameters }, () =>
-        this.execute(agentName, parameters, input, callback, tokenOutput, onContextLengthError, options)
-      );
+      throw new Error('VoxContext.execute requires an active run; call withRun() or forkRun().');
     }
 
     const agent = agentRegistry.get<TParameters>(agentName);
@@ -571,8 +550,7 @@ export class VoxContext<TParameters extends AgentParameters> {
     }
 
     const root = frame.root;
-    // The active root's composed parameters are the single source of execution parameters; the
-    // `parameters` argument only seeds the ephemeral root in the compat branch above.
+    // The active root's composed parameters are the single source of execution parameters.
     const params = root.parameters;
     // Push a nested frame so a sub-agent (e.g. an agent-tool such as call-diplomatic-analyst,
     // running on this same VoxContext) sees its own input. The parent input is restored

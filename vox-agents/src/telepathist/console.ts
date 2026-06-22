@@ -154,7 +154,7 @@ async function main() {
   // (which fans out its own per-turn roots) and then a greeting. The run carries the progress
   // sink so preparation and execution share it.
   await voxContext.withRun({ streamProgress }, () =>
-    voxContext.execute(agentName, params, thread, streamCallback)
+    voxContext.execute(agentName, thread, streamCallback)
   );
 
   logger.info('Bootstrapping complete');

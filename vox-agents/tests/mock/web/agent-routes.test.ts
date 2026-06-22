@@ -52,8 +52,6 @@ function makeMockContext(opts: {
     getBaseParameters: () => base,
     setBaseParameters: (p: any) => { base = p; current = p; },
     get currentParameters() { return current; },
-    // Stage-1 shim alias kept so any not-yet-migrated read still resolves.
-    get lastParameter() { return current; },
     withRunCalls,
     runHandles,
     async withRun(options: any, cb: any) {
@@ -204,7 +202,7 @@ describe('agent routes', () => {
 
     it('opens a run at the live turn with a streamProgress sink and never aborts on normal completion', async () => {
       const ctx = makeMockContext({ session: { getTurn: () => 7 }, baseParameters: liveBase(7) });
-      ctx.execute = vi.fn(async (_n: string, _p: unknown, input: any) => {
+      ctx.execute = vi.fn(async (_n: string, input: any) => {
         input.messages.push({ message: { role: 'assistant', content: 'hello' }, metadata: { datetime: new Date(), turn: 7 } });
         return input;
       });
@@ -217,11 +215,11 @@ describe('agent routes', () => {
       expect(ctx.withRunCalls).toHaveLength(1);
       expect(ctx.withRunCalls[0].overrides.turn).toBe(7);
       expect(typeof ctx.withRunCalls[0].streamProgress).toBe('function');
-      // The diplomat executed as a nested call with the composed live-turn params.
+      // The diplomat executed as a nested call (no parameter argument — it resolves the run's
+      // composed live-turn params), receiving the conversation thread and a stream callback.
       expect(ctx.execute).toHaveBeenCalledWith(
         'diplomat',
-        expect.objectContaining({ turn: 7, playerID: 3 }),
-        expect.anything(),
+        expect.objectContaining({ messages: expect.anything() }),
         expect.anything(),
       );
       // Normal completion must not cancel anything — not the run, not the context.
@@ -410,7 +408,7 @@ describe('agent routes', () => {
     }
 
     it('runs the voiced diplomat and persists its reply after a human proposal', async () => {
-      const execute = vi.fn(async (_name, _parameters, input) => {
+      const execute = vi.fn(async (_name, input) => {
         input.messages.push({
           message: { role: 'assistant', content: 'We will answer this offer.' },
           metadata: { datetime: new Date(), turn: 5 },
@@ -443,7 +441,6 @@ describe('agent routes', () => {
       expect(ctx.withRunCalls.some((c: any) => c.overrides?.turn === 5)).toBe(true);
       expect(execute).toHaveBeenCalledWith(
         'diplomat',
-        expect.objectContaining({ playerID: 3, turn: 5 }),
         expect.objectContaining({ id: 'dipl:g:1:3' }),
         undefined,
         undefined,

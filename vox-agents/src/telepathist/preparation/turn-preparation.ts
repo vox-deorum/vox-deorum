@@ -102,7 +102,6 @@ export async function prepareTurnSummaries(
             const rawSummary = await context.callAgent<string>(
               'summarizer',
               summaryInput,
-              parameters,
               () => { contextExceeded = true; }
             );
             const parsed = rawSummary ? parseSummaryMarkdown(rawSummary, turnSummarySchema) : undefined;

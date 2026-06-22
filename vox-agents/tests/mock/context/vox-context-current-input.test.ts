@@ -48,7 +48,8 @@ describe('VoxContext.execute currentInput save/restore', () => {
     }));
     agentRegistry.register(new NoopAgent('test-ci-outer', async (ctx) => {
       // Mid-parent: invoke a sub-agent on the SAME context (mirrors call-diplomatic-analyst).
-      await ctx.execute('test-ci-inner', params, innerInput);
+      // The nested execute stays in the parent's active root (no parameter argument).
+      await ctx.execute('test-ci-inner', innerInput);
       // After the sub-agent returns, the parent's input must be back in place.
       seenAfterInner = ctx.currentInput;
     }));
@@ -62,7 +63,8 @@ describe('VoxContext.execute currentInput save/restore', () => {
     );
     expect(context.currentInput).toBeUndefined();
 
-    await context.execute('test-ci-outer', params, outerInput);
+    // execute() requires an active run; open one over the params, then run the outer agent inside it.
+    await context.withRun({ parameters: params }, () => context.execute('test-ci-outer', outerInput));
 
     expect(seenDuringInner).toBe(innerInput); // sub-agent saw its own input
     expect(seenAfterInner).toBe(outerInput);  // parent input restored — the fix

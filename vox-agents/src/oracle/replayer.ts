@@ -277,7 +277,7 @@ async function replaySingleRow(
   // OracleParameters carry their own turn, so no overrides are needed.
   const tokenOutput: ExecuteTokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
   const result = await voxContext.withRun({ parameters }, () =>
-    voxContext.execute('oracle', parameters, input, undefined, tokenOutput)
+    voxContext.execute('oracle', input, undefined, tokenOutput)
   ) as ReplayResult | undefined;
 
   if (!result) {

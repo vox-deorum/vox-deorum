@@ -84,8 +84,7 @@ export async function preparePhaseSummaries(
           const parsed = await exponentialRetry(async () => {
             const rawPhaseSummary = await context.callAgent<string>(
               'summarizer',
-              input,
-              parameters
+              input
             );
             const result = rawPhaseSummary ? parseSummaryMarkdown(rawPhaseSummary, phaseSummarySchema) : undefined;
             if (!result) {

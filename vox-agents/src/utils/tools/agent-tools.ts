@@ -20,20 +20,19 @@ const tracer = trace.getTracer('vox-tools');
  * Allows agents to call other agents as tools, enabling hierarchical agent architectures.
  *
  * @param agent - The agent to wrap as a tool
- * @param context - The VoxContext for executing the agent
- * @param baseParameters - Base parameters to merge with tool invocation parameters
+ * @param context - The VoxContext for executing the agent (the agent runs as a nested execution
+ *   in the caller's active root, or a forked root for fire-and-forget; parameters come from there)
  * @returns A CoreTool that can be used with AI SDK
  *
  * @example
  * ```typescript
  * const strategistAgent = new SimpleStrategist();
- * const tool = createAgentTool(strategistAgent, context, { playerID: 0 });
+ * const tool = createAgentTool(strategistAgent, context);
  * ```
  */
 export function createAgentTool<TParameters extends AgentParameters, TInput = unknown, TOutput = unknown>(
   agent: VoxAgent<TParameters, TInput, TOutput>,
-  context: VoxContext<TParameters>,
-  toolsGetter: () => TParameters
+  context: VoxContext<TParameters>
 ): VercelTool {
   const logger = createLogger(`AgentTool-${agent.name}`);
 
@@ -63,8 +62,6 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
           'tool.input': JSON.stringify(input)
         });
 
-        let parameters = toolsGetter();
-
         // Map the caller's arguments into the agent's input, enriching with ambient context
         // (e.g. the caller's currentInput) — still the caller's input at this point, since the
         // agent-tool runs inside the caller's step before context.execute swaps it.
@@ -81,7 +78,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         // context-wide abort. It snapshots the parent's parameters and logs failures internally.
         if (agent.fireAndForget) {
           otelContext.with(ROOT_CONTEXT, () => {
-            context.forkRun(() => context.execute(targetName, parameters, agentInput));
+            context.forkRun(() => context.execute(targetName, agentInput));
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
@@ -89,7 +86,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         }
 
         // Execute the agent through the context
-        const result = await context.execute(targetName, parameters, agentInput);
+        const result = await context.execute(targetName, agentInput);
         logger.debug(`Agent-tool execution completed: ${agent.name}`);
 
         span.setAttributes({
