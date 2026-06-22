@@ -13,7 +13,7 @@ import { StrategistParameters } from "../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
-import { buildDealContextMessage } from "./diplomat-deal-tools.js";
+import { buildDealContextMessage } from "./utils/diplomat-utils.js";
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.

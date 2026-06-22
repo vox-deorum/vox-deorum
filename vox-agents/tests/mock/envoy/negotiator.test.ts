@@ -20,11 +20,11 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 // an agent module in isolation — otherwise vox-agent → vox-context → agent-registry → strategist
 // re-enters vox-agent mid-evaluation (the circular-import hazard noted in diplomat-prompts.test).
 import '../../../src/infra/agent-registry.js';
+import { Negotiator } from '../../../src/envoy/negotiator.js';
 import {
   createNegotiatorTerminalTools,
-  Negotiator,
   type NegotiatorInput,
-} from '../../../src/envoy/negotiator.js';
+} from '../../../src/envoy/utils/negotiator-utils.js';
 import { sessionRegistry } from '../../../src/infra/session-registry.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;

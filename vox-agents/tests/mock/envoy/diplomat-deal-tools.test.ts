@@ -1,5 +1,5 @@
 /**
- * Tests for the diplomat's deal-context view (src/envoy/diplomat-deal-tools.ts): the
+ * Tests for the diplomat's deal-context view (src/envoy/utils/diplomat-utils.ts): the
  * formatted "deal on the table" block the diplomat sees at every step (terms, the
  * negotiator's rationale/message, per-item value snapshots, status). Pure over a reduction.
  */
@@ -13,7 +13,7 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 
 // Load the agent graph through the registry first (circular-import hazard, see negotiator.test).
 import '../../../src/infra/agent-registry.js';
-import { formatDealContext } from '../../../src/envoy/diplomat-deal-tools.js';
+import { formatDealContext } from '../../../src/envoy/utils/diplomat-utils.js';
 import { deriveActiveProposal } from '../../../src/utils/diplomacy/deal-reduce.js';
 import type { TranscriptMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 

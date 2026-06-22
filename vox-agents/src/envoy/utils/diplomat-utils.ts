@@ -1,5 +1,5 @@
 /**
- * @module envoy/diplomat-deal-tools
+ * @module envoy/utils/diplomat-utils
  *
  * The on-the-table deal context the diplomat sees on every step (interactive-diplomacy stage 5).
  * The diplomat NEVER authors deal terms — it hands the conversational context to its negotiator
@@ -8,12 +8,12 @@
  * snapshots, and status) into the diplomat's model context so it can voice each move faithfully.
  */
 
-import type { EnvoyThread } from "../types/index.js";
-import { deriveActiveProposal, type DealReduction } from "../utils/diplomacy/deal-reduce.js";
-import { inspectDeal, readDealMessages, type InspectDealResult } from "../utils/diplomacy/deal.js";
-import { createLogger } from "../utils/logger.js";
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
-import type { DealPayload, PerItemValueMap } from "../../../mcp-server/dist/utils/deal-schema.js";
+import type { EnvoyThread } from "../../types/index.js";
+import { deriveActiveProposal, type DealReduction } from "../../utils/diplomacy/deal-reduce.js";
+import { inspectDeal, readDealMessages, type InspectDealResult } from "../../utils/diplomacy/deal.js";
+import { createLogger } from "../../utils/logger.js";
+import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
+import type { DealPayload, PerItemValueMap } from "../../../../mcp-server/dist/utils/deal-schema.js";
 
 const logger = createLogger("diplomat-deal-tools");
 
