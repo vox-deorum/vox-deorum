@@ -6,12 +6,11 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 - **ESM**: Always use `.js` extensions in imports, even for `.ts` files (`"type": "module"`)
 - **Winston logger only** — never `console.log/error/warn` in production code (OK in tests)
-- **Refresh AbortController after abort** — create a fresh one for future operations
 - **MCP tools**: Always read `mcp-server/src/tools/index.ts` to know which tools actually exist
 - **Embedding models**: Set `options.embeddingSize` on model config. Use `embedder` alias in `config.llms`. Call `getEmbeddingModel()` from `utils/models/models.ts`
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
 - **Use Map for registries** (players, handlers, etc.)
-- **Graceful shutdown** via AbortController — pass abort signal to all async operations
+- **Graceful cancellation** — each root run owns its `AbortController`; pass the active root's signal (resolved from `AsyncLocalStorage`) to async operations. `context.abort()` cancels every active root
 
 ## Testing
 
@@ -117,7 +116,8 @@ Wraps ObsManager to add segment-based recording driven by game render events.
 
 ## Advanced Patterns
 
-- **Fire-and-forget agents**: Set `fireAndForget: true` — runs in detached trace context, caller continues immediately
+- **Run model**: `execute()`/`callAgent()` require an active root run — open one with `withRun()` (or `forkRun()` for detached work). Read seat state through `baseParameters`/`currentParameters` (the active root's composed view); the old `lastParameter` field is gone. Run-model types live in `infra/vox-run.ts`
+- **Fire-and-forget agents**: Set `fireAndForget: true` — detaches via `forkRun()` into its own root run (independent signal and token sink), caller continues immediately
 - **Special messages**: `{{{MessageType}}}` triple-brace tokens trigger behaviors via `getSpecialMessages()` in Envoy subclasses
 - **Tool rescue middleware**: Extracts JSON tool calls from malformed LLM text responses via `toolRescueMiddleware()`
 - **Concurrency**: Per-model rate limiting via `streamTextWithConcurrency()` with semaphore-like tracking
@@ -143,7 +143,7 @@ After each successful implementation, update relevant docs:
 
 ## Common Pitfalls
 
-1. Not refreshing AbortController after abort
+1. Calling `execute()` or `callAgent()` outside an active run (open one with `withRun()`/`forkRun()` first)
 2. Forgetting sequential test execution for IPC tests
 3. Not handling crash recovery in standalone mode
 4. Missing telemetry flushing on exit
