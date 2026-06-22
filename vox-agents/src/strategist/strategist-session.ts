@@ -487,6 +487,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       // autoplay activation, so ordering matters (human-control spec §2).
       const humanID = this.humanPlayerID;
       const overrideLine = humanID !== undefined ? `Game.SetObserverUIOverridePlayer(${humanID});\n` : "";
+      // Pause the human seat *before* SetAIAutoPlay so its turn 0 (capital
+      // founding + the engine's auto-pick doResearch) is held until the human
+      // decides. The seat's execute() init resume-game already ran during player
+      // creation, so this proactive pause is the net state. The decision is
+      // presented below, once the UI/panel addin is live (post-LoadScreenClose).
+      if (humanID !== undefined) await mcpClient.callTool("pause-game", { PlayerID: humanID });
       await mcpClient.callTool("lua-executor", {
         Script: `
 Events.LoadScreenClose();
@@ -503,6 +509,14 @@ ${overrideLine}Game.SetAIAutoPlay(2000, -1);`
 
     // Start production controller (recording waits for render events)
     await this.obsCall('startProduction', () => this.production!.start());
+
+    // Present the human's turn-0 decision now that the load screen is closed and
+    // autoplay is running — so the VoxDeorumHumanDecision panel listener exists.
+    // The seat was paused above, so its turn 0 stays held until the human submits;
+    // the execute() loop then enacts the decision and issues the first resume-game.
+    if (params.turn === 0 && this.humanPlayerID !== undefined) {
+      this.activePlayers.get(this.humanPlayerID)?.notifyTurn(params.turn, params.latestID);
+    }
   }
 
   /**
