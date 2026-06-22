@@ -65,9 +65,9 @@ function negotiatorInput(partial: Partial<NegotiatorInput> = {}): NegotiatorInpu
   };
 }
 
-/** Minimal context stub: the tools read currentInput + lastParameter. */
+/** Minimal context stub: the tools read currentInput + currentParameters. */
 function makeContext(input: NegotiatorInput) {
-  return { id: 'ctx', currentInput: input, lastParameter: { turn: 5, playerID: 3 } } as any;
+  return { id: 'ctx', currentInput: input, currentParameters: { turn: 5, playerID: 3 } } as any;
 }
 
 /** Invoke a terminal tool's execute with the standard tool-call options. */

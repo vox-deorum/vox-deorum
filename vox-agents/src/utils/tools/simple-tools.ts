@@ -89,7 +89,7 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
           'tool.name': config.name,
           'tool.type': 'simple',
           'vox.context.id': context.id,
-          'game.turn': context.lastParameter?.turn ?? -1
+          'game.turn': context.currentParameters?.turn ?? -1
         }
       });
 
@@ -99,10 +99,11 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
           'tool.input': JSON.stringify(input)
         });
 
-        // Execute the function with input and parameters
+        // Execute the function with input and parameters. Resolve the active root's composed
+        // parameters (turn/before/after overlay), falling back to the base outside a run.
         const result = await config.execute(
           input as TInput,
-          context.lastParameter!,
+          context.currentParameters!,
           options as SimpleToolExecutionOptions
         );
 

@@ -272,9 +272,13 @@ async function replaySingleRow(
   Object.defineProperty(input, 'messages', { enumerable: false, value: input.messages });
   Object.defineProperty(input, 'system', { enumerable: false, value: input.system });
 
-  // Execute through VoxContext
+  // Execute through VoxContext. Each replay task gets its own root (and token sink) on the
+  // shared Oracle context, so concurrent tasks never share cancellation or token accounting.
+  // OracleParameters carry their own turn, so no overrides are needed.
   const tokenOutput: ExecuteTokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
-  const result = await voxContext.execute('oracle', parameters, input, undefined, tokenOutput) as ReplayResult | undefined;
+  const result = await voxContext.withRun({ parameters }, () =>
+    voxContext.execute('oracle', parameters, input, undefined, tokenOutput)
+  ) as ReplayResult | undefined;
 
   if (!result) {
     throw new Error('Oracle agent returned no result');

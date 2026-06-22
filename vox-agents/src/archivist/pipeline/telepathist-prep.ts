@@ -58,6 +58,10 @@ export async function prepareTelepathist(
     // and model config from env vars. No MCP connection required.
     const modelOverrides: Record<string, string> = modelOverride ? { summarizer: modelOverride } : {};
     context = new VoxContext(modelOverrides, `archivist-${gameId}-${playerId}`);
+    // Transfer parameter ownership to the context: prepareTurnSummaries fans out per-turn roots
+    // via withRun({ overrides: { turn } }) with no own `parameters`, so they compose over this
+    // base. shutdown() closes it (see the finally below — we don't also close it explicitly).
+    context.setBaseParameters(parameters);
 
     const contextExceededTurns = await prepareTurnSummaries(parameters, context);
 
@@ -68,11 +72,14 @@ export async function prepareTelepathist(
     logger.error(`Telepathist prep failed for player ${playerId} in game ${gameId}`, { error });
     return new Set<number>();
   } finally {
-    if (parameters?.close) {
-      try { await parameters.close(); } catch { /* ignore cleanup errors */ }
-    }
     if (context) {
+      // shutdown() closes the base parameters we transferred via setBaseParameters(); don't
+      // double-close them here.
       try { await context.shutdown(); } catch { /* ignore cleanup errors */ }
+    } else if (parameters?.close) {
+      // Context was never created (createTelepathistParameters threw later, or context ctor
+      // failed) — close the parameters ourselves since no context owns them.
+      try { await parameters.close(); } catch { /* ignore cleanup errors */ }
     }
   }
 }

@@ -37,9 +37,9 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
   };
 }
 
-/** Minimal VoxContext stub: the tool reads currentInput + lastParameter. */
+/** Minimal VoxContext stub: the tool reads currentInput + currentParameters. */
 function makeContext(currentInput: EnvoyThread | undefined) {
-  return { id: 'ctx', currentInput, lastParameter: { turn: 5, playerID: 3 } } as any;
+  return { id: 'ctx', currentInput, currentParameters: { turn: 5, playerID: 3 } } as any;
 }
 
 /** Run the tool's execute with the given active conversation. */

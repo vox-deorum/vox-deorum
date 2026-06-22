@@ -22,6 +22,17 @@ const mocks = vi.hoisted(() => ({
   createContext: vi.fn(),
   disconnect: vi.fn(),
   execute: vi.fn(),
+  // Each replay task opens its own root via withRun({ parameters }); the fake just runs the
+  // callback (which calls execute) and returns its result, so per-task execute still happens.
+  withRun: vi.fn(async (_options: any, cb: (run: unknown) => unknown) =>
+    cb({
+      id: 'oracle-run',
+      parameters: {},
+      signal: new AbortController().signal,
+      tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+      abort: () => {},
+    })
+  ),
   forceFlush: vi.fn(),
   loadToolSchemaCache: vi.fn(() => true),
   registerTools: vi.fn(),
@@ -32,6 +43,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../src/infra/vox-context.js', () => ({
   VoxContext: vi.fn().mockImplementation(() => ({
     execute: mocks.execute,
+    withRun: mocks.withRun,
     registerTools: mocks.registerTools,
     shutdown: mocks.shutdown,
     tools: {},
@@ -485,6 +497,10 @@ describe('oracle replayer (non-cache paths)', () => {
       expect(mocks.forceFlush).toHaveBeenCalledTimes(1);
       expect(mocks.createContext).toHaveBeenCalledTimes(1);
       expect(mocks.shutdown).toHaveBeenCalledTimes(1);
+      // Each replay task ran inside its own root: one withRun per task, each carrying the
+      // task's OracleParameters as the run's parameter source.
+      expect(mocks.withRun).toHaveBeenCalledTimes(1);
+      expect(mocks.withRun.mock.calls[0][0]).toEqual({ parameters: expect.objectContaining({ turn: 3 }) });
       // Cached schemas loaded -> never touches MCP connect/disconnect.
       expect(mocks.connect).not.toHaveBeenCalled();
       expect(mocks.disconnect).not.toHaveBeenCalled();

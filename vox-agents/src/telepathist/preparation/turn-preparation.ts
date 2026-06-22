@@ -39,9 +39,14 @@ export async function prepareTurnSummaries(
 
   const contextExceededTurns = new Set<number>();
 
+  // Capture the caller's progress sink once, before the fan-out: each concurrent turn opens its
+  // own root and we carry this same callback into every one (a shared function stored per-root,
+  // never on a shared context field).
+  const streamProgress = context.streamProgress;
+
   if (turnsToSummarize.length === 0) {
     logger.info('All turn summaries already exist, skipping summarization');
-    context.streamProgress?.('Summaries already exist. Loading...');
+    streamProgress?.('Summaries already exist. Loading...');
     return contextExceededTurns;
   }
 
@@ -53,7 +58,12 @@ export async function prepareTurnSummaries(
 
   await Promise.all(
     turnsToSummarize.map((turn, i) =>
-      limit(async () => {
+      limit(() =>
+        // Each concurrent turn runs in its own root with its own `turn` override, abort signal,
+        // and token sink, composing over the base parameters. `parameters` below is the run's
+        // composed view (carrying this turn), replacing the old `{ ...parameters, turn }` copy.
+        context.withRun({ overrides: { turn }, streamProgress }, async (run) => {
+        const parameters = run.parameters;
         context.streamProgress?.(`Analyzing turn ${turn} (${i + 1}/${turnsToSummarize.length})...`);
 
         try {
@@ -86,14 +96,13 @@ export async function prepareTurnSummaries(
             reminder
           };
 
-          const turnParameters = { ...parameters, turn };
           let formatFailures = 0;
           let contextExceeded = false;
           const summary = await exponentialRetry(async () => {
             const rawSummary = await context.callAgent<string>(
               'summarizer',
               summaryInput,
-              turnParameters,
+              parameters,
               () => { contextExceeded = true; }
             );
             const parsed = rawSummary ? parseSummaryMarkdown(rawSummary, turnSummarySchema) : undefined;
@@ -130,7 +139,8 @@ export async function prepareTurnSummaries(
         } catch (e) {
           logger.error(`Failed to summarize turn ${turn}`, { error: e });
         }
-      })
+        })
+      )
     )
   );
 

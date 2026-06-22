@@ -56,9 +56,16 @@ export async function preparePhaseSummaries(
   const phasesToSummarize = phases.filter(p => !existingPhaseKeys.has(`${p.fromTurn}-${p.toTurn}`));
   const limit = pLimit(5);
 
+  // Capture the caller's progress sink once before the fan-out; carried into each phase's root.
+  const streamProgress = context.streamProgress;
+
   await Promise.all(
     phasesToSummarize.map(phase =>
-      limit(async () => {
+      limit(() =>
+        // Each concurrent phase runs in its own root with `turn` overridden to the phase's last
+        // turn, plus its own signal and token sink, composing over the base parameters.
+        context.withRun({ overrides: { turn: phase.toTurn }, streamProgress }, async (run) => {
+        const parameters = run.parameters;
         context.streamProgress?.(`Summarizing phase: turns ${phase.fromTurn}–${phase.toTurn}...`);
 
         try {
@@ -73,14 +80,12 @@ export async function preparePhaseSummaries(
             instruction,
             reminder
           };
-          const phaseParameters = { ...parameters, turn: phase.toTurn };
-
           let formatFailures = 0;
           const parsed = await exponentialRetry(async () => {
             const rawPhaseSummary = await context.callAgent<string>(
               'summarizer',
               input,
-              phaseParameters
+              parameters
             );
             const result = rawPhaseSummary ? parseSummaryMarkdown(rawPhaseSummary, phaseSummarySchema) : undefined;
             if (!result) {
@@ -112,7 +117,8 @@ export async function preparePhaseSummaries(
         } catch (e) {
           logger.error(`Failed to summarize phase ${phase.fromTurn}-${phase.toTurn}`, { error: e });
         }
-      })
+        })
+      )
     )
   );
 }

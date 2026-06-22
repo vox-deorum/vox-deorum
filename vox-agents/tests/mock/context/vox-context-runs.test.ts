@@ -171,6 +171,72 @@ describe('VoxContext run model', () => {
     expect(signals.every(s => s.aborted)).toBe(true);
   });
 
+  it('cascades a parent abort to nested child runs while keeping siblings isolated', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'runs-nested-abort');
+    const base = makeStrategistParameters();
+    ctx.setBaseParameters(base); // children open withRun({ overrides }) and compose over the base
+
+    // A gate that resolves once both child runs are active, and a hold that keeps them running.
+    let bothActive!: () => void;
+    const ready = new Promise<void>(r => (bothActive = r));
+    let arrived = 0;
+    let release!: () => void;
+    const hold = new Promise<void>(r => (release = r));
+
+    let childA!: { signal: AbortSignal; abort(): void };
+    let childB!: { signal: AbortSignal };
+    let parent!: { signal: AbortSignal; abort(): void };
+
+    const parentDone = ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async p => {
+      parent = p;
+      // Two children opened inside the parent run — each links to the parent's signal.
+      await Promise.all([
+        ctx.withRun({ overrides: { turn: 2 } }, async run => {
+          childA = run;
+          if (++arrived >= 2) bothActive();
+          await hold;
+        }),
+        ctx.withRun({ overrides: { turn: 3 } }, async run => {
+          childB = run;
+          if (++arrived >= 2) bothActive();
+          await hold;
+        }),
+      ]);
+    });
+
+    await ready; // both children registered and holding
+
+    // Sibling isolation: aborting child A reaches neither child B nor the parent.
+    childA.abort();
+    expect(childA.signal.aborted).toBe(true);
+    expect(childB.signal.aborted).toBe(false);
+    expect(parent.signal.aborted).toBe(false);
+
+    // Parent abort cascades into the still-running child.
+    parent.abort();
+    expect(parent.signal.aborted).toBe(true);
+    expect(childB.signal.aborted).toBe(true);
+
+    release();
+    await parentDone;
+  });
+
+  it('aborts a nested child immediately when the parent is already aborted', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'runs-nested-abort-pre');
+    const base = makeStrategistParameters();
+    ctx.setBaseParameters(base); // child opens withRun({ overrides }) and composes over the base
+
+    let childSignal!: AbortSignal;
+    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async parent => {
+      parent.abort(); // parent cancelled before the child opens
+      await ctx.withRun({ overrides: { turn: 2 } }, async child => {
+        childSignal = child.signal;
+      });
+    });
+
+    expect(childSignal.aborted).toBe(true);
+  });
+
   it('forkRun snapshots top-level primitives, shares nested state, and detaches cancellation', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'runs-fork');
     const base = makeStrategistParameters({ turn: 7 });

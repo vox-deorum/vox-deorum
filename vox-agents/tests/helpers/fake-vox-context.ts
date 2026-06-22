@@ -34,8 +34,10 @@
  * `mockResolvedValue`/`mockRejectedValue`.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { vi } from 'vitest';
 import { Tool } from 'ai';
+import { composeParameters } from '../../src/infra/vox-run.js';
 import { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
 import type { VoxContext } from '../../src/infra/vox-context.js';
 import type { GameState, StrategistParameters } from '../../src/strategist/strategy-parameters.js';
@@ -77,16 +79,116 @@ export class FakeVoxContext {
   /** The input of the currently-executing agent (e.g. the active EnvoyThread). */
   public currentInput?: unknown;
 
-  /** Optional non-LLM progress callback; some hooks invoke it during initialization. */
-  public streamProgress?: (message: string) => void;
+  /** The context-owned base parameters (set via {@link setBaseParameters}). */
+  private _baseParameters?: unknown;
+
+  /** Progress callback set outside a run (mirrors VoxContext's context-field fallback). */
+  private _streamProgress?: (message: string) => void;
+
+  /**
+   * Per-run execution state, reached through {@link AsyncLocalStorage} exactly like the real
+   * VoxContext — so concurrent runs are genuinely isolated rather than overwriting shared fields.
+   */
+  private _als = new AsyncLocalStorage<{
+    parameters: unknown;
+    streamProgress?: (message: string) => void;
+  }>();
+
+  /** Monotonic id source for fake run handles. */
+  private _runCounter = 0;
 
   /** Silent logger stand-in — agents call `this.logger`, contexts expose `.logger`. */
-  public logger = {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  };
+  public logger = (() => {
+    const base: any = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    // `.child()` returns the same logger so child-logger call sites are recorded alongside it.
+    base.child = vi.fn(() => base);
+    return base;
+  })();
+
+  /**
+   * The active run's composed parameters, falling back to the base outside a run — mirrors
+   * `VoxContext.currentParameters`. Resolved from ALS so concurrent runs each see their own.
+   */
+  get currentParameters(): unknown {
+    return this._als.getStore()?.parameters ?? this._baseParameters;
+  }
+
+  /**
+   * Non-LLM progress callback. Inside a run it resolves to that run's callback (ALS-backed);
+   * outside a run it falls back to the field, which tests set directly via the setter.
+   */
+  get streamProgress(): ((message: string) => void) | undefined {
+    const store = this._als.getStore();
+    return store ? store.streamProgress : this._streamProgress;
+  }
+  set streamProgress(callback: ((message: string) => void) | undefined) {
+    this._streamProgress = callback;
+  }
+
+  /** The context-owned base parameters. */
+  getBaseParameters(): unknown {
+    return this._baseParameters;
+  }
+
+  /** Transfer parameter ownership to the (fake) context. */
+  setBaseParameters(parameters: unknown): void {
+    this._baseParameters = parameters;
+  }
+
+  /**
+   * Run-model fake: compose `overrides` over the run's parameter source (option `parameters` or
+   * the base), run the callback inside an ALS scope carrying the composed parameters + run-local
+   * `streamProgress`, and yield a handle with an observable `abort`. Because the per-run state
+   * lives in AsyncLocalStorage (not shared fields), concurrent runs observe their own
+   * `currentParameters`/`streamProgress` — matching production isolation. The composed parameters
+   * are also exposed on the handle, so code reading `run.parameters` works as in production.
+   *
+   * Composition uses the real {@link composeParameters} proxy (not a shallow copy), so override
+   * keys stay run-local while writes to *non-override* top-level fields go through to the base —
+   * seat-wide, exactly as in production — instead of being silently kept local (which would mask
+   * state-sharing bugs).
+   */
+  withRun = vi.fn(
+    async (
+      options: {
+        parameters?: unknown;
+        overrides?: Record<string, unknown>;
+        streamProgress?: (message: string) => void;
+      },
+      callback: (run: {
+        id: string;
+        parameters: unknown;
+        signal: AbortSignal;
+        tokens: { inputTokens: number; reasoningTokens: number; outputTokens: number };
+        abort: () => void;
+      }) => Promise<unknown>
+    ): Promise<unknown> => {
+      const source = options?.parameters ?? this._baseParameters;
+      // With a source present, build the same override-overlay proxy production uses; tolerate a
+      // missing source (no params/base) by falling back to an overrides-only object.
+      const composed =
+        source !== undefined
+          ? composeParameters(source as any, options?.overrides as any)
+          : { ...(options?.overrides ?? {}) };
+      const aborter = new AbortController();
+      const handle = {
+        id: `fake-run-${this._runCounter++}`,
+        parameters: composed,
+        signal: aborter.signal,
+        tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+        abort: vi.fn(() => aborter.abort()),
+      };
+      // Run-local streamProgress: the option when provided, otherwise inherit the ambient value.
+      const streamProgress =
+        options && 'streamProgress' in options ? options.streamProgress : this.streamProgress;
+      return this._als.run({ parameters: composed, streamProgress }, () => callback(handle));
+    }
+  );
 
   /** Every `callTool` invocation, in order. */
   public callLog: RecordedToolCall[] = [];
@@ -178,6 +280,7 @@ export class FakeVoxContext {
     this.callAgent.mockClear();
     this.execute.mockClear();
     this.forkRun.mockClear();
+    this.withRun.mockClear();
     this.logger.info.mockClear();
     this.logger.warn.mockClear();
     this.logger.error.mockClear();

@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 /** Minimal stub VoxContext — only the fields wrapMCPTool touches. */
-const context = { id: 'ctx-1', lastParameter: { turn: 4 }, timeoutRefresh: vi.fn() } as any;
+const context = { id: 'ctx-1', currentParameters: { turn: 4 }, timeoutRefresh: vi.fn() } as any;
 
 /** Build an MCP tool definition; `_meta` carries autoComplete / markdownConfig. */
 function mcpTool(meta?: Record<string, unknown>): Tool {

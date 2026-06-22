@@ -201,6 +201,21 @@ describe('VoxContext.shutdown', () => {
     await expect(ctx.withRun({ parameters: base }, async () => 'x')).rejects.toThrow(/shutting down/);
   });
 
+  it('closes baseParameters and marks closing even if a telemetry flush throws', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'shutdown-flush-throws');
+    const close = vi.fn().mockResolvedValue(undefined);
+    ctx.setBaseParameters(makeStrategistParameters({ close }));
+    // Force the telemetry flush to fail partway through shutdown.
+    vi.spyOn(spanProcessor, 'forceFlush').mockRejectedValueOnce(new Error('flush boom'));
+
+    await expect(ctx.shutdown()).rejects.toThrow('flush boom');
+
+    // Cleanup is unconditional: the base parameters were still closed exactly once...
+    expect(close).toHaveBeenCalledTimes(1);
+    // ...and the context still rejects new runs (closing flag was set before the throw).
+    await expect(ctx.withRun({ overrides: { turn: 1 } }, async () => 'x')).rejects.toThrow(/shutting down/);
+  });
+
   it('aborts pending roots and proceeds without waiting for them to unwind', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'shutdown-pending');
     const close = vi.fn().mockResolvedValue(undefined);

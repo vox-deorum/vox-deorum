@@ -99,7 +99,8 @@ async function main() {
   const contextId =  `${identifierInfo.gameID}-telepath-${identifierInfo.playerID}`;
   VoxSpanExporter.getInstance().createContext(contextId, "telepathist");
   const voxContext = new VoxContext<TelepathistParameters>({}, contextId);
-  voxContext.lastParameter = params;
+  // Transfer ownership of the seat parameters to the context; shutdown() closes them.
+  voxContext.setBaseParameters(params);
 
   // Load cached MCP tool metadata (for markdownConfig formatting) and register agent tools.
   // No live MCP connection needed — telepathist reads from the telemetry database only.
@@ -108,8 +109,9 @@ async function main() {
     voxContext.registerAgentTools();
   }
 
-  // Wire up streaming to logger
-  voxContext.streamProgress = (message: string) => {
+  // Stream non-LLM progress to the logger. Carried into the run below so preparation and the
+  // top-level execution (and the per-turn preparation roots) all reach the same sink.
+  const streamProgress = (message: string) => {
     logger.info(message);
   };
 
@@ -148,8 +150,12 @@ async function main() {
     prepareOnly
   });
 
-  // Execute the agent - Initialize triggers turn/phase summarization then a greeting
-  await voxContext.execute(agentName, params, thread, streamCallback);
+  // One root for the whole bootstrap: the Initialize message triggers turn/phase preparation
+  // (which fans out its own per-turn roots) and then a greeting. The run carries the progress
+  // sink so preparation and execution share it.
+  await voxContext.withRun({ streamProgress }, () =>
+    voxContext.execute(agentName, params, thread, streamCallback)
+  );
 
   logger.info('Bootstrapping complete');
 

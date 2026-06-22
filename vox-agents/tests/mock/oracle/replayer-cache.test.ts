@@ -9,6 +9,17 @@ const mocks = vi.hoisted(() => ({
   createContext: vi.fn(),
   disconnect: vi.fn(),
   execute: vi.fn(),
+  // Each replay task opens its own root via withRun({ parameters }); the fake just runs the
+  // callback (which calls execute) and returns its result.
+  withRun: vi.fn(async (_options: any, cb: (run: unknown) => unknown) =>
+    cb({
+      id: 'oracle-run',
+      parameters: {},
+      signal: new AbortController().signal,
+      tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+      abort: () => {},
+    })
+  ),
   forceFlush: vi.fn(),
   loadToolSchemaCache: vi.fn(() => true),
   registerTools: vi.fn(),
@@ -19,6 +30,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../src/infra/vox-context.js', () => ({
   VoxContext: vi.fn().mockImplementation(() => ({
     execute: mocks.execute,
+    withRun: mocks.withRun,
     registerTools: mocks.registerTools,
     shutdown: mocks.shutdown,
     tools: {},

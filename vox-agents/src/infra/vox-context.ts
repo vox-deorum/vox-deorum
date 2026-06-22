@@ -376,9 +376,30 @@ export class VoxContext<TParameters extends AgentParameters> {
     const frame = createExecutionFrame(run, undefined);
     this.activeRuns.set(run.id, run);
 
+    // A run opened inside another run is a *child*: it dies with its parent. Link this run's
+    // cancellation to the enclosing run's signal so a parent run.abort() (e.g. an SSE disconnect)
+    // cascades into nested work such as per-turn telepathist preparation. The child keeps its own
+    // AbortController, so aborting one sibling never touches another — only parent→child cascades.
+    // (forkRun() deliberately does NOT link: a detached analyst must survive its parent's abort.)
+    let unlinkParent: (() => void) | undefined;
+    const parentFrame = this.als.getStore();
+    if (parentFrame) {
+      const parentSignal = parentFrame.root.abortController.signal;
+      if (parentSignal.aborted) {
+        abortRun(run);
+      } else {
+        const onParentAbort = () => abortRun(run);
+        parentSignal.addEventListener('abort', onParentAbort);
+        // Remove the listener once this child settles so a long-lived parent signal doesn't
+        // accumulate listeners across many completed children.
+        unlinkParent = () => parentSignal.removeEventListener('abort', onParentAbort);
+      }
+    }
+
     try {
       return await this.als.run(frame, () => callback(handle));
     } finally {
+      unlinkParent?.();
       run.settled = true;
       this.activeRuns.delete(run.id);
     }
@@ -897,16 +918,21 @@ export class VoxContext<TParameters extends AgentParameters> {
       // Close the SQLite database for this specific context
       await VoxSpanExporter.getInstance().closeContext(this.id);
 
-      // Close the context-owned base parameter resources (database connections, etc.) if applicable
-      await this.baseParameters?.close?.();
-
-      // Automatically unregister this context from the registry
-      contextRegistry.unregister(this.id);
-
       this.logger.info(`VoxContext ${this.id} shutdown complete`);
     } catch (error) {
       this.logger.error(`Error during VoxContext shutdown for ${this.id}:`, error);
       throw error;
+    } finally {
+      // Resource cleanup is unconditional: release the context-owned base parameters (DB
+      // connections, etc.) and unregister even if a telemetry flush above threw, so a failed
+      // flush never leaks the parameters. close() runs exactly once (only here, never in the
+      // try) and is guarded so its own failure still lets the unregister proceed.
+      try {
+        await this.baseParameters?.close?.();
+      } catch (closeError) {
+        this.logger.error(`Error closing base parameters for ${this.id}:`, closeError);
+      }
+      contextRegistry.unregister(this.id);
     }
   }
 }
