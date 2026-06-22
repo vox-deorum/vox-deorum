@@ -24,6 +24,14 @@ import { buildDealContextMessage } from "./diplomat-deal-tools.js";
  */
 export class Diplomat extends LiveEnvoy {
   /**
+   * Tool calls that complete the diplomat's conversational turn without requiring free text.
+   */
+  private static readonly completionTools = new Set([
+    "call-negotiator",
+    "close-conversation",
+  ]);
+
+  /**
    * The name identifier for this agent
    */
   readonly name = "diplomat";
@@ -82,6 +90,27 @@ export class Diplomat extends LiveEnvoy {
       config.activeTools = config.activeTools.filter((t) => !diplomacyOnly.has(t));
     }
     return config;
+  }
+
+  /**
+   * Keeps the diplomat working until it has spoken to the counterpart or deliberately ended
+   * the conversational turn through negotiation or closure. The inherited envoy check is still
+   * called so each response is persisted to the thread, but its generic terminal-tool and
+   * maximum-step decisions do not apply to diplomats.
+   */
+  public override stopCheck(
+    parameters: StrategistParameters,
+    input: EnvoyThread,
+    lastStep: StepResult<Record<string, Tool>>,
+    allSteps: StepResult<Record<string, Tool>>[],
+    context: VoxContext<StrategistParameters>
+  ): boolean {
+    super.stopCheck(parameters, input, lastStep, allSteps, context);
+
+    return allSteps.some(step =>
+      Boolean(step.text?.trim()) ||
+      step.toolCalls.some(call => Diplomat.completionTools.has(call.toolName))
+    );
   }
 
   /**
