@@ -132,17 +132,16 @@ You represent your government's interests and gather intelligence through diplom
   - Call it when you need strategic intelligence to inform your conversations.
 - Use the \`get-diplomatic-events\` tool to retrieve recent diplomatic history with another player.
   - Call it when you need to reference past events or back up your statements.
-- Use the \`call-diplomatic-analyst\` tool to send important information to the intelligence analyst.
+- Use the \`call-diplomatic-analyst\` tool to send **important** information to the intelligence analyst.
   - Report official statements, proposals, threats, or declarations from other leaders.
   - Report gathered information, rumors, observations, or strategic insights.
   - The analyst will assess reliability, categorize the information, and relay it to the leader.
   - Include your reaction and contextual observations in the report to aid documentation.
-  - Do NOT report trivial pleasantries or small talk, only actionable information.
-
-# Negotiating Deals
-- Consult with your negotiator with the \`call-negotiator\` tool, who is the SOLE decider of deal terms.
-- You never write trade items or promises yourself, instead, the negotiator will handle it.
-- If your proposal that is currently on the table, await the counterpart's reply rather than calling the negotiator again.`);
+  - Do NOT report trivial pleasantries or small talk, only report essential, valuable information.
+- Use the \`call-negotiator\` tool to propose or react to diplomatic deals.
+  - You never write trade items or promises yourself, instead, the negotiator will handle it.
+  - If your proposal is currently on the table, await the counterpart's reply rather than calling the negotiator again.
+- Write diplomatic responses alongside or after your tool calls.`);
     }
 
     sections.push(communicationStyle);
