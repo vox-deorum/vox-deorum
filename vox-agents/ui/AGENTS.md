@@ -37,8 +37,8 @@ import type { VoxContext, ToolCall, AIMessage } from '@/utils/types';
 **IMPORTANT**: Always reuse existing styles from `src/styles/` rather than creating duplicates.
 
 ### Available Stylesheets
-- `global.css` — `.section-container` (card sections with gap), `.section-header` (card title with icon)
-- `data-table.css` — `.data-table`, `.table-header`, `.table-body`, `.table-row`, `.table-empty`, `.col-fixed-{50-250}`, `.col-expand`, `.text-truncate`, `.text-wrap`, `.text-muted`, `.text-small`
+- `global.css` — `.section-container` (card sections with gap)
+- `data-table.css` — `.data-table`, `.table-header`, `.table-body`, `.table-row`, `.table-empty`, `.col-fixed-{60-250}`, `.col-expand`, `.text-truncate`, `.text-wrap`, `.text-muted`, `.text-small`
 - `chat.css` — Chat message and interface styles
 - `states.css` — `.loading-container`, `.error-container`, `.empty-state`
 

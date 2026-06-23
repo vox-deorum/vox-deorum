@@ -70,7 +70,6 @@
   padding-right: 0.5rem;
 }
 
-.col-fixed-50  { flex: 0 0 50px; }
 .col-fixed-60  { flex: 0 0 60px; }
 .col-fixed-80  { flex: 0 0 80px; }
 .col-fixed-100 { flex: 0 0 100px; }
@@ -154,11 +153,6 @@
 }
 
 @media (max-width: 480px) {
-  /* Hide some columns on very small screens */
-  .hide-mobile {
-    display: none;
-  }
-
   .col-expand {
     flex: 2;
   }

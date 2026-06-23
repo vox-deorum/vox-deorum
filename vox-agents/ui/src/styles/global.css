@@ -71,13 +71,6 @@ body {
   gap: 1.5rem;
 }
 
-/* Section header for card titles */
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 /* Page header with controls */
 .page-header {
   display: flex;
@@ -106,13 +99,6 @@ body {
   gap: 0.5rem;
 }
 
-/* Virtua VList optimization */
-.virtua-scroller {
-  will-change: scroll-position; /* Hint browser for optimization */
-  transform: translateZ(0); /* Enable hardware acceleration */
-  backface-visibility: hidden; /* Prevent flickering */
-}
-
 /* PrimeVue input icon positioning fix */
 .p-input-icon-left,
 .p-input-icon-right {
@@ -137,12 +123,3 @@ body {
 .text-muted { color: var(--p-text-muted-color); }
 .text-secondary { color: var(--p-text-secondary-color); }
 .text-small { font-size: 0.75rem; }
-
-/* Borderless cards for chat interface */
-.borderless :deep(.p-card) {
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
-}
-.borderless.no-top :deep(.p-card) { border-top: none; }
-.borderless.no-bottom :deep(.p-card) { border-bottom: none; }

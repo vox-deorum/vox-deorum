@@ -17,7 +17,8 @@
     "test:coverage": "cross-env USE_MOCK=true vitest run --coverage",
     "test:unit": "cross-env USE_MOCK=true vitest run",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "purgecss": "node ./purgecss.run.mjs"
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.2",
@@ -43,6 +44,7 @@
     "@vue/tsconfig": "^0.8.1",
     "jsdom": "^27.2.0",
     "npm-run-all2": "^8.0.4",
+    "purgecss": "^8.0.0",
     "vite": "npm:rolldown-vite@latest",
     "vite-plugin-vue-devtools": "^8.0.5",
     "vue-tsc": "^3.1.5"

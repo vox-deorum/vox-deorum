@@ -40,8 +40,7 @@
 }
 
 /* List Layouts */
-.config-list { display: flex; flex-direction: column; gap: 1rem; }
-.mappings-list, .models-list, .players-list, .settings-grid {
+.mappings-list, .models-list, .settings-grid {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -71,13 +70,8 @@
 }
 
 /* Input Sizing */
-.config-name-input,
-.strategist-input {
+.config-name-input {
   flex: 1;
-}
-
-.strategist-input {
-  min-width: 0; /* Prevent overflow by allowing shrinking */
 }
 
 .agent-input {
@@ -108,10 +102,6 @@
   width: 2.5rem; /* Match PrimeVue icon-only button so the delete column lines up across rows */
 }
 
-.delete-btn.in-row {
-  margin-left: auto;
-}
-
 /* Checkbox Styles */
 .checkbox-wrapper {
   display: flex;
@@ -137,7 +127,6 @@
   }
 
   .field-input,
-  .strategist-input,
   .model-dropdown,
   .provider-dropdown {
     max-width: 100%;
