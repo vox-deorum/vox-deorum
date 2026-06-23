@@ -14,6 +14,21 @@ import type { DealPayload, PerItemValueMap } from '../../../mcp-server/dist/util
 // Re-export types that are used in API responses
 export type { PlayersReport };
 export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap } from '../../../mcp-server/dist/utils/deal-schema.js';
+// The enriched `inspect-deal` result shape is owned by the tool (interactive-diplomacy stage 4);
+// re-export it (and its normalized range / candidate / promise-target types) verbatim so the Web
+// deal board consumes the same explicit interfaces the tool returns rather than loose records.
+export type {
+  InspectDealResponse,
+  InspectedTradeItem,
+  InspectedPromise,
+  NormalizedSideRange,
+  CandidateLegality,
+  NormalizedResourceCandidate,
+  NormalizedCityCandidate,
+  NormalizedTechCandidate,
+  NormalizedThirdPartyCandidate,
+  PromiseTargetInfo,
+} from '../../../mcp-server/dist/tools/knowledge/inspect-deal.js';
 
 // ============================================================================
 // Core API Response Types
@@ -336,31 +351,6 @@ export interface DeleteChatResponse {
 export interface InspectDealRequest {
   /** Optional constructed deal to evaluate; omit for the tradable range only. */
   deal?: DealPayload;
-}
-
-/** One inspected trade term (index-aligned with the proposed deal's items). */
-export interface InspectedTradeItem {
-  fromPlayerID: number;
-  toPlayerID: number;
-  itemType: string;
-  /** Structural legality under the same human-to-human semantics as enactment. */
-  legality: boolean;
-  /** Reasons it is untradeable (empty when legal). */
-  reasons: string[];
-  /** Advisory AI value to the giver of parting with it (may be a large sentinel). */
-  valueIfIGive: number;
-  /** Advisory AI value to the receiver of gaining it (may be a large sentinel). */
-  valueIfIReceive: number;
-}
-
-/** The `inspect-deal` result surfaced to the deal screen. */
-export interface InspectDealResponse {
-  /** Per-term legality + both-direction value for the proposed trade items. */
-  items: InspectedTradeItem[];
-  /** Per-promise agreeability factors (advisory raw decision inputs). */
-  promises: unknown[];
-  /** Per side (keyed by player ID as string): the full tradable range it could put on the table. */
-  tradableRange: Record<string, unknown>;
 }
 
 /**

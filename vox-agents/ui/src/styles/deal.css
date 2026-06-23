@@ -1,0 +1,243 @@
+/*
+ * Deal board layout (interactive-diplomacy stage 4): the three-panel in-game trade-screen
+ * replica — counterpart inventory | deal on the table | your inventory. Uses PrimeVue `--p-*`
+ * design tokens throughout; no copied Civilization V artwork. Imported by the deal components
+ * via `@import '@/styles/deal.css'` (matching the existing `@import '@/styles/chat.css'`).
+ */
+
+/* Horizontal-scroll wrapper: on narrow viewports the board scrolls sideways; panels never stack. */
+.deal-board-scroll {
+  overflow-x: auto;
+}
+
+/* counterpart | center offer | you — center is widest, sides hold the categorized inventories. */
+.deal-board {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.4fr) minmax(280px, 1fr);
+  gap: 0.75rem;
+  min-width: 1100px;
+  align-items: start;
+}
+
+/* A bordered region (inventory panel or the central offer). */
+.deal-panel {
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.deal-panel-title {
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Each inventory scrolls independently so a long list never moves the offer or the other side. */
+.deal-panel-scroll {
+  overflow-y: auto;
+  max-height: 60vh;
+  padding: 0.35rem 0.4rem;
+}
+
+.deal-category {
+  margin-bottom: 0.35rem;
+}
+.deal-category-title {
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--p-text-muted-color);
+  padding: 0.2rem 0.25rem;
+}
+.deal-category-empty {
+  font-size: 0.78rem;
+  color: var(--p-text-muted-color);
+  padding: 0.1rem 0.35rem;
+}
+
+/* An inventory row is the primary control: a click adds the term. */
+.deal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.2rem 0.35rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--p-text-color);
+  cursor: pointer;
+  font: inherit;
+}
+/* Rows use `aria-disabled` (not the native attribute) so their reason tooltip still fires on hover;
+   the JS click guards block activation. Suppress the hover background + dim the disabled state here. */
+.deal-row:hover:not([aria-disabled='true']) {
+  background: var(--p-content-hover-background);
+}
+/* Locked/busy rows: dim like the old native-disabled look. Illegal (red) and selected rows keep
+   their own dedicated styling, so exclude them here. */
+.deal-row[aria-disabled='true']:not(.deal-row-illegal):not(.deal-row-selected) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.deal-row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deal-row-secondary {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+  flex-shrink: 0;
+}
+
+/* Structurally impossible candidate: visible, red, with its reason in a tooltip; not addable. */
+.deal-row-illegal {
+  color: var(--p-red-500);
+  cursor: not-allowed;
+}
+.deal-row-illegal:hover {
+  background: transparent;
+}
+/* A singleton already on the table: shown selected and not addable again. */
+.deal-row-selected {
+  opacity: 0.55;
+  cursor: default;
+}
+.deal-row-selected:hover {
+  background: transparent;
+}
+
+/* An expandable row (targeted promises, third-party peace/war): click to reveal its targets. */
+.deal-row-expandable .pi {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--p-text-muted-color);
+}
+/* The indented list of eligible targets revealed under an expandable row. */
+.deal-row-targets {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--p-content-border-color);
+  margin-left: 0.5rem;
+}
+.deal-row-target {
+  padding-left: 0.9rem;
+}
+
+/* ---- Central offer ----------------------------------------------------------------------- */
+
+.deal-message {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+.deal-message-input {
+  width: 100%;
+}
+
+/* They give (counterpart) | You give (you) — aligned columns mirroring the two inventories. */
+.deal-offer-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+}
+.deal-offer-col-title {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--p-text-muted-color);
+  margin-bottom: 0.25rem;
+}
+.deal-offer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.deal-offer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 4px;
+}
+.deal-offer-row-illegal {
+  border-color: var(--p-red-500);
+}
+.deal-offer-label {
+  flex: 1 1 auto;
+  min-width: 6rem;
+}
+.deal-offer-label-illegal {
+  color: var(--p-red-500);
+}
+.deal-offer-value {
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
+  flex-basis: 100%;
+}
+.deal-offer-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  flex-basis: 100%;
+}
+.deal-offer-empty {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+  padding: 0.2rem 0.35rem;
+}
+
+/* Live value balance, directly below the offer table; sentinel estimates are flagged. */
+.deal-balance {
+  padding: 0.4rem 0.5rem;
+  border-top: 1px solid var(--p-content-border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+.deal-balance-item {
+  color: var(--p-text-muted-color);
+}
+.balance-positive { color: var(--p-green-500); }
+.balance-negative { color: var(--p-red-500); }
+
+/* ---- Status + actions -------------------------------------------------------------------- */
+
+.deal-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  min-height: 1.75rem;
+}
+.deal-muted {
+  color: var(--p-text-muted-color);
+  font-size: 0.85rem;
+}
+.deal-refresh {
+  margin-left: auto;
+}
+.deal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}

@@ -75,18 +75,20 @@ Purpose: Main chat interface for interacting with agents
       </div>
     </div>
 
-    <!-- Deal screen: in-game trade-screen replica, shown as a modal over the conversation -->
+    <!-- Deal screen: the wide three-panel in-game trade-board replica, shown as a modal over the
+         conversation. Non-stacking; the board enforces its own min-width and scrolls horizontally
+         on narrow viewports. Mounted only while open (v-if="showDeal") so each open — including from
+         an inline card's Counter — reloads the current active proposal into the board. -->
     <Dialog
       v-if="thread?.diplomacy"
       v-model:visible="showDeal"
       modal
-      maximizable
       header="Propose deal"
-      :style="{ width: '92vw', maxWidth: '1100px' }"
+      :style="{ width: 'min(1400px, 95vw)' }"
       :draggable="false"
     >
       <DealScreen
-        v-if="audiencePlayerID !== undefined"
+        v-if="showDeal && audiencePlayerID !== undefined"
         :chatId="sessionId"
         :leftID="audiencePlayerID"
         :rightID="thread.agent"

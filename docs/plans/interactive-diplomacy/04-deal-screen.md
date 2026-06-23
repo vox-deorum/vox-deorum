@@ -1,6 +1,6 @@
 # Stage 4 — Web UI: redo the deal screen around the in-game trade board
 
-> **🔄 Redesign required.** The existing deal workflow functions, but its two generic forms do not replicate the core layout or interaction model of Civilization V's trade screen.
+> **✅ Redesign delivered.** The deal screen is now the three-panel in-game trade-board replica described below: categorized inventory panels (`InventoryPanel.vue`) flank a central two-sided offer (`CentralOffer.vue`), promises are folded into that offer, and the board is driven by the enriched `inspect-deal` data layer. Add-a-term is click-with-defaults; amounts/quantities/durations/targets are edited on the central rows. The board is hosted in a wide modal dialog the inline conversation cards open for review/counter.
 > Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements live in [specs.md](specs.md).
 
 ## Objective

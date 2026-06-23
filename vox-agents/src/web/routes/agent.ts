@@ -603,7 +603,9 @@ export function createAgentRoutes(): Router {
 
     try {
       const result = await inspectDeal(thread.player1ID, thread.player2ID, deal);
-      return res.json(result);
+      // `inspectDeal` types its return loosely (the agent-facing InspectDealResult), but the value
+      // is the enriched tool response the Web board consumes — annotate the route with that shape.
+      return res.json(result as InspectDealResponse);
     } catch (error) {
       logger.error('Failed to inspect deal', { error });
       return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to inspect deal' });

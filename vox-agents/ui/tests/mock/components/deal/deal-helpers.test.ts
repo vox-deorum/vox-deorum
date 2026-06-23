@@ -6,9 +6,9 @@ import {
   formatItemLabel,
   formatPromiseLabel,
   computeSideBalance,
-  type SideRange,
+  type NormalizedSideRange,
 } from '@/components/deal/deal-helpers';
-import type { TradeItem, PromiseTerm, InspectedTradeItem } from '@/utils/types';
+import type { TradeItem, PromiseTerm, InspectedTradeItem, PromiseTargetInfo } from '@/utils/types';
 
 const item = (over: Partial<TradeItem>): TradeItem => ({
   fromPlayerID: 0,
@@ -16,6 +16,28 @@ const item = (over: Partial<TradeItem>): TradeItem => ({
   itemType: 'GOLD',
   ...over,
 });
+
+/** A normalized range fixture carrying the game-facing names + per-candidate legality. */
+const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange =>
+  ({
+    gold: { available: true, max: 500, reasons: [] },
+    goldPerTurn: { available: true, reasons: [] },
+    maps: { legal: true, reasons: [] },
+    openBorders: { legal: true, reasons: [] },
+    defensivePact: { legal: true, reasons: [] },
+    researchAgreement: { legal: true, reasons: [] },
+    peaceTreaty: { legal: true, reasons: [] },
+    allowEmbassy: { legal: true, reasons: [] },
+    declarationOfFriendship: { legal: true, reasons: [] },
+    vassalage: { legal: true, reasons: [] },
+    vassalageRevoke: { legal: true, reasons: [] },
+    resources: [],
+    cities: [],
+    techs: [],
+    thirdPartyPeace: [],
+    thirdPartyWar: [],
+    ...over,
+  }) as NormalizedSideRange;
 
 describe('deal-helpers', () => {
   it('flags INT_MAX-scale sentinels and formats them as a dash', () => {
@@ -33,18 +55,34 @@ describe('deal-helpers', () => {
     expect(sideGives(items, 1).map((g) => g.index)).toEqual([1]);
   });
 
-  it('labels items, using the giver range for city names', () => {
-    const range = { cities: [{ cityID: 7, name: 'Berlin', x: 1, y: 2 }] } as unknown as SideRange;
+  it('labels items, using the giver range for game-facing names', () => {
+    const r = range({
+      cities: [{ cityID: 7, name: 'Berlin', x: 1, y: 2, legal: true, reasons: [] }],
+      resources: [{ resourceID: 3, name: 'Iron', category: 'strategic', quantityAvailable: 5, legal: true, reasons: [] }],
+      techs: [{ techID: 9, name: 'Steel', legal: true, reasons: [] }],
+      thirdPartyPeace: [{ teamID: 4, name: 'Greece', legal: true, reasons: [] }],
+    });
     expect(formatItemLabel(item({ itemType: 'GOLD', amount: 100 }))).toBe('Gold: 100');
-    expect(formatItemLabel(item({ itemType: 'CITIES', cityID: 7 }), range)).toBe('City: Berlin');
-    expect(formatItemLabel(item({ itemType: 'CITIES', cityID: 9 }), range)).toBe('City #9');
+    expect(formatItemLabel(item({ itemType: 'CITIES', cityID: 7 }), r)).toBe('City: Berlin');
+    expect(formatItemLabel(item({ itemType: 'CITIES', cityID: 9 }), r)).toBe('City #9');
+    expect(formatItemLabel(item({ itemType: 'RESOURCES', resourceID: 3, quantity: 2 }), r)).toBe('Iron ×2');
+    expect(formatItemLabel(item({ itemType: 'TECHS', techID: 9 }), r)).toBe('Tech: Steel');
+    expect(formatItemLabel(item({ itemType: 'THIRD_PARTY_PEACE', thirdPartyTeamID: 4 }), r)).toBe('Peace with Greece');
     expect(formatItemLabel(item({ itemType: 'OPEN_BORDERS' }))).toBe('Open Borders');
   });
 
-  it('labels promises with their target for three-party promises', () => {
+  it('falls back to numeric ids when a name cannot be resolved', () => {
+    expect(formatItemLabel(item({ itemType: 'RESOURCES', resourceID: 8, quantity: 1 }))).toBe('Resource #8 ×1');
+    expect(formatItemLabel(item({ itemType: 'TECHS', techID: 2 }))).toBe('Tech #2');
+    expect(formatItemLabel(item({ itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 6 }))).toBe('War with team 6');
+  });
+
+  it('labels promises and resolves a target display name when metadata is supplied', () => {
     const coop: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 3 };
     const spy: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'SPY' };
+    const targets: PromiseTargetInfo[] = [{ playerID: 3, teamID: 3, name: 'Washington', kind: 'major' }];
     expect(formatPromiseLabel(coop)).toContain('target: player 3');
+    expect(formatPromiseLabel(coop, targets)).toContain('target: Washington');
     expect(formatPromiseLabel(spy)).toBe('Stop spying on me');
   });
 

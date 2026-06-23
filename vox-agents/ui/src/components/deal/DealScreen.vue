@@ -1,17 +1,98 @@
 <!--
 Component: DealScreen
-Purpose: Web replica of the in-game diplomatic trade screen (interactive-diplomacy stage 4).
+Purpose: Web replica of the in-game diplomatic trade screen (interactive-diplomacy stage 4) — a
+three-panel board: counterpart inventory | deal on the table | your inventory.
 
-Driven entirely by the read-only `inspect-deal` tool (the screen holds no deal state of its
-own beyond the in-progress proposal): it renders both sides' item tables from the tradable
-range, lets the human build/modify a deal with live per-term legality + value feedback, shows
-the other-side value balance summed live, and presents Accept / Counter / Reject against the
-current proposal. Preview mode — proposal/counter round-trip through the durable store;
-acceptance is wired but deferred to enactment (stage 6).
+Driven entirely by the read-only `inspect-deal` tool (the screen holds no deal state of its own
+beyond the in-progress proposal): it builds both sides' categorized inventories from the tradable
+range, lets the human build/modify a deal with live per-term legality + value feedback, shows the
+other-side value balance summed live, and presents the proposal-state actions (Propose; or
+Refuse/Counter/Accept; or Retract/Counter). Preview mode — proposal/counter round-trip through the
+durable store; acceptance is wired but deferred to enactment (stage 6).
+
+Orchestration (loading, debounced live inspection with latest-request-wins, proposal freshness,
+writes) lives here; the three visual regions are the InventoryPanel / CentralOffer components, and
+the categorized inventory model + value math are pure helpers (deal-catalog.ts / deal-helpers.ts).
 -->
 <template>
   <div class="deal-screen">
-    <div class="deal-header">
+    <Message v-if="error" severity="error" :closable="true" @close="error = ''">{{ error }}</Message>
+    <Message v-if="!inspection && !error" severity="secondary">Loading the tradable range…</Message>
+
+    <!-- The board never stacks; on a narrow viewport the wrapper scrolls horizontally. -->
+    <div v-if="inspection" class="deal-board-scroll">
+      <div class="deal-board">
+        <!-- Left = the counterpart's inventory. -->
+        <InventoryPanel
+          side="left"
+          :label="counterpartLabel"
+          :categories="counterpartCategories"
+          :locked="locked"
+          :busy="busy"
+          @add-term="onAddTerm"
+        />
+
+        <!-- Center = the deal on the table. -->
+        <CentralOffer
+          :items="workingDeal.items"
+          :promises="workingDeal.promises"
+          :inspected-items="inspection.items"
+          :inspected-promises="inspection.promises"
+          :counterpart-i-d="counterpartID"
+          :you-i-d="youID"
+          :counterpart-label="counterpartLabel"
+          :you-label="youLabel"
+          :ranges="inspection.tradableRange"
+          :promise-targets="promiseTargets"
+          v-model:message="dealMessage"
+          :locked="locked"
+          :busy="busy"
+          @update-item="onUpdateItem"
+          @remove-item="onRemoveItem"
+          @remove-promise="onRemovePromise"
+        />
+
+        <!-- Right = your inventory. -->
+        <InventoryPanel
+          side="right"
+          :label="youLabel"
+          :categories="youCategories"
+          :locked="locked"
+          :busy="busy"
+          @add-term="onAddTerm"
+        />
+      </div>
+    </div>
+
+    <!-- Proposal-state actions. -->
+    <div class="deal-actions">
+      <span v-if="locked" class="deal-muted">Conversation closed this turn — deal actions are locked.</span>
+      <template v-else>
+        <Button v-if="!hasOpenProposal" label="Propose" icon="pi pi-send" :loading="busy" :disabled="!canPropose" @click="doPropose" />
+        <Button v-if="hasOpenProposal" label="Counter" icon="pi pi-replay" severity="secondary" :loading="busy" :disabled="!canCounter" @click="doCounter" />
+        <!-- Accept records the STORED proposal; once the draft is edited it would no longer match, so hide it. -->
+        <Button v-if="hasOpenProposal && !activeAuthoredByViewer && !dealEdited" label="Accept" icon="pi pi-check" severity="success" :loading="busy" :disabled="!canAccept" @click="doAccept" />
+        <Button v-if="hasOpenProposal && dealEdited" label="Reset" icon="pi pi-undo" severity="secondary" text :disabled="busy" @click="resetToActiveProposal" v-tooltip.bottom="'Discard edits and restore the original proposal'" />
+        <Button
+          v-if="hasOpenProposal"
+          :label="activeAuthoredByViewer ? 'Retract' : 'Refuse'"
+          icon="pi pi-times-circle"
+          severity="danger"
+          :loading="busy"
+          :disabled="!canReject"
+          @click="doReject"
+        />
+        <span v-if="hasOpenProposal && !activeAuthoredByViewer && dealEdited" class="deal-muted">
+          You’ve changed this proposal — send it as a Counter, or Reset to accept the original.
+        </span>
+        <span v-else-if="hasOpenProposal && !activeAuthoredByViewer && hasIllegalTerm" class="deal-muted">
+          Remove or fix the impossible term (red) to accept.
+        </span>
+      </template>
+    </div>
+
+    <!-- Subdued board-level status: proposal state, live-inspection progress, reload. -->
+    <div class="deal-status">
       <Tag v-if="reduction.status === 'open'" value="Active proposal" severity="info" />
       <Tag v-else-if="reduction.status === 'rejected'" value="Last proposal rejected" severity="warn" />
       <Tag v-else-if="reduction.status === 'enacted'" value="Enacted" severity="success" />
@@ -27,166 +108,21 @@ acceptance is wired but deferred to enactment (stage 6).
         v-tooltip.bottom="'Reload proposals & re-evaluate'"
       />
     </div>
-
-    <Message v-if="error" severity="error" :closable="true" @close="error = ''">{{ error }}</Message>
-    <Message v-if="!inspection && !error" severity="secondary">Loading the tradable range…</Message>
-
-    <div v-if="inspection" class="deal-body">
-      <!-- Both sides' item tables, laid out like the in-game trade screen. -->
-      <div class="deal-sides">
-        <section
-          v-for="side in sides"
-          :key="side.id"
-          class="deal-side"
-        >
-          <header class="deal-side-header">
-            <span class="deal-side-name">{{ side.label }} gives</span>
-            <span class="deal-balance" :class="balanceClass(side.id)">
-              value to {{ side.label }}: {{ formatBalance(side.id) }}
-            </span>
-          </header>
-
-          <!-- Current terms this side gives -->
-          <ul class="deal-terms">
-            <li v-for="entry in sideGives(workingDeal.items, side.id)" :key="entry.index" class="deal-term">
-              <span class="deal-term-label">{{ itemLabel(entry.item, side.id) }}</span>
-              <Tag
-                v-if="inspectedFor(entry.index) && !inspectedFor(entry.index)!.legality"
-                value="illegal"
-                severity="danger"
-                v-tooltip.bottom="reasonText(entry.index)"
-              />
-              <span class="deal-term-value" v-if="inspectedFor(entry.index)">
-                give {{ fmt(inspectedFor(entry.index)!.valueIfIGive) }} ·
-                worth {{ fmt(inspectedFor(entry.index)!.valueIfIReceive) }}
-              </span>
-              <Button icon="pi pi-times" text rounded size="small" severity="danger" :disabled="locked || busy" @click="removeItem(entry.index)" />
-            </li>
-            <li v-if="sideGives(workingDeal.items, side.id).length === 0" class="deal-empty">— nothing —</li>
-          </ul>
-
-          <!-- Add-term controls drawn from this side's tradable range -->
-          <div class="deal-add" v-if="!locked">
-            <div class="deal-add-row" v-if="rangeFor(side.id)?.gold.available">
-              <InputNumber v-model="draftFor(side.id).gold" :min="0" :max="rangeFor(side.id)!.gold.max" size="small" placeholder="Gold" />
-              <Button label="Add gold" size="small" outlined :disabled="!draftFor(side.id).gold" @click="addGold(side.id)" />
-            </div>
-            <div class="deal-add-row" v-if="rangeFor(side.id)?.goldPerTurn.available">
-              <InputNumber v-model="draftFor(side.id).gpt" :min="0" size="small" placeholder="Gold/turn" />
-              <Button label="Add GPT" size="small" outlined :disabled="!draftFor(side.id).gpt" @click="addGpt(side.id)" />
-            </div>
-            <div class="deal-add-row" v-if="rangeFor(side.id) && rangeFor(side.id)!.resources.length">
-              <Select v-model="draftFor(side.id).resourceID" :options="resourceOptions(side.id)" optionLabel="label" optionValue="value" placeholder="Resource" size="small" />
-              <InputNumber v-model="draftFor(side.id).resourceQty" :min="1" size="small" placeholder="Qty" />
-              <Button label="Add" size="small" outlined :disabled="draftFor(side.id).resourceID == null" @click="addResource(side.id)" />
-            </div>
-            <div class="deal-add-row" v-if="rangeFor(side.id) && rangeFor(side.id)!.cities.length">
-              <Select v-model="draftFor(side.id).cityID" :options="cityOptions(side.id)" optionLabel="label" optionValue="value" placeholder="City" size="small" />
-              <Button label="Add city" size="small" outlined :disabled="draftFor(side.id).cityID == null" @click="addCity(side.id)" />
-            </div>
-            <div class="deal-add-row" v-if="rangeFor(side.id) && rangeFor(side.id)!.techs.length">
-              <Select v-model="draftFor(side.id).techID" :options="techOptions(side.id)" optionLabel="label" optionValue="value" placeholder="Tech" size="small" />
-              <Button label="Add tech" size="small" outlined :disabled="draftFor(side.id).techID == null" @click="addTech(side.id)" />
-            </div>
-            <div class="deal-add-row" v-if="rangeFor(side.id) && rangeFor(side.id)!.thirdPartyPeace.length">
-              <Select v-model="draftFor(side.id).thirdPartyPeaceTeamID" :options="thirdPartyPeaceOptions(side.id)" optionLabel="label" optionValue="value" placeholder="Peace with team" size="small" />
-              <Button label="Add third-party peace" size="small" outlined :disabled="draftFor(side.id).thirdPartyPeaceTeamID == null" @click="addThirdPartyPeace(side.id)" />
-            </div>
-            <div class="deal-add-row" v-if="rangeFor(side.id) && rangeFor(side.id)!.thirdPartyWar.length">
-              <Select v-model="draftFor(side.id).thirdPartyWarTeamID" :options="thirdPartyWarOptions(side.id)" optionLabel="label" optionValue="value" placeholder="War with team" size="small" />
-              <Button label="Add third-party war" size="small" outlined :disabled="draftFor(side.id).thirdPartyWarTeamID == null" @click="addThirdPartyWar(side.id)" />
-            </div>
-            <!-- The inspection range cannot enumerate live Congress resolutions, so vote
-                 commitments use explicit IDs while still receiving live legality/value. -->
-            <div class="deal-add-row">
-              <InputNumber v-model="draftFor(side.id).resolutionID" :min="0" size="small" placeholder="Resolution ID" />
-              <InputNumber v-model="draftFor(side.id).voteChoice" size="small" placeholder="Vote choice" />
-              <InputNumber v-model="draftFor(side.id).numVotes" :min="1" size="small" placeholder="Votes" />
-              <Select v-model="draftFor(side.id).voteRepeal" :options="voteModeOptions" optionLabel="label" optionValue="value" size="small" />
-              <Button
-                label="Add vote commitment"
-                size="small"
-                outlined
-                :disabled="draftFor(side.id).resolutionID == null || draftFor(side.id).voteChoice == null || draftFor(side.id).numVotes < 1"
-                @click="addVoteCommitment(side.id)"
-              />
-            </div>
-            <div class="deal-add-row deal-toggles">
-              <Button
-                v-for="t in availableToggles(side.id)"
-                :key="t.itemType"
-                :label="t.label"
-                size="small"
-                text
-                @click="addToggle(side.id, t.itemType)"
-              />
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- Promise terms (the eight standing promises + Coop War), a separate section (specs §3) -->
-      <section class="deal-promises">
-        <header class="deal-side-header"><span class="deal-side-name">Promises</span></header>
-        <ul class="deal-terms">
-          <li v-for="(p, i) in workingDeal.promises" :key="i" class="deal-term">
-            <span class="deal-term-label">player {{ p.promiserID }} → player {{ p.recipientID }}: {{ promiseLabel(p) }}</span>
-            <span class="deal-term-value" v-if="agreeabilityNote(i)" v-tooltip.bottom="agreeabilityNote(i)"><i class="pi pi-info-circle" /> factors</span>
-            <Button icon="pi pi-times" text rounded size="small" severity="danger" :disabled="locked || busy" @click="removePromise(i)" />
-          </li>
-          <li v-if="workingDeal.promises.length === 0" class="deal-empty">— none —</li>
-        </ul>
-        <div class="deal-add deal-add-row" v-if="!locked">
-          <Select v-model="promiseDraft.promiserID" :options="sideOptions" optionLabel="label" optionValue="value" placeholder="Promiser" size="small" />
-          <Select v-model="promiseDraft.promiseType" :options="promiseTypeOptions" optionLabel="label" optionValue="value" placeholder="Promise" size="small" />
-          <InputNumber v-if="promiseNeedsTarget" v-model="promiseDraft.targetPlayerID" :min="0" size="small" placeholder="Target player" />
-          <Button label="Add promise" size="small" outlined :disabled="!canAddPromise" @click="addPromise" />
-        </div>
-      </section>
-
-      <!-- Optional one-sentence note voiced alongside the deal (stored on Payload.Deal.message). -->
-      <div class="deal-message" v-if="!locked">
-        <InputText v-model="dealMessage" class="deal-message-input" placeholder="A line to send with the deal (optional)…" />
-      </div>
-
-      <!-- Accept / Counter / Reject against the current proposal -->
-      <div class="deal-actions">
-        <span v-if="locked" class="deal-muted">Conversation closed this turn — deal actions are locked.</span>
-        <template v-else>
-          <Button v-if="!hasOpenProposal" label="Propose" icon="pi pi-send" :loading="busy" :disabled="!canPropose" @click="doPropose" />
-          <Button v-if="hasOpenProposal" label="Counter" icon="pi pi-replay" severity="secondary" :loading="busy" :disabled="!canCounter" @click="doCounter" />
-          <Button v-if="hasOpenProposal && !activeAuthoredByViewer" label="Accept" icon="pi pi-check" severity="success" :loading="busy" :disabled="!canAccept" @click="doAccept" />
-          <Button v-if="hasOpenProposal" :label="activeAuthoredByViewer ? 'Retract' : 'Reject'" icon="pi pi-times-circle" severity="danger" :loading="busy" :disabled="!canReject" @click="doReject" />
-        </template>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
-import Select from 'primevue/select';
-import InputNumber from 'primevue/inputnumber';
-import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
 import { api } from '@/api/client';
-import type { DealPayload, TradeItem, PromiseTerm, InspectDealResponse, InspectedTradeItem } from '@/utils/types';
+import type { DealPayload, TradeItem, InspectDealResponse, NormalizedSideRange, PromiseTargetInfo } from '@/utils/types';
 import { deriveActiveProposal, type DealReduction } from './deal-reduce';
-import {
-  type SideRange,
-  PROMISE_TYPES,
-  PROMISE_LABELS,
-  PROMISE_NEEDS_TARGET,
-  TOGGLE_ITEMS,
-  sideGives,
-  formatValue,
-  formatItemLabel,
-  formatPromiseLabel,
-  computeSideBalance,
-} from './deal-helpers';
+import { buildSideCatalog, type AddTermPayload } from './deal-catalog';
+import InventoryPanel from './InventoryPanel.vue';
+import CentralOffer from './CentralOffer.vue';
 
 const props = defineProps<{
   chatId: string;
@@ -213,87 +149,66 @@ const emptyDeal = (): DealPayload => ({ version: 1, items: [], promises: [] });
 const workingDeal = ref<DealPayload>(emptyDeal());
 /** Optional one-sentence note the human attaches to the deal (Payload.Deal.message). */
 const dealMessage = ref('');
+/**
+ * Whether the human has changed the terms of the active proposal in the editor. `Accept` records
+ * acceptance of the STORED proposal (by `proposalMessageID`), not the edited draft, so an edited
+ * draft must never be acceptable — once edited, Accept is hidden (Counter only) until `Reset`
+ * restores the original terms. Reset to false whenever the active proposal is (re)loaded.
+ */
+const dealEdited = ref(false);
 const inspection = ref<InspectDealResponse | null>(null);
 const reduction = ref<DealReduction>({ active: null, status: 'none', proposals: [] });
 const inspecting = ref(false);
 const error = ref('');
 
-/** The two sides, in display order: you (left) then them (right). */
-const sides = computed(() => [
-  { id: props.leftID, label: props.leftLabel },
-  { id: props.rightID, label: props.rightLabel },
-]);
-const sideOptions = computed(() => sides.value.map((s) => ({ label: s.label, value: s.id })));
+/**
+ * Display orientation: the host passes the audience as `leftID` and the LLM seat as `rightID`,
+ * but the in-game board puts the COUNTERPART on the left and YOU on the right. Keep that
+ * inversion in one place so the panels, columns, and giver semantics never disagree.
+ */
+const counterpartID = computed(() => props.rightID);
+const youID = computed(() => props.leftID);
+const counterpartLabel = computed(() => props.rightLabel);
+const youLabel = computed(() => props.leftLabel);
 
-// Per-side add-term draft inputs, keyed by player ID.
-interface Draft {
-  gold: number | null;
-  gpt: number | null;
-  resourceID: number | null;
-  resourceQty: number;
-  cityID: number | null;
-  techID: number | null;
-  thirdPartyPeaceTeamID: number | null;
-  thirdPartyWarTeamID: number | null;
-  resolutionID: number | null;
-  voteChoice: number | null;
-  numVotes: number;
-  voteRepeal: boolean;
-}
-const drafts = reactive<Record<number, Draft>>({});
-/** Create the add-term draft fields for one side when it first appears. */
-const ensureDraft = (id: number) => {
-  if (!drafts[id]) {
-    drafts[id] = {
-      gold: null,
-      gpt: null,
-      resourceID: null,
-      resourceQty: 1,
-      cityID: null,
-      techID: null,
-      thirdPartyPeaceTeamID: null,
-      thirdPartyWarTeamID: null,
-      resolutionID: null,
-      voteChoice: null,
-      numVotes: 1,
-      voteRepeal: false,
-    };
-  }
-};
-/** Ensure and return the (reactive) draft for a side — used by the template's v-models. */
-const draftFor = (id: number): Draft => { ensureDraft(id); return drafts[id]!; };
-watch(sides, (s) => s.forEach((side) => ensureDraft(side.id)), { immediate: true });
+// ---- inventory catalogs (recompute as the range or working deal changes) -----------------
+const rangeFor = (id: number): NormalizedSideRange | undefined => inspection.value?.tradableRange[String(id)];
+const promiseTargets = computed<PromiseTargetInfo[]>(() => inspection.value?.promiseTargets ?? []);
+const buildCatalogFor = (ownerID: number, otherID: number) =>
+  buildSideCatalog({
+    ownerID,
+    otherID,
+    range: rangeFor(ownerID),
+    currentItems: workingDeal.value.items,
+    currentPromises: workingDeal.value.promises,
+    defaultDuration: inspection.value?.defaultDuration,
+    promiseTargets: promiseTargets.value,
+  });
+const counterpartCategories = computed(() => buildCatalogFor(counterpartID.value, youID.value));
+const youCategories = computed(() => buildCatalogFor(youID.value, counterpartID.value));
 
-const promiseDraft = reactive<{ promiserID: number | null; promiseType: string; targetPlayerID: number | null }>(
-  { promiserID: null, promiseType: '', targetPlayerID: null }
-);
-const promiseNeedsTarget = computed(() => PROMISE_NEEDS_TARGET.has(promiseDraft.promiseType));
-const promiseTypeOptions = PROMISE_TYPES.map((t) => ({ label: PROMISE_LABELS[t] ?? t, value: t }));
-const canAddPromise = computed(() => {
-  if (promiseDraft.promiserID == null || !promiseDraft.promiseType) return false;
-  if (!promiseNeedsTarget.value) return true;
-  return (
-    promiseDraft.targetPlayerID != null &&
-    promiseDraft.targetPlayerID !== props.leftID &&
-    promiseDraft.targetPlayerID !== props.rightID
-  );
-});
-const voteModeOptions = [
-  { label: 'Enact', value: false },
-  { label: 'Repeal', value: true },
-];
-
+// ---- proposal-state guards --------------------------------------------------------------
 const hasTerms = computed(() => workingDeal.value.items.length > 0 || workingDeal.value.promises.length > 0);
 /** The current reducer state says there is one open proposal awaiting a response. */
 const hasOpenProposal = computed(() => reduction.value.active !== null && reduction.value.status === 'open');
 /** The active open offer was authored by the local viewer, so it can be retracted but not accepted. */
 const activeAuthoredByViewer = computed(() => reduction.value.active?.SpeakerID === props.leftID);
+/** A term in the current proposal is structurally impossible right now — blocks acceptance. */
+const hasIllegalTerm = computed(() => (inspection.value?.items ?? []).some((it) => !it.legality));
 /** State-only guard for opening a fresh proposal; `busy` is layered on for button disabling. */
 const mayPropose = computed(() => hasTerms.value && !hasOpenProposal.value);
 /** State-only guard for answering an open proposal with a counter. */
 const mayCounter = computed(() => hasTerms.value && hasOpenProposal.value);
-/** State-only guard for accepting an incoming open proposal. */
-const mayAccept = computed(() => hasOpenProposal.value && !activeAuthoredByViewer.value);
+/**
+ * State-only guard for accepting an incoming open proposal. Two things bar acceptance, folded in
+ * here (not just on the button) so `doAccept` and the pre-submit re-inspection in
+ * `ensureActionStillValid` enforce them too: (1) a stale-impossible proposal stays visible (red)
+ * and cannot be accepted until fixed/removed; (2) an EDITED draft diverges from the stored proposal
+ * that Accept would actually record — the human must Counter (to send the edit) or Reset instead.
+ */
+const mayAccept = computed(
+  () => hasOpenProposal.value && !activeAuthoredByViewer.value && !hasIllegalTerm.value && !dealEdited.value
+);
 /** State-only guard for rejecting or retracting the current open proposal. */
 const mayReject = computed(() => hasOpenProposal.value);
 const canPropose = computed(() => !busy.value && mayPropose.value);
@@ -301,151 +216,59 @@ const canCounter = computed(() => !busy.value && mayCounter.value);
 const canAccept = computed(() => !busy.value && mayAccept.value);
 const canReject = computed(() => !busy.value && mayReject.value);
 
-// ---- range / inspection accessors -------------------------------------------------------
-const rangeFor = (id: number): SideRange | undefined => inspection.value?.tradableRange[String(id)] as SideRange | undefined;
-const inspectedFor = (index: number): InspectedTradeItem | undefined => inspection.value?.items[index];
-const reasonText = (index: number): string => inspectedFor(index)?.reasons.join('\n') ?? '';
-const fmt = (v: number) => formatValue(v);
-const itemLabel = (item: TradeItem, sideID: number) => formatItemLabel(item, rangeFor(sideID));
-const promiseLabel = (p: PromiseTerm) => formatPromiseLabel(p);
-const agreeabilityNote = (i: number): string => {
-  const p = (inspection.value?.promises[i] ?? {}) as { agreeabilityFactors?: { note?: string } };
-  return p.agreeabilityFactors?.note ?? '';
+// ---- editing (mutate workingDeal; the debounced watcher re-inspects) ---------------------
+const onAddTerm = (payload: AddTermPayload) => {
+  if (props.locked || busy.value) return;
+  if (payload.kind === 'item') workingDeal.value.items.push(payload.item);
+  else workingDeal.value.promises.push(payload.promise);
+  dealEdited.value = true;
 };
-
-const resourceOptions = (id: number) =>
-  (rangeFor(id)?.resources ?? []).map((r) => ({ label: `Resource #${r.resourceID} (≤${r.quantityAvailable})`, value: r.resourceID }));
-const cityOptions = (id: number) =>
-  (rangeFor(id)?.cities ?? []).map((c) => ({ label: c.name || `City #${c.cityID}`, value: c.cityID }));
-const techOptions = (id: number) =>
-  (rangeFor(id)?.techs ?? []).map((t) => ({ label: `Tech #${t.techID}`, value: t.techID }));
-const thirdPartyPeaceOptions = (id: number) =>
-  (rangeFor(id)?.thirdPartyPeace ?? []).map((t) => ({ label: `Team ${t.teamID}`, value: t.teamID }));
-const thirdPartyWarOptions = (id: number) =>
-  (rangeFor(id)?.thirdPartyWar ?? []).map((t) => ({ label: `Team ${t.teamID}`, value: t.teamID }));
-const availableToggles = (id: number) => {
-  const range = rangeFor(id);
-  if (!range) return [];
-  return TOGGLE_ITEMS.filter((t) => range[t.rangeKey] === true);
+const onUpdateItem = (index: number, patch: Partial<TradeItem>) => {
+  const item = workingDeal.value.items[index];
+  if (item) { Object.assign(item, patch); dealEdited.value = true; }
 };
-
-// ---- balance ----------------------------------------------------------------------------
-const balanceFor = (id: number) => computeSideBalance(workingDeal.value.items, inspection.value?.items ?? [], id);
-const formatBalance = (id: number) => {
-  const b = balanceFor(id);
-  return `${b.net > 0 ? '+' : ''}${formatValue(b.net)}${b.hasSentinel ? ' (some impossible)' : ''}`;
-};
-const balanceClass = (id: number) => {
-  const net = balanceFor(id).net;
-  return net > 0 ? 'balance-positive' : net < 0 ? 'balance-negative' : '';
-};
-
-// ---- editing ----------------------------------------------------------------------------
-const otherSide = (sideID: number) => (sideID === props.leftID ? props.rightID : props.leftID);
-const pushItem = (item: TradeItem) => { workingDeal.value.items.push(item); };
-
-const addGold = (sideID: number) => {
-  const amount = drafts[sideID]!.gold!;
-  pushItem({ fromPlayerID: sideID, toPlayerID: otherSide(sideID), itemType: 'GOLD', amount });
-  drafts[sideID]!.gold = null;
-};
-const addGpt = (sideID: number) => {
-  const amount = drafts[sideID]!.gpt!;
-  pushItem({ fromPlayerID: sideID, toPlayerID: otherSide(sideID), itemType: 'GOLD_PER_TURN', amount });
-  drafts[sideID]!.gpt = null;
-};
-const addResource = (sideID: number) => {
-  pushItem({ fromPlayerID: sideID, toPlayerID: otherSide(sideID), itemType: 'RESOURCES', resourceID: drafts[sideID]!.resourceID!, quantity: drafts[sideID]!.resourceQty });
-  drafts[sideID]!.resourceID = null;
-  drafts[sideID]!.resourceQty = 1;
-};
-const addCity = (sideID: number) => {
-  pushItem({ fromPlayerID: sideID, toPlayerID: otherSide(sideID), itemType: 'CITIES', cityID: drafts[sideID]!.cityID! });
-  drafts[sideID]!.cityID = null;
-};
-const addTech = (sideID: number) => {
-  pushItem({ fromPlayerID: sideID, toPlayerID: otherSide(sideID), itemType: 'TECHS', techID: drafts[sideID]!.techID! });
-  drafts[sideID]!.techID = null;
-};
-/** Add a peace-with-third-party term selected from the live tradable range. */
-const addThirdPartyPeace = (sideID: number) => {
-  pushItem({
-    fromPlayerID: sideID,
-    toPlayerID: otherSide(sideID),
-    itemType: 'THIRD_PARTY_PEACE',
-    thirdPartyTeamID: drafts[sideID]!.thirdPartyPeaceTeamID!,
-  });
-  drafts[sideID]!.thirdPartyPeaceTeamID = null;
-};
-/** Add a war-with-third-party term selected from the live tradable range. */
-const addThirdPartyWar = (sideID: number) => {
-  pushItem({
-    fromPlayerID: sideID,
-    toPlayerID: otherSide(sideID),
-    itemType: 'THIRD_PARTY_WAR',
-    thirdPartyTeamID: drafts[sideID]!.thirdPartyWarTeamID!,
-  });
-  drafts[sideID]!.thirdPartyWarTeamID = null;
-};
-/** Add an explicit World Congress vote commitment for live inspection. */
-const addVoteCommitment = (sideID: number) => {
-  const draft = drafts[sideID]!;
-  pushItem({
-    fromPlayerID: sideID,
-    toPlayerID: otherSide(sideID),
-    itemType: 'VOTE_COMMITMENT',
-    resolutionID: draft.resolutionID!,
-    voteChoice: draft.voteChoice!,
-    numVotes: draft.numVotes,
-    repeal: draft.voteRepeal,
-  });
-  draft.resolutionID = null;
-  draft.voteChoice = null;
-  draft.numVotes = 1;
-  draft.voteRepeal = false;
-};
-const addToggle = (sideID: number, itemType: TradeItem['itemType']) => {
-  // Toggle items carry no extra data, so a second identical one is meaningless — skip the dup.
-  if (workingDeal.value.items.some((i) => i.fromPlayerID === sideID && i.itemType === itemType)) return;
-  pushItem({ fromPlayerID: sideID, toPlayerID: otherSide(sideID), itemType });
-};
-const removeItem = (index: number) => { workingDeal.value.items.splice(index, 1); };
-
-const addPromise = () => {
-  if (!canAddPromise.value) return;
-  const promiserID = promiseDraft.promiserID!;
-  const promise: PromiseTerm = { promiserID, recipientID: otherSide(promiserID), promiseType: promiseDraft.promiseType as PromiseTerm['promiseType'] };
-  if (promiseNeedsTarget.value && promiseDraft.targetPlayerID != null) promise.targetPlayerID = promiseDraft.targetPlayerID;
-  workingDeal.value.promises.push(promise);
-  promiseDraft.promiseType = '';
-  promiseDraft.targetPlayerID = null;
-};
-const removePromise = (index: number) => { workingDeal.value.promises.splice(index, 1); };
+const onRemoveItem = (index: number) => { workingDeal.value.items.splice(index, 1); dealEdited.value = true; };
+const onRemovePromise = (index: number) => { workingDeal.value.promises.splice(index, 1); dealEdited.value = true; };
 
 // ---- live re-evaluation -----------------------------------------------------------------
 let inspectTimer: ReturnType<typeof setTimeout> | undefined;
 let inspectSequence = 0;
-/** Inspect one immutable draft snapshot and apply only the newest request's result. */
-const runInspect = async () => {
-  if (props.leftID < 0 || props.rightID < 0 || props.leftID === props.rightID) return;
+/**
+ * Inspect one immutable draft snapshot and apply only the newest request's result. Resolves `true`
+ * when the inspection succeeded (so a preflight can trust the freshly-applied legality), `false` when
+ * the seats are invalid or the call failed — letting `ensureActionStillValid` abort rather than act
+ * on stale `inspection.value`. The live debounced watcher ignores the return.
+ */
+const runInspect = async (): Promise<boolean> => {
+  if (props.leftID < 0 || props.rightID < 0 || props.leftID === props.rightID) return false;
+  // A direct inspect is authoritative: cancel any pending debounced inspect so it can't fire
+  // mid-flight and supersede this one — otherwise a preflight could validate against a snapshot
+  // this call's result was discarded in favor of.
+  if (inspectTimer) { clearTimeout(inspectTimer); inspectTimer = undefined; }
   const sequence = ++inspectSequence;
   const deal = clone(workingDeal.value);
   inspecting.value = true;
   try {
     const result = await api.inspectDeal(props.chatId, { deal });
-    if (sequence === inspectSequence) {
+    // Success ONLY when this result is the one applied. If a newer request superseded us, our
+    // result is discarded, so the caller (a preflight) must not treat it as the current legality.
+    const applied = sequence === inspectSequence;
+    if (applied) {
       inspection.value = result;
       error.value = '';
     }
+    return applied;
   } catch (e) {
     if (sequence === inspectSequence) {
       error.value = e instanceof Error ? e.message : 'Failed to inspect the deal';
     }
+    return false;
   } finally {
     if (sequence === inspectSequence) inspecting.value = false;
   }
 };
-// Re-query inspect-deal as the proposed deal changes (debounced).
+// Re-query inspect-deal as the proposed deal changes (debounced). Every edit routes through a
+// workingDeal mutation, so this single watcher (with latest-request-wins) is the only trigger.
 watch(workingDeal, () => {
   if (inspectTimer) clearTimeout(inspectTimer);
   inspectTimer = setTimeout(runInspect, 250);
@@ -459,13 +282,16 @@ const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean>
   try {
     const res = await api.getDealMessages(props.chatId);
     reduction.value = deriveActiveProposal(res.messages);
-    // Load the active proposal's terms into the editor as the starting point.
+    // Load the active proposal's terms into the editor as the starting point (a clean, unedited
+    // baseline — Accept is offered until the human changes a term).
     if (loadActiveIntoEditor && reduction.value.active?.Payload?.Deal) {
       workingDeal.value = clone(reduction.value.active.Payload.Deal);
       dealMessage.value = reduction.value.active.Payload.Deal.message ?? '';
+      dealEdited.value = false;
     }
-    await runInspect();
-    return true;
+    // The preflight is only valid if the re-inspection actually succeeded — propagate its result so
+    // a failed inspect aborts the pending action instead of letting it run on stale legality.
+    return await runInspect();
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load deal messages';
     return false;
@@ -474,6 +300,19 @@ const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean>
 
 const reloadDeals = async () => { await refreshDealState(true); };
 const afterWrite = async () => { await reloadDeals(); emit('changed'); };
+
+/**
+ * Discard the human's edits and restore the active proposal's stored terms, re-enabling Accept.
+ * Pairs with `dealEdited`: editing an incoming proposal hides Accept (you can only Counter the
+ * change); Reset brings back the exact terms the server would record on acceptance.
+ */
+const resetToActiveProposal = () => {
+  const deal = reduction.value.active?.Payload?.Deal;
+  if (!deal) return;
+  workingDeal.value = clone(deal);
+  dealMessage.value = deal.message ?? '';
+  dealEdited.value = false;
+};
 
 /**
  * Refresh deal state immediately before a write and report whether the action is still valid.
@@ -532,10 +371,10 @@ const doReject = async () => {
   const targetID = reduction.value.active?.ID;
   busy.value = true;
   try {
-    if (!(await ensureActionStillValid(() => mayReject.value, activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot reject yet', targetID))) return;
+    if (!(await ensureActionStillValid(() => mayReject.value, activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot refuse yet', targetID))) return;
     if (!reduction.value.active) return;
     await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
-    toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal rejected', life: 2500 });
+    toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal refused', life: 2500 });
     await afterWrite();
   } catch (e) { actionError(e); } finally { busy.value = false; }
 };
@@ -574,39 +413,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@import '@/styles/deal.css';
 .deal-screen {
   min-width: 0;
 }
-.deal-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  min-height: 2rem;
-}
-.deal-muted { color: var(--p-text-muted-color); font-size: 0.85rem; }
-.deal-refresh { margin-left: auto; }
-.deal-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.deal-side, .deal-promises {
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 6px;
-  padding: 0.5rem;
-}
-.deal-promises { margin-top: 0.75rem; }
-.deal-side-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.25rem; }
-.deal-side-name { font-weight: 600; }
-.deal-balance { font-size: 0.8rem; color: var(--p-text-muted-color); }
-.balance-positive { color: var(--p-green-500); }
-.balance-negative { color: var(--p-red-500); }
-.deal-terms { list-style: none; padding: 0; margin: 0 0 0.5rem; }
-.deal-term { display: flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0; }
-.deal-term-label { flex: 1; }
-.deal-term-value { font-size: 0.75rem; color: var(--p-text-muted-color); }
-.deal-empty { color: var(--p-text-muted-color); font-size: 0.85rem; }
-.deal-add { display: flex; flex-direction: column; gap: 0.35rem; }
-.deal-add-row { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
-.deal-toggles { flex-wrap: wrap; }
-.deal-message { margin-top: 0.75rem; }
-.deal-message-input { width: 100%; }
-.deal-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
 </style>

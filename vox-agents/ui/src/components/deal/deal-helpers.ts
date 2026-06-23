@@ -1,33 +1,28 @@
 /**
  * Pure helpers for the Web deal screen (interactive-diplomacy stage 4): the trade-item
- * vocabulary, per-term display formatting, sentinel-aware value formatting, and the
- * other-side value balance summed from `inspect-deal`'s per-item values.
+ * vocabulary, per-term display formatting using the game-facing names `inspect-deal` now
+ * returns, sentinel-aware value formatting, and the other-side value balance summed from
+ * `inspect-deal`'s per-item values.
  *
- * Kept free of Vue/DOM so it can be unit-tested directly. The component holds the
- * reactive editing state and wires these into the template.
+ * Kept free of Vue/DOM so it can be unit-tested directly. The component holds the reactive
+ * editing state and wires these into the template. The categorized inventory model lives in
+ * the sibling `deal-catalog.ts`.
  */
 
-import type { TradeItem, PromiseTerm, InspectedTradeItem } from '@/utils/types';
+import type {
+  TradeItem,
+  PromiseTerm,
+  InspectedTradeItem,
+  NormalizedSideRange,
+  PromiseTargetInfo,
+} from '@/utils/types';
 
-/** The tradable range one side could put on the table, as `inspect-deal` returns it. */
-export interface SideRange {
-  gold: { available: boolean; max: number };
-  goldPerTurn: { available: boolean };
-  maps: boolean;
-  openBorders: boolean;
-  defensivePact: boolean;
-  researchAgreement: boolean;
-  peaceTreaty: boolean;
-  allowEmbassy: boolean;
-  declarationOfFriendship: boolean;
-  vassalage: boolean;
-  vassalageRevoke: boolean;
-  resources: Array<{ resourceID: number; quantityAvailable: number }>;
-  cities: Array<{ cityID: number; name: string; x: number; y: number }>;
-  techs: Array<{ techID: number }>;
-  thirdPartyPeace: Array<{ teamID: number }>;
-  thirdPartyWar: Array<{ teamID: number }>;
-}
+/**
+ * The tradable range one side could put on the table, as `inspect-deal` returns it. This is
+ * now the tool-owned normalized shape (display names, resource category, per-candidate
+ * legality + reason lines); re-exported here so component/test imports have one canonical name.
+ */
+export type { NormalizedSideRange } from '@/utils/types';
 
 /**
  * The nine promises tradeable on the agent path (specs §3). Mirrors the pinned
@@ -62,15 +57,20 @@ export const PROMISE_LABELS: Record<string, string> = {
 /** Promise types that require a third-party target. */
 export const PROMISE_NEEDS_TARGET = new Set(['COOP_WAR', 'BULLY_CITY_STATE', 'ATTACK_CITY_STATE']);
 
-/** Trade-item types that carry no extra data — a single "Add" toggle each, gated by the range. */
-export const TOGGLE_ITEMS: Array<{ itemType: TradeItem['itemType']; label: string; rangeKey: keyof SideRange }> = [
+/**
+ * Single-shot trade-item toggles (no extra data), in the in-game category order
+ * (embassy, open borders, pacts, friendship, maps, peace, then vassalage). Each maps to a
+ * `CandidateLegality` slot on `NormalizedSideRange`, so the inventory can show it red with a
+ * reason when structurally impossible rather than hiding it.
+ */
+export const TOGGLE_ITEMS: Array<{ itemType: TradeItem['itemType']; label: string; rangeKey: keyof NormalizedSideRange }> = [
+  { itemType: 'ALLOW_EMBASSY', label: 'Allow Embassy', rangeKey: 'allowEmbassy' },
   { itemType: 'OPEN_BORDERS', label: 'Open Borders', rangeKey: 'openBorders' },
   { itemType: 'DEFENSIVE_PACT', label: 'Defensive Pact', rangeKey: 'defensivePact' },
   { itemType: 'RESEARCH_AGREEMENT', label: 'Research Agreement', rangeKey: 'researchAgreement' },
-  { itemType: 'PEACE_TREATY', label: 'Peace Treaty', rangeKey: 'peaceTreaty' },
-  { itemType: 'MAPS', label: 'Maps', rangeKey: 'maps' },
-  { itemType: 'ALLOW_EMBASSY', label: 'Allow Embassy', rangeKey: 'allowEmbassy' },
   { itemType: 'DECLARATION_OF_FRIENDSHIP', label: 'Declaration of Friendship', rangeKey: 'declarationOfFriendship' },
+  { itemType: 'MAPS', label: 'Maps', rangeKey: 'maps' },
+  { itemType: 'PEACE_TREATY', label: 'Peace Treaty', rangeKey: 'peaceTreaty' },
   { itemType: 'VASSALAGE', label: 'Vassalage', rangeKey: 'vassalage' },
   { itemType: 'VASSALAGE_REVOKE', label: 'Revoke Vassalage', rangeKey: 'vassalageRevoke' },
 ];
@@ -93,32 +93,44 @@ export function formatValue(value: number): string {
   return Math.round(value).toString();
 }
 
-/** Items one side gives in a deal (the side is the `from` party). */
+/** Items one side gives in a deal (the side is the `from` party), paired with their deal index. */
 export function sideGives(items: TradeItem[], sideID: number): Array<{ item: TradeItem; index: number }> {
   return items
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => item.fromPlayerID === sideID);
 }
 
-/** A short human label for a trade item, using the giver's range for names where available. */
-export function formatItemLabel(item: TradeItem, range?: SideRange): string {
+/** Resolve a resource's display name from the giver's range, falling back to its ID. */
+function resourceName(resourceID: number | undefined, range?: NormalizedSideRange): string {
+  const found = range?.resources.find((r) => r.resourceID === resourceID);
+  return found?.name ?? `Resource #${resourceID}`;
+}
+
+/** A short human label for a trade item, using the giver's range for game-facing names. */
+export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange): string {
   switch (item.itemType) {
     case 'GOLD':
       return `Gold: ${item.amount ?? 0}`;
     case 'GOLD_PER_TURN':
       return `Gold/turn: ${item.amount ?? 0}${item.duration ? ` (${item.duration}t)` : ''}`;
     case 'RESOURCES':
-      return `Resource #${item.resourceID} ×${item.quantity ?? 0}${item.duration ? ` (${item.duration}t)` : ''}`;
+      return `${resourceName(item.resourceID, range)} ×${item.quantity ?? 0}${item.duration ? ` (${item.duration}t)` : ''}`;
     case 'CITIES': {
       const city = range?.cities.find((c) => c.cityID === item.cityID);
       return city ? `City: ${city.name}` : `City #${item.cityID}`;
     }
-    case 'TECHS':
-      return `Tech #${item.techID}`;
-    case 'THIRD_PARTY_PEACE':
-      return `Third-party peace (team ${item.thirdPartyTeamID})`;
-    case 'THIRD_PARTY_WAR':
-      return `Third-party war (team ${item.thirdPartyTeamID})`;
+    case 'TECHS': {
+      const tech = range?.techs.find((t) => t.techID === item.techID);
+      return tech?.name ? `Tech: ${tech.name}` : `Tech #${item.techID}`;
+    }
+    case 'THIRD_PARTY_PEACE': {
+      const team = range?.thirdPartyPeace.find((t) => t.teamID === item.thirdPartyTeamID);
+      return `Peace with ${team?.name ?? `team ${item.thirdPartyTeamID}`}`;
+    }
+    case 'THIRD_PARTY_WAR': {
+      const team = range?.thirdPartyWar.find((t) => t.teamID === item.thirdPartyTeamID);
+      return `War with ${team?.name ?? `team ${item.thirdPartyTeamID}`}`;
+    }
     case 'VOTE_COMMITMENT':
       return `Vote commitment (resolution ${item.resolutionID})`;
     default: {
@@ -186,11 +198,17 @@ export function storedBalanceToSide(
   return { net, hasSentinel };
 }
 
-/** A promise term's display label, including its target for three-party promises. */
-export function formatPromiseLabel(promise: PromiseTerm): string {
+/**
+ * A promise term's display label. When `targets` is supplied a three-party promise resolves
+ * its target's game-facing name (Coop War major / city-state minor); otherwise it falls back
+ * to the bare target player ID.
+ */
+export function formatPromiseLabel(promise: PromiseTerm, targets?: PromiseTargetInfo[]): string {
   const base = PROMISE_LABELS[promise.promiseType] ?? promise.promiseType;
   if (PROMISE_NEEDS_TARGET.has(promise.promiseType) && promise.targetPlayerID !== undefined) {
-    return `${base} (target: player ${promise.targetPlayerID})`;
+    const target = targets?.find((t) => t.playerID === promise.targetPlayerID);
+    const name = target?.name ?? `player ${promise.targetPlayerID}`;
+    return `${base} (target: ${name})`;
   }
   return base;
 }
