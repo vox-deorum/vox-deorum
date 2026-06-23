@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { getTool } from '../../../src/tools/index.js';
-import createInspectDealTool from '../../../src/tools/knowledge/inspect-deal.js';
+import createInspectDealTool, { type NormalizedSideRange } from '../../../src/tools/knowledge/inspect-deal.js';
 import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
 import type { InspectDealResult, SideRange } from '../../../src/utils/lua/inspect-deal.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
@@ -22,20 +22,21 @@ let inspectSpy: ReturnType<typeof vi.spyOn>;
 let opinionsSpy: ReturnType<typeof vi.spyOn>;
 let eventsSpy: ReturnType<typeof vi.spyOn>;
 
-/** A minimal valid SideRange with everything off / empty. */
+/** A minimal valid (raw) SideRange with everything off / empty. */
 function emptySide(overrides: Partial<SideRange> = {}): SideRange {
+  const off = { legal: false, reason: '' };
   return {
-    gold: { available: true, max: 100 },
-    goldPerTurn: { available: true },
-    maps: false,
-    openBorders: false,
-    defensivePact: false,
-    researchAgreement: false,
-    peaceTreaty: false,
-    allowEmbassy: false,
-    declarationOfFriendship: false,
-    vassalage: false,
-    vassalageRevoke: false,
+    gold: { available: true, max: 100, reason: '' },
+    goldPerTurn: { available: true, reason: '' },
+    maps: { ...off },
+    openBorders: { ...off },
+    defensivePact: { ...off },
+    researchAgreement: { ...off },
+    peaceTreaty: { ...off },
+    allowEmbassy: { ...off },
+    declarationOfFriendship: { ...off },
+    vassalage: { ...off },
+    vassalageRevoke: { ...off },
     resources: [],
     cities: [],
     techs: [],
@@ -50,6 +51,8 @@ function cannedResult(overrides: Partial<InspectDealResult> = {}): InspectDealRe
   return {
     items: [],
     range: { '1': emptySide(), '3': emptySide() },
+    defaultDuration: 30,
+    promiseTargets: [],
     ...overrides,
   };
 }
@@ -83,7 +86,7 @@ describe('inspect-deal', () => {
     expect(result.items).toEqual([]);
     expect(result.promises).toEqual([]);
     expect(Object.keys(result.tradableRange)).toEqual(['1', '3']);
-    expect((result.tradableRange['1'] as SideRange).gold.available).toBe(true);
+    expect((result.tradableRange['1'] as NormalizedSideRange).gold.available).toBe(true);
   });
 
   it('rejects trade items that are not between the inspected players', async () => {
@@ -221,8 +224,128 @@ describe('inspect-deal', () => {
 
     const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
 
-    expect((result.tradableRange['1'] as SideRange).resources).toEqual([]);
-    expect((result.tradableRange['1'] as SideRange).cities).toEqual([]);
+    expect((result.tradableRange['1'] as NormalizedSideRange).resources).toEqual([]);
+    expect((result.tradableRange['1'] as NormalizedSideRange).cities).toEqual([]);
+  });
+
+  it('passes through the default deal duration and eligible promise targets with eligibility', async () => {
+    inspectSpy.mockResolvedValue(
+      cannedResult({
+        defaultDuration: 45,
+        promiseTargets: [
+          // Major coop-war targets carry structural eligibility; minors carry the protectors.
+          { playerID: 5, teamID: 5, name: 'Rome', kind: 'major', coopWarEligible: true },
+          { playerID: 7, teamID: 7, name: 'Egypt', kind: 'major', coopWarEligible: false },
+          { playerID: 22, teamID: 22, name: 'City-State Geneva', kind: 'minor', protectingPlayerIDs: [3] },
+          // A coop-war eligibility absent (older DLL) survives as undefined.
+          { playerID: 9, teamID: 9, name: 'Greece', kind: 'major' },
+        ],
+      })
+    );
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+
+    expect(result.defaultDuration).toBe(45);
+    expect(result.promiseTargets).toEqual([
+      { playerID: 5, teamID: 5, name: 'Rome', kind: 'major', coopWarEligible: true },
+      { playerID: 7, teamID: 7, name: 'Egypt', kind: 'major', coopWarEligible: false },
+      { playerID: 22, teamID: 22, name: 'City-State Geneva', kind: 'minor', protectingPlayerIDs: [3] },
+      { playerID: 9, teamID: 9, name: 'Greece', kind: 'major' },
+    ]);
+  });
+
+  it('coerces an empty-object promiseTargets (empty Lua table) so the output schema validates', async () => {
+    // The Lua/JSON boundary turns an empty array into {}; left uncoerced it would fail the
+    // z.array(PromiseTargetSchema) output schema the MCP layer enforces on the result.
+    const canned = cannedResult();
+    (canned as any).promiseTargets = {};
+    inspectSpy.mockResolvedValue(canned);
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+
+    expect(result.promiseTargets).toEqual([]);
+    // Reproduce the MCP output validation path that was failing before the coercion.
+    expect(() => tool.outputSchema.parse(result)).not.toThrow();
+  });
+
+  it('enriches resource candidates with name, category, and normalized legality', async () => {
+    inspectSpy.mockResolvedValue(
+      cannedResult({
+        range: {
+          '1': emptySide({
+            resources: [
+              { resourceID: 0, name: 'Iron', category: 'strategic', quantityAvailable: 3, legal: true, reason: '' },
+              {
+                resourceID: 1,
+                name: 'Silk',
+                category: 'luxury',
+                quantityAvailable: 1,
+                legal: false,
+                reason: '[COLOR_NEGATIVE_TEXT]They already have this luxury.[ENDCOLOR]',
+              },
+            ],
+          }),
+          '3': emptySide(),
+        },
+      })
+    );
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const resources = (result.tradableRange['1'] as NormalizedSideRange).resources;
+
+    expect(resources[0]).toMatchObject({ resourceID: 0, name: 'Iron', category: 'strategic', legal: true, reasons: [] });
+    // A structurally-impossible resource is KEPT (not dropped) and carries its reason.
+    expect(resources[1]).toMatchObject({ resourceID: 1, name: 'Silk', category: 'luxury', legal: false });
+    expect(resources[1].reasons).toEqual(['They already have this luxury.']);
+  });
+
+  it('normalizes toggle candidates and supplies a fallback reason when the DLL is silent', async () => {
+    inspectSpy.mockResolvedValue(
+      cannedResult({
+        range: {
+          '1': emptySide({
+            openBorders: { legal: true, reason: '' },
+            // Illegal but with no stock reason string → fallback line, mirroring items.
+            defensivePact: { legal: false, reason: '' },
+          }),
+          '3': emptySide(),
+        },
+      })
+    );
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const side = result.tradableRange['1'] as NormalizedSideRange;
+
+    expect(side.openBorders).toEqual({ legal: true, reasons: [] });
+    expect(side.defensivePact.legal).toBe(false);
+    expect(side.defensivePact.reasons).toHaveLength(1);
+    expect(side.defensivePact.reasons[0]).toMatch(/no specific reason/i);
+  });
+
+  it('keeps impossible city / tech / third-party candidates with their reasons', async () => {
+    inspectSpy.mockResolvedValue(
+      cannedResult({
+        range: {
+          '1': emptySide({
+            cities: [
+              { cityID: 7, name: 'Berlin', x: 1, y: 2, legal: false, reason: 'You cannot trade your capital.' },
+            ],
+            techs: [{ techID: 4, name: 'Pottery', legal: true, reason: '' }],
+            thirdPartyWar: [{ teamID: 2, name: 'Egypt', legal: false, reason: 'You are already at war.' }],
+          }),
+          '3': emptySide(),
+        },
+      })
+    );
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const side = result.tradableRange['1'] as NormalizedSideRange;
+
+    expect(side.cities[0]).toMatchObject({ cityID: 7, name: 'Berlin', legal: false });
+    expect(side.cities[0].reasons).toEqual(['You cannot trade your capital.']);
+    expect(side.techs[0]).toMatchObject({ techID: 4, name: 'Pottery', legal: true, reasons: [] });
+    expect(side.thirdPartyWar[0]).toMatchObject({ teamID: 2, name: 'Egypt', legal: false });
+    expect(side.thirdPartyWar[0].reasons).toEqual(['You are already at war.']);
   });
 
   it('assembles promise agreeability factors and fetches getters once per promiser', async () => {

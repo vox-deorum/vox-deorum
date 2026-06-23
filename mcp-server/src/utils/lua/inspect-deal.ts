@@ -33,24 +33,97 @@ export interface InspectedItem {
   unknown?: boolean;
 }
 
-/** The tradable range one side could put on the table (legality + identity). */
+/** Structural legality + raw reason carried by a single-shot toggle candidate. */
+export interface ToggleCandidate {
+  legal: boolean;
+  /** Raw DLL reason string when illegal (color/newline tags; stripped in the tool layer). */
+  reason: string;
+}
+
+/** A resource the giver holds and could put on the table. */
+export interface ResourceCandidate {
+  resourceID: number;
+  /** Localized resource name (e.g. "Iron"); falls back to the ID in the UI when absent. */
+  name?: string;
+  /** In-game trade-screen bucket. */
+  category?: "luxury" | "strategic" | "bonus";
+  quantityAvailable: number;
+  legal: boolean;
+  reason: string;
+}
+
+/** One of the giver's cities offered on the table. */
+export interface CityCandidate {
+  cityID: number;
+  name: string;
+  x: number;
+  y: number;
+  legal: boolean;
+  reason: string;
+}
+
+/** A technology the giver knows and the receiver lacks. */
+export interface TechCandidate {
+  techID: number;
+  /** Localized technology name; falls back to the ID in the UI when absent. */
+  name?: string;
+  legal: boolean;
+  reason: string;
+}
+
+/** A third-party team for a third-party peace/war term. */
+export interface ThirdPartyTeamCandidate {
+  teamID: number;
+  /** Display name of a representative civ on the team; falls back to the team ID when absent. */
+  name?: string;
+  legal: boolean;
+  reason: string;
+}
+
+/**
+ * The tradable range one side could put on the table. Each candidate carries its own
+ * structural legality + raw reason so a structurally-impossible row stays visible
+ * (red) rather than being dropped (stage 4). Reason strings are raw here and stripped
+ * of color/newline tags in the inspect-deal tool layer.
+ */
 export interface SideRange {
-  gold: { available: boolean; max: number };
-  goldPerTurn: { available: boolean };
-  maps: boolean;
-  openBorders: boolean;
-  defensivePact: boolean;
-  researchAgreement: boolean;
-  peaceTreaty: boolean;
-  allowEmbassy: boolean;
-  declarationOfFriendship: boolean;
-  vassalage: boolean;
-  vassalageRevoke: boolean;
-  resources: Array<{ resourceID: number; quantityAvailable: number }>;
-  cities: Array<{ cityID: number; name: string; x: number; y: number }>;
-  techs: Array<{ techID: number }>;
-  thirdPartyPeace: Array<{ teamID: number }>;
-  thirdPartyWar: Array<{ teamID: number }>;
+  gold: { available: boolean; max: number; reason?: string };
+  goldPerTurn: { available: boolean; reason?: string };
+  maps: ToggleCandidate;
+  openBorders: ToggleCandidate;
+  defensivePact: ToggleCandidate;
+  researchAgreement: ToggleCandidate;
+  peaceTreaty: ToggleCandidate;
+  allowEmbassy: ToggleCandidate;
+  declarationOfFriendship: ToggleCandidate;
+  vassalage: ToggleCandidate;
+  vassalageRevoke: ToggleCandidate;
+  resources: ResourceCandidate[];
+  cities: CityCandidate[];
+  techs: TechCandidate[];
+  thirdPartyPeace: ThirdPartyTeamCandidate[];
+  thirdPartyWar: ThirdPartyTeamCandidate[];
+}
+
+/** An eligible third-party promise target (Coop War → major; city-state promises → minor). */
+export interface PromiseTargetInfo {
+  playerID: number;
+  teamID: number;
+  /** Display name (civ short description, or "City-State <name>"); falls back to the ID. */
+  name?: string;
+  kind: "major" | "minor";
+  /**
+   * Coop War (major targets): whether a coop war between the two principals against this
+   * civ is structurally valid (both pass IsValidCoopWarTarget). Absent on a DLL build
+   * without the IsValidCoopWarTarget binding — treat absence as "unknown" (show anyway).
+   */
+  coopWarEligible?: boolean;
+  /**
+   * City-state promises (minor targets): which of the two principals currently protect this
+   * city-state — i.e. valid recipients of a "stop bullying / don't attack my protected
+   * city-state" promise. Omitted when neither protects it.
+   */
+  protectingPlayerIDs?: number[];
 }
 
 /** Raw return shape of inspect-deal.lua. */
@@ -58,6 +131,10 @@ export interface InspectDealResult {
   items: InspectedItem[];
   /** Keyed by player ID (as string): what that side could give. */
   range: Record<string, SideRange>;
+  /** The game's default deal duration in turns (Game.GetDealDuration). */
+  defaultDuration?: number;
+  /** Eligible third-party promise targets with display names and major/minor kind. */
+  promiseTargets?: PromiseTargetInfo[];
   /** Set when the in-game scratch deal could not be obtained. */
   error?: string;
 }

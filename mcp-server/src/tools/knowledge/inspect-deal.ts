@@ -24,7 +24,13 @@ import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { getTool } from "../index.js";
 import { stripTags } from "../../utils/database/localized.js";
-import { inspectDeal, type InspectedItem, type SideRange } from "../../utils/lua/inspect-deal.js";
+import {
+  inspectDeal,
+  type InspectedItem,
+  type SideRange,
+  type ToggleCandidate,
+  type PromiseTargetInfo,
+} from "../../utils/lua/inspect-deal.js";
 import { DealPayloadSchema, PROMISE_TYPES, type PromiseTerm, type TradeItem } from "../../utils/deal-schema.js";
 
 /** Coerce a value that may arrive as an empty Lua table ({} instead of []). */
@@ -104,12 +110,180 @@ const InspectedPromiseSchema = z.object({
   }),
 });
 
+/** An eligible third-party promise target (Coop War → major; city-state promises → minor). */
+const PromiseTargetSchema = z.object({
+  playerID: z.number(),
+  teamID: z.number(),
+  name: z.string().optional().describe("Display name; falls back to the player ID in the UI when absent"),
+  kind: z.enum(["major", "minor"]),
+  coopWarEligible: z
+    .boolean()
+    .optional()
+    .describe("Major targets: a coop war between the two principals against this civ is structurally valid (absent on a DLL without the binding)"),
+  protectingPlayerIDs: z
+    .array(z.number())
+    .optional()
+    .describe("Minor targets: which principals protect this city-state (valid recipients of a city-state promise targeting it)"),
+});
+
 /** Output schema. */
 const InspectDealOutputSchema = z.object({
   items: z.array(InspectedTradeItemSchema),
   promises: z.array(InspectedPromiseSchema),
   tradableRange: z.record(z.string(), z.any()).describe("Per side (keyed by player ID): the full range it could put on the table"),
+  defaultDuration: z.number().optional().describe("The game's default deal duration in turns (Game.GetDealDuration)"),
+  promiseTargets: z.array(PromiseTargetSchema).optional().describe("Eligible third-party promise targets with display names and major/minor kind"),
 });
+
+// ============================================================================
+// Normalized response types (exported for the Web deal board, stage 4)
+//
+// The Lua/bridge layer returns each candidate's raw DLL reason string; the tool
+// strips the color/newline tags into discrete `reasons` lines, mirroring the
+// per-term `items` shape. These explicit interfaces replace the Web's former
+// loose `Record<string, unknown>` range handling.
+// ============================================================================
+
+/** One inspected trade term (normalized; index-aligned with the proposed deal's items). */
+export type InspectedTradeItem = z.infer<typeof InspectedTradeItemSchema>;
+/** One inspected promise term with its advisory agreeability factors. */
+export type InspectedPromise = z.infer<typeof InspectedPromiseSchema>;
+/** An eligible third-party promise target. */
+export type { PromiseTargetInfo };
+
+/** Structural legality + normalized reason lines shared by every range candidate. */
+export interface CandidateLegality {
+  legal: boolean;
+  /** Reasons it is untradeable (empty when legal). */
+  reasons: string[];
+}
+
+export interface NormalizedResourceCandidate extends CandidateLegality {
+  resourceID: number;
+  name?: string;
+  category?: "luxury" | "strategic" | "bonus";
+  quantityAvailable: number;
+}
+export interface NormalizedCityCandidate extends CandidateLegality {
+  cityID: number;
+  name: string;
+  x: number;
+  y: number;
+}
+export interface NormalizedTechCandidate extends CandidateLegality {
+  techID: number;
+  name?: string;
+}
+export interface NormalizedThirdPartyCandidate extends CandidateLegality {
+  teamID: number;
+  name?: string;
+}
+
+/** The tradable range one side could put on the table, with normalized reason lines. */
+export interface NormalizedSideRange {
+  gold: { available: boolean; max: number; reasons: string[] };
+  goldPerTurn: { available: boolean; reasons: string[] };
+  maps: CandidateLegality;
+  openBorders: CandidateLegality;
+  defensivePact: CandidateLegality;
+  researchAgreement: CandidateLegality;
+  peaceTreaty: CandidateLegality;
+  allowEmbassy: CandidateLegality;
+  declarationOfFriendship: CandidateLegality;
+  vassalage: CandidateLegality;
+  vassalageRevoke: CandidateLegality;
+  resources: NormalizedResourceCandidate[];
+  cities: NormalizedCityCandidate[];
+  techs: NormalizedTechCandidate[];
+  thirdPartyPeace: NormalizedThirdPartyCandidate[];
+  thirdPartyWar: NormalizedThirdPartyCandidate[];
+}
+
+/** The full `inspect-deal` result surfaced to the deal board. */
+export interface InspectDealResponse {
+  items: InspectedTradeItem[];
+  promises: InspectedPromise[];
+  tradableRange: Record<string, NormalizedSideRange>;
+  defaultDuration?: number;
+  promiseTargets?: PromiseTargetInfo[];
+}
+
+/**
+ * Turn a candidate's raw reason string into normalized reason lines: empty when legal,
+ * a fallback line when illegal but the stock reason API was silent (mirrors `items`).
+ */
+function candidateReasons(legal: boolean, reason: string | undefined): string[] {
+  if (legal) return [];
+  const parsed = parseReasons(reason);
+  return parsed.length > 0 ? parsed : ["Not tradeable under current game state (the game provided no specific reason)."];
+}
+
+/** Normalize a single-shot toggle candidate (open borders, embassy, pacts, …). */
+function normalizeToggle(c: ToggleCandidate | undefined): CandidateLegality {
+  const legal = !!c?.legal;
+  return { legal, reasons: candidateReasons(legal, c?.reason) };
+}
+
+/**
+ * Normalize one side's raw range: strip reason tags into `reasons` arrays, coerce empty
+ * Lua tables ({}) into arrays, and preserve the enriched display fields.
+ */
+function normalizeSide(raw: Partial<SideRange>): NormalizedSideRange {
+  return {
+    gold: {
+      available: !!raw.gold?.available,
+      max: raw.gold?.max ?? 0,
+      reasons: candidateReasons(!!raw.gold?.available, raw.gold?.reason),
+    },
+    goldPerTurn: {
+      available: !!raw.goldPerTurn?.available,
+      reasons: candidateReasons(!!raw.goldPerTurn?.available, raw.goldPerTurn?.reason),
+    },
+    maps: normalizeToggle(raw.maps),
+    openBorders: normalizeToggle(raw.openBorders),
+    defensivePact: normalizeToggle(raw.defensivePact),
+    researchAgreement: normalizeToggle(raw.researchAgreement),
+    peaceTreaty: normalizeToggle(raw.peaceTreaty),
+    allowEmbassy: normalizeToggle(raw.allowEmbassy),
+    declarationOfFriendship: normalizeToggle(raw.declarationOfFriendship),
+    vassalage: normalizeToggle(raw.vassalage),
+    vassalageRevoke: normalizeToggle(raw.vassalageRevoke),
+    resources: asArray<SideRange["resources"][number]>(raw.resources).map((r) => ({
+      resourceID: r.resourceID,
+      name: r.name,
+      category: r.category,
+      quantityAvailable: r.quantityAvailable,
+      legal: !!r.legal,
+      reasons: candidateReasons(!!r.legal, r.reason),
+    })),
+    cities: asArray<SideRange["cities"][number]>(raw.cities).map((c) => ({
+      cityID: c.cityID,
+      name: c.name,
+      x: c.x,
+      y: c.y,
+      legal: !!c.legal,
+      reasons: candidateReasons(!!c.legal, c.reason),
+    })),
+    techs: asArray<SideRange["techs"][number]>(raw.techs).map((t) => ({
+      techID: t.techID,
+      name: t.name,
+      legal: !!t.legal,
+      reasons: candidateReasons(!!t.legal, t.reason),
+    })),
+    thirdPartyPeace: asArray<SideRange["thirdPartyPeace"][number]>(raw.thirdPartyPeace).map((t) => ({
+      teamID: t.teamID,
+      name: t.name,
+      legal: !!t.legal,
+      reasons: candidateReasons(!!t.legal, t.reason),
+    })),
+    thirdPartyWar: asArray<SideRange["thirdPartyWar"][number]>(raw.thirdPartyWar).map((t) => ({
+      teamID: t.teamID,
+      name: t.name,
+      legal: !!t.legal,
+      reasons: candidateReasons(!!t.legal, t.reason),
+    })),
+  };
+}
 
 /**
  * Tool that inspects a proposed/empty deal: legality + value for trade items,
@@ -169,18 +343,11 @@ class InspectDealTool extends ToolBase {
       };
     });
 
-    // Normalize the per-side range arrays (empty Lua tables may arrive as {}).
-    const tradableRange: Record<string, unknown> = {};
+    // Normalize the per-side range: strip reason tags into `reasons` arrays, coerce
+    // empty Lua tables ({}) into arrays, and preserve the enriched display fields.
+    const tradableRange: Record<string, NormalizedSideRange> = {};
     for (const [pid, raw] of Object.entries(inspection.range ?? {})) {
-      const side = raw as Partial<SideRange>;
-      tradableRange[pid] = {
-        ...side,
-        resources: asArray(side.resources),
-        cities: asArray(side.cities),
-        techs: asArray(side.techs),
-        thirdPartyPeace: asArray(side.thirdPartyPeace),
-        thirdPartyWar: asArray(side.thirdPartyWar),
-      };
+      tradableRange[pid] = normalizeSide(raw as Partial<SideRange>);
     }
 
     // 2) Promise agreeability factors, assembled from existing diplomacy getters.
@@ -190,6 +357,10 @@ class InspectDealTool extends ToolBase {
       items,
       promises: inspectedPromises,
       tradableRange,
+      defaultDuration: inspection.defaultDuration,
+      // Coerce: an empty Lua table arrives as {} (not []) over the bridge and would fail
+      // the z.array output schema; asArray normalizes it (and undefined) to [].
+      promiseTargets: asArray<PromiseTargetInfo>(inspection.promiseTargets),
     };
   }
 

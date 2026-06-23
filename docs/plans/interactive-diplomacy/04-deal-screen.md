@@ -63,18 +63,25 @@ Refresh state, inspection progress, errors, and the closed-this-turn lock remain
 
 ## Data required from `inspect-deal`
 
-`inspect-deal` remains the screen's single source of trade inventory, legality, and valuation data. Extend its response additively so the board can use game-facing labels rather than numeric placeholders:
+`inspect-deal` remains the screen's single source of trade inventory, legality, and valuation data. Its response is extended **additively** so the board can use game-facing labels rather than numeric placeholders. This data layer is **delivered**:
 
-- Resources include a localized display name and a category: `luxury`, `strategic`, or `bonus`.
+- Resources include a localized display name and a category — `luxury`, `strategic`, or `bonus` (from `ResourceClassType`).
 - Technologies include a localized display name.
-- Third-party peace and war entries include a display name for the target team or civilization.
-- Inventory candidates include current structural legality and reasons instead of structurally impossible candidates being omitted from the range.
+- Third-party peace and war entries include a display name for the target team, resolved from a representative civ on it.
+- Inventory candidates include current structural legality and **normalized reason lines** (`legal` + `reasons[]`) instead of structurally impossible candidates being omitted from the range — gold, the single-shot toggles, resources, cities, technologies, and third-party terms each carry their own legality + reasons.
 - The response includes the game's default deal duration.
-- The response includes eligible promise-target metadata: player ID, team ID, display name, and major/minor kind.
+- The response includes eligible promise-target metadata — player ID, team ID, display name, and major/minor kind — plus per-target **structural eligibility**:
+  - **Coop War** (major targets) carry `coopWarEligible`: both principals pass the game's `IsValidCoopWarTarget` request-phase check *and* no coop war is already `PREPARING` between them against that target. Absent on a DLL build without the new binding (treat as unknown → show anyway).
+  - **City-state promises** (minor targets) carry `protectingPlayerIDs`: which of the two principals currently protect the city-state, i.e. the valid recipients of a "stop bullying / don't attack my protected city-state" promise. Omitted when neither protects it.
+- Third-party trade entries and promise targets are only surfaced when **both** principals have met the civ — matching the stock screen, so a target's name never leaks a civ one side hasn't discovered.
 
-Keep numeric IDs as fallbacks when a localized name cannot be resolved. Structurally impossible inventory rows remain visible, are red, expose their reason, and cannot be added. This is distinct from an advisory `CvDealAI` sentinel value: sentinel valuation remains visible but does not make a structurally legal term unavailable. Replace the UI's loose `Record<string, unknown>` range handling with explicit TypeScript interfaces, including a typed inspected-promise result.
+Keep numeric IDs as fallbacks when a localized name cannot be resolved. Structurally impossible inventory rows remain visible, are red, expose their reason, and cannot be added. This is distinct from an advisory `CvDealAI` sentinel value: sentinel valuation remains visible but does not make a structurally legal term unavailable. The UI's loose `Record<string, unknown>` range handling is replaced with explicit TypeScript interfaces — the tool exports `InspectDealResponse`, `NormalizedSideRange`, the per-candidate types, the typed promise-target metadata, and a typed inspected-promise result.
 
 This enrichment does not change `Payload.Deal`, transcript message shapes, or the typed proposal/counter/accept/reject routes.
+
+### One read-only DLL addition (additive, not a gameplay change)
+
+To present Coop War eligibility from the game's own logic rather than reimplementing it in Lua, this stage exposes the existing `CvDiplomacyAI::IsValidCoopWarTarget` as a read-only `Players[id]:IsValidCoopWarTarget(target, bAtWarException)` binding (`CvLuaPlayer.cpp`), mirroring stage 3's read-only `GetTradeItemValue` getter — unconditionally registered (not `MOD_ACTIVE_DIPLOMACY`-gated), no enum/save change, `CvDealAI` untouched. The city-state promise check reuses the already-exposed `IsProtectingMinor`; the already-preparing guard reuses `GetCoopWarAcceptedState` + the `CoopWarStates` enum. `inspect-deal.lua` feature-detects the new binding (a guarded call yields `nil`/omitted eligibility on an older DLL), so the screen degrades gracefully until the rebuilt DLL ships through the normal release flow. This is the *only* DLL change in the stage and it is read-only — stage 6 remains the only **gameplay** DLL change. The `bAtWarException=false` request-phase semantics (and the `PREPARING` guard) keep the eligibility preview aligned with what stage-6 enactment will allow.
 
 ## Implementation shape
 
@@ -95,6 +102,7 @@ Reuse the existing typed deal-action API, `Payload.Deal`, `inspect-deal`, transc
 ## Test plan
 
 - Verify `inspect-deal` enrichment, resource categorization, target metadata, default duration, normalization, and numeric fallbacks.
+- Verify promise-target eligibility: Coop War targets reflect `IsValidCoopWarTarget` and exclude already-`PREPARING` wars; city-state promise targets carry the protecting principals; third-party trade entries and promise targets are hidden unless **both** sides have met the civ.
 - Verify structurally impossible inventory candidates are returned with reasons rather than filtered out.
 - Test pure catalog grouping, category order, selected-state handling, and stable mapping to original deal-item indices.
 - Verify the three-panel orientation and the left/right giver semantics.
