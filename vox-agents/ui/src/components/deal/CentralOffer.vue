@@ -17,11 +17,6 @@ re-inspects live, keeping the per-row legality/value index-aligned).
       <span>Deal on the table</span>
     </header>
 
-    <!-- Optional one-sentence line voiced alongside the deal (above the offer, per the in-game screen). -->
-    <div class="deal-message">
-      <InputText v-model="message" class="deal-message-input" :disabled="locked || busy" placeholder="A line to send with the deal (optional)…" />
-    </div>
-
     <div class="deal-offer-columns">
       <div v-for="col in columns" :key="col.sideID" class="deal-offer-col">
         <div class="deal-offer-col-title">{{ col.label }} give</div>
@@ -61,16 +56,8 @@ re-inspects live, keeping the per-row legality/value index-aligned).
               <InputNumber :modelValue="entry.item.duration" :min="1" size="small" :disabled="locked || busy" placeholder="Turns"
                 @update:modelValue="(v: number) => $emit('update-item', entry.index, { duration: v })" />
             </div>
-            <div v-else-if="entry.item.itemType === 'VOTE_COMMITMENT'" class="deal-offer-edit">
-              <InputNumber :modelValue="entry.item.resolutionID" :min="0" size="small" :disabled="locked || busy" placeholder="Resolution"
-                @update:modelValue="(v: number) => $emit('update-item', entry.index, { resolutionID: v })" />
-              <InputNumber :modelValue="entry.item.voteChoice" size="small" :disabled="locked || busy" placeholder="Choice"
-                @update:modelValue="(v: number) => $emit('update-item', entry.index, { voteChoice: v })" />
-              <InputNumber :modelValue="entry.item.numVotes" :min="1" size="small" :disabled="locked || busy" placeholder="Votes"
-                @update:modelValue="(v: number) => $emit('update-item', entry.index, { numVotes: v })" />
-              <Select :modelValue="!!entry.item.repeal" :options="voteRepealOptions" optionLabel="label" optionValue="value" size="small" :disabled="locked || busy"
-                @update:modelValue="(v: boolean) => $emit('update-item', entry.index, { repeal: v })" />
-            </div>
+            <!-- VOTE_COMMITMENT carries no central editor: the resolution, choice, vote count, and
+                 enact/repeal are all fixed when the row is picked from the World Congress list. -->
           </li>
 
           <!-- Promises the side pledges (the side is the promiser). The target, when needed, was
@@ -88,6 +75,12 @@ re-inspects live, keeping the per-row legality/value index-aligned).
       </div>
     </div>
 
+    <!-- Optional one-sentence line voiced alongside the deal, placed right above the value balance
+         (the last thing read before proposing). -->
+    <div class="deal-message">
+      <InputText v-model="message" class="deal-message-input" :disabled="locked || busy" placeholder="A line to send with the deal (optional)…" />
+    </div>
+
     <!-- Live value balance; sentinel estimates are clearly flagged. -->
     <div class="deal-balance">
       <span class="deal-balance-item" :class="balanceClass(youID)">Value to {{ youLabel }}: {{ formatBalance(youID) }}</span>
@@ -101,7 +94,6 @@ import { computed } from 'vue';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
 import type { TradeItem, PromiseTerm, InspectedTradeItem, InspectedPromise, NormalizedSideRange, PromiseTargetInfo } from '@/utils/types';
 import {
   formatItemLabel,
@@ -182,11 +174,6 @@ const balanceClass = (sideID: number) => {
 const goldMax = (item: TradeItem): number | undefined => rangeFor(item.fromPlayerID)?.gold.max;
 const resourceMax = (item: TradeItem): number | undefined =>
   rangeFor(item.fromPlayerID)?.resources.find((r) => r.resourceID === item.resourceID)?.quantityAvailable;
-
-const voteRepealOptions = [
-  { label: 'Enact', value: false },
-  { label: 'Repeal', value: true },
-];
 </script>
 
 <style scoped>

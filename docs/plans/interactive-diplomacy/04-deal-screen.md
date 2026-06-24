@@ -33,15 +33,16 @@ Both inventories follow the in-game screen's category order:
 4. Other resources
 5. World Congress
 6. Embassy, open borders, defensive pact, research agreement, declaration of friendship, maps, and peace
-7. Cities and technologies
-8. Third-party peace and war
-9. Promises
+7. Cities
+8. Technologies
+9. Third-party peace and war
+10. Promises
 
-Inventory rows are the primary controls. Clicking a simple row adds the term directly to the deal. Rows that need parameters open a compact inline editor for amounts, quantities, durations, targets, or votes. Singleton rows already present in the deal are visibly selected and cannot be added twice.
+Inventory rows are the primary controls. Clicking a simple row adds the term directly to the deal. Rows that need an amount, quantity, or duration open a compact inline editor on the central offer; rows that need a choice of target — third-party terms, targeted promises, and World Congress vote commitments — instead **expand to a list of eligible choices** and add a fully-formed term on click. Singleton rows already present in the deal are visibly selected and cannot be added twice.
 
 ### Deal on the table
 
-- The optional one-sentence deal message appears above the offer table.
+- The optional one-sentence deal message appears directly above the value balance (the last thing read before proposing).
 - Selected terms appear in the center under the side that gives them.
 - Quantitative and targeted terms remain editable from their central rows.
 - A term can be removed directly from the center.
@@ -93,7 +94,7 @@ To present Coop War eligibility from the game's own logic rather than reimplemen
 - Preserve `DealMessageCard.vue`, transcript interleaving, and deal reduction unless a small compatibility adjustment is required.
 - Continue debounced inspection and apply only the newest response.
 
-World Congress resolution enumeration remains outside this redo. Vote commitments continue to use an explicit compact editor and receive normal live inspection after being added.
+World Congress vote commitments are enumerated by `inspect-deal` (see [03-inspect-deal.md](03-inspect-deal.md)) and surfaced as an **expandable "Vote commitment" row** under World Congress — each in-session resolution/choice (enact or repeal) is picked directly, carrying its full term (resolution, choice, the game-computed vote count, enact/repeal) with no separate central editor. The category is hidden when no league is in session. Because the DLL allows only one vote commitment per giver per deal (`CvDeal::IsPossibleToTradeItem`'s `ContainsItemType` guard), once a side has one on the table the other vote targets are shown blocked (with a reason) until it is removed.
 
 ## Reuse
 

@@ -20,7 +20,7 @@ import {
   sideGives,
 } from './deal-helpers';
 
-/** The nine inventory categories, in the in-game display order. */
+/** The inventory categories, in the in-game display order. */
 export type CategoryKind =
   | 'gold'
   | 'luxury'
@@ -28,7 +28,8 @@ export type CategoryKind =
   | 'bonus'
   | 'congress'
   | 'toggles'
-  | 'citiesTechs'
+  | 'cities'
+  | 'techs'
   | 'thirdParty'
   | 'promises';
 
@@ -201,10 +202,11 @@ export function promiseTargetsFor(
 /**
  * Build the ordered, categorized inventory for one side. `ownerID` gives, `otherID` receives.
  * `currentItems` / `currentPromises` drive singleton selected-state. `defaultDuration` seeds
- * duration-bearing items. World Congress is a single seed row (explicit IDs, edited centrally)
- * since live resolutions can't be enumerated; promises surface all nine (target chosen centrally).
+ * duration-bearing items. World Congress expands into the in-session resolutions the range
+ * enumerates (each choice pre-filled, edited nowhere); promises surface all nine (target chosen
+ * centrally).
  *
- * Always returns the full nine categories in order — empty ones included — so the panel decides
+ * Always returns the full set of categories in order — empty ones included — so the panel decides
  * whether to render an empty category, and ordering is asserted directly in tests.
  */
 export function buildSideCatalog(args: {
@@ -229,6 +231,17 @@ export function buildSideCatalog(args: {
     item: TradeItem,
     secondary?: string
   ): InventoryRow => ({ key, label, secondary, legal, reasons, selected, addPayload: { kind: 'item', item } });
+
+  // An expandable header row: clicking it reveals its `targets`, each adding a fully-targeted term.
+  const expandableRow = (key: string, label: string, targets: InventoryTarget[]): InventoryRow => ({
+    key,
+    label,
+    secondary: `${targets.length} ${targets.length === 1 ? 'option' : 'options'}`,
+    legal: true,
+    reasons: [],
+    selected: false,
+    targets,
+  });
 
   // 1. Gold + gold per turn.
   const gold: InventoryRow[] = [];
@@ -264,14 +277,48 @@ export function buildSideCatalog(args: {
         )
       );
 
-  // 5. World Congress — a single seed row; resolution/votes set centrally.
-  const congress: InventoryRow[] = [
-    itemRow(
-      'VOTE_COMMITMENT', 'Vote commitment', true, [], false,
-      defaultItemFor('VOTE_COMMITMENT', ownerID, otherID),
-      'set resolution & votes in the offer'
-    ),
-  ];
+  // 5. World Congress — "Vote commitment" expands into the in-session resolutions the range
+  // enumerates. Each choice carries its full term (resolution, choice, the game-computed vote
+  // count, enact/repeal), so picking it needs no further central editing. Hidden when no league
+  // is in session (no candidates), like third-party rows.
+  //
+  // The DLL allows only ONE vote commitment per giver per deal (CvDeal::IsPossibleToTradeItem's
+  // ContainsItemType guard). The range is enumerated against an empty scratch deal, so it can't
+  // see the draft's existing commitment — replicate the rule here: once this side has any vote
+  // commitment on the table, the others are blocked (red, with a reason) until it's removed.
+  const sideHasVoteCommitment = ownerGives((i) => i.itemType === 'VOTE_COMMITMENT');
+  const voteTargets: InventoryTarget[] = (range?.voteCommitments ?? []).map((v) => {
+    const selected = ownerGives(
+      (i) =>
+        i.itemType === 'VOTE_COMMITMENT' &&
+        i.resolutionID === v.resolutionID &&
+        i.voteChoice === v.voteChoice &&
+        !!i.repeal === v.repeal
+    );
+    const blockedByExisting = sideHasVoteCommitment && !selected;
+    return {
+      key: `VC:${v.resolutionID}:${v.voteChoice}:${v.repeal}`,
+      label: v.name ?? `Resolution #${v.resolutionID}`,
+      legal: v.legal && !blockedByExisting,
+      reasons: blockedByExisting
+        ? ['Only one vote commitment per deal — remove the current one first.']
+        : v.reasons,
+      selected,
+      addPayload: {
+        kind: 'item',
+        item: {
+          ...defaultItemFor('VOTE_COMMITMENT', ownerID, otherID),
+          resolutionID: v.resolutionID,
+          voteChoice: v.voteChoice,
+          numVotes: v.numVotes,
+          repeal: v.repeal,
+        },
+      },
+    };
+  });
+  const congress: InventoryRow[] = voteTargets.length
+    ? [expandableRow('VOTE_COMMITMENT', 'Vote commitment', voteTargets)]
+    : [];
 
   // 6. Single-shot toggles (embassy, open borders, pacts, friendship, maps, peace, vassalage).
   const toggles: InventoryRow[] = range
@@ -285,42 +332,31 @@ export function buildSideCatalog(args: {
       })
     : [];
 
-  // 7. Cities, then technologies.
-  const citiesTechs: InventoryRow[] = [
-    ...(range?.cities ?? []).map((c) =>
-      itemRow(
-        `CITY:${c.cityID}`,
-        c.name || `City #${c.cityID}`,
-        c.legal,
-        c.reasons,
-        ownerGives((i) => i.itemType === 'CITIES' && i.cityID === c.cityID),
-        defaultItemFor('CITIES', ownerID, otherID, { cityID: c.cityID })
-      )
-    ),
-    ...(range?.techs ?? []).map((t) =>
-      itemRow(
-        `TECH:${t.techID}`,
-        t.name ? `Tech: ${t.name}` : `Tech #${t.techID}`,
-        t.legal,
-        t.reasons,
-        ownerGives((i) => i.itemType === 'TECHS' && i.techID === t.techID),
-        defaultItemFor('TECHS', ownerID, otherID, { techID: t.techID })
-      )
-    ),
-  ];
+  // 7. Cities.
+  const cities: InventoryRow[] = (range?.cities ?? []).map((c) =>
+    itemRow(
+      `CITY:${c.cityID}`,
+      c.name || `City #${c.cityID}`,
+      c.legal,
+      c.reasons,
+      ownerGives((i) => i.itemType === 'CITIES' && i.cityID === c.cityID),
+      defaultItemFor('CITIES', ownerID, otherID, { cityID: c.cityID })
+    )
+  );
 
-  // An expandable header row: clicking it reveals its `targets`, each adding a fully-targeted term.
-  const expandableRow = (key: string, label: string, targets: InventoryTarget[]): InventoryRow => ({
-    key,
-    label,
-    secondary: `${targets.length} ${targets.length === 1 ? 'option' : 'options'}`,
-    legal: true,
-    reasons: [],
-    selected: false,
-    targets,
-  });
+  // 8. Technologies.
+  const techs: InventoryRow[] = (range?.techs ?? []).map((t) =>
+    itemRow(
+      `TECH:${t.techID}`,
+      t.name ? `Tech: ${t.name}` : `Tech #${t.techID}`,
+      t.legal,
+      t.reasons,
+      ownerGives((i) => i.itemType === 'TECHS' && i.techID === t.techID),
+      defaultItemFor('TECHS', ownerID, otherID, { techID: t.techID })
+    )
+  );
 
-  // 8. Third-party peace / war — pick the target team from an expandable list (only if any exist).
+  // 9. Third-party peace / war — pick the target team from an expandable list (only if any exist).
   const thirdParty: InventoryRow[] = [];
   const peaceTargets: InventoryTarget[] = (range?.thirdPartyPeace ?? []).map((t) => ({
     key: `TPP:${t.teamID}`,
@@ -341,7 +377,7 @@ export function buildSideCatalog(args: {
   if (peaceTargets.length) thirdParty.push(expandableRow('TP_PEACE', 'Make peace with…', peaceTargets));
   if (warTargets.length) thirdParty.push(expandableRow('TP_WAR', 'Declare war on…', warTargets));
 
-  // 9. Promises (the nine). A targeted promise expands to pick its third party (and never auto-selects
+  // 10. Promises (the nine). A targeted promise expands to pick its third party (and never auto-selects
   // at the header); a non-targeted promise is a direct singleton-by-type.
   const promises: InventoryRow[] = PROMISE_TYPES.map((pt) => {
     if (PROMISE_NEEDS_TARGET.has(pt)) {
@@ -365,7 +401,8 @@ export function buildSideCatalog(args: {
     { kind: 'bonus', title: 'Other resources', rows: resourceRows('bonus') },
     { kind: 'congress', title: 'World Congress', rows: congress },
     { kind: 'toggles', title: 'Agreements', rows: toggles },
-    { kind: 'citiesTechs', title: 'Cities & technologies', rows: citiesTechs },
+    { kind: 'cities', title: 'Cities', rows: cities },
+    { kind: 'techs', title: 'Technologies', rows: techs },
     { kind: 'thirdParty', title: 'Third-party peace & war', rows: thirdParty },
     { kind: 'promises', title: 'Promises', rows: promises },
   ];

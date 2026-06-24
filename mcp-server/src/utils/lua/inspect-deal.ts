@@ -81,6 +81,25 @@ export interface ThirdPartyTeamCandidate {
 }
 
 /**
+ * One World Congress vote commitment the giver could put on the table — an in-session
+ * enact/repeal proposal paired with one of its voter choices. The committed vote count is
+ * the DLL's GetPotentialVotesForMember (the giver's remaining votes, adjusted by the
+ * receiver's diplomat presence), not all the giver's votes.
+ */
+export interface VoteCommitmentCandidate {
+  resolutionID: number;
+  voteChoice: number;
+  /** Votes the giver would commit (the game's computed amount, fixed at selection). */
+  numVotes: number;
+  /** True for a repeal proposal, false for an enact proposal. */
+  repeal: boolean;
+  /** Display name: resolution name + " — " + choice text (repeals prefixed "Repeal: "). */
+  name?: string;
+  legal: boolean;
+  reason: string;
+}
+
+/**
  * The tradable range one side could put on the table. Each candidate carries its own
  * structural legality + raw reason so a structurally-impossible row stays visible
  * (red) rather than being dropped (stage 4). Reason strings are raw here and stripped
@@ -103,6 +122,7 @@ export interface SideRange {
   techs: TechCandidate[];
   thirdPartyPeace: ThirdPartyTeamCandidate[];
   thirdPartyWar: ThirdPartyTeamCandidate[];
+  voteCommitments: VoteCommitmentCandidate[];
 }
 
 /** An eligible third-party promise target (Coop War → major; city-state promises → minor). */

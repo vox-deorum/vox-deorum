@@ -27,6 +27,7 @@ export type {
   NormalizedCityCandidate,
   NormalizedTechCandidate,
   NormalizedThirdPartyCandidate,
+  NormalizedVoteCommitmentCandidate,
   PromiseTargetInfo,
 } from '../../../mcp-server/dist/tools/knowledge/inspect-deal.js';
 

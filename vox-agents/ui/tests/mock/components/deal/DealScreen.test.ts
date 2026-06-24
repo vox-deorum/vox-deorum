@@ -33,6 +33,7 @@ const range = (over: Record<string, unknown> = {}) => ({
   techs: [],
   thirdPartyPeace: [],
   thirdPartyWar: [],
+  voteCommitments: [],
   ...over,
 });
 

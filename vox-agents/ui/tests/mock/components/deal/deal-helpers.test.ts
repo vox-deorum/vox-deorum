@@ -36,6 +36,7 @@ const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange =>
     techs: [],
     thirdPartyPeace: [],
     thirdPartyWar: [],
+    voteCommitments: [],
     ...over,
   }) as NormalizedSideRange;
 
@@ -83,7 +84,21 @@ describe('deal-helpers', () => {
     const targets: PromiseTargetInfo[] = [{ playerID: 3, teamID: 3, name: 'Washington', kind: 'major' }];
     expect(formatPromiseLabel(coop)).toContain('target: player 3');
     expect(formatPromiseLabel(coop, targets)).toContain('target: Washington');
-    expect(formatPromiseLabel(spy)).toBe('Stop spying on me');
+    expect(formatPromiseLabel(spy)).toBe("Won't spy on you");
+  });
+
+  it('labels a vote commitment with the resolution name + vote count from the giver range', () => {
+    const r = range({
+      voteCommitments: [
+        { resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false, name: 'Embargo — Yes', legal: true, reasons: [] },
+      ],
+    });
+    const vote = item({ itemType: 'VOTE_COMMITMENT', resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false });
+    expect(formatItemLabel(vote, r)).toBe('Vote: Embargo — Yes (12 votes)');
+    // Falls back to the bare resolution id when the range has no matching entry.
+    expect(formatItemLabel(item({ itemType: 'VOTE_COMMITMENT', resolutionID: 9, voteChoice: 0, numVotes: 1, repeal: false }), r)).toBe(
+      'Vote: resolution 9 (1 vote)'
+    );
   });
 
   it('sums the net value to a side from per-item values, excluding sentinels', () => {

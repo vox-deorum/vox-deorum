@@ -41,17 +41,20 @@ export const PROMISE_TYPES = [
   'COOP_WAR',
 ] as const;
 
-/** Human-readable promise labels. */
+/**
+ * Human-readable promise labels, phrased in the promiser's voice (what the offering side pledges
+ * toward the other side) so they read correctly on both the inventory row and the central offer.
+ */
 export const PROMISE_LABELS: Record<string, string> = {
-  MILITARY: "Won't attack / move troops away",
-  EXPANSION: "Don't settle near me",
-  BORDER: "Don't buy plots near my cities",
-  NO_CONVERT: "Don't spread religion",
-  NO_DIGGING: "Don't dig my antiquity sites",
-  SPY: 'Stop spying on me',
-  BULLY_CITY_STATE: 'Stop bullying my protected city-state',
-  ATTACK_CITY_STATE: "Don't attack my protected city-state",
-  COOP_WAR: 'Join / honor a cooperative war',
+  MILITARY: "Won't attack / will move troops away",
+  EXPANSION: "Won't settle near you",
+  BORDER: "Won't buy plots near your cities",
+  NO_CONVERT: "Won't spread my religion to you",
+  NO_DIGGING: "Won't dig your antiquity sites",
+  SPY: "Won't spy on you",
+  BULLY_CITY_STATE: "Won't bully your protected city-state",
+  ATTACK_CITY_STATE: "Won't attack your protected city-state",
+  COOP_WAR: 'Will join a cooperative war',
 };
 
 /** Promise types that require a third-party target. */
@@ -131,8 +134,14 @@ export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange): s
       const team = range?.thirdPartyWar.find((t) => t.teamID === item.thirdPartyTeamID);
       return `War with ${team?.name ?? `team ${item.thirdPartyTeamID}`}`;
     }
-    case 'VOTE_COMMITMENT':
-      return `Vote commitment (resolution ${item.resolutionID})`;
+    case 'VOTE_COMMITMENT': {
+      const vote = range?.voteCommitments.find(
+        (v) => v.resolutionID === item.resolutionID && v.voteChoice === item.voteChoice && v.repeal === !!item.repeal
+      );
+      const name = vote?.name ?? `resolution ${item.resolutionID}`;
+      const votes = item.numVotes ?? vote?.numVotes;
+      return `Vote: ${name}${votes !== undefined ? ` (${votes} ${votes === 1 ? 'vote' : 'votes'})` : ''}`;
+    }
     default: {
       const toggle = TOGGLE_ITEMS.find((t) => t.itemType === item.itemType);
       return toggle ? toggle.label : item.itemType;

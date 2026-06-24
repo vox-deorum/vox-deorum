@@ -42,6 +42,7 @@ function emptySide(overrides: Partial<SideRange> = {}): SideRange {
     techs: [],
     thirdPartyPeace: [],
     thirdPartyWar: [],
+    voteCommitments: [],
     ...overrides,
   };
 }
@@ -332,6 +333,10 @@ describe('inspect-deal', () => {
             ],
             techs: [{ techID: 4, name: 'Pottery', legal: true, reason: '' }],
             thirdPartyWar: [{ teamID: 2, name: 'Egypt', legal: false, reason: 'You are already at war.' }],
+            voteCommitments: [
+              { resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false, name: 'Embargo — Yes', legal: true, reason: '' },
+              { resolutionID: 8, voteChoice: 0, numVotes: 12, repeal: true, name: 'Repeal: Scholars', legal: false, reason: 'You have no spare votes.' },
+            ],
           }),
           '3': emptySide(),
         },
@@ -346,6 +351,9 @@ describe('inspect-deal', () => {
     expect(side.techs[0]).toMatchObject({ techID: 4, name: 'Pottery', legal: true, reasons: [] });
     expect(side.thirdPartyWar[0]).toMatchObject({ teamID: 2, name: 'Egypt', legal: false });
     expect(side.thirdPartyWar[0].reasons).toEqual(['You are already at war.']);
+    expect(side.voteCommitments[0]).toMatchObject({ resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false, name: 'Embargo — Yes', legal: true, reasons: [] });
+    expect(side.voteCommitments[1]).toMatchObject({ resolutionID: 8, repeal: true, legal: false });
+    expect(side.voteCommitments[1].reasons).toEqual(['You have no spare votes.']);
   });
 
   it('assembles promise agreeability factors and fetches getters once per promiser', async () => {

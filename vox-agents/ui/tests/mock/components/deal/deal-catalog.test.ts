@@ -29,6 +29,7 @@ const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange =>
     techs: [],
     thirdPartyPeace: [],
     thirdPartyWar: [],
+    voteCommitments: [],
     ...over,
   }) as NormalizedSideRange;
 
@@ -47,7 +48,7 @@ const build = (over: Partial<Parameters<typeof buildSideCatalog>[0]> = {}): Inve
 const cat = (cats: InventoryCategory[], kind: string) => cats.find((c) => c.kind === kind)!;
 
 describe('deal-catalog', () => {
-  it('returns the nine categories in the in-game order', () => {
+  it('returns the categories in the in-game order', () => {
     expect(build().map((c) => c.kind)).toEqual([
       'gold',
       'luxury',
@@ -55,7 +56,8 @@ describe('deal-catalog', () => {
       'bonus',
       'congress',
       'toggles',
-      'citiesTechs',
+      'cities',
+      'techs',
       'thirdParty',
       'promises',
     ]);
@@ -191,6 +193,56 @@ describe('deal-catalog', () => {
     });
     const war = cat(cats, 'thirdParty').rows.find((r) => r.key === 'TP_WAR')!;
     expect(war.targets![0]!.selected).toBe(true);
+  });
+
+  it('expands World Congress into the enumerated resolutions, each carrying its full vote term', () => {
+    const cats = build({
+      range: range({
+        voteCommitments: [
+          { resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false, name: 'Embargo — Yes', legal: true, reasons: [] },
+          { resolutionID: 8, voteChoice: 0, numVotes: 12, repeal: true, name: 'Repeal: Scholars', legal: false, reasons: ['Not enough votes'] },
+        ],
+      }),
+    });
+    const congress = cat(cats, 'congress').rows;
+    expect(congress.map((r) => r.key)).toEqual(['VOTE_COMMITMENT']);
+
+    const vote = congress[0]!;
+    expect(vote.addPayload).toBeUndefined(); // expandable header, not a direct add
+    expect(vote.targets!.map((t) => t.label)).toEqual(['Embargo — Yes', 'Repeal: Scholars']);
+    // The picked term is fully formed (resolution, choice, game-computed votes, enact/repeal).
+    expect(vote.targets![0]!.addPayload).toMatchObject({
+      kind: 'item',
+      item: { itemType: 'VOTE_COMMITMENT', resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false },
+    });
+    // Nothing on the table yet: the legal one is addable, the impossible one shows its own reason.
+    expect(vote.targets![0]!.selected).toBe(false);
+    expect(vote.targets![1]!.legal).toBe(false);
+    expect(vote.targets![1]!.reasons).toEqual(['Not enough votes']);
+  });
+
+  it('blocks the other vote targets once the side has one vote commitment (DLL allows one per deal)', () => {
+    const cats = build({
+      range: range({
+        voteCommitments: [
+          { resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false, name: 'Embargo — Yes', legal: true, reasons: [] },
+          { resolutionID: 8, voteChoice: 0, numVotes: 12, repeal: true, name: 'Repeal: Scholars', legal: true, reasons: [] },
+        ],
+      }),
+      currentItems: [{ fromPlayerID: 0, toPlayerID: 1, itemType: 'VOTE_COMMITMENT', resolutionID: 5, voteChoice: 1, numVotes: 12, repeal: false }],
+    });
+    const targets = cat(cats, 'congress').rows[0]!.targets!;
+
+    // The committed one is selected (shown "on the table"), still legal.
+    expect(targets[0]).toMatchObject({ selected: true, legal: true });
+    // Every other vote is blocked until the current one is removed.
+    expect(targets[1]!.selected).toBe(false);
+    expect(targets[1]!.legal).toBe(false);
+    expect(targets[1]!.reasons).toEqual(['Only one vote commitment per deal — remove the current one first.']);
+  });
+
+  it('hides the World Congress category when no resolutions are in session', () => {
+    expect(cat(build({ range: range({ voteCommitments: [] }) }), 'congress').rows).toHaveLength(0);
   });
 
   it('seeds default items: qty 1, the default duration, and gold capped at the range max', () => {

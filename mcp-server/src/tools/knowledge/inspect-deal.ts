@@ -178,6 +178,16 @@ export interface NormalizedThirdPartyCandidate extends CandidateLegality {
   teamID: number;
   name?: string;
 }
+export interface NormalizedVoteCommitmentCandidate extends CandidateLegality {
+  resolutionID: number;
+  voteChoice: number;
+  /** Votes the giver would commit (the game's computed amount, fixed at selection). */
+  numVotes: number;
+  /** True for a repeal proposal, false for an enact proposal. */
+  repeal: boolean;
+  /** Resolution name + choice text (repeals prefixed "Repeal: "). */
+  name?: string;
+}
 
 /** The tradable range one side could put on the table, with normalized reason lines. */
 export interface NormalizedSideRange {
@@ -197,6 +207,7 @@ export interface NormalizedSideRange {
   techs: NormalizedTechCandidate[];
   thirdPartyPeace: NormalizedThirdPartyCandidate[];
   thirdPartyWar: NormalizedThirdPartyCandidate[];
+  voteCommitments: NormalizedVoteCommitmentCandidate[];
 }
 
 /** The full `inspect-deal` result surfaced to the deal board. */
@@ -281,6 +292,15 @@ function normalizeSide(raw: Partial<SideRange>): NormalizedSideRange {
       name: t.name,
       legal: !!t.legal,
       reasons: candidateReasons(!!t.legal, t.reason),
+    })),
+    voteCommitments: asArray<SideRange["voteCommitments"][number]>(raw.voteCommitments).map((v) => ({
+      resolutionID: v.resolutionID,
+      voteChoice: v.voteChoice,
+      numVotes: v.numVotes,
+      repeal: !!v.repeal,
+      name: v.name,
+      legal: !!v.legal,
+      reasons: candidateReasons(!!v.legal, v.reason),
     })),
   };
 }

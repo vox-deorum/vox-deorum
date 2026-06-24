@@ -64,7 +64,8 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
       </div>
     </div>
 
-    <!-- Proposal-state actions. -->
+    <!-- Footer: proposal-state actions on the left; board status (proposal state, live-inspection
+         progress) and the reload button grouped to the right. -->
     <div class="deal-actions">
       <span v-if="locked" class="deal-muted">Conversation closed this turn — deal actions are locked.</span>
       <template v-else>
@@ -89,24 +90,24 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           Remove or fix the impossible term (red) to accept.
         </span>
       </template>
-    </div>
 
-    <!-- Subdued board-level status: proposal state, live-inspection progress, reload. -->
-    <div class="deal-status">
-      <Tag v-if="reduction.status === 'open'" value="Active proposal" severity="info" />
-      <Tag v-else-if="reduction.status === 'rejected'" value="Last proposal rejected" severity="warn" />
-      <Tag v-else-if="reduction.status === 'enacted'" value="Enacted" severity="success" />
-      <span v-if="inspecting" class="deal-muted"><i class="pi pi-spin pi-spinner" /> evaluating…</span>
-      <Button
-        class="deal-refresh"
-        icon="pi pi-refresh"
-        text
-        rounded
-        size="small"
-        :disabled="busy"
-        @click="reloadDeals"
-        v-tooltip.bottom="'Reload proposals & re-evaluate'"
-      />
+      <!-- Right-aligned status group (shown in both locked and unlocked states). -->
+      <div class="deal-status">
+        <Tag v-if="reduction.status === 'open'" value="Active proposal" severity="info" />
+        <Tag v-else-if="reduction.status === 'rejected'" value="Last proposal rejected" severity="warn" />
+        <Tag v-else-if="reduction.status === 'enacted'" value="Enacted" severity="success" />
+        <span v-if="inspecting" class="deal-muted"><i class="pi pi-spin pi-spinner" /> evaluating…</span>
+        <Button
+          class="deal-refresh"
+          icon="pi pi-refresh"
+          text
+          rounded
+          size="small"
+          :disabled="busy"
+          @click="reloadDeals"
+          v-tooltip.bottom="'Reload proposals & re-evaluate'"
+        />
+      </div>
     </div>
   </div>
 </template>

@@ -137,9 +137,10 @@
 
 /* ---- Central offer ----------------------------------------------------------------------- */
 
+/* Sits between the offer columns and the value balance; the top border separates it from the offer. */
 .deal-message {
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid var(--p-content-border-color);
+  border-top: 1px solid var(--p-content-border-color);
 }
 .deal-message-input {
   width: 100%;
@@ -220,24 +221,22 @@
 
 /* ---- Status + actions -------------------------------------------------------------------- */
 
+/* Board status (proposal tags, live-inspection hint, reload) grouped at the right of the footer. */
 .deal-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
-  min-height: 1.75rem;
+  margin-left: auto;
 }
 .deal-muted {
   color: var(--p-text-muted-color);
   font-size: 0.85rem;
-}
-.deal-refresh {
-  margin-left: auto;
 }
 .deal-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.5rem;
+  min-height: 1.75rem;
   flex-wrap: wrap;
 }

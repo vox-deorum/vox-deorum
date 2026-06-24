@@ -278,9 +278,48 @@ local function enumerateSide(deal, giver, receiver)
   out.thirdPartyPeace = tpPeace
   out.thirdPartyWar = tpWar
 
-  -- NOTE: vote-commitment enumeration is intentionally omitted from the range (it
-  -- needs live World Congress resolution context the deal screen builds separately).
-  -- Vote commitments are still fully supported as explicit proposed terms.
+  -- World Congress vote commitments the giver could put on the table, enumerated exactly as
+  -- the in-game trade screen does (TradeLogic.lua's UpdateLeagueVotes / RefreshPocketVotes):
+  -- every in-session enact/repeal proposal expands into its voter choices. The committed vote
+  -- count is the DLL's own GetPotentialVotesForMember(receiver, giver) — the giver's REMAINING
+  -- starting votes (after existing commitments), adjusted by the receiver's diplomat presence —
+  -- NOT simply all the giver's votes. pcall-guarded so a DLL build without the League bindings
+  -- (or no active league) degrades to an empty list rather than erroring.
+  local voteCommitments = {}
+  pcall(function()
+    if Game.GetNumActiveLeagues() <= 0 then return end
+    local pLeague = Game.GetActiveLeague()
+    if pLeague == nil then return end
+    local numVotes = pLeague:GetPotentialVotesForMember(receiver, giver)
+
+    -- One proposal expands into one entry per voter choice (its display name + that choice's
+    -- text), each with the giver's vote count and its own structural legality.
+    local function addProposal(t, decision, repeal, prefix)
+      local baseName = pLeague:GetResolutionName(t.Type, t.ID, t.ProposerDecision, false) or ""
+      for _, choice in ipairs(pLeague:GetChoicesForDecision(decision)) do
+        local choiceText = pLeague:GetTextForChoice(decision, choice) or ""
+        local name = prefix .. baseName
+        if choiceText ~= "" then name = name .. " — " .. choiceText end
+        local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_VOTE_COMMITMENT, t.ID, choice, numVotes, repeal)
+        table.insert(voteCommitments, {
+          resolutionID = t.ID, voteChoice = choice, numVotes = numVotes,
+          repeal = repeal, name = name, legal = legal, reason = reason,
+        })
+      end
+    end
+
+    -- Enact proposals: voter decision comes from each resolution's own definition.
+    for _, t in ipairs(pLeague:GetEnactProposals()) do
+      local decision = GameInfo.ResolutionDecisions[GameInfo.Resolutions[t.Type].VoterDecision].ID
+      addProposal(t, decision, false, "")
+    end
+    -- Repeal proposals: always the shared "repeal" decision.
+    local repealDecision = GameInfo.ResolutionDecisions["RESOLUTION_DECISION_REPEAL"].ID
+    for _, t in ipairs(pLeague:GetRepealProposals()) do
+      addProposal(t, repealDecision, true, "Repeal: ")
+    end
+  end)
+  out.voteCommitments = voteCommitments
 
   return out
 end
