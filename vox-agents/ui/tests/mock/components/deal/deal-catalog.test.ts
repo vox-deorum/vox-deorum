@@ -48,12 +48,11 @@ const build = (over: Partial<Parameters<typeof buildSideCatalog>[0]> = {}): Inve
 const cat = (cats: InventoryCategory[], kind: string) => cats.find((c) => c.kind === kind)!;
 
 describe('deal-catalog', () => {
-  it('returns the categories in the in-game order', () => {
+  it('returns the categories in the in-game order (no bonus bucket — bonus resources are never tradeable)', () => {
     expect(build().map((c) => c.kind)).toEqual([
       'gold',
       'luxury',
       'strategic',
-      'bonus',
       'congress',
       'toggles',
       'cities',
@@ -61,23 +60,21 @@ describe('deal-catalog', () => {
       'thirdParty',
       'promises',
     ]);
+    // Bonus resources are filtered out at the inspect-deal source, so there is no bucket for them.
+    expect(build().some((c) => (c.kind as string) === 'bonus')).toBe(false);
   });
 
-  it('buckets resources into luxury / strategic / other by category; uncategorized falls into Other', () => {
+  it('buckets resources into luxury / strategic only (bonus is hidden upstream)', () => {
     const cats = build({
       range: range({
         resources: [
           { resourceID: 1, name: 'Wine', category: 'luxury', quantityAvailable: 2, legal: true, reasons: [] },
           { resourceID: 2, name: 'Iron', category: 'strategic', quantityAvailable: 5, legal: true, reasons: [] },
-          { resourceID: 3, name: 'Wheat', category: 'bonus', quantityAvailable: 9, legal: true, reasons: [] },
-          // category absent upstream → must not vanish; folds into "Other resources" (bonus).
-          { resourceID: 4, name: 'Mystery', quantityAvailable: 1, legal: true, reasons: [] },
         ],
       }),
     });
     expect(cat(cats, 'luxury').rows.map((r) => r.label)).toEqual(['Wine']);
     expect(cat(cats, 'strategic').rows.map((r) => r.label)).toEqual(['Iron']);
-    expect(cat(cats, 'bonus').rows.map((r) => r.label)).toEqual(['Wheat', 'Mystery']);
     expect(cat(cats, 'strategic').rows[0]!.secondary).toBe('≤ 5');
   });
 
@@ -98,6 +95,22 @@ describe('deal-catalog', () => {
     const ob = cat(cats, 'toggles').rows.find((r) => r.key === 'OPEN_BORDERS')!;
     expect(ob.legal).toBe(false);
     expect(ob.reasons).toEqual(['No embassy']);
+  });
+
+  it('omits ruleset-gated toggles entirely when absent from the range (hidden, not red)', () => {
+    // The inspect-deal source drops research-agreement / vassalage when the game option forbids
+    // them, so the row must not appear at all — while a present-but-illegal toggle still renders.
+    const gated = range();
+    delete (gated as Partial<NormalizedSideRange>).researchAgreement;
+    delete (gated as Partial<NormalizedSideRange>).vassalage;
+    delete (gated as Partial<NormalizedSideRange>).vassalageRevoke;
+    const keys = cat(build({ range: gated }), 'toggles').rows.map((r) => r.key);
+    expect(keys).not.toContain('RESEARCH_AGREEMENT');
+    expect(keys).not.toContain('VASSALAGE');
+    expect(keys).not.toContain('VASSALAGE_REVOKE');
+    // Non-gated toggles are unaffected.
+    expect(keys).toContain('OPEN_BORDERS');
+    expect(keys).toContain('PEACE_TREATY');
   });
 
   it('shows singletons already on the table as selected', () => {

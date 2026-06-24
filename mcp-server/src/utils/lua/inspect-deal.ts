@@ -104,6 +104,11 @@ export interface VoteCommitmentCandidate {
  * structural legality + raw reason so a structurally-impossible row stays visible
  * (red) rather than being dropped (stage 4). Reason strings are raw here and stripped
  * of color/newline tags in the inspect-deal tool layer.
+ *
+ * `researchAgreement` / `vassalage` / `vassalageRevoke` are OPTIONAL: the Lua omits them
+ * entirely when the ruleset forbids the whole category (research agreements / vassalage game
+ * options off), so the pocket is hidden rather than shown red. Tech trading is hidden the same
+ * way but degrades to an empty `techs` array.
  */
 export interface SideRange {
   gold: { available: boolean; max: number; reason?: string };
@@ -111,12 +116,12 @@ export interface SideRange {
   maps: ToggleCandidate;
   openBorders: ToggleCandidate;
   defensivePact: ToggleCandidate;
-  researchAgreement: ToggleCandidate;
+  researchAgreement?: ToggleCandidate;
   peaceTreaty: ToggleCandidate;
   allowEmbassy: ToggleCandidate;
   declarationOfFriendship: ToggleCandidate;
-  vassalage: ToggleCandidate;
-  vassalageRevoke: ToggleCandidate;
+  vassalage?: ToggleCandidate;
+  vassalageRevoke?: ToggleCandidate;
   resources: ResourceCandidate[];
   cities: CityCandidate[];
   techs: TechCandidate[];

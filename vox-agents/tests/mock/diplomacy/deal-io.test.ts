@@ -19,6 +19,7 @@ import {
   appendDealProposal,
   appendDealReject,
   readDealMessages,
+  IllegalDealError,
   type InspectDealResult,
 } from '../../../src/utils/diplomacy/deal.js';
 
@@ -113,6 +114,27 @@ describe('appendDealProposal', () => {
 
     await expect(appendDealProposal(thread(), 1, 'deal-proposal', 'Offer', emptyDeal))
       .rejects.toThrow('Could not inspect deal before storing proposal');
+    expect(mcp.calls('append-message')).toHaveLength(0);
+  });
+
+  it('hard-rejects (IllegalDealError) a proposal with an untradeable item, archiving nothing', async () => {
+    // Legality is enforced, not advisory: a deal carrying an illegal term is refused before the
+    // archival write — covering both the UI route and the negotiator that share this function.
+    const inspection: InspectDealResult = {
+      items: [
+        { fromPlayerID: 1, toPlayerID: 3, itemType: 'RESOURCES', legality: false, reasons: ['Bonus resources cannot be traded.'], valueIfIGive: 0, valueIfIReceive: 0 },
+      ],
+      promises: [],
+      tradableRange: {},
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+
+    const deal = {
+      version: 1 as const,
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'RESOURCES' as const, resourceID: 9, quantity: 1 }],
+      promises: [],
+    };
+    await expect(appendDealProposal(thread(), 1, 'deal-proposal', 'Offer', deal)).rejects.toThrow(IllegalDealError);
     expect(mcp.calls('append-message')).toHaveLength(0);
   });
 

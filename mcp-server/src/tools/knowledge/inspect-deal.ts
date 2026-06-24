@@ -196,12 +196,15 @@ export interface NormalizedSideRange {
   maps: CandidateLegality;
   openBorders: CandidateLegality;
   defensivePact: CandidateLegality;
-  researchAgreement: CandidateLegality;
+  /** Absent when the ruleset forbids research agreements (hidden, not shown red). */
+  researchAgreement?: CandidateLegality;
   peaceTreaty: CandidateLegality;
   allowEmbassy: CandidateLegality;
   declarationOfFriendship: CandidateLegality;
-  vassalage: CandidateLegality;
-  vassalageRevoke: CandidateLegality;
+  /** Absent when the ruleset forbids vassalage (hidden, not shown red). */
+  vassalage?: CandidateLegality;
+  /** Absent when the ruleset forbids vassalage (hidden, not shown red). */
+  vassalageRevoke?: CandidateLegality;
   resources: NormalizedResourceCandidate[];
   cities: NormalizedCityCandidate[];
   techs: NormalizedTechCandidate[];
@@ -253,12 +256,14 @@ function normalizeSide(raw: Partial<SideRange>): NormalizedSideRange {
     maps: normalizeToggle(raw.maps),
     openBorders: normalizeToggle(raw.openBorders),
     defensivePact: normalizeToggle(raw.defensivePact),
-    researchAgreement: normalizeToggle(raw.researchAgreement),
     peaceTreaty: normalizeToggle(raw.peaceTreaty),
     allowEmbassy: normalizeToggle(raw.allowEmbassy),
     declarationOfFriendship: normalizeToggle(raw.declarationOfFriendship),
-    vassalage: normalizeToggle(raw.vassalage),
-    vassalageRevoke: normalizeToggle(raw.vassalageRevoke),
+    // Ruleset-gated toggles: when the Lua omits one (game option off) it stays ABSENT here —
+    // hidden from the board and the negotiator — instead of defaulting to a red candidate.
+    ...(raw.researchAgreement ? { researchAgreement: normalizeToggle(raw.researchAgreement) } : {}),
+    ...(raw.vassalage ? { vassalage: normalizeToggle(raw.vassalage) } : {}),
+    ...(raw.vassalageRevoke ? { vassalageRevoke: normalizeToggle(raw.vassalageRevoke) } : {}),
     resources: asArray<SideRange["resources"][number]>(raw.resources).map((r) => ({
       resourceID: r.resourceID,
       name: r.name,

@@ -25,7 +25,6 @@ export type CategoryKind =
   | 'gold'
   | 'luxury'
   | 'strategic'
-  | 'bonus'
   | 'congress'
   | 'toggles'
   | 'cities'
@@ -260,11 +259,11 @@ export function buildSideCatalog(args: {
     ));
   }
 
-  // 2–4. Resources, bucketed by category. `category` is optional upstream, so an absent/unknown
-  // category falls into "Other resources" (bonus) rather than vanishing from every bucket.
-  const resourceRows = (category: 'luxury' | 'strategic' | 'bonus'): InventoryRow[] =>
+  // 2–3. Resources, bucketed by category. Bonus resources are never tradeable, so the inspect-deal
+  // source omits them entirely — only luxury and strategic buckets exist here.
+  const resourceRows = (category: 'luxury' | 'strategic'): InventoryRow[] =>
     (range?.resources ?? [])
-      .filter((r) => (category === 'bonus' ? r.category !== 'luxury' && r.category !== 'strategic' : r.category === category))
+      .filter((r) => r.category === category)
       .map((r) =>
         itemRow(
           `RES:${r.resourceID}`,
@@ -321,14 +320,17 @@ export function buildSideCatalog(args: {
     : [];
 
   // 6. Single-shot toggles (embassy, open borders, pacts, friendship, maps, peace, vassalage).
+  // A ruleset-gated toggle (research agreement / vassalage) is ABSENT from the range when the
+  // game option forbids it — skip it so it renders nowhere, rather than showing it red.
   const toggles: InventoryRow[] = range
-    ? TOGGLE_ITEMS.map((t) => {
-        const cand = range[t.rangeKey] as CandidateLegality;
-        return itemRow(
+    ? TOGGLE_ITEMS.flatMap((t) => {
+        const cand = range[t.rangeKey] as CandidateLegality | undefined;
+        if (!cand) return [];
+        return [itemRow(
           t.itemType, t.label, cand.legal, cand.reasons,
           isSingletonSelected(t.itemType, ownerID, currentItems),
           defaultItemFor(t.itemType, ownerID, otherID)
-        );
+        )];
       })
     : [];
 
@@ -398,7 +400,6 @@ export function buildSideCatalog(args: {
     { kind: 'gold', title: 'Gold', rows: gold },
     { kind: 'luxury', title: 'Luxury resources', rows: resourceRows('luxury') },
     { kind: 'strategic', title: 'Strategic resources', rows: resourceRows('strategic') },
-    { kind: 'bonus', title: 'Other resources', rows: resourceRows('bonus') },
     { kind: 'congress', title: 'World Congress', rows: congress },
     { kind: 'toggles', title: 'Agreements', rows: toggles },
     { kind: 'cities', title: 'Cities', rows: cities },

@@ -12,6 +12,7 @@ import createEnactAgentDealTool from '../../../src/tools/actions/enact-agent-dea
 import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
 
 // The append-message major-civ check falls back to a live Lua fetch when the cache is empty.
 vi.mock('../../../src/knowledge/getters/player-information.js', async (importOriginal) => {
@@ -27,6 +28,14 @@ beforeEach(async () => {
   store = await setupDiplomacyStore(10);
   await seedPlayer(store, 1);
   await seedPlayer(store, 3);
+  // The enactment legality re-check inspects the stored deal via the bridge. These store-only
+  // tests have no bridge, so stub it to report all-legal by default (individual tests override).
+  vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue({
+    items: [],
+    range: {},
+    defaultDuration: 30,
+    promiseTargets: [],
+  } as any);
 });
 
 afterEach(async () => {
@@ -212,5 +221,48 @@ describe('enact-agent-deal (stub)', () => {
       SpeakerID: 3, MessageType: 'text', Content: 'hi',
     } as any);
     await expect(enact.execute({ ProposalMessageID: text.ID } as any)).rejects.toThrow(/not a deal-proposal or deal-counter/);
+  });
+
+  it('refuses to enact a deal the re-inspection reports as illegal, writing nothing', async () => {
+    const proposalID = await seedProposal(3, {
+      version: 1,
+      items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'RESEARCH_AGREEMENT' }],
+      promises: [],
+    });
+    // The deal turned illegal between authoring and acceptance (e.g. a rule/state change).
+    vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue({
+      items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'RESEARCH_AGREEMENT', legal: false, reason: 'Research agreements are disabled.', valueToGiver: 0, valueToReceiver: 0 }],
+      range: {},
+      defaultDuration: 30,
+      promiseTargets: [],
+    } as any);
+
+    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(/untradeable/i);
+    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
+    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
+  });
+
+  it('still enacts when the bridge cannot inspect (null) — the authoring guard already vetted it', async () => {
+    const proposalID = await seedProposal();
+    vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue(null as any);
+
+    const result = await enact.execute({ ProposalMessageID: proposalID } as any);
+    expect(typeof result.EnactedMessageID).toBe('number');
+    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
+  });
+
+  it('enacts a promise-only / item-less deal even when the bridge encodes items as {} (empty Lua table)', async () => {
+    const proposalID = await seedProposal();
+    // The live bridge returns an empty list as {} (not []); the guard must coerce, not throw.
+    vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue({
+      items: {},
+      range: {},
+      defaultDuration: 30,
+      promiseTargets: [],
+    } as any);
+
+    const result = await enact.execute({ ProposalMessageID: proposalID } as any);
+    expect(typeof result.EnactedMessageID).toBe('number');
+    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
   });
 });

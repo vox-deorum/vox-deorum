@@ -323,6 +323,26 @@ describe('inspect-deal', () => {
     expect(side.defensivePact.reasons[0]).toMatch(/no specific reason/i);
   });
 
+  it('keeps ruleset-gated toggles ABSENT (hidden, not red) when the Lua omits them', async () => {
+    // When a game option forbids the whole category, the Lua leaves the field unset; the
+    // normalizer must NOT materialize it as a red candidate — it stays absent so the board and
+    // negotiator hide it (distinct from a present-but-illegal toggle that should show red).
+    const side = emptySide();
+    delete (side as Partial<SideRange>).researchAgreement;
+    delete (side as Partial<SideRange>).vassalage;
+    delete (side as Partial<SideRange>).vassalageRevoke;
+    inspectSpy.mockResolvedValue(cannedResult({ range: { '1': side, '3': emptySide() } }));
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const normalized = result.tradableRange['1'] as NormalizedSideRange;
+
+    expect(normalized.researchAgreement).toBeUndefined();
+    expect(normalized.vassalage).toBeUndefined();
+    expect(normalized.vassalageRevoke).toBeUndefined();
+    // A non-gated toggle the Lua still emits is normalized as usual (present, red here).
+    expect(normalized.openBorders.legal).toBe(false);
+  });
+
   it('keeps impossible city / tech / third-party candidates with their reasons', async () => {
     inspectSpy.mockResolvedValue(
       cannedResult({

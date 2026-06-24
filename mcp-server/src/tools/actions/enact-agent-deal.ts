@@ -24,6 +24,7 @@ import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { knowledgeManager } from "../../server.js";
 import { applyVisibility, composeVisibility } from "../../utils/knowledge/visibility.js";
 import { DealPayloadSchema } from "../../utils/deal-schema.js";
+import { inspectDeal } from "../../utils/lua/inspect-deal.js";
 
 /** Proposal/counter message types an enactment may answer. */
 const PROPOSAL_TYPES = new Set(["deal-proposal", "deal-counter"]);
@@ -193,8 +194,31 @@ class EnactAgentDealTool extends ToolBase {
         throw new Error(`AccepterID ${accepterID} must be the proposal recipient (${recipientID})`);
       }
 
-      // ── Stage 6 will insert DLL validation + EnactAgentDeal here, using storedDeal.data
-      //    and applying promise commitments before the transcript records are committed. ──
+      // ── Legality re-check (stage-6 DLL EnactAgentDeal will build on this). A proposal that was
+      //    legal when authored can turn illegal before acceptance (game state moved), so re-inspect
+      //    the stored terms and refuse to enact an untradeable deal rather than record a bad one.
+      //    If the bridge can't inspect right now (null or error), the authoring-time guard already
+      //    vetted these terms, so a transient gap should not block enactment — we proceed. ──
+      let inspectionItems: { itemType: string; legal: boolean; reason: string }[] = [];
+      try {
+        const inspection = await inspectDeal(Player1ID, Player2ID, storedDeal.data.items);
+        // The Lua bridge encodes an empty list as {} (not []), so an item-less / promise-only
+        // deal would arrive non-array — coerce before filtering (mirrors the inspect tool's asArray).
+        inspectionItems = Array.isArray(inspection?.items) ? inspection.items : [];
+      } catch (error) {
+        inspectionItems = []; // bridge unavailable — fall through (authoring guard already vetted)
+      }
+      const illegal = inspectionItems.filter((it) => !it.legal);
+      if (illegal.length > 0) {
+        throw new Error(
+          `Cannot enact: deal contains untradeable items — ${illegal
+            .map((it) => `${it.itemType}: ${it.reason || "not tradeable"}`)
+            .join("; ")}`
+        );
+      }
+
+      // ── Stage 6 will also build the CvDeal and call the DLL EnactAgentDeal here, using
+      //    storedDeal.data and applying promise commitments before the transcript records. ──
 
       const visibilityFlags = composeVisibility([Player1ID, Player2ID]);
 

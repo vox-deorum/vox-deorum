@@ -35,6 +35,16 @@
 local TI = TradeableItems
 local DEFAULT_DURATION = Game.GetDealDuration()
 
+-- Categories the current ruleset forbids ENTIRELY. These are hidden from the range (omitted),
+-- not shown red, so the Web board and the negotiator both match the in-game trade screen, which
+-- hides the whole pocket rather than disabling it. The conditions mirror VP-EUI TradeLogic.lua
+-- (g_bAllowResearchAgreements / g_bDisableScience / g_bDisableTechTrading / g_bDisableVassalage).
+local RA_ALLOWED        = (not Game.IsOption("GAMEOPTION_DISABLE_RESEARCH_AGREEMENTS"))
+                          and (not Game.IsOption("GAMEOPTION_NO_SCIENCE"))
+local TECH_ALLOWED      = Game.IsOption("GAMEOPTION_ENABLE_TECH_TRADING")
+                          and (not Game.IsOption("GAMEOPTION_NO_SCIENCE"))
+local VASSALAGE_ALLOWED = Game.IsOption("GAMEOPTION_ENABLE_VASSALAGE")
+
 -- itemType string -> TradeableItems enum value
 local ENUM = {
   GOLD = TI.TRADE_ITEM_GOLD,
@@ -211,20 +221,28 @@ local function enumerateSide(deal, giver, receiver)
   out.maps = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_MAPS, DEFAULT_DURATION)
   out.openBorders = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_OPEN_BORDERS, DEFAULT_DURATION)
   out.defensivePact = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_DEFENSIVE_PACT, DEFAULT_DURATION)
-  out.researchAgreement = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_RESEARCH_AGREEMENT, DEFAULT_DURATION)
   out.peaceTreaty = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_PEACE_TREATY, DEFAULT_DURATION)
   out.allowEmbassy = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_ALLOW_EMBASSY, DEFAULT_DURATION)
   out.declarationOfFriendship = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_DECLARATION_OF_FRIENDSHIP, DEFAULT_DURATION)
-  out.vassalage = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_VASSALAGE)
-  out.vassalageRevoke = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_VASSALAGE_REVOKE)
+  -- Research agreement / vassalage are ruleset-gated: omit entirely (hidden, not red) when the
+  -- game option forbids them, so the field is simply absent over the bridge.
+  if RA_ALLOWED then
+    out.researchAgreement = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_RESEARCH_AGREEMENT, DEFAULT_DURATION)
+  end
+  if VASSALAGE_ALLOWED then
+    out.vassalage = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_VASSALAGE)
+    out.vassalageRevoke = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_VASSALAGE_REVOKE)
+  end
 
   -- Resources the giver actually holds (>0 available). A currently-impossible one
-  -- (e.g. a duplicate-luxury import) stays in the list, flagged with its reason.
+  -- (e.g. a duplicate-luxury import) stays in the list, flagged with its reason. Bonus
+  -- resources (ResourceUsage 0) are NEVER tradeable, so they are hidden entirely — only
+  -- strategic (1) and luxury (2) are enumerated, matching the in-game trade screen.
   local resources = {}
   for row in GameInfo.Resources() do
     local rid = row.ID
     local avail = pGiver:GetNumResourceAvailable(rid, false)
-    if avail > 0 then
+    if avail > 0 and (row.ResourceUsage == 1 or row.ResourceUsage == 2) then
       local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_RESOURCES, rid, 1)
       table.insert(resources, {
         resourceID = rid,
@@ -248,13 +266,18 @@ local function enumerateSide(deal, giver, receiver)
   out.cities = cities
 
   -- Technologies the giver knows and the receiver lacks (the natural candidate set the
-  -- in-game screen offers); each carries legality so brokering-blocked techs show red.
+  -- in-game screen offers); each carries legality so brokering-blocked techs show red. Tech
+  -- trading is ruleset-gated: when the option forbids it, the whole pocket is hidden (empty
+  -- list) rather than shown red, matching the in-game screen. (Per-tech brokering blocks are a
+  -- pairing rule and still surface as red legality when tech trading is allowed.)
   local techs = {}
-  for row in GameInfo.Technologies() do
-    local tid = row.ID
-    if pGiver:HasTech(tid) and not pReceiver:HasTech(tid) then
-      local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_TECHS, tid)
-      table.insert(techs, { techID = tid, name = Locale.ConvertTextKey(row.Description), legal = legal, reason = reason })
+  if TECH_ALLOWED then
+    for row in GameInfo.Technologies() do
+      local tid = row.ID
+      if pGiver:HasTech(tid) and not pReceiver:HasTech(tid) then
+        local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_TECHS, tid)
+        table.insert(techs, { techID = tid, name = Locale.ConvertTextKey(row.Description), legal = legal, reason = reason })
+      end
     end
   end
   out.techs = techs

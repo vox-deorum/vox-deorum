@@ -69,6 +69,7 @@ import {
   validateDealForThread,
   enactAgentDeal,
   requireCurrentOpenProposal,
+  IllegalDealError,
 } from '../../utils/diplomacy/deal.js';
 // Pinned deal contract — validate request bodies against the same schema mcp-server uses.
 import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
@@ -648,6 +649,11 @@ export function createAgentRoutes(): Router {
         }
         return res.json({ id, messageType, turn, agentResponded });
       } catch (error) {
+        // An untradeable item is a bad request (the client/agent proposed something illegal),
+        // not a server/bridge failure — surface it as 400 with the per-item reasons.
+        if (error instanceof IllegalDealError) {
+          return res.status(400).json({ error: error.message });
+        }
         logger.error(`Failed to append ${messageType}`, { error });
         return res.status(502).json({ error: error instanceof Error ? error.message : `Failed to append ${messageType}` });
       }

@@ -36,6 +36,21 @@ import {
 
 const logger = createLogger("diplomacy:deal");
 
+/**
+ * Thrown when a deal carries a trade item the game reports as untradeable. This is a client/agent
+ * error (a bad proposal), distinct from a bridge/store failure, so callers can map it to a 4xx
+ * (UI) or relay the per-item reasons back to the model (negotiator) instead of treating it as 5xx.
+ */
+export class IllegalDealError extends Error {
+  /** One line per illegal trade item: "ITEM_TYPE (from→to): reason". */
+  readonly reasons: string[];
+  constructor(reasons: string[]) {
+    super(`Deal contains untradeable items: ${reasons.join("; ")}`);
+    this.name = "IllegalDealError";
+    this.reasons = reasons;
+  }
+}
+
 /** Promise types whose meaning requires a third-party target. */
 const TARGETED_PROMISE_TYPES = new Set(["COOP_WAR", "BULLY_CITY_STATE", "ATTACK_CITY_STATE"]);
 
@@ -87,7 +102,9 @@ function unwrap<T>(result: unknown): T {
  * Read-only `inspect-deal` for a conversation's endpoint pair against live game state.
  * Passing an empty/omitted deal returns the tradable range only; passing a constructed
  * deal additionally returns per-term legality + both-direction value and per-promise
- * agreeability factors. Everything is advisory — it gates nothing (specs §4).
+ * agreeability factors. The inspector itself gates nothing; the per-term legality it reports
+ * is enforced by the writers that consume it (`appendDealProposal` rejects untradeable items
+ * at authoring; enactment re-checks before applying). Promise agreeability stays advisory.
  */
 export async function inspectDeal(
   playerAID: number,
@@ -196,6 +213,20 @@ export async function appendDealProposal(
       `Could not inspect deal before storing proposal: ${error instanceof Error ? error.message : "unknown error"}`
     );
   }
+
+  // Hard legality guard: a proposal carrying any untradeable trade item must never be archived.
+  // The same per-term legality that drives the board's red rows now gates the write — so a hidden
+  // category (bonus resource, ruleset-disabled RA/tech/vassalage) or any pairing-illegal term is
+  // rejected here, for both the UI and the negotiator paths that share this function.
+  const illegal = inspection.items.filter((it) => !it.legality);
+  if (illegal.length > 0) {
+    throw new IllegalDealError(
+      illegal.map(
+        (it) => `${it.itemType} (${it.fromPlayerID}→${it.toPlayerID}): ${it.reasons.join("; ") || "not tradeable"}`
+      )
+    );
+  }
+
   const { value1, value2 } = computeValueMaps(inspection, thread.player1ID, thread.player2ID);
 
   const payload: Record<string, unknown> = { Deal: deal };
