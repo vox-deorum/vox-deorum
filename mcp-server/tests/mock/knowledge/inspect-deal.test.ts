@@ -170,6 +170,21 @@ describe('inspect-deal', () => {
     });
   });
 
+  it('mirrors one-sided mutual agreements before Lua inspection', async () => {
+    const deal = {
+      version: 1,
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP' }],
+      promises: [],
+    };
+
+    await tool.execute({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
+
+    expect(inspectSpy).toHaveBeenCalledWith(1, 3, [
+      { fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP' },
+      { fromPlayerID: 3, toPlayerID: 1, itemType: 'DECLARATION_OF_FRIENDSHIP' },
+    ]);
+  });
+
   it('normalizes DLL reason tags into discrete reason lines for an illegal item', async () => {
     inspectSpy.mockResolvedValue(
       cannedResult({

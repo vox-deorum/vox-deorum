@@ -107,6 +107,9 @@ export type TradeItem = z.infer<typeof TradeItemSchema>;
  * may author. Identical to {@link TradeItemSchema} but WITHOUT `duration`: durations are fixed game
  * constants, never author-chosen, so they are stripped from proposable terms and stamped server-side
  * instead (see {@link applyDealDurations}). Assignable to {@link TradeItem} (duration optional there).
+ *
+ * The mutual agreements (see {@link SYMMETRIC_TRADE_ITEM_TYPES}) are auto-completed onto both sides
+ * server-side ({@link symmetrizeDeal}), so an author may list one side and the deal becomes mutual.
  */
 export const AuthoredTradeItemSchema = TradeItemSchema.omit({ duration: true });
 export type AuthoredTradeItem = z.infer<typeof AuthoredTradeItemSchema>;
@@ -197,6 +200,45 @@ export function applyDealDurations(deal: DealPayload, durations: DealDurations):
       return duration === undefined ? item : { ...item, duration };
     }),
   };
+}
+
+/**
+ * Trade items the game treats as **mutual**: a Declaration of Friendship, Defensive Pact, Research
+ * Agreement, or Peace Treaty always binds BOTH sides, so the in-game trade screen pairs them
+ * automatically. Our model stores them as ordinary directed items, so a one-sided pact is possible
+ * to author but the game then reports it untradeable. {@link symmetrizeDeal} completes the missing
+ * side before inspection/storage; the Web editor mirrors the same set on add/remove.
+ */
+export const SYMMETRIC_TRADE_ITEM_TYPES: ReadonlySet<TradeItem["itemType"]> = new Set([
+  "DECLARATION_OF_FRIENDSHIP",
+  "DEFENSIVE_PACT",
+  "RESEARCH_AGREEMENT",
+  "PEACE_TREATY",
+]);
+
+/**
+ * Ensure every mutual agreement (see {@link SYMMETRIC_TRADE_ITEM_TYPES}) sits on BOTH sides: for any
+ * such item present in one direction, append its opposite-direction twin (same `itemType`, with
+ * `fromPlayerID`/`toPlayerID` swapped) when it is not already there. These types carry no
+ * discriminator data beyond `duration` (which {@link applyDealDurations} stamps by type afterward),
+ * so the twin is just the item with its giver/receiver swapped. Idempotent — an already-symmetric
+ * deal is returned unchanged. Returns a new deal; the input is not mutated.
+ */
+export function symmetrizeDeal(deal: DealPayload): DealPayload {
+  const items = [...deal.items];
+  for (const item of deal.items) {
+    if (!SYMMETRIC_TRADE_ITEM_TYPES.has(item.itemType)) continue;
+    const hasTwin = items.some(
+      (i) =>
+        i.itemType === item.itemType &&
+        i.fromPlayerID === item.toPlayerID &&
+        i.toPlayerID === item.fromPlayerID
+    );
+    if (!hasTwin) {
+      items.push({ ...item, fromPlayerID: item.toPlayerID, toPlayerID: item.fromPlayerID });
+    }
+  }
+  return items.length === deal.items.length ? deal : { ...deal, items };
 }
 
 /**

@@ -31,7 +31,7 @@ import {
   type ToggleCandidate,
   type PromiseTargetInfo,
 } from "../../utils/lua/inspect-deal.js";
-import { DealPayloadSchema, PROMISE_TYPES, type PromiseTerm, type TradeItem } from "../../utils/deal-schema.js";
+import { DealPayloadSchema, PROMISE_TYPES, symmetrizeDeal, type PromiseTerm, type TradeItem } from "../../utils/deal-schema.js";
 
 /** Coerce a value that may arrive as an empty Lua table ({} instead of []). */
 function asArray<T>(value: unknown): T[] {
@@ -344,8 +344,11 @@ class InspectDealTool extends ToolBase {
       throw new Error("The two players must be distinct");
     }
 
-    const proposedItems = ProposedDeal?.items ?? [];
-    const promises = ProposedDeal?.promises ?? [];
+    // Mirror mutual agreements before legality/value inspection so preview and archival see the
+    // same canonical deal shape.
+    const proposedDeal = ProposedDeal ? symmetrizeDeal(ProposedDeal) : undefined;
+    const proposedItems = proposedDeal?.items ?? [];
+    const promises = proposedDeal?.promises ?? [];
     validateDealParticipants(PlayerAID, PlayerBID, proposedItems, promises);
 
     // 1) Trade items + tradable range, via the in-game scratch deal.

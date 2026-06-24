@@ -31,6 +31,7 @@ import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 import {
   DealPayloadSchema,
   applyDealDurations,
+  symmetrizeDeal,
   type DealPayload,
   type PerItemValueMap,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
@@ -212,14 +213,20 @@ export async function appendDealProposal(
   content: string,
   deal: DealPayload
 ): Promise<{ id: number; turn?: number; inspection?: InspectDealResult; deal: DealPayload }> {
+  // Mutual agreements (DoF / defensive pact / research agreement / peace) bind both sides — complete
+  // any one-sided pact up front so the inspection, legality guard, value snapshots, and stored deal
+  // all reflect the symmetric term (mirrors what the Web editor does on add). Same chokepoint for the
+  // UI and negotiator paths, so neither can archive a one-sided pact the game would reject.
+  const symmetricDeal = symmetrizeDeal(deal);
+
   // Transcript-shape validation is not best-effort: malformed terms must never be archived.
-  validateDealForThread(thread, deal);
+  validateDealForThread(thread, symmetricDeal);
 
   // Required value/agreement snapshot: if the game can't inspect this proposal right now,
   // do not archive a deal the diplomat/negotiator cannot evaluate faithfully.
   let inspection: InspectDealResult;
   try {
-    inspection = await inspectDeal(thread.player1ID, thread.player2ID, deal);
+    inspection = await inspectDeal(thread.player1ID, thread.player2ID, symmetricDeal);
   } catch (error) {
     logger.error("Could not inspect proposal before archival", { error });
     throw new Error(
@@ -244,7 +251,7 @@ export async function appendDealProposal(
 
   // Stamp the fixed per-type durations from the fresh inspection so the archived deal never carries
   // an author-supplied or missing duration (the durations match what the inspection just valued).
-  const storedDeal = applyDealDurations(deal, inspection);
+  const storedDeal = applyDealDurations(symmetricDeal, inspection);
 
   const payload: Record<string, unknown> = { Deal: storedDeal };
   payload.Value1 = value1;

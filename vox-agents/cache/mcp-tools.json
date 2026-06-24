@@ -564,7 +564,7 @@
                     "maximum": 9007199254740991
                   },
                   "duration": {
-                    "description": "Duration in turns (defaults to the game's deal duration)",
+                    "description": "Duration in turns (auto-filled server-side from the game's fixed per-type duration; not author-set)",
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
@@ -1561,7 +1561,7 @@
                     "maximum": 9007199254740991
                   },
                   "duration": {
-                    "description": "Duration in turns (defaults to the game's deal duration)",
+                    "description": "Duration in turns (auto-filled server-side from the game's fixed per-type duration; not author-set)",
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991

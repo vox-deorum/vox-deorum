@@ -842,7 +842,7 @@ async function openDiplomacyChat(
     // (agent, context, roles, title) so they never drift from the current target.
     existing.agent = targetPlayerID;
     existing.contextId = targetContextId;
-    existing.title = `${targetCiv ?? `Player ${targetPlayerID}`} ↔ ${initiatorCiv ?? `Player ${initiatorID}`}`;
+    existing.title = `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`;
     existing.player1Role = player1ID === targetPlayerID ? voice : audienceRole;
     existing.player2Role = player2ID === targetPlayerID ? voice : audienceRole;
     existing.player1Identity = player1ID === targetPlayerID ? targetIdentity : initiatorIdentity;
@@ -856,7 +856,7 @@ async function openDiplomacyChat(
   const thread: EnvoyThread = {
     id,
     agent: targetPlayerID,
-    title: `${targetCiv ?? `Player ${targetPlayerID}`} ↔ ${initiatorCiv ?? `Player ${initiatorID}`}`,
+    title: `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`,
     gameID,
     player1ID,
     player2ID,

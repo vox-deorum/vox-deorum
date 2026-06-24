@@ -235,7 +235,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
         message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart."),
-        items: z.array(AuthoredTradeItemSchema).default([]).describe("Ordinary trade terms (each directed between the two civs). Durations are fixed by the game and filled in automatically — do not specify them."),
+        items: z.array(AuthoredTradeItemSchema).default([]).describe("Ordinary trade terms (each directed between the two civs). Durations are fixed by the game and filled in automatically — do not specify them. Mutual agreements (Declaration of Friendship, Defensive Pact, Research Agreement, Peace Treaty) bind both sides and are auto-completed onto both, so you may list one side."),
         promises: z.array(PromiseTermSchema).default([]).describe("Promise commitment terms (directed between the two civs)."),
       }),
       execute: async (args, _parameters, options) => {

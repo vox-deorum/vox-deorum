@@ -43,8 +43,9 @@ function getCityName(payload: Record<string, any>, ctx: FormatContext): string {
   return "a city";
 }
 
-function formatDealSide(items: string[] = []): string {
-  if (items.length === 0) return "nothing";
+// items may arrive as an empty Lua table ({} not []) when a side gives nothing — guard before join.
+function formatDealSide(items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) return "nothing";
   return items.join(", ");
 }
 

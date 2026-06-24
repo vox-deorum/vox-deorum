@@ -155,6 +155,67 @@ describe('appendDealProposal', () => {
     expect(((mcp.calls('append-message')[0]!.args.Payload as Record<string, unknown>).Deal as { items: Array<{ duration?: number }> }).items[0]!.duration).toBe(30);
   });
 
+  it('completes a one-sided mutual agreement onto both sides before inspecting and archiving', async () => {
+    // A Declaration of Friendship binds both sides; appendDealProposal mirrors the one-sided term so
+    // the inspected and stored deal are symmetric — the same completion the in-game trade screen does.
+    const inspection: InspectDealResult = {
+      items: [
+        { fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP', legality: true, reasons: [], valueIfIGive: 0, valueIfIReceive: 0 },
+        { fromPlayerID: 3, toPlayerID: 1, itemType: 'DECLARATION_OF_FRIENDSHIP', legality: true, reasons: [], valueIfIGive: 0, valueIfIReceive: 0 },
+      ],
+      promises: [],
+      tradableRange: {},
+      defaultDuration: 30,
+      relationshipDuration: 25,
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+    mcp.respondWith('append-message', structuredResult({ ID: 21, Turn: 8 }));
+
+    const deal = { version: 1 as const, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP' as const }], promises: [] };
+    const out = await appendDealProposal(thread(), 1, 'deal-proposal', 'Friends?', deal);
+
+    // inspect-deal saw the mirrored (symmetric) deal...
+    const inspected = mcp.calls('inspect-deal')[0]!.args.ProposedDeal as { items: unknown[] };
+    expect(inspected.items).toHaveLength(2);
+    // ...and the stored/returned deal carries both directions, each stamped with the relationship duration.
+    const stored = (mcp.calls('append-message')[0]!.args.Payload as Record<string, unknown>).Deal as { items: unknown[] };
+    expect(stored.items).toEqual([
+      { fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP', duration: 25 },
+      { fromPlayerID: 3, toPlayerID: 1, itemType: 'DECLARATION_OF_FRIENDSHIP', duration: 25 },
+    ]);
+    expect(out.deal.items).toHaveLength(2);
+  });
+
+  it('leaves an already-symmetric mutual agreement unchanged (idempotent)', async () => {
+    const inspection: InspectDealResult = {
+      items: [
+        { fromPlayerID: 1, toPlayerID: 3, itemType: 'DEFENSIVE_PACT', legality: true, reasons: [], valueIfIGive: 0, valueIfIReceive: 0 },
+        { fromPlayerID: 3, toPlayerID: 1, itemType: 'DEFENSIVE_PACT', legality: true, reasons: [], valueIfIGive: 0, valueIfIReceive: 0 },
+      ],
+      promises: [],
+      tradableRange: {},
+      defaultDuration: 30,
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+    mcp.respondWith('append-message', structuredResult({ ID: 22, Turn: 8 }));
+
+    const deal = {
+      version: 1 as const,
+      items: [
+        { fromPlayerID: 1, toPlayerID: 3, itemType: 'DEFENSIVE_PACT' as const },
+        { fromPlayerID: 3, toPlayerID: 1, itemType: 'DEFENSIVE_PACT' as const },
+      ],
+      promises: [],
+    };
+    await appendDealProposal(thread(), 1, 'deal-proposal', 'Pact', deal);
+
+    // No third item added — the deal was already mutual.
+    const inspected = mcp.calls('inspect-deal')[0]!.args.ProposedDeal as { items: unknown[] };
+    expect(inspected.items).toHaveLength(2);
+    const stored = (mcp.calls('append-message')[0]!.args.Payload as Record<string, unknown>).Deal as { items: unknown[] };
+    expect(stored.items).toHaveLength(2);
+  });
+
   it('does not archive the proposal when inspection fails', async () => {
     mcp.failWith('inspect-deal', 'game busy');
 

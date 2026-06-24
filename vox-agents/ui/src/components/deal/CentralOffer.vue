@@ -1,7 +1,7 @@
 <!--
 Component: CentralOffer
 Purpose: The "deal on the table" — the center of the three-panel trade board (interactive-diplomacy
-stage 4). Two aligned columns ("They give" = counterpart / "You give" = you) list the selected terms
+stage 4). Two aligned columns ("You give" = you / "They give" = counterpart) list the selected terms
 under the side that gives them, with editable amounts, quantities, votes, and promise targets plus
 read-only fixed durations, and removable in place. Structurally impossible terms stay visible in red
 with their reason as a tooltip. Below the columns sits the live, sentinel-aware value balance; above
@@ -21,9 +21,10 @@ re-inspects live, keeping the per-row legality/value index-aligned).
       <div v-for="col in columns" :key="col.sideID" class="deal-offer-col">
         <div class="deal-offer-col-title">{{ col.label }} give</div>
         <ul class="deal-offer-list">
-          <!-- Trade items the side gives. Compact: a name+remove line, with an optional inline
-               `[number] × [turns] turns` editor line only for the duration/amount-bearing types. The
-               per-term give/worth value lives in the row tooltip (the live balance below sums it). -->
+          <!-- Trade items the side gives, each on ONE line: a prefix label, an optional inline
+               `[number] × [turns] turns` editor for the amount/duration-bearing types, then the
+               remove button pinned right. The per-term give/worth value lives in the row tooltip
+               (the live balance below sums it). -->
           <li
             v-for="entry in col.items"
             :key="`item-${entry.index}`"
@@ -31,51 +32,34 @@ re-inspects live, keeping the per-row legality/value index-aligned).
             :class="{ 'deal-offer-row-illegal': isIllegal(entry.index) }"
             v-tooltip.bottom="itemTooltip(entry.index)"
           >
-            <div class="deal-offer-main">
-              <span class="deal-offer-label" :class="{ 'deal-offer-label-illegal': isIllegal(entry.index) }">{{ itemLabel(entry.item) }}</span>
-              <Button class="deal-offer-x" icon="pi pi-times" text rounded size="small" severity="danger" :disabled="locked || busy" @click="$emit('remove-item', entry.index)" />
-            </div>
+            <span class="deal-offer-label" :class="{ 'deal-offer-label-illegal': isIllegal(entry.index) }">{{ itemLabel(entry.item) }}</span>
 
-            <!-- Type-specific editors. Only the amount/quantity is editable; the duration is a fixed
-                 game value shown read-only as "× N turns". Items without an editable amount (peace,
-                 agreements, votes, cities, techs, war) have no editor — their fixed duration, when
-                 any, sits in the label as "(Nt)". -->
-            <div v-if="entry.item.itemType === 'GOLD'" class="deal-offer-edit">
-              <InputNumber class="deal-num" :modelValue="entry.item.amount" :min="0" :max="goldMax(entry.item)" :useGrouping="false" size="small" :disabled="locked || busy"
-                @update:modelValue="(v: number) => $emit('update-item', entry.index, { amount: v })" />
-            </div>
-            <div v-else-if="entry.item.itemType === 'GOLD_PER_TURN'" class="deal-offer-edit">
-              <InputNumber class="deal-num" :modelValue="entry.item.amount" :min="1" :useGrouping="false" size="small" :disabled="locked || busy"
-                @update:modelValue="(v: number) => $emit('update-item', entry.index, { amount: v })" />
-              <template v-if="durationText(entry.item)">
+            <!-- Amount/quantity editor. The duration is a fixed game value shown read-only as
+                 "× N turns" for recurring rows; read-only terms carry duration in the label. -->
+            <template v-if="hasAmountEditor(entry.item)">
+              <InputNumber class="deal-num" :modelValue="editorValue(entry.item)" :min="editorMin(entry.item)" :max="editorMax(entry.item)" :useGrouping="false" size="small" :disabled="locked || busy"
+                @update:modelValue="(v: number) => $emit('update-item', entry.index, editorPatch(entry.item, v))" />
+              <template v-if="showsEditorDuration(entry.item) && durationText(entry.item)">
                 <span class="deal-times">×</span>
                 <span class="deal-unit">{{ durationText(entry.item) }}</span>
               </template>
-            </div>
-            <div v-else-if="entry.item.itemType === 'RESOURCES'" class="deal-offer-edit">
-              <InputNumber class="deal-num" :modelValue="entry.item.quantity" :min="1" :max="resourceMax(entry.item)" :useGrouping="false" size="small" :disabled="locked || busy"
-                @update:modelValue="(v: number) => $emit('update-item', entry.index, { quantity: v })" />
-              <template v-if="durationText(entry.item)">
-                <span class="deal-times">×</span>
-                <span class="deal-unit">{{ durationText(entry.item) }}</span>
-              </template>
-            </div>
+            </template>
+
+            <Button class="deal-offer-x" icon="pi pi-times" text rounded size="small" severity="danger" :disabled="locked || busy" @click="$emit('remove-item', entry.index)" />
           </li>
 
-          <!-- Promises the side pledges (the side is the promiser). The target, when needed, was
-               chosen on the inventory row, so the central row only shows + removes it. Agreeability
-               factors, when present, surface in the row tooltip. -->
+          <!-- Promises the side pledges (the side is the promiser), one line too. The target, when
+               needed, was chosen on the inventory row, so the central row only shows + removes it.
+               Agreeability factors, when present, surface in the row tooltip. -->
           <li
             v-for="entry in col.promises"
             :key="`promise-${entry.index}`"
             class="deal-offer-row"
             v-tooltip.bottom="promiseNote(entry.index)"
           >
-            <div class="deal-offer-main">
-              <span class="deal-offer-label">{{ promiseLabel(entry.promise) }}</span>
-              <i v-if="promiseNote(entry.index)" class="pi pi-info-circle deal-offer-note" />
-              <Button class="deal-offer-x" icon="pi pi-times" text rounded size="small" severity="danger" :disabled="locked || busy" @click="$emit('remove-promise', entry.index)" />
-            </div>
+            <span class="deal-offer-label">{{ promiseLabel(entry.promise) }}</span>
+            <i v-if="promiseNote(entry.index)" class="pi pi-info-circle deal-offer-note" />
+            <Button class="deal-offer-x" icon="pi pi-times" text rounded size="small" severity="danger" :disabled="locked || busy" @click="$emit('remove-promise', entry.index)" />
           </li>
 
           <li v-if="col.items.length === 0 && col.promises.length === 0" class="deal-offer-empty">— nothing —</li>
@@ -139,34 +123,55 @@ defineEmits<{
 /** The one-sentence outward line, two-way bound to the parent's working draft. */
 const message = defineModel<string>('message', { default: '' });
 
-/** The two giver columns: counterpart ("They give") then you ("You give"). */
+/** The two giver columns: you ("You give") then counterpart ("They give") — aligned with the
+ *  inventory panels (you on the left, counterpart on the right). */
 const columns = computed(() => [
-  {
-    sideID: props.counterpartID,
-    label: props.counterpartLabel,
-    items: offerItemsForSide(props.items, props.counterpartID),
-    promises: offerPromisesForSide(props.promises, props.counterpartID),
-  },
   {
     sideID: props.youID,
     label: props.youLabel,
     items: offerItemsForSide(props.items, props.youID),
     promises: offerPromisesForSide(props.promises, props.youID),
   },
+  {
+    sideID: props.counterpartID,
+    label: props.counterpartLabel,
+    items: offerItemsForSide(props.items, props.counterpartID),
+    promises: offerPromisesForSide(props.promises, props.counterpartID),
+  },
 ]);
 
 const rangeFor = (sideID: number): NormalizedSideRange | undefined => props.ranges[String(sideID)];
 const fmt = (v: number) => formatValue(v);
 /**
- * The item types whose editor line shows the fixed duration inline ("× N turns"). Their label omits
- * the duration to avoid showing it twice; every other row carries its fixed duration in the label.
+ * The item types whose amount/quantity is edited in an inline input on the row (so the label is a
+ * bare prefix and any fixed duration shows as a trailing "× N turns"). Every other row carries its
+ * full label, with its fixed duration in the label as "(Nt)".
  */
-const DURATION_INLINE_TYPES = new Set<TradeItem['itemType']>(['GOLD_PER_TURN', 'RESOURCES']);
+const AMOUNT_EDITOR_TYPES = new Set<TradeItem['itemType']>(['GOLD', 'GOLD_PER_TURN', 'RESOURCES']);
 const itemLabel = (item: TradeItem) =>
-  formatItemLabel(item, rangeFor(item.fromPlayerID), { omitDuration: DURATION_INLINE_TYPES.has(item.itemType) });
+  formatItemLabel(item, rangeFor(item.fromPlayerID), { amountInEditor: AMOUNT_EDITOR_TYPES.has(item.itemType) });
 const promiseLabel = (p: PromiseTerm) => formatPromiseLabel(p, props.promiseTargets);
 /** Fixed-duration text for inline amount rows; hidden when older/mock data has no duration. */
 const durationText = (item: TradeItem): string => item.duration === undefined ? '' : `${item.duration} turns`;
+/** Whether a trade item has an editable numeric amount/quantity in the offer row. */
+const hasAmountEditor = (item: TradeItem): boolean => AMOUNT_EDITOR_TYPES.has(item.itemType);
+/** Current numeric value for an editable item row. */
+const editorValue = (item: TradeItem): number | undefined =>
+  item.itemType === 'RESOURCES' ? item.quantity : item.amount;
+/** Minimum value for an editable item row. */
+const editorMin = (item: TradeItem): number => item.itemType === 'GOLD' ? 0 : 1;
+/** Maximum value for an editable item row, when the inspected range provides one. */
+const editorMax = (item: TradeItem): number | undefined =>
+  item.itemType === 'GOLD'
+    ? goldMax(item)
+    : item.itemType === 'RESOURCES'
+      ? resourceMax(item)
+      : undefined;
+/** Patch emitted for an editable item row's changed numeric value. */
+const editorPatch = (item: TradeItem, value: number): Partial<TradeItem> =>
+  item.itemType === 'RESOURCES' ? { quantity: value } : { amount: value };
+/** Recurring amount rows show their fixed duration after the input. */
+const showsEditorDuration = (item: TradeItem): boolean => item.itemType === 'GOLD_PER_TURN' || item.itemType === 'RESOURCES';
 
 const isIllegal = (index: number): boolean => {
   const insp = props.inspectedItems[index];

@@ -1,7 +1,8 @@
 <!--
 Component: DealScreen
 Purpose: Web replica of the in-game diplomatic trade screen (interactive-diplomacy stage 4) — a
-three-panel board: counterpart inventory | deal on the table | your inventory.
+three-panel board: your inventory | deal on the table | counterpart inventory (the board leads with
+the conversation's initiator/audience seat on the left).
 
 Driven entirely by the read-only `inspect-deal` tool (the screen holds no deal state of its own
 beyond the in-progress proposal): it builds both sides' categorized inventories from the tradable
@@ -22,11 +23,11 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
     <!-- The board never stacks; on a narrow viewport the wrapper scrolls horizontally. -->
     <div v-if="inspection" class="deal-board-scroll">
       <div class="deal-board">
-        <!-- Left = the counterpart's inventory. -->
+        <!-- Left = your (the initiator/audience) inventory. -->
         <InventoryPanel
           side="left"
-          :label="counterpartLabel"
-          :categories="counterpartCategories"
+          :label="youLabel"
+          :categories="youCategories"
           :locked="locked"
           :busy="busy"
           @add-term="onAddTerm"
@@ -52,11 +53,11 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           @remove-promise="onRemovePromise"
         />
 
-        <!-- Right = your inventory. -->
+        <!-- Right = the counterpart's inventory. -->
         <InventoryPanel
           side="right"
-          :label="youLabel"
-          :categories="youCategories"
+          :label="counterpartLabel"
+          :categories="counterpartCategories"
           :locked="locked"
           :busy="busy"
           @add-term="onAddTerm"
@@ -122,6 +123,7 @@ import { api } from '@/api/client';
 import type { DealPayload, TradeItem, InspectDealResponse, NormalizedSideRange, PromiseTargetInfo } from '@/utils/types';
 import { deriveActiveProposal, type DealReduction } from './deal-reduce';
 import { buildSideCatalog, type AddTermPayload } from './deal-catalog';
+import { addItemWithMirror, removeItemWithMirror } from './deal-helpers';
 import InventoryPanel from './InventoryPanel.vue';
 import CentralOffer from './CentralOffer.vue';
 
@@ -163,9 +165,11 @@ const inspecting = ref(false);
 const error = ref('');
 
 /**
- * Display orientation: the host passes the audience as `leftID` and the LLM seat as `rightID`,
- * but the in-game board puts the COUNTERPART on the left and YOU on the right. Keep that
- * inversion in one place so the panels, columns, and giver semantics never disagree.
+ * Display orientation: the host passes the audience as `leftID` and the LLM seat as `rightID`.
+ * The board leads with the conversation's INITIATOR — the audience/"you" seat — on the left and the
+ * COUNTERPART on the right (so "A initiated on B" reads A | B). These computeds keep the seat
+ * IDENTITY/labels fixed (you = audience, counterpart = LLM) regardless of physical side, so the
+ * panels, columns, and giver semantics never disagree; only the visual placement is reversed.
  */
 const counterpartID = computed(() => props.rightID);
 const youID = computed(() => props.leftID);
@@ -222,15 +226,21 @@ const canReject = computed(() => !busy.value && mayReject.value);
 // ---- editing (mutate workingDeal; the debounced watcher re-inspects) ---------------------
 const onAddTerm = (payload: AddTermPayload) => {
   if (props.locked || busy.value) return;
-  if (payload.kind === 'item') workingDeal.value.items.push(payload.item);
-  else workingDeal.value.promises.push(payload.promise);
+  if (payload.kind === 'item') {
+    workingDeal.value.items = addItemWithMirror(workingDeal.value.items, payload.item);
+  } else {
+    workingDeal.value.promises.push(payload.promise);
+  }
   dealEdited.value = true;
 };
 const onUpdateItem = (index: number, patch: Partial<TradeItem>) => {
   const item = workingDeal.value.items[index];
   if (item) { Object.assign(item, patch); dealEdited.value = true; }
 };
-const onRemoveItem = (index: number) => { workingDeal.value.items.splice(index, 1); dealEdited.value = true; };
+const onRemoveItem = (index: number) => {
+  workingDeal.value.items = removeItemWithMirror(workingDeal.value.items, index);
+  dealEdited.value = true;
+};
 const onRemovePromise = (index: number) => { workingDeal.value.promises.splice(index, 1); dealEdited.value = true; };
 
 // ---- live re-evaluation -----------------------------------------------------------------

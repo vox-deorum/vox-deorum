@@ -79,6 +79,57 @@ export const TOGGLE_ITEMS: Array<{ itemType: TradeItem['itemType']; label: strin
 ];
 
 /**
+ * Trade items the game treats as **mutual**: they always sit on BOTH sides at once (the in-game
+ * trade screen pairs them automatically). The editor mirrors them on add/remove so a friendship /
+ * pact / peace is never one-sided; the backend auto-completes the same way (`symmetrizeDeal` in
+ * deal-schema.ts). Duplicated here as a plain set so the browser bundle needn't import the
+ * mcp-server runtime (mirrors the `PROMISE_TYPES` duplication above).
+ */
+export const SYMMETRIC_ITEM_TYPES = new Set<TradeItem['itemType']>([
+  'DECLARATION_OF_FRIENDSHIP',
+  'DEFENSIVE_PACT',
+  'RESEARCH_AGREEMENT',
+  'PEACE_TREATY',
+]);
+
+/** The opposite-direction twin of a (symmetric) item: the same term with giver/receiver swapped. */
+export function mirrorItem(item: TradeItem): TradeItem {
+  return { ...item, fromPlayerID: item.toPlayerID, toPlayerID: item.fromPlayerID };
+}
+
+/** Whether `candidate` is `item`'s opposite-direction twin (same type, swapped from/to). */
+function isMirrorItem(candidate: TradeItem, item: TradeItem): boolean {
+  return (
+    candidate.itemType === item.itemType &&
+    candidate.fromPlayerID === item.toPlayerID &&
+    candidate.toPlayerID === item.fromPlayerID
+  );
+}
+
+/** Whether `items` already holds `item`'s opposite-direction twin (same type, swapped from/to). */
+export function hasMirror(items: TradeItem[], item: TradeItem): boolean {
+  return items.some((i) => isMirrorItem(i, item));
+}
+
+/** Add an item, auto-adding its opposite-direction twin when the term is mutual. */
+export function addItemWithMirror(items: TradeItem[], item: TradeItem): TradeItem[] {
+  const next = [...items, item];
+  return SYMMETRIC_ITEM_TYPES.has(item.itemType) && !hasMirror(next, item)
+    ? [...next, mirrorItem(item)]
+    : next;
+}
+
+/** Remove an item, auto-removing its opposite-direction twin when the term is mutual. */
+export function removeItemWithMirror(items: TradeItem[], index: number): TradeItem[] {
+  const removed = items[index];
+  if (!removed) return items;
+  const next = items.filter((_, i) => i !== index);
+  if (!SYMMETRIC_ITEM_TYPES.has(removed.itemType)) return next;
+  const twin = next.findIndex((item) => isMirrorItem(item, removed));
+  return twin < 0 ? next : next.filter((_, i) => i !== twin);
+}
+
+/**
  * The AI valuation returns an INT_MAX sentinel for anti-exploit guards (last strategic
  * resource, last luxury while unhappy) and "impossible" items. These surface in estimates
  * but gate nothing (specs §4) — we flag them rather than fold them into a total.
@@ -109,18 +160,35 @@ function resourceName(resourceID: number | undefined, range?: NormalizedSideRang
   return found?.name ?? `Resource #${resourceID}`;
 }
 
-/** A short human label for a trade item, using the giver's range for game-facing names. */
-export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange, opts?: { omitDuration?: boolean }): string {
+/**
+ * A short human label for a trade item, using the giver's range for game-facing names.
+ *
+ * `amountInEditor` is for the central offer, where the amount/quantity lives in an inline input and
+ * the fixed duration is rendered as a trailing "× N turns": the three editor-bearing types
+ * (GOLD, GOLD_PER_TURN, RESOURCES) then return a bare prefix ("Gold:", "Gold:", "<name>:") so the
+ * value isn't shown twice — and Gold/turn drops the "/turn" since the "× N turns" already says it.
+ * It implies `omitDuration` for those types. Every other (read-only) caller omits it and gets the
+ * full "Gold: 100" / "Iron ×2 (30t)" form.
+ */
+export function formatItemLabel(
+  item: TradeItem,
+  range?: NormalizedSideRange,
+  opts?: { omitDuration?: boolean; amountInEditor?: boolean }
+): string {
   // Fixed duration suffix shown for every duration-bearing item, unless the caller renders the
   // duration elsewhere (the central offer shows it on the editor line for Gold/turn & Resources).
   const dur = !opts?.omitDuration && item.duration ? ` (${item.duration}t)` : '';
   switch (item.itemType) {
     case 'GOLD':
-      return `Gold: ${item.amount ?? 0}`;
+      return opts?.amountInEditor ? 'Gold:' : `Gold: ${item.amount ?? 0}`;
     case 'GOLD_PER_TURN':
-      return `Gold/turn: ${item.amount ?? 0}${dur}`;
+      // In the central offer the per-turn nature is carried by the trailing "× N turns", so the
+      // prefix is just "Gold:"; the read-only callers keep the explicit "Gold/turn: N".
+      return opts?.amountInEditor ? 'Gold:' : `Gold/turn: ${item.amount ?? 0}${dur}`;
     case 'RESOURCES':
-      return `${resourceName(item.resourceID, range)} ×${item.quantity ?? 0}${dur}`;
+      return opts?.amountInEditor
+        ? `${resourceName(item.resourceID, range)}:`
+        : `${resourceName(item.resourceID, range)} ×${item.quantity ?? 0}${dur}`;
     case 'CITIES': {
       const city = range?.cities.find((c) => c.cityID === item.cityID);
       return city ? `City: ${city.name}` : `City #${item.cityID}`;

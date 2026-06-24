@@ -1,6 +1,6 @@
 /*
  * Deal board layout (interactive-diplomacy stage 4): the three-panel in-game trade-screen
- * replica — counterpart inventory | deal on the table | your inventory. Uses PrimeVue `--p-*`
+ * replica — your inventory | deal on the table | counterpart inventory. Uses PrimeVue `--p-*`
  * design tokens throughout; no copied Civilization V artwork. Imported by the deal components
  * via `@import '@/styles/deal.css'` (matching the existing `@import '@/styles/chat.css'`).
  */
@@ -10,7 +10,7 @@
   overflow-x: auto;
 }
 
-/* counterpart | center offer | you — center is widest, sides hold the categorized inventories. */
+/* you | center offer | counterpart — center is widest, sides hold the categorized inventories. */
 .deal-board {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.4fr) minmax(280px, 1fr);
@@ -146,7 +146,7 @@
   width: 100%;
 }
 
-/* They give (counterpart) | You give (you) — aligned columns mirroring the two inventories. */
+/* You give (you) | They give (counterpart) — aligned columns mirroring the two inventories. */
 .deal-offer-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -166,11 +166,13 @@
   display: flex;
   flex-direction: column;
 }
-/* A term on the table: no heavy box — a hairline top divider + hover, in-game-tight. */
+/* A term on the table, all on ONE line: prefix label · inline editor (× N turns) · remove button,
+   on a hairline top divider + hover, in-game-tight. */
 .deal-offer-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
   min-width: 0;
   padding: 0.15rem 0.25rem 0.15rem 0.4rem;
   border-radius: 3px;
@@ -182,19 +184,14 @@
 .deal-offer-row:hover {
   background: var(--p-content-hover-background);
 }
-/* Illegal: red label (below) + a subtle left accent, not a full red border. */
+/* Illegal: red label + a subtle left accent, not a full red border. */
 .deal-offer-row-illegal {
   box-shadow: inset 2px 0 0 var(--p-red-500);
 }
-/* Line 1: label grows + ellipsizes, the remove button sits tight at the right. */
-.deal-offer-main {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-width: 0;
-}
+/* The label is a tight prefix for editor rows (the amount lives in the input that follows) and the
+   full term for the rest; it shrinks/ellipsizes (never grows) so the editor sits right after it. */
 .deal-offer-label {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -209,20 +206,14 @@
   font-size: 0.72rem;
   color: var(--p-text-muted-color);
 }
-/* Shrink the remove button so it doesn't dominate a tight row. */
+/* Shrink the remove button so it doesn't dominate a tight row, and pin it to the right edge. */
 .deal-offer-x.p-button {
   width: 1.4rem;
   height: 1.4rem;
   flex: 0 0 auto;
+  margin-left: auto;
 }
-/* Line 2: compact inline editor expression "[number] × [turns] turns". */
-.deal-offer-edit {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  padding-left: 0.15rem;
-}
+/* The read-only "× [turns] turns" expression that trails the inline editor. */
 .deal-times,
 .deal-unit {
   flex: 0 0 auto;

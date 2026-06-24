@@ -150,3 +150,32 @@ describe('get-diplomatic-events: visibility', () => {
     expect(forTwo).toEqual({});
   });
 });
+
+describe('get-diplomatic-events: DealMade formatting', () => {
+  /** Pull the single formatted markdown line out of a one-event result. */
+  const onlyLine = (result: Record<string, any[]>) => Object.values(result).flat()[0] as string;
+
+  it('formats both sides when each is a normal string array', async () => {
+    await seedEvent('DealMade', 5,
+      { FromPlayerID: 0, ToPlayerID: 1, FromGives: ['Gold: 100'], ToGives: ['Open Borders'] }, [0, 1]);
+    const result = await tool.execute({ PlayerID: 0, Formatted: true } as any);
+    expect(onlyLine(result)).toBe('Deal: **Rome** gives [Gold: 100] ↔ **Egypt** gives [Open Borders]');
+  });
+
+  // Regression: a side that gives nothing arrives from Lua as an empty table, which serializes to
+  // JSON as `{}` (an object), not `[]`. formatDealSide must render it as "nothing", not throw
+  // `items.join is not a function`.
+  it('renders a side that arrives as an empty object ({}) as "nothing" without throwing', async () => {
+    await seedEvent('DealMade', 5,
+      { FromPlayerID: 0, ToPlayerID: 1, FromGives: ['Gold: 100'], ToGives: {} }, [0, 1]);
+    const result = await tool.execute({ PlayerID: 0, Formatted: true } as any);
+    expect(onlyLine(result)).toBe('Deal: **Rome** gives [Gold: 100] ↔ **Egypt** gives [nothing]');
+  });
+
+  it('renders missing give fields as "nothing"', async () => {
+    await seedEvent('DealMade', 5,
+      { FromPlayerID: 0, ToPlayerID: 1 }, [0, 1]);
+    const result = await tool.execute({ PlayerID: 0, Formatted: true } as any);
+    expect(onlyLine(result)).toBe('Deal: **Rome** gives [nothing] ↔ **Egypt** gives [nothing]');
+  });
+});

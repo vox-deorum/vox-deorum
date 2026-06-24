@@ -6,6 +6,11 @@ import {
   formatItemLabel,
   formatPromiseLabel,
   computeSideBalance,
+  SYMMETRIC_ITEM_TYPES,
+  mirrorItem,
+  hasMirror,
+  addItemWithMirror,
+  removeItemWithMirror,
   type NormalizedSideRange,
 } from '@/components/deal/deal-helpers';
 import type { TradeItem, PromiseTerm, InspectedTradeItem, PromiseTargetInfo } from '@/utils/types';
@@ -82,6 +87,47 @@ describe('deal-helpers', () => {
     // Gold/turn & Resources can suppress it (the central offer shows the duration on the editor line).
     expect(formatItemLabel(item({ itemType: 'GOLD_PER_TURN', amount: 5, duration: 30 }))).toBe('Gold/turn: 5 (30t)');
     expect(formatItemLabel(item({ itemType: 'GOLD_PER_TURN', amount: 5, duration: 30 }), undefined, { omitDuration: true })).toBe('Gold/turn: 5');
+  });
+
+  it('returns a bare prefix for editor rows (amountInEditor), dropping the duplicated amount', () => {
+    const r = range({
+      resources: [{ resourceID: 3, name: 'Iron', category: 'strategic', quantityAvailable: 5, legal: true, reasons: [] }],
+    });
+    // Gold lump + Gold/turn both shorten to "Gold:" — the number lives in the input, and the
+    // trailing "× N turns" (rendered separately) already conveys the per-turn nature.
+    expect(formatItemLabel(item({ itemType: 'GOLD', amount: 100 }), undefined, { amountInEditor: true })).toBe('Gold:');
+    expect(formatItemLabel(item({ itemType: 'GOLD_PER_TURN', amount: 5, duration: 30 }), undefined, { amountInEditor: true })).toBe('Gold:');
+    // Resources become "<name>:" with the quantity moving to the input.
+    expect(formatItemLabel(item({ itemType: 'RESOURCES', resourceID: 3, quantity: 2 }), r, { amountInEditor: true })).toBe('Iron:');
+    // Non-editor types ignore the flag and keep their full label (with the fixed duration suffix).
+    expect(formatItemLabel(item({ itemType: 'OPEN_BORDERS', duration: 30 }), undefined, { amountInEditor: true })).toBe('Open Borders (30t)');
+  });
+
+  it('identifies mutual agreements and builds their opposite-direction twin', () => {
+    for (const t of ['DECLARATION_OF_FRIENDSHIP', 'DEFENSIVE_PACT', 'RESEARCH_AGREEMENT', 'PEACE_TREATY'] as const) {
+      expect(SYMMETRIC_ITEM_TYPES.has(t)).toBe(true);
+    }
+    expect(SYMMETRIC_ITEM_TYPES.has('OPEN_BORDERS')).toBe(false);
+    expect(SYMMETRIC_ITEM_TYPES.has('GOLD')).toBe(false);
+
+    const dof = item({ itemType: 'DECLARATION_OF_FRIENDSHIP', fromPlayerID: 0, toPlayerID: 1, duration: 25 });
+    expect(mirrorItem(dof)).toEqual({ itemType: 'DECLARATION_OF_FRIENDSHIP', fromPlayerID: 1, toPlayerID: 0, duration: 25 });
+    // hasMirror finds the swapped-direction twin, not the item itself.
+    expect(hasMirror([dof], dof)).toBe(false);
+    expect(hasMirror([dof, mirrorItem(dof)], dof)).toBe(true);
+  });
+
+  it('adds and removes mutual agreements as a mirrored pair', () => {
+    const dof = item({ itemType: 'DECLARATION_OF_FRIENDSHIP', fromPlayerID: 0, toPlayerID: 1, duration: 25 });
+    const openBorders = item({ itemType: 'OPEN_BORDERS', fromPlayerID: 0, toPlayerID: 1, duration: 30 });
+
+    const withDof = addItemWithMirror([], dof);
+    expect(withDof).toEqual([dof, mirrorItem(dof)]);
+    expect(addItemWithMirror([dof, mirrorItem(dof)], dof)).toEqual([dof, mirrorItem(dof), dof]);
+
+    expect(addItemWithMirror([], openBorders)).toEqual([openBorders]);
+    expect(removeItemWithMirror(withDof, 0)).toEqual([]);
+    expect(removeItemWithMirror([openBorders, ...withDof], 0)).toEqual(withDof);
   });
 
   it('falls back to numeric ids when a name cannot be resolved', () => {

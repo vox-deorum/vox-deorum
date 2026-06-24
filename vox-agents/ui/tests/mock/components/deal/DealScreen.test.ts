@@ -116,15 +116,15 @@ describe('DealScreen', () => {
     api.inspectDeal.mockResolvedValue(inspectionResult());
   });
 
-  it('renders the counterpart on the left and you on the right (three-panel orientation)', async () => {
+  it('renders you on the left and the counterpart on the right (three-panel orientation)', async () => {
     const wrapper = mountScreen();
     await flushPromises();
 
     expect(api.getDealMessages).toHaveBeenCalledWith('dipl:g:0:1');
     expect(api.inspectDeal).toHaveBeenCalled();
-    // Host passes leftID=you, rightID=LLM; the board inverts to counterpart-left / you-right.
-    expect(wrapper.find('.deal-panel-left .deal-panel-title').text()).toContain('Germany');
-    expect(wrapper.find('.deal-panel-right .deal-panel-title').text()).toContain('You, Rome');
+    // Host passes leftID=you, rightID=LLM; the board leads with the initiator/you-left, counterpart-right.
+    expect(wrapper.find('.deal-panel-left .deal-panel-title').text()).toContain('You, Rome');
+    expect(wrapper.find('.deal-panel-right .deal-panel-title').text()).toContain('Germany');
   });
 
   it('adds a clicked inventory term to the correct giver/column', async () => {
@@ -132,8 +132,8 @@ describe('DealScreen', () => {
     const wrapper = mountScreen();
     await flushPromises();
 
-    // Your panel (right) → you are the giver (fromPlayerID = leftID = 0).
-    await rowInPanel(wrapper, '.deal-panel-right', 'Open Borders')!.trigger('click');
+    // Your panel (left) → you are the giver (fromPlayerID = leftID = 0).
+    await rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!.trigger('click');
     await flushPromises();
 
     // It lands under "You give" in the central offer.
@@ -158,8 +158,8 @@ describe('DealScreen', () => {
     const wrapper = mountScreen();
     await flushPromises();
 
-    // Counterpart panel (left) → the counterpart is the giver (fromPlayerID = rightID = 1).
-    await rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!.trigger('click');
+    // Counterpart panel (right) → the counterpart is the giver (fromPlayerID = rightID = 1).
+    await rowInPanel(wrapper, '.deal-panel-right', 'Open Borders')!.trigger('click');
     await flushPromises();
     await wrapper.findAll('button').find((b) => b.text() === 'Propose')!.trigger('click');
     await flushPromises();
@@ -175,12 +175,12 @@ describe('DealScreen', () => {
     await flushPromises();
 
     // Rows use `aria-disabled` (not the native attribute) so the reason tooltip still fires on hover.
-    const dp = rowInPanel(wrapper, '.deal-panel-right', 'Defensive Pact')!;
+    const dp = rowInPanel(wrapper, '.deal-panel-left', 'Defensive Pact')!;
     expect(dp.classes()).toContain('deal-row-illegal');
     expect(dp.attributes('aria-disabled')).toBe('true');
     expect(dp.attributes('disabled')).toBeUndefined();
 
-    const ob = rowInPanel(wrapper, '.deal-panel-right', 'Open Borders')!;
+    const ob = rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!;
     expect(ob.classes()).not.toContain('deal-row-illegal');
     expect(ob.attributes('aria-disabled')).toBe('false');
   });
@@ -250,7 +250,7 @@ describe('DealScreen', () => {
     const wrapper = mountScreen();
     await flushPromises();
 
-    await rowInPanel(wrapper, '.deal-panel-right', 'Open Borders')!.trigger('click');
+    await rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!.trigger('click');
     await new Promise((resolve) => setTimeout(resolve, 300));
     await flushPromises();
 
@@ -283,7 +283,7 @@ describe('DealScreen', () => {
     await flushPromises();
 
     // Add gold from your panel, then edit its amount on the central row.
-    await rowInPanel(wrapper, '.deal-panel-right', 'Gold')!.trigger('click');
+    await rowInPanel(wrapper, '.deal-panel-left', 'Gold')!.trigger('click');
     await flushPromises();
 
     const goldInput = wrapper.find('.deal-panel-center .number-stub');
@@ -306,11 +306,11 @@ describe('DealScreen', () => {
     const wrapper = mountScreen();
     await flushPromises();
 
-    // Expand the Coop War promise in your (right) panel; the target list appears inline.
-    await rowInPanel(wrapper, '.deal-panel-right', 'cooperative war')!.trigger('click');
+    // Expand the Coop War promise in your (left) panel; the target list appears inline.
+    await rowInPanel(wrapper, '.deal-panel-left', 'cooperative war')!.trigger('click');
     await flushPromises();
     // Pick the target on the inventory row — the promise is added already targeted.
-    await rowInPanel(wrapper, '.deal-panel-right', 'Carthage')!.trigger('click');
+    await rowInPanel(wrapper, '.deal-panel-left', 'Carthage')!.trigger('click');
     await flushPromises();
 
     const proposeBtn = wrapper.findAll('button').find((b) => b.text() === 'Propose')!;
@@ -334,9 +334,9 @@ describe('DealScreen', () => {
     const wrapper = mountScreen();
     await flushPromises();
 
-    await rowInPanel(wrapper, '.deal-panel-right', 'Declare war')!.trigger('click');
+    await rowInPanel(wrapper, '.deal-panel-left', 'Declare war')!.trigger('click');
     await flushPromises();
-    await rowInPanel(wrapper, '.deal-panel-right', 'Greece')!.trigger('click');
+    await rowInPanel(wrapper, '.deal-panel-left', 'Greece')!.trigger('click');
     await flushPromises();
 
     expect(wrapper.find('.deal-panel-center').text()).toContain('War with Greece');
@@ -407,7 +407,7 @@ describe('DealScreen', () => {
     expect(labels()).not.toContain('Reset');
 
     // Edit the proposal by adding a term from your panel — the draft now diverges from the stored deal.
-    await rowInPanel(wrapper, '.deal-panel-right', 'Open Borders')!.trigger('click');
+    await rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!.trigger('click');
     await flushPromises();
     expect(labels()).not.toContain('Accept'); // hidden: Accept would record the wrong (original) terms
     expect(labels()).toContain('Counter');
@@ -418,5 +418,60 @@ describe('DealScreen', () => {
     await flushPromises();
     expect(labels()).toContain('Accept');
     expect(labels()).not.toContain('Reset');
+  });
+
+  it('mirrors a mutual agreement onto both sides on add, proposing both directions', async () => {
+    api.proposeDeal.mockResolvedValue({ id: 9, messageType: 'deal-proposal', turn: 1 });
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    // A Declaration of Friendship is mutual — adding it from one panel pairs it onto the other side.
+    await rowInPanel(wrapper, '.deal-panel-left', 'Declaration of Friendship')!.trigger('click');
+    await flushPromises();
+
+    const dofRows = wrapper.find('.deal-panel-center').findAll('.deal-offer-row')
+      .filter((r) => r.text().includes('Declaration of Friendship'));
+    expect(dofRows).toHaveLength(2); // shown under both "give" columns
+
+    await wrapper.findAll('button').find((b) => b.text() === 'Propose')!.trigger('click');
+    await flushPromises();
+
+    const items = api.proposeDeal.mock.calls[0]![1].deal.items;
+    expect(items).toHaveLength(2);
+    expect(items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ fromPlayerID: 0, toPlayerID: 1, itemType: 'DECLARATION_OF_FRIENDSHIP' }),
+      expect.objectContaining({ fromPlayerID: 1, toPlayerID: 0, itemType: 'DECLARATION_OF_FRIENDSHIP' }),
+    ]));
+  });
+
+  it('removes both sides of a mutual agreement when either is removed', async () => {
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    await rowInPanel(wrapper, '.deal-panel-left', 'Declaration of Friendship')!.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.deal-panel-center').findAll('.deal-offer-row')
+      .filter((r) => r.text().includes('Declaration of Friendship'))).toHaveLength(2);
+
+    // Remove one side via its red X — the mutual twin goes with it.
+    const firstDof = wrapper.find('.deal-panel-center').findAll('.deal-offer-row')
+      .find((r) => r.text().includes('Declaration of Friendship'))!;
+    await firstDof.find('.deal-offer-x').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.deal-panel-center').findAll('.deal-offer-row')
+      .filter((r) => r.text().includes('Declaration of Friendship'))).toHaveLength(0);
+  });
+
+  it('adds a one-directional term (Open Borders) on only one side', async () => {
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    await rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!.trigger('click');
+    await flushPromises();
+
+    // Not a mutual agreement → exactly one row, on the giver's side only.
+    expect(wrapper.find('.deal-panel-center').findAll('.deal-offer-row')
+      .filter((r) => r.text().includes('Open Borders'))).toHaveLength(1);
   });
 });

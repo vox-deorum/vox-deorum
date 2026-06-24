@@ -1,7 +1,7 @@
 <!--
 Component: InventoryPanel
 Purpose: One side's categorized, independently-scrolling inventory in the three-panel deal board
-(interactive-diplomacy stage 4) — the left "counterpart" or right "your items" column of the
+(interactive-diplomacy stage 4) — the left "your items" or right "counterpart" column of the
 in-game trade screen.
 
 Pure-presentational: it renders a precomputed `InventoryCategory[]` (built by the parent via
