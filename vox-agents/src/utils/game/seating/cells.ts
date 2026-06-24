@@ -162,3 +162,21 @@ export function buildSeatingMap(
   }
   return seatingMap;
 }
+
+/**
+ * Deep-equality for two `configSlot → seat` maps. Used by load/wait-mode cell
+ * recovery to find the cycle rotation whose generated map reproduces the
+ * seating a loaded game actually has. Both maps use string keys / number
+ * values, so a key-count + per-key compare is sufficient.
+ */
+export function seatingMapsEqual(
+  a: Record<string, number>,
+  b: Record<string, number>
+): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}

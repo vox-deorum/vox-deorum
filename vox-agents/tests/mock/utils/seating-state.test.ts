@@ -17,6 +17,7 @@ vi.mock('../../../src/utils/config.js', async (importOriginal) => {
 
 // Imports come AFTER vi.mock so the mocked module is used by SeatingStateManager.
 import { SeatingStateManager } from '../../../src/utils/game/seating/state.js';
+import { buildSeatingMap, seatingMapsEqual } from '../../../src/utils/game/seating/cells.js';
 import type { SeatingClaim, SeatingState } from '../../../src/utils/game/seating/types.js';
 
 let testCounter = 0;
@@ -833,5 +834,248 @@ describe('SeatingStateManager — seeded randomizeSeating', () => {
       seedSets: [undefined],
       randomizeSeating: 1.5
     })).toThrow(/randomizeSeating/);
+  });
+});
+
+describe('seatingMapsEqual', () => {
+  it('compares maps by content, independent of key order', () => {
+    expect(seatingMapsEqual({ '3': 1, '5': 2 }, { '3': 1, '5': 2 })).toBe(true);
+    expect(seatingMapsEqual({ '5': 2, '3': 1 }, { '3': 1, '5': 2 })).toBe(true);
+    expect(seatingMapsEqual({}, {})).toBe(true);
+    expect(seatingMapsEqual({ '3': 1, '5': 2 }, { '3': 1, '5': 9 })).toBe(false);
+    expect(seatingMapsEqual({ '3': 1 }, { '3': 1, '5': 2 })).toBe(false);
+    expect(seatingMapsEqual({ '3': 1, '5': 2 }, { '3': 1 })).toBe(false);
+  });
+});
+
+describe('SeatingStateManager — claimMatchingCell (load/wait resume)', () => {
+  const ourId = `${os.hostname()}#${process.pid}`;
+
+  /** Overwrite the on-disk state file in place (to forge a terminated claim). */
+  function writeStateFile(configName: string, state: SeatingState): void {
+    fs.writeFileSync(
+      path.join(tmpRoot, `${configName}.seating.json`),
+      JSON.stringify(state, null, 2)
+    );
+  }
+
+  it('returns the identity claim in trivial mode, ignoring observed input', async () => {
+    const cfg = uniqueConfigName('match-trivial');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [0, 2, 5], totalSeats: 8,
+      seedCount: 1, seedSets: [{ sync: 42 }], randomizeSeating: false,
+    });
+
+    const claim = await mgr.claimMatchingCell({
+      seatingMap: { '0': 0, '2': 2, '5': 5 }, seeds: { sync: 42 }, rotation: 0, seedIndex: 0,
+    });
+
+    expect(claim.rotation).toBe(0);
+    expect(claim.seatingMap).toEqual({ '0': 0, '2': 2, '5': 5 });
+    expect(claim.seeds).toEqual({ sync: 42 });
+    // Trivial mode never persists state.
+    expect(fs.existsSync(path.join(tmpRoot, `${cfg}.seating.json`))).toBe(false);
+  });
+
+  it('claims the cell matching the loaded game via an exact rotation hint', async () => {
+    const cfg = uniqueConfigName('match-exact');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 12345,
+    });
+    // Materialize the state file so we can read its deterministic basePerm.
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    const rotation = 3;
+    const observedMap = buildSeatingMap(basePerm, rotation, [7]);
+
+    const claim = await mgr.claimMatchingCell({
+      seatingMap: observedMap, rotation, seedIndex: 0, seeds: { sync: undefined, map: undefined },
+    });
+
+    expect(claim.rotation).toBe(rotation);
+    expect(claim.seedIndex).toBe(0);
+    expect(claim.seatingMap).toEqual(observedMap);
+    const cell = readState(cfg).cells[String(rotation)]['0'];
+    expect(cell.status).toBe('in-progress');
+    expect(cell.claimedBy).toBe(ourId);
+  });
+
+  it('falls back to scanning rotations when the hint is absent', async () => {
+    const cfg = uniqueConfigName('match-scan');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [3, 5], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 7,
+    });
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    const rotation = 4;
+    const observedMap = buildSeatingMap(basePerm, rotation, [3, 5]);
+
+    // No rotation hint — must resolve purely by seating-map content.
+    const claim = await mgr.claimMatchingCell({ seatingMap: observedMap });
+
+    expect(claim.rotation).toBe(rotation);
+    expect(claim.seatingMap).toEqual(observedMap);
+  });
+
+  it('resolves seedIndex via the seatingSeedIndex hint (multi-seed)', async () => {
+    const cfg = uniqueConfigName('match-multiseed-hint');
+    const seedSets = [{ sync: 1, map: 1 }, { sync: 2, map: 2 }, { sync: 3, map: 3 }];
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8, seedCount: 3, seedSets, randomizeSeating: true,
+    });
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    const rotation = 2, seedIndex = 1;
+    const observedMap = buildSeatingMap(basePerm, rotation, [7]);
+
+    const claim = await mgr.claimMatchingCell({
+      seatingMap: observedMap, rotation, seedIndex, seeds: seedSets[seedIndex],
+    });
+
+    expect(claim.rotation).toBe(rotation);
+    expect(claim.seedIndex).toBe(seedIndex);
+    expect(claim.seeds).toEqual(seedSets[seedIndex]);
+  });
+
+  it('resolves seedIndex by matching observed seeds when no hint is given', async () => {
+    const cfg = uniqueConfigName('match-multiseed-scan');
+    const seedSets = [{ sync: 1, map: 1 }, { sync: 2, map: 2 }, { sync: 3, map: 3 }];
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8, seedCount: 3, seedSets, randomizeSeating: true,
+    });
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    const rotation = 5;
+    const observedMap = buildSeatingMap(basePerm, rotation, [7]);
+
+    const claim = await mgr.claimMatchingCell({
+      seatingMap: observedMap, seeds: { sync: 3, map: 3 },
+    });
+
+    expect(claim.rotation).toBe(rotation);
+    expect(claim.seedIndex).toBe(2);
+    expect(claim.seeds).toEqual({ sync: 3, map: 3 });
+  });
+
+  it('matches an unfixed ("Civ chose") seed set and carries undefined seeds', async () => {
+    const cfg = uniqueConfigName('match-unfixed-seed');
+    const seedSets = [undefined, { sync: 5 }];
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8, seedCount: 2, seedSets, randomizeSeating: true,
+    });
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    const rotation = 1, seedIndex = 0;
+    const observedMap = buildSeatingMap(basePerm, rotation, [7]);
+
+    // Whatever Civ rolled for the unfixed index must not be promoted into the claim.
+    const claim = await mgr.claimMatchingCell({
+      seatingMap: observedMap, rotation, seedIndex, seeds: { sync: 99999, map: 12345 },
+    });
+
+    expect(claim.seedIndex).toBe(0);
+    expect(claim.seeds).toBeUndefined();
+  });
+
+  it('throws when the launched game has no seating map (unknown/fresh game)', async () => {
+    const cfg = uniqueConfigName('match-no-map');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: true,
+    });
+
+    await expect(mgr.claimMatchingCell({ seeds: { sync: 1 } })).rejects.toThrow(/no seating metadata/i);
+    await expect(mgr.claimMatchingCell({ seatingMap: {} })).rejects.toThrow(/no seating metadata/i);
+  });
+
+  it('throws when no rotation reproduces the seating map (cycle drift)', async () => {
+    const cfg = uniqueConfigName('match-drift');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [3, 5], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: true,
+    });
+    await mgr.claimNextCell();
+
+    // {3:0, 5:0} maps both slots to the same seat — impossible for any rotation.
+    await expect(mgr.claimMatchingCell({ seatingMap: { '3': 0, '5': 0 } }))
+      .rejects.toThrow(/reproduces|drift|refusing/i);
+  });
+
+  it('fails recovery when a recorded rotation hint no longer matches (no silent rescan)', async () => {
+    const cfg = uniqueConfigName('match-hint-drift');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 4242,
+    });
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    // The observed map corresponds to one rotation, but the recorded hint claims
+    // a different one. A blind scan WOULD find the real rotation (with one config
+    // slot every seat is reachable), so the mismatched hint must veto it — drift,
+    // not a silent rebind.
+    const actualRotation = 2;
+    const observedMap = buildSeatingMap(basePerm, actualRotation, [7]);
+    const wrongHint = (actualRotation + 1) % 8;
+    expect(seatingMapsEqual(buildSeatingMap(basePerm, wrongHint, [7]), observedMap)).toBe(false);
+
+    await expect(
+      mgr.claimMatchingCell({ seatingMap: observedMap, rotation: wrongHint, seedIndex: 0 })
+    ).rejects.toThrow(/Refusing to assign a different cell/);
+  });
+
+  it('fails recovery when a recorded seedIndex hint no longer matches its seeds', async () => {
+    const cfg = uniqueConfigName('match-seed-hint-drift');
+    const seedSets = [{ sync: 1, map: 1 }, { sync: 2, map: 2 }];
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8, seedCount: 2, seedSets, randomizeSeating: true,
+    });
+    await mgr.claimNextCell();
+    const basePerm = readState(cfg).basePerm;
+    const rotation = 1;
+    const observedMap = buildSeatingMap(basePerm, rotation, [7]);
+    // Observed seeds are seedSets[0], but the recorded hint claims index 1 — the
+    // randomSeeds config drifted (reordered), so recovery must fail rather than
+    // rebind to the wrong seed cell.
+    await expect(
+      mgr.claimMatchingCell({ seatingMap: observedMap, rotation, seedIndex: 1, seeds: { sync: 1, map: 1 } })
+    ).rejects.toThrow(/Refusing to assign a different cell/);
+  });
+
+  it('re-owns a terminated in-progress cell without charging the failure budget', async () => {
+    const cfg = uniqueConfigName('match-reown');
+    const mgr = new SeatingStateManager({
+      configName: cfg, configSlots: [7], totalSeats: 8,
+      seedCount: 1, seedSets: [undefined], randomizeSeating: 999,
+    });
+    // First claim materializes state and gives us a concrete cell to forge.
+    const original = await mustClaim(mgr);
+    const r = String(original.rotation), s = String(original.seedIndex);
+    const oldClaimedAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+    // Simulate a hard-terminated run: the cell is left in-progress under a dead
+    // runner, mid-game, with prior failures on the books.
+    const state = readState(cfg);
+    state.cells[r][s] = {
+      status: 'in-progress', claimedBy: 'dead-host#1234', claimedAt: oldClaimedAt,
+      gameID: 'game-xyz', failureCount: 2,
+    };
+    writeStateFile(cfg, state);
+
+    const claim = await mgr.claimMatchingCell({
+      seatingMap: original.seatingMap, rotation: original.rotation, seedIndex: original.seedIndex,
+    });
+
+    expect(claim.rotation).toBe(original.rotation);
+    expect(claim.seedIndex).toBe(original.seedIndex);
+
+    const cell = readState(cfg).cells[r][s];
+    expect(cell.status).toBe('in-progress');
+    expect(cell.claimedBy).toBe(ourId);          // re-owned by us
+    expect(cell.failureCount).toBe(2);           // preserved, NOT bumped
+    expect(cell.gameID).toBe('game-xyz');        // preserved for forensics
+    expect(cell.claimedAt).not.toBe(oldClaimedAt); // fresh timestamp
+    expect(claim.claimedAt).toBe(cell.claimedAt);  // claim carries the on-disk claimedAt
   });
 });

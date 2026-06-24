@@ -20,7 +20,7 @@ import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
 import { SessionStatus, PlayerAssignment } from "../types/api.js";
 import { SeatingStateManager } from "../utils/game/seating/state.js";
-import type { SeatingClaim } from "../utils/game/seating/types.js";
+import type { ObservedSeating, SeatingClaim } from "../utils/game/seating/types.js";
 import { getMetadata, setMetadata } from "../utils/game/metadata.js";
 
 const logger = createLogger('StrategistSession');
@@ -58,7 +58,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
    * runs the full persistent cycle.
    */
   private readonly seatingManager: SeatingStateManager;
-  /** The current cell claim, set by `ensureSeatingClaim` before the game launches. */
+  /**
+   * The current cell claim. Set by the constructor for `start` mode (the loop
+   * pre-fetched it via `claimNextCell`). For `load`/`wait` mode it starts
+   * `undefined` and is recovered in `handleGameSwitched` by matching the
+   * launched game against the cycle (see `recoverSeatingClaimFromGame`).
+   */
   private seatingClaim?: SeatingClaim;
   /** Tracks whether the active claim has already been released, so shutdown() doesn't double-release. */
   private claimReleased = false;
@@ -66,19 +71,21 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private victoryObserved = false;
 
   /**
-   * Wire the session against a pre-fetched seating claim and the manager that
-   * produced it (so `attachGameID` / `releaseCell` / `refreshClaim` write back
-   * to the same on-disk cycle state). The repetition loop ([./loop.ts]) owns
-   * the manager and the cycle progression; the session just runs the game.
+   * Wire the session against the manager that owns the cycle state (so
+   * `attachGameID` / `releaseCell` write back to the same on-disk state) and a
+   * seating claim. The claim is pre-fetched by the repetition loop
+   * ([./loop.ts]) for `start` mode; for `load`/`wait` mode it is `null` and is
+   * recovered from the launched game on `GameSwitched`. The loop owns the
+   * manager and cycle progression; the session just runs the game.
    */
-  constructor(config: StrategistSessionConfig, seatingManager: SeatingStateManager, seatingClaim: SeatingClaim) {
+  constructor(config: StrategistSessionConfig, seatingManager: SeatingStateManager, seatingClaim: SeatingClaim | null) {
     super(config);
     this.finishPromise = new Promise((resolve) => {
       this.victoryResolve = resolve;
     });
 
     this.seatingManager = seatingManager;
-    this.seatingClaim = seatingClaim;
+    this.seatingClaim = seatingClaim ?? undefined;
 
     voxCivilization.onGameExit(this.handleGameExit.bind(this));
   }
@@ -102,14 +109,23 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         logger.info(`Calculated player count: ${playerCount} from player IDs: ${playerIds.join(', ')}`);
       }
 
-      // Seating claim is supplied by the constructor — the loop fetched it
-      // already so this method can launch the game immediately.
-      logger.info(
-        `Starting strategist session ${this.id} in ${this.config.gameMode} mode; ` +
-        `seating rotation=${this.seatingClaim!.rotation} seedIndex=${this.seatingClaim!.seedIndex} ` +
-        `seatingMap=${JSON.stringify(this.seatingClaim!.seatingMap)}`,
-        this.config
-      );
+      // In `start` mode the loop pre-fetched the claim so we can launch
+      // immediately; in `load`/`wait` mode the cell is recovered from the
+      // launched game on GameSwitched, so the claim isn't known yet.
+      if (this.seatingClaim) {
+        logger.info(
+          `Starting strategist session ${this.id} in ${this.config.gameMode} mode; ` +
+          `seating rotation=${this.seatingClaim.rotation} seedIndex=${this.seatingClaim.seedIndex} ` +
+          `seatingMap=${JSON.stringify(this.seatingClaim.seatingMap)}`,
+          this.config
+        );
+      } else {
+        logger.info(
+          `Starting strategist session ${this.id} in ${this.config.gameMode} mode; ` +
+          `seating cell will be recovered from the launched game on GameSwitched`,
+          this.config
+        );
+      }
 
       // Human-control sessions ride the existing visual-mode gating: animations
       // on, no strategic-view toggle, and the DLL AI-turn cooldown. Normalize an
@@ -433,6 +449,26 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     this.turn = params.turn;  // Update current turn
     logger.warn(`Game context switching to ${params.gameID} at turn ${params.turn}`);
 
+    // Load/wait mode binds to a game launched outside our control (typically a
+    // resumed controlled save). Its seeds + seating are already baked in, so
+    // instead of the loop assigning a fresh cell we recover the matching cell
+    // from the launched game now — its per-game metadata is addressable once
+    // GameSwitched fires. A failed match is fatal; route it through the error
+    // path rather than throwing out of this (swallowed) notification handler.
+    if (!this.seatingClaim) {
+      try {
+        this.seatingClaim = await this.recoverSeatingClaimFromGame();
+      } catch (err) {
+        const message = `Failed to match the launched game to the seating cycle: ${(err as Error).message}`;
+        logger.error(message);
+        this.onStateChange('error', message);
+        this.abortController.abort();
+        await voxCivilization.killGame();
+        this.victoryResolve?.();
+        return;
+      }
+    }
+
     // Bind the gameID to the current seating-cycle attempt so operators can
     // correlate cells to archive files. Idempotent across crash-recoveries:
     // each relaunch overwrites with the new gameID. No-op in trivial mode.
@@ -588,6 +624,58 @@ ${overrideLine}Game.SetAIAutoPlay(2000, -1);`
     await voxCivilization.killGame();
     this.victoryResolve?.();
     return false;
+  }
+
+  /**
+   * Recover the seating claim for a game launched outside the fresh-start path
+   * (`load`/`wait` mode). The Civ V gameID persists across save→load, so the
+   * per-game metadata written by the original run is readable here: read back
+   * the seating map, cycle coordinates, and Civ's observed pregame seeds, then
+   * ask the manager for the cycle cell that reproduces them.
+   *
+   * Throws (surfaced as a session error by the caller) when nothing matches —
+   * an unknown / fresh game with no seating metadata, or a cycle that drifted
+   * since this save started.
+   */
+  private async recoverSeatingClaimFromGame(): Promise<SeatingClaim> {
+    const [mapText, rotationText, seedIndexText, syncText, mapSeedText] = await Promise.all([
+      getMetadata("seatingMap"),
+      getMetadata("seatingRotation"),
+      getMetadata("seatingSeedIndex"),
+      getMetadata("syncRandSeed"),
+      getMetadata("mapRandSeed"),
+    ]);
+
+    let seatingMap: Record<string, number> | undefined;
+    if (mapText) {
+      try {
+        seatingMap = JSON.parse(mapText) as Record<string, number>;
+      } catch {
+        throw new Error(`launched game's seatingMap metadata is not valid JSON: "${mapText}"`);
+      }
+    }
+
+    // Empty/missing metadata → undefined; a present-but-non-numeric value is
+    // malformed and fails recovery early with a key-specific message.
+    const parseNum = (text: string, key: string): number | undefined => {
+      if (!text) return undefined;
+      const n = Number(text);
+      if (!Number.isFinite(n)) {
+        throw new Error(`launched game's ${key} metadata is not a number: "${text}"`);
+      }
+      return n;
+    };
+
+    const observed: ObservedSeating = {
+      seatingMap,
+      rotation: parseNum(rotationText, "seatingRotation"),
+      seedIndex: parseNum(seedIndexText, "seatingSeedIndex"),
+      seeds: {
+        sync: parseNum(syncText, "syncRandSeed"),
+        map: parseNum(mapSeedText, "mapRandSeed"),
+      },
+    };
+    return this.seatingManager.claimMatchingCell(observed);
   }
 
   /**

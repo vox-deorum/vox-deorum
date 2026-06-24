@@ -69,6 +69,7 @@ import {
   getCellStatusCounts as countsHelper,
   isCycleFinished as cycleFinishedHelper,
   pickCell,
+  seatingMapsEqual,
   setCell,
   type CellStatusCounts,
 } from './cells.js';
@@ -81,11 +82,13 @@ import {
 import type {
   CellEntry,
   CellStatus,
+  ObservedSeating,
   SeatingClaim,
   SeatingCycleCell,
   SeatingState,
   SeatingStateManagerOptions,
 } from './types.js';
+import type { RandomSeedsConfig } from '../../../types/config.js';
 
 const logger = createLogger('SeatingState');
 
@@ -102,6 +105,21 @@ const SEATING_WAIT_RETRY_MS = 60_000;
 /** Identifier embedded in `claimedBy` so we can distinguish our own crashes from others'. */
 function runnerId(): string {
   return `${os.hostname()}#${process.pid}`;
+}
+
+/**
+ * Whether a configured seed set is consistent with a loaded game's observed
+ * seeds. Only fixed (`!== undefined`) configured fields are checked — an unfixed
+ * field means Civ chose the value, so any observed value is acceptable.
+ */
+function seedsMatchObserved(
+  configured: RandomSeedsConfig | undefined,
+  observed: RandomSeedsConfig | undefined,
+): boolean {
+  if (!configured) return true; // "Civ chose" — matches whatever the game has
+  if (configured.sync !== undefined && configured.sync !== observed?.sync) return false;
+  if (configured.map !== undefined && configured.map !== observed?.map) return false;
+  return true;
 }
 
 /**
@@ -335,6 +353,97 @@ export class SeatingStateManager {
 
     // Shutting down — treat as finished so the caller exits its loop.
     return null;
+  }
+
+  /**
+   * Claim the specific cell that reproduces an already-running (loaded) game,
+   * instead of picking the next pending cell.
+   *
+   * Load/wait mode binds to a save that already has its seeds + seating baked
+   * in. Picking a fresh cell (via {@link claimNextCell}) would assign a
+   * different seating/seed that fails the session's seed verification, so
+   * instead we find the cycle cell whose generated `seatingMap` and seed set
+   * match what the game actually has — using the original run's recorded cycle
+   * coordinates only as candidates, validated by content — re-own it under our
+   * runnerId, and return the claim.
+   *
+   * Re-owning is deliberate (operator-driven resume), so it does NOT charge the
+   * failure budget the way a stale-steal does; `failureCount` is preserved. The
+   * returned claim carries the **configured** seed set (`seedSets[seedIndex]`),
+   * never the observed seeds — an unfixed index stays `undefined` so the session
+   * doesn't verify a value the cycle never fixed.
+   *
+   * @throws if no cell in the current cycle reproduces the observed setup —
+   *   an unknown / non-controlled save, a fresh game, or a cycle whose
+   *   `basePerm` drifted since this game started. Callers must surface this
+   *   rather than silently fall back to a new cell.
+   */
+  async claimMatchingCell(observed: ObservedSeating): Promise<SeatingClaim> {
+    if (this.trivial) {
+      // Single identity cell — there is nothing to match; behaves like claimNextCell.
+      return this.buildTrivialClaim();
+    }
+    const observedMap = observed.seatingMap;
+    if (!observedMap || Object.keys(observedMap).length === 0) {
+      throw new Error(
+        `Cannot resume "${this.configName}": the launched game has no seating metadata to ` +
+        `match against the cycle (unknown or non-controlled save, or a fresh game).`
+      );
+    }
+    const ourId = runnerId();
+
+    return withLock(this.lockPath, ourId, this.configName, () => {
+      const state = loadOrInit({
+        statePath: this.statePath,
+        configName: this.configName,
+        totalSeats: this.totalSeats,
+        seedCount: this.seedCount,
+        configSlotsSorted: this.configSlotsSorted,
+        seatingSeed: this.seatingSeed,
+      });
+
+      // Both resolvers throw with a descriptive message when the launched game
+      // can't be matched to a cell (drift / unknown game); the throw propagates
+      // out of withLock and is surfaced as a session error by the caller.
+      const rotation = this.resolveRotation(state, observedMap, observed.rotation);
+      const seedIndex = this.resolveSeedIndex(observed.seeds, observed.seedIndex);
+
+      const before = getCell(state, rotation, seedIndex);
+      if (before.status === 'in-progress' && before.claimedBy !== ourId) {
+        logger.warn(
+          `Re-owning seating cell rotation=${rotation} seedIndex=${seedIndex} for "${this.configName}" ` +
+          `held in-progress by ${before.claimedBy} to resume the launched game`
+        );
+      } else if (before.status === 'completed') {
+        logger.warn(
+          `Re-owning already-completed seating cell rotation=${rotation} seedIndex=${seedIndex} for ` +
+          `"${this.configName}" to resume the launched game`
+        );
+      }
+
+      const now = Date.now();
+      const claimedAt = new Date(now).toISOString();
+      setCell(state, rotation, seedIndex, {
+        status: 'in-progress',
+        claimedAt,
+        claimedBy: ourId,
+        gameID: before.gameID,
+        // Deliberate operator resume — preserve the failure budget rather than
+        // charging it like a stale-steal/crash.
+        failureCount: before.failureCount,
+        completedBy: before.completedBy,
+      });
+      writeStateUnlocked(this.statePath, state);
+
+      const seatingMap = buildSeatingMap(state.basePerm, rotation, this.configSlotsSorted);
+      const seeds = this.seedSets[seedIndex];
+      logger.info(
+        `Re-claimed seating cell rotation=${rotation} seedIndex=${seedIndex} for "${this.configName}" ` +
+        `to resume launched game (prior status=${before.status}, seatingMap=${JSON.stringify(seatingMap)}, ` +
+        `failureCount=${before.failureCount ?? 0}/${this.maxCellFailures})`
+      );
+      return { rotation, seedIndex, seatingMap, seeds, claimedAt };
+    });
   }
 
   /**
@@ -578,5 +687,82 @@ export class SeatingStateManager {
       }
       return { pick, before, failureCount: incremented };
     }
+  }
+
+  /**
+   * Resolve the rotation of the cycle cell that reproduces a loaded game's
+   * seating map, for {@link claimMatchingCell}.
+   *
+   * A recorded `seatingRotation` hint (written by the original run) is
+   * authoritative: it must still reproduce `observedMap` under the current
+   * `basePerm`. If it doesn't — out of range, or the map no longer matches — the
+   * cycle drifted (config edited or reset) since this game started, so we throw
+   * rather than silently rebind to whichever rotation happens to match now. With
+   * a single config slot every seat is reachable in any `basePerm`, so a blind
+   * scan would always "match" the wrong cell and corrupt cycle accounting.
+   *
+   * Only a *missing* hint (legacy save) falls back to a best-effort content
+   * scan. Throws when nothing reproduces the map.
+   */
+  private resolveRotation(
+    state: SeatingState,
+    observedMap: Record<string, number>,
+    hint: number | undefined,
+  ): number {
+    const matches = (rotation: number): boolean =>
+      seatingMapsEqual(buildSeatingMap(state.basePerm, rotation, this.configSlotsSorted), observedMap);
+    if (hint !== undefined) {
+      if (Number.isInteger(hint) && hint >= 0 && hint < state.totalSeats && matches(hint)) {
+        return hint;
+      }
+      throw new Error(
+        `Recorded seatingRotation=${hint} for "${this.configName}" no longer reproduces the launched ` +
+        `game's seating map (${JSON.stringify(observedMap)}); the cycle drifted since this game started ` +
+        `(config shape changed or the cycle was reset). Refusing to assign a different cell.`
+      );
+    }
+    for (let rotation = 0; rotation < state.totalSeats; rotation++) {
+      if (matches(rotation)) return rotation;
+    }
+    throw new Error(
+      `No seating rotation for "${this.configName}" reproduces the launched game's seating map ` +
+      `(${JSON.stringify(observedMap)}); refusing to assign a new cell.`
+    );
+  }
+
+  /**
+   * Resolve the seedIndex of the cycle cell for a loaded game, for
+   * {@link claimMatchingCell}. A single seed set leaves only one choice.
+   * Otherwise a recorded `seatingSeedIndex` hint is authoritative: it must be in
+   * range and its seed set must still match the observed seeds, else the
+   * `randomSeeds` config drifted (reordered / changed) and we throw rather than
+   * rebind to a different seed cell. Only a *missing* hint (legacy save) falls
+   * back to matching by observed seeds. Throws when nothing matches.
+   */
+  private resolveSeedIndex(
+    observedSeeds: RandomSeedsConfig | undefined,
+    hint: number | undefined,
+  ): number {
+    if (this.seedCount === 1) return 0;
+    if (hint !== undefined) {
+      if (
+        Number.isInteger(hint) && hint >= 0 && hint < this.seedCount &&
+        seedsMatchObserved(this.seedSets[hint], observedSeeds)
+      ) {
+        return hint;
+      }
+      throw new Error(
+        `Recorded seatingSeedIndex=${hint} for "${this.configName}" is out of range or its seed set no ` +
+        `longer matches the launched game's seeds (${JSON.stringify(observedSeeds ?? {})}); the randomSeeds ` +
+        `config drifted since this game started. Refusing to assign a different cell.`
+      );
+    }
+    for (let seedIndex = 0; seedIndex < this.seedCount; seedIndex++) {
+      if (seedsMatchObserved(this.seedSets[seedIndex], observedSeeds)) return seedIndex;
+    }
+    throw new Error(
+      `No seed set for "${this.configName}" matches the launched game's seeds ` +
+      `(${JSON.stringify(observedSeeds ?? {})}); refusing to assign a new cell.`
+    );
   }
 }

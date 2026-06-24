@@ -79,6 +79,23 @@ export interface SeatingState {
   completedCycles: number;
 }
 
+/**
+ * What a loaded game reports about its own seating + seeds, used by
+ * `claimMatchingCell` to recover the cycle cell the save belongs to (load/wait
+ * mode). `seatingMap` is the authoritative content match; `rotation`/`seedIndex`
+ * are the original run's recorded coordinates, used only as validated hints.
+ */
+export interface ObservedSeating {
+  /** configSlot (string) → actual player ID, from the original run's `seatingMap` metadata. */
+  seatingMap?: Record<string, number>;
+  /** Civ's observed pregame seeds for the loaded game (`syncRandSeed`/`mapRandSeed`). */
+  seeds?: RandomSeedsConfig;
+  /** Recorded `seatingRotation` (audit hint; validated against `seatingMap` content). */
+  rotation?: number;
+  /** Recorded `seatingSeedIndex` (audit hint; validated against observed seeds). */
+  seedIndex?: number;
+}
+
 /** Result of a successful claim — pass to `releaseCell` when the game ends. */
 export interface SeatingClaim {
   rotation: number;

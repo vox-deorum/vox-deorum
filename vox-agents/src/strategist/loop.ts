@@ -11,6 +11,12 @@
  * cases (peers still mid-game) are handled inside `claimNextCell` itself, so
  * the loop body stays trivial.
  *
+ * Only `start` mode claims a cell up front. `load`/`wait` bind to a game
+ * launched outside our control (a resumed controlled save), so the cell is
+ * matched and re-owned by the session on GameSwitched instead — the loop passes
+ * a `null` claim for those modes. After the first iteration the loop rolls the
+ * mode to `start`, so subsequent iterations claim normally.
+ *
  * Used by both the console entry point and the web `/api/session/start` route.
  */
 
@@ -18,6 +24,7 @@ import { processManager } from '../infra/process-manager.js';
 import { SeatingStateManager } from '../utils/game/seating/state.js';
 import { createLogger } from '../utils/logger.js';
 import type { StrategistSessionConfig } from '../types/config.js';
+import type { SeatingClaim } from '../utils/game/seating/types.js';
 import { buildSeatingManagerOptions } from './seating-options.js';
 import { StrategistSession } from './strategist-session.js';
 
@@ -53,10 +60,18 @@ export async function runStrategistLoop(opts: StrategistLoopOptions): Promise<vo
   for (let i = 0; i < opts.maxRepetitions; i++) {
     if (processManager.isShuttingDown || opts.shouldStop?.()) break;
 
-    const claim = await seatingManager.claimNextCell();
-    if (!claim) {
-      logger.info(`Seating × seed cycle finished after ${i} session(s); exiting loop`);
-      break;
+    // `start` mode creates a fresh game, so claim the next cell up front.
+    // `load`/`wait` bind to a game launched outside our control (a resumed
+    // controlled save), whose cell can only be matched once it's launched — the
+    // session recovers it from the launched game on GameSwitched, so the claim
+    // stays null here.
+    let claim: SeatingClaim | null = null;
+    if (opts.config.gameMode === 'start') {
+      claim = await seatingManager.claimNextCell();
+      if (!claim) {
+        logger.info(`Seating × seed cycle finished after ${i} session(s); exiting loop`);
+        break;
+      }
     }
 
     const session = new StrategistSession(opts.config, seatingManager, claim);
