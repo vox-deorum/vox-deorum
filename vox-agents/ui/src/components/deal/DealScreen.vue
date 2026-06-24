@@ -183,6 +183,8 @@ const buildCatalogFor = (ownerID: number, otherID: number) =>
     currentItems: workingDeal.value.items,
     currentPromises: workingDeal.value.promises,
     defaultDuration: inspection.value?.defaultDuration,
+    peaceDuration: inspection.value?.peaceDuration,
+    relationshipDuration: inspection.value?.relationshipDuration,
     promiseTargets: promiseTargets.value,
   });
 const counterpartCategories = computed(() => buildCatalogFor(counterpartID.value, youID.value));

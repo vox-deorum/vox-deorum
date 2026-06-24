@@ -26,7 +26,9 @@
 --     items = { { fromPlayerID, toPlayerID, itemType, legal, reason,
 --                 valueToGiver, valueToReceiver, unknown? }, ... },
 --     range = { [tostring(playerID)] = <side range>, ... },
---     defaultDuration = <int>,
+--     defaultDuration = <int>,        -- standard deal duration (Game.GetDealDuration)
+--     peaceDuration = <int>,          -- peace-deal duration (Game.GetPeaceDuration)
+--     relationshipDuration = <int>,   -- DoF/denounce duration (Game.GetRelationshipDuration)
 --     promiseTargets = { { playerID, teamID, name, kind }, ... }
 --   }
 -- Legality/reasons are computed with bTreatAsHumanToHuman = true so the preview
@@ -34,6 +36,12 @@
 
 local TI = TradeableItems
 local DEFAULT_DURATION = Game.GetDealDuration()
+-- Peace items (peace treaty / third-party peace) run for the game-speed peace-deal duration, and a
+-- Declaration of Friendship lasts the relationship duration — both distinct from the standard deal
+-- duration. CvGame exposes a direct accessor for each (GetPeaceDuration == getPeaceDealDuration;
+-- GetRelationshipDuration == getRelationshipDuration).
+local PEACE_DURATION = Game.GetPeaceDuration()
+local RELATIONSHIP_DURATION = Game.GetRelationshipDuration()
 
 -- Categories the current ruleset forbids ENTIRELY. These are hidden from the range (omitted),
 -- not shown red, so the Web board and the negotiator both match the in-game trade screen, which
@@ -120,6 +128,20 @@ local function toggleCandidate(deal, giver, receiver, enum, d1, d2)
   return { legal = legal, reason = reason }
 end
 
+-- The fixed game duration for an item type. Durations are read-only game constants, never author-set:
+-- any authored `duration` is IGNORED so legality/value are evaluated at the same length the deal is
+-- stored and displayed at (mirrors durationForItemType in deal-schema.ts). Peace items run the
+-- peace-deal duration; a Declaration of Friendship the relationship duration; everything else (incl.
+-- the items whose duration arg the DLL ignores) the standard deal duration.
+local function durationFor(itemType)
+  if itemType == "PEACE_TREATY" or itemType == "THIRD_PARTY_PEACE" then
+    return PEACE_DURATION
+  elseif itemType == "DECLARATION_OF_FRIENDSHIP" then
+    return RELATIONSHIP_DURATION
+  end
+  return DEFAULT_DURATION
+end
+
 -- For a structured item resolve, for its giver:
 --   d1,d2,d3,flag1            -> IsPossibleToTradeItem / GetReasonsItemUntradeable
 --   v1,v2,v3,vflag1,vdur      -> GetTradeItemValue (duration is a separate arg there)
@@ -127,7 +149,7 @@ end
 -- Returns nil for an unrecognized item type.
 local function resolveItem(item, giver)
   local t = item.itemType
-  local dur = item.duration or DEFAULT_DURATION
+  local dur = durationFor(t)
   if t == "GOLD" then
     local amt = item.amount or 0
     return amt, -1, -1, false, amt, -1, -1, false, -1,
@@ -497,4 +519,4 @@ for pid = 0, GameDefines.MAX_CIV_PLAYERS - 1 do
   end
 end
 
-return { items = items, range = range, defaultDuration = DEFAULT_DURATION, promiseTargets = promiseTargets }
+return { items = items, range = range, defaultDuration = DEFAULT_DURATION, peaceDuration = PEACE_DURATION, relationshipDuration = RELATIONSHIP_DURATION, promiseTargets = promiseTargets }

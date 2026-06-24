@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildSideCatalog,
   defaultItemFor,
+  durationFor,
   isSingletonSelected,
   offerItemsForSide,
   offerPromisesForSide,
@@ -41,11 +42,14 @@ const build = (over: Partial<Parameters<typeof buildSideCatalog>[0]> = {}): Inve
     currentItems: [],
     currentPromises: [],
     defaultDuration: 30,
+    peaceDuration: 10,
+    relationshipDuration: 25,
     promiseTargets: [],
     ...over,
   });
 
 const cat = (cats: InventoryCategory[], kind: string) => cats.find((c) => c.kind === kind)!;
+const durations = { defaultDuration: 30, peaceDuration: 10, relationshipDuration: 25 };
 
 describe('deal-catalog', () => {
   it('returns the categories in the in-game order (no bonus bucket — bonus resources are never tradeable)', () => {
@@ -258,8 +262,8 @@ describe('deal-catalog', () => {
     expect(cat(build({ range: range({ voteCommitments: [] }) }), 'congress').rows).toHaveLength(0);
   });
 
-  it('seeds default items: qty 1, the default duration, and gold capped at the range max', () => {
-    expect(defaultItemFor('RESOURCES', 0, 1, { resourceID: 3, defaultDuration: 30 })).toEqual({
+  it('seeds default items: qty 1, the fixed duration, and gold capped at the range max', () => {
+    expect(defaultItemFor('RESOURCES', 0, 1, { resourceID: 3, durations })).toEqual({
       fromPlayerID: 0,
       toPlayerID: 1,
       itemType: 'RESOURCES',
@@ -267,13 +271,55 @@ describe('deal-catalog', () => {
       quantity: 1,
       duration: 30,
     });
-    expect(defaultItemFor('GOLD_PER_TURN', 0, 1, { defaultDuration: 30 })).toMatchObject({ amount: 0, duration: 30 });
+    expect(defaultItemFor('GOLD_PER_TURN', 0, 1, { durations })).toMatchObject({ amount: 1, duration: 30 });
+    expect(defaultItemFor('GOLD_PER_TURN', 0, 1)).not.toHaveProperty('duration');
     // Gold seed is capped at what the side can actually offer.
     const lowGold = build({ range: range({ gold: { available: true, max: 40, reasons: [] } }) });
     const goldRow = cat(lowGold, 'gold').rows.find((r) => r.key === 'GOLD')!;
     expect(goldRow.addPayload).toMatchObject({ item: { itemType: 'GOLD', amount: 40 } });
     const highGold = cat(build(), 'gold').rows.find((r) => r.key === 'GOLD')!;
     expect(highGold.addPayload).toMatchObject({ item: { itemType: 'GOLD', amount: 100 } });
+  });
+
+  it('durationFor maps each item type to its fixed game duration (deal / peace / relationship / none)', () => {
+    // Deal duration: tribute (gold-per-turn / resources) + Open Borders / Defensive Pact / Research Agreement.
+    expect(durationFor('GOLD_PER_TURN', durations)).toBe(30);
+    expect(durationFor('RESOURCES', durations)).toBe(30);
+    expect(durationFor('OPEN_BORDERS', durations)).toBe(30);
+    expect(durationFor('DEFENSIVE_PACT', durations)).toBe(30);
+    expect(durationFor('RESEARCH_AGREEMENT', durations)).toBe(30);
+    // Peace duration: peace treaty + third-party peace. Relationship duration: declaration of friendship.
+    expect(durationFor('PEACE_TREATY', durations)).toBe(10);
+    expect(durationFor('THIRD_PARTY_PEACE', durations)).toBe(10);
+    expect(durationFor('DECLARATION_OF_FRIENDSHIP', durations)).toBe(25);
+    // No-duration types.
+    expect(durationFor('GOLD', durations)).toBeUndefined();
+    expect(durationFor('MAPS', durations)).toBeUndefined();
+    expect(durationFor('ALLOW_EMBASSY', durations)).toBeUndefined();
+    // Peace / relationship fall back to the deal duration when their game-speed value is unavailable.
+    expect(durationFor('PEACE_TREATY', { defaultDuration: 30, peaceDuration: undefined, relationshipDuration: undefined })).toBe(30);
+    expect(durationFor('DECLARATION_OF_FRIENDSHIP', { defaultDuration: 30, peaceDuration: undefined, relationshipDuration: undefined })).toBe(30);
+  });
+
+  it('seeds each agreement toggle with its fixed game duration (deal / peace / relationship)', () => {
+    const toggles = cat(build(), 'toggles').rows;
+    const dur = (key: string) =>
+      (toggles.find((r) => r.key === key)?.addPayload as { item: TradeItem } | undefined)?.item.duration;
+    // Open Borders / Defensive Pact / Research Agreement run for the deal duration (30).
+    expect(dur('OPEN_BORDERS')).toBe(30);
+    expect(dur('DEFENSIVE_PACT')).toBe(30);
+    expect(dur('RESEARCH_AGREEMENT')).toBe(30);
+    // Peace Treaty → peace duration (10); Declaration of Friendship → relationship duration (25).
+    expect(dur('PEACE_TREATY')).toBe(10);
+    expect(dur('DECLARATION_OF_FRIENDSHIP')).toBe(25);
+    // Allow Embassy / Maps / Vassalage carry no duration.
+    expect(dur('ALLOW_EMBASSY')).toBeUndefined();
+    expect(dur('MAPS')).toBeUndefined();
+
+    // Third-party peace (an expandable target) also uses the peace duration.
+    const peaceRange = range({ thirdPartyPeace: [{ teamID: 4, name: 'Greece', legal: true, reasons: [] }] });
+    const tp = cat(build({ range: peaceRange }), 'thirdParty').rows.find((r) => r.key === 'TP_PEACE')!;
+    expect((tp.targets![0]!.addPayload as { item: TradeItem }).item.duration).toBe(10);
   });
 
   it('maps offer rows back to their working-deal index per giver', () => {

@@ -110,14 +110,17 @@ function resourceName(resourceID: number | undefined, range?: NormalizedSideRang
 }
 
 /** A short human label for a trade item, using the giver's range for game-facing names. */
-export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange): string {
+export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange, opts?: { omitDuration?: boolean }): string {
+  // Fixed duration suffix shown for every duration-bearing item, unless the caller renders the
+  // duration elsewhere (the central offer shows it on the editor line for Gold/turn & Resources).
+  const dur = !opts?.omitDuration && item.duration ? ` (${item.duration}t)` : '';
   switch (item.itemType) {
     case 'GOLD':
       return `Gold: ${item.amount ?? 0}`;
     case 'GOLD_PER_TURN':
-      return `Gold/turn: ${item.amount ?? 0}${item.duration ? ` (${item.duration}t)` : ''}`;
+      return `Gold/turn: ${item.amount ?? 0}${dur}`;
     case 'RESOURCES':
-      return `${resourceName(item.resourceID, range)} ×${item.quantity ?? 0}${item.duration ? ` (${item.duration}t)` : ''}`;
+      return `${resourceName(item.resourceID, range)} ×${item.quantity ?? 0}${dur}`;
     case 'CITIES': {
       const city = range?.cities.find((c) => c.cityID === item.cityID);
       return city ? `City: ${city.name}` : `City #${item.cityID}`;
@@ -128,7 +131,7 @@ export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange): s
     }
     case 'THIRD_PARTY_PEACE': {
       const team = range?.thirdPartyPeace.find((t) => t.teamID === item.thirdPartyTeamID);
-      return `Peace with ${team?.name ?? `team ${item.thirdPartyTeamID}`}`;
+      return `Peace with ${team?.name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
     }
     case 'THIRD_PARTY_WAR': {
       const team = range?.thirdPartyWar.find((t) => t.teamID === item.thirdPartyTeamID);
@@ -144,7 +147,7 @@ export function formatItemLabel(item: TradeItem, range?: NormalizedSideRange): s
     }
     default: {
       const toggle = TOGGLE_ITEMS.find((t) => t.itemType === item.itemType);
-      return toggle ? toggle.label : item.itemType;
+      return (toggle ? toggle.label : item.itemType) + dur;
     }
   }
 }

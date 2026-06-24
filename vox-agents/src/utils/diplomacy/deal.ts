@@ -30,6 +30,7 @@ import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 // Pinned deal contract — the single source of truth shared across stages 4–6.
 import {
   DealPayloadSchema,
+  applyDealDurations,
   type DealPayload,
   type PerItemValueMap,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
@@ -90,6 +91,12 @@ export interface InspectDealResult {
   promises: InspectedPromise[];
   /** Per side (keyed by player ID as string): the full tradable range it could put on the table. */
   tradableRange: Record<string, unknown>;
+  /** The game's standard deal duration in turns (Game.GetDealDuration); used to stamp duration-bearing terms. */
+  defaultDuration?: number;
+  /** The game's peace-deal duration in turns (Game.GetPeaceDuration); used for peace / third-party-peace terms. */
+  peaceDuration?: number;
+  /** The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship. */
+  relationshipDuration?: number;
 }
 
 /** Unwrap the structured tool result (mcp tool results wrap the value under structuredContent). */
@@ -188,9 +195,15 @@ export function computeValueMaps(
  * write. The speaker is the endpoint authoring the move (the human/caller in stage-4
  * preview).
  *
+ * Durations are not author-supplied (specs §3): before archival the deal is normalized via
+ * `applyDealDurations`, stamping each duration-bearing item's fixed game duration (deal / peace /
+ * relationship, by type) from the fresh inspection. So the stored `Payload.Deal` always carries the
+ * right durations, whether it came from the Web editor or an agent that proposed none.
+ *
  * @returns the stored row's append ID and server-stamped turn (the values `read-transcript`
  *          will later report), plus the proposal-time inspection when available so an agent
- *          caller can immediately brief the diplomat without re-reading or re-inspecting.
+ *          caller can immediately brief the diplomat without re-reading or re-inspecting, and the
+ *          canonical (duration-stamped) deal exactly as it was archived.
  */
 export async function appendDealProposal(
   thread: EnvoyThread,
@@ -198,7 +211,7 @@ export async function appendDealProposal(
   messageType: DealProposalType,
   content: string,
   deal: DealPayload
-): Promise<{ id: number; turn?: number; inspection?: InspectDealResult }> {
+): Promise<{ id: number; turn?: number; inspection?: InspectDealResult; deal: DealPayload }> {
   // Transcript-shape validation is not best-effort: malformed terms must never be archived.
   validateDealForThread(thread, deal);
 
@@ -229,12 +242,16 @@ export async function appendDealProposal(
 
   const { value1, value2 } = computeValueMaps(inspection, thread.player1ID, thread.player2ID);
 
-  const payload: Record<string, unknown> = { Deal: deal };
+  // Stamp the fixed per-type durations from the fresh inspection so the archived deal never carries
+  // an author-supplied or missing duration (the durations match what the inspection just valued).
+  const storedDeal = applyDealDurations(deal, inspection);
+
+  const payload: Record<string, unknown> = { Deal: storedDeal };
   payload.Value1 = value1;
   payload.Value2 = value2;
 
   const stored = await appendRaw(thread, speakerID, messageType, content, payload);
-  return { ...stored, inspection };
+  return { ...stored, inspection, deal: storedDeal };
 }
 
 /**

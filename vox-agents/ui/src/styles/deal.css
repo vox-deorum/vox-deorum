@@ -165,38 +165,69 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
 }
+/* A term on the table: no heavy box — a hairline top divider + hover, in-game-tight. */
 .deal-offer-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.35rem;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 4px;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.15rem 0.25rem 0.15rem 0.4rem;
+  border-radius: 3px;
+  border-top: 1px solid var(--p-content-border-color);
 }
+.deal-offer-list > .deal-offer-row:first-child {
+  border-top: none;
+}
+.deal-offer-row:hover {
+  background: var(--p-content-hover-background);
+}
+/* Illegal: red label (below) + a subtle left accent, not a full red border. */
 .deal-offer-row-illegal {
-  border-color: var(--p-red-500);
+  box-shadow: inset 2px 0 0 var(--p-red-500);
+}
+/* Line 1: label grows + ellipsizes, the remove button sits tight at the right. */
+.deal-offer-main {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
 }
 .deal-offer-label {
   flex: 1 1 auto;
-  min-width: 6rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
 }
 .deal-offer-label-illegal {
   color: var(--p-red-500);
 }
-.deal-offer-value {
+.deal-offer-note {
+  flex: 0 0 auto;
   font-size: 0.72rem;
   color: var(--p-text-muted-color);
-  flex-basis: 100%;
 }
+/* Shrink the remove button so it doesn't dominate a tight row. */
+.deal-offer-x.p-button {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex: 0 0 auto;
+}
+/* Line 2: compact inline editor expression "[number] × [turns] turns". */
 .deal-offer-edit {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem;
-  flex-basis: 100%;
+  gap: 0.3rem;
+  padding-left: 0.15rem;
+}
+.deal-times,
+.deal-unit {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--p-text-muted-color);
 }
 .deal-offer-empty {
   font-size: 0.8rem;

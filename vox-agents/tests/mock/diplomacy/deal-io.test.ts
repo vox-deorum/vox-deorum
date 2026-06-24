@@ -100,13 +100,59 @@ describe('appendDealProposal', () => {
     const deal = { version: 1 as const, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }], promises: [] };
     const out = await appendDealProposal(thread(), 1, 'deal-proposal', 'Here is my offer', deal);
 
-    expect(out).toEqual({ id: 7, turn: 4, inspection });
+    // GOLD carries no duration, so the stamped deal equals the input; the canonical deal is returned.
+    expect(out).toEqual({ id: 7, turn: 4, inspection, deal });
     const append = mcp.calls('append-message')[0]!;
     expect(append.args.MessageType).toBe('deal-proposal');
     expect(append.args.SpeakerID).toBe(1);
     expect((append.args.Payload as Record<string, unknown>).Deal).toEqual(deal);
     expect((append.args.Payload as Record<string, unknown>).Value1).toEqual({ '0': 30 });
     expect((append.args.Payload as Record<string, unknown>).Value2).toEqual({ '0': 25 });
+  });
+
+  it('stamps the fixed per-type duration onto duration-bearing terms before archival', async () => {
+    // The proposer (agent or UI) supplies no duration; appendDealProposal fills it from the
+    // inspection's game-speed durations so the stored/returned deal never carries a missing duration.
+    const inspection: InspectDealResult = {
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD_PER_TURN', legality: true, reasons: [], valueIfIGive: 90, valueIfIReceive: 80 }],
+      promises: [],
+      tradableRange: {},
+      defaultDuration: 30,
+      peaceDuration: 10,
+      relationshipDuration: 25,
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+    mcp.respondWith('append-message', structuredResult({ ID: 11, Turn: 5 }));
+
+    const deal = { version: 1 as const, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD_PER_TURN' as const, amount: 5 }], promises: [] };
+    const out = await appendDealProposal(thread(), 1, 'deal-proposal', 'Tribute', deal);
+
+    const stampedItem = { fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD_PER_TURN', amount: 5, duration: 30 };
+    expect(out.deal.items[0]).toEqual(stampedItem);
+    expect((mcp.calls('append-message')[0]!.args.Payload as Record<string, unknown>).Deal).toEqual({
+      version: 1,
+      items: [stampedItem],
+      promises: [],
+    });
+  });
+
+  it('treats duration as read-only: a stale authored duration is overwritten with the fixed game value', async () => {
+    // Durations are fixed game constants; an authored value must never survive to the stored deal
+    // (and the inspection that produced Value1/Value2 evaluates at the same fixed length on the Lua side).
+    const inspection: InspectDealResult = {
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD_PER_TURN', legality: true, reasons: [], valueIfIGive: 90, valueIfIReceive: 80 }],
+      promises: [],
+      tradableRange: {},
+      defaultDuration: 30,
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+    mcp.respondWith('append-message', structuredResult({ ID: 12, Turn: 5 }));
+
+    const deal = { version: 1 as const, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD_PER_TURN' as const, amount: 5, duration: 1 }], promises: [] };
+    const out = await appendDealProposal(thread(), 1, 'deal-proposal', 'Tribute', deal);
+
+    expect(out.deal.items[0]!.duration).toBe(30);
+    expect(((mcp.calls('append-message')[0]!.args.Payload as Record<string, unknown>).Deal as { items: Array<{ duration?: number }> }).items[0]!.duration).toBe(30);
   });
 
   it('does not archive the proposal when inspection fails', async () => {

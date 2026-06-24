@@ -132,6 +132,8 @@ const InspectDealOutputSchema = z.object({
   promises: z.array(InspectedPromiseSchema),
   tradableRange: z.record(z.string(), z.any()).describe("Per side (keyed by player ID): the full range it could put on the table"),
   defaultDuration: z.number().optional().describe("The game's default deal duration in turns (Game.GetDealDuration)"),
+  peaceDuration: z.number().optional().describe("The game's peace-deal duration in turns (Game.GetPeaceDuration); used for peace/third-party-peace items"),
+  relationshipDuration: z.number().optional().describe("The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship"),
   promiseTargets: z.array(PromiseTargetSchema).optional().describe("Eligible third-party promise targets with display names and major/minor kind"),
 });
 
@@ -219,6 +221,10 @@ export interface InspectDealResponse {
   promises: InspectedPromise[];
   tradableRange: Record<string, NormalizedSideRange>;
   defaultDuration?: number;
+  /** The game's peace-deal duration in turns; used to seed peace/third-party-peace term defaults. */
+  peaceDuration?: number;
+  /** The game's relationship duration in turns; used to seed Declaration of Friendship's fixed duration. */
+  relationshipDuration?: number;
   promiseTargets?: PromiseTargetInfo[];
 }
 
@@ -383,6 +389,8 @@ class InspectDealTool extends ToolBase {
       promises: inspectedPromises,
       tradableRange,
       defaultDuration: inspection.defaultDuration,
+      peaceDuration: inspection.peaceDuration,
+      relationshipDuration: inspection.relationshipDuration,
       // Coerce: an empty Lua table arrives as {} (not []) over the bridge and would fail
       // the z.array output schema; asArray normalizes it (and undefined) to [].
       promiseTargets: asArray<PromiseTargetInfo>(inspection.promiseTargets),

@@ -72,6 +72,18 @@ describe('deal-helpers', () => {
     expect(formatItemLabel(item({ itemType: 'OPEN_BORDERS' }))).toBe('Open Borders');
   });
 
+  it('appends a fixed (Nt) duration suffix, and omitDuration suppresses it', () => {
+    const r = range({ thirdPartyPeace: [{ teamID: 4, name: 'Greece', legal: true, reasons: [] }] });
+    // Agreement toggles + third-party peace carry their fixed duration in the label.
+    expect(formatItemLabel(item({ itemType: 'OPEN_BORDERS', duration: 30 }))).toBe('Open Borders (30t)');
+    expect(formatItemLabel(item({ itemType: 'PEACE_TREATY', duration: 10 }))).toBe('Peace Treaty (10t)');
+    expect(formatItemLabel(item({ itemType: 'DECLARATION_OF_FRIENDSHIP', duration: 25 }))).toBe('Declaration of Friendship (25t)');
+    expect(formatItemLabel(item({ itemType: 'THIRD_PARTY_PEACE', thirdPartyTeamID: 4, duration: 10 }), r)).toBe('Peace with Greece (10t)');
+    // Gold/turn & Resources can suppress it (the central offer shows the duration on the editor line).
+    expect(formatItemLabel(item({ itemType: 'GOLD_PER_TURN', amount: 5, duration: 30 }))).toBe('Gold/turn: 5 (30t)');
+    expect(formatItemLabel(item({ itemType: 'GOLD_PER_TURN', amount: 5, duration: 30 }), undefined, { omitDuration: true })).toBe('Gold/turn: 5');
+  });
+
   it('falls back to numeric ids when a name cannot be resolved', () => {
     expect(formatItemLabel(item({ itemType: 'RESOURCES', resourceID: 8, quantity: 1 }))).toBe('Resource #8 ×1');
     expect(formatItemLabel(item({ itemType: 'TECHS', techID: 2 }))).toBe('Tech #2');

@@ -158,6 +158,10 @@ export interface InspectDealResult {
   range: Record<string, SideRange>;
   /** The game's default deal duration in turns (Game.GetDealDuration). */
   defaultDuration?: number;
+  /** The game's peace-deal duration in turns (Game.GetPeaceDuration); used for peace items. */
+  peaceDuration?: number;
+  /** The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship. */
+  relationshipDuration?: number;
   /** Eligible third-party promise targets with display names and major/minor kind. */
   promiseTargets?: PromiseTargetInfo[];
   /** Set when the in-game scratch deal could not be obtained. */

@@ -50,7 +50,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 #### What a deal is
 
 - A deal is a **structured artifact**, not free text. It carries **two kinds of terms**:
-  - **(a) Ordinary trade items** — each belongs to one side and carries its type and type-specific data (a city id; a resource plus quantity and duration; a gold amount; a peace treaty; and so on). These mirror the in-game diplomatic deal screen and map directly onto `CvDeal` / `CvTradedItem` and the per-item `lAdd*Trade` Lua constructors.
+  - **(a) Ordinary trade items** — each belongs to one side and carries its type and type-specific data (a city id; a resource plus quantity and game-set duration; a gold amount; a peace treaty; and so on). These mirror the in-game diplomatic deal screen and map directly onto `CvDeal` / `CvTradedItem` and the per-item `lAdd*Trade` Lua constructors.
   - **(b) Promise commitments** — a separate list where one side pledges a diplomatic promise to the other (§ Promises as deal terms). These are a Vox-Deorum/interactive-only addition that does **not** go through the `TradeableItems` enum.
 - The deal model supports the full set of in-game trade items the game already understands (the `TradeableItems` enum), so negotiation can express anything the underlying deal system can — and, with promise commitments, more besides. This includes **mixed deals** the stock screen discourages:
   - a peace treaty *combined with* an exchange of items rather than a one-sided capitulation, or
@@ -122,7 +122,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - a luxury can't be imported in duplicate (except by the Netherlands) and can't be a banned luxury;
   - a city buyer needs an embassy in peacetime;
   - peace requires the two sides to be at war and is mutual;
-  - resource quantities and durations must be valid;
+  - resource quantities must be valid, and duration-bearing terms use the game's fixed durations;
   - the trade must be between two distinct, living major civs.
 
 #### Validated as human-to-human

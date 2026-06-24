@@ -30,7 +30,7 @@ import {
 } from "../../utils/diplomacy/deal.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import {
-  TradeItemSchema,
+  AuthoredTradeItemSchema,
   PromiseTermSchema,
   type DealPayload,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
@@ -235,7 +235,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
         message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart."),
-        items: z.array(TradeItemSchema).default([]).describe("Ordinary trade terms (each directed between the two civs)."),
+        items: z.array(AuthoredTradeItemSchema).default([]).describe("Ordinary trade terms (each directed between the two civs). Durations are fixed by the game and filled in automatically — do not specify them."),
         promises: z.array(PromiseTermSchema).default([]).describe("Promise commitment terms (directed between the two civs)."),
       }),
       execute: async (args, _parameters, options) => {
@@ -264,7 +264,9 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           } else {
             await requireNoOpenProposal(ni.thread);
           }
-          const { id, turn, inspection } = await appendDealProposal(
+          // appendDealProposal stamps the fixed per-type durations and returns the canonical deal;
+          // use it so the diplomat briefing reflects exactly what was stored.
+          const { id, turn, inspection, deal: storedDeal } = await appendDealProposal(
             ni.thread,
             ni.thread.agent,
             isCounter ? "deal-counter" : "deal-proposal",
@@ -276,7 +278,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             rationale: args.rationale,
             message: args.message,
             dealMessageID: id,
-            deal,
+            deal: storedDeal,
             inspection,
             turn,
           };

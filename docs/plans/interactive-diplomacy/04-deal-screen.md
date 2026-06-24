@@ -1,6 +1,6 @@
 # Stage 4 — Web UI: redo the deal screen around the in-game trade board
 
-> **✅ Redesign delivered.** The deal screen is now the three-panel in-game trade-board replica described below: categorized inventory panels (`InventoryPanel.vue`) flank a central two-sided offer (`CentralOffer.vue`), promises are folded into that offer, and the board is driven by the enriched `inspect-deal` data layer. Add-a-term is click-with-defaults; amounts/quantities/durations/targets are edited on the central rows. The board is hosted in a wide modal dialog the inline conversation cards open for review/counter.
+> **✅ Redesign delivered.** The deal screen is now the three-panel in-game trade-board replica described below: categorized inventory panels (`InventoryPanel.vue`) flank a central two-sided offer (`CentralOffer.vue`), promises are folded into that offer, and the board is driven by the enriched `inspect-deal` data layer. Add-a-term is click-with-defaults; amounts/quantities/targets are edited on the central rows, while game-set durations are shown read-only. The board is hosted in a wide modal dialog the inline conversation cards open for review/counter.
 > Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements live in [specs.md](specs.md).
 
 ## Objective
@@ -38,13 +38,13 @@ Both inventories follow the in-game screen's category order:
 9. Third-party peace and war
 10. Promises
 
-Inventory rows are the primary controls. Clicking a simple row adds the term directly to the deal. Rows that need an amount, quantity, or duration open a compact inline editor on the central offer; rows that need a choice of target — third-party terms, targeted promises, and World Congress vote commitments — instead **expand to a list of eligible choices** and add a fully-formed term on click. Singleton rows already present in the deal are visibly selected and cannot be added twice.
+Inventory rows are the primary controls. Clicking a simple row adds the term directly to the deal. Rows that need an amount or quantity open a compact inline editor on the central offer; fixed-duration rows show their game-set turn count read-only. Rows that need a choice of target — third-party terms, targeted promises, and World Congress vote commitments — instead **expand to a list of eligible choices** and add a fully-formed term on click. Singleton rows already present in the deal are visibly selected and cannot be added twice.
 
 ### Deal on the table
 
 - The optional one-sentence deal message appears directly above the value balance (the last thing read before proposing).
 - Selected terms appear in the center under the side that gives them.
-- Quantitative and targeted terms remain editable from their central rows.
+- Quantitative and targeted terms remain editable from their central rows; duration-bearing terms show their fixed turn count read-only.
 - A term can be removed directly from the center.
 - A structurally impossible term is shown in red with its reason available as a tooltip.
 - When an existing proposal has become structurally impossible under current game state, retain it in the offer table, mark it red, and prevent acceptance until it is removed or changed.
@@ -70,7 +70,7 @@ Refresh state, inspection progress, errors, and the closed-this-turn lock remain
 - Technologies include a localized display name.
 - Third-party peace and war entries include a display name for the target team, resolved from a representative civ on it.
 - Inventory candidates include current structural legality and **normalized reason lines** (`legal` + `reasons[]`) instead of structurally impossible candidates being omitted from the range — gold, the single-shot toggles, resources, cities, technologies, and third-party terms each carry their own legality + reasons.
-- The response includes the game's default deal duration.
+- The response includes the game's default deal, peace-deal, and relationship durations.
 - The response includes eligible promise-target metadata — player ID, team ID, display name, and major/minor kind — plus per-target **structural eligibility**:
   - **Coop War** (major targets) carry `coopWarEligible`: both principals pass the game's `IsValidCoopWarTarget` request-phase check *and* no coop war is already `PREPARING` between them against that target. Absent on a DLL build without the new binding (treat as unknown → show anyway).
   - **City-state promises** (minor targets) carry `protectingPlayerIDs`: which of the two principals currently protect the city-state, i.e. the valid recipients of a "stop bullying / don't attack my protected city-state" promise. Omitted when neither protects it.
@@ -102,7 +102,7 @@ Reuse the existing typed deal-action API, `Payload.Deal`, `inspect-deal`, transc
 
 ## Test plan
 
-- Verify `inspect-deal` enrichment, resource categorization, target metadata, default duration, normalization, and numeric fallbacks.
+- Verify `inspect-deal` enrichment, resource categorization, target metadata, default / peace / relationship durations, normalization, and numeric fallbacks.
 - Verify promise-target eligibility: Coop War targets reflect `IsValidCoopWarTarget` and exclude already-`PREPARING` wars; city-state promise targets carry the protecting principals; third-party trade entries and promise targets are hidden unless **both** sides have met the civ.
 - Verify structurally impossible inventory candidates are returned with reasons rather than filtered out.
 - Test pure catalog grouping, category order, selected-state handling, and stable mapping to original deal-item indices.
@@ -110,11 +110,11 @@ Reuse the existing typed deal-action API, `Payload.Deal`, `inspect-deal`, transc
 - Verify adding an item from either inventory places it in the correct center column.
 - Verify impossible inventory rows are red and disabled, while structurally legal sentinel-valued rows remain selectable.
 - Verify an existing proposal that is no longer structurally legal remains visible in red and cannot be accepted.
-- Verify editing and removing gold, gold per turn, resources, toggles, cities, technologies, third-party terms, votes, and promises.
+- Verify editing/removing gold, gold per turn, resources, toggles, cities, technologies, third-party terms, votes, and promises, with fixed durations displayed read-only.
 - Preserve coverage for latest-inspection-wins, active-proposal freshness, closed-state locking, and proposal/counter/accept/reject/retract actions.
 - Compare the core board manually with the in-game reference at 1366×768 and 1920×1080.
 - Run the root TypeScript test and build suites.
 
 ## Done when
 
-The Web dialog reads immediately as the core Civilization V trade screen without recreating the leader scene: two categorized inventories flank a central two-sided offer, the deal message sits above that offer, and its live value balance sits immediately below it. Inventory rows add terms, central rows edit or remove them, structurally impossible choices are red and disabled, and stale impossible terms in existing proposals remain visible in red. All existing structured deal actions and transcript behavior continue to work, while resource, technology, third-party, and promise-target choices use meaningful game-facing names.
+The Web dialog reads immediately as the core Civilization V trade screen without recreating the leader scene: two categorized inventories flank a central two-sided offer, the deal message sits above that offer, and its live value balance sits immediately below it. Inventory rows add terms, central rows edit or remove editable fields, fixed durations remain read-only, structurally impossible choices are red and disabled, and stale impossible terms in existing proposals remain visible in red. All existing structured deal actions and transcript behavior continue to work, while resource, technology, third-party, and promise-target choices use meaningful game-facing names.

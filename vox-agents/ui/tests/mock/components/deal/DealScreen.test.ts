@@ -42,6 +42,8 @@ const inspectionResult = (items: unknown[] = [], over: Record<string, unknown> =
   promises: [],
   tradableRange: { '0': range(), '1': range() },
   defaultDuration: 30,
+  peaceDuration: 10,
+  relationshipDuration: 25,
   promiseTargets: [],
   ...over,
 });
@@ -263,15 +265,17 @@ describe('DealScreen', () => {
     await wrapper.find('.deal-refresh').trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('give 99');
+    // The per-item worth is tooltip-only now; the value-balance footer is the visible signal
+    // (receiver gains valueIfIReceive = 88, giver loses valueIfIGive = 99).
+    expect(wrapper.text()).toContain('+88');
 
     slow.resolve(
       inspectionResult([{ fromPlayerID: 0, toPlayerID: 1, itemType: 'OPEN_BORDERS', legality: true, reasons: [], valueIfIGive: 1, valueIfIReceive: 2 }])
     );
     await flushPromises();
 
-    expect(wrapper.text()).toContain('give 99');
-    expect(wrapper.text()).not.toContain('give 1 ·');
+    expect(wrapper.text()).toContain('+88');
+    expect(wrapper.text()).not.toContain('+2');
   });
 
   it('re-inspects with the edited amount when a central gold row is changed', async () => {
