@@ -64,7 +64,7 @@ Purpose: Main chat interface for interacting with agents
         :active-deal-i-d="activeDealID"
         :deal-status="dealStatus"
         :deal-locked="closedThisTurn"
-        :deal-action-busy="dealActionBusy"
+        :deal-action-busy="dealBlocked"
         @deal-accept="onDealAccept"
         @deal-reject="onDealReject"
         @deal-counter="onDealCounter"
@@ -95,6 +95,7 @@ Purpose: Main chat interface for interacting with agents
         :leftLabel="userLabel"
         :rightLabel="agentLabel"
         :locked="closedThisTurn"
+        :agent-busy="isStreaming"
         v-model:busy="dealActionBusy"
         @changed="refreshConversation"
       />
@@ -212,6 +213,8 @@ const closedThisTurn = computed(() =>
   currentTurn.value !== undefined &&
   currentTurn.value <= thread.value.closeTurn);
 const canSend = computed(() => !!thread.value && !isStreaming.value && !closedThisTurn.value);
+/** Inline deal actions are blocked by either their own write or an active agent reply. */
+const dealBlocked = computed(() => dealActionBusy.value || isStreaming.value);
 
 /** Messages filtered to hide special message tokens (e.g., {{{Greeting}}}) from display */
 const visibleMessages = computed(() => {
@@ -326,7 +329,7 @@ const loadDealMessages = async () => {
 
 /** Accept the active proposal (wired; enactment deferred to stage 6 — surfaced as a notice). */
 const onDealAccept = async (id: number) => {
-  if (dealActionBusy.value) return;
+  if (dealBlocked.value) return;
   dealActionBusy.value = true;
   try {
     await api.acceptDeal(sessionId.value, { proposalMessageID: id });
@@ -340,7 +343,7 @@ const onDealAccept = async (id: number) => {
 
 /** Reject (decline or retract) the active proposal from its inline card. */
 const onDealReject = async (id: number) => {
-  if (dealActionBusy.value) return;
+  if (dealBlocked.value) return;
   dealActionBusy.value = true;
   try {
     await api.rejectDeal(sessionId.value, { proposalMessageID: id });

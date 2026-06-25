@@ -86,6 +86,20 @@ export interface InventoryCategory {
   rows: InventoryRow[];
 }
 
+/** One side in the central/read-only offer columns. */
+export interface OfferSide {
+  sideID: number;
+  label: string;
+}
+
+/** One giver column, preserving each term's original deal index. */
+export interface OfferColumn {
+  sideID: number;
+  label: string;
+  items: Array<{ item: TradeItem; index: number }>;
+  promises: Array<{ promise: PromiseTerm; index: number }>;
+}
+
 /** Discriminator data a default term may need (the row already knows which it is). */
 export interface DefaultItemCtx {
   /** The fixed, game-set durations reported by inspect-deal; resolved here by item type. */
@@ -213,6 +227,20 @@ export function offerPromisesForSide(
   return promises
     .map((promise, index) => ({ promise, index }))
     .filter(({ promise }) => promise.promiserID === sideID);
+}
+
+/** Build giver columns for a deal offer, sharing the side partitioning across renderers. */
+export function offerColumnsFor(
+  items: TradeItem[],
+  promises: PromiseTerm[],
+  sides: OfferSide[]
+): OfferColumn[] {
+  return sides.map(({ sideID, label }) => ({
+    sideID,
+    label,
+    items: offerItemsForSide(items, sideID),
+    promises: offerPromisesForSide(promises, sideID),
+  }));
 }
 
 /**

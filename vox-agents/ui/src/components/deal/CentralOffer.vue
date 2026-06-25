@@ -95,7 +95,7 @@ import {
   formatValue,
   computeSideBalance,
 } from './deal-helpers';
-import { offerItemsForSide, offerPromisesForSide } from './deal-catalog';
+import { offerColumnsFor } from './deal-catalog';
 
 const props = defineProps<{
   items: TradeItem[];
@@ -127,20 +127,12 @@ const message = defineModel<string>('message', { default: '' });
 
 /** The two giver columns: you ("You give") then counterpart ("They give") — aligned with the
  *  inventory panels (you on the left, counterpart on the right). */
-const columns = computed(() => [
-  {
-    sideID: props.youID,
-    label: props.youLabel,
-    items: offerItemsForSide(props.items, props.youID),
-    promises: offerPromisesForSide(props.promises, props.youID),
-  },
-  {
-    sideID: props.counterpartID,
-    label: props.counterpartLabel,
-    items: offerItemsForSide(props.items, props.counterpartID),
-    promises: offerPromisesForSide(props.promises, props.counterpartID),
-  },
-]);
+const columns = computed(() =>
+  offerColumnsFor(props.items, props.promises, [
+    { sideID: props.youID, label: props.youLabel },
+    { sideID: props.counterpartID, label: props.counterpartLabel },
+  ])
+);
 
 const rangeFor = (sideID: number): NormalizedSideRange | undefined => props.ranges[String(sideID)];
 const fmt = (v: number) => formatValue(v);

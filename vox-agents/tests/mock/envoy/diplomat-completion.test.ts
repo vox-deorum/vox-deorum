@@ -79,13 +79,24 @@ describe('Diplomat.stopCheck', () => {
     expect(diplomat.stopCheck(parameters, thread(), spoken, [spoken], context)).toBe(true);
   });
 
-  it('stops when a previous step already produced free text', () => {
+  it('does not stop when a supporting tool is requested after free text', () => {
     const input = thread();
     const context = createFakeVoxContext().asContext();
     const spoken = step('That proposal has merit.');
     const laterTool = step('', ['call-diplomatic-analyst']);
 
-    expect(diplomat.stopCheck(parameters, input, laterTool, [spoken, laterTool], context)).toBe(true);
+    // A pending supporting tool after a short speech keeps the diplomat working...
+    expect(diplomat.stopCheck(parameters, input, laterTool, [spoken, laterTool], context)).toBe(false);
+    // ...and once that tool resolves and nothing is left pending, the earlier speech ends the turn.
+    const done = step('');
+    expect(diplomat.stopCheck(parameters, input, done, [spoken, laterTool, done], context)).toBe(true);
+  });
+
+  it('does not stop when a step both speaks and requests a supporting tool', () => {
+    const context = createFakeVoxContext().asContext();
+    const both = step('A brief word.', ['get-briefing']);
+
+    expect(diplomat.stopCheck(parameters, thread(), both, [both], context)).toBe(false);
   });
 
   it.each(['call-negotiator', 'close-conversation'])(

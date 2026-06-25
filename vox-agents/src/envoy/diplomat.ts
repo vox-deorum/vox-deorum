@@ -97,6 +97,12 @@ export class Diplomat extends LiveEnvoy {
    * the conversational turn through negotiation or closure. The inherited envoy check is still
    * called so each response is persisted to the thread, but its generic terminal-tool and
    * maximum-step decisions do not apply to diplomats.
+   *
+   * A pending supporting (non-terminal) tool on the latest step — `get-briefing`,
+   * `get-diplomatic-events`, or `call-diplomatic-analyst` — means the diplomat intends to keep
+   * working (e.g. it spoke a short line and then asked for a briefing), so it must NOT stop on
+   * that step even though it has already produced free text. Only a negotiator handoff/closure
+   * (terminal wherever it appears) or a spoken turn with nothing left pending ends the loop.
    */
   public override stopCheck(
     parameters: StrategistParameters,
@@ -107,10 +113,18 @@ export class Diplomat extends LiveEnvoy {
   ): boolean {
     super.stopCheck(parameters, input, lastStep, allSteps, context);
 
-    return allSteps.some(step =>
-      Boolean(step.text?.trim()) ||
-      step.toolCalls.some(call => Diplomat.completionTools.has(call.toolName))
+    const completionTools = Diplomat.completionTools;
+    // A negotiator handoff or closure ends the turn — terminal wherever it appears.
+    const hasCompletionTool = allSteps.some(step =>
+      step.toolCalls.some(call => completionTools.has(call.toolName))
     );
+    if (hasCompletionTool) return true;
+    // A pending supporting (non-terminal) tool means the diplomat means to keep working — e.g. it
+    // spoke a short line then asked for a briefing — so don't stop on that step.
+    const hasPendingSupportTool = lastStep.toolCalls.some(call => !completionTools.has(call.toolName));
+    if (hasPendingSupportTool) return false;
+    // No pending tool and no handoff/closure: stop once it has spoken to the counterpart.
+    return allSteps.some(step => Boolean(step.text?.trim()));
   }
 
   /**

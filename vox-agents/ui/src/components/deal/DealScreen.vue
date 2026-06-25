@@ -74,7 +74,7 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
         <Button v-if="hasOpenProposal" label="Counter" icon="pi pi-replay" severity="secondary" :loading="busy" :disabled="!canCounter" @click="doCounter" />
         <!-- Accept records the STORED proposal; once the draft is edited it would no longer match, so hide it. -->
         <Button v-if="hasOpenProposal && !activeAuthoredByViewer && !dealEdited" label="Accept" icon="pi pi-check" severity="success" :loading="busy" :disabled="!canAccept" @click="doAccept" />
-        <Button v-if="hasOpenProposal && dealEdited" label="Reset" icon="pi pi-undo" severity="secondary" text :disabled="busy" @click="resetToActiveProposal" v-tooltip.bottom="'Discard edits and restore the original proposal'" />
+        <Button v-if="hasOpenProposal && dealEdited" label="Reset" icon="pi pi-undo" severity="secondary" text :disabled="blocked" @click="resetToActiveProposal" v-tooltip.bottom="'Discard edits and restore the original proposal'" />
         <Button
           v-if="hasOpenProposal"
           :label="activeAuthoredByViewer ? 'Retract' : 'Refuse'"
@@ -137,6 +137,12 @@ const props = defineProps<{
   rightLabel: string;
   /** Closed-this-turn lock: deal actions are disabled (specs §8). */
   locked?: boolean;
+  /**
+   * The voiced agent is mid-reply (the chat send button is disabled). An inbound, read-only
+   * signal — kept separate from the `busy` write-model — that blocks sending a deal while the
+   * agent works, mirroring the chat input.
+   */
+  agentBusy?: boolean;
 }>();
 
 const emit = defineEmits<{ (e: 'changed'): void }>();
@@ -218,10 +224,12 @@ const mayAccept = computed(
 );
 /** State-only guard for rejecting or retracting the current open proposal. */
 const mayReject = computed(() => hasOpenProposal.value);
-const canPropose = computed(() => !busy.value && mayPropose.value);
-const canCounter = computed(() => !busy.value && mayCounter.value);
-const canAccept = computed(() => !busy.value && mayAccept.value);
-const canReject = computed(() => !busy.value && mayReject.value);
+/** Disable every deal-send while a write is in flight OR the agent is mid-reply (chat blocked). */
+const blocked = computed(() => busy.value || props.agentBusy);
+const canPropose = computed(() => !blocked.value && mayPropose.value);
+const canCounter = computed(() => !blocked.value && mayCounter.value);
+const canAccept = computed(() => !blocked.value && mayAccept.value);
+const canReject = computed(() => !blocked.value && mayReject.value);
 
 // ---- editing (mutate workingDeal; the debounced watcher re-inspects) ---------------------
 const onAddTerm = (payload: AddTermPayload) => {
@@ -353,57 +361,85 @@ const draftToSend = (): DealPayload => {
   return deal;
 };
 
-const doPropose = async () => {
-  if (busy.value || !mayPropose.value) return;
+/** Toast after a proposal/counter write, including the "agent did not reply" preview warning. */
+const dealSentToast = (summary: string, agentResponded: boolean | undefined) => {
+  toast.add(agentResponded === false
+    ? { severity: 'warn', summary, detail: 'The diplomat did not produce a reply.', life: 4000 }
+    : { severity: 'success', summary, life: 2500 });
+};
+
+/** Run a guarded deal write: block duplicates, revalidate current state, then reset the shared busy flag. */
+const runDealWrite = async (
+  allowed: () => boolean,
+  staleSummary: string,
+  write: () => Promise<void>,
+  onError: (e: unknown) => void,
+  expectedActiveID?: number
+): Promise<void> => {
+  if (blocked.value || !allowed()) return;
   busy.value = true;
   try {
-    if (!(await ensureActionStillValid(() => mayPropose.value, 'Cannot propose yet'))) return;
-    const result = await api.proposeDeal(props.chatId, { deal: draftToSend() });
-    toast.add(result.agentResponded === false
-      ? { severity: 'warn', summary: 'Proposal sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
-      : { severity: 'success', summary: 'Proposal sent', life: 2500 });
-    await afterWrite();
-  } catch (e) { retryableError(e, 'Could not send proposal'); } finally { busy.value = false; }
+    if (!(await ensureActionStillValid(allowed, staleSummary, expectedActiveID))) return;
+    await write();
+  } catch (e) { onError(e); } finally { busy.value = false; }
 };
-const doCounter = async () => {
-  if (busy.value || !mayCounter.value) return;
+
+const doPropose = () => runDealWrite(
+  () => mayPropose.value,
+  'Cannot propose yet',
+  async () => {
+    const result = await api.proposeDeal(props.chatId, { deal: draftToSend() });
+    dealSentToast('Proposal sent', result.agentResponded);
+    await afterWrite();
+  },
+  (e) => retryableError(e, 'Could not send proposal')
+);
+const doCounter = () => {
   // The counter must answer the proposal currently shown; abort if a newer one slips in.
   const targetID = reduction.value.active?.ID;
-  busy.value = true;
-  try {
-    if (!(await ensureActionStillValid(() => mayCounter.value, 'Cannot counter yet', targetID))) return;
-    const result = await api.counterDeal(props.chatId, { deal: draftToSend() });
-    toast.add(result.agentResponded === false
-      ? { severity: 'warn', summary: 'Counter sent', detail: 'The diplomat did not produce a reply.', life: 4000 }
-      : { severity: 'success', summary: 'Counter sent', life: 2500 });
-    await afterWrite();
-  } catch (e) { retryableError(e, 'Could not send counter'); } finally { busy.value = false; }
+  return runDealWrite(
+    () => mayCounter.value,
+    'Cannot counter yet',
+    async () => {
+      const result = await api.counterDeal(props.chatId, { deal: draftToSend() });
+      dealSentToast('Counter sent', result.agentResponded);
+      await afterWrite();
+    },
+    (e) => retryableError(e, 'Could not send counter'),
+    targetID
+  );
 };
-const doReject = async () => {
-  if (busy.value || !mayReject.value) return;
+const doReject = () => {
   const targetID = reduction.value.active?.ID;
-  busy.value = true;
-  try {
-    if (!(await ensureActionStillValid(() => mayReject.value, activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot refuse yet', targetID))) return;
-    if (!reduction.value.active) return;
-    await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
-    toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal refused', life: 2500 });
-    await afterWrite();
-  } catch (e) { actionError(e); } finally { busy.value = false; }
+  return runDealWrite(
+    () => mayReject.value,
+    activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot refuse yet',
+    async () => {
+      if (!reduction.value.active) return;
+      await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
+      toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal refused', life: 2500 });
+      await afterWrite();
+    },
+    actionError,
+    targetID
+  );
 };
-const doAccept = async () => {
-  if (busy.value || !mayAccept.value) return;
+const doAccept = () => {
   const targetID = reduction.value.active?.ID;
-  busy.value = true;
-  try {
-    if (!(await ensureActionStillValid(() => mayAccept.value, 'Cannot accept yet', targetID))) return;
-    if (!reduction.value.active) return;
-    await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
-    await afterWrite();
-  } catch (e) {
-    // Expected in preview: acceptance is wired but enactment is deferred to stage 6.
-    toast.add({ severity: 'info', summary: 'Acceptance deferred', detail: e instanceof Error ? e.message : 'Enactment arrives in stage 6', life: 4000 });
-  } finally { busy.value = false; }
+  return runDealWrite(
+    () => mayAccept.value,
+    'Cannot accept yet',
+    async () => {
+      if (!reduction.value.active) return;
+      await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
+      await afterWrite();
+    },
+    (e) => {
+      // Expected in preview: acceptance is wired but enactment is deferred to stage 6.
+      toast.add({ severity: 'info', summary: 'Acceptance deferred', detail: e instanceof Error ? e.message : 'Enactment arrives in stage 6', life: 4000 });
+    },
+    targetID
+  );
 };
 const actionError = (e: unknown) => {
   toast.add({ severity: 'error', summary: 'Deal action failed', detail: e instanceof Error ? e.message : 'Unknown error', life: 4000 });

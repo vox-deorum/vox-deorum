@@ -19,17 +19,17 @@ wired but enactment is deferred to stage 6.
       <div v-if="dealRationale" class="deal-card-rationale" v-tooltip.bottom="dealRationale">
         <i class="pi pi-comment" /> rationale
       </div>
-      <div class="deal-card-side">
-        <span class="deal-card-side-label">{{ youLabel }} give:</span>
-        <span class="deal-card-terms">{{ youGiveText }}</span>
-      </div>
-      <div class="deal-card-side">
-        <span class="deal-card-side-label">{{ themLabel }} give:</span>
-        <span class="deal-card-terms">{{ themGiveText }}</span>
-      </div>
-      <div v-if="promisesText" class="deal-card-side">
-        <span class="deal-card-side-label">Promises:</span>
-        <span class="deal-card-terms">{{ promisesText }}</span>
+      <!-- Two aligned columns ("You give" | "They give"), mirroring the deal screen's central
+           offer: each side lists the items it gives then the promises it pledges. -->
+      <div class="deal-card-columns">
+        <div v-for="col in columns" :key="col.sideID" class="deal-card-col">
+          <div class="deal-card-col-title">{{ col.label }} give</div>
+          <ul class="deal-card-list">
+            <li v-for="(label, i) in col.itemLabels" :key="`item-${i}`">{{ label }}</li>
+            <li v-for="(label, i) in col.promiseLabels" :key="`promise-${i}`" class="deal-card-promise">{{ label }}</li>
+            <li v-if="col.itemLabels.length === 0 && col.promiseLabels.length === 0" class="deal-card-empty">— nothing —</li>
+          </ul>
+        </div>
       </div>
       <div v-if="valueText" class="deal-card-value">value to {{ youLabel }}: {{ valueText }}</div>
     </template>
@@ -57,9 +57,10 @@ wired but enactment is deferred to stage 6.
 <script setup lang="ts">
 import { computed } from 'vue';
 import Button from 'primevue/button';
-import type { DealTranscriptMessage, TradeItem } from '@/utils/types';
+import type { DealTranscriptMessage, TradeItem, PromiseTerm } from '@/utils/types';
 import type { DealStatus } from './deal-reduce';
-import { sideGives, formatItemLabel, formatPromiseLabel, formatValue, storedBalanceToSide } from './deal-helpers';
+import { formatItemLabel, formatPromiseLabel, formatValue, storedBalanceToSide } from './deal-helpers';
+import { offerColumnsFor } from './deal-catalog';
 
 const props = withDefaults(defineProps<{
   deal: DealTranscriptMessage;
@@ -117,13 +118,21 @@ const dealMessage = computed(() => props.deal.Payload?.Deal?.message ?? '');
 const dealRationale = computed(() => props.deal.Payload?.Deal?.rationale ?? '');
 
 const items = computed<TradeItem[]>(() => props.deal.Payload?.Deal?.items ?? []);
-const labelsFor = (sideID: number) => sideGives(items.value, sideID).map(({ item }) => formatItemLabel(item)).join(', ') || '—';
-const youGiveText = computed(() => labelsFor(props.youID));
-const themGiveText = computed(() => labelsFor(props.themID));
-const promisesText = computed(() =>
-  (props.deal.Payload?.Deal?.promises ?? [])
-    .map((p) => `player ${p.promiserID}: ${formatPromiseLabel(p)}`)
-    .join('; ')
+const promises = computed<PromiseTerm[]>(() => props.deal.Payload?.Deal?.promises ?? []);
+
+/** The two giver columns ("You give" | "They give"), each carrying the side's item labels then
+ *  its pledged-promise labels — the compact, read-only mirror of the deal screen's central offer
+ *  (no editors/targets, so labels use the graceful no-range/no-target fallbacks). */
+const columns = computed(() =>
+  offerColumnsFor(items.value, promises.value, [
+    { sideID: props.youID, label: props.youLabel },
+    { sideID: props.themID, label: props.themLabel },
+  ]).map(({ sideID, label, items: columnItems, promises: columnPromises }) => ({
+    sideID,
+    label,
+    itemLabels: columnItems.map(({ item }) => formatItemLabel(item)),
+    promiseLabels: columnPromises.map(({ promise }) => formatPromiseLabel(promise)),
+  }))
 );
 
 const valueText = computed(() => {
@@ -154,9 +163,15 @@ const valueText = computed(() => {
 .deal-card-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; }
 .deal-card-title { font-weight: 600; }
 .deal-card-turn { margin-left: auto; font-size: 0.75rem; color: var(--p-text-muted-color); }
-.deal-card-side { display: flex; gap: 0.4rem; padding: 0.1rem 0; }
-.deal-card-side-label { color: var(--p-text-muted-color); min-width: 7rem; }
 .deal-card-terms { flex: 1; }
+/* You give | They give — the compact two-column mirror of the deal screen's central offer. */
+.deal-card-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.2rem 0; }
+.deal-card-col { min-width: 0; }
+.deal-card-col-title { color: var(--p-text-muted-color); font-size: 0.78rem; font-weight: 600; margin-bottom: 0.2rem; }
+.deal-card-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.deal-card-list li { font-size: 0.85rem; word-break: break-word; }
+.deal-card-promise { color: var(--p-text-muted-color); }
+.deal-card-empty { color: var(--p-text-muted-color); font-size: 0.8rem; }
 .deal-card-message { font-style: italic; margin-bottom: 0.3rem; }
 .deal-card-rationale { font-size: 0.75rem; color: var(--p-text-muted-color); margin-bottom: 0.3rem; cursor: help; }
 .deal-card-value { font-size: 0.8rem; color: var(--p-text-muted-color); margin-top: 0.25rem; }
