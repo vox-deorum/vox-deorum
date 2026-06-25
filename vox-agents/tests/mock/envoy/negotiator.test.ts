@@ -392,7 +392,9 @@ describe('getOutput', () => {
     const out = await negotiator.getOutput({} as any, input, '');
     expect(out).toContain('PROPOSAL');
     expect(out).toContain('deal message #11');
-    expect(out).toContain('itemType: GOLD');
+    // Direction-grouped, friendly-labelled terms (no civ identities on the test thread → "Player N").
+    expect(out).toContain('Player 3 gives Player 1');
+    expect(out).toContain('Gold: 50');
   });
 
   it('returns undefined when no terminal tool recorded a move', async () => {

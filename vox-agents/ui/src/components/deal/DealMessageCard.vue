@@ -136,7 +136,7 @@ const valueText = computed(() => {
     props.youID
   );
   if (!balance) return '';
-  return `${balance.net > 0 ? '+' : ''}${formatValue(balance.net)}${balance.hasSentinel ? ' (some impossible)' : ''}`;
+  return `${balance.net > 0 ? '+' : ''}${formatValue(balance.net)}${balance.hasSentinel ? ' (some have no usable estimate)' : ''}`;
 });
 </script>
 

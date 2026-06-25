@@ -46,11 +46,11 @@ const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange =>
   }) as NormalizedSideRange;
 
 describe('deal-helpers', () => {
-  it('flags INT_MAX-scale sentinels and formats them as a dash', () => {
+  it('flags INT_MAX-scale sentinels and formats them as "no usable estimate"', () => {
     expect(isSentinel(2147483647)).toBe(true);
     expect(isSentinel(-2147483647)).toBe(true);
     expect(isSentinel(42)).toBe(false);
-    expect(formatValue(2147483647)).toBe('—');
+    expect(formatValue(2147483647)).toBe('no usable estimate');
     expect(formatValue(42.6)).toBe('43');
   });
 

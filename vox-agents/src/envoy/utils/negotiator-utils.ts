@@ -22,12 +22,19 @@ import type { EnvoyThread } from "../../types/index.js";
 import {
   appendDealProposal,
   appendDealReject,
+  computeValueMaps,
   enactAgentDeal,
   requireCurrentOpenProposal,
   requireNoOpenProposal,
   type InspectDealResult,
   type EnactDealResult,
 } from "../../utils/diplomacy/deal.js";
+import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
+import {
+  formatDealTermsByDirection,
+  formatEstimate,
+  itemTypeLabel,
+} from "../../utils/diplomacy/deal-format.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import {
   AuthoredTradeItemSchema,
@@ -82,6 +89,11 @@ export interface NegotiatorInput {
   outcome?: NegotiatorMove;
 }
 
+/** A seat → civ-name resolver from the thread's stored identities ("Player <id>" fallback). */
+function civNameFor(thread: EnvoyThread): (playerID: number) => string {
+  return (id: number) => identityOf(thread, id)?.name ?? `Player ${id}`;
+}
+
 /** Format the upfront inspect-deal results into a compact, model-readable block (context 2). */
 export function formatInspection(inspection: InspectDealResult): string {
   const sections: string[] = [];
@@ -89,7 +101,8 @@ export function formatInspection(inspection: InspectDealResult): string {
   if (inspection.items.length > 0) {
     const lines = inspection.items.map((it, i) => {
       const legal = it.legality ? "legal" : `ILLEGAL (${it.reasons.join("; ") || "no reason given"})`;
-      return `  [${i}] ${it.itemType}: ${it.fromPlayerID}→${it.toPlayerID} — ${legal}; value if I give = ${it.valueIfIGive}, value if I receive = ${it.valueIfIReceive}`;
+      // Values are the stock AI's advisory estimate; a maxed-out estimate renders "no usable estimate".
+      return `  [${i}] ${itemTypeLabel(it.itemType)}: ${it.fromPlayerID}→${it.toPlayerID} — ${legal}; value if I give = ${formatEstimate(it.valueIfIGive)}, value if I receive = ${formatEstimate(it.valueIfIReceive)}`;
     });
     sections.push(`### On-the-table trade items (per-term legality + AI value, advisory)\n${lines.join("\n")}`);
   }
@@ -108,30 +121,49 @@ export function formatInspection(inspection: InspectDealResult): string {
   return sections.join("\n\n");
 }
 
-/** Format the on-the-table proposed terms (context 3) for the model. */
-export function formatActiveProposal(active: ActiveProposalContext): string {
-  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
-  return `### The deal on the table (proposal message #${active.messageID})\n${jsonToMarkdown(
-    { items: active.deal.items, promises: active.deal.promises, message: active.deal.message }
-  )}`;
+/** Format the on-the-table proposed terms (context 3) for the model — grouped by direction with civ names. */
+export function formatActiveProposal(active: ActiveProposalContext, thread: EnvoyThread): string {
+  // Terms only (no value snapshots on the relayed proposal) — the values live in the inspection block.
+  const terms = formatDealTermsByDirection(
+    active.deal,
+    undefined,
+    undefined,
+    thread.player1ID,
+    thread.player2ID,
+    civNameFor(thread),
+    thread.agent
+  );
+  const lines = [`### The deal on the table (proposal message #${active.messageID})`];
+  if (terms) lines.push(terms);
+  if (active.deal.message) lines.push(`Their one-sentence line: "${active.deal.message}"`);
+  return lines.join("\n");
 }
 
 /** Render a newly authored deal's terms and proposal-time estimates for the diplomat. */
-function summarizeAuthoredDeal(move: Extract<NegotiatorMove, { type: "propose" | "counter" }>): string {
-  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
-  const lines = [`Terms:\n${jsonToMarkdown({ items: move.deal.items, promises: move.deal.promises })}`];
-  if (move.inspection) {
-    lines.push(
-      `Proposal-time estimates:\n${jsonToMarkdown({ items: move.inspection.items, promises: move.inspection.promises })}`
-    );
-  } else {
+function summarizeAuthoredDeal(
+  move: Extract<NegotiatorMove, { type: "propose" | "counter" }>,
+  thread: EnvoyThread
+): string {
+  // Fresh proposal-time inspection gives per-item values; fold them into the direction-grouped terms.
+  const maps = move.inspection ? computeValueMaps(move.inspection, thread.player1ID, thread.player2ID) : undefined;
+  const terms = formatDealTermsByDirection(
+    move.deal,
+    maps?.value1,
+    maps?.value2,
+    thread.player1ID,
+    thread.player2ID,
+    civNameFor(thread),
+    thread.agent
+  );
+  const lines = [terms || "(no terms)"];
+  if (!move.inspection) {
     lines.push("Proposal-time estimates were unavailable; describe the stored terms without inventing values.");
   }
   return lines.join("\n");
 }
 
 /** Render the negotiator's move into a briefing the diplomat reasons over and voices. */
-export function summarizeMove(move: NegotiatorMove): string {
+export function summarizeMove(move: NegotiatorMove, thread: EnvoyThread): string {
   switch (move.type) {
     case "accept":
       return [
@@ -155,7 +187,7 @@ export function summarizeMove(move: NegotiatorMove): string {
         `Your negotiator has prepared a ${move.type === "counter" ? "COUNTER" : "PROPOSAL"} (deal message #${move.dealMessageID}).`,
         `Rationale (for you, do not quote): ${move.rationale}`,
         `Suggested one-sentence line to voice (elaborate around it): "${move.message}"`,
-        summarizeAuthoredDeal(move),
+        summarizeAuthoredDeal(move, thread),
         "The deal is now on the table for the counterpart to accept, counter, or reject.",
       ].join("\n");
   }

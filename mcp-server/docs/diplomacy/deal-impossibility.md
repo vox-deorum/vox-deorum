@@ -1,32 +1,53 @@
-# Deal Impossibility System
+# Deal Valuation & the `INT_MAX` Sentinel
 
-Reference for how the Civ 5 Community Patch DLL marks diplomatic deals as "impossible." Understanding this is important for interpreting AI trade behavior and building tools that reason about deal feasibility.
+Reference for how the Civ 5 Community Patch DLL marks a trade item as `INT_MAX` (2,147,483,647).
+Understanding this is important for interpreting AI trade behavior and building tools that reason
+about deal feasibility.
 
-## How It Works
+## Two distinct mechanisms (don't conflate them)
 
-The system uses `INT_MAX` (2,147,483,647) as a sentinel value meaning "impossible." There is no explicit boolean — impossibility is encoded in the valuation layer.
+`INT_MAX` shows up for **two different reasons**, and only the first is a true impossibility:
 
-### The Cascade
+1. **Structural impossibility** — `CvDeal::IsPossibleToTradeItem()` returns `false` (you don't own the
+   item, peace must be mutual, vassalage prerequisites unmet, …). This is an always-on *rule*: the item
+   genuinely cannot be in a deal. It is reported separately by `GetReasonsItemUntradeable()` and drives
+   the deal board's red/disabled rows.
+
+2. **Advisory valuation refusal** — `CvDealAI::GetTradeItemValue()` returns `INT_MAX` because the stock
+   AI's **value estimate maxes out**: it would not make this trade at any price (last strategic resource,
+   last luxury while unhappy, a category/policy refusal, an uneconomic peace resource, …). This is a
+   strategic/political **preference**, not a structural bar. On the agent/inspection path this valuation
+   is **read-only and bypassed for acceptance** (specs §4) — agents may strike deals the stock AI never
+   would — so it surfaces as **"no usable estimate"** and **gates nothing**.
+
+Both encode as `INT_MAX` in the stock value cascade (below), which is why the *stock* AI refuses such a
+deal outright. The triggers catalogued further down are mostly mechanism (2) — advisory preferences —
+even though the stock game treats them as hard refusals.
+
+### The Cascade (stock acceptance path)
 
 ```
-IsPossibleToTradeItem() returns false     (CvDealClasses.cpp)
+IsPossibleToTradeItem() returns false     (structural — CvDealClasses.cpp)
   → iItemValue = INT_MAX                  (CvDealAI.cpp, GetDealValue)
-    → SetFromPlayerValue(INT_MAX)
-    → SetToPlayerValue(INT_MAX)
+...or CvDealAI valuation maxes out        (advisory — GetTradeItemValue, e.g. GetResourceValue)
+  → iItemValue = INT_MAX
+    → SetFromPlayerValue(INT_MAX) / SetToPlayerValue(INT_MAX)
       → GetDealValue() returns INT_MAX
-        → AI refuses outright / won't propose
+        → stock AI refuses outright / won't propose
 ```
 
-One impossible item kills the entire deal. The AI won't negotiate — it's an immediate rejection, not an unfavorable counter.
+One `INT_MAX` item kills the entire deal **for the stock AI**. (On the agent path the valuation is never
+consulted for acceptance — see specs §4.)
 
-### Impossible vs Unfavorable
+### Structural-impossible vs advisory-refused vs unfavorable
 
-| | Impossible | Unfavorable |
-|---|---|---|
-| Value | `INT_MAX` | Normal integer |
-| Cause | Structural constraint | Bad terms / diplomacy |
-| AI response | Immediate refusal | Negotiates for better terms |
-| UI | Greyed out / disabled | Enabled, may be rejected |
+| | Structurally impossible | Advisory refusal (`INT_MAX` value) | Unfavorable |
+|---|---|---|---|
+| Source | `IsPossibleToTradeItem` | `CvDealAI::GetTradeItemValue` maxes out | Normal valuation |
+| Value | `INT_MAX` | `INT_MAX` | Normal integer |
+| Nature | Always-on rule | Strategic/political preference | Bad terms / diplomacy |
+| Stock AI | Cannot trade | Immediate refusal | Negotiates for better terms |
+| Agent path | Still enforced (red row) | Read-only/advisory; "no usable estimate"; gates nothing | Advisory only |
 
 ## Impossibility Triggers by Trade Item
 

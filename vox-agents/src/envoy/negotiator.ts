@@ -205,7 +205,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
     ];
 
     if (input.activeProposal) {
-      sections.push(formatActiveProposal(input.activeProposal));
+      sections.push(formatActiveProposal(input.activeProposal, thread));
       sections.push(
         "Decide on this on-the-table deal: accept-deal, propose-deal (a counter), or reject-deal."
       );
@@ -235,6 +235,6 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
     input: NegotiatorInput,
     _finalText: string
   ): Promise<string | undefined> {
-    return input.outcome ? summarizeMove(input.outcome) : undefined;
+    return input.outcome ? summarizeMove(input.outcome, input.thread) : undefined;
   }
 }

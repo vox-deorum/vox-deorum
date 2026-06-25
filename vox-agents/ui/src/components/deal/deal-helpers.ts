@@ -130,20 +130,25 @@ export function removeItemWithMirror(items: TradeItem[], index: number): TradeIt
 }
 
 /**
- * The AI valuation returns an INT_MAX sentinel for anti-exploit guards (last strategic
- * resource, last luxury while unhappy) and "impossible" items. These surface in estimates
- * but gate nothing (specs §4) — we flag them rather than fold them into a total.
+ * The per-item values are the stock AI's ADVISORY estimate; it returns an INT_MAX-scale sentinel when
+ * that estimate maxes out (last strategic resource, last luxury while unhappy, a category/policy
+ * refusal, …). This is NOT structural impossibility (a separate legality check drives the red rows) and
+ * it gates nothing (specs §4) — we surface it as "no usable estimate" and exclude it from the balance
+ * rather than fold it in. Kept in sync with the server twin `src/utils/diplomacy/deal-format.ts`.
  */
 const SENTINEL_THRESHOLD = 1e9;
 
-/** True when an advisory value is a sentinel rather than a real estimate. */
+/** Phrase shown for a sentinel (maxed-out) advisory estimate. */
+export const SENTINEL_LABEL = 'no usable estimate';
+
+/** True when an advisory value is a sentinel (maxed out) rather than a real estimate. */
 export function isSentinel(value: number): boolean {
   return !Number.isFinite(value) || Math.abs(value) >= SENTINEL_THRESHOLD;
 }
 
-/** Format an advisory value for display: a sentinel shows as a dash, else a signed integer. */
+/** Format an advisory value for display: a sentinel reads "no usable estimate", else a signed integer. */
 export function formatValue(value: number): string {
-  if (isSentinel(value)) return '—';
+  if (isSentinel(value)) return SENTINEL_LABEL;
   return Math.round(value).toString();
 }
 

@@ -45,8 +45,28 @@ describe('formatDealContext', () => {
     expect(out).toContain('deal-counter, message #5, status: open');
     expect(out).toContain('They are desperate for gold.');
     expect(out).toContain('Fifty gold buys your open borders.');
-    expect(out).toContain('item[0]=30');
-    expect(out).toContain('item[0]=25');
+    // Direction-grouped, friendly-labelled terms with the advisory per-item estimates.
+    expect(out).toContain('Player 1 gives Player 3');
+    expect(out).toContain('Gold: 50');
+    expect(out).toContain('worth 30 to Player 1 (giving)');
+    expect(out).toContain('worth 25 to Player 3 (receiving)');
+    expect(out).toContain('advisory');
+  });
+
+  it('renders a maxed-out advisory estimate as "no usable estimate", never a raw INT_MAX', () => {
+    const deal = {
+      version: 1 as const,
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }],
+      promises: [],
+    };
+    const reduction = deriveActiveProposal([
+      msg('deal-proposal', { Deal: deal, Value1: { '0': 2147483647 }, Value2: { '0': 25 } }, 8),
+    ]);
+
+    const out = formatDealContext(reduction, 3)!;
+    expect(out).not.toContain('2147483647');
+    expect(out).toContain('no usable estimate for Player 1 (giving)');
+    expect(out).toContain('worth 25 to Player 3 (receiving)');
   });
 
   it('does not expose the opposing negotiator rationale', () => {
@@ -77,7 +97,7 @@ describe('formatDealContext', () => {
       msg('deal-counter', { Deal: deal }, 7),
     ]);
 
-    const out = formatDealContext(reduction, 3, {
+    const out = formatDealContext(reduction, 3, undefined, {
       items: [],
       promises: [{
         promiserID: 3,

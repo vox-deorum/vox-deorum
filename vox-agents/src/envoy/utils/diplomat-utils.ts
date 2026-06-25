@@ -13,16 +13,11 @@ import { deriveActiveProposal, type DealReduction } from "../../utils/diplomacy/
 import { inspectDeal, readDealMessages, type InspectDealResult } from "../../utils/diplomacy/deal.js";
 import { createLogger } from "../../utils/logger.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
+import { formatDealTermsByDirection } from "../../utils/diplomacy/deal-format.js";
+import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
 import type { DealPayload, PerItemValueMap } from "../../../../mcp-server/dist/utils/deal-schema.js";
 
-const logger = createLogger("diplomat-deal-tools");
-
-/** Format a per-item value snapshot map (index → value) compactly, or undefined if empty. */
-function formatValueMap(label: string, map: PerItemValueMap | undefined): string | undefined {
-  if (!map || Object.keys(map).length === 0) return undefined;
-  const parts = Object.entries(map).map(([i, v]) => `item[${i}]=${v}`);
-  return `${label}: ${parts.join(", ")}`;
-}
+const logger = createLogger("diplomat-deal");
 
 /** Format promise agreeability factors for the active deal, or a note when unavailable. */
 function formatPromiseAgreeability(deal: DealPayload, inspection: InspectDealResult | undefined): string | undefined {
@@ -34,14 +29,16 @@ function formatPromiseAgreeability(deal: DealPayload, inspection: InspectDealRes
 
 /**
  * Format the on-the-table deal the diplomat must "see at every step": the active proposal's
- * terms, the negotiator's inward `rationale` and one-sentence `message`, the stored per-item
- * value snapshots, fresh promise agreeability factors, and the proposal's current status.
- * Private rationale is included only for a proposal authored by the diplomat's own seat.
+ * terms (grouped by direction with civ names and the advisory per-item value estimates), the
+ * negotiator's inward `rationale` and one-sentence `message`, fresh promise agreeability factors,
+ * and the proposal's current status. Private rationale is included only for a proposal authored by
+ * the diplomat's own seat. `civName` resolves a seat's civ name (defaults to "Player <id>").
  * Returns undefined when no deal is active.
  */
 export function formatDealContext(
   reduction: DealReduction,
   viewerID: number,
+  civName?: (playerID: number) => string,
   inspection?: InspectDealResult
 ): string | undefined {
   const active = reduction.active;
@@ -51,29 +48,35 @@ export function formatDealContext(
   const deal = payload.Deal as DealPayload | undefined;
   if (!deal) return undefined;
 
-  const lines: string[] = [
-    `# Deal on the table (${active.MessageType}, message #${active.ID}, status: ${reduction.status})`,
-    // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
-    `Terms:\n${jsonToMarkdown({ items: deal.items, promises: deal.promises })}`,
-  ];
-  if (active.SpeakerID === viewerID && deal.rationale) {
-    lines.push(`Your negotiator's rationale (for you, do not quote): ${deal.rationale}`);
-  }
-  if (deal.message) lines.push(`Negotiator's one-sentence line: "${deal.message}"`);
+  const resolveName = civName ?? ((id: number) => `Player ${id}`);
+  const terms = formatDealTermsByDirection(
+    deal,
+    payload.Value1 as PerItemValueMap | undefined,
+    payload.Value2 as PerItemValueMap | undefined,
+    active.Player1ID,
+    active.Player2ID,
+    resolveName,
+    viewerID
+  );
 
-  const v1 = formatValueMap("Player1 per-item values", payload.Value1 as PerItemValueMap | undefined);
-  const v2 = formatValueMap("Player2 per-item values", payload.Value2 as PerItemValueMap | undefined);
-  if (v1) lines.push(v1);
-  if (v2) lines.push(v2);
+  const header = `# Deal on the table (${active.MessageType}, message #${active.ID}, status: ${reduction.status})`;
+  // The header and the advisory-marked terms read as one tight block; everything after is spaced.
+  const blocks: string[] = [terms ? `${header}\n${terms}` : header];
+
+  if (active.SpeakerID === viewerID && deal.rationale) {
+    blocks.push(`Your negotiator's rationale (for you, do not quote): ${deal.rationale}`);
+  }
+  if (deal.message) blocks.push(`Negotiator's one-sentence line: "${deal.message}"`);
+
   const promiseAgreeability = formatPromiseAgreeability(deal, inspection);
-  if (promiseAgreeability) lines.push(promiseAgreeability);
+  if (promiseAgreeability) blocks.push(promiseAgreeability);
 
   if (reduction.status === "open") {
-    lines.push(
+    blocks.push(
       "This deal awaits a response. If it came from the counterpart, call your negotiator with a briefing; if you authored it, await their reply."
     );
   }
-  return lines.join("\n");
+  return blocks.join("\n\n");
 }
 
 /**
@@ -95,5 +98,6 @@ export async function buildDealContextMessage(thread: EnvoyThread): Promise<stri
     }
   }
 
-  return formatDealContext(reduction, thread.agent, inspection);
+  const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
+  return formatDealContext(reduction, thread.agent, civName, inspection);
 }

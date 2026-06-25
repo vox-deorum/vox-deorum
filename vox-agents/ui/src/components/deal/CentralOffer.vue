@@ -73,8 +73,10 @@ re-inspects live, keeping the per-row legality/value index-aligned).
       <InputText v-model="message" class="deal-message-input" :disabled="locked || busy" placeholder="A line to send with the deal (optional)…" />
     </div>
 
-    <!-- Live value balance; sentinel estimates are clearly flagged. -->
+    <!-- Live value balance. The values are the stock AI's advisory estimate — marked once here — and
+         never block the deal; a maxed-out estimate reads "no usable estimate". -->
     <div class="deal-balance">
+      <div class="deal-balance-caption">AI value estimate — advisory, doesn't block the deal</div>
       <span class="deal-balance-item" :class="balanceClass(youID)">Value to {{ youLabel }}: {{ formatBalance(youID) }}</span>
       <span class="deal-balance-item" :class="balanceClass(counterpartID)">Value to {{ counterpartLabel }}: {{ formatBalance(counterpartID) }}</span>
     </div>
@@ -187,14 +189,14 @@ const promiseNote = (index: number): string => props.inspectedPromises[index]?.a
 const itemTooltip = (index: number): string => {
   if (isIllegal(index)) return reasonText(index);
   const insp = props.inspectedItems[index];
-  return insp ? `Give ${fmt(insp.valueIfIGive)} · worth ${fmt(insp.valueIfIReceive)}` : '';
+  return insp ? `To give: ${fmt(insp.valueIfIGive)} · to receive: ${fmt(insp.valueIfIReceive)}` : '';
 };
 
 // ---- value balance ----------------------------------------------------------------------
 const balanceFor = (sideID: number) => computeSideBalance(props.items, props.inspectedItems, sideID);
 const formatBalance = (sideID: number) => {
   const b = balanceFor(sideID);
-  return `${b.net > 0 ? '+' : ''}${formatValue(b.net)}${b.hasSentinel ? ' (some impossible)' : ''}`;
+  return `${b.net > 0 ? '+' : ''}${formatValue(b.net)}${b.hasSentinel ? ' (some have no usable estimate)' : ''}`;
 };
 const balanceClass = (sideID: number) => {
   const net = balanceFor(sideID).net;
@@ -210,6 +212,8 @@ const resourceMax = (item: TradeItem): number | undefined =>
 <style scoped>
 @import '@/styles/deal.css';
 .deal-offer-col { min-width: 0; }
+/* One-time advisory caption above the value balance (the values never gate the deal). */
+.deal-balance-caption { flex: 0 0 100%; font-size: 0.72rem; opacity: 0.7; margin-bottom: 0.15rem; }
 
 /* Narrow inline number cells: pin the inline-flex wrapper AND the inner input PrimeVue renders
    (the row is a flex container, so an un-pinned wrapper would stretch). Mirrors the proven
