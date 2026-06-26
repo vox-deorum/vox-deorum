@@ -411,6 +411,42 @@ describe('getInitialMessages task determination', () => {
     expect(mcp.calls('inspect-deal')[0]!.args).not.toHaveProperty('ProposedDeal');
   });
 
+  it('shows each duration-bearing term its fixed term length in the menu', async () => {
+    const durInspection = {
+      items: [],
+      promises: [],
+      promiseTargets: [],
+      defaultDuration: 30,
+      peaceDuration: 15,
+      relationshipDuration: 20,
+      tradableRange: {
+        '3': {
+          gold: { available: false, max: 0, reasons: [] },
+          goldPerTurn: { available: false, reasons: [] },
+          resources: [], cities: [], techs: [], thirdPartyPeace: [], thirdPartyWar: [], voteCommitments: [],
+          maps: { legal: false, reasons: [] },
+          allowEmbassy: { legal: false, reasons: [] },
+          openBorders: { legal: true, reasons: [] }, // runs the default deal duration
+          declarationOfFriendship: { legal: true, reasons: [] }, // runs the relationship duration
+          defensivePact: { legal: false, reasons: [] },
+          researchAgreement: { legal: false, reasons: [] },
+          peaceTreaty: { legal: false, reasons: [] },
+          vassalage: { legal: false, reasons: [] },
+          vassalageRevoke: { legal: false, reasons: [] },
+        },
+      },
+    } as any;
+    mcp.respondWith('inspect-deal', structuredResult(durInspection));
+    const negotiator = new Negotiator();
+    const input = negotiatorInput({ intent: 'Improve relations.' });
+
+    const messages = await negotiator.getInitialMessages(params, input, {} as any);
+    const text = content(messages);
+
+    expect(text).toContain('Open Borders (lasts 30 turns)');
+    expect(text).toContain('Declaration Of Friendship (Mutual, lasts 20 turns)');
+  });
+
   it('does not forward the seat own pending proposal (notes it awaits a reply)', async () => {
     setOpenProposal(7, 3); // the negotiator's own seat authored it
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));

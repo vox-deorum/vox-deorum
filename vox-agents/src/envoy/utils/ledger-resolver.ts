@@ -60,9 +60,39 @@ export const LEDGER_TERMS = [
 
 export type LedgerTermLabel = (typeof LEDGER_TERMS)[number];
 
+/**
+ * Normalize a term for forgiving matching: fold case, map curly apostrophes to straight, the dash
+ * family to a plain hyphen, and collapse internal whitespace. Lets a casing/punctuation slip
+ * ("won't attack", a curly apostrophe, an en-dash in "Third-Party") resolve to its canonical label
+ * instead of tripping enum validation and forcing a retry.
+ */
+function normalizeTerm(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[‐-―]/g, "-")
+    .replace(/\s+/g, " ");
+}
+
+/** Normalized-form → canonical label, built once for the preprocess step below. */
+const TERM_BY_NORMALIZED = new Map<string, LedgerTermLabel>(
+  LEDGER_TERMS.map((t) => [normalizeTerm(t), t])
+);
+
+/** Resolve a friendly term label to its canonical spelling, allowing harmless punctuation slips. */
+function canonicalLedgerTerm(term: string): LedgerTermLabel | undefined {
+  return TERM_BY_NORMALIZED.get(normalizeTerm(term));
+}
+
 /** One authored ledger entry, used in both `Give` and `Take`. */
 export const LedgerTermSchema = z.object({
-  Term: z.enum(LEDGER_TERMS).describe("The kind of term, exactly as labelled in the GIVE/TAKE menu."),
+  // Forgive minor casing/punctuation differences by mapping to the canonical label before the enum
+  // validates; an unrecognized term still falls through to the standard enum error.
+  Term: z.preprocess(
+    (v) => (typeof v === "string" ? canonicalLedgerTerm(v) ?? v : v),
+    z.enum(LEDGER_TERMS).describe("The kind of term, exactly as labelled in the GIVE/TAKE menu.")
+  ),
   Name: z
     .string()
     .optional()
@@ -242,10 +272,17 @@ export function resolveLedger(args: {
     range: NormalizedSideRange | undefined
   ): void => {
     for (const t of terms) {
-      const mapped = TERM_MAP[t.Term as LedgerTermLabel];
+      const rawTerm = t.Term;
+      const term = canonicalLedgerTerm(rawTerm) ?? rawTerm;
+      const mapped = TERM_MAP[term as LedgerTermLabel] as ResolvedKind | undefined;
       const fail = (problem: string, suggestions?: string[]): void => {
-        errors.push({ Side: side, Term: t.Term, Name: t.Name, Problem: problem, Suggestions: suggestions });
+        errors.push({ Side: side, Term: term, Name: t.Name, Problem: problem, Suggestions: suggestions });
       };
+
+      if (!mapped) {
+        errors.push({ Side: side, Term: rawTerm, Name: t.Name, Problem: "unknown ledger term." });
+        continue;
+      }
 
       if (mapped.kind === "promise") {
         const promiseType = mapped.promiseType;
@@ -281,7 +318,7 @@ export function resolveLedger(args: {
         case "GOLD":
         case "GOLD_PER_TURN": {
           if (t.Amount === undefined || t.Amount <= 0) {
-            fail(`${t.Term} needs a positive \`Amount\`.`);
+            fail(`${term} needs a positive \`Amount\`.`);
             continue;
           }
           items.push({ ...base, amount: t.Amount });
@@ -323,7 +360,7 @@ export function resolveLedger(args: {
         case "THIRD_PARTY_PEACE":
         case "THIRD_PARTY_WAR": {
           const list = itemType === "THIRD_PARTY_PEACE" ? range?.thirdPartyPeace : range?.thirdPartyWar;
-          const tp = lookupByName(list ?? [], t.Name, { term: t.Term, noun: "third party", nounPlural: `${t.Term.toLowerCase()} targets` }, side.toLowerCase());
+          const tp = lookupByName(list ?? [], t.Name, { term, noun: "third party", nounPlural: `${term.toLowerCase()} targets` }, side.toLowerCase());
           if (!("match" in tp)) {
             fail(tp.problem, tp.suggestions);
             continue;

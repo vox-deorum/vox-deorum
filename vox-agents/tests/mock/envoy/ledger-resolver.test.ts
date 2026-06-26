@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { resolveLedger, type LedgerTerm } from '../../../src/envoy/utils/ledger-resolver.js';
+import { resolveLedger, LedgerTermSchema, type LedgerTerm } from '../../../src/envoy/utils/ledger-resolver.js';
 
 const AGENT = 3;
 const COUNTERPART = 1;
@@ -54,6 +54,12 @@ describe('resolveLedger directions', () => {
   it('directs a Take from the counterpart to the agent', () => {
     const { items } = resolve([], [{ Term: 'Open Borders' }]);
     expect(items).toEqual([{ fromPlayerID: COUNTERPART, toPlayerID: AGENT, itemType: 'OPEN_BORDERS' }]);
+  });
+
+  it('normalizes term labels during direct resolution', () => {
+    const { items, errors } = resolve([{ Term: 'open borders' } as LedgerTerm]);
+    expect(errors).toEqual([]);
+    expect(items).toEqual([{ fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'OPEN_BORDERS' }]);
   });
 });
 
@@ -129,6 +135,40 @@ describe('resolveLedger errors', () => {
     ], [], { giveRange });
     expect(items).toHaveLength(1);
     expect(errors[0].Problem).toContain('only one vote commitment');
+  });
+});
+
+describe('LedgerTermSchema forgiving Term labels', () => {
+  it('normalizes casing/whitespace to the canonical label', () => {
+    expect(LedgerTermSchema.parse({ Term: 'open borders' }).Term).toBe('Open Borders');
+    expect(LedgerTermSchema.parse({ Term: "  declaration  of   friendship " }).Term).toBe('Declaration Of Friendship');
+  });
+
+  it("normalizes apostrophe and dash variants", () => {
+    expect(LedgerTermSchema.parse({ Term: "won't attack" }).Term).toBe("Won't Attack");
+    expect(LedgerTermSchema.parse({ Term: 'won’t attack' }).Term).toBe("Won't Attack"); // curly apostrophe
+    expect(LedgerTermSchema.parse({ Term: 'Third–Party Peace' }).Term).toBe('Third-Party Peace'); // en-dash
+  });
+
+  it('still rejects an unrecognized term', () => {
+    expect(LedgerTermSchema.safeParse({ Term: 'Free Stuff' }).success).toBe(false);
+  });
+});
+
+describe('resolveLedger mutual agreements', () => {
+  it('resolves a mutual pact on one side to a single directed item (symmetrized at storage)', () => {
+    const { items, errors } = resolve([{ Term: 'Declaration Of Friendship' }]);
+    expect(errors).toEqual([]);
+    expect(items).toEqual([{ fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'DECLARATION_OF_FRIENDSHIP' }]);
+  });
+
+  it('resolves a mutual pact listed on both sides to the opposite-directed pair', () => {
+    const { items, errors } = resolve([{ Term: 'Defensive Pact' }], [{ Term: 'Defensive Pact' }]);
+    expect(errors).toEqual([]);
+    expect(items).toEqual([
+      { fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'DEFENSIVE_PACT' },
+      { fromPlayerID: COUNTERPART, toPlayerID: AGENT, itemType: 'DEFENSIVE_PACT' },
+    ]);
   });
 });
 

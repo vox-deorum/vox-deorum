@@ -34,7 +34,6 @@ import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
 import {
   formatDealTermsByDirection,
   formatEstimate,
-  formatItemLabel,
   formatPromiseLabel,
   isSentinel,
   itemTypeLabel,
@@ -45,7 +44,9 @@ import {
   resolveLedger,
   formatResolutionErrors,
 } from "./ledger-resolver.js";
+import { durationForItemType } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
+  DealDurations,
   DealPayload,
   TradeItem,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
@@ -122,10 +123,21 @@ function bareValue(value: number | undefined, receiverName: string): string {
   return isSentinel(value) ? "no usable estimate" : `worth ~${Math.round(value)} to ${receiverName}`;
 }
 
+/** Parenthesize comma-separated row details, omitting absent/empty details. */
+function detailClause(...details: Array<string | undefined>): string {
+  const present = details.filter((detail): detail is string => !!detail);
+  return present.length ? ` (${present.join(", ")})` : "";
+}
+
 /** A parenthesized advisory-value clause for a menu row, or "" when no estimate is available. */
 function valueClause(value: number | undefined, receiverName: string): string {
-  const phrase = bareValue(value, receiverName);
-  return phrase ? ` (${phrase})` : "";
+  return detailClause(bareValue(value, receiverName));
+}
+
+/** A bare "lasts N turns" phrase for a duration-bearing item type, or "" when the type carries none. */
+function durationPhrase(itemType: TradeItem["itemType"], durations: DealDurations): string {
+  const turns = durationForItemType(itemType, durations);
+  return turns !== undefined ? `lasts ${turns} turns` : "";
 }
 
 /** Append a "## <title>" block when it has rows. */
@@ -138,16 +150,21 @@ function pushMenuCategory(into: string[], title: string, rows: string[]): void {
  * four mutual pacts are tagged "(Mutual)" and listed once (they bind both sides). `key` indexes the
  * side range's toggle candidates.
  */
-const AGREEMENT_ROWS: ReadonlyArray<{ key: keyof NormalizedSideRange; label: string; mutual?: boolean }> = [
-  { key: "allowEmbassy", label: "Allow Embassy" },
-  { key: "openBorders", label: "Open Borders" },
-  { key: "maps", label: "Maps" },
-  { key: "declarationOfFriendship", label: "Declaration Of Friendship", mutual: true },
-  { key: "defensivePact", label: "Defensive Pact", mutual: true },
-  { key: "researchAgreement", label: "Research Agreement", mutual: true },
-  { key: "peaceTreaty", label: "Peace Treaty", mutual: true },
-  { key: "vassalage", label: "Vassalage" },
-  { key: "vassalageRevoke", label: "Revoke Vassalage" },
+const AGREEMENT_ROWS: ReadonlyArray<{
+  key: keyof NormalizedSideRange;
+  label: string;
+  itemType: TradeItem["itemType"];
+  mutual?: boolean;
+}> = [
+  { key: "allowEmbassy", label: "Allow Embassy", itemType: "ALLOW_EMBASSY" },
+  { key: "openBorders", label: "Open Borders", itemType: "OPEN_BORDERS" },
+  { key: "maps", label: "Maps", itemType: "MAPS" },
+  { key: "declarationOfFriendship", label: "Declaration Of Friendship", itemType: "DECLARATION_OF_FRIENDSHIP", mutual: true },
+  { key: "defensivePact", label: "Defensive Pact", itemType: "DEFENSIVE_PACT", mutual: true },
+  { key: "researchAgreement", label: "Research Agreement", itemType: "RESEARCH_AGREEMENT", mutual: true },
+  { key: "peaceTreaty", label: "Peace Treaty", itemType: "PEACE_TREATY", mutual: true },
+  { key: "vassalage", label: "Vassalage", itemType: "VASSALAGE" },
+  { key: "vassalageRevoke", label: "Revoke Vassalage", itemType: "VASSALAGE_REVOKE" },
 ];
 
 /** The six promises that need no third-party target, paired with their friendly labels. */
@@ -173,31 +190,34 @@ function formatSideMenu(
   giverName: string,
   receiverName: string,
   subline: string,
-  promiseTargets: InspectDealResult["promiseTargets"]
+  promiseTargets: InspectDealResult["promiseTargets"],
+  durations: DealDurations
 ): string {
   const head = `# What ${giverName} Can Give`;
   if (!range) return `${head}\n- ${subline}\n(menu unavailable)`;
   const out: string[] = [head, `- ${subline}`];
 
-  // Gold + gold per turn (net income shows how much GPT the side can sustain).
+  // Gold + gold per turn (net income shows how much GPT the side can sustain; GPT runs for a term).
   const goldRows: string[] = [];
   if (range.gold.available) goldRows.push(`- Gold (up to ${range.gold.max})`);
   if (range.goldPerTurn.available) {
-    goldRows.push(
-      `- Gold Per Turn${range.netGoldPerTurn !== undefined ? ` (${giverName}'s net income: ${range.netGoldPerTurn}/turn)` : ""}`
-    );
+    goldRows.push(`- Gold Per Turn${detailClause(
+      range.netGoldPerTurn !== undefined ? `${giverName}'s net income: ${range.netGoldPerTurn}/turn` : undefined,
+      durationPhrase("GOLD_PER_TURN", durations)
+    )}`);
   }
   pushMenuCategory(out, "Gold", goldRows);
 
-  // Resources, bucketed luxury then strategic (count + advisory value).
+  // Resources, bucketed luxury then strategic (count + duration + advisory value).
   const resourceRows = (category: "luxury" | "strategic"): string[] =>
     range.resources
       .filter((r) => r.legal && r.category === category)
       .map((r) => {
-        const parts = [`${r.quantityAvailable} available`];
-        const v = bareValue(r.valueToReceiver, receiverName);
-        if (v) parts.push(v);
-        return `- ${r.name ?? `Resource #${r.resourceID}`} (${parts.join(", ")})`;
+        return `- ${r.name ?? `Resource #${r.resourceID}`}${detailClause(
+          `${r.quantityAvailable} available`,
+          durationPhrase("RESOURCES", durations),
+          bareValue(r.valueToReceiver, receiverName)
+        )}`;
       });
   pushMenuCategory(out, "Luxury Resources", resourceRows("luxury"));
   pushMenuCategory(out, "Strategic Resources", resourceRows("strategic"));
@@ -206,18 +226,23 @@ function formatSideMenu(
   const voteRows = range.voteCommitments
     .filter((v) => v.legal)
     .map((v) => {
-      const parts = [`${v.numVotes} ${v.numVotes === 1 ? "vote" : "votes"}`];
-      const val = bareValue(v.valueToReceiver, receiverName);
-      if (val) parts.push(val);
-      return `- ${v.name ?? `Resolution #${v.resolutionID}`} (${parts.join(", ")})`;
+      return `- ${v.name ?? `Resolution #${v.resolutionID}`}${detailClause(
+        `${v.numVotes} ${v.numVotes === 1 ? "vote" : "votes"}`,
+        bareValue(v.valueToReceiver, receiverName)
+      )}`;
     });
   pushMenuCategory(out, "World Congress", voteRows);
 
-  // Agreements: single-shot toggles (with value) + the four mutual pacts (tagged, list once).
-  const agreementRows = AGREEMENT_ROWS.flatMap(({ key, label, mutual }) => {
+  // Agreements: single-shot toggles + the four mutual pacts (tagged). Each shows its fixed term
+  // length where it carries one; mutual pacts are tagged and omit the (symmetric) advisory value.
+  const agreementRows = AGREEMENT_ROWS.flatMap(({ key, label, itemType, mutual }) => {
     const cand = range[key] as NormalizedSideRange["maps"] | undefined;
     if (!cand?.legal) return [];
-    return [mutual ? `- ${label} (Mutual)` : `- ${label}${valueClause(cand.valueToReceiver, receiverName)}`];
+    return [`- ${label}${detailClause(
+      mutual ? "Mutual" : undefined,
+      durationPhrase(itemType, durations),
+      mutual ? undefined : bareValue(cand.valueToReceiver, receiverName)
+    )}`];
   });
   pushMenuCategory(out, "Agreements", agreementRows);
 
@@ -225,12 +250,11 @@ function formatSideMenu(
   const cityRows = range.cities
     .filter((c) => c.legal)
     .map((c) => {
-      const parts: string[] = [];
-      if (c.population !== undefined) parts.push(`Population ${c.population}`);
-      if (c.hitPoints !== undefined && c.maxHitPoints !== undefined) parts.push(`HP ${c.hitPoints}/${c.maxHitPoints}`);
-      const v = bareValue(c.valueToReceiver, receiverName);
-      if (v) parts.push(v);
-      return `- ${c.name}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+      return `- ${c.name}${detailClause(
+        c.population !== undefined ? `Population ${c.population}` : undefined,
+        c.hitPoints !== undefined && c.maxHitPoints !== undefined ? `HP ${c.hitPoints}/${c.maxHitPoints}` : undefined,
+        bareValue(c.valueToReceiver, receiverName)
+      )}`;
     });
   pushMenuCategory(out, "Cities", cityRows);
 
@@ -240,11 +264,15 @@ function formatSideMenu(
     .map((t) => `- ${t.name ?? `Tech #${t.techID}`}${valueClause(t.valueToReceiver, receiverName)}`);
   pushMenuCategory(out, "Technologies", techRows);
 
-  // Third-party peace & war (target civ names + advisory value).
+  // Third-party peace & war (target civ names + advisory value; peace runs for the peace-deal term).
+  const peaceDur = durationPhrase("THIRD_PARTY_PEACE", durations);
   const tpRows = [
     ...range.thirdPartyPeace
       .filter((t) => t.legal)
-      .map((t) => `- Third-Party Peace with ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`),
+      .map((t) => `- Third-Party Peace with ${t.name ?? `team ${t.teamID}`}${detailClause(
+        peaceDur,
+        bareValue(t.valueToReceiver, receiverName)
+      )}`),
     ...range.thirdPartyWar
       .filter((t) => t.legal)
       .map((t) => `- Third-Party War on ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`),
@@ -287,7 +315,8 @@ export function formatGiveTakeLedger(inspection: InspectDealResult, thread: Envo
     agentName,
     counterpartName,
     `Potential terms YOUR civ can give ${counterpartName}`,
-    inspection.promiseTargets
+    inspection.promiseTargets,
+    inspection
   );
   const take = formatSideMenu(
     inspection.tradableRange[String(counterpartID)],
@@ -296,7 +325,8 @@ export function formatGiveTakeLedger(inspection: InspectDealResult, thread: Envo
     counterpartName,
     agentName,
     `Potential terms ${counterpartName} can give YOUR civ`,
-    inspection.promiseTargets
+    inspection.promiseTargets,
+    inspection
   );
   return [
     "Send NAMES exactly as written below; never numbers. Durations and vote counts are fixed by the game.",
@@ -328,13 +358,22 @@ export function formatInspection(inspection: InspectDealResult): string {
   return sections.length > 0 ? sections.join("\n\n") : "(no on-the-table terms to inspect)";
 }
 
-/** Friendly label for an on-the-table item, resolving resource/city/tech/team/vote IDs to NAMES via the inspection range. */
+/**
+ * Friendly label for an on-the-table item, resolving resource/city/tech/team/vote IDs to NAMES via
+ * the inspection range. Duration-bearing terms append their stamped, fixed term length ("lasts N
+ * turns") off the item's own `duration` (set server-side by `applyDealDurations`).
+ */
 function namedItemLabel(item: TradeItem, inspection?: InspectDealResult): string {
   const giverRange = inspection?.tradableRange[String(item.fromPlayerID)];
+  const dur = item.duration ? ` (lasts ${item.duration} turns)` : "";
   switch (item.itemType) {
+    case "GOLD":
+      return `Gold: ${item.amount ?? 0}`;
+    case "GOLD_PER_TURN":
+      return `Gold Per Turn: ${item.amount ?? 0}${dur}`;
     case "RESOURCES": {
       const r = giverRange?.resources.find((x) => x.resourceID === item.resourceID);
-      return `Resource: ${r?.name ?? `#${item.resourceID}`} x${item.quantity ?? 1}`;
+      return `Resource: ${r?.name ?? `#${item.resourceID}`} x${item.quantity ?? 1}${dur}`;
     }
     case "CITIES": {
       const c = giverRange?.cities.find((x) => x.cityID === item.cityID);
@@ -346,7 +385,7 @@ function namedItemLabel(item: TradeItem, inspection?: InspectDealResult): string
     }
     case "THIRD_PARTY_PEACE": {
       const t = giverRange?.thirdPartyPeace.find((x) => x.teamID === item.thirdPartyTeamID);
-      return `Third-Party Peace with ${t?.name ?? `team ${item.thirdPartyTeamID}`}`;
+      return `Third-Party Peace with ${t?.name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
     }
     case "THIRD_PARTY_WAR": {
       const t = giverRange?.thirdPartyWar.find((x) => x.teamID === item.thirdPartyTeamID);
@@ -359,7 +398,7 @@ function namedItemLabel(item: TradeItem, inspection?: InspectDealResult): string
       return `Vote Commitment: ${v?.name ?? `resolution ${item.resolutionID}`}`;
     }
     default:
-      return formatItemLabel(item);
+      return `${itemTypeLabel(item.itemType)}${dur}`;
   }
 }
 
@@ -537,7 +576,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           .array(LedgerTermSchema)
           .default([])
           .describe(
-            "Terms YOUR civ gives the counterpart. Use NAMES from the GIVE menu. Mutual agreements (Declaration Of Friendship, Defensive Pact, Research Agreement, Peace Treaty) bind both sides automatically; list once on either side. Durations are fixed by the game."
+            "Terms YOUR civ gives the counterpart. Use NAMES from the GIVE menu. Durations are fixed by the game."
           ),
         Take: z
           .array(LedgerTermSchema)
