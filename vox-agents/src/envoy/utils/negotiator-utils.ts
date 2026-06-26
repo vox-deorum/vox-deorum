@@ -169,36 +169,6 @@ function pushMenuCategory(into: string[], title: string, rows: string[]): void {
 }
 
 /**
- * The "Agreements" menu rows, derived from the canonical {@link AGREEMENT_METADATA} (single source of
- * truth for label / order / mutuality). Single-shot toggles show their advisory value; the four mutual
- * pacts are tagged "(Mutual)" and listed once (they bind both sides). `key` indexes the side range's
- * toggle candidates.
- */
-const AGREEMENT_ROWS: ReadonlyArray<{
-  key: keyof NormalizedSideRange;
-  label: string;
-  itemType: TradeItem["itemType"];
-  mutual: boolean;
-}> = AGREEMENT_METADATA.map((a) => ({
-  key: a.rangeKey as keyof NormalizedSideRange,
-  label: a.label,
-  itemType: a.itemType,
-  mutual: a.mutual,
-}));
-
-/**
- * The untargeted promises (label + promise type, for the term-length clause), derived from the
- * canonical {@link PROMISE_METADATA}: every contract promise that carries no third-party target.
- * The non-honored promises are not in the contract at all; Coop War is targeted, so it gets its own
- * row below.
- */
-const UNTARGETED_PROMISE_ROWS: ReadonlyArray<{ label: string; promiseType: PromiseTerm["promiseType"] }> =
-  PROMISE_TYPES.filter((t) => !PROMISE_METADATA[t].targeted).map((t) => ({
-    label: PROMISE_METADATA[t].label,
-    promiseType: t,
-  }));
-
-/**
  * Render one side's tradable range as a first-person "What <Giver> Can Give" menu (only legal terms),
  * with the friendly term labels and entity NAMES the `propose-deal` tool expects, plus advisory value
  * (to the receiver), available counts, net income, and city population/HP. `receiverName` frames the
@@ -256,8 +226,8 @@ function formatSideMenu(
 
   // Agreements: single-shot toggles + the four mutual pacts (tagged). Each shows its fixed term
   // length where it carries one; mutual pacts are tagged and omit the (symmetric) advisory value.
-  const agreementRows = AGREEMENT_ROWS.flatMap(({ key, label, itemType, mutual }) => {
-    const cand = range[key] as NormalizedSideRange["maps"] | undefined;
+  const agreementRows = AGREEMENT_METADATA.flatMap(({ rangeKey, label, itemType, mutual }) => {
+    const cand = range[rangeKey as keyof NormalizedSideRange] as NormalizedSideRange["maps"] | undefined;
     if (!cand?.legal) return [];
     return [`- ${label}${detailClause(
       mutual ? "Mutual" : undefined,
@@ -302,9 +272,9 @@ function formatSideMenu(
 
   // Promises: the untargeted ones (with their term length), plus Coop War listing eligible major
   // target NAMES and its preparation countdown. Only AI-honored promises are offered.
-  const promiseRows = UNTARGETED_PROMISE_ROWS.map(
-    ({ label, promiseType }) =>
-      `- ${label}${detailClause(renderPromiseDuration(promiseType, durationForPromiseType(promiseType, durations)))}`
+  const promiseRows = PROMISE_TYPES.filter((t) => !PROMISE_METADATA[t].targeted).map(
+    (promiseType) =>
+      `- ${PROMISE_METADATA[promiseType].label}${detailClause(renderPromiseDuration(promiseType, durationForPromiseType(promiseType, durations)))}`
   );
   const coopNames = (promiseTargets ?? [])
     .filter((t) => t.kind === "major" && t.coopWarEligible !== false)
