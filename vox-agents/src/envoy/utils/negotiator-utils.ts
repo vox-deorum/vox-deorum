@@ -26,6 +26,7 @@ import {
   enactAgentDeal,
   requireCurrentOpenProposal,
   requireNoOpenProposal,
+  IllegalDealError,
   type InspectDealResult,
   type EnactDealResult,
 } from "../../utils/diplomacy/deal.js";
@@ -33,14 +34,22 @@ import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
 import {
   formatDealTermsByDirection,
   formatEstimate,
+  formatItemLabel,
+  formatPromiseLabel,
+  isSentinel,
   itemTypeLabel,
 } from "../../utils/diplomacy/deal-format.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import {
-  AuthoredTradeItemSchema,
-  PromiseTermSchema,
-  type DealPayload,
+  LedgerTermSchema,
+  resolveLedger,
+  formatResolutionErrors,
+} from "./ledger-resolver.js";
+import type {
+  DealPayload,
+  TradeItem,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import type { NormalizedSideRange } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
 
 const logger = createLogger("negotiator");
 
@@ -85,6 +94,12 @@ export interface NegotiatorInput {
   intent?: string;
   /** The on-the-table deal from the counterpart, when one awaits a response. Derived, not authored. */
   activeProposal?: ActiveProposalContext;
+  /**
+   * The upfront `inspect-deal` result (tradable range + promise targets) computed in
+   * `getInitialMessages`. The `propose-deal` tool reads it to resolve the authored Give/Take NAMES
+   * back into IDs without re-inspecting. Absent when the upfront inspection failed.
+   */
+  upfrontInspection?: InspectDealResult;
   /** Set by the terminal tool the negotiator calls. */
   outcome?: NegotiatorMove;
 }
@@ -94,7 +109,203 @@ function civNameFor(thread: EnvoyThread): (playerID: number) => string {
   return (id: number) => identityOf(thread, id)?.name ?? `Player ${id}`;
 }
 
-/** Format the upfront inspect-deal results into a compact, model-readable block (context 2). */
+/** The negotiator's own seat and its counterpart (the other endpoint of the thread). */
+function endpoints(thread: EnvoyThread): { agentID: number; counterpartID: number } {
+  const agentID = thread.agent;
+  const counterpartID = thread.player1ID === agentID ? thread.player2ID : thread.player1ID;
+  return { agentID, counterpartID };
+}
+
+/** A bare advisory-value phrase ("worth ~N to <civ>" / "no usable estimate"), or "" when absent. */
+function bareValue(value: number | undefined, receiverName: string): string {
+  if (value === undefined) return "";
+  return isSentinel(value) ? "no usable estimate" : `worth ~${Math.round(value)} to ${receiverName}`;
+}
+
+/** A parenthesized advisory-value clause for a menu row, or "" when no estimate is available. */
+function valueClause(value: number | undefined, receiverName: string): string {
+  const phrase = bareValue(value, receiverName);
+  return phrase ? ` (${phrase})` : "";
+}
+
+/** Append a "## <title>" block when it has rows. */
+function pushMenuCategory(into: string[], title: string, rows: string[]): void {
+  if (rows.length > 0) into.push(`## ${title}`, ...rows);
+}
+
+/**
+ * The "Agreements" menu rows, in display order. Single-shot toggles show their advisory value; the
+ * four mutual pacts are tagged "(Mutual)" and listed once (they bind both sides). `key` indexes the
+ * side range's toggle candidates.
+ */
+const AGREEMENT_ROWS: ReadonlyArray<{ key: keyof NormalizedSideRange; label: string; mutual?: boolean }> = [
+  { key: "allowEmbassy", label: "Allow Embassy" },
+  { key: "openBorders", label: "Open Borders" },
+  { key: "maps", label: "Maps" },
+  { key: "declarationOfFriendship", label: "Declaration Of Friendship", mutual: true },
+  { key: "defensivePact", label: "Defensive Pact", mutual: true },
+  { key: "researchAgreement", label: "Research Agreement", mutual: true },
+  { key: "peaceTreaty", label: "Peace Treaty", mutual: true },
+  { key: "vassalage", label: "Vassalage" },
+  { key: "vassalageRevoke", label: "Revoke Vassalage" },
+];
+
+/** The six promises that need no third-party target, paired with their friendly labels. */
+const UNTARGETED_PROMISE_ROWS: ReadonlyArray<string> = [
+  "Won't Attack",
+  "Won't Settle Near",
+  "Won't Buy Plots",
+  "Won't Convert",
+  "Won't Dig",
+  "Won't Spy",
+];
+
+/**
+ * Render one side's tradable range as a first-person "What <Giver> Can Give" menu (only legal terms),
+ * with the friendly term labels and entity NAMES the `propose-deal` tool expects, plus advisory value
+ * (to the receiver), available counts, net income, and city population/HP. `receiverName` frames the
+ * advisory values; `promiseTargets` drives the targeted-promise rows.
+ */
+function formatSideMenu(
+  range: NormalizedSideRange | undefined,
+  giverID: number,
+  receiverID: number,
+  giverName: string,
+  receiverName: string,
+  subline: string,
+  promiseTargets: InspectDealResult["promiseTargets"]
+): string {
+  const head = `# What ${giverName} Can Give`;
+  if (!range) return `${head}\n- ${subline}\n(menu unavailable)`;
+  const out: string[] = [head, `- ${subline}`];
+
+  // Gold + gold per turn (net income shows how much GPT the side can sustain).
+  const goldRows: string[] = [];
+  if (range.gold.available) goldRows.push(`- Gold (up to ${range.gold.max})`);
+  if (range.goldPerTurn.available) {
+    goldRows.push(
+      `- Gold Per Turn${range.netGoldPerTurn !== undefined ? ` (${giverName}'s net income: ${range.netGoldPerTurn}/turn)` : ""}`
+    );
+  }
+  pushMenuCategory(out, "Gold", goldRows);
+
+  // Resources, bucketed luxury then strategic (count + advisory value).
+  const resourceRows = (category: "luxury" | "strategic"): string[] =>
+    range.resources
+      .filter((r) => r.legal && r.category === category)
+      .map((r) => {
+        const parts = [`${r.quantityAvailable} available`];
+        const v = bareValue(r.valueToReceiver, receiverName);
+        if (v) parts.push(v);
+        return `- ${r.name ?? `Resource #${r.resourceID}`} (${parts.join(", ")})`;
+      });
+  pushMenuCategory(out, "Luxury Resources", resourceRows("luxury"));
+  pushMenuCategory(out, "Strategic Resources", resourceRows("strategic"));
+
+  // World Congress vote commitments (votes + advisory value).
+  const voteRows = range.voteCommitments
+    .filter((v) => v.legal)
+    .map((v) => {
+      const parts = [`${v.numVotes} ${v.numVotes === 1 ? "vote" : "votes"}`];
+      const val = bareValue(v.valueToReceiver, receiverName);
+      if (val) parts.push(val);
+      return `- ${v.name ?? `Resolution #${v.resolutionID}`} (${parts.join(", ")})`;
+    });
+  pushMenuCategory(out, "World Congress", voteRows);
+
+  // Agreements: single-shot toggles (with value) + the four mutual pacts (tagged, list once).
+  const agreementRows = AGREEMENT_ROWS.flatMap(({ key, label, mutual }) => {
+    const cand = range[key] as NormalizedSideRange["maps"] | undefined;
+    if (!cand?.legal) return [];
+    return [mutual ? `- ${label} (Mutual)` : `- ${label}${valueClause(cand.valueToReceiver, receiverName)}`];
+  });
+  pushMenuCategory(out, "Agreements", agreementRows);
+
+  // Cities (population + HP + advisory value).
+  const cityRows = range.cities
+    .filter((c) => c.legal)
+    .map((c) => {
+      const parts: string[] = [];
+      if (c.population !== undefined) parts.push(`Population ${c.population}`);
+      if (c.hitPoints !== undefined && c.maxHitPoints !== undefined) parts.push(`HP ${c.hitPoints}/${c.maxHitPoints}`);
+      const v = bareValue(c.valueToReceiver, receiverName);
+      if (v) parts.push(v);
+      return `- ${c.name}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+    });
+  pushMenuCategory(out, "Cities", cityRows);
+
+  // Technologies.
+  const techRows = range.techs
+    .filter((t) => t.legal)
+    .map((t) => `- ${t.name ?? `Tech #${t.techID}`}${valueClause(t.valueToReceiver, receiverName)}`);
+  pushMenuCategory(out, "Technologies", techRows);
+
+  // Third-party peace & war (target civ names + advisory value).
+  const tpRows = [
+    ...range.thirdPartyPeace
+      .filter((t) => t.legal)
+      .map((t) => `- Third-Party Peace with ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`),
+    ...range.thirdPartyWar
+      .filter((t) => t.legal)
+      .map((t) => `- Third-Party War on ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`),
+  ];
+  pushMenuCategory(out, "Third-Party Peace & War", tpRows);
+
+  // Promises: the six untargeted, plus targeted ones listing eligible target NAMES.
+  const targets = promiseTargets ?? [];
+  const coopNames = targets
+    .filter((t) => t.kind === "major" && t.coopWarEligible !== false)
+    .map((t) => t.name ?? `player ${t.playerID}`);
+  const cityStateNames = targets
+    .filter((t) => t.kind === "minor" && !!t.protectingPlayerIDs?.includes(receiverID))
+    .map((t) => t.name ?? `player ${t.playerID}`);
+  const promiseRows = [...UNTARGETED_PROMISE_ROWS.map((p) => `- ${p}`)];
+  if (coopNames.length) promiseRows.push(`- Cooperative War (targets: ${coopNames.join(", ")})`);
+  if (cityStateNames.length) {
+    promiseRows.push(`- Won't Bully City-State (targets: ${cityStateNames.join(", ")})`);
+    promiseRows.push(`- Won't Attack City-State (targets: ${cityStateNames.join(", ")})`);
+  }
+  pushMenuCategory(out, "Promises", promiseRows);
+
+  return out.join("\n");
+}
+
+/**
+ * Format the full first-person Give/Take ledger menu (context 2): what the negotiator's civ can GIVE
+ * (its own tradable range) and what it can TAKE (the counterpart's range). Names and labels here are
+ * exactly what the `propose-deal` tool expects, so this menu is a faithful template for the schema.
+ */
+export function formatGiveTakeLedger(inspection: InspectDealResult, thread: EnvoyThread): string {
+  const { agentID, counterpartID } = endpoints(thread);
+  const name = civNameFor(thread);
+  const agentName = name(agentID);
+  const counterpartName = name(counterpartID);
+  const give = formatSideMenu(
+    inspection.tradableRange[String(agentID)],
+    agentID,
+    counterpartID,
+    agentName,
+    counterpartName,
+    `Potential terms YOUR civ can give ${counterpartName}`,
+    inspection.promiseTargets
+  );
+  const take = formatSideMenu(
+    inspection.tradableRange[String(counterpartID)],
+    counterpartID,
+    agentID,
+    counterpartName,
+    agentName,
+    `Potential terms ${counterpartName} can give YOUR civ`,
+    inspection.promiseTargets
+  );
+  return [
+    "Send NAMES exactly as written below; never numbers. Durations and vote counts are fixed by the game.",
+    give,
+    take,
+  ].join("\n\n");
+}
+
+/** Format the upfront on-the-table inspection (per-term legality + value, promise agreeability). */
 export function formatInspection(inspection: InspectDealResult): string {
   const sections: string[] = [];
 
@@ -102,7 +313,7 @@ export function formatInspection(inspection: InspectDealResult): string {
     const lines = inspection.items.map((it, i) => {
       const legal = it.legality ? "legal" : `ILLEGAL (${it.reasons.join("; ") || "no reason given"})`;
       // Values are the stock AI's advisory estimate; a maxed-out estimate renders "no usable estimate".
-      return `  [${i}] ${itemTypeLabel(it.itemType)}: ${it.fromPlayerID}→${it.toPlayerID} — ${legal}; value if I give = ${formatEstimate(it.valueIfIGive)}, value if I receive = ${formatEstimate(it.valueIfIReceive)}`;
+      return `  [${i}] ${itemTypeLabel(it.itemType)}: ${it.fromPlayerID} to ${it.toPlayerID}, ${legal}; value if I give = ${formatEstimate(it.valueIfIGive)}, value if I receive = ${formatEstimate(it.valueIfIReceive)}`;
     });
     sections.push(`### On-the-table trade items (per-term legality + AI value, advisory)\n${lines.join("\n")}`);
   }
@@ -114,29 +325,84 @@ export function formatInspection(inspection: InspectDealResult): string {
     );
   }
 
-  sections.push(
-    `### Tradable range per side (what each civ could put on the table)\n${jsonToMarkdown(inspection.tradableRange)}`
-  );
-
-  return sections.join("\n\n");
+  return sections.length > 0 ? sections.join("\n\n") : "(no on-the-table terms to inspect)";
 }
 
-/** Format the on-the-table proposed terms (context 3) for the model — grouped by direction with civ names. */
-export function formatActiveProposal(active: ActiveProposalContext, thread: EnvoyThread): string {
-  // Terms only (no value snapshots on the relayed proposal) — the values live in the inspection block.
-  const terms = formatDealTermsByDirection(
-    active.deal,
-    undefined,
-    undefined,
-    thread.player1ID,
-    thread.player2ID,
-    civNameFor(thread),
-    thread.agent
-  );
-  const lines = [`### The deal on the table (proposal message #${active.messageID})`];
-  if (terms) lines.push(terms);
-  if (active.deal.message) lines.push(`Their one-sentence line: "${active.deal.message}"`);
+/** Friendly label for an on-the-table item, resolving resource/city/tech/team/vote IDs to NAMES via the inspection range. */
+function namedItemLabel(item: TradeItem, inspection?: InspectDealResult): string {
+  const giverRange = inspection?.tradableRange[String(item.fromPlayerID)];
+  switch (item.itemType) {
+    case "RESOURCES": {
+      const r = giverRange?.resources.find((x) => x.resourceID === item.resourceID);
+      return `Resource: ${r?.name ?? `#${item.resourceID}`} x${item.quantity ?? 1}`;
+    }
+    case "CITIES": {
+      const c = giverRange?.cities.find((x) => x.cityID === item.cityID);
+      return `City: ${c?.name ?? `#${item.cityID}`}`;
+    }
+    case "TECHS": {
+      const t = giverRange?.techs.find((x) => x.techID === item.techID);
+      return `Technology: ${t?.name ?? `#${item.techID}`}`;
+    }
+    case "THIRD_PARTY_PEACE": {
+      const t = giverRange?.thirdPartyPeace.find((x) => x.teamID === item.thirdPartyTeamID);
+      return `Third-Party Peace with ${t?.name ?? `team ${item.thirdPartyTeamID}`}`;
+    }
+    case "THIRD_PARTY_WAR": {
+      const t = giverRange?.thirdPartyWar.find((x) => x.teamID === item.thirdPartyTeamID);
+      return `Third-Party War on ${t?.name ?? `team ${item.thirdPartyTeamID}`}`;
+    }
+    case "VOTE_COMMITMENT": {
+      const v = giverRange?.voteCommitments.find(
+        (x) => x.resolutionID === item.resolutionID && x.voteChoice === item.voteChoice && !!x.repeal === !!item.repeal
+      );
+      return `Vote Commitment: ${v?.name ?? `resolution ${item.resolutionID}`}`;
+    }
+    default:
+      return formatItemLabel(item);
+  }
+}
+
+/** Format the on-the-table proposed terms (context 3) first-person: what each side offers to give. */
+export function formatActiveProposalLedger(
+  active: ActiveProposalContext,
+  thread: EnvoyThread,
+  inspection?: InspectDealResult
+): string {
+  const { agentID, counterpartID } = endpoints(thread);
+  const name = civNameFor(thread);
+  const deal = active.deal;
+  const directionRows = (giverID: number, receiverID: number): string[] => [
+    ...deal.items
+      .filter((i) => i.fromPlayerID === giverID && i.toPlayerID === receiverID)
+      .map((i) => `- ${namedItemLabel(i, inspection)}`),
+    ...deal.promises
+      .filter((p) => p.promiserID === giverID && p.recipientID === receiverID)
+      .map((p) => `- ${formatPromiseLabel(p)}`),
+  ];
+  const lines = [`# Deal On The Table (proposal message #${active.messageID})`];
+  const give = directionRows(agentID, counterpartID);
+  const take = directionRows(counterpartID, agentID);
+  if (give.length) lines.push(`## ${name(agentID)} Offers To Give ${name(counterpartID)}`, ...give);
+  if (take.length) lines.push(`## ${name(counterpartID)} Offers To Give ${name(agentID)}`, ...take);
+  if (deal.message) lines.push(`Their one-sentence line: "${deal.message}"`);
   return lines.join("\n");
+}
+
+/**
+ * Reframe an {@link IllegalDealError} (one `"ITEM_TYPE (from→to): reason"` line per untradeable item)
+ * into first-person Give/Take feedback the model can act on. A reason whose giver is the negotiator's
+ * own seat is a Give; otherwise it is a Take. No deal was written, so the model can adjust and retry.
+ */
+function formatIllegalDealError(error: IllegalDealError, agentID: number): string {
+  const lines = error.reasons.map((r) => {
+    const m = r.match(/^(\w+)\s*\((\d+)\s*→\s*(\d+)\):\s*(.*)$/);
+    if (!m) return `- ${r}`;
+    const [, itemType, from, , reason] = m;
+    const side = Number(from) === agentID ? "Give" : "Take";
+    return `- [${side}] ${itemTypeLabel(itemType)}: ${reason}`;
+  });
+  return ["This deal can't be made. Adjust these terms and try again:", ...lines].join("\n");
 }
 
 /** Render a newly authored deal's terms and proposal-time estimates for the diplomat. */
@@ -261,30 +527,56 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "propose-deal",
       description:
-        "Author the deal terms to present: a counter to the deal on the table, or an opening proposal when none is on the table. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
+        "Author the deal terms to present: a counter to the deal on the table, or an opening proposal when none is on the table. Author by NAME using two lists, Give (what your civ gives the counterpart) and Take (what the counterpart gives your civ), copying term labels and names exactly from the GIVE/TAKE menu. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
-        rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
-        message: z
+        Rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
+        Message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart."),
-        items: z.array(AuthoredTradeItemSchema).default([]).describe("Ordinary trade terms (each directed between the two civs). Durations are fixed by the game and filled in automatically — do not specify them. Mutual agreements (Declaration of Friendship, Defensive Pact, Research Agreement, Peace Treaty) bind both sides and are auto-completed onto both, so you may list one side."),
-        promises: z.array(PromiseTermSchema).default([]).describe("Promise commitment terms (directed between the two civs)."),
+        Give: z
+          .array(LedgerTermSchema)
+          .default([])
+          .describe(
+            "Terms YOUR civ gives the counterpart. Use NAMES from the GIVE menu. Mutual agreements (Declaration Of Friendship, Defensive Pact, Research Agreement, Peace Treaty) bind both sides automatically; list once on either side. Durations are fixed by the game."
+          ),
+        Take: z
+          .array(LedgerTermSchema)
+          .default([])
+          .describe("Terms the counterpart gives YOUR civ. Use NAMES from the TAKE menu."),
       }),
       execute: async (args, _parameters, options) => {
         const ni = input();
         if (!ni) return "No negotiation context is active.";
         const claimed = claimStep(options, "propose-deal");
         if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
-        if (args.items.length === 0 && args.promises.length === 0) {
-          return "A proposal must include at least one trade item or promise. Reject instead if you want no deal.";
+        if (args.Give.length === 0 && args.Take.length === 0) {
+          return "A proposal must include at least one term in Give or Take. Reject instead if you want no deal.";
         }
+
+        // Resolve the authored NAMES against the upfront tradable range (the same menu the model saw).
+        const { agentID, counterpartID } = endpoints(ni.thread);
+        const insp = ni.upfrontInspection;
+        const { items, promises, errors } = resolveLedger({
+          give: args.Give,
+          take: args.Take,
+          agentID,
+          counterpartID,
+          giveRange: insp?.tradableRange[String(agentID)],
+          takeRange: insp?.tradableRange[String(counterpartID)],
+          promiseTargets: insp?.promiseTargets ?? [],
+        });
+        if (errors.length > 0) {
+          // Nothing is written; return correctable feedback so the model can fix names and retry.
+          return formatResolutionErrors(errors);
+        }
+
         const isCounter = ni.activeProposal !== undefined;
         const deal: DealPayload = {
           version: 1,
-          items: args.items,
-          promises: args.promises,
-          rationale: args.rationale,
-          message: args.message,
+          items,
+          promises,
+          rationale: args.Rationale,
+          message: args.Message,
         };
         try {
           if (isCounter) {
@@ -302,13 +594,13 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             ni.thread,
             ni.thread.agent,
             isCounter ? "deal-counter" : "deal-proposal",
-            args.message,
+            args.Message,
             deal
           );
           ni.outcome = {
             type: isCounter ? "counter" : "propose",
-            rationale: args.rationale,
-            message: args.message,
+            rationale: args.Rationale,
+            message: args.Message,
             dealMessageID: id,
             deal: storedDeal,
             inspection,
@@ -316,6 +608,10 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           };
           return `${isCounter ? "Counter" : "Proposal"} recorded as deal message #${id}.`;
         } catch (error) {
+          // An untradeable term: reframe each per-item reason in Give/Take terms so the model can fix it.
+          if (error instanceof IllegalDealError) {
+            return formatIllegalDealError(error, agentID);
+          }
           logger.error("Failed to record proposal/counter", { error });
           return `Failed to record the deal: ${error instanceof Error ? error.message : "unknown error"}`;
         }

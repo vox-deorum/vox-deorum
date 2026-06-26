@@ -153,11 +153,19 @@ export type InspectedPromise = z.infer<typeof InspectedPromiseSchema>;
 /** An eligible third-party promise target. */
 export type { PromiseTargetInfo };
 
-/** Structural legality + normalized reason lines shared by every range candidate. */
+/**
+ * Structural legality + normalized reason lines shared by every range candidate, plus the advisory
+ * both-direction value (what the giver loses parting with it / what the receiver gains taking it).
+ * Values are advisory and may be INT_MAX-scale sentinels; the agent menu renders them via formatEstimate.
+ */
 export interface CandidateLegality {
   legal: boolean;
   /** Reasons it is untradeable (empty when legal). */
   reasons: string[];
+  /** Advisory value to the giver of parting with this candidate (may be a sentinel). */
+  valueToGiver?: number;
+  /** Advisory value to the receiver of gaining this candidate (may be a sentinel). */
+  valueToReceiver?: number;
 }
 
 export interface NormalizedResourceCandidate extends CandidateLegality {
@@ -171,6 +179,11 @@ export interface NormalizedCityCandidate extends CandidateLegality {
   name: string;
   x: number;
   y: number;
+  /** Current city population (citizens). */
+  population?: number;
+  /** Current hit points (MaxHitPoints - Damage) and the maximum. */
+  hitPoints?: number;
+  maxHitPoints?: number;
 }
 export interface NormalizedTechCandidate extends CandidateLegality {
   techID: number;
@@ -193,6 +206,8 @@ export interface NormalizedVoteCommitmentCandidate extends CandidateLegality {
 
 /** The tradable range one side could put on the table, with normalized reason lines. */
 export interface NormalizedSideRange {
+  /** The giver's net income per turn (CalculateGoldRate); context for sustainable gold-per-turn. */
+  netGoldPerTurn?: number;
   gold: { available: boolean; max: number; reasons: string[] };
   goldPerTurn: { available: boolean; reasons: string[] };
   maps: CandidateLegality;
@@ -238,10 +253,21 @@ function candidateReasons(legal: boolean, reason: string | undefined): string[] 
   return parsed.length > 0 ? parsed : ["Not tradeable under current game state (the game provided no specific reason)."];
 }
 
+/** Carry through a candidate's advisory both-direction value (omitting absent fields). */
+function candidateValue(c: { valueToGiver?: number; valueToReceiver?: number } | undefined): {
+  valueToGiver?: number;
+  valueToReceiver?: number;
+} {
+  return {
+    ...(c?.valueToGiver !== undefined ? { valueToGiver: c.valueToGiver } : {}),
+    ...(c?.valueToReceiver !== undefined ? { valueToReceiver: c.valueToReceiver } : {}),
+  };
+}
+
 /** Normalize a single-shot toggle candidate (open borders, embassy, pacts, …). */
 function normalizeToggle(c: ToggleCandidate | undefined): CandidateLegality {
   const legal = !!c?.legal;
-  return { legal, reasons: candidateReasons(legal, c?.reason) };
+  return { legal, reasons: candidateReasons(legal, c?.reason), ...candidateValue(c) };
 }
 
 /**
@@ -250,6 +276,7 @@ function normalizeToggle(c: ToggleCandidate | undefined): CandidateLegality {
  */
 function normalizeSide(raw: Partial<SideRange>): NormalizedSideRange {
   return {
+    ...(raw.netGoldPerTurn !== undefined ? { netGoldPerTurn: raw.netGoldPerTurn } : {}),
     gold: {
       available: !!raw.gold?.available,
       max: raw.gold?.max ?? 0,
@@ -277,32 +304,40 @@ function normalizeSide(raw: Partial<SideRange>): NormalizedSideRange {
       quantityAvailable: r.quantityAvailable,
       legal: !!r.legal,
       reasons: candidateReasons(!!r.legal, r.reason),
+      ...candidateValue(r),
     })),
     cities: asArray<SideRange["cities"][number]>(raw.cities).map((c) => ({
       cityID: c.cityID,
       name: c.name,
       x: c.x,
       y: c.y,
+      ...(c.population !== undefined ? { population: c.population } : {}),
+      ...(c.hitPoints !== undefined ? { hitPoints: c.hitPoints } : {}),
+      ...(c.maxHitPoints !== undefined ? { maxHitPoints: c.maxHitPoints } : {}),
       legal: !!c.legal,
       reasons: candidateReasons(!!c.legal, c.reason),
+      ...candidateValue(c),
     })),
     techs: asArray<SideRange["techs"][number]>(raw.techs).map((t) => ({
       techID: t.techID,
       name: t.name,
       legal: !!t.legal,
       reasons: candidateReasons(!!t.legal, t.reason),
+      ...candidateValue(t),
     })),
     thirdPartyPeace: asArray<SideRange["thirdPartyPeace"][number]>(raw.thirdPartyPeace).map((t) => ({
       teamID: t.teamID,
       name: t.name,
       legal: !!t.legal,
       reasons: candidateReasons(!!t.legal, t.reason),
+      ...candidateValue(t),
     })),
     thirdPartyWar: asArray<SideRange["thirdPartyWar"][number]>(raw.thirdPartyWar).map((t) => ({
       teamID: t.teamID,
       name: t.name,
       legal: !!t.legal,
       reasons: candidateReasons(!!t.legal, t.reason),
+      ...candidateValue(t),
     })),
     voteCommitments: asArray<SideRange["voteCommitments"][number]>(raw.voteCommitments).map((v) => ({
       resolutionID: v.resolutionID,
@@ -312,6 +347,7 @@ function normalizeSide(raw: Partial<SideRange>): NormalizedSideRange {
       name: v.name,
       legal: !!v.legal,
       reasons: candidateReasons(!!v.legal, v.reason),
+      ...candidateValue(v),
     })),
   };
 }

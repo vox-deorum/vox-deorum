@@ -33,15 +33,22 @@ export interface InspectedItem {
   unknown?: boolean;
 }
 
+/** Advisory both-direction value carried by an enumerated candidate (what the giver loses parting
+ *  with it / what the receiver gains taking it). Both may be INT_MAX-scale sentinels; advisory only. */
+export interface CandidateValue {
+  valueToGiver?: number;
+  valueToReceiver?: number;
+}
+
 /** Structural legality + raw reason carried by a single-shot toggle candidate. */
-export interface ToggleCandidate {
+export interface ToggleCandidate extends CandidateValue {
   legal: boolean;
   /** Raw DLL reason string when illegal (color/newline tags; stripped in the tool layer). */
   reason: string;
 }
 
 /** A resource the giver holds and could put on the table. */
-export interface ResourceCandidate {
+export interface ResourceCandidate extends CandidateValue {
   resourceID: number;
   /** Localized resource name (e.g. "Iron"); falls back to the ID in the UI when absent. */
   name?: string;
@@ -53,17 +60,22 @@ export interface ResourceCandidate {
 }
 
 /** One of the giver's cities offered on the table. */
-export interface CityCandidate {
+export interface CityCandidate extends CandidateValue {
   cityID: number;
   name: string;
   x: number;
   y: number;
+  /** Current city population (citizens). */
+  population?: number;
+  /** Current hit points (MaxHitPoints - Damage) and the maximum, for a sense of the city's resilience. */
+  hitPoints?: number;
+  maxHitPoints?: number;
   legal: boolean;
   reason: string;
 }
 
 /** A technology the giver knows and the receiver lacks. */
-export interface TechCandidate {
+export interface TechCandidate extends CandidateValue {
   techID: number;
   /** Localized technology name; falls back to the ID in the UI when absent. */
   name?: string;
@@ -72,7 +84,7 @@ export interface TechCandidate {
 }
 
 /** A third-party team for a third-party peace/war term. */
-export interface ThirdPartyTeamCandidate {
+export interface ThirdPartyTeamCandidate extends CandidateValue {
   teamID: number;
   /** Display name of a representative civ on the team; falls back to the team ID when absent. */
   name?: string;
@@ -86,7 +98,7 @@ export interface ThirdPartyTeamCandidate {
  * the DLL's GetPotentialVotesForMember (the giver's remaining votes, adjusted by the
  * receiver's diplomat presence), not all the giver's votes.
  */
-export interface VoteCommitmentCandidate {
+export interface VoteCommitmentCandidate extends CandidateValue {
   resolutionID: number;
   voteChoice: number;
   /** Votes the giver would commit (the game's computed amount, fixed at selection). */
@@ -111,6 +123,8 @@ export interface VoteCommitmentCandidate {
  * way but degrades to an empty `techs` array.
  */
 export interface SideRange {
+  /** The giver's net income per turn (CalculateGoldRate); context for how much GPT it can sustain. */
+  netGoldPerTurn?: number;
   gold: { available: boolean; max: number; reason?: string };
   goldPerTurn: { available: boolean; reason?: string };
   maps: ToggleCandidate;

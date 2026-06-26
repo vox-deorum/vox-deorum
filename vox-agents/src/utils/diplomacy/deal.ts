@@ -35,6 +35,10 @@ import {
   type DealPayload,
   type PerItemValueMap,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import type {
+  NormalizedSideRange,
+  PromiseTargetInfo,
+} from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
 
 const logger = createLogger("diplomacy:deal");
 
@@ -91,13 +95,15 @@ export interface InspectDealResult {
   items: InspectedTradeItem[];
   promises: InspectedPromise[];
   /** Per side (keyed by player ID as string): the full tradable range it could put on the table. */
-  tradableRange: Record<string, unknown>;
+  tradableRange: Record<string, NormalizedSideRange>;
   /** The game's standard deal duration in turns (Game.GetDealDuration); used to stamp duration-bearing terms. */
   defaultDuration?: number;
   /** The game's peace-deal duration in turns (Game.GetPeaceDuration); used for peace / third-party-peace terms. */
   peaceDuration?: number;
   /** The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship. */
   relationshipDuration?: number;
+  /** Eligible third-party promise targets (Coop War majors / city-state minors) with display names. */
+  promiseTargets?: PromiseTargetInfo[];
 }
 
 /** Unwrap the structured tool result (mcp tool results wrap the value under structuredContent). */

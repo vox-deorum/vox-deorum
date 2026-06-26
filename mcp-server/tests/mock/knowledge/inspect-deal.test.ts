@@ -391,6 +391,30 @@ describe('inspect-deal', () => {
     expect(side.voteCommitments[1].reasons).toEqual(['You have no spare votes.']);
   });
 
+  it('passes through advisory values, net income, and city population/HP', async () => {
+    inspectSpy.mockResolvedValue(
+      cannedResult({
+        range: {
+          '1': emptySide({
+            netGoldPerTurn: 25,
+            resources: [{ resourceID: 7, name: 'Iron', category: 'strategic', quantityAvailable: 4, legal: true, reason: '', valueToGiver: 60, valueToReceiver: 80 }],
+            cities: [{ cityID: 4, name: 'Berlin', x: 1, y: 2, legal: true, reason: '', population: 8, hitPoints: 180, maxHitPoints: 200, valueToGiver: 300, valueToReceiver: 150 }],
+            openBorders: { legal: true, reason: '', valueToGiver: 10, valueToReceiver: 30 },
+          } as any),
+          '3': emptySide(),
+        },
+      })
+    );
+
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const side = result.tradableRange['1'] as NormalizedSideRange;
+
+    expect(side.netGoldPerTurn).toBe(25);
+    expect(side.resources[0]).toMatchObject({ valueToGiver: 60, valueToReceiver: 80 });
+    expect(side.cities[0]).toMatchObject({ population: 8, hitPoints: 180, maxHitPoints: 200, valueToReceiver: 150 });
+    expect(side.openBorders).toMatchObject({ valueToGiver: 10, valueToReceiver: 30 });
+  });
+
   it('assembles promise agreeability factors and fetches getters once per promiser', async () => {
     const result = await tool.execute({
       PlayerAID: 1,

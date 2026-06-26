@@ -122,10 +122,26 @@ local function legalityOf(deal, giver, receiver, enum, d1, d2, d3, flag1)
   return legal, reason
 end
 
--- A single-shot toggle candidate (open borders, embassy, pacts, …): legality + reason.
-local function toggleCandidate(deal, giver, receiver, enum, d1, d2)
+-- Advisory both-direction value for a candidate (what the giver loses parting with it / what the
+-- receiver gains taking it), via the same GetTradeItemValue the proposed-item path uses below. The
+-- value args differ per item type (see resolveItem's v1..vdur); callers pass the matching ones.
+-- pcall-guarded so a candidate the stock valuation refuses degrades to 0,0 rather than erroring.
+local function valueOf(deal, giver, receiver, enum, v1, v2, v3, vf1, vdur)
+  local ok, vGive, vReceive = pcall(function()
+    return deal:GetTradeItemValue(giver, receiver, enum, v1 or -1, v2 or -1, v3 or -1, vf1 or false, vdur or -1)
+  end)
+  if not ok then return 0, 0 end
+  return vGive or 0, vReceive or 0
+end
+
+-- A single-shot toggle candidate (open borders, embassy, pacts, …): legality + reason + advisory value.
+-- `vdur` is the fixed game duration the term runs for (open borders / pacts / DoF / peace); pass it so
+-- the advisory value is computed over the same horizon the term is actually offered at, matching the
+-- proposed-item valuation. Non-duration toggles (maps, embassy, vassalage) pass nil (valued at -1).
+local function toggleCandidate(deal, giver, receiver, enum, d1, d2, vdur)
   local legal, reason = legalityOf(deal, giver, receiver, enum, d1, d2)
-  return { legal = legal, reason = reason }
+  local vGive, vReceive = valueOf(deal, giver, receiver, enum, -1, -1, -1, false, vdur)
+  return { legal = legal, reason = reason, valueToGiver = vGive, valueToReceiver = vReceive }
 end
 
 -- The fixed game duration for an item type. Durations are read-only game constants, never author-set:
@@ -230,6 +246,10 @@ local function enumerateSide(deal, giver, receiver)
   local receiverTeam = Teams[pReceiver:GetTeam()]
   local out = {}
 
+  -- The giver's net income per turn (CalculateGoldRate), surfaced so the menu can show how much
+  -- gold-per-turn the side can sustainably commit (mirrors get-player-summary.lua).
+  out.netGoldPerTurn = pGiver:CalculateGoldRate()
+
   -- Gold / gold-per-turn: legality + reason ride alongside the amount metadata.
   do
     local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_GOLD, 1)
@@ -240,16 +260,20 @@ local function enumerateSide(deal, giver, receiver)
     out.goldPerTurn = { available = legal, reason = reason }
   end
 
+  -- The third arg after the enum is the legality duration; the trailing arg is the VALUE duration so
+  -- advisory values are computed over each term's fixed game horizon (durationFor): open borders /
+  -- defensive pact / research agreement run the deal duration, peace the peace duration, a Declaration
+  -- of Friendship the relationship duration. Maps / embassy / vassalage carry no duration (nil).
   out.maps = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_MAPS, DEFAULT_DURATION)
-  out.openBorders = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_OPEN_BORDERS, DEFAULT_DURATION)
-  out.defensivePact = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_DEFENSIVE_PACT, DEFAULT_DURATION)
-  out.peaceTreaty = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_PEACE_TREATY, DEFAULT_DURATION)
+  out.openBorders = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_OPEN_BORDERS, DEFAULT_DURATION, nil, DEFAULT_DURATION)
+  out.defensivePact = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_DEFENSIVE_PACT, DEFAULT_DURATION, nil, DEFAULT_DURATION)
+  out.peaceTreaty = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_PEACE_TREATY, DEFAULT_DURATION, nil, PEACE_DURATION)
   out.allowEmbassy = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_ALLOW_EMBASSY, DEFAULT_DURATION)
-  out.declarationOfFriendship = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_DECLARATION_OF_FRIENDSHIP, DEFAULT_DURATION)
+  out.declarationOfFriendship = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_DECLARATION_OF_FRIENDSHIP, DEFAULT_DURATION, nil, RELATIONSHIP_DURATION)
   -- Research agreement / vassalage are ruleset-gated: omit entirely (hidden, not red) when the
   -- game option forbids them, so the field is simply absent over the bridge.
   if RA_ALLOWED then
-    out.researchAgreement = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_RESEARCH_AGREEMENT, DEFAULT_DURATION)
+    out.researchAgreement = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_RESEARCH_AGREEMENT, DEFAULT_DURATION, nil, DEFAULT_DURATION)
   end
   if VASSALAGE_ALLOWED then
     out.vassalage = toggleCandidate(deal, giver, receiver, TI.TRADE_ITEM_VASSALAGE)
@@ -266,6 +290,8 @@ local function enumerateSide(deal, giver, receiver)
     local avail = pGiver:GetNumResourceAvailable(rid, false)
     if avail > 0 and (row.ResourceUsage == 1 or row.ResourceUsage == 2) then
       local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_RESOURCES, rid, 1)
+      -- Value a single unit per turn (quantity 1), the menu's default offer quantity.
+      local vGive, vReceive = valueOf(deal, giver, receiver, TI.TRADE_ITEM_RESOURCES, rid, 1, -1, false, DEFAULT_DURATION)
       table.insert(resources, {
         resourceID = rid,
         name = Locale.ConvertTextKey(row.Description),
@@ -273,6 +299,8 @@ local function enumerateSide(deal, giver, receiver)
         quantityAvailable = avail,
         legal = legal,
         reason = reason,
+        valueToGiver = vGive,
+        valueToReceiver = vReceive,
       })
     end
   end
@@ -283,7 +311,18 @@ local function enumerateSide(deal, giver, receiver)
   for city in pGiver:Cities() do
     local x, y = city:GetX(), city:GetY()
     local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_CITIES, x, y)
-    table.insert(cities, { cityID = city:GetID(), name = city:GetName(), x = x, y = y, legal = legal, reason = reason })
+    -- City valuation dereferences the plot, so only value when the coordinates resolved.
+    local vGive, vReceive = 0, 0
+    if x >= 0 and y >= 0 then
+      vGive, vReceive = valueOf(deal, giver, receiver, TI.TRADE_ITEM_CITIES, x, y)
+    end
+    table.insert(cities, {
+      cityID = city:GetID(), name = city:GetName(), x = x, y = y, legal = legal, reason = reason,
+      population = city:GetPopulation(),
+      hitPoints = city:GetMaxHitPoints() - city:GetDamage(),
+      maxHitPoints = city:GetMaxHitPoints(),
+      valueToGiver = vGive, valueToReceiver = vReceive,
+    })
   end
   out.cities = cities
 
@@ -298,7 +337,11 @@ local function enumerateSide(deal, giver, receiver)
       local tid = row.ID
       if pGiver:HasTech(tid) and not pReceiver:HasTech(tid) then
         local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_TECHS, tid)
-        table.insert(techs, { techID = tid, name = Locale.ConvertTextKey(row.Description), legal = legal, reason = reason })
+        local vGive, vReceive = valueOf(deal, giver, receiver, TI.TRADE_ITEM_TECHS, tid)
+        table.insert(techs, {
+          techID = tid, name = Locale.ConvertTextKey(row.Description), legal = legal, reason = reason,
+          valueToGiver = vGive, valueToReceiver = vReceive,
+        })
       end
     end
   end
@@ -315,9 +358,11 @@ local function enumerateSide(deal, giver, receiver)
         and giverTeam:IsHasMet(tid) and receiverTeam:IsHasMet(tid) then
       local pLegal, pReason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_THIRD_PARTY_PEACE, tid, DEFAULT_DURATION)
       local wLegal, wReason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_THIRD_PARTY_WAR, tid)
+      local pvGive, pvReceive = valueOf(deal, giver, receiver, TI.TRADE_ITEM_THIRD_PARTY_PEACE, tid)
+      local wvGive, wvReceive = valueOf(deal, giver, receiver, TI.TRADE_ITEM_THIRD_PARTY_WAR, tid)
       local name = teamDisplayName(tid)
-      table.insert(tpPeace, { teamID = tid, name = name, legal = pLegal, reason = pReason })
-      table.insert(tpWar, { teamID = tid, name = name, legal = wLegal, reason = wReason })
+      table.insert(tpPeace, { teamID = tid, name = name, legal = pLegal, reason = pReason, valueToGiver = pvGive, valueToReceiver = pvReceive })
+      table.insert(tpWar, { teamID = tid, name = name, legal = wLegal, reason = wReason, valueToGiver = wvGive, valueToReceiver = wvReceive })
     end
   end
   out.thirdPartyPeace = tpPeace
@@ -344,11 +389,13 @@ local function enumerateSide(deal, giver, receiver)
       for _, choice in ipairs(pLeague:GetChoicesForDecision(decision)) do
         local choiceText = pLeague:GetTextForChoice(decision, choice) or ""
         local name = prefix .. baseName
-        if choiceText ~= "" then name = name .. " — " .. choiceText end
+        if choiceText ~= "" then name = name .. ", " .. choiceText end
         local legal, reason = legalityOf(deal, giver, receiver, TI.TRADE_ITEM_VOTE_COMMITMENT, t.ID, choice, numVotes, repeal)
+        local vGive, vReceive = valueOf(deal, giver, receiver, TI.TRADE_ITEM_VOTE_COMMITMENT, t.ID, choice, numVotes, repeal)
         table.insert(voteCommitments, {
           resolutionID = t.ID, voteChoice = choice, numVotes = numVotes,
           repeal = repeal, name = name, legal = legal, reason = reason,
+          valueToGiver = vGive, valueToReceiver = vReceive,
         })
       end
     end

@@ -56,6 +56,16 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
 
 const emptyInspection = { items: [], promises: [], tradableRange: {} };
 
+/** An inspection whose GIVE side (seat 3) holds a named resource, so name resolution can be exercised. */
+const namedInspection = {
+  items: [],
+  promises: [],
+  tradableRange: {
+    '3': { resources: [{ resourceID: 1, name: 'Iron', category: 'strategic', quantityAvailable: 4, legal: true, reasons: [] }] },
+  },
+  promiseTargets: [],
+} as any;
+
 /** A live NegotiatorInput, with or without an on-the-table proposal. */
 function negotiatorInput(partial: Partial<NegotiatorInput> = {}): NegotiatorInput {
   return {
@@ -136,17 +146,17 @@ describe('accept-deal', () => {
 });
 
 describe('propose-deal', () => {
-  it('writes a deal-proposal (opening) when nothing is on the table', async () => {
+  it('resolves a Give term by name/amount into a directed deal-proposal (opening)', async () => {
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
     mcp.respondWith('append-message', structuredResult({ ID: 11, Turn: 5 }));
-    const input = negotiatorInput({ intent: 'open trade' });
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: emptyInspection });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
     await run(tools['propose-deal'], {
-      rationale: 'Start modest.',
-      message: 'I offer 50 gold for your map.',
-      items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 }],
-      promises: [],
+      Rationale: 'Start modest.',
+      Message: 'I offer 50 gold for your map.',
+      Give: [{ Term: 'Gold', Amount: 50 }],
+      Take: [],
     });
 
     const append = mcp.calls('append-message')[0]!.args;
@@ -155,51 +165,94 @@ describe('propose-deal', () => {
     const payloadDeal = (append.Payload as any).Deal;
     expect(payloadDeal.rationale).toBe('Start modest.');
     expect(payloadDeal.message).toBe('I offer 50 gold for your map.');
-    expect(input.outcome).toMatchObject({
-      type: 'propose',
-      dealMessageID: 11,
-      deal: payloadDeal,
-      inspection: emptyInspection,
-    });
+    // A Give runs from the negotiator's own seat (3) to the counterpart (1).
+    expect(payloadDeal.items).toEqual([{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 }]);
+    expect(input.outcome).toMatchObject({ type: 'propose', dealMessageID: 11, deal: payloadDeal });
   });
 
-  it('writes a deal-counter when a deal is on the table', async () => {
+  it('resolves a Take term into a counter directed from the counterpart', async () => {
     setOpenProposal();
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
     mcp.respondWith('append-message', structuredResult({ ID: 12, Turn: 5 }));
-    const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
+    const input = negotiatorInput({
+      activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } },
+      upfrontInspection: emptyInspection,
+    });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
     await run(tools['propose-deal'], {
-      rationale: 'Ask for more.',
-      message: 'Add open borders and we have a deal.',
-      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'OPEN_BORDERS' }],
-      promises: [],
+      Rationale: 'Ask for more.',
+      Message: 'Add open borders and we have a deal.',
+      Give: [],
+      Take: [{ Term: 'Open Borders' }],
     });
 
-    expect(mcp.calls('append-message')[0]!.args.MessageType).toBe('deal-counter');
+    const append = mcp.calls('append-message')[0]!.args;
+    expect(append.MessageType).toBe('deal-counter');
+    // A Take runs from the counterpart (1) to the negotiator's own seat (3).
+    expect((append.Payload as any).Deal.items).toEqual([{ fromPlayerID: 1, toPlayerID: 3, itemType: 'OPEN_BORDERS' }]);
     expect(input.outcome).toMatchObject({ type: 'counter', dealMessageID: 12 });
   });
 
   it('refuses an empty proposal (no terms)', async () => {
     const input = negotiatorInput();
     const tools = createNegotiatorTerminalTools(makeContext(input));
-    const msg = await run(tools['propose-deal'], { rationale: 'x', message: 'y', items: [], promises: [] });
-    expect(msg).toContain('at least one trade item or promise');
+    const msg = await run(tools['propose-deal'], { Rationale: 'x', Message: 'y', Give: [], Take: [] });
+    expect(msg).toContain('at least one term in Give or Take');
+    expect(input.outcome).toBeUndefined();
+    expect(mcp.calls('append-message')).toHaveLength(0);
+  });
+
+  it('returns correctable feedback (with suggestions) for a misspelled name, writing nothing', async () => {
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: namedInspection });
+    const tools = createNegotiatorTerminalTools(makeContext(input));
+
+    const msg = await run(tools['propose-deal'], {
+      Rationale: 'Trade iron.',
+      Message: 'My iron for your gold.',
+      Give: [{ Term: 'Resource', Name: 'Irn' }],
+      Take: [],
+    });
+
+    expect(msg).toContain('Iron'); // suggested the closest available name
+    expect(msg).toContain('[Give]');
+    expect(input.outcome).toBeUndefined();
+    expect(mcp.calls('append-message')).toHaveLength(0);
+  });
+
+  it('reframes an untradeable item as Give/Take feedback, writing nothing', async () => {
+    // The fresh inspection inside appendDealProposal reports the gold term as illegal.
+    mcp.respondWith('inspect-deal', structuredResult({
+      items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', legality: false, reasons: ['You have no gold.'], valueIfIGive: 0, valueIfIReceive: 0 }],
+      promises: [],
+      tradableRange: {},
+    }));
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: emptyInspection });
+    const tools = createNegotiatorTerminalTools(makeContext(input));
+
+    const msg = await run(tools['propose-deal'], {
+      Rationale: 'Pay up.',
+      Message: 'Here is gold.',
+      Give: [{ Term: 'Gold', Amount: 50 }],
+      Take: [],
+    });
+
+    expect(msg).toContain('[Give] Gold');
+    expect(msg).toContain('You have no gold.');
     expect(input.outcome).toBeUndefined();
     expect(mcp.calls('append-message')).toHaveLength(0);
   });
 
   it('does not create an opening proposal while another proposal is open', async () => {
     setOpenProposal();
-    const input = negotiatorInput({ intent: 'open trade' });
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: emptyInspection });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
     const msg = await run(tools['propose-deal'], {
-      rationale: 'Start modest.',
-      message: 'I offer 50 gold.',
-      items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 }],
-      promises: [],
+      Rationale: 'Start modest.',
+      Message: 'I offer 50 gold.',
+      Give: [{ Term: 'Gold', Amount: 50 }],
+      Take: [],
     });
 
     expect(msg).toContain('already open');
@@ -336,7 +389,9 @@ describe('getInitialMessages task determination', () => {
     const messages = await negotiator.getInitialMessages(params, input, {} as any);
 
     expect(input.activeProposal).toMatchObject({ messageID: 7 });
-    expect(content(messages)).toContain('deal on the table');
+    expect(content(messages)).toContain('Deal On The Table');
+    // The upfront inspection is stashed for the propose-deal tool to resolve names against.
+    expect(input.upfrontInspection).toBeDefined();
     // Inspection runs against the on-the-table deal.
     expect(mcp.calls('inspect-deal')[0]!.args).toHaveProperty('ProposedDeal');
   });
@@ -350,6 +405,9 @@ describe('getInitialMessages task determination', () => {
 
     expect(input.activeProposal).toBeUndefined();
     expect(content(messages)).toContain('no deal from the counterpart');
+    // The Give/Take menu is rendered (first-person, by seat name).
+    expect(content(messages)).toContain('Can Give');
+    expect(input.upfrontInspection).toBeDefined();
     expect(mcp.calls('inspect-deal')[0]!.args).not.toHaveProperty('ProposedDeal');
   });
 

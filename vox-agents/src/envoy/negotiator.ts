@@ -31,13 +31,14 @@ import { StrategistParameters, buildGameContextMessages } from "../strategist/st
 import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createLogger } from "../utils/logger.js";
 import type { EnvoyThread } from "../types/index.js";
-import { inspectDeal, readActiveProposal } from "../utils/diplomacy/deal.js";
+import { inspectDeal, readActiveProposal, type InspectDealResult } from "../utils/diplomacy/deal.js";
 import { activeProposalDeal } from "../utils/diplomacy/deal-reduce.js";
 import { resolveNegotiator } from "../utils/diplomacy/resolve-negotiator.js";
 import {
   NEGOTIATOR_TERMINAL_TOOLS,
   createNegotiatorTerminalTools,
-  formatActiveProposal,
+  formatActiveProposalLedger,
+  formatGiveTakeLedger,
   formatInspection,
   summarizeMove,
   type NegotiatorInput,
@@ -161,10 +162,13 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
 - You will choose EXACTLY ONE terminal tool after gathering sufficient information.
 - Use the \`accept-deal\` tool to accept the on-the-table deal exactly as-is. (Only when a deal is on the table.)
 - Use the \`reject-deal\` tool to decline the on-the-table deal exactly as-is. (Only when a deal is on the table.)
-- Use the \`propose-deal\` tool to author a new proposal. You must include a one-sentence outward \`message\` for the diplomat to voice.
-  - Trade items are directed (\`fromPlayerID\` → \`toPlayerID\`) and must run between the two negotiating civs.
-  - Promises are directed (\`promiserID\` → \`recipientID\`) and must run between the two negotiating civs.
-  - Coop War and city-state promises need a third-party \`targetPlayerID\`.`.trim();
+- Use the \`propose-deal\` tool to author a new proposal. You must include a one-sentence outward \`Message\` for the diplomat to voice.
+  - Author by NAME using two lists: \`Give\` (what YOUR civ gives the counterpart) and \`Take\` (what the counterpart gives YOUR civ).
+  - Each ledger entry has \`Term\`, \`Name\`, and \`Amount\`. Copy each \`Term\` label and \`Name\` EXACTLY from the GIVE/TAKE menu. Never use numeric IDs.
+  - Gold and Gold Per Turn need an \`Amount\`; resources may set \`Amount\` for quantity (default 1).
+  - Mutual agreements (Declaration Of Friendship, Defensive Pact, Research Agreement, Peace Treaty) bind both sides automatically; list once on either side.
+  - Cooperative War and city-state promises need a third-party Civilization Name from the menu in the \`Name\` field.
+  - Do not set durations or vote counts; the game fixes them.`.trim();
   }
 
   /**
@@ -190,14 +194,14 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
       if (deal) input.activeProposal = { messageID: reduction.active.ID, deal };
     }
 
-    // (2) what is tradable and each item's value — inspect upfront (range only when proposing).
-    let inspectionBlock: string;
+    // (2) what is tradable and each item's value — inspect upfront (range only when proposing). The
+    // result is stashed on `input` so the propose-deal tool can resolve authored NAMES back to IDs.
+    let inspection: InspectDealResult | undefined;
     try {
-      const inspection = await inspectDeal(thread.player1ID, thread.player2ID, input.activeProposal?.deal);
-      inspectionBlock = formatInspection(inspection);
+      inspection = await inspectDeal(thread.player1ID, thread.player2ID, input.activeProposal?.deal);
+      input.upfrontInspection = inspection;
     } catch (error) {
-      logger.warn("inspect-deal failed; proceeding without value estimates", { error });
-      inspectionBlock = "(inspection unavailable — describe the stored terms without inventing values)";
+      logger.warn("inspect-deal failed; proceeding without the tradable menu or value estimates", { error });
     }
 
     const sections: string[] = [
@@ -205,7 +209,9 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
     ];
 
     if (input.activeProposal) {
-      sections.push(formatActiveProposal(input.activeProposal, thread));
+      sections.push(formatActiveProposalLedger(input.activeProposal, thread, inspection));
+      // Per-term legality + advisory value of the on-the-table deal (only meaningful with a proposal).
+      if (inspection) sections.push(`# Inspection (advisory)\n${formatInspection(inspection)}`);
       sections.push(
         "Decide on this on-the-table deal: accept-deal, propose-deal (a counter), or reject-deal."
       );
@@ -217,11 +223,16 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
       }
       sections.push(`# Strategic Intent\n${input.intent || "(open a deal at your discretion)"}`);
       sections.push(
-        "There is no deal from the counterpart on the table. Construct opening terms with propose-deal (the tradable range and values below are your basis)."
+        "There is no deal from the counterpart on the table. Construct opening terms with propose-deal using the menu below."
       );
     }
 
-    sections.push(`# Inspection (advisory)\n${inspectionBlock}`);
+    // The Give/Take menu (context 2): the available terms, by NAME, that propose-deal expects.
+    sections.push(
+      inspection
+        ? formatGiveTakeLedger(inspection, thread)
+        : "# Tradable terms\n(menu unavailable — the game could not be inspected; keep any proposal minimal)"
+    );
 
     return [
       ...buildGameContextMessages(parameters),
