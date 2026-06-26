@@ -139,23 +139,34 @@ describe('deal-catalog', () => {
     expect(isSingletonSelected('MAPS', 1, items)).toBe(true);
   });
 
-  it('surfaces all nine promises; non-targeted add directly, targeted expand to eligible civs', () => {
+  it('surfaces only the offered promises; non-targeted add directly, Coop War expands to eligible civs', () => {
     const promiseTargets: PromiseTargetInfo[] = [
       { playerID: 3, teamID: 3, name: 'Washington', kind: 'major', coopWarEligible: true },
       { playerID: 4, teamID: 4, name: 'Napoleon', kind: 'major', coopWarEligible: false },
     ];
     const currentPromises: PromiseTerm[] = [
-      { promiserID: 0, recipientID: 1, promiseType: 'SPY' },
+      { promiserID: 0, recipientID: 1, promiseType: 'MILITARY' },
       { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 3 },
     ];
     const rows = cat(build({ currentPromises, promiseTargets }), 'promises').rows;
-    expect(rows).toHaveLength(9);
+    // Only the AI-honored promises are offered (MILITARY/EXPANSION/BORDER/NO_DIGGING/COOP_WAR).
+    expect(rows.map((r) => r.key)).toEqual([
+      'PROMISE:MILITARY',
+      'PROMISE:EXPANSION',
+      'PROMISE:BORDER',
+      'PROMISE:NO_DIGGING',
+      'PROMISE:COOP_WAR',
+    ]);
+    // The non-honored promises are not addable from the editor.
+    for (const t of ['SPY', 'NO_CONVERT', 'BULLY_CITY_STATE', 'ATTACK_CITY_STATE']) {
+      expect(rows.find((r) => r.key === `PROMISE:${t}`)).toBeUndefined();
+    }
 
     // Non-targeted: a direct singleton-by-type, already pledged → selected.
-    const spy = rows.find((r) => r.key === 'PROMISE:SPY')!;
-    expect(spy.selected).toBe(true);
-    expect(spy.targets).toBeUndefined();
-    expect(spy.addPayload).toEqual({ kind: 'promise', promise: { promiserID: 0, recipientID: 1, promiseType: 'SPY' } });
+    const military = rows.find((r) => r.key === 'PROMISE:MILITARY')!;
+    expect(military.selected).toBe(true);
+    expect(military.targets).toBeUndefined();
+    expect(military.addPayload).toEqual({ kind: 'promise', promise: { promiserID: 0, recipientID: 1, promiseType: 'MILITARY' } });
 
     // Targeted: expandable, no direct add; targets from metadata with per-target eligibility/selected.
     const coop = rows.find((r) => r.key === 'PROMISE:COOP_WAR')!;
@@ -166,21 +177,6 @@ describe('deal-catalog', () => {
     expect(wash.selected).toBe(true); // COOP_WAR vs 3 already on the table
     expect(wash.addPayload).toEqual({ kind: 'promise', promise: { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 3 } });
     expect(napo.legal).toBe(false); // coopWarEligible === false → ineligible (but still shown)
-  });
-
-  it('filters city-state promise targets to those the recipient protects (absence ⇒ ineligible)', () => {
-    const promiseTargets: PromiseTargetInfo[] = [
-      { playerID: 7, teamID: 7, name: 'Geneva', kind: 'minor', protectingPlayerIDs: [1] },
-      { playerID: 8, teamID: 8, name: 'Zurich', kind: 'minor', protectingPlayerIDs: [2] },
-      { playerID: 9, teamID: 9, name: 'Kabul', kind: 'minor' },
-    ];
-    // owner 0 promises to recipient 1; only a city-state recipient 1 protects qualifies. The bridge
-    // omits `protectingPlayerIDs` when nobody protects it, so Kabul (no protectors) is ineligible.
-    const bully = cat(build({ ownerID: 0, otherID: 1, promiseTargets }), 'promises').rows.find((r) => r.key === 'PROMISE:BULLY_CITY_STATE')!;
-    const labels = bully.targets!.map((t) => t.label);
-    expect(labels).toContain('Geneva');
-    expect(labels).not.toContain('Zurich');
-    expect(labels).not.toContain('Kabul');
   });
 
   it('builds third-party peace/war as expandable target rows', () => {

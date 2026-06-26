@@ -32,6 +32,7 @@ import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createLogger } from "../utils/logger.js";
 import type { EnvoyThread } from "../types/index.js";
 import { inspectDeal, readActiveProposal, type InspectDealResult } from "../utils/diplomacy/deal.js";
+import { PROMISE_METADATA } from "../../../mcp-server/dist/utils/deal-schema.js";
 import { activeProposalDeal } from "../utils/diplomacy/deal-reduce.js";
 import { resolveNegotiator } from "../utils/diplomacy/resolve-negotiator.js";
 import {
@@ -166,7 +167,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
   - Author by NAME using two lists: \`Give\` (what YOUR civ gives the counterpart) and \`Take\` (what the counterpart gives YOUR civ).
   - Each ledger entry has \`Term\`, \`Name\`, and \`Amount\`. Copy each \`Term\` label and \`Name\` EXACTLY from the GIVE/TAKE menu. Never use numeric IDs.
   - Gold and Gold Per Turn need an \`Amount\`; resources may set \`Amount\` for quantity (default 1).
-  - Cooperative War and city-state promises need a third-party Civilization Name from the menu in the \`Name\` field.
+  - "${PROMISE_METADATA.COOP_WAR.label}" needs a third-party Civilization Name from the menu in the \`Name\` field. It is a prepared joint war that begins after a short countdown and binds both sides; for war right now, use Third-Party War instead.
   - Do not set durations or vote counts; the game fixes them.`.trim();
   }
 

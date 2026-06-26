@@ -16,6 +16,7 @@ import {
   SENTINEL_LABEL,
 } from '../../../src/utils/diplomacy/deal-format.js';
 import type { DealPayload, TradeItem } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import { PROMISE_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
 
 const INT_MAX = 2147483647;
 
@@ -53,10 +54,11 @@ describe('formatItemLabel / itemTypeLabel / formatPromiseLabel', () => {
     expect(itemTypeLabel('OPEN_BORDERS')).toBe('Open Borders');
   });
   it('labels promises in the promiser voice and resolves a third-party target name', () => {
-    expect(formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'SPY' })).toBe("Won't spy on you");
+    // Labels come from the canonical PROMISE_METADATA (single source of truth).
+    expect(formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'SPY' })).toBe(PROMISE_METADATA.SPY.label);
     expect(
       formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 5 }, { 5: 'Greece' })
-    ).toBe('Will join a cooperative war (target: Greece)');
+    ).toBe(`${PROMISE_METADATA.COOP_WAR.label} (target: Greece)`);
   });
 });
 
@@ -115,9 +117,9 @@ describe('formatDealTermsByDirection', () => {
 
     const out = formatDealTermsByDirection(promiseDeal, value1, value2, 0, 1, civ, 1);
     expect(out).toContain('# Germany promises Rome');
-    expect(out).toContain("- Won't spy on you");
+    expect(out).toContain(`- ${PROMISE_METADATA.SPY.label}`);
     expect(out).toContain('# Rome promises Germany');
-    expect(out).toContain('- Will join a cooperative war (target: player 5)');
+    expect(out).toContain(`- ${PROMISE_METADATA.COOP_WAR.label} (target: player 5)`);
     expect(out).not.toContain('Per-item values');
   });
 });

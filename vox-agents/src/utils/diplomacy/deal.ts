@@ -32,6 +32,8 @@ import {
   DealPayloadSchema,
   applyDealDurations,
   symmetrizeDeal,
+  isOfferedPromiseType,
+  TARGETED_PROMISE_TYPES,
   type DealPayload,
   type PerItemValueMap,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
@@ -56,9 +58,6 @@ export class IllegalDealError extends Error {
     this.reasons = reasons;
   }
 }
-
-/** Promise types whose meaning requires a third-party target. */
-const TARGETED_PROMISE_TYPES = new Set(["COOP_WAR", "BULLY_CITY_STATE", "ATTACK_CITY_STATE"]);
 
 /** Deal message types that carry proposed terms in Payload.Deal. */
 export type DealProposalType = "deal-proposal" | "deal-counter";
@@ -102,7 +101,15 @@ export interface InspectDealResult {
   peaceDuration?: number;
   /** The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship. */
   relationshipDuration?: number;
-  /** Eligible third-party promise targets (Coop War majors / city-state minors) with display names. */
+  /** Military promise binding window in turns (flat). */
+  militaryPromiseDuration?: number;
+  /** Expansion promise binding window in turns (game-speed scaled). */
+  expansionPromiseDuration?: number;
+  /** Border promise binding window in turns (game-speed scaled). */
+  borderPromiseDuration?: number;
+  /** Coop War preparation countdown in turns before the joint war auto-declares. */
+  coopWarPromiseDuration?: number;
+  /** Eligible third-party promise targets (Coop War majors) with display names. */
   promiseTargets?: PromiseTargetInfo[];
 }
 
@@ -159,6 +166,14 @@ export function validateDealForThread(thread: EnvoyThread, deal: DealPayload): v
   for (const [index, promise] of deal.promises.entries()) {
     if (!isConversationDirection(promise.promiserID, promise.recipientID, thread.player1ID, thread.player2ID)) {
       throw new Error(`deal.promises[${index}] must be directed between the conversation endpoints`);
+    }
+    // Only promises the tactical AI behaviorally honors may be authored — the shared guard for the
+    // negotiator and Web editor paths, so neither can archive a promise the AI would silently ignore.
+    // (The full set stays valid to inspect/display; see PROMISE_METADATA `offered`.)
+    if (!isOfferedPromiseType(promise.promiseType)) {
+      throw new Error(
+        `deal.promises[${index}] type ${promise.promiseType} is not an offered promise (the tactical AI does not honor it)`
+      );
     }
     if (TARGETED_PROMISE_TYPES.has(promise.promiseType)) {
       if (

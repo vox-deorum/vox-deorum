@@ -134,6 +134,10 @@ const InspectDealOutputSchema = z.object({
   defaultDuration: z.number().optional().describe("The game's default deal duration in turns (Game.GetDealDuration)"),
   peaceDuration: z.number().optional().describe("The game's peace-deal duration in turns (Game.GetPeaceDuration); used for peace/third-party-peace items"),
   relationshipDuration: z.number().optional().describe("The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship"),
+  militaryPromiseDuration: z.number().optional().describe("Military promise binding window in turns (flat; Game.GetMilitaryPromiseDuration)"),
+  expansionPromiseDuration: z.number().optional().describe("Expansion promise binding window in turns (Game.GetExpansionPromiseDuration)"),
+  borderPromiseDuration: z.number().optional().describe("Border promise binding window in turns (Game.GetBorderPromiseDuration)"),
+  coopWarPromiseDuration: z.number().optional().describe("Coop War preparation countdown in turns before the war auto-declares (COOP_WAR_SOON_COUNTER)"),
   promiseTargets: z.array(PromiseTargetSchema).optional().describe("Eligible third-party promise targets with display names and major/minor kind"),
 });
 
@@ -240,6 +244,14 @@ export interface InspectDealResponse {
   peaceDuration?: number;
   /** The game's relationship duration in turns; used to seed Declaration of Friendship's fixed duration. */
   relationshipDuration?: number;
+  /** Military promise binding window in turns (flat). */
+  militaryPromiseDuration?: number;
+  /** Expansion promise binding window in turns (game-speed scaled). */
+  expansionPromiseDuration?: number;
+  /** Border promise binding window in turns (game-speed scaled). */
+  borderPromiseDuration?: number;
+  /** Coop War preparation countdown in turns before the joint war auto-declares. */
+  coopWarPromiseDuration?: number;
   promiseTargets?: PromiseTargetInfo[];
 }
 
@@ -430,6 +442,10 @@ class InspectDealTool extends ToolBase {
       defaultDuration: inspection.defaultDuration,
       peaceDuration: inspection.peaceDuration,
       relationshipDuration: inspection.relationshipDuration,
+      militaryPromiseDuration: inspection.militaryPromiseDuration,
+      expansionPromiseDuration: inspection.expansionPromiseDuration,
+      borderPromiseDuration: inspection.borderPromiseDuration,
+      coopWarPromiseDuration: inspection.coopWarPromiseDuration,
       // Coerce: an empty Lua table arrives as {} (not []) over the bridge and would fail
       // the z.array output schema; asArray normalizes it (and undefined) to [].
       promiseTargets: asArray<PromiseTargetInfo>(inspection.promiseTargets),

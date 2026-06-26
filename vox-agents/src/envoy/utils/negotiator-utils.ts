@@ -44,10 +44,17 @@ import {
   resolveLedger,
   formatResolutionErrors,
 } from "./ledger-resolver.js";
-import { durationForItemType } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import {
+  durationForItemType,
+  durationForPromiseType,
+  AGREEMENT_METADATA,
+  PROMISE_METADATA,
+  PROMISE_TYPES,
+} from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
   DealDurations,
   DealPayload,
+  PromiseTerm,
   TradeItem,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type { NormalizedSideRange } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
@@ -134,10 +141,26 @@ function valueClause(value: number | undefined, receiverName: string): string {
   return detailClause(bareValue(value, receiverName));
 }
 
+/** A bare "lasts N turn(s)" phrase for a turn count (singular-aware). */
+function lastsTurns(turns: number): string {
+  return `lasts ${turns} ${turns === 1 ? "turn" : "turns"}`;
+}
+
 /** A bare "lasts N turns" phrase for a duration-bearing item type, or "" when the type carries none. */
 function durationPhrase(itemType: TradeItem["itemType"], durations: DealDurations): string {
   const turns = durationForItemType(itemType, durations);
-  return turns !== undefined ? `lasts ${turns} turns` : "";
+  return turns !== undefined ? lastsTurns(turns) : "";
+}
+
+/**
+ * A bare term-length phrase for a promise. Every offered promise is one the tactical AI honors, so
+ * there is no enforcement caveat. 
+ */
+function renderPromiseDuration(promiseType: PromiseTerm["promiseType"], turns: number | undefined): string {
+  if (promiseType === "COOP_WAR") {
+    return turns !== undefined ? `war begins in ${turns} turns` : "war begins after a short preparation";
+  }
+  return turns !== undefined ? lastsTurns(turns) : "lasts until broken";
 }
 
 /** Append a "## <title>" block when it has rows. */
@@ -146,36 +169,34 @@ function pushMenuCategory(into: string[], title: string, rows: string[]): void {
 }
 
 /**
- * The "Agreements" menu rows, in display order. Single-shot toggles show their advisory value; the
- * four mutual pacts are tagged "(Mutual)" and listed once (they bind both sides). `key` indexes the
- * side range's toggle candidates.
+ * The "Agreements" menu rows, derived from the canonical {@link AGREEMENT_METADATA} (single source of
+ * truth for label / order / mutuality). Single-shot toggles show their advisory value; the four mutual
+ * pacts are tagged "(Mutual)" and listed once (they bind both sides). `key` indexes the side range's
+ * toggle candidates.
  */
 const AGREEMENT_ROWS: ReadonlyArray<{
   key: keyof NormalizedSideRange;
   label: string;
   itemType: TradeItem["itemType"];
-  mutual?: boolean;
-}> = [
-  { key: "allowEmbassy", label: "Allow Embassy", itemType: "ALLOW_EMBASSY" },
-  { key: "openBorders", label: "Open Borders", itemType: "OPEN_BORDERS" },
-  { key: "maps", label: "Maps", itemType: "MAPS" },
-  { key: "declarationOfFriendship", label: "Declaration Of Friendship", itemType: "DECLARATION_OF_FRIENDSHIP", mutual: true },
-  { key: "defensivePact", label: "Defensive Pact", itemType: "DEFENSIVE_PACT", mutual: true },
-  { key: "researchAgreement", label: "Research Agreement", itemType: "RESEARCH_AGREEMENT", mutual: true },
-  { key: "peaceTreaty", label: "Peace Treaty", itemType: "PEACE_TREATY", mutual: true },
-  { key: "vassalage", label: "Vassalage", itemType: "VASSALAGE" },
-  { key: "vassalageRevoke", label: "Revoke Vassalage", itemType: "VASSALAGE_REVOKE" },
-];
+  mutual: boolean;
+}> = AGREEMENT_METADATA.map((a) => ({
+  key: a.rangeKey as keyof NormalizedSideRange,
+  label: a.label,
+  itemType: a.itemType,
+  mutual: a.mutual,
+}));
 
-/** The six promises that need no third-party target, paired with their friendly labels. */
-const UNTARGETED_PROMISE_ROWS: ReadonlyArray<string> = [
-  "Won't Attack",
-  "Won't Settle Near",
-  "Won't Buy Plots",
-  "Won't Convert",
-  "Won't Dig",
-  "Won't Spy",
-];
+/**
+ * The untargeted promises offered (label + promise type, for the term-length clause), derived from the
+ * canonical {@link PROMISE_METADATA}: the promises that are offered (the tactical AI honors them) and
+ * carry no third-party target. Spy / No-Convert / Bully-CS / Attack-CS fall out automatically (not
+ * offered); Coop War is offered but targeted, so it gets its own row below.
+ */
+const UNTARGETED_PROMISE_ROWS: ReadonlyArray<{ label: string; promiseType: PromiseTerm["promiseType"] }> =
+  PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].offered && !PROMISE_METADATA[t].targeted).map((t) => ({
+    label: PROMISE_METADATA[t].label,
+    promiseType: t,
+  }));
 
 /**
  * Render one side's tradable range as a first-person "What <Giver> Can Give" menu (only legal terms),
@@ -279,19 +300,20 @@ function formatSideMenu(
   ];
   pushMenuCategory(out, "Third-Party Peace & War", tpRows);
 
-  // Promises: the six untargeted, plus targeted ones listing eligible target NAMES.
-  const targets = promiseTargets ?? [];
-  const coopNames = targets
+  // Promises: the untargeted ones (with their term length), plus Coop War listing eligible major
+  // target NAMES and its preparation countdown. Only AI-honored promises are offered.
+  const promiseRows = UNTARGETED_PROMISE_ROWS.map(
+    ({ label, promiseType }) =>
+      `- ${label}${detailClause(renderPromiseDuration(promiseType, durationForPromiseType(promiseType, durations)))}`
+  );
+  const coopNames = (promiseTargets ?? [])
     .filter((t) => t.kind === "major" && t.coopWarEligible !== false)
     .map((t) => t.name ?? `player ${t.playerID}`);
-  const cityStateNames = targets
-    .filter((t) => t.kind === "minor" && !!t.protectingPlayerIDs?.includes(receiverID))
-    .map((t) => t.name ?? `player ${t.playerID}`);
-  const promiseRows = [...UNTARGETED_PROMISE_ROWS.map((p) => `- ${p}`)];
-  if (coopNames.length) promiseRows.push(`- Cooperative War (targets: ${coopNames.join(", ")})`);
-  if (cityStateNames.length) {
-    promiseRows.push(`- Won't Bully City-State (targets: ${cityStateNames.join(", ")})`);
-    promiseRows.push(`- Won't Attack City-State (targets: ${cityStateNames.join(", ")})`);
+  if (coopNames.length) {
+    promiseRows.push(`- ${PROMISE_METADATA.COOP_WAR.label}${detailClause(
+      `targets: ${coopNames.join(", ")}`,
+      renderPromiseDuration("COOP_WAR", durationForPromiseType("COOP_WAR", durations))
+    )}`);
   }
   pushMenuCategory(out, "Promises", promiseRows);
 
@@ -417,7 +439,9 @@ export function formatActiveProposalLedger(
       .map((i) => `- ${namedItemLabel(i, inspection)}`),
     ...deal.promises
       .filter((p) => p.promiserID === giverID && p.recipientID === receiverID)
-      .map((p) => `- ${formatPromiseLabel(p)}`),
+      // The stamped `duration` carries the fixed term length (set server-side); render it the same
+      // way the menu does (Coop War "war begins in N turns", others "lasts N turns" / "indefinitely").
+      .map((p) => `- ${formatPromiseLabel(p)}${detailClause(renderPromiseDuration(p.promiseType, p.duration))}`),
   ];
   const lines = [`# Deal On The Table (proposal message #${active.messageID})`];
   const give = directionRows(agentID, counterpartID);

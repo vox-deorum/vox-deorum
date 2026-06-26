@@ -176,6 +176,14 @@ export interface InspectDealResult {
   peaceDuration?: number;
   /** The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship. */
   relationshipDuration?: number;
+  /** Military promise binding window in turns (flat; Game.GetMilitaryPromiseDuration). */
+  militaryPromiseDuration?: number;
+  /** Expansion promise binding window in turns (Game.GetExpansionPromiseDuration). */
+  expansionPromiseDuration?: number;
+  /** Border promise binding window in turns (Game.GetBorderPromiseDuration). */
+  borderPromiseDuration?: number;
+  /** Coop War preparation countdown in turns before the joint war auto-declares (COOP_WAR_SOON_COUNTER). */
+  coopWarPromiseDuration?: number;
   /** Eligible third-party promise targets with display names and major/minor kind. */
   promiseTargets?: PromiseTargetInfo[];
   /** Set when the in-game scratch deal could not be obtained. */

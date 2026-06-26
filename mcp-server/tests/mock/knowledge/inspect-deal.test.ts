@@ -430,19 +430,24 @@ describe('inspect-deal', () => {
       },
     } as any);
 
-    expect(result.promises).toHaveLength(3);
+    // Coop War is mutual: symmetrizeDeal completes the opposite-directed twin (promiser 3) before
+    // inspection, so the three authored promises become four.
+    expect(result.promises).toHaveLength(4);
     const military = result.promises[0];
     expect(military.promiseType).toBe('MILITARY');
     expect(military.agreeabilityFactors.promiserOpinionOfRecipient).toEqual(['Wary']);
     expect(military.agreeabilityFactors.recipientOpinionOfPromiser).toEqual(['Friendly']);
     expect(military.agreeabilityFactors.recentDiplomaticEvents).toEqual({ '40': ['**Civ1** made peace with **Civ3**'] });
-    expect(result.promises[2].targetPlayerID).toBe(5);
+    expect(result.promises[2]).toMatchObject({ promiseType: 'COOP_WAR', promiserID: 1, targetPlayerID: 5 });
+    expect(result.promises[3]).toMatchObject({ promiseType: 'COOP_WAR', promiserID: 3, targetPlayerID: 5 });
 
-    // Same promiser/recipient across all three promises → one getter call each (cached).
-    expect(opinionsSpy).toHaveBeenCalledTimes(1);
+    // Getters are cached per promiser: promiser 1 (three promises) and the coop-war twin's promiser 3.
+    expect(opinionsSpy).toHaveBeenCalledTimes(2);
     expect(opinionsSpy).toHaveBeenCalledWith({ PlayerID: 1 });
-    expect(eventsSpy).toHaveBeenCalledTimes(1);
+    expect(opinionsSpy).toHaveBeenCalledWith({ PlayerID: 3 });
+    expect(eventsSpy).toHaveBeenCalledTimes(2);
     expect(eventsSpy).toHaveBeenCalledWith({ PlayerID: 1, OtherPlayerID: 3, Formatted: true });
+    expect(eventsSpy).toHaveBeenCalledWith({ PlayerID: 3, OtherPlayerID: 1, Formatted: true });
   });
 
   it('throws when the game cannot inspect the deal (bridge failure)', async () => {

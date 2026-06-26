@@ -18,6 +18,7 @@ import type {
   NormalizedSideRange,
   PromiseTargetInfo,
 } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
+import { PROMISE_METADATA, PROMISE_TYPES } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
   AuthoredTradeItem,
   PromiseTerm,
@@ -26,8 +27,9 @@ import type {
 
 /**
  * The friendly term labels the ledger uses, shared verbatim by the rendered GIVE/TAKE menu and the
- * tool schema so the model copies them directly. Trade items use Title Case; promises use the short
- * "Won't …" / "Cooperative war" voice that mirrors the menu's promise rows.
+ * tool schema so the model copies them directly. Trade-item agreement labels and promise labels are
+ * the canonical single labels from AGREEMENT_METADATA / PROMISE_METADATA (deal-schema.ts), so the
+ * authored term and the rendered menu never splinter.
  */
 export const LEDGER_TERMS = [
   "Gold",
@@ -38,7 +40,9 @@ export const LEDGER_TERMS = [
   "Allow Embassy",
   "Open Borders",
   "Maps",
-  "Declaration Of Friendship",
+  // Agreement labels MUST mirror AGREEMENT_METADATA[*].label (canonical source of truth in
+  // deal-schema.ts); a drift guard test asserts it. Kept as a literal tuple because `z.enum` needs one.
+  "Declaration of Friendship",
   "Defensive Pact",
   "Research Agreement",
   "Peace Treaty",
@@ -47,15 +51,16 @@ export const LEDGER_TERMS = [
   "Third-Party Peace",
   "Third-Party War",
   "Vote Commitment",
-  "Won't Attack",
-  "Won't Settle Near",
-  "Won't Buy Plots",
-  "Won't Convert",
-  "Won't Dig",
-  "Won't Spy",
-  "Won't Bully City-State",
-  "Won't Attack City-State",
-  "Cooperative War",
+  // Promise labels below MUST mirror PROMISE_METADATA[*].label for the OFFERED promise types (the
+  // canonical source of truth in deal-schema.ts). A drift guard test asserts they stay in sync; this
+  // list stays a literal tuple because `z.enum(LEDGER_TERMS)` requires one. Non-offered promises
+  // (Won't spread religion / spy / bully / attack city-state) are omitted because the tactical AI does
+  // not honor them — re-add here (and flip `offered` in the metadata) if the DLL ever enforces them.
+  "Won't attack / will move troops away",
+  "Won't settle near you",
+  "Won't buy plots near your cities",
+  "Won't dig your antiquity sites",
+  "Will join a cooperative war",
 ] as const;
 
 export type LedgerTermLabel = (typeof LEDGER_TERMS)[number];
@@ -144,7 +149,7 @@ const TERM_MAP: Record<LedgerTermLabel, ResolvedKind> = {
   "Allow Embassy": { kind: "item", itemType: "ALLOW_EMBASSY" },
   "Open Borders": { kind: "item", itemType: "OPEN_BORDERS" },
   Maps: { kind: "item", itemType: "MAPS" },
-  "Declaration Of Friendship": { kind: "item", itemType: "DECLARATION_OF_FRIENDSHIP" },
+  "Declaration of Friendship": { kind: "item", itemType: "DECLARATION_OF_FRIENDSHIP" },
   "Defensive Pact": { kind: "item", itemType: "DEFENSIVE_PACT" },
   "Research Agreement": { kind: "item", itemType: "RESEARCH_AGREEMENT" },
   "Peace Treaty": { kind: "item", itemType: "PEACE_TREATY" },
@@ -153,23 +158,27 @@ const TERM_MAP: Record<LedgerTermLabel, ResolvedKind> = {
   "Third-Party Peace": { kind: "item", itemType: "THIRD_PARTY_PEACE" },
   "Third-Party War": { kind: "item", itemType: "THIRD_PARTY_WAR" },
   "Vote Commitment": { kind: "item", itemType: "VOTE_COMMITMENT" },
-  "Won't Attack": { kind: "promise", promiseType: "MILITARY" },
-  "Won't Settle Near": { kind: "promise", promiseType: "EXPANSION" },
-  "Won't Buy Plots": { kind: "promise", promiseType: "BORDER" },
-  "Won't Convert": { kind: "promise", promiseType: "NO_CONVERT" },
-  "Won't Dig": { kind: "promise", promiseType: "NO_DIGGING" },
-  "Won't Spy": { kind: "promise", promiseType: "SPY" },
-  "Won't Bully City-State": { kind: "promise", promiseType: "BULLY_CITY_STATE" },
-  "Won't Attack City-State": { kind: "promise", promiseType: "ATTACK_CITY_STATE" },
-  "Cooperative War": { kind: "promise", promiseType: "COOP_WAR" },
+  "Won't attack / will move troops away": { kind: "promise", promiseType: "MILITARY" },
+  "Won't settle near you": { kind: "promise", promiseType: "EXPANSION" },
+  "Won't buy plots near your cities": { kind: "promise", promiseType: "BORDER" },
+  "Won't dig your antiquity sites": { kind: "promise", promiseType: "NO_DIGGING" },
+  // Omitted to match LEDGER_TERMS — the tactical AI doesn't honor these (see note above):
+  // "Won't spread my religion to you": { kind: "promise", promiseType: "NO_CONVERT" },
+  // "Won't spy on you": { kind: "promise", promiseType: "SPY" },
+  // "Won't bully your protected city-state": { kind: "promise", promiseType: "BULLY_CITY_STATE" },
+  // "Won't attack your protected city-state": { kind: "promise", promiseType: "ATTACK_CITY_STATE" },
+  "Will join a cooperative war": { kind: "promise", promiseType: "COOP_WAR" },
 };
 
-/** Promise types that require a third-party `name` resolved against the promise targets. */
-const TARGETED_PROMISES = new Set<PromiseTerm["promiseType"]>([
-  "COOP_WAR",
-  "BULLY_CITY_STATE",
-  "ATTACK_CITY_STATE",
-]);
+/**
+ * Offered promise types that require a third-party `name` resolved against the promise targets —
+ * derived from the canonical {@link PROMISE_METADATA} (offered AND targeted). Only Coop War qualifies;
+ * the city-state promises (Bully/Attack) are targeted but not offered (the tactical AI does not honor
+ * them), so they never reach the ledger.
+ */
+const TARGETED_PROMISES = new Set<PromiseTerm["promiseType"]>(
+  PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].offered && PROMISE_METADATA[t].targeted)
+);
 
 /** Levenshtein distance between two strings (small inputs; iterative DP). */
 function levenshtein(a: string, b: string): number {
@@ -292,10 +301,9 @@ export function resolveLedger(args: {
             fail("this promise needs a third-party `Name` from the menu.");
             continue;
           }
-          const eligible = promiseTargets.filter((pt) =>
-            promiseType === "COOP_WAR"
-              ? pt.kind === "major" && pt.coopWarEligible !== false
-              : pt.kind === "minor" && !!pt.protectingPlayerIDs?.includes(receiverID)
+          // Coop War targets a major the giver can validly go to war alongside.
+          const eligible = promiseTargets.filter(
+            (pt) => pt.kind === "major" && pt.coopWarEligible !== false
           );
           const match = findByName(eligible, t.Name);
           if (!match) {

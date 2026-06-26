@@ -17,6 +17,12 @@
  * sync between the two. Types come straight from the pinned deal contract.
  */
 
+import {
+  AGREEMENT_METADATA,
+  PROMISE_METADATA,
+  PROMISE_TYPES,
+  TARGETED_PROMISE_TYPES,
+} from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
   TradeItem,
   PromiseTerm,
@@ -78,15 +84,9 @@ export function formatSideValue(
  * data-bearing types from the item's own fields and falls back to this map for the toggles.
  */
 export const ITEM_TYPE_LABELS: Record<string, string> = {
-  ALLOW_EMBASSY: "Allow Embassy",
-  OPEN_BORDERS: "Open Borders",
-  DEFENSIVE_PACT: "Defensive Pact",
-  RESEARCH_AGREEMENT: "Research Agreement",
-  DECLARATION_OF_FRIENDSHIP: "Declaration of Friendship",
-  MAPS: "Maps",
-  PEACE_TREATY: "Peace Treaty",
-  VASSALAGE: "Vassalage",
-  VASSALAGE_REVOKE: "Revoke Vassalage",
+  // Agreement labels come from the canonical AGREEMENT_METADATA (single source of truth); the
+  // data-bearing types keep their own labels here (they are not "agreements").
+  ...Object.fromEntries(AGREEMENT_METADATA.map((a) => [a.itemType, a.label])),
   GOLD: "Gold",
   GOLD_PER_TURN: "Gold per turn",
   RESOURCES: "Resource",
@@ -102,21 +102,18 @@ export function itemTypeLabel(itemType: string): string {
   return ITEM_TYPE_LABELS[itemType] ?? itemType;
 }
 
-/** Human-readable promise labels in the promiser's voice; mirrors `PROMISE_LABELS` in the web twin. */
-export const PROMISE_LABELS: Record<string, string> = {
-  MILITARY: "Won't attack you",
-  EXPANSION: "Won't settle near you",
-  BORDER: "Won't buy plots near your cities",
-  NO_CONVERT: "Won't spread my religion to you",
-  NO_DIGGING: "Won't dig your antiquity sites",
-  SPY: "Won't spy on you",
-  BULLY_CITY_STATE: "Won't bully your protected city-state",
-  ATTACK_CITY_STATE: "Won't attack your protected city-state",
-  COOP_WAR: "Will join a cooperative war",
-};
+/**
+ * Human-readable promise labels in the promiser's voice, derived from the canonical
+ * {@link PROMISE_METADATA} `label` so the diplomat path, the negotiator's on-the-table view, and
+ * the web twin all read the same wording. Covers every {@link PROMISE_TYPES} so a pre-existing
+ * (non-offered) promise still renders.
+ */
+export const PROMISE_LABELS: Record<string, string> = Object.fromEntries(
+  PROMISE_TYPES.map((t) => [t, PROMISE_METADATA[t].label])
+);
 
-/** Promise types that carry a third-party target. */
-const PROMISE_NEEDS_TARGET = new Set(["COOP_WAR", "BULLY_CITY_STATE", "ATTACK_CITY_STATE"]);
+/** Promise types that carry a third-party target; the canonical set (covers non-offered ones too). */
+const PROMISE_NEEDS_TARGET = TARGETED_PROMISE_TYPES;
 
 /**
  * A short human label for a trade item. Unlike the web board there is no live tradable range on the

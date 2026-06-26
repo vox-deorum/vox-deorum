@@ -25,9 +25,10 @@ import type {
 export type { NormalizedSideRange } from '@/utils/types';
 
 /**
- * The nine promises tradeable on the agent path (specs §3). Mirrors the pinned
- * `PROMISE_TYPES` vocabulary; kept here as a plain list so the browser bundle needn't
- * import the mcp-server runtime module.
+ * The full nine-promise vocabulary (specs §3), mirroring the pinned `PROMISE_TYPES`. Kept here as a
+ * plain list so the browser bundle needn't import the mcp-server runtime module. Used only for
+ * DISPLAY/formatting of an arbitrary (possibly pre-existing) promise; what the editor lets a human
+ * ADD is the filtered {@link OFFERED_PROMISE_TYPES} below.
  */
 export const PROMISE_TYPES = [
   'MILITARY',
@@ -38,6 +39,21 @@ export const PROMISE_TYPES = [
   'SPY',
   'BULLY_CITY_STATE',
   'ATTACK_CITY_STATE',
+  'COOP_WAR',
+] as const;
+
+/**
+ * The promises actually OFFERED in the deal editor — only those the tactical AI behaviorally honors.
+ * MUST equal the canonical `OFFERED_PROMISE_TYPES` derived from `PROMISE_METADATA` (deal-schema.ts);
+ * a unit test asserts they stay in sync. Duplicated as a plain literal because the browser bundle
+ * deliberately avoids importing the mcp-server runtime (which pulls in zod). The backend writer
+ * (`validateDealForThread`) is the hard guarantee — it rejects any non-offered promise regardless.
+ */
+export const OFFERED_PROMISE_TYPES = [
+  'MILITARY',
+  'EXPANSION',
+  'BORDER',
+  'NO_DIGGING',
   'COOP_WAR',
 ] as const;
 

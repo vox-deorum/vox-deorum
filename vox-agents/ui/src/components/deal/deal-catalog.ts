@@ -14,7 +14,7 @@
 
 import type { TradeItem, PromiseTerm, NormalizedSideRange, CandidateLegality, PromiseTargetInfo } from '@/utils/types';
 import {
-  PROMISE_TYPES,
+  OFFERED_PROMISE_TYPES,
   PROMISE_LABELS,
   PROMISE_NEEDS_TARGET,
   TOGGLE_ITEMS,
@@ -244,10 +244,11 @@ export function offerColumnsFor(
 }
 
 /**
- * Eligible targets for one targeted promise type, from the inspect-deal promise-target metadata.
- * Coop War lists major targets (ineligible only when `coopWarEligible === false` — absent ⇒ unknown
- * ⇒ shown); city-state promises list minor targets the recipient (`otherID`) protects. Each option
- * carries the fully-targeted promise to add and its `(type,target)` selected-state.
+ * Eligible targets for one targeted promise type, from the inspect-deal promise-target metadata. The
+ * only offered targeted promise is Cooperative War, which lists major targets (ineligible only when
+ * `coopWarEligible === false`; absent ⇒ unknown ⇒ shown). Each option carries the fully-targeted
+ * promise to add and its `(type,target)` selected-state. (The city-state promises are not offered —
+ * the tactical AI does not honor them — and inspect-deal no longer reports minor targets.)
  */
 export function promiseTargetsFor(
   promiseType: PromiseTerm['promiseType'],
@@ -256,21 +257,13 @@ export function promiseTargetsFor(
   promiseTargets: PromiseTargetInfo[],
   currentPromises: PromiseTerm[]
 ): InventoryTarget[] {
-  const isCoopWar = promiseType === 'COOP_WAR';
-  const eligible = promiseTargets.filter((t) =>
-    isCoopWar
-      ? t.kind === 'major'
-      // City-state target: the recipient (`otherID`) must protect it. The bridge OMITS
-      // `protectingPlayerIDs` when neither principal protects the minor (an empty array is
-      // elided over the Lua/JSON boundary), so absence ⇒ ineligible — require presence + membership.
-      : t.kind === 'minor' && !!t.protectingPlayerIDs?.includes(otherID)
-  );
+  const eligible = promiseTargets.filter((t) => t.kind === 'major');
   return eligible.map((t) => ({
     key: `${promiseType}:${t.playerID}`,
     label: t.name ?? `player ${t.playerID}`,
-    // Coop War: a definite `false` disables it; absent (older DLL) ⇒ shown. Others: always eligible.
-    legal: isCoopWar ? t.coopWarEligible !== false : true,
-    reasons: isCoopWar && t.coopWarEligible === false ? ['Not a valid cooperative-war target right now.'] : [],
+    // A definite `false` disables the Coop War target; absent (older DLL) ⇒ shown.
+    legal: t.coopWarEligible !== false,
+    reasons: t.coopWarEligible === false ? ['Not a valid cooperative-war target right now.'] : [],
     selected: currentPromises.some(
       (p) => p.promiserID === ownerID && p.promiseType === promiseType && p.targetPlayerID === t.playerID
     ),
@@ -284,8 +277,8 @@ export function promiseTargetsFor(
  * duration-bearing items; `peaceDuration` seeds peace / third-party-peace items (the game runs those
  * for the separate game-speed peace-deal duration, not the standard deal duration). World Congress
  * expands into the in-session resolutions the range
- * enumerates (each choice pre-filled, edited nowhere); promises surface all nine (target chosen
- * centrally).
+ * enumerates (each choice pre-filled, edited nowhere); promises surface only the offered set
+ * (those the tactical AI honors; target chosen centrally for Coop War).
  *
  * Always returns the full set of categories in order — empty ones included — so the panel decides
  * whether to render an empty category, and ordering is asserted directly in tests.
@@ -467,9 +460,10 @@ export function buildSideCatalog(args: {
   if (peaceTargets.length) thirdParty.push(expandableRow('TP_PEACE', 'Make peace with…', peaceTargets));
   if (warTargets.length) thirdParty.push(expandableRow('TP_WAR', 'Declare war on…', warTargets));
 
-  // 10. Promises (the nine). A targeted promise expands to pick its third party (and never auto-selects
-  // at the header); a non-targeted promise is a direct singleton-by-type.
-  const promises: InventoryRow[] = PROMISE_TYPES.map((pt) => {
+  // 10. Promises — only the ones the tactical AI honors (OFFERED_PROMISE_TYPES). A targeted promise
+  // (Coop War) expands to pick its third party (and never auto-selects at the header); a non-targeted
+  // promise is a direct singleton-by-type.
+  const promises: InventoryRow[] = OFFERED_PROMISE_TYPES.map((pt) => {
     if (PROMISE_NEEDS_TARGET.has(pt)) {
       return expandableRow(`PROMISE:${pt}`, PROMISE_LABELS[pt] ?? pt, promiseTargetsFor(pt, ownerID, otherID, promiseTargets, currentPromises));
     }

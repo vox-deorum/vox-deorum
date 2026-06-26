@@ -26,6 +26,10 @@ import {
   type NegotiatorInput,
 } from '../../../src/envoy/utils/negotiator-utils.js';
 import { sessionRegistry } from '../../../src/infra/session-registry.js';
+import { PROMISE_METADATA, PROMISE_TYPES, AGREEMENT_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
+
+/** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
+const agreementLabel = (itemType: string) => AGREEMENT_METADATA.find((a) => a.itemType === itemType)!.label;
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {
@@ -415,10 +419,12 @@ describe('getInitialMessages task determination', () => {
     const durInspection = {
       items: [],
       promises: [],
-      promiseTargets: [],
+      promiseTargets: [{ playerID: 9, teamID: 9, name: 'Rome', kind: 'major', coopWarEligible: true }],
       defaultDuration: 30,
       peaceDuration: 15,
       relationshipDuration: 20,
+      militaryPromiseDuration: 20,
+      coopWarPromiseDuration: 10,
       tradableRange: {
         '3': {
           gold: { available: false, max: 0, reasons: [] },
@@ -443,8 +449,17 @@ describe('getInitialMessages task determination', () => {
     const messages = await negotiator.getInitialMessages(params, input, {} as any);
     const text = content(messages);
 
-    expect(text).toContain('Open Borders (lasts 30 turns)');
-    expect(text).toContain('Declaration Of Friendship (Mutual, lasts 20 turns)');
+    expect(text).toContain(`${agreementLabel('OPEN_BORDERS')} (lasts 30 turns)`);
+    expect(text).toContain(`${agreementLabel('DECLARATION_OF_FRIENDSHIP')} (Mutual, lasts 20 turns)`);
+    // Promises: honored ones show term length; Coop War shows its preparation countdown. Labels come
+    // from the canonical PROMISE_METADATA (single source of truth).
+    expect(text).toContain(`${PROMISE_METADATA.MILITARY.label} (lasts 20 turns)`);
+    expect(text).toContain(`${PROMISE_METADATA.NO_DIGGING.label} (lasts until broken)`);
+    expect(text).toContain(`${PROMISE_METADATA.COOP_WAR.label} (targets: Rome, war begins in 10 turns)`);
+    // The non-honored promises are not offered at all.
+    for (const t of PROMISE_TYPES) {
+      if (!PROMISE_METADATA[t].offered) expect(text).not.toContain(PROMISE_METADATA[t].label);
+    }
   });
 
   it('does not forward the seat own pending proposal (notes it awaits a reply)', async () => {

@@ -6,7 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { resolveLedger, LedgerTermSchema, type LedgerTerm } from '../../../src/envoy/utils/ledger-resolver.js';
+import { resolveLedger, LedgerTermSchema, LEDGER_TERMS, type LedgerTerm } from '../../../src/envoy/utils/ledger-resolver.js';
+import { PROMISE_TYPES, PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
 
 const AGENT = 3;
 const COUNTERPART = 1;
@@ -141,17 +142,43 @@ describe('resolveLedger errors', () => {
 describe('LedgerTermSchema forgiving Term labels', () => {
   it('normalizes casing/whitespace to the canonical label', () => {
     expect(LedgerTermSchema.parse({ Term: 'open borders' }).Term).toBe('Open Borders');
-    expect(LedgerTermSchema.parse({ Term: "  declaration  of   friendship " }).Term).toBe('Declaration Of Friendship');
+    // The canonical Declaration-of-Friendship label comes from AGREEMENT_METADATA.
+    const dof = AGREEMENT_METADATA.find((a) => a.itemType === 'DECLARATION_OF_FRIENDSHIP')!.label;
+    expect(LedgerTermSchema.parse({ Term: `  ${dof.replace(/ /g, '  ').toLowerCase()} ` }).Term).toBe(dof);
   });
 
   it("normalizes apostrophe and dash variants", () => {
-    expect(LedgerTermSchema.parse({ Term: "won't attack" }).Term).toBe("Won't Attack");
-    expect(LedgerTermSchema.parse({ Term: 'won’t attack' }).Term).toBe("Won't Attack"); // curly apostrophe
+    // Lowercase + curly-apostrophe variant of the canonical MILITARY label still resolves to it.
+    const military = PROMISE_METADATA.MILITARY.label; // "Won't attack / will move troops away"
+    expect(LedgerTermSchema.parse({ Term: military.toLowerCase().replace("'", '’') }).Term).toBe(military);
     expect(LedgerTermSchema.parse({ Term: 'Third–Party Peace' }).Term).toBe('Third-Party Peace'); // en-dash
   });
 
   it('still rejects an unrecognized term', () => {
     expect(LedgerTermSchema.safeParse({ Term: 'Free Stuff' }).success).toBe(false);
+  });
+
+  it('rejects promises the tactical AI does not honor (removed from the offered set)', () => {
+    // Every non-offered promise's canonical label is rejected; every offered one parses.
+    for (const t of PROMISE_TYPES) {
+      const { offered, label } = PROMISE_METADATA[t];
+      expect(LedgerTermSchema.safeParse({ Term: label }).success).toBe(offered);
+    }
+  });
+
+  it('keeps the ledger promise labels in sync with the canonical PROMISE_METADATA offered set', () => {
+    // LEDGER_TERMS stays a literal tuple (z.enum needs one), so guard it against the source of truth:
+    // exactly the OFFERED promise labels appear, and no non-offered one leaks in.
+    const ledger = new Set<string>(LEDGER_TERMS);
+    for (const t of PROMISE_TYPES) {
+      const { offered, label } = PROMISE_METADATA[t];
+      expect(ledger.has(label)).toBe(offered);
+    }
+  });
+
+  it('keeps the ledger agreement labels in sync with the canonical AGREEMENT_METADATA', () => {
+    const ledger = new Set<string>(LEDGER_TERMS);
+    for (const a of AGREEMENT_METADATA) expect(ledger.has(a.label)).toBe(true);
   });
 });
 
@@ -174,21 +201,21 @@ describe('resolveLedger mutual agreements', () => {
 
 describe('resolveLedger promises', () => {
   it('emits an untargeted promise directed by side', () => {
-    const { promises } = resolve([{ Term: "Won't Attack" }]);
+    const { promises } = resolve([{ Term: PROMISE_METADATA.MILITARY.label }]);
     expect(promises[0]).toEqual({ promiserID: AGENT, recipientID: COUNTERPART, promiseType: 'MILITARY' });
   });
 
   it('resolves a cooperative-war target by name when eligible', () => {
     const promiseTargets = [{ playerID: 9, teamID: 9, name: 'Rome', kind: 'major', coopWarEligible: true }];
-    const { promises, errors } = resolve([{ Term: 'Cooperative War', Name: 'Rome' }], [], { promiseTargets });
+    const { promises, errors } = resolve([{ Term: PROMISE_METADATA.COOP_WAR.label, Name: 'Rome' }], [], { promiseTargets });
     expect(errors).toEqual([]);
     expect(promises[0]).toMatchObject({ promiseType: 'COOP_WAR', targetPlayerID: 9 });
   });
 
   it('rejects an ineligible cooperative-war target with suggestions', () => {
     const promiseTargets = [{ playerID: 9, teamID: 9, name: 'Rome', kind: 'major', coopWarEligible: false }];
-    const { promises, errors } = resolve([{ Term: 'Cooperative War', Name: 'Rome' }], [], { promiseTargets });
+    const { promises, errors } = resolve([{ Term: PROMISE_METADATA.COOP_WAR.label, Name: 'Rome' }], [], { promiseTargets });
     expect(promises).toEqual([]);
-    expect(errors[0].Term).toBe('Cooperative War');
+    expect(errors[0].Term).toBe(PROMISE_METADATA.COOP_WAR.label);
   });
 });

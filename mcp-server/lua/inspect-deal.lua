@@ -43,6 +43,21 @@ local DEFAULT_DURATION = Game.GetDealDuration()
 local PEACE_DURATION = Game.GetPeaceDuration()
 local RELATIONSHIP_DURATION = Game.GetRelationshipDuration()
 
+-- Promise durations (turns). Only the promises the tactical AI actually honors are offered, and the
+-- three standing ones expose a direct CvGame accessor (Military is flat; Expansion/Border scale by
+-- game speed). Coop War's preparation countdown (COOP_WAR_SOON_COUNTER) has no accessor, so it is
+-- read off the GameDefines table. Each is guarded so a DLL build lacking an accessor degrades to nil
+-- (field omitted) rather than erroring.
+local function safeDuration(fn)
+  local ok, v = pcall(fn)
+  if ok and type(v) == "number" then return v end
+  return nil
+end
+local MILITARY_PROMISE_DURATION = safeDuration(function() return Game.GetMilitaryPromiseDuration() end)
+local EXPANSION_PROMISE_DURATION = safeDuration(function() return Game.GetExpansionPromiseDuration() end)
+local BORDER_PROMISE_DURATION = safeDuration(function() return Game.GetBorderPromiseDuration() end)
+local COOP_WAR_PROMISE_DURATION = GameDefines and GameDefines.COOP_WAR_SOON_COUNTER or nil
+
 -- Categories the current ruleset forbids ENTIRELY. These are hidden from the range (omitted),
 -- not shown red, so the Web board and the negotiator both match the in-game trade screen, which
 -- hides the whole pocket rather than disabling it. The conditions mirror VP-EUI TradeLogic.lua
@@ -497,11 +512,11 @@ range[tostring(playerBID)] = enumerateSide(deal, playerBID, playerAID)
 
 deal:ClearItems()
 
--- Eligible promise targets: every other living civ (third parties), with display name,
--- major/minor kind, and structural eligibility for the targeted promises so the board can
--- offer only valid targets (using the game's own checks rather than reimplemented logic):
---   * Coop War (major target): BOTH principals must have a valid coop-war target.
---   * Bully/Attack City-State (minor target): the RECIPIENT must protect the minor.
+-- Eligible promise targets: every other living MAJOR civ (third parties), with display name and
+-- structural Coop-War eligibility, so the board offers only valid coop-war targets (using the game's
+-- own checks rather than reimplemented logic): BOTH principals must have a valid coop-war target.
+-- City-state (minor) promise targets are intentionally NOT reported: the tactical AI does not honor
+-- the Bully/Attack-City-State promises, so they are not offered (see ledger-resolver LEDGER_TERMS).
 
 -- Whether a coop war between the two principals against targetID is structurally valid,
 -- mirroring CanRequestCoopWar's request-phase check (bAtWarException = false) for EACH
@@ -524,15 +539,6 @@ local function coopWarEligible(targetID)
   return true
 end
 
--- Which of the two principals currently protect minorID, i.e. valid recipients of a
--- "stop bullying / don't attack my protected city-state" promise targeting it.
-local function protectingPrincipals(minorID)
-  local out = {}
-  if Players[playerAID]:IsProtectingMinor(minorID) then table.insert(out, playerAID) end
-  if Players[playerBID]:IsProtectingMinor(minorID) then table.insert(out, playerBID) end
-  return out
-end
-
 -- Only expose a third party BOTH principals have met, so a target's name never leaks a
 -- civ one side hasn't discovered (same rule the trade third-party lists use above).
 local aTeam = Teams[Players[playerAID]:GetTeam()]
@@ -544,26 +550,29 @@ for pid = 0, GameDefines.MAX_CIV_PLAYERS - 1 do
     local p = Players[pid]
     if p and p:IsAlive() and not p:IsBarbarian() then
       local tTeam = p:GetTeam()
-      if aTeam:IsHasMet(tTeam) and bTeam:IsHasMet(tTeam) then
-        local isMinor = p:IsMinorCiv()
-        local entry = {
+      -- Majors only — city-state (minor) promise targets are not reported (see note above).
+      if aTeam:IsHasMet(tTeam) and bTeam:IsHasMet(tTeam) and not p:IsMinorCiv() then
+        table.insert(promiseTargets, {
           playerID = pid,
           teamID = tTeam,
           name = playerDisplayName(p),
-          kind = isMinor and "minor" or "major",
-        }
-        if isMinor then
-          -- Omit when neither principal protects it: an empty array is ambiguous over the
-          -- Lua/JSON boundary, and absence reads the same to the UI's optional-chained filter.
-          local protectors = protectingPrincipals(pid)
-          if #protectors > 0 then entry.protectingPlayerIDs = protectors end
-        else
-          entry.coopWarEligible = coopWarEligible(pid)
-        end
-        table.insert(promiseTargets, entry)
+          kind = "major",
+          coopWarEligible = coopWarEligible(pid),
+        })
       end
     end
   end
 end
 
-return { items = items, range = range, defaultDuration = DEFAULT_DURATION, peaceDuration = PEACE_DURATION, relationshipDuration = RELATIONSHIP_DURATION, promiseTargets = promiseTargets }
+return {
+  items = items,
+  range = range,
+  defaultDuration = DEFAULT_DURATION,
+  peaceDuration = PEACE_DURATION,
+  relationshipDuration = RELATIONSHIP_DURATION,
+  militaryPromiseDuration = MILITARY_PROMISE_DURATION,
+  expansionPromiseDuration = EXPANSION_PROMISE_DURATION,
+  borderPromiseDuration = BORDER_PROMISE_DURATION,
+  coopWarPromiseDuration = COOP_WAR_PROMISE_DURATION,
+  promiseTargets = promiseTargets,
+}
