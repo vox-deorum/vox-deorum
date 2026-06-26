@@ -16,6 +16,13 @@ import type {
   NormalizedSideRange,
   PromiseTargetInfo,
 } from '@/utils/types';
+import {
+  PROMISE_TYPES,
+  PROMISE_METADATA,
+  TARGETED_PROMISE_TYPES,
+  AGREEMENT_METADATA,
+  SYMMETRIC_TRADE_ITEM_TYPES,
+} from '../../../../../mcp-server/dist/utils/deal-metadata.js';
 
 /**
  * The tradable range one side could put on the table, as `inspect-deal` returns it. This is
@@ -25,88 +32,39 @@ import type {
 export type { NormalizedSideRange } from '@/utils/types';
 
 /**
- * The full nine-promise vocabulary (specs §3), mirroring the pinned `PROMISE_TYPES`. Kept here as a
- * plain list so the browser bundle needn't import the mcp-server runtime module. Used only for
- * DISPLAY/formatting of an arbitrary (possibly pre-existing) promise; what the editor lets a human
- * ADD is the filtered {@link OFFERED_PROMISE_TYPES} below.
+ * The deal vocabulary is DERIVED from the canonical, zod-free metadata in
+ * `mcp-server/src/utils/deal-metadata.ts` (imported from its compiled `dist`, the same way the
+ * type chain reaches mcp-server). That module carries no zod, so importing it adds nothing to the
+ * browser bundle, and there are no hand-maintained copies left to drift. The contract holds only the
+ * promises the tactical AI honors, so every `PROMISE_TYPES` entry is authorable — there is no separate
+ * "offered" subset to track. `PROMISE_METADATA[t].label` is the single label used everywhere.
  */
-export const PROMISE_TYPES = [
-  'MILITARY',
-  'EXPANSION',
-  'BORDER',
-  'NO_CONVERT',
-  'NO_DIGGING',
-  'SPY',
-  'BULLY_CITY_STATE',
-  'ATTACK_CITY_STATE',
-  'COOP_WAR',
-] as const;
+
+/** The authorable promise vocabulary (specs §3) — every entry is honored by the tactical AI. */
+export { PROMISE_TYPES, PROMISE_METADATA };
+
+/** Promise types that require a third-party target (Coop War). */
+export const PROMISE_NEEDS_TARGET = TARGETED_PROMISE_TYPES;
 
 /**
- * The promises actually OFFERED in the deal editor — only those the tactical AI behaviorally honors.
- * MUST equal the canonical `OFFERED_PROMISE_TYPES` derived from `PROMISE_METADATA` (deal-schema.ts);
- * a unit test asserts they stay in sync. Duplicated as a plain literal because the browser bundle
- * deliberately avoids importing the mcp-server runtime (which pulls in zod). The backend writer
- * (`validateDealForThread`) is the hard guarantee — it rejects any non-offered promise regardless.
+ * Single-shot trade-item toggles + mutual pacts, in the in-game category order, derived from the
+ * canonical `AGREEMENT_METADATA`. Each maps to a `CandidateLegality` slot on `NormalizedSideRange`,
+ * so the inventory can show it red with a reason when structurally impossible rather than hiding it.
  */
-export const OFFERED_PROMISE_TYPES = [
-  'MILITARY',
-  'EXPANSION',
-  'BORDER',
-  'NO_DIGGING',
-  'COOP_WAR',
-] as const;
-
-/**
- * Human-readable promise labels, phrased in the promiser's voice (what the offering side pledges
- * toward the other side) so they read correctly on both the inventory row and the central offer.
- */
-export const PROMISE_LABELS: Record<string, string> = {
-  MILITARY: "Won't attack / will move troops away",
-  EXPANSION: "Won't settle near you",
-  BORDER: "Won't buy plots near your cities",
-  NO_CONVERT: "Won't spread my religion to you",
-  NO_DIGGING: "Won't dig your antiquity sites",
-  SPY: "Won't spy on you",
-  BULLY_CITY_STATE: "Won't bully your protected city-state",
-  ATTACK_CITY_STATE: "Won't attack your protected city-state",
-  COOP_WAR: 'Will join a cooperative war',
-};
-
-/** Promise types that require a third-party target. */
-export const PROMISE_NEEDS_TARGET = new Set(['COOP_WAR', 'BULLY_CITY_STATE', 'ATTACK_CITY_STATE']);
-
-/**
- * Single-shot trade-item toggles (no extra data), in the in-game category order
- * (embassy, open borders, pacts, friendship, maps, peace, then vassalage). Each maps to a
- * `CandidateLegality` slot on `NormalizedSideRange`, so the inventory can show it red with a
- * reason when structurally impossible rather than hiding it.
- */
-export const TOGGLE_ITEMS: Array<{ itemType: TradeItem['itemType']; label: string; rangeKey: keyof NormalizedSideRange }> = [
-  { itemType: 'ALLOW_EMBASSY', label: 'Allow Embassy', rangeKey: 'allowEmbassy' },
-  { itemType: 'OPEN_BORDERS', label: 'Open Borders', rangeKey: 'openBorders' },
-  { itemType: 'DEFENSIVE_PACT', label: 'Defensive Pact', rangeKey: 'defensivePact' },
-  { itemType: 'RESEARCH_AGREEMENT', label: 'Research Agreement', rangeKey: 'researchAgreement' },
-  { itemType: 'DECLARATION_OF_FRIENDSHIP', label: 'Declaration of Friendship', rangeKey: 'declarationOfFriendship' },
-  { itemType: 'MAPS', label: 'Maps', rangeKey: 'maps' },
-  { itemType: 'PEACE_TREATY', label: 'Peace Treaty', rangeKey: 'peaceTreaty' },
-  { itemType: 'VASSALAGE', label: 'Vassalage', rangeKey: 'vassalage' },
-  { itemType: 'VASSALAGE_REVOKE', label: 'Revoke Vassalage', rangeKey: 'vassalageRevoke' },
-];
+export const TOGGLE_ITEMS: Array<{ itemType: TradeItem['itemType']; label: string; rangeKey: keyof NormalizedSideRange }> =
+  AGREEMENT_METADATA.map((a) => ({
+    itemType: a.itemType,
+    label: a.label,
+    rangeKey: a.rangeKey as keyof NormalizedSideRange,
+  }));
 
 /**
  * Trade items the game treats as **mutual**: they always sit on BOTH sides at once (the in-game
  * trade screen pairs them automatically). The editor mirrors them on add/remove so a friendship /
- * pact / peace is never one-sided; the backend auto-completes the same way (`symmetrizeDeal` in
- * deal-schema.ts). Duplicated here as a plain set so the browser bundle needn't import the
- * mcp-server runtime (mirrors the `PROMISE_TYPES` duplication above).
+ * pact / peace is never one-sided; the backend auto-completes the same way (`symmetrizeDeal`).
+ * The canonical set, derived from `AGREEMENT_METADATA`.
  */
-export const SYMMETRIC_ITEM_TYPES = new Set<TradeItem['itemType']>([
-  'DECLARATION_OF_FRIENDSHIP',
-  'DEFENSIVE_PACT',
-  'RESEARCH_AGREEMENT',
-  'PEACE_TREATY',
-]);
+export const SYMMETRIC_ITEM_TYPES = SYMMETRIC_TRADE_ITEM_TYPES;
 
 /** The opposite-direction twin of a (symmetric) item: the same term with giver/receiver swapped. */
 export function mirrorItem(item: TradeItem): TradeItem {
@@ -305,7 +263,7 @@ export function storedBalanceToSide(
  * to the bare target player ID.
  */
 export function formatPromiseLabel(promise: PromiseTerm, targets?: PromiseTargetInfo[]): string {
-  const base = PROMISE_LABELS[promise.promiseType] ?? promise.promiseType;
+  const base = PROMISE_METADATA[promise.promiseType].label;
   if (PROMISE_NEEDS_TARGET.has(promise.promiseType) && promise.targetPlayerID !== undefined) {
     const target = targets?.find((t) => t.playerID === promise.targetPlayerID);
     const name = target?.name ?? `player ${promise.targetPlayerID}`;

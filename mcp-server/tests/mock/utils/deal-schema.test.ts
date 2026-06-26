@@ -9,11 +9,10 @@ import {
   applyDealDurations,
   SYMMETRIC_TRADE_ITEM_TYPES,
   SYMMETRIC_PROMISE_TYPES,
-  OFFERED_PROMISE_TYPES,
   TARGETED_PROMISE_TYPES,
   PROMISE_METADATA,
   PROMISE_TYPES,
-  isOfferedPromiseType,
+  PromiseTermSchema,
   durationForPromiseType,
   type DealPayload,
   type PromiseTerm,
@@ -34,26 +33,22 @@ describe('SYMMETRIC_TRADE_ITEM_TYPES', () => {
 });
 
 describe('PROMISE_METADATA (single source of truth) + derived sets', () => {
-  it('offers exactly the promises the tactical AI honors', () => {
-    expect([...OFFERED_PROMISE_TYPES].sort()).toEqual(
+  it('holds exactly the promises the tactical AI honors (the non-honored ones are out of the contract)', () => {
+    expect([...PROMISE_TYPES].sort()).toEqual(
       ['BORDER', 'COOP_WAR', 'EXPANSION', 'MILITARY', 'NO_DIGGING']
     );
-    // The non-honored promises remain in the contract but are not offered.
-    for (const t of ['SPY', 'NO_CONVERT', 'BULLY_CITY_STATE', 'ATTACK_CITY_STATE'] as const) {
-      expect(OFFERED_PROMISE_TYPES.has(t)).toBe(false);
-      expect(isOfferedPromiseType(t)).toBe(false);
+    // The non-honored promises are commented out of the contract, so the schema rejects them.
+    for (const t of ['SPY', 'NO_CONVERT', 'BULLY_CITY_STATE', 'ATTACK_CITY_STATE']) {
+      expect(PromiseTermSchema.safeParse({ promiserID: 1, recipientID: 3, promiseType: t }).success).toBe(false);
     }
-    expect(isOfferedPromiseType('MILITARY')).toBe(true);
-    expect(isOfferedPromiseType('NOT_A_PROMISE')).toBe(false);
+    expect(PromiseTermSchema.safeParse({ promiserID: 1, recipientID: 3, promiseType: 'MILITARY' }).success).toBe(true);
   });
 
-  it('derives OFFERED / TARGETED / SYMMETRIC sets from the metadata flags', () => {
-    expect([...OFFERED_PROMISE_TYPES].sort()).toEqual(
-      PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].offered).sort()
-    );
+  it('derives TARGETED / SYMMETRIC sets from the metadata flags', () => {
     expect([...TARGETED_PROMISE_TYPES].sort()).toEqual(
       PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].targeted).sort()
     );
+    expect([...TARGETED_PROMISE_TYPES]).toEqual(['COOP_WAR']);
     expect([...SYMMETRIC_PROMISE_TYPES]).toEqual(['COOP_WAR']);
   });
 

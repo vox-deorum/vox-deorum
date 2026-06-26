@@ -271,20 +271,10 @@ describe('appendDealProposal', () => {
     expect(mcp.calls('append-message')).toHaveLength(0);
   });
 
-  it('rejects a promise the tactical AI does not honor (not offered) before archival', async () => {
-    // SPY is in the contract (so it inspects/displays) but is not offered — the shared writer guard
-    // keeps it out of the durable store for both the negotiator and the Web editor paths.
-    const malformed = {
-      version: 1 as const,
-      items: [],
-      promises: [{ promiserID: 1, recipientID: 3, promiseType: 'SPY' as const }],
-    };
-
-    await expect(appendDealProposal(thread(), 1, 'deal-proposal', 'Offer', malformed))
-      .rejects.toThrow('not an offered promise');
-    expect(mcp.calls('inspect-deal')).toHaveLength(0);
-    expect(mcp.calls('append-message')).toHaveLength(0);
-  });
+  // Non-honored promises (SPY / NO_CONVERT / city-state) are not in the contract at all, so
+  // `DealPayloadSchema` rejects them at the parse boundary both writer paths share — there is no
+  // separate "offered" guard in appendDealProposal to test. (Schema rejection is covered in
+  // mcp-server's deal-schema.test.ts.)
 });
 
 describe('appendDealReject', () => {

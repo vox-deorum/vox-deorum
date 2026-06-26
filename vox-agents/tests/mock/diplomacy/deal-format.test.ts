@@ -55,7 +55,7 @@ describe('formatItemLabel / itemTypeLabel / formatPromiseLabel', () => {
   });
   it('labels promises in the promiser voice and resolves a third-party target name', () => {
     // Labels come from the canonical PROMISE_METADATA (single source of truth).
-    expect(formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'SPY' })).toBe(PROMISE_METADATA.SPY.label);
+    expect(formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'NO_DIGGING' })).toBe(PROMISE_METADATA.NO_DIGGING.label);
     expect(
       formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 5 }, { 5: 'Greece' })
     ).toBe(`${PROMISE_METADATA.COOP_WAR.label} (target: Greece)`);
@@ -110,14 +110,14 @@ describe('formatDealTermsByDirection', () => {
       version: 1,
       items: [],
       promises: [
-        { promiserID: 1, recipientID: 0, promiseType: 'SPY' },
+        { promiserID: 1, recipientID: 0, promiseType: 'NO_DIGGING' },
         { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 5 },
       ],
     };
 
     const out = formatDealTermsByDirection(promiseDeal, value1, value2, 0, 1, civ, 1);
     expect(out).toContain('# Germany promises Rome');
-    expect(out).toContain(`- ${PROMISE_METADATA.SPY.label}`);
+    expect(out).toContain(`- ${PROMISE_METADATA.NO_DIGGING.label}`);
     expect(out).toContain('# Rome promises Germany');
     expect(out).toContain(`- ${PROMISE_METADATA.COOP_WAR.label} (target: player 5)`);
     expect(out).not.toContain('Per-item values');

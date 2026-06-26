@@ -329,7 +329,7 @@ describe('deal-catalog', () => {
 
     const promises: PromiseTerm[] = [
       { promiserID: 1, recipientID: 0, promiseType: 'MILITARY' },
-      { promiserID: 0, recipientID: 1, promiseType: 'SPY' },
+      { promiserID: 0, recipientID: 1, promiseType: 'EXPANSION' },
     ];
     expect(offerPromisesForSide(promises, 0).map((e) => e.index)).toEqual([1]);
     expect(offerPromisesForSide(promises, 1).map((e) => e.index)).toEqual([0]);

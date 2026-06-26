@@ -26,7 +26,7 @@ import {
   type NegotiatorInput,
 } from '../../../src/envoy/utils/negotiator-utils.js';
 import { sessionRegistry } from '../../../src/infra/session-registry.js';
-import { PROMISE_METADATA, PROMISE_TYPES, AGREEMENT_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
 
 /** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
 const agreementLabel = (itemType: string) => AGREEMENT_METADATA.find((a) => a.itemType === itemType)!.label;
@@ -456,9 +456,14 @@ describe('getInitialMessages task determination', () => {
     expect(text).toContain(`${PROMISE_METADATA.MILITARY.label} (lasts 20 turns)`);
     expect(text).toContain(`${PROMISE_METADATA.NO_DIGGING.label} (lasts until broken)`);
     expect(text).toContain(`${PROMISE_METADATA.COOP_WAR.label} (targets: Rome, war begins in 10 turns)`);
-    // The non-honored promises are not offered at all.
-    for (const t of PROMISE_TYPES) {
-      if (!PROMISE_METADATA[t].offered) expect(text).not.toContain(PROMISE_METADATA[t].label);
+    // The non-honored promises are out of the contract entirely, so their labels never appear.
+    for (const label of [
+      "Won't spread my religion to you",
+      "Won't spy on you",
+      "Won't bully your protected city-state",
+      "Won't attack your protected city-state",
+    ]) {
+      expect(text).not.toContain(label);
     }
   });
 

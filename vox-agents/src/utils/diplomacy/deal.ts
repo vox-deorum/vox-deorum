@@ -32,7 +32,6 @@ import {
   DealPayloadSchema,
   applyDealDurations,
   symmetrizeDeal,
-  isOfferedPromiseType,
   TARGETED_PROMISE_TYPES,
   type DealPayload,
   type PerItemValueMap,
@@ -167,14 +166,10 @@ export function validateDealForThread(thread: EnvoyThread, deal: DealPayload): v
     if (!isConversationDirection(promise.promiserID, promise.recipientID, thread.player1ID, thread.player2ID)) {
       throw new Error(`deal.promises[${index}] must be directed between the conversation endpoints`);
     }
-    // Only promises the tactical AI behaviorally honors may be authored — the shared guard for the
-    // negotiator and Web editor paths, so neither can archive a promise the AI would silently ignore.
-    // (The full set stays valid to inspect/display; see PROMISE_METADATA `offered`.)
-    if (!isOfferedPromiseType(promise.promiseType)) {
-      throw new Error(
-        `deal.promises[${index}] type ${promise.promiseType} is not an offered promise (the tactical AI does not honor it)`
-      );
-    }
+    // Only promises the tactical AI honors exist in the contract (PROMISE_TYPES / PROMISE_METADATA), so
+    // `DealPayloadSchema` already rejects any non-honored promise at the parse boundary both writer
+    // paths go through (the Web route and the negotiator's ledger). Nothing extra to guard here beyond
+    // the targeted-promise requirement below.
     if (TARGETED_PROMISE_TYPES.has(promise.promiseType)) {
       if (
         promise.targetPlayerID === undefined ||

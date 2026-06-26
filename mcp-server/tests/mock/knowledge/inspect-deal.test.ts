@@ -424,7 +424,7 @@ describe('inspect-deal', () => {
         items: [],
         promises: [
           { promiserID: 1, recipientID: 3, promiseType: 'MILITARY' },
-          { promiserID: 1, recipientID: 3, promiseType: 'SPY' },
+          { promiserID: 1, recipientID: 3, promiseType: 'NO_DIGGING' },
           { promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR', targetPlayerID: 5 },
         ],
       },

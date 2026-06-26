@@ -187,13 +187,13 @@ const AGREEMENT_ROWS: ReadonlyArray<{
 }));
 
 /**
- * The untargeted promises offered (label + promise type, for the term-length clause), derived from the
- * canonical {@link PROMISE_METADATA}: the promises that are offered (the tactical AI honors them) and
- * carry no third-party target. Spy / No-Convert / Bully-CS / Attack-CS fall out automatically (not
- * offered); Coop War is offered but targeted, so it gets its own row below.
+ * The untargeted promises (label + promise type, for the term-length clause), derived from the
+ * canonical {@link PROMISE_METADATA}: every contract promise that carries no third-party target.
+ * The non-honored promises are not in the contract at all; Coop War is targeted, so it gets its own
+ * row below.
  */
 const UNTARGETED_PROMISE_ROWS: ReadonlyArray<{ label: string; promiseType: PromiseTerm["promiseType"] }> =
-  PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].offered && !PROMISE_METADATA[t].targeted).map((t) => ({
+  PROMISE_TYPES.filter((t) => !PROMISE_METADATA[t].targeted).map((t) => ({
     label: PROMISE_METADATA[t].label,
     promiseType: t,
   }));

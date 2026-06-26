@@ -90,8 +90,8 @@ describe('formatDealContext', () => {
     const deal = {
       version: 1 as const,
       items: [],
-      promises: [{ promiserID: 3, recipientID: 1, promiseType: 'SPY' as const }],
-      message: 'We will stop spying if this settles the matter.',
+      promises: [{ promiserID: 3, recipientID: 1, promiseType: 'NO_DIGGING' as const }],
+      message: 'We will leave your antiquity sites alone if this settles the matter.',
     };
     const reduction = deriveActiveProposal([
       msg('deal-counter', { Deal: deal }, 7),
@@ -102,7 +102,7 @@ describe('formatDealContext', () => {
       promises: [{
         promiserID: 3,
         recipientID: 1,
-        promiseType: 'SPY',
+        promiseType: 'NO_DIGGING',
         agreeabilityFactors: {
           promiserOpinionOfRecipient: ['FRIENDLY'],
           note: 'Promise context note',

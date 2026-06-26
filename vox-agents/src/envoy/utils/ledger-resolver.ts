@@ -18,7 +18,7 @@ import type {
   NormalizedSideRange,
   PromiseTargetInfo,
 } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
-import { PROMISE_METADATA, PROMISE_TYPES } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import { TARGETED_PROMISE_TYPES } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
   AuthoredTradeItem,
   PromiseTerm,
@@ -51,11 +51,11 @@ export const LEDGER_TERMS = [
   "Third-Party Peace",
   "Third-Party War",
   "Vote Commitment",
-  // Promise labels below MUST mirror PROMISE_METADATA[*].label for the OFFERED promise types (the
-  // canonical source of truth in deal-schema.ts). A drift guard test asserts they stay in sync; this
-  // list stays a literal tuple because `z.enum(LEDGER_TERMS)` requires one. Non-offered promises
-  // (Won't spread religion / spy / bully / attack city-state) are omitted because the tactical AI does
-  // not honor them — re-add here (and flip `offered` in the metadata) if the DLL ever enforces them.
+  // Promise labels below MUST mirror PROMISE_METADATA[*].label (the canonical source of truth in
+  // deal-schema.ts). A drift guard test asserts they stay in sync; this list stays a literal tuple
+  // because `z.enum(LEDGER_TERMS)` requires one. The non-honored promises (Won't spread religion /
+  // spy / bully / attack city-state) are absent because they are not in the contract — re-add here
+  // (and uncomment them in the metadata) if the DLL ever enforces them.
   "Won't attack / will move troops away",
   "Won't settle near you",
   "Won't buy plots near your cities",
@@ -169,16 +169,6 @@ const TERM_MAP: Record<LedgerTermLabel, ResolvedKind> = {
   // "Won't attack your protected city-state": { kind: "promise", promiseType: "ATTACK_CITY_STATE" },
   "Will join a cooperative war": { kind: "promise", promiseType: "COOP_WAR" },
 };
-
-/**
- * Offered promise types that require a third-party `name` resolved against the promise targets —
- * derived from the canonical {@link PROMISE_METADATA} (offered AND targeted). Only Coop War qualifies;
- * the city-state promises (Bully/Attack) are targeted but not offered (the tactical AI does not honor
- * them), so they never reach the ledger.
- */
-const TARGETED_PROMISES = new Set<PromiseTerm["promiseType"]>(
-  PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].offered && PROMISE_METADATA[t].targeted)
-);
 
 /** Levenshtein distance between two strings (small inputs; iterative DP). */
 function levenshtein(a: string, b: string): number {
@@ -296,7 +286,7 @@ export function resolveLedger(args: {
       if (mapped.kind === "promise") {
         const promiseType = mapped.promiseType;
         const promise: PromiseTerm = { promiserID: giverID, recipientID: receiverID, promiseType };
-        if (TARGETED_PROMISES.has(promiseType)) {
+        if (TARGETED_PROMISE_TYPES.has(promiseType)) {
           if (!t.Name) {
             fail("this promise needs a third-party `Name` from the menu.");
             continue;

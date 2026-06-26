@@ -14,12 +14,24 @@
 
 import type { TradeItem, PromiseTerm, NormalizedSideRange, CandidateLegality, PromiseTargetInfo } from '@/utils/types';
 import {
-  OFFERED_PROMISE_TYPES,
-  PROMISE_LABELS,
   PROMISE_NEEDS_TARGET,
   TOGGLE_ITEMS,
   sideGives,
 } from './deal-helpers';
+import {
+  PROMISE_TYPES,
+  PROMISE_METADATA,
+  type DealDurations,
+  durationForItemType,
+} from '../../../../../mcp-server/dist/utils/deal-metadata.js';
+
+/**
+ * The fixed, game-set durations bundle and the per-item-type duration lookup come from the canonical,
+ * zod-free `deal-metadata.ts` (single source of truth, shared with the server and inspect-deal.lua).
+ * Re-exported under the names this module's consumers/tests already use.
+ */
+export type { DealDurations };
+export const durationFor = durationForItemType;
 
 /** The inventory categories, in the in-game display order. */
 export type CategoryKind =
@@ -114,36 +126,6 @@ export interface DefaultItemCtx {
 
 /** A sensible starting gold amount, capped at what the side can actually offer. */
 const GOLD_SEED = 100;
-
-/** The three game-speed durations `inspect-deal` reports, used to seed each term's fixed duration. */
-export interface DealDurations {
-  defaultDuration: number | undefined;
-  peaceDuration: number | undefined;
-  relationshipDuration: number | undefined;
-}
-
-/**
- * Which fixed game duration each trade-item type runs for; types absent carry none. Durations are
- * read-only game constants. Mirrors `durationForItemType` (server) and `durationFor` in
- * inspect-deal.lua (game side); duplicated here so the browser bundle needn't import the server module.
- */
-const DURATION_KEY_BY_ITEM_TYPE: Partial<Record<TradeItem['itemType'], keyof DealDurations>> = {
-  GOLD_PER_TURN: 'defaultDuration',
-  RESOURCES: 'defaultDuration',
-  OPEN_BORDERS: 'defaultDuration',
-  DEFENSIVE_PACT: 'defaultDuration',
-  RESEARCH_AGREEMENT: 'defaultDuration',
-  PEACE_TREATY: 'peaceDuration',
-  THIRD_PARTY_PEACE: 'peaceDuration',
-  DECLARATION_OF_FRIENDSHIP: 'relationshipDuration',
-};
-
-/** The fixed, game-set duration for an item type (read-only), or `undefined` for the no-duration
- *  types. Peace / relationship fall back to the deal duration when their game-speed value is absent. */
-export function durationFor(itemType: TradeItem['itemType'], durations: DealDurations): number | undefined {
-  const key = DURATION_KEY_BY_ITEM_TYPE[itemType];
-  return key ? durations[key] ?? durations.defaultDuration : undefined;
-}
 
 /** Adds a duration only when inspect-deal provided one for this fixed-duration item type. */
 function withDuration(
@@ -460,16 +442,16 @@ export function buildSideCatalog(args: {
   if (peaceTargets.length) thirdParty.push(expandableRow('TP_PEACE', 'Make peace with…', peaceTargets));
   if (warTargets.length) thirdParty.push(expandableRow('TP_WAR', 'Declare war on…', warTargets));
 
-  // 10. Promises — only the ones the tactical AI honors (OFFERED_PROMISE_TYPES). A targeted promise
-  // (Coop War) expands to pick its third party (and never auto-selects at the header); a non-targeted
-  // promise is a direct singleton-by-type.
-  const promises: InventoryRow[] = OFFERED_PROMISE_TYPES.map((pt) => {
+  // 10. Promises — the contract holds only the ones the tactical AI honors, so the full PROMISE_TYPES
+  // is the offered set. A targeted promise (Coop War) expands to pick its third party (and never
+  // auto-selects at the header); a non-targeted promise is a direct singleton-by-type.
+  const promises: InventoryRow[] = PROMISE_TYPES.map((pt) => {
     if (PROMISE_NEEDS_TARGET.has(pt)) {
-      return expandableRow(`PROMISE:${pt}`, PROMISE_LABELS[pt] ?? pt, promiseTargetsFor(pt, ownerID, otherID, promiseTargets, currentPromises));
+      return expandableRow(`PROMISE:${pt}`, PROMISE_METADATA[pt].label, promiseTargetsFor(pt, ownerID, otherID, promiseTargets, currentPromises));
     }
     return {
       key: `PROMISE:${pt}`,
-      label: PROMISE_LABELS[pt] ?? pt,
+      label: PROMISE_METADATA[pt].label,
       // Promise structural legality is a light entrypoint check, not part of the range; show all.
       legal: true,
       reasons: [],

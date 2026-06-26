@@ -20,7 +20,6 @@
 import {
   AGREEMENT_METADATA,
   PROMISE_METADATA,
-  PROMISE_TYPES,
   TARGETED_PROMISE_TYPES,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
@@ -102,17 +101,7 @@ export function itemTypeLabel(itemType: string): string {
   return ITEM_TYPE_LABELS[itemType] ?? itemType;
 }
 
-/**
- * Human-readable promise labels in the promiser's voice, derived from the canonical
- * {@link PROMISE_METADATA} `label` so the diplomat path, the negotiator's on-the-table view, and
- * the web twin all read the same wording. Covers every {@link PROMISE_TYPES} so a pre-existing
- * (non-offered) promise still renders.
- */
-export const PROMISE_LABELS: Record<string, string> = Object.fromEntries(
-  PROMISE_TYPES.map((t) => [t, PROMISE_METADATA[t].label])
-);
-
-/** Promise types that carry a third-party target; the canonical set (covers non-offered ones too). */
+/** Promise types that carry a third-party target (Coop War); the canonical derived set. */
 const PROMISE_NEEDS_TARGET = TARGETED_PROMISE_TYPES;
 
 /**
@@ -153,7 +142,7 @@ export function formatItemLabel(item: TradeItem): string {
  * `targetNames` when supplied, else fall back to the bare player ID.
  */
 export function formatPromiseLabel(promise: PromiseTerm, targetNames?: Record<number, string>): string {
-  const base = PROMISE_LABELS[promise.promiseType] ?? promise.promiseType;
+  const base = PROMISE_METADATA[promise.promiseType].label;
   if (PROMISE_NEEDS_TARGET.has(promise.promiseType) && promise.targetPlayerID !== undefined) {
     const name = targetNames?.[promise.targetPlayerID] ?? `player ${promise.targetPlayerID}`;
     return `${base} (target: ${name})`;

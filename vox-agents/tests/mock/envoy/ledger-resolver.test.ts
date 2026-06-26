@@ -158,21 +158,24 @@ describe('LedgerTermSchema forgiving Term labels', () => {
     expect(LedgerTermSchema.safeParse({ Term: 'Free Stuff' }).success).toBe(false);
   });
 
-  it('rejects promises the tactical AI does not honor (removed from the offered set)', () => {
-    // Every non-offered promise's canonical label is rejected; every offered one parses.
-    for (const t of PROMISE_TYPES) {
-      const { offered, label } = PROMISE_METADATA[t];
-      expect(LedgerTermSchema.safeParse({ Term: label }).success).toBe(offered);
+  it('rejects promises the tactical AI does not honor (not in the contract)', () => {
+    // The non-honored promises are commented out of the metadata, so their labels are unrecognized.
+    for (const label of [
+      "Won't spread my religion to you",
+      "Won't spy on you",
+      "Won't bully your protected city-state",
+      "Won't attack your protected city-state",
+    ]) {
+      expect(LedgerTermSchema.safeParse({ Term: label }).success).toBe(false);
     }
   });
 
-  it('keeps the ledger promise labels in sync with the canonical PROMISE_METADATA offered set', () => {
+  it('keeps the ledger promise labels in sync with the canonical PROMISE_METADATA', () => {
     // LEDGER_TERMS stays a literal tuple (z.enum needs one), so guard it against the source of truth:
-    // exactly the OFFERED promise labels appear, and no non-offered one leaks in.
+    // every contract promise label appears, since every contract promise is authorable.
     const ledger = new Set<string>(LEDGER_TERMS);
     for (const t of PROMISE_TYPES) {
-      const { offered, label } = PROMISE_METADATA[t];
-      expect(ledger.has(label)).toBe(offered);
+      expect(ledger.has(PROMISE_METADATA[t].label)).toBe(true);
     }
   });
 

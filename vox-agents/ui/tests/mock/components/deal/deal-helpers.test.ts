@@ -138,11 +138,11 @@ describe('deal-helpers', () => {
 
   it('labels promises and resolves a target display name when metadata is supplied', () => {
     const coop: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 3 };
-    const spy: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'SPY' };
+    const dig: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'NO_DIGGING' };
     const targets: PromiseTargetInfo[] = [{ playerID: 3, teamID: 3, name: 'Washington', kind: 'major' }];
     expect(formatPromiseLabel(coop)).toContain('target: player 3');
     expect(formatPromiseLabel(coop, targets)).toContain('target: Washington');
-    expect(formatPromiseLabel(spy)).toBe("Won't spy on you");
+    expect(formatPromiseLabel(dig)).toBe("Won't dig your antiquity sites");
   });
 
   it('labels a vote commitment with the resolution name + vote count from the giver range', () => {
