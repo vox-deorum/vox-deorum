@@ -154,7 +154,7 @@ describe('agent routes', () => {
       expect(res.status).toBe(404);
     });
 
-    it('removes the attempted message when a live context has no available turn', async () => {
+    it('rejects up front (503) and never writes the message when a live context has no available turn', async () => {
       vi.spyOn(contextRegistry, 'get').mockReturnValue(
         makeMockContext({ session: { getTurn: () => undefined } }) as any,
       );
@@ -174,8 +174,9 @@ describe('agent routes', () => {
         chatId: opened.body.id,
         message: 'Do not retain this',
       });
-      expect(response.status).toBe(200);
-      expect(response.text).toContain('The live game turn is not available yet');
+      // Fail fast with a plain JSON error BEFORE any append/push (no phantom row, nothing in memory).
+      expect(response.status).toBe(503);
+      expect(response.body.error).toMatch(/live game turn is not available/i);
 
       const thread = await request(app).get(`/api/agents/chat/${opened.body.id}`);
       expect(thread.body.messages).toEqual([]);
@@ -246,6 +247,103 @@ describe('agent routes', () => {
       expect(ctx.runHandles[0].abort).toHaveBeenCalled();
       // The old behavior aborted the whole context (every sibling run); the new path must not.
       expect(ctx.abort).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /api/agents/message - diplomacy', () => {
+    /** Open a diplomacy thread (caller 1 ↔ target 3) over a live, session-bearing context. */
+    async function openDiplomacy(opts: { transcript?: unknown[]; liveTurn?: number; execute?: any } = {}) {
+      const turn = opts.liveTurn;
+      const mcp = installMockMcpClient();
+      mcp.respondWith('read-transcript', structuredResult({ messages: opts.transcript ?? [] }));
+      const ctx = makeMockContext({
+        // currentTurnOf = session.getTurn() ?? baseParameters.turn, so an omitted liveTurn must leave
+        // BOTH undefined to simulate a genuinely unavailable live turn.
+        session: { getTurn: () => turn },
+        baseParameters: {
+          turn, gameID: 'g', playerID: 3,
+          gameStates: { [turn ?? 5]: { options: {}, players: {} } },
+        },
+        execute: opts.execute ?? vi.fn(async (_n: string, input: any) => input),
+      });
+      vi.spyOn(contextRegistry, 'get').mockReturnValue(ctx as any);
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({ name: 'diplomat', description: 'Diplomat', tags: [] } as any);
+      const opened = await request(app).post('/api/agents/chat').send({
+        mode: 'diplomacy', contextId: 'g-player-3', callerPlayerID: 1, targetPlayerID: 3,
+      });
+      expect(opened.status).toBe(200);
+      return { mcp, ctx, chatId: opened.body.id as string };
+    }
+
+    /** A diplomat execute that voices a fixed reply into the thread. */
+    const replyWith = (text: string) =>
+      vi.fn(async (_n: string, input: any) => {
+        input.messages.push({ message: { role: 'assistant', content: text }, metadata: { datetime: new Date(), turn: 5 } });
+        return input;
+      });
+
+    it('archives the caller text then the diplomat reply, in order (both text)', async () => {
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: replyWith('A measured reply.') });
+      let nextID = 30;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(200);
+
+      const appends = mcp.calls('append-message');
+      expect(appends.map((c) => c.args.MessageType)).toEqual(['text', 'text']);
+      expect(appends[0]!.args.Content).toBe('Will you trade?');   // caller text archived first
+      expect(appends[1]!.args.Content).toBe('A measured reply.');  // diplomat reply archived after
+    });
+
+    it('never archives a {{{Greeting}}} trigger as a caller message', async () => {
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: replyWith('Greetings, neighbor.') });
+      let nextID = 40;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: '{{{Greeting}}}' });
+      expect(res.status).toBe(200);
+
+      // Only the diplomat's reply is archived; the special trigger is not a real utterance.
+      expect(mcp.calls('append-message').map((c) => c.args.Content)).toEqual(['Greetings, neighbor.']);
+    });
+
+    it('never archives a phantom transcript row when the live turn is unavailable (rejects 503 first)', async () => {
+      // No liveTurn → the up-front guard must reject BEFORE the durable caller-text append, so the
+      // store gets nothing (the prior bug left a phantom row, rolling back only the in-memory copy).
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: undefined });
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(503);
+      expect(res.body.error).toMatch(/live game turn is not available/i);
+      expect(mcp.calls('append-message')).toHaveLength(0);
+    });
+
+    it('rejects with 409 when the conversation was closed THIS turn (not a stale turn-unavailable reason)', async () => {
+      const closeRow = {
+        ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'close', Content: '', Payload: {}, Turn: 5, CreatedAt: 0,
+      };
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [closeRow] });
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'still there?' });
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/closed this turn/i);
+      expect(mcp.calls('append-message')).toHaveLength(0); // a locked conversation is never archived or run
+    });
+
+    it('allows a message when the conversation was closed on an EARLIER turn', async () => {
+      const closeRow = {
+        ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'close', Content: '', Payload: {}, Turn: 4, CreatedAt: 0,
+      };
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [closeRow], execute: replyWith('Back to talks.') });
+      let nextID = 50;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'back again' });
+      expect(res.status).toBe(200);
+      expect(mcp.calls('append-message').map((c) => c.args.Content)).toEqual(['back again', 'Back to talks.']);
     });
   });
 

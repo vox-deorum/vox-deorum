@@ -10,7 +10,9 @@
  *    estimate BOTH directions (worth if I give it vs. if I receive it);
  *  - per promise term: agreeability factors — the raw decision inputs the negotiator
  *    reasons over — assembled from existing diplomacy getters (get-opinions /
- *    get-players / get-diplomatic-events), since no in-game promise valuation exists.
+ *    get-diplomatic-events), since no in-game promise valuation exists. (Trust /
+ *    untrustworthiness and victory-competition factors from get-players are a deferred
+ *    enhancement — named in the spec but not yet assembled here.)
  *
  * Everything is advisory; it gates nothing (specs.md §4). The deal is inspected
  * against live game state via a transient scratch deal that is never activated, so

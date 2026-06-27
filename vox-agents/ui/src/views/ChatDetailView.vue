@@ -152,6 +152,9 @@ import DeleteSessionDialog from '../components/DeleteSessionDialog.vue';
 import DealScreen from '../components/deal/DealScreen.vue';
 import { mergeThreadItems, reviveMessageDates } from '../components/deal/deal-thread';
 import { deriveActiveProposal } from '../components/deal/deal-reduce';
+// Pure transcript helpers shared with the backend (via @vox) so labels and the close-lock
+// comparison can never drift from the server's `isClosedThisTurn` / role derivation.
+import { roleOf, agentName as agentNameOf, audienceID, isClosedThisTurn } from '@vox/utils/diplomacy/transcript-utils';
 import { useThreadMessages } from '../composables/useThreadMessages';
 
 const route = useRoute();
@@ -178,16 +181,10 @@ const newChunkEvent = ref(0);
 // Computed
 const sessionId = computed(() => route.params.sessionId as string);
 const capitalize = (s?: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
-/** The free-form role descriptor stored for a playerID in the ordered pair. */
-const roleOf = (t: EnvoyThread, id: number) => (id === t.player1ID ? t.player1Role : t.player2Role);
 /** The agent-voiced seat's role IS the executable agent name. */
-const agentName = computed(() => (thread.value ? roleOf(thread.value, thread.value.agent) : undefined));
+const agentName = computed(() => (thread.value ? agentNameOf(thread.value) : undefined));
 /** The audience endpoint's playerID = the non-voiced seat (the human/caller in preview). */
-const audiencePlayerID = computed(() => {
-  const t = thread.value;
-  if (!t) return undefined;
-  return t.player1ID === t.agent ? t.player2ID : t.player1ID;
-});
+const audiencePlayerID = computed(() => (thread.value ? audienceID(thread.value) : undefined));
 /** The audience = the other endpoint. */
 const audienceRole = computed(() => {
   const t = thread.value;
@@ -209,9 +206,7 @@ const agentLabel = computed(() => {
 const isClosed = computed(() => thread.value?.closeTurn !== undefined);
 /** Closed this turn → locked; the conversation can only resume on a later turn (specs §8). */
 const closedThisTurn = computed(() =>
-  thread.value?.closeTurn !== undefined &&
-  currentTurn.value !== undefined &&
-  currentTurn.value <= thread.value.closeTurn);
+  currentTurn.value !== undefined && isClosedThisTurn(thread.value?.closeTurn, currentTurn.value));
 const canSend = computed(() => !!thread.value && !isStreaming.value && !closedThisTurn.value);
 /** Inline deal actions are blocked by either their own write or an active agent reply. */
 const dealBlocked = computed(() => dealActionBusy.value || isStreaming.value);

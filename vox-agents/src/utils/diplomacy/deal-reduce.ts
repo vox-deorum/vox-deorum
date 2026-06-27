@@ -4,11 +4,12 @@
  * Server-side reduction of a conversation's append-ordered deal messages into the latest
  * active proposal and its agreement status (interactive-diplomacy stage 5, work item 4).
  *
- * This is the backend twin of the stage-4 UI reducer (`ui/src/components/deal/deal-reduce.ts`):
- * the durable transcript is append-only and status-free (specs §6), so the current deal state
- * is *derived*, never stored. The diplomat (to see the on-the-table deal), the negotiator loop
- * (to forward it), and the orchestration layer (to decide what to enact) all reduce here rather
- * than guessing.
+ * This is the single source of truth for deal-state reduction; the stage-4 UI reducer
+ * (`ui/src/components/deal/deal-reduce.ts`) is a thin typed wrapper that delegates here (via the
+ * `@vox` alias), so the two can never drift. The durable transcript is append-only and
+ * status-free (specs §6), so the current deal state is *derived*, never stored. The diplomat (to
+ * see the on-the-table deal), the negotiator loop (to forward it), and the orchestration layer
+ * (to decide what to enact) all reduce here rather than guessing.
  *
  *  - `deal-proposal` / `deal-counter` replace the active deal (the latest on the table wins);
  *  - `deal-accept` / `deal-reject` / `deal-enacted` reference the proposal they answer via
@@ -24,13 +25,13 @@ import type { DealPayload } from "../../../../mcp-server/dist/utils/deal-schema.
 /** Lifecycle status of the latest active proposal, derived from the messages answering it. */
 export type DealStatus = "none" | "open" | "rejected" | "accepted" | "enacted";
 
-export interface DealReduction {
+export interface DealReduction<M extends TranscriptMessage = TranscriptMessage> {
   /** The latest proposal/counter on the table, or null if none has been presented. */
-  active: TranscriptMessage | null;
+  active: M | null;
   /** Status of the active proposal (`none` when there is no active proposal). */
   status: DealStatus;
   /** All proposal/counter messages in append order (proposal history). */
-  proposals: TranscriptMessage[];
+  proposals: M[];
 }
 
 const PROPOSAL_TYPES = new Set(["deal-proposal", "deal-counter"]);
@@ -47,7 +48,7 @@ function answeredProposalID(message: TranscriptMessage): number | undefined {
  * message referencing its ID (enacted > accepted > rejected, else open). A proposal answered
  * only by responses to *earlier* proposals stays `open`.
  */
-export function deriveActiveProposal(messages: TranscriptMessage[]): DealReduction {
+export function deriveActiveProposal<M extends TranscriptMessage>(messages: M[]): DealReduction<M> {
   const proposals = messages.filter((m) => PROPOSAL_TYPES.has(m.MessageType));
   const active = proposals.length > 0 ? proposals[proposals.length - 1]! : null;
 

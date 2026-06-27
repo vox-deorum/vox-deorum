@@ -191,16 +191,6 @@ export function isSingletonSelected(
   return currentItems.some((i) => i.fromPlayerID === ownerID && i.itemType === itemType);
 }
 
-/**
- * Offer rows for one giver, each paired with its index in `workingDeal.items`. That index is
- * also the index into the index-aligned `inspect-deal` `items[]`, so the central row's legality
- * and value line read straight from `inspectedItems[index]`. Thin wrapper over `sideGives` kept
- * here so the offer→deal mapping lives (and is tested) in one place.
- */
-export function offerItemsForSide(items: TradeItem[], sideID: number): Array<{ item: TradeItem; index: number }> {
-  return sideGives(items, sideID);
-}
-
 /** Promise terms one side promises (the side is the promiser), paired with their deal index. */
 export function offerPromisesForSide(
   promises: PromiseTerm[],
@@ -220,7 +210,9 @@ export function offerColumnsFor(
   return sides.map(({ sideID, label }) => ({
     sideID,
     label,
-    items: offerItemsForSide(items, sideID),
+    // sideGives pairs each item with its index in workingDeal.items, which is also the index into
+    // the index-aligned inspect-deal items[] (so the central row reads legality/value by index).
+    items: sideGives(items, sideID),
     promises: offerPromisesForSide(promises, sideID),
   }));
 }

@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
 import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
+import { getVisibility } from '../../../src/utils/knowledge/visibility.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 
@@ -162,5 +163,38 @@ describe('append-message deal-reject referencing', () => {
       args({ MessageType: 'deal-reject', SpeakerID: 1, Payload: { ProposalMessageID: proposalId } }) as any
     );
     expect(row.MessageType).toBe('deal-reject');
+  });
+
+  it('accepts a reject spoken by the original proposer (a retraction, not just a counterparty decline)', async () => {
+    // seedProposal authors the proposal as SpeakerID 3; the proposer retracts it themselves.
+    const proposalId = await seedProposal();
+    const row = await tool.execute(
+      args({ MessageType: 'deal-reject', SpeakerID: 3, Payload: { ProposalMessageID: proposalId } }) as any
+    );
+    expect(row.MessageType).toBe('deal-reject');
+    expect(row.SpeakerID).toBe(3);
+  });
+});
+
+describe('append-message visibility flags', () => {
+  it('sets full visibility for BOTH civ endpoints on a civ↔civ row, and none for an uninvolved player', async () => {
+    await seedPlayer(store, 1);
+    await seedPlayer(store, 3);
+    await tool.execute(args() as any); // 1 ↔ 3
+    const [row] = await getDiplomaticMessages(1, 3);
+    expect(getVisibility(row, 1)).toBe(2);
+    expect(getVisibility(row, 3)).toBe(2);
+    expect(getVisibility(row, 2)).toBe(0); // an uninvolved civ cannot see the private transcript
+  });
+
+  it('sets visibility only for the real civ on an observer (-1) row', async () => {
+    await seedPlayer(store, 5);
+    await tool.execute(
+      args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 }) as any
+    );
+    const [row] = await getDiplomaticMessages(-1, 5);
+    expect(getVisibility(row, 5)).toBe(2);
+    // The observer sentinel (-1) has no player slot; no other player gains visibility.
+    expect(getVisibility(row, 0)).toBe(0);
   });
 });

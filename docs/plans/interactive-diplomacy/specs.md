@@ -68,6 +68,7 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - **Bully City-State** — "stop bullying my protected city-state"
   - **Attack City-State** — "don't attack my protected city-state"
   - **Coop War** — "join/honor a cooperative war"
+  - **Status (current build):** only **Military, Expansion, Border, No-Digging, and Coop War** are currently authorable. **No-Convert, Spy, Bully City-State, and Attack City-State are temporarily disabled** because the Vox Populi AI does not honor/enforce them yet (Spy is detection-only, No-Convert reputation-only, the city-state pair has enforcement disabled in the DLL) — their schema and code paths are retained but inert (`inspect-deal` does not enumerate them, and `protectingPlayerIDs` / city-state targeting stays dormant). Re-enable when VPAI implements them.
 - A promise term is `{ promiser, promiseType, target?, duration? }`.
   - The **promiser** is the side making the pledge — the player whose `CvDiplomacyAI` state is set toward the recipient.
   - Promises are one-sided per term, but a deal may stack several (one or both ways).

@@ -4,7 +4,6 @@ import {
   defaultItemFor,
   durationFor,
   isSingletonSelected,
-  offerItemsForSide,
   offerPromisesForSide,
   type InventoryCategory,
 } from '@/components/deal/deal-catalog';
@@ -318,15 +317,8 @@ describe('deal-catalog', () => {
     expect((tp.targets![0]!.addPayload as { item: TradeItem }).item.duration).toBe(10);
   });
 
-  it('maps offer rows back to their working-deal index per giver', () => {
-    const items: TradeItem[] = [
-      { fromPlayerID: 0, toPlayerID: 1, itemType: 'GOLD', amount: 1 },
-      { fromPlayerID: 1, toPlayerID: 0, itemType: 'GOLD', amount: 2 },
-      { fromPlayerID: 0, toPlayerID: 1, itemType: 'MAPS' },
-    ];
-    expect(offerItemsForSide(items, 0).map((e) => e.index)).toEqual([0, 2]);
-    expect(offerItemsForSide(items, 1).map((e) => e.index)).toEqual([1]);
-
+  it('maps offer promise rows back to their working-deal index per giver', () => {
+    // (Item-index mapping is `sideGives`, covered in deal-helpers.test.ts.)
     const promises: PromiseTerm[] = [
       { promiserID: 1, recipientID: 0, promiseType: 'MILITARY' },
       { promiserID: 0, recipientID: 1, promiseType: 'EXPANSION' },

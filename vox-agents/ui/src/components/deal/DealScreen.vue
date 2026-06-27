@@ -72,9 +72,9 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
       <template v-else>
         <Button v-if="!hasOpenProposal" label="Propose" icon="pi pi-send" :loading="busy" :disabled="!canPropose" @click="doPropose" />
         <Button v-if="hasOpenProposal" label="Counter" icon="pi pi-replay" severity="secondary" :loading="busy" :disabled="!canCounter" @click="doCounter" />
-        <!-- Accept records the STORED proposal; once the draft is edited it would no longer match, so hide it. -->
-        <Button v-if="hasOpenProposal && !activeAuthoredByViewer && !dealEdited" label="Accept" icon="pi pi-check" severity="success" :loading="busy" :disabled="!canAccept" @click="doAccept" />
-        <Button v-if="hasOpenProposal && dealEdited" label="Reset" icon="pi pi-undo" severity="secondary" text :disabled="blocked" @click="resetToActiveProposal" v-tooltip.bottom="'Discard edits and restore the original proposal'" />
+        <!-- Accept records the STORED proposal; once the draft (terms OR message) is edited it would no longer match, so hide it. -->
+        <Button v-if="hasOpenProposal && !activeAuthoredByViewer && !isEdited" label="Accept" icon="pi pi-check" severity="success" :loading="busy" :disabled="!canAccept" @click="doAccept" />
+        <Button v-if="hasOpenProposal && isEdited" label="Reset" icon="pi pi-undo" severity="secondary" text :disabled="blocked" @click="resetToActiveProposal" v-tooltip.bottom="'Discard edits and restore the original proposal'" />
         <Button
           v-if="hasOpenProposal"
           :label="activeAuthoredByViewer ? 'Retract' : 'Refuse'"
@@ -84,7 +84,7 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           :disabled="!canReject"
           @click="doReject"
         />
-        <span v-if="hasOpenProposal && !activeAuthoredByViewer && dealEdited" class="deal-muted">
+        <span v-if="hasOpenProposal && !activeAuthoredByViewer && isEdited" class="deal-muted">
           You’ve changed this proposal — send it as a Counter, or Reset to accept the original.
         </span>
         <span v-else-if="hasOpenProposal && !activeAuthoredByViewer && hasIllegalTerm" class="deal-muted">
@@ -159,12 +159,14 @@ const workingDeal = ref<DealPayload>(emptyDeal());
 /** Optional one-sentence note the human attaches to the deal (Payload.Deal.message). */
 const dealMessage = ref('');
 /**
- * Whether the human has changed the terms of the active proposal in the editor. `Accept` records
- * acceptance of the STORED proposal (by `proposalMessageID`), not the edited draft, so an edited
- * draft must never be acceptable — once edited, Accept is hidden (Counter only) until `Reset`
- * restores the original terms. Reset to false whenever the active proposal is (re)loaded.
+ * A stable fingerprint of the editable draft (terms + the one-sentence message). `isEdited` compares
+ * the live draft against the loaded `baseline`, so any change — a term add/edit/remove OR a message
+ * edit — is detected with no per-edit bookkeeping.
  */
-const dealEdited = ref(false);
+const draftFingerprint = (deal: DealPayload, message: string): string =>
+  JSON.stringify({ items: deal.items, promises: deal.promises, message: message.trim() });
+/** Fingerprint of the loaded proposal's draft; the draft is "edited" when it diverges from this. */
+const baseline = ref(draftFingerprint(emptyDeal(), ''));
 const inspection = ref<InspectDealResponse | null>(null);
 const reduction = ref<DealReduction>({ active: null, status: 'none', proposals: [] });
 const inspecting = ref(false);
@@ -213,14 +215,20 @@ const mayPropose = computed(() => hasTerms.value && !hasOpenProposal.value);
 /** State-only guard for answering an open proposal with a counter. */
 const mayCounter = computed(() => hasTerms.value && hasOpenProposal.value);
 /**
+ * The draft diverges from the loaded proposal — by a term edit OR a message edit. `Accept` records
+ * the STORED proposal (by `proposalMessageID`, carrying its original terms and message), so any
+ * divergence must hide Accept and offer Counter/Reset instead — otherwise an edit is silently dropped.
+ */
+const isEdited = computed(() => draftFingerprint(workingDeal.value, dealMessage.value) !== baseline.value);
+/**
  * State-only guard for accepting an incoming open proposal. Two things bar acceptance, folded in
  * here (not just on the button) so `doAccept` and the pre-submit re-inspection in
  * `ensureActionStillValid` enforce them too: (1) a stale-impossible proposal stays visible (red)
- * and cannot be accepted until fixed/removed; (2) an EDITED draft diverges from the stored proposal
- * that Accept would actually record — the human must Counter (to send the edit) or Reset instead.
+ * and cannot be accepted until fixed/removed; (2) an EDITED draft (terms or message) diverges from
+ * the stored proposal Accept would record — the human must Counter (to send the edit) or Reset.
  */
 const mayAccept = computed(
-  () => hasOpenProposal.value && !activeAuthoredByViewer.value && !hasIllegalTerm.value && !dealEdited.value
+  () => hasOpenProposal.value && !activeAuthoredByViewer.value && !hasIllegalTerm.value && !isEdited.value
 );
 /** State-only guard for rejecting or retracting the current open proposal. */
 const mayReject = computed(() => hasOpenProposal.value);
@@ -232,6 +240,8 @@ const canAccept = computed(() => !blocked.value && mayAccept.value);
 const canReject = computed(() => !blocked.value && mayReject.value);
 
 // ---- editing (mutate workingDeal; the debounced watcher re-inspects) ---------------------
+// Every edit mutates workingDeal/dealMessage; `isEdited` derives from the fingerprint, so the
+// handlers carry no edit-tracking bookkeeping of their own.
 const onAddTerm = (payload: AddTermPayload) => {
   if (props.locked || busy.value) return;
   if (payload.kind === 'item') {
@@ -239,17 +249,15 @@ const onAddTerm = (payload: AddTermPayload) => {
   } else {
     workingDeal.value.promises.push(payload.promise);
   }
-  dealEdited.value = true;
 };
 const onUpdateItem = (index: number, patch: Partial<TradeItem>) => {
   const item = workingDeal.value.items[index];
-  if (item) { Object.assign(item, patch); dealEdited.value = true; }
+  if (item) Object.assign(item, patch);
 };
 const onRemoveItem = (index: number) => {
   workingDeal.value.items = removeItemWithMirror(workingDeal.value.items, index);
-  dealEdited.value = true;
 };
-const onRemovePromise = (index: number) => { workingDeal.value.promises.splice(index, 1); dealEdited.value = true; };
+const onRemovePromise = (index: number) => { workingDeal.value.promises.splice(index, 1); };
 
 // ---- live re-evaluation -----------------------------------------------------------------
 let inspectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -298,17 +306,22 @@ watch(workingDeal, () => {
 // ---- deal-message round-trip ------------------------------------------------------------
 const clone = (deal: DealPayload): DealPayload => JSON.parse(JSON.stringify(deal));
 
+/** Load a proposal's terms + message into the editor and capture it as the unedited baseline. */
+const loadDraft = (deal: DealPayload) => {
+  workingDeal.value = clone(deal);
+  dealMessage.value = deal.message ?? '';
+  baseline.value = draftFingerprint(workingDeal.value, dealMessage.value);
+};
+
 /** Refresh the active proposal reducer, optionally loading the active terms into the editor. */
 const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean> => {
   try {
     const res = await api.getDealMessages(props.chatId);
     reduction.value = deriveActiveProposal(res.messages);
     // Load the active proposal's terms into the editor as the starting point (a clean, unedited
-    // baseline — Accept is offered until the human changes a term).
+    // baseline — Accept is offered until the human changes a term or the message).
     if (loadActiveIntoEditor && reduction.value.active?.Payload?.Deal) {
-      workingDeal.value = clone(reduction.value.active.Payload.Deal);
-      dealMessage.value = reduction.value.active.Payload.Deal.message ?? '';
-      dealEdited.value = false;
+      loadDraft(reduction.value.active.Payload.Deal);
     }
     // The preflight is only valid if the re-inspection actually succeeded — propagate its result so
     // a failed inspect aborts the pending action instead of letting it run on stale legality.
@@ -323,16 +336,13 @@ const reloadDeals = async () => { await refreshDealState(true); };
 const afterWrite = async () => { await reloadDeals(); emit('changed'); };
 
 /**
- * Discard the human's edits and restore the active proposal's stored terms, re-enabling Accept.
- * Pairs with `dealEdited`: editing an incoming proposal hides Accept (you can only Counter the
- * change); Reset brings back the exact terms the server would record on acceptance.
+ * Discard the human's edits and restore the active proposal's stored terms + message, re-enabling
+ * Accept. Pairs with `isEdited`: editing an incoming proposal hides Accept (you can only Counter the
+ * change); Reset brings back the exact draft the server would record on acceptance.
  */
 const resetToActiveProposal = () => {
   const deal = reduction.value.active?.Payload?.Deal;
-  if (!deal) return;
-  workingDeal.value = clone(deal);
-  dealMessage.value = deal.message ?? '';
-  dealEdited.value = false;
+  if (deal) loadDraft(deal);
 };
 
 /**
@@ -358,6 +368,7 @@ const draftToSend = (): DealPayload => {
   const deal = clone(workingDeal.value);
   const note = dealMessage.value.trim();
   if (note) deal.message = note;
+  else delete deal.message; // clearing the field drops the stored message, never resends the original
   return deal;
 };
 

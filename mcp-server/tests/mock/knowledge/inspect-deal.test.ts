@@ -170,6 +170,37 @@ describe('inspect-deal', () => {
     });
   });
 
+  it('passes an INT_MAX-scale sentinel value through unchanged without flipping legality', async () => {
+    // The CvDealAI anti-exploit guards (last strategic-resource copy, last luxury while unhappy)
+    // return an INT_MAX-scale value. On the agent path this is advisory only (specs §4): it must
+    // SURFACE in the estimate but never make a structurally-legal term illegal.
+    const SENTINEL = 2147483647; // INT_MAX
+    inspectSpy.mockResolvedValue(
+      cannedResult({
+        items: [
+          {
+            fromPlayerID: 1,
+            toPlayerID: 3,
+            itemType: 'GOLD',
+            legal: true,
+            reason: '',
+            valueToGiver: SENTINEL,
+            valueToReceiver: 12,
+          },
+        ],
+      })
+    );
+
+    const deal = { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 100 }], promises: [] };
+    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
+
+    expect(result.items[0]).toMatchObject({
+      legality: true,         // the sentinel value did NOT make a structurally-legal term illegal
+      valueIfIGive: SENTINEL, // the sentinel surfaces unchanged (advisory; gates nothing)
+      valueIfIReceive: 12,
+    });
+  });
+
   it('mirrors one-sided mutual agreements before Lua inspection', async () => {
     const deal = {
       version: 1,

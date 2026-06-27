@@ -420,6 +420,66 @@ describe('DealScreen', () => {
     expect(labels()).not.toContain('Reset');
   });
 
+  it('hides Accept when ONLY the deal message is edited (not terms), and restores it on Reset', async () => {
+    api.getDealMessages.mockResolvedValue({
+      messages: [incomingProposal({ Payload: { Deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS' }], promises: [] } } })],
+    });
+    api.inspectDeal.mockResolvedValue(
+      inspectionResult([{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS', legality: true, reasons: [], valueIfIGive: 1, valueIfIReceive: 1 }])
+    );
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    const labels = () => wrapper.findAll('button').map((b) => b.text());
+    expect(labels()).toContain('Accept');
+    expect(labels()).not.toContain('Reset');
+
+    // Edit ONLY the one-sentence message. Accept records the stored proposal (whose message is the
+    // original), so a diverged message must hide Accept — otherwise the edit is silently dropped.
+    const messageInput = wrapper.find('.deal-message .text-stub');
+    expect(messageInput.exists()).toBe(true);
+    (messageInput.element as HTMLInputElement).value = 'On second thought, here is my note.';
+    await messageInput.trigger('input');
+    await flushPromises();
+
+    expect(labels()).not.toContain('Accept'); // hidden by the message-divergence guard
+    expect(labels()).toContain('Counter');
+    expect(labels()).toContain('Reset');
+
+    // Reset restores the stored (empty) message → Accept returns.
+    await wrapper.findAll('button').find((b) => b.text() === 'Reset')!.trigger('click');
+    await flushPromises();
+    expect(labels()).toContain('Accept');
+    expect(labels()).not.toContain('Reset');
+  });
+
+  it('drops a cleared message when sending a Counter (never resends the original line)', async () => {
+    const withMessage = incomingProposal({
+      Payload: { Deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS' }], promises: [], message: 'Original note.' } },
+    });
+    api.getDealMessages.mockResolvedValue({ messages: [withMessage] });
+    api.inspectDeal.mockResolvedValue(
+      inspectionResult([{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS', legality: true, reasons: [], valueIfIGive: 1, valueIfIReceive: 1 }])
+    );
+    api.counterDeal.mockResolvedValue({ id: 11, messageType: 'deal-counter', turn: 1 });
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    // The loaded proposal's message is in the editor; clear it.
+    const messageInput = wrapper.find('.deal-message .text-stub');
+    expect((messageInput.element as HTMLInputElement).value).toBe('Original note.');
+    (messageInput.element as HTMLInputElement).value = '';
+    await messageInput.trigger('input');
+    await flushPromises();
+
+    await wrapper.findAll('button').find((b) => b.text() === 'Counter')!.trigger('click');
+    await flushPromises();
+
+    // The sent deal carries NO message — the cleared field drops it rather than resending the original.
+    expect(api.counterDeal).toHaveBeenCalledTimes(1);
+    expect(api.counterDeal.mock.calls[0]![1].deal.message).toBeUndefined();
+  });
+
   it('mirrors a mutual agreement onto both sides on add, proposing both directions', async () => {
     api.proposeDeal.mockResolvedValue({ id: 9, messageType: 'deal-proposal', turn: 1 });
     const wrapper = mountScreen();

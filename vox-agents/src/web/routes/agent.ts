@@ -352,9 +352,18 @@ export function createAgentRoutes(): Router {
       return;
     }
 
-    const currentTurn = currentTurnOf(voxContext) ?? 0;
+    // A live chat (every diplomacy thread is one) reasons at the session's LIVE turn (specs §8). If
+    // it isn't available we can neither evaluate the close-lock, archive, nor run — reject up front,
+    // BEFORE the durable append below, so a failed turn never leaves a phantom transcript row.
+    const liveTurn = currentTurnOf(voxContext);
+    if (thread.contextType === 'live' && liveTurn === undefined) {
+      res.status(503).json({ error: 'The live game turn is not available yet. Please retry once the game is running.' });
+      return;
+    }
+    const currentTurn = liveTurn ?? 0;
 
     // A diplomacy conversation closed on the current turn is locked until a later turn (specs §8).
+    // liveTurn is guaranteed defined for any live (hence any diplomacy) context by the guard above.
     if (thread.diplomacy && isClosedThisTurn(thread.closeTurn, currentTurn)) {
       res.status(409).json({ error: 'This conversation was closed this turn and cannot be reopened until a later turn.' });
       return;
@@ -420,21 +429,14 @@ export function createAgentRoutes(): Router {
     // by reference, so the chat's refresh writes into the same game-state cache the strategist
     // reads. The coverage-aware ensureGameState reconciles this narrow live-turn slice
     // (after = turn * 1e6) with the strategist's wider fetch without either losing events.
+    // The live turn was validated up front (see the guard above); reuse it so the whole request
+    // reasons at one consistent turn rather than re-fetching a possibly-moved value.
     let overrides: Partial<StrategistParameters> | undefined;
     if (thread.contextType === 'live') {
-      const liveTurn = currentTurnOf(voxContext);
-      if (liveTurn === undefined) {
-        // Roll back this request's in-memory message without disturbing a concurrent append.
-        const messageIndex = thread.messages.lastIndexOf(threadMessage);
-        if (messageIndex >= 0) thread.messages.splice(messageIndex, 1);
-        sendEvent('error', { message: 'The live game turn is not available yet. Please retry once the game is running.' });
-        res.end();
-        return;
-      }
       overrides = {
-        turn: liveTurn,
-        before: liveTurn * 1000000 + 999999,
-        after: liveTurn * 1000000,
+        turn: currentTurn,
+        before: currentTurn * 1000000 + 999999,
+        after: currentTurn * 1000000,
       };
     }
 
@@ -775,6 +777,30 @@ export function createAgentRoutes(): Router {
  * the deterministic id ensures reopening hydrates the same thread. The voice defaults to the
  * target seat's configured diplomat, overridable by the local operator.
  */
+/**
+ * Assign the ordered-pair role/identity fields from a seat-relative view: the agent-voiced seat
+ * gets the agent name + voiced identity, the other endpoint gets the audience role + identity.
+ * Centralizes the mapping so the three call sites (diplomacy re-sync, diplomacy create, ordinary
+ * chat) can never drift. Only `player1ID` is needed to place the voiced seat: the pair is distinct
+ * and `voicedID` is one of the two, so player2 is voiced iff player1 isn't.
+ */
+function orderedRolesAndIdentities(
+  player1ID: number,
+  voicedID: number,
+  voicedRole: string,
+  audienceRole: string,
+  voicedIdentity: EnvoyThread['player1Identity'],
+  audienceIdentity: EnvoyThread['player1Identity'],
+): Pick<EnvoyThread, 'player1Role' | 'player2Role' | 'player1Identity' | 'player2Identity'> {
+  const voicedIsPlayer1 = player1ID === voicedID;
+  return {
+    player1Role: voicedIsPlayer1 ? voicedRole : audienceRole,
+    player2Role: voicedIsPlayer1 ? audienceRole : voicedRole,
+    player1Identity: voicedIsPlayer1 ? voicedIdentity : audienceIdentity,
+    player2Identity: voicedIsPlayer1 ? audienceIdentity : voicedIdentity,
+  };
+}
+
 async function openDiplomacyChat(
   req: Request<{}, {}, CreateChatRequest>,
   res: Response<CreateChatResponse | ErrorResponse>
@@ -843,10 +869,7 @@ async function openDiplomacyChat(
     existing.agent = targetPlayerID;
     existing.contextId = targetContextId;
     existing.title = `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`;
-    existing.player1Role = player1ID === targetPlayerID ? voice : audienceRole;
-    existing.player2Role = player2ID === targetPlayerID ? voice : audienceRole;
-    existing.player1Identity = player1ID === targetPlayerID ? targetIdentity : initiatorIdentity;
-    existing.player2Identity = player2ID === targetPlayerID ? targetIdentity : initiatorIdentity;
+    Object.assign(existing, orderedRolesAndIdentities(player1ID, targetPlayerID, voice, audienceRole, targetIdentity, initiatorIdentity));
     existing.messages = messages;
     existing.closeTurn = closeTurn;
     existing.metadata!.updatedAt = new Date();
@@ -860,10 +883,7 @@ async function openDiplomacyChat(
     gameID,
     player1ID,
     player2ID,
-    player1Role: player1ID === targetPlayerID ? voice : audienceRole,
-    player2Role: player2ID === targetPlayerID ? voice : audienceRole,
-    player1Identity: player1ID === targetPlayerID ? targetIdentity : initiatorIdentity,
-    player2Identity: player2ID === targetPlayerID ? targetIdentity : initiatorIdentity,
+    ...orderedRolesAndIdentities(player1ID, targetPlayerID, voice, audienceRole, targetIdentity, initiatorIdentity),
     diplomacy: true,
     contextType: 'live',
     contextId: targetContextId,
@@ -969,10 +989,7 @@ async function openOrdinaryChat(
     gameID,
     player1ID,
     player2ID,
-    player1Role: player1ID === voicedID ? agentNameReq : audienceRole,
-    player2Role: player2ID === voicedID ? agentNameReq : audienceRole,
-    player1Identity: player1ID === voicedID ? voicedIdentity : callerIdentity,
-    player2Identity: player2ID === voicedID ? voicedIdentity : callerIdentity,
+    ...orderedRolesAndIdentities(player1ID, voicedID, agentNameReq, audienceRole, voicedIdentity, callerIdentity),
     diplomacy: false,
     contextType,
     contextId: effectiveContextId!,

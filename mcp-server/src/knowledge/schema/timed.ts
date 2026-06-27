@@ -528,7 +528,8 @@ export interface TacticalZones extends TimedKnowledge {
  * in the inherited `Payload`:
  *   - deal-proposal / deal-counter: `Payload.Deal` holds the proposed terms, with
  *     optional proposal-time `Payload.Value1` / `Payload.Value2` snapshots for the
- *     two ordered players (undefined for human participants).
+ *     two ordered players (a human side's items are valued by the VP AI too, so its
+ *     map may be present — not only the LLM side's).
  *   - deal-accept / deal-reject / deal-enacted: `Payload.ProposalMessageID` points
  *     at the proposal/counter message they answer or record as enacted.
  * Legality and live DLL state are never stored.

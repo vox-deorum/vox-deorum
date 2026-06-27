@@ -129,11 +129,17 @@ end
 -- Structural legality + reason for a candidate, under the human-to-human override.
 -- The reason is read only when illegal and is returned raw (the TS layer strips tags).
 local function legalityOf(deal, giver, receiver, enum, d1, d2, d3, flag1)
-  local legal = canTrade(deal, giver, receiver, enum, d1, d2, d3, flag1)
-  local reason = ""
-  if not legal then
-    reason = deal:GetReasonsItemUntradeable(giver, receiver, enum, d1 or -1, d2 or -1, d3 or -1, flag1 or false, true) or ""
-  end
+  -- pcall-guarded (like valueOf) so a term the stock checks throw on degrades to illegal with an
+  -- empty reason (the TS layer supplies a structured fallback) rather than aborting the whole call.
+  local ok, legal, reason = pcall(function()
+    local isLegal = canTrade(deal, giver, receiver, enum, d1, d2, d3, flag1)
+    local why = ""
+    if not isLegal then
+      why = deal:GetReasonsItemUntradeable(giver, receiver, enum, d1 or -1, d2 or -1, d3 or -1, flag1 or false, true) or ""
+    end
+    return isLegal, why
+  end)
+  if not ok then return false, "" end
   return legal, reason
 end
 
@@ -477,20 +483,14 @@ for i, r in ipairs(resolved) do
       legal = false, reason = "Unknown item type", valueToGiver = 0, valueToReceiver = 0, unknown = true,
     }
   else
-    local unresolvedCity = hasUnresolvedCityCoordinates(item, r)
-    local legal = false
-    if not unresolvedCity then
-      legal = deal:IsPossibleToTradeItem(giver, receiver, enum, r.d1, r.d2, r.d3, r.f1, true)
-    end
-    local reason = ""
-    if unresolvedCity then
-      reason = "City ID could not be resolved for the giving player."
-    elseif not legal then
-      reason = deal:GetReasonsItemUntradeable(giver, receiver, enum, r.d1, r.d2, r.d3, r.f1, true)
-    end
-    local vGive, vReceive = 0, 0
-    if not unresolvedCity then
-      vGive, vReceive = deal:GetTradeItemValue(giver, receiver, enum, r.v1, r.v2, r.v3, r.vf1, r.vdur)
+    -- Route through the shared legalityOf/valueOf helpers (both pcall-guarded) so one pathological
+    -- term degrades to illegal/0 instead of erroring the whole bridge call, mirroring enumeration.
+    local legal, reason, vGive, vReceive
+    if hasUnresolvedCityCoordinates(item, r) then
+      legal, reason, vGive, vReceive = false, "City ID could not be resolved for the giving player.", 0, 0
+    else
+      legal, reason = legalityOf(deal, giver, receiver, enum, r.d1, r.d2, r.d3, r.f1)
+      vGive, vReceive = valueOf(deal, giver, receiver, enum, r.v1, r.v2, r.v3, r.vf1, r.vdur)
     end
     items[i] = {
       fromPlayerID = giver, toPlayerID = receiver, itemType = item.itemType,
