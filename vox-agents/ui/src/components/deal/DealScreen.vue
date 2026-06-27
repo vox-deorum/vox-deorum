@@ -158,13 +158,26 @@ const emptyDeal = (): DealPayload => ({ version: 1, items: [], promises: [] });
 const workingDeal = ref<DealPayload>(emptyDeal());
 /** Optional one-sentence note the human attaches to the deal (Payload.Deal.message). */
 const dealMessage = ref('');
+const clone = (deal: DealPayload): DealPayload => JSON.parse(JSON.stringify(deal));
+/**
+ * The working draft normalized for the wire: a fresh clone of the terms with the trimmed note as
+ * `message` (absent when blank). Both the edit-tracking fingerprint and the submitted proposal/
+ * counter go through this, so the message trim/drop rule lives in exactly one place.
+ */
+const normalizedDraft = (deal: DealPayload, message: string): DealPayload => {
+  const draft = clone(deal);
+  const note = message.trim();
+  if (note) draft.message = note;
+  else delete draft.message; // a blank note drops the message; it never resends a stale line
+  return draft;
+};
 /**
  * A stable fingerprint of the editable draft (terms + the one-sentence message). `isEdited` compares
  * the live draft against the loaded `baseline`, so any change — a term add/edit/remove OR a message
  * edit — is detected with no per-edit bookkeeping.
  */
 const draftFingerprint = (deal: DealPayload, message: string): string =>
-  JSON.stringify({ items: deal.items, promises: deal.promises, message: message.trim() });
+  JSON.stringify(normalizedDraft(deal, message));
 /** Fingerprint of the loaded proposal's draft; the draft is "edited" when it diverges from this. */
 const baseline = ref(draftFingerprint(emptyDeal(), ''));
 const inspection = ref<InspectDealResponse | null>(null);
@@ -304,8 +317,6 @@ watch(workingDeal, () => {
 }, { deep: true });
 
 // ---- deal-message round-trip ------------------------------------------------------------
-const clone = (deal: DealPayload): DealPayload => JSON.parse(JSON.stringify(deal));
-
 /** Load a proposal's terms + message into the editor and capture it as the unedited baseline. */
 const loadDraft = (deal: DealPayload) => {
   workingDeal.value = clone(deal);
@@ -363,14 +374,8 @@ const ensureActionStillValid = async (
   return false;
 };
 
-/** Clone the working deal and attach the human's one-sentence note (Payload.Deal.message). */
-const draftToSend = (): DealPayload => {
-  const deal = clone(workingDeal.value);
-  const note = dealMessage.value.trim();
-  if (note) deal.message = note;
-  else delete deal.message; // clearing the field drops the stored message, never resends the original
-  return deal;
-};
+/** The working draft serialized for a proposal/counter: terms plus the trimmed note (see `normalizedDraft`). */
+const draftToSend = (): DealPayload => normalizedDraft(workingDeal.value, dealMessage.value);
 
 /** Toast after a proposal/counter write, including the "agent did not reply" preview warning. */
 const dealSentToast = (summary: string, agentResponded: boolean | undefined) => {

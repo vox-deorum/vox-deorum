@@ -14,10 +14,16 @@ export interface UseThreadMessagesOptions {
   sessionId: Ref<string>;
   isStreaming: Ref<boolean>;
   onNewChunk?: () => void;
+  /**
+   * A user-sent message could not be delivered because the send never took effect (e.g. the live
+   * turn wasn't available, or the conversation was closed this turn). Its optimistically-rendered
+   * rows have already been removed; the host returns the text to the input box and surfaces why.
+   */
+  onSendFailed?: (text: string, error: string) => void;
 }
 
 export function useThreadMessages(options: UseThreadMessagesOptions) {
-  const { thread, sessionId, isStreaming, onNewChunk } = options;
+  const { thread, sessionId, isStreaming, onNewChunk, onSendFailed } = options;
   let contents: Array<LanguageModelV3TextPart | LanguageModelV3ReasoningPart | LanguageModelV3ToolCallPart | LanguageModelV3ToolResultPart>;
 
   /**
@@ -40,10 +46,16 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
   };
 
   /**
-   * Streams an agent response, setting up the assistant message placeholder
-   * and handling all chunk types. Shared by sendMessage and requestGreeting.
+   * Streams an agent response, setting up the assistant message placeholder and handling all chunk
+   * types. Shared by sendMessage and requestGreeting. `rollbackTo` is the thread length captured
+   * before the caller's optimistic rows were added; if the send never takes effect, every row from
+   * there on is removed and `onRecoverableFailure` runs (so the caller can restore the input).
    */
-  const streamResponse = (request: ChatMessageRequest): (() => void) | undefined => {
+  const streamResponse = (
+    request: ChatMessageRequest,
+    rollbackTo: number,
+    onRecoverableFailure?: (error: string) => void,
+  ): (() => void) | undefined => {
     if (!thread.value) return;
 
     const currentTurn = thread.value.metadata?.turn || 0;
@@ -131,9 +143,19 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
             break;
         }
       },
-      (error) => {
+      (error, info) => {
         console.error('SSE error:', error);
-        pushErrorMessage(error);
+        if (info.recoverable) {
+          // The send never took effect (the stream never opened — the route rejected before
+          // committing the message). Remove the optimistic rows we added and let the caller restore
+          // the input, rather than leaving a phantom that disappears on the next reload.
+          thread.value?.messages.splice(rollbackTo);
+          onRecoverableFailure?.(error);
+        } else {
+          // The reply failed mid-stream after the message was committed — keep it and show the
+          // error inline (rolling it back here would duplicate the stored message on a resend).
+          pushErrorMessage(error);
+        }
         isStreaming.value = false;
       },
       () => {
@@ -154,7 +176,9 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
       return;
     }
 
-    // Add user message to thread with metadata
+    // Optimistically render the user's message. Capture the pre-send length so a failed send can
+    // remove exactly the rows we add (this user message + the assistant placeholder).
+    const rollbackTo = thread.value.messages.length;
     const currentTurn = thread.value.metadata?.turn || 0;
     const userMessage: ModelMessage = { role: "user", content: message };
     thread.value.messages.push({
@@ -168,10 +192,15 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     isStreaming.value = true;
 
     try {
-      return streamResponse({ chatId: sessionId.value, message });
+      return streamResponse(
+        { chatId: sessionId.value, message },
+        rollbackTo,
+        (error) => onSendFailed?.(message, error),
+      );
     } catch (error) {
       console.error('Failed to send message:', error);
-      pushErrorMessage(error instanceof Error ? error : 'Failed to send message');
+      thread.value?.messages.splice(rollbackTo);
+      onSendFailed?.(message, error instanceof Error ? error.message : 'Failed to send message');
       isStreaming.value = false;
     }
   };
@@ -186,13 +215,16 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
       return;
     }
 
+    // The greeting trigger isn't a visible user message; only the assistant placeholder is
+    // optimistic, so a failed greeting just rolls that one row back (no input to restore).
+    const rollbackTo = thread.value.messages.length;
     isStreaming.value = true;
 
     try {
-      return streamResponse({ chatId: sessionId.value, message: '{{{Greeting}}}' });
+      return streamResponse({ chatId: sessionId.value, message: '{{{Greeting}}}' }, rollbackTo);
     } catch (error) {
       console.error('Failed to request greeting:', error);
-      pushErrorMessage(error instanceof Error ? error : 'Failed to request greeting');
+      thread.value?.messages.splice(rollbackTo);
       isStreaming.value = false;
     }
   };

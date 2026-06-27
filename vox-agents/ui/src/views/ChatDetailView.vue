@@ -242,7 +242,13 @@ const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
   onNewChunk: () => {
     // Increment the event counter to trigger a reactive update
     newChunkEvent.value++;
-  }
+  },
+  onSendFailed: (text, error) => {
+    // The send didn't take effect and its optimistic rows were removed — return the text to the
+    // input so the human can retry, and explain why it bounced.
+    inputMessage.value = text;
+    toast.add({ severity: 'warn', summary: 'Message not sent', detail: error, life: 4000 });
+  },
 });
 
 // Methods

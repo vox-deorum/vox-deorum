@@ -49,6 +49,24 @@ import type {
 import type { TextStreamPart, ToolSet } from 'ai';
 
 /**
+ * Normalize whatever an `sse.js` 'error' event carries into one human-readable line. A server-sent
+ * error event and a non-2xx POST response both stash their JSON body in `event.data`; a bare
+ * connection drop has none. We accept the `{ message }` shape our own SSE error events use, the
+ * `{ error }` shape every route's JSON rejection uses, and a plain JSON-string payload.
+ */
+function streamErrorMessage(event: any): string {
+  const body = event?.data;
+  if (typeof body !== 'string' || !body) return 'The connection to the server was lost.';
+  try {
+    const parsed = JSON.parse(body);
+    if (typeof parsed === 'string') return parsed;
+    return parsed?.message || parsed?.error || body;
+  } catch {
+    return body; // not JSON — surface the raw text
+  }
+}
+
+/**
  * API client for managing communication with the Vox Agents backend server.
  * Handles both REST API calls and Server-Sent Events (SSE) streaming connections.
  *
@@ -585,7 +603,7 @@ class ApiClient {
   streamAgentMessage(
     request: ChatMessageRequest,
     onMessage: (data: TextStreamPart<ToolSet>) => void,
-    onError: (message: string) => void,
+    onError: (message: string, info: { recoverable: boolean }) => void,
     onDone: () => void
   ): () => void {
     const key = `agent-chat-${request.chatId}`;
@@ -601,8 +619,16 @@ class ApiClient {
       withCredentials: false
     });
 
+    // Track whether the stream actually opened. The server emits `connected` only after it has passed
+    // every pre-stream guard and committed the caller's message; a non-2xx JSON rejection (live turn
+    // unavailable, closed-this-turn, …) returns before that. So `opened === false` at failure time
+    // means the send never took effect — the caller can safely roll it back and restore the input.
+    let opened = false;
+    eventSource.addEventListener('connected', () => { opened = true; });
+
     // Listen for 'message' events (streaming chunks)
     eventSource.addEventListener('message', (event: any) => {
+      opened = true;
       try {
         const data = JSON.parse(event.data);
         // The backend sends just the chunk string for message events
@@ -615,25 +641,22 @@ class ApiClient {
     // Listen for 'done' events
     eventSource.addEventListener('done', onDone);
 
-    // Listen for 'error' events from the server
-    eventSource.addEventListener('error', (event: any) => {
-      if (event.data) {
-        try {
-          const data = JSON.parse(event.data);
-          console.error('SSE server error:', data);
-          // Pass server error to the handler
-          onError(data);
-        } catch (error) {
-          console.error('Failed to parse error event:', error);
-        }
-      }
-    });
-
-    // Handle SSE connection errors (not server-sent error events)
-    eventSource.onerror = (error: any) => {
-      console.error('SSE connection error:', error);
-      if (onError) onError(error);
+    // Surface a stream failure exactly once, as a human-readable line. sse.js dispatches a single
+    // 'error' event to BOTH `onerror` and every `addEventListener('error')` listener, and a non-2xx
+    // response to the POST (the route's pre-stream JSON rejections: 400/404/409/502/503) lands here
+    // too — with the JSON body in `event.data`. Without this guard one failure yields two bubbles,
+    // and the raw event/`{ error }` body doesn't match what the caller expects, so both read generic.
+    let failed = false;
+    const fail = (event: any) => {
+      if (failed) return;
+      failed = true;
+      const message = streamErrorMessage(event);
+      console.error('SSE error:', message);
+      // `recoverable` ⇒ the stream never opened, so the send didn't take effect and may be rolled back.
+      onError(message, { recoverable: !opened });
     };
+    eventSource.addEventListener('error', fail);
+    eventSource.onerror = fail;
 
     // Start the connection
     eventSource.stream();

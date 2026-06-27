@@ -212,11 +212,29 @@ describe('ApiClient SSE streams', () => {
     sse.emit('done')
     expect(onDone).toHaveBeenCalled()
 
+    // A 'message' already streamed, so the failure is mid-stream (not recoverable — the send took effect).
     sse.emit('error', JSON.stringify('server failed'))
-    expect(onError).toHaveBeenCalledWith('server failed')
+    expect(onError).toHaveBeenCalledWith('server failed', { recoverable: false })
 
     cleanup()
     expect(sse.closed).toBe(true)
+  })
+
+  it('surfaces a non-2xx pre-stream rejection once, with the route’s JSON error message', () => {
+    const onError = vi.fn()
+    api.streamAgentMessage({ chatId: 'c1', message: 'hi' } as never, vi.fn(), onError, vi.fn())
+    const sse = sseInstances[0]
+
+    // sse.js dispatches ONE failure to BOTH `onerror` and the 'error' listener; for a non-2xx POST
+    // the body is the route's JSON `{ error }` rejection (e.g. the 503 live-turn guard). The client
+    // must surface it exactly once, with the real message — not two generic bubbles.
+    const body = JSON.stringify({ error: 'The live game turn is not available yet.' })
+    sse.onerror?.({ data: body })
+    sse.emit('error', body)
+
+    // Surfaced once, with the real message; the stream never opened, so the send is recoverable.
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith('The live game turn is not available yet.', { recoverable: true })
   })
 
   it('closeAllConnections closes every open stream', () => {

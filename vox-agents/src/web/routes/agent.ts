@@ -49,7 +49,6 @@ import {
 import { VoxSpanExporter } from '../../utils/telemetry/vox-exporter.js';
 import {
   diplomacyThreadId,
-  orderPair,
   agentName,
   audienceID,
   identityOf,
@@ -164,12 +163,16 @@ function enrichChat(thread: EnvoyThread): ChatResponseEnrichment {
  * The authoritative "current turn" for stale-turn / close-lock detection. A live context owns
  * a reference to its session, which tracks the live game turn from the game's own
  * PlayerDoneTurn / GameSwitched notifications — so it stays correct even when a conversation
- * outlives the pause that started it (specs §8), unlike a context's decision-point
- * `parameters.turn` snapshot. Falls back to the params turn for standalone contexts
- * (database/telepathist) that have no owning session.
+ * outlives the pause that started it (specs §8), unlike a context's decision-point snapshot.
+ *
+ * When a session exists, trust its turn verbatim — including `undefined`, which means "the live
+ * turn isn't known yet" (before the first turn notification). We must NOT mask that with the base
+ * `parameters.turn`: production seeds a live seat's base turn to -1 (vox-player), so falling back
+ * would yield a bogus -1 that defeats the unavailable-turn guards. Only a sessionless standalone
+ * context (database/telepathist) has no live turn and reads its base-parameter turn.
  */
 function currentTurnOf(context: VoxContext<StrategistParameters> | undefined): number | undefined {
-  return context?.session?.getTurn() ?? context?.getBaseParameters()?.turn;
+  return context?.session ? context.session.getTurn() : context?.getBaseParameters()?.turn;
 }
 
 /**
@@ -772,35 +775,39 @@ export function createAgentRoutes(): Router {
   return router;
 }
 
+/** A conversation endpoint: its seat id, the free-form role descriptor stored for it, and its civ identity. */
+interface OrderedParticipant {
+  id: number;
+  role: string;
+  identity: EnvoyThread['player1Identity'];
+}
+
+/**
+ * Project two conversation endpoints onto the canonical ordered pair (Player1 = lower id, matching
+ * the store's `orderPair`), carrying each seat's role + identity to its slot. One helper for all
+ * three call sites (diplomacy re-sync, diplomacy create, ordinary chat) so the paired ID/role/
+ * identity fields are derived together and can never drift apart.
+ */
+function orderParticipants(
+  a: OrderedParticipant,
+  b: OrderedParticipant,
+): Pick<EnvoyThread, 'player1ID' | 'player2ID' | 'player1Role' | 'player2Role' | 'player1Identity' | 'player2Identity'> {
+  const [p1, p2] = a.id <= b.id ? [a, b] : [b, a];
+  return {
+    player1ID: p1.id,
+    player2ID: p2.id,
+    player1Role: p1.role,
+    player2Role: p2.role,
+    player1Identity: p1.identity,
+    player2Identity: p2.identity,
+  };
+}
+
 /**
  * Open or find a civ↔civ diplomacy conversation. One conversation per ordered player pair:
  * the deterministic id ensures reopening hydrates the same thread. The voice defaults to the
  * target seat's configured diplomat, overridable by the local operator.
  */
-/**
- * Assign the ordered-pair role/identity fields from a seat-relative view: the agent-voiced seat
- * gets the agent name + voiced identity, the other endpoint gets the audience role + identity.
- * Centralizes the mapping so the three call sites (diplomacy re-sync, diplomacy create, ordinary
- * chat) can never drift. Only `player1ID` is needed to place the voiced seat: the pair is distinct
- * and `voicedID` is one of the two, so player2 is voiced iff player1 isn't.
- */
-function orderedRolesAndIdentities(
-  player1ID: number,
-  voicedID: number,
-  voicedRole: string,
-  audienceRole: string,
-  voicedIdentity: EnvoyThread['player1Identity'],
-  audienceIdentity: EnvoyThread['player1Identity'],
-): Pick<EnvoyThread, 'player1Role' | 'player2Role' | 'player1Identity' | 'player2Identity'> {
-  const voicedIsPlayer1 = player1ID === voicedID;
-  return {
-    player1Role: voicedIsPlayer1 ? voicedRole : audienceRole,
-    player2Role: voicedIsPlayer1 ? audienceRole : voicedRole,
-    player1Identity: voicedIsPlayer1 ? voicedIdentity : audienceIdentity,
-    player2Identity: voicedIsPlayer1 ? audienceIdentity : voicedIdentity,
-  };
-}
-
 async function openDiplomacyChat(
   req: Request<{}, {}, CreateChatRequest>,
   res: Response<CreateChatResponse | ErrorResponse>
@@ -858,7 +865,11 @@ async function openDiplomacyChat(
   const closeTurn = deriveCloseTurn(transcript);
 
   const id = diplomacyThreadId(gameID, initiatorID, targetPlayerID);
-  const { player1ID, player2ID } = orderPair(initiatorID, targetPlayerID);
+  // The voiced (target) seat carries the agent name + its identity; the initiator is the audience.
+  const ordered = orderParticipants(
+    { id: targetPlayerID, role: voice, identity: targetIdentity },
+    { id: initiatorID, role: audienceRole, identity: initiatorIdentity },
+  );
   const existing = chatSessions.get(id);
 
   if (existing) {
@@ -869,7 +880,7 @@ async function openDiplomacyChat(
     existing.agent = targetPlayerID;
     existing.contextId = targetContextId;
     existing.title = `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`;
-    Object.assign(existing, orderedRolesAndIdentities(player1ID, targetPlayerID, voice, audienceRole, targetIdentity, initiatorIdentity));
+    Object.assign(existing, ordered);
     existing.messages = messages;
     existing.closeTurn = closeTurn;
     existing.metadata!.updatedAt = new Date();
@@ -881,9 +892,7 @@ async function openDiplomacyChat(
     agent: targetPlayerID,
     title: `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`,
     gameID,
-    player1ID,
-    player2ID,
-    ...orderedRolesAndIdentities(player1ID, targetPlayerID, voice, audienceRole, targetIdentity, initiatorIdentity),
+    ...ordered,
     diplomacy: true,
     contextType: 'live',
     contextId: targetContextId,
@@ -972,7 +981,6 @@ async function openOrdinaryChat(
   // the agent name (pinned contract); the audience role is the caller's free-form role.
   const callerID = callerPlayerID !== undefined && callerPlayerID >= 0 ? callerPlayerID : OBSERVER_ID;
   const audienceRole = callerRole?.trim() || 'Observer';
-  const { player1ID, player2ID } = orderPair(voicedID, callerID);
 
   // The caller's identity comes from the dialog (a real seat's civ, or the hardcoded observer
   // identity). Fall back to the live lookup only for non-dialog callers with a real seat.
@@ -981,15 +989,19 @@ async function openOrdinaryChat(
       ? civIdentity(contextRegistry.get<StrategistParameters>(effectiveContextId!), callerID)
       : undefined);
 
+  // The agent-voiced seat carries the agent name + its identity; the caller/observer is the audience.
+  const ordered = orderParticipants(
+    { id: voicedID, role: agentNameReq, identity: voicedIdentity },
+    { id: callerID, role: audienceRole, identity: callerIdentity },
+  );
+
   const sessionId = uuidv4();
   const thread: EnvoyThread = {
     id: sessionId,
     agent: voicedID,
     title: `${agentNameReq} - ${new Date().toLocaleString()}`,
     gameID,
-    player1ID,
-    player2ID,
-    ...orderedRolesAndIdentities(player1ID, voicedID, agentNameReq, audienceRole, voicedIdentity, callerIdentity),
+    ...ordered,
     diplomacy: false,
     contextType,
     contextId: effectiveContextId!,

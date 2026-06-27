@@ -156,7 +156,12 @@ describe('agent routes', () => {
 
     it('rejects up front (503) and never writes the message when a live context has no available turn', async () => {
       vi.spyOn(contextRegistry, 'get').mockReturnValue(
-        makeMockContext({ session: { getTurn: () => undefined } }) as any,
+        // Session present but its live turn is unknown, with the base turn seeded to -1 the way
+        // production does — the guard must reject on the undefined session turn, NOT fall back to -1.
+        makeMockContext({
+          session: { getTurn: () => undefined },
+          baseParameters: { turn: -1, gameID: 'g', playerID: 3, gameStates: { 5: { options: {}, players: {} } } },
+        }) as any,
       );
       vi.spyOn(agentRegistry, 'get').mockReturnValue({
         name: 'diplomat',
@@ -257,11 +262,12 @@ describe('agent routes', () => {
       const mcp = installMockMcpClient();
       mcp.respondWith('read-transcript', structuredResult({ messages: opts.transcript ?? [] }));
       const ctx = makeMockContext({
-        // currentTurnOf = session.getTurn() ?? baseParameters.turn, so an omitted liveTurn must leave
-        // BOTH undefined to simulate a genuinely unavailable live turn.
+        // currentTurnOf trusts a session-bearing (live) context's getTurn() verbatim, so an omitted
+        // liveTurn leaves it undefined — and the base turn is seeded to -1 the way production does, to
+        // prove the guard rejects on the undefined session turn rather than masking it with that -1.
         session: { getTurn: () => turn },
         baseParameters: {
-          turn, gameID: 'g', playerID: 3,
+          turn: turn ?? -1, gameID: 'g', playerID: 3,
           gameStates: { [turn ?? 5]: { options: {}, players: {} } },
         },
         execute: opts.execute ?? vi.fn(async (_n: string, input: any) => input),
