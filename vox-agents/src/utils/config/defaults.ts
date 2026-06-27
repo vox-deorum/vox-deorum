@@ -84,16 +84,16 @@ export const defaultConfig: VoxAgentsConfig = {
       provider: 'anthropic',
       name: 'claude-opus-4-7'
     },
-    'synthetic/hf:moonshotai/Kimi-K2.5': {
+    'synthetic/hf:moonshotai/Kimi-K2.6': {
       provider: 'synthetic',
-      name: 'hf:moonshotai/Kimi-K2.5',
+      name: 'hf:moonshotai/Kimi-K2.6',
       options: {
         toolMiddleware: 'prompt'
       }
     },
-    'synthetic/hf:MiniMaxAI/MiniMax-M2.7': {
+    'synthetic/hf:MiniMaxAI/MiniMax-M3': {
       provider: 'synthetic',
-      name: 'hf:MiniMaxAI/MiniMax-M2.7',
+      name: 'hf:MiniMaxAI/MiniMax-M3',
       options: {
         toolMiddleware: 'prompt'
       }
@@ -101,13 +101,6 @@ export const defaultConfig: VoxAgentsConfig = {
     'openai-compatible/gpt-oss-120b': {
       provider: 'openai-compatible',
       name: 'gpt-oss-120b',
-      options: {
-        toolMiddleware: 'prompt'
-      }
-    },
-    'openai-compatible/GLM-4.7': {
-      provider: 'openai-compatible',
-      name: 'GLM-4.7',
       options: {
         toolMiddleware: 'prompt'
       }
@@ -154,25 +147,11 @@ export const defaultConfig: VoxAgentsConfig = {
       provider: 'openai-compatible',
       name: 'DeepSeek-V4'
     },
-    'openai-compatible/Kimi-K2-Thinking': {
-      provider: 'openai-compatible',
-      name: 'Kimi-K2-Thinking',
-      options: {
-        toolMiddleware: 'prompt'
-      }
-    },
     'openai-compatible/Kimi-K2.5': {
       provider: 'openai-compatible',
       name: 'Kimi-K2.5',
       options: {
         toolMiddleware: 'prompt'
-      }
-    },
-    'openai-compatible/claude-opus-4-7': {
-      provider: 'anthropic',
-      name: 'claude-opus-4-7',
-      options: {
-        concurrencyLimit: 1
       }
     },
     'openai-compatible/Kimi-K2.6': {
@@ -189,17 +168,17 @@ export const defaultConfig: VoxAgentsConfig = {
         toolMiddleware: 'prompt'
       }
     },
-    'openai-compatible/MiniMax-M2.5': {
+    'openai-compatible/MiniMax-M2.7': {
       provider: 'openai-compatible',
-      name: 'MiniMax-M2.5',
+      name: 'MiniMax-M2.7',
       options: {
         toolMiddleware: 'prompt',
         thinkMiddleware: 'think'
       }
     },
-    'openai-compatible/MiniMax-M2.7': {
+    'openai-compatible/MiniMax-M3': {
       provider: 'openai-compatible',
-      name: 'MiniMax-M2.7',
+      name: 'MiniMax-M3',
       options: {
         toolMiddleware: 'prompt',
         thinkMiddleware: 'think'
