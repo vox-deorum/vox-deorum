@@ -21,7 +21,6 @@ import { pacingInterruptionRegistry } from '../../strategist/pacing/registry.js'
 import { VoxContext } from '../../infra/vox-context.js';
 import { createLogger } from '../../utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
-import { ModelMessage } from 'ai';
 import fs from 'fs/promises';
 import {
   parseContextIdentifier,
@@ -59,6 +58,7 @@ import {
   joinAssistantText,
   appendTranscriptMessage,
 } from '../../utils/diplomacy/transcript.js';
+import { beginChatTurn, ThreadBusyError, type ChatTurn } from '../../utils/diplomacy/chat-turn-commit.js';
 import {
   inspectDeal,
   appendDealProposal,
@@ -90,9 +90,6 @@ const chatSessions = new Map<string, EnvoyThread>();
 
 /** The observer / no-seat endpoint sentinel (shared with the mcp-server store). */
 const OBSERVER_ID = -1;
-
-/** Triple-brace special tokens (e.g. {{{Greeting}}}) are agent triggers, not archival text. */
-const SPECIAL_MESSAGE = /^\{\{\{.+\}\}\}$/;
 
 /** Resolve the active strategist session's per-seat agent assignments, if any. */
 function getActiveAssignments(): Record<number, PlayerAssignment> | undefined {
@@ -377,28 +374,22 @@ export function createAgentRoutes(): Router {
       return;
     }
 
-    // Persist the caller's utterance to the durable store BEFORE running the diplomat. The negotiator
-    // and close tools append their own transcript rows during the run, so the caller text must land
-    // first or a proposal/close would precede the message that prompted it. The store is append-only,
-    // so this is the commit point — but nothing has streamed yet, so a failed append can still reject
-    // cleanly (502), which the UI treats as a never-took-effect send and restores the input. Special
-    // tokens ({{{Greeting}}}) are agent triggers, never real utterances, so they are never persisted.
-    const isSpecial = SPECIAL_MESSAGE.test(message);
-    if (thread.diplomacy && !isSpecial) {
-      try {
-        await appendTranscriptMessage(thread, audienceID(thread), 'text', message);
-      } catch (error) {
-        logger.error('Failed to persist caller message to transcript store', { error });
-        res.status(502).json({ error: 'Failed to record your message. Please retry.' });
+    // Begin the turn: take the per-thread lock and commit the caller utterance (the append-only store's
+    // commit point) before anything streams. A turn already in flight rejects 409 and a durable-append
+    // failure rejects 502 — both pre-stream, so the UI restores the never-sent message. See
+    // beginChatTurn for the full lock/commit/archive/rollback invariant.
+    let turn: ChatTurn;
+    try {
+      turn = await beginChatTurn(thread, message, currentTurn);
+    } catch (error) {
+      if (error instanceof ThreadBusyError) {
+        res.status(409).json({ error: 'A reply is already being generated for this conversation. Please wait for it to finish.' });
         return;
       }
+      logger.error('Failed to persist caller message to transcript store', { error });
+      res.status(502).json({ error: 'Failed to record your message. Please retry.' });
+      return;
     }
-
-    // Mirror the committed message into the in-memory cache so the diplomat sees it and the live view
-    // renders it.
-    const userMessage: ModelMessage = { role: 'user', content: message };
-    thread.messages.push({ message: userMessage, metadata: { datetime: new Date(), turn: currentTurn } });
-    thread.metadata!.updatedAt = new Date();
 
     // Set up SSE stream
     res.writeHead(200, {
@@ -414,10 +405,6 @@ export function createAgentRoutes(): Router {
     };
 
     sendEvent('connected', { sessionId: thread.id });
-
-    // Remember where the assistant reply begins (just past the committed caller row) so we can capture
-    // the LLM reply on success, and trim it back out on failure without disturbing the caller message.
-    const messagesBefore = thread.messages.length;
 
     const streamCallback: StreamingEventCallback = {
       OnChunk: ({ chunk }) => {
@@ -452,11 +439,6 @@ export function createAgentRoutes(): Router {
     // Track normal completion so the disconnect listener (which also fires after our own res.end())
     // only cancels the run on a genuine client drop, never on successful/errored completion.
     let completed = false;
-    // The caller's utterance is already durably committed (above); only the diplomat's reply is still
-    // pending. `succeeded` gates the in-memory trim in `finally`: on any non-success path (agent error,
-    // client disconnect, unresolved voice, context overflow) we roll the partial/unwritten assistant
-    // reply back out of the cache — keeping the committed caller row — so the live view matches the store.
-    let succeeded = false;
     // A context-length overflow is the one failure execute() never rethrows even under throwOnError
     // (it's reserved for callers that compact-and-retry). This route has no retry, so capture it and
     // treat it as a failure below instead of letting the run fall through to a false `done`.
@@ -517,22 +499,8 @@ export function createAgentRoutes(): Router {
           return;
         }
 
-        // The run succeeded — archive the diplomat's reply. The caller's utterance was already committed
-        // before the run, so ordering relative to any tool-written rows is correct. The reply append is
-        // best-effort: a store failure here degrades gracefully (the reply was streamed live) without
-        // discarding the committed caller row. Greetings carry no caller utterance but still reply.
-        if (thread.diplomacy) {
-          const reply = joinAssistantText(thread.messages.slice(messagesBefore));
-          if (reply) {
-            try {
-              await appendTranscriptMessage(thread, thread.agent, 'text', reply);
-            } catch (error) {
-              logger.error('Failed to append diplomat reply to transcript store', { error });
-            }
-          }
-        }
-
-        succeeded = true;
+        // The run succeeded — archive the diplomat's reply (best-effort) and emit the terminal `done`.
+        await turn.complete();
         sendEvent('done', {
           sessionId: thread.id,
           messageCount: thread.messages.length
@@ -543,12 +511,10 @@ export function createAgentRoutes(): Router {
       const errorMessage = error instanceof Error ? error.message : 'unknown';
       sendEvent('error', { message: `Failed to execute agent: ${errorMessage}` })
     } finally {
-      // Reconcile the in-memory cache with the durable store on a failed run. The committed caller
-      // utterance stays (an append-only store can't unwrite it, and the UI keeps showing it); only its
-      // unwritten reply is trimmed. A special trigger ({{{Greeting}}}) is never a durable utterance —
-      // it was pushed only so the agent could see it — so a failed run drops it too (messagesBefore - 1),
-      // otherwise a phantom greeting row would make the client decline a re-greet this turn.
-      if (!succeeded) thread.messages.splice(isSpecial ? messagesBefore - 1 : messagesBefore);
+      // Release the per-thread lock and reconcile the cache with the append-only store: a failed run
+      // trims the unwritten reply (and a trigger's own cache row), keeping the committed caller. See
+      // ChatTurn.finish.
+      turn.finish();
       completed = true;
       res.end();
     }

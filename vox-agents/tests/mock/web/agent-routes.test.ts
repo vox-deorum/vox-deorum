@@ -419,6 +419,40 @@ describe('agent routes', () => {
       expect(after.body.messages).toHaveLength(0);
     });
 
+    it('rejects a second concurrent turn on the same thread (409) without corrupting the cache', async () => {
+      // The cache is mutated by index (push the caller, slice/splice the reply); two overlapping turns
+      // on one thread would interleave those indices and delete each other's rows. A gated execute keeps
+      // the first turn in flight while the second is posted, so the second must be locked out — committing
+      // nothing — rather than racing the first.
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const slow = vi.fn(async (_n: string, input: any) => {
+        await gate;
+        input.messages.push({ message: { role: 'assistant', content: 'A reply.' }, metadata: { datetime: new Date(), turn: 5 } });
+        return input;
+      });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: slow });
+      let nextID = 110;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      // Fire the first turn but don't await its completion — superagent dispatches lazily on .then(), so
+      // the trailing .then() kicks it off; it then parks in the gated execute, holding the thread lock.
+      const first = request(app).post('/api/agents/message').send({ chatId, message: 'First message' }).then((r) => r);
+      await vi.waitFor(() => expect(slow).toHaveBeenCalledTimes(1));
+
+      // The second concurrent turn is rejected up front, before committing or streaming anything.
+      const second = await request(app).post('/api/agents/message').send({ chatId, message: 'Second message' });
+      expect(second.status).toBe(409);
+      expect(second.body.error).toMatch(/already being generated/i);
+
+      // Let the first turn finish; its caller + reply are the only rows that ever reached the store.
+      release();
+      const firstRes = await first;
+      expect(firstRes.status).toBe(200);
+      expect(firstRes.text).toMatch(/event: done/);
+      expect(mcp.calls('append-message').map((c) => c.args.Content)).toEqual(['First message', 'A reply.']);
+    });
+
     it('retracts the open proposal when the conversation is closed', async () => {
       const proposal = {
         ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
