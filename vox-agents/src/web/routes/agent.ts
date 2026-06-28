@@ -51,9 +51,7 @@ import {
   agentName,
   audienceID,
   identityOf,
-  readTranscript,
-  hydrateMessages,
-  deriveCloseTurn,
+  syncThreadMessages,
   isClosedThisTurn,
   joinAssistantText,
   appendTranscriptMessage,
@@ -302,7 +300,7 @@ export function createAgentRoutes(): Router {
   /**
    * GET /api/agents/chat/:chatId - Get chat thread details with messages
    */
-  router.get('/agents/chat/:chatId', (req: Request, res: Response<GetChatResponse | ErrorResponse>): Response => {
+  router.get('/agents/chat/:chatId', async (req: Request, res: Response<GetChatResponse | ErrorResponse>): Promise<Response> => {
     try {
       const { chatId } = req.params;
       const thread = chatSessions.get(chatId);
@@ -310,6 +308,11 @@ export function createAgentRoutes(): Router {
       if (!thread) {
         return res.status(404).json({ error: 'Chat thread not found' });
       }
+
+      // Sync-on-read: deal-action endpoints and the diplomat's tools write deal rows straight
+      // to the durable store, bypassing this write-through cache. Re-hydrate diplomacy threads
+      // from the store so a refresh reflects the latest proposals/accepts/rejects in append order.
+      if (thread.diplomacy) await syncThreadMessages(thread);
 
       // Enrich with current turn + display labels resolved from the live context.
       return res.json({ ...thread, ...enrichChat(thread) });
@@ -867,11 +870,6 @@ async function openDiplomacyChat(
   const targetCiv = displayIdentity(targetIdentity);
   const initiatorCiv = displayIdentity(initiatorIdentity);
 
-  // Hydrate from the durable store (source of truth for the transcript).
-  const transcript = await readTranscript(initiatorID, targetPlayerID);
-  const messages = hydrateMessages(transcript, targetPlayerID);
-  const closeTurn = deriveCloseTurn(transcript);
-
   const id = diplomacyThreadId(gameID, initiatorID, targetPlayerID);
   // The voiced (target) seat carries the agent name + its identity; the initiator is the audience.
   const ordered = orderParticipants(
@@ -889,8 +887,9 @@ async function openDiplomacyChat(
     existing.contextId = targetContextId;
     existing.title = `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`;
     Object.assign(existing, ordered);
-    existing.messages = messages;
-    existing.closeTurn = closeTurn;
+    // Refresh the write-through cache from the durable store (source of truth) for the
+    // (possibly re-chosen) direction/voice.
+    await syncThreadMessages(existing);
     existing.metadata!.updatedAt = new Date();
     return res.json({ ...existing, ...enrichChat(existing) });
   }
@@ -904,14 +903,15 @@ async function openDiplomacyChat(
     diplomacy: true,
     contextType: 'live',
     contextId: targetContextId,
-    messages,
-    closeTurn,
+    messages: [],
     metadata: {
       createdAt: new Date(),
       updatedAt: new Date(),
       turn,
     }
   };
+  // Hydrate the new thread from the durable store (source of truth for the transcript).
+  await syncThreadMessages(thread);
 
   chatSessions.set(id, thread);
   return res.json({ ...thread, ...enrichChat(thread) });

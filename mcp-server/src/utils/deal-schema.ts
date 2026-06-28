@@ -26,6 +26,7 @@
  */
 
 import * as z from "zod";
+import { MESSAGE_TYPES, type MessageType, type TranscriptMessage } from "./transcript-schema.js";
 import {
   TRADE_ITEM_TYPES,
   PROMISE_TYPES,
@@ -225,3 +226,40 @@ export function symmetrizeDeal(deal: DealPayload): DealPayload {
  */
 export const PerItemValueMapSchema = z.record(z.string(), z.number());
 export type PerItemValueMap = z.infer<typeof PerItemValueMapSchema>;
+
+/**
+ * The `Payload` shape carried by deal-related transcript messages. Proposal/counter rows
+ * store the proposed terms in `Deal` plus optional per-item value snapshots in
+ * `Value1` / `Value2`; accept/reject/enacted rows reference the proposal they answer via
+ * `ProposalMessageID`. Widens the canonical `Record<string, unknown>` payload with the
+ * pinned deal fields while staying assignable to it.
+ */
+export interface DealMessagePayload extends Record<string, unknown> {
+  Deal?: DealPayload;
+  Value1?: PerItemValueMap;
+  Value2?: PerItemValueMap;
+  ProposalMessageID?: number;
+}
+
+/** The `deal-*` subset of the message vocabulary (proposal/counter/accept/reject/enacted). */
+export type DealMessageType = Extract<MessageType, `deal-${string}`>;
+
+/** The deal-related message types, derived from the canonical vocabulary. */
+export const DEAL_MESSAGE_TYPES = MESSAGE_TYPES.filter(
+  (t): t is DealMessageType => t.startsWith("deal-")
+);
+
+/**
+ * A transcript row narrowed to a deal-related message: the canonical {@link TranscriptMessage}
+ * wire shape with its `MessageType` a `deal-*` type and `Payload` typed as {@link DealMessagePayload}.
+ * Used by the deal UI/agents for reduction and inline rendering.
+ */
+export type DealTranscriptMessage = Omit<TranscriptMessage, "MessageType" | "Payload"> & {
+  MessageType: DealMessageType;
+  Payload: DealMessagePayload;
+};
+
+/** Narrow a transcript row to a deal-related message (proposal/counter/accept/reject/enacted). */
+export function isDealMessage(m: TranscriptMessage): m is DealTranscriptMessage {
+  return (DEAL_MESSAGE_TYPES as readonly string[]).includes(m.MessageType);
+}

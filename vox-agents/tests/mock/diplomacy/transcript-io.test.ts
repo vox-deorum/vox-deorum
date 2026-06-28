@@ -17,6 +17,7 @@ import {
   readTranscript,
   appendTranscriptMessage,
   appendCloseMessage,
+  syncThreadMessages,
 } from '../../../src/utils/diplomacy/transcript.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
@@ -87,6 +88,45 @@ describe('appendTranscriptMessage', () => {
   it('returns undefined when the response omits a numeric Turn', async () => {
     mcp.respondWith('append-message', structuredResult({ ID: 5 }));
     expect(await appendTranscriptMessage(thread(), 3, 'text', 'reply')).toBeUndefined();
+  });
+});
+
+describe('syncThreadMessages', () => {
+  /** A stored transcript row with sensible defaults for the ordered pair 1↔3. */
+  const row = (over: Record<string, unknown>) => ({
+    ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+    SpeakerID: 1, MessageType: 'text', Content: '', Payload: {}, Turn: 1, CreatedAt: 0, ...over,
+  });
+
+  it('re-hydrates the thread from the store: text + deal rows inline, in append order', async () => {
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      row({ ID: 1, SpeakerID: 1, MessageType: 'text', Content: 'hello', Turn: 5, CreatedAt: 2 }),
+      row({ ID: 2, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'deal', Turn: 5,
+        Payload: { Deal: { version: 1, items: [], promises: [] } } }),
+      row({ ID: 3, SpeakerID: 3, MessageType: 'close', Content: 'bye', Turn: 6 }),
+    ] }));
+    const t = thread();
+
+    await syncThreadMessages(t);
+
+    // Reads the thread's ordered pair, and replaces messages in store append order.
+    expect(mcp.calls('read-transcript')[0].args).toEqual({ PlayerAID: 1, PlayerBID: 3 });
+    expect(t.messages.map((m) => m.message.content)).toEqual(['hello', 'deal', 'bye']);
+    // The deal row carries its payload for inline rendering/reduction; plain rows don't.
+    expect(t.messages[1].deal?.MessageType).toBe('deal-proposal');
+    expect(t.messages[0].deal).toBeUndefined();
+  });
+
+  it('derives the close turn from the latest close row', async () => {
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      row({ ID: 1, MessageType: 'text', Turn: 4 }),
+      row({ ID: 2, MessageType: 'close', Turn: 8 }),
+    ] }));
+    const t = thread();
+
+    await syncThreadMessages(t);
+
+    expect(t.closeTurn).toBe(8);
   });
 });
 

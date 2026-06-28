@@ -9,11 +9,11 @@ import type { Span, TelemetryMetadata, TelemetrySession } from './telemetry.js';
 import type { EnvoyThread, ParticipantIdentity } from './chat.js';
 import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
 // Pinned deal contract shared across interactive-diplomacy stages 4–6.
-import type { DealPayload, PerItemValueMap } from '../../../mcp-server/dist/utils/deal-schema.js';
+import type { DealPayload, DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
 
 // Re-export types that are used in API responses
 export type { PlayersReport };
-export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap } from '../../../mcp-server/dist/utils/deal-schema.js';
+export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap, DealMessagePayload, DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
 // The enriched `inspect-deal` result shape is owned by the tool (interactive-diplomacy stage 4);
 // re-export it (and its normalized range / candidate / promise-target types) verbatim so the Web
 // deal board consumes the same explicit interfaces the tool returns rather than loose records.
@@ -382,27 +382,6 @@ export interface DealActionResponse {
   turn?: number;
   /** Whether a human proposal/counter successfully produced and persisted a diplomat reply. */
   agentResponded?: boolean;
-}
-
-/** One deal-related transcript message, returned for client-side reduction. */
-export interface DealTranscriptMessage {
-  ID: number;
-  Player1ID: number;
-  Player2ID: number;
-  Player1Role: string;
-  Player2Role: string;
-  SpeakerID: number;
-  MessageType: string;
-  Content: string;
-  Payload: {
-    Deal?: DealPayload;
-    Value1?: PerItemValueMap;
-    Value2?: PerItemValueMap;
-    ProposalMessageID?: number;
-    [key: string]: unknown;
-  };
-  Turn: number;
-  CreatedAt: number;
 }
 
 /** Response listing a conversation's deal messages in append order, for reduction. */

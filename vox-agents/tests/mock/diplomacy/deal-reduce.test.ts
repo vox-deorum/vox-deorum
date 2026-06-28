@@ -12,7 +12,7 @@ import {
 import type { TranscriptMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 
 let nextId = 1;
-function msg(messageType: string, payload: Record<string, unknown> = {}, partial: Partial<TranscriptMessage> = {}): TranscriptMessage {
+function msg(messageType: TranscriptMessage['MessageType'], payload: Record<string, unknown> = {}, partial: Partial<TranscriptMessage> = {}): TranscriptMessage {
   return {
     ID: nextId++,
     Player1ID: 1,

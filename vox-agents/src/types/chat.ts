@@ -18,6 +18,7 @@ export interface StreamingEventCallback {
  */
 
 import type { ModelMessage } from "ai";
+import type { DealTranscriptMessage } from "../../../mcp-server/dist/utils/deal-schema.js";
 
 /** Identity (civ + leader) of a conversation participant, resolved once when the thread opens. */
 export interface ParticipantIdentity {
@@ -43,6 +44,13 @@ export interface MessageWithMetadata {
     /** Game turn when this message was created */
     turn: number;
   };
+
+  /**
+   * Set when this thread item is a deal-related transcript row (proposal/counter/accept/
+   * reject/enacted), carrying its payload so the UI renders an inline deal card and reduces
+   * deal state from the same append-ordered message list — no separate fetch or timestamp merge.
+   */
+  deal?: DealTranscriptMessage;
 }
 
 /**

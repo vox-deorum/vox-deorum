@@ -12,6 +12,7 @@
 
 import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
+import { hydrateMessages, deriveCloseTurn } from "./transcript-utils.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
 
 export type { TranscriptMessage } from "./transcript-utils.js";
@@ -40,6 +41,19 @@ export async function readTranscript(playerAID: number, playerBID: number): Prom
   const structured = (raw.structuredContent ?? raw) as Record<string, unknown>;
   const arr = structured?.messages as unknown;
   return Array.isArray(arr) ? (arr as TranscriptMessage[]) : [];
+}
+
+/**
+ * Re-hydrate a diplomacy thread's in-memory message cache (and close status) from the durable
+ * transcript — the source of truth. Deal-action endpoints and the diplomat's tools write deal
+ * rows straight to the store, bypassing the cache; calling this at every read boundary (open,
+ * refresh) keeps the thread the UI renders in sync with what was actually persisted, in append
+ * order. The single place transcript→thread synchronization lives.
+ */
+export async function syncThreadMessages(thread: EnvoyThread): Promise<void> {
+  const transcript = await readTranscript(thread.player1ID, thread.player2ID);
+  thread.messages = hydrateMessages(transcript, thread.agent);
+  thread.closeTurn = deriveCloseTurn(transcript);
 }
 
 /**

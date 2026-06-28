@@ -48,12 +48,12 @@ import { ref, watch, nextTick, onMounted } from 'vue';
 import { VList } from 'virtua/vue';
 import ChatMessage from './ChatMessage.vue';
 import DealMessageCard from '../deal/DealMessageCard.vue';
-import type { RenderedThreadItem } from '../deal/deal-thread';
+import type { MessageWithMetadata } from '@/utils/types';
 import type { DealStatus } from '../deal/deal-reduce';
 
 interface Props {
-  /** Rendered stream items: ordinary chat messages plus interleaved inline deal cards. */
-  messages: RenderedThreadItem[];
+  /** Rendered stream items: ordinary chat messages plus inline deal cards (a row's `deal`). */
+  messages: MessageWithMetadata[];
   autoScroll?: boolean;
   scrollTrigger?: number;
   userLabel?: string;

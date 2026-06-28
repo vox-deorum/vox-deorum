@@ -34,7 +34,9 @@ import {
   applyDealDurations,
   symmetrizeDeal,
   TARGETED_PROMISE_TYPES,
+  isDealMessage,
   type DealPayload,
+  type DealTranscriptMessage,
   type PerItemValueMap,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
@@ -322,25 +324,16 @@ async function appendRaw(
   };
 }
 
-/** Message types that participate in deal reduction (proposal/counter/response/enacted). */
-const DEAL_MESSAGE_TYPES = new Set([
-  "deal-proposal",
-  "deal-counter",
-  "deal-accept",
-  "deal-reject",
-  "deal-enacted",
-]);
-
 /**
  * Read the deal-related messages for a conversation's endpoint pair, in append order.
  * The Web reduces these into the latest active proposal client-side (work item 4); the
  * readable text/close messages are hydrated separately for the chat thread.
  */
-export async function readDealMessages(playerAID: number, playerBID: number): Promise<TranscriptMessage[]> {
+export async function readDealMessages(playerAID: number, playerBID: number): Promise<DealTranscriptMessage[]> {
   const result = await mcpClient.callTool("read-transcript", { PlayerAID: playerAID, PlayerBID: playerBID });
   const arr = unwrap<{ messages?: unknown }>(result)?.messages;
   if (!Array.isArray(arr)) return [];
-  return (arr as TranscriptMessage[]).filter((m) => DEAL_MESSAGE_TYPES.has(m.MessageType));
+  return (arr as TranscriptMessage[]).filter(isDealMessage);
 }
 
 /**

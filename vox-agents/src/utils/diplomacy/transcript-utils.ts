@@ -13,21 +13,11 @@
 
 import type { ModelMessage } from "ai";
 import type { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../../types/index.js";
-
-/** One transcript row as returned by the mcp-server `read-transcript` tool. */
-export interface TranscriptMessage {
-  ID: number;
-  Player1ID: number;
-  Player2ID: number;
-  Player1Role: string;
-  Player2Role: string;
-  SpeakerID: number;
-  MessageType: string;
-  Content: string;
-  Payload: Record<string, unknown>;
-  Turn: number;
-  CreatedAt: number;
-}
+// The canonical transcript/deal wire contracts are owned by mcp-server; re-export the row
+// type so existing importers keep working, and reuse the shared deal-message guard.
+import type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
+import { isDealMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
+export type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
 
 /** Message types that contribute readable text to a conversation thread. */
 const CONVERSATION_TYPES = new Set(["text", "close"]);
@@ -82,18 +72,25 @@ export function speakerRole(speakerID: number, voicedID: number): "assistant" | 
 }
 
 /**
- * Hydrate a thread's in-memory message list from a stored transcript. Only readable
- * conversation messages (`text`, `close`) become thread messages; deal messages (added
- * in later stages) are reduced separately by the deal UI/agents.
+ * Hydrate a thread's in-memory message list from a stored transcript, in the store's append
+ * order — the single source of truth for conversation ordering. Readable conversation
+ * messages (`text`, `close`) and deal messages (`deal-*`) both become thread items; a deal
+ * row additionally carries its payload on `deal`, so the UI renders an inline deal card and
+ * reduces deal state from this same ordered list (no separate fetch or timestamp merge).
  */
 export function hydrateMessages(transcript: TranscriptMessage[], voicedID: number): MessageWithMetadata[] {
   return transcript
-    .filter((m) => CONVERSATION_TYPES.has(m.MessageType))
-    .map((m) => ({
-      message: { role: speakerRole(m.SpeakerID, voicedID), content: m.Content } as ModelMessage,
-      // SQLite's unixepoch() stores whole seconds; JavaScript Date expects milliseconds.
-      metadata: { datetime: new Date(m.CreatedAt * 1000), turn: m.Turn },
-    }));
+    .filter((m) => CONVERSATION_TYPES.has(m.MessageType) || isDealMessage(m))
+    .map((m) => {
+      const item: MessageWithMetadata = {
+        message: { role: speakerRole(m.SpeakerID, voicedID), content: m.Content } as ModelMessage,
+        // SQLite's unixepoch() stores whole seconds; JavaScript Date expects milliseconds.
+        metadata: { datetime: new Date(m.CreatedAt * 1000), turn: m.Turn },
+      };
+      // The guard narrows `m` to DealTranscriptMessage — no cast needed.
+      if (isDealMessage(m)) item.deal = m;
+      return item;
+    });
 }
 
 /**

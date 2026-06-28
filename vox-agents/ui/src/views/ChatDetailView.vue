@@ -146,11 +146,10 @@ import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { api } from '../api/client';
-import type { EnvoyThread, DealTranscriptMessage } from '../utils/types';
+import type { EnvoyThread } from '../utils/types';
 import ChatMessages from '../components/chat/ChatMessages.vue';
 import DeleteSessionDialog from '../components/DeleteSessionDialog.vue';
 import DealScreen from '../components/deal/DealScreen.vue';
-import { mergeThreadItems, reviveMessageDates } from '../components/deal/deal-thread';
 import { deriveActiveProposal } from '../components/deal/deal-reduce';
 // Pure transcript helpers shared with the backend (via @vox) so labels and the close-lock
 // comparison can never drift from the server's `isClosedThisTurn` / role derivation.
@@ -171,7 +170,6 @@ const isStreaming = ref(false);
 const isClosing = ref(false);
 const showDeleteDialog = ref(false);
 const showDeal = ref(false);
-const dealMessages = ref<DealTranscriptMessage[]>([]);
 const dealActionBusy = ref(false);
 let sseCleanup: (() => void) | null = null;
 
@@ -211,10 +209,13 @@ const canSend = computed(() => !!thread.value && !isStreaming.value && !closedTh
 /** Inline deal actions are blocked by either their own write or an active agent reply. */
 const dealBlocked = computed(() => dealActionBusy.value || isStreaming.value);
 
-/** Messages filtered to hide special message tokens (e.g., {{{Greeting}}}) from display */
+/** Messages filtered for display: hide special tokens and the card-less deal-reject row. */
 const visibleMessages = computed(() => {
   if (!thread.value) return [];
   return thread.value.messages.filter(msg => {
+    // A deal-reject is kept in the thread only for status reduction — it renders as the
+    // *status* of the proposal it answers, never as its own card (see deal-reduce).
+    if (msg.deal) return msg.deal.MessageType !== 'deal-reject';
     if (msg.message.role === 'user' && typeof msg.message.content === 'string') {
       return !/^\{\{\{.+\}\}\}$/.test(msg.message.content);
     }
@@ -222,17 +223,18 @@ const visibleMessages = computed(() => {
   });
 });
 
+/** Deal records carried inline in the thread (append order) — the source for reduction. */
+const dealMessages = computed(() =>
+  (thread.value?.messages ?? []).flatMap((m) => (m.deal ? [m.deal] : []))
+);
 /** The reduced deal state (latest active proposal + status) from the conversation's deal messages. */
 const dealReduction = computed(() => deriveActiveProposal(dealMessages.value));
 /** The latest proposal's message ID — its card carries the live status (actions only when open). */
 const activeDealID = computed(() => dealReduction.value.active?.ID);
 /** Status of the latest proposal, so its inline card can show open actions vs. rejected/enacted. */
 const dealStatus = computed(() => dealReduction.value.status);
-/** The rendered stream: visible chat messages with deal-message cards interleaved by time. */
-const renderedItems = computed(() => {
-  if (!thread.value) return [];
-  return mergeThreadItems(visibleMessages.value, dealMessages.value, thread.value.agent);
-});
+/** The rendered stream: the thread's messages in store append order, deal cards inline. */
+const renderedItems = computed(() => visibleMessages.value);
 
 // Use the thread messages composable
 const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
@@ -268,19 +270,13 @@ const goBack = () => {
 
 /** Refresh the in-memory conversation and its separately stored deal messages. */
 const refreshConversation = async () => {
+  // The API client revives server-hydrated datetimes to Date objects (deal rows included),
+  // so the thread renders in store append order with no client-side date massaging here.
   const response = await api.getAgentChat(sessionId.value);
-  // Server-hydrated history carries ISO-string datetimes; revive them to Date so the thread's
-  // timestamps match live-streamed messages (and merge/sort cleanly with deal cards).
-  if (response?.messages) response.messages = reviveMessageDates(response.messages);
   thread.value = response;
   currentTurn.value = response.currentTurn;
   voicedCiv.value = response.voicedCiv;
   audienceCiv.value = response.audienceCiv;
-
-  if (!thread.value) return;
-
-  // Load the conversation's deal messages so proposals render inline in the thread.
-  if (thread.value.diplomacy) await loadDealMessages();
 };
 
 const loadSession = async () => {
@@ -327,17 +323,6 @@ const confirmDelete = () => {
   showDeleteDialog.value = true;
 };
 
-/** Fetch the conversation's deal messages for inline rendering (diplomacy threads only). */
-const loadDealMessages = async () => {
-  if (!thread.value?.diplomacy) return;
-  try {
-    const res = await api.getDealMessages(sessionId.value);
-    dealMessages.value = res.messages;
-  } catch (err) {
-    console.error('Failed to load deal messages:', err);
-  }
-};
-
 /** Accept the active proposal (wired; enactment deferred to stage 6 — surfaced as a notice). */
 const onDealAccept = async (id: number) => {
   if (dealBlocked.value) return;
@@ -376,7 +361,6 @@ const closeConversation = async () => {
   isClosing.value = true;
   try {
     const updated = await api.closeAgentChat(sessionId.value);
-    if (updated?.messages) updated.messages = reviveMessageDates(updated.messages);
     thread.value = updated;
     currentTurn.value = updated.currentTurn;
     voicedCiv.value = updated.voicedCiv;

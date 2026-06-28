@@ -44,7 +44,8 @@ import type {
   DealRejectRequest,
   DealAcceptRequest,
   DealActionResponse,
-  DealMessagesResponse
+  DealMessagesResponse,
+  MessageWithMetadata
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
 
@@ -487,12 +488,29 @@ class ApiClient {
   }
 
   /**
+   * Normalize a fetched thread's message datetimes to real `Date` objects. Server-hydrated
+   * history arrives with `metadata.datetime` as an ISO string (a `Date` serialized over HTTP);
+   * revive it here — at the deserialization seam — so callers always see `Date`s (and the `deal`
+   * payload and every other field are preserved via the spread).
+   */
+  private reviveThreadDates(thread: GetChatResponse): GetChatResponse {
+    if (Array.isArray(thread?.messages)) {
+      thread.messages = thread.messages.map((m: MessageWithMetadata) =>
+        m.metadata?.datetime instanceof Date
+          ? m
+          : { ...m, metadata: { ...m.metadata, datetime: new Date(m.metadata.datetime) } }
+      );
+    }
+    return thread;
+  }
+
+  /**
    * Get a specific agent chat thread
    */
   async getAgentChat(chatId: string): Promise<GetChatResponse> {
-    return this.fetchJson<GetChatResponse>(
+    return this.reviveThreadDates(await this.fetchJson<GetChatResponse>(
       `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}`
-    );
+    ));
   }
 
   /**
@@ -510,14 +528,14 @@ class ApiClient {
    * conversation for the rest of the current turn. Returns the updated thread.
    */
   async closeAgentChat(chatId: string, message?: string): Promise<GetChatResponse> {
-    return this.fetchJson<GetChatResponse>(
+    return this.reviveThreadDates(await this.fetchJson<GetChatResponse>(
       `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/close`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message })
       }
-    );
+    ));
   }
 
   // ============= Typed Deal-Action API (interactive-diplomacy stage 4) =============

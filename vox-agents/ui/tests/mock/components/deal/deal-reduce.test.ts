@@ -3,7 +3,7 @@ import { deriveActiveProposal } from '@/components/deal/deal-reduce';
 import type { DealTranscriptMessage } from '@/utils/types';
 
 let nextId = 1;
-function msg(messageType: string, payload: Record<string, unknown> = {}): DealTranscriptMessage {
+function msg(messageType: DealTranscriptMessage['MessageType'], payload: Record<string, unknown> = {}): DealTranscriptMessage {
   const id = nextId++;
   return {
     ID: id,

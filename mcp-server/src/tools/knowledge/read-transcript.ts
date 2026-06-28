@@ -13,17 +13,7 @@ import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { getDiplomaticMessages } from "../../knowledge/getters/diplomatic-messages.js";
-
-/** Message vocabulary, for the optional MessageType filter. */
-const MESSAGE_TYPES = [
-  "text",
-  "close",
-  "deal-proposal",
-  "deal-counter",
-  "deal-accept",
-  "deal-reject",
-  "deal-enacted",
-] as const;
+import { MESSAGE_TYPES, type MessageType, TranscriptMessageSchema } from "../../utils/transcript-schema.js";
 
 /** Input schema for the read-transcript tool. */
 const ReadTranscriptInputSchema = z.object({
@@ -31,21 +21,6 @@ const ReadTranscriptInputSchema = z.object({
   PlayerBID: z.number().int().min(-1).describe("The other endpoint's playerID (or -1 for the observer)"),
   MessageType: z.enum(MESSAGE_TYPES).optional().describe("Optional: only return messages of this type"),
   Role: z.string().optional().describe("Optional: only return messages whose speaker holds this free-form role (e.g. 'diplomat')"),
-});
-
-/** Schema for a single transcript message. */
-const TranscriptMessageSchema = z.object({
-  ID: z.number(),
-  Player1ID: z.number(),
-  Player2ID: z.number(),
-  Player1Role: z.string(),
-  Player2Role: z.string(),
-  SpeakerID: z.number(),
-  MessageType: z.string(),
-  Content: z.string(),
-  Payload: z.record(z.string(), z.any()),
-  Turn: z.number(),
-  CreatedAt: z.number(),
 });
 
 /** Output schema: the ordered list of messages, wrapped in an object so the MCP
@@ -87,7 +62,8 @@ class ReadTranscriptTool extends ToolBase {
         Player1Role: m.Player1Role,
         Player2Role: m.Player2Role,
         SpeakerID: m.SpeakerID,
-        MessageType: m.MessageType,
+        // The DB column is a free string; the store only ever writes a known type.
+        MessageType: m.MessageType as MessageType,
         Content: m.Content,
         Payload: (m.Payload ?? {}) as Record<string, unknown>,
         Turn: m.Turn,

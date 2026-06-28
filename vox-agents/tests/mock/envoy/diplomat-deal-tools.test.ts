@@ -17,7 +17,7 @@ import { formatDealContext } from '../../../src/envoy/utils/diplomat-utils.js';
 import { deriveActiveProposal } from '../../../src/utils/diplomacy/deal-reduce.js';
 import type { TranscriptMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 
-function msg(messageType: string, payload: Record<string, unknown>, id = 1): TranscriptMessage {
+function msg(messageType: TranscriptMessage['MessageType'], payload: Record<string, unknown>, id = 1): TranscriptMessage {
   return {
     ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
     SpeakerID: 3, MessageType: messageType, Content: '', Payload: payload, Turn: 1, CreatedAt: 0,

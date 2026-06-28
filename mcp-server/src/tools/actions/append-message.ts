@@ -29,23 +29,13 @@ import { composeVisibility } from "../../utils/knowledge/visibility.js";
 import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { orderPlayerPair, getDiplomaticMessageById } from "../../knowledge/getters/diplomatic-messages.js";
+import { MESSAGE_TYPES } from "../../utils/transcript-schema.js";
 
 /** The observer / no-seat endpoint sentinel (shared with the existing non-diplomacy chats). */
 const OBSERVER_ID = -1;
 
 /** Default role descriptor for the observer endpoint when none is provided. */
 const OBSERVER_ROLE = "observer";
-
-/** Full message vocabulary (matches the schema column). */
-const MESSAGE_TYPES = [
-  "text",
-  "close",
-  "deal-proposal",
-  "deal-counter",
-  "deal-accept",
-  "deal-reject",
-  "deal-enacted",
-] as const;
 
 /** Message types that carry proposed deal terms in Payload.Deal. */
 const PROPOSAL_TYPES = new Set(["deal-proposal", "deal-counter"]);
