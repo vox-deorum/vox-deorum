@@ -6,7 +6,7 @@
 import type { Ref } from 'vue';
 import type { EnvoyThread, ChatMessageRequest } from '@/utils/types';
 import type { LanguageModelV3TextPart, LanguageModelV3ReasoningPart, LanguageModelV3ToolCallPart, LanguageModelV3ToolResultPart } from '@ai-sdk/provider';
-import { api } from '@/api/client';
+import { api, type SendCommitState } from '@/api/client';
 import type { ModelMessage } from 'ai';
 
 export interface UseThreadMessagesOptions {
@@ -15,52 +15,46 @@ export interface UseThreadMessagesOptions {
   isStreaming: Ref<boolean>;
   onNewChunk?: () => void;
   /**
-   * A user-sent message could not be delivered because the send never took effect (e.g. the live
-   * turn wasn't available, or the conversation was closed this turn). Its optimistically-rendered
-   * rows have already been removed; the host returns the text to the input box and surfaces why.
+   * A user-sent message could not be delivered. `commit` says whether retrying is safe: 'uncommitted'
+   * (a pre-stream rejection — the live turn wasn't available, the conversation was closed this turn,
+   * etc.) means nothing was written and the optimistic rows were fully removed, so the host returns the
+   * text to the input box for a clean retry; 'committed' means the stream had opened and the message may
+   * be on the record, so only the unfinished reply was removed and the message stays on screen — the
+   * host surfaces the error WITHOUT restoring the input, since resending could duplicate it.
    */
-  onSendFailed?: (text: string, error: string) => void;
+  onSendFailed?: (text: string, error: string, commit: SendCommitState) => void;
+  /**
+   * A greeting request ({{{Greeting}}}) failed. A greeting has no user text to restore, so the host
+   * just surfaces why it bounced; the server drops the failed trigger so a reload can re-greet.
+   */
+  onGreetingFailed?: (error: string) => void;
 }
 
 export function useThreadMessages(options: UseThreadMessagesOptions) {
-  const { thread, sessionId, isStreaming, onNewChunk, onSendFailed } = options;
-  let contents: Array<LanguageModelV3TextPart | LanguageModelV3ReasoningPart | LanguageModelV3ToolCallPart | LanguageModelV3ToolResultPart>;
+  const { thread, sessionId, isStreaming, onNewChunk, onSendFailed, onGreetingFailed } = options;
 
-  /**
-   * Push or update an error message
-   * @param error - Error object or string
-   * @param messageIndex - Optional index to update existing message
-   * @returns Index of the error message
-   */
-  const pushErrorMessage = (error: any) => {
-    if (!thread.value) return -1;
-    const errorMessage = typeof error === 'string'
-      ? error
-      : error?.message || 'An error occurred during the streaming.';
-    const errorContent = `❌ ${errorMessage}`;
-    // Update existing message
-    contents.push({
-      type: "text",
-      text: errorContent
-    });
-  };
+  /** Trim the thread's messages back to `length`, no-op if the thread went away mid-stream. */
+  const rollbackTo = (length: number) => thread.value?.messages.splice(length);
 
   /**
    * Streams an agent response, setting up the assistant message placeholder and handling all chunk
-   * types. Shared by sendMessage and requestGreeting. `rollbackTo` is the thread length captured
-   * before the caller's optimistic rows were added; if the send never takes effect, every row from
-   * there on is removed and `onRecoverableFailure` runs (so the caller can restore the input).
+   * types. Shared by sendMessage and requestGreeting. `optimisticStart` is the thread length captured
+   * before the caller's optimistic row was added; the assistant placeholder we push here sits just
+   * after it. On a failure before `done`, a RECOVERABLE error (the send never took effect) rolls every
+   * optimistic row back to `optimisticStart`; an unrecoverable one (the stream had opened, so the
+   * message may be committed) rolls back only the unfinished assistant row and keeps the message.
    */
   const streamResponse = (
     request: ChatMessageRequest,
-    rollbackTo: number,
-    onRecoverableFailure?: (error: string) => void,
+    optimisticStart: number,
+    onFailure?: (error: string, commit: SendCommitState) => void,
   ): (() => void) | undefined => {
     if (!thread.value) return;
 
     const currentTurn = thread.value.metadata?.turn || 0;
 
-    // Prepare for assistant response with array content for multi-part support
+    // Prepare for assistant response with array content for multi-part support. Its index is the
+    // rollback point for an unrecoverable failure (keep the caller's message, drop the partial reply).
     const assistantMessage: ModelMessage = { role: "assistant", content: [] };
     thread.value.messages.push({
       message: assistantMessage,
@@ -69,14 +63,21 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
         turn: currentTurn
       }
     });
-    contents = thread.value.messages[thread.value.messages.length - 1]!.message.content as any;
+    const assistantStart = thread.value.messages.length - 1;
+    const contents = thread.value.messages[assistantStart]!.message.content as Array<
+      LanguageModelV3TextPart | LanguageModelV3ReasoningPart | LanguageModelV3ToolCallPart | LanguageModelV3ToolResultPart
+    >;
 
-    // Prepare for each type
+    // The terminal 'done' commits the exchange server-side; a trailing error after it must not undo it.
+    let done = false;
+
+    // Streaming text/reasoning parts are mutated in place as deltas arrive. `contents.push(obj)` stores
+    // the very object we hold here (arrays push by reference), so the running `currentText`/
+    // `currentReasoning` reference already points at the in-array element — no re-read needed.
     let currentText: LanguageModelV3TextPart | null = null;
     let currentTextID: string = "";
     let currentReasoning: LanguageModelV3ReasoningPart | null = null;
     let currentReasoningID: string = "";
-    let currentToolCall: LanguageModelV3ToolCallPart | null = null;
 
     return api.streamAgentMessage(
       request,
@@ -89,7 +90,6 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
               currentTextID = part.id;
               currentText = { type: "text", text: part.text };
               contents.push(currentText);
-              currentText = contents[contents.length - 1] as any;
             } else if (currentText) {
               // Continue streaming to existing text part
               currentText.text += part.text;
@@ -105,7 +105,6 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
               currentReasoningID = part.id;
               currentReasoning = { type: "reasoning", text: part.text };
               contents.push(currentReasoning);
-              currentReasoning = contents[contents.length - 1] as any;
             } else if (currentReasoning) {
               // Continue streaming to existing reasoning part
               currentReasoning.text += part.text;
@@ -115,14 +114,13 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
             break;
 
           case "tool-call":
-            currentToolCall = {
+            // Tool calls arrive whole (not streamed), so just append — nothing mutates it afterward.
+            contents.push({
               type: "tool-call",
               toolCallId: part.toolCallId,
               toolName: part.toolName,
               input: part.input
-            };
-            contents.push(currentToolCall);
-            currentToolCall = contents[contents.length - 1] as any;
+            });
             break;
 
           case "tool-result":
@@ -143,23 +141,20 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
             break;
         }
       },
-      (error, info) => {
+      (error, commit) => {
+        if (done) return; // a terminal 'done' already committed the exchange — ignore a trailing error
         console.error('SSE error:', error);
-        if (info.recoverable) {
-          // The send never took effect (the stream never opened — the route rejected before
-          // committing the message). Remove the optimistic rows we added and let the caller restore
-          // the input, rather than leaving a phantom that disappears on the next reload.
-          thread.value?.messages.splice(rollbackTo);
-          onRecoverableFailure?.(error);
-        } else {
-          // The reply failed mid-stream after the message was committed — keep it and show the
-          // error inline (rolling it back here would duplicate the stored message on a resend).
-          pushErrorMessage(error);
-        }
+        // 'uncommitted': the send was rejected before the server wrote anything (a pre-stream guard), so
+        // remove every optimistic row and let the caller restore the input for a clean retry. 'committed':
+        // the stream had opened and the caller's message may already be on the record — keep it on screen
+        // and drop only the unfinished assistant reply, so a retry can't duplicate it.
+        rollbackTo(commit === 'uncommitted' ? optimisticStart : assistantStart);
+        onFailure?.(error, commit);
         isStreaming.value = false;
       },
       () => {
         // onDone callback - streaming completed successfully
+        done = true;
         console.log('Streaming completed');
         isStreaming.value = false;
       }
@@ -178,7 +173,7 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
 
     // Optimistically render the user's message. Capture the pre-send length so a failed send can
     // remove exactly the rows we add (this user message + the assistant placeholder).
-    const rollbackTo = thread.value.messages.length;
+    const optimisticStart = thread.value.messages.length;
     const currentTurn = thread.value.metadata?.turn || 0;
     const userMessage: ModelMessage = { role: "user", content: message };
     thread.value.messages.push({
@@ -194,13 +189,14 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     try {
       return streamResponse(
         { chatId: sessionId.value, message },
-        rollbackTo,
-        (error) => onSendFailed?.(message, error),
+        optimisticStart,
+        (error, commit) => onSendFailed?.(message, error, commit),
       );
     } catch (error) {
+      // A synchronous throw means the stream never started, so nothing was committed → 'uncommitted'.
       console.error('Failed to send message:', error);
-      thread.value?.messages.splice(rollbackTo);
-      onSendFailed?.(message, error instanceof Error ? error.message : 'Failed to send message');
+      rollbackTo(optimisticStart);
+      onSendFailed?.(message, error instanceof Error ? error.message : 'Failed to send message', 'uncommitted');
       isStreaming.value = false;
     }
   };
@@ -216,15 +212,21 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     }
 
     // The greeting trigger isn't a visible user message; only the assistant placeholder is
-    // optimistic, so a failed greeting just rolls that one row back (no input to restore).
-    const rollbackTo = thread.value.messages.length;
+    // optimistic, so a failed greeting just rolls that one row back (no input to restore). It still
+    // surfaces the failure (rather than silently vanishing) via onGreetingFailed.
+    const optimisticStart = thread.value.messages.length;
     isStreaming.value = true;
 
     try {
-      return streamResponse({ chatId: sessionId.value, message: '{{{Greeting}}}' }, rollbackTo);
+      return streamResponse(
+        { chatId: sessionId.value, message: '{{{Greeting}}}' },
+        optimisticStart,
+        (error) => onGreetingFailed?.(error),
+      );
     } catch (error) {
       console.error('Failed to request greeting:', error);
-      thread.value?.messages.splice(rollbackTo);
+      rollbackTo(optimisticStart);
+      onGreetingFailed?.(error instanceof Error ? error.message : 'Failed to request greeting');
       isStreaming.value = false;
     }
   };

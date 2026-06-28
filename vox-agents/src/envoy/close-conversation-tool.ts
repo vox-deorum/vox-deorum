@@ -17,7 +17,7 @@ import type { VoxContext } from "../infra/vox-context.js";
 import type { StrategistParameters } from "../strategist/strategy-parameters.js";
 import type { EnvoyThread } from "../types/index.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
-import { appendCloseMessage } from "../utils/diplomacy/transcript.js";
+import { closeConversation } from "../utils/diplomacy/deal.js";
 import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("close-conversation-tool");
@@ -44,11 +44,12 @@ export function createCloseConversationTool(context: VoxContext<StrategistParame
           return "No active conversation to close.";
         }
         // The diplomat voices the agent seat (thread.agent), so the close is authored by it.
-        // The recorded turn comes from the store's authoritative current turn (returned by
-        // append-message); parameters.turn is only a fallback, since a live agent's turn is a
-        // decision-point snapshot that can be stale once a conversation outlives its pause.
+        // closeConversation first retracts any open proposal so nothing is left enactable, then
+        // records the close. The recorded turn comes from the store's authoritative current turn
+        // (returned by append-message); parameters.turn is only a fallback, since a live agent's
+        // turn is a decision-point snapshot that can be stale once a conversation outlives its pause.
         try {
-          const turn = await appendCloseMessage(thread, thread.agent, input.Farewell, parameters.turn);
+          const turn = await closeConversation(thread, thread.agent, input.Farewell, parameters.turn);
           return `Conversation closed on turn ${turn}. It cannot be reopened until a later turn.`;
         } catch (error) {
           logger.error("Failed to append close message", { error });

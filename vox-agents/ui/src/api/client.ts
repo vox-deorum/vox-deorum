@@ -49,6 +49,17 @@ import type {
 import type { TextStreamPart, ToolSet } from 'ai';
 
 /**
+ * Where a failed send leaves the durable record, so the UI knows whether retrying is safe:
+ * - 'uncommitted': the stream never opened (a pre-stream rejection — unavailable turn, closed
+ *   conversation, a 502 on the caller append…), so nothing was written; the host can roll the
+ *   optimistic rows fully back and restore the input for a clean retry.
+ * - 'committed': the stream had already opened, so the caller's message may be on the record; the
+ *   host keeps it and drops only the unfinished reply, since resending could duplicate a committed
+ *   utterance. (The name reflects the safe assumption, not certainty — an ambiguous drop counts here.)
+ */
+export type SendCommitState = 'uncommitted' | 'committed';
+
+/**
  * Normalize whatever an `sse.js` 'error' event carries into one human-readable line. A server-sent
  * error event and a non-2xx POST response both stash their JSON body in `event.data`; a bare
  * connection drop has none. We accept the `{ message }` shape our own SSE error events use, the
@@ -603,7 +614,7 @@ class ApiClient {
   streamAgentMessage(
     request: ChatMessageRequest,
     onMessage: (data: TextStreamPart<ToolSet>) => void,
-    onError: (message: string, info: { recoverable: boolean }) => void,
+    onError: (message: string, commit: SendCommitState) => void,
     onDone: () => void
   ): () => void {
     const key = `agent-chat-${request.chatId}`;
@@ -619,16 +630,8 @@ class ApiClient {
       withCredentials: false
     });
 
-    // Track whether the stream actually opened. The server emits `connected` only after it has passed
-    // every pre-stream guard and committed the caller's message; a non-2xx JSON rejection (live turn
-    // unavailable, closed-this-turn, …) returns before that. So `opened === false` at failure time
-    // means the send never took effect — the caller can safely roll it back and restore the input.
-    let opened = false;
-    eventSource.addEventListener('connected', () => { opened = true; });
-
     // Listen for 'message' events (streaming chunks)
     eventSource.addEventListener('message', (event: any) => {
-      opened = true;
       try {
         const data = JSON.parse(event.data);
         // The backend sends just the chunk string for message events
@@ -641,19 +644,22 @@ class ApiClient {
     // Listen for 'done' events
     eventSource.addEventListener('done', onDone);
 
-    // Surface a stream failure exactly once, as a human-readable line. sse.js dispatches a single
-    // 'error' event to BOTH `onerror` and every `addEventListener('error')` listener, and a non-2xx
-    // response to the POST (the route's pre-stream JSON rejections: 400/404/409/502/503) lands here
-    // too — with the JSON body in `event.data`. Without this guard one failure yields two bubbles,
-    // and the raw event/`{ error }` body doesn't match what the caller expects, so both read generic.
+    // Surface a stream failure exactly once, with a `SendCommitState` telling the caller whether a retry
+    // is safe. sse.js dispatches a single 'error' event to BOTH `onerror` and every
+    // `addEventListener('error')` listener, so the `failed` guard collapses the two bubbles into one. A
+    // non-2xx response to the POST (the route's pre-stream JSON rejections: 400/404/409/502/503) carries
+    // `event.responseCode` and means the send never took effect → 'uncommitted'; any other terminal
+    // failure (a server-sent error event or a bare drop, no responseCode) arrives only after the stream
+    // opened, when the caller's message may already be on the record → 'committed'.
     let failed = false;
     const fail = (event: any) => {
       if (failed) return;
       failed = true;
       const message = streamErrorMessage(event);
+      const commit: SendCommitState =
+        typeof event?.responseCode === 'number' && event.responseCode >= 400 ? 'uncommitted' : 'committed';
       console.error('SSE error:', message);
-      // `recoverable` ⇒ the stream never opened, so the send didn't take effect and may be rolled back.
-      onError(message, { recoverable: !opened });
+      onError(message, commit);
     };
     eventSource.addEventListener('error', fail);
     eventSource.onerror = fail;

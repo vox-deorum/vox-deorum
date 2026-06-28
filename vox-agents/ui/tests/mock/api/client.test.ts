@@ -212,29 +212,43 @@ describe('ApiClient SSE streams', () => {
     sse.emit('done')
     expect(onDone).toHaveBeenCalled()
 
-    // A 'message' already streamed, so the failure is mid-stream (not recoverable — the send took effect).
+    // A bare 'error' event (no responseCode) lands after the stream opened → the message may be committed.
     sse.emit('error', JSON.stringify('server failed'))
-    expect(onError).toHaveBeenCalledWith('server failed', { recoverable: false })
+    expect(onError).toHaveBeenCalledWith('server failed', 'committed')
 
     cleanup()
     expect(sse.closed).toBe(true)
   })
 
-  it('surfaces a non-2xx pre-stream rejection once, with the route’s JSON error message', () => {
+  it('surfaces a non-2xx pre-stream rejection once, uncommitted, with the route’s JSON error message', () => {
     const onError = vi.fn()
     api.streamAgentMessage({ chatId: 'c1', message: 'hi' } as never, vi.fn(), onError, vi.fn())
     const sse = sseInstances[0]
 
-    // sse.js dispatches ONE failure to BOTH `onerror` and the 'error' listener; for a non-2xx POST
-    // the body is the route's JSON `{ error }` rejection (e.g. the 503 live-turn guard). The client
-    // must surface it exactly once, with the real message — not two generic bubbles.
-    const body = JSON.stringify({ error: 'The live game turn is not available yet.' })
-    sse.onerror?.({ data: body })
-    sse.emit('error', body)
+    // sse.js dispatches ONE failure (the same CustomEvent) to BOTH `onerror` and the 'error' listener;
+    // for a non-2xx POST it carries `responseCode = xhr.status` and the body is the route's JSON
+    // `{ error }` rejection (e.g. the 503 live-turn guard). The client must surface it exactly once,
+    // with the real message, flagged 'uncommitted' (nothing was written → the input can be restored).
+    const event = { data: JSON.stringify({ error: 'The live game turn is not available yet.' }), responseCode: 503 }
+    sse.onerror?.(event)
+    for (const cb of sse.listeners['error'] || []) cb(event)
 
-    // Surfaced once, with the real message; the stream never opened, so the send is recoverable.
     expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledWith('The live game turn is not available yet.', { recoverable: true })
+    expect(onError).toHaveBeenCalledWith('The live game turn is not available yet.', 'uncommitted')
+  })
+
+  it('flags a post-stream failure (no response code) as committed', () => {
+    const onError = vi.fn()
+    api.streamAgentMessage({ chatId: 'c1', message: 'hi' } as never, vi.fn(), onError, vi.fn())
+    const sse = sseInstances[0]
+
+    // A server-sent 'error' event or a dropped connection arrives only AFTER the stream opened and
+    // carries no responseCode. The caller's message may already be committed, so this is flagged
+    // 'committed' — the host keeps the message rather than restoring the input.
+    sse.emit('error', JSON.stringify({ message: 'Failed to execute agent: boom' }))
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledWith('Failed to execute agent: boom', 'committed')
   })
 
   it('closeAllConnections closes every open stream', () => {

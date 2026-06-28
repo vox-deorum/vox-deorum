@@ -222,11 +222,16 @@ describe('agent routes', () => {
       expect(ctx.withRunCalls[0].overrides.turn).toBe(7);
       expect(typeof ctx.withRunCalls[0].streamProgress).toBe('function');
       // The diplomat executed as a nested call (no parameter argument — it resolves the run's
-      // composed live-turn params), receiving the conversation thread and a stream callback.
+      // composed live-turn params), receiving the conversation thread and a stream callback, an
+      // onContextLengthError sink (so an overflow surfaces as an error, not a false done), and
+      // throwOnError so a real agent failure propagates to the SSE error path instead of being swallowed.
       expect(ctx.execute).toHaveBeenCalledWith(
         'diplomat',
         expect.objectContaining({ messages: expect.anything() }),
         expect.anything(),
+        undefined,
+        expect.any(Function),
+        { throwOnError: true },
       );
       // Normal completion must not cancel anything — not the run, not the context.
       expect(ctx.runHandles[0].abort).not.toHaveBeenCalled();
@@ -350,6 +355,98 @@ describe('agent routes', () => {
       const res = await request(app).post('/api/agents/message').send({ chatId, message: 'back again' });
       expect(res.status).toBe(200);
       expect(mcp.calls('append-message').map((c) => c.args.Content)).toEqual(['back again', 'Back to talks.']);
+    });
+
+    it('commits the caller utterance up front and keeps it (no reply) when the agent run fails', async () => {
+      // The caller's message is durably committed BEFORE the run (so it precedes any tool-written rows),
+      // then the diplomat fails. The route passes throwOnError, so the failure propagates and surfaces
+      // as an SSE error event rather than being swallowed into a false `done`; the committed caller row
+      // stays put (an append-only store can't unwrite it) and only the unwritten reply is skipped.
+      const failing = vi.fn(async () => { throw new Error('LLM exploded'); });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: failing });
+      let nextID = 80;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: error/);
+      expect(res.text).not.toMatch(/event: done/);
+
+      // Only the caller text was archived — the reply never was. And the route passed throwOnError so
+      // the agent error actually propagated (without it, execute() swallows it and `done` fires).
+      const appends = mcp.calls('append-message');
+      expect(appends.map((c) => c.args.MessageType)).toEqual(['text']);
+      expect(appends[0]!.args.Content).toBe('Will you trade?');
+      expect(failing.mock.calls[0]![5]).toEqual({ throwOnError: true });
+    });
+
+    it('surfaces a context-length overflow as an error, never a false done', async () => {
+      // execute() never rethrows a context overflow even under throwOnError (it's reserved for
+      // compact-and-retry callers). This route has no retry, so the onContextLengthError sink must turn
+      // it into an SSE error — NOT a `done` with an archived partial reply.
+      const overflow = vi.fn(async (_n: string, _input: any, _cb: any, _tok: any, onContextLengthError?: () => void) => {
+        onContextLengthError?.();
+      });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: overflow });
+      let nextID = 90;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: error/);
+      expect(res.text).not.toMatch(/event: done/);
+
+      // Only the caller text was archived — the overflow produced no reply to archive.
+      expect(mcp.calls('append-message').map((c) => c.args.MessageType)).toEqual(['text']);
+    });
+
+    it('drops a failed {{{Greeting}}} trigger from the cache so the client can re-greet', async () => {
+      // The greeting trigger is pushed only so the agent can see it; a failed run must not leave it in
+      // the in-memory thread, or the client's greet check would see a phantom row at the current turn
+      // and decline a re-greet. (A real caller utterance stays committed; a special trigger does not.)
+      const failing = vi.fn(async () => { throw new Error('LLM exploded'); });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: failing });
+      mcp.onTool('append-message', () => structuredResult({ ID: 1, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: '{{{Greeting}}}' });
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: error/);
+
+      // Nothing archived (the trigger is never persisted and the reply failed), and the cached thread is
+      // back to empty so a later open/refresh re-greets rather than declining.
+      expect(mcp.calls('append-message')).toHaveLength(0);
+      const after = await request(app).get(`/api/agents/chat/${chatId}`);
+      expect(after.body.messages).toHaveLength(0);
+    });
+
+    it('retracts the open proposal when the conversation is closed', async () => {
+      const proposal = {
+        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
+      };
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [proposal] });
+      let nextID = 60;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post(`/api/agents/chat/${chatId}/close`).send({});
+      expect(res.status).toBe(200);
+
+      // The open proposal is retracted (a deal-reject referencing it) BEFORE the close is written, so
+      // nothing is left enactable on the closed conversation.
+      const appends = mcp.calls('append-message');
+      expect(appends.map((c) => c.args.MessageType)).toEqual(['deal-reject', 'close']);
+      expect(appends[0]!.args.Payload.ProposalMessageID).toBe(7);
+    });
+
+    it('writes only the close when there is no open proposal to retract', async () => {
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5 });
+      let nextID = 70;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post(`/api/agents/chat/${chatId}/close`).send({});
+      expect(res.status).toBe(200);
+      expect(mcp.calls('append-message').map((c) => c.args.MessageType)).toEqual(['close']);
     });
   });
 

@@ -25,6 +25,7 @@
 import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
+import { appendCloseMessage } from "./transcript.js";
 import { createLogger } from "../logger.js";
 import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 // Pinned deal contract — the single source of truth shared across stages 4–6.
@@ -350,6 +351,36 @@ export async function readDealMessages(playerAID: number, playerBID: number): Pr
 export async function readActiveProposal(playerAID: number, playerBID: number): Promise<DealReduction> {
   const messages = await readDealMessages(playerAID, playerBID);
   return deriveActiveProposal(messages);
+}
+
+/**
+ * Close a conversation, retracting any still-open proposal first. A pending offer must not outlive
+ * the conversation it belongs to — otherwise it stays enactable after the talks ended (and after a
+ * later reopen), the root of the "enact on a closed conversation" problem. So we reject the open
+ * proposal — authored by whoever closes — BEFORE writing the `close`, leaving nothing to enact.
+ *
+ * The retract is not swallowed: if it fails, the close fails too, so a conversation is never closed
+ * while an open proposal survives (the caller's existing error handling retries). Shared by the Web
+ * close control and the diplomat's close-conversation tool so both paths retract identically.
+ *
+ * @returns the turn the close was recorded at.
+ */
+export async function closeConversation(
+  thread: EnvoyThread,
+  speakerID: number,
+  content: string,
+  fallbackTurn: number
+): Promise<number> {
+  const reduction = await readActiveProposal(thread.player1ID, thread.player2ID);
+  if (reduction.active && reduction.status === "open") {
+    await appendDealReject(
+      thread,
+      speakerID,
+      "The conversation was closed; the open proposal is retracted.",
+      reduction.active.ID
+    );
+  }
+  return appendCloseMessage(thread, speakerID, content, fallbackTurn);
 }
 
 /** A validated open proposal plus its canonical stored deal terms. */

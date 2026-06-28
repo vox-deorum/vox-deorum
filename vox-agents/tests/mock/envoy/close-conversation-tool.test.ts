@@ -1,7 +1,8 @@
 /**
  * Tests for the diplomat's close-conversation tool (src/envoy/close-conversation-tool.ts).
- * The close flows through the durable store via appendCloseMessage → mcpClient.callTool,
- * driven here by the shared mcpClient fixture — no live server / game.
+ * The close flows through the durable store via closeConversation → mcpClient.callTool
+ * (reading the active proposal, retracting it if open, then writing the close), driven here by
+ * the shared mcpClient fixture — no live server / game.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -18,6 +19,9 @@ import { createCloseConversationTool } from '../../../src/envoy/close-conversati
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {
   mcp = installMockMcpClient();
+  // closeConversation reads the transcript first to find any open proposal to retract; default to
+  // none so the close-only tests exercise the plain close path.
+  mcp.respondWith('read-transcript', structuredResult({ messages: [] }));
 });
 
 /** Active diplomacy thread the diplomat is voicing (agent = seat 3). */
@@ -68,6 +72,25 @@ describe('close-conversation tool', () => {
     expect(args.MessageType).toBe('close');
     expect(args.SpeakerID).toBe(3); // thread.agent
     expect(args.Content).toBe('Until next time.');
+  });
+
+  it('retracts an open proposal before closing (authored by the diplomat seat)', async () => {
+    mcp.respondWith('read-transcript', structuredResult({ messages: [{
+      ID: 9, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+      SpeakerID: 1, MessageType: 'deal-proposal', Content: 'Offer',
+      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
+    }] }));
+    let nextID = 20;
+    mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 7 }));
+
+    const result = await close(thread(), 'Done here.');
+
+    expect(result).toBe('Conversation closed on turn 7. It cannot be reopened until a later turn.');
+    // The open proposal is rejected first, then the close is written — both authored by seat 3.
+    const appends = mcp.calls('append-message');
+    expect(appends.map((c) => c.args.MessageType)).toEqual(['deal-reject', 'close']);
+    expect(appends[0].args.SpeakerID).toBe(3); // thread.agent retracts
+    expect(appends[0].args.Payload.ProposalMessageID).toBe(9);
   });
 
   it('returns a failure string when the store write throws', async () => {

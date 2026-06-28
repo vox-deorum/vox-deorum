@@ -243,11 +243,21 @@ const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
     // Increment the event counter to trigger a reactive update
     newChunkEvent.value++;
   },
-  onSendFailed: (text, error) => {
-    // The send didn't take effect and its optimistic rows were removed — return the text to the
-    // input so the human can retry, and explain why it bounced.
-    inputMessage.value = text;
-    toast.add({ severity: 'warn', summary: 'Message not sent', detail: error, life: 4000 });
+  onSendFailed: (text, error, commit) => {
+    if (commit === 'uncommitted') {
+      // The send never took effect and its optimistic rows were removed — return the text to the
+      // input so the human can retry cleanly, and explain why it bounced.
+      inputMessage.value = text;
+      toast.add({ severity: 'warn', summary: 'Message not sent', detail: error, life: 4000 });
+    } else {
+      // The message may have landed before the reply failed; it stays on screen. Surface the error
+      // but DON'T restore the input — resending could duplicate the committed message.
+      toast.add({ severity: 'warn', summary: 'The reply may have failed', detail: error, life: 4000 });
+    }
+  },
+  onGreetingFailed: (error) => {
+    // A greeting has no input to restore; just surface why it didn't arrive (a reload re-greets).
+    toast.add({ severity: 'warn', summary: 'Could not start the conversation', detail: error, life: 4000 });
   },
 });
 
