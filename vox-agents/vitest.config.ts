@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import { TEST_TELEMETRY_DIR } from './tests/helpers/telemetry-test-dir'
 
 // Unified convention. The tier selects which tests/<tier>/** directory runs:
 //   mock (default) — MCP client replaced in-process via vi.mock of the mcp-client
@@ -22,6 +23,12 @@ export default defineConfig({
     environment: 'node',
     include: [`tests/${tier}/**/*.test.ts`],
     setupFiles: ['./tests/setup.ts'],
+    // Redirect all test telemetry to an isolated temp dir so test-created
+    // VoxContext databases never pollute the real `telemetry/` directory (the
+    // "Past Games" UI). Applied before any source module loads, so config.ts
+    // picks it up as `config.telemetryDir`. The dir is wiped by global-setup.ts.
+    env: { TELEMETRY_DIR: TEST_TELEMETRY_DIR },
+    globalSetup: ['./tests/global-setup.ts'],
     coverage: {
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts'],
