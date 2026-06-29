@@ -55,7 +55,7 @@ Purpose: Main chat interface for interacting with agents
     <div class="messages-wrapper">
       <ChatMessages
         v-if="thread"
-        :messages="renderedItems"
+        :messages="visibleMessages"
         :scroll-trigger="newChunkEvent"
         :user-label="userLabel"
         :agent-label="agentLabel"
@@ -97,7 +97,7 @@ Purpose: Main chat interface for interacting with agents
         :locked="closedThisTurn"
         :agent-busy="isStreaming"
         v-model:busy="dealActionBusy"
-        @changed="refreshConversation"
+        @changed="onDealScreenChanged"
       />
     </Dialog>
 
@@ -233,8 +233,6 @@ const dealReduction = computed(() => deriveActiveProposal(dealMessages.value));
 const activeDealID = computed(() => dealReduction.value.active?.ID);
 /** Status of the latest proposal, so its inline card can show open actions vs. rejected/enacted. */
 const dealStatus = computed(() => dealReduction.value.status);
-/** The rendered stream: the thread's messages in store append order, deal cards inline. */
-const renderedItems = computed(() => visibleMessages.value);
 
 // Use the thread messages composable
 const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
@@ -268,15 +266,29 @@ const goBack = () => {
   router.push('/chat');
 };
 
-/** Refresh the in-memory conversation and its separately stored deal messages. */
+/** Adopt a server chat response (thread + label/turn enrichment) as the live view. */
+const applyThread = (updated: Awaited<ReturnType<typeof api.getAgentChat>>) => {
+  thread.value = updated;
+  currentTurn.value = updated.currentTurn;
+  voicedCiv.value = updated.voicedCiv;
+  audienceCiv.value = updated.audienceCiv;
+};
+
+/** Refresh the in-memory conversation from the store (full re-hydrate — entry/mount/propose). */
 const refreshConversation = async () => {
   // The API client revives server-hydrated datetimes to Date objects (deal rows included),
   // so the thread renders in store append order with no client-side date massaging here.
-  const response = await api.getAgentChat(sessionId.value);
-  thread.value = response;
-  currentTurn.value = response.currentTurn;
-  voicedCiv.value = response.voicedCiv;
-  audienceCiv.value = response.audienceCiv;
+  applyThread(await api.getAgentChat(sessionId.value));
+};
+
+/**
+ * The deal screen reported a change. Accept/reject hand back the updated thread (its new deal row
+ * already mirrored in) — adopt it directly so the conversation's live reasoning/tool-call traces
+ * survive. Propose/counter pass nothing: an agent turn ran, so re-hydrate from the store.
+ */
+const onDealScreenChanged = async (updated?: Awaited<ReturnType<typeof api.getAgentChat>>) => {
+  if (updated) applyThread(updated);
+  else await refreshConversation();
 };
 
 const loadSession = async () => {
@@ -323,27 +335,29 @@ const confirmDelete = () => {
   showDeleteDialog.value = true;
 };
 
-/** Accept the active proposal (wired; enactment deferred to stage 6 — surfaced as a notice). */
+/**
+ * Accept the active proposal. The endpoint mirrors the deal-accept/enacted rows into the thread and
+ * returns it, so we adopt that response directly — a status flip must not re-fetch and flatten the
+ * conversation's live reasoning/tool-call traces.
+ */
 const onDealAccept = async (id: number) => {
   if (dealBlocked.value) return;
   dealActionBusy.value = true;
   try {
-    await api.acceptDeal(sessionId.value, { proposalMessageID: id });
-    await refreshConversation();
+    applyThread(await api.acceptDeal(sessionId.value, { proposalMessageID: id }));
   } catch (err) {
-    toast.add({ severity: 'info', summary: 'Acceptance deferred', detail: err instanceof Error ? err.message : 'Enactment arrives in stage 6', life: 4000 });
+    toast.add({ severity: 'error', summary: 'Failed to accept', detail: err instanceof Error ? err.message : 'Unknown error', life: 4000 });
   } finally {
     dealActionBusy.value = false;
   }
 };
 
-/** Reject (decline or retract) the active proposal from its inline card. */
+/** Reject (decline or retract) the active proposal from its inline card; adopt the returned thread. */
 const onDealReject = async (id: number) => {
   if (dealBlocked.value) return;
   dealActionBusy.value = true;
   try {
-    await api.rejectDeal(sessionId.value, { proposalMessageID: id });
-    await refreshConversation();
+    applyThread(await api.rejectDeal(sessionId.value, { proposalMessageID: id }));
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Failed to reject', detail: err instanceof Error ? err.message : 'Unknown error', life: 4000 });
   } finally {
@@ -360,11 +374,7 @@ const closeConversation = async () => {
   if (!thread.value || isClosing.value) return;
   isClosing.value = true;
   try {
-    const updated = await api.closeAgentChat(sessionId.value);
-    thread.value = updated;
-    currentTurn.value = updated.currentTurn;
-    voicedCiv.value = updated.voicedCiv;
-    audienceCiv.value = updated.audienceCiv;
+    applyThread(await api.closeAgentChat(sessionId.value));
   } catch (err) {
     toast.add({
       severity: 'error',

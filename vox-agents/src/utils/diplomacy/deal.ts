@@ -25,7 +25,8 @@
 import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
-import { appendCloseMessage } from "./transcript.js";
+import { hydrateDealRow } from "./transcript-utils.js";
+import { appendCloseMessage, readTranscript } from "./transcript.js";
 import { createLogger } from "../logger.js";
 import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 // Pinned deal contract — the single source of truth shared across stages 4–6.
@@ -330,10 +331,23 @@ async function appendRaw(
  * readable text/close messages are hydrated separately for the chat thread.
  */
 export async function readDealMessages(playerAID: number, playerBID: number): Promise<DealTranscriptMessage[]> {
-  const result = await mcpClient.callTool("read-transcript", { PlayerAID: playerAID, PlayerBID: playerBID });
-  const arr = unwrap<{ messages?: unknown }>(result)?.messages;
-  if (!Array.isArray(arr)) return [];
-  return (arr as TranscriptMessage[]).filter(isDealMessage);
+  return (await readTranscript(playerAID, playerBID)).filter(isDealMessage);
+}
+
+/**
+ * Mirror any durable deal rows not yet in the live cache into `thread.messages`, in append order,
+ * WITHOUT disturbing existing rows — so a deal status write (accept/reject, or the close-time
+ * retract) is reflected while the conversation's live reasoning/tool-call traces are preserved (no
+ * full re-hydrate). Deduped by stored row ID; the new rows are the newest events, so end-append
+ * keeps order. The accept-mid-conversation counterpart of `syncThreadMessages` (which re-hydrates
+ * the whole thread on entry).
+ */
+export async function reconcileDealRows(thread: EnvoyThread): Promise<void> {
+  const rows = await readDealMessages(thread.player1ID, thread.player2ID);
+  const present = new Set(thread.messages.flatMap((m) => (m.deal ? [m.deal.ID] : [])));
+  for (const row of rows) {
+    if (!present.has(row.ID)) thread.messages.push(hydrateDealRow(row, thread.agent));
+  }
 }
 
 /**

@@ -588,32 +588,34 @@ class ApiClient {
 
   /**
    * Reject (decline or retract) a proposal by the message ID it answers (deal-reject).
+   * Returns the updated thread (the proposal now reduces to rejected) — a status flip mirrors
+   * the new row into the conversation rather than re-fetching/replacing it.
    */
-  async rejectDeal(chatId: string, request: DealRejectRequest): Promise<DealActionResponse> {
-    return this.fetchJson<DealActionResponse>(
+  async rejectDeal(chatId: string, request: DealRejectRequest): Promise<GetChatResponse> {
+    return this.reviveThreadDates(await this.fetchJson<GetChatResponse>(
       `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/reject`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request)
       }
-    );
+    ));
   }
 
   /**
-   * Accept a proposal. Wired in stage 4 but deferred: enactment (and the durable
-   * deal-accept record) arrives with the enactment route in stage 6, so this currently
-   * resolves to a 501 the UI surfaces as "enactment available from stage 6".
+   * Accept a proposal, routing through enactment (the sole writer of deal-accept / deal-enacted).
+   * Returns the updated thread with the deal-accept / deal-enacted rows mirrored in (the proposal
+   * now reduces to enacted), preserving the conversation's existing reasoning/tool-call traces.
    */
-  async acceptDeal(chatId: string, request: DealAcceptRequest): Promise<DealActionResponse> {
-    return this.fetchJson<DealActionResponse>(
+  async acceptDeal(chatId: string, request: DealAcceptRequest): Promise<GetChatResponse> {
+    return this.reviveThreadDates(await this.fetchJson<GetChatResponse>(
       `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/accept`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request)
       }
-    );
+    ));
   }
 
   /**

@@ -145,7 +145,12 @@ const props = defineProps<{
   agentBusy?: boolean;
 }>();
 
-const emit = defineEmits<{ (e: 'changed'): void }>();
+/** The chat thread a deal write returns (accept/reject mirror their new row into it server-side). */
+type ThreadResponse = Awaited<ReturnType<typeof api.acceptDeal>>;
+// A deal write changed the conversation. Accept/reject carry the updated thread so the parent adopts
+// it directly (preserving live reasoning/tool-call traces); propose/counter omit it (an agent turn
+// ran — the parent re-hydrates from the store).
+const emit = defineEmits<{ (e: 'changed', thread?: ThreadResponse): void }>();
 /**
  * Whether a deal write is in flight. A two-way model so the parent view shares ONE busy flag
  * across both deal surfaces (this screen and the inline message-card actions): any in-flight
@@ -344,7 +349,10 @@ const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean>
 };
 
 const reloadDeals = async () => { await refreshDealState(true); };
-const afterWrite = async () => { await reloadDeals(); emit('changed'); };
+// Refresh this screen's own reducer, then notify the parent. `updated` is the thread a status write
+// returned (accept/reject); when present the parent adopts it instead of re-fetching, so the chat's
+// live traces survive. Propose/counter pass nothing → the parent re-hydrates after the agent turn.
+const afterWrite = async (updated?: ThreadResponse) => { await reloadDeals(); emit('changed', updated); };
 
 /**
  * Discard the human's edits and restore the active proposal's stored terms + message, re-enabling
@@ -432,9 +440,9 @@ const doReject = () => {
     activeAuthoredByViewer.value ? 'Cannot retract yet' : 'Cannot refuse yet',
     async () => {
       if (!reduction.value.active) return;
-      await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
+      const updated = await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
       toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal refused', life: 2500 });
-      await afterWrite();
+      await afterWrite(updated);
     },
     actionError,
     targetID
@@ -447,13 +455,10 @@ const doAccept = () => {
     'Cannot accept yet',
     async () => {
       if (!reduction.value.active) return;
-      await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
-      await afterWrite();
+      const updated = await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
+      await afterWrite(updated);
     },
-    (e) => {
-      // Expected in preview: acceptance is wired but enactment is deferred to stage 6.
-      toast.add({ severity: 'info', summary: 'Acceptance deferred', detail: e instanceof Error ? e.message : 'Enactment arrives in stage 6', life: 4000 });
-    },
+    actionError,
     targetID
   );
 };

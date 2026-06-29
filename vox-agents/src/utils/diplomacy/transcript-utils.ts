@@ -16,7 +16,7 @@ import type { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../.
 // The canonical transcript/deal wire contracts are owned by mcp-server; re-export the row
 // type so existing importers keep working, and reuse the shared deal-message guard.
 import type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
-import { isDealMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import { isDealMessage, type DealTranscriptMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
 export type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
 
 /** Message types that contribute readable text to a conversation thread. */
@@ -72,6 +72,28 @@ export function speakerRole(speakerID: number, voicedID: number): "assistant" | 
 }
 
 /**
+ * Hydrate a single stored row into a thread cache item: a chat `message` + `metadata`, plus the
+ * `deal` payload when it is a `deal-*` row (so the UI renders an inline deal card and reduces deal
+ * state from it). The one place a transcript row becomes a cache item — used both for bulk
+ * hydration and for mirroring a freshly-written deal row into the live cache.
+ */
+export function hydrateRow(m: TranscriptMessage, voicedID: number): MessageWithMetadata {
+  const item: MessageWithMetadata = {
+    message: { role: speakerRole(m.SpeakerID, voicedID), content: m.Content } as ModelMessage,
+    // SQLite's unixepoch() stores whole seconds; JavaScript Date expects milliseconds.
+    metadata: { datetime: new Date(m.CreatedAt * 1000), turn: m.Turn },
+  };
+  // The guard narrows `m` to DealTranscriptMessage — no cast needed.
+  if (isDealMessage(m)) item.deal = m;
+  return item;
+}
+
+/** Mirror a known deal row into a cache item (the row is already narrowed to a deal message). */
+export function hydrateDealRow(row: DealTranscriptMessage, voicedID: number): MessageWithMetadata {
+  return hydrateRow(row, voicedID);
+}
+
+/**
  * Hydrate a thread's in-memory message list from a stored transcript, in the store's append
  * order — the single source of truth for conversation ordering. Readable conversation
  * messages (`text`, `close`) and deal messages (`deal-*`) both become thread items; a deal
@@ -81,16 +103,7 @@ export function speakerRole(speakerID: number, voicedID: number): "assistant" | 
 export function hydrateMessages(transcript: TranscriptMessage[], voicedID: number): MessageWithMetadata[] {
   return transcript
     .filter((m) => CONVERSATION_TYPES.has(m.MessageType) || isDealMessage(m))
-    .map((m) => {
-      const item: MessageWithMetadata = {
-        message: { role: speakerRole(m.SpeakerID, voicedID), content: m.Content } as ModelMessage,
-        // SQLite's unixepoch() stores whole seconds; JavaScript Date expects milliseconds.
-        metadata: { datetime: new Date(m.CreatedAt * 1000), turn: m.Turn },
-      };
-      // The guard narrows `m` to DealTranscriptMessage — no cast needed.
-      if (isDealMessage(m)) item.deal = m;
-      return item;
-    });
+    .map((m) => hydrateRow(m, voicedID));
 }
 
 /**

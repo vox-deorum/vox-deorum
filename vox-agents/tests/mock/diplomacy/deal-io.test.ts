@@ -19,9 +19,11 @@ import {
   appendDealProposal,
   appendDealReject,
   readDealMessages,
+  reconcileDealRows,
   IllegalDealError,
   type InspectDealResult,
 } from '../../../src/utils/diplomacy/deal.js';
+import type { MessageWithMetadata } from '../../../src/types/index.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {
@@ -302,5 +304,58 @@ describe('readDealMessages', () => {
     ] }));
     const out = await readDealMessages(1, 3);
     expect(out.map((m) => m.ID)).toEqual([2, 4]);
+  });
+});
+
+describe('reconcileDealRows', () => {
+  /** A stored deal row with sensible defaults for the ordered pair 1↔3. */
+  const dealRow = (over: Record<string, unknown>) => ({
+    ID: 0, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+    SpeakerID: 1, MessageType: 'deal-proposal', Content: '', Payload: {}, Turn: 5, CreatedAt: 0, ...over,
+  });
+
+  it('appends only the deal rows not already in the cache, leaving existing rows untouched', async () => {
+    // The store now also holds a deal-enacted answering the proposal already on the thread.
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      dealRow({ ID: 7, MessageType: 'deal-proposal', Payload: { Deal: emptyDeal } }),
+      dealRow({ ID: 10, MessageType: 'deal-enacted', SpeakerID: 3, Payload: { ProposalMessageID: 7 } }),
+    ] }));
+
+    // Live cache: a plain user line, the existing proposal (deal ID 7), and a reasoning/trace row —
+    // the kinds of in-memory content a full re-hydrate would discard.
+    const userRow: MessageWithMetadata = { message: { role: 'user', content: 'hi' }, metadata: { datetime: new Date(), turn: 5 } };
+    const proposalRow: MessageWithMetadata = {
+      message: { role: 'assistant', content: 'offer' }, metadata: { datetime: new Date(), turn: 5 },
+      deal: dealRow({ ID: 7, MessageType: 'deal-proposal', SpeakerID: 3, Payload: { Deal: emptyDeal } }) as MessageWithMetadata['deal'],
+    };
+    const traceRow: MessageWithMetadata = { message: { role: 'assistant', content: 'thinking…' }, metadata: { datetime: new Date(), turn: 5 } };
+    const t = thread({ messages: [userRow, proposalRow, traceRow] });
+
+    await reconcileDealRows(t);
+
+    // The enacted row is appended; the proposal (already present by ID) is not duplicated.
+    expect(t.messages).toHaveLength(4);
+    expect(t.messages[3]!.deal?.ID).toBe(10);
+    expect(t.messages[3]!.deal?.MessageType).toBe('deal-enacted');
+    // Existing rows are the exact same objects — live traces preserved, nothing re-hydrated.
+    expect(t.messages[0]).toBe(userRow);
+    expect(t.messages[1]).toBe(proposalRow);
+    expect(t.messages[2]).toBe(traceRow);
+  });
+
+  it('is a no-op when every stored deal row is already mirrored', async () => {
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      dealRow({ ID: 7, MessageType: 'deal-proposal', Payload: { Deal: emptyDeal } }),
+    ] }));
+    const proposalRow: MessageWithMetadata = {
+      message: { role: 'assistant', content: 'offer' }, metadata: { datetime: new Date(), turn: 5 },
+      deal: dealRow({ ID: 7, MessageType: 'deal-proposal', Payload: { Deal: emptyDeal } }) as MessageWithMetadata['deal'],
+    };
+    const t = thread({ messages: [proposalRow] });
+
+    await reconcileDealRows(t);
+
+    expect(t.messages).toHaveLength(1);
+    expect(t.messages[0]).toBe(proposalRow);
   });
 });

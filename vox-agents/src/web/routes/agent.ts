@@ -62,6 +62,7 @@ import {
   appendDealProposal,
   appendDealReject,
   readDealMessages,
+  reconcileDealRows,
   validateDealForThread,
   enactAgentDeal,
   requireCurrentOpenProposal,
@@ -152,6 +153,20 @@ function enrichChat(thread: EnvoyThread): ChatResponseEnrichment {
     voicedCiv: displayIdentity(identityOf(thread, thread.agent)),
     audienceCiv: displayIdentity(identityOf(thread, audienceID(thread))),
   };
+}
+
+/**
+ * Mirror freshly-written deal rows into the live cache, best-effort. The durable store is the commit
+ * point and the source of truth, so this runs AFTER the write — a failure to re-read here must never
+ * turn a committed accept/reject/close into a reported failure (which would invite a duplicate retry).
+ * Log and move on; the next refresh / reopen re-hydrates whatever this missed.
+ */
+async function mirrorDealRowsBestEffort(thread: EnvoyThread): Promise<void> {
+  try {
+    await reconcileDealRows(thread);
+  } catch (error) {
+    logger.error('Failed to mirror deal rows into the live cache after a committed write', { error });
+  }
 }
 
 /**
@@ -553,6 +568,10 @@ export function createAgentRoutes(): Router {
       // authoritative result for the local echo too.
       const content = req.body?.message?.trim() || 'The conversation has been closed.';
       const closedAt = await closeConversation(thread, audienceID(thread), content, currentTurn);
+      // closeConversation retracts any open proposal (a deal-reject) before the close; mirror that
+      // retract into the live cache so the returned thread reduces the proposal as rejected — not
+      // still-open — before we echo the close row. Best-effort: the close is already committed.
+      await mirrorDealRowsBestEffort(thread);
       thread.messages.push({
         message: { role: 'user', content },
         metadata: { datetime: new Date(), turn: closedAt }
@@ -681,7 +700,7 @@ export function createAgentRoutes(): Router {
    * POST /api/agents/chat/:chatId/deal/reject - Decline or retract a proposal (deal-reject).
    * Either endpoint may speak it; in preview the human declines a proposal or retracts its own.
    */
-  router.post('/agents/chat/:chatId/deal/reject', async (req: Request<{ chatId: string }, {}, DealRejectRequest>, res: Response<DealActionResponse | ErrorResponse>): Promise<Response> => {
+  router.post('/agents/chat/:chatId/deal/reject', async (req: Request<{ chatId: string }, {}, DealRejectRequest>, res: Response<GetChatResponse | ErrorResponse>): Promise<Response> => {
     const thread = resolveDealThread(req.params.chatId, res);
     if (!thread) return res;
     if (isDealLocked(thread, res)) return res;
@@ -692,8 +711,13 @@ export function createAgentRoutes(): Router {
     }
     const content = req.body?.content?.trim() || 'The deal was rejected.';
     try {
-      const { id, turn } = await appendDealReject(thread, audienceID(thread), content, proposalMessageID);
-      return res.json({ id, messageType: 'deal-reject', turn });
+      await appendDealReject(thread, audienceID(thread), content, proposalMessageID);
+      // Mirror just the new reject row into the live cache (preserving the conversation's
+      // reasoning/tool-call traces) and hand the updated thread straight back — a status flip
+      // must not re-hydrate the whole thread. Best-effort: the reject is already committed, so a
+      // mirror-read failure must not report 502 and invite a duplicate retry. Reduces to rejected.
+      await mirrorDealRowsBestEffort(thread);
+      return res.json({ ...thread, ...enrichChat(thread) });
     } catch (error) {
       logger.error('Failed to append deal-reject', { error });
       return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to append deal-reject' });
@@ -708,7 +732,7 @@ export function createAgentRoutes(): Router {
    * deal) but does NOT yet apply in-game effects — the DLL enactment lands in stage 6. The
    * accepter defaults server-side to the proposal's recipient (the non-authoring endpoint).
    */
-  router.post('/agents/chat/:chatId/deal/accept', async (req: Request<{ chatId: string }, {}, DealAcceptRequest>, res: Response<DealActionResponse | ErrorResponse>): Promise<Response> => {
+  router.post('/agents/chat/:chatId/deal/accept', async (req: Request<{ chatId: string }, {}, DealAcceptRequest>, res: Response<GetChatResponse | ErrorResponse>): Promise<Response> => {
     const thread = resolveDealThread(req.params.chatId, res);
     if (!thread) return res;
     if (isDealLocked(thread, res)) return res;
@@ -722,8 +746,13 @@ export function createAgentRoutes(): Router {
       return res.status(409).json({ error: error instanceof Error ? error.message : 'Proposal is not open for acceptance' });
     }
     try {
-      const result = await enactAgentDeal(req.body.proposalMessageID, { accepterID });
-      return res.json({ id: result.enactedMessageID, messageType: 'deal-enacted', turn: result.turn });
+      await enactAgentDeal(req.body.proposalMessageID, { accepterID });
+      // Mirror the new deal-accept / deal-enacted rows into the live cache (preserving the
+      // conversation's reasoning/tool-call traces) and return the updated thread — the proposal now
+      // reduces to enacted without re-hydrating (and discarding) the whole thread. Best-effort: the
+      // enactment is already committed, so a mirror-read failure must not report 502.
+      await mirrorDealRowsBestEffort(thread);
+      return res.json({ ...thread, ...enrichChat(thread) });
     } catch (error) {
       // The pre-check passed, so a failure here usually means the proposal state changed
       // under us (countered/rejected/enacted) between the check and the authoritative write.
