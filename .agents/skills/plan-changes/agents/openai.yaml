@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Changes"
+  short_description: "Explore, question, draft, review, and present an implementation plan"
+  default_prompt: "Use $plan-changes to plan the requested changes: explore the codebase with delegated subagents, ask any clarifying questions you need, draft a plan, have a fresh-context subagent review it, revise, and present the result through the plan tool for approval."

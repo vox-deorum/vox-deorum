@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Staged Changes"
+  short_description: "Review staged changes for risk and maintainability"
+  default_prompt: "Use $review-staged-changes to review the staged changes for correctness, maintainability, readability, and simplification opportunities, assuming tests have passed."

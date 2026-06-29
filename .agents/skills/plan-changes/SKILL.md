@@ -1,0 +1,75 @@
+---
+name: plan-changes
+description: Orchestrate a thorough, independently-reviewed implementation plan for a set of changes before any code is written. Use this whenever the user wants to "plan a change", "design an approach", "figure out how to implement X", "write a plan", "think through" a feature, refactor, or migration, or asks for a well-researched plan they can review and approve. The skill explores the codebase with delegated subagents (cheaper models for simple lookups, stronger models for hard reasoning), asks as many clarifying questions as it needs, drafts a plan, has a fresh-context subagent critique it, revises, and presents the result through the plan tool for approval. Prefer this skill over planning inline whenever the change is non-trivial, spans multiple files or systems, or benefits from independent review — even if the user never says the word "plan".
+---
+
+# Plan Changes
+
+Produce a plan good enough that implementation is mostly mechanical. The plan is the deliverable, not the code. Get there by spreading the reading and the critiquing across subagents so the final plan reflects more of the codebase than one context could hold and survives a skeptical second look.
+
+The flow: **frame → explore → ask → draft → review → revise → present**. Run all of it for a real change. For a genuinely small or localized change, compress the middle (one explorer, fewer questions, skip the formal review) rather than skipping the discipline entirely — match the depth to the work.
+
+## Phase 1 — Frame the work
+
+Read the user's request and the relevant repository/context instructions first. Before delegating anything, write down for yourself:
+
+- **The goal** in one or two sentences — what should be true when this is done.
+- **The unknowns** — what must be learned about the codebase before a plan is possible (existing patterns, call sites, data shapes, constraints, prior art).
+- **The decisions** — the design choices that will shape the plan and that the user may have opinions on.
+
+This framing drives everything below: unknowns become exploration briefs, decisions become questions.
+
+## Phase 2 — Explore with delegated subagents
+
+Delegate the codebase reading to subagents so the orchestrating context stays clean and the work happens in parallel. Spawn independent explorers in a single message so they run concurrently.
+
+Pick the model per difficulty — this is the point of delegating rather than reading inline:
+
+- **`model: "sonnet"`** for well-scoped, mechanical lookups: "find every caller of `X` and list its signature", "trace how `Y` flows from the route to persistence", "list the files in `Z/` and what each exports". Fast and cheap; most exploration is this.
+- **`model: "opus"`** for ambiguous or cross-cutting reasoning: "is this abstraction safe to change, and what breaks if we do", "reconcile these two competing patterns and recommend one", "figure out why this was built this way". Reserve it for questions where judgment matters more than retrieval.
+
+Choose the agent type to match: use **`Explore`** (read-only, reads excerpts, returns conclusions) for breadth-first "where / what / who-calls" searches; use **`general-purpose`** or the **`Plan`** architect agent for "how / why / should-we" analysis that needs deeper reading and reasoning.
+
+Write each brief so the subagent returns conclusions, not file dumps: state what you need to decide, the specific questions to answer, and the format to return (e.g. "list each call site as `file:line — how it uses the return value`"). Their context is discarded; only their final message survives, so demand the distilled answer.
+
+## Phase 3 — Ask as many questions as you need
+
+The cost of a wrong assumption in a plan is a wrong implementation, so resolve ambiguity now rather than guessing. Use the `AskUserQuestion` tool. Batch related questions into one call (up to four per call) instead of trickling them out, and ask follow-up rounds as exploration surfaces new forks.
+
+Ask about things the user decides and the codebase can't tell you: scope boundaries, desired behavior on edge cases, backward-compatibility and migration expectations, performance or UX priorities, and which of several viable designs they prefer. When you recommend one option, put it first and mark it. Do not ask about things a subagent can find out — find those out.
+
+If exploration and the request leave nothing genuinely ambiguous, say so and move on; manufactured questions waste the user's time.
+
+## Phase 4 — Draft the plan
+
+Synthesize the exploration findings and the user's answers into a concrete plan. A good plan is specific enough to hand to an implementer and includes:
+
+- **Goal & success criteria** — what done looks like, observable.
+- **Current state** — the relevant files, patterns, and constraints found during exploration, cited as `path:line` so they're checkable.
+- **Approach & key decisions** — the chosen design, the main alternatives considered, and why this one. Surface trade-offs honestly.
+- **Step-by-step changes** — ordered by dependency, grouped by file or area, each step concrete about what changes and how (signatures, data shapes, new modules).
+- **Risks, edge cases & open questions** — what could break, what's still uncertain.
+- **Verification** — how the change will be tested or confirmed to work, consistent with how this repo tests.
+- **Out of scope** — what this deliberately does not touch, to bound the work.
+
+Keep it tight. Precision and correct ordering matter more than length.
+
+## Phase 5 — Review with a fresh context
+
+Spawn one `model: "opus"` subagent to critique the draft with **no prior context** — it has not seen the exploration or the conversation, which is exactly why it catches what the orchestrator has gone blind to. Give it the plan, the original request, and pointers to the key files, and assign it an adversarial brief:
+
+- Does the approach actually achieve the goal, or are there gaps and unhandled cases?
+- Are the codebase claims accurate? Spot-check the cited `path:line` references against the real files.
+- Is the step ordering correct, or are there hidden dependencies / missing steps?
+- Is anything over-engineered, or simpler if reframed? Is anything under-specified for an implementer?
+- What did the plan miss entirely — affected call sites, tests, migrations, docs, config?
+
+Ask it to return a prioritized list of concrete problems with evidence, not vague praise. Have it default to skepticism. For a high-stakes or large change, spawn two or three reviewers with different lenses (correctness, simplicity, completeness) in one message instead of one.
+
+## Phase 6 — Revise
+
+Read the critique and fold in what holds up. For each point: fix the plan, or note why it was considered and rejected — both are fine, hand-waving is not. If the review exposed a real unknown, run another targeted exploration subagent (Phase 2) or ask another question (Phase 3) before finalizing. Loop back as needed; the goal is a plan you'd stake the implementation on. The revised version should not retain layered history, but freshly written. It should use natural language with sufficient (but not excessive) explanation.
+
+## Phase 7 — Present through the plan tool
+
+Present the final revised plan for approval using the **`ExitPlanMode`** plan tool — that is the deliverable and the point at which the user reviews and approves before any implementation. Put the full plan in the tool call. Keep any surrounding chat brief: a one-line summary of the approach and a note of anything still open. Do not start implementing until the user approves through the plan tool.
