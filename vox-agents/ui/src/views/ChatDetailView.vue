@@ -289,6 +289,9 @@ const refreshConversation = async () => {
 const onDealScreenChanged = async (updated?: Awaited<ReturnType<typeof api.getAgentChat>>) => {
   if (updated) applyThread(updated);
   else await refreshConversation();
+  // The dialog's work is done after any successful deal action (propose/counter/accept/reject):
+  // hide the modal so the conversation — now carrying the sent proposal as an inline card — shows.
+  showDeal.value = false;
 };
 
 const loadSession = async () => {

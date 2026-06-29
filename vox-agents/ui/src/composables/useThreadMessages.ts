@@ -71,9 +71,11 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     // The terminal 'done' commits the exchange server-side; a trailing error after it must not undo it.
     let done = false;
 
-    // Streaming text/reasoning parts are mutated in place as deltas arrive. `contents.push(obj)` stores
-    // the very object we hold here (arrays push by reference), so the running `currentText`/
-    // `currentReasoning` reference already points at the in-array element — no re-read needed.
+    // Streaming text/reasoning parts are mutated in place as deltas arrive. `thread` is a deep `ref`,
+    // so `contents` is a reactive array: `contents.push(obj)` stores the RAW object, but the view reads
+    // it back through a reactive proxy. We must re-read the just-pushed element (`contents[len-1]`) and
+    // mutate THAT proxy — mutating the local raw object would bypass the proxy's set-trap and never
+    // trigger a re-render, freezing the display at the first delta.
     let currentText: LanguageModelV3TextPart | null = null;
     let currentTextID: string = "";
     let currentReasoning: LanguageModelV3ReasoningPart | null = null;
@@ -90,6 +92,8 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
               currentTextID = part.id;
               currentText = { type: "text", text: part.text };
               contents.push(currentText);
+              // Re-read the in-array reactive proxy so subsequent deltas mutate reactively (see above).
+              currentText = contents[contents.length - 1] as LanguageModelV3TextPart;
             } else if (currentText) {
               // Continue streaming to existing text part
               currentText.text += part.text;
@@ -105,6 +109,8 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
               currentReasoningID = part.id;
               currentReasoning = { type: "reasoning", text: part.text };
               contents.push(currentReasoning);
+              // Re-read the in-array reactive proxy so subsequent deltas mutate reactively (see above).
+              currentReasoning = contents[contents.length - 1] as LanguageModelV3ReasoningPart;
             } else if (currentReasoning) {
               // Continue streaming to existing reasoning part
               currentReasoning.text += part.text;
