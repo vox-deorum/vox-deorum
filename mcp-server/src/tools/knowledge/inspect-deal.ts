@@ -264,7 +264,7 @@ export interface InspectDealResponse {
 function candidateReasons(legal: boolean, reason: string | undefined): string[] {
   if (legal) return [];
   const parsed = parseReasons(reason);
-  return parsed.length > 0 ? parsed : ["Not tradeable under current game state (the game provided no specific reason)."];
+  return parsed.length > 0 ? parsed : ["Not tradeable under current game state"];
 }
 
 /** Carry through a candidate's advisory both-direction value (omitting absent fields). */
@@ -415,7 +415,7 @@ class InspectDealTool extends ToolBase {
           ? []
           : parsedReasons.length > 0
             ? parsedReasons
-            : ["Not tradeable under current game state (the game provided no specific reason)."];
+            : ["Not tradeable under current game state"];
       return {
         fromPlayerID: it.fromPlayerID,
         toPlayerID: it.toPlayerID,

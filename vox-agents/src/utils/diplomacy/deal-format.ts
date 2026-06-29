@@ -44,7 +44,7 @@ export const SENTINEL_LABEL = "no usable estimate";
  * "no usable estimate" means). Kept on the agent path because the stock AI valuation never binds it.
  */
 export const ADVISORY_NOTE =
-  'Per-item values are the stock AI\'s advisory estimates and don\'t block this deal. "No usable estimate" means its estimate maxed out (it would refuse) — advisory only.';
+  'Per-item values are the in-game AI\'s advisory estimates, for your reference only.';
 
 /** True when an advisory value is a sentinel (maxed out) rather than a real estimate. */
 export function isSentinel(value: number): boolean {
