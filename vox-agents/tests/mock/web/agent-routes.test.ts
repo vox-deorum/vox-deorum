@@ -17,6 +17,7 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 });
 
 import { createAgentRoutes } from '../../../src/web/routes/agent.js';
+import { retryMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { pacingInterruptionRegistry } from '../../../src/strategist/pacing/registry.js';
@@ -305,6 +306,51 @@ describe('agent routes', () => {
       expect(appends.map((c) => c.args.MessageType)).toEqual(['text', 'text']);
       expect(appends[0]!.args.Content).toBe('Will you trade?');   // caller text archived first
       expect(appends[1]!.args.Content).toBe('A measured reply.');  // diplomat reply archived after
+    });
+
+    it('archives and streams the shared retry line when the turn produces no spoken reply', async () => {
+      // A stuck turn (e.g. the step ceiling was hit) leaves nothing spoken. The route streams the
+      // shared retry line and the commit path archives the SAME line, so the user sees a polite request
+      // to repeat both live and on reload rather than dead air. (The mock execute pushes no reply.)
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: vi.fn(async (_n: string, input: any) => input) });
+      let nextID = 70;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: done/);
+
+      const appends = mcp.calls('append-message');
+      expect(appends.map((c) => c.args.MessageType)).toEqual(['text', 'text']);
+      expect(appends[0]!.args.Content).toBe('Will you trade?');
+      expect(appends[1]!.args.Content).toBe(retryMessage); // the stuck turn archived the retry line
+      expect(res.text).toContain(retryMessage);             // and streamed it to the client
+    });
+
+    it('does NOT stream or archive the retry line when the turn handed the deal to the negotiator', async () => {
+      // A deal handoff is a deliberate, visible outcome (the deal move, archived by the negotiator's
+      // own tool), so a turn that calls call-negotiator without speaking is NOT stuck. The misleading
+      // "lost my train of thought" line must not stand in for it — no retry row archived, none streamed.
+      const handoff = vi.fn(async (_n: string, input: any) => {
+        input.messages.push({
+          message: { role: 'assistant', content: [{ type: 'tool-call', toolCallId: 'h1', toolName: 'call-negotiator', input: { Briefing: 'x' } }] },
+          metadata: { datetime: new Date(), turn: 5 },
+        });
+        return input;
+      });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: handoff });
+      let nextID = 80;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: done/);
+
+      const appends = mcp.calls('append-message');
+      // Only the caller's text is archived; no retry reply row stands in for the handoff.
+      expect(appends.map((c) => c.args.MessageType)).toEqual(['text']);
+      expect(appends[0]!.args.Content).toBe('Will you trade?');
+      expect(res.text).not.toContain(retryMessage);
     });
 
     it('never archives a {{{Greeting}}} trigger as a caller message', async () => {

@@ -14,6 +14,9 @@ import { EnvoyThread } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
 import { buildDealContextMessage } from "./utils/diplomat-utils.js";
+import { readActiveProposal } from "../utils/diplomacy/deal.js";
+import { counterpartOpenProposal } from "../utils/diplomacy/deal-reduce.js";
+import { terminalActionTools } from "../utils/diplomacy/transcript-utils.js";
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.
@@ -23,14 +26,6 @@ import { buildDealContextMessage } from "./utils/diplomat-utils.js";
  * @class
  */
 export class Diplomat extends LiveEnvoy {
-  /**
-   * Tool calls that complete the diplomat's conversational turn without requiring free text.
-   */
-  private static readonly completionTools = new Set([
-    "call-negotiator",
-    "close-conversation",
-  ]);
-
   /**
    * The name identifier for this agent
    */
@@ -53,6 +48,7 @@ export class Diplomat extends LiveEnvoy {
   public override getActiveTools(_parameters: StrategistParameters): string[] | undefined {
     return [
       "get-briefing",
+      "send-message",
       "get-diplomatic-events",
       "call-diplomatic-analyst",
       "close-conversation",
@@ -73,8 +69,16 @@ export class Diplomat extends LiveEnvoy {
 
   /**
    * Gates close-conversation and the negotiator handoff to civ↔civ diplomacy threads — they are
-   * meaningless for an observer chat (endpoint A = -1), and special-message (greeting) mode
-   * needs no tools.
+   * meaningless for an observer chat (endpoint A = -1); special-message (greeting) mode is already
+   * restricted to send-message by LiveEnvoy.
+   *
+   * When a deal authored by the **counterpart** is open on the table, the ball is in the diplomat's
+   * court, so it is restricted to call-negotiator + send-message — it must either hand the proposal
+   * to the negotiator or reply, never wander off into briefings/analyst calls. The gate reads the
+   * **authoritative durable reduction** (`readActiveProposal`, the same source the negotiator and the
+   * accept/reject routes use), NOT the best-effort in-memory cache, so a stale `open` left by a
+   * disconnect on an accept/reject can never wrongly keep restricting the next turn. A proposal our
+   * own side authored leaves the ball with the other side and does not restrict us.
    */
   public override async prepareStep(
     parameters: StrategistParameters,
@@ -85,46 +89,34 @@ export class Diplomat extends LiveEnvoy {
     context: VoxContext<StrategistParameters>
   ) {
     const config = await super.prepareStep(parameters, input, lastStep, allSteps, messages, context);
-    if (!input.diplomacy && config.activeTools) {
-      const diplomacyOnly = new Set(["close-conversation", "call-negotiator"]);
-      config.activeTools = config.activeTools.filter((t) => !diplomacyOnly.has(t));
+    if (!input.diplomacy) {
+      // Observer chat (endpoint A = -1): no counterpart exists, so the non-spoken terminal actions
+      // (negotiator handoff / close) are meaningless — strip them from the resolved tool set. Reuse the
+      // shared `terminalActionTools` source rather than a parallel literal that could silently drift.
+      const active = config.activeTools ?? this.getActiveTools(parameters) ?? [];
+      config.activeTools = active.filter((t) => !terminalActionTools.has(t));
+    } else if (lastStep === null && !this.isSpecialMode(input)) {
+      // Diplomacy turn, first step: read the authoritative deal state once. The counterpart cannot act
+      // mid-turn (the per-thread lock), so the gate state is fixed for the whole turn; and when the gate
+      // IS active it restricts to call-negotiator + send-message, both of which end the turn — so there
+      // is never a later step to re-restrict. Reading every step would just repeat the same MCP round-trip.
+      const reduction = await readActiveProposal(input.player1ID, input.player2ID);
+      if (counterpartOpenProposal(reduction, input.agent)) {
+        config.activeTools = ["call-negotiator", "send-message"];
+      }
     }
     return config;
   }
 
   /**
-   * Keeps the diplomat working until it has spoken to the counterpart or deliberately ended
-   * the conversational turn through negotiation or closure. The inherited envoy check is still
-   * called so each response is persisted to the thread, but its generic terminal-tool and
-   * maximum-step decisions do not apply to diplomats.
-   *
-   * A pending supporting (non-terminal) tool on the latest step — `get-briefing`,
-   * `get-diplomatic-events`, or `call-diplomatic-analyst` — means the diplomat intends to keep
-   * working (e.g. it spoke a short line and then asked for a briefing), so it must NOT stop on
-   * that step even though it has already produced free text. Only a negotiator handoff/closure
-   * (terminal wherever it appears) or a spoken turn with nothing left pending ends the loop.
+   * The diplomat ends its turn by speaking (send-message), handing the deal to the negotiator, or
+   * closing the conversation — all terminal wherever they appear. The shared LiveEnvoy stop logic
+   * (with the hard step ceiling and the Anthropic free-text fallback) consumes this set.
    */
-  public override stopCheck(
-    parameters: StrategistParameters,
-    input: EnvoyThread,
-    lastStep: StepResult<Record<string, Tool>>,
-    allSteps: StepResult<Record<string, Tool>>[],
-    context: VoxContext<StrategistParameters>
-  ): boolean {
-    super.stopCheck(parameters, input, lastStep, allSteps, context);
-
-    const completionTools = Diplomat.completionTools;
-    // A negotiator handoff or closure ends the turn — terminal wherever it appears.
-    const hasCompletionTool = allSteps.some(step =>
-      step.toolCalls.some(call => completionTools.has(call.toolName))
-    );
-    if (hasCompletionTool) return true;
-    // A pending supporting (non-terminal) tool means the diplomat means to keep working — e.g. it
-    // spoke a short line then asked for a briefing — so don't stop on that step.
-    const hasPendingSupportTool = lastStep.toolCalls.some(call => !completionTools.has(call.toolName));
-    if (hasPendingSupportTool) return false;
-    // No pending tool and no handoff/closure: stop once it has spoken to the counterpart.
-    return allSteps.some(step => Boolean(step.text?.trim()));
+  protected override getCompletionTools(): Set<string> {
+    // send-message (a spoken reply ends the turn) plus the non-spoken terminal tools, sourced from
+    // the shared `terminalActionTools` so the retry-suppression predicate can never drift from this set.
+    return new Set(["send-message", ...terminalActionTools]);
   }
 
   /**
@@ -163,6 +155,7 @@ You represent your government's interests and gather intelligence through diplom
 
       `# Your Expectations
 - You engage in diplomatic dialogue on behalf of your leader.
+- You speak to the counterpart ONLY by calling the \`send-message\` tool.
 - You gather intelligence and relay important information back to your leader using the \`call-diplomatic-analyst\` tool.
 - You assess the situation and provide context in your reports to help the analyst.
 - Validate and reason against current game state: a conversation can outlive the moment it began, so do not assume the world is frozen.
@@ -171,6 +164,9 @@ You represent your government's interests and gather intelligence through diplom
 
     if (!this.isSpecialMode(input)) {
       sections.push(`# Your Resources
+- Use the \`send-message\` tool to say something to the counterpart.
+  - The \`Message\` you provide is delivered exactly as written, so write the finished reply, not a description of it.
+  - Never write a reply as free text outside this tool.
 - Use the \`get-briefing\` tool to retrieve briefings on Military, Economy, and/or Diplomacy.
   - Call it when you need strategic intelligence to inform your conversations.
 - Use the \`get-diplomatic-events\` tool to retrieve recent diplomatic history with another player.
@@ -184,7 +180,7 @@ You represent your government's interests and gather intelligence through diplom
 - Use the \`call-negotiator\` tool to propose or react to diplomatic deals.
   - You never write trade items or promises yourself, instead, the negotiator will handle it.
   - If your proposal is currently on the table, await the counterpart's reply rather than calling the negotiator again.
-- Write diplomatic responses alongside or after your tool calls.`);
+  - When a deal authored by the counterpart is on the table, either hand it to the negotiator with \`call-negotiator\` or reply with \`send-message\`: do not leave it unanswered.`);
     }
 
     sections.push(communicationStyle);
@@ -194,9 +190,10 @@ You represent your government's interests and gather intelligence through diplom
   }
 
   /**
-   * The diplomat's normal-mode nudge appended after the hint: gather and relay intelligence.
+   * The diplomat's normal-mode nudge appended after the hint: gather and relay intelligence, and
+   * speak through send-message.
    */
   protected override getDefaultAddon(): string {
-    return "Gather intelligence and relay important information to the analyst.";
+    return "Gather intelligence and relay important information to the analyst. Speak to the counterpart with the `send-message` tool.";
   }
 }

@@ -53,8 +53,11 @@ import {
   identityOf,
   syncThreadMessages,
   isClosedThisTurn,
+  retryMessage,
+  needsRetryReply,
 } from '../../utils/diplomacy/transcript.js';
 import { hydrateDealRow } from '../../utils/diplomacy/transcript-utils.js';
+import { createSendMessageStreamer, type StreamChunk } from '../../utils/models/send-message-stream.js';
 import { beginChatTurn, withThreadLock, ThreadBusyError, type ChatTurn, type TurnCommit } from '../../utils/diplomacy/chat-turn-commit.js';
 import {
   inspectDeal,
@@ -415,9 +418,24 @@ export function createAgentRoutes(): Router {
     // the deal dialog here, then streams the reply below. Text turns carry no `deal`.
     sendEvent('connected', { sessionId: thread.id, deal: turn.dealRow });
 
+    // The live envoy speaks by calling the `send-message` tool; the streamer turns that tool's
+    // streamed `Message` argument back into `text-delta` events (and swallows the tool's own
+    // tool-call/tool-result chunks) so a spoken reply renders as a normal text bubble, not a
+    // tool-call card. Every other chunk passes through unchanged.
+    //
+    // Whether the turn spoke is NOT tracked as a live streaming flag here: it is decided after the
+    // run from the persisted reply slice with the same `needsRetryReply` predicate the commit path
+    // archives with (see the retry guard below), so the streamed and archived retry decisions are one
+    // decision and can never diverge (e.g. on a whitespace-only reply).
+    const emitSpoken = (text: string, id: string) => {
+      sendEvent('message', { type: 'text-delta', text, id });
+    };
+    const streamer = createSendMessageStreamer(emitSpoken);
     const streamCallback: StreamingEventCallback = {
       OnChunk: ({ chunk }) => {
-        sendEvent('message', chunk as Record<string, unknown>);
+        if (!streamer.handleChunk(chunk as StreamChunk)) {
+          sendEvent('message', chunk as Record<string, unknown>);
+        }
       }
     };
 
@@ -502,7 +520,7 @@ export function createAgentRoutes(): Router {
             return;
           }
           await agent.handleMessage(params, thread, commit.message, (text: string) => {
-            sendEvent('message', { type: 'text-delta', text, id: 'programmatic' });
+            emitSpoken(text, 'programmatic');
           });
         } else {
           // throwOnError so a real agent failure propagates to the catch below and surfaces as an SSE
@@ -522,6 +540,19 @@ export function createAgentRoutes(): Router {
         if (contextLengthFailed) {
           sendEvent('error', { message: 'This conversation is too long for the model to continue. Please start a new one.' });
           return;
+        }
+
+        // A turn that spoke nothing AND took no deliberate terminal action (the step ceiling was hit,
+        // or the model produced nothing usable) still owes the counterpart an answer: stream the shared
+        // retry line — the same one the commit path archives, under the same condition — so a stuck turn
+        // is visible rather than silent dead air. A deal handoff / close is its own visible outcome, so
+        // the retry must NOT fire for it (it would contradict the deal/close just produced). The
+        // `needsRetryReply` predicate (over the slice taken BEFORE the deal-row splice below) is the
+        // exact one the commit path uses, so the streamed and archived retry are literally one decision.
+        // Gated on `diplomacy` to match where the commit path archives the reply, so live and reload agree.
+        const replySlice = thread.messages.slice(replyStart);
+        if (thread.diplomacy && needsRetryReply(replySlice)) {
+          sendEvent('message', { type: 'text-delta', text: retryMessage, id: 'retry' });
         }
 
         // The run succeeded — archive the diplomat's reply (best-effort) FIRST, so the reply slice never

@@ -31,6 +31,8 @@ export {
   joinAssistantText,
   collectSpokenReply,
   retryMessage,
+  tookTerminalAction,
+  needsRetryReply,
 } from "./transcript-utils.js";
 
 /** Read the full ordered transcript between two endpoints from the mcp-server store. */

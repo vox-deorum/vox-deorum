@@ -35,10 +35,10 @@ export class Spokesperson extends LiveEnvoy {
   public tags = ["active-game", "diplomatic"];
 
   /**
-   * Extends LiveEnvoy's tool set with the MCP get-diplomatic-events tool
+   * Extends LiveEnvoy's tool set (get-briefing + send-message) with the MCP get-diplomatic-events tool
    */
   public override getActiveTools(_parameters: StrategistParameters): string[] | undefined {
-    return ["get-briefing", "get-diplomatic-events"];
+    return ["get-briefing", "send-message", "get-diplomatic-events"];
   }
 
   /**
@@ -58,11 +58,12 @@ You represent your government's interests with diplomatic tact and strategic amb
 - You convey your leader's existing viewpoints and positions - do NOT draft, propose, or negotiate new terms
 - Your purpose is to further your nation's goals and strategies, not to serve or please your audience
 - You maintain diplomatic decorum while protecting sensitive information (the bar depends on the diplomatic relationship and audience)
-- Answer purposefully, and do not send out in a text block`,
+- You answer the audience ONLY by calling the \`send-message\` tool: its \`Message\` is delivered verbatim as your spoken reply. Never write a reply as free text outside the tool. Answer purposefully.`,
     ];
 
     if (!this.isSpecialMode(input)) {
       sections.push(`# Available Tools
+- You answer the audience with the \`send-message\` tool. The \`Message\` you provide is delivered exactly as written, so write the finished reply, not a description of it. This is your ONLY way to speak.
 - You have a \`get-briefing\` tool to retrieve briefings on Military, Economy, and/or Diplomacy.
   - Call it when you need strategic intelligence.
   - No need to call it for simple greetings or casual diplomatic exchanges.

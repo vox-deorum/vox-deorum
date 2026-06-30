@@ -58,8 +58,8 @@ describe('Diplomat.stopCheck', () => {
     expect(diplomat.stopCheck(parameters, input, steps[3], steps, context)).toBe(false);
   });
 
-  it.each(['call-negotiator', 'close-conversation'])(
-    'stops when the current step calls %s regardless of its result',
+  it.each(['send-message', 'call-negotiator', 'close-conversation'])(
+    'stops when the current step calls the completion tool %s regardless of its result',
     toolName => {
       const input = thread();
       const context = createFakeVoxContext().asContext();
@@ -69,6 +69,26 @@ describe('Diplomat.stopCheck', () => {
       expect(diplomat.stopCheck(parameters, input, terminal, [terminal], context)).toBe(true);
     }
   );
+
+  it('stops when a step speaks and hands off in the same step (send-message + call-negotiator)', () => {
+    const context = createFakeVoxContext().asContext();
+    // The model may speak and hand the deal to the negotiator in one step; either alone ends the turn,
+    // so the pair certainly does.
+    const both = step('', ['send-message', 'call-negotiator']);
+
+    expect(diplomat.stopCheck(parameters, thread(), both, [both], context)).toBe(true);
+  });
+
+  it('stops at the hard step ceiling even with a support tool still pending', () => {
+    const input = thread();
+    const context = createFakeVoxContext().asContext();
+    // Ten consecutive support-tool steps with nothing spoken: a runaway loop. The ceiling (maxSteps=10)
+    // is checked before the keep-working branch, so even a pending support tool cannot extend it.
+    const steps = Array.from({ length: 10 }, () => step('', ['get-briefing']));
+
+    expect(diplomat.stopCheck(parameters, input, steps[8], steps.slice(0, 9), context)).toBe(false);
+    expect(diplomat.stopCheck(parameters, input, steps[9], steps, context)).toBe(true);
+  });
 
   it('stops on non-whitespace free text but not whitespace-only text', () => {
     const context = createFakeVoxContext().asContext();

@@ -52,9 +52,10 @@ function greetingThread(): EnvoyThread {
 const params = { playerID: 3, turn: 5, metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck' } }, gameStates: {} };
 
 describe('Diplomat tool set', () => {
-  it('includes close-conversation and the negotiator handoff alongside briefing/events/analyst', () => {
+  it('includes send-message, close-conversation, and the negotiator handoff alongside briefing/events/analyst', () => {
     expect(diplomat.getActiveTools(params)).toEqual([
       'get-briefing',
+      'send-message',
       'get-diplomatic-events',
       'call-diplomatic-analyst',
       'close-conversation',
@@ -64,9 +65,10 @@ describe('Diplomat tool set', () => {
 });
 
 describe('Spokesperson tool set', () => {
-  it('has briefing/events but never close-conversation', () => {
+  it('has briefing/events/send-message but never close-conversation', () => {
     const tools = spokesperson.getActiveTools(params);
     expect(tools).toContain('get-briefing');
+    expect(tools).toContain('send-message');
     expect(tools).toContain('get-diplomatic-events');
     expect(tools).not.toContain('close-conversation');
   });
@@ -78,6 +80,14 @@ describe('Diplomat.getSystem', () => {
     expect(system).toContain('# Your Resources');
     expect(system).toContain('call-diplomatic-analyst');
     expect(system).toContain('# Your Audience');
+  });
+
+  it('directs the diplomat to speak only through send-message', async () => {
+    const system = await diplomat.getSystem(params, thread(), undefined);
+    expect(system).toContain('send-message');
+    // The instruction is present in both modes — even a greeting speaks through the tool.
+    const greeting = await diplomat.getSystem(params, greetingThread(), undefined);
+    expect(greeting).toContain('send-message');
   });
 
   it('omits the resources block in special (greeting) mode', async () => {
@@ -147,6 +157,14 @@ describe('Spokesperson.getSystem', () => {
     expect(system).toContain('# Available Tools');
     expect(system).toContain('get-briefing');
     expect(system).toContain('get-diplomatic-events');
+    expect(system).toContain('send-message');
+  });
+
+  it('directs the spokesperson to answer only through send-message', async () => {
+    const system = await spokesperson.getSystem(params, thread(), undefined);
+    expect(system).toContain('send-message');
+    // The old "do not send out in a text block" guidance is replaced by the send-message directive.
+    expect(system).not.toContain('do not send out in a text block');
   });
 
   it('omits the tool section in special (greeting) mode', async () => {

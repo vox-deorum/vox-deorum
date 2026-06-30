@@ -136,22 +136,115 @@ describe('LiveEnvoy.getInitialMessages', () => {
 });
 
 describe('LiveEnvoy.prepareStep', () => {
-  it('clears active tools in special (greeting) mode', async () => {
+  it('restricts active tools to send-message in special (greeting) mode', async () => {
     const params = liveParams();
     const input = thread({ messages: [greetingMessage()] });
     const ctx = createFakeVoxContext().asContext();
 
+    // With the tool force honored on the deployed model an empty set would be uncompliable; the
+    // greeting speaks through send-message like any other reply.
     const config = await spokesperson.prepareStep(params, input, null, [], [], ctx);
-    expect(config.activeTools).toEqual([]);
+    expect(config.activeTools).toEqual(['send-message']);
   });
 
-  it('does not clear active tools in normal mode', async () => {
+  it('does not restrict active tools in normal mode', async () => {
     const params = liveParams();
     const input = thread({ messages: [textMessage('hello')] });
     const ctx = createFakeVoxContext().asContext();
 
     const config = await spokesperson.prepareStep(params, input, null, [], [], ctx);
-    expect(config.activeTools).not.toEqual([]);
+    expect(config.activeTools).not.toEqual(['send-message']);
+  });
+});
+
+describe('LiveEnvoy.stopCheck (shared completion logic via Spokesperson)', () => {
+  const parameters = { turn: 5 } as any;
+
+  /** Minimal AI SDK step shape consumed by Envoy + LiveEnvoy stop checks. */
+  function step(text = '', toolNames: string[] = []) {
+    return {
+      text,
+      toolCalls: toolNames.map(toolName => ({ toolName })),
+      toolResults: [],
+      response: { messages: [{ role: 'assistant', content: text }] },
+    } as any;
+  }
+
+  it('stops once the spokesperson speaks through send-message', () => {
+    const ctx = createFakeVoxContext().asContext();
+    const spoke = step('', ['send-message']);
+    expect(spokesperson.stopCheck(parameters, thread(), spoke, [spoke], ctx)).toBe(true);
+  });
+
+  it('keeps working while a support tool is pending, below the ceiling', () => {
+    const ctx = createFakeVoxContext().asContext();
+    const briefing = step('', ['get-briefing']);
+    expect(spokesperson.stopCheck(parameters, thread(), briefing, [briefing], ctx)).toBe(false);
+  });
+
+  it('stops at the shared hard step ceiling (maxSteps = 10)', () => {
+    const ctx = createFakeVoxContext().asContext();
+    const steps = Array.from({ length: 10 }, () => step('', ['get-briefing']));
+    expect(spokesperson.stopCheck(parameters, thread(), steps[9], steps, ctx)).toBe(true);
+  });
+
+  it('stops on raw spoken free text (the Anthropic fallback)', () => {
+    const ctx = createFakeVoxContext().asContext();
+    const spoken = step('We share your hope for peace.');
+    expect(spokesperson.stopCheck(parameters, thread(), spoken, [spoken], ctx)).toBe(true);
+  });
+});
+
+describe('Envoy.convertToModelMessages (send-message archival → context)', () => {
+  /** An assistant message-with-metadata carrying the given content. */
+  function assistant(content: unknown, turn = 4): MessageWithMetadata {
+    return { message: { role: 'assistant', content } as any, metadata: { datetime: new Date(0), turn } };
+  }
+
+  /** A tool message-with-metadata carrying the given tool-result parts. */
+  function toolMessage(content: unknown, turn = 4): MessageWithMetadata {
+    return { message: { role: 'tool', content } as any, metadata: { datetime: new Date(0), turn } };
+  }
+
+  it('keeps the send-message tool-call part but drops its "Message delivered." tool-result', () => {
+    const messages: MessageWithMetadata[] = [
+      assistant([
+        { type: 'text', text: 'I will respond.' },
+        { type: 'tool-call', toolCallId: 't1', toolName: 'send-message', input: { Message: 'We accept.' } },
+      ]),
+      toolMessage([
+        { type: 'tool-result', toolCallId: 't1', toolName: 'send-message', output: { type: 'text', value: 'Message delivered.' } },
+      ]),
+    ];
+
+    const result = spokesperson.convertToModelMessages(messages);
+
+    // The tool message is dropped entirely (its only result was the send-message confirmation).
+    expect(result).toHaveLength(1);
+    expect(result[0].role).toBe('assistant');
+    const parts = result[0].content as any[];
+    // The send-message tool-call part survives so the model's history shows it spoke by calling it.
+    expect(parts.some(p => p.type === 'tool-call' && p.toolName === 'send-message')).toBe(true);
+    expect(parts.some(p => p.type === 'text')).toBe(true);
+    // The confirmation never resurfaces as a user line.
+    const joined = JSON.stringify(result);
+    expect(joined).not.toContain('Message delivered.');
+  });
+
+  it('still summarizes a non-send-message tool-result, dropping only the send-message one', () => {
+    const messages: MessageWithMetadata[] = [
+      toolMessage([
+        { type: 'tool-result', toolCallId: 't1', toolName: 'send-message', output: { type: 'text', value: 'Message delivered.' } },
+        { type: 'tool-result', toolCallId: 't2', toolName: 'get-briefing', output: { type: 'text', value: 'Military: strong.' } },
+      ]),
+    ];
+
+    const result = spokesperson.convertToModelMessages(messages);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].role).toBe('user');
+    expect(result[0].content).toContain('Military: strong.');
+    expect(result[0].content).not.toContain('Message delivered.');
   });
 });
 

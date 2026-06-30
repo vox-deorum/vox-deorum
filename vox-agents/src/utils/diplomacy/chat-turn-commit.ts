@@ -11,7 +11,7 @@
 import type { EnvoyThread, ChatMessageRequest } from "../../types/index.js";
 import type { DealTranscriptMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import { ModelMessage } from "ai";
-import { appendTranscriptMessage, audienceID, joinAssistantText } from "./transcript.js";
+import { appendTranscriptMessage, audienceID, collectSpokenReply, retryMessage, needsRetryReply } from "./transcript.js";
 import { hydrateDealRow } from "./transcript-utils.js";
 import { appendDealProposal, classifyDealSubmission } from "./deal.js";
 import { createLogger } from "../logger.js";
@@ -126,7 +126,14 @@ export async function beginChatTurn(thread: EnvoyThread, commit: TurnCommit, tur
     dealRow,
     async complete() {
       if (thread.diplomacy) {
-        const reply = joinAssistantText(thread.messages.slice(replyStart));
+        // Archive exactly what was displayed: the spoken reply is the interleaved text + send-message
+        // arguments (collectSpokenReply). A turn that spoke nothing falls back to the shared retry line
+        // — the same one the web route streams, under the SAME `needsRetryReply` predicate — UNLESS it
+        // took a deliberate terminal action (a deal handoff or a close): that turn's outcome is the
+        // deal/close itself (archived by its own tool), so a "lost my train of thought" line would
+        // contradict it (needsRetryReply is false). Such a turn archives no reply row.
+        const slice = thread.messages.slice(replyStart);
+        const reply = collectSpokenReply(slice) || (needsRetryReply(slice) ? retryMessage : "");
         if (reply) {
           try {
             await appendTranscriptMessage(thread, thread.agent, "text", reply);

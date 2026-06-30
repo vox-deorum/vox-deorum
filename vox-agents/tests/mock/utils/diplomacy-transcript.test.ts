@@ -16,6 +16,7 @@ import {
   isClosedThisTurn,
   joinAssistantText,
   collectSpokenReply,
+  tookTerminalAction,
   type TranscriptMessage,
 } from '../../../src/utils/diplomacy/transcript-utils.js';
 import { counterpartOpenProposal, type DealReduction } from '../../../src/utils/diplomacy/deal-reduce.js';
@@ -210,6 +211,42 @@ describe('diplomacy transcript helpers', () => {
         { message: { role: 'user', content: 'ignore me' }, metadata: { datetime: new Date(0), turn: 1 } },
       ];
       expect(collectSpokenReply(messages)).toBe('');
+    });
+  });
+
+  describe('tookTerminalAction', () => {
+    /** Wrap assistant content as a thread item with throwaway metadata. */
+    function assistant(content: MessageWithMetadata['message']['content']): MessageWithMetadata {
+      return { message: { role: 'assistant', content } as MessageWithMetadata['message'], metadata: { datetime: new Date(0), turn: 1 } };
+    }
+
+    it('is true when the turn handed the deal to the negotiator', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't1', toolName: 'call-negotiator', input: { Briefing: 'x' } },
+      ])];
+      expect(tookTerminalAction(messages)).toBe(true);
+    });
+
+    it('is true when the turn closed the conversation', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't2', toolName: 'close-conversation', input: {} },
+      ])];
+      expect(tookTerminalAction(messages)).toBe(true);
+    });
+
+    it('is false for a spoken (send-message) turn — speaking is not a terminal action', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't3', toolName: 'send-message', input: { Message: 'Hi.' } },
+      ])];
+      expect(tookTerminalAction(messages)).toBe(false);
+    });
+
+    it('is false for a support-tool-only / empty (stuck) turn', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't4', toolName: 'get-briefing', input: { Categories: ['Military'] } },
+      ])];
+      expect(tookTerminalAction(messages)).toBe(false);
+      expect(tookTerminalAction([assistant('plain free text, no tools')])).toBe(false);
     });
   });
 });

@@ -190,3 +190,43 @@ export function collectSpokenReply(messages: MessageWithMetadata[]): string {
   const joined = parts.filter((piece) => piece !== "").join("\n");
   return joined.trim() === "" ? "" : joined;
 }
+
+/**
+ * Completion tools whose call is itself the turn's visible outcome — a deal handoff or a closure —
+ * even when the agent speaks no accompanying line. This is the single source of truth for the
+ * diplomat's non-spoken terminal tools: `Diplomat.getCompletionTools()` is built from this set plus
+ * `send-message` (speaking is captured by {@link collectSpokenReply}), so the two cannot drift.
+ */
+export const terminalActionTools = new Set(["call-negotiator", "close-conversation"]);
+
+/**
+ * Whether a reply slice contains a deliberate non-spoken outcome (a negotiator handoff or a
+ * conversation close). Such a turn produced a deal move / close — shown to the counterpart in its
+ * own right — so a missing spoken reply is intentional, NOT a stuck turn. The retry line (which
+ * reads as "I lost my train of thought") must therefore stand in only when nothing was spoken AND
+ * no terminal action was taken; otherwise it contradicts the deal/close the turn just produced.
+ */
+export function tookTerminalAction(messages: MessageWithMetadata[]): boolean {
+  for (const item of messages) {
+    if (item.message.role !== "assistant") continue;
+    const content = item.message.content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content) {
+      if (part.type === "tool-call" && terminalActionTools.has(part.toolName)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether a diplomacy turn's reply slice is a "stuck" turn that needs the {@link retryMessage}
+ * stand-in: it spoke nothing ({@link collectSpokenReply} is empty) AND took no deliberate terminal
+ * action ({@link tookTerminalAction} — a deal handoff or close is its own visible outcome). This is
+ * the single decision behind the retry line: the commit path archives `retryMessage` and the web
+ * route streams it under exactly this predicate, so both call this one function and can never drift
+ * (e.g. a model whose spoken reply happens to equal `retryMessage` verbatim is NOT stuck — it spoke,
+ * so this returns false and the route does not double the line the streamer already showed live).
+ */
+export function needsRetryReply(messages: MessageWithMetadata[]): boolean {
+  return !collectSpokenReply(messages) && !tookTerminalAction(messages);
+}

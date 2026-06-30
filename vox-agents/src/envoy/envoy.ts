@@ -11,6 +11,7 @@ import { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../types/
 import { VoxContext } from "../infra/vox-context.js";
 import { formatToolResultOutput, stripTurnMarker } from "../utils/models/text-cleaning.js";
 import { audienceID, identityOf, roleOf } from "../utils/diplomacy/transcript-utils.js";
+import { sendMessageToolName } from "../utils/diplomacy/send-message-tool-name.js";
 
 /**
  * Default special messages shared by all envoy agents. Maps a triple-brace-enclosed
@@ -157,10 +158,14 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
     for (const item of messages) {
       const message = { ...item.message };
 
-      // Replace tool-result messages with a plain text summary
+      // Replace tool-result messages with a plain text summary. Drop the send-message tool-result
+      // ("Message delivered." confirmation): the spoken reply is the tool-call's Message argument,
+      // already shown by the kept assistant tool-call part, so the confirmation carries no content
+      // and would only add a stray "user" line. If dropping it empties the tool message, skip it.
       if (message.role === 'tool' && Array.isArray(message.content)) {
         const texts = message.content
           .filter(part => part.type === 'tool-result')
+          .filter(part => part.toolName !== sendMessageToolName)
           .map(part => formatToolResultOutput(part))
           .filter((t): t is string => t !== undefined);
         if (texts.length === 0) continue;
