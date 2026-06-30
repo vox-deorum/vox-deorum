@@ -7,7 +7,11 @@ description: Review Git staged changes for correctness risks and concrete mainta
 
 Review only the Git index. Treat tests as passed, remain read-only, and lead with actionable findings that improve correctness and make the code easier to understand and change safely.
 
+Throughout, *delegate* means hand the work to a **less expensive subagent** (e.g. Sonnet, GPT-5.5-medium) and reserve your own reasoning for synthesis and final judgment.
+
 ## Inspect the change
+
+Delegate the following groundwork to the subagent first:
 
 1. Read the repository instructions, then any instructions scoped to changed directories.
 2. Inspect `git status --short`, `git diff --cached --name-only`, and `git diff --cached --stat`.
@@ -32,18 +36,33 @@ For each risk, identify the triggering path and user-visible or operational impa
 
 ## Improve maintainability and readability
 
-Recommend an improvement when the staged design makes future changes harder, forces readers to hold unnecessary context, or obscures an important invariant. Prefer structural clarity but still look for opportunities to simplify the code. Look especially for:
+Recommend an improvement when the staged design makes future changes harder, forces readers to hold unnecessary context, or obscures an important invariant. Prefer structural clarity but still look for opportunities to simplify the code. Work one theme at a time and look especially for:
+
+**Single source of truth**: one fact, represented and derived in one place.
 
 - One concept represented by multiple types, fields, callbacks, or sources of truth
-- Responsibilities split across layers without a clear owner, or unrelated concerns interleaved in one function
+- Duplicate policy, validation, transformation, or error handling likely to drift
+- Authoritative data discarded and reconstructed, reread, refreshed wholesale, or fabricated later
+
+**Contracts and invariants**: the declared shape matches runtime behavior, and invariants are enforced once at a boundary.
+
 - Names, types, comments, and runtime behavior that describe different contracts
 - Important invariants enforced late, repeatedly, or only by callers instead of at one boundary
-- Duplicate policy, validation, transformation, or error handling likely to drift
-- Excessive indirection, pass-through wrappers, broad interfaces, or callbacks that hide the real control flow
-- Long branching paths that can become a direct operation by strengthening an earlier invariant
-- Authoritative data discarded and reconstructed, reread, refreshed wholesale, or fabricated later
 - Tests coupled to incidental implementation details or fixtures that conceal the production contract
+
+**Responsibilities and control flow**: clear ownership, with no flow hidden behind indirection.
+
+- Responsibilities split across layers without a clear owner, or unrelated concerns interleaved in one function
+- Excessive indirection, pass-through wrappers, broad interfaces, or callbacks that hide the real control flow
+
+**Simplification through a smaller design**: less code, fewer branches, reusable units.
+
+- Long branching paths that can become a direct operation by strengthening an earlier invariant
 - Comments that narrate complexity which can instead be removed through a smaller design
+- Complicated in-function logic that can be distilled into separate functions, particularly reusable ones
+- Excessively long code files that can be logically split into util files, particularly reusable ones
+
+After drafting the findings for a theme, delegate that group's draft to the subagent to check your reasoning and surface additional opportunities within the same theme before moving on. Fold its confirmed additions into the group.
 
 Do not report formatting preferences or subjective style in isolation. For each maintainability finding, name the future change, debugging task, or invariant that is unnecessarily difficult to reason about.
 
