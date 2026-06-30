@@ -43,9 +43,9 @@ So: **game tools are always prompt-mode for claude-code.** Built-in CLI tools, w
 ### 1.1 Dependency
 Add to the monorepo-root `package.json` `dependencies` (with the other `@ai-sdk/*` providers):
 ```jsonc
-"ai-sdk-provider-claude-code": "^3.0.0",
+"ai-sdk-provider-claude-code": "^3.5.0",
 ```
-`npm install` from the repo root; keep `optionalDependencies`. Smoke-check no import-time CLI spawn: `node -e "import('ai-sdk-provider-claude-code').then(()=>console.log('ok'))"`.
+(`^3.5.0` guarantees the `effort`/`thinking` and top-level `tools` fields this plan uses.) `npm install` from the repo root; keep `optionalDependencies`. Smoke-check no import-time CLI spawn: `node -e "import('ai-sdk-provider-claude-code').then(()=>console.log('ok'))"`.
 
 ### 1.2 Provider case — `src/utils/models/models.ts`
 Imports near the other provider imports (`models.ts:8-22`):
@@ -182,23 +182,25 @@ This is the only real call site.
 
 ## Stage 3 — Built-in tool-call telemetry
 
-When built-in tools run, the CLI executes them in its own loop and the provider surfaces each as an AI-SDK `tool-call`/`tool-result` part with `providerExecuted: true` (distinct from the middleware-synthesized game-tool parts, which are not provider-executed). These appear in `stepResponse.response.messages` and `result.steps[*]`. They currently get no vox-agents span (the existing per-tool spans live in the in-process `execute` of `mcp-tools.ts:112-176` / `simple-tools.ts` / `agent-tools.ts`, which built-in tools never hit).
+When built-in tools run, the CLI executes them in its own loop and the provider surfaces each as an AI-SDK `tool-call`/`tool-result` part with `providerExecuted: true` (distinct from the middleware-synthesized game-tool parts, which are not provider-executed). They currently get no vox-agents span (the existing per-tool spans live in the in-process `execute` of `mcp-tools.ts:112-176` / `simple-tools.ts` / `agent-tools.ts`, which built-in tools never hit).
 
 ### 3.1 Extract + span — `src/infra/vox-context.ts` (`executeAgentStep`)
-After `stepResponse` is resolved and messages gathered (`vox-context.ts:806`), add a helper that walks `stepResponse.response.messages` for parts with `providerExecuted === true` and `type` `tool-call`/`tool-result`, pairs them by `toolCallId`, and emits one span per call mirroring the `mcp-tool.*` shape:
+Read the parts from **`stepResponse.content`**, not `stepResponse.response.messages`. `stepResponse` already *is* the last `StepResult` (`vox-context.ts:790`), and `StepResult.content: Array<ContentPart>` carries `providerExecuted` on **both** the `tool-call` and `tool-result` variants, with the tool-result `output` unwrapped. The `response.messages` layer is the wrong source: its `ToolResultPart` structurally **drops** `providerExecuted` (only the tool-*call* keeps it) and wraps `output` in a `{type:'json',value}` envelope — so filtering results on `providerExecuted` there would silently match nothing.
+
+After `stepResponse` is resolved (`vox-context.ts:790`), add a helper that walks `stepResponse.content` for parts with `providerExecuted === true`, pairs `tool-call`/`tool-result` by `toolCallId`, and emits one span per call mirroring the `mcp-tool.*` shape:
 ```ts
 // span name `claude-code-tool.<toolName>`, kind CLIENT, attributes:
 //   'tool.name', 'tool.type': 'claude-code-builtin', 'vox.context.id': this.id,
-//   'game.turn': parameters.turn, 'tool.input': JSON.stringify(input),
-//   'tool.output': JSON.stringify(result), and isError -> ERROR status.
+//   'game.turn': String(parameters.turn), 'tool.input': JSON.stringify(input),
+//   'tool.output': JSON.stringify(output), and isError -> ERROR status.
 ```
-These are retrospective (the tool already ran in the CLI), so they are point-in-time spans under the step span, not timed wrappers. Gate the walk on `stepModel.provider === 'claude-code'` to keep it zero-cost for other providers.
+These are retrospective (the tool already ran in the CLI), so they are point-in-time spans under the step span, not timed wrappers. Gate the walk on `stepModel.provider === 'claude-code'` to keep it zero-cost for other providers. (Provider-executed parts are the built-in CLI tools; the middleware-synthesized game-tool parts are not provider-executed, so they're naturally excluded.)
 
 ### 3.2 Verify the surface
-Confirm empirically (a real claude-code run with `claudeCodeTools` set) that built-in tool activity actually arrives as `providerExecuted` parts in `response.messages`/`steps`. If a given CLI tool does not surface that way, fall back to reading the provider's stream parts in the `concurrency.ts` `fullStream` drain (`concurrency.ts:171-182`) and emitting spans there instead. The research confirmed this shape for `createAiSdkMcpServer` (bridged) tools and that `buildToolCallPart`/`buildToolResultPart` are shared by `doGenerate`/`doStream`; built-in tools are the one thing to confirm.
+The type evidence settles the source (`StepResult.content`); what remains to confirm empirically (a real claude-code run with `claudeCodeTools` set) is that the provider actually emits provider-executed parts for *built-in* CLI tools (the research confirmed this shape for `createAiSdkMcpServer`-bridged tools, and that `buildToolCallPart`/`buildToolResultPart` are shared by `doGenerate`/`doStream`; built-in tools are the one unconfirmed case). If a built-in tool does not surface in `stepResponse.content`, read the provider's raw stream parts in the `concurrency.ts` `fullStream` drain (`concurrency.ts:171-182`) and emit spans there instead.
 
 ### 3.3 Tests
-Unit-test the extraction helper with a synthetic `stepResponse.response.messages` containing a `providerExecuted` tool-call + tool-result pair and a normal (non-provider-executed) game-tool part, asserting only the built-in pair produces a span record (use a fake tracer / span recorder) and the game-tool part is ignored.
+Unit-test the extraction helper with a synthetic `stepResponse.content` array containing a `providerExecuted` tool-call + tool-result pair and a normal (non-provider-executed) game-tool part, asserting only the built-in pair produces a span record (use a fake tracer / span recorder) and the game-tool part is ignored.
 
 ---
 
