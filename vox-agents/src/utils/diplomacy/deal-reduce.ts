@@ -86,3 +86,13 @@ export function activeProposalDeal(reduction: DealReduction): DealPayload | unde
 export function isAgreed(reduction: DealReduction): boolean {
   return reduction.status === "accepted" || reduction.status === "enacted";
 }
+
+/**
+ * True when an open proposal authored by the **counterpart** (not the agent's own seat) is on the
+ * table. This is the one deal state that gates the diplomat's tools: when the ball is in its court
+ * it should either hand the proposal to the negotiator or reply, not wander off into briefings. A
+ * proposal our own side authored leaves the ball with the other side, so it does not restrict us.
+ */
+export function counterpartOpenProposal(reduction: DealReduction, agentSeat: number): boolean {
+  return reduction.status === "open" && !!reduction.active && reduction.active.SpeakerID !== agentSeat;
+}

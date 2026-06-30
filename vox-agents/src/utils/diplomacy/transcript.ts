@@ -29,6 +29,8 @@ export {
   deriveCloseTurn,
   isClosedThisTurn,
   joinAssistantText,
+  collectSpokenReply,
+  retryMessage,
 } from "./transcript-utils.js";
 
 /** Read the full ordered transcript between two endpoints from the mcp-server store. */

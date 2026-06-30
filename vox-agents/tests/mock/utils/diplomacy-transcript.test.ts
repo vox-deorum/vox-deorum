@@ -15,8 +15,10 @@ import {
   deriveCloseTurn,
   isClosedThisTurn,
   joinAssistantText,
+  collectSpokenReply,
   type TranscriptMessage,
 } from '../../../src/utils/diplomacy/transcript-utils.js';
+import { counterpartOpenProposal, type DealReduction } from '../../../src/utils/diplomacy/deal-reduce.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../src/types/index.js';
 
 /** Minimal thread for the ordered-pair derivation helpers. */
@@ -151,5 +153,90 @@ describe('diplomacy transcript helpers', () => {
       ];
       expect(joinAssistantText(messages)).toBe('plain reply\npart one\npart two');
     });
+  });
+
+  describe('collectSpokenReply', () => {
+    /** Wrap assistant content as a thread item with throwaway metadata. */
+    function assistant(content: MessageWithMetadata['message']['content']): MessageWithMetadata {
+      return { message: { role: 'assistant', content } as MessageWithMetadata['message'], metadata: { datetime: new Date(0), turn: 1 } };
+    }
+
+    it('captures a send-message-only turn from the tool-call Message input', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't1', toolName: 'send-message', input: { Message: 'Hello there.' } },
+      ])];
+      expect(collectSpokenReply(messages)).toBe('Hello there.');
+    });
+
+    it('archives a narrate-then-send-message turn as BOTH, in display order', () => {
+      // The leak this closes: a model that narrates and then speaks shows both live; the reload must
+      // reproduce that same sequence (native text first, then the send-message text).
+      const messages = [assistant([
+        { type: 'text', text: 'I will respond carefully.' },
+        { type: 'tool-call', toolCallId: 't2', toolName: 'send-message', input: { Message: 'We accept your terms.' } },
+      ])];
+      expect(collectSpokenReply(messages)).toBe('I will respond carefully.\nWe accept your terms.');
+    });
+
+    it('captures a plain-string assistant message (the Anthropic free-text fallback)', () => {
+      expect(collectSpokenReply([assistant('A spoken fallback line.')])).toBe('A spoken fallback line.');
+    });
+
+    it('returns "" for a turn that spoke nothing (support tools only, no text)', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't3', toolName: 'get-briefing', input: { Categories: ['Military'] } },
+      ])];
+      expect(collectSpokenReply(messages)).toBe('');
+    });
+
+    it('preserves the spoken text verbatim, including leading/trailing whitespace', () => {
+      // What streamed live keeps the model's own padding; archival must not silently trim it, or the
+      // reloaded reply would differ from what the counterpart saw.
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't4', toolName: 'send-message', input: { Message: '  Hold the line.\n' } },
+      ])];
+      expect(collectSpokenReply(messages)).toBe('  Hold the line.\n');
+    });
+
+    it('collapses a whitespace-only reply to "" so the retry fallback engages', () => {
+      const messages = [assistant([
+        { type: 'tool-call', toolCallId: 't5', toolName: 'send-message', input: { Message: '   \n  ' } },
+      ])];
+      expect(collectSpokenReply(messages)).toBe('');
+    });
+
+    it('ignores user messages and returns "" when none are assistant turns', () => {
+      const messages: MessageWithMetadata[] = [
+        { message: { role: 'user', content: 'ignore me' }, metadata: { datetime: new Date(0), turn: 1 } },
+      ];
+      expect(collectSpokenReply(messages)).toBe('');
+    });
+  });
+});
+
+describe('counterpartOpenProposal', () => {
+  /** A deal reduction with sensible defaults (no proposal on the table). */
+  function reduction(partial: Partial<DealReduction> = {}): DealReduction {
+    return { active: null, status: 'none', proposals: [], ...partial };
+  }
+
+  it('is true only when an OPEN proposal authored by the counterpart is on the table', () => {
+    // Agent voices seat 3; the counterpart (seat 1) authored the open proposal.
+    const counterpart = reduction({ active: row({ SpeakerID: 1, MessageType: 'deal-proposal' }), status: 'open' });
+    expect(counterpartOpenProposal(counterpart, 3)).toBe(true);
+  });
+
+  it('is false when OUR own side authored the open proposal (ball is on the other side)', () => {
+    const own = reduction({ active: row({ SpeakerID: 3, MessageType: 'deal-proposal' }), status: 'open' });
+    expect(counterpartOpenProposal(own, 3)).toBe(false);
+  });
+
+  it('is false when there is no active proposal', () => {
+    expect(counterpartOpenProposal(reduction(), 3)).toBe(false);
+  });
+
+  it('is false when the counterpart proposal is no longer open (e.g. accepted)', () => {
+    const accepted = reduction({ active: row({ SpeakerID: 1, MessageType: 'deal-proposal' }), status: 'accepted' });
+    expect(counterpartOpenProposal(accepted, 3)).toBe(false);
   });
 });

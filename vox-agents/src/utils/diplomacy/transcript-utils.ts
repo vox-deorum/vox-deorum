@@ -17,6 +17,7 @@ import type { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../.
 // type so existing importers keep working, and reuse the shared deal-message guard.
 import type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
 import { isDealMessage, type DealTranscriptMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import { sendMessageToolName } from "./send-message-tool-name.js";
 export type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
 
 /** Message types that contribute readable text to a conversation thread. */
@@ -127,7 +128,7 @@ export function isClosedThisTurn(closeTurn: number | undefined, currentTurn: num
   return closeTurn !== undefined && currentTurn <= closeTurn;
 }
 
-/** Concatenate the readable text of assistant messages — used to capture an LLM reply. */
+/** Concatenate the readable text of assistant messages, used to capture an LLM reply. */
 export function joinAssistantText(messages: MessageWithMetadata[]): string {
   const parts: string[] = [];
   for (const item of messages) {
@@ -142,4 +143,50 @@ export function joinAssistantText(messages: MessageWithMetadata[]): string {
     }
   }
   return parts.join("\n").trim();
+}
+
+/**
+ * The polite retry line streamed to the client and archived as the turn's reply when a turn ends
+ * with no usable spoken reply (the step ceiling was hit, or the model produced nothing usable), so
+ * a stuck turn degrades into a request to repeat rather than dead air. Shared by the commit path
+ * and the web route so both stream/persist exactly the same line.
+ */
+export const retryMessage = "My apologies, I lost my train of thought. Could you say that again?";
+
+/**
+ * Capture exactly what was displayed as the agent's spoken reply. Walk assistant messages in
+ * order and, within each, walk content parts in their original order, concatenating every `text`
+ * part and every `send-message` tool-call part's `Message` input. That is the same sequence the
+ * client rendered (native text-delta greetings/fallback interleaved with the `send-message` text
+ * the streamer converted), so a reload reproduces the live view, closing the leak where a model
+ * that narrates *and then* calls `send-message` would show both live but persist only the tool
+ * text. Returns "" when nothing was spoken.
+ *
+ * Emptiness is detected with a trim check, but a non-empty reply is returned **verbatim** (not
+ * trimmed): the streamed text preserves the model's own leading/trailing whitespace, so trimming
+ * here would make the reloaded reply differ from what the counterpart saw live. Only the
+ * newline join (display order) and the drop of empty pieces are imposed.
+ */
+export function collectSpokenReply(messages: MessageWithMetadata[]): string {
+  const parts: string[] = [];
+  for (const item of messages) {
+    if (item.message.role !== "assistant") continue;
+    const content = item.message.content;
+    if (typeof content === "string") {
+      parts.push(content);
+    } else if (Array.isArray(content)) {
+      for (const part of content) {
+        if (part.type === "text") {
+          parts.push(part.text);
+        } else if (part.type === "tool-call" && part.toolName === sendMessageToolName) {
+          const message = (part.input as { Message?: unknown } | undefined)?.Message;
+          if (typeof message === "string") parts.push(message);
+        }
+      }
+    }
+  }
+  // Drop empty pieces (e.g. an empty text part that streamed nothing) so they add no phantom
+  // separator, then collapse a whitespace-only turn to "" while leaving meaningful content untouched.
+  const joined = parts.filter((piece) => piece !== "").join("\n");
+  return joined.trim() === "" ? "" : joined;
 }
