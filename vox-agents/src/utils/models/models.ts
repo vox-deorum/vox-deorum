@@ -11,6 +11,7 @@ import type { Model } from '../../types/index.js';
 import { createOpenRouter, LanguageModelV3 } from '@openrouter/ai-sdk-provider';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createClaudeCode, type ClaudeCodeSettings } from 'ai-sdk-provider-claude-code';
 import { hermesToolMiddleware } from '@ai-sdk-tool/parser';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createVertex } from '@ai-sdk/google-vertex';
@@ -152,6 +153,25 @@ export function getModel(config: Model, options?: { useToolPrompt?: boolean }): 
     case "anthropic":
       result = createAnthropic()(config.name);
       break;
+    case "claude-code": {
+      // Drives the local Claude Agent SDK / Claude Code CLI subprocess. It has no
+      // native AI-SDK tool calling, so game tools MUST be prompt-emulated — force
+      // prompt mode by rebinding config so the middleware tail's "prompt" branch runs.
+      config = { ...config, options: { ...config.options, toolMiddleware: 'prompt' } };
+      const opts = config.options ?? {};
+      const settings: ClaudeCodeSettings = {
+        settingSources: [], // explicit: never load CLAUDE.md / .claude/settings.json into agent prompts
+        tools: [],          // Stage 1: disable all built-in CLI tools (zero host tool execution)
+      };
+      // reasoningEffort -> Claude Code `effort` (non-adaptive). 'minimal' disables thinking instead.
+      if (opts.reasoningEffort === 'minimal') {
+        settings.thinking = { type: 'disabled' };
+      } else if (opts.reasoningEffort) {
+        settings.effort = opts.reasoningEffort; // 'low' | 'medium' | 'high' ⊆ EffortLevel
+      }
+      result = createClaudeCode()(config.name, settings);
+      break;
+    }
     case "aws":
       result = createAmazonBedrock()(config.name);
       break;

@@ -84,6 +84,23 @@ export const defaultConfig: VoxAgentsConfig = {
       provider: 'anthropic',
       name: 'claude-opus-4-7'
     },
+    'claude-code/sonnet': {
+      provider: 'claude-code',
+      name: 'sonnet',
+      // prompt-mode tool calling is forced unconditionally in getModel's
+      // 'claude-code' case (no native tool calling), so it is not set here.
+      options: {}
+    },
+    'claude-code/opus': {
+      provider: 'claude-code',
+      name: 'opus',
+      options: {}
+    },
+    'claude-code/haiku': {
+      provider: 'claude-code',
+      name: 'haiku',
+      options: {}
+    },
     'synthetic/hf:moonshotai/Kimi-K2.6': {
       provider: 'synthetic',
       name: 'hf:moonshotai/Kimi-K2.6',

@@ -6,7 +6,7 @@
 
 The work lands in three independently-shippable, ordered checkpoints. Each keeps the package type-checking and the mock test suite green.
 
-- [ ] **Stage 1 — Core provider (pure-text, prompt-mode game tools).** Install the package; add the `claude-code` case to `getModel()` (forces prompt middleware, `settingSources: []`, effort-only reasoning, no built-in tools); register `claude-code/{sonnet,opus,haiku}` defaults; add the UI provider entry; first `models.ts` unit test. After this, any agent can use `claude-code/sonnet` as a drop-in text model with full prompt-mode tool calling. This is the ~95% case.
+- [x] **Stage 1 — Core provider (pure-text, prompt-mode game tools).** ✅ DONE. Install the package; add the `claude-code` case to `getModel()` (forces prompt middleware, `settingSources: []`, effort-only reasoning, no built-in tools); register `claude-code/{sonnet,opus,haiku}` defaults; add the UI provider entry; first `models.ts` unit test. After this, any agent can use `claude-code/sonnet` as a drop-in text model with full prompt-mode tool calling. This is the ~95% case.
 - [ ] **Stage 2 — Optional built-in CLI tools + temp folder + prompt override.** Add `options.claudeCodeTools` (opt-in list; `['everything']` = a vetted safe set; Bash never allowed) and `options.claudeCodePromptOverride`; thread `gameID-playerID` into `getModel()` for the per-seat temp `cwd`; teach the tool-rescue middleware an optional `preamble` so the game-tool prompt can disambiguate game actions from built-in CLI tools.
 - [ ] **Stage 3 — Built-in tool-call telemetry.** Surface the CLI-executed built-in tool calls/results (which arrive as `providerExecuted` AI-SDK parts) into vox-agents per-tool spans, mirroring the existing `mcp-tool.*` span shape.
 
@@ -39,6 +39,30 @@ So: **game tools are always prompt-mode for claude-code.** Built-in CLI tools, w
 ---
 
 ## Stage 1 — Core provider (pure-text, prompt-mode game tools)
+
+> **Status: ✅ Implemented (2026-06-30).** Built as specified; `npm run type-check` clean and the
+> full mock suite green (new `tests/mock/utils/models.test.ts`, 6 tests). Built against the
+> installed `ai-sdk-provider-claude-code@3.5.0` / `@anthropic-ai/claude-agent-sdk`.
+>
+> **Confirmed against the installed `.d.ts` (resolves the SAFETY-GATE uncertainty):**
+> - `ClaudeCodeSettings` exposes a top-level **`tools?: string[] | { type:'preset'; preset:'claude_code' }`**,
+>   and `[]` is the **documented** value for "disable all built-in tools" — so the primary path
+>   (`tools: []`) is correct and **no `disallowedTools` fallback is needed**. (This also de-risks Stage 2.3.)
+> - `effort?: EffortLevel = 'low'|'medium'|'high'|'xhigh'|'max'` and `thinking` accepts `{ type:'disabled' }`
+>   — the `'minimal'→disabled` / else `effort` mapping type-checks with no cast (`reasoningEffort` is
+>   already `'minimal'|'low'|'medium'|'high'`).
+> - `createClaudeCode()(id, settings)` returns `@ai-sdk/provider`'s `LanguageModelV3`, assignable to the
+>   `result` variable with **no cast**. Both `createClaudeCode` and `claudeCode` are exported.
+> - Bonus: the provider already defaults `settingSources` to `[]` when omitted; we still pass it explicitly.
+>
+> **Deviations from the snippets below (minor):**
+> - The test uses `vi.hoisted(() => ({ captured }))` to share the capture holder with the hoisted
+>   `vi.mock` factory (the `let captured` form in 1.5 trips Vitest's mock-hoisting guard).
+> - The `getModelConfig('claude-code/sonnet')` assertion runs against the real merged config (local
+>   `config.json` only overrides `default`; the entry-level merge preserves all default `llms` keys),
+>   so the `defaultConfig.llms` fallback was not needed.
+> - **Not yet run:** the manual real-CLI SAFETY-GATE turn (needs an authenticated `claude` CLI) — still
+>   required before relying on `claude-code/*` in production.
 
 ### 1.1 Dependency
 Add to the monorepo-root `package.json` `dependencies` (with the other `@ai-sdk/*` providers):
@@ -156,7 +180,7 @@ if (!requested || requested.length === 0) {
     ?? `## Built-in tools\nYou also have these built-in CLI tools, called natively (NOT via the JSON format below): ${allowed.join(', ')}.\nUse the JSON tool-call format ONLY for the game actions listed under "Available Tools".`;
 }
 ```
-(`tools` is the availability layer — only these built-ins are in Claude's context; `allowedTools` is the permission layer. Setting `tools` is what actually bounds the surface, so `bypassPermissions` can only ever auto-approve the vetted set. Confirm during implementation that the provider exposes a top-level `tools` field; if it only honors `allowedTools`, restrict availability via `disallowedTools` for the unwanted built-ins instead.)
+(`tools` is the availability layer — only these built-ins are in Claude's context; `allowedTools` is the permission layer. Setting `tools` is what actually bounds the surface, so `bypassPermissions` can only ever auto-approve the vetted set. **Confirmed in Stage 1** against `ai-sdk-provider-claude-code@3.5.0`: the provider exposes a top-level `tools?: string[] | { type:'preset'; preset:'claude_code' }`, so `settings.tools = allowed` is the correct availability control — the `disallowedTools`-only fallback is not needed.)
 Add node imports at the top of `models.ts`: `import os from 'node:os'; import fs from 'node:fs'; import path from 'node:path';`.
 
 ### 2.4 Middleware preamble — `src/utils/models/tool-rescue/{types,middleware}.ts`
@@ -206,7 +230,7 @@ Unit-test the extraction helper with a synthetic `stepResponse.content` array co
 
 ## Cross-cutting risks
 
-- **SAFETY GATE — `tools: []` must mean zero host tool execution.** It's the default path for all three registered models. The Agent SDK availability layer documents `tools: []` as "all built-ins removed," but the provider's exposure of that field must be confirmed. Before merging Stage 1, empirically confirm a `claude-code/sonnet` generation has no built-in tools available and runs **none**. If the provider doesn't honor a top-level `tools` field, fall back to `disallowedTools` covering every built-in (or whatever the provider documents as the availability control).
+- **SAFETY GATE — `tools: []` must mean zero host tool execution.** It's the default path for all three registered models. **Resolved in Stage 1:** `ai-sdk-provider-claude-code@3.5.0` exposes a top-level `tools?: string[] | { type:'preset'; preset:'claude_code' }`, and the Agent SDK documents `[]` as "Disable all built-in tools" — so `tools: []` is the correct, type-checked availability control and no `disallowedTools` fallback is required. **Still outstanding:** the empirical real-CLI confirmation that a `claude-code/sonnet` generation has no built-in tools available and runs **none** (needs an authenticated `claude` CLI) — required before relying on `claude-code/*` in production.
 - **Bash is unconditionally blocked**, both by exclusion from `allowedTools` and by `disallowedTools: ['Bash']`. If other shell-exec-adjacent built-ins should also be blocked (e.g. a future `KillShell`), extend `CLAUDE_CODE_BLOCKED_TOOLS`.
 - **`bypassPermissions` runs real tools on the host.** The vetted set includes `Write`/`Edit`/`WebFetch`/`WebSearch`; `cwd` scopes file ops to the temp folder but web tools reach the network. This is an explicit opt-in.
 - **Structured output through prompt-mode.** `vox-context.ts:776` sets `experimental_output: Output.object(...)` in the same call as prompt-mode tools — identical to every other prompt-mode provider today, so claude-code inherits existing behavior. The provider's "structured mode bypasses tool bridging" note concerns the MCP bridge we are not using; still, verify a real diplomacy turn with both an output schema and active tools parses correctly and rescues no spurious tool call.
