@@ -99,6 +99,16 @@ describe('agent routes', () => {
       ]);
     });
 
+    it('surfaces the diplomacyOnly capability flag', async () => {
+      vi.spyOn(agentRegistry, 'getAll').mockReturnValue([
+        { name: 'diplomat', description: 'speaks for a civ', tags: ['diplomacy'], diplomacyOnly: true },
+      ] as never);
+
+      const res = await request(app).get('/api/agents');
+      expect(res.status).toBe(200);
+      expect(res.body.agents[0].diplomacyOnly).toBe(true);
+    });
+
     it('defaults tags to an empty array when an agent omits them', async () => {
       vi.spyOn(agentRegistry, 'getAll').mockReturnValue([
         { name: 'observer', description: 'watches' },
@@ -789,6 +799,17 @@ describe('agent routes', () => {
         .send({ agentName: 'ghost' });
       expect(res.status).toBe(404);
       expect(res.body.error).toMatch(/not found/i);
+    });
+
+    it('rejects an ordinary chat with a diplomacy-only agent (400) — must use diplomacy mode', async () => {
+      vi.spyOn(agentRegistry, 'get').mockReturnValue(
+        { name: 'diplomat', description: 'Diplomat', tags: [], diplomacyOnly: true } as any,
+      );
+      const res = await request(app)
+        .post('/api/agents/chat')
+        .send({ agentName: 'diplomat', contextId: 'g-player-3' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/diplomacy mode/i);
     });
 
     it('rejects a diplomacy chat with no contextId', async () => {

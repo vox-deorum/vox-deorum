@@ -198,6 +198,8 @@ export interface AgentInfo {
   description: string;
   /** Tags for categorizing/filtering agents */
   tags: string[];
+  /** When true, this agent only operates in diplomacy mode (no ordinary observer/telepathist chat). */
+  diplomacyOnly?: boolean;
 }
 
 /**

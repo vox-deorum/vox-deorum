@@ -299,6 +299,23 @@ function onConversationModeChange() {
   }
 }
 
+/**
+ * Pick an agent from the list. A diplomacy-only agent (e.g. the diplomat) can never run as an
+ * ordinary observer chat, so selecting it forces the Diplomacy form: the regular Observer/identity
+ * panel is never shown and the clicked agent becomes the conversation voice.
+ */
+async function selectAgent(agent: AgentInfo) {
+  if (agent.diplomacyOnly) {
+    selectedAgent.value = null;
+    error.value = null;
+    conversationMode.value = 'diplomacy';
+    if (civPlayerOptions.value.length === 0) await loadPlayerOptions();
+    voiceOverride.value = agent;
+    return;
+  }
+  selectedAgent.value = agent;
+}
+
 /** Proceed from Step 1 to Step 2, or skip for database contexts */
 function proceedToIdentity() {
   if (!selectedAgent.value) return;
@@ -517,7 +534,7 @@ watch(
             :key="agent.name"
             class="table-row clickable"
             :class="{ 'selected': selectedAgent?.name === agent.name }"
-            @click="selectedAgent = agent"
+            @click="selectAgent(agent)"
           >
             <div class="col-fixed-150">{{ agent.name }}</div>
             <div class="col-expand text-wrap">{{ agent.description }}</div>

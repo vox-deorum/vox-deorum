@@ -74,11 +74,23 @@ class NestingAgent extends VoxAgent<StrategistParameters> {
   }
 }
 
+/** Minimal diplomacy-only agent (one mocked step), used to exercise the execute() boundary guard. */
+class DiplomacyOnlyAgent extends VoxAgent<StrategistParameters> {
+  readonly description = 'diplomacy-only test agent';
+  override diplomacyOnly = true;
+  constructor(public readonly name: string) { super(); }
+  override getModel(): Model { return { provider: 'test', name: 'test' } as Model; }
+  async getSystem(): Promise<string> { return 'system'; }
+  override getActiveTools(): string[] { return []; }
+  override stopCheck(): boolean { return true; }
+}
+
 beforeAll(() => {
   agentRegistry.register(new StepAgent('test-step-a') as any);
   agentRegistry.register(new StepAgent('test-step-b') as any);
   agentRegistry.register(new StepAgent('test-step-child') as any);
   agentRegistry.register(new NestingAgent('test-nesting', 'test-step-child') as any);
+  agentRegistry.register(new DiplomacyOnlyAgent('test-diplomacy-only') as any);
 });
 
 beforeEach(() => {
@@ -138,6 +150,34 @@ describe('VoxContext.execute token accounting', () => {
     expect(tokensA).toEqual([100]);
     expect(tokensB).toEqual([100]);
     expect(ctx.inputTokens).toBe(200); // seat total is the sum of both roots
+  });
+});
+
+describe('VoxContext.execute diplomacy-only guard', () => {
+  it('rejects a diplomacy-only agent unless the input is a diplomacy thread, before any model step', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-diplomacy-only-reject');
+    const base = makeStrategistParameters();
+
+    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
+      await expect(ctx.execute('test-diplomacy-only', { diplomacy: false }))
+        .rejects.toThrow(/only runs in diplomacy mode/i);
+      await expect(ctx.execute('test-diplomacy-only', {}))
+        .rejects.toThrow(/only runs in diplomacy mode/i);
+    });
+
+    expect(stc).not.toHaveBeenCalled(); // the guard fails fast, before the step loop runs the model
+  });
+
+  it('runs a diplomacy-only agent when the input carries the diplomacy flag', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-diplomacy-only-run');
+    const base = makeStrategistParameters();
+
+    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
+      const result = await ctx.execute('test-diplomacy-only', { diplomacy: true });
+      expect(result).toBe('done');
+    });
+
+    expect(stc).toHaveBeenCalledTimes(1);
   });
 });
 

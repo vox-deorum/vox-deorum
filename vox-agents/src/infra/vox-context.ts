@@ -549,6 +549,16 @@ export class VoxContext<TParameters extends AgentParameters> {
       throw new Error(`Agent '${agentName}' not found in registry`);
     }
 
+    // A diplomacy-only agent (e.g. the diplomat) has no counterpart outside a civ↔civ diplomacy
+    // conversation, so it must never run as an ordinary observer/telepathist chat. This is the single
+    // execution boundary every entry point — the web chat routes, the telepathist CLI, and agent-tool
+    // handoffs — funnels through, so enforcing the invariant here makes it unbypassable rather than
+    // relying on each caller to re-check it. The EnvoyThread `diplomacy` flag is set only by the
+    // diplomacy route; non-envoy inputs (strategists, narrators) are never diplomacyOnly and skip this.
+    if (agent.diplomacyOnly && !(input as { diplomacy?: boolean } | null | undefined)?.diplomacy) {
+      throw new Error(`Agent '${agentName}' only runs in diplomacy mode; it cannot run as an ordinary observer/telepathist chat.`);
+    }
+
     const root = frame.root;
     // The active root's composed parameters are the single source of execution parameters.
     const params = root.parameters;

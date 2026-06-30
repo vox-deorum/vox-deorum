@@ -202,7 +202,8 @@ export function createAgentRoutes(): Router {
       const agentList: AgentInfo[] = agents.map(agent => ({
         name: agent.name,
         description: agent.description,
-        tags: agent.tags || []
+        tags: agent.tags || [],
+        diplomacyOnly: agent.diplomacyOnly
       }));
 
       res.json({ agents: agentList });
@@ -993,6 +994,12 @@ async function openOrdinaryChat(
   const agent = agentRegistry.get(agentNameReq);
   if (!agent) {
     return res.status(404).json({ error: `Agent ${agentNameReq} not found` });
+  }
+
+  // Defense in depth: a diplomacy-only agent (e.g. the diplomat) has no counterpart in an ordinary
+  // observer/telepathist chat and must only run via the diplomacy route (which sets diplomacy: true).
+  if (agent.diplomacyOnly) {
+    return res.status(400).json({ error: `Agent ${agentNameReq} only supports diplomacy mode; open it with mode: 'diplomacy'.` });
   }
 
   // The voiced player (the agent seat) is parsed from the chosen context / database.

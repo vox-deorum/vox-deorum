@@ -42,6 +42,15 @@ export class Diplomat extends LiveEnvoy {
   public tags = ["active-game", "diplomatic"];
 
   /**
+   * The diplomat only operates inside a civ↔civ diplomacy conversation. The invariant is guaranteed
+   * at the `VoxContext.execute` boundary (which rejects it unless the input is a diplomacy thread),
+   * so the `prepareStep`/`getInitialMessages` deal-state reads below can assume a counterpart exists;
+   * the web chat route, the telepathist CLI, and the chat dialog (which forces the Diplomacy form,
+   * never the regular Observer panel) each reject or steer it away up front.
+   */
+  public override diplomacyOnly = true;
+
+  /**
    * Extends LiveEnvoy's tool set with diplomatic events, analyst reporting, and — for
    * civ↔civ diplomacy conversations — the close-conversation tool.
    */
@@ -68,10 +77,6 @@ export class Diplomat extends LiveEnvoy {
   }
 
   /**
-   * Gates close-conversation and the negotiator handoff to civ↔civ diplomacy threads — they are
-   * meaningless for an observer chat (endpoint A = -1); special-message (greeting) mode is already
-   * restricted to send-message by LiveEnvoy.
-   *
    * When a deal authored by the **counterpart** is open on the table, the ball is in the diplomat's
    * court, so it is restricted to call-negotiator + send-message — it must either hand the proposal
    * to the negotiator or reply, never wander off into briefings/analyst calls. The gate reads the
@@ -79,6 +84,9 @@ export class Diplomat extends LiveEnvoy {
    * accept/reject routes use), NOT the best-effort in-memory cache, so a stale `open` left by a
    * disconnect on an accept/reject can never wrongly keep restricting the next turn. A proposal our
    * own side authored leaves the ball with the other side and does not restrict us.
+   *
+   * Special-message (greeting) mode is already restricted to send-message by LiveEnvoy, so the gate
+   * is skipped there.
    */
   public override async prepareStep(
     parameters: StrategistParameters,
@@ -89,13 +97,7 @@ export class Diplomat extends LiveEnvoy {
     context: VoxContext<StrategistParameters>
   ) {
     const config = await super.prepareStep(parameters, input, lastStep, allSteps, messages, context);
-    if (!input.diplomacy) {
-      // Observer chat (endpoint A = -1): no counterpart exists, so the non-spoken terminal actions
-      // (negotiator handoff / close) are meaningless — strip them from the resolved tool set. Reuse the
-      // shared `terminalActionTools` source rather than a parallel literal that could silently drift.
-      const active = config.activeTools ?? this.getActiveTools(parameters) ?? [];
-      config.activeTools = active.filter((t) => !terminalActionTools.has(t));
-    } else if (lastStep === null && !this.isSpecialMode(input)) {
+    if (lastStep === null && !this.isSpecialMode(input)) {
       // Diplomacy turn, first step: read the authoritative deal state once. The counterpart cannot act
       // mid-turn (the per-thread lock), so the gate state is fixed for the whole turn; and when the gate
       // IS active it restricts to call-negotiator + send-message, both of which end the turn — so there
@@ -123,7 +125,7 @@ export class Diplomat extends LiveEnvoy {
    * Adds the on-the-table deal to the diplomat's context so it "sees the deal at every step"
    * (specs §7) — the active proposal's terms, the negotiator's rationale/message, and the
    * per-item value snapshots — so it can voice each move faithfully and keep its intelligence
-   * current. Skipped in special-message (greeting) mode and for non-diplomacy chats.
+   * current. Skipped in special-message (greeting) mode.
    */
   public override async getInitialMessages(
     parameters: StrategistParameters,
@@ -131,7 +133,7 @@ export class Diplomat extends LiveEnvoy {
     context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
     const messages = await super.getInitialMessages(parameters, input, context);
-    if (input.diplomacy && !this.isSpecialMode(input)) {
+    if (!this.isSpecialMode(input)) {
       const dealContext = await buildDealContextMessage(input);
       if (dealContext) {
         messages.push({ role: "user", content: dealContext });

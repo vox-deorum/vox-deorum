@@ -59,6 +59,17 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   public tags: string[] = [];
 
   /**
+   * Generic capability flag: when true, this agent only operates inside a civ↔civ diplomacy
+   * conversation and must never be run as an ordinary observer/telepathist chat. The invariant is
+   * enforced at the single execution boundary `VoxContext.execute`, which rejects such an agent
+   * unless its input carries the diplomacy flag, so no entry point can bypass it. The web chat route
+   * and the telepathist CLI additionally reject it up front with a clearer message, and the chat
+   * dialog forces the Diplomacy form (never the regular Observer panel) so it is never selected for
+   * an ordinary chat.
+   */
+  public diplomacyOnly = false;
+
+  /**
    * Optional description for when this agent is exposed as a tool
    */
   public toolDescription?: string;

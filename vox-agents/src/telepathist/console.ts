@@ -27,6 +27,7 @@ import {
   parseDatabaseIdentifier,
 } from '../utils/telemetry/identifier-parser.js';
 import { contextRegistry } from '../infra/context-registry.js';
+import { agentRegistry } from '../infra/agent-registry.js';
 import { StreamingEventCallback, EnvoyThread } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
@@ -64,6 +65,16 @@ const prepareOnly = values.prepare as boolean;
 
 if (!rawDatabasePath) {
   logger.error('Database path is required. Usage: telepathist -d <database-path> [-a <agent>] [-p]');
+  process.exit(1);
+}
+
+// Fail fast on a diplomacy-only agent (e.g. the diplomat): the telepathist console always builds a
+// non-diplomacy thread, so such an agent has no counterpart here. VoxContext.execute enforces this
+// invariant for every entry point, but checking up front gives the operator a clear message before
+// the database, web server, and context are spun up.
+const agentDef = agentRegistry.get(agentName);
+if (agentDef?.diplomacyOnly) {
+  logger.error(`Agent '${agentName}' only runs in diplomacy mode and cannot be voiced in a telepathist console session. Choose an observer/telepathist agent (e.g. talkative-telepathist).`);
   process.exit(1);
 }
 
