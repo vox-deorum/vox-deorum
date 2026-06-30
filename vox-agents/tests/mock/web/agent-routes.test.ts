@@ -380,6 +380,216 @@ describe('agent routes', () => {
       expect(failing.mock.calls[0]![5]).toEqual({ throwOnError: true });
     });
 
+    it('commits a deal proposal as the turn, then streams the diplomat reply', async () => {
+      // A deal turn reuses this route: the proposal is the durable commit point (archived FIRST, so any
+      // tool-written row follows it), then the diplomat streams its reply exactly like a chat message.
+      const { mcp, ctx, chatId } = await openDiplomacy({ liveTurn: 5, execute: replyWith('We will weigh your offer.') });
+      mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
+      let nextID = 60;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }], promises: [] },
+        // No expectedProposalID — nothing is open, so this opens a fresh proposal (the server derives the type).
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: done/);
+      expect(res.text).not.toMatch(/event: error/);
+      // The post-commit `connected` event carries the authoritative committed row (real ID 60), so the
+      // UI inserts it without a reread/refresh.
+      expect(res.text).toMatch(/event: connected/);
+      expect(res.text).toMatch(/"deal":\{"ID":60/);
+
+      const appends = mcp.calls('append-message');
+      expect(appends.map((c) => c.args.MessageType)).toEqual(['deal-proposal', 'text']);
+      expect(appends[1]!.args.Content).toBe('We will weigh your offer.');
+      // One root run at the live turn carries the diplomat — the same lifecycle as a chat turn.
+      expect(ctx.withRunCalls.some((c: any) => c.overrides?.turn === 5)).toBe(true);
+    });
+
+    it('commits a counter bound to the reviewed proposal, then streams the reply', async () => {
+      // Proposing and countering are one action. The audience answers the agent's open proposal (ID 7) by
+      // submitting a deal with expectedProposalID 7; beginChatTurn reconciles it against the live state
+      // under the lock — 7 is still the active open offer — so it archives a deal-counter and the diplomat
+      // streams its reply. (The server derives the deal-counter type from the open offer; no wire flag.)
+      const proposal = {
+        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
+      };
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [proposal], execute: replyWith('Considering your counter.') });
+      mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
+      let nextID = 60;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 25 }], promises: [] },
+        expectedProposalID: 7,
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: done/);
+      expect(mcp.calls('append-message').map((c) => c.args.MessageType)).toEqual(['deal-counter', 'text']);
+    });
+
+    it('409s a submission whose answered offer is no longer the active one (without archiving or streaming)', async () => {
+      // The human reviewed proposal 7, but 9 is the active offer now (a concurrent change slipped in). The
+      // submission carries expectedProposalID 7, so the under-lock reconcile rejects it as a conflict BEFORE
+      // any archival — a stale submission must never revive a dead negotiation as the new active offer.
+      const newer = {
+        ID: 9, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Newer offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
+      };
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [newer] });
+      mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
+      mcp.onTool('append-message', () => structuredResult({ ID: 60, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [], promises: [] },
+        expectedProposalID: 7,
+      });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/no longer the active proposal/i);
+      expect(mcp.calls('append-message')).toHaveLength(0);
+    });
+
+    it('409s a fresh proposal submitted while an offer is already open (no silent supersede)', async () => {
+      // Proposing and countering are one action, validated identically: a fresh submission (no
+      // expectedProposalID) while an offer is open is NOT allowed to silently supersede it. beginChatTurn
+      // reconciles the submitter's "none open" view against the live open offer (ID 7) — a mismatch — and
+      // 409s BEFORE any archival. The submitter must answer the open offer instead.
+      const open = {
+        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Open offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
+      };
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [open] });
+      mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
+      mcp.onTool('append-message', () => structuredResult({ ID: 60, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }], promises: [] },
+        // expectedProposalID omitted — submitter believes nothing is open, but offer 7 is.
+      });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatch(/must be answered/i);
+      expect(mcp.calls('append-message')).toHaveLength(0);
+    });
+
+    it("streams the diplomat's mid-run deal rows on `done` so the board updates without a reload", async () => {
+      // The diplomat's negotiator tools write deal rows (counter/accept/reject/enacted) straight to the
+      // durable store DURING the streamed reply — they never ride the text stream. After the run the route
+      // reconciles those rows and ships the NEW ones on `done`, so the live board reflects the outcome
+      // without a full refresh (which would flatten the streamed reasoning/tool traces).
+      const counterRow = {
+        ID: 77, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: 3, MessageType: 'deal-counter', Content: 'Consider this instead.',
+        Payload: { Deal: { version: 1, items: [], promises: [] }, Value1: {}, Value2: {} }, Turn: 5, CreatedAt: 0,
+      };
+      let diplomatCountered = false;
+      const execute = vi.fn(async (_n: string, input: any) => {
+        diplomatCountered = true; // the diplomat's tool durably wrote a deal-counter mid-run
+        input.messages.push({ message: { role: 'assistant', content: 'A measured reply.' }, metadata: { datetime: new Date(), turn: 5 } });
+        return input;
+      });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute });
+      // read-transcript reflects the counter only after the run wrote it (the post-run reconcile reads it).
+      mcp.onTool('read-transcript', () => structuredResult({ messages: diplomatCountered ? [counterRow] : [] }));
+      let nextID = 60;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: done/);
+      // The diplomat's mid-run counter (ID 77) is reconciled and carried on `done`, not lost until reload.
+      expect(res.text).toMatch(/"deals":\[\{"ID":77/);
+    });
+
+    it('rejects a structurally malformed deal pre-stream (400, not 502) without archiving', async () => {
+      // A term directed outside the conversation pair fails validateDealForThread, which now throws
+      // IllegalDealError (a client error) — the route maps it to 400, never a generic 502. inspect-deal
+      // is never reached because the structural guard runs first.
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5 });
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 9, itemType: 'GOLD', amount: 50 }], promises: [] },
+      });
+
+      expect(res.status).toBe(400);
+      expect(mcp.calls('append-message')).toHaveLength(0);
+    });
+
+    it('rejects an illegal deal pre-stream (400) without archiving or streaming', async () => {
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5 });
+      // The legality guard in appendDealProposal throws IllegalDealError BEFORE the SSE opens, so the
+      // route maps it to a 400 JSON body and nothing is committed (the optimistic UI card rolls back).
+      mcp.respondWith('inspect-deal', structuredResult({
+        items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: false, reasons: ['No gold to give'] }],
+        promises: [], tradableRange: {},
+      }));
+      mcp.onTool('append-message', () => structuredResult({ ID: 99, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }], promises: [] },
+      });
+
+      expect(res.status).toBe(400);
+      expect(mcp.calls('append-message')).toHaveLength(0);
+    });
+
+    it('rejects a deal turn whose expectedProposalID is not a number (400) before committing anything', async () => {
+      // The only shape-level requirement left for a deal turn (propose and counter are one action): when
+      // expectedProposalID is supplied it must be a number, so the under-lock reconcile can compare it.
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5 });
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [], promises: [] },
+        expectedProposalID: 'not-a-number',
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/expectedProposalID/i);
+      expect(mcp.calls('append-message')).toHaveLength(0);
+    });
+
+    it('keeps a committed deal proposal but skips the reply when the diplomat run fails', async () => {
+      // The proposal is durably committed BEFORE the run, then the diplomat fails. throwOnError surfaces
+      // it as an SSE error (not a false `done`); the append-only proposal stays and only the reply is
+      // skipped — the streaming counterpart of the human's preliminary card staying on a 'committed' fail.
+      const failing = vi.fn(async () => { throw new Error('LLM exploded'); });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: failing });
+      mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
+      let nextID = 80;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      const res = await request(app).post('/api/agents/message').send({
+        kind: 'deal',
+        chatId,
+        deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }], promises: [] },
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toMatch(/event: error/);
+      expect(res.text).not.toMatch(/event: done/);
+      expect(mcp.calls('append-message').map((c) => c.args.MessageType)).toEqual(['deal-proposal']);
+    });
+
     it('surfaces a context-length overflow as an error, never a false done', async () => {
       // execute() never rethrows a context overflow even under throwOnError (it's reserved for
       // compact-and-retry callers). This route has no retry, so the onContextLengthError sink must turn
@@ -451,6 +661,41 @@ describe('agent routes', () => {
       expect(firstRes.status).toBe(200);
       expect(firstRes.text).toMatch(/event: done/);
       expect(mcp.calls('append-message').map((c) => c.args.Content)).toEqual(['First message', 'A reply.']);
+    });
+
+    it('serializes the blocking deal/close routes against a streaming turn (409 while in flight)', async () => {
+      // A streaming turn holds the per-thread lock for its whole lifecycle. A human-initiated status
+      // write (deal reject, conversation close) that arrives mid-stream must 409 rather than interleave
+      // with the reply — or the rows the diplomat's own tools write inside that turn. (The Close button
+      // is also disabled client-side while streaming; this is the authoritative server backstop.)
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const slow = vi.fn(async (_n: string, input: any) => {
+        await gate;
+        input.messages.push({ message: { role: 'assistant', content: 'A reply.' }, metadata: { datetime: new Date(), turn: 5 } });
+        return input;
+      });
+      const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: slow });
+      let nextID = 200;
+      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
+
+      // Park the first turn inside the gated execute, holding the thread lock (see the concurrent-turn test).
+      const first = request(app).post('/api/agents/message').send({ chatId, message: 'First message' }).then((r) => r);
+      await vi.waitFor(() => expect(slow).toHaveBeenCalledTimes(1));
+
+      // Both a reject and a close are locked out while the turn streams — neither writes anything.
+      const reject = await request(app).post(`/api/agents/chat/${chatId}/deal/reject`).send({ proposalMessageID: 1 });
+      expect(reject.status).toBe(409);
+      expect(reject.body.error).toMatch(/already being generated/i);
+
+      const close = await request(app).post(`/api/agents/chat/${chatId}/close`).send({});
+      expect(close.status).toBe(409);
+
+      // Only the streaming turn's own rows ever reached the store (the locked-out writes committed nothing).
+      release();
+      const firstRes = await first;
+      expect(firstRes.status).toBe(200);
+      expect(mcp.calls('append-message').map((c) => c.args.MessageType)).toEqual(['text', 'text']);
     });
 
     it('retracts the open proposal when the conversation is closed', async () => {
@@ -578,20 +823,10 @@ describe('agent routes', () => {
   });
 
   describe('typed deal-action endpoints on unknown threads', () => {
-    const emptyDeal = { version: 1, items: [], promises: [] };
-
+    // Propose/counter are no longer typed routes — they commit through POST /api/agents/message with a
+    // `deal` body (the streaming chat path), covered in the diplomacy block below.
     it('inspect returns 404', async () => {
       const res = await request(app).post('/api/agents/chat/missing/deal/inspect').send({});
-      expect(res.status).toBe(404);
-    });
-
-    it('propose returns 404', async () => {
-      const res = await request(app).post('/api/agents/chat/missing/deal/propose').send({ deal: emptyDeal });
-      expect(res.status).toBe(404);
-    });
-
-    it('counter returns 404', async () => {
-      const res = await request(app).post('/api/agents/chat/missing/deal/counter').send({ deal: emptyDeal });
       expect(res.status).toBe(404);
     });
 
@@ -641,53 +876,6 @@ describe('agent routes', () => {
       expect(response.status).toBe(200);
       return { mcp, ctx };
     }
-
-    it('runs the voiced diplomat and persists its reply after a human proposal', async () => {
-      const execute = vi.fn(async (_name, input) => {
-        input.messages.push({
-          message: { role: 'assistant', content: 'We will answer this offer.' },
-          metadata: { datetime: new Date(), turn: 5 },
-        });
-        return input;
-      });
-      const { mcp, ctx } = await openDiplomacyThread([], execute);
-      mcp.respondWith('inspect-deal', structuredResult({
-        items: [],
-        promises: [],
-        tradableRange: {},
-      }));
-      let nextID = 20;
-      mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
-
-      const response = await request(app)
-        .post('/api/agents/chat/dipl:g:1:3/deal/propose')
-        .send({
-          deal: {
-            version: 1,
-            items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }],
-            promises: [],
-          },
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.agentResponded).toBe(true);
-      // respondToHumanDeal opens its OWN run at the live turn (base turn 5, no session) and runs
-      // the diplomat as a nested execution inside it.
-      expect(ctx.withRunCalls.some((c: any) => c.overrides?.turn === 5)).toBe(true);
-      expect(execute).toHaveBeenCalledWith(
-        'diplomat',
-        expect.objectContaining({ id: 'dipl:g:1:3' }),
-        undefined,
-        undefined,
-        undefined,
-        { throwOnError: true }
-      );
-      expect(mcp.calls('append-message').map((call) => call.args.MessageType)).toEqual([
-        'deal-proposal',
-        'text',
-      ]);
-      expect(mcp.calls('append-message')[1]!.args.Content).toBe('We will answer this offer.');
-    });
 
     it('rejects an ID that is not the chat current open proposal', async () => {
       const transcript = [{

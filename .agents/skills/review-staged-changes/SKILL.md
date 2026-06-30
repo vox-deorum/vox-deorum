@@ -32,7 +32,7 @@ For each risk, identify the triggering path and user-visible or operational impa
 
 ## Improve maintainability and readability
 
-Recommend an improvement when the staged design makes future changes harder, forces readers to hold unnecessary context, or obscures an important invariant. Prefer structural clarity over cosmetic style and require a concrete maintenance or comprehension benefit. Look especially for:
+Recommend an improvement when the staged design makes future changes harder, forces readers to hold unnecessary context, or obscures an important invariant. Prefer structural clarity but still look for opportunities to simplify the code. Look especially for:
 
 - One concept represented by multiple types, fields, callbacks, or sources of truth
 - Responsibilities split across layers without a clear owner, or unrelated concerns interleaved in one function
@@ -49,7 +49,7 @@ Do not report formatting preferences or subjective style in isolation. For each 
 
 ## Report findings
 
-Order findings by severity, with correctness before maintainability, readability, and optional cleanup. For each finding:
+Order findings by severity. For each finding:
 
 1. State the problem or improvement opportunity in one sentence.
 2. Cite the staged file and line nearest the cause.
@@ -58,4 +58,4 @@ Order findings by severity, with correctness before maintainability, readability
 
 Use `P0` through `P3` when defect severity helps prioritization; label non-defect improvements `Maintainability` when a severity would be misleading. Group small related cleanup into one item. If no concrete findings remain, say so plainly and mention only material residual uncertainty.
 
-End by stating that no files were changed and tests were not rerun because they were assumed passing.
+After correctness reports, write a section on maintainability, readability, simplification opportunities, and cleanup.

@@ -38,6 +38,7 @@ Purpose: Main chat interface for interacting with agents
           icon="pi pi-times-circle"
           text
           :loading="isClosing"
+          :disabled="isStreaming"
           @click="closeConversation"
         />
         <Button
@@ -98,6 +99,7 @@ Purpose: Main chat interface for interacting with agents
         :agent-busy="isStreaming"
         v-model:busy="dealActionBusy"
         @changed="onDealScreenChanged"
+        @send="onDealSend"
       />
     </Dialog>
 
@@ -146,7 +148,7 @@ import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { api } from '../api/client';
-import type { EnvoyThread } from '../utils/types';
+import type { EnvoyThread, DealPayload } from '../utils/types';
 import ChatMessages from '../components/chat/ChatMessages.vue';
 import DeleteSessionDialog from '../components/DeleteSessionDialog.vue';
 import DealScreen from '../components/deal/DealScreen.vue';
@@ -235,7 +237,7 @@ const activeDealID = computed(() => dealReduction.value.active?.ID);
 const dealStatus = computed(() => dealReduction.value.status);
 
 // Use the thread messages composable
-const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
+const { sendMessage: sendThreadMessage, requestGreeting, proposeDeal } = useThreadMessages({
   thread,
   sessionId,
   isStreaming,
@@ -258,6 +260,16 @@ const { sendMessage: sendThreadMessage, requestGreeting } = useThreadMessages({
   onGreetingFailed: (error) => {
     // A greeting has no input to restore; just surface why it didn't arrive (a reload re-greets).
     toast.add({ severity: 'warn', summary: 'Could not start the conversation', detail: error, life: 4000 });
+  },
+  onDealFailed: (error, commit) => {
+    if (commit === 'uncommitted') {
+      // The proposal never committed (illegal/uninspectable deal, busy, or close-locked) and its
+      // optimistic preliminary card was rolled back — surface why; the human can reopen the dialog.
+      toast.add({ severity: 'warn', summary: 'Proposal not sent', detail: error, life: 4000 });
+    } else {
+      // The proposal committed but the diplomat's reply failed; the card stays. Surface the error.
+      toast.add({ severity: 'warn', summary: 'The reply may have failed', detail: error, life: 4000 });
+    }
   },
 });
 
@@ -282,16 +294,33 @@ const refreshConversation = async () => {
 };
 
 /**
- * The deal screen reported a change. Accept/reject hand back the updated thread (its new deal row
- * already mirrored in) — adopt it directly so the conversation's live reasoning/tool-call traces
- * survive. Propose/counter pass nothing: an agent turn ran, so re-hydrate from the store.
+ * The deal screen reported a blocking write (accept/reject). It always hands back the updated thread
+ * (its new deal row already mirrored in) — adopt it directly so the conversation's live reasoning/
+ * tool-call traces survive — then close the dialog. (Propose/counter no longer come through here; they
+ * stream via `onDealSend`.)
  */
-const onDealScreenChanged = async (updated?: Awaited<ReturnType<typeof api.getAgentChat>>) => {
-  if (updated) applyThread(updated);
-  else await refreshConversation();
-  // The dialog's work is done after any successful deal action (propose/counter/accept/reject):
-  // hide the modal so the conversation — now carrying the sent proposal as an inline card — shows.
+const onDealScreenChanged = (updated: Awaited<ReturnType<typeof api.getAgentChat>>) => {
+  applyThread(updated);
   showDeal.value = false;
+};
+
+/**
+ * The human submitted a deal (propose or counter — one action) from the deal screen. Keep the dialog
+ * OPEN (its controls disable via `agent-busy`/`isStreaming`) until the server *accepts* the deal:
+ * `proposeDeal` streams it through the chat-message path and closes the dialog on the post-commit
+ * `connected` event — which also inserts the authoritative committed card, with the reply streaming
+ * below. A pre-stream rejection never fires `connected`, so the dialog stays open with the draft intact
+ * and `onDealFailed` explains why.
+ *
+ * `expectedProposalID` is the open offer the submission answers (omitted to open a fresh one): the server
+ * 409s it if the live offer state changed under the human — that 409 is a pre-stream `uncommitted`
+ * failure, so the draft stays.
+ */
+const onDealSend = async (
+  { deal, expectedProposalID }: { deal: DealPayload; expectedProposalID?: number },
+) => {
+  const cleanup = await proposeDeal(deal, () => { showDeal.value = false; }, expectedProposalID);
+  if (cleanup) sseCleanup = cleanup;
 };
 
 const loadSession = async () => {

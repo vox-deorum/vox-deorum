@@ -318,14 +318,49 @@ export interface ListChatsResponse {
 export type GetChatResponse = EnvoyThread & ChatResponseEnrichment;
 
 /**
- * Request to send a chat message
+ * A plain-text chat turn for the unified `/api/agents/message` streaming route. Also carries the
+ * `{{{Greeting}}}` trigger (an agent-initiated reply on an empty/stale thread) as its `message`.
  */
-export interface ChatMessageRequest {
-  /** Chat thread ID to send the message to */
+export interface TextMove {
+  kind: 'text';
+  /** Chat thread ID to send the message to. */
   chatId: string;
-  /** The message content. Omit for greeting mode (empty thread). */
-  message?: string;
+  /** The utterance to commit, or the `{{{Greeting}}}` trigger. */
+  message: string;
 }
+
+/**
+ * A structured deal turn committed as the turn's commit point (diplomacy threads only). Proposing and
+ * countering are ONE action — submitting a deal — so there is no `propose`/`counter` flag: the server
+ * derives the archival type (`deal-proposal` vs `deal-counter`) from the live offer state. The route
+ * computes value snapshots + durations server-side and streams the diplomat's reply identically for
+ * both; the transcript Content is derived server-side from `deal.message` (no separate field).
+ */
+export interface DealMove {
+  kind: 'deal';
+  /** Chat thread ID to send the deal to. */
+  chatId: string;
+  /** Structured deal to commit this turn (its `message` becomes the proposal's transcript Content). */
+  deal: DealPayload;
+  /**
+   * The submitter's view of the open offer it is answering: the ID of the proposal currently on the
+   * table, or `undefined` when it believes none is open (a fresh proposal). The commit reconciles this
+   * against the live state under the per-thread turn lock — it MUST match the actual active open offer
+   * (or its actual absence). So a stale/fresh submission can't silently supersede an offer that opened
+   * under it, and a stale counter can't revive a rejected/countered/closed one (either mismatch is a 409).
+   */
+  expectedProposalID?: number;
+}
+
+/**
+ * Request to send a chat message OR commit a deal proposal/counter as the turn's commit point.
+ *
+ * A `kind`-discriminated union: a turn is EITHER a plain-text utterance (`text`) or a structured
+ * `deal`, never both. The unified `/api/agents/message` streaming route commits the caller's move
+ * accordingly, then streams the diplomat's reply identically for both. `beginChatTurn` reuses this
+ * exact union as its `TurnCommit` (ignoring `chatId`), so there's one shape end-to-end.
+ */
+export type ChatMessageRequest = TextMove | DealMove;
 
 /**
  * Response after deleting a chat thread
@@ -338,10 +373,11 @@ export interface DeleteChatResponse {
 // ============================================================================
 // Typed deal-action API (interactive-diplomacy stage 4)
 //
-// These are explicit structured deal endpoints, distinct from the plain-text
-// `/api/agents/message` path. Each lives under `/api/agents/chat/:chatId/deal/*`.
-// In preview mode the human builds and round-trips proposal/counter (and may reject
-// or retract); acceptance is wired but deferred to the enactment route (stage 6).
+// The BLOCKING structured deal endpoints — inspect / reject / accept / deals — each under
+// `/api/agents/chat/:chatId/deal/*`, returning the updated thread with no streamed reply. Proposal &
+// counter are NOT here: they commit + stream the diplomat's reply through the unified
+// `/api/agents/message` path (a `deal` body, see DealMove). In preview mode the human may reject or
+// retract; acceptance is wired but deferred to the enactment route (stage 6).
 // ============================================================================
 
 /**
@@ -354,16 +390,6 @@ export interface InspectDealRequest {
   deal?: DealPayload;
 }
 
-/**
- * Request to present a deal (`deal-proposal`) or counter (`deal-counter`). The proposed
- * terms are carried in `deal`; the server computes and stores the proposal-time per-item
- * value snapshots. `content` is an optional free-text framing line for the transcript.
- */
-export interface DealProposalRequest {
-  deal: DealPayload;
-  content?: string;
-}
-
 /** Request to reject (decline or retract) an earlier proposal/counter by its message ID. */
 export interface DealRejectRequest {
   proposalMessageID: number;
@@ -373,15 +399,6 @@ export interface DealRejectRequest {
 /** Request to accept an earlier proposal (wired in stage 4, enacted from stage 6). */
 export interface DealAcceptRequest {
   proposalMessageID: number;
-}
-
-/** Response after a deal-action write: the stored row's id, type, and server-stamped turn. */
-export interface DealActionResponse {
-  id: number;
-  messageType: string;
-  turn?: number;
-  /** Whether a human proposal/counter successfully produced and persisted a diplomat reply. */
-  agentResponded?: boolean;
 }
 
 /** Response listing a conversation's deal messages in append order, for reduction. */

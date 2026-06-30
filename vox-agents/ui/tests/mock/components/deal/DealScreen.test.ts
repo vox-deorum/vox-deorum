@@ -5,8 +5,6 @@ import { mount, flushPromises } from '@vue/test-utils';
 const api = vi.hoisted(() => ({
   inspectDeal: vi.fn(),
   getDealMessages: vi.fn(),
-  proposeDeal: vi.fn(),
-  counterDeal: vi.fn(),
   rejectDeal: vi.fn(),
   acceptDeal: vi.fn(),
 }));
@@ -94,6 +92,15 @@ function mountScreen(props: Record<string, unknown> = {}) {
 const rowInPanel = (wrapper: ReturnType<typeof mountScreen>, panel: string, label: string) =>
   wrapper.find(panel).findAll('button.deal-row').find((b) => b.text().includes(label));
 
+/** The deal carried by the most recent `send` (propose/counter) emit — the screen hands the draft
+ *  UP to the host instead of writing it; the host closes the dialog and streams the reply. */
+const lastSent = (wrapper: ReturnType<typeof mountScreen>) => {
+  const calls = wrapper.emitted('send')!;
+  // Proposing and countering are one action — the payload carries no propose/counter flag, only the
+  // draft and (for a counter) the open offer's ID; the server derives the type under the lock.
+  return calls[calls.length - 1]![0] as { deal: any; expectedProposalID?: number };
+};
+
 const incomingProposal = (over: Record<string, unknown> = {}) => ({
   ID: 9,
   Player1ID: 0,
@@ -128,7 +135,6 @@ describe('DealScreen', () => {
   });
 
   it('adds a clicked inventory term to the correct giver/column', async () => {
-    api.proposeDeal.mockResolvedValue({ id: 5, messageType: 'deal-proposal', turn: 1 });
     const wrapper = mountScreen();
     await flushPromises();
 
@@ -143,18 +149,38 @@ describe('DealScreen', () => {
     await proposeBtn!.trigger('click');
     await flushPromises();
 
-    expect(api.proposeDeal).toHaveBeenCalledTimes(1);
-    expect(api.proposeDeal.mock.calls[0]![1].deal.items[0]).toMatchObject({
+    // The screen hands the draft up via `send` (the host streams it) rather than writing it here.
+    expect(wrapper.emitted('send')).toHaveLength(1);
+    // A fresh proposal carries no expectedProposalID (nothing is open to answer).
+    expect(lastSent(wrapper).expectedProposalID).toBeUndefined();
+    expect(lastSent(wrapper).deal.items[0]).toMatchObject({
       fromPlayerID: 0,
       toPlayerID: 1,
       itemType: 'OPEN_BORDERS',
     });
-    // Initial load, pre-submit freshness check, then reload after the write.
-    expect(api.getDealMessages).toHaveBeenCalledTimes(3);
+    // Initial load, then the pre-submit freshness check (no post-write reload — the host reconciles).
+    expect(api.getDealMessages).toHaveBeenCalledTimes(2);
+  });
+
+  it('freezes the draft while the diplomat is replying (agentBusy), so an edit cannot diverge from a submission', async () => {
+    // Finding: after the synchronous submit emit the local `busy` resets, but `agentBusy` (the streamed
+    // reply) stays true. The inventory/offer controls take the combined `blocked` state and the mutation
+    // handlers guard on it, so the human cannot edit the draft mid-reply (which would silently diverge from
+    // the snapshot just submitted).
+    const wrapper = mountScreen({ agentBusy: true });
+    await flushPromises();
+
+    const row = rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!;
+    expect(row.attributes('aria-disabled')).toBe('true');
+    await row.trigger('click');
+    await flushPromises();
+
+    // The guarded handler is a no-op — nothing lands in the central offer while the reply streams.
+    expect(wrapper.find('.deal-panel-center').text()).not.toContain('Open Borders');
+    expect(wrapper.emitted('send')).toBeFalsy();
   });
 
   it('adds a counterpart-panel term as the counterpart giver', async () => {
-    api.proposeDeal.mockResolvedValue({ id: 6, messageType: 'deal-proposal', turn: 1 });
     const wrapper = mountScreen();
     await flushPromises();
 
@@ -164,7 +190,7 @@ describe('DealScreen', () => {
     await wrapper.findAll('button').find((b) => b.text() === 'Propose')!.trigger('click');
     await flushPromises();
 
-    expect(api.proposeDeal.mock.calls[0]![1].deal.items[0]).toMatchObject({ fromPlayerID: 1, toPlayerID: 0 });
+    expect(lastSent(wrapper).deal.items[0]).toMatchObject({ fromPlayerID: 1, toPlayerID: 0 });
   });
 
   it('renders structurally impossible inventory rows red and disabled, while legal rows stay clickable', async () => {
@@ -243,7 +269,8 @@ describe('DealScreen', () => {
     await wrapper.findAll('button').find((b) => b.text() === 'Counter')!.trigger('click');
     await flushPromises();
 
-    expect(api.counterDeal).not.toHaveBeenCalled();
+    // The freshness guard aborts before handing the draft up — no `send` is emitted.
+    expect(wrapper.emitted('send')).toBeFalsy();
   });
 
   it('keeps the newest inspection result when an older request finishes later', async () => {
@@ -302,7 +329,6 @@ describe('DealScreen', () => {
     api.inspectDeal.mockResolvedValue(
       inspectionResult([], { promiseTargets: [{ playerID: 3, teamID: 3, name: 'Carthage', kind: 'major', coopWarEligible: true }] })
     );
-    api.proposeDeal.mockResolvedValue({ id: 7, messageType: 'deal-proposal', turn: 1 });
     const wrapper = mountScreen();
     await flushPromises();
 
@@ -318,7 +344,7 @@ describe('DealScreen', () => {
     await proposeBtn.trigger('click');
     await flushPromises();
 
-    expect(api.proposeDeal.mock.calls[0]![1].deal.promises[0]).toMatchObject({
+    expect(lastSent(wrapper).deal.promises[0]).toMatchObject({
       promiserID: 0,
       recipientID: 1,
       promiseType: 'COOP_WAR',
@@ -330,7 +356,6 @@ describe('DealScreen', () => {
     api.inspectDeal.mockResolvedValue(
       inspectionResult([], { tradableRange: { '0': range({ thirdPartyWar: [{ teamID: 5, name: 'Greece', legal: true, reasons: [] }] }), '1': range() } })
     );
-    api.proposeDeal.mockResolvedValue({ id: 8, messageType: 'deal-proposal', turn: 1 });
     const wrapper = mountScreen();
     await flushPromises();
 
@@ -343,7 +368,7 @@ describe('DealScreen', () => {
     await wrapper.findAll('button').find((b) => b.text() === 'Propose')!.trigger('click');
     await flushPromises();
 
-    expect(api.proposeDeal.mock.calls[0]![1].deal.items[0]).toMatchObject({
+    expect(lastSent(wrapper).deal.items[0]).toMatchObject({
       itemType: 'THIRD_PARTY_WAR',
       thirdPartyTeamID: 5,
       fromPlayerID: 0,
@@ -389,6 +414,32 @@ describe('DealScreen', () => {
 
     // A failed preflight makes refreshDealState return false, so ensureActionStillValid aborts the write.
     expect(api.acceptDeal).not.toHaveBeenCalled();
+  });
+
+  it('emits changed with the updated thread on a successful Accept (no wasted post-write reload)', async () => {
+    api.getDealMessages.mockResolvedValue({
+      messages: [incomingProposal({ Payload: { Deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS' }], promises: [] } } })],
+    });
+    api.inspectDeal.mockResolvedValue(
+      inspectionResult([{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS', legality: true, reasons: [], valueIfIGive: 1, valueIfIReceive: 1 }])
+    );
+    // accept/reject return the updated thread (its new deal row already mirrored in); the screen hands
+    // it straight to the host via `changed` (now a required payload — propose/counter use `send` instead).
+    const updatedThread = { id: 'dipl:g:0:1', messages: [] } as any;
+    api.acceptDeal.mockResolvedValue(updatedThread);
+
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    await wrapper.findAll('button').find((b) => b.text() === 'Accept')!.trigger('click');
+    await flushPromises();
+
+    expect(api.acceptDeal).toHaveBeenCalledWith('dipl:g:0:1', { proposalMessageID: 9 });
+    expect(wrapper.emitted('changed')).toHaveLength(1);
+    expect(wrapper.emitted('changed')![0]![0]).toBe(updatedThread);
+    // Only the mount load + the pre-submit freshness check fetch deals — the old post-write reload (a
+    // third fetch on a screen about to unmount) is gone.
+    expect(api.getDealMessages).toHaveBeenCalledTimes(2);
   });
 
   it('hides Accept once the incoming proposal is edited and restores it on Reset', async () => {
@@ -461,7 +512,6 @@ describe('DealScreen', () => {
     api.inspectDeal.mockResolvedValue(
       inspectionResult([{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS', legality: true, reasons: [], valueIfIGive: 1, valueIfIReceive: 1 }])
     );
-    api.counterDeal.mockResolvedValue({ id: 11, messageType: 'deal-counter', turn: 1 });
     const wrapper = mountScreen();
     await flushPromises();
 
@@ -476,12 +526,13 @@ describe('DealScreen', () => {
     await flushPromises();
 
     // The sent deal carries NO message — the cleared field drops it rather than resending the original.
-    expect(api.counterDeal).toHaveBeenCalledTimes(1);
-    expect(api.counterDeal.mock.calls[0]![1].deal.message).toBeUndefined();
+    expect(wrapper.emitted('send')).toHaveLength(1);
+    expect(lastSent(wrapper).deal.message).toBeUndefined();
+    // The counter rides along the reviewed proposal's ID (incomingProposal ID 9) so the server can bind it.
+    expect(lastSent(wrapper).expectedProposalID).toBe(9);
   });
 
   it('mirrors a mutual agreement onto both sides on add, proposing both directions', async () => {
-    api.proposeDeal.mockResolvedValue({ id: 9, messageType: 'deal-proposal', turn: 1 });
     const wrapper = mountScreen();
     await flushPromises();
 
@@ -496,7 +547,7 @@ describe('DealScreen', () => {
     await wrapper.findAll('button').find((b) => b.text() === 'Propose')!.trigger('click');
     await flushPromises();
 
-    const items = api.proposeDeal.mock.calls[0]![1].deal.items;
+    const items = lastSent(wrapper).deal.items;
     expect(items).toHaveLength(2);
     expect(items).toEqual(expect.arrayContaining([
       expect.objectContaining({ fromPlayerID: 0, toPlayerID: 1, itemType: 'DECLARATION_OF_FRIENDSHIP' }),

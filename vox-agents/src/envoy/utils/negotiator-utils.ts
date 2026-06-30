@@ -627,7 +627,6 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             ni.thread,
             ni.thread.agent,
             isCounter ? "deal-counter" : "deal-proposal",
-            args.Message,
             deal
           );
           ni.outcome = {

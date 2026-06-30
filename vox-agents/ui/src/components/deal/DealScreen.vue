@@ -8,8 +8,9 @@ Driven entirely by the read-only `inspect-deal` tool (the screen holds no deal s
 beyond the in-progress proposal): it builds both sides' categorized inventories from the tradable
 range, lets the human build/modify a deal with live per-term legality + value feedback, shows the
 other-side value balance summed live, and presents the proposal-state actions (Propose; or
-Refuse/Counter/Accept; or Retract/Counter). Preview mode — proposal/counter round-trip through the
-durable store; acceptance is wired but deferred to enactment (stage 6).
+Refuse/Counter/Accept; or Retract/Counter). Preview mode — proposal/counter are handed UP to the host
+to stream through the chat-message path (the dialog closes once the server accepts); reject is a
+blocking write; acceptance is wired but deferred to enactment (stage 6).
 
 Orchestration (loading, debounced live inspection with latest-request-wins, proposal freshness,
 writes) lives here; the three visual regions are the InventoryPanel / CentralOffer components, and
@@ -29,7 +30,7 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           :label="youLabel"
           :categories="youCategories"
           :locked="locked"
-          :busy="busy"
+          :busy="blocked"
           @add-term="onAddTerm"
         />
 
@@ -47,7 +48,7 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           :promise-targets="promiseTargets"
           v-model:message="dealMessage"
           :locked="locked"
-          :busy="busy"
+          :busy="blocked"
           @update-item="onUpdateItem"
           @remove-item="onRemoveItem"
           @remove-promise="onRemovePromise"
@@ -59,7 +60,7 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           :label="counterpartLabel"
           :categories="counterpartCategories"
           :locked="locked"
-          :busy="busy"
+          :busy="blocked"
           @add-term="onAddTerm"
         />
       </div>
@@ -104,7 +105,7 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           text
           rounded
           size="small"
-          :disabled="busy"
+          :disabled="blocked"
           @click="reloadDeals"
           v-tooltip.bottom="'Reload proposals & re-evaluate'"
         />
@@ -147,10 +148,22 @@ const props = defineProps<{
 
 /** The chat thread a deal write returns (accept/reject mirror their new row into it server-side). */
 type ThreadResponse = Awaited<ReturnType<typeof api.acceptDeal>>;
-// A deal write changed the conversation. Accept/reject carry the updated thread so the parent adopts
-// it directly (preserving live reasoning/tool-call traces); propose/counter omit it (an agent turn
-// ran — the parent re-hydrates from the store).
-const emit = defineEmits<{ (e: 'changed', thread?: ThreadResponse): void }>();
+// Two ways this screen reports out:
+//  - `changed`: a blocking write (accept/reject) completed and carries the updated thread, so the
+//    parent adopts it directly (preserving live reasoning/tool-call traces).
+//  - `send`: the human submitted a proposal/counter — the screen hands the normalized draft UP so the
+//    parent streams the diplomat's reply (the async chat-message path) and closes the dialog once the
+//    server accepts it, rather than blocking here on the round-trip. A counter also carries the open
+//    proposal's ID so the server can bind it to the offer the human reviewed (a stale counter 409s).
+const emit = defineEmits<{
+  // Only accept/reject reach the parent this way now (propose/counter stream via `send`), and both
+  // always carry the updated thread — so the payload is required, and the parent adopts it directly.
+  (e: 'changed', thread: ThreadResponse): void;
+  // Proposing and countering are one action — submitting a deal. `expectedProposalID` is the open offer
+  // being answered (omitted to open a fresh one); the server reconciles it against the live state under
+  // the turn lock and derives the archival type, so the wire carries no propose/counter flag.
+  (e: 'send', payload: { deal: DealPayload; expectedProposalID?: number }): void;
+}>();
 /**
  * Whether a deal write is in flight. A two-way model so the parent view shares ONE busy flag
  * across both deal surfaces (this screen and the inline message-card actions): any in-flight
@@ -260,8 +273,11 @@ const canReject = computed(() => !blocked.value && mayReject.value);
 // ---- editing (mutate workingDeal; the debounced watcher re-inspects) ---------------------
 // Every edit mutates workingDeal/dealMessage; `isEdited` derives from the fingerprint, so the
 // handlers carry no edit-tracking bookkeeping of their own.
+// Every edit is blocked while a write is in flight OR the diplomat is mid-reply (`blocked`, not just the
+// local `busy`): after the synchronous submit emit `busy` resets but `agentBusy` stays true for the whole
+// streamed reply, and a mid-reply edit would silently diverge the draft from the snapshot just submitted.
 const onAddTerm = (payload: AddTermPayload) => {
-  if (props.locked || busy.value) return;
+  if (props.locked || blocked.value) return;
   if (payload.kind === 'item') {
     workingDeal.value.items = addItemWithMirror(workingDeal.value.items, payload.item);
   } else {
@@ -269,13 +285,18 @@ const onAddTerm = (payload: AddTermPayload) => {
   }
 };
 const onUpdateItem = (index: number, patch: Partial<TradeItem>) => {
+  if (props.locked || blocked.value) return;
   const item = workingDeal.value.items[index];
   if (item) Object.assign(item, patch);
 };
 const onRemoveItem = (index: number) => {
+  if (props.locked || blocked.value) return;
   workingDeal.value.items = removeItemWithMirror(workingDeal.value.items, index);
 };
-const onRemovePromise = (index: number) => { workingDeal.value.promises.splice(index, 1); };
+const onRemovePromise = (index: number) => {
+  if (props.locked || blocked.value) return;
+  workingDeal.value.promises.splice(index, 1);
+};
 
 // ---- live re-evaluation -----------------------------------------------------------------
 let inspectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -349,10 +370,10 @@ const refreshDealState = async (loadActiveIntoEditor: boolean): Promise<boolean>
 };
 
 const reloadDeals = async () => { await refreshDealState(true); };
-// Refresh this screen's own reducer, then notify the parent. `updated` is the thread a status write
-// returned (accept/reject); when present the parent adopts it instead of re-fetching, so the chat's
-// live traces survive. Propose/counter pass nothing → the parent re-hydrates after the agent turn.
-const afterWrite = async (updated?: ThreadResponse) => { await reloadDeals(); emit('changed', updated); };
+// Notify the parent of a completed accept/reject, handing it the thread that write returned (its new
+// deal row already mirrored in) so it adopts it directly — the chat's live traces survive. The screen
+// unmounts on close, so there's no point reloading this reducer first (the old wasted pre-close fetch).
+const afterWrite = (updated: ThreadResponse) => { emit('changed', updated); };
 
 /**
  * Discard the human's edits and restore the active proposal's stored terms + message, re-enabling
@@ -385,13 +406,6 @@ const ensureActionStillValid = async (
 /** The working draft serialized for a proposal/counter: terms plus the trimmed note (see `normalizedDraft`). */
 const draftToSend = (): DealPayload => normalizedDraft(workingDeal.value, dealMessage.value);
 
-/** Toast after a proposal/counter write, including the "agent did not reply" preview warning. */
-const dealSentToast = (summary: string, agentResponded: boolean | undefined) => {
-  toast.add(agentResponded === false
-    ? { severity: 'warn', summary, detail: 'The diplomat did not produce a reply.', life: 4000 }
-    : { severity: 'success', summary, life: 2500 });
-};
-
 /** Run a guarded deal write: block duplicates, revalidate current state, then reset the shared busy flag. */
 const runDealWrite = async (
   allowed: () => boolean,
@@ -408,26 +422,34 @@ const runDealWrite = async (
   } catch (e) { onError(e); } finally { busy.value = false; }
 };
 
+// Propose/counter no longer block here on the agent round-trip: after the pre-submit re-inspection +
+// freshness guard, hand the normalized draft to the parent, which closes the dialog immediately and
+// streams the diplomat's reply (the async chat-message path). The parent owns the optimistic card and
+// the post-stream reconcile, so there's no local `afterWrite` reload.
+// Proposing and countering are one action (submitting a deal) emitting the same shape; only the bound
+// offer ID differs — absent when opening a fresh proposal, the active offer's ID when answering one. The
+// server reconciles that ID against the live state under the turn lock and 409s a mismatch.
 const doPropose = () => runDealWrite(
   () => mayPropose.value,
   'Cannot propose yet',
-  async () => {
-    const result = await api.proposeDeal(props.chatId, { deal: draftToSend() });
-    dealSentToast('Proposal sent', result.agentResponded);
-    await afterWrite();
-  },
+  // No offer is on the table (mayPropose requires it), so submit with no expectedProposalID — the server
+  // confirms none is open under the lock and archives a fresh deal-proposal (a 409 if one slipped in).
+  async () => { emit('send', { deal: draftToSend() }); },
   (e) => retryableError(e, 'Could not send proposal')
 );
 const doCounter = () => {
-  // The counter must answer the proposal currently shown; abort if a newer one slips in.
+  // The counter answers the proposal currently shown; abort if a newer one slips in. Its ID rides along
+  // so the server reconciles the submission to it under the lock (the client freshness check races the
+  // durable write; the server check is the authoritative backstop).
   const targetID = reduction.value.active?.ID;
   return runDealWrite(
     () => mayCounter.value,
     'Cannot counter yet',
     async () => {
-      const result = await api.counterDeal(props.chatId, { deal: draftToSend() });
-      dealSentToast('Counter sent', result.agentResponded);
-      await afterWrite();
+      // `mayCounter` already requires an open proposal, so `targetID` is defined here; guard as a
+      // belt-and-braces against a vanished proposal.
+      if (targetID === undefined) return;
+      emit('send', { deal: draftToSend(), expectedProposalID: targetID });
     },
     (e) => retryableError(e, 'Could not send counter'),
     targetID
@@ -442,7 +464,7 @@ const doReject = () => {
       if (!reduction.value.active) return;
       const updated = await api.rejectDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
       toast.add({ severity: 'info', summary: activeAuthoredByViewer.value ? 'Proposal retracted' : 'Proposal refused', life: 2500 });
-      await afterWrite(updated);
+      afterWrite(updated);
     },
     actionError,
     targetID
@@ -456,7 +478,7 @@ const doAccept = () => {
     async () => {
       if (!reduction.value.active) return;
       const updated = await api.acceptDeal(props.chatId, { proposalMessageID: reduction.value.active.ID });
-      await afterWrite(updated);
+      afterWrite(updated);
     },
     actionError,
     targetID

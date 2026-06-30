@@ -78,7 +78,7 @@ Refresh state, inspection progress, errors, and the closed-this-turn lock remain
 
 Keep numeric IDs as fallbacks when a localized name cannot be resolved. Structurally impossible inventory rows remain visible, are red, expose their reason, and cannot be added. This is distinct from an advisory `CvDealAI` sentinel value: sentinel valuation remains visible but does not make a structurally legal term unavailable. The UI's loose `Record<string, unknown>` range handling is replaced with explicit TypeScript interfaces — the tool exports `InspectDealResponse`, `NormalizedSideRange`, the per-candidate types, the typed promise-target metadata, and a typed inspected-promise result.
 
-This enrichment does not change `Payload.Deal`, transcript message shapes, or the typed proposal/counter/accept/reject routes.
+This enrichment does not change `Payload.Deal` or the transcript message shapes. (The deal-action routes have since been split: proposal/counter commit through the unified streaming `/api/agents/message` path — the diplomat's reply streams and the dialog closes on the post-commit `connected` event — while inspect/reject/accept remain typed deal routes under `/api/agents/chat/:chatId/deal/*`.)
 
 ### One read-only DLL addition (additive, not a gameplay change)
 

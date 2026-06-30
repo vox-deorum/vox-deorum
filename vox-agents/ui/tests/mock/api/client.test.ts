@@ -220,6 +220,24 @@ describe('ApiClient SSE streams', () => {
     expect(sse.closed).toBe(true)
   })
 
+  it('dispatches the post-commit `connected` event (carrying the committed deal row) to onConnected', () => {
+    const onConnected = vi.fn()
+    api.streamAgentMessage(
+      { kind: 'deal', chatId: 'c1', deal: {} } as never,
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      onConnected,
+    )
+    const sse = sseInstances[0]
+
+    const row = { ID: 7, MessageType: 'deal-proposal', Payload: { Deal: {} } }
+    sse.emit('connected', JSON.stringify({ sessionId: 'c1', deal: row }))
+
+    expect(onConnected).toHaveBeenCalledTimes(1)
+    expect(onConnected.mock.calls[0]![0]).toEqual({ sessionId: 'c1', deal: row })
+  })
+
   it('surfaces a non-2xx pre-stream rejection once, uncommitted, with the route’s JSON error message', () => {
     const onError = vi.fn()
     api.streamAgentMessage({ chatId: 'c1', message: 'hi' } as never, vi.fn(), onError, vi.fn())

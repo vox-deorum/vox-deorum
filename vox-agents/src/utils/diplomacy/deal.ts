@@ -5,12 +5,13 @@
  * mcp-server: read-only `inspect-deal` inspection plus the typed deal-action transcript
  * writes (`deal-proposal` / `deal-counter` / `deal-reject`) through `append-message`.
  *
- * These are the structured deal endpoints — explicitly NOT the plain-text
- * `/api/agents/message` path. Each write is archival only (specs §6): `append-message`
- * archives the transcript row; it never streams, notifies, runs agents, or enacts.
- *
- * Stage-4 boundaries (preview mode):
- *  - proposal / counter / reject round-trip through the durable store here;
+ * Each write here is archival only (specs §6): `append-message` archives the transcript row; it
+ * never streams, notifies, runs agents, or enacts. The CALLERS differ by action, though:
+ *  - proposal / counter are a single "submit a deal" action that commits as the turn's commit point
+ *    through the unified streaming `/api/agents/message` path (so the diplomat's reply streams after);
+ *    `appendDealProposal` is the shared chokepoint both that path and the negotiator's tool use, and
+ *    `classifyDealSubmission` reconciles the submission against the live offer state under the turn lock;
+ *  - reject is a blocking status write (the typed `/deal/reject` route, and the diplomat's reject tool);
  *  - `deal-accept` is NOT written here — acceptance goes through the enactment route
  *    (`enact-agent-deal`, stage 6), the only writer of `deal-accept` / `deal-enacted`
  *    (pinned contract). The accept endpoint is wired in stage 4 but deferred.
@@ -59,6 +60,20 @@ export class IllegalDealError extends Error {
     super(`Deal contains untradeable items: ${reasons.join("; ")}`);
     this.name = "IllegalDealError";
     this.reasons = reasons;
+  }
+}
+
+/**
+ * Thrown when a deal action targets a proposal that is no longer the active open offer — a concurrent
+ * reject, counter, or close changed it under the actor between render and the durable write. This is a
+ * lost-race conflict, not an infra failure or a malformed deal, so routes map it to 409 (the actor
+ * should re-read the current proposal and retry), distinct from `IllegalDealError` (400) and store
+ * failures (502).
+ */
+export class ProposalConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProposalConflictError";
   }
 }
 
@@ -160,15 +175,17 @@ function isConversationDirection(
  * of the durable store; live structural legality remains advisory.
  */
 export function validateDealForThread(thread: EnvoyThread, deal: DealPayload): void {
+  // A malformed deal is a client/agent error, not an infra failure — throw IllegalDealError (the one
+  // typed deal-error the route maps to 400) so it can't be miscategorized as a generic 502.
   for (const [index, item] of deal.items.entries()) {
     if (!isConversationDirection(item.fromPlayerID, item.toPlayerID, thread.player1ID, thread.player2ID)) {
-      throw new Error(`deal.items[${index}] must be directed between the conversation endpoints`);
+      throw new IllegalDealError([`deal.items[${index}] must be directed between the conversation endpoints`]);
     }
   }
 
   for (const [index, promise] of deal.promises.entries()) {
     if (!isConversationDirection(promise.promiserID, promise.recipientID, thread.player1ID, thread.player2ID)) {
-      throw new Error(`deal.promises[${index}] must be directed between the conversation endpoints`);
+      throw new IllegalDealError([`deal.promises[${index}] must be directed between the conversation endpoints`]);
     }
     // Only promises the tactical AI honors exist in the contract (PROMISE_TYPES / PROMISE_METADATA), so
     // `DealPayloadSchema` already rejects any non-honored promise at the parse boundary both writer
@@ -181,7 +198,7 @@ export function validateDealForThread(thread: EnvoyThread, deal: DealPayload): v
         promise.targetPlayerID === thread.player1ID ||
         promise.targetPlayerID === thread.player2ID
       ) {
-        throw new Error(`deal.promises[${index}] with type ${promise.promiseType} requires a third-party targetPlayerID`);
+        throw new IllegalDealError([`deal.promises[${index}] with type ${promise.promiseType} requires a third-party targetPlayerID`]);
       }
     }
   }
@@ -221,18 +238,25 @@ export function computeValueMaps(
  * relationship, by type) from the fresh inspection. So the stored `Payload.Deal` always carries the
  * right durations, whether it came from the Web editor or an agent that proposed none.
  *
+ * The transcript Content is derived from `deal.message` (the proposal's one-line note); callers no
+ * longer pass it separately. A blank message falls back to a per-type default.
+ *
  * @returns the stored row's append ID and server-stamped turn (the values `read-transcript`
- *          will later report), plus the proposal-time inspection when available so an agent
- *          caller can immediately brief the diplomat without re-reading or re-inspecting, and the
- *          canonical (duration-stamped) deal exactly as it was archived.
+ *          will later report), the proposal-time inspection when available so an agent caller can
+ *          immediately brief the diplomat without re-reading or re-inspecting, the canonical
+ *          (duration-stamped) deal exactly as it was archived, and the full authoritative
+ *          `row` (real ID + value snapshots) so the streaming route can emit it over SSE without
+ *          a reread.
  */
 export async function appendDealProposal(
   thread: EnvoyThread,
   speakerID: number,
   messageType: DealProposalType,
-  content: string,
   deal: DealPayload
-): Promise<{ id: number; turn?: number; inspection?: InspectDealResult; deal: DealPayload }> {
+): Promise<{ id: number; turn?: number; inspection?: InspectDealResult; deal: DealPayload; row: DealTranscriptMessage }> {
+  // The proposal's transcript Content is its one-line note; never a separately-passed field (the UI
+  // and negotiator both put the line on the deal). Blank → a per-type default so the row is never empty.
+  const content = deal.message?.trim() || (messageType === "deal-counter" ? "A deal was countered." : "A deal was proposed.");
   // Mutual agreements (DoF / defensive pact / research agreement / peace) bind both sides — complete
   // any one-sided pact up front so the inspection, legality guard, value snapshots, and stored deal
   // all reflect the symmetric term (mirrors what the Web editor does on add). Same chokepoint for the
@@ -273,12 +297,26 @@ export async function appendDealProposal(
   // an author-supplied or missing duration (the durations match what the inspection just valued).
   const storedDeal = applyDealDurations(symmetricDeal, inspection);
 
-  const payload: Record<string, unknown> = { Deal: storedDeal };
-  payload.Value1 = value1;
-  payload.Value2 = value2;
+  const payload = { Deal: storedDeal, Value1: value1, Value2: value2 };
 
   const stored = await appendRaw(thread, speakerID, messageType, content, payload);
-  return { ...stored, inspection, deal: storedDeal };
+  // Assemble the authoritative committed row from the store's echoed canonical fields (ordered IDs +
+  // roles + the server-stamped Turn) plus the payload we just computed. CreatedAt approximates the
+  // store's unixepoch (the exact value loads on the next full re-hydrate); display-only.
+  const row: DealTranscriptMessage = {
+    ID: stored.ID,
+    Player1ID: stored.Player1ID,
+    Player2ID: stored.Player2ID,
+    Player1Role: stored.Player1Role,
+    Player2Role: stored.Player2Role,
+    SpeakerID: stored.SpeakerID,
+    MessageType: messageType,
+    Content: stored.Content,
+    Payload: payload,
+    Turn: stored.Turn,
+    CreatedAt: Math.floor(Date.now() / 1000),
+  };
+  return { id: stored.ID, turn: stored.Turn, inspection, deal: storedDeal, row };
 }
 
 /**
@@ -292,17 +330,31 @@ export async function appendDealReject(
   content: string,
   proposalMessageID: number
 ): Promise<{ id: number; turn?: number }> {
-  return appendRaw(thread, speakerID, "deal-reject", content, { ProposalMessageID: proposalMessageID });
+  const stored = await appendRaw(thread, speakerID, "deal-reject", content, { ProposalMessageID: proposalMessageID });
+  return { id: stored.ID, turn: stored.Turn };
 }
 
-/** Shared archival write: one `append-message` row with a Payload, returning its id + turn. */
+/** The store's echoed canonical row fields, after `append-message` orders the pair (Player1ID = min). */
+interface AppendedRow {
+  ID: number;
+  Player1ID: number;
+  Player2ID: number;
+  Player1Role: string;
+  Player2Role: string;
+  SpeakerID: number;
+  MessageType: string;
+  Content: string;
+  Turn: number;
+}
+
+/** Shared archival write: one `append-message` row with a Payload, returning the store's echoed row. */
 async function appendRaw(
   thread: EnvoyThread,
   speakerID: number,
   messageType: string,
   content: string,
   payload: Record<string, unknown>
-): Promise<{ id: number; turn?: number }> {
+): Promise<AppendedRow> {
   const result = await mcpClient.callTool("append-message", {
     PlayerAID: thread.player1ID,
     PlayerBID: thread.player2ID,
@@ -313,16 +365,14 @@ async function appendRaw(
     Content: content,
     Payload: payload,
   });
-  const row = unwrap<{ ID?: unknown; Turn?: unknown }>(result);
-  // A successful append-message must echo a numeric row ID — the UI references the proposal by
-  // it. A missing/non-numeric ID is a store-contract violation, not a value to paper over.
-  if (typeof row?.ID !== "number") {
-    throw new Error(`append-message did not return a numeric ID for ${messageType}`);
+  const row = unwrap<Partial<AppendedRow>>(result);
+  // A successful append-message echoes the full canonical row; a missing/non-numeric ID or Turn is a
+  // store-contract violation, not a value to paper over (the UI references the proposal by ID, and the
+  // authoritative row built from this carries the server-stamped Turn).
+  if (typeof row?.ID !== "number" || typeof row?.Turn !== "number") {
+    throw new Error(`append-message did not return a numeric ID/Turn for ${messageType}`);
   }
-  return {
-    id: row.ID,
-    turn: typeof row?.Turn === "number" ? row.Turn : undefined,
-  };
+  return row as AppendedRow;
 }
 
 /**
@@ -425,6 +475,39 @@ export async function requireCurrentOpenProposal(
     throw new Error(`Proposal ${proposalMessageID} has invalid stored deal terms`);
   }
   return { message: reduction.active, deal: parsed.data };
+}
+
+/**
+ * Reconcile a streamed deal submission against the live offer state under the turn lock, returning the
+ * transcript type it must be archived as. Proposing and countering are the SAME action — submitting a
+ * deal — distinguished only by whether an offer is already on the table. The submitter passes the ID of
+ * the open offer it saw (`undefined` = it believed none was open); this must match reality:
+ *
+ *  - matches an active open offer → it answers that offer: archive as `deal-counter`;
+ *  - matches "none open"          → it opens a fresh offer: archive as `deal-proposal`;
+ *  - mismatch                     → a lost race (an offer opened, was rejected/countered/closed, or
+ *                                   changed identity under the submitter): `ProposalConflictError` (→ 409).
+ *
+ * Validating BOTH directions under the lock is what stops a stale/fresh submission from silently
+ * superseding an offer that opened under it, AND a stale counter from reviving a dead negotiation. There
+ * is no author check (unlike `requireCurrentOpenProposal`): revising your own standing offer is allowed.
+ */
+export async function classifyDealSubmission(
+  thread: EnvoyThread,
+  expectedProposalID: number | undefined
+): Promise<DealProposalType> {
+  const reduction = await readActiveProposal(thread.player1ID, thread.player2ID);
+  const activeOpenID = reduction.active && reduction.status === "open" ? reduction.active.ID : undefined;
+  if (activeOpenID !== expectedProposalID) {
+    // Phrase the conflict by the submitter's intent: answering a specific offer that has since changed
+    // identity / been closed vs. opening a fresh one while an offer it didn't see is already on the table.
+    throw new ProposalConflictError(
+      expectedProposalID === undefined
+        ? `Another proposal (#${activeOpenID}) is now the open offer and must be answered before opening a new one`
+        : `Proposal ${expectedProposalID} is no longer the active proposal`
+    );
+  }
+  return activeOpenID === undefined ? "deal-proposal" : "deal-counter";
 }
 
 /**

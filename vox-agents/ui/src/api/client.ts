@@ -40,14 +40,32 @@ import type {
   // Typed deal-action API (stage 4)
   InspectDealRequest,
   InspectDealResponse,
-  DealProposalRequest,
   DealRejectRequest,
   DealAcceptRequest,
-  DealActionResponse,
   DealMessagesResponse,
+  DealTranscriptMessage,
   MessageWithMetadata
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
+
+/** The `connected` SSE event payload: fired post-commit; for a deal turn it carries the committed row. */
+export interface ConnectedData {
+  sessionId?: string;
+  /** The authoritative committed deal row (deal turns only) — the UI inserts it and closes the dialog. */
+  deal?: DealTranscriptMessage;
+}
+
+/** The terminal `done` SSE event payload: the turn succeeded. */
+export interface DoneData {
+  sessionId?: string;
+  messageCount?: number;
+  /**
+   * Deal rows the diplomat's negotiator tools wrote mid-run (counter/accept/reject/enacted), reconciled
+   * from the durable store so the board reflects the diplomat's outcome without a reload that would
+   * flatten the streamed reasoning/tool traces. Absent/empty when the diplomat wrote no deal rows.
+   */
+  deals?: DealTranscriptMessage[];
+}
 
 /**
  * Where a failed send leaves the durable record, so the UI knows whether retrying is safe:
@@ -557,34 +575,9 @@ class ApiClient {
     );
   }
 
-  /**
-   * Present a deal (deal-proposal). The proposed terms round-trip through the durable
-   * store with proposal-time per-item value snapshots computed server-side.
-   */
-  async proposeDeal(chatId: string, request: DealProposalRequest): Promise<DealActionResponse> {
-    return this.fetchJson<DealActionResponse>(
-      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/propose`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request)
-      }
-    );
-  }
-
-  /**
-   * Counter a deal (deal-counter) — a modified deal presented back to the other side.
-   */
-  async counterDeal(chatId: string, request: DealProposalRequest): Promise<DealActionResponse> {
-    return this.fetchJson<DealActionResponse>(
-      `${this.baseUrl}/api/agents/chat/${encodeURIComponent(chatId)}/deal/counter`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request)
-      }
-    );
-  }
+  // Presenting (deal-proposal) and countering (deal-counter) a deal are NOT separate calls: they go
+  // through `streamAgentMessage` with a `deal` body (the unified streaming chat path), so the
+  // diplomat's reply streams asynchronously like a chat reply instead of blocking on the round-trip.
 
   /**
    * Reject (decline or retract) a proposal by the message ID it answers (deal-reject).
@@ -635,7 +628,8 @@ class ApiClient {
     request: ChatMessageRequest,
     onMessage: (data: TextStreamPart<ToolSet>) => void,
     onError: (message: string, commit: SendCommitState) => void,
-    onDone: () => void
+    onDone: (data: DoneData) => void,
+    onConnected?: (data: ConnectedData) => void
   ): () => void {
     const key = `agent-chat-${request.chatId}`;
     this.closeSseConnection(key);
@@ -661,8 +655,28 @@ class ApiClient {
       }
     });
 
-    // Listen for 'done' events
-    eventSource.addEventListener('done', onDone);
+    // 'connected' fires once the server has COMMITTED the turn (post-commit), before the reply streams.
+    // For a deal turn it carries the authoritative committed row; the caller inserts it and closes the
+    // deal dialog here. A pre-stream rejection never reaches this, so the dialog stays open.
+    eventSource.addEventListener('connected', (event: any) => {
+      try {
+        onConnected?.(JSON.parse(event.data));
+      } catch (error) {
+        console.error('Failed to parse connected event:', error);
+      }
+    });
+
+    // Listen for 'done' events. The terminal payload carries any deal rows the diplomat's tools wrote
+    // mid-run (reconciled server-side); parse it so the caller can splice them in without a reload.
+    eventSource.addEventListener('done', (event: any) => {
+      let data: DoneData = {};
+      try {
+        if (event?.data) data = JSON.parse(event.data);
+      } catch (error) {
+        console.error('Failed to parse done event:', error);
+      }
+      onDone(data);
+    });
 
     // Surface a stream failure exactly once, with a `SendCommitState` telling the caller whether a retry
     // is safe. sse.js dispatches a single 'error' event to BOTH `onerror` and every

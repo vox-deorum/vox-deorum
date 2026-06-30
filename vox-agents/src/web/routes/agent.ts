@@ -53,31 +53,28 @@ import {
   identityOf,
   syncThreadMessages,
   isClosedThisTurn,
-  joinAssistantText,
-  appendTranscriptMessage,
 } from '../../utils/diplomacy/transcript.js';
-import { beginChatTurn, ThreadBusyError, type ChatTurn } from '../../utils/diplomacy/chat-turn-commit.js';
+import { hydrateDealRow } from '../../utils/diplomacy/transcript-utils.js';
+import { beginChatTurn, withThreadLock, ThreadBusyError, type ChatTurn, type TurnCommit } from '../../utils/diplomacy/chat-turn-commit.js';
 import {
   inspectDeal,
-  appendDealProposal,
   appendDealReject,
   readDealMessages,
   reconcileDealRows,
-  validateDealForThread,
   enactAgentDeal,
   requireCurrentOpenProposal,
   closeConversation,
   IllegalDealError,
+  ProposalConflictError,
 } from '../../utils/diplomacy/deal.js';
 // Pinned deal contract — validate request bodies against the same schema mcp-server uses.
 import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import type { DealTranscriptMessage } from '../../../../mcp-server/dist/utils/deal-schema.js';
 import type {
   InspectDealRequest,
   InspectDealResponse,
-  DealProposalRequest,
   DealRejectRequest,
   DealAcceptRequest,
-  DealActionResponse,
   DealMessagesResponse,
 } from '../../types/index.js';
 
@@ -183,55 +180,6 @@ async function mirrorDealRowsBestEffort(thread: EnvoyThread): Promise<void> {
  */
 function currentTurnOf(context: VoxContext<StrategistParameters> | undefined): number | undefined {
   return context?.session ? context.session.getTurn() : context?.getBaseParameters()?.turn;
-}
-
-/**
- * Run the voiced diplomat after the human places a proposal/counter, then persist its textual
- * reply. The diplomat sees the freshly archived deal through its deal-context injection and
- * can hand it to the negotiator without requiring a second human chat message.
- */
-async function respondToHumanDeal(thread: EnvoyThread): Promise<boolean> {
-  const voxContext = contextRegistry.get<StrategistParameters>(thread.contextId);
-  const voice = agentName(thread);
-  if (!voxContext || !voice) {
-    throw new Error("Could not resolve the voiced diplomat context for the deal response");
-  }
-
-  // The automatic deal response is a live diplomatic interaction: reason at the session's LIVE turn
-  // (specs §8), not the strategist's queued/stale decision turn. Its own root owns cancellation and
-  // token accounting, isolated from any concurrent strategist turn or chat on the same seat.
-  const liveTurn = currentTurnOf(voxContext);
-  if (liveTurn === undefined) {
-    throw new Error("The live game turn is not available for the deal response");
-  }
-  const overrides: Partial<StrategistParameters> = {
-    turn: liveTurn,
-    before: liveTurn * 1000000 + 999999,
-    after: liveTurn * 1000000,
-  };
-
-  return await voxContext.withRun({ overrides }, async () => {
-    const parameters = voxContext.currentParameters!;
-
-    if (thread.contextType === "live" && parameters.gameStates && !parameters.gameStates[parameters.turn]) {
-      await ensureGameState(voxContext, parameters);
-    }
-
-    const messagesBefore = thread.messages.length;
-    await voxContext.execute(
-      voice,
-      thread,
-      undefined,
-      undefined,
-      undefined,
-      { throwOnError: true }
-    );
-
-    const reply = joinAssistantText(thread.messages.slice(messagesBefore));
-    if (!reply) return false;
-    await appendTranscriptMessage(thread, thread.agent, "text", reply);
-    return true;
-  });
 }
 
 /**
@@ -350,7 +298,7 @@ export function createAgentRoutes(): Router {
    * without persisting.
    */
   router.post('/agents/message', async (req: Request<{}, {}, ChatMessageRequest>, res: Response): Promise<void> => {
-    const { chatId, message } = req.body;
+    const { chatId } = req.body;
 
     if (!chatId) {
       res.status(400).json({ error: 'Chat ID is required' });
@@ -363,8 +311,36 @@ export function createAgentRoutes(): Router {
       return;
     }
 
-    // Message is always required (use special messages like {{{Greeting}}} for agent-initiated responses)
-    if (!message) {
+    // A turn is EITHER a structured deal (the diplomacy-only path) or a plain-text utterance, tagged by
+    // `kind`. Validate the move up front and build the commit so an invalid one rejects pre-stream. The
+    // commit IS the wire request (minus chatId), so there's no conversion — only the deal is re-parsed
+    // so the untrusted payload is validated before it reaches the durable append.
+    let commit: TurnCommit;
+    if (req.body.kind === 'deal') {
+      if (!thread.diplomacy) {
+        res.status(400).json({ error: 'Only diplomacy conversations support deal actions.' });
+        return;
+      }
+      const parsed = DealPayloadSchema.safeParse(req.body.deal);
+      if (!parsed.success) {
+        res.status(400).json({ error: `Invalid deal payload: ${parsed.error.message}` });
+        return;
+      }
+      // Proposing and countering are one action — submitting a deal. The optional expectedProposalID is
+      // the open offer the submitter is answering (omitted to open a fresh one); beginChatTurn reconciles
+      // it against the live offer state under the turn lock — a mismatch (a stale submission that would
+      // supersede an offer opened under it, or a stale counter answering a dead one) is a 409 — and
+      // derives the archival type (deal-proposal vs deal-counter) from that same state.
+      const { expectedProposalID } = req.body;
+      if (expectedProposalID !== undefined && typeof expectedProposalID !== 'number') {
+        res.status(400).json({ error: 'expectedProposalID must be a number when provided.' });
+        return;
+      }
+      commit = { kind: 'deal', chatId, deal: parsed.data, expectedProposalID };
+    } else if (req.body.message) {
+      commit = { kind: 'text', chatId, message: req.body.message };
+    } else {
+      // Plain-text turns still require a message (use {{{Greeting}}} for agent-initiated responses).
       res.status(400).json({ error: 'Message is required' });
       return;
     }
@@ -392,19 +368,31 @@ export function createAgentRoutes(): Router {
       return;
     }
 
-    // Begin the turn: take the per-thread lock and commit the caller utterance (the append-only store's
-    // commit point) before anything streams. A turn already in flight rejects 409 and a durable-append
-    // failure rejects 502 — both pre-stream, so the UI restores the never-sent message. See
-    // beginChatTurn for the full lock/commit/archive/rollback invariant.
+    // Begin the turn: take the per-thread lock and commit the caller's move (the append-only store's
+    // commit point) before anything streams — the `commit` built above. A turn already in flight (or a
+    // deal submission whose offer state changed under it) rejects 409, an illegal deal rejects 400, and an
+    // inspect/durable-append failure rejects 502 — all pre-stream, so the UI restores/rolls back the
+    // never-sent move. See beginChatTurn for the full lock/commit/archive/rollback invariant.
     let turn: ChatTurn;
     try {
-      turn = await beginChatTurn(thread, message, currentTurn);
+      turn = await beginChatTurn(thread, commit, currentTurn);
     } catch (error) {
       if (error instanceof ThreadBusyError) {
         res.status(409).json({ error: 'A reply is already being generated for this conversation. Please wait for it to finish.' });
         return;
       }
-      logger.error('Failed to persist caller message to transcript store', { error });
+      if (error instanceof ProposalConflictError) {
+        // The deal submission lost the race: the live offer state no longer matches what it answered (an
+        // offer opened/changed/closed under it). 409 so the client keeps the draft, re-reads the current
+        // proposal, and resubmits against the fresh state (never streams).
+        res.status(409).json({ error: error.message });
+        return;
+      }
+      if (error instanceof IllegalDealError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      logger.error('Failed to commit the turn to the transcript store', { error });
       res.status(502).json({ error: 'Failed to record your message. Please retry.' });
       return;
     }
@@ -422,7 +410,10 @@ export function createAgentRoutes(): Router {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
-    sendEvent('connected', { sessionId: thread.id });
+    // `connected` fires post-commit, so it's the "server accepted this turn" signal. For a deal turn it
+    // carries the authoritative committed row (real ID + value snapshots); the UI inserts it and closes
+    // the deal dialog here, then streams the reply below. Text turns carry no `deal`.
+    sendEvent('connected', { sessionId: thread.id, deal: turn.dealRow });
 
     const streamCallback: StreamingEventCallback = {
       OnChunk: ({ chunk }) => {
@@ -453,6 +444,16 @@ export function createAgentRoutes(): Router {
         after: currentTurn * 1000000,
       };
     }
+
+    // Deal rows the client already has at turn start: those hydrated at load plus the caller's committed
+    // row just sent on `connected`. Anything the diplomat's negotiator tools append mid-run BEYOND these
+    // (a counter/accept/reject/enacted) is the delta we stream on `done` — so the live board reflects the
+    // diplomat's outcome without a full reload (which would flatten the streamed reasoning/tool traces).
+    const knownDealIDs = new Set(thread.messages.flatMap((m) => (m.deal ? [m.deal.ID] : [])));
+    // The reply boundary: the diplomat's streamed reply lands at and after this index. The mid-run deal
+    // rows are reconciled in BEFORE it (the tools wrote them to the durable store before the reply was
+    // archived), so the live order matches the durable order a later full reload produces.
+    const replyStart = thread.messages.length;
 
     // Track normal completion so the disconnect listener (which also fires after our own res.end())
     // only cancels the run on a genuine client drop, never on successful/errored completion.
@@ -494,7 +495,13 @@ export function createAgentRoutes(): Router {
         // Check if the agent handles messages programmatically (no LLM)
         const agent = agentRegistry.get(voice);
         if (agent?.programmatic) {
-          await agent.handleMessage(params, thread, message, (text: string) => {
+          // Deals are diplomacy-only and the diplomat is an LLM agent, so a programmatic agent never
+          // commits a deal — guard defensively rather than pass an undefined message to handleMessage.
+          if (commit.kind === 'deal') {
+            sendEvent('error', { message: 'Deal actions are not supported by this conversation.' });
+            return;
+          }
+          await agent.handleMessage(params, thread, commit.message, (text: string) => {
             sendEvent('message', { type: 'text-delta', text, id: 'programmatic' });
           });
         } else {
@@ -517,11 +524,30 @@ export function createAgentRoutes(): Router {
           return;
         }
 
-        // The run succeeded — archive the diplomat's reply (best-effort) and emit the terminal `done`.
+        // The run succeeded — archive the diplomat's reply (best-effort) FIRST, so the reply slice never
+        // captures a deal row the diplomat's tools wrote mid-run. THEN read the durable deal rows, take
+        // just the NEW ones (the diplomat's counter/accept/reject/enacted), and splice them into the cache
+        // at the reply boundary — BEFORE the streamed reply — so the live order matches the durable order a
+        // later full reload yields. Stream the same rows on `done` so the board updates inline without a
+        // reload. Best-effort: a reconcile-read failure must not turn a succeeded turn into an error — the
+        // next refresh/reopen re-hydrates whatever this missed.
         await turn.complete();
+        let newDeals: DealTranscriptMessage[] = [];
+        if (thread.diplomacy) {
+          try {
+            const rows = await readDealMessages(thread.player1ID, thread.player2ID);
+            newDeals = rows.filter((row) => !knownDealIDs.has(row.ID));
+            if (newDeals.length > 0) {
+              thread.messages.splice(replyStart, 0, ...newDeals.map((row) => hydrateDealRow(row, thread.agent)));
+            }
+          } catch (error) {
+            logger.error("Failed to reconcile the diplomat's mid-run deal rows after the turn", { error });
+          }
+        }
         sendEvent('done', {
           sessionId: thread.id,
-          messageCount: thread.messages.length
+          messageCount: thread.messages.length,
+          deals: newDeals,
         });
       });
     } catch (error) {
@@ -565,21 +591,27 @@ export function createAgentRoutes(): Router {
 
       // closeConversation retracts any open proposal, then records the close, returning the
       // server-stamped turn (currentTurn is only a fallback if the store omits it). Use the
-      // authoritative result for the local echo too.
+      // authoritative result for the local echo too. Under the per-thread lock so the retract+close
+      // can't interleave with a streaming reply (or its tool-written rows) — see withThreadLock.
       const content = req.body?.message?.trim() || 'The conversation has been closed.';
-      const closedAt = await closeConversation(thread, audienceID(thread), content, currentTurn);
-      // closeConversation retracts any open proposal (a deal-reject) before the close; mirror that
-      // retract into the live cache so the returned thread reduces the proposal as rejected — not
-      // still-open — before we echo the close row. Best-effort: the close is already committed.
-      await mirrorDealRowsBestEffort(thread);
-      thread.messages.push({
-        message: { role: 'user', content },
-        metadata: { datetime: new Date(), turn: closedAt }
+      await withThreadLock(thread, async () => {
+        const closedAt = await closeConversation(thread, audienceID(thread), content, currentTurn);
+        // closeConversation retracts any open proposal (a deal-reject) before the close; mirror that
+        // retract into the live cache so the returned thread reduces the proposal as rejected — not
+        // still-open — before we echo the close row. Best-effort: the close is already committed.
+        await mirrorDealRowsBestEffort(thread);
+        thread.messages.push({
+          message: { role: 'user', content },
+          metadata: { datetime: new Date(), turn: closedAt }
+        });
+        thread.metadata!.updatedAt = new Date();
       });
-      thread.metadata!.updatedAt = new Date();
 
       return res.json({ ...thread, ...enrichChat(thread) });
     } catch (error) {
+      if (error instanceof ThreadBusyError) {
+        return res.status(409).json({ error: 'A reply is already being generated for this conversation. Please wait for it to finish.' });
+      }
       logger.error('Failed to close conversation', { error });
       return res.status(500).json({ error: 'Failed to close conversation' });
     }
@@ -588,10 +620,11 @@ export function createAgentRoutes(): Router {
   // ============================================================================
   // Typed deal-action routes (interactive-diplomacy stage 4)
   //
-  // Structured deal endpoints — distinct from the plain-text /api/agents/message path.
-  // The Web reaches mcp-server only through these routes (specs §6, no direct Web→mcp
-  // channel). In preview mode the human builds and round-trips proposal/counter (and may
-  // reject/retract); acceptance is wired but deferred to the enactment route (stage 6).
+  // The BLOCKING deal endpoints — inspect / reject / accept / deals — status writes that return the
+  // updated thread with no LLM turn. Propose & counter are NOT here: they commit + stream the reply
+  // through /api/agents/message (the deal is the turn's commit point). The Web reaches mcp-server only
+  // through these routes (specs §6, no direct Web→mcp channel). Acceptance is wired but deferred to the
+  // enactment route (stage 6).
   // ============================================================================
 
   /** Resolve a diplomacy thread for a deal action, or send the appropriate error and return undefined. */
@@ -648,53 +681,10 @@ export function createAgentRoutes(): Router {
     }
   });
 
-  /**
-   * POST /api/agents/chat/:chatId/deal/propose - Present a deal (deal-proposal).
-   * POST /api/agents/chat/:chatId/deal/counter - Counter a deal (deal-counter).
-   * Both archive the proposed terms (Payload.Deal) plus proposal-time per-item value
-   * snapshots through the durable store. In preview mode the author is the human (audience).
-   */
-  const handleProposal = (messageType: 'deal-proposal' | 'deal-counter') =>
-    async (req: Request<{ chatId: string }, {}, DealProposalRequest>, res: Response<DealActionResponse | ErrorResponse>): Promise<Response> => {
-      const thread = resolveDealThread(req.params.chatId, res);
-      if (!thread) return res;
-      if (isDealLocked(thread, res)) return res;
-
-      const parsed = DealPayloadSchema.safeParse(req.body?.deal);
-      if (!parsed.success) {
-        return res.status(400).json({ error: `Invalid deal payload: ${parsed.error.message}` });
-      }
-      try {
-        validateDealForThread(thread, parsed.data);
-      } catch (error) {
-        return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid deal participants' });
-      }
-
-      const verb = messageType === 'deal-counter' ? 'countered' : 'proposed';
-      const content = req.body?.content?.trim() || `A deal was ${verb}.`;
-      try {
-        const { id, turn } = await appendDealProposal(thread, audienceID(thread), messageType, content, parsed.data);
-        let agentResponded = false;
-        try {
-          agentResponded = await respondToHumanDeal(thread);
-        } catch (error) {
-          // The proposal is already durably stored, so do not turn a response failure into an
-          // ambiguous HTTP failure that invites the human to submit the same proposal twice.
-          logger.error(`Diplomat failed to respond to ${messageType}`, { error });
-        }
-        return res.json({ id, messageType, turn, agentResponded });
-      } catch (error) {
-        // An untradeable item is a bad request (the client/agent proposed something illegal),
-        // not a server/bridge failure — surface it as 400 with the per-item reasons.
-        if (error instanceof IllegalDealError) {
-          return res.status(400).json({ error: error.message });
-        }
-        logger.error(`Failed to append ${messageType}`, { error });
-        return res.status(502).json({ error: error instanceof Error ? error.message : `Failed to append ${messageType}` });
-      }
-    };
-  router.post('/agents/chat/:chatId/deal/propose', handleProposal('deal-proposal'));
-  router.post('/agents/chat/:chatId/deal/counter', handleProposal('deal-counter'));
+  // Presenting a deal (deal-proposal) and countering one (deal-counter) are NOT separate blocking
+  // routes: they commit through the unified streaming chat path (`POST /api/agents/message` with a
+  // `deal` body), so the diplomat's reply streams asynchronously exactly like a chat reply. See
+  // `beginChatTurn` for the shared lock/commit/rollback lifecycle.
 
   /**
    * POST /api/agents/chat/:chatId/deal/reject - Decline or retract a proposal (deal-reject).
@@ -711,14 +701,21 @@ export function createAgentRoutes(): Router {
     }
     const content = req.body?.content?.trim() || 'The deal was rejected.';
     try {
-      await appendDealReject(thread, audienceID(thread), content, proposalMessageID);
-      // Mirror just the new reject row into the live cache (preserving the conversation's
-      // reasoning/tool-call traces) and hand the updated thread straight back — a status flip
-      // must not re-hydrate the whole thread. Best-effort: the reject is already committed, so a
-      // mirror-read failure must not report 502 and invite a duplicate retry. Reduces to rejected.
-      await mirrorDealRowsBestEffort(thread);
+      // Under the per-thread lock so a reject can't interleave with a streaming reply (or its
+      // tool-written rows) — see withThreadLock. A turn already in flight rejects 409.
+      await withThreadLock(thread, async () => {
+        await appendDealReject(thread, audienceID(thread), content, proposalMessageID);
+        // Mirror just the new reject row into the live cache (preserving the conversation's
+        // reasoning/tool-call traces) and hand the updated thread straight back — a status flip
+        // must not re-hydrate the whole thread. Best-effort: the reject is already committed, so a
+        // mirror-read failure must not report 502 and invite a duplicate retry. Reduces to rejected.
+        await mirrorDealRowsBestEffort(thread);
+      });
       return res.json({ ...thread, ...enrichChat(thread) });
     } catch (error) {
+      if (error instanceof ThreadBusyError) {
+        return res.status(409).json({ error: 'A reply is already being generated for this conversation. Please wait for it to finish.' });
+      }
       logger.error('Failed to append deal-reject', { error });
       return res.status(502).json({ error: error instanceof Error ? error.message : 'Failed to append deal-reject' });
     }
@@ -741,22 +738,24 @@ export function createAgentRoutes(): Router {
     }
     const accepterID = audienceID(thread);
     try {
-      await requireCurrentOpenProposal(thread, req.body.proposalMessageID, accepterID);
-    } catch (error) {
-      return res.status(409).json({ error: error instanceof Error ? error.message : 'Proposal is not open for acceptance' });
-    }
-    try {
-      await enactAgentDeal(req.body.proposalMessageID, { accepterID });
-      // Mirror the new deal-accept / deal-enacted rows into the live cache (preserving the
-      // conversation's reasoning/tool-call traces) and return the updated thread — the proposal now
-      // reduces to enacted without re-hydrating (and discarding) the whole thread. Best-effort: the
-      // enactment is already committed, so a mirror-read failure must not report 502.
-      await mirrorDealRowsBestEffort(thread);
+      // Under the per-thread lock so the pre-check, enactment, and cache mirror are atomic against a
+      // streaming reply (or its tool-written rows) and sibling status writes — see withThreadLock. The
+      // pre-check requires the proposal to still be open for this accepter; the enactment records the
+      // deal-accept / deal-enacted rows, and the mirror reflects them without re-hydrating the thread.
+      await withThreadLock(thread, async () => {
+        await requireCurrentOpenProposal(thread, req.body.proposalMessageID, accepterID);
+        await enactAgentDeal(req.body.proposalMessageID, { accepterID });
+        // Best-effort: the enactment is already committed, so a mirror-read failure must not report 502.
+        await mirrorDealRowsBestEffort(thread);
+      });
       return res.json({ ...thread, ...enrichChat(thread) });
     } catch (error) {
-      // The pre-check passed, so a failure here usually means the proposal state changed
-      // under us (countered/rejected/enacted) between the check and the authoritative write.
-      // Re-derive to map that race to a 409 conflict; a still-open proposal is a genuine 502.
+      if (error instanceof ThreadBusyError) {
+        return res.status(409).json({ error: 'A reply is already being generated for this conversation. Please wait for it to finish.' });
+      }
+      // The proposal wasn't open for acceptance, or its state changed under us (countered/rejected/
+      // enacted) between the check and the authoritative write. Re-derive to map that race to a 409
+      // conflict; a still-open proposal is a genuine 502.
       try {
         await requireCurrentOpenProposal(thread, req.body.proposalMessageID, accepterID);
       } catch (conflict) {
