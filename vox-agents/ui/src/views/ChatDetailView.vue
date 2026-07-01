@@ -64,6 +64,7 @@ Purpose: Main chat interface for interacting with agents
         :them-i-d="thread.agent"
         :active-deal-i-d="activeDealID"
         :deal-status="dealStatus"
+        :deal-status-message="dealStatusMessage"
         :deal-locked="closedThisTurn"
         :deal-action-busy="dealBlocked"
         @deal-accept="onDealAccept"
@@ -235,6 +236,9 @@ const dealReduction = computed(() => deriveActiveProposal(dealMessages.value));
 const activeDealID = computed(() => dealReduction.value.active?.ID);
 /** Status of the latest proposal, so its inline card can show open actions vs. rejected/enacted. */
 const dealStatus = computed(() => dealReduction.value.status);
+/** The negotiator's outward line on the answering move, surfaced in the rejected status notice
+ *  (the deal-reject row itself is not rendered; accept/counter carry their line on their own card). */
+const dealStatusMessage = computed(() => dealReduction.value.statusMessage);
 
 // Use the thread messages composable
 const { sendMessage: sendThreadMessage, requestGreeting, proposeDeal } = useThreadMessages({

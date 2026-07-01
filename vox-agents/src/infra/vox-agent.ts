@@ -70,6 +70,16 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   public diplomacyOnly = false;
 
   /**
+   * Generic capability flag: when true, this agent speaks ONLY through an explicit tool (the live
+   * envoy's `send-message`), so raw model free text is never a legitimate spoken reply: it is the
+   * Anthropic tool-force fallback (and, with the tool-rescue middleware, can carry malformed
+   * tool-call text that renders badly). The streaming chat route swallows native text chunks for
+   * such an agent, and the diplomacy commit path archives only the explicit spoken reply, so live
+   * and reload agree and the junk reaches neither. Default false (ordinary agents speak as free text).
+   */
+  public suppressFreeText = false;
+
+  /**
    * Optional description for when this agent is exposed as a tool
    */
   public toolDescription?: string;

@@ -48,7 +48,10 @@ wired but enactment is deferred to stage 6.
           <Button label="Reject" size="small" text severity="danger" icon="pi pi-times-circle" :disabled="busy" @click="$emit('reject', deal.ID)" />
         </template>
       </div>
-      <div v-else-if="statusNote" class="deal-card-status" :class="statusClass">{{ statusNote }}</div>
+      <div v-else-if="statusNote" class="deal-card-status" :class="statusClass">
+        {{ statusNote }}
+        <span v-if="status === 'rejected' && statusMessage" class="deal-card-status-message">“{{ statusMessage }}”</span>
+      </div>
     </template>
     <div v-else-if="isProposal && !isActive" class="deal-card-superseded">superseded</div>
   </div>
@@ -74,6 +77,8 @@ const props = withDefaults(defineProps<{
   isActive: boolean;
   /** The latest proposal's status — `open` offers actions, else the card shows the outcome. */
   status?: DealStatus;
+  /** The negotiator's outward line on the answering move, shown in the rejected status notice. */
+  statusMessage?: string;
   /** Closed-this-turn lock disables actions. */
   locked?: boolean;
   /** Another deal action is already in flight from this conversation surface. */
@@ -178,6 +183,7 @@ const valueText = computed(() => {
 .deal-card-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
 .deal-card-superseded { font-size: 0.75rem; color: var(--p-text-muted-color); margin-top: 0.35rem; font-style: italic; }
 .deal-card-status { font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; }
+.deal-card-status-message { font-weight: 400; font-style: italic; }
 .status-rejected { color: var(--p-red-500); }
 .status-done { color: var(--p-green-500); }
 </style>

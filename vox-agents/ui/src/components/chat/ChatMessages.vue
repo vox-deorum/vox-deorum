@@ -24,6 +24,7 @@
           :them-label="agentLabel ?? 'Them'"
           :is-active="item.deal.ID === activeDealID"
           :status="dealStatus"
+          :status-message="dealStatusMessage"
           :locked="dealLocked"
           :busy="dealActionBusy"
           @accept="$emit('deal-accept', $event)"
@@ -65,6 +66,8 @@ interface Props {
   activeDealID?: number;
   /** Status of the latest proposal: `open` offers actions, else it renders rejected/enacted. */
   dealStatus?: DealStatus;
+  /** The negotiator's outward line on the answering move, shown in the rejected status notice. */
+  dealStatusMessage?: string;
   /** Closed-this-turn lock disables deal-card actions. */
   dealLocked?: boolean;
   /** A deal action is currently in flight from the parent view. */
@@ -115,8 +118,12 @@ const handleScroll = () => {
   userScrolledAway.value = distanceFromBottom > 100;
 };
 
-// Watch for scroll trigger events (streaming chunks)
-watch(() => props.scrollTrigger, () => {
+// Auto-scroll on streaming chunks (scrollTrigger) AND whenever the rendered list grows. The latter
+// covers rows that arrive without a streamed text/tool delta: the optimistic user row, the committed
+// deal card inserted on `connected`, and the reconciled deal rows spliced in on `done`, none of which
+// bump scrollTrigger, so a proposal turn would otherwise never scroll. scrollToBottom() is idempotent
+// and respects the user-scrolled-away pause.
+watch([() => props.scrollTrigger, () => props.messages.length], () => {
   if (props.autoScroll && !userScrolledAway.value && virtualScroller.value) {
     nextTick(() => {
       scrollToBottom();

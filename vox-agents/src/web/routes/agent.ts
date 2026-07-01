@@ -431,7 +431,14 @@ export function createAgentRoutes(): Router {
     const emitSpoken = (text: string, id: string) => {
       sendEvent('message', { type: 'text-delta', text, id });
     };
-    const streamer = createSendMessageStreamer(emitSpoken);
+    // A live envoy (diplomat / spokesperson) speaks ONLY through `send-message`, so its raw model
+    // free text is never a real spoken reply: it is the Anthropic tool-force fallback, which the
+    // tool-rescue middleware can leave as malformed tool-call text that renders badly. For such an
+    // agent the streamer swallows native text chunks so they never reach the UI (the commit path
+    // likewise keeps them out of the archive, so live and reload agree). Ordinary agents stream text.
+    const voiceName = agentName(thread);
+    const suppressFreeText = Boolean(voiceName && agentRegistry.get(voiceName)?.suppressFreeText);
+    const streamer = createSendMessageStreamer(emitSpoken, { suppressFreeText });
     const streamCallback: StreamingEventCallback = {
       OnChunk: ({ chunk }) => {
         if (!streamer.handleChunk(chunk as StreamChunk)) {
@@ -552,7 +559,7 @@ export function createAgentRoutes(): Router {
         // exact one the commit path uses, so the streamed and archived retry are literally one decision.
         // Gated on `diplomacy` to match where the commit path archives the reply, so live and reload agree.
         const replySlice = thread.messages.slice(replyStart);
-        if (thread.diplomacy && needsRetryReply(replySlice)) {
+        if (thread.diplomacy && needsRetryReply(replySlice, { sendMessageOnly: suppressFreeText })) {
           sendEvent('message', { type: 'text-delta', text: retryMessage, id: 'retry' });
         }
 
@@ -563,7 +570,7 @@ export function createAgentRoutes(): Router {
         // later full reload yields. Stream the same rows on `done` so the board updates inline without a
         // reload. Best-effort: a reconcile-read failure must not turn a succeeded turn into an error — the
         // next refresh/reopen re-hydrates whatever this missed.
-        await turn.complete();
+        await turn.complete({ sendMessageOnly: suppressFreeText });
         let newDeals: DealTranscriptMessage[] = [];
         if (thread.diplomacy) {
           try {

@@ -74,7 +74,7 @@ export interface ActiveProposalContext {
 
 /** The negotiator's chosen move, set by the terminal tool it calls and read back by the loop. */
 export type NegotiatorMove =
-  | { type: "accept"; rationale: string; proposalMessageID: number; enact: EnactDealResult }
+  | { type: "accept"; rationale: string; message: string; proposalMessageID: number; enact: EnactDealResult }
   | {
       type: "propose" | "counter";
       rationale: string;
@@ -84,7 +84,7 @@ export type NegotiatorMove =
       inspection?: InspectDealResult;
       turn?: number;
     }
-  | { type: "reject"; rationale: string; proposalMessageID: number; rejectMessageID: number };
+  | { type: "reject"; rationale: string; message: string; proposalMessageID: number; rejectMessageID: number };
 
 /**
  * The negotiator's input. Built by `Negotiator.resolveHandoffInput` from the diplomat's
@@ -472,13 +472,13 @@ export function summarizeMove(move: NegotiatorMove, thread: EnvoyThread): string
           ? "This deal was already agreed earlier."
           : "The agreement has been recorded" +
             (move.enact.enacted ? " and enacted." : " (in-game enactment lands in stage 6)."),
-        "Voice the acceptance to the counterpart in your own words.",
+        `Suggested one-sentence line to voice (elaborate around it): "${move.message}"`,
       ].join("\n");
     case "reject":
       return [
         "Your negotiator has REJECTED the deal on the table.",
         `Rationale (for you, do not quote): ${move.rationale}`,
-        "Voice the rejection to the counterpart in your own words — firm but not needlessly hostile.",
+        `Suggested one-sentence line to voice (elaborate around it, firm but not needlessly hostile): "${move.message}"`,
       ].join("\n");
     case "propose":
     case "counter":
@@ -518,9 +518,12 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "accept-deal",
       description:
-        "Accept the deal on the table exactly as-is. Provide your inward rationale for the diplomat. The agreement is recorded and routed to enactment. Use only when a deal is on the table.",
+        "Accept the deal on the table exactly as-is. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced. The agreement is recorded and routed to enactment. Use only when a deal is on the table.",
       inputSchema: z.object({
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
+        Message: z
+          .string()
+          .describe("One single sentence the diplomat will voice to the counterpart, conveying the acceptance."),
       }),
       execute: async (args, _parameters, options) => {
         const ni = input();
@@ -534,13 +537,16 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             ni.activeProposal.messageID,
             ni.thread.agent
           );
+          // The outward Message is recorded as the deal-accept row's Content so the UI surfaces it as
+          // the diplomat's reply in the acceptance notice.
           const enact = await enactAgentDeal(ni.activeProposal.messageID, {
             accepterID: ni.thread.agent,
-            content: "The deal was accepted.",
+            content: args.Message,
           });
           ni.outcome = {
             type: "accept",
             rationale: args.rationale,
+            message: args.Message,
             proposalMessageID: ni.activeProposal.messageID,
             enact,
           };
@@ -656,9 +662,12 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "reject-deal",
       description:
-        "Reject the deal on the table exactly as-is. Provide your inward rationale for the diplomat. Use only when a deal is on the table.",
+        "Reject the deal on the table exactly as-is. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced. Use only when a deal is on the table.",
       inputSchema: z.object({
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
+        Message: z
+          .string()
+          .describe("One single sentence the diplomat will voice to the counterpart, conveying the rejection."),
       }),
       execute: async (args, _parameters, options) => {
         const ni = input();
@@ -672,15 +681,18 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             ni.activeProposal.messageID,
             ni.thread.agent
           );
+          // The outward Message is recorded as the deal-reject row's Content so the UI surfaces it as
+          // the diplomat's reply in the rejection notice (reject rows reduce to the proposal's status).
           const { id } = await appendDealReject(
             ni.thread,
             ni.thread.agent,
-            "The proposed deal was declined.",
+            args.Message,
             ni.activeProposal.messageID
           );
           ni.outcome = {
             type: "reject",
             rationale: args.rationale,
+            message: args.Message,
             proposalMessageID: ni.activeProposal.messageID,
             rejectMessageID: id,
           };

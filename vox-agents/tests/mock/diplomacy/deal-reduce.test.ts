@@ -82,6 +82,29 @@ describe('deriveActiveProposal', () => {
     expect(r.active?.ID).toBe(counter.ID);
     expect(r.status).toBe('open');
   });
+
+  describe('statusMessage (the answering move\'s outward line)', () => {
+    it('carries the deal-reject Content so the UI can show it in the rejected notice', () => {
+      const proposal = msg('deal-proposal', { Deal: deal });
+      const reject = msg('deal-reject', { ProposalMessageID: proposal.ID }, { SpeakerID: 3, Content: 'We must decline this.' });
+      const r = deriveActiveProposal([proposal, reject]);
+      expect(r.status).toBe('rejected');
+      expect(r.statusMessage).toBe('We must decline this.');
+    });
+
+    it('carries the deal-accept Content, kept through enactment', () => {
+      const proposal = msg('deal-proposal', { Deal: deal });
+      const accept = msg('deal-accept', { ProposalMessageID: proposal.ID }, { SpeakerID: 3, Content: 'We gladly accept.' });
+      const enacted = msg('deal-enacted', { ProposalMessageID: proposal.ID }, { Content: '' });
+      const r = deriveActiveProposal([proposal, accept, enacted]);
+      expect(r.status).toBe('enacted');
+      expect(r.statusMessage).toBe('We gladly accept.');
+    });
+
+    it('is undefined while the proposal is still open', () => {
+      expect(deriveActiveProposal([msg('deal-proposal', { Deal: deal })]).statusMessage).toBeUndefined();
+    });
+  });
 });
 
 describe('activeProposalDeal / isAgreed', () => {

@@ -33,6 +33,14 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   public override toolChoice: string = "required";
 
   /**
+   * A live envoy speaks ONLY via the `send-message` tool, so raw model free text is never a real
+   * spoken reply: it is the Anthropic tool-force fallback (which the tool-rescue middleware may leave
+   * as malformed tool-call text). The chat route swallows it from the live stream and the commit path
+   * keeps it out of the archive, so the UI and a reload show only the explicit spoken reply.
+   */
+  public override suppressFreeText = true;
+
+  /**
    * Hard step ceiling for every live envoy (overrides the base default of 3). A runaway support-tool
    * loop (get-briefing forever) or a string of empty responses always terminates by this many steps.
    */

@@ -11,13 +11,14 @@ import { describe, it, expect } from 'vitest';
 import {
   decodeJsonStringField,
   createSendMessageStreamer,
+  type SendMessageStreamerOptions,
   type StreamChunk,
 } from '../../../src/utils/models/send-message-stream.js';
 
 /** Collect the (text, id) pairs a streamer emits so a test can assert order and grouping. */
-function makeSink() {
+function makeSink(options?: SendMessageStreamerOptions) {
   const emitted: Array<{ text: string; id: string }> = [];
-  const streamer = createSendMessageStreamer((text, id) => emitted.push({ text, id }));
+  const streamer = createSendMessageStreamer((text, id) => emitted.push({ text, id }), options);
   return { emitted, streamer };
 }
 
@@ -191,5 +192,30 @@ describe('createSendMessageStreamer', () => {
     // A stray delta for a different id is not part of any tracked stream: pass it through.
     expect(streamer.handleChunk({ type: 'tool-input-delta', id: 'other', delta: '{"Message":"x"}' })).toBe(false);
     expect(emitted).toEqual([]);
+  });
+
+  describe('suppressFreeText (live-envoy mode)', () => {
+    it('swallows every native text chunk type so it never renders', () => {
+      const { emitted, streamer } = makeSink({ suppressFreeText: true });
+      for (const type of ['text', 'text-start', 'text-delta', 'text-end']) {
+        expect(streamer.handleChunk({ type, id: 't', delta: 'malformed <|tool_call|> junk' } as StreamChunk)).toBe(true);
+      }
+      expect(emitted).toEqual([]);
+    });
+
+    it('still converts send-message tool calls to text deltas', () => {
+      const { emitted, streamer } = makeSink({ suppressFreeText: true });
+      streamer.handleChunk({ type: 'tool-input-start', id: 'c1', toolName: 'send-message' });
+      expect(streamer.handleChunk({ type: 'tool-input-delta', id: 'c1', delta: '{"Message":"Hi"}' })).toBe(true);
+      expect(emitted).toEqual([{ text: 'Hi', id: 'c1' }]);
+    });
+
+    it("still passes through reasoning and other tools' chunks", () => {
+      const { emitted, streamer } = makeSink({ suppressFreeText: true });
+      // Reasoning is not free text; other tools are not the spoken channel, so both keep streaming.
+      expect(streamer.handleChunk({ type: 'reasoning-delta', id: 'r', delta: 'thinking' } as StreamChunk)).toBe(false);
+      expect(streamer.handleChunk({ type: 'tool-input-start', id: 'b1', toolName: 'get-briefing' })).toBe(false);
+      expect(emitted).toEqual([]);
+    });
   });
 });

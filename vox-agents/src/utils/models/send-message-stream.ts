@@ -7,9 +7,11 @@
  * argument back as text is what preserves the token-by-token bubble for all replies. The tool's
  * own `tool-call` / `tool-result` chunks are swallowed so the UI renders a text bubble, never a
  * tool-call card; every other chunk (native `text-delta` greetings/fallback, other tools' chunks)
- * passes through unchanged. The web route owns the SSE wiring; this module only maps stream chunks
- * to `(text, id)` emissions, so it is a pure model-stream transform (like its neighbor
- * `concurrency.ts`).
+ * passes through unchanged, UNLESS `suppressFreeText` is set (a live envoy, which speaks only via
+ * `send-message`), in which case native model text chunks are swallowed too: such free text is the
+ * Anthropic tool-force fallback, possibly malformed tool-call junk, never a real spoken reply. The
+ * web route owns the SSE wiring; this module only maps stream chunks to `(text, id)` emissions, so
+ * it is a pure model-stream transform (like its neighbor `concurrency.ts`).
  *
  * The AI SDK delivers `tool-input-start` / `tool-input-delta` / `tool-call` / `tool-result` chunks
  * to `streamText`'s `onChunk`. A `tool-input-delta` carries only a raw JSON-text fragment (the
@@ -43,6 +45,19 @@ export interface SendMessageStreamer {
   /** Process one chunk. Returns true when it was consumed (the caller must NOT forward it). */
   handleChunk(chunk: StreamChunk): boolean;
 }
+
+/** Options for {@link createSendMessageStreamer}. */
+export interface SendMessageStreamerOptions {
+  /**
+   * When true (a live envoy, which speaks ONLY through `send-message`), swallow native model text
+   * chunks too. Such free text is the Anthropic tool-force fallback (possibly malformed tool-call
+   * text the rescue middleware left behind), never a real spoken reply, so it must not render.
+   */
+  suppressFreeText?: boolean;
+}
+
+/** Native model text chunk types (vs. the `send-message` tool-input chunks the streamer converts). */
+const NATIVE_TEXT_CHUNK_TYPES = new Set(["text", "text-start", "text-delta", "text-end"]);
 
 /** In-flight decode state for one `send-message` tool-input stream. */
 interface OpenStream {
@@ -132,8 +147,10 @@ function isJsonWhitespace(c: string): boolean {
  * argument with no deltas, emitted as a fresh bubble keyed on the `toolCallId`.
  */
 export function createSendMessageStreamer(
-  emitTextDelta: (text: string, id: string) => void
+  emitTextDelta: (text: string, id: string) => void,
+  options?: SendMessageStreamerOptions
 ): SendMessageStreamer {
+  const suppressFreeText = options?.suppressFreeText ?? false;
   const streams = new Map<string, OpenStream>();
 
   /** Emit the portion of `fullMessage` beyond what has already been streamed under `id`. */
@@ -202,8 +219,10 @@ export function createSendMessageStreamer(
           return chunk.toolName === sendMessageToolName;
 
         default:
-          // Native text-delta (greetings / Anthropic fallback) and every other tool's chunks pass
-          // through unchanged.
+          // For a live envoy, swallow native model text (the Anthropic tool-force fallback / malformed
+          // tool-call junk) so it never renders; the real spoken reply always arrives via send-message.
+          if (suppressFreeText && NATIVE_TEXT_CHUNK_TYPES.has(chunk.type)) return true;
+          // Otherwise native text-delta and every other tool's chunks pass through unchanged.
           return false;
       }
     },

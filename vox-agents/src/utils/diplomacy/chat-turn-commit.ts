@@ -52,8 +52,13 @@ export interface ChatTurn {
    * over the `connected` SSE event so the UI inserts it without a reread/refresh. Undefined for text.
    */
   dealRow?: DealTranscriptMessage;
-  /** Archive the streamed reply (diplomacy only, best-effort) and mark the turn complete. */
-  complete(): Promise<void>;
+  /**
+   * Archive the streamed reply (diplomacy only, best-effort), normalize the cached reply slice to that
+   * same archived content, and mark the turn complete. `sendMessageOnly` (set for a live envoy) archives
+   * only the explicit `send-message` reply, dropping raw free text (the same text the route swallows from
+   * the live stream), so live and reload agree.
+   */
+  complete(opts?: { sendMessageOnly?: boolean }): Promise<void>;
   /**
    * Release the per-thread lock and reconcile the cache with the store: a completed turn keeps both
    * rows; an incomplete one trims the unwritten reply (and a {{{Greeting}}} trigger's own cache row,
@@ -124,22 +129,40 @@ export async function beginChatTurn(thread: EnvoyThread, commit: TurnCommit, tur
   let finished = false;
   return {
     dealRow,
-    async complete() {
+    async complete(opts?: { sendMessageOnly?: boolean }) {
       if (thread.diplomacy) {
-        // Archive exactly what was displayed: the spoken reply is the interleaved text + send-message
-        // arguments (collectSpokenReply). A turn that spoke nothing falls back to the shared retry line
-        // — the same one the web route streams, under the SAME `needsRetryReply` predicate — UNLESS it
-        // took a deliberate terminal action (a deal handoff or a close): that turn's outcome is the
-        // deal/close itself (archived by its own tool), so a "lost my train of thought" line would
-        // contradict it (needsRetryReply is false). Such a turn archives no reply row.
+        // Archive exactly what was displayed: the spoken reply is the interleaved text plus send-message
+        // arguments (collectSpokenReply). For a live envoy (`sendMessageOnly`) only the explicit
+        // send-message reply is kept, since raw free text is the swallowed tool-force fallback, so
+        // excluding it here keeps the archive identical to the live stream. A turn that spoke nothing
+        // falls back to the shared retry line (the same one the web route streams, under the SAME
+        // `needsRetryReply` predicate with the same option), UNLESS it took a deliberate terminal action
+        // (a deal handoff or a close): that turn's outcome is the deal/close itself (archived by its own
+        // tool), so a "lost my train of thought" line would contradict it (needsRetryReply is false).
+        // Such a turn archives no reply row.
         const slice = thread.messages.slice(replyStart);
-        const reply = collectSpokenReply(slice) || (needsRetryReply(slice) ? retryMessage : "");
+        const reply = collectSpokenReply(slice, opts) || (needsRetryReply(slice, opts) ? retryMessage : "");
         if (reply) {
           try {
             await appendTranscriptMessage(thread, thread.agent, "text", reply);
           } catch (error) {
             logger.error("Failed to append diplomat reply to transcript store", { error });
           }
+        }
+        // Normalize the cache to exactly what was archived. The run left the raw assistant messages in
+        // the slice (free text, the send-message tool call, the negotiator/close handoff); for a live
+        // envoy that raw text is the swallowed tool-force fallback the user never saw, and none of the
+        // tool plumbing is durable. Replacing the slice with the single archived reply row (or nothing
+        // when the turn spoke none) drops the unseen text the same way the store does, so a later turn
+        // prompts on the same history a reload would hydrate rather than resurfacing malformed junk. The
+        // route splices any mid-run deal rows in at this same boundary afterward, ahead of this reply,
+        // matching the durable order.
+        thread.messages.splice(replyStart);
+        if (reply) {
+          thread.messages.push({
+            message: { role: "assistant", content: reply },
+            metadata: { datetime: new Date(), turn },
+          });
         }
       }
       completed = true;

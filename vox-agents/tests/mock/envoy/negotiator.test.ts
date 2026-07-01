@@ -119,11 +119,12 @@ describe('accept-deal', () => {
     const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
-    const msg = await run(tools['accept-deal'], { rationale: 'Good enough.' });
+    const msg = await run(tools['accept-deal'], { rationale: 'Good enough.', Message: 'We have an accord.' });
 
-    expect(input.outcome).toMatchObject({ type: 'accept', proposalMessageID: 7, rationale: 'Good enough.' });
-    // The accepter is the negotiator's own seat (the LLM accepting the relayed deal).
-    expect(mcp.calls('enact-agent-deal')[0]!.args).toMatchObject({ ProposalMessageID: 7, AccepterID: 3 });
+    expect(input.outcome).toMatchObject({ type: 'accept', proposalMessageID: 7, rationale: 'Good enough.', message: 'We have an accord.' });
+    // The accepter is the negotiator's own seat (the LLM accepting the relayed deal); the outward
+    // Message is recorded as the deal-accept row's Content so the UI surfaces it as the reply.
+    expect(mcp.calls('enact-agent-deal')[0]!.args).toMatchObject({ ProposalMessageID: 7, AccepterID: 3, Content: 'We have an accord.' });
     expect(msg).toContain('Accepted proposal #7');
   });
 
@@ -272,12 +273,14 @@ describe('reject-deal', () => {
     const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
-    await run(tools['reject-deal'], { rationale: 'Insulting offer.' });
+    await run(tools['reject-deal'], { rationale: 'Insulting offer.', Message: 'We must decline this.' });
 
     const append = mcp.calls('append-message')[0]!.args;
     expect(append.MessageType).toBe('deal-reject');
+    // The outward Message is the deal-reject row's Content so the UI can surface it in the rejected notice.
+    expect(append.Content).toBe('We must decline this.');
     expect((append.Payload as any).ProposalMessageID).toBe(7);
-    expect(input.outcome).toMatchObject({ type: 'reject', proposalMessageID: 7, rejectMessageID: 13 });
+    expect(input.outcome).toMatchObject({ type: 'reject', proposalMessageID: 7, rejectMessageID: 13, message: 'We must decline this.' });
   });
 
   it('refuses to reject when no deal is on the table', async () => {
@@ -483,13 +486,30 @@ describe('getInitialMessages task determination', () => {
 describe('getOutput', () => {
   const negotiator = new Negotiator();
 
-  it('summarizes a rejection for the diplomat to voice', async () => {
+  it('summarizes a rejection for the diplomat to voice, including the outward line', async () => {
     const input = negotiatorInput({
-      outcome: { type: 'reject', rationale: 'Insulting.', proposalMessageID: 7, rejectMessageID: 9 },
+      outcome: { type: 'reject', rationale: 'Insulting.', message: 'We cannot accept these terms.', proposalMessageID: 7, rejectMessageID: 9 },
     });
     const out = await negotiator.getOutput({} as any, input, '');
     expect(out).toContain('REJECTED');
     expect(out).toContain('Insulting.');
+    // The negotiator's authored outward line is offered for the diplomat to voice.
+    expect(out).toContain('We cannot accept these terms.');
+  });
+
+  it('summarizes an acceptance for the diplomat to voice, including the outward line', async () => {
+    const input = negotiatorInput({
+      outcome: {
+        type: 'accept',
+        rationale: 'Fair deal.',
+        message: 'We gladly accept.',
+        proposalMessageID: 7,
+        enact: { alreadyEnacted: false, enacted: false } as any,
+      },
+    });
+    const out = await negotiator.getOutput({} as any, input, '');
+    expect(out).toContain('ACCEPTED');
+    expect(out).toContain('We gladly accept.');
   });
 
   it('summarizes a proposal with its terms and estimates', async () => {

@@ -212,6 +212,29 @@ describe('diplomacy transcript helpers', () => {
       ];
       expect(collectSpokenReply(messages)).toBe('');
     });
+
+    describe('sendMessageOnly (live envoy)', () => {
+      it('keeps the send-message text but drops the narrated free text', () => {
+        // The live-envoy mode: only the explicit send-message reply is a real spoken line; the native
+        // text is the tool-force fallback (swallowed from the stream too), so it must not be archived.
+        const messages = [assistant([
+          { type: 'text', text: 'I will respond carefully.' },
+          { type: 'tool-call', toolCallId: 't2', toolName: 'send-message', input: { Message: 'We accept your terms.' } },
+        ])];
+        expect(collectSpokenReply(messages, { sendMessageOnly: true })).toBe('We accept your terms.');
+      });
+
+      it('drops a plain-string free-text fallback entirely (so the retry line engages)', () => {
+        expect(collectSpokenReply([assistant('Some malformed <|tool_call|> junk.')], { sendMessageOnly: true })).toBe('');
+      });
+
+      it('still captures a send-message-only turn', () => {
+        const messages = [assistant([
+          { type: 'tool-call', toolCallId: 't1', toolName: 'send-message', input: { Message: 'Hello there.' } },
+        ])];
+        expect(collectSpokenReply(messages, { sendMessageOnly: true })).toBe('Hello there.');
+      });
+    });
   });
 
   describe('tookTerminalAction', () => {

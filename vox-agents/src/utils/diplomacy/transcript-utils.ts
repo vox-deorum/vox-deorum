@@ -166,18 +166,27 @@ export const retryMessage = "My apologies, I lost my train of thought. Could you
  * trimmed): the streamed text preserves the model's own leading/trailing whitespace, so trimming
  * here would make the reloaded reply differ from what the counterpart saw live. Only the
  * newline join (display order) and the drop of empty pieces are imposed.
+ *
+ * `sendMessageOnly` (set for a live envoy, which speaks ONLY via `send-message`) drops raw assistant
+ * `text` parts entirely, capturing just the `send-message` arguments. Raw free text in that mode is
+ * the Anthropic tool-force fallback (possibly malformed tool-call junk): it is swallowed from the
+ * live stream too, so excluding it here keeps live and reload identical and stores no junk.
  */
-export function collectSpokenReply(messages: MessageWithMetadata[]): string {
+export function collectSpokenReply(
+  messages: MessageWithMetadata[],
+  opts?: { sendMessageOnly?: boolean }
+): string {
+  const sendMessageOnly = opts?.sendMessageOnly ?? false;
   const parts: string[] = [];
   for (const item of messages) {
     if (item.message.role !== "assistant") continue;
     const content = item.message.content;
     if (typeof content === "string") {
-      parts.push(content);
+      if (!sendMessageOnly) parts.push(content);
     } else if (Array.isArray(content)) {
       for (const part of content) {
         if (part.type === "text") {
-          parts.push(part.text);
+          if (!sendMessageOnly) parts.push(part.text);
         } else if (part.type === "tool-call" && part.toolName === sendMessageToolName) {
           const message = (part.input as { Message?: unknown } | undefined)?.Message;
           if (typeof message === "string") parts.push(message);
@@ -226,7 +235,13 @@ export function tookTerminalAction(messages: MessageWithMetadata[]): boolean {
  * route streams it under exactly this predicate, so both call this one function and can never drift
  * (e.g. a model whose spoken reply happens to equal `retryMessage` verbatim is NOT stuck — it spoke,
  * so this returns false and the route does not double the line the streamer already showed live).
+ *
+ * `sendMessageOnly` is forwarded to {@link collectSpokenReply} so the stuck-turn decision uses the
+ * same reply definition the archive does, so for a live envoy free text does not count as "spoke".
  */
-export function needsRetryReply(messages: MessageWithMetadata[]): boolean {
-  return !collectSpokenReply(messages) && !tookTerminalAction(messages);
+export function needsRetryReply(
+  messages: MessageWithMetadata[],
+  opts?: { sendMessageOnly?: boolean }
+): boolean {
+  return !collectSpokenReply(messages, opts) && !tookTerminalAction(messages);
 }
