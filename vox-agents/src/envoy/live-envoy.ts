@@ -62,7 +62,7 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     const addon = specialConfig ?? this.getDefaultAddon(parameters, input);
 
     if (!specialConfig) {
-      // Normal mode: include conversation history; the LLM calls get-briefing if it needs detail.
+      // Normal mode: include conversation history.
       messages.push(...this.convertToModelMessages(
         this.filterSpecialMessages(input.messages)
       ));

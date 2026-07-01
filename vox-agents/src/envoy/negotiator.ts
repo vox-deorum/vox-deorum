@@ -240,7 +240,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
     return [
       ...buildGameContextMessages(parameters),
       { role: "user", content: sections.join("\n\n") },
-      { role: "user", content: `You are the deal negotiator for ${civName}, serving ${leader}. Use exactly *one* tool to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
+      { role: "user", content: `You are the deal negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
     ];
   }
 

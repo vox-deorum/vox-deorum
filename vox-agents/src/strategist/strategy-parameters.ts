@@ -321,13 +321,23 @@ export function buildGameContextMessages(parameters: StrategistParameters): Mode
   const { Options, ...Strategy } = state.options || {};
 
   return [{
-    role: "system",
-    content: `
+      role: "system",
+      content: `
 # Situation
 ${jsonToMarkdown(SituationData)}
 
 # Your Civilization
-${jsonToMarkdown(YouAre)}
+${jsonToMarkdown(YouAre)}`.trim(),
+      providerOptions: {
+        anthropic: { cacheControl: { type: 'ephemeral' } }
+      }
+    }, {
+      role: "user",
+      content: `
+# Victory Progress
+Victory Progress: current progress towards each type of victory.
+
+${jsonToMarkdown(state.victory)}
 
 # Players
 Players: summary reports about visible players in the world.
