@@ -566,10 +566,12 @@ export function createAgentRoutes(): Router {
         // The run succeeded — archive the diplomat's reply (best-effort) FIRST, so the reply slice never
         // captures a deal row the diplomat's tools wrote mid-run. THEN read the durable deal rows, take
         // just the NEW ones (the diplomat's counter/accept/reject/enacted), and splice them into the cache
-        // at the reply boundary — BEFORE the streamed reply — so the live order matches the durable order a
-        // later full reload yields. Stream the same rows on `done` so the board updates inline without a
-        // reload. Best-effort: a reconcile-read failure must not turn a succeeded turn into an error — the
-        // next refresh/reopen re-hydrates whatever this missed.
+        // at the reply boundary so this cache mirrors the store's append order (a negotiator handoff is
+        // terminal, so a handoff turn archives no reply row and that boundary sits just past the caller
+        // move). Stream the same rows on `done` so the board updates inline without a reload; the live view
+        // appends them AFTER the streamed reasoning/handoff block for readability (see useThreadMessages
+        // `done`) and re-syncs to this store order on the next reload. Best-effort: a reconcile-read failure
+        // must not turn a succeeded turn into an error — the next refresh/reopen re-hydrates what this missed.
         await turn.complete({ sendMessageOnly: suppressFreeText });
         let newDeals: DealTranscriptMessage[] = [];
         if (thread.diplomacy) {

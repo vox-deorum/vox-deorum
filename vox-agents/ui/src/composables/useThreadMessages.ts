@@ -211,18 +211,17 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
         isStreaming.value = false;
       },
       (data) => {
-        // onDone — streaming completed successfully; the committed exchange stays put. The diplomat may
-        // have written deal rows mid-run (counter/accept/reject/enacted) the text stream didn't carry; the
-        // server reconciled and sent them here. Insert them JUST BEFORE the streamed reply (at
-        // assistantStart) — the order the tools wrote them in, before the reply was archived — so a card's
-        // position is stable across a later full reload. Dedup against rows already present (the connected
-        // card). No reload, so the streamed reasoning/tool traces survive.
+        // onDone — streaming completed successfully; the committed exchange stays put. The diplomat's
+        // negotiator handoff (`call-negotiator`) is a terminal action, so a handoff turn writes deal rows
+        // mid-run (counter/accept/reject/enacted) but speaks no separate reply; the server reconciled the
+        // new rows and sent them here. Append them AFTER the streamed reasoning/tool block that produced
+        // them (via `mergeDealRows`, which dedups against the connected proposal card and pushes to the
+        // end — the assistant reply is the last item on `done`), so a card reads as the OUTCOME of the
+        // handoff rather than preceding it. No reload, so the streamed reasoning/tool traces survive; a
+        // later full reload drops those ephemeral traces and re-syncs to the store's append order, which —
+        // since a handoff turn has no separate reply row — matches this order exactly.
         done = true;
-        if (data?.deals?.length && thread.value) {
-          const present = new Set(thread.value.messages.flatMap((m) => (m.deal ? [m.deal.ID] : [])));
-          const fresh = data.deals.filter((r) => !present.has(r.ID)).map((r) => hydrateDealRow(r, thread.value!.agent));
-          if (fresh.length) thread.value.messages.splice(assistantStart, 0, ...fresh);
-        }
+        if (data?.deals?.length) mergeDealRows(data.deals);
         isStreaming.value = false;
       },
       (data) => {

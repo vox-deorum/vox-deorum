@@ -165,7 +165,7 @@ function renderPromiseDuration(promiseType: PromiseTerm["promiseType"], turns: n
 
 /** Append a "## <title>" block when it has rows. */
 function pushMenuCategory(into: string[], title: string, rows: string[]): void {
-  if (rows.length > 0) into.push(`## ${title}`, ...rows);
+  if (rows.length > 0) into.push(`### ${title}`, ...rows);
 }
 
 /**
@@ -175,17 +175,14 @@ function pushMenuCategory(into: string[], title: string, rows: string[]): void {
  * advisory values; `promiseTargets` drives the targeted-promise rows.
  */
 function formatSideMenu(
-  range: NormalizedSideRange | undefined,
-  giverID: number,
-  receiverID: number,
+  range: NormalizedSideRange,
   giverName: string,
   receiverName: string,
   subline: string,
   promiseTargets: InspectDealResult["promiseTargets"],
   durations: DealDurations
 ): string {
-  const head = `# What ${giverName} Can Give`;
-  if (!range) return `${head}\n- ${subline}\n(menu unavailable)`;
+  const head = `## What ${giverName} Can Give`;
   const out: string[] = [head, `- ${subline}`];
 
   // Gold + gold per turn (net income shows how much GPT the side can sustain; GPT runs for a term).
@@ -287,7 +284,7 @@ function formatSideMenu(
   }
   pushMenuCategory(out, "Promises", promiseRows);
 
-  return out.join("\n");
+  return out.join("\n\n").trim();
 }
 
 /**
@@ -302,29 +299,25 @@ export function formatGiveTakeLedger(inspection: InspectDealResult, thread: Envo
   const counterpartName = name(counterpartID);
   const give = formatSideMenu(
     inspection.tradableRange[String(agentID)],
-    agentID,
-    counterpartID,
     agentName,
     counterpartName,
-    `Potential terms YOUR civ can give ${counterpartName}`,
+    `Potential terms ${name} (YOUR civ) can give ${counterpartName}`,
     inspection.promiseTargets,
     inspection
   );
   const take = formatSideMenu(
     inspection.tradableRange[String(counterpartID)],
-    counterpartID,
-    agentID,
     counterpartName,
     agentName,
-    `Potential terms ${counterpartName} can give YOUR civ`,
+    `Potential terms ${counterpartName} can give ${name} (YOUR civ)`,
     inspection.promiseTargets,
     inspection
   );
   return [
-    "Send NAMES exactly as written below; never numbers. Durations and vote counts are fixed by the game.",
+    "Send NAMES exactly as written below. Term durations or vote counts are fixed.",
     give,
     take,
-  ].join("\n\n");
+  ].join("\n\n").trim();
 }
 
 /** Format the upfront on-the-table inspection (per-term legality + value, promise agreeability). */

@@ -165,10 +165,11 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
 - Use the \`reject-deal\` tool to decline the on-the-table deal exactly as-is. (Only when a deal is on the table.)
 - Use the \`propose-deal\` tool to author a new proposal. You must include a one-sentence outward \`Message\` for the diplomat to voice.
   - Author by NAME using two lists: \`Give\` (what YOUR civ gives the counterpart) and \`Take\` (what the counterpart gives YOUR civ).
-  - Each ledger entry has \`Term\`, \`Name\`, and \`Amount\`. Copy each \`Term\` label and \`Name\` EXACTLY from the GIVE/TAKE menu. Never use numeric IDs.
-  - Gold and Gold Per Turn need an \`Amount\`; resources may set \`Amount\` for quantity (default 1).
-  - "${PROMISE_METADATA.COOP_WAR.label}" needs a third-party Civilization Name from the menu in the \`Name\` field. It is a prepared joint war that begins after a short countdown and binds both sides; for war right now, use Third-Party War instead.
-  - Do not set durations or vote counts; the game fixes them.`.trim();
+    - Each ledger entry has \`Term\`, \`Name\`, and \`Amount\`. Copy each \`Term\` label and \`Name\` EXACTLY from the GIVE/TAKE menu. Never use numeric IDs.
+    - Gold, Gold Per Turn, and resources need an \`Amount\` for quantity.
+  - Joint wars needs a third-party Civilization Name from the menu.
+    - "${PROMISE_METADATA.COOP_WAR.label}" creates a joint war that begins after a short countdown. 
+    - Use Third-Party War to start a war right now.`.trim();
   }
 
   /**
@@ -185,6 +186,8 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
     _context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
     const { thread } = input;
+    const leader = parameters.metadata?.YouAre?.Leader ?? "your leader";
+    const civName = parameters.metadata?.YouAre?.Name ?? "your civilization";
 
     // (3) what is on the table — reduce the transcript and forward only the counterpart's offer.
     const reduction = await readActiveProposal(thread.player1ID, thread.player2ID);
@@ -229,14 +232,15 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
 
     // The Give/Take menu (context 2): the available terms, by NAME, that propose-deal expects.
     sections.push(
-      inspection
-        ? formatGiveTakeLedger(inspection, thread)
-        : "# Tradable terms\n(menu unavailable — the game could not be inspected; keep any proposal minimal)"
+       "# Tradable Terms\n" + (inspection
+          ? formatGiveTakeLedger(inspection, thread) :
+          "(options unavailable)")
     );
 
     return [
       ...buildGameContextMessages(parameters),
       { role: "user", content: sections.join("\n\n") },
+      { role: "user", content: `You are the deal negotiator for ${civName}, serving ${leader}. Use exactly *one* tool to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
     ];
   }
 

@@ -202,7 +202,7 @@ describe('useThreadMessages', () => {
     expect(isStreaming.value).toBe(false);
   });
 
-  it("folds the diplomat's mid-run deal rows (carried on `done`) into the board", async () => {
+  it("folds the diplomat's mid-run deal rows (carried on `done`) in AFTER the streamed reply", async () => {
     const { proposeDeal } = setup();
     await proposeDeal(emptyDeal(), vi.fn());
     cb.onConnected({ deal: dealRow() });                            // the caller's proposal card (ID 42)
@@ -210,12 +210,14 @@ describe('useThreadMessages', () => {
     // The diplomat countered mid-run; the server reconciled it and sends the authoritative row on `done`.
     cb.onDone({ deals: [dealRow({ ID: 43, MessageType: 'deal-counter' })] });
 
-    // card (42) + the diplomat's counter (43) + streamed reply — the counter lands BEFORE the reply
-    // (matching durable order), not appended after; dedup keeps 42 once; no reload.
+    // proposal card (42) + streamed reply + the diplomat's counter (43) — the counter is appended AFTER
+    // the reply (the reasoning/tool block that produced it), reading as its OUTCOME; dedup keeps 42 once;
+    // no reload.
     expect(thread.value!.messages).toHaveLength(3);
-    expect(thread.value!.messages[1]!.deal!.ID).toBe(43);
-    expect(thread.value!.messages[1]!.deal!.MessageType).toBe('deal-counter');
-    expect(thread.value!.messages[2]!.deal).toBeUndefined(); // the streamed reply follows the card
+    expect(thread.value!.messages[0]!.deal!.ID).toBe(42);    // the caller's proposal card stays first
+    expect(thread.value!.messages[1]!.deal).toBeUndefined(); // the streamed reply precedes the mid-run card
+    expect(thread.value!.messages[2]!.deal!.ID).toBe(43);
+    expect(thread.value!.messages[2]!.deal!.MessageType).toBe('deal-counter');
     expect(isStreaming.value).toBe(false);
   });
 
@@ -240,6 +242,51 @@ describe('useThreadMessages', () => {
     expect(cards).toHaveLength(1);
     expect(cards[0]!.deal!.ID).toBe(50);
     expect(onDealFailed).toHaveBeenCalledWith('The connection to the server was lost.', 'committed');
+    expect(isStreaming.value).toBe(false);
+  });
+
+  it('appends multiple mid-run rows (accept then enacted) after the reasoning/handoff block, in order', async () => {
+    // The screenshot case: the human proposes, the diplomat reasons and hands off to the negotiator
+    // (call-negotiator is terminal, so no spoken reply follows), and the negotiator accepts + enacts.
+    // Both authoritative rows arrive on `done` and must land AFTER the reasoning/tool block that produced
+    // them — reading as its outcome — preserving the server's append order between themselves.
+    const { proposeDeal } = setup();
+    await proposeDeal(emptyDeal(), vi.fn());
+    cb.onConnected({ deal: dealRow() });                              // the caller's proposal card (ID 42)
+    cb.onMessage({ type: 'reasoning-delta', text: 'Weighing the embassy exchange.', id: 'r' });
+    cb.onMessage({ type: 'tool-call', toolCallId: 't1', toolName: 'call-negotiator', input: {} });
+    cb.onDone({ deals: [
+      dealRow({ ID: 43, MessageType: 'deal-accept' }),
+      dealRow({ ID: 44, MessageType: 'deal-enacted' }),
+    ] });
+
+    // proposal (42) → the reasoning/handoff reply → accept (43) → enacted (44).
+    expect(thread.value!.messages).toHaveLength(4);
+    expect(thread.value!.messages[0]!.deal!.ID).toBe(42);
+    expect(thread.value!.messages[1]!.deal).toBeUndefined();         // the ephemeral reasoning/tool block
+    expect(thread.value!.messages[2]!.deal!.MessageType).toBe('deal-accept');
+    expect(thread.value!.messages[3]!.deal!.MessageType).toBe('deal-enacted');
+    expect(isStreaming.value).toBe(false);
+  });
+
+  it("appends a text turn's mid-run counter after the reply (no connected proposal card)", async () => {
+    // A plain chat message the diplomat answers with a negotiator handoff: no deal rides on `connected`,
+    // the mid-run counter arrives on `done`, and it must follow the reasoning/handoff block — not slot in
+    // between the user's message and that block.
+    const { sendMessage } = setup();
+    await sendMessage('Will you trade?');
+    expect(thread.value!.messages).toHaveLength(2);                  // user message + assistant placeholder
+    cb.onConnected({});                                              // a text turn carries no deal
+    cb.onMessage({ type: 'reasoning-delta', text: 'They want a trade.', id: 'r' });
+    cb.onMessage({ type: 'tool-call', toolCallId: 't1', toolName: 'call-negotiator', input: {} });
+    cb.onDone({ deals: [dealRow({ ID: 50, MessageType: 'deal-counter', SpeakerID: 1 })] });
+
+    // user message → the reasoning/handoff reply → counter (50).
+    expect(thread.value!.messages).toHaveLength(3);
+    expect(thread.value!.messages[0]!.message).toMatchObject({ role: 'user', content: 'Will you trade?' });
+    expect(thread.value!.messages[1]!.deal).toBeUndefined();
+    expect(thread.value!.messages[2]!.deal!.ID).toBe(50);
+    expect(thread.value!.messages[2]!.deal!.MessageType).toBe('deal-counter');
     expect(isStreaming.value).toBe(false);
   });
 });
