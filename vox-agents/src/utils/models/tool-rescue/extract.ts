@@ -72,11 +72,14 @@ export function rescueToolCallsFromText(
     return { toolCalls: delimiterToolCalls, remainingText: remainingAfterDelimiters || undefined };
   }
 
-  // Define common field name patterns to check
+  // Define common field name patterns to check. Both 'tool' and 'action' keys are
+  // always accepted (framing-agnostic): the 'action' key is what the claude-code
+  // provider's prompt instructs; tool-name validation below keeps this safe.
   const fieldPatterns = [
     { nameField: 'name', parametersField: 'parameters' },
     { nameField: 'toolName', parametersField: 'input' },
-    { nameField: 'tool', parametersField: 'arguments' }
+    { nameField: 'tool', parametersField: 'arguments' },
+    { nameField: 'action', parametersField: 'arguments' }
   ];
 
   // First, try to extract the largest JSON block by finding balanced brackets/braces

@@ -79,11 +79,11 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
       }
 
       // Create tool instruction prompt with full tool schemas
-      const toolPrompt = createToolPrompts(params.tools, params.toolChoice ?? { type: "auto" });
+      const toolPrompt = createToolPrompts(params.tools, params.toolChoice ?? { type: "auto" }, options?.framing);
 
       // Convert existing tool-call/tool-result messages to text so the model
       // sees a consistent text-based history instead of native tool parts it never produced
-      const convertedPrompt = convertPromptToolMessagesToText(params.prompt ?? []);
+      const convertedPrompt = convertPromptToolMessagesToText(params.prompt ?? [], options?.framing);
 
       // Build the modified prompt, respecting systemPromptFirst models that only
       // accept a single system message. When set, merge the tool prompt into the

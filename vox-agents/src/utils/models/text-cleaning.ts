@@ -5,6 +5,7 @@
  */
 
 import { jsonToMarkdown } from '../tools/json-to-markdown.js';
+import type { ToolCallFraming } from './tool-rescue/types.js';
 
 /** Minimal interface for tool result parts accepted by formatting functions. */
 interface ToolResultLike {
@@ -62,26 +63,29 @@ export function cleanToolArtifacts(text: string): string {
 
 /**
  * Formats a tool call as a markdown JSON code block (prompt-mode representation).
+ * `framing` selects the JSON name field: the framing literal IS the key, so
+ * `'tool'` emits `{ "tool": ... }` and `'action'` emits `{ "action": ... }`,
+ * matching the wire format that `createToolPrompts` instructs the model to use.
  */
-export function formatToolCallText(toolName: string, args: unknown): string {
+export function formatToolCallText(toolName: string, args: unknown, framing: ToolCallFraming = 'tool'): string {
   let parsed = args;
   if (typeof parsed === 'string') {
     try { parsed = JSON.parse(parsed); } catch { /* keep as-is */ }
   }
-  return '```json\n' + JSON.stringify([{ tool: toolName, arguments: parsed }], null, 2) + '\n```';
+  return '```json\n' + JSON.stringify([{ [framing]: toolName, arguments: parsed }], null, 2) + '\n```';
 }
 
 /**
  * Formats a tool result with a markdown heading and content.
  */
-export function formatToolResultText(toolName: string, resultText: string): string {
-  return `# Tool ${toolName} Result\n${resultText}`;
+export function formatToolResultText(toolName: string, resultText: string, framing: ToolCallFraming = 'tool'): string {
+  return `# ${framing === 'action' ? 'Action' : 'Tool'} ${toolName} Result\n${resultText}`;
 }
 
 /**
  * Serializes a tool result part's output into readable text.
  */
-export function formatToolResultOutput(part: ToolResultLike, maxLength: number = -1): string | undefined {
+export function formatToolResultOutput(part: ToolResultLike, maxLength: number = -1, framing: ToolCallFraming = 'tool'): string | undefined {
   const output = part.output;
   const value = output.value;
   let resultText: string;
@@ -109,7 +113,7 @@ export function formatToolResultOutput(part: ToolResultLike, maxLength: number =
       resultText = JSON.stringify(output);
   }
 
-  let text = formatToolResultText(part.toolName, resultText);
+  let text = formatToolResultText(part.toolName, resultText, framing);
   if (maxLength !== -1 && text.length > maxLength) {
     text = text.slice(0, maxLength) + ' [Truncated]';
   }
@@ -119,10 +123,14 @@ export function formatToolResultOutput(part: ToolResultLike, maxLength: number =
 /**
  * Builds a recovery prompt for empty response rescue.
  * The prompt varies based on the effective toolChoice to guide the model appropriately.
+ * `framing` keeps the terminology ("tool" vs "action") consistent with the injected
+ * instructions so the retry does not point a claude-code model at its built-in tools.
+ * Defaults to `'tool'`, which reproduces the historical wording byte-for-byte.
  */
-export function buildRescuePrompt(toolChoice: string): string {
+export function buildRescuePrompt(toolChoice: string, framing: ToolCallFraming = 'tool'): string {
+  const noun = framing === 'action' ? 'action' : 'tool';
   if (toolChoice === "required" || toolChoice === "tool") {
-    return 'Your previous response was empty and did not include any tool calls. You MUST call one or more of the available tools in the given format. Please try again.';
+    return `Your previous response was empty and did not include any ${noun} calls. You MUST call one or more of the available ${noun}s in the given format. Please try again.`;
   }
-  return 'Your previous response was empty. Please provide either a text response or PROPERLY call one or more of the available tools in the given format.';
+  return `Your previous response was empty. Please provide either a text response or PROPERLY call one or more of the available ${noun}s in the given format.`;
 }

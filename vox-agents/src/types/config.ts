@@ -28,6 +28,14 @@ export interface LLMConfig {
     concurrencyLimit?: number;
     reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
     systemPromptFirst?: boolean;
+    /**
+     * claude-code only: built-in CLI tools to enable. Undefined/empty = pure text
+     * model (no tool execution). ['everything'] = a vetted safe set. Any other list
+     * = an explicit whitelist. Bash is NEVER enabled, even if listed. When enabled,
+     * the CLI runs under dontAsk in a temp folder keyed to gameID-playerID, with
+     * Write/Edit path-scoped to that folder.
+     */
+    claudeCodeTools?: string[];
     /** When set, marks this model as an embedding model; value is the target embedding dimension */
     embeddingSize?: number;
     [key: string]: any;

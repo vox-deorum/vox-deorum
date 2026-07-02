@@ -49,6 +49,14 @@ describe('rescueToolCallsFromText', () => {
       expect(result.toolCalls.map(tc => tc.toolName)).toEqual(['get-data', 'end-turn']);
       expect(result.remainingText).toBeUndefined();
     });
+
+    it('should rescue an array of action-key objects (claude-code framing)', () => {
+      // The exact shape the 'action' framing prompt instructs the model to emit.
+      const text = '```json\n[\n  { "action": "get-data", "arguments": { "a": 1 } },\n  { "action": "end-turn", "arguments": {} }\n]\n```';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls.map(tc => tc.toolName)).toEqual(['get-data', 'end-turn']);
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ a: 1 });
+    });
   });
 
   describe('raw JSON blocks', () => {
@@ -71,6 +79,14 @@ describe('rescueToolCallsFromText', () => {
       const result = rescueToolCallsFromText(text, tools);
       expect(result.toolCalls).toHaveLength(1);
       expect(result.toolCalls[0].toolName).toBe('end-turn');
+    });
+
+    it('should support the action/arguments field pattern (claude-code framing)', () => {
+      const text = '{"action": "end-turn", "arguments": {"confirm": true}}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0].toolName).toBe('end-turn');
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ confirm: true });
     });
 
     it('should normalize underscores in tool names to hyphens', () => {

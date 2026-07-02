@@ -11,7 +11,7 @@ import { createLogger } from "../utils/logger.js";
 import { z, ZodObject } from "zod";
 import { Model } from "../types/index.js";
 import { VoxContext } from "./vox-context.js";
-import { getModelConfig } from "../utils/models/models.js";
+import { getModelConfig, resolveToolFraming } from "../utils/models/models.js";
 import { hasOnlyTerminalCalls } from "../utils/tools/terminal-tools.js";
 import { buildRescuePrompt } from "../utils/models/text-cleaning.js";
 // @ts-ignore - jaison doesn't have type definitions
@@ -386,7 +386,10 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
       const cleaned = baseMessages.filter(
         msg => !responseMessages.some(respMsg => respMsg === msg)
       );
-      const rescue = buildRescuePrompt(toolChoice);
+      // Match the rescue wording to the model's framing so a claude-code model with
+      // built-in CLI tools is asked for an "action", not pointed at its host "tools".
+      const rescueFraming = resolveToolFraming(this.getModel(parameters, input, context.modelOverrides));
+      const rescue = buildRescuePrompt(toolChoice, rescueFraming);
       if (cleaned[cleaned.length - 1]?.content !== rescue)
         cleaned.push({ role: 'user', content: rescue });
       config.messages = cleaned;

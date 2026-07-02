@@ -31,10 +31,20 @@ export function isTerminalTool(toolName: string, mcpToolMap: Map<string, MCPTool
   return false;
 }
 
-/** Checks if ALL tool calls in a step are terminal (or no tool calls at all) */
+/**
+ * Checks if ALL game tool calls in a step are terminal (or there are none).
+ *
+ * Provider-executed calls are the host CLI's own tools (e.g. claude-code's Read), not
+ * game actions, so they are excluded from the check: they must never keep the agent
+ * loop alive. Without this exclusion a non-terminal built-in call sharing a step with
+ * a terminal game action would read as non-terminal and wrongly force another step,
+ * risking a repeat of the terminal action's side effects.
+ */
 export function hasOnlyTerminalCalls(
-  step: { toolCalls: Array<{ toolName: string }> },
+  step: { toolCalls: Array<{ toolName: string; providerExecuted?: boolean }> },
   mcpToolMap: Map<string, MCPTool>
 ): boolean {
-  return step.toolCalls.every(tc => isTerminalTool(tc.toolName, mcpToolMap));
+  return step.toolCalls
+    .filter(tc => !tc.providerExecuted)
+    .every(tc => isTerminalTool(tc.toolName, mcpToolMap));
 }

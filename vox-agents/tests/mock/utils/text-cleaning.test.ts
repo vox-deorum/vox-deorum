@@ -134,12 +134,26 @@ describe('text-cleaning', () => {
       const parsed = JSON.parse(fenced![1]);
       expect(parsed[0]).toEqual({ tool: 'toolY', arguments: 'not json' });
     });
+
+    it("uses the 'action' JSON key under action framing", () => {
+      const out = formatToolCallText('toolZ', { foo: 'bar' }, 'action');
+      const fenced = out.match(/```json\n([\s\S]*)\n```/);
+      const parsed = JSON.parse(fenced![1]);
+      expect(parsed[0]).toEqual({ action: 'toolZ', arguments: { foo: 'bar' } });
+    });
   });
 
   describe('formatToolResultText', () => {
     it('includes the tool name in a result heading and the result body', () => {
       const out = formatToolResultText('searchDB', 'the body');
       expect(out).toMatch(/#\s*Tool\s+searchDB\s+Result/);
+      expect(out).toContain('the body');
+    });
+
+    it("uses an 'Action' heading under action framing", () => {
+      const out = formatToolResultText('searchDB', 'the body', 'action');
+      expect(out).toMatch(/#\s*Action\s+searchDB\s+Result/);
+      expect(out).not.toContain('Tool');
       expect(out).toContain('the body');
     });
   });
@@ -240,6 +254,16 @@ describe('text-cleaning', () => {
       expect(out).not.toContain('[Truncated]');
       expect(out).toContain(long);
     });
+
+    it("threads action framing into the result heading", () => {
+      const out = formatToolResultOutput(
+        { toolName: 'echo', output: { type: 'text', value: 'plain text' } },
+        -1,
+        'action'
+      );
+      expect(out).toMatch(/#\s*Action\s+echo\s+Result/);
+      expect(out).toContain('plain text');
+    });
   });
 
   describe('buildRescuePrompt', () => {
@@ -257,6 +281,28 @@ describe('text-cleaning', () => {
       const out = buildRescuePrompt('auto');
       expect(out).not.toMatch(/MUST call/);
       expect(out).toMatch(/text response/);
+    });
+
+    it('defaults to "tool" terminology (byte-identical to before)', () => {
+      const out = buildRescuePrompt('required');
+      expect(out).toContain('tool calls');
+      expect(out).toContain('available tools');
+      expect(out).not.toContain('action');
+    });
+
+    it('uses "action" terminology under action framing (required/tool)', () => {
+      const out = buildRescuePrompt('required', 'action');
+      expect(out).toMatch(/MUST call/);
+      expect(out).toContain('action calls');
+      expect(out).toContain('available actions');
+      expect(out).not.toMatch(/\btool/);
+    });
+
+    it('uses "action" terminology under action framing (auto)', () => {
+      const out = buildRescuePrompt('auto', 'action');
+      expect(out).toMatch(/text response/);
+      expect(out).toContain('available actions');
+      expect(out).not.toMatch(/\btool/);
     });
   });
 });

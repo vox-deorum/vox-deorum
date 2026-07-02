@@ -768,7 +768,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         const result = await streamTextWithConcurrency(
           withModelConfig({
             // Model settings
-            model: getModel(stepModel),
+            model: getModel(stepModel, { workingDirId: `${parameters.gameID}-${parameters.playerID}` }),
             providerOptions: stepProviderOptions,
             // Disable Vercel AI SDK's internal retry to let our wrapper handle it
             maxRetries: 0,

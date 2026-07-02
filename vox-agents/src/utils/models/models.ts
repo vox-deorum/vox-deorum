@@ -20,9 +20,18 @@ import dotenv from 'dotenv';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { toolRescueMiddleware } from './tool-rescue/middleware.js';
+import type { ToolCallFraming } from './tool-rescue/types.js';
 import { Agent } from 'undici';
+import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
 
 dotenv.config();
+
+// Vetted safe built-in CLI tools that claude-code's `['everything']` expands to (Bash excluded).
+const CLAUDE_CODE_SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'TodoWrite'];
+// Never enabled, even if explicitly listed.
+const CLAUDE_CODE_BLOCKED_TOOLS = ['Bash'];
 
 /**
  * Get a LLM model config by name.
@@ -80,6 +89,18 @@ export function getModelConfig(
 
 
 /**
+ * Resolves the tool-call terminology preset for a model. claude-code with built-in
+ * CLI tools enabled uses 'action' so its native CLI tools and the JSON-invoked game
+ * tools do not both read as "tools" (the distinct terminology is the disambiguation).
+ * Every other model uses the default 'tool'. Exported so callers outside getModel
+ * (e.g. the empty-response rescue prompt in vox-agent) can match the model's framing.
+ */
+export function resolveToolFraming(config: Model): ToolCallFraming {
+  const hasBuiltinTools = (config.options?.claudeCodeTools?.length ?? 0) > 0;
+  return config.provider === 'claude-code' && hasBuiltinTools ? 'action' : 'tool';
+}
+
+/**
  * Get a LLM model instance by name.
  * Creates a language model from the specified provider and wraps it with
  * appropriate middleware (gemmaToolMiddleware for Gemma models, toolRescueMiddleware for others).
@@ -93,12 +114,15 @@ export function getModelConfig(
  * ```typescript
  * const modelConfig = getModelConfig('default');
  * const model = getModel(modelConfig);
- * // Or with tool prompt middleware:
- * const model = getModel(modelConfig, { useToolPrompt: true });
+ * // Or, for claude-code with built-in CLI tools, keyed to a temp working dir:
+ * const model = getModel(modelConfig, { workingDirId: `${gameID}-${playerID}` });
  * ```
  */
-export function getModel(config: Model, options?: { useToolPrompt?: boolean }): LanguageModel {
+export function getModel(config: Model, options?: { workingDirId?: string }): LanguageModel {
   var result: LanguageModelV3;
+  // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming):
+  // 'action' for claude-code with built-in CLI tools, 'tool' for everything else.
+  const toolFraming: ToolCallFraming = resolveToolFraming(config);
   // Find providers
   switch (config.provider) {
     case "openrouter":
@@ -161,8 +185,34 @@ export function getModel(config: Model, options?: { useToolPrompt?: boolean }): 
       const opts = config.options ?? {};
       const settings: ClaudeCodeSettings = {
         settingSources: [], // explicit: never load CLAUDE.md / .claude/settings.json into agent prompts
-        tools: [],          // Stage 1: disable all built-in CLI tools (zero host tool execution)
       };
+      // Built-in CLI tools are an explicit opt-in. Layering: `tools` bounds what is *in
+      // context* (availability), `allowedTools` is what may *run* (permission), and
+      // `dontAsk` denies the rest without prompting. `cwd` is NOT a sandbox (it only
+      // resolves relative paths), so the path confinement of Write/Edit comes from the
+      // `(./**)` rules plus dontAsk's deny-by-default, not from `cwd` itself.
+      const requested = opts.claudeCodeTools;
+      if (!requested || requested.length === 0) {
+        settings.tools = []; // pure text: disable all built-in CLI tools (zero host tool execution)
+      } else {
+        const expanded = (requested.length === 1 && requested[0] === 'everything')
+          ? CLAUDE_CODE_SAFE_TOOLS
+          : requested;
+        // Bash (and anything else in CLAUDE_CODE_BLOCKED_TOOLS) is dropped here, so it is
+        // absent from both `tools` and `allowedTools`; with dontAsk deny-by-default that
+        // keeps it blocked. We deliberately do NOT also set `disallowedTools`: the provider
+        // ignores it whenever `allowedTools` is present and warns on every request if both
+        // are supplied, so the allowlist alone is the single permission mechanism.
+        const allowed = expanded.filter(t => !CLAUDE_CODE_BLOCKED_TOOLS.includes(t));
+        const id = options?.workingDirId ?? 'default';
+        const dir = path.join(os.tmpdir(), 'vox-claude-code', id);
+        fs.mkdirSync(dir, { recursive: true });
+        settings.cwd = dir;
+        settings.tools = allowed;                    // availability: bare names only
+        settings.permissionMode = 'dontAsk';         // never prompt; deny anything not pre-approved below
+        settings.allowedTools = allowed.map(t =>
+          t === 'Write' || t === 'Edit' ? `${t}(./**)` : t); // path-scope writes to the temp cwd
+      }
       // reasoningEffort -> Claude Code `effort` (non-adaptive). 'minimal' disables thinking instead.
       if (opts.reasoningEffort === 'minimal') {
         settings.thinking = { type: 'disabled' };
@@ -214,7 +264,7 @@ export function getModel(config: Model, options?: { useToolPrompt?: boolean }): 
     case "prompt":
       result = wrapLanguageModel({
         model: result,
-        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst })
+        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming })
       });
       break;
     default:

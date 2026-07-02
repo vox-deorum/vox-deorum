@@ -15,6 +15,18 @@ import {
   LanguageModelV3ToolChoice,
 } from '@ai-sdk/provider';
 import { formatToolCallText, formatToolResultOutput } from '../text-cleaning.js';
+import type { ToolCallFraming } from './types.js';
+
+/**
+ * Terminology presets for the tool-call instructions. `noun` doubles as the JSON
+ * name field (`{ "<noun>": "<noun>_name", ... }`), keeping the instructed key in
+ * lockstep with `formatToolCallText`. `'tool'` reproduces the historical strings
+ * byte-for-byte, which the ~15 prompt-mode models depend on.
+ */
+const FRAMING_PRESETS = {
+  tool:   { heading: '## Tool Calling',   listHeading: '## Available Tools',   noun: 'tool'   },
+  action: { heading: '## Action Calling', listHeading: '## Available Actions', noun: 'action' },
+} as const;
 
 export function createToolPrompt(tool: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)) {
   // We don't support provider tools this way
@@ -35,42 +47,44 @@ export function createToolPrompt(tool: (LanguageModelV3FunctionTool | LanguageMo
  * @returns System prompt text instructing the model to use JSON format for tool calls
  */
 export function createToolPrompts(tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[],
-  choice: LanguageModelV3ToolChoice): string | undefined {
+  choice: LanguageModelV3ToolChoice,
+  framing: ToolCallFraming = 'tool'): string | undefined {
   // Format tools with their schemas
   const descriptions = tools.map(createToolPrompt).join('\n\n');
+  const { heading, listHeading, noun } = FRAMING_PRESETS[framing];
 
   // Format the prompt
   switch (choice.type) {
     case "required":
-      return `## Tool Calling
-You must use one or more tools from the list below. Respond ONLY with a JSON array in this exact format:
+      return `${heading}
+You must use one or more ${noun}s from the list below. Respond ONLY with a JSON array in this exact format:
 \`\`\`json
 [
-  { "tool": "<tool_name>", "arguments": { <parameters> } },
+  { "${noun}": "<${noun}_name>", "arguments": { <parameters> } },
 ]
 \`\`\`
 
-## Available Tools
+${listHeading}
 ${descriptions}`;
     case "tool":
-      return `## Tool Calling
-You must use the tool defined below. Respond ONLY with a JSON object in this exact format:
-{ "tool": "<tool_name>", "arguments": { <parameters> } }
+      return `${heading}
+You must use the ${noun} defined below. Respond ONLY with a JSON object in this exact format:
+{ "${noun}": "<${noun}_name>", "arguments": { <parameters> } }
 
 ${descriptions}`;
     case "none":
       return undefined;
 
     default:
-      return `## Tool Calling
-You have access to tools. If you decide to invoke any of the tool(s), ONLY respond with a JSON array in this EXACT format as the text output:
+      return `${heading}
+You have access to ${noun}s. If you decide to invoke any of the ${noun}(s), ONLY respond with a JSON array in this EXACT format as the text output:
 \`\`\`json
 [
-  { "tool": "<tool_name>", "arguments": { <parameters> } },
+  { "${noun}": "<${noun}_name>", "arguments": { <parameters> } },
 ]
 \`\`\`
 
-## Available Tools
+${listHeading}
 ${descriptions}`;
   }
 }
@@ -80,7 +94,7 @@ ${descriptions}`;
  * Used in prompt mode so the model sees a consistent text-based conversation history
  * instead of native tool-call/tool-result parts it never produced.
  */
-export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt): LanguageModelV3Prompt {
+export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt, framing: ToolCallFraming = 'tool'): LanguageModelV3Prompt {
   const converted: LanguageModelV3Message[] = [];
 
   for (const message of prompt) {
@@ -88,16 +102,27 @@ export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt): 
       // Convert tool-call/tool-result parts to text in a single pass
       const newContent: typeof message.content = [];
       for (const part of message.content) {
+        // Provider-executed parts belong to the host CLI's own tools (e.g. claude-code's
+        // Read), not the prompt-emulated game tools. Leave them native so the provider
+        // serializes them itself; reframing them as game "actions" would misattribute
+        // built-in tool use to the game and corrupt the history the model sees next turn.
+        // In assistant content a tool-result part exists only for a provider-executed
+        // tool (client results arrive as a separate `tool` role message, handled below),
+        // so it is left native as well.
+        if (part.type === 'tool-result') {
+          newContent.push(part);
+          continue;
+        }
         if (part.type === 'tool-call') {
+          if (part.providerExecuted) {
+            newContent.push(part);
+            continue;
+          }
           let args = part.input;
           if (typeof args === 'string') {
             try { args = JSON.parse(args); } catch { /* keep as-is */ }
           }
-          newContent.push({ type: 'text', text: formatToolCallText(part.toolName, args) });
-          continue;
-        } else if (part.type === 'tool-result') {
-          const formatted = formatToolResultOutput(part);
-          if (formatted) newContent.push({ type: 'text', text: formatted });
+          newContent.push({ type: 'text', text: formatToolCallText(part.toolName, args, framing) });
           continue;
         }
         newContent.push(part);
@@ -109,7 +134,7 @@ export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt): 
       // Convert tool message to user message with text content
       const textParts = message.content
         .filter(part => part.type === 'tool-result')
-        .map(part => formatToolResultOutput(part))
+        .map(part => formatToolResultOutput(part, -1, framing))
         .filter((text): text is string => text !== undefined)
         .map(text => ({ type: 'text' as const, text }));
 
