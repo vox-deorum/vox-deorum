@@ -460,25 +460,25 @@ export function summarizeMove(move: NegotiatorMove, thread: EnvoyThread): string
     case "accept":
       return [
         "Your negotiator has ACCEPTED the deal on the table.",
-        `Rationale (for you, do not quote): ${move.rationale}`,
+        `- Rationale (for you, do not quote): ${move.rationale}`,
         move.enact.alreadyEnacted
           ? "This deal was already agreed earlier."
           : "The agreement has been recorded" +
             (move.enact.enacted ? " and enacted." : " (in-game enactment lands in stage 6)."),
-        `Suggested one-sentence line to voice (elaborate around it): "${move.message}"`,
+        `- Message to the counterpart: "${move.message}"`,
       ].join("\n");
     case "reject":
       return [
         "Your negotiator has REJECTED the deal on the table.",
-        `Rationale (for you, do not quote): ${move.rationale}`,
-        `Suggested one-sentence line to voice (elaborate around it, firm but not needlessly hostile): "${move.message}"`,
+        `- Rationale (for you, do not quote): ${move.rationale}`,
+        `- Message to the counterpart: "${move.message}"`,
       ].join("\n");
     case "propose":
     case "counter":
       return [
         `Your negotiator has prepared a ${move.type === "counter" ? "COUNTER" : "PROPOSAL"} (deal message #${move.dealMessageID}).`,
-        `Rationale (for you, do not quote): ${move.rationale}`,
-        `Suggested one-sentence line to voice (elaborate around it): "${move.message}"`,
+        `- Rationale (for you, do not quote): ${move.rationale}`,
+        `- Message to the counterpart: "${move.message}"`,
         summarizeAuthoredDeal(move, thread),
         "The deal is now on the table for the counterpart to accept, counter, or reject.",
       ].join("\n");
