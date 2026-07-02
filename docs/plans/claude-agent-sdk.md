@@ -1,145 +1,105 @@
 # Add the Claude Code (Agent SDK) provider
 
-> Implementation plan. Register `ai-sdk-provider-claude-code` as a new `claude-code` LLM provider so vox-agents can route any agent through the locally-installed Claude Agents SDK. The provider has no native AI-SDK tool calling, so vox-agents **game tools always stay in the existing prompt-mode emulation lane**. Built-in CLI tools (Read/Write/WebFetch/…, never Bash) are an explicit per-model opt-in that runs in a temp folder keyed to `gameID-playerID`; when on, the injected tool-prompt is made co-existence-aware (overridable per model) and the CLI-executed tool calls are surfaced into vox-agents telemetry.
+> Implementation plan. Register `ai-sdk-provider-claude-code` as a new `claude-code` LLM provider so vox-agents can route any agent through the locally-installed Claude Agents SDK. The provider has no native AI-SDK tool calling, so vox-agents **game tools always stay in the existing prompt-mode emulation lane**. Built-in CLI tools (Read/Write/WebFetch/…, never Bash) are an explicit per-model opt-in that runs under `permissionMode: 'dontAsk'` with Write/Edit path-scoped to a temp folder keyed to `gameID-playerID`; when on, the injected tool-prompt gets a co-existence preamble (overridable per model) and the CLI-executed tool calls are surfaced into vox-agents telemetry.
 
 ## Stages
 
-The work lands in three independently-shippable, ordered checkpoints. Each keeps the package type-checking and the mock test suite green.
+Three independently-shippable, ordered checkpoints. Each keeps the package type-checking and the mock test suite green.
 
-- [x] **Stage 1 — Core provider (pure-text, prompt-mode game tools).** ✅ DONE. Install the package; add the `claude-code` case to `getModel()` (forces prompt middleware, `settingSources: []`, effort-only reasoning, no built-in tools); register `claude-code/{sonnet,opus,haiku}` defaults; add the UI provider entry; first `models.ts` unit test. After this, any agent can use `claude-code/sonnet` as a drop-in text model with full prompt-mode tool calling. This is the ~95% case.
-- [ ] **Stage 2 — Optional built-in CLI tools + temp folder + prompt override.** Add `options.claudeCodeTools` (opt-in list; `['everything']` = a vetted safe set; Bash never allowed) and `options.claudeCodePromptOverride`; thread `gameID-playerID` into `getModel()` for the per-seat temp `cwd`; teach the tool-rescue middleware an optional `preamble` so the game-tool prompt can disambiguate game actions from built-in CLI tools.
-- [ ] **Stage 3 — Built-in tool-call telemetry.** Surface the CLI-executed built-in tool calls/results (which arrive as `providerExecuted` AI-SDK parts) into vox-agents per-tool spans, mirroring the existing `mcp-tool.*` span shape.
+- [x] **Stage 1 — Core provider (pure-text, prompt-mode game tools).** ✅ DONE (2026-06-30). Any agent can use `claude-code/sonnet` as a drop-in text model with full prompt-mode tool calling. This is the ~95% case.
+- [ ] **Stage 2 — Optional built-in CLI tools + temp folder + prompt override.** `options.claudeCodeTools` opt-in (`['everything']` = a vetted safe set; Bash never allowed) under `dontAsk` with path-scoped Write/Edit; `options.claudeCodePromptOverride`; thread `gameID-playerID` into `getModel()`; tool-rescue middleware learns an optional `preamble`.
+- [ ] **Stage 3 — Built-in tool-call telemetry.** Surface CLI-executed built-in tool calls/results (which arrive as `providerExecuted: true` AI-SDK parts — confirmed in provider source) as vox-agents per-tool spans mirroring the `mcp-tool.*` shape.
 
 ## Background
 
-`ai-sdk-provider-claude-code` (repo `ben-vargas/ai-sdk-provider-claude-code`, npm `ai-sdk-provider-claude-code`) is a community Vercel AI SDK provider that drives Anthropic's Claude **Agent SDK** / Claude Code CLI as a subprocess. Facts verified against the package source (`3.5.x`) and `@anthropic-ai/claude-agent-sdk` (`0.3.x`):
+`ai-sdk-provider-claude-code` (repo `ben-vargas/ai-sdk-provider-claude-code`, npm same name) is a community Vercel AI SDK provider that drives Anthropic's Claude **Agent SDK** / Claude Code CLI as a subprocess. Facts verified against the installed `3.5.0` and `@anthropic-ai/claude-agent-sdk` `0.3.x`:
 
-- **Exports** `createClaudeCode` and `claudeCode` (`src/index.ts`); factory call `createClaudeCode()(modelId, settings?)`. Also `createAiSdkMcpServer`, `createSdkMcpServer`, `tool`, error guards (`isAuthenticationError`).
+- **Exports** `createClaudeCode` and `claudeCode`; factory call `createClaudeCode()(modelId, settings?)` returns `@ai-sdk/provider`'s `LanguageModelV3` (no cast needed). Also `createAiSdkMcpServer`, `createSdkMcpServer`, `tool`, error guards (`isAuthenticationError`).
 - **Model ids** `'haiku' | 'sonnet' | 'opus'` or a full id (`'claude-sonnet-4-6'`).
-- **AI SDK** latest `3.x` targets `ai@^6`; the monorepo pins `ai@^6.0.0` (root `package.json:44`). Compatible.
-- **Auth** local Claude Code CLI **subscription** auth — does **not** read `ANTHROPIC_API_KEY`. Prerequisite: a recent `claude` CLI installed and authenticated. `effort`/`thinking` are `0.3.x`-era features.
-- **No native tools.** AI SDK `tools`/`toolChoice` (≠ `'auto'`) are ignored with a warning. Sampling params (`temperature`, `topP`, `maxOutputTokens`, …) likewise — and the one call site sets none of them.
-- **Settings used** (all present directly on `ClaudeCodeSettings`): `cwd?: string`, `allowedTools?: string[]`, `disallowedTools?: string[]`, `permissionMode?: PermissionMode` (`'default'|'acceptEdits'|'bypassPermissions'|'plan'|'dontAsk'|'auto'`), `settingSources?: ('user'|'project'|'local')[]`, `effort?: 'low'|'medium'|'high'|'xhigh'|'max'`, `thinking?: {type:'adaptive'}|{type:'enabled',budgetTokens?}|{type:'disabled'}`.
-- **`settingSources` is load-bearing.** Agent SDK `0.3.x` changed the default so *omitting* `settingSources` loads ALL filesystem settings (`CLAUDE.md`, `.claude/settings.json`). This repo root has both. We must **explicitly** pass `settingSources: []` to keep them out of agent prompts.
-- **Platform.** Pulls `@anthropic-ai/claude-agent-sdk`, shipped as per-platform binaries via `optionalDependencies` (Windows `win32-x64` included). CI/Docker must keep optional deps.
+- **AI SDK** `3.x` targets `ai@^6`; the monorepo pins `ai@^6.0.0` (root `package.json:44`). Compatible.
+- **Auth** local Claude Code CLI **subscription** auth — does **not** read `ANTHROPIC_API_KEY`. Prerequisite: a recent authenticated `claude` CLI.
+- **No native tools.** AI SDK `tools`/`toolChoice` (≠ `'auto'`) and sampling params are ignored with a warning — and the one call site sets none of them.
+- **Settings used** (all on `ClaudeCodeSettings`): `cwd`, `tools?: string[] | {type:'preset', preset:'claude_code'}` (availability; `[]` is the **documented** "disable all built-in tools"), `allowedTools`/`disallowedTools` (permission rules, accept path specifiers like `Edit(docs/**)`), `permissionMode`, `settingSources`, `effort?: 'low'|'medium'|'high'|'xhigh'|'max'`, `thinking` (accepts `{type:'disabled'}`).
+- **`permissionMode: 'bypassPermissions'` additionally requires `allowDangerouslySkipPermissions: true`** (SDK-enforced safety flag). We avoid it entirely: `'dontAsk'` ("don't prompt; deny if not pre-approved") plus `allowedTools` rules gives the same no-prompt behavior with deny-by-default instead of bypass.
+- **`settingSources` is load-bearing.** Agent SDK `0.3.x` made *omitting* it load ALL filesystem settings (`CLAUDE.md`, `.claude/settings.json`) — this repo root has both. We pass `settingSources: []` explicitly (the provider also defaults to `[]`).
+- **Provider-executed tool parts.** Every CLI-executed tool surfaces as AI-SDK `tool-call`/`tool-result`/`tool-error` parts stamped `providerExecuted: true, dynamic: true` — the builders (`buildToolCallPart`/`buildToolResultPart`) are shared by `doGenerate` and `doStream`, and oversized tool results are truncated before emission. This is Stage 3's foundation.
+- **Platform.** `@anthropic-ai/claude-agent-sdk` ships per-platform binaries via `optionalDependencies` (Windows `win32-x64` included). CI/Docker must keep optional deps.
 
 ### Why game tools stay in prompt-mode (and the MCP bridge is rejected)
 
-vox-agents has one real SDK chokepoint: `getModel(config): LanguageModel` (`src/utils/models/models.ts:99`) is imported only by `src/infra/vox-context.ts:25` and called once at `vox-context.ts:761` (inside `executeAgentStep(parameters, …)` of `VoxContext`), feeding the single `streamText` in `streamTextWithConcurrency` (`concurrency.ts:171`). That call always passes `tools`, `activeTools`, `toolChoice` (`vox-context.ts:771-773`).
+vox-agents has one real SDK chokepoint: `getModel(config): LanguageModel` (`src/utils/models/models.ts:100`) is imported only by `src/infra/vox-context.ts` and called once at `vox-context.ts:771` (inside `executeAgentStep`), feeding the single `streamText` in `streamTextWithConcurrency` (`concurrency.ts:171`). That call always passes `tools`, `activeTools`, `toolChoice`.
 
-For no-native-tool providers, `toolRescueMiddleware({ prompt: true })` (selected by `config.options.toolMiddleware === 'prompt'`, `models.ts:194-199`) strips `tools` from the request (`tool-rescue/middleware.ts:108-112`), injects a JSON tool-call protocol as a system message (`middleware.ts:82-105`, `tool-rescue/prompt.ts:37`), and re-synthesizes `tool-call`/`tool-result` stream parts from the model's text (`middleware.ts:122-146, 215-256`, `tool-rescue/extract.ts`). This is already shipping for ~15 models (`defaults.ts:61-200`).
+For no-native-tool providers, `toolRescueMiddleware({ prompt: true })` strips `tools` from the request (`tool-rescue/middleware.ts:108-111`), injects a JSON tool-call protocol as a system message (`middleware.ts:82-105`), and re-synthesizes `tool-call`/`tool-result` stream parts from the model's text (`middleware.ts:115-292`, `tool-rescue/extract.ts`). Already shipping for ~15 models (`defaults.ts`).
 
 A bridge that turns game tools into native Claude/MCP tools (`createAiSdkMcpServer`) was investigated and **rejected**. The game tools are doubly coupled to the AI-SDK loop:
 
 1. **In-process state.** `send-message`, `close-conversation`, `call-negotiator`, the negotiator's `accept-deal`/`propose-deal`/`reject-deal`, and the `call-*` agent tools mutate `VoxContext` AsyncLocalStorage state — `currentInput.outcome` (`negotiator-utils.ts:501,541,632,681`), the abort signal, `forkRun()` (`agent-tools.ts:79-86`), and a dedup `WeakMap` keyed on the AI-SDK per-step `messages`. An out-of-loop bridge has none of it.
-2. **Stream-part visibility.** Turn termination (`stopCheck`, `live-envoy.ts:121-129`, `vox-agent.ts:194-198`), transcript archival (`collectSpokenReply` reads `send-message` tool-call parts, `transcript-utils.ts:181-219`), live UI streaming (`onChunk` rebuilds the reply from tool chunks, `send-message-stream.ts:163-208`), per-tool telemetry spans, and token accounting all read game-tool calls **as AI-SDK stream parts / `StepResult`**. `createAiSdkMcpServer` surfaces calls only as `providerExecuted:true, dynamic:true` parts with `mcp__…` names — the shape none of that code matches.
+2. **Stream-part visibility.** Turn termination (`stopCheck`, `live-envoy.ts:121-129`, `vox-agent.ts:194-198`), transcript archival (`collectSpokenReply`, `transcript-utils.ts:181-219`), live UI streaming (`send-message-stream.ts:163-208`), per-tool telemetry, and token accounting all read game-tool calls **as AI-SDK stream parts / `StepResult`**. Bridged tools surface only as `providerExecuted: true, dynamic: true` parts with `mcp__…` names — a shape none of that code matches.
 
-So: **game tools are always prompt-mode for claude-code.** Built-in CLI tools, when enabled, run in the CLI's own loop alongside (Stage 2), and we read their `providerExecuted` parts for telemetry (Stage 3) rather than for control flow.
+So: **game tools are always prompt-mode for claude-code.** Built-in CLI tools, when enabled, run in the CLI's own loop alongside (Stage 2), and we read their `providerExecuted` parts for telemetry only (Stage 3), never control flow.
 
 ---
 
-## Stage 1 — Core provider (pure-text, prompt-mode game tools)
+## Stage 1 — Core provider (pure-text, prompt-mode game tools) ✅
 
-> **Status: ✅ Implemented (2026-06-30).** Built as specified; `npm run type-check` clean and the
-> full mock suite green (new `tests/mock/utils/models.test.ts`, 6 tests). Built against the
-> installed `ai-sdk-provider-claude-code@3.5.0` / `@anthropic-ai/claude-agent-sdk`.
->
-> **Confirmed against the installed `.d.ts` (resolves the SAFETY-GATE uncertainty):**
-> - `ClaudeCodeSettings` exposes a top-level **`tools?: string[] | { type:'preset'; preset:'claude_code' }`**,
->   and `[]` is the **documented** value for "disable all built-in tools" — so the primary path
->   (`tools: []`) is correct and **no `disallowedTools` fallback is needed**. (This also de-risks Stage 2.3.)
-> - `effort?: EffortLevel = 'low'|'medium'|'high'|'xhigh'|'max'` and `thinking` accepts `{ type:'disabled' }`
->   — the `'minimal'→disabled` / else `effort` mapping type-checks with no cast (`reasoningEffort` is
->   already `'minimal'|'low'|'medium'|'high'`).
-> - `createClaudeCode()(id, settings)` returns `@ai-sdk/provider`'s `LanguageModelV3`, assignable to the
->   `result` variable with **no cast**. Both `createClaudeCode` and `claudeCode` are exported.
-> - Bonus: the provider already defaults `settingSources` to `[]` when omitted; we still pass it explicitly.
->
-> **Deviations from the snippets below (minor):**
-> - The test uses `vi.hoisted(() => ({ captured }))` to share the capture holder with the hoisted
->   `vi.mock` factory (the `let captured` form in 1.5 trips Vitest's mock-hoisting guard).
-> - The `getModelConfig('claude-code/sonnet')` assertion runs against the real merged config (local
->   `config.json` only overrides `default`; the entry-level merge preserves all default `llms` keys),
->   so the `defaultConfig.llms` fallback was not needed.
-> - **Not yet run:** the manual real-CLI SAFETY-GATE turn (needs an authenticated `claude` CLI) — still
->   required before relying on `claude-code/*` in production.
+> **Status: implemented (2026-06-30).** `npm run type-check` clean; full mock suite green (new `tests/mock/utils/models.test.ts`, 6 tests). Built against `ai-sdk-provider-claude-code@3.5.0`. **Not yet run:** the manual real-CLI SAFETY-GATE turn (needs an authenticated `claude` CLI) — still required before relying on `claude-code/*` in production.
 
 ### 1.1 Dependency
-Add to the monorepo-root `package.json` `dependencies` (with the other `@ai-sdk/*` providers):
-```jsonc
-"ai-sdk-provider-claude-code": "^3.5.0",
-```
-(`^3.5.0` guarantees the `effort`/`thinking` and top-level `tools` fields this plan uses.) `npm install` from the repo root; keep `optionalDependencies`. Smoke-check no import-time CLI spawn: `node -e "import('ai-sdk-provider-claude-code').then(()=>console.log('ok'))"`.
+Monorepo-root `package.json` `dependencies`: `"ai-sdk-provider-claude-code": "^3.5.0"` (guarantees the `effort`/`thinking` and top-level `tools` fields this plan uses). Keep `optionalDependencies` on install. Import smoke-check: `node -e "import('ai-sdk-provider-claude-code').then(()=>console.log('ok'))"` — no import-time CLI spawn.
 
-### 1.2 Provider case — `src/utils/models/models.ts`
-Imports near the other provider imports (`models.ts:8-22`):
+### 1.2 Provider case — `src/utils/models/models.ts:156-174`
 ```ts
 import { createClaudeCode, type ClaudeCodeSettings } from 'ai-sdk-provider-claude-code';
 ```
-The middleware tail of `getModel` switches on `config.options?.toolMiddleware` (`models.ts:187-205`). To **force** prompt mode for claude-code (it is mandatory — game tools must be emulated), the `claude-code` case rebinds `config` so the tail's `"prompt"` branch is taken regardless of how the model was configured. Add the case alongside `case "anthropic":` (`models.ts:152-157`):
+The middleware tail of `getModel` switches on `config.options?.toolMiddleware` (`models.ts:207-225`). The `claude-code` case (alongside `case "anthropic":`) **forces** prompt mode by rebinding `config` so the tail's `"prompt"` branch always runs:
 ```ts
 case "claude-code": {
-  // Game tools MUST be prompt-emulated for this provider — force it.
+  // No native AI-SDK tool calling — game tools MUST be prompt-emulated; force it.
   config = { ...config, options: { ...config.options, toolMiddleware: 'prompt' } };
   const opts = config.options ?? {};
   const settings: ClaudeCodeSettings = {
-    settingSources: [],      // explicit: never load CLAUDE.md / .claude/settings.json
-    tools: [],               // Stage 1: remove ALL built-in tools from context (availability layer)
+    settingSources: [], // explicit: never load CLAUDE.md / .claude/settings.json
+    tools: [],          // Stage 1: disable all built-in CLI tools (zero host tool execution)
   };
-  // reasoningEffort -> Claude Code `effort` only (non-adaptive), all models.
+  // reasoningEffort -> `effort` (non-adaptive); 'minimal' disables thinking instead.
   if (opts.reasoningEffort === 'minimal') {
     settings.thinking = { type: 'disabled' };
   } else if (opts.reasoningEffort) {
-    settings.effort = opts.reasoningEffort; // narrowed to 'low'|'medium'|'high' ⊆ EffortLevel
+    settings.effort = opts.reasoningEffort; // 'low'|'medium'|'high' ⊆ EffortLevel
   }
   result = createClaudeCode()(config.name, settings);
   break;
 }
 ```
-`buildProviderOptions()` needs **no** claude-code branch — it falls to the default branch (`models.ts:318-321`) yielding `{ 'claude-code': model.options }`, exactly like the other prompt-mode providers, and is inert (the provider reads its config from the construction-time `settings`, not runtime `providerOptions`).
+`buildProviderOptions()` needs **no** claude-code branch — the default branch yields `{ 'claude-code': model.options }`, inert (the provider reads construction-time `settings`, not runtime `providerOptions`).
 
-### 1.3 Default models — `src/utils/config/defaults.ts`
-After the `anthropic/claude-*` entries (`defaults.ts:75-86`):
-```ts
-'claude-code/sonnet': { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt' } },
-'claude-code/opus':   { provider: 'claude-code', name: 'opus',   options: { toolMiddleware: 'prompt' } },
-'claude-code/haiku':  { provider: 'claude-code', name: 'haiku',  options: { toolMiddleware: 'prompt' } },
-```
-(The forced rebind in 1.2 makes `toolMiddleware: 'prompt'` redundant here, but keep it explicit for clarity/consistency.) Do **not** change `config.json`'s `default`.
+### 1.3 Default models — `src/utils/config/defaults.ts:87-101`
+`claude-code/{sonnet,opus,haiku}` entries with `provider: 'claude-code'` and **no** `options.toolMiddleware` — prompt mode is forced unconditionally in the provider case, so storing it on the config would be dead weight; a comment in `defaults.ts` says so. `config.json`'s `default` is unchanged.
 
-### 1.4 UI provider list — `src/types/constants.ts:25-34`
-Add to `llmProviders`: `{ label: 'Claude Code', value: 'claude-code' }`. No `apiKeyFields` entry (CLI subscription auth).
+### 1.4 UI provider list — `src/types/constants.ts:28`
+`{ label: 'Claude Code', value: 'claude-code' }` in `llmProviders`. No `apiKeyFields` entry (CLI subscription auth).
 
-### 1.5 Tests — new `tests/mock/utils/models.test.ts`
-No per-provider test for `models.ts` exists today (the mock tier stubs `models.js` wholesale), so this is the first. Mock the package (both exports) returning a `MockLanguageModelV3` from `ai/test` so the middleware `wrapLanguageModel` tail accepts it:
-```ts
-import { MockLanguageModelV3 } from 'ai/test';
-let captured: any;
-vi.mock('ai-sdk-provider-claude-code', () => {
-  const factory = vi.fn((_id: string, settings: any) => { captured = settings; return new MockLanguageModelV3(); });
-  return { createClaudeCode: () => factory, claudeCode: factory };
-});
-```
-Assert: `getModelConfig('claude-code/sonnet')` resolves to the registered entry; `getModel({provider:'claude-code',name:'sonnet',options:{toolMiddleware:'prompt'}})` → captured `settingSources: []`, `tools: []`; `reasoningEffort:'high'` → `effort:'high'`, no `thinking`; `'minimal'` → `thinking:{type:'disabled'}`, no `effort`.
+### 1.5 Tests — `tests/mock/utils/models.test.ts`
+First per-provider unit test for `models.ts`. Mocks the package (both exports) via a `vi.hoisted` capture holder (a plain `let` trips Vitest's mock-hoisting guard), returning `MockLanguageModelV3` from `ai/test` so the `wrapLanguageModel` tail accepts it. Asserts: `getModelConfig('claude-code/sonnet')` resolves to the registered entry (with `toolMiddleware` undefined per 1.3); captured `settingSources: []` and `tools: []`; `reasoningEffort:'high'` → `effort:'high'`, no `thinking`; `'minimal'` → `thinking:{type:'disabled'}`, no `effort`; neither set when unconfigured.
 
 ---
 
 ## Stage 2 — Optional built-in CLI tools + temp folder + prompt override
 
-### 2.1 Config options — `src/types/config.ts`
-Add to `LLMConfig.options` (after `systemPromptFirst`, `config.ts:30`):
+### 2.1 Config options — `src/types/config.ts` (`LLMConfig.options`, after `systemPromptFirst`)
 ```ts
 /**
  * claude-code only: built-in CLI tools to enable. Undefined/empty = pure text
  * model (no tool execution). ['everything'] = a vetted safe set. Any other list
  * = an explicit whitelist. Bash is NEVER enabled, even if listed. When enabled,
- * the CLI runs in a temp folder keyed to gameID-playerID.
+ * the CLI runs under dontAsk in a temp folder keyed to gameID-playerID, with
+ * Write/Edit path-scoped to that folder.
  */
 claudeCodeTools?: string[];
 /**
  * claude-code only: replaces the auto-generated co-existence preamble prepended
- * to the prompt-mode tool instructions (used to disambiguate built-in CLI tools
- * from vox-agents game tools when built-in tools are enabled).
+ * to the prompt-mode tool instructions (disambiguates built-in CLI tools from
+ * vox-agents game tools when built-in tools are enabled).
  */
 claudeCodePromptOverride?: string;
 ```
@@ -153,102 +113,105 @@ const CLAUDE_CODE_BLOCKED_TOOLS = ['Bash'];
 ```
 
 ### 2.3 Signature + built-in-tool wiring — `getModel`
-Replace the dead `useToolPrompt` option (`models.ts:99`, never read) with a working-dir id:
+Replace the dead `useToolPrompt` option (`models.ts:100`, never read) with a working-dir id:
 ```ts
 export function getModel(config: Model, options?: { workingDirId?: string }): LanguageModel
 ```
-Extend the `claude-code` case from 1.2 to handle built-in tools and the co-existence preamble. Declare a `let claudeCodePreamble: string | undefined;` **before** the middleware switch, set it here, and pass it into the `"prompt"` middleware branch (2.4). Replace the fixed `tools: []` with:
+Extend the `claude-code` case. Declare `let claudeCodePreamble: string | undefined;` **before** the middleware switch, set it here, pass it into the `"prompt"` middleware branch (2.4). Replace the fixed `tools: []` with:
 ```ts
 const requested = opts.claudeCodeTools;
 if (!requested || requested.length === 0) {
-  settings.tools = [];                        // pure text: no built-ins available
+  settings.tools = [];                         // pure text: no built-ins in context
 } else {
   const expanded = (requested.length === 1 && requested[0] === 'everything')
     ? CLAUDE_CODE_SAFE_TOOLS
     : requested;
   const allowed = expanded.filter(t => !CLAUDE_CODE_BLOCKED_TOOLS.includes(t));
-  settings.tools = allowed;                    // availability: only the vetted built-ins in context
-  settings.allowedTools = allowed;             // permission: auto-approve them
-  settings.disallowedTools = CLAUDE_CODE_BLOCKED_TOOLS; // defense in depth: Bash never in context
-  settings.permissionMode = 'bypassPermissions';        // no interactive prompts for the vetted set
   const id = options?.workingDirId ?? 'default';
   const dir = path.join(os.tmpdir(), 'vox-claude-code', id);
   fs.mkdirSync(dir, { recursive: true });
   settings.cwd = dir;
-  // Co-existence: tell the model these are CLI tools, distinct from the JSON game actions.
+  settings.tools = allowed;                    // availability: bare names only
+  // Permission layer: dontAsk = never prompt, DENY anything not pre-approved
+  // below. No bypassPermissions (which would need allowDangerouslySkipPermissions
+  // and approve everything, everywhere). Write/Edit rules are path-scoped to the
+  // temp cwd — relative rule paths resolve against the session cwd.
+  settings.permissionMode = 'dontAsk';
+  settings.allowedTools = allowed.map(t =>
+    t === 'Write' || t === 'Edit' ? `${t}(./**)` : t);
+  settings.disallowedTools = CLAUDE_CODE_BLOCKED_TOOLS; // defense in depth
+  // Co-existence: these are CLI tools, distinct from the JSON game actions.
   claudeCodePreamble = opts.claudeCodePromptOverride
     ?? `## Built-in tools\nYou also have these built-in CLI tools, called natively (NOT via the JSON format below): ${allowed.join(', ')}.\nUse the JSON tool-call format ONLY for the game actions listed under "Available Tools".`;
 }
 ```
-(`tools` is the availability layer — only these built-ins are in Claude's context; `allowedTools` is the permission layer. Setting `tools` is what actually bounds the surface, so `bypassPermissions` can only ever auto-approve the vetted set. **Confirmed in Stage 1** against `ai-sdk-provider-claude-code@3.5.0`: the provider exposes a top-level `tools?: string[] | { type:'preset'; preset:'claude_code' }`, so `settings.tools = allowed` is the correct availability control — the `disallowedTools`-only fallback is not needed.)
-Add node imports at the top of `models.ts`: `import os from 'node:os'; import fs from 'node:fs'; import path from 'node:path';`.
+Layering: `tools` bounds what is *in context* (availability), `allowedTools` is what may *run* (permission), `dontAsk` denies the rest without prompting. **`cwd` is NOT a sandbox** — it only resolves relative paths — so the path confinement comes from the `Write(./**)`/`Edit(./**)` rules plus dontAsk's deny-by-default. If manual verification (below) shows relative rule paths not resolving against `cwd`, switch to absolute patterns built from `dir` (forward-slashed, `//`-prefixed).
+Node imports at the top of `models.ts`: `import os from 'node:os'; import fs from 'node:fs'; import path from 'node:path';`.
 
 ### 2.4 Middleware preamble — `src/utils/models/tool-rescue/{types,middleware}.ts`
-Add to `ToolRescueOptions` (`types.ts:10-22`): `preamble?: string;`. In `middleware.ts transformParams`, after `const toolPrompt = createToolPrompts(...)` (`middleware.ts:82`), prepend the preamble:
+Add `preamble?: string;` to `ToolRescueOptions` (`types.ts:10-22`). In `transformParams`, after `const toolPrompt = createToolPrompts(...)` (`middleware.ts:82`):
 ```ts
 const withPreamble = toolPrompt && options?.preamble ? `${options.preamble}\n\n${toolPrompt}` : toolPrompt;
 ```
-and use `withPreamble` where `toolPrompt` is currently consumed (`middleware.ts:92-105`). Then in `getModel`'s `"prompt"` middleware branch (`models.ts:194-199`), pass `preamble: claudeCodePreamble` alongside the existing `prompt`/`systemPromptFirst` options. `claudeCodePreamble` is `undefined` for non-claude-code models, so their behavior is unchanged.
+and use `withPreamble` where `toolPrompt` is consumed (`middleware.ts:92-105`). In `getModel`'s `"prompt"` branch (`models.ts:214-219`), pass `preamble: claudeCodePreamble` alongside `prompt`/`systemPromptFirst`. It is `undefined` for non-claude-code models — behavior unchanged. Known gap, acceptable: `transformParams` early-returns when a step has no game tools (`middleware.ts:77`), so such a step gets no preamble — but there is no JSON protocol to disambiguate then either.
 
-### 2.5 Thread the seat id — `src/infra/vox-context.ts:761`
-`parameters` (`AgentParameters` with `gameID:string`, `playerID:number`, `vox-agent.ts:24-33`) is in scope. Change `model: getModel(stepModel)` to:
+### 2.5 Thread the seat id — `src/infra/vox-context.ts:771`
+`parameters` (`AgentParameters` with `gameID:string`, `playerID:number`) is in scope in `executeAgentStep`. Change `model: getModel(stepModel)` to:
 ```ts
 model: getModel(stepModel, { workingDirId: `${parameters.gameID}-${parameters.playerID}` }),
 ```
-This is the only real call site.
+This is the only call site of the module-level `getModel` (the `VoxAgent.getModel` methods are unrelated config resolvers).
 
 ### 2.6 Tests — extend `tests/mock/utils/models.test.ts`
-- `claudeCodeTools: ['everything']` + `{workingDirId:'g1-3'}` → captured `tools` and `allowedTools` deep-equal `CLAUDE_CODE_SAFE_TOOLS` (no `Bash`), `disallowedTools: ['Bash']`, `permissionMode:'bypassPermissions'`, `cwd` ends with `vox-claude-code/g1-3` (folder exists).
-- `claudeCodeTools: ['Read','Bash']` → captured `tools` and `allowedTools` equal `['Read']` (Bash filtered).
-- A tool-rescue middleware test: `toolRescueMiddleware({prompt:true, preamble:'PRE'})` `transformParams` prepends `PRE` to the injected system message; `claudeCodePromptOverride` flows through as the preamble. Clean up temp folders in `afterEach`.
+- `claudeCodeTools: ['everything']` + `{workingDirId:'g1-3'}` → captured `tools` deep-equals `CLAUDE_CODE_SAFE_TOOLS` (no `Bash`); `allowedTools` is the same list with `Write`/`Edit` replaced by `Write(./**)`/`Edit(./**)`; `disallowedTools: ['Bash']`; `permissionMode: 'dontAsk'`; `cwd` ends with `path.join('vox-claude-code','g1-3')` (build the expectation with `path.join` — literal `/` fails on Windows) and the folder exists.
+- `claudeCodeTools: ['Read','Bash']` → captured `tools` equals `['Read']` (Bash filtered).
+- Tool-rescue middleware: `toolRescueMiddleware({prompt:true, preamble:'PRE'})` `transformParams` prepends `PRE` to the injected system message; `claudeCodePromptOverride` flows through as the preamble. Clean up temp folders in `afterEach`.
 
 ---
 
 ## Stage 3 — Built-in tool-call telemetry
 
-When built-in tools run, the CLI executes them in its own loop and the provider surfaces each as an AI-SDK `tool-call`/`tool-result` part with `providerExecuted: true` (distinct from the middleware-synthesized game-tool parts, which are not provider-executed). They currently get no vox-agents span (the existing per-tool spans live in the in-process `execute` of `mcp-tools.ts:112-176` / `simple-tools.ts` / `agent-tools.ts`, which built-in tools never hit).
+When built-in tools are enabled, the CLI executes them in its own loop; the provider surfaces each as AI-SDK `tool-call`/`tool-result` (or `tool-error`) parts stamped `providerExecuted: true, dynamic: true`. **Confirmed in the `3.5.0` source:** the part builders stamp these unconditionally for every CLI-executed tool and are shared by `doGenerate`/`doStream`; the stream path emits them for any tool arriving via `content_block` events; oversized tool results are truncated before emission (capping token growth when the parts flow into the next step's converted history). The middleware-synthesized game-tool parts are *not* provider-executed, so the two populations are cleanly separable. Built-in tool calls currently get no vox-agents span — the existing per-tool spans live in the in-process `execute` of `mcp-tools.ts:112-176` / `simple-tools.ts` / `agent-tools.ts`, which built-in tools never hit.
 
 ### 3.1 Extract + span — `src/infra/vox-context.ts` (`executeAgentStep`)
-Read the parts from **`stepResponse.content`**, not `stepResponse.response.messages`. `stepResponse` already *is* the last `StepResult` (`vox-context.ts:790`), and `StepResult.content: Array<ContentPart>` carries `providerExecuted` on **both** the `tool-call` and `tool-result` variants, with the tool-result `output` unwrapped. The `response.messages` layer is the wrong source: its `ToolResultPart` structurally **drops** `providerExecuted` (only the tool-*call* keeps it) and wraps `output` in a `{type:'json',value}` envelope — so filtering results on `providerExecuted` there would silently match nothing.
+Read the parts from **`stepResponse.content`**, not `stepResponse.response.messages`. `stepResponse` is the last `StepResult` (`vox-context.ts:800`), and `StepResult.content` carries `providerExecuted` on **both** the `tool-call` and `tool-result` variants, with the tool-result `output` unwrapped. The `response.messages` layer structurally **drops** `providerExecuted` from tool-results (only the tool-*call* keeps it) and wraps `output` in a `{type:'json',value}` envelope — filtering there would silently match nothing.
 
-After `stepResponse` is resolved (`vox-context.ts:790`), add a helper that walks `stepResponse.content` for parts with `providerExecuted === true`, pairs `tool-call`/`tool-result` by `toolCallId`, and emits one span per call mirroring the `mcp-tool.*` shape:
+After `stepResponse` resolves, gate on `stepModel.provider === 'claude-code'` (zero-cost otherwise), then walk `stepResponse.content` for parts with `providerExecuted === true` (key on that alone — `dynamic` is also true but irrelevant), pair `tool-call` with its `tool-result`/`tool-error` by `toolCallId`, and emit one span per call mirroring the `mcp-tool.*` shape:
 ```ts
 // span name `claude-code-tool.<toolName>`, kind CLIENT, attributes:
 //   'tool.name', 'tool.type': 'claude-code-builtin', 'vox.context.id': this.id,
 //   'game.turn': String(parameters.turn), 'tool.input': JSON.stringify(input),
-//   'tool.output': JSON.stringify(output), and isError -> ERROR status.
+//   'tool.output': JSON.stringify(output); tool-error or isError -> ERROR status.
 ```
-These are retrospective (the tool already ran in the CLI), so they are point-in-time spans under the step span, not timed wrappers. Gate the walk on `stepModel.provider === 'claude-code'` to keep it zero-cost for other providers. (Provider-executed parts are the built-in CLI tools; the middleware-synthesized game-tool parts are not provider-executed, so they're naturally excluded.)
+The tools already ran inside the CLI, so these are retrospective point-in-time spans under the step span, not timed wrappers.
 
-### 3.2 Verify the surface
-The type evidence settles the source (`StepResult.content`); what remains to confirm empirically (a real claude-code run with `claudeCodeTools` set) is that the provider actually emits provider-executed parts for *built-in* CLI tools (the research confirmed this shape for `createAiSdkMcpServer`-bridged tools, and that `buildToolCallPart`/`buildToolResultPart` are shared by `doGenerate`/`doStream`; built-in tools are the one unconfirmed case). If a built-in tool does not surface in `stepResponse.content`, read the provider's raw stream parts in the `concurrency.ts` `fullStream` drain (`concurrency.ts:171-182`) and emit spans there instead.
-
-### 3.3 Tests
-Unit-test the extraction helper with a synthetic `stepResponse.content` array containing a `providerExecuted` tool-call + tool-result pair and a normal (non-provider-executed) game-tool part, asserting only the built-in pair produces a span record (use a fake tracer / span recorder) and the game-tool part is ignored.
+### 3.2 Tests
+Unit-test the extraction helper with a synthetic `stepResponse.content` containing a `providerExecuted` tool-call + tool-result pair, a `providerExecuted` tool-call + tool-error pair, and a normal (non-provider-executed) game-tool part. Assert only the built-in pairs produce span records (fake tracer/span recorder), the error pair gets ERROR status, and the game-tool part is ignored.
 
 ---
 
 ## Cross-cutting risks
 
-- **SAFETY GATE — `tools: []` must mean zero host tool execution.** It's the default path for all three registered models. **Resolved in Stage 1:** `ai-sdk-provider-claude-code@3.5.0` exposes a top-level `tools?: string[] | { type:'preset'; preset:'claude_code' }`, and the Agent SDK documents `[]` as "Disable all built-in tools" — so `tools: []` is the correct, type-checked availability control and no `disallowedTools` fallback is required. **Still outstanding:** the empirical real-CLI confirmation that a `claude-code/sonnet` generation has no built-in tools available and runs **none** (needs an authenticated `claude` CLI) — required before relying on `claude-code/*` in production.
-- **Bash is unconditionally blocked**, both by exclusion from `allowedTools` and by `disallowedTools: ['Bash']`. If other shell-exec-adjacent built-ins should also be blocked (e.g. a future `KillShell`), extend `CLAUDE_CODE_BLOCKED_TOOLS`.
-- **`bypassPermissions` runs real tools on the host.** The vetted set includes `Write`/`Edit`/`WebFetch`/`WebSearch`; `cwd` scopes file ops to the temp folder but web tools reach the network. This is an explicit opt-in.
-- **Structured output through prompt-mode.** `vox-context.ts:776` sets `experimental_output: Output.object(...)` in the same call as prompt-mode tools — identical to every other prompt-mode provider today, so claude-code inherits existing behavior. The provider's "structured mode bypasses tool bridging" note concerns the MCP bridge we are not using; still, verify a real diplomacy turn with both an output schema and active tools parses correctly and rescues no spurious tool call.
-- **Co-existence is experimental.** Built-in tools + prompt-mode game tools in one turn is new; the preamble (overridable via `claudeCodePromptOverride`) is the mitigation. The default (no built-in tools) is the proven path. Verify before relying on the combined mode.
-- **Temp folders persist and are reused** (deterministic `vox-claude-code/<gameID>-<playerID>`); two games with the same player number on one host share the folder. No cleanup policy is added.
-- **CLI prerequisite / version.** A recent authenticated `claude` CLI is required; `effort` needs `0.3.x`. Missing/old CLI fails at runtime — optionally surface a friendlier message via `isAuthenticationError`.
-- **Throughput.** Each call uses a CLI subprocess; the existing `streamTextWithConcurrency` + `options.concurrencyLimit` gate parallelism if subprocess pressure appears.
+- **SAFETY GATE — `tools: []` must mean zero host tool execution.** It is the default path for all three registered models. Type/doc-level: resolved — the Agent SDK documents `[]` as "Disable all built-in tools" and the provider forwards it. **Still outstanding:** one empirical real-CLI turn confirming a `claude-code/sonnet` generation has no built-in tools available and runs none — required before production use.
+- **Bash is unconditionally blocked** — excluded from `tools`/`allowedTools` and listed in `disallowedTools`. Extend `CLAUDE_CODE_BLOCKED_TOOLS` if other shell-adjacent built-ins appear.
+- **Deny-by-default permission posture.** `dontAsk` + explicit `allowedTools` means anything unlisted is denied, never prompted; `bypassPermissions` (and its required `allowDangerouslySkipPermissions`) is never used. Residual, accepted by the opt-in: `Read`/`Glob`/`Grep` are read-only but **not path-scoped** — they can read host files into the agent context — and `WebFetch`/`WebSearch` reach the network. Only `Write`/`Edit` are confined to the temp folder, and that confinement rests on the path-scoped rules (not `cwd`) — verify it empirically (below).
+- **Structured output through prompt-mode.** `vox-context.ts:786` sets `experimental_output: Output.object(...)` alongside prompt-mode tools — identical to every other prompt-mode provider, so claude-code inherits existing behavior. The provider's "structured mode bypasses tool bridging" note concerns the rejected MCP bridge. Verify a real turn with both a schema and active tools anyway.
+- **Co-existence is experimental.** Built-in tools + prompt-mode game tools in one turn is new; the preamble (overridable via `claudeCodePromptOverride`) is the mitigation. The default (no built-in tools) is the proven path.
+- **Temp folders persist and are reused** (deterministic `vox-claude-code/<gameID>-<playerID>`); two games sharing a gameID-playerID pair on one host share the folder. No cleanup policy.
+- **CLI prerequisite.** A recent authenticated `claude` CLI is required (`effort` needs Agent SDK `0.3.x`); missing/old CLI fails at runtime — optionally surface a friendlier message via `isAuthenticationError`.
+- **Throughput.** Each call is a CLI subprocess; `streamTextWithConcurrency` + `options.concurrencyLimit` gate parallelism if subprocess pressure appears.
 
 ## Verification
 
 - `cd vox-agents && npm run type-check` — clean after each stage.
-- `cd vox-agents && npm test` (mock tier) — new/extended `tests/mock/utils/models.test.ts` and the middleware preamble + Stage-3 extraction tests pass; full suite stays green (the mock tier never reaches the real `getModel`).
-- Import smoke: `node -e "import('ai-sdk-provider-claude-code').then(()=>console.log('ok'))"`.
-- Manual (recent authenticated `claude` CLI): point an agent at `claude-code/sonnet` and run a diplomacy turn with both an output schema and active tools — confirm prompt-mode tool calls parse, the object parses, no spurious rescue, and (default config) **zero** host tools run. Then set `claudeCodeTools: ['everything']` and confirm the `vox-claude-code/<gameID>-<playerID>` folder is created/reused, built-in tools run (never Bash), and their calls appear as `claude-code-tool.*` spans (Stage 3).
+- `cd vox-agents && npm test` (mock tier) — `models.test.ts`, middleware preamble, and Stage-3 extraction tests pass; full suite stays green.
+- Manual (authenticated `claude` CLI), one session covering the outstanding gates:
+  1. Default config: a diplomacy turn on `claude-code/sonnet` with an output schema and active tools — prompt-mode tool calls parse, the object parses, no spurious rescue, **zero** host tools run.
+  2. `claudeCodeTools: ['everything']`: the `vox-claude-code/<gameID>-<playerID>` folder is created/reused; built-in tools run (never Bash); a `Write` to an **absolute path outside the temp folder is denied** (confirms the path-scoped rules resolve against `cwd` — if not, switch to absolute rule patterns per 2.3); the calls appear as `claude-code-tool.*` spans (Stage 3).
 
 ## Out of scope
 
-- **Embeddings** (`getEmbeddingModel`) and **oracle batch** — no claude-code path (no embedding/batch endpoint).
+- **Embeddings** (`getEmbeddingModel`) and **oracle batch** — no claude-code path.
 - **MCP tool bridging** of game tools (`createAiSdkMcpServer`) — rejected above.
 - **Session persistence/resume/fork, sandbox, plugins, skills, hooks** and other `ClaudeCodeSettings` features.
-- **`config.json` `default`** — left unchanged.
+- **`config.json` `default`** — unchanged.
