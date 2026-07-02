@@ -33,6 +33,7 @@ import { trace, SpanStatusCode, context } from '@opentelemetry/api';
 import { spanProcessor } from '../instrumentation.js';
 import { VoxSpanExporter } from '../utils/telemetry/vox-exporter.js';
 import { countMessagesTokens } from "../utils/models/token-counter.js";
+import { emitClaudeCodeToolSpans } from "../utils/telemetry/claude-code-spans.js";
 import { cleanToolArtifacts } from "../utils/models/text-cleaning.js";
 import { isContextLengthError } from "../utils/retry.js";
 import { agentRegistry } from "./agent-registry.js";
@@ -798,6 +799,19 @@ export class VoxContext<TParameters extends AgentParameters> {
         // Steps are already resolved by streamTextWithConcurrency
         const stepResults = result.steps;
         const stepResponse = stepResults[stepResults.length - 1];
+
+        // Stage 3: surface CLI-executed built-in tool calls (Read/Glob/Grep/…) as
+        // retrospective per-tool spans. Only claude-code steps can carry provider-
+        // executed parts, so gate on the provider to keep this zero-cost elsewhere.
+        if (stepModel.provider === 'claude-code') {
+          const builtinToolSpans = emitClaudeCodeToolSpans(stepResponse.content, this.tracer, {
+            contextId: this.id,
+            turn: parameters.turn,
+          });
+          if (builtinToolSpans > 0) {
+            this.logger.debug(`Emitted ${builtinToolSpans} claude-code built-in tool span(s) for ${agent.name} step ${stepCount + 1}`);
+          }
+        }
 
         // Update token usage
         const inputTokens = Math.max(countMessagesTokens(messages, false), stepResponse.usage.inputTokens ?? 0);
