@@ -8,10 +8,11 @@ import * as z from "zod";
 import { createLogger } from "../../utils/logger.js";
 
 const logger = createLogger('GetPlayersTool');
+
 import { getPlayerSummaries } from "../../knowledge/getters/player-summary.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { PlayerOpinions, PlayerSummary } from "../../knowledge/schema/timed.js";
-import { MaxMajorCivs } from "../../knowledge/schema/base.js";
+import { MaxMajorCivs, MINOR_CIV_LEADER } from "../../knowledge/schema/base.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { stripMutableKnowledgeMetadata } from "../../utils/knowledge/strip-metadata.js";
 import { cleanEventData } from "./get-events.js";
@@ -23,6 +24,10 @@ import { Selectable } from "kysely";
 import { sortBySchema } from "../../utils/schema.js";
 import { stripTags } from "../../utils/database/localized.js";
 import { annotateSubjects } from "./get-opinions.js";
+
+// Re-export the minor-civ leader sentinel so `get-players` consumers can still find it here; the
+// single source of truth lives in the dependency-free base schema alongside MaxMajorCivs.
+export { MINOR_CIV_LEADER };
 
 /**
  * Input schema for the GetPlayers tool
@@ -197,7 +202,7 @@ class GetPlayersTool extends ToolBase {
         // Static information
         TeamID: info.TeamID,
         Civilization: info.Civilization,
-        Leader: info.IsMajor ? info.Leader : "City State",
+        Leader: info.IsMajor ? info.Leader : MINOR_CIV_LEADER,
         IsMajor: info.IsMajor == 1,
         // Dynamic summary (if available)
         ...cleanSummary

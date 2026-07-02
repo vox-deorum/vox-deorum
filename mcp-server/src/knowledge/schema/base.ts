@@ -29,6 +29,14 @@ import { PlayerInformation } from './public';
 export const MaxMajorCivs = 22;
 
 /**
+ * The leader identity recorded for a minor civ (city-state), which carries no real leader. Consumers
+ * distinguish major/major pairs from minor civs by matching against this sentinel, so it is exported
+ * as the single source of truth (see e.g. vox-agents' diplomacy-context guard). It lives here in a
+ * dependency-free leaf module so the vox-agents runtime can import it without loading the server graph.
+ */
+export const MINOR_CIV_LEADER = "City State";
+
+/**
  * Player visibility flags for knowledge entries
  */
 export interface PlayerVisibility {

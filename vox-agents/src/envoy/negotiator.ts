@@ -44,6 +44,7 @@ import {
   summarizeMove,
   type NegotiatorInput,
 } from "./utils/negotiator-utils.js";
+import { buildDiplomacyBackgroundMessage } from "./utils/diplomacy-context.js";
 
 const logger = createLogger("negotiator");
 
@@ -183,7 +184,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
   public async getInitialMessages(
     parameters: StrategistParameters,
     input: NegotiatorInput,
-    _context: VoxContext<StrategistParameters>
+    context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
     const { thread } = input;
     const leader = parameters.metadata?.YouAre?.Leader ?? "your leader";
@@ -237,8 +238,12 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
           "(options unavailable)")
     );
 
+    // Cities + game deals background between the two civs (context 1 support), fetched fresh.
+    const background = await buildDiplomacyBackgroundMessage(context, parameters, thread);
+
     return [
       ...buildGameContextMessages(parameters),
+      ...(background ? [{ role: "user" as const, content: background }] : []),
       { role: "user", content: sections.join("\n\n") },
       { role: "user", content: `You are the deal negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
     ];

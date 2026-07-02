@@ -21,12 +21,8 @@ The system is made up of five components:
 
 Each component has its own AGENTS.md with detailed patterns. Read it before working in that directory.
 
-## Tool-Calling Rules
-
-- Use built-in tools instead of their bash equivalents: Read not `cat`/`head`/`tail`, Edit not `sed`/`awk`, Write not `echo >`, Grep not `grep`/`rg`, and Glob not `find`/`ls`.
-- Never cd into the working directory. Run `git diff --stat v0.8.1..HEAD`, not `cd f:/vox-deorum/vox-deorum && ...` or `git -C ...`.
-- Always use relative paths in bash, never absolute paths like `f:\vox-deorum\...`.
-- Avoid noisy shell idioms such as `2>/dev/null || echo "not found"`. The dedicated tools handle missing paths gracefully.
+## Use Subagents Whenever Appropriate
+Always delegate less important or complicated work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small but extensive edits.
 
 ## Workflow Rules
 

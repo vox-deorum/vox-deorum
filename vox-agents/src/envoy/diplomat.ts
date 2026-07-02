@@ -14,6 +14,7 @@ import { EnvoyThread } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
 import { buildDealContextMessage } from "./utils/diplomat-utils.js";
+import { buildDiplomacyBackgroundMessage } from "./utils/diplomacy-context.js";
 import { readActiveProposal } from "../utils/diplomacy/deal.js";
 import { counterpartOpenProposal } from "../utils/diplomacy/deal-reduce.js";
 import { terminalActionTools } from "../utils/diplomacy/transcript-utils.js";
@@ -134,6 +135,12 @@ export class Diplomat extends LiveEnvoy {
   ): Promise<ModelMessage[]> {
     const messages = await super.getInitialMessages(parameters, input, context);
     if (!this.isSpecialMode(input)) {
+      // Background first (cities + game deals), then the on-the-table proposal last so the most
+      // action-relevant item sits closest to the turn hint.
+      const background = await buildDiplomacyBackgroundMessage(context, parameters, input);
+      if (background) {
+        messages.push({ role: "user", content: background });
+      }
       const dealContext = await buildDealContextMessage(input);
       if (dealContext) {
         messages.push({ role: "user", content: dealContext });

@@ -58,7 +58,32 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
   };
 }
 
-const emptyInspection = { items: [], promises: [], tradableRange: {} };
+/**
+ * A complete-but-empty tradable side range, matching what `inspect-deal` actually returns for a seat
+ * (both seats are always present, every category populated — see inspect-deal.lua). Nothing is legal
+ * or available, so the menu renders its header with no rows.
+ */
+function emptySideRange() {
+  return {
+    gold: { available: false, max: 0, reasons: [] },
+    goldPerTurn: { available: false, reasons: [] },
+    resources: [], cities: [], techs: [], thirdPartyPeace: [], thirdPartyWar: [], voteCommitments: [],
+    maps: { legal: false, reasons: [] },
+    allowEmbassy: { legal: false, reasons: [] },
+    openBorders: { legal: false, reasons: [] },
+    declarationOfFriendship: { legal: false, reasons: [] },
+    defensivePact: { legal: false, reasons: [] },
+    researchAgreement: { legal: false, reasons: [] },
+    peaceTreaty: { legal: false, reasons: [] },
+    vassalage: { legal: false, reasons: [] },
+    vassalageRevoke: { legal: false, reasons: [] },
+  };
+}
+
+const emptyInspection = {
+  items: [], promises: [], promiseTargets: [],
+  tradableRange: { '1': emptySideRange(), '3': emptySideRange() },
+};
 
 /** An inspection whose GIVE side (seat 3) holds a named resource, so name resolution can be exercised. */
 const namedInspection = {
@@ -429,6 +454,7 @@ describe('getInitialMessages task determination', () => {
       militaryPromiseDuration: 20,
       coopWarPromiseDuration: 10,
       tradableRange: {
+        '1': emptySideRange(), // the counterpart (take side); inspect-deal always returns both seats
         '3': {
           gold: { available: false, max: 0, reasons: [] },
           goldPerTurn: { available: false, reasons: [] },
@@ -480,6 +506,33 @@ describe('getInitialMessages task determination', () => {
 
     expect(input.activeProposal).toBeUndefined();
     expect(content(messages)).toContain('awaiting the counterpart');
+  });
+
+  it('injects the fresh diplomacy background when the thread carries civ identities', async () => {
+    // Wiring check: with identities populated, the builder runs and its fetches flow through
+    // context.callTool (the ONLY consumer of context here). The other tests leave identities off, so
+    // the builder short-circuits and never touches context.
+    mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
+    const negotiator = new Negotiator();
+    const input = negotiatorInput({
+      intent: 'Improve relations.',
+      thread: thread({
+        player1Identity: { name: 'Rome', leader: 'Augustus Caesar' },
+        player2Identity: { name: 'Germany', leader: 'Bismarck' },
+      }),
+    });
+    const callTool = vi.fn(async (name: string) => (({
+      'get-cities': { Germany: { Berlin: { Population: 5 } } },
+      'get-players': {},
+      'get-diplomatic-events': {},
+    }) as Record<string, unknown>)[name]);
+
+    const messages = await negotiator.getInitialMessages(params, input, { callTool } as any);
+
+    expect(callTool).toHaveBeenCalledWith('get-cities', expect.anything(), expect.anything());
+    // The negotiator voices seat 3 (Germany), so the counterpart is Rome and its own cities render.
+    expect(content(messages)).toContain('Cities & Diplomatic Standing (with Rome)');
+    expect(content(messages)).toContain('## Your cities (Germany)');
   });
 });
 

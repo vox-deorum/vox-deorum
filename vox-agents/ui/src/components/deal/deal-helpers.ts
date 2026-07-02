@@ -108,8 +108,8 @@ export function removeItemWithMirror(items: TradeItem[], index: number): TradeIt
  * that estimate maxes out (last strategic resource, last luxury while unhappy, a category/policy
  * refusal, …). This is NOT structural impossibility (a separate legality check drives the red rows) and
  * it gates nothing (specs §4) — we surface it as "no usable estimate" and exclude it from the balance
- * rather than fold it in. Kept in sync with the vox-agents backend twin
- * `vox-agents/src/utils/diplomacy/deal-format.ts`.
+ * rather than fold it in. Kept in sync with the backend twin
+ * `mcp-server/src/utils/deal-format.ts`.
  */
 const SENTINEL_THRESHOLD = 1e9;
 

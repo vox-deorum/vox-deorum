@@ -1,11 +1,17 @@
 /**
- * Tests for the server-side deal renderer (src/utils/diplomacy/deal-format.ts): friendly item/promise
- * labels, the advisory "no usable estimate" sentinel, and the direction-grouped terms block the
- * diplomat/negotiator agents read. Pure — no mcp-client or game state.
+ * Tests for the deal renderer (src/utils/deal-format.ts). Two families live here since they share one
+ * module:
+ *   1. The string-form helpers for the game's own already-localized deals — the active standing deals
+ *      (get-players → DiplomaticDeals) and the DealMade events (get-diplomatic-events).
+ *   2. The structured, value-aware renderer the diplomat/negotiator agents read (friendly item/promise
+ *      labels, the advisory "no usable estimate" sentinel, the direction-grouped terms block).
+ * Pure — no mcp-client or game state.
  */
-
 import { describe, it, expect } from 'vitest';
 import {
+  formatDealSide,
+  getDealExpirySuffix,
+  formatStringDeal,
   isSentinel,
   formatEstimate,
   formatSideValue,
@@ -14,11 +20,61 @@ import {
   formatDealTermsByDirection,
   itemTypeLabel,
   SENTINEL_LABEL,
-} from '../../../src/utils/diplomacy/deal-format.js';
-import type { DealPayload, TradeItem } from '../../../../mcp-server/dist/utils/deal-schema.js';
-import { PROMISE_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
+} from '../../../src/utils/deal-format.js';
+import type { DealPayload, TradeItem } from '../../../src/utils/deal-schema.js';
+import { PROMISE_METADATA } from '../../../src/utils/deal-schema.js';
 
 const INT_MAX = 2147483647;
+
+describe('formatDealSide', () => {
+  it('joins a non-empty string array', () => {
+    expect(formatDealSide(['Gold: 100', 'Open Borders'])).toBe('Gold: 100, Open Borders');
+  });
+
+  it('renders an empty array as "nothing"', () => {
+    expect(formatDealSide([])).toBe('nothing');
+  });
+
+  it('renders a non-array (empty Lua table {}) as "nothing" without throwing', () => {
+    expect(formatDealSide({})).toBe('nothing');
+    expect(formatDealSide(undefined)).toBe('nothing');
+  });
+});
+
+describe('getDealExpirySuffix', () => {
+  it('reports a future expiry turn', () => {
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 30 }, 20)).toBe(' (will expire at turn 40)');
+  });
+
+  it('reports an already-expired turn', () => {
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 5 }, 20)).toBe(' (expired at turn 15)');
+  });
+
+  it('returns "" for a permanent/termless deal or a missing start turn', () => {
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 0 }, 20)).toBe('');
+    expect(getDealExpirySuffix({ TurnsRemaining: 30 }, 20)).toBe('');
+  });
+});
+
+describe('formatStringDeal', () => {
+  it('renders the canonical "gives [..] ↔ gives [..]" line with caller-supplied framing', () => {
+    expect(
+      formatStringDeal({
+        leftLabel: 'Rome',
+        rightLabel: 'Egypt',
+        leftGive: ['Gold: 100'],
+        rightGive: ['Open Borders'],
+        framing: ' (12 turns remaining)',
+      })
+    ).toBe('Deal: **Rome** gives [Gold: 100] ↔ **Egypt** gives [Open Borders] (12 turns remaining)');
+  });
+
+  it('renders empty/absent sides as "nothing" and an empty framing cleanly', () => {
+    expect(
+      formatStringDeal({ leftLabel: 'Rome', rightLabel: 'Egypt', leftGive: [], rightGive: {}, framing: '' })
+    ).toBe('Deal: **Rome** gives [nothing] ↔ **Egypt** gives [nothing]');
+  });
+});
 
 describe('isSentinel / formatEstimate', () => {
   it('flags INT_MAX-scale values and renders them as "no usable estimate"', () => {

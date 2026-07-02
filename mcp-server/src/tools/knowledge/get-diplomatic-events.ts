@@ -16,6 +16,7 @@ import { retrieveEnumName } from "../../utils/knowledge/enum.js";
 import { cleanEventData, hideDealMadeTradeItems } from "./get-events.js";
 import { Selectable } from "kysely";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
+import { formatStringDeal, getDealExpirySuffix } from "../../utils/deal-format.js";
 
 // ─── Formatting Helpers ───────────────────────────────────────────────
 
@@ -41,21 +42,6 @@ function getCityName(payload: Record<string, any>, ctx: FormatContext): string {
   const y = payload.CityY ?? payload.CapitalY;
   if (x !== undefined && y !== undefined) return ctx.city(x, y);
   return "a city";
-}
-
-// items may arrive as an empty Lua table ({} not []) when a side gives nothing — guard before join.
-function formatDealSide(items: unknown): string {
-  if (!Array.isArray(items) || items.length === 0) return "nothing";
-  return items.join(", ");
-}
-
-function getDealExpirySuffix(payload: Record<string, any>, currentTurn: number): string {
-  const turnsRemaining = payload.TurnsRemaining;
-  if (typeof turnsRemaining !== "number" || turnsRemaining <= 0 || payload.StartTurn === undefined) return "";
-
-  const expiryTurn = payload.StartTurn + turnsRemaining;
-  if (currentTurn > expiryTurn) return ` (expired at turn ${expiryTurn})`;
-  return ` (will expire at turn ${expiryTurn})`;
 }
 
 // ─── Diplomatic Event Configuration ───────────────────────────────────
@@ -96,11 +82,14 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   },
   DealMade: {
     playerIdFields: ["FromPlayerID", "ToPlayerID"],
-    toMarkdown: (e, ctx) => {
-      const from = ctx.player(e.FromPlayerID);
-      const to = ctx.player(e.ToPlayerID);
-      return `Deal: **${from}** gives [${formatDealSide(e.FromGives ?? [])}] ↔ **${to}** gives [${formatDealSide(e.ToGives ?? [])}]${getDealExpirySuffix(e, ctx.currentTurn)}`;
-    }
+    toMarkdown: (e, ctx) =>
+      formatStringDeal({
+        leftLabel: ctx.player(e.FromPlayerID),
+        rightLabel: ctx.player(e.ToPlayerID),
+        leftGive: e.FromGives ?? [],
+        rightGive: e.ToGives ?? [],
+        framing: getDealExpirySuffix(e, ctx.currentTurn),
+      })
   },
   TeamMeet: {
     playerIdFields: [],

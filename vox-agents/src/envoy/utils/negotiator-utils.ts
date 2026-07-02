@@ -37,7 +37,7 @@ import {
   formatPromiseLabel,
   isSentinel,
   itemTypeLabel,
-} from "../../utils/diplomacy/deal-format.js";
+} from "../../../../mcp-server/dist/utils/deal-format.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import {
   LedgerTermSchema,
@@ -118,7 +118,7 @@ function civNameFor(thread: EnvoyThread): (playerID: number) => string {
 }
 
 /** The negotiator's own seat and its counterpart (the other endpoint of the thread). */
-function endpoints(thread: EnvoyThread): { agentID: number; counterpartID: number } {
+export function endpoints(thread: EnvoyThread): { agentID: number; counterpartID: number } {
   const agentID = thread.agent;
   const counterpartID = thread.player1ID === agentID ? thread.player2ID : thread.player1ID;
   return { agentID, counterpartID };

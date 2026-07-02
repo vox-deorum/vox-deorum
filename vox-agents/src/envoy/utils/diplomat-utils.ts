@@ -13,7 +13,7 @@ import { deriveActiveProposal, type DealReduction } from "../../utils/diplomacy/
 import { inspectDeal, readDealMessages, type InspectDealResult } from "../../utils/diplomacy/deal.js";
 import { createLogger } from "../../utils/logger.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
-import { formatDealTermsByDirection } from "../../utils/diplomacy/deal-format.js";
+import { formatDealTermsByDirection } from "../../../../mcp-server/dist/utils/deal-format.js";
 import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
 import type { DealPayload, PerItemValueMap } from "../../../../mcp-server/dist/utils/deal-schema.js";
 

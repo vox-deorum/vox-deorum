@@ -1,38 +1,43 @@
 /**
- * @module utils/diplomacy/deal-format
+ * @module utils/deal-format
  *
- * Server-side rendering of a stored deal into the direction-grouped, civ-named block the diplomat
- * and negotiator agents read (interactive-diplomacy stage 5). One section per giver→receiver
+ * The single source of truth for rendering a deal into the direction-grouped, civ-named block the
+ * diplomat and negotiator agents read (interactive-diplomacy stage 5). One section per giver→receiver
  * direction ("# <Giver> gives <Receiver>:"), with friendly item labels and the per-item value
  * snapshots framed "to <civ> (giving|receiving)".
  *
- * The per-item values are the stock trade AI's ADVISORY estimates — read-only, and never a gate on
+ * The per-item values are the stock trade AI's ADVISORY estimates: read-only, and never a gate on
  * the agent path (specs §4). `GetTradeItemValue` returns an INT_MAX sentinel when its estimate maxes
  * out (it would refuse the trade); that is NOT structural impossibility (a separate `IsPossibleToTradeItem`
  * check) and it binds nothing here, so a sentinel renders as "no usable estimate" and the advisory
  * nature is stated once via {@link ADVISORY_NOTE}.
  *
- * This is the browser-free twin of `ui/src/components/deal/deal-helpers.ts` (which renders the same
- * vocabulary for the web deal board); the toggle/promise labels and the sentinel wording are kept in
- * sync between the two. Types come straight from the pinned deal contract.
+ * This module also carries {@link formatStringDeal}, the shared renderer for the game's own
+ * (already-localized, string-form) deals: the active standing deals from `get-players` and the
+ * `DealMade` events from `get-diplomatic-events`. Those have NO advisory value estimates.
+ *
+ * This is the browser-free twin of `vox-agents/ui/src/components/deal/deal-helpers.ts` (which renders
+ * the same vocabulary for the web deal board); the toggle/promise labels and the sentinel wording are
+ * kept in sync between the two. Types come straight from the pinned deal contract. It lives in
+ * mcp-server so both server tools and the vox-agents runtime (via `mcp-server/dist`) share it.
  */
 
 import {
   AGREEMENT_METADATA,
   PROMISE_METADATA,
   TARGETED_PROMISE_TYPES,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "./deal-schema.js";
 import type {
   TradeItem,
   PromiseTerm,
   DealPayload,
   PerItemValueMap,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "./deal-schema.js";
 
 /**
  * The AI valuation returns an INT_MAX-scale sentinel when its advisory estimate maxes out (last
  * strategic resource, last luxury while unhappy, a category/policy refusal, …). It is advisory and
- * gates nothing — we surface it as "no usable estimate" rather than fold it into anything.
+ * gates nothing; we surface it as "no usable estimate" rather than fold it into anything.
  */
 const SENTINEL_THRESHOLD = 1e9;
 
@@ -215,7 +220,7 @@ export function formatDealTermsByDirection(
     if (block) blocks.push(block);
   }
 
-  // Promise sections (one per direction that has promises) — promises carry no value clause.
+  // Promise sections (one per direction that has promises); promises carry no value clause.
   for (const { from, to } of directions) {
     const rows = deal.promises
       .filter((p) => p.promiserID === from && p.recipientID === to)
@@ -226,4 +231,53 @@ export function formatDealTermsByDirection(
 
   if (blocks.length === 0) return "";
   return (renderedAnyValue ? [ADVISORY_NOTE, ...blocks] : blocks).join("\n\n");
+}
+
+// ─── The game's own (string-form) deals ───────────────────────────────
+//
+// The active standing deals (`get-players` → DiplomaticDeals) and the `DealMade` events
+// (`get-diplomatic-events`) arrive as already-localized item strings from Lua, with NO advisory
+// value estimates. These helpers are the single renderer for that string form so the two call sites
+// stay in lockstep.
+
+/** Comma-join a side's already-localized item strings. Guards the empty Lua table ({} not []). */
+export function formatDealSide(items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) return "nothing";
+  return items.join(", ");
+}
+
+/**
+ * The trailing "(will expire / expired at turn N)" clause for a `DealMade` event payload, derived
+ * from its `StartTurn` + `TurnsRemaining`. Returns "" when the deal has no finite term or lacks a
+ * start turn. (The active standing-deals path has no `StartTurn`, so it frames turns-remaining itself.)
+ */
+export function getDealExpirySuffix(
+  payload: { TurnsRemaining?: number; StartTurn?: number },
+  currentTurn: number
+): string {
+  const turnsRemaining = payload.TurnsRemaining;
+  if (typeof turnsRemaining !== "number" || turnsRemaining <= 0 || payload.StartTurn === undefined) return "";
+
+  const expiryTurn = payload.StartTurn + turnsRemaining;
+  if (currentTurn > expiryTurn) return ` (expired at turn ${expiryTurn})`;
+  return ` (will expire at turn ${expiryTurn})`;
+}
+
+/**
+ * Render one game deal from its already-localized side strings:
+ * `Deal: **<leftLabel>** gives [<leftGive>] ↔ **<rightLabel>** gives [<rightGive>]<framing>`.
+ * `framing` is a trailing clause the caller supplies (including any leading space): the standing-deal
+ * "N turns remaining" phrase or the `DealMade` {@link getDealExpirySuffix}; pass "" for none.
+ *
+ * The left/right labels are perspective-neutral: the viewer-first callers pass their own civ as the
+ * left side, while the event-log caller passes the deal's from/to players, where neither side is "we".
+ */
+export function formatStringDeal(d: {
+  leftLabel: string;
+  rightLabel: string;
+  leftGive: unknown;
+  rightGive: unknown;
+  framing: string;
+}): string {
+  return `Deal: **${d.leftLabel}** gives [${formatDealSide(d.leftGive)}] ↔ **${d.rightLabel}** gives [${formatDealSide(d.rightGive)}]${d.framing}`;
 }
