@@ -1,7 +1,7 @@
 # Strategist Orchestrator
 
 > This plan adds a **strategist orchestrator** to Vox Deorum. A strategist workflow becomes editable data: a sandboxed script, per-subagent manifests, and templated prompt files, executed inside a per-run working folder. A non-blocking orchestrator then reviews recent runs in repeated cycles and iteratively improves those artifacts.
-> This document is the specification: what we want to achieve and the constraints that keep it coherent. Design and staged implementation plans come after, in this folder.
+> This document is the specification: what we want to achieve and the constraints that keep it coherent. The staged build order lives in [README.md](README.md); individual stage plans are the numbered files beside it.
 
 ## Summary
 
@@ -63,10 +63,10 @@ A run terminates in one of three ways:
 
 Each seat (game, player) gets a working folder, fully inspectable by the orchestrator; each run (one decision turn) gets a subfolder inside it:
 
-- **Game state as files**: the runtime writes per-component snapshots (`players.json`, `cities.json`, `military.json`, `options.json`, `victory.json`, `events.json`) from the same reports the strategists consume today. They are read-only inputs, embeddable in prompts via the template.
+- **Game state as files**: per-component snapshots (`players.json`, `cities.json`, `military.json`, `options.json`, `victory.json`, `events.json`) drawn from the same reports the strategists consume today. They are read-only inputs, embeddable in prompts via the template.
 - **Shared cross-turn artifacts**: a `shared/` area beside the turn folders carries state between turns, the scripted counterpart of today's working memory (`focus-briefer` requests, pending `find-episodes` queries). Deliberately *not* called memory: memory is a separate expansion below.
 - **Artifacts**: intermediate outputs of the run's sub-agents, auto-written or script-written.
-- **Run record**: derived from the telemetry spans; the SQLite telemetry pipeline is unchanged and remains the source of truth. A renderer produces a markdown master record (which sub-agents fired, the call hierarchy, tokens and cost per component, the workflow version the run pinned) plus one markdown transcript per sub-agent conversation. The record is rendered on every terminal path (completion, budget exhaustion, abandonment, script failure) from whatever spans were flushed; a partial record for a broken run is expected and is exactly what the orchestrator wants to read.
+- **Run record**: the SQLite telemetry pipeline is unchanged and remains the source of truth. A **single renderer** produces both the `state/*.json` snapshots and the markdown records — a master record (which sub-agents fired, the call hierarchy, tokens and cost per component, the workflow version the run pinned) plus one markdown transcript per sub-agent conversation — from **either** source: the live knowledge reports while a run is in progress (online), or the telemetry spans replayed afterward (offline, when the orchestrator reconstructs a past run). One code path, two sources, so the online and offline outputs are identical. The record is rendered on every terminal path (completion, budget exhaustion, abandonment, script failure) from whatever spans were flushed; a partial record for a broken run is expected and is exactly what the orchestrator wants to read.
 - **Retention**: working folders are retained over a configurable window that covers the orchestrator's review horizon and pruned beyond it.
 
 Proposed layout, to be confirmed in design:
@@ -101,7 +101,7 @@ workflows/<workflow-name>/
 
 ### Sandbox
 
-The script substrate is sandboxed TypeScript. Scripts are treated as untrusted, LLM-authored code, and the allowlists are the trust boundary:
+The script substrate is sandboxed JavaScript, run under **`ses`** (Endo's SES lockdown) inside a `worker_thread`. Scripts are LLM-authored code, and the allowlists are the trust boundary:
 
 - The sandbox root is the **seat working folder**:
   - `artifacts/` and the seat's `shared/` area are readable and writable;
@@ -110,18 +110,15 @@ The script substrate is sandboxed TypeScript. Scripts are treated as untrusted, 
 - The **workflow definition is read-only inside a run**: a script cannot edit its own script, manifests, or prompts, and cannot alter what a manifest grants. Permissions come only from the manifests as committed; only the orchestrator (or a human editing the seeds) changes the workflow.
 - It enforces the per-sub-agent action and file-access allowlists.
 - It enforces token cost budgets, and bounds the script's own computation (wall-clock/CPU): a `while(true)` in plain code must die as surely as a runaway LLM loop.
-- It must be **model-agnostic**: will design a simple interface for the script to operate on. No external packages allowed.
+- It must be **model-agnostic**: a simple host interface is injected for the script to operate on. No external packages allowed.
 - It supports **parallel sub-agent calls** (the staffed strategist runs three briefers concurrently) and **deterministic computation** (a seeded RNG, for the `null` recreation).
 - Host-side primitives (LLM calls, action tools) are awaited across the sandbox boundary.
 
-Candidate sandboxes:
-
-- **QuickJS compiled to WASM** (`quickjs-emscripten`, preferably on the `quickjs-ng` engine variant): the leading candidate. Isolation comes from the WASM memory model; it exposes a memory limit, a stack cap, and an interrupt handler for the compute bound, and host-resolved promises cover awaited and parallel sub-agent calls. Pure WASM means no native build step, which matters on Windows.
-- **Hardened JS in a worker** (`ses` from the Endo project, run inside `worker_threads`): capability-based Compartments mirror the manifest allowlist model and run at native V8 speed with ordinary async/await; the worker supplies what lockdown does not, a kill switch and memory caps for the compute bound.
+**Why SES.** Capability-based Compartments mirror the manifest allowlist model directly: a script sees only the host primitives explicitly injected into its Compartment, nothing else. It runs at native V8 speed with ordinary `async`/`await`, so awaited and parallel sub-agent calls need no host-promise bridging, and it needs no native build step, which matters on Windows. Lockdown supplies the isolation; the `worker_thread` supplies what lockdown does not — a kill switch and a memory cap for the compute bound. (SES was chosen over QuickJS-compiled-to-WASM: both avoid a native build step, but SES keeps ordinary async/await and native speed without a host-promise bridge.)
 
 ### Recreating the roster
 
-We keep the static strategists and recreate every one as a scripted workflow, except for `human-strategist`. Recreating even the non-LLM ones proves the substrate is general, and it turns the whole roster into starting material.
+We keep the static strategists and recreate them as scripted workflows, except for `human-strategist`. Recreating even the non-LLM ones proves the substrate is general, and it turns the roster into starting material. **v1 recreates `null`, `none`, `simple`, `simple-briefed`, and `simple-staffed`**; `learned` and its episode retrieval are **deferred with the workflow-memory expansion** (below), since the baseline, briefed, and staffed workflows already exercise the whole substrate.
 
 Verification is by **static unit tests** in the existing mock test tier, with the static strategist as the reference oracle:
 
@@ -140,7 +137,7 @@ The `shared/` folder is plain files, good enough for the current roster's cross-
 
 ### Definition and objectives
 
-The orchestrator is a **non-blocking revision loop** in the family of the existing offline tools (oracle, telepathist): each **cycle** is a one-shot review, propose, commit pass that runs to completion and exits, matching how those tools run. The *loop* is the sequence of cycles over a **persistent conversation**: the orchestrator keeps its converation thread and resumes it on the next cycle, with stable prompt prefixes so provider prompt caching keeps resumption cheap. Compaction of a long conversation, in the manner of agentic coding tools, happens whenever necessary.
+The orchestrator is itself a **type of agent**, in the same sense a strategist is: a registered agent with its own sub-agents and scoped file and git tools, not a bespoke pipeline. It runs as a **non-blocking revision loop** in the family of the existing offline tools (oracle, telepathist): each **cycle** is a one-shot review, propose, commit pass that runs to completion and exits, matching how those tools run. The *loop* is the sequence of cycles over a **persistent conversation**: the orchestrator keeps its conversation thread and resumes it on the next cycle, with stable prompt prefixes so provider prompt caching keeps resumption cheap. Compaction of a long conversation, in the manner of agentic coding tools, happens whenever necessary.
 
 One orchestrator instance owns **one workflow line on one seat**. It reviews one game at a time, because a single game already spans millions of tokens of runs and records. The line, however, outlives any single game: when the workflow moves on to its next game, the next orchestrator run inherits both the version line and the accumulated notes, so artifacts and lessons carry forward together even though each game is reviewed on its own.
 
@@ -149,17 +146,17 @@ Its job is to review the seat's recent runs and rewrite the workflow's scripts, 
 - **Offline mode**: the orchestrator console runs one cycle and exits, or repeats cycles on a configurable cadence. The offline driver is the console itself (or any external scheduler that re-invokes it); nothing inside a game is involved.
 - **Online mode**: the strategist session fires a cycle when a trigger condition is met during play. Initial trigger set: a cost spike against the workflow's rolling average; every N completed runs; a budget exhaustion or script failure (the graceful-degradation paths fired); a victory-trend decline.
 - **Non-blocking, always**: it never pauses a running strategist. A run pins its workflow version at start; a committed edit applies from the next run onward, mid-game included. Committing immediately per seat is deliberate: the orchestrator debugs a live game, where an edit that fits the current phase only matters if it lands while that phase is still being played, and the next runs are the signal on how it landed.
-- **Versioned, with a commit gate**: the runtime resolves a workflow through a configurable path, either the in-repo seeds by default or an orchestrator-managed folder whose `current` pointer names the seat's adopted version. **Commit** is the orchestrator's adoption step, and it is gated: **static checks** over the script, manifests, and prompt references, then a **dry-run** of the workflow against a recent `state/` snapshot with stubbed models and stubbed actions. The dry-run proves control flow, template rendering, and budget wiring without spending tokens or touching a game; the same harness doubles as a testbed for developing workflows by hand. The real test is the next live run, whose record feeds back into the next cycle. A commit that passes becomes a numbered version snapshot with a changelog and an atomic update of the `current` pointer, read once by each run at start. There is **no automatic rollback**: if a committed version still fails in a live run, the failure lands in the run record and the orchestrator debugs and iterates next cycle; moving the pointer back stays available to it as a deliberate edit. The version history is itself input to later cycles, so the orchestrator learns from its own changes, and because run records carry the version that produced them, evidence groups by version instead of a mixed set.
-- Both modes are config-gated; offline ships first.
+- **Versioned, with a commit gate**: the orchestrator-managed workflow folder is a **git repository** the orchestrator has scoped access to. The runtime resolves a workflow through a configurable path, either the in-repo seeds by default or this repository, whose **per-seat branch/ref** names the seat's adopted version. **Commit** is the orchestrator's adoption step, and it is gated: **static checks** over the script, manifests, and prompt references, then a **dry-run** of the workflow against a recent `state/` snapshot with stubbed models and stubbed actions. The dry-run proves control flow, template rendering, and budget wiring without spending tokens or touching a game; the same harness doubles as a testbed for developing workflows by hand. The real test is the next live run, whose record feeds back into the next cycle. A commit that passes advances the seat ref atomically, and each run reads that ref once at start to pin its version. A git commit *is* the version snapshot, its message *is* the changelog, and `git log` *is* the history. There is **no automatic rollback**: if a committed version still fails in a live run, the failure lands in the run record and the orchestrator debugs and iterates next cycle; a `git revert` stays available to it as a deliberate edit. The version history is itself input to later cycles, so the orchestrator learns from its own changes, and because run records carry the version (the commit) that produced them, evidence groups by version instead of a mixed set.
+- Both modes are config-gated; **offline ships first, and online mode with cross-game continuity is a later phase.**
 
 ### Reference signals
 
 The orchestrator reads a defined evaluation surface, not raw win/loss (too sparse). These signals are **reference material for its own judgment**: it eyeballs them and makes intuitive improvements, and no attribution protocol or automated optimization is prescribed. Nor do they form an objective function: selecting among workflows by outcome (evolutionary pressure) is a separate external mechanism, out of scope here, so a variant that drifts toward cheap and shallow is a survivable outcome that downstream selection, not the orchestrator, will punish. Each signal is individually enable-able so experiments can isolate one at a time:
 
-- **Decision quality**: an LLM-judge critique of individual strategist decisions and rationales, independent of eventual outcome. Judging is a **capability the orchestrator invokes at its own discretion** (like a developer reaching for a debugger), not a fixed pipeline stage; it decides when, on which decisions, and whether to judge at all.
+- **Decision quality**: an LLM-judge critique of individual strategist decisions and rationales, independent of eventual outcome. The judge is simply a **pre-defined sub-agent the orchestrator can call** at its own discretion (like a developer reaching for a debugger), not a fixed pipeline stage and not a separate judging subsystem: it decides when, on which decisions, and whether to judge at all. Building the judge is **deferred from v1** — once the orchestrator-as-agent machinery exists, adding this one sub-agent is cheap — so v1 judges from the run records, cost, coverage, and victory trend instead.
 - **Decision coverage**: a negative signal when a run leaves an available decision unaddressed, for example an empty next-research or policy slot that no sanctioned action filled. mcp-server defines the inventory: its sanctioned tools and game-state reports determine which decision slots exist on a turn. This keeps do-nothing workflows visibly bad even when they are cheap.
 - **Cost**: cost-weighted tokens per workflow component (briefer vs strategist), sourced from telemetry, cache-aware as defined above. Latency is excluded: it is not a stable measurement, and compute is already accounted for through cost.
-- **Victory trend**: civ-bench estimates when available; otherwise the in-game **score ratio** (the seat's score divided by the current maximum, a 0-to-1 value in the same units as a victory probability). Either way, the signal is consumed as a smoothed trend over a window and gated by game phase (see the calling convention below).
+- **Victory trend**: a **single generic victory-trend interface** with pluggable providers. v1 ships the in-game **score ratio** provider (the seat's score divided by the current maximum, a 0-to-1 value in the same units as a victory probability); the external civ-bench connector is a later provider behind the same interface. Either way, the signal is consumed as a smoothed trend over a window and gated by game phase (see the calling convention below).
 
 ### What it reads and writes
 
@@ -183,17 +180,17 @@ The orchestrator's own model is configured like any agent's, through the model r
 
 ### civ-bench calling convention
 
-civ-bench is an external process, not part of this repository. This spec defines only how we talk to it:
+civ-bench is an external process, not part of this repository, and its connector is a **deferred provider** behind the generic victory-trend interface (the score ratio ships first). This spec defines only how we talk to it:
 
 - **What it does**: reads a game-state snapshot and returns a per-player victory-probability estimate for that turn.
 - **How we call it**: vox-agents spawns the civ-bench CLI per evaluation, passing at least the game id, the current turn, and the path to the run's `state/` snapshot folder (the same per-component files the workflow consumed); it returns per-player estimates as JSON on stdout. Invocation cadence is configurable.
 - **How we read it**: it is a noisy probability model. Oscillation is normal and early-game estimates are near meaningless, so it is never read as per-turn ground truth. The system consumes it as a smoothed, phase-gated trend.
-- **When it is on**: assumed available and on by default; it can be disabled, in which case the smoothed score ratio substitutes as the victory trend.
+- **When it is on**: the civ-bench connector is a deferred provider; until it ships, the smoothed **score ratio is the default** provider. When the connector is present it runs on the configured cadence, and disabling it falls back to the score ratio.
 - The estimator's internal model is out of scope.
 
 ## Component impact
 
-- **`vox-agents`**: the bulk of the work. The workflow format (sandboxed TypeScript script, per-subagent manifests, templated prompts), the working-folder model with the shared cross-turn area and retention, the workflow runtime with cost-unit budgets, graceful termination, and the script-failure fallback, the `scripted-strategist` agent, the recreated roster and its static unit tests, the run-record renderer over telemetry spans, cached-token telemetry capture, the tier-to-model and cost-coefficient configuration, the version-pointer resolution, the commit gate (static checks and the stubbed dry-run testbed), the orchestrator cycles with persistent conversation, the decision-quality judge capability, the decision-coverage and score-ratio signals, and the civ-bench CLI client.
+- **`vox-agents`**: the bulk of the work. The workflow format (sandboxed TypeScript script, per-subagent manifests, templated prompts), the working-folder model with the shared cross-turn area and retention, the workflow runtime with cost-unit budgets, graceful termination, and the script-failure fallback, the `scripted-strategist` agent, the recreated roster and its static unit tests, the run-record renderer over telemetry spans, cached-token telemetry capture, the tier-to-model and cost-coefficient configuration, the git-backed version resolution with per-seat ref pinning, the commit gate (static checks and the stubbed dry-run testbed), the orchestrator cycles with persistent conversation, the decision-quality judge sub-agent (deferred), the decision-coverage and score-ratio signals, and the civ-bench CLI client (deferred provider).
 - **`mcp-server`**: expected largely unchanged. The runtime uses existing tools; the schema snapshot builds on the existing cached tool-definition mechanism.
 - **civ-bench**: external, not in this repo. This plan defines only the calling convention.
 - **`bridge-service`**, **`civ5-dll`**, **`civ5-mod`**: expected unchanged.

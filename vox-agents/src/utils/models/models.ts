@@ -89,18 +89,19 @@ export function getModelConfig(
 
 
 /**
- * Resolves the tool-call terminology preset for a model. claude-code with built-in
- * CLI tools enabled uses 'action' so its native CLI tools and the JSON-invoked game
- * tools do not both read as "tools" (the distinct terminology is the disambiguation).
- * Every other model uses the default 'tool'. Exported so callers outside getModel
- * (e.g. the empty-response rescue prompt in vox-agent) can match the model's framing.
+ * Resolves the tool-call terminology preset for a model. claude-code always uses 'action'
+ * framing: its CLI persona reasons in terms of actions, and keeping the terminology uniform
+ * across every claude-code turn (whether or not built-in CLI tools are enabled) also avoids
+ * the JSON-invoked game tools and the CLI's native tools both reading as "tools". Every other
+ * model uses the default 'tool'. An explicit options.framing override wins (Oracle replay).
+ * Exported so callers outside getModel (e.g. the empty-response rescue prompt in vox-agent)
+ * can match the model's framing.
  */
 export function resolveToolFraming(config: Model): ToolCallFraming {
   // Explicit override wins: Oracle replay sets this to reproduce the original turn's
-  // framing on any replay model, regardless of provider or built-in tools.
+  // framing on any replay model, regardless of provider.
   if (config.options?.framing) return config.options.framing;
-  const hasBuiltinTools = (config.options?.claudeCodeTools?.length ?? 0) > 0;
-  return config.provider === 'claude-code' && hasBuiltinTools ? 'action' : 'tool';
+  return config.provider === 'claude-code' ? 'action' : 'tool';
 }
 
 /**
@@ -124,7 +125,7 @@ export function resolveToolFraming(config: Model): ToolCallFraming {
 export function getModel(config: Model, options?: { workingDirId?: string; onToolFraming?: (info: { framing: ToolCallFraming; toolPrompt?: string }) => void }): LanguageModel {
   var result: LanguageModelV3;
   // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming):
-  // 'action' for claude-code with built-in CLI tools, 'tool' for everything else.
+  // 'action' for claude-code, 'tool' for everything else.
   const toolFraming: ToolCallFraming = resolveToolFraming(config);
   // Find providers
   switch (config.provider) {

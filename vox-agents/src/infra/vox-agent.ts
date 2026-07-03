@@ -386,8 +386,8 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
       const cleaned = baseMessages.filter(
         msg => !responseMessages.some(respMsg => respMsg === msg)
       );
-      // Match the rescue wording to the model's framing so a claude-code model with
-      // built-in CLI tools is asked for an "action", not pointed at its host "tools".
+      // Match the rescue wording to the model's framing so a claude-code model is
+      // asked for an "action", not pointed at its host "tools".
       const rescueFraming = resolveToolFraming(this.getModel(parameters, input, context.modelOverrides));
       const rescue = buildRescuePrompt(toolChoice, rescueFraming);
       if (cleaned[cleaned.length - 1]?.content !== rescue)

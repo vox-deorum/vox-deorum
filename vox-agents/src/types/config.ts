@@ -40,9 +40,8 @@ export interface LLMConfig {
     claudeCodeTools?: string[];
     /**
      * Explicit prompt-mode terminology override. Normally resolved automatically
-     * (`'action'` for claude-code with built-in CLI tools, else `'tool'`); set
-     * here mainly by Oracle replay to reproduce a recorded turn's framing on any
-     * replay model. See `resolveToolFraming`.
+     * (`'action'` for claude-code, else `'tool'`); set here mainly by Oracle replay
+     * to reproduce a recorded turn's framing on any replay model. See `resolveToolFraming`.
      */
     framing?: ToolCallFraming;
     /** When set, marks this model as an embedding model; value is the target embedding dimension */

@@ -269,7 +269,7 @@ describe('claude-code provider', () => {
       }
     });
 
-    it('stays on the default Tool framing for pure-text claude-code (no built-in tools)', async () => {
+    it('uses Action framing for pure-text claude-code too (no built-in tools)', async () => {
       const model = getModel(
         { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt' } }
       );
@@ -282,27 +282,27 @@ describe('claude-code provider', () => {
       const calls = mocks.model.doGenerateCalls;
       const sys = calls[calls.length - 1].prompt.find((m: any) => m.role === 'system');
       expect(sys).toBeDefined();
-      expect(sys.content).toContain('## Tool Calling');
-      expect(sys.content).not.toContain('## Action Calling');
+      // claude-code is always action-framed, regardless of built-in CLI tools.
+      expect(sys.content).toContain('## Action Calling');
+      expect(sys.content).not.toContain('## Tool Calling');
     });
   });
 });
 
 describe('resolveToolFraming', () => {
-  it("returns 'action' for claude-code with built-in CLI tools", () => {
+  it("returns 'action' for claude-code regardless of built-in CLI tools", () => {
+    // With built-in CLI tools...
     expect(resolveToolFraming(
       { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: ['Read'] } }
     )).toBe('action');
     expect(resolveToolFraming(
       { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: ['everything'] } }
     )).toBe('action');
-  });
-
-  it("returns 'tool' for pure-text claude-code (no or empty claudeCodeTools)", () => {
-    expect(resolveToolFraming({ provider: 'claude-code', name: 'sonnet' })).toBe('tool');
+    // ...and for pure-text claude-code (no or empty claudeCodeTools).
+    expect(resolveToolFraming({ provider: 'claude-code', name: 'sonnet' })).toBe('action');
     expect(resolveToolFraming(
       { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: [] } }
-    )).toBe('tool');
+    )).toBe('action');
   });
 
   it("returns 'tool' for any non-claude-code provider, even if claudeCodeTools is set", () => {
