@@ -116,7 +116,7 @@ The script substrate is sandboxed JavaScript, run under **`ses`** (Endo's SES lo
 
 ### Recreating the roster
 
-We keep the static strategists and recreate them as scripted workflows, except for `human-strategist`. Recreating even the non-LLM ones proves the substrate is general, and it turns the roster into starting material. **v1 recreates `null`, `none`, `simple`, `simple-briefed`, and `simple-staffed`**; `learned` and its episode retrieval are **deferred with the workflow-memory expansion** (below), since the baseline, briefed, and staffed workflows already exercise the whole substrate.
+We keep the static strategists and recreate them as scripted workflows, except for `human-strategist`. Recreating even the non-LLM ones proves the substrate is general, and it turns the roster into starting material. **v1 recreates `null`, `simple`, `simple-briefed`, and `simple-staffed`**; `learned` and its episode retrieval are **deferred with the workflow-memory expansion** (below), since the baseline, briefed, and staffed workflows already exercise the whole substrate.
 
 Verification is by **static unit tests** in the existing mock test tier, with the static strategist as the reference oracle:
 
