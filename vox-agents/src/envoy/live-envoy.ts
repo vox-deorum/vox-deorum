@@ -68,7 +68,7 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
       ));
     }
     messages.push({
-      role: "user",
+      role: "system",
       content: `${this.getHint(parameters, input)} ${addon}`.trim()
     });
     return messages;

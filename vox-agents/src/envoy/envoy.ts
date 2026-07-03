@@ -19,7 +19,7 @@ import { sendMessageToolName } from "../utils/diplomacy/send-message-tool-name.j
  * when that token is the last message. Override `getSpecialMessages` to extend or replace.
  */
 export const specialMessages: Record<string, string> = {
-  "{{{Greeting}}}": "Send a one-sentence greeting appropriate to your diplomatic relationship, adjusting tone to the situation.",
+  "{{{Greeting}}}": "Send a one-sentence greeting appropriate to your diplomatic relationship, adjusting tone to the situation. Use the \`send-message\` tool.",
 };
 
 /**
