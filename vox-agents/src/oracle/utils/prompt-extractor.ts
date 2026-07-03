@@ -172,12 +172,22 @@ export async function extractPrompt(
   const stepModel = stepAttrs['model'] as string || '';
   const finalModelString = modelString || stepModel;
 
+  // Framing is recorded explicitly (step.tool_framing), decoupled from whether any
+  // prompt content (step.tool_prompt) was stored. Read the explicit value; never infer
+  // framing from the presence of toolPrompt.
+  const rawFraming = stepAttrs['step.tool_framing'];
+  const framing = rawFraming === 'action' || rawFraming === 'tool' ? rawFraming : undefined;
+  const rawToolPrompt = stepAttrs['step.tool_prompt'];
+  const toolPrompt = typeof rawToolPrompt === 'string' ? rawToolPrompt : undefined;
+
   return {
     system,
     messages,
     activeTools,
     modelString: finalModelString,
     agentName,
+    framing,
+    toolPrompt,
   };
 }
 

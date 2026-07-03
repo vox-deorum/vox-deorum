@@ -96,6 +96,9 @@ export function getModelConfig(
  * (e.g. the empty-response rescue prompt in vox-agent) can match the model's framing.
  */
 export function resolveToolFraming(config: Model): ToolCallFraming {
+  // Explicit override wins: Oracle replay sets this to reproduce the original turn's
+  // framing on any replay model, regardless of provider or built-in tools.
+  if (config.options?.framing) return config.options.framing;
   const hasBuiltinTools = (config.options?.claudeCodeTools?.length ?? 0) > 0;
   return config.provider === 'claude-code' && hasBuiltinTools ? 'action' : 'tool';
 }
@@ -118,7 +121,7 @@ export function resolveToolFraming(config: Model): ToolCallFraming {
  * const model = getModel(modelConfig, { workingDirId: `${gameID}-${playerID}` });
  * ```
  */
-export function getModel(config: Model, options?: { workingDirId?: string }): LanguageModel {
+export function getModel(config: Model, options?: { workingDirId?: string; onToolFraming?: (info: { framing: ToolCallFraming; toolPrompt?: string }) => void }): LanguageModel {
   var result: LanguageModelV3;
   // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming):
   // 'action' for claude-code with built-in CLI tools, 'tool' for everything else.
@@ -264,7 +267,7 @@ export function getModel(config: Model, options?: { workingDirId?: string }): La
     case "prompt":
       result = wrapLanguageModel({
         model: result,
-        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming })
+        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming, onToolFraming: options?.onToolFraming })
       });
       break;
     default:

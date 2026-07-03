@@ -199,6 +199,47 @@ describe('claude-code provider', () => {
       expect(allText).not.toContain('# Tool send_message Result');
     });
 
+    it('rewords agent-authored system prose to action wording under action framing', async () => {
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
+      const out: any = await (mw.transformParams as any)({
+        params: {
+          tools,
+          toolChoice: { type: 'auto' },
+          prompt: [
+            { role: 'system', content: 'Use the `send_message` tool. See the Available Tools list.' },
+            { role: 'user', content: [{ type: 'text', text: 'hi' }] },
+          ],
+        },
+      });
+      const joined = out.prompt.filter((m: any) => m.role === 'system').map((m: any) => m.content).join('\n');
+      expect(joined).toContain('Use the `send_message` action. See the Available Actions list.');
+      expect(joined).not.toContain('`send_message` tool');
+    });
+
+    it('reports action framing plus the vanilla tool prompt via onToolFraming', async () => {
+      let info: { framing: string; toolPrompt?: string } | undefined;
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action', onToolFraming: (i) => { info = i; } });
+      await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(info?.framing).toBe('action');
+      // The prompt is captured in VANILLA 'tool' wording, NOT the 'action' framing the model is sent.
+      expect(info?.toolPrompt).toContain('## Tool Calling');
+      expect(info?.toolPrompt).toContain('{ "tool": "<tool_name>", "arguments": { <parameters> } }');
+      expect(info?.toolPrompt).not.toContain('## Action Calling');
+    });
+
+    it("reports 'tool' framing with no prompt content via onToolFraming under the default framing", async () => {
+      let info: { framing: string; toolPrompt?: string } | undefined;
+      const mw = toolRescueMiddleware({ prompt: true, onToolFraming: (i) => { info = i; } });
+      await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(info?.framing).toBe('tool');
+      // Content is recorded only when adapted, so the default path carries the framing fact but no prompt.
+      expect(info?.toolPrompt).toBeUndefined();
+    });
+
     it("threads 'action' framing end-to-end through getModel when built-in CLI tools are enabled", async () => {
       const tempRoot = path.join(os.tmpdir(), 'vox-claude-code');
       try {
@@ -268,6 +309,15 @@ describe('resolveToolFraming', () => {
     expect(resolveToolFraming({ provider: 'openrouter', name: 'x' })).toBe('tool');
     expect(resolveToolFraming(
       { provider: 'openrouter', name: 'x', options: { claudeCodeTools: ['Read'] } }
+    )).toBe('tool');
+  });
+
+  it('honors an explicit options.framing override regardless of provider (Oracle replay)', () => {
+    // Force 'action' on a plain provider to reproduce a recorded action-framed turn.
+    expect(resolveToolFraming({ provider: 'openrouter', name: 'x', options: { framing: 'action' } })).toBe('action');
+    // An explicit 'tool' override beats the claude-code+built-in-tools default.
+    expect(resolveToolFraming(
+      { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: ['Read'], framing: 'tool' } }
     )).toBe('tool');
   });
 });

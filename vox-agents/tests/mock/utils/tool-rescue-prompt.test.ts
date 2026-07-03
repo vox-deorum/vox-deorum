@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createToolPrompts,
   convertPromptToolMessagesToText,
+  reframeToolWording,
 } from '../../../src/utils/models/tool-rescue/prompt.js';
 
 const tools = [
@@ -82,6 +83,26 @@ describe('createToolPrompts', () => {
   it("returns undefined for the 'none' choice regardless of framing", () => {
     expect(createToolPrompts(tools, { type: 'none' })).toBeUndefined();
     expect(createToolPrompts(tools, { type: 'none' }, 'action')).toBeUndefined();
+  });
+});
+
+describe('reframeToolWording', () => {
+  it('rewrites whole-word tool wording to action, preserving case and plurality', () => {
+    expect(reframeToolWording('Use the `send-message` tool; see the Available Tools list.'))
+      .toBe('Use the `send-message` action; see the Available Actions list.');
+    expect(reframeToolWording('call as many tools as you need')).toBe('call as many actions as you need');
+    expect(reframeToolWording('Tool Calling and TOOLS')).toBe('Action Calling and ACTIONS');
+  });
+
+  it('leaves non-word and embedded occurrences untouched', () => {
+    // No whole-word "tool" boundary: toolkit, stool, and hyphenless compounds are safe.
+    expect(reframeToolWording('a toolkit on a stool')).toBe('a toolkit on a stool');
+    expect(reframeToolWording('protocol')).toBe('protocol');
+  });
+
+  it('is idempotent on already-action text', () => {
+    const once = reframeToolWording('the tool');
+    expect(reframeToolWording(once)).toBe(once);
   });
 });
 

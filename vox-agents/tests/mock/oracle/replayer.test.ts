@@ -248,6 +248,62 @@ describe('oracle replayer (non-cache paths)', () => {
       const trailFiles = fs.readdirSync(path.join(outputDir, 'single-array')).filter(f => f.endsWith('.json'));
       expect(trailFiles).toEqual(['game-1-p2-t3.json']);
     });
+
+    it('passes the original turn framing/toolPrompt into modelOverride as its third argument', async () => {
+      const outputDir = makeTempDir();
+      mockFreshExecution();
+      const seen: Array<{ originalModel: string; original: unknown }> = [];
+
+      const modelOverride = vi.fn((originalModel: string, _row: any, original: unknown) => {
+        seen.push({ originalModel, original });
+        return undefined; // keep the original model
+      });
+
+      await runReplay(
+        baseConfig(outputDir, 'override-framing-arg', () => ({}), { modelOverride }),
+        [retrieved({ framing: 'action', toolPrompt: 'VANILLA_TOOL_PROMPT' })]
+      );
+
+      expect(modelOverride).toHaveBeenCalledTimes(1);
+      expect(seen[0].originalModel).toBe('oracle-test/original-model@low');
+      expect(seen[0].original).toEqual({ framing: 'action', toolPrompt: 'VANILLA_TOOL_PROMPT' });
+    });
+
+    it('reproduces source framing when modelOverride returns a model with options.framing', async () => {
+      const outputDir = makeTempDir();
+      const captured: any[] = [];
+      mocks.execute.mockImplementation(async (_agentName, input, _cb, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
+        captured.push(parameters.resolvedModel);
+        tokenOutput.inputTokens = 1;
+        return {
+          row: input.row,
+          model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
+          decisions: [],
+          tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+          messages: [],
+        };
+      });
+
+      // Two source rows with identical models but different framings resolve to the
+      // same name yet carry distinct options.framing — the opt-in P2#1 documents.
+      const modelOverride = (_m: string, _row: any, original?: { framing?: string }) =>
+        original?.framing
+          ? { provider: 'oracle-test', name: 'reframed', options: { framing: original.framing } }
+          : { provider: 'oracle-test', name: 'reframed' };
+
+      await runReplay(
+        baseConfig(outputDir, 'reproduce-framing', () => ({}), { modelOverride: modelOverride as any }),
+        [
+          retrieved({ framing: 'action', toolPrompt: 'VANILLA', row: { ...baseRow, turn: '3' } }),
+          retrieved({ framing: 'tool', row: { ...baseRow, turn: '4' } }),
+        ]
+      );
+
+      const framings = captured.map(m => m.options?.framing);
+      expect(framings).toContain('action');
+      expect(framings).toContain('tool');
+    });
   });
 
   describe('concurrency cap', () => {

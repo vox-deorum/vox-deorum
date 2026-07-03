@@ -15,7 +15,7 @@ import type {
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import type { ToolRescueOptions } from './types.js';
-import { createToolPrompts, convertPromptToolMessagesToText } from './prompt.js';
+import { createToolPrompts, convertPromptToolMessagesToText, reframeToolWording } from './prompt.js';
 import { rescueToolCallsFromText } from './extract.js';
 
 const logger = createLogger("tool-rescue");
@@ -78,12 +78,38 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         return params;
       }
 
+      const framing = options?.framing ?? 'tool';
+      const toolChoice = params.toolChoice ?? { type: "auto" };
+
       // Create tool instruction prompt with full tool schemas
-      const toolPrompt = createToolPrompts(params.tools, params.toolChoice ?? { type: "auto" }, options?.framing);
+      const toolPrompt = createToolPrompts(params.tools, toolChoice, framing);
+
+      // Report the resolved framing as an explicit fact (recorded separately from any
+      // prompt content) plus, only when we adapted to 'action', the injected prompt in
+      // VANILLA 'tool' wording. Recording the framing value — not the mere presence of a
+      // stored prompt — keeps future prompt-storage changes from silently altering how a
+      // turn's framing reads; Oracle re-derives the action view from its own replay model.
+      if (options?.onToolFraming) {
+        const vanillaToolPrompt = framing === 'action'
+          ? createToolPrompts(params.tools, toolChoice, 'tool')
+          : undefined;
+        options.onToolFraming({ framing, toolPrompt: vanillaToolPrompt });
+      }
 
       // Convert existing tool-call/tool-result messages to text so the model
       // sees a consistent text-based history instead of native tool parts it never produced
-      const convertedPrompt = convertPromptToolMessagesToText(params.prompt ?? [], options?.framing);
+      let convertedPrompt = convertPromptToolMessagesToText(params.prompt ?? [], framing);
+
+      // Uniformly reword agent-authored system prose to match the action framing.
+      // Confined to system messages; the protocol block (toolPrompt) is already
+      // action-framed by construction and is prepended/merged below untouched.
+      if (framing === 'action') {
+        convertedPrompt = convertedPrompt.map(message =>
+          message.role === 'system'
+            ? { ...message, content: reframeToolWording(message.content) }
+            : message
+        );
+      }
 
       // Build the modified prompt, respecting systemPromptFirst models that only
       // accept a single system message. When set, merge the tool prompt into the

@@ -14,7 +14,7 @@ npm run oracle -- -c <experiment.js>
 
 Oracle deliberately splits its work into a retrieve phase and a replay phase.
 
-**Retrieve** (`src/oracle/retriever.ts`) reads the input CSV, locates each row's telemetry database (scanning the telemetry directory for `{gameId}-player-{playerId}.db`), and extracts the raw original prompt — system messages, conversation history, active tool names, and the original model — exactly as recorded. No LLM is involved and nothing is modified. The extracted rows can be saved as JSON for inspection.
+**Retrieve** (`src/oracle/retriever.ts`) reads the input CSV, locates each row's telemetry database (scanning the telemetry directory for `{gameId}-player-{playerId}.db`), and extracts the raw original prompt — system messages, conversation history, active tool names, the original model, and the recorded tool framing (see *Tool framing*) — exactly as recorded. No LLM is involved and nothing is modified. The extracted rows can be saved as JSON for inspection.
 
 **Replay** (`src/oracle/replayer.ts`) takes those rows, applies the experiment's `modifyPrompt` transformation, and runs each through the chosen model via a dedicated `OracleAgent`. It writes:
 
@@ -34,13 +34,19 @@ Turn numbers alone are unreliable, because botched and re-run turns reuse them. 
 
 An experiment is an ES module exporting an `OracleConfig`. See `src/oracle/types.ts` for the exact shape and `vox-agents/experiments/` for examples. Beyond the required CSV path and experiment name, the interesting knobs are callbacks:
 
-- **`modifyPrompt`** is the heart of the experiment. It receives the original system prompts, messages, active tools, model, and CSV row, and returns whichever of those it wants to override — rewrite one sentence of the system prompt, drop a briefing, hide a tool. Omitted fields keep their originals.
-- **`modelOverride`** redirects the replay to a different model, or to an *array* of models. With an array, each row is replayed once per entry for side-by-side comparison. Duplicating a model in the array repeats the sample, with results distinguished by a repetition index.
+- **`modifyPrompt`** is the heart of the experiment. It receives the original system prompts, messages, active tools, model, and CSV row, and returns whichever of those it wants to override — rewrite one sentence of the system prompt, drop a briefing, hide a tool. Omitted fields keep their originals. It also carries the original turn's recorded `framing` and `toolPrompt` (see *Tool framing* below).
+- **`modelOverride`** redirects the replay to a different model, or to an *array* of models. With an array, each row is replayed once per entry for side-by-side comparison. Duplicating a model in the array repeats the sample, with results distinguished by a repetition index. Its third argument exposes the original turn's `{ framing, toolPrompt }`, so an experiment can return a model with `options.framing` set to reproduce the source framing (see *Tool framing*).
 - **`rewriteToolSchemas`** rewrites the tool descriptions and schemas the model sees, useful for terminology experiments.
 - **`filter`** narrows which CSV rows run.
 - **`extractColumns`** pulls experiment-specific values out of each replay into extra CSV columns.
 
-Replays run with bounded concurrency, reuse existing trail files to skip already-completed rows, and can route through provider batch APIs for large experiments (`src/oracle/batch/`).
+Replays run with bounded concurrency, reuse existing trail files to skip already-completed rows, and can route through provider batch APIs for large experiments (`src/oracle/batch/`). The batch path serializes the request directly to the provider and does **not** run the tool-rescue middleware, so it is incompatible with prompt-mode models (`options.toolMiddleware: 'prompt'`) — replaying one under `batch` throws rather than silently sending native tools. Override to a native tool-calling model or drop batch mode for those rows.
+
+### Tool framing
+
+Prompt-mode models don't call tools natively; the tool-rescue middleware strips native tools and injects a JSON tool-call protocol as a system message. When a claude-code model has built-in CLI tools enabled, that protocol — and the agent's own system prose — is reframed from "tool" to "action" so the game tools don't read as the CLI's native tools. Each replayed turn records this as telemetry: `step.tool_framing` (`'tool'` or `'action'`) always, and `step.tool_prompt` (the injected protocol, in vanilla `'tool'` wording) only when the turn was adapted to `'action'`.
+
+Retrieve surfaces both on every row as `framing` and `toolPrompt`. They are **informational** — replay framing derives solely from the replay model, so a prompt-mode model replaying a claude-code turn is told "tools", not "actions". To reproduce the original view deliberately, either return a model with `options.framing` set from `modelOverride`, or apply the exported `reframeToolWording` helper to the system prompt / tool prompt inside `modifyPrompt`. Both `framing` and `toolPrompt` are `undefined` for turns that predate the telemetry, ran a native tool path, had no tools, or failed before recording.
 
 ## Where things land
 

@@ -36,4 +36,13 @@ export interface ToolRescueOptions {
    * tools and the JSON-invoked game tools don't both read as "tools".
    */
   framing?: ToolCallFraming;
+  /**
+   * Called once during `transformParams` for every prompt-mode injection with
+   * the resolved `framing` (an explicit fact, recorded separately from prompt
+   * content) and — only when `framing === 'action'` — the injected prompt in
+   * **vanilla `'tool'` wording**. Lets the caller record the framing state and
+   * the pre-adaptation prompt to telemetry without inferring one from the other,
+   * so the adaptation is verifiable and Oracle can read a vanilla prompt.
+   */
+  onToolFraming?: (info: { framing: ToolCallFraming; toolPrompt?: string }) => void;
 }

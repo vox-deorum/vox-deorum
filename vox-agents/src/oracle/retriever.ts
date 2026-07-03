@@ -149,6 +149,8 @@ async function retrieveRow(
         system: extracted.system,
         messages: extracted.messages,
         activeTools: extracted.activeTools,
+        framing: extracted.framing,
+        toolPrompt: extracted.toolPrompt,
       };
     } finally {
       await db.destroy();

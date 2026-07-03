@@ -28,6 +28,29 @@ const FRAMING_PRESETS = {
   action: { heading: '## Action Calling', listHeading: '## Available Actions', noun: 'action' },
 } as const;
 
+/**
+ * Case-preserving, whole-word rewrite of "tool" wording to "action" wording.
+ * Used to reframe human-authored system-prompt prose ("the `send-message` tool",
+ * "Available Tools") to match the `'action'` framing the model is instructed to use.
+ *
+ * Deliberately confined to prose: the injected JSON protocol and the tool-call wire
+ * format are reframed by construction via {@link FRAMING_PRESETS}, never by this
+ * regex, so tool argument schemas can never be corrupted. Whole-word `\b` boundaries
+ * leave `toolkit`, `stool`, and backticked tool names (`send-message`) untouched.
+ */
+export function reframeToolWording(text: string): string {
+  return text.replace(/\b(TOOLS|TOOL|Tools|Tool|tools|tool)\b/g, (match) => {
+    switch (match) {
+      case 'TOOLS': return 'ACTIONS';
+      case 'TOOL':  return 'ACTION';
+      case 'Tools': return 'Actions';
+      case 'Tool':  return 'Action';
+      case 'tools': return 'actions';
+      default:      return 'action';
+    }
+  });
+}
+
 export function createToolPrompt(tool: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)) {
   // We don't support provider tools this way
   if (tool.type === "provider") return;

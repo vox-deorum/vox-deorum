@@ -393,8 +393,10 @@ describe("strategy-parameters", () => {
         },
       });
 
-      const [message] = buildGameContextMessages(params);
-      const content = message.content as string;
+      // Context is split across a cached system message (identity) and a user
+      // message (dynamic state); assemble both in order to assert on the whole.
+      const messages = buildGameContextMessages(params);
+      const content = messages.map((m) => m.content as string).join("\n\n");
 
       // Key section headers present.
       expect(content).toContain("# Situation");

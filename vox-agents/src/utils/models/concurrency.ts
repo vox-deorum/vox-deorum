@@ -87,6 +87,19 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
   // This bypasses streaming, per-model concurrency limiting, and retry logic entirely —
   // the batch API handles all of that server-side.
   if (hasBatchManager() && modelConfig) {
+    // The batch path serializes params.messages/params.tools directly to the provider's
+    // native request; it never invokes the model's tool-rescue middleware. For a prompt-mode
+    // model that means native tools would be sent, system prose would not be reworded, and no
+    // framing telemetry would be recorded — silently wrong results. Reject the combination
+    // rather than replay it incorrectly.
+    if (modelConfig.options?.toolMiddleware === 'prompt') {
+      throw new Error(
+        `Batch mode cannot replay prompt-mode model '${modelConfig.provider}/${modelConfig.name}': ` +
+        `the batch path bypasses tool-rescue middleware, so native tools would be sent, system ` +
+        `prose would not be reworded to the model's framing, and no framing telemetry would be ` +
+        `recorded. Run this experiment without batch mode, or override to a native tool-calling model.`
+      );
+    }
     const response = await getBatchManager().enqueue(params, modelConfig);
     return convertToStepResult(response);
   }
