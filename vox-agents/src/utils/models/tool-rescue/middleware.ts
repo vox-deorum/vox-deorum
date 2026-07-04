@@ -25,9 +25,55 @@ function toolInputToString(input: unknown): string {
   return typeof input === 'string' ? input : JSON.stringify(input ?? {});
 }
 
-/** Dedupe key for a rescued or native tool call: name plus its serialized input. */
+/** Comparison key for a rescued or native tool call: name plus its serialized input. */
 function toolCallKey(toolCall: { toolName: string; input: unknown }): string {
   return `${toolCall.toolName}:${toolInputToString(toolCall.input)}`;
+}
+
+/** Identifies whether a rescued payload came from ordinary model text or the carrier channel. */
+type ToolCallSource = 'text' | 'carrier';
+
+/** State shared by text and carrier recovery for one model response. */
+interface ToolCallRecoveryState {
+  textCallCounts: Map<string, number>;
+}
+
+/** Creates empty source-aware recovery state for one model response. */
+function createToolCallRecoveryState(): ToolCallRecoveryState {
+  return { textCallCounts: new Map() };
+}
+
+/**
+ * Rescues calls from one payload and reconciles the two transport sources. Text is authoritative:
+ * every call it contains survives, including identical calls split across separate text blocks.
+ * Carrier calls are compared by multiplicity against calls already recovered from text, so only
+ * the carrier copies are removed while any additional calls remain available as fallback recovery.
+ */
+function recoverToolCalls(
+  payload: string,
+  source: ToolCallSource,
+  availableTools: Set<string>,
+  toolSchemas: Map<string, string[]>,
+  state: ToolCallRecoveryState,
+  useJaison: boolean = true
+): ReturnType<typeof rescueToolCallsFromText> {
+  const processed = rescueToolCallsFromText(payload, availableTools, useJaison, toolSchemas);
+  if (source === 'text') {
+    for (const call of processed.toolCalls) {
+      const key = toolCallKey(call);
+      state.textCallCounts.set(key, (state.textCallCounts.get(key) ?? 0) + 1);
+    }
+    return processed;
+  }
+
+  const carrierCounts = new Map<string, number>();
+  const toolCalls = processed.toolCalls.filter((call) => {
+    const key = toolCallKey(call);
+    const occurrence = (carrierCounts.get(key) ?? 0) + 1;
+    carrierCounts.set(key, occurrence);
+    return occurrence > (state.textCallCounts.get(key) ?? 0);
+  });
+  return { ...processed, toolCalls };
 }
 
 /**
@@ -71,26 +117,6 @@ function emitToolCallChunks(
       input: toolCall.input
     } as any);
   });
-}
-
-/**
- * Emits tool calls not already emitted in a PRIOR batch this stream, keyed by name + serialized
- * input. A single logical turn's `{ actions: [...] }` payload can reach us through more than one
- * channel (the diverted structured-output text AND the StructuredOutput carrier's own input), so
- * this drops the second copy. Duplicates WITHIN one batch are kept, because a model may
- * legitimately repeat an identical action in a single turn. Returns true if anything was emitted.
- */
-function emitUniqueToolCalls(
-  toolCalls: LanguageModelV3ToolCall[],
-  controller: TransformStreamDefaultController<LanguageModelV3StreamPart>,
-  seen: Set<string>
-): boolean {
-  // Filter against `seen` as it stands before this batch (the filter completes before any add),
-  // then record the batch's keys. This keeps intra-batch duplicates while dropping cross-batch ones.
-  const fresh = toolCalls.filter((toolCall) => !seen.has(toolCallKey(toolCall)));
-  for (const toolCall of fresh) seen.add(toolCallKey(toolCall));
-  if (fresh.length > 0) emitToolCallChunks(fresh, controller);
-  return fresh.length > 0;
 }
 
 /**
@@ -229,26 +255,16 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
           const toolSchemas = buildToolSchemaKeyMap(params.tools);
           const newContents: typeof result.content = [];
           const rescuedCalls: LanguageModelV3ToolCall[] = [];
-          const seen = new Set<string>();
+          const recoveryState = createToolCallRecoveryState();
           const carrierParts: LanguageModelV3ToolCall[] = [];
-
-          // Adds a batch of rescued calls, keeping duplicates that occur within the batch (a model
-          // may legitimately repeat an identical action) while dropping repeats already contributed
-          // by an earlier batch/channel. The filter reads `seen` before any add, so intra-batch
-          // duplicates survive; cross-batch ones do not.
-          const addCalls = (calls: LanguageModelV3ToolCall[]) => {
-            const fresh = calls.filter(call => !seen.has(toolCallKey(call)));
-            for (const call of fresh) seen.add(toolCallKey(call));
-            rescuedCalls.push(...fresh);
-          };
 
           for (const content of result.content) {
             if (content.type === "text") {
-              const processed = rescueToolCallsFromText(content.text, toolNames, true, toolSchemas);
+              const processed = recoverToolCalls(content.text, 'text', toolNames, toolSchemas, recoveryState);
               if (processed.toolCalls.length > 0) {
                 // Remove the text that contained the tool calls if it was completely consumed
                 if (processed.remainingText) newContents.push({ type: 'text', text: processed.remainingText });
-                addCalls(processed.toolCalls);
+                rescuedCalls.push(...processed.toolCalls);
                 continue;
               }
               newContents.push(content);
@@ -263,14 +279,17 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
             newContents.push(content);
           }
 
-          // Fallback: unwrap the carrier's own input only when the diverted text produced nothing.
-          // Both channels carry the identical wrapper, so running this after a successful text
-          // rescue would only re-add cross-channel duplicates.
-          if (rescuedCalls.length === 0) {
-            for (const carrier of carrierParts) {
-              const processed = rescueToolCallsFromText(toolInputToString(carrier.input), toolNames, true, toolSchemas);
-              addCalls(processed.toolCalls);
-            }
+          // Reconcile every carrier after text has established the authoritative call counts.
+          // Identical carrier copies disappear, while carrier-only or additional calls survive.
+          for (const carrier of carrierParts) {
+            const processed = recoverToolCalls(
+              toolInputToString(carrier.input),
+              'carrier',
+              toolNames,
+              toolSchemas,
+              recoveryState
+            );
+            rescuedCalls.push(...processed.toolCalls);
           }
 
           if (rescuedCalls.length > 0) {
@@ -329,8 +348,11 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         // Accumulated input deltas per carrier id, used as a recovery fallback if the terminal
         // tool-call chunk arrives without its assembled input.
         const carrierBuffers: Record<string, string> = {};
-        // Dedupe rescued calls across every channel (diverted text + carrier input) this stream.
-        const seenCallKeys = new Set<string>();
+        // Reconcile carrier copies against text without deduping calls within or across text blocks.
+        const recoveryState = createToolCallRecoveryState();
+        // Defer carrier recovery until finish so later text blocks remain authoritative regardless
+        // of whether the provider emits the carrier before or after its text representation.
+        const pendingCarrierPayloads: Array<{ payload: string; id: string }> = [];
 
         const transformStream = new TransformStream<
           LanguageModelV3StreamPart,
@@ -371,10 +393,18 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
 
                   if (!incompleteBuffer.startsWith('```json')) {
                     // Try to rescue tool calls from accumulated buffer - strict first
-                    const processed = rescueToolCallsFromText(incompleteBuffer, toolNames, false, toolSchemas);
+                    const processed = recoverToolCalls(
+                      incompleteBuffer,
+                      'text',
+                      toolNames,
+                      toolSchemas,
+                      recoveryState,
+                      false
+                    );
                     if (processed.toolCalls.length > 0) {
-                      // Emit tool calls as proper stream chunks (deduped across channels)
-                      if (emitUniqueToolCalls(processed.toolCalls, controller, seenCallKeys)) toolCallsFound = true;
+                      // Every text-authored call is authoritative, including identical repeats.
+                      emitToolCallChunks(processed.toolCalls, controller);
+                      toolCallsFound = true;
                       // Clear the buffer and put remaining text there
                       let remaining = processed.remainingText ?? "";
                       if (remaining.indexOf("{") !== -1 || remaining.indexOf("<|tool_call") !== -1)
@@ -400,12 +430,19 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
                 let incompleteBuffer = incompleteBuffers[chunk.id] ?? "";
                 if (incompleteBuffer !== "") {
                   // More lenient when the stream is finishing
-                  const processed = rescueToolCallsFromText(incompleteBuffer, toolNames, true, toolSchemas);
+                  const processed = recoverToolCalls(
+                    incompleteBuffer,
+                    'text',
+                    toolNames,
+                    toolSchemas,
+                    recoveryState
+                  );
                   if (processed.toolCalls.length > 0) {
                     // Emit remaining text if any
                     emitRemainingText(processed.remainingText, controller, chunk.id);
-                    // Emit tool calls (deduped across channels)
-                    if (emitUniqueToolCalls(processed.toolCalls, controller, seenCallKeys)) toolCallsFound = true;
+                    // Every text-authored call is authoritative, including identical repeats.
+                    emitToolCallChunks(processed.toolCalls, controller);
+                    toolCallsFound = true;
                   } else {
                     emitRemainingText(incompleteBuffer, controller, chunk.id);
                   }
@@ -450,15 +487,10 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
                     if (buffered && buffered.trim()) inputStr = buffered;
                   }
                   if (inputStr.trim() && inputStr.trim() !== "{}") {
-                    const processed = rescueToolCallsFromText(inputStr, toolNames, true, toolSchemas);
-                    // Deduped: the diverted text has usually already emitted these calls.
-                    if (emitUniqueToolCalls(processed.toolCalls, controller, seenCallKeys)) toolCallsFound = true;
-                    else if (!toolCallsFound) {
-                      // Nothing rescued from any channel: surface the payload as text rather than
-                      // dropping the whole turn to an empty stream (a silent no-op step downstream).
-                      logger.log("warn", "structuredToolCalls carrier produced no rescuable tool call; preserving payload as text");
-                      emitRemainingText(inputStr, controller, (chunk as any).toolCallId);
-                    }
+                    pendingCarrierPayloads.push({
+                      payload: inputStr,
+                      id: (chunk as any).toolCallId,
+                    });
                   }
                   break; // drop the carrier tool-call
                 }
@@ -466,6 +498,30 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
                 break;
               }
               case "finish": {
+                const unrescuedCarrierPayloads: Array<{ payload: string; id: string }> = [];
+                for (const pending of pendingCarrierPayloads) {
+                  const processed = recoverToolCalls(
+                    pending.payload,
+                    'carrier',
+                    toolNames,
+                    toolSchemas,
+                    recoveryState
+                  );
+                  if (processed.toolCalls.length > 0) {
+                    emitToolCallChunks(processed.toolCalls, controller);
+                    toolCallsFound = true;
+                  } else {
+                    unrescuedCarrierPayloads.push(pending);
+                  }
+                }
+                if (!toolCallsFound && unrescuedCarrierPayloads.length > 0) {
+                  // Nothing was rescued from either source: preserve carrier payloads as text
+                  // rather than turning the model response into a silent no-op.
+                  logger.log("warn", "structuredToolCalls carrier produced no rescuable tool call; preserving payload as text");
+                  for (const pending of unrescuedCarrierPayloads) {
+                    emitRemainingText(pending.payload, controller, pending.id);
+                  }
+                }
                 // Update finish reason if we found tool calls
                 if (toolCallsFound) {
                   controller.enqueue({

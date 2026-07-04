@@ -422,6 +422,24 @@ describe('claude-code provider', () => {
         expect(finish.finishReason.unified).toBe('tool-calls');
       });
 
+      it('wrapStream reconciles a carrier emitted before its text copy', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: 'so1', toolName: 'claude-code-tool.StructuredOutput' },
+          { type: 'tool-input-end', id: 'so1' },
+          { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: wrapper },
+          { type: 'text-end', id: 't1' },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(1);
+      });
+
       it('wrapStream falls back to the carrier input when the diverted text is malformed', async () => {
         const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
         // The diverted text can arrive truncated (`{"actions":}`); the carrier input is the clean
@@ -472,6 +490,37 @@ describe('claude-code provider', () => {
           { type: 'text-start', id: 't1' },
           { type: 'text-delta', id: 't1', delta: twice },
           { type: 'text-end', id: 't1' },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
+      });
+
+      it('wrapGenerate keeps identical actions from separate text blocks', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const doGenerate = async () => ({
+          content: [
+            { type: 'text', text: wrapper },
+            { type: 'text', text: wrapper },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
+      });
+
+      it('wrapStream keeps identical actions from separate text blocks', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: wrapper },
+          { type: 'text-end', id: 't1' },
+          { type: 'text-start', id: 't2' },
+          { type: 'text-delta', id: 't2', delta: wrapper },
+          { type: 'text-end', id: 't2' },
           { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
         ];
         const doStream = async () => ({ stream: streamFrom(chunks) });
