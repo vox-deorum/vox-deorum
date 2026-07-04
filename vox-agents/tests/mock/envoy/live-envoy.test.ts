@@ -82,9 +82,9 @@ describe('LiveEnvoy.getInitialMessages', () => {
     expect(messages[0]).toEqual(expectedContext);
 
     // Normal mode appends the hint (anchors on identity/audience/turn) followed by the
-    // agent's default add-on as the last message.
+    // agent's default add-on as the last message — delivered as a system (operator) message.
     const last = messages[messages.length - 1];
-    expect(last.role).toBe('user');
+    expect(last.role).toBe('system');
     expect(last.content.startsWith(spokesperson.getHint(params, input))).toBe(true);
     expect(last.content).toContain(spokesperson.getDefaultAddon(params, input));
 
@@ -119,7 +119,8 @@ describe('LiveEnvoy.getInitialMessages', () => {
     const messages = await spokesperson.getInitialMessages(params, input, ctx);
     const last = messages[messages.length - 1];
 
-    expect(last.role).toBe('user');
+    // The hint + special add-on are delivered as a single system (operator) message.
+    expect(last.role).toBe('system');
     // The exact prompt string comes from the shared greeting config, included verbatim.
     expect(last.content).toContain(specialMessages['{{{Greeting}}}']);
 
