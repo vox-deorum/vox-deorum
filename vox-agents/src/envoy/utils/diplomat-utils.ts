@@ -78,7 +78,7 @@ export function formatDealContext(
     blocks.push(
       active.SpeakerID === viewerID
         ? "Your proposal awaits the counterpart's reply. Do not call the negotiator again until they respond."
-        : "The counterpart's deal is on the table. Hand it to the negotiator with the `call-negotiator` tool."
+        : "The counterpart's deal is on the table. Hand it to the negotiator by calling `call-negotiator` with a `Briefing` of the conversation so far. The negotiator decides whether to accept, counter, or reject."
     );
   }
   return blocks.join("\n\n");
