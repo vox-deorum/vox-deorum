@@ -18,7 +18,7 @@ import { runPreparation } from './preparation/index.js';
 import { EnvoyThread, Model } from '../types/index.js';
 import { VoxContext } from '../infra/vox-context.js';
 import { createLogger } from '../utils/logger.js';
-import { hasOnlyTerminalCalls } from '../utils/tools/terminal-tools.js';
+import { getValidCalls, hasOnlyTerminalCalls } from '../utils/tools/terminal-tools.js';
 import { getModelConfig } from '../utils/models/models.js';
 
 const logger = createLogger('Telepathist');
@@ -119,7 +119,7 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
     super.stopCheck(parameters, input, lastStep, allSteps, context);
 
     // Telepathist-specific stop conditions (50-step limit vs default 3)
-    if (lastStep.toolCalls.length === 0 && !lastStep.text?.trim()) {
+    if (getValidCalls(lastStep).length === 0 && !lastStep.text?.trim()) {
       return allSteps.length >= 50;
     }
     if (hasOnlyTerminalCalls(lastStep, context.mcpToolMap)) {

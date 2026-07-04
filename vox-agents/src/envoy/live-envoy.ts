@@ -14,6 +14,7 @@ import { EnvoyThread } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createSendMessageTool } from "./send-message-tool.js";
+import { getValidCalls } from "../utils/tools/terminal-tools.js";
 
 /**
  * Envoy specialized for live game sessions with StrategistParameters.
@@ -125,16 +126,17 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     super.stopCheck(parameters, input, lastStep, allSteps, context);
 
     const completionTools = this.getCompletionTools();
-    // A completion tool (send-message / negotiator handoff / closure) ends the turn wherever it appears.
+    // A completion tool (send-message / negotiator handoff / closure) ends the turn wherever it
+    // appears. Only valid calls count: an invalid send-message never executed, so nothing was spoken.
     const hasCompletionTool = allSteps.some(step =>
-      step.toolCalls.some(call => completionTools.has(call.toolName))
+      getValidCalls(step).some(call => completionTools.has(call.toolName))
     );
     if (hasCompletionTool) return true;
     // Hard ceiling, checked before the keep-working branch so a runaway loop always stops.
     if (allSteps.length >= this.maxSteps) return true;
     // A pending supporting (non-completion) tool means the envoy means to keep working — e.g. it
     // spoke a short line then asked for a briefing — so don't stop on that step.
-    const hasPendingSupportTool = lastStep.toolCalls.some(call => !completionTools.has(call.toolName));
+    const hasPendingSupportTool = getValidCalls(lastStep).some(call => !completionTools.has(call.toolName));
     if (hasPendingSupportTool) return false;
     // No pending tool and no completion tool: stop once it has spoken raw free text (Anthropic fallback).
     return allSteps.some(step => Boolean(step.text?.trim()));

@@ -1,15 +1,16 @@
 /**
- * Mock-tier unit tests for `hasOnlyTerminalCalls` (terminal-tools).
+ * Mock-tier unit tests for `hasOnlyTerminalCalls` and `getValidCalls` (terminal-tools).
  *
- * Focuses on the provider-executed exclusion: the host CLI's own tool calls
- * (e.g. claude-code's Read, marked providerExecuted) must not affect the
- * game-turn terminal decision. Terminal-ness of game tools is derived from
- * the MCP readOnlyHint annotation (readOnlyHint:false = write/action = terminal;
- * readOnlyHint:true = read-only = non-terminal).
+ * Focuses on the provider-executed and invalid-call exclusions: the host CLI's own
+ * tool calls (e.g. claude-code's Read, marked providerExecuted) and never-executed
+ * invalid calls (marked invalid) must not affect the game-turn terminal decision.
+ * Terminal-ness of game tools is derived from the MCP readOnlyHint annotation
+ * (readOnlyHint:false = write/action = terminal; readOnlyHint:true = read-only =
+ * non-terminal).
  */
 
 import { describe, expect, it } from 'vitest';
-import { hasOnlyTerminalCalls } from '../../../src/utils/tools/terminal-tools.js';
+import { getValidCalls, hasOnlyTerminalCalls } from '../../../src/utils/tools/terminal-tools.js';
 
 const mcpToolMap = new Map<string, any>([
   ['end_turn', { name: 'end_turn', inputSchema: { type: 'object' }, annotations: { readOnlyHint: false } }],
@@ -42,5 +43,31 @@ describe('hasOnlyTerminalCalls', () => {
   it('treats a host-only step (provider-executed calls only) as terminal', () => {
     const step = { toolCalls: [{ toolName: 'Read', providerExecuted: true }] };
     expect(hasOnlyTerminalCalls(step, mcpToolMap as any)).toBe(true);
+  });
+
+  it('ignores an invalid call alongside a terminal game action', () => {
+    // An invalid call never executes; it must not read as non-terminal and force
+    // another step after the terminal action already ran.
+    const step = { toolCalls: [
+      { toolName: 'end_turn' },
+      { toolName: 'no_such_tool', invalid: true },
+    ] };
+    expect(hasOnlyTerminalCalls(step, mcpToolMap as any)).toBe(true);
+  });
+});
+
+describe('getValidCalls', () => {
+  it('filters out invalid calls and keeps the rest', () => {
+    const step = { toolCalls: [
+      { toolName: 'end_turn' },
+      { toolName: 'look', invalid: false },
+      { toolName: 'no_such_tool', invalid: true },
+    ] };
+    expect(getValidCalls(step).map(c => c.toolName)).toEqual(['end_turn', 'look']);
+  });
+
+  it('returns an empty array for a step with only invalid calls', () => {
+    const step = { toolCalls: [{ toolName: 'garbled', invalid: true }] };
+    expect(getValidCalls(step)).toEqual([]);
   });
 });

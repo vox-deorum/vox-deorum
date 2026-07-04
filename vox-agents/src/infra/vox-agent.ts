@@ -12,7 +12,7 @@ import { z, ZodObject } from "zod";
 import { Model } from "../types/index.js";
 import { VoxContext } from "./vox-context.js";
 import { getModelConfig, resolveToolFraming } from "../utils/models/models.js";
-import { hasOnlyTerminalCalls } from "../utils/tools/terminal-tools.js";
+import { getValidCalls, hasOnlyTerminalCalls } from "../utils/tools/terminal-tools.js";
 import { buildRescuePrompt } from "../utils/models/text-cleaning.js";
 // @ts-ignore - jaison doesn't have type definitions
 import jaison from 'jaison';
@@ -218,8 +218,9 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
         step.toolResults.some(r => this.requiredTools!.includes(r.toolName) && r.output)
       )) return true;
     } else {
-      // Default mode: stop on empty responses or terminal-only calls
-      if (lastStep.toolCalls.length === 0 && !lastStep.text?.trim()) {
+      // Default mode: stop on empty responses or terminal-only calls (invalid calls never
+      // execute, so a step carrying only invalid calls counts as empty)
+      if (getValidCalls(lastStep).length === 0 && !lastStep.text?.trim()) {
         return allSteps.length >= this.maxSteps;
       }
       if (hasOnlyTerminalCalls(lastStep, context.mcpToolMap)) {
