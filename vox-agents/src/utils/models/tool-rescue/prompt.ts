@@ -8,6 +8,7 @@
  */
 
 import {
+  JSONSchema7,
   LanguageModelV3FunctionTool,
   LanguageModelV3Message,
   LanguageModelV3Prompt,
@@ -20,13 +21,26 @@ import type { ToolCallFraming } from './types.js';
 /**
  * Terminology presets for the tool-call instructions. `noun` doubles as the JSON
  * name field (`{ "<noun>": "<noun>_name", ... }`), keeping the instructed key in
- * lockstep with `formatToolCallText`. `'tool'` reproduces the historical strings
- * byte-for-byte, which the ~15 prompt-mode models depend on.
+ * lockstep with `formatToolCallText`. `listKey` is the pluralized wrapper key used by
+ * {@link buildToolCallArraySchema}, defined here so the pluralization convention lives in
+ * one place. `'tool'` reproduces the historical strings byte-for-byte, which the ~15
+ * prompt-mode models depend on.
  */
 const FRAMING_PRESETS = {
-  tool:   { heading: '## Tool Calling',   listHeading: '## Available Tools',   noun: 'tool'   },
-  action: { heading: '## Action Calling', listHeading: '## Available Actions', noun: 'action' },
+  tool:   { heading: '## Tool Calling',   listHeading: '## Available Tools',   noun: 'tool',   listKey: 'tools'   },
+  action: { heading: '## Action Calling', listHeading: '## Available Actions', noun: 'action', listKey: 'actions' },
 } as const;
+
+/**
+ * The tools we emulate via prompt/JSON. Provider tools belong to the host CLI (e.g. claude-code's
+ * `Read`) and are never taught or constrained here; centralizing the filter keeps the instruction
+ * prompt and {@link buildToolCallArraySchema} from ever disagreeing about which tools are in play.
+ */
+function functionTools(
+  tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[]
+): LanguageModelV3FunctionTool[] {
+  return tools.filter((tool): tool is LanguageModelV3FunctionTool => tool.type !== 'provider');
+}
 
 /**
  * Case-preserving, whole-word rewrite of "tool" wording to "action" wording.
@@ -72,8 +86,8 @@ export function createToolPrompt(tool: (LanguageModelV3FunctionTool | LanguageMo
 export function createToolPrompts(tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[],
   choice: LanguageModelV3ToolChoice,
   framing: ToolCallFraming = 'tool'): string | undefined {
-  // Format tools with their schemas
-  const descriptions = tools.map(createToolPrompt).join('\n\n');
+  // Format tools with their schemas (provider tools are excluded via functionTools)
+  const descriptions = functionTools(tools).map(createToolPrompt).join('\n\n');
   const { heading, listHeading, noun } = FRAMING_PRESETS[framing];
 
   // Format the prompt
@@ -110,6 +124,50 @@ You have access to ${noun}s. If you decide to invoke any of the ${noun}(s), ONLY
 ${listHeading}
 ${descriptions}`;
   }
+}
+
+/**
+ * Builds a shape-only JSON Schema used as the `responseFormat.schema` so a
+ * constrained-decoding provider (claude-code) is forced to emit the tool-call array in our
+ * contour. The **root is an object** wrapping the array under `"<noun>s"`: a constrained-
+ * decoding provider realizes `responseFormat` as a forced tool call, and the Anthropic API
+ * rejects any tool whose `input_schema.type` is not `'object'` (400
+ * `tools.0.custom.input_schema.type`), so an array root is illegal. The rescue unwraps the
+ * array property (keyed `listKey`), keeping the wrapper transparent downstream, so the injected
+ * prompt can keep teaching the shared bare-array contour. The item `noun` key and the `listKey`
+ * both come from {@link FRAMING_PRESETS} (and therefore stay in lockstep with `formatToolCallText`),
+ * and provider tools are excluded via the shared {@link functionTools} filter. Only the array and
+ * the action name (an enum of the active tool names) are constrained; `arguments` stays an open
+ * object, so per-argument validity remains with each tool's `execute`. If the CLI cannot enforce
+ * the open object it silently falls back to prose, which the existing rescue still parses, so this
+ * is never worse than prompt-only mode.
+ */
+export function buildToolCallArraySchema(
+  tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[],
+  framing: ToolCallFraming = 'tool'
+): JSONSchema7 {
+  const { noun, listKey } = FRAMING_PRESETS[framing];
+  const names = functionTools(tools).map(tool => tool.name);
+  return {
+    type: 'object',
+    properties: {
+      [listKey]: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            [noun]: { type: 'string', enum: names },
+            arguments: { type: 'object' },
+          },
+          required: [noun, 'arguments'],
+          additionalProperties: false,
+        },
+        minItems: 1
+      },
+    },
+    required: [listKey],
+    additionalProperties: false,
+  };
 }
 
 /**

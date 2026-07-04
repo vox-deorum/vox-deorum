@@ -268,7 +268,7 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
     case "prompt":
       result = wrapLanguageModel({
         model: result,
-        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming, onToolFraming: options?.onToolFraming })
+        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming, onToolFraming: options?.onToolFraming, structuredToolCalls: config.provider === 'claude-code' })
       });
       break;
     default:

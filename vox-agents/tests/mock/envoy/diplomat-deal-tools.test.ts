@@ -86,6 +86,22 @@ describe('formatDealContext', () => {
     expect(out).toContain('Let us make this trade.');
   });
 
+  it('closes an open deal with the action ask resolved by author', () => {
+    const deal = { version: 1 as const, items: [], promises: [] };
+
+    // Counterpart-authored: the ball is in our court, so the block asks for the negotiator handover.
+    const incoming = msg('deal-proposal', { Deal: deal }, 6);
+    incoming.SpeakerID = 1;
+    const fromCounterpart = formatDealContext(deriveActiveProposal([incoming]), 3)!;
+    expect(fromCounterpart).toContain('Hand it to the negotiator');
+    expect(fromCounterpart).toContain('call-negotiator');
+
+    // Own-authored: the ball is with the other side, so the block says to await their reply.
+    const own = formatDealContext(deriveActiveProposal([msg('deal-proposal', { Deal: deal }, 7)]), 3)!;
+    expect(own).toContain("awaits the counterpart's reply");
+    expect(own).not.toContain('call-negotiator');
+  });
+
   it('surfaces promise agreeability estimates when present', () => {
     const deal = {
       version: 1 as const,

@@ -200,9 +200,10 @@ You represent your government's interests and gather intelligence through diplom
 
   /**
    * The diplomat's normal-mode nudge appended after the hint: gather and relay intelligence, and
-   * speak through send-message.
+   * speak through send-message. When a deal is on the table, the deal-context block (which lands
+   * after this hint, see getInitialMessages) closes with the overriding ask for that state.
    */
   protected override getDefaultAddon(): string {
-    return "Gather intelligence and relay important information to the analyst. Speak to the counterpart with the `send-message` tool.";
+    return "When you need to speak directly to the counterpart, use the `send-message` tool.";
   }
 }

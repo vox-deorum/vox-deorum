@@ -38,6 +38,28 @@ vi.mock('ai-sdk-provider-claude-code', () => {
 import { getModel, getModelConfig, resolveToolFraming } from '../../../src/utils/models/models.js';
 import { toolRescueMiddleware } from '../../../src/utils/models/tool-rescue/middleware.js';
 
+/** Build a ReadableStream that emits the given chunks then closes (for wrapStream tests). */
+function streamFrom(chunks: any[]): ReadableStream<any> {
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
+  });
+}
+
+/** Read every chunk out of a stream into an array. */
+async function drain(stream: ReadableStream<any>): Promise<any[]> {
+  const out: any[] = [];
+  const reader = stream.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    out.push(value);
+  }
+  return out;
+}
+
 // The vetted safe set that claude-code's ['everything'] expands to (mirrors models.ts).
 const SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'TodoWrite'];
 
@@ -238,6 +260,281 @@ describe('claude-code provider', () => {
       expect(info?.framing).toBe('tool');
       // Content is recorded only when adapted, so the default path carries the framing fact but no prompt.
       expect(info?.toolPrompt).toBeUndefined();
+    });
+
+    it('pins responseFormat to the tool-call array contour for structuredToolCalls + required', async () => {
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+      const out: any = await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'required' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(out.responseFormat?.type).toBe('json');
+      const schema = out.responseFormat.schema;
+      // Root is an object wrapping the array (a forced tool call's input_schema must be an object).
+      expect(schema.type).toBe('object');
+      expect(schema.required).toEqual(['actions']);
+      const item = schema.properties.actions.items;
+      expect(item.additionalProperties).toBe(false);
+      expect(item.required).toEqual(['action', 'arguments']);
+      expect(item.properties.action.enum).toEqual(['send_message']);
+      expect(item.properties.arguments).toEqual({ type: 'object' });
+    });
+
+    it('does not set responseFormat for a non-required tool choice', async () => {
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+      const out: any = await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(out.responseFormat).toBeUndefined();
+    });
+
+    it('does not set responseFormat when structuredToolCalls is disabled', async () => {
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
+      const out: any = await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'required' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(out.responseFormat).toBeUndefined();
+    });
+
+    it('never clobbers a responseFormat a real output schema already set', async () => {
+      const existing = { type: 'json', schema: { type: 'object' } };
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+      const out: any = await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'required' }, responseFormat: existing, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(out.responseFormat).toBe(existing);
+    });
+
+    describe('StructuredOutput carrier capture-back', () => {
+      // Real game tools are hyphenated; the carrier emits the same hyphenated action name.
+      const gameTools = [
+        { type: 'function', name: 'send-message', description: 'Send a message', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+      ];
+      const wrapper = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'hi' } }] });
+
+      // Build params the way production does: transformParams stashes originalTools (clearing
+      // params.tools), sets the structuredToolCallsActive marker, and installs our responseFormat;
+      // wrapGenerate/wrapStream restore tools from originalTools. Routing through here exercises
+      // that restore path and the marker instead of hand-populating params.tools.
+      async function transformed(mw: any, toolset: any[]) {
+        return await (mw.transformParams as any)({
+          params: { tools: toolset, toolChoice: { type: 'required' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+        });
+      }
+
+      it('wrapGenerate rescues send-message from the carrier + wrapper text without double-emitting', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Non-streaming surfaces BOTH the carrier tool-call (with the wrapper as input) and the
+        // structured-output text; the fix must dedupe to a single send-message.
+        const doGenerate = async () => ({
+          content: [
+            { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper },
+            { type: 'text', text: wrapper },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        const toolCalls = result.content.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(toolCalls[0].toolName).toBe('send-message');
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ message: 'hi' });
+        // Carrier is gone; the raw wrapper text is consumed.
+        expect(result.content.some((c: any) => c.type === 'tool-call' && /structuredoutput/i.test(c.toolName))).toBe(false);
+        expect(result.content.some((c: any) => c.type === 'text' && c.text.includes('"actions"'))).toBe(false);
+        expect(result.finishReason.unified).toBe('tool-calls');
+      });
+
+      it('wrapGenerate realigns the argument-key casing to the tool schema (message → Message)', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const schemaTools = [
+          { type: 'function', name: 'send-message', description: 'Send a message', inputSchema: { type: 'object', properties: { Message: { type: 'string' } }, required: ['Message'], additionalProperties: false } },
+        ];
+        // The model emits lowercase `message`; the schema wants `Message`.
+        const wrapperLc = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'Hail' } }] });
+        const doGenerate = async () => ({
+          content: [
+            { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapperLc },
+            { type: 'text', text: wrapperLc },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, schemaTools) });
+        const toolCalls = result.content.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ Message: 'Hail' });
+      });
+
+      it('wrapGenerate unwraps a carrier-only response (no wrapper text) via the input fallback', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const doGenerate = async () => ({
+          content: [
+            { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        const toolCalls = result.content.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(toolCalls[0].toolName).toBe('send-message');
+        expect(result.finishReason.unified).toBe('tool-calls');
+      });
+
+      it('wrapGenerate leaves a genuine game tool-call untouched', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const native = { type: 'tool-call', toolCallId: 'g1', toolName: 'send-message', input: JSON.stringify({ message: 'x' }) };
+        const doGenerate = async () => ({ content: [native], finishReason: { unified: 'tool-calls', raw: 'tool_use' } });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        expect(result.content).toEqual([native]);
+      });
+
+      it('wrapGenerate does not treat a carrier as droppable when structuredToolCalls is off', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
+        const carrier = { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper };
+        const doGenerate = async () => ({ content: [carrier], finishReason: { unified: 'tool-calls', raw: 'tool_use' } });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        expect(result.content.some((c: any) => /structuredoutput/i.test(c.toolName))).toBe(true);
+      });
+
+      it('wrapStream emits ONE send-message even when both text and carrier carry the payload', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Live behavior: the payload is diverted to text AND the terminal carrier tool-call
+        // carries the full wrapper as its own input. Without dedup this double-emits send-message
+        // (the `...572`/`...576` duplicate). All carrier chunks must also be suppressed.
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: 'so1', toolName: 'claude-code-tool.StructuredOutput' },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: wrapper },
+          { type: 'text-end', id: 't1' },
+          { type: 'tool-input-end', id: 'so1' },
+          { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        const toolCalls = out.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(toolCalls[0].toolName).toBe('send-message');
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ message: 'hi' });
+        // No carrier chunk of any kind leaks (tool-input-start/end or the terminal tool-call).
+        expect(out.some((c: any) => /structuredoutput/i.test(c.toolName ?? ''))).toBe(false);
+        const finish = out.find((c: any) => c.type === 'finish');
+        expect(finish.finishReason.unified).toBe('tool-calls');
+      });
+
+      it('wrapStream falls back to the carrier input when the diverted text is malformed', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // The diverted text can arrive truncated (`{"actions":}`); the carrier input is the clean
+        // authoritative copy, so the send-message must still be recovered from it.
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: 'so1', toolName: 'claude-code-tool.StructuredOutput' },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: '{"actions":}' },
+          { type: 'text-end', id: 't1' },
+          { type: 'tool-input-end', id: 'so1' },
+          { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        const toolCalls = out.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(toolCalls[0].toolName).toBe('send-message');
+        expect(out.some((c: any) => /structuredoutput/i.test(c.toolName ?? ''))).toBe(false);
+      });
+
+      it('wrapGenerate keeps legitimately repeated identical actions (no over-dedupe)', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // A single wrapper that intentionally repeats the same action twice: both must survive,
+        // since dedupe is only meant to collapse the SAME payload arriving via two channels.
+        const twice = JSON.stringify({ actions: [
+          { action: 'send-message', arguments: { message: 'hi' } },
+          { action: 'send-message', arguments: { message: 'hi' } },
+        ] });
+        const doGenerate = async () => ({
+          content: [{ type: 'text', text: twice }],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
+      });
+
+      it('wrapStream keeps legitimately repeated identical actions (no over-dedupe)', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const twice = JSON.stringify({ actions: [
+          { action: 'send-message', arguments: { message: 'hi' } },
+          { action: 'send-message', arguments: { message: 'hi' } },
+        ] });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: twice },
+          { type: 'text-end', id: 't1' },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
+      });
+
+      it('wrapGenerate preserves the carrier payload as text when nothing can be rescued', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Carrier-only response whose action names an unavailable tool: rescue yields nothing.
+        const badWrapper = JSON.stringify({ actions: [{ action: 'nonexistent-tool', arguments: {} }] });
+        const doGenerate = async () => ({
+          content: [
+            { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: badWrapper },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        // The turn is not silently empty: no tool call, but the payload survives as text.
+        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(0);
+        expect(result.content.some((c: any) => c.type === 'text' && c.text.includes('nonexistent-tool'))).toBe(true);
+        expect(result.finishReason.unified).toBe('stop');
+      });
+
+      it('wrapStream preserves the carrier payload as text when nothing can be rescued', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const badWrapper = JSON.stringify({ actions: [{ action: 'nonexistent-tool', arguments: {} }] });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: 'so1', toolName: 'claude-code-tool.StructuredOutput' },
+          { type: 'tool-input-delta', id: 'so1', delta: badWrapper },
+          { type: 'tool-input-end', id: 'so1' },
+          { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: badWrapper },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(0);
+        // Payload surfaced as text rather than dropped to an empty stream; no carrier leaks.
+        expect(out.some((c: any) => c.type === 'text-delta' && String(c.delta).includes('nonexistent-tool'))).toBe(true);
+        expect(out.some((c: any) => /structuredoutput/i.test(c.toolName ?? ''))).toBe(false);
+      });
+
+      it('does not suppress the carrier when a real output schema owns responseFormat', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // A genuine output schema already occupies responseFormat, so transformParams must neither
+        // install ours nor mark the call active; the StructuredOutput carrier now holds the real
+        // structured output and must not be destroyed by tool rescue.
+        const existing = { type: 'json', schema: { type: 'object' } };
+        const params: any = await (mw.transformParams as any)({
+          params: { tools: gameTools, toolChoice: { type: 'required' }, responseFormat: existing, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+        });
+        expect(params.structuredToolCallsActive).toBeUndefined();
+        const realOutput = JSON.stringify({ result: 42 });
+        const doGenerate = async () => ({
+          content: [{ type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: realOutput }],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params });
+        expect(result.content.some((c: any) => /structuredoutput/i.test(c.toolName ?? ''))).toBe(true);
+      });
     });
 
     it("threads 'action' framing end-to-end through getModel when built-in CLI tools are enabled", async () => {

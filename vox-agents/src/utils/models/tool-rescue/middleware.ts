@@ -15,10 +15,44 @@ import type {
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import type { ToolRescueOptions } from './types.js';
-import { createToolPrompts, convertPromptToolMessagesToText, reframeToolWording } from './prompt.js';
-import { rescueToolCallsFromText } from './extract.js';
+import { createToolPrompts, convertPromptToolMessagesToText, reframeToolWording, buildToolCallArraySchema } from './prompt.js';
+import { rescueToolCallsFromText, isStructuredOutputToolName } from './extract.js';
 
 const logger = createLogger("tool-rescue");
+
+/** A tool-call part's `input` is normally a JSON string, but guard against an object form. */
+function toolInputToString(input: unknown): string {
+  return typeof input === 'string' ? input : JSON.stringify(input ?? {});
+}
+
+/** Dedupe key for a rescued or native tool call: name plus its serialized input. */
+function toolCallKey(toolCall: { toolName: string; input: unknown }): string {
+  return `${toolCall.toolName}:${toolInputToString(toolCall.input)}`;
+}
+
+/**
+ * True when a native tool-call name is the StructuredOutput carrier we installed for a
+ * constrained-decoding provider: enabled for this call (`active`), not one of the game tools,
+ * and matching the carrier name. `active` reflects whether transformParams actually set our
+ * `responseFormat` (not merely the config flag), so a step carrying a genuine `output` schema
+ * keeps its structured output instead of having it suppressed as a phantom carrier.
+ */
+function isCarrierToolName(name: string, toolNames: Set<string>, active: boolean | undefined): boolean {
+  return !!active && !toolNames.has(name) && isStructuredOutputToolName(name);
+}
+
+/**
+ * Maps each function tool's canonical name to its top-level argument-property names, so the rescue
+ * can realign the model's argument-key casing (e.g. `message` → the schema's `Message`).
+ */
+function buildToolSchemaKeyMap(tools: readonly any[] | undefined): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const tool of tools ?? []) {
+    const props = tool?.type === 'function' ? tool.inputSchema?.properties : undefined;
+    if (props && typeof props === 'object') map.set(tool.name, Object.keys(props));
+  }
+  return map;
+}
 
 /**
  * Emits rescued tool calls as stream chunks
@@ -37,6 +71,26 @@ function emitToolCallChunks(
       input: toolCall.input
     } as any);
   });
+}
+
+/**
+ * Emits tool calls not already emitted in a PRIOR batch this stream, keyed by name + serialized
+ * input. A single logical turn's `{ actions: [...] }` payload can reach us through more than one
+ * channel (the diverted structured-output text AND the StructuredOutput carrier's own input), so
+ * this drops the second copy. Duplicates WITHIN one batch are kept, because a model may
+ * legitimately repeat an identical action in a single turn. Returns true if anything was emitted.
+ */
+function emitUniqueToolCalls(
+  toolCalls: LanguageModelV3ToolCall[],
+  controller: TransformStreamDefaultController<LanguageModelV3StreamPart>,
+  seen: Set<string>
+): boolean {
+  // Filter against `seen` as it stands before this batch (the filter completes before any add),
+  // then record the batch's keys. This keeps intra-batch duplicates while dropping cross-batch ones.
+  const fresh = toolCalls.filter((toolCall) => !seen.has(toolCallKey(toolCall)));
+  for (const toolCall of fresh) seen.add(toolCallKey(toolCall));
+  if (fresh.length > 0) emitToolCallChunks(fresh, controller);
+  return fresh.length > 0;
 }
 
 /**
@@ -86,14 +140,25 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
 
       // Report the resolved framing as an explicit fact (recorded separately from any
       // prompt content) plus, only when we adapted to 'action', the injected prompt in
-      // VANILLA 'tool' wording. Recording the framing value — not the mere presence of a
-      // stored prompt — keeps future prompt-storage changes from silently altering how a
+      // VANILLA 'tool' wording. Recording the framing value (not the mere presence of a
+      // stored prompt) keeps future prompt-storage changes from silently altering how a
       // turn's framing reads; Oracle re-derives the action view from its own replay model.
       if (options?.onToolFraming) {
         const vanillaToolPrompt = framing === 'action'
           ? createToolPrompts(params.tools, toolChoice, 'tool')
           : undefined;
         options.onToolFraming({ framing, toolPrompt: vanillaToolPrompt });
+      }
+
+      // For a constrained-decoding provider (claude-code) with forced tool use, pin the
+      // reply to the tool-call array contour so the rescue below parses schema-valid text
+      // instead of best-effort free text. The injected prompt above still stands (semantic
+      // guidance + prose fallback). Respect a responseFormat a real output schema already
+      // set (streamText lowers `output` to params.responseFormat), so never clobber it, and
+      // mark that we installed ours so the carrier suppression below only fires for our schema.
+      if (options?.structuredToolCalls && toolChoice.type === 'required' && !params.responseFormat) {
+        params.responseFormat = { type: 'json', schema: buildToolCallArraySchema(params.tools, framing) };
+        (params as any).structuredToolCallsActive = true;
       }
 
       // Convert existing tool-call/tool-result messages to text so the model
@@ -144,28 +209,82 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         const result = await doGenerate();
         params.tools = params.tools ?? (params as any).originalTools;
 
-        // Process the response to rescue tool calls from JSON text if we have tools but not tool calls
-        if (result.content.findIndex(content => content.type === "tool-call") === -1 && params.tools && params.tools.length > 0) {
-          // Extract tool names from the tool definitions
-          const toolNames = new Set(params.tools.map((tool) => tool.name));
-          const newContents: typeof result.content = [];
+        // Whether transformParams installed our StructuredOutput responseFormat for this call.
+        // Gating carrier handling on this (not merely the config flag) keeps a step that carries
+        // a genuine `output` schema from having its real structured output suppressed.
+        const structuredActive = (params as any).structuredToolCallsActive;
 
-          // Go through each text respose
-          result.content.forEach((content) => {
+        // Extract tool names from the tool definitions
+        const toolNames = params.tools ? new Set(params.tools.map((tool) => tool.name)) : new Set<string>();
+
+        // Rescue tool calls from JSON text if we have tools but no *game* tool call yet.
+        // We can't bail on any tool-call part existing: under constrained decoding the
+        // claude-code StructuredOutput carrier arrives as a native tool-call part that carries
+        // our `{ actions: [...] }` wrapper, so the real game call is still hiding in text (or in
+        // that carrier's own input). Only a genuine game tool call means there's nothing to do.
+        const hasGameToolCall = result.content.some(
+          content => content.type === "tool-call" && toolNames.has(content.toolName)
+        );
+        if (!hasGameToolCall && params.tools && params.tools.length > 0) {
+          const toolSchemas = buildToolSchemaKeyMap(params.tools);
+          const newContents: typeof result.content = [];
+          const rescuedCalls: LanguageModelV3ToolCall[] = [];
+          const seen = new Set<string>();
+          const carrierParts: LanguageModelV3ToolCall[] = [];
+
+          // Adds a batch of rescued calls, keeping duplicates that occur within the batch (a model
+          // may legitimately repeat an identical action) while dropping repeats already contributed
+          // by an earlier batch/channel. The filter reads `seen` before any add, so intra-batch
+          // duplicates survive; cross-batch ones do not.
+          const addCalls = (calls: LanguageModelV3ToolCall[]) => {
+            const fresh = calls.filter(call => !seen.has(toolCallKey(call)));
+            for (const call of fresh) seen.add(toolCallKey(call));
+            rescuedCalls.push(...fresh);
+          };
+
+          for (const content of result.content) {
             if (content.type === "text") {
-              const processed = rescueToolCallsFromText(content.text, toolNames);
-              // If tool calls were rescued, add them to the content array
+              const processed = rescueToolCallsFromText(content.text, toolNames, true, toolSchemas);
               if (processed.toolCalls.length > 0) {
                 // Remove the text that contained the tool calls if it was completely consumed
                 if (processed.remainingText) newContents.push({ type: 'text', text: processed.remainingText });
-                // Add the rescued tool calls to content
-                newContents.push(...processed.toolCalls);
-                result.finishReason = { unified: 'tool-calls', raw: result.finishReason?.raw };
-                return;
+                addCalls(processed.toolCalls);
+                continue;
               }
+              newContents.push(content);
+              continue;
+            }
+            // Drop the StructuredOutput carrier; its `{ actions: [...] }` payload is rescued
+            // (from text above, or from its own input as a fallback below).
+            if (content.type === "tool-call" && isCarrierToolName(content.toolName, toolNames, structuredActive)) {
+              carrierParts.push(content);
+              continue;
             }
             newContents.push(content);
-          });
+          }
+
+          // Fallback: unwrap the carrier's own input only when the diverted text produced nothing.
+          // Both channels carry the identical wrapper, so running this after a successful text
+          // rescue would only re-add cross-channel duplicates.
+          if (rescuedCalls.length === 0) {
+            for (const carrier of carrierParts) {
+              const processed = rescueToolCallsFromText(toolInputToString(carrier.input), toolNames, true, toolSchemas);
+              addCalls(processed.toolCalls);
+            }
+          }
+
+          if (rescuedCalls.length > 0) {
+            newContents.push(...rescuedCalls);
+            result.finishReason = { unified: 'tool-calls', raw: result.finishReason?.raw };
+          } else if (carrierParts.length > 0) {
+            // Carrier(s) were suppressed but nothing rescued from any channel. Rather than return an
+            // empty turn (a silent no-op step downstream), surface the raw carrier payload as text so
+            // the failure is visible and recoverable instead of vanishing.
+            logger.log("warn", "structuredToolCalls carrier produced no rescuable tool call; preserving payload as text");
+            for (const carrier of carrierParts) {
+              newContents.push({ type: 'text', text: toolInputToString(carrier.input) });
+            }
+          }
 
           // Update result with new contents
           result.content = newContents;
@@ -176,7 +295,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         // Re-throw the error to let the retry mechanism handle it
         logger.error("Error in wrapGenerate middleware, passing down");
         // Preserve context length errors so they survive the AI SDK's error wrapping
-        (params as any).providerOptions.error = error;
+        ((params as any).providerOptions ??= {}).error = error;
         throw error;
       }
     },
@@ -191,13 +310,27 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
           return { stream, ...rest };
         }
 
+        // Whether transformParams installed our StructuredOutput responseFormat for this call;
+        // gates carrier suppression so a genuine `output` schema survives (see wrapGenerate).
+        const structuredActive = (params as any).structuredToolCallsActive;
+
         // Extract tool names from the tool definitions
         const toolNames = new Set(params.tools.map((tool) => tool.name));
+        const toolSchemas = buildToolSchemaKeyMap(params.tools);
 
         // Track if we've already found tool calls
         let toolCallsFound = false;
         // Buffer for incomplete JSON
         let incompleteBuffers: Record<string, string> = {};
+        // IDs of StructuredOutput carrier tool blocks to suppress. Under constrained decoding the
+        // carrier's `{ actions: [...] }` payload is diverted to text (rescued by the text path),
+        // and the empty carrier tool-call must not leak downstream as an unknown tool.
+        const carrierIds = new Set<string>();
+        // Accumulated input deltas per carrier id, used as a recovery fallback if the terminal
+        // tool-call chunk arrives without its assembled input.
+        const carrierBuffers: Record<string, string> = {};
+        // Dedupe rescued calls across every channel (diverted text + carrier input) this stream.
+        const seenCallKeys = new Set<string>();
 
         const transformStream = new TransformStream<
           LanguageModelV3StreamPart,
@@ -238,11 +371,10 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
 
                   if (!incompleteBuffer.startsWith('```json')) {
                     // Try to rescue tool calls from accumulated buffer - strict first
-                    const processed = rescueToolCallsFromText(incompleteBuffer, toolNames, false);
+                    const processed = rescueToolCallsFromText(incompleteBuffer, toolNames, false, toolSchemas);
                     if (processed.toolCalls.length > 0) {
-                      toolCallsFound = true;
-                      // Emit tool calls as proper stream chunks
-                      emitToolCallChunks(processed.toolCalls, controller);
+                      // Emit tool calls as proper stream chunks (deduped across channels)
+                      if (emitUniqueToolCalls(processed.toolCalls, controller, seenCallKeys)) toolCallsFound = true;
                       // Clear the buffer and put remaining text there
                       let remaining = processed.remainingText ?? "";
                       if (remaining.indexOf("{") !== -1 || remaining.indexOf("<|tool_call") !== -1)
@@ -268,16 +400,67 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
                 let incompleteBuffer = incompleteBuffers[chunk.id] ?? "";
                 if (incompleteBuffer !== "") {
                   // More lenient when the stream is finishing
-                  const processed = rescueToolCallsFromText(incompleteBuffer, toolNames);
+                  const processed = rescueToolCallsFromText(incompleteBuffer, toolNames, true, toolSchemas);
                   if (processed.toolCalls.length > 0) {
-                    toolCallsFound = true;
                     // Emit remaining text if any
                     emitRemainingText(processed.remainingText, controller, chunk.id);
-                    // Emit tool calls
-                    emitToolCallChunks(processed.toolCalls, controller);
+                    // Emit tool calls (deduped across channels)
+                    if (emitUniqueToolCalls(processed.toolCalls, controller, seenCallKeys)) toolCallsFound = true;
                   } else {
                     emitRemainingText(incompleteBuffer, controller, chunk.id);
                   }
+                }
+                controller.enqueue(chunk);
+                break;
+              }
+              case "tool-input-start": {
+                // Begin suppressing a StructuredOutput carrier block (start + deltas + end + call).
+                if (isCarrierToolName((chunk as any).toolName, toolNames, structuredActive)) {
+                  carrierIds.add(chunk.id);
+                  break; // drop
+                }
+                controller.enqueue(chunk);
+                break;
+              }
+              case "tool-input-delta": {
+                // Buffer (rather than forward) the carrier's input deltas, so its payload can still
+                // be recovered if the terminal tool-call chunk arrives without assembled input.
+                if (carrierIds.has(chunk.id)) {
+                  carrierBuffers[chunk.id] = (carrierBuffers[chunk.id] ?? "") + ((chunk as any).delta ?? "");
+                  break;
+                }
+                controller.enqueue(chunk);
+                break;
+              }
+              case "tool-input-end": {
+                // Drop the carrier's input-end chunk (payload handled via text or the buffer above).
+                if (carrierIds.has(chunk.id)) break;
+                controller.enqueue(chunk);
+                break;
+              }
+              case "tool-call": {
+                const isCarrier = carrierIds.has((chunk as any).toolCallId)
+                  || isCarrierToolName(chunk.toolName, toolNames, structuredActive);
+                if (isCarrier) {
+                  // Fallback: unwrap the carrier's wrapper input (or the buffered deltas) when the
+                  // diverted text didn't already produce the game call. Then drop the carrier.
+                  let inputStr = toolInputToString((chunk as any).input);
+                  if (!inputStr.trim() || inputStr.trim() === "{}") {
+                    const buffered = carrierBuffers[(chunk as any).toolCallId];
+                    if (buffered && buffered.trim()) inputStr = buffered;
+                  }
+                  if (inputStr.trim() && inputStr.trim() !== "{}") {
+                    const processed = rescueToolCallsFromText(inputStr, toolNames, true, toolSchemas);
+                    // Deduped: the diverted text has usually already emitted these calls.
+                    if (emitUniqueToolCalls(processed.toolCalls, controller, seenCallKeys)) toolCallsFound = true;
+                    else if (!toolCallsFound) {
+                      // Nothing rescued from any channel: surface the payload as text rather than
+                      // dropping the whole turn to an empty stream (a silent no-op step downstream).
+                      logger.log("warn", "structuredToolCalls carrier produced no rescuable tool call; preserving payload as text");
+                      emitRemainingText(inputStr, controller, (chunk as any).toolCallId);
+                    }
+                  }
+                  break; // drop the carrier tool-call
                 }
                 controller.enqueue(chunk);
                 break;
@@ -312,7 +495,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         // Re-throw the error to let the retry mechanism handle it
         logger.error("Error in wrapStream middleware, passing down");
         // Preserve context length errors so they survive the AI SDK's error wrapping
-        (params as any).providerOptions.error = error;
+        ((params as any).providerOptions ??= {}).error = error;
         throw error;
       }
     }

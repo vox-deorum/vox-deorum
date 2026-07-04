@@ -17,6 +17,7 @@ import {
   createToolPrompts,
   convertPromptToolMessagesToText,
   reframeToolWording,
+  buildToolCallArraySchema,
 } from '../../../src/utils/models/tool-rescue/prompt.js';
 
 const tools = [
@@ -27,6 +28,42 @@ const tools = [
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
 ];
+
+describe('buildToolCallArraySchema', () => {
+  it("wraps the array under 'tools' and enumerates the names under default framing", () => {
+    const schema: any = buildToolCallArraySchema(tools);
+    // Root must be an object: a forced tool call's input_schema.type must be 'object'.
+    expect(schema.type).toBe('object');
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(['tools']);
+    expect(schema.properties.tools.type).toBe('array');
+    const item = schema.properties.tools.items;
+    expect(item.type).toBe('object');
+    expect(item.additionalProperties).toBe(false);
+    expect(item.required).toEqual(['tool', 'arguments']);
+    expect(item.properties.tool.enum).toEqual(['send_message']);
+    // Shape-only: the action name is constrained but arguments stays an open object.
+    expect(item.properties.arguments).toEqual({ type: 'object' });
+  });
+
+  it("wraps under 'actions' and uses the 'action' key under action framing", () => {
+    const schema: any = buildToolCallArraySchema(tools, 'action');
+    expect(schema.required).toEqual(['actions']);
+    const item = schema.properties.actions.items;
+    expect(item.required).toEqual(['action', 'arguments']);
+    expect(item.properties.action.enum).toEqual(['send_message']);
+    expect(item.properties.tool).toBeUndefined();
+  });
+
+  it('excludes provider tools from the enum (mirrors createToolPrompt)', () => {
+    const withProvider = [
+      ...tools,
+      { type: 'provider' as const, id: 'anthropic.web_search', name: 'web_search', args: {} },
+    ];
+    const schema: any = buildToolCallArraySchema(withProvider as any);
+    expect(schema.properties.tools.items.properties.tool.enum).toEqual(['send_message']);
+  });
+});
 
 describe('createToolPrompts', () => {
   describe("default ('tool') framing", () => {

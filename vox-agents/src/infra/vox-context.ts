@@ -796,7 +796,7 @@ export class VoxContext<TParameters extends AgentParameters> {
             toolChoice: stepModel.provider === "anthropic" && stepToolChoice === "required" ? "auto" : stepToolChoice as any,
             experimental_context: parameters,
             // Output schema for tool as agent
-            experimental_output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,
+            output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,
             // Stop after one step
             stopWhen: () => true,
             // Events

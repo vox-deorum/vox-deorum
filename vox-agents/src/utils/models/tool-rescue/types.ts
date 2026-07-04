@@ -39,10 +39,23 @@ export interface ToolRescueOptions {
   /**
    * Called once during `transformParams` for every prompt-mode injection with
    * the resolved `framing` (an explicit fact, recorded separately from prompt
-   * content) and — only when `framing === 'action'` — the injected prompt in
+   * content) and, only when `framing === 'action'`, the injected prompt in
    * **vanilla `'tool'` wording**. Lets the caller record the framing state and
    * the pre-adaptation prompt to telemetry without inferring one from the other,
    * so the adaptation is verifiable and Oracle can read a vanilla prompt.
    */
   onToolFraming?: (info: { framing: ToolCallFraming; toolPrompt?: string }) => void;
+  /**
+   * If true, and the step forces tool use (`toolChoice.type === 'required'`) and no
+   * real `output` schema already occupies `responseFormat`, a JSON `responseFormat` is
+   * set so the provider constrained-decodes the reply to the tool-call contour. The wire
+   * schema is object-wrapped (`{ "<framing>s": [{ "<framing>": "<name>", "arguments":
+   * {...} }] }`, built by `buildToolCallArraySchema`), because a constrained-decoding
+   * provider realizes `responseFormat` as a forced tool whose `input_schema.type` must be
+   * `'object'`; the rescue unwraps that array transparently. The provider emits the payload
+   * as ordinary text, which the existing rescue then parses into tool calls, turning the
+   * best-effort parse into a parse of schema-valid text. Only enable for providers whose
+   * `responseFormat` triggers constrained decoding (claude-code); others ignore it or 400.
+   */
+  structuredToolCalls?: boolean;
 }

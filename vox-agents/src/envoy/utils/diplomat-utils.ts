@@ -72,8 +72,13 @@ export function formatDealContext(
   if (promiseAgreeability) blocks.push(promiseAgreeability);
 
   if (reduction.status === "open") {
+    // This block lands after the turn hint (getInitialMessages puts it last, closest to the
+    // action), and the author is known here — so state the open-deal ask directly instead of
+    // leaving the model an if-else, overriding the hint's generic gather-intelligence nudge.
     blocks.push(
-      "This deal awaits a response. If it came from the counterpart, call your negotiator with a briefing; if you authored it, await their reply."
+      active.SpeakerID === viewerID
+        ? "Your proposal awaits the counterpart's reply. Do not call the negotiator again until they respond."
+        : "The counterpart's deal is on the table. Hand it to the negotiator with the `call-negotiator` tool."
     );
   }
   return blocks.join("\n\n");
