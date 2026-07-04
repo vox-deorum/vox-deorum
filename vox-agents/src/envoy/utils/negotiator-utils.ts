@@ -165,7 +165,7 @@ function renderPromiseDuration(promiseType: PromiseTerm["promiseType"], turns: n
 
 /** Append a "## <title>" block when it has rows. */
 function pushMenuCategory(into: string[], title: string, rows: string[]): void {
-  if (rows.length > 0) into.push(`### ${title}`, ...rows);
+  if (rows.length > 0) into.push(`### ${title}\n`, ...rows);
 }
 
 /**
@@ -284,7 +284,7 @@ function formatSideMenu(
   }
   pushMenuCategory(out, "Promises", promiseRows);
 
-  return out.join("\n\n").trim();
+  return out.join("\n").trim();
 }
 
 /**
@@ -406,7 +406,7 @@ export function formatActiveProposalLedger(
       // way the menu does (Coop War "war begins in N turns", others "lasts N turns" / "indefinitely").
       .map((p) => `- ${formatPromiseLabel(p)}${detailClause(renderPromiseDuration(p.promiseType, p.duration))}`),
   ];
-  const lines = [`# Deal On The Table (proposal message #${active.messageID})`];
+  const lines = [`# Deal On The Table #${active.messageID}`];
   const give = directionRows(agentID, counterpartID);
   const take = directionRows(counterpartID, agentID);
   if (give.length) lines.push(`## ${name(agentID)} Offers To Give ${name(counterpartID)}`, ...give);

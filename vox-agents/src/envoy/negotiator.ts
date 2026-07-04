@@ -170,9 +170,7 @@ Your goal is to **call EXACTLY ONE terminal tool** after gathering sufficient in
 # Resources
 You can access additional information by calling the following tools.
 - Use the \`get-briefing\` tool to retrieve briefings on Military, Economy, and/or Diplomacy.
-  - Call it when you need strategic intelligence to inform your decisions.
-- Use the \`get-diplomatic-events\` tool to retrieve recent diplomatic history with another player.
-  - Call it when you need to reference past events for negotiation.`.trim();
+  - Call it when you need strategic intelligence to inform your decisions.`.trim();
   }
 
   /**
@@ -218,9 +216,6 @@ You can access additional information by calling the following tools.
       sections.push(formatActiveProposalLedger(input.activeProposal, thread, inspection));
       // Per-term legality + advisory value of the on-the-table deal (only meaningful with a proposal).
       if (inspection) sections.push(`# Inspection (advisory)\n${formatInspection(inspection)}`);
-      sections.push(
-        "Decide on this on-the-table deal: accept-deal, propose-deal (a counter), or reject-deal."
-      );
     } else {
       if (ownPending) {
         sections.push(
@@ -247,7 +242,7 @@ You can access additional information by calling the following tools.
       ...buildGameContextMessages(parameters),
       ...(background ? [{ role: "user" as const, content: background }] : []),
       { role: "user", content: sections.join("\n\n") },
-      { role: "user", content: `You are the deal negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
+      { role: "system", content: `You are the negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool in JSON format to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
     ];
   }
 
