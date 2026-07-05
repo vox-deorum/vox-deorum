@@ -85,11 +85,13 @@ the categorized inventory model + value math are pure helpers (deal-catalog.ts /
           :disabled="!canReject"
           @click="doReject"
         />
-        <span v-if="hasOpenProposal && !activeAuthoredByViewer && isEdited" class="deal-muted">
-          You’ve changed this proposal — send it as a Counter, or Reset to accept the original.
+        <!-- Illegal-term hint first: a red term blocks proposing, countering AND accepting, so it takes
+             precedence over the edited hint below (which suggests Counter — disabled while a term is red). -->
+        <span v-if="hasIllegalTerm && hasTerms" class="deal-muted">
+          Remove or fix the impossible term (red)
         </span>
-        <span v-else-if="hasOpenProposal && !activeAuthoredByViewer && hasIllegalTerm" class="deal-muted">
-          Remove or fix the impossible term (red) to accept.
+        <span v-else-if="hasOpenProposal && !activeAuthoredByViewer && isEdited" class="deal-muted">
+          You’ve changed this proposal — send it as a Counter, or Reset to accept the original.
         </span>
       </template>
 
@@ -223,6 +225,9 @@ const buildCatalogFor = (ownerID: number, otherID: number) =>
     ownerID,
     otherID,
     range: rangeFor(ownerID),
+    // The counterpart's range — a mutual pact is only addable when both sides can trade it (the add
+    // mirrors it onto the other side), so the catalog disables this side's toggle when the other can't.
+    otherRange: rangeFor(otherID),
     currentItems: workingDeal.value.items,
     currentPromises: workingDeal.value.promises,
     defaultDuration: inspection.value?.defaultDuration,
@@ -239,12 +244,13 @@ const hasTerms = computed(() => workingDeal.value.items.length > 0 || workingDea
 const hasOpenProposal = computed(() => reduction.value.active !== null && reduction.value.status === 'open');
 /** The active open offer was authored by the local viewer, so it can be retracted but not accepted. */
 const activeAuthoredByViewer = computed(() => reduction.value.active?.SpeakerID === props.leftID);
-/** A term in the current proposal is structurally impossible right now — blocks acceptance. */
+/** A term in the current draft is structurally impossible right now — blocks any submission
+ *  (propose/counter/accept); the game would reject it, so it must never leave the board. */
 const hasIllegalTerm = computed(() => (inspection.value?.items ?? []).some((it) => !it.legality));
 /** State-only guard for opening a fresh proposal; `busy` is layered on for button disabling. */
-const mayPropose = computed(() => hasTerms.value && !hasOpenProposal.value);
+const mayPropose = computed(() => hasTerms.value && !hasOpenProposal.value && !hasIllegalTerm.value);
 /** State-only guard for answering an open proposal with a counter. */
-const mayCounter = computed(() => hasTerms.value && hasOpenProposal.value);
+const mayCounter = computed(() => hasTerms.value && hasOpenProposal.value && !hasIllegalTerm.value);
 /**
  * The draft diverges from the loaded proposal — by a term edit OR a message edit. `Accept` records
  * the STORED proposal (by `proposalMessageID`, carrying its original terms and message), so any

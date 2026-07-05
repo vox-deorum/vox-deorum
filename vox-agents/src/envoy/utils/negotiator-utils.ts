@@ -416,18 +416,18 @@ export function formatActiveProposalLedger(
 }
 
 /**
- * Reframe an {@link IllegalDealError} (one `"ITEM_TYPE (from→to): reason"` line per untradeable item)
- * into first-person Give/Take feedback the model can act on. A reason whose giver is the negotiator's
- * own seat is a Give; otherwise it is a Take. No deal was written, so the model can adjust and retry.
+ * Reframe an {@link IllegalDealError} into first-person Give/Take feedback the model can act on. Each
+ * structured detail whose giver is the negotiator's own seat is a Give; otherwise it is a Take. A
+ * structural error carries no per-item details (the endpoint/targeting guards), so its human-readable
+ * reasons are relayed verbatim. No deal was written, so the model can adjust and retry.
  */
 function formatIllegalDealError(error: IllegalDealError, agentID: number): string {
-  const lines = error.reasons.map((r) => {
-    const m = r.match(/^(\w+)\s*\((\d+)\s*→\s*(\d+)\):\s*(.*)$/);
-    if (!m) return `- ${r}`;
-    const [, itemType, from, , reason] = m;
-    const side = Number(from) === agentID ? "Give" : "Take";
-    return `- [${side}] ${itemTypeLabel(itemType)}: ${reason}`;
-  });
+  const lines = error.details.length
+    ? error.details.map((d) => {
+        const side = d.fromPlayerID === agentID ? "Give" : "Take";
+        return `- [${side}] ${itemTypeLabel(d.itemType)}: ${d.reasons.join("; ") || "not tradeable"}`;
+      })
+    : error.reasons.map((r) => `- ${r}`);
   return ["This deal can't be made. Adjust these terms and try again:", ...lines].join("\n");
 }
 

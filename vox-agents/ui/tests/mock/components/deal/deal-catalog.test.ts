@@ -116,6 +116,52 @@ describe('deal-catalog', () => {
     expect(keys).toContain('PEACE_TREATY');
   });
 
+  it('disables a mutual pact when only the counterpart side can’t trade it (its mirror is auto-added)', () => {
+    // A DoF/pact/peace auto-adds its mirror on the other side when clicked, so it is unaddable unless
+    // BOTH sides can trade it — this side's row must reflect the counterpart's illegality.
+    const cats = build({
+      otherRange: range({ declarationOfFriendship: { legal: false, reasons: ['Not tradeable under current game state'] } }),
+    });
+    const dof = cat(cats, 'toggles').rows.find((r) => r.key === 'DECLARATION_OF_FRIENDSHIP')!;
+    expect(dof.legal).toBe(false);
+    expect(dof.reasons).toEqual(['Not tradeable under current game state']);
+  });
+
+  it('dedupes an identical reason reported by both sides into one tooltip line', () => {
+    const reason = 'Not tradeable under current game state';
+    const cats = build({
+      range: range({ defensivePact: { legal: false, reasons: [reason] } }),
+      otherRange: range({ defensivePact: { legal: false, reasons: [reason] } }),
+    });
+    const dp = cat(cats, 'toggles').rows.find((r) => r.key === 'DEFENSIVE_PACT')!;
+    expect(dp.legal).toBe(false);
+    expect(dp.reasons).toEqual([reason]);
+  });
+
+  it('ignores the counterpart range for non-mutual toggles (they are not auto-mirrored)', () => {
+    const cats = build({ otherRange: range({ openBorders: { legal: false, reasons: ['No embassy'] } }) });
+    const ob = cat(cats, 'toggles').rows.find((r) => r.key === 'OPEN_BORDERS')!;
+    expect(ob.legal).toBe(true);
+    expect(ob.reasons).toEqual([]);
+  });
+
+  it('falls back to own-side legality for a mutual pact when the counterpart range is unknown', () => {
+    // otherRange omitted → the pairing can't be known, so the pact keeps its own-side legality (today's behavior).
+    const dof = cat(build(), 'toggles').rows.find((r) => r.key === 'DECLARATION_OF_FRIENDSHIP')!;
+    expect(dof.legal).toBe(true);
+    expect(dof.reasons).toEqual([]);
+  });
+
+  it('disables a mutual pact present on this side but absent from a known counterpart range', () => {
+    // Own-side absence hides the toggle (ruleset-gated); counterpart-side absence instead disables it,
+    // since a symmetric add would be guaranteed untradeable on the missing side.
+    const other = range();
+    delete (other as Partial<NormalizedSideRange>).declarationOfFriendship;
+    const dof = cat(build({ otherRange: other }), 'toggles').rows.find((r) => r.key === 'DECLARATION_OF_FRIENDSHIP')!;
+    expect(dof.legal).toBe(false);
+    expect(dof.reasons).toEqual(['Not available for the other side right now.']);
+  });
+
   it('shows singletons already on the table as selected', () => {
     const currentItems: TradeItem[] = [{ fromPlayerID: 0, toPlayerID: 1, itemType: 'OPEN_BORDERS' }];
     const cats = build({ currentItems });

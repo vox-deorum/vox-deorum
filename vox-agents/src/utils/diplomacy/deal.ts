@@ -26,7 +26,7 @@
 import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
-import { hydrateDealRow } from "./transcript-utils.js";
+import { hydrateDealRow, identityOf } from "./transcript-utils.js";
 import { appendCloseMessage, readTranscript } from "./transcript.js";
 import { createLogger } from "../logger.js";
 import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
@@ -41,6 +41,8 @@ import {
   type DealTranscriptMessage,
   type PerItemValueMap,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
+// Friendly, game-facing labels for illegal-item error lines (single source of truth in mcp-server).
+import { formatItemLabel, itemTypeLabel } from "../../../../mcp-server/dist/utils/deal-format.js";
 import type {
   NormalizedSideRange,
   PromiseTargetInfo,
@@ -48,18 +50,32 @@ import type {
 
 const logger = createLogger("diplomacy:deal");
 
+/** One untradeable trade item, structured so programmatic consumers (the negotiator's Give/Take
+ *  reframe) never have to parse the human-readable reason strings. */
+export interface IllegalTradeItem {
+  itemType: string;
+  fromPlayerID: number;
+  toPlayerID: number;
+  reasons: string[];
+}
+
 /**
  * Thrown when a deal carries a trade item the game reports as untradeable. This is a client/agent
  * error (a bad proposal), distinct from a bridge/store failure, so callers can map it to a 4xx
  * (UI) or relay the per-item reasons back to the model (negotiator) instead of treating it as 5xx.
  */
 export class IllegalDealError extends Error {
-  /** One line per illegal trade item: "ITEM_TYPE (from→to): reason". */
+  /** Human-readable display lines, one per illegal trade item ("<friendly label> (<giver> → <receiver>): reason").
+   *  The joined form is the error message; the UI toast shows it verbatim. */
   readonly reasons: string[];
-  constructor(reasons: string[]) {
+  /** Structured per-item detail for programmatic consumers (empty for structural validation errors,
+   *  which carry no trade item — the negotiator then relays `reasons` verbatim). */
+  readonly details: IllegalTradeItem[];
+  constructor(reasons: string[], details: IllegalTradeItem[] = []) {
     super(`Deal contains untradeable items: ${reasons.join("; ")}`);
     this.name = "IllegalDealError";
     this.reasons = reasons;
+    this.details = details;
   }
 }
 
@@ -281,13 +297,24 @@ export async function appendDealProposal(
   // Hard legality guard: a proposal carrying any untradeable trade item must never be archived.
   // The same per-term legality that drives the board's red rows now gates the write — so a hidden
   // category (bonus resource, ruleset-disabled RA/tech/vassalage) or any pairing-illegal term is
-  // rejected here, for both the UI and the negotiator paths that share this function.
-  const illegal = inspection.items.filter((it) => !it.legality);
+  // rejected here, for both the UI and the negotiator paths that share this function. The inspected
+  // items are index-aligned with `symmetricDeal.items`, so the full TradeItem (for a friendly,
+  // data-bearing label) is available by index; civ names come from the thread's stored identities.
+  const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
+  const illegal = inspection.items.map((it, index) => ({ it, index })).filter(({ it }) => !it.legality);
   if (illegal.length > 0) {
     throw new IllegalDealError(
-      illegal.map(
-        (it) => `${it.itemType} (${it.fromPlayerID}→${it.toPlayerID}): ${it.reasons.join("; ") || "not tradeable"}`
-      )
+      illegal.map(({ it, index }) => {
+        const item = symmetricDeal.items[index];
+        const label = item ? formatItemLabel(item) : itemTypeLabel(it.itemType);
+        return `${label} (${civName(it.fromPlayerID)} → ${civName(it.toPlayerID)}): ${it.reasons.join("; ") || "not tradeable"}`;
+      }),
+      illegal.map(({ it }) => ({
+        itemType: it.itemType,
+        fromPlayerID: it.fromPlayerID,
+        toPlayerID: it.toPlayerID,
+        reasons: it.reasons,
+      }))
     );
   }
 

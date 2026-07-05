@@ -274,7 +274,44 @@ describe('appendDealProposal', () => {
       items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'RESOURCES' as const, resourceID: 9, quantity: 1 }],
       promises: [],
     };
-    await expect(appendDealProposal(thread(), 1, 'deal-proposal', deal)).rejects.toThrow(IllegalDealError);
+    const err = await appendDealProposal(thread(), 1, 'deal-proposal', deal).catch((e) => e);
+    expect(err).toBeInstanceOf(IllegalDealError);
+    // The message uses the friendly, data-bearing item label and civ-name fallback ("Player <id>" with
+    // no identities set) — never the raw enum. It reaches the UI toast verbatim.
+    expect(err.message).toContain('Resource #9 ×1 (Player 1 → Player 3): Bonus resources cannot be traded.');
+    expect(err.message).not.toContain('RESOURCES');
+    // Structured details let the negotiator reframe Give/Take without parsing the message.
+    expect(err.details).toEqual([
+      { itemType: 'RESOURCES', fromPlayerID: 1, toPlayerID: 3, reasons: ['Bonus resources cannot be traded.'] },
+    ]);
+    expect(mcp.calls('append-message')).toHaveLength(0);
+  });
+
+  it('names the illegal item and civs with friendly labels when the thread carries identities', async () => {
+    // The reported bug: DECLARATION_OF_FRIENDSHIP (4→1) → a friendly "Declaration of Friendship
+    // (Rome → Egypt)". Civ names come from the thread's stored identities; the label from the item type.
+    const inspection: InspectDealResult = {
+      items: [
+        { fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP', legality: false, reasons: ['Not tradeable under current game state'], valueIfIGive: 0, valueIfIReceive: 0 },
+      ],
+      promises: [],
+      tradableRange: {},
+    };
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+
+    const deal = {
+      version: 1 as const,
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP' as const }],
+      promises: [],
+    };
+    const named = thread({
+      player1Identity: { name: 'Rome', leader: 'Augustus' },
+      player2Identity: { name: 'Egypt', leader: 'Cleopatra' },
+    });
+    const err = await appendDealProposal(named, 1, 'deal-proposal', deal).catch((e) => e);
+    expect(err).toBeInstanceOf(IllegalDealError);
+    expect(err.message).toContain('Declaration of Friendship (Rome → Egypt)');
+    expect(err.message).not.toContain('DECLARATION_OF_FRIENDSHIP');
     expect(mcp.calls('append-message')).toHaveLength(0);
   });
 

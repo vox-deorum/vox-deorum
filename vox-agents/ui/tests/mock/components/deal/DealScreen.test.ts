@@ -234,7 +234,7 @@ describe('DealScreen', () => {
     expect(labels).toContain('Counter');
   });
 
-  it('keeps a stale-impossible proposal visible in red and blocks Accept (Counter/Refuse stay available)', async () => {
+  it('keeps a stale-impossible proposal visible in red and blocks Accept AND Counter (Refuse stays available)', async () => {
     api.getDealMessages.mockResolvedValue({
       messages: [incomingProposal({ Payload: { Deal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 0, itemType: 'OPEN_BORDERS' }], promises: [] } } })],
     });
@@ -249,9 +249,62 @@ describe('DealScreen', () => {
     expect(wrapper.find('.deal-offer-row-illegal').exists()).toBe(true);
 
     const button = (label: string) => wrapper.findAll('button').find((b) => b.text() === label)!;
+    // A red term blocks every submission now: Accept AND Counter are disabled (previously Counter stayed
+    // enabled — countering a stale-impossible proposal now requires removing the red row first). Refuse
+    // remains the immediate escape hatch, and a hint explains the disabled buttons.
     expect(button('Accept').attributes('disabled')).toBeDefined();
-    expect(button('Counter').attributes('disabled')).toBeUndefined();
+    expect(button('Counter').attributes('disabled')).toBeDefined();
     expect(button('Refuse').attributes('disabled')).toBeUndefined();
+    expect(wrapper.text()).toContain('Remove or fix the impossible term');
+  });
+
+  it('disables Propose (with a hint, no send) while the draft carries an illegal term', async () => {
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    // Add a term legal at click time, then have the debounced re-inspection report it illegal.
+    await rowInPanel(wrapper, '.deal-panel-left', 'Open Borders')!.trigger('click');
+    api.inspectDeal.mockResolvedValue(
+      inspectionResult([{ fromPlayerID: 0, toPlayerID: 1, itemType: 'OPEN_BORDERS', legality: false, reasons: ['No longer possible'], valueIfIGive: 0, valueIfIReceive: 0 }])
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await flushPromises();
+
+    const proposeBtn = wrapper.findAll('button').find((b) => b.text() === 'Propose')!;
+    expect(proposeBtn.attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain('Remove or fix the impossible term');
+
+    // Even if the disabled button is clicked, the guard refuses to hand a red deal up.
+    await proposeBtn.trigger('click');
+    await flushPromises();
+    expect(wrapper.emitted('send')).toBeFalsy();
+  });
+
+  it('disables a mutual pact on BOTH panels when only one side can trade it', async () => {
+    // Side 0 can't declare friendship; side 1 can. Because clicking auto-mirrors the pact onto side 0,
+    // side 1's row must also be disabled — otherwise it would build an unsubmittable one-sided pact.
+    api.inspectDeal.mockResolvedValue(
+      inspectionResult([], {
+        tradableRange: {
+          '0': range({ declarationOfFriendship: { legal: false, reasons: ['Not tradeable under current game state'] } }),
+          '1': range(),
+        },
+      })
+    );
+    const wrapper = mountScreen();
+    await flushPromises();
+
+    const leftDof = rowInPanel(wrapper, '.deal-panel-left', 'Declaration of Friendship')!;
+    const rightDof = rowInPanel(wrapper, '.deal-panel-right', 'Declaration of Friendship')!;
+    expect(leftDof.classes()).toContain('deal-row-illegal');
+    expect(leftDof.attributes('aria-disabled')).toBe('true');
+    expect(rightDof.classes()).toContain('deal-row-illegal');
+    expect(rightDof.attributes('aria-disabled')).toBe('true');
+
+    // A non-mutual toggle on the still-legal side is unaffected (never auto-mirrored).
+    const rightOb = rowInPanel(wrapper, '.deal-panel-right', 'Open Borders')!;
+    expect(rightOb.classes()).not.toContain('deal-row-illegal');
+    expect(rightOb.attributes('aria-disabled')).toBe('false');
   });
 
   it('does not counter when the active proposal changed identity before submit', async () => {

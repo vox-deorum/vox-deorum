@@ -16,6 +16,7 @@ import type { TradeItem, PromiseTerm, NormalizedSideRange, CandidateLegality, Pr
 import {
   PROMISE_NEEDS_TARGET,
   TOGGLE_ITEMS,
+  SYMMETRIC_ITEM_TYPES,
   sideGives,
 } from './deal-helpers';
 import {
@@ -261,6 +262,10 @@ export function buildSideCatalog(args: {
   ownerID: number;
   otherID: number;
   range: NormalizedSideRange | undefined;
+  /** The COUNTERPART's range. A mutual pact auto-adds its mirror on the other side (`addItemWithMirror`),
+   *  so it is only addable when BOTH sides can trade it — this side's toggle is disabled when the other
+   *  side reports it illegal. Omitted ⇒ own-side legality only (can't know the pairing). */
+  otherRange?: NormalizedSideRange;
   currentItems: TradeItem[];
   currentPromises: PromiseTerm[];
   defaultDuration: number | undefined;
@@ -270,7 +275,7 @@ export function buildSideCatalog(args: {
   relationshipDuration: number | undefined;
   promiseTargets: PromiseTargetInfo[];
 }): InventoryCategory[] {
-  const { ownerID, otherID, range, currentItems, currentPromises, defaultDuration, peaceDuration, relationshipDuration, promiseTargets } = args;
+  const { ownerID, otherID, range, otherRange, currentItems, currentPromises, defaultDuration, peaceDuration, relationshipDuration, promiseTargets } = args;
   // The fixed, game-set durations bundle; default terms resolve their read-only duration by item type.
   const durations: DealDurations = { defaultDuration, peaceDuration, relationshipDuration };
   const ownerGives = (predicate: (i: TradeItem) => boolean): boolean =>
@@ -377,12 +382,24 @@ export function buildSideCatalog(args: {
   // 6. Single-shot toggles (embassy, open borders, pacts, friendship, maps, peace, vassalage).
   // A ruleset-gated toggle (research agreement / vassalage) is ABSENT from the range when the
   // game option forbids it — skip it so it renders nowhere, rather than showing it red.
+  //
+  // A mutual pact (DoF / defensive pact / research agreement / peace) auto-adds its mirror on the
+  // OTHER side when clicked (`addItemWithMirror`), so a one-sided add is impossible: the row is only
+  // addable when both sides can trade it. AND the two ranges' legality and merge (deduped) their
+  // reasons — a slot present on this side but absent from a known `otherRange` means the mirror
+  // would be untradeable, so disable it. `otherRange` undefined ⇒ own-side legality only.
   const toggles: InventoryRow[] = range
     ? TOGGLE_ITEMS.flatMap((t) => {
         const cand = range[t.rangeKey] as CandidateLegality | undefined;
         if (!cand) return [];
+        const mirror = SYMMETRIC_ITEM_TYPES.has(t.itemType) && otherRange
+          ? (otherRange[t.rangeKey] as CandidateLegality | undefined)
+              ?? { legal: false, reasons: ['Not available for the other side right now.'] }
+          : undefined;
+        const legal = cand.legal && (mirror?.legal ?? true);
+        const reasons = mirror ? [...new Set([...cand.reasons, ...mirror.reasons])] : cand.reasons;
         return [itemRow(
-          t.itemType, t.label, cand.legal, cand.reasons,
+          t.itemType, t.label, legal, reasons,
           isSingletonSelected(t.itemType, ownerID, currentItems),
           defaultItemFor(t.itemType, ownerID, otherID, { durations })
         )];
