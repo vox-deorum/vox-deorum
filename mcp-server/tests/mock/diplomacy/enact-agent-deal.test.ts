@@ -1,8 +1,9 @@
 /**
- * Tests for the stage-5 stub enact-agent-deal tool: it records deal-accept + deal-enacted
- * against a proposal (the transcript reduces to an agreed/enacted deal) WITHOUT applying any
- * in-game effect, and is idempotent on the proposal's deal-enacted record. Runs against an
- * in-memory KnowledgeStore — no bridge-service / DLL.
+ * Tests for the stage-6 enact-agent-deal tool: it enacts the deal in-game (via the mocked
+ * `enactDeal` bridge call), records deal-accept + deal-enacted against a proposal, and is
+ * idempotent on the proposal's deal-enacted record. A bridge error or un-enacted result now
+ * throws and writes nothing. Runs against an in-memory KnowledgeStore with `enactDeal` stubbed —
+ * no real bridge-service / DLL.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -28,13 +29,11 @@ beforeEach(async () => {
   store = await setupDiplomacyStore(10);
   await seedPlayer(store, 1);
   await seedPlayer(store, 3);
-  // The enactment legality re-check inspects the stored deal via the bridge. These store-only
-  // tests have no bridge, so stub it to report all-legal by default (individual tests override).
-  vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue({
+  // Enactment calls the DLL enact path via the bridge. These store-only tests have no bridge, so
+  // stub it to report a successful enactment by default (individual tests override to fail/refuse).
+  vi.spyOn(inspectDealUtil, 'enactDeal').mockResolvedValue({
+    enacted: true,
     items: [],
-    range: {},
-    defaultDuration: 30,
-    promiseTargets: [],
   } as any);
 });
 
@@ -61,14 +60,14 @@ async function seedProposal(
   return row.ID;
 }
 
-describe('enact-agent-deal (stub)', () => {
-  it('records deal-accept + deal-enacted against the proposal, accepter defaulting to the recipient', async () => {
+describe('enact-agent-deal', () => {
+  it('enacts the deal and records deal-accept + deal-enacted, accepter defaulting to the recipient', async () => {
     const proposalID = await seedProposal();
 
     const result = await enact.execute({ ProposalMessageID: proposalID } as any);
 
     expect(result.AlreadyEnacted).toBe(false);
-    expect(result.Enacted).toBe(false); // stub: no in-game effect
+    expect(result.Enacted).toBe(true); // enacted in-game (mocked bridge)
     expect(typeof result.AcceptMessageID).toBe('number');
     expect(typeof result.EnactedMessageID).toBe('number');
 
@@ -223,45 +222,45 @@ describe('enact-agent-deal (stub)', () => {
     await expect(enact.execute({ ProposalMessageID: text.ID } as any)).rejects.toThrow(/not a deal-proposal or deal-counter/);
   });
 
-  it('refuses to enact a deal the re-inspection reports as illegal, writing nothing', async () => {
+  it('refuses to enact a deal the DLL reports as un-enacted, writing nothing', async () => {
     const proposalID = await seedProposal(3, {
       version: 1,
       items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'RESEARCH_AGREEMENT' }],
       promises: [],
     });
-    // The deal turned illegal between authoring and acceptance (e.g. a rule/state change).
-    vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue({
-      items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'RESEARCH_AGREEMENT', legal: false, reason: 'Research agreements are disabled.', valueToGiver: 0, valueToReceiver: 0 }],
-      range: {},
-      defaultDuration: 30,
-      promiseTargets: [],
+    // The deal turned illegal between authoring and acceptance (e.g. a rule/state change), so the
+    // enact-mode script validates up front, writes nothing, and returns enacted = false + reasons.
+    vi.spyOn(inspectDealUtil, 'enactDeal').mockResolvedValue({
+      enacted: false,
+      reasons: ['Item 1 (RESEARCH_AGREEMENT): Research agreements are disabled.'],
+      items: [],
     } as any);
 
-    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(/untradeable/i);
+    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(/Research agreements are disabled/);
     expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
     expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
   });
 
-  it('still enacts when the bridge cannot inspect (null) — the authoring guard already vetted it', async () => {
+  it('throws and writes nothing when the bridge is unavailable (null) — inverted from the stage-5 stub', async () => {
     const proposalID = await seedProposal();
-    vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue(null as any);
+    vi.spyOn(inspectDealUtil, 'enactDeal').mockResolvedValue(null as any);
 
-    const result = await enact.execute({ ProposalMessageID: proposalID } as any);
-    expect(typeof result.EnactedMessageID).toBe('number');
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
+    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(/bridge is unavailable/);
+    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
+    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
   });
 
-  it('enacts a promise-only / item-less deal even when the bridge encodes items as {} (empty Lua table)', async () => {
-    const proposalID = await seedProposal();
-    // The live bridge returns an empty list as {} (not []); the guard must coerce, not throw.
-    vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue({
-      items: {},
-      range: {},
-      defaultDuration: 30,
-      promiseTargets: [],
-    } as any);
+  it('enacts a promise-only / item-less deal', async () => {
+    const proposalID = await seedProposal(3, {
+      version: 1,
+      items: [],
+      promises: [{ promiserID: 3, recipientID: 1, promiseType: 'MILITARY' }],
+    });
+    // The enact-mode script applies the promise and Deal:Enact is a no-op returning true for no items.
+    vi.spyOn(inspectDealUtil, 'enactDeal').mockResolvedValue({ enacted: true, items: [] } as any);
 
     const result = await enact.execute({ ProposalMessageID: proposalID } as any);
+    expect(result.Enacted).toBe(true);
     expect(typeof result.EnactedMessageID).toBe('number');
     expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
   });

@@ -15,8 +15,8 @@
  *  - `deal-accept` / `deal-reject` / `deal-enacted` reference the proposal they answer via
  *    `Payload.ProposalMessageID`;
  *  - **agreement** exists only when the active proposal has the required acceptance from its
- *    recipient and no later counter/reject supersedes it; `deal-enacted` records that
- *    orchestration succeeded for that proposal (the in-game transfer itself lands in stage 6).
+ *    recipient and no later counter/reject supersedes it; `deal-enacted` records that the deal was
+ *    enacted in-game for that proposal (its trade items transferred and promise commitments applied).
  */
 
 import type { TranscriptMessage } from "./transcript-utils.js";

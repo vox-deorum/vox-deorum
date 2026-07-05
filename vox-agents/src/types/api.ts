@@ -378,8 +378,8 @@ export interface DeleteChatResponse {
 // The BLOCKING structured deal endpoints — inspect / reject / accept / deals — each under
 // `/api/agents/chat/:chatId/deal/*`, returning the updated thread with no streamed reply. Proposal &
 // counter are NOT here: they commit + stream the diplomat's reply through the unified
-// `/api/agents/message` path (a `deal` body, see DealMove). In preview mode the human may reject or
-// retract; acceptance is wired but deferred to the enactment route (stage 6).
+// `/api/agents/message` path (a `deal` body, see DealMove). The human may reject or retract;
+// acceptance routes through the enactment route, which enacts the deal in-game.
 // ============================================================================
 
 /**
@@ -398,7 +398,7 @@ export interface DealRejectRequest {
   content?: string;
 }
 
-/** Request to accept an earlier proposal (wired in stage 4, enacted from stage 6). */
+/** Request to accept an earlier proposal; acceptance enacts the deal in-game via the enactment route. */
 export interface DealAcceptRequest {
   proposalMessageID: number;
 }

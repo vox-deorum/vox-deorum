@@ -3,8 +3,9 @@ Component: DealMessageCard
 Purpose: Inline rendering of a deal message inside the conversation stream (the second deal
 surface, alongside the configuring dialog). Shows a proposal/counter's terms (you give / they
 give) with the proposal-time value to you, or a reject notice. Accept / Reject act inline;
-Counter opens the dialog (the parent loads the active proposal there). Preview mode — Accept is
-wired but enactment is deferred to stage 6.
+Counter opens the dialog (the parent loads the active proposal there). Accepting a deal enacts it
+for real in-game (stage 6): the enactment route transfers its trade items and applies its promise
+commitments, then records the agreement.
 -->
 <template>
   <div class="deal-card" :class="{ 'deal-card-mine': mine }">

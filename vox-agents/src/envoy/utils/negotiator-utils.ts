@@ -364,9 +364,9 @@ export function summarizeMove(move: NegotiatorMove, thread: EnvoyThread): string
         "Your negotiator has ACCEPTED the deal on the table.",
         `- Rationale (for you, do not quote): ${move.rationale}`,
         move.enact.alreadyEnacted
-          ? "This deal was already agreed earlier."
+          ? "This deal was already agreed and enacted earlier."
           : "The agreement has been recorded" +
-            (move.enact.enacted ? " and enacted." : " (in-game enactment lands in stage 6)."),
+            (move.enact.enacted ? " and enacted in-game." : " but the deal was not enacted in-game."),
         `- Message to the counterpart: "${move.message}"`,
       ].join("\n");
     case "reject":
@@ -445,8 +445,12 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             proposalMessageID: ni.activeProposal.messageID,
             enact,
           };
-          return `Accepted proposal #${ni.activeProposal.messageID}. Agreement recorded${
-            enact.enacted ? " and enacted" : " (in-game enactment pending stage 6)"
+          return `Accepted proposal #${ni.activeProposal.messageID} ${
+            enact.enacted
+              ? "(enacted)."
+              : enact.alreadyEnacted
+                ? "(enacted earlier)."
+                : "(not enacted)."
           }.`;
         } catch (error) {
           logger.warn("Could not accept stale or invalid proposal", { error });

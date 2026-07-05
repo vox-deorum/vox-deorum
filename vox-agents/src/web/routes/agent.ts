@@ -664,8 +664,8 @@ export function createAgentRoutes(): Router {
   // The BLOCKING deal endpoints — inspect / reject / accept / deals — status writes that return the
   // updated thread with no LLM turn. Propose & counter are NOT here: they commit + stream the reply
   // through /api/agents/message (the deal is the turn's commit point). The Web reaches mcp-server only
-  // through these routes (specs §6, no direct Web→mcp channel). Acceptance is wired but deferred to the
-  // enactment route (stage 6).
+  // through these routes (specs §6, no direct Web→mcp channel). Acceptance routes through the
+  // enactment route (enact-agent-deal), which enacts the deal in-game.
   // ============================================================================
 
   /** Resolve a diplomacy thread for a deal action, or send the appropriate error and return undefined. */
@@ -766,9 +766,9 @@ export function createAgentRoutes(): Router {
    * POST /api/agents/chat/:chatId/deal/accept - Accept a proposal, routing through the
    * enactment route (enact-agent-deal), the sole writer of deal-accept / deal-enacted.
    *
-   * Stage 5: the route records the agreement in the transcript (so it reduces to an agreed
-   * deal) but does NOT yet apply in-game effects — the DLL enactment lands in stage 6. The
-   * accepter defaults server-side to the proposal's recipient (the non-authoring endpoint).
+   * The route enacts the deal in-game (transferring its trade items and applying its promise
+   * commitments) and records the agreement in the transcript (so it reduces to an agreed deal).
+   * The accepter defaults server-side to the proposal's recipient (the non-authoring endpoint).
    */
   router.post('/agents/chat/:chatId/deal/accept', async (req: Request<{ chatId: string }, {}, DealAcceptRequest>, res: Response<GetChatResponse | ErrorResponse>): Promise<Response> => {
     const thread = resolveDealThread(req.params.chatId, res);

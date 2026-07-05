@@ -1489,7 +1489,7 @@
   },
   {
     "name": "enact-agent-deal",
-    "description": "Enact an agreed agent deal by proposal message ID, recording acceptance and enactment in the transcript. STUB: does not yet apply in-game effects (DLL enactment arrives in stage 6).",
+    "description": "Enact an agreed agent deal by proposal message ID: transfer its trade items and apply its promise commitments in-game (bypassing the AI's political refusal, honoring structural legality), then record acceptance and enactment in the transcript. Idempotent: a second enactment of the same proposal is refused.",
     "inputSchema": {
       "type": "object",
       "properties": {

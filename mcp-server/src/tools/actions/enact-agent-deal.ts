@@ -1,21 +1,22 @@
 /**
- * Tool that "enacts" an agreed agent deal (interactive-diplomacy stage 5 — STUB).
+ * Tool that enacts an agreed agent deal for real (interactive-diplomacy stage 6).
  *
  * This is the enactment route: the sole writer of the `deal-accept` and `deal-enacted`
- * transcript records (the public `append-message` tool refuses both — pinned writer-split).
+ * transcript records (the public `append-message` tool refuses both, a pinned writer-split).
  * It takes a proposal message ID (and, optionally, the complete deal object), reduces the
- * conversation to enforce single-enactment, then records the agreement.
+ * conversation to enforce single-enactment, enacts the deal in-game, then records the agreement.
  *
- * **Stage-5 stub boundary.** The *in-game* effect — building the `CvDeal`, validating it
- * structurally, calling the DLL `EnactAgentDeal`, and applying promise commitments — does
- * NOT happen yet (the DLL entrypoint lands in stage 6). Here the tool only *stores the
- * transcript*: it appends `deal-accept` (agreement reached) and `deal-enacted` (orchestration
- * recorded) against the proposal so the transcript reduces to an agreed/enacted deal, while
- * no items change hands. Stage 6 inserts the DLL validation + enactment between the
- * idempotency check and these writes, keeping the tool's external contract identical.
+ * **In-game enactment.** Between the idempotency check and the transcript writes it calls the DLL
+ * enact path (`enactDeal` -> `inspect-deal.lua` enact mode -> `Deal:Enact` + `Player:SetPromise`),
+ * which, in one atomic Lua invocation, validates every trade item and promise, then transfers the
+ * items and applies the promises, bypassing the AI's political refusal while honoring structural
+ * legality. A bridge error or an un-enacted result throws and writes nothing (so a `deal-enacted`
+ * record never outlives a no-op enactment). On success it appends `deal-accept` (agreement reached)
+ * and `deal-enacted` (enactment recorded) against the proposal.
  *
- * Idempotency: the `deal-enacted` record is the idempotency key — a second enactment of a
- * proposal that already has a `deal-enacted` is refused (returns the prior record).
+ * Idempotency: the `deal-enacted` record is the idempotency key. A second enactment of a
+ * proposal that already has a `deal-enacted` is refused (returns the prior record, `Enacted: false`,
+ * since this call did not enact it).
  */
 
 import { ToolBase } from "../base.js";
@@ -24,7 +25,7 @@ import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { knowledgeManager } from "../../server.js";
 import { applyVisibility, composeVisibility } from "../../utils/knowledge/visibility.js";
 import { DealPayloadSchema } from "../../utils/deal-schema.js";
-import { inspectDeal } from "../../utils/lua/inspect-deal.js";
+import { enactDeal } from "../../utils/lua/inspect-deal.js";
 
 /** Proposal/counter message types an enactment may answer. */
 const PROPOSAL_TYPES = new Set(["deal-proposal", "deal-counter"]);
@@ -70,7 +71,7 @@ const EnactAgentDealInputSchema = z.object({
     .int()
     .describe("Append ID of the deal-proposal / deal-counter being enacted"),
   Deal: DealPayloadSchema.optional().describe(
-    "Optional complete deal object. Omit to enact the terms stored on the referenced proposal. (Stage 6 uses this for DLL enactment.)"
+    "Optional complete deal object. When provided it must match the terms stored on the referenced proposal. Omit to enact those stored terms directly."
   ),
   AccepterID: z
     .number()
@@ -88,25 +89,27 @@ const EnactAgentDealOutputSchema = z.object({
   AcceptMessageID: z.number().optional().describe("Append ID of the deal-accept record (absent when already enacted)"),
   EnactedMessageID: z.number().describe("Append ID of the deal-enacted record (existing one when already enacted)"),
   AlreadyEnacted: z.boolean().describe("True when this proposal had already been enacted (no new writes)"),
-  Enacted: z.boolean().describe("Whether the in-game deal was actually enacted (false in the stage-5 stub)"),
+  Enacted: z.boolean().describe("Whether this call enacted the deal in-game (false on the AlreadyEnacted idempotent path)"),
   Turn: z.number(),
 });
 
 /**
- * Tool that records the agreement/enactment of an agent deal in the transcript.
- * Stage-5 stub: stores `deal-accept` + `deal-enacted`, skips the DLL in-game enactment.
+ * Tool that enacts an agreed agent deal in-game and records the agreement in the transcript:
+ * validates + transfers the trade items and applies the promise commitments via the DLL enact path,
+ * then stores `deal-accept` + `deal-enacted`.
  */
 class EnactAgentDealTool extends ToolBase {
   readonly name = "enact-agent-deal";
 
   readonly description =
-    "Enact an agreed agent deal by proposal message ID, recording acceptance and enactment in the transcript. STUB: does not yet apply in-game effects (DLL enactment arrives in stage 6).";
+    "Enact an agreed agent deal by proposal message ID: transfer its trade items and apply its promise commitments in-game (bypassing the AI's political refusal, honoring structural legality), then record acceptance and enactment in the transcript. Idempotent: a second enactment of the same proposal is refused.";
 
   readonly inputSchema = EnactAgentDealInputSchema;
 
   readonly outputSchema = EnactAgentDealOutputSchema;
 
-  // Not read-only — it writes transcript records — but it does not (yet) mutate game state.
+  // Not read-only: it enacts the deal in-game (transfers items, applies promises) and writes
+  // transcript records.
   readonly annotations: ToolAnnotations = { readOnlyHint: false };
 
   readonly metadata = {
@@ -194,31 +197,34 @@ class EnactAgentDealTool extends ToolBase {
         throw new Error(`AccepterID ${accepterID} must be the proposal recipient (${recipientID})`);
       }
 
-      // ── Legality re-check (stage-6 DLL EnactAgentDeal will build on this). A proposal that was
-      //    legal when authored can turn illegal before acceptance (game state moved), so re-inspect
-      //    the stored terms and refuse to enact an untradeable deal rather than record a bad one.
-      //    If the bridge can't inspect right now (null or error), the authoring-time guard already
-      //    vetted these terms, so a transient gap should not block enactment — we proceed. ──
-      let inspectionItems: { itemType: string; legal: boolean; reason: string }[] = [];
-      try {
-        const inspection = await inspectDeal(Player1ID, Player2ID, storedDeal.data.items);
-        // The Lua bridge encodes an empty list as {} (not []), so an item-less / promise-only
-        // deal would arrive non-array — coerce before filtering (mirrors the inspect tool's asArray).
-        inspectionItems = Array.isArray(inspection?.items) ? inspection.items : [];
-      } catch (error) {
-        inspectionItems = []; // bridge unavailable — fall through (authoring guard already vetted)
-      }
-      const illegal = inspectionItems.filter((it) => !it.legal);
-      if (illegal.length > 0) {
+      // ── Enact the deal in-game (stage 6). The whole validate, then enact-items, then apply-promises
+      //    sequence runs in ONE atomic Lua invocation, so validation cannot go stale between check and
+      //    act: structurally-illegal items or invalid/already-made promises refuse and write nothing.
+      //    The canonical stored terms are enacted (items AND promises), never any caller-supplied Deal.
+      //
+      //    Bridge-failure policy is INVERTED from the stage-5 stub's read-only re-check: a bridge error
+      //    (null) or an un-enacted result now THROWS and writes nothing. The stub's lenient fall-through
+      //    was correct for a redundant re-check, but here it would record `deal-enacted` with no in-game
+      //    effect and permanently block retry via idempotency. (Watch-item: a DB failure AFTER a
+      //    successful enact leaves an enacted deal without its record; accepted, because the write is the
+      //    next statement and the DealMade IPC event is the reconciliation signal.) ──
+      const enactment = await enactDeal(
+        Player1ID,
+        Player2ID,
+        storedDeal.data.items,
+        storedDeal.data.promises
+      );
+      if (!enactment) {
         throw new Error(
-          `Cannot enact: deal contains untradeable items — ${illegal
-            .map((it) => `${it.itemType}: ${it.reason || "not tradeable"}`)
-            .join("; ")}`
+          `Cannot enact proposal ${ProposalMessageID}: the game bridge is unavailable`
         );
       }
-
-      // ── Stage 6 will also build the CvDeal and call the DLL EnactAgentDeal here, using
-      //    storedDeal.data and applying promise commitments before the transcript records. ──
+      if (!enactment.enacted) {
+        const reasons = enactment.reasons?.length
+          ? enactment.reasons.join("; ")
+          : "the deal could not be enacted";
+        throw new Error(`Cannot enact proposal ${ProposalMessageID}: ${reasons}`);
+      }
 
       const visibilityFlags = composeVisibility([Player1ID, Player2ID]);
 
@@ -250,12 +256,7 @@ class EnactAgentDealTool extends ToolBase {
         .executeTakeFirstOrThrow();
       const enacted = await transaction
         .insertInto("DiplomaticMessages")
-        .values(
-          messageRow(
-            "deal-enacted",
-            "The deal was enacted (in-game effects pending stage 6)."
-          ) as any
-        )
+        .values(messageRow("deal-enacted", "The deal was enacted.") as any)
         .returning("ID")
         .executeTakeFirstOrThrow();
 
@@ -264,7 +265,7 @@ class EnactAgentDealTool extends ToolBase {
         AcceptMessageID: accept.ID,
         EnactedMessageID: enacted.ID,
         AlreadyEnacted: false,
-        Enacted: false,
+        Enacted: true,
         Turn: turn,
       };
     });

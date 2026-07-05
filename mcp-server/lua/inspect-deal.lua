@@ -1,27 +1,40 @@
--- Read-only inspection of a (possibly empty) proposed deal between two major civs.
+-- Inspect (or, opt-in, ENACT) a (possibly empty) proposed deal between two major civs.
 --
 -- Builds a TRANSIENT scratch deal (UI.GetScratchDeal, exactly as the in-game trade
 -- screen does), reads back per-term legality + reasons + both-direction AI value for
 -- the proposed items, and enumerates the full tradable range each side could put on
 -- the table. Per-term legality/reasons use the human-to-human override directly;
--- scratch-deal context is best-effort for terms the stock Add* helpers accept. The
--- scratch deal is NEVER activated and is cleared on the way out, so this leaves no
--- trace on game state (specs.md §4, stage 3 is read-only).
+-- scratch-deal context is best-effort for terms the stock Add* helpers accept.
 --
--- The range is enriched so the Web board can read like the in-game trade screen
--- (stage 4): candidates carry game-facing display names, resources carry a category
--- (luxury/strategic/bonus), and every candidate carries its own structural legality +
--- reason so a STRUCTURALLY IMPOSSIBLE candidate stays visible (red) instead of being
--- dropped. The response also carries the game's default deal duration and the list of
--- eligible promise targets (third parties) with their display names and major/minor
--- kind. Numeric IDs are always present as fallbacks when a name cannot be resolved.
+-- Two modes, chosen by the optional `enact` argument (the same defaulted-parameter
+-- philosophy as the DLL overrides):
+--   * READ-ONLY (enact absent): the scratch deal is NEVER activated and is cleared on
+--     the way out, so this leaves no trace on game state (specs.md §4). The range is
+--     enriched so the Web board can read like the in-game trade screen (stage 4):
+--     candidates carry game-facing display names, resources carry a category
+--     (luxury/strategic/bonus), and every candidate carries its own structural
+--     legality + reason so a STRUCTURALLY IMPOSSIBLE candidate stays visible (red)
+--     instead of being dropped. The response also carries the game's default deal
+--     duration and the list of eligible promise targets (third parties). Numeric IDs
+--     are always present as fallbacks when a name cannot be resolved.
+--   * ENACT (enact present): the whole validate-then-write sequence runs in this ONE
+--     atomic invocation (validation cannot go stale between check and act). Trade items
+--     are built with the human-to-human override and every item and promise is validated
+--     BEFORE any write; on refusal nothing is written. The trade items are enacted first
+--     via Deal:Enact (the fallible step); if that fails, nothing else is written. Only on
+--     a successful enactment are the promises applied via Player:SetPromise (best-effort,
+--     no rollback, since structural validity is vetted up front). The range/promiseTargets
+--     enumeration is skipped. (stage 6, the only gameplay write.)
 --
 -- Args:
 --   playerAID, playerBID : the two major-civ player IDs
 --   proposedItems        : array of structured trade items (see deal-schema.ts).
 --                          May be empty/nil (an empty deal still yields the range).
+--   enact                : OPTIONAL. Absent → read-only. Present (e.g. { promises = {...} })
+--                          → enact mode; carries the deal's promise commitments
+--                          ({ promiserID, recipientID, promiseType, targetPlayerID? }).
 --
--- Returns one table:
+-- Returns (read-only) one table:
 --   {
 --     items = { { fromPlayerID, toPlayerID, itemType, legal, reason,
 --                 valueToGiver, valueToReceiver, unknown? }, ... },
@@ -31,8 +44,11 @@
 --     relationshipDuration = <int>,   -- DoF/denounce duration (Game.GetRelationshipDuration)
 --     promiseTargets = { { playerID, teamID, name, kind }, ... }
 --   }
--- Legality/reasons are computed with bTreatAsHumanToHuman = true so the preview
--- matches what stage-6 enactment will allow.
+-- Returns (enact mode) one table:
+--   { enacted = <bool>, reasons = { <string>, ... }, items = <per-item legality> }
+--   (reasons is present/non-empty only on refusal or a failed enactment).
+-- Legality/reasons are computed with bTreatAsHumanToHuman = true so the read-only
+-- preview matches exactly what enactment will allow.
 
 local TI = TradeableItems
 local DEFAULT_DURATION = Game.GetDealDuration()
@@ -182,7 +198,11 @@ end
 -- For a structured item resolve, for its giver:
 --   d1,d2,d3,flag1            -> IsPossibleToTradeItem / GetReasonsItemUntradeable
 --   v1,v2,v3,vflag1,vdur      -> GetTradeItemValue (duration is a separate arg there)
---   add(deal)                 -> push the item onto the scratch deal
+--   add(deal, h2h)            -> push the item onto the scratch deal. h2h is the human-to-human
+--                               override forwarded to the Add* constructor's internal guard: the
+--                               enact path passes true so override-only items (e.g. two cities from
+--                               one side) are actually added; read-only inspection passes false/nil,
+--                               preserving stock scratch-deal context exactly.
 -- Returns nil for an unrecognized item type.
 local function resolveItem(item, giver)
   local t = item.itemType
@@ -190,68 +210,68 @@ local function resolveItem(item, giver)
   if t == "GOLD" then
     local amt = item.amount or 0
     return amt, -1, -1, false, amt, -1, -1, false, -1,
-      function(d) d:AddGoldTrade(giver, amt) end
+      function(d, h2h) d:AddGoldTrade(giver, amt, h2h) end
   elseif t == "GOLD_PER_TURN" then
     local amt = item.amount or 0
     return amt, dur, -1, false, amt, -1, -1, false, dur,
-      function(d) d:AddGoldPerTurnTrade(giver, amt, dur) end
+      function(d, h2h) d:AddGoldPerTurnTrade(giver, amt, dur, h2h) end
   elseif t == "MAPS" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddMapTrade(giver) end
+      function(d, h2h) d:AddMapTrade(giver, h2h) end
   elseif t == "RESOURCES" then
     local r = item.resourceID or -1
     local q = item.quantity or 0
     return r, q, -1, false, r, q, -1, false, dur,
-      function(d) d:AddResourceTrade(giver, r, q, dur) end
+      function(d, h2h) d:AddResourceTrade(giver, r, q, dur, h2h) end
   elseif t == "CITIES" then
     local pCity = Players[giver]:GetCityByID(item.cityID or -1)
     local x = pCity and pCity:GetX() or -1
     local y = pCity and pCity:GetY() or -1
     return x, y, -1, false, x, y, -1, false, -1,
-      function(d) d:AddCityTrade(giver, item.cityID or -1) end
+      function(d, h2h) d:AddCityTrade(giver, item.cityID or -1, h2h) end
   elseif t == "OPEN_BORDERS" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddOpenBorders(giver, dur) end
+      function(d, h2h) d:AddOpenBorders(giver, dur, h2h) end
   elseif t == "DEFENSIVE_PACT" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddDefensivePact(giver, dur) end
+      function(d, h2h) d:AddDefensivePact(giver, dur, h2h) end
   elseif t == "RESEARCH_AGREEMENT" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddResearchAgreement(giver, dur) end
+      function(d, h2h) d:AddResearchAgreement(giver, dur, h2h) end
   elseif t == "PEACE_TREATY" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddPeaceTreaty(giver, dur) end
+      function(d, h2h) d:AddPeaceTreaty(giver, dur, h2h) end
   elseif t == "THIRD_PARTY_PEACE" then
     local tm = item.thirdPartyTeamID or -1
     return tm, dur, -1, false, tm, -1, -1, false, -1,
-      function(d) d:AddThirdPartyPeace(giver, tm, dur) end
+      function(d, h2h) d:AddThirdPartyPeace(giver, tm, dur, h2h) end
   elseif t == "THIRD_PARTY_WAR" then
     local tm = item.thirdPartyTeamID or -1
     return tm, -1, -1, false, tm, -1, -1, false, -1,
-      function(d) d:AddThirdPartyWar(giver, tm) end
+      function(d, h2h) d:AddThirdPartyWar(giver, tm, h2h) end
   elseif t == "ALLOW_EMBASSY" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddAllowEmbassy(giver) end
+      function(d, h2h) d:AddAllowEmbassy(giver, h2h) end
   elseif t == "DECLARATION_OF_FRIENDSHIP" then
     return dur, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddDeclarationOfFriendship(giver) end
+      function(d, h2h) d:AddDeclarationOfFriendship(giver, h2h) end
   elseif t == "VOTE_COMMITMENT" then
     local rid = item.resolutionID or -1
     local vc = item.voteChoice or -1
     local nv = item.numVotes or 1
     local rp = item.repeal or false
     return rid, vc, nv, rp, rid, vc, nv, rp, -1,
-      function(d) d:AddVoteCommitment(giver, rid, vc, nv, rp) end
+      function(d, h2h) d:AddVoteCommitment(giver, rid, vc, nv, rp, h2h) end
   elseif t == "TECHS" then
     local tech = item.techID or -1
     return tech, -1, -1, false, tech, -1, -1, false, -1,
-      function(d) d:AddTechTrade(giver, tech) end
+      function(d, h2h) d:AddTechTrade(giver, tech, h2h) end
   elseif t == "VASSALAGE" then
     return -1, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddVassalageTrade(giver) end
+      function(d, h2h) d:AddVassalageTrade(giver, h2h) end
   elseif t == "VASSALAGE_REVOKE" then
     return -1, -1, -1, false, -1, -1, -1, false, -1,
-      function(d) d:AddRevokeVassalageTrade(giver) end
+      function(d, h2h) d:AddRevokeVassalageTrade(giver, h2h) end
   end
   return nil
 end
@@ -450,11 +470,145 @@ end
 
 proposedItems = proposedItems or {}
 
--- Populate the scratch deal first so ordinary terms get the same cross-item context the
--- game uses, then evaluate every term directly with human-to-human legality. Stock
--- Add* helpers can still refuse override-only terms; those terms are inspected, but
--- cannot contribute to scratch context until the enactment path adds override-aware
--- construction.
+-- Enact mode is opt-in: the optional `enact` argument (absent in read-only inspection) carries the
+-- deal's promise commitments and switches this invocation from "report legality/range" to "validate
+-- everything, then write it for real". It is one atomic bridge invocation, so validation cannot go
+-- stale between check and act. Everything before the first write is validation; there is NO rollback
+-- (structural validity is fully vetted up front via the exposed reads), so a term a setter later
+-- declines silently is simply left unenforced (see runEnact below).
+local enactMode = (enact ~= nil)
+
+-- Whether a coop war between the two deal principals against targetID is structurally valid (both
+-- pass IsValidCoopWarTarget without the Declaration-of-Friendship prerequisite, and none is already
+-- PREPARING between them against it). Returns nil when the IsValidCoopWarTarget binding is absent, so
+-- inspection degrades gracefully. Defined here (not only for the range enumeration) so the enact
+-- branch can reuse it for coop-war terms.
+local function coopWarEligible(targetID)
+  local okA, a = pcall(function() return Players[playerAID]:IsValidCoopWarTarget(targetID, false) end)
+  local okB, b = pcall(function() return Players[playerBID]:IsValidCoopWarTarget(targetID, false) end)
+  if not okA or not okB then return nil end
+  if not (a and b) then return false end
+  local preparing = CoopWarStates.COOP_WAR_STATE_PREPARING
+  if Players[playerAID]:GetCoopWarAcceptedState(playerBID, targetID) == preparing
+      or Players[playerBID]:GetCoopWarAcceptedState(playerAID, targetID) == preparing then
+    return false
+  end
+  return true
+end
+
+-- Enact mode (stage 6, the only gameplay write): validate every trade item and promise up front, then
+-- write. On any structural problem nothing is written and { enacted = false, reasons } is returned.
+-- The ordering is failure-safe: the trade items are enacted FIRST via Deal:Enact (the fallible step),
+-- and only if that succeeds are the promises applied via Player:SetPromise. That way a refused or
+-- failed enactment leaves game state untouched, and the no-rollback promise writes never outlive a
+-- deal that did not go through. `resolved`/`items` are the per-item resolution/legality the caller has
+-- already computed; the range/promiseTargets enumeration is skipped in this mode.
+local function runEnact(resolved, items)
+  local reasons = {}
+
+  -- (a) Validate the ordinary trade items. Each must be structurally legal under the human-to-human
+  --     override AND have actually joined the scratch deal (a silent constructor refusal means the
+  --     deal we would Enact is incomplete). Unknown types and unresolved cities surface here too.
+  for i, r in ipairs(resolved) do
+    local it = items[i]
+    local label = "Item " .. i .. " (" .. tostring(r.item.itemType) .. ")"
+    if it.unknown then
+      table.insert(reasons, label .. ": unknown item type")
+    elseif not it.legal then
+      table.insert(reasons, label .. ": " .. (it.reason ~= "" and it.reason or "not tradeable"))
+    elseif not r.added then
+      table.insert(reasons, label .. ": could not be added to the deal")
+    end
+  end
+
+  -- (b) Validate the promise commitments and collect the ones to apply. A promise's two sides must be
+  --     the two deal principals (distinct living majors). Coop-War twins (the two symmetrized
+  --     directions of one joint war against the same target) are deduped to a single application.
+  local function livingMajor(pid)
+    local p = Players[pid]
+    return p ~= nil and p:IsAlive() and not p:IsMinorCiv() and not p:IsBarbarian()
+  end
+  local standingApplies, coopApplies = {}, {}
+  local seenCoop = {}
+  for _, pr in ipairs(enact.promises or {}) do
+    local kind = pr.promiseType
+    local giver = pr.promiserID
+    local recv = pr.recipientID
+    local label = "Promise " .. tostring(kind)
+    local principalsOk = livingMajor(giver) and livingMajor(recv)
+      and ((giver == playerAID and recv == playerBID) or (giver == playerBID and recv == playerAID))
+    if not principalsOk then
+      table.insert(reasons, label .. ": promiser and recipient must be the two deal parties (distinct living majors)")
+    elseif kind == "COOP_WAR" then
+      local target = pr.targetPlayerID
+      local key = tostring(target)
+      if not seenCoop[key] then
+        seenCoop[key] = true
+        local elig = coopWarEligible(target)
+        if elig == nil then
+          table.insert(reasons, label .. ": cooperative-war eligibility unavailable")
+        elseif not elig then
+          table.insert(reasons, label .. ": not a valid cooperative-war target (" .. tostring(target) .. ")")
+        else
+          table.insert(coopApplies, pr)
+        end
+      end
+      -- a duplicate twin is silently dropped (already represented by the first)
+    else
+      -- Not-already-made check via the exposed reads, where the game exposes one (they return -1 when
+      -- the state is not MADE). Kinds without a made-read (No-Digging and the dormant kinds) are
+      -- re-applied idempotently, a harmless no-op when the promise already exists.
+      local alreadyMade = false
+      if kind == "MILITARY" then
+        alreadyMade = Players[recv]:GetNumTurnsMilitaryPromise(giver) >= 0
+      elseif kind == "EXPANSION" then
+        alreadyMade = Players[recv]:GetNumTurnsExpansionPromise(giver) >= 0
+      elseif kind == "BORDER" then
+        alreadyMade = Players[recv]:GetNumTurnsBorderPromise(giver) >= 0
+      end
+      if alreadyMade then
+        table.insert(reasons, label .. ": already in effect for this pair")
+      else
+        table.insert(standingApplies, pr)
+      end
+    end
+  end
+
+  -- Refuse before any write if anything is structurally invalid: nothing has touched game state yet
+  -- (only the transient scratch deal, cleared here).
+  if #reasons > 0 then
+    deal:ClearItems()
+    return { enacted = false, reasons = reasons, items = items }
+  end
+
+  -- (c) Enact the trade items FIRST, the fallible and irreversible step. Their legality was checked in
+  --     this same invocation so a false return is not expected, but if it does fail we refuse here,
+  --     BEFORE applying any promise, so a failed enactment leaves game state untouched. Deal:Enact
+  --     takes a copy of the deal, so the scratch deal is cleared right after.
+  local ok = deal:Enact()
+  deal:ClearItems()
+  if not ok then
+    return { enacted = false, reasons = { "The deal's trade items could not be enacted." }, items = items }
+  end
+
+  -- The trade items are enacted; now apply the promises, standing ones first and the side-effect-heavy
+  -- Coop War last. Fire-and-forget: SetPromise returns nothing, so a setter that silently declines
+  -- leaves that one term unenforced (accepted, since validity was vetted above and there is no rollback).
+  for _, pr in ipairs(standingApplies) do
+    Players[pr.recipientID]:SetPromise(pr.promiserID, pr.promiseType, pr.targetPlayerID or -1, true)
+  end
+  for _, pr in ipairs(coopApplies) do
+    Players[pr.recipientID]:SetPromise(pr.promiserID, pr.promiseType, pr.targetPlayerID, true)
+  end
+
+  return { enacted = true, items = items }
+end
+
+-- Populate the scratch deal first so ordinary terms get the same cross-item context the game uses,
+-- then evaluate every term directly with human-to-human legality. Read-only inspection uses stock
+-- Add* (override off), so an override-only term is inspected but does not join the scratch context;
+-- enact mode passes the override so it is actually added, and records the GetNumItems delta (`added`)
+-- to catch a silent constructor refusal the legality read alone would miss.
 deal:ClearItems()
 deal:SetFromPlayer(playerAID)
 deal:SetToPlayer(playerBID)
@@ -463,12 +617,14 @@ local resolved = {}
 for i, item in ipairs(proposedItems) do
   local giver = item.fromPlayerID
   local d1, d2, d3, f1, v1, v2, v3, vf1, vdur, addfn = resolveItem(item, giver)
+  local before = deal:GetNumItems()
+  if d1 ~= nil and addfn then addfn(deal, enactMode) end
   resolved[i] = {
     item = item, giver = giver,
     d1 = d1, d2 = d2, d3 = d3, f1 = f1,
     v1 = v1, v2 = v2, v3 = v3, vf1 = vf1, vdur = vdur,
+    added = (deal:GetNumItems() > before),
   }
-  if d1 ~= nil and addfn then addfn(deal) end
 end
 
 local items = {}
@@ -500,6 +656,11 @@ for i, r in ipairs(resolved) do
   end
 end
 
+-- Enact mode short-circuits here: validate, write, and return without enumerating the range.
+if enactMode then
+  return runEnact(resolved, items)
+end
+
 -- Enumerate the tradable range for each side against an empty deal context (so the
 -- proposed items don't pollute it), then leave the scratch deal clean.
 deal:ClearItems()
@@ -513,31 +674,11 @@ range[tostring(playerBID)] = enumerateSide(deal, playerBID, playerAID)
 deal:ClearItems()
 
 -- Eligible promise targets: every other living MAJOR civ (third parties), with display name and
--- structural Coop-War eligibility, so the board offers only valid coop-war targets (using the game's
--- own checks rather than reimplemented logic): BOTH principals must have a valid coop-war target.
--- City-state (minor) promise targets are intentionally NOT reported: the tactical AI does not honor
--- the Bully/Attack-City-State promises, so they are not offered (see ledger-resolver LEDGER_TERMS).
-
--- Whether a coop war between the two principals against targetID is structurally valid,
--- mirroring CanRequestCoopWar's request-phase check (bAtWarException = false) for EACH
--- principal but WITHOUT its Declaration-of-Friendship prerequisite (bypassed on the agent
--- path). It DOES keep CanRequestCoopWar's other structural guard — a coop war already
--- PREPARING between the two against this target is not a fresh, proposable target (the
--- ONGOING case is already excluded by IsValidCoopWarTarget, since both are then at war).
--- pcall-guarded: a DLL build without IsValidCoopWarTarget yields nil (field omitted) rather
--- than erroring, so inspection degrades gracefully until the new binding ships.
-local function coopWarEligible(targetID)
-  local okA, a = pcall(function() return Players[playerAID]:IsValidCoopWarTarget(targetID, false) end)
-  local okB, b = pcall(function() return Players[playerBID]:IsValidCoopWarTarget(targetID, false) end)
-  if not okA or not okB then return nil end
-  if not (a and b) then return false end
-  local preparing = CoopWarStates.COOP_WAR_STATE_PREPARING
-  if Players[playerAID]:GetCoopWarAcceptedState(playerBID, targetID) == preparing
-      or Players[playerBID]:GetCoopWarAcceptedState(playerAID, targetID) == preparing then
-    return false
-  end
-  return true
-end
+-- structural Coop-War eligibility (via coopWarEligible above), so the board offers only valid coop-war
+-- targets, using the game's own checks rather than reimplemented logic: BOTH principals must have a
+-- valid coop-war target, and no coop war may already be PREPARING between them against it. City-state
+-- (minor) promise targets are intentionally NOT reported: the tactical AI does not honor the
+-- Bully/Attack-City-State promises, so they are not offered (see ledger-resolver LEDGER_TERMS).
 
 -- Only expose a third party BOTH principals have met, so a target's name never leaks a
 -- civ one side hasn't discovered (same rule the trade third-party lists use above).

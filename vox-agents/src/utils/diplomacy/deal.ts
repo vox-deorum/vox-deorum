@@ -547,22 +547,22 @@ export async function requireNoOpenProposal(thread: EnvoyThread): Promise<void> 
   }
 }
 
-/** The result of the (stage-5 stub) enactment route. */
+/** The result of the enactment route (`enact-agent-deal`). */
 export interface EnactDealResult {
   proposalMessageID: number;
   acceptMessageID?: number;
   enactedMessageID: number;
   alreadyEnacted: boolean;
-  /** Whether in-game effects were applied (always false in the stage-5 stub). */
+  /** Whether this call enacted the deal in-game (false on the already-enacted idempotent path). */
   enacted: boolean;
   turn?: number;
 }
 
 /**
- * Enact an agreed deal through the mcp-server `enact-agent-deal` route — the sole writer of
- * `deal-accept` / `deal-enacted` (pinned writer-split). In stage 5 this records the agreement
- * in the transcript without applying in-game effects (the DLL entrypoint lands in stage 6);
- * it is idempotent on the proposal's `deal-enacted` record.
+ * Enact an agreed deal through the mcp-server `enact-agent-deal` route, the sole writer of
+ * `deal-accept` / `deal-enacted` (pinned writer-split). It enacts the deal in-game (transferring
+ * the trade items and applying the promise commitments) and records the agreement in the
+ * transcript; it is idempotent on the proposal's `deal-enacted` record.
  *
  * @param proposalMessageID The deal-proposal / deal-counter being enacted.
  * @param options.accepterID The endpoint accepting (defaults server-side to the recipient).

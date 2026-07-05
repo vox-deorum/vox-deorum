@@ -12,7 +12,7 @@
 
 import { LuaFunction } from "../../bridge/lua-function.js";
 import { createLogger } from "../logger.js";
-import type { TradeItem } from "../deal-schema.js";
+import type { TradeItem, PromiseTerm } from "../deal-schema.js";
 
 const logger = createLogger("InspectDeal");
 
@@ -190,13 +190,30 @@ export interface InspectDealResult {
   error?: string;
 }
 
+/**
+ * Result of an enact-mode inspect-deal call (the game-write path). Enactment validates every
+ * trade item and promise before any write; on refusal nothing is written and `enacted` is false
+ * with per-term `reasons`. The trade items are enacted first via `Deal:Enact` (the fallible step);
+ * only on success are the promises applied best-effort via `Player:SetPromise` (no rollback, since
+ * validity is vetted up front).
+ */
+export interface EnactDealResult {
+  /** True when the trade items were enacted for real (Deal:Enact returned true). */
+  enacted: boolean;
+  /** Refusal / failure reasons, present and non-empty only when `enacted` is false. */
+  reasons?: string[];
+  /** Per-item structural legality (diagnostics; same shape as read-only inspection). */
+  items?: InspectedItem[];
+}
+
 let inspectDealFunctionInstance: LuaFunction | undefined;
-/** Lazily constructed so the (file-reading) init runs on first use, not at import. */
+/** Lazily constructed so the (file-reading) init runs on first use, not at import. The optional
+ *  fourth `enact` argument (absent in read-only inspection) switches the script to enact mode. */
 const inspectDealFunction = () =>
   (inspectDealFunctionInstance ??= LuaFunction.fromFile(
     "inspect-deal.lua",
     "inspectDeal",
-    ["playerAID", "playerBID", "proposedItems"]
+    ["playerAID", "playerBID", "proposedItems", "enact"]
   ));
 
 /** Accept both the live bridge's direct return object and older array-wrapped mocks. */
@@ -232,6 +249,47 @@ export async function inspectDeal(
   }
   if (result?.error) {
     logger.error(`inspect-deal returned an error for players ${playerAID}/${playerBID}: ${result.error}`);
+    return null;
+  }
+  return result;
+}
+
+/**
+ * Enact a complete deal between two major civs: the game-write path (stage 6). Runs the whole
+ * validate, then enact-items, then apply-promises sequence in one atomic Lua invocation, so
+ * validation cannot go stale between check and act. Structurally-illegal items or already-made or
+ * invalid promises refuse with per-term reasons and write nothing. The `bTreatAsHumanToHuman`
+ * override is applied inside the script, so AI-only political restrictions do not gate the deal
+ * while structural legality still does.
+ *
+ * @param playerAID - One major-civ player ID (the deal's from-player)
+ * @param playerBID - The other major-civ player ID (the deal's to-player)
+ * @param items - The ordinary trade items to enact (may be empty for a promise-only deal)
+ * @param promises - The promise commitments to apply (may be empty for an items-only deal)
+ * @returns The enactment result, or null on bridge failure (bridge down / malformed response)
+ */
+export async function enactDeal(
+  playerAID: number,
+  playerBID: number,
+  items: TradeItem[],
+  promises: PromiseTerm[]
+): Promise<EnactDealResult | null> {
+  const response = await inspectDealFunction().execute(playerAID, playerBID, items, { promises });
+
+  if (!response.success || response.result === undefined || response.result === null) {
+    logger.error(`enact-deal failed for players ${playerAID}/${playerBID}`, { error: response.error });
+    return null;
+  }
+
+  // Reuse the read-only unwrap (both share the maybe-array-wrapped object shape), then read the
+  // enact-mode fields off it.
+  const result = unwrapInspectDealResult(response.result) as (EnactDealResult & { error?: string }) | undefined;
+  if (!result) {
+    logger.error(`enact-deal returned an empty result for players ${playerAID}/${playerBID}`);
+    return null;
+  }
+  if (result.error) {
+    logger.error(`enact-deal returned an error for players ${playerAID}/${playerBID}: ${result.error}`);
     return null;
   }
   return result;

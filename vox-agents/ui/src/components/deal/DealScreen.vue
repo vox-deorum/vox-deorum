@@ -8,9 +8,9 @@ Driven entirely by the read-only `inspect-deal` tool (the screen holds no deal s
 beyond the in-progress proposal): it builds both sides' categorized inventories from the tradable
 range, lets the human build/modify a deal with live per-term legality + value feedback, shows the
 other-side value balance summed live, and presents the proposal-state actions (Propose; or
-Refuse/Counter/Accept; or Retract/Counter). Preview mode — proposal/counter are handed UP to the host
-to stream through the chat-message path (the dialog closes once the server accepts); reject is a
-blocking write; acceptance is wired but deferred to enactment (stage 6).
+Refuse/Counter/Accept; or Retract/Counter). Proposal/counter are handed UP to the host to stream
+through the chat-message path (the dialog closes once the server accepts); reject is a blocking
+write; acceptance is handed up the same way and now enacts the deal for real in-game (stage 6).
 
 Orchestration (loading, debounced live inspection with latest-request-wins, proposal freshness,
 writes) lives here; the three visual regions are the InventoryPanel / CentralOffer components, and
