@@ -49,7 +49,7 @@ function mountCard(props: Record<string, unknown> = {}) {
       status: 'open',
       ...props,
     },
-    global: { stubs: { Button } },
+    global: { stubs: { Button }, directives: { tooltip: {} } },
   });
 }
 

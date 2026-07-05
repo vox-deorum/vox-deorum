@@ -306,14 +306,24 @@ export function logStartup(serviceName: string, version: string, port?: number):
   logSeparator();
 }
 
-// Log unhandled errors
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
-});
+// Log unhandled errors. Guard against duplicate registration: a normal Node import registers these
+// once (modules are cached), but a test runner that isolates the module registry (vitest/vite-node)
+// re-evaluates this module per test file while sharing the real `process`, which would otherwise
+// stack a fresh pair of handlers each time and trip Node's MaxListenersExceededWarning. The flag
+// lives on `process` — the shared object the handlers attach to — so the guard holds across
+// re-evaluations. Behaviour in production (single import) is unchanged.
+const GLOBAL_HANDLERS_FLAG = Symbol.for('vox.logger.globalErrorHandlersRegistered');
+if (!(process as unknown as Record<symbol, boolean>)[GLOBAL_HANDLERS_FLAG]) {
+  (process as unknown as Record<symbol, boolean>)[GLOBAL_HANDLERS_FLAG] = true;
 
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at: ' + promise?.toString() + ', reason:', reason);
-});
+  process.on('uncaughtException', (error) => {
+    logger.error('Uncaught Exception:', error);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection at: ' + promise?.toString() + ', reason:', reason);
+  });
+}
 
 export default logger;
