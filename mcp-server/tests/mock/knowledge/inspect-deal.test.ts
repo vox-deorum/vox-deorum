@@ -259,7 +259,7 @@ describe('inspect-deal', () => {
     } as any);
 
     expect(result.items[0].reasons).toHaveLength(1);
-    expect(result.items[0].reasons[0]).toMatch(/no specific reason/i);
+    expect(result.items[0].reasons[0]).toMatch(/not tradeable under current game state/i);
   });
 
   it('coerces range arrays that arrive as empty Lua objects', async () => {
@@ -366,7 +366,7 @@ describe('inspect-deal', () => {
     expect(side.openBorders).toEqual({ legal: true, reasons: [] });
     expect(side.defensivePact.legal).toBe(false);
     expect(side.defensivePact.reasons).toHaveLength(1);
-    expect(side.defensivePact.reasons[0]).toMatch(/no specific reason/i);
+    expect(side.defensivePact.reasons[0]).toMatch(/not tradeable under current game state/i);
   });
 
   it('keeps ruleset-gated toggles ABSENT (hidden, not red) when the Lua omits them', async () => {
