@@ -27,7 +27,7 @@ import { z } from "zod";
 import { ModelMessage, StepResult, Tool } from "ai";
 import { VoxAgent } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
+import { StrategistParameters, buildGameContextMessages, getRecentGameState } from "../strategist/strategy-parameters.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createLogger } from "../utils/logger.js";
 import type { EnvoyThread } from "../types/index.js";
@@ -40,7 +40,6 @@ import {
   createNegotiatorTerminalTools,
   formatActiveProposalLedger,
   formatGiveTakeLedger,
-  formatInspection,
   summarizeMove,
   type NegotiatorInput,
 } from "./utils/negotiator-utils.js";
@@ -208,14 +207,21 @@ You can access additional information by calling the following tools.
       logger.warn("inspect-deal failed; proceeding without the tradable menu or value estimates", { error });
     }
 
+    // Cities + game deals background between the two civs (context 1 support), fetched fresh. It also
+    // returns the viewer-perspective players report, reused below for third-party relationship context.
+    // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
+    const background = await buildDiplomacyBackgroundMessage(context, parameters, thread);
+    const relationships = getRecentGameState(parameters)?.options?.Relationships;
+    const ledgerOptions = { inspection, players: background.players, relationships };
+
     const sections: string[] = [
       `# Diplomat's Briefing\n${input.briefing || "(no briefing provided)"}`,
     ];
 
     if (input.activeProposal) {
-      sections.push(formatActiveProposalLedger(input.activeProposal, thread, inspection));
-      // Per-term legality + advisory value of the on-the-table deal (only meaningful with a proposal).
-      if (inspection) sections.push(`# Inspection (advisory)\n${formatInspection(inspection)}`);
+      // The unified ledger folds the on-the-table deal's per-term legality, advisory value, and
+      // third-party relationship context directly into the terms: no separate inspection section.
+      sections.push(formatActiveProposalLedger(input.activeProposal, thread, ledgerOptions));
     } else {
       if (ownPending) {
         sections.push(
@@ -231,16 +237,13 @@ You can access additional information by calling the following tools.
     // The Give/Take menu (context 2): the available terms, by NAME, that propose-deal expects.
     sections.push(
        "# Tradable Terms\n" + (inspection
-          ? formatGiveTakeLedger(inspection, thread) :
+          ? formatGiveTakeLedger(inspection, thread, background.players) :
           "(options unavailable)")
     );
 
-    // Cities + game deals background between the two civs (context 1 support), fetched fresh.
-    const background = await buildDiplomacyBackgroundMessage(context, parameters, thread);
-
     return [
       ...buildGameContextMessages(parameters),
-      ...(background ? [{ role: "user" as const, content: background }] : []),
+      ...(background.text ? [{ role: "user" as const, content: background.text }] : []),
       { role: "user", content: sections.join("\n\n") },
       { role: "system", content: `You are the negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool in JSON format to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
     ];

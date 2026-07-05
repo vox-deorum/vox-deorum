@@ -29,7 +29,7 @@ describe('formatDealContext', () => {
     expect(formatDealContext(deriveActiveProposal([msg('text', {})]), 3)).toBeUndefined();
   });
 
-  it('surfaces own terms, rationale, one-sentence line, value snapshots, and status', () => {
+  it('surfaces own terms, rationale, one-sentence message, advisory estimates from inspection, and status', () => {
     const deal = {
       version: 1 as const,
       items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }],
@@ -37,19 +37,26 @@ describe('formatDealContext', () => {
       rationale: 'They are desperate for gold.',
       message: 'Fifty gold buys your open borders.',
     };
-    const reduction = deriveActiveProposal([
-      msg('deal-counter', { Deal: deal, Value1: { '0': 30 }, Value2: { '0': 25 } }, 5),
-    ]);
+    const reduction = deriveActiveProposal([msg('deal-counter', { Deal: deal }, 5)]);
 
-    const out = formatDealContext(reduction, 3)!;
-    expect(out).toContain('deal-counter, message #5, status: open');
+    // Advisory values now come from a fresh inspection (index-aligned with deal.items), not stored snapshots.
+    const inspection = {
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: true, reasons: [], valueIfIGive: 30, valueIfIReceive: 25 }],
+      promises: [],
+      tradableRange: {},
+    } as any;
+
+    const out = formatDealContext(reduction, 3, undefined, { inspection })!;
+    expect(out).toContain('# Deal On The Table (#5, deal-counter, status: open)');
+    // Own-authored (SpeakerID 3): private rationale shown, message hoisted as our negotiator's line.
+    expect(out).toContain('## Our Negotiator\'s Message');
     expect(out).toContain('They are desperate for gold.');
     expect(out).toContain('Fifty gold buys your open borders.');
     // Direction-grouped, friendly-labelled terms with the advisory per-item estimates.
-    expect(out).toContain('Player 1 gives Player 3');
-    expect(out).toContain('Gold: 50');
-    expect(out).toContain('worth 30 to Player 1 (giving)');
-    expect(out).toContain('worth 25 to Player 3 (receiving)');
+    expect(out).toContain('## Player 1 Offers To Give Player 3');
+    expect(out).toContain('### Gold: 50');
+    expect(out).toContain('Estimated value to Player 1 (them): 30');
+    expect(out).toContain('Estimated value to Player 3 (us): 25');
     expect(out).toContain('advisory');
   });
 
@@ -59,14 +66,32 @@ describe('formatDealContext', () => {
       items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }],
       promises: [],
     };
-    const reduction = deriveActiveProposal([
-      msg('deal-proposal', { Deal: deal, Value1: { '0': 2147483647 }, Value2: { '0': 25 } }, 8),
-    ]);
+    const reduction = deriveActiveProposal([msg('deal-proposal', { Deal: deal }, 8)]);
+    const inspection = {
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: true, reasons: [], valueIfIGive: 2147483647, valueIfIReceive: 25 }],
+      promises: [],
+      tradableRange: {},
+    } as any;
+
+    const out = formatDealContext(reduction, 3, undefined, { inspection })!;
+    expect(out).not.toContain('2147483647');
+    expect(out).toContain('Estimated value to Player 1 (them): no usable estimate');
+    expect(out).toContain('Estimated value to Player 3 (us): 25');
+  });
+
+  it('renders terms without advisory estimates or the note when no inspection is supplied (closed deal)', () => {
+    const deal = {
+      version: 1 as const,
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }],
+      promises: [],
+    };
+    const accepted = msg('deal-accept', { ProposalMessageID: 5 }, 6);
+    const reduction = deriveActiveProposal([msg('deal-proposal', { Deal: deal }, 5), accepted]);
 
     const out = formatDealContext(reduction, 3)!;
-    expect(out).not.toContain('2147483647');
-    expect(out).toContain('no usable estimate for Player 1 (giving)');
-    expect(out).toContain('worth 25 to Player 3 (receiving)');
+    expect(out).toContain('### Gold: 50');
+    expect(out).not.toContain('Estimated value');
+    expect(out).not.toContain('advisory');
   });
 
   it('does not expose the opposing negotiator rationale', () => {
@@ -102,33 +127,42 @@ describe('formatDealContext', () => {
     expect(own).not.toContain('call-negotiator');
   });
 
-  it('surfaces promise agreeability estimates when present', () => {
+  it('renders third-party relationship + our-leader intention for a coop-war promise, not the agreeability blob', () => {
     const deal = {
       version: 1 as const,
       items: [],
-      promises: [{ promiserID: 3, recipientID: 1, promiseType: 'NO_DIGGING' as const }],
-      message: 'We will leave your antiquity sites alone if this settles the matter.',
+      promises: [{ promiserID: 3, recipientID: 1, promiseType: 'COOP_WAR' as const, targetPlayerID: 9 }],
+      message: 'Join me against Rome.',
     };
-    const reduction = deriveActiveProposal([
-      msg('deal-counter', { Deal: deal }, 7),
-    ]);
-
-    const out = formatDealContext(reduction, 3, undefined, {
+    const reduction = deriveActiveProposal([msg('deal-counter', { Deal: deal }, 7)]);
+    // The inspection still carries the old agreeability factors, but they must NOT be rendered anymore.
+    const inspection = {
       items: [],
       promises: [{
-        promiserID: 3,
-        recipientID: 1,
-        promiseType: 'NO_DIGGING',
-        agreeabilityFactors: {
-          promiserOpinionOfRecipient: ['FRIENDLY'],
-          note: 'Promise context note',
-        },
+        promiserID: 3, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 9,
+        agreeabilityFactors: { promiserOpinionOfRecipient: ['FRIENDLY'], note: 'Promise context note' },
       }],
+      promiseTargets: [{ playerID: 9, teamID: 9, name: 'Rome', kind: 'major', coopWarEligible: true }],
       tradableRange: {},
-    })!;
+    } as any;
+    // get-players rows (viewer-perspective) carry each side's public relationship to the third party.
+    const players = {
+      '3': { Relationships: { Rome: 'War' } },
+      '1': { Relationships: { Rome: ['Denounced them'] } },
+    } as any;
+    // Our leader's own set-relationship directive toward the third party (from get-options).
+    const relationships = { Rome: { Public: -50, Private: -30, Rationale: 'Keep Rome weak.', UpdatedTurn: 4 } } as any;
+    const civName = (id: number) => (({ 1: 'Egypt', 3: 'Germany' }) as Record<number, string>)[id] ?? `Player ${id}`;
 
-    expect(out).toContain('Promise agreeability estimates');
-    expect(out).toContain('Promise context note');
-    expect(out).toContain('FRIENDLY');
+    const out = formatDealContext(reduction, 3, civName, { inspection, players, relationships })!;
+
+    // The two-party agreeability blob (opinions / note / raw factor keys) is gone entirely.
+    expect(out).not.toContain('Promise context note');
+    expect(out).not.toContain('FRIENDLY');
+    expect(out).not.toContain('promiserOpinionOfRecipient');
+    // Instead: each side's public relationship to Rome + our leader's directive toward it.
+    expect(out).toContain("Germany's (our) relationship to Rome (third-party): War");
+    expect(out).toContain("Our leader's intention for Rome: Public -50/Private -30 (Keep Rome weak.)");
+    expect(out).toContain("Egypt's (their) relationship to Rome (third-party): Denounced them");
   });
 });

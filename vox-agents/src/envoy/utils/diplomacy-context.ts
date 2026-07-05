@@ -19,7 +19,7 @@ import type { EnvoyThread } from "../../types/index.js";
 import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import { createLogger } from "../../utils/logger.js";
-import { endpoints } from "./negotiator-utils.js";
+import { endpoints } from "./deal-ledger.js";
 import {
   formatStringDeal,
   getDealExpirySuffix,
@@ -141,18 +141,27 @@ function concludedDealsSection(
   return `## Recently concluded deals with ${counterpartCiv} (last ${window} turns)\n${rows.join("\n")}`;
 }
 
+/** The diplomacy background plus the viewer-perspective players report both agents reuse. */
+export interface DiplomacyBackground {
+  /** Rendered background markdown (cities + standing/concluded deals), or undefined when empty. */
+  text?: string;
+  /** The viewer-perspective get-players report, when the fetch succeeded (for relationship context). */
+  players?: PlayersReport;
+}
+
 /**
- * Build the diplomat/negotiator background message: the two civs' cities, the standing in-game deals
- * between them, and their recently-concluded deals. Returns a single markdown string (the caller wraps
- * it as a `user` message), or `undefined` when there is nothing to show (no counterpart, a minor-civ
- * counterpart, or all three sections empty).
+ * Build the diplomat/negotiator background: the two civs' cities, the standing in-game deals between
+ * them, and their recently-concluded deals, plus the viewer-perspective get-players report the caller
+ * reuses for third-party relationship context (so it is fetched only once). Returns `{}` when there is
+ * nothing to show (no counterpart, a minor-civ counterpart) and never fetches in those cases; otherwise
+ * `text` is the markdown (the caller wraps it as a `user` message) and `players` the fetched report.
  */
 export async function buildDiplomacyBackgroundMessage(
   context: VoxContext<StrategistParameters>,
   parameters: StrategistParameters,
   thread: EnvoyThread,
   opts?: { recentTurnWindow?: number }
-): Promise<string | undefined> {
+): Promise<DiplomacyBackground> {
   const { agentID: viewerID, counterpartID } = endpoints(thread);
 
   const selfIdentity = identityOf(thread, viewerID);
@@ -161,7 +170,7 @@ export async function buildDiplomacyBackgroundMessage(
   // Intended skip: a minor-civ (city-state) counterpart carries the sentinel leader and records no
   // deals, so there is deliberately no civ-to-civ background to show. Silent by design.
   if (counterpartIdentity?.leader === MINOR_CIV_LEADER) {
-    return undefined;
+    return {};
   }
   // Data gap (distinct from the minor-civ skip above): a civ-to-civ thread should carry a leader
   // identity on both seats. Absence is production-plausible (unmet / not-yet-visible players, a
@@ -174,7 +183,7 @@ export async function buildDiplomacyBackgroundMessage(
       hasSelfIdentity: Boolean(selfIdentity?.leader),
       hasCounterpartIdentity: Boolean(counterpartIdentity?.leader),
     });
-    return undefined;
+    return {};
   }
 
   if (parameters.playerID !== undefined && parameters.playerID !== viewerID) {
@@ -235,6 +244,10 @@ export async function buildDiplomacyBackgroundMessage(
     concludedDealsSection(events, viewerID, counterpartID, selfCiv, counterpartCiv, parameters.turn, window),
   ].filter((s): s is string => s !== undefined);
 
-  if (sections.length === 0) return undefined;
-  return [`# Cities & Diplomatic Standing (with ${counterpartCiv})`, ...sections].join("\n\n");
+  // Always hand back the players report (the third-party-relationship source both agents reuse), even
+  // when no background section rendered, the report can carry relationships the deal ledger still wants.
+  const text = sections.length === 0
+    ? undefined
+    : [`# Cities & Diplomatic Standing (with ${counterpartCiv})`, ...sections].join("\n\n");
+  return { text, players };
 }

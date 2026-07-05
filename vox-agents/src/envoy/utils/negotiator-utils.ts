@@ -22,7 +22,6 @@ import type { EnvoyThread } from "../../types/index.js";
 import {
   appendDealProposal,
   appendDealReject,
-  computeValueMaps,
   enactAgentDeal,
   requireCurrentOpenProposal,
   requireNoOpenProposal,
@@ -30,22 +29,16 @@ import {
   type InspectDealResult,
   type EnactDealResult,
 } from "../../utils/diplomacy/deal.js";
-import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
 import {
-  formatDealTermsByDirection,
-  formatEstimate,
-  formatPromiseLabel,
   isSentinel,
   itemTypeLabel,
 } from "../../../../mcp-server/dist/utils/deal-format.js";
-import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import {
   LedgerTermSchema,
   resolveLedger,
   formatResolutionErrors,
 } from "./ledger-resolver.js";
 import {
-  durationForItemType,
   durationForPromiseType,
   AGREEMENT_METADATA,
   PROMISE_METADATA,
@@ -54,10 +47,20 @@ import {
 import type {
   DealDurations,
   DealPayload,
-  PromiseTerm,
-  TradeItem,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type { NormalizedSideRange } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
+import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
+import {
+  civNameFor,
+  detailClause,
+  durationPhrase,
+  endpoints,
+  formatDealLedger,
+  ledgerContextFor,
+  renderPromiseDuration,
+  thirdPartyRelationshipBullets,
+  type DealLedgerOptions,
+} from "./deal-ledger.js";
 
 const logger = createLogger("negotiator");
 
@@ -112,55 +115,15 @@ export interface NegotiatorInput {
   outcome?: NegotiatorMove;
 }
 
-/** A seat → civ-name resolver from the thread's stored identities ("Player <id>" fallback). */
-function civNameFor(thread: EnvoyThread): (playerID: number) => string {
-  return (id: number) => identityOf(thread, id)?.name ?? `Player ${id}`;
-}
-
-/** The negotiator's own seat and its counterpart (the other endpoint of the thread). */
-export function endpoints(thread: EnvoyThread): { agentID: number; counterpartID: number } {
-  const agentID = thread.agent;
-  const counterpartID = thread.player1ID === agentID ? thread.player2ID : thread.player1ID;
-  return { agentID, counterpartID };
-}
-
 /** A bare advisory-value phrase ("worth ~N to <civ>" / "no usable estimate"), or "" when absent. */
 function bareValue(value: number | undefined, receiverName: string): string {
   if (value === undefined) return "";
   return isSentinel(value) ? "no usable estimate" : `worth ~${Math.round(value)} to ${receiverName}`;
 }
 
-/** Parenthesize comma-separated row details, omitting absent/empty details. */
-function detailClause(...details: Array<string | undefined>): string {
-  const present = details.filter((detail): detail is string => !!detail);
-  return present.length ? ` (${present.join(", ")})` : "";
-}
-
 /** A parenthesized advisory-value clause for a menu row, or "" when no estimate is available. */
 function valueClause(value: number | undefined, receiverName: string): string {
   return detailClause(bareValue(value, receiverName));
-}
-
-/** A bare "lasts N turn(s)" phrase for a turn count (singular-aware). */
-function lastsTurns(turns: number): string {
-  return `lasts ${turns} ${turns === 1 ? "turn" : "turns"}`;
-}
-
-/** A bare "lasts N turns" phrase for a duration-bearing item type, or "" when the type carries none. */
-function durationPhrase(itemType: TradeItem["itemType"], durations: DealDurations): string {
-  const turns = durationForItemType(itemType, durations);
-  return turns !== undefined ? lastsTurns(turns) : "";
-}
-
-/**
- * A bare term-length phrase for a promise. Every offered promise is one the tactical AI honors, so
- * there is no enforcement caveat. 
- */
-function renderPromiseDuration(promiseType: PromiseTerm["promiseType"], turns: number | undefined): string {
-  if (promiseType === "COOP_WAR") {
-    return turns !== undefined ? `war begins in ${turns} turns` : "war begins after a short preparation";
-  }
-  return turns !== undefined ? lastsTurns(turns) : "lasts until broken";
 }
 
 /** Append a "## <title>" block when it has rows. */
@@ -180,7 +143,8 @@ function formatSideMenu(
   receiverName: string,
   subline: string,
   promiseTargets: InspectDealResult["promiseTargets"],
-  durations: DealDurations
+  durations: DealDurations,
+  relBullets?: (targetName: string) => string[]
 ): string {
   const head = `## What ${giverName} Can Give`;
   const out: string[] = [head, `- ${subline}`];
@@ -253,17 +217,25 @@ function formatSideMenu(
   pushMenuCategory(out, "Technologies", techRows);
 
   // Third-party peace & war (target civ names + advisory value; peace runs for the peace-deal term).
+  // Each legal target trails the two sides' public relationship to it (relBullets), indented.
   const peaceDur = durationPhrase("THIRD_PARTY_PEACE", durations);
+  const tpBullets = (name: string | undefined): string[] => (name ? relBullets?.(name) ?? [] : []);
   const tpRows = [
     ...range.thirdPartyPeace
       .filter((t) => t.legal)
-      .map((t) => `- Third-Party Peace with ${t.name ?? `team ${t.teamID}`}${detailClause(
-        peaceDur,
-        bareValue(t.valueToReceiver, receiverName)
-      )}`),
+      .flatMap((t) => [
+        `- Third-Party Peace with ${t.name ?? `team ${t.teamID}`}${detailClause(
+          peaceDur,
+          bareValue(t.valueToReceiver, receiverName)
+        )}`,
+        ...tpBullets(t.name),
+      ]),
     ...range.thirdPartyWar
       .filter((t) => t.legal)
-      .map((t) => `- Third-Party War on ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`),
+      .flatMap((t) => [
+        `- Third-Party War on ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`,
+        ...tpBullets(t.name),
+      ]),
   ];
   pushMenuCategory(out, "Third-Party Peace & War", tpRows);
 
@@ -273,14 +245,13 @@ function formatSideMenu(
     (promiseType) =>
       `- ${PROMISE_METADATA[promiseType].label}${detailClause(renderPromiseDuration(promiseType, durationForPromiseType(promiseType, durations)))}`
   );
-  const coopNames = (promiseTargets ?? [])
-    .filter((t) => t.kind === "major" && t.coopWarEligible !== false)
-    .map((t) => t.name ?? `player ${t.playerID}`);
-  if (coopNames.length) {
+  const coopTargets = (promiseTargets ?? []).filter((t) => t.kind === "major" && t.coopWarEligible !== false);
+  if (coopTargets.length) {
     promiseRows.push(`- ${PROMISE_METADATA.COOP_WAR.label}${detailClause(
-      `targets: ${coopNames.join(", ")}`,
+      `targets: ${coopTargets.map((t) => t.name ?? `player ${t.playerID}`).join(", ")}`,
       renderPromiseDuration("COOP_WAR", durationForPromiseType("COOP_WAR", durations))
     )}`);
+    for (const t of coopTargets) promiseRows.push(...tpBullets(t.name));
   }
   pushMenuCategory(out, "Promises", promiseRows);
 
@@ -292,26 +263,37 @@ function formatSideMenu(
  * (its own tradable range) and what it can TAKE (the counterpart's range). Names and labels here are
  * exactly what the `propose-deal` tool expects, so this menu is a faithful template for the schema.
  */
-export function formatGiveTakeLedger(inspection: InspectDealResult, thread: EnvoyThread): string {
+export function formatGiveTakeLedger(
+  inspection: InspectDealResult,
+  thread: EnvoyThread,
+  players?: PlayersReport
+): string {
   const { agentID, counterpartID } = endpoints(thread);
   const name = civNameFor(thread);
+  const ctx = ledgerContextFor(thread);
+  // Menu sub-bullets carry only the public relationship status (no set-relationship directive;
+  // that stays a deal-ledger detail), indented two spaces under the third-party candidate row.
+  const relBullets = (targetName: string) =>
+    thirdPartyRelationshipBullets(targetName, ctx, players, { indent: "  " });
   const agentName = name(agentID);
   const counterpartName = name(counterpartID);
   const give = formatSideMenu(
     inspection.tradableRange[String(agentID)],
     agentName,
     counterpartName,
-    `Potential terms ${name} (YOUR civ) can give ${counterpartName}`,
+    `Potential terms ${agentName} (YOUR civ) can give ${counterpartName}`,
     inspection.promiseTargets,
-    inspection
+    inspection,
+    relBullets
   );
   const take = formatSideMenu(
     inspection.tradableRange[String(counterpartID)],
     counterpartName,
     agentName,
-    `Potential terms ${counterpartName} can give ${name} (YOUR civ)`,
+    `Potential terms ${counterpartName} can give ${agentName} (YOUR civ)`,
     inspection.promiseTargets,
-    inspection
+    inspection,
+    relBullets
   );
   return [
     "Send NAMES exactly as written below. Term durations or vote counts are fixed.",
@@ -320,99 +302,24 @@ export function formatGiveTakeLedger(inspection: InspectDealResult, thread: Envo
   ].join("\n\n").trim();
 }
 
-/** Format the upfront on-the-table inspection (per-term legality + value, promise agreeability). */
-export function formatInspection(inspection: InspectDealResult): string {
-  const sections: string[] = [];
-
-  if (inspection.items.length > 0) {
-    const lines = inspection.items.map((it, i) => {
-      const legal = it.legality ? "legal" : `ILLEGAL (${it.reasons.join("; ") || "no reason given"})`;
-      // Values are the stock AI's advisory estimate; a maxed-out estimate renders "no usable estimate".
-      return `  [${i}] ${itemTypeLabel(it.itemType)}: ${it.fromPlayerID} to ${it.toPlayerID}, ${legal}; value if I give = ${formatEstimate(it.valueIfIGive)}, value if I receive = ${formatEstimate(it.valueIfIReceive)}`;
-    });
-    sections.push(`### On-the-table trade items (per-term legality + AI value, advisory)\n${lines.join("\n")}`);
-  }
-
-  // Model context — render as markdown, never JSON (see utils/tools/json-to-markdown).
-  if (inspection.promises.length > 0) {
-    sections.push(
-      `### On-the-table promises (agreeability factors, advisory)\n${jsonToMarkdown(inspection.promises)}`
-    );
-  }
-
-  return sections.length > 0 ? sections.join("\n\n") : "(no on-the-table terms to inspect)";
-}
-
 /**
- * Friendly label for an on-the-table item, resolving resource/city/tech/team/vote IDs to NAMES via
- * the inspection range. Duration-bearing terms append their stamped, fixed term length ("lasts N
- * turns") off the item's own `duration` (set server-side by `applyDealDurations`).
+ * Format the on-the-table proposal (context 3) as the shared unified ledger: the counterpart's
+ * one-line message, our leader's intention toward them, and every term grouped by direction with the
+ * advisory per-item value estimates and third-party relationship context. Always a counterpart-authored
+ * deal here (the negotiator only ever responds to the other side's offer), so the message is "theirs".
  */
-function namedItemLabel(item: TradeItem, inspection?: InspectDealResult): string {
-  const giverRange = inspection?.tradableRange[String(item.fromPlayerID)];
-  const dur = item.duration ? ` (lasts ${item.duration} turns)` : "";
-  switch (item.itemType) {
-    case "GOLD":
-      return `Gold: ${item.amount ?? 0}`;
-    case "GOLD_PER_TURN":
-      return `Gold Per Turn: ${item.amount ?? 0}${dur}`;
-    case "RESOURCES": {
-      const r = giverRange?.resources.find((x) => x.resourceID === item.resourceID);
-      return `Resource: ${r?.name ?? `#${item.resourceID}`} x${item.quantity ?? 1}${dur}`;
-    }
-    case "CITIES": {
-      const c = giverRange?.cities.find((x) => x.cityID === item.cityID);
-      return `City: ${c?.name ?? `#${item.cityID}`}`;
-    }
-    case "TECHS": {
-      const t = giverRange?.techs.find((x) => x.techID === item.techID);
-      return `Technology: ${t?.name ?? `#${item.techID}`}`;
-    }
-    case "THIRD_PARTY_PEACE": {
-      const t = giverRange?.thirdPartyPeace.find((x) => x.teamID === item.thirdPartyTeamID);
-      return `Third-Party Peace with ${t?.name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
-    }
-    case "THIRD_PARTY_WAR": {
-      const t = giverRange?.thirdPartyWar.find((x) => x.teamID === item.thirdPartyTeamID);
-      return `Third-Party War on ${t?.name ?? `team ${item.thirdPartyTeamID}`}`;
-    }
-    case "VOTE_COMMITMENT": {
-      const v = giverRange?.voteCommitments.find(
-        (x) => x.resolutionID === item.resolutionID && x.voteChoice === item.voteChoice && !!x.repeal === !!item.repeal
-      );
-      return `Vote Commitment: ${v?.name ?? `resolution ${item.resolutionID}`}`;
-    }
-    default:
-      return `${itemTypeLabel(item.itemType)}${dur}`;
-  }
-}
-
-/** Format the on-the-table proposed terms (context 3) first-person: what each side offers to give. */
 export function formatActiveProposalLedger(
   active: ActiveProposalContext,
   thread: EnvoyThread,
-  inspection?: InspectDealResult
+  options?: DealLedgerOptions
 ): string {
-  const { agentID, counterpartID } = endpoints(thread);
-  const name = civNameFor(thread);
-  const deal = active.deal;
-  const directionRows = (giverID: number, receiverID: number): string[] => [
-    ...deal.items
-      .filter((i) => i.fromPlayerID === giverID && i.toPlayerID === receiverID)
-      .map((i) => `- ${namedItemLabel(i, inspection)}`),
-    ...deal.promises
-      .filter((p) => p.promiserID === giverID && p.recipientID === receiverID)
-      // The stamped `duration` carries the fixed term length (set server-side); render it the same
-      // way the menu does (Coop War "war begins in N turns", others "lasts N turns" / "indefinitely").
-      .map((p) => `- ${formatPromiseLabel(p)}${detailClause(renderPromiseDuration(p.promiseType, p.duration))}`),
-  ];
-  const lines = [`# Deal On The Table #${active.messageID}`];
-  const give = directionRows(agentID, counterpartID);
-  const take = directionRows(counterpartID, agentID);
-  if (give.length) lines.push(`## ${name(agentID)} Offers To Give ${name(counterpartID)}`, ...give);
-  if (take.length) lines.push(`## ${name(counterpartID)} Offers To Give ${name(agentID)}`, ...take);
-  if (deal.message) lines.push(`Their one-sentence line: "${deal.message}"`);
-  return lines.join("\n");
+  const messageBlock = active.deal.message ? `## Their Message\n> ${active.deal.message}` : undefined;
+  return formatDealLedger(
+    active.deal,
+    `# Deal On The Table (#${active.messageID})`,
+    ledgerContextFor(thread),
+    { ...options, messageBlock }
+  );
 }
 
 /**
@@ -436,18 +343,13 @@ function summarizeAuthoredDeal(
   move: Extract<NegotiatorMove, { type: "propose" | "counter" }>,
   thread: EnvoyThread
 ): string {
-  // Fresh proposal-time inspection gives per-item values; fold them into the direction-grouped terms.
-  const maps = move.inspection ? computeValueMaps(move.inspection, thread.player1ID, thread.player2ID) : undefined;
-  const terms = formatDealTermsByDirection(
-    move.deal,
-    maps?.value1,
-    maps?.value2,
-    thread.player1ID,
-    thread.player2ID,
-    civNameFor(thread),
-    thread.agent
-  );
-  const lines = [terms || "(no terms)"];
+  // Same unified ledger the diplomat sees for the on-the-table deal; the fresh proposal-time
+  // inspection supplies the per-item value estimates. No players/relationships context is threaded
+  // into the move summary, so third-party relationship lines are omitted here.
+  const terms = formatDealLedger(move.deal, "Proposed terms:", ledgerContextFor(thread), {
+    inspection: move.inspection,
+  });
+  const lines = [terms];
   if (!move.inspection) {
     lines.push("Proposal-time estimates were unavailable; describe the stored terms without inventing values.");
   }

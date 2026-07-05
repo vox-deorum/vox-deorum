@@ -220,10 +220,11 @@ export function offerColumnsFor(
 
 /**
  * Eligible targets for one targeted promise type, from the inspect-deal promise-target metadata. The
- * only offered targeted promise is Cooperative War, which lists major targets (ineligible only when
- * `coopWarEligible === false`; absent ⇒ unknown ⇒ shown). Each option carries the fully-targeted
- * promise to add and its `(type,target)` selected-state. (The city-state promises are not offered —
- * the tactical AI does not honor them — and inspect-deal no longer reports minor targets.)
+ * only offered targeted promise is Cooperative War, which lists major targets. Ineligible targets
+ * (`coopWarEligible === false`) are HIDDEN, except one already selected in the deal being edited (kept
+ * visible so it can be deselected). An absent `coopWarEligible` (older DLL) ⇒ unknown ⇒ shown. Each
+ * option carries the fully-targeted promise to add and its `(type,target)` selected-state. (The
+ * city-state promises are not offered; the tactical AI does not honor them.)
  */
 export function promiseTargetsFor(
   promiseType: PromiseTerm['promiseType'],
@@ -233,17 +234,21 @@ export function promiseTargetsFor(
   currentPromises: PromiseTerm[]
 ): InventoryTarget[] {
   const eligible = promiseTargets.filter((t) => t.kind === 'major');
-  return eligible.map((t) => ({
-    key: `${promiseType}:${t.playerID}`,
-    label: t.name ?? `player ${t.playerID}`,
-    // A definite `false` disables the Coop War target; absent (older DLL) ⇒ shown.
-    legal: t.coopWarEligible !== false,
-    reasons: t.coopWarEligible === false ? ['Not a valid cooperative-war target right now.'] : [],
-    selected: currentPromises.some(
-      (p) => p.promiserID === ownerID && p.promiseType === promiseType && p.targetPlayerID === t.playerID
-    ),
-    addPayload: { kind: 'promise', promise: { promiserID: ownerID, recipientID: otherID, promiseType, targetPlayerID: t.playerID } },
-  }));
+  return eligible
+    .map((t): InventoryTarget => ({
+      key: `${promiseType}:${t.playerID}`,
+      label: t.name ?? `player ${t.playerID}`,
+      // A definite `false` disables the Coop War target; absent (older DLL) ⇒ shown.
+      legal: t.coopWarEligible !== false,
+      reasons: t.coopWarEligible === false ? ['Not a valid cooperative-war target right now.'] : [],
+      selected: currentPromises.some(
+        (p) => p.promiserID === ownerID && p.promiseType === promiseType && p.targetPlayerID === t.playerID
+      ),
+      addPayload: { kind: 'promise', promise: { promiserID: ownerID, recipientID: otherID, promiseType, targetPlayerID: t.playerID } },
+    }))
+    // Hide ineligible targets outright; keep one only if it is already on the deal, so it still shows
+    // as "on the table" here (the pledge is removed on the central offer, not from this add-menu).
+    .filter((target) => target.legal || target.selected);
 }
 
 /**
@@ -431,23 +436,25 @@ export function buildSideCatalog(args: {
   );
 
   // 9. Third-party peace / war — pick the target team from an expandable list (only if any exist).
+  // Illegal targets (not at war for peace / already at war for war) are HIDDEN, except one already on
+  // the deal (kept visible so it can be deselected). An empty surviving list drops the whole row.
   const thirdParty: InventoryRow[] = [];
-  const peaceTargets: InventoryTarget[] = (range?.thirdPartyPeace ?? []).map((t) => ({
+  const peaceTargets: InventoryTarget[] = (range?.thirdPartyPeace ?? []).map((t): InventoryTarget => ({
     key: `TPP:${t.teamID}`,
     label: t.name ?? `team ${t.teamID}`,
     legal: t.legal,
     reasons: t.reasons,
     selected: ownerGives((i) => i.itemType === 'THIRD_PARTY_PEACE' && i.thirdPartyTeamID === t.teamID),
     addPayload: { kind: 'item', item: defaultItemFor('THIRD_PARTY_PEACE', ownerID, otherID, { thirdPartyTeamID: t.teamID, durations }) },
-  }));
-  const warTargets: InventoryTarget[] = (range?.thirdPartyWar ?? []).map((t) => ({
+  })).filter((target) => target.legal || target.selected);
+  const warTargets: InventoryTarget[] = (range?.thirdPartyWar ?? []).map((t): InventoryTarget => ({
     key: `TPW:${t.teamID}`,
     label: t.name ?? `team ${t.teamID}`,
     legal: t.legal,
     reasons: t.reasons,
     selected: ownerGives((i) => i.itemType === 'THIRD_PARTY_WAR' && i.thirdPartyTeamID === t.teamID),
     addPayload: { kind: 'item', item: defaultItemFor('THIRD_PARTY_WAR', ownerID, otherID, { thirdPartyTeamID: t.teamID }) },
-  }));
+  })).filter((target) => target.legal || target.selected);
   if (peaceTargets.length) thirdParty.push(expandableRow('TP_PEACE', 'Make peace with…', peaceTargets));
   if (warTargets.length) thirdParty.push(expandableRow('TP_WAR', 'Declare war on…', warTargets));
 

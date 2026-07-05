@@ -8,8 +8,10 @@ Pure-presentational: it renders a precomputed `InventoryCategory[]` (built by th
 `buildSideCatalog`) and emits `add-term` when a row is clicked. Direct rows add immediately with
 default parameters (edited later on the central offer). Rows that need a target (targeted promises,
 third-party peace/war) are EXPANDABLE: clicking reveals the eligible targets, and clicking a target
-adds the already-targeted term. Structurally impossible rows/targets are red and not addable (their
-reason is a tooltip); singletons already on the table are shown selected.
+adds the already-targeted term. Illegitimate third-party / coop-war targets are hidden outright (kept
+only when already on the deal, so they still show as "on the table"; the pledge is removed on the
+central offer, not here); other structurally impossible rows are red and not addable (their reason is
+a tooltip); singletons already on the table are shown selected.
 -->
 <template>
   <section class="deal-panel" :class="`deal-panel-${side}`">

@@ -9,7 +9,7 @@
 import { ModelMessage, StepResult, Tool } from "ai";
 import { LiveEnvoy } from "./live-envoy.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { StrategistParameters } from "../strategist/strategy-parameters.js";
+import { StrategistParameters, getRecentGameState } from "../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
@@ -136,12 +136,15 @@ export class Diplomat extends LiveEnvoy {
     const messages = await super.getInitialMessages(parameters, input, context);
     if (!this.isSpecialMode(input)) {
       // Background first (cities + game deals), then the on-the-table proposal last so the most
-      // action-relevant item sits closest to the turn hint.
+      // action-relevant item sits closest to the turn hint. The background fetch also returns the
+      // viewer-perspective players report, reused for the deal's third-party relationship context.
       const background = await buildDiplomacyBackgroundMessage(context, parameters, input);
-      if (background) {
-        messages.push({ role: "user", content: background });
+      if (background.text) {
+        messages.push({ role: "user", content: background.text });
       }
-      const dealContext = await buildDealContextMessage(input);
+      // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
+      const relationships = getRecentGameState(parameters)?.options?.Relationships;
+      const dealContext = await buildDealContextMessage(input, background.players, relationships);
       if (dealContext) {
         messages.push({ role: "user", content: dealContext });
       }

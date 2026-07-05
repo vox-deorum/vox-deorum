@@ -428,6 +428,57 @@ describe('getInitialMessages task determination', () => {
     expect(mcp.calls('inspect-deal')[0]!.args).toHaveProperty('ProposedDeal');
   });
 
+  it('folds inspection values and third-party relationship context into the on-the-table ledger', async () => {
+    const deal = {
+      version: 1 as const,
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 40 }],
+      promises: [{ promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR' as const, targetPlayerID: 9 }],
+      message: 'Gold and a joint war against Rome.',
+    };
+    setOpenProposal(7, 1, deal); // counterpart (seat 1) authored it; the negotiator voices seat 3
+    mcp.respondWith('inspect-deal', structuredResult({
+      items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: true, reasons: [], valueIfIGive: 40, valueIfIReceive: 35 }],
+      promises: [{ promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR', targetPlayerID: 9 }],
+      promiseTargets: [{ playerID: 9, teamID: 9, name: 'Rome', kind: 'major', coopWarEligible: true }],
+      tradableRange: { '1': emptySideRange(), '3': emptySideRange() },
+    }));
+    const negotiator = new Negotiator();
+    const input = negotiatorInput({
+      thread: thread({
+        player1Identity: { name: 'Carthage', leader: 'Dido' },
+        player2Identity: { name: 'Germany', leader: 'Bismarck' },
+      }),
+    });
+    // Our leader's own set-relationship directive rides along the cached game state (no extra fetch).
+    const paramsWithRel = {
+      ...params,
+      gameStates: {
+        5: {
+          options: { Relationships: { Rome: { Public: -50, Private: -30, Rationale: 'Keep Rome weak.', UpdatedTurn: 4 } } },
+          players: {},
+        },
+      },
+    } as any;
+    const callTool = vi.fn(async (name: string) => (({
+      'get-cities': {},
+      'get-players': { '3': { Relationships: { Rome: 'War' } }, '1': { Relationships: { Rome: ['Denounced them'] } } },
+      'get-diplomatic-events': {},
+    }) as Record<string, unknown>)[name]);
+
+    const text = content(await negotiator.getInitialMessages(paramsWithRel, input, { callTool } as any));
+
+    expect(text).toContain('Deal On The Table (#7)');
+    expect(text).not.toContain('Inspection (advisory)');
+    // Per-item advisory estimates fold into the term (giver first), not a separate section.
+    expect(text).toContain('### Gold: 40');
+    expect(text).toContain('Estimated value to Carthage (them): 40');
+    expect(text).toContain('Estimated value to Germany (us): 35');
+    // Coop-war third-party context: both sides' public relationship + our leader's directive toward Rome.
+    expect(text).toContain("Germany's (our) relationship to Rome (third-party): War");
+    expect(text).toContain("Our leader's intention for Rome: Public -50/Private -30 (Keep Rome weak.)");
+    expect(text).toContain("Carthage's (their) relationship to Rome (third-party): Denounced them");
+  });
+
   it('opens a deal when nothing is on the table (request task)', async () => {
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
     const negotiator = new Negotiator();
@@ -579,9 +630,10 @@ describe('getOutput', () => {
     const out = await negotiator.getOutput({} as any, input, '');
     expect(out).toContain('PROPOSAL');
     expect(out).toContain('deal message #11');
-    // Direction-grouped, friendly-labelled terms (no civ identities on the test thread → "Player N").
-    expect(out).toContain('Player 3 gives Player 1');
-    expect(out).toContain('Gold: 50');
+    // Unified ledger: direction-grouped, friendly-labelled terms (no civ identities → "Player N").
+    expect(out).toContain('Proposed terms:');
+    expect(out).toContain('Player 3 Offers To Give Player 1');
+    expect(out).toContain('### Gold: 50');
   });
 
   it('returns undefined when no terminal tool recorded a move', async () => {

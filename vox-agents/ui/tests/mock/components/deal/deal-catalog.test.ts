@@ -213,38 +213,66 @@ describe('deal-catalog', () => {
     expect(military.targets).toBeUndefined();
     expect(military.addPayload).toEqual({ kind: 'promise', promise: { promiserID: 0, recipientID: 1, promiseType: 'MILITARY' } });
 
-    // Targeted: expandable, no direct add; targets from metadata with per-target eligibility/selected.
+    // Targeted: expandable, no direct add; only eligible targets survive (ineligible ones are hidden).
     const coop = rows.find((r) => r.key === 'PROMISE:COOP_WAR')!;
     expect(coop.addPayload).toBeUndefined();
     const wash = coop.targets!.find((t) => t.label === 'Washington')!;
-    const napo = coop.targets!.find((t) => t.label === 'Napoleon')!;
     expect(wash.legal).toBe(true);
     expect(wash.selected).toBe(true); // COOP_WAR vs 3 already on the table
     expect(wash.addPayload).toEqual({ kind: 'promise', promise: { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 3 } });
-    expect(napo.legal).toBe(false); // coopWarEligible === false → ineligible (but still shown)
+    // Napoleon (coopWarEligible === false, not on the deal) is hidden outright.
+    expect(coop.targets!.find((t) => t.label === 'Napoleon')).toBeUndefined();
   });
 
-  it('builds third-party peace/war as expandable target rows', () => {
+  it('keeps an ineligible Coop War target visible when it is already on the deal (to allow removal)', () => {
+    const promiseTargets: PromiseTargetInfo[] = [
+      { playerID: 4, teamID: 4, name: 'Napoleon', kind: 'major', coopWarEligible: false },
+    ];
+    // The now-ineligible Coop War vs Napoleon is already pledged, so it must stay visible (marked on the table).
+    const currentPromises: PromiseTerm[] = [{ promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 4 }];
+    const coop = cat(build({ currentPromises, promiseTargets }), 'promises').rows.find((r) => r.key === 'PROMISE:COOP_WAR')!;
+    const napo = coop.targets!.find((t) => t.label === 'Napoleon')!;
+    expect(napo.selected).toBe(true);
+    expect(napo.legal).toBe(false);
+  });
+
+  it('shows an unknown-eligibility Coop War target (older DLL: coopWarEligible absent)', () => {
+    const promiseTargets: PromiseTargetInfo[] = [{ playerID: 4, teamID: 4, name: 'Napoleon', kind: 'major' }];
+    const coop = cat(build({ currentPromises: [], promiseTargets }), 'promises').rows.find((r) => r.key === 'PROMISE:COOP_WAR')!;
+    const napo = coop.targets!.find((t) => t.label === 'Napoleon')!;
+    expect(napo.legal).toBe(true); // absent ⇒ unknown ⇒ shown as addable
+  });
+
+  it('builds third-party peace/war rows, hiding illegal targets (empty target list drops the row)', () => {
     const cats = build({
       range: range({
         thirdPartyPeace: [{ teamID: 4, name: 'Greece', legal: true, reasons: [] }],
+        // Egypt war is illegal (already at war) and not on the deal → hidden, so TP_WAR has no targets and vanishes.
         thirdPartyWar: [{ teamID: 5, name: 'Egypt', legal: false, reasons: ['Already at war'] }],
       }),
     });
     const rows = cat(cats, 'thirdParty').rows;
-    expect(rows.map((r) => r.key)).toEqual(['TP_PEACE', 'TP_WAR']);
+    expect(rows.map((r) => r.key)).toEqual(['TP_PEACE']);
 
     const peace = rows.find((r) => r.key === 'TP_PEACE')!;
     expect(peace.addPayload).toBeUndefined();
     expect(peace.targets!.map((t) => t.label)).toEqual(['Greece']);
     expect(peace.targets![0]!.addPayload).toMatchObject({ kind: 'item', item: { itemType: 'THIRD_PARTY_PEACE', thirdPartyTeamID: 4 } });
+  });
 
-    const war = rows.find((r) => r.key === 'TP_WAR')!;
+  it('keeps an illegal third-party war target visible (with its reason) when it is already on the deal', () => {
+    const cats = build({
+      range: range({ thirdPartyWar: [{ teamID: 5, name: 'Egypt', legal: false, reasons: ['Already at war'] }] }),
+      currentItems: [{ fromPlayerID: 0, toPlayerID: 1, itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 5 }],
+    });
+    const war = cat(cats, 'thirdParty').rows.find((r) => r.key === 'TP_WAR')!;
+    // Illegal-but-selected stays visible so it can be removed; its reason still surfaces as a tooltip.
+    expect(war.targets![0]!.selected).toBe(true);
     expect(war.targets![0]!.legal).toBe(false);
     expect(war.targets![0]!.reasons).toEqual(['Already at war']);
   });
 
-  it('marks a third-party target selected when that team is already on the table', () => {
+  it('marks a legal third-party target selected when that team is already on the table', () => {
     const cats = build({
       range: range({ thirdPartyWar: [{ teamID: 5, name: 'Egypt', legal: true, reasons: [] }] }),
       currentItems: [{ fromPlayerID: 0, toPlayerID: 1, itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 5 }],

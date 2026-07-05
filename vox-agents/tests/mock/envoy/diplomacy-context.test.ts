@@ -75,8 +75,11 @@ describe('buildDiplomacyBackgroundMessage', () => {
   it('renders all three sections, keying cities by civ name and deals viewer-first', async () => {
     const { context } = makeContext({ 'get-cities': cities, 'get-players': players, 'get-diplomatic-events': events });
 
-    const out = await buildDiplomacyBackgroundMessage(context, params, thread());
+    const result = await buildDiplomacyBackgroundMessage(context, params, thread());
+    const out = result.text;
 
+    // The players report is handed back for the callers' third-party relationship context.
+    expect(result.players).toEqual(players);
     expect(out).toContain('# Cities & Diplomatic Standing (with Rome)');
     // Cities: keyed by short name (Germany/Rome), NOT leader (Bismarck/Augustus Caesar).
     expect(out).toContain('## Your cities (Germany)');
@@ -96,22 +99,24 @@ describe('buildDiplomacyBackgroundMessage', () => {
     const { context, callTool } = makeContext({ 'get-cities': cities, 'get-players': players, 'get-diplomatic-events': events });
     const minorThread = thread({ player1Identity: { name: 'Venice', leader: MINOR_CIV_LEADER } });
 
-    const out = await buildDiplomacyBackgroundMessage(context, params, minorThread);
+    const { text: out } = await buildDiplomacyBackgroundMessage(context, params, minorThread);
 
     expect(out).toBeUndefined();
     expect(callTool).not.toHaveBeenCalled();
   });
 
-  it('returns undefined when every section is empty', async () => {
+  it('returns no text when every section is empty (but still echoes the players report)', async () => {
     const { context } = makeContext({ 'get-cities': {}, 'get-players': {}, 'get-diplomatic-events': {} });
-    expect(await buildDiplomacyBackgroundMessage(context, params, thread())).toBeUndefined();
+    const out = await buildDiplomacyBackgroundMessage(context, params, thread());
+    expect(out.text).toBeUndefined();
+    expect(out.players).toEqual({});
   });
 
   it('degrades each section independently when a fetch fails (returns undefined)', async () => {
     // Cities and events fetches fail; only standing deals survive.
     const { context } = makeContext({ 'get-cities': undefined, 'get-players': players, 'get-diplomatic-events': undefined });
 
-    const out = await buildDiplomacyBackgroundMessage(context, params, thread());
+    const { text: out } = await buildDiplomacyBackgroundMessage(context, params, thread());
 
     expect(out).toContain('Standing agreements currently in force with Rome');
     expect(out).not.toContain('Your cities');
@@ -129,7 +134,7 @@ describe('buildDiplomacyBackgroundMessage', () => {
     };
     const { context } = makeContext({ 'get-cities': {}, 'get-players': {}, 'get-diplomatic-events': mixedEvents });
 
-    const out = await buildDiplomacyBackgroundMessage(context, params, thread());
+    const { text: out } = await buildDiplomacyBackgroundMessage(context, params, thread());
 
     expect(out).toContain('turn 15: Deal: **Germany** gives [Gold: 25] ↔ **Rome** gives [Open Borders]');
     expect(out).not.toContain('Secret pact');
@@ -146,7 +151,7 @@ describe('buildDiplomacyBackgroundMessage', () => {
     }
     const { context } = makeContext({ 'get-cities': {}, 'get-players': {}, 'get-diplomatic-events': many });
 
-    const out = await buildDiplomacyBackgroundMessage(context, params, thread());
+    const { text: out } = await buildDiplomacyBackgroundMessage(context, params, thread());
 
     expect(out!.split('- turn ').length - 1).toBe(10);
     expect(out).not.toContain('- turn 1:');
