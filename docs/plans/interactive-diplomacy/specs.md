@@ -154,10 +154,10 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
   - validates it structurally by calling `AreAllTradeItemsValid(bTreatAsHumanToHuman = true)` (the defaulted override above), and
   - activates it with acceptance already decided.
 - **The `CvDealAI` valuation logic is left completely untouched, and the normal in-game deal pathway behaves exactly as before.** The shared-function change is the *defaulted* `bTreatAsHumanToHuman` parameter on `IsPossibleToTradeItem` / `AreAllTradeItemsValid` and the matching inspection/reason path, with the default reproducing the prior computation. We add an entrypoint; we do not change the behavior of the existing ones.
-- `EnactAgentDeal` does two things in one call:
+- Enactment does two things in one call (the `Deal:Enact` / `Player:SetPromise` bindings, invoked together in one synchronous Lua invocation):
   - finalizes the `CvDeal` of ordinary trade items (as above), **and**
-  - applies the deal's **promise commitments** by calling the diplomacy setters directly — `SetXxxPromiseState` / `SetXxxPromiseTurn` for the eight standing promises and `SetCoopWarState` for Coop War.
-- The whole entrypoint is gated behind `MOD_ACTIVE_DIPLOMACY`, so promises are reachable only here, never on the stock screen.
+  - applies the deal's **promise commitments** by calling the diplomacy setters directly — `SetXxxPromiseState` (which stamp the promise turn internally) for the eight standing promises and `SetCoopWarState` for Coop War.
+- The enactment surface is additive and Lua-only (the finalize chain lives in the `MOD_ACTIVE_DIPLOMACY` region), so promises are reachable only here, never on the stock screen.
 - Promise legality is a **light structural check** done in the entrypoint — it does **not** route through `IsPossibleToTradeItem`, since promises are not `TradeableItems`:
   - distinct living major civs;
   - not already in `PROMISE_STATE_MADE` for that pair;
@@ -275,7 +275,7 @@ Durable transcript storage and the deal bridge:
   - the **AI value estimate both directions** (for trade items, via the new `GetTradeItemValue` getter);
   - **agreeability factors** (for promises, assembled from existing diplomacy/opinion getters).
   - Legality and estimation are unified here — there is no separate estimate tool.
-- A non-read-only **enact-agent-deal** tool that calls the new DLL `EnactAgentDeal` function with a complete deal object, passing both the trade items **and the promise commitment list**. The DLL function is stateless; the tool is transcript-aware — it takes the proposal message ID, checks for a prior `deal-enacted` on it (idempotent), enacts, and records `deal-enacted` on success. Callers reduce the transcript only to choose the proposal to enact.
+- A non-read-only **enact-agent-deal** tool that calls the new DLL enactment bindings (`Deal:Enact` + `Player:SetPromise`) with a complete deal object, passing both the trade items **and the promise commitment list**. The DLL surface is stateless; the tool is transcript-aware — it takes the proposal message ID, checks for a prior `deal-enacted` on it (idempotent), enacts, and records `deal-enacted` on success. Callers reduce the transcript only to choose the proposal to enact.
 - Tools follow the existing `ToolBase` / `LuaFunctionTool` pattern and registry (`tools/index.ts`).
 
 ### `vox-agents`
@@ -293,14 +293,14 @@ The diplomat and negotiator agents and the per-seat config generalization:
 
 The *only* gameplay code change:
 
-- A new Lua-exposed entrypoint (an `EnactAgentDeal` method exposed in `CvLuaDeal.cpp`) that:
+- A new Lua-exposed enactment surface (an `Enact` method on `CvLuaDeal.cpp` plus a `SetPromise` method on `CvLuaPlayer.cpp`) that:
   - builds a `CvDeal`;
   - validates it with `AreAllTradeItemsValid(bTreatAsHumanToHuman = true)` for structural legality — using the **defaulted override** added to `IsPossibleToTradeItem` / `AreAllTradeItemsValid` (default reproduces today's computed value, so stock callers are unchanged), so AI-only structural restrictions don't gate agent deals — §4;
   - activates it via the existing `FinalizeDealValidAndAccepted` / `ActivateDeal` with acceptance pre-decided — **without** invoking `CvDealAI`;
-  - then **applies the deal's promise commitments** by calling the diplomacy setters directly — `SetXxxPromiseState` / `SetXxxPromiseTurn` (plus existing side-effects) for the eight standing promises, and `SetCoopWarState` for Coop War — all gated behind `MOD_ACTIVE_DIPLOMACY`.
+  - then **applies the deal's promise commitments** by calling the diplomacy setters directly — `SetXxxPromiseState` (which stamp the promise turn internally, plus existing side-effects) for the eight standing promises, and `SetCoopWarState` for Coop War — with the finalize chain living in the `MOD_ACTIVE_DIPLOMACY` region.
 - Inspection reuses `lIsPossibleToTradeItem` / `lGetReasonsItemUntradeable`, which already exist on the Lua-exposed `CvDeal` (`CvLuaDeal.cpp`) but are not yet wrapped by mcp-server — **plus a new read-only getter** that wraps `CvDealAI::GetTradeItemValue` per item, both directions, for the value estimates. The legality/reason wrapper passes the same `bTreatAsHumanToHuman = true` override so the screen's per-term legality matches what enactment will allow.
 - The **defaulted `bTreatAsHumanToHuman` override** on `IsPossibleToTradeItem` / `AreAllTradeItemsValid`, plus the matching inspection/reason wrapper path (§4): a backward-compatible signature extension whose default reproduces the existing computed value, so the stock deal screen and AI paths are unchanged. `CvDealAI` is untouched.
-- **No `TradeableItems` enum change, no new save fields, and no new acceptability/valuation logic** (promise agreeability is factor-based reasoning in the agent, § Deal valuation visible to both agents). Requires a DLL rebuild and a version bump; the normal pathway behaves exactly as before.
+- **No `TradeableItems` enum change, no new save fields, and no new acceptability/valuation logic** (promise agreeability is factor-based reasoning in the agent, § Deal valuation visible to both agents). Requires a DLL rebuild (no version bump); the normal pathway behaves exactly as before.
 
 ### Web UI (`vox-agents/ui`)
 
