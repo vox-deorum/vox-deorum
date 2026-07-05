@@ -112,6 +112,15 @@ describe('rescueToolCallsFromText', () => {
       expect(result.toolCalls.map(tc => tc.toolName)).toEqual(['get-data']);
       expect(JSON.parse(result.toolCalls[0].input)).toEqual({ x: 1 });
     });
+
+    it('treats a bare wrapper remnant as empty, not a failed rescue', () => {
+      // `{"actions":}` is the leftover shell of the constrained-decoding envelope after the
+      // real calls were extracted natively. It carries no tool call and must not warn.
+      const text = '{"actions":}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.remainingText).toBe(text);
+    });
   });
 
   describe('markdown code blocks', () => {

@@ -14,6 +14,12 @@ import { createLogger } from '../../logger.js';
 
 const logger = createLogger("tool-rescue");
 
+// Keys under which constrained-decoding providers wrap the tool-call array (the
+// `listKey` values in buildToolCallArraySchema). A parsed object whose only keys
+// are these is a bare wrapper shell (e.g. `{"actions":}` left behind after the
+// real calls were extracted natively), not a failed tool call.
+const WRAPPER_KEYS = new Set(['tools', 'actions']);
+
 // Simple ID generator
 function generateId(): string {
   return `call_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -247,7 +253,7 @@ export function rescueToolCallsFromText(
     const looksLikeToolCall = fieldPatterns.some(pattern => candidate[pattern.nameField] !== undefined);
     if (!looksLikeToolCall) {
       const arrayEntries = Object.entries(candidate).filter(([, value]) => Array.isArray(value));
-      const named = arrayEntries.find(([key]) => key === 'tools' || key === 'actions');
+      const named = arrayEntries.find(([key]) => WRAPPER_KEYS.has(key));
       if (named) candidate = named[1];
       else if (arrayEntries.length === 1) candidate = arrayEntries[0][1];
     }
@@ -278,7 +284,11 @@ export function rescueToolCallsFromText(
     }
 
     if (!patternFound) {
-      if (Object.keys(toolCall).length > 0 && useJaison)
+      // A bare wrapper shell (only wrapper keys, no tool-call fields) is a harmless
+      // remnant of the constrained-decoding envelope, not a genuine parse failure.
+      const keys = Object.keys(toolCall);
+      const isWrapperRemnant = keys.length > 0 && keys.every(key => WRAPPER_KEYS.has(key));
+      if (keys.length > 0 && !isWrapperRemnant && useJaison)
         logger.log("warn", `Failed to rescue tool call: no matching field pattern found from ${jsonText}`);
       continue;
     }
