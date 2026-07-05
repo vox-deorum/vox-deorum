@@ -161,14 +161,26 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
       const framing = options?.framing ?? 'tool';
       const toolChoice = params.toolChoice ?? { type: "auto" };
 
+      // Single source of truth for whether constrained decoding will FORCE the tool-call wrapper
+      // object. Drives BOTH the injected prompt shape (so the taught example matches) and the
+      // responseFormat schema below, so the instruction and the grammar can never diverge.
+      const wrapToolCalls = !!options?.structuredToolCalls
+        && toolChoice.type === 'required'
+        && !params.responseFormat;
+
       // Create tool instruction prompt with full tool schemas
-      const toolPrompt = createToolPrompts(params.tools, toolChoice, framing);
+      const toolPrompt = createToolPrompts(params.tools, toolChoice, framing, wrapToolCalls);
 
       // Report the resolved framing as an explicit fact (recorded separately from any
       // prompt content) plus, only when we adapted to 'action', the injected prompt in
       // VANILLA 'tool' wording. Recording the framing value (not the mere presence of a
       // stored prompt) keeps future prompt-storage changes from silently altering how a
-      // turn's framing reads; Oracle re-derives the action view from its own replay model.
+      // turn's framing reads. Deliberately vanilla AND unwrapped: the wrapper object is a
+      // claude-code-only constrained-decoding transport convention, so the neutral bare-array
+      // 'tool' form is the canonical record. Replay re-applies whichever convention its OWN
+      // model dictates (non-CC → bare, CC → wrapper) — freezing the wrapper here would leak a
+      // CC-only shape into a record a non-CC replay reads. Faithful CC reproduction comes from
+      // modelOverride returning a CC/options.framing model, not from this telemetry.
       if (options?.onToolFraming) {
         const vanillaToolPrompt = framing === 'action'
           ? createToolPrompts(params.tools, toolChoice, 'tool')
@@ -182,7 +194,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
       // guidance + prose fallback). Respect a responseFormat a real output schema already
       // set (streamText lowers `output` to params.responseFormat), so never clobber it, and
       // mark that we installed ours so the carrier suppression below only fires for our schema.
-      if (options?.structuredToolCalls && toolChoice.type === 'required' && !params.responseFormat) {
+      if (wrapToolCalls) {
         params.responseFormat = { type: 'json', schema: buildToolCallArraySchema(params.tools, framing) };
         (params as any).structuredToolCallsActive = true;
       }

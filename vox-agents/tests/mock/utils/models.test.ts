@@ -251,6 +251,22 @@ describe('claude-code provider', () => {
       expect(info?.toolPrompt).not.toContain('## Action Calling');
     });
 
+    it('keeps the telemetry prompt convention-neutral (vanilla bare array, no wrapper) even under constrained decoding', async () => {
+      let info: { framing: string; toolPrompt?: string } | undefined;
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true, onToolFraming: (i) => { info = i; } });
+      await (mw.transformParams as any)({
+        params: { tools, toolChoice: { type: 'required' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
+      });
+      expect(info?.framing).toBe('action');
+      // The wrapper object is a claude-code-only transport convention. The record stays the
+      // neutral vanilla bare-array 'tool' form so replay re-applies whichever convention ITS
+      // model dictates (non-CC → bare, CC → wrapper), rather than inheriting a CC-only shape.
+      expect(info?.toolPrompt).toContain('## Tool Calling');
+      expect(info?.toolPrompt).toMatch(/Respond ONLY with a JSON array/);
+      expect(info?.toolPrompt).not.toMatch(/"tools":\s*\[/);
+      expect(info?.toolPrompt).not.toContain('## Action Calling');
+    });
+
     it("reports 'tool' framing with no prompt content via onToolFraming under the default framing", async () => {
       let info: { framing: string; toolPrompt?: string } | undefined;
       const mw = toolRescueMiddleware({ prompt: true, onToolFraming: (i) => { info = i; } });

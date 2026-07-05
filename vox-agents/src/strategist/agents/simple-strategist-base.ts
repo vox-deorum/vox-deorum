@@ -8,11 +8,12 @@
 import { Strategist } from "../strategist.js";
 import { StrategistParameters } from "../strategy-parameters.js";
 import { StrategyDecisionType } from "../../types/config.js";
+import { buildRequiredToolsNudge } from "../../utils/tools/terminal-tools.js";
 
 /** Builds a mode-aware nudge reminding the model to finalize its strategic decision */
 function buildStrategistNudge(parameters: StrategistParameters): string {
   const decisionTool = parameters.mode === "Flavor" ? "set-flavors" : "set-strategy";
-  return `Make sure to call \`${decisionTool}\` or \`keep-status-quo\` to finalize your decisions.`;
+  return buildRequiredToolsNudge([decisionTool, "keep-status-quo"])!;
 }
 
 /**
@@ -26,7 +27,10 @@ export abstract class SimpleStrategistBase extends Strategist {
   public removeUsedTools: boolean = true;
   public requiredTools = ["set-strategy", "set-flavors", "keep-status-quo"];
   public maxSteps = 5;
-  public continuationNudge = buildStrategistNudge;
+
+  public override continuationNudge(parameters: StrategistParameters): string {
+    return buildStrategistNudge(parameters);
+  }
 
   // ============================================================
   // System Section Prompts (for getSystem method)

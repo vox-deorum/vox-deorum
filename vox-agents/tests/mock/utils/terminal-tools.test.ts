@@ -10,7 +10,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { getValidCalls, hasOnlyTerminalCalls } from '../../../src/utils/tools/terminal-tools.js';
+import {
+  getValidCalls,
+  hasOnlyTerminalCalls,
+  formatToolChoiceList,
+  buildRequiredToolsNudge,
+} from '../../../src/utils/tools/terminal-tools.js';
 
 const mcpToolMap = new Map<string, any>([
   ['end_turn', { name: 'end_turn', inputSchema: { type: 'object' }, annotations: { readOnlyHint: false } }],
@@ -69,5 +74,39 @@ describe('getValidCalls', () => {
   it('returns an empty array for a step with only invalid calls', () => {
     const step = { toolCalls: [{ toolName: 'garbled', invalid: true }] };
     expect(getValidCalls(step)).toEqual([]);
+  });
+});
+
+describe('formatToolChoiceList', () => {
+  it('returns undefined for an empty list', () => {
+    expect(formatToolChoiceList([])).toBeUndefined();
+  });
+
+  it('backtick-quotes a single name with no conjunction', () => {
+    expect(formatToolChoiceList(['a'])).toBe('`a`');
+  });
+
+  it('joins two names with "or" and no comma', () => {
+    expect(formatToolChoiceList(['a', 'b'])).toBe('`a` or `b`');
+  });
+
+  it('uses an Oxford comma for three or more names', () => {
+    expect(formatToolChoiceList(['a', 'b', 'c'])).toBe('`a`, `b`, or `c`');
+  });
+
+  it('passes hyphenated tool names through verbatim inside the backticks', () => {
+    expect(formatToolChoiceList(['accept-deal', 'propose-deal', 'reject-deal']))
+      .toBe('`accept-deal`, `propose-deal`, or `reject-deal`');
+  });
+});
+
+describe('buildRequiredToolsNudge', () => {
+  it('returns undefined for an empty list so the injection site skips', () => {
+    expect(buildRequiredToolsNudge([])).toBeUndefined();
+  });
+
+  it('wraps the formatted list in the finalize reminder', () => {
+    expect(buildRequiredToolsNudge(['accept-deal', 'propose-deal', 'reject-deal']))
+      .toBe('Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` to finalize your decisions.');
   });
 });

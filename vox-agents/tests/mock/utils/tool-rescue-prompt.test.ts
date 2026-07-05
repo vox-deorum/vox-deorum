@@ -81,6 +81,9 @@ describe('createToolPrompts', () => {
       const out = createToolPrompts(tools, { type: 'required' })!;
       expect(out).toContain('## Tool Calling');
       expect(out).toMatch(/You must use one or more tools/);
+      // Unwrapped by default: teaches a bare array, never the wrapper object.
+      expect(out).toMatch(/Respond ONLY with a JSON array/);
+      expect(out).not.toMatch(/"tools":\s*\[/);
     });
 
     it('mandates the single tool for the tool branch', () => {
@@ -114,6 +117,31 @@ describe('createToolPrompts', () => {
       expect(out).toContain('## Action Calling');
       expect(out).toMatch(/You must use the action defined below/);
       expect(out).toContain('{ "action": "<action_name>", "arguments": { <parameters> } }');
+    });
+  });
+
+  describe('wrapped (constrained-decoding) required branch', () => {
+    it('teaches the wrapper object matching the responseFormat schema under action framing', () => {
+      const out = createToolPrompts(tools, { type: 'required' }, 'action', true)!;
+      expect(out).toContain('## Action Calling');
+      expect(out).toMatch(/Respond ONLY with a JSON object/);
+      expect(out).toMatch(/"actions":\s*\[/);
+      expect(out).toContain('{ "action": "<action_name>", "arguments": { <parameters> } }');
+      // Must NOT reuse the bare-array phrasing that would contradict the enforced grammar.
+      expect(out).not.toMatch(/Respond ONLY with a JSON array/);
+    });
+
+    it("uses the framing's listKey wrapper under tool framing", () => {
+      const out = createToolPrompts(tools, { type: 'required' }, 'tool', true)!;
+      expect(out).toContain('## Tool Calling');
+      expect(out).toMatch(/"tools":\s*\[/);
+      expect(out).toContain('{ "tool": "<tool_name>", "arguments": { <parameters> } }');
+    });
+
+    it('only affects the required branch — auto stays bare even when wrapped is true', () => {
+      const out = createToolPrompts(tools, { type: 'auto' }, 'action', true)!;
+      expect(out).toMatch(/You have access to actions/);
+      expect(out).not.toMatch(/"actions":\s*\[/);
     });
   });
 

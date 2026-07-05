@@ -12,7 +12,7 @@ import { z, ZodObject } from "zod";
 import { Model } from "../types/index.js";
 import { VoxContext } from "./vox-context.js";
 import { getModelConfig, resolveToolFraming } from "../utils/models/models.js";
-import { getValidCalls, hasOnlyTerminalCalls } from "../utils/tools/terminal-tools.js";
+import { getValidCalls, hasOnlyTerminalCalls, buildRequiredToolsNudge } from "../utils/tools/terminal-tools.js";
 import { buildRescuePrompt } from "../utils/models/text-cleaning.js";
 // @ts-ignore - jaison doesn't have type definitions
 import jaison from 'jaison';
@@ -135,10 +135,14 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   public requiredTools?: string[];
 
   /**
-   * Generates a nudge message when the loop continues without calling required tools.
-   * Called with current parameters to produce a mode-aware reminder string.
+   * Reminder injected as a user message when the loop continues past the first step, nudging the
+   * model to finalize. The default derives from {@link requiredTools} (so any required-tools agent
+   * gets a sensible nudge for free); override for mode-aware wording, or return undefined to disable
+   * (e.g. replay agents that must not perturb the reproduced prompt).
    */
-  public continuationNudge?: (parameters: TParameters) => string;
+  public continuationNudge(_parameters: TParameters): string | undefined {
+    return this.requiredTools?.length ? buildRequiredToolsNudge(this.requiredTools) : undefined;
+  }
 
   /**
    * When true, this agent handles messages programmatically without an LLM.
@@ -420,12 +424,14 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
       config.messages = filteredMessages;
     }
 
-    // Inject continuation nudge when loop continues past first step
-    if (this.continuationNudge && allSteps.length > 0) {
+    // Inject continuation nudge when loop continues past the first step
+    if (allSteps.length > 0) {
       const nudge = this.continuationNudge(parameters);
-      const msgs = config.messages || messages;
-      if (msgs[msgs.length - 1]?.content !== nudge) {
-        config.messages = [...msgs, { role: 'user', content: nudge }];
+      if (nudge) {
+        const msgs = config.messages || messages;
+        if (msgs[msgs.length - 1]?.content !== nudge) {
+          config.messages = [...msgs, { role: 'user', content: nudge }];
+        }
       }
     }
 

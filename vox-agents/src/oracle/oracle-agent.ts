@@ -25,6 +25,15 @@ export class OracleAgent extends VoxAgent<OracleParameters, OracleInput, ReplayR
   public override requiredTools = ['set-strategy', 'set-flavors', 'keep-status-quo'];
   public override maxSteps = 5;
 
+  /**
+   * Disable the requiredTools-derived nudge: Oracle replays the originally recorded prompt
+   * verbatim, so injecting an unrecorded reminder on a continuation step would diverge the
+   * replayed conversation from what the original agent saw and bias the counterfactual.
+   */
+  public override continuationNudge(): undefined {
+    return undefined;
+  }
+
   /** Return the pre-resolved model from parameters */
   public override getModel(parameters: OracleParameters, _input: OracleInput, _overrides: Record<string, Model | string>): Model {
     return parameters.resolvedModel;

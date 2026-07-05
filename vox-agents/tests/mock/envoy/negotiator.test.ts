@@ -26,7 +26,12 @@ import {
   type NegotiatorInput,
 } from '../../../src/envoy/utils/negotiator-utils.js';
 import { sessionRegistry } from '../../../src/infra/session-registry.js';
+import { createFakeVoxContext } from '../../helpers/fake-vox-context.js';
 import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../mcp-server/dist/utils/deal-schema.js';
+
+/** The nudge the negotiator inherits from its terminal-tool requiredTools (declared order). */
+const NEGOTIATOR_NUDGE =
+  'Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` to finalize your decisions.';
 
 /** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
 const agreementLabel = (itemType: string) => AGREEMENT_METADATA.find((a) => a.itemType === itemType)!.label;
@@ -329,6 +334,39 @@ describe('negotiator completion', () => {
     expect(
       negotiator.stopCheck({} as any, input, failedTerminalStep, [failedTerminalStep], {} as any)
     ).toBe(false);
+  });
+
+  it('nudges toward its terminal tools when a continuation step produced text but no move', async () => {
+    // Negotiator runs toolChoice:"auto", so text-without-a-terminal-call is not the empty-response
+    // rescue path; the inherited requiredTools nudge is what pushes it to commit. No override needed.
+    const negotiator = new Negotiator();
+    const ctx = createFakeVoxContext().asContext();
+    const messages = [
+      { role: 'system' as const, content: 'sys' },
+      { role: 'user' as const, content: 'Decide on the deal.' },
+    ];
+    const textStep = { toolCalls: [], text: 'Let me weigh the offer...', response: { messages: [] } } as any;
+
+    const config = await negotiator.prepareStep({} as any, negotiatorInput(), textStep, [textStep], messages, ctx);
+
+    const last = config.messages![config.messages!.length - 1];
+    expect(last).toEqual({ role: 'user', content: NEGOTIATOR_NUDGE });
+  });
+
+  it('does not re-append the nudge when it is already the last message', async () => {
+    const negotiator = new Negotiator();
+    const ctx = createFakeVoxContext().asContext();
+    const messages = [
+      { role: 'system' as const, content: 'sys' },
+      { role: 'user' as const, content: 'Decide on the deal.' },
+      { role: 'user' as const, content: NEGOTIATOR_NUDGE },
+    ];
+    const textStep = { toolCalls: [], text: 'Still thinking...', response: { messages: [] } } as any;
+
+    const config = await negotiator.prepareStep({} as any, negotiatorInput(), textStep, [textStep], messages, ctx);
+
+    // Duplicate guard: nothing appended, so prepareStep leaves messages untouched.
+    expect(config.messages).toBeUndefined();
   });
 
   it('takes only the first terminal tool call from one model step', async () => {
