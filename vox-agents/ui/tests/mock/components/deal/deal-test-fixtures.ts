@@ -40,7 +40,9 @@ export const dealStubs = {
     template: '<button :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
   },
   InputNumber: {
-    props: ['modelValue', 'disabled'],
+    // `size` is declared (though unused) so PrimeVue's `size="small"` is consumed as a prop rather
+    // than falling through onto the native <input>, whose `size` attribute jsdom rejects as non-numeric.
+    props: ['modelValue', 'disabled', 'size'],
     emits: ['update:modelValue'],
     template: '<input class="number-stub" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
   },

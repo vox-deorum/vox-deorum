@@ -82,5 +82,5 @@ export function formatToolChoiceList(names: string[]): string | undefined {
  */
 export function buildRequiredToolsNudge(names: string[]): string | undefined {
   const list = formatToolChoiceList(names);
-  return list ? `Make sure to call ${list} to finalize your decisions.` : undefined;
+  return list ? `Make sure to call ${list} with the exact provided format to finalize your decisions.` : undefined;
 }

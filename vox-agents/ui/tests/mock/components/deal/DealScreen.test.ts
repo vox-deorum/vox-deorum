@@ -62,7 +62,9 @@ const stubs = {
   Tag: { props: ['value'], template: '<span class="tag">{{ value }}</span>' },
   Select: { props: ['options', 'modelValue'], emits: ['update:modelValue'], template: '<span class="select-stub"></span>' },
   InputNumber: {
-    props: ['modelValue'],
+    // `size` is declared (though unused) so PrimeVue's `size="small"` is consumed as a prop rather
+    // than falling through onto the native <input>, whose `size` attribute jsdom rejects as non-numeric.
+    props: ['modelValue', 'size'],
     emits: ['update:modelValue'],
     template: '<input class="number-stub" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
   },

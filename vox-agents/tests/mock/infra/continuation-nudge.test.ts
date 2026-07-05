@@ -19,17 +19,17 @@ describe('continuationNudge', () => {
   it('derives the default nudge from requiredTools (negotiator, inherited)', () => {
     const negotiator = agentRegistry.get('negotiator') as any;
     expect(negotiator.continuationNudge({})).toBe(
-      'Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` to finalize your decisions.'
+      'Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` with the exact provided format to finalize your decisions.'
     );
   });
 
   it('keeps the strategist wording mode-aware after the shared-formatter refactor', () => {
     const strategist = agentRegistry.get('simple-strategist') as any;
     expect(strategist.continuationNudge({ mode: 'Strategy' })).toBe(
-      'Make sure to call `set-strategy` or `keep-status-quo` to finalize your decisions.'
+      'Make sure to call `set-strategy` or `keep-status-quo` with the exact provided format to finalize your decisions.'
     );
     expect(strategist.continuationNudge({ mode: 'Flavor' })).toBe(
-      'Make sure to call `set-flavors` or `keep-status-quo` to finalize your decisions.'
+      'Make sure to call `set-flavors` or `keep-status-quo` with the exact provided format to finalize your decisions.'
     );
   });
 

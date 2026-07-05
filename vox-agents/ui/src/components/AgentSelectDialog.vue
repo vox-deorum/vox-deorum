@@ -78,7 +78,7 @@ const playerIdentities = ref<Record<number, ParticipantIdentity>>({});
 const assignments = ref<Record<number, PlayerAssignment>>({});
 const diplomacyInitiator = ref<PlayerOption | null>(null);
 const voiceOverride = ref<AgentInfo | null>(null);
-const initiatorRole = ref('the leader');
+const initiatorRole = ref('the diplomat');
 
 /** Major-civ player options (no observer) for the diplomacy selectors. */
 const civPlayerOptions = computed(() => playerOptions.value.filter(o => o.value !== 'observer'));
@@ -341,7 +341,7 @@ function closeDialog() {
   selectedPlayerOption.value = null;
   diplomacyInitiator.value = null;
   voiceOverride.value = null;
-  initiatorRole.value = 'the leader';
+  initiatorRole.value = 'the diplomat';
   // Drop the cached seat civ/identity so reopening for a different session re-resolves them.
   playerCivs.value = {};
   playerIdentities.value = {};
