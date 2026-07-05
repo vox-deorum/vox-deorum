@@ -101,9 +101,6 @@ export class Negotiator extends VoxAgent<StrategistParameters, NegotiatorInput, 
     return thread ? resolveNegotiator(thread) : this.name;
   }
 
-  /** Let the model reason (e.g. call get-briefing) before committing to a terminal tool. */
-  public override toolChoice = "auto";
-
   /** Stop as soon as one terminal tool has produced a move. */
   public override requiredTools = [...NEGOTIATOR_TERMINAL_TOOLS];
 
@@ -245,7 +242,7 @@ You can access additional information by calling the following tools.
       ...buildGameContextMessages(parameters),
       ...(background.text ? [{ role: "user" as const, content: background.text }] : []),
       { role: "user", content: sections.join("\n\n") },
-      { role: "system", content: `You are the negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool in JSON format to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
+      { role: "system", content: `You are the negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool in the provided format to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },
     ];
   }
 
