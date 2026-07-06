@@ -11,9 +11,12 @@ import {
   hasMirror,
   addItemWithMirror,
   removeItemWithMirror,
-  type NormalizedSideRange,
+  goldCap,
+  gptCap,
+  resourceCap,
 } from '@/components/deal/deal-helpers';
 import type { TradeItem, PromiseTerm, InspectedTradeItem, PromiseTargetInfo } from '@/utils/types';
+import { range } from './deal-test-fixtures';
 
 const item = (over: Partial<TradeItem>): TradeItem => ({
   fromPlayerID: 0,
@@ -21,29 +24,6 @@ const item = (over: Partial<TradeItem>): TradeItem => ({
   itemType: 'GOLD',
   ...over,
 });
-
-/** A normalized range fixture carrying the game-facing names + per-candidate legality. */
-const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange =>
-  ({
-    gold: { available: true, max: 500, reasons: [] },
-    goldPerTurn: { available: true, reasons: [] },
-    maps: { legal: true, reasons: [] },
-    openBorders: { legal: true, reasons: [] },
-    defensivePact: { legal: true, reasons: [] },
-    researchAgreement: { legal: true, reasons: [] },
-    peaceTreaty: { legal: true, reasons: [] },
-    allowEmbassy: { legal: true, reasons: [] },
-    declarationOfFriendship: { legal: true, reasons: [] },
-    vassalage: { legal: true, reasons: [] },
-    vassalageRevoke: { legal: true, reasons: [] },
-    resources: [],
-    cities: [],
-    techs: [],
-    thirdPartyPeace: [],
-    thirdPartyWar: [],
-    voteCommitments: [],
-    ...over,
-  }) as NormalizedSideRange;
 
 describe('deal-helpers', () => {
   it('flags INT_MAX-scale sentinels and formats them as "no usable estimate"', () => {
@@ -59,6 +39,25 @@ describe('deal-helpers', () => {
     const gives0 = sideGives(items, 0);
     expect(gives0.map((g) => g.index)).toEqual([0, 2]);
     expect(sideGives(items, 1).map((g) => g.index)).toEqual([1]);
+  });
+
+  it('derives the per-row editor caps from the giver range (gold treasury, GPT income, resource qty)', () => {
+    // GOLD: the treasury, always defined — 0 when broke (the row's min 0 clamps to [0, 0]).
+    expect(goldCap(range({ gold: { available: true, max: 500, reasons: [] } }))).toBe(500);
+    expect(goldCap(range({ gold: { available: true, max: 0, reasons: [] } }))).toBe(0);
+    // GPT: net income, but dropped (undefined) when ≤0 or absent, since the row's min is 1.
+    expect(gptCap(range({ netGoldPerTurn: 42 }))).toBe(42);
+    expect(gptCap(range({ netGoldPerTurn: 0 }))).toBeUndefined();
+    expect(gptCap(range({ netGoldPerTurn: -3 }))).toBeUndefined();
+    expect(gptCap(range({ netGoldPerTurn: undefined }))).toBeUndefined();
+    // RESOURCES: the available quantity of the matching resource, else undefined.
+    const r = range({ resources: [{ resourceID: 3, name: 'Iron', category: 'strategic', quantityAvailable: 5, legal: true, reasons: [] }] });
+    expect(resourceCap(r, 3)).toBe(5);
+    expect(resourceCap(r, 99)).toBeUndefined();
+    // A missing side range yields no cap for any type.
+    expect(goldCap(undefined)).toBeUndefined();
+    expect(gptCap(undefined)).toBeUndefined();
+    expect(resourceCap(undefined, 3)).toBeUndefined();
   });
 
   it('labels items, using the giver range for game-facing names', () => {

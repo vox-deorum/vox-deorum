@@ -94,6 +94,9 @@ import {
   formatPromiseLabel,
   formatValue,
   computeSideBalance,
+  goldCap,
+  gptCap,
+  resourceCap,
 } from './deal-helpers';
 import { offerColumnsFor } from './deal-catalog';
 
@@ -197,17 +200,11 @@ const balanceClass = (sideID: number) => {
   return net > 0 ? 'balance-positive' : net < 0 ? 'balance-negative' : '';
 };
 
-// ---- per-row editor caps ----------------------------------------------------------------
-const goldMax = (item: TradeItem): number | undefined => rangeFor(item.fromPlayerID)?.gold.max;
-// Max GPT a side can commit = its net income (netGoldPerTurn == calculateGoldRate(), the DLL bound:
-// CvDeal::IsPossibleToTradeItem rejects GPT above the giver's gold rate). Undefined/≤0 income ⇒ no
-// cap here; the row is already unavailable (disabled) in that case.
-const gptMax = (item: TradeItem): number | undefined => {
-  const rate = rangeFor(item.fromPlayerID)?.netGoldPerTurn;
-  return rate !== undefined && rate > 0 ? rate : undefined;
-};
+// ---- per-row editor caps (one derivation shared with the catalog hints — see deal-helpers) -------
+const goldMax = (item: TradeItem): number | undefined => goldCap(rangeFor(item.fromPlayerID));
+const gptMax = (item: TradeItem): number | undefined => gptCap(rangeFor(item.fromPlayerID));
 const resourceMax = (item: TradeItem): number | undefined =>
-  rangeFor(item.fromPlayerID)?.resources.find((r) => r.resourceID === item.resourceID)?.quantityAvailable;
+  resourceCap(rangeFor(item.fromPlayerID), item.resourceID);
 </script>
 
 <style scoped>

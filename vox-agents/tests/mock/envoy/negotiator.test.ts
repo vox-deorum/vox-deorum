@@ -31,7 +31,7 @@ import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../mcp-server/dis
 
 /** The nudge the negotiator inherits from its terminal-tool requiredTools (declared order). */
 const NEGOTIATOR_NUDGE =
-  'Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` with the exact provided format to finalize your decisions.';
+  'Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` following the EXACT provided format to finalize your decisions.';
 
 /** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
 const agreementLabel = (itemType: string) => AGREEMENT_METADATA.find((a) => a.itemType === itemType)!.label;

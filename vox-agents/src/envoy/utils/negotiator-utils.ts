@@ -414,7 +414,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "accept-deal",
       description:
-        "Accept the deal on the table exactly as-is. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced. The agreement is recorded and routed to enactment. Use only when a deal is on the table.",
+        "Accept the deal on the table. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced. Use only when a deal is on the table.",
       inputSchema: z.object({
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z
@@ -466,7 +466,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "propose-deal",
       description:
-        "Author the deal terms to present: a counter to the deal on the table, or an opening proposal when none is on the table. Author by NAME using two lists, Give (what your civ gives the counterpart) and Take (what the counterpart gives your civ), copying term labels and names exactly from the GIVE/TAKE menu. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
+        "Present a new or counter deal offer. Author both Give (what your civ gives the counterpart) and Take (what the counterpart gives your civ) lists with EXACT term labels and names from the GIVE/TAKE menu. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
         Rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z
@@ -562,7 +562,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "reject-deal",
       description:
-        "Reject the deal on the table exactly as-is. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced. Use only when a deal is on the table.",
+        "Reject the deal on the table. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
         rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z

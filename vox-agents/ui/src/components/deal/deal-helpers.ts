@@ -134,6 +134,33 @@ export function sideGives(items: TradeItem[], sideID: number): Array<{ item: Tra
     .filter(({ item }) => item.fromPlayerID === sideID);
 }
 
+/**
+ * Per-row editor caps for the amount/quantity types, derived once from the giver's authoritative
+ * `NormalizedSideRange`. Both surfaces consume these: the central offer as the numeric `max` on its
+ * input, and the inventory catalog as the "up to N" hint — one derivation so the two can't drift.
+ *
+ * They differ only in how "can give none" is represented, and that difference is deliberate — it
+ * follows each row's minimum:
+ *  - GOLD: cap is the treasury (`gold.max`, always a number, 0 when broke). The row's min is 0, so a
+ *    broke giver still has a valid range and clamps to [0, 0].
+ *  - GOLD_PER_TURN: cap is net income (`netGoldPerTurn` == the DLL's CalculateGoldRate();
+ *    CvDeal::IsPossibleToTradeItem rejects GPT above the giver's gold rate). The row's min is 1, so
+ *    ≤0 / absent income has no valid range to clamp to — we drop the cap (undefined). The row is
+ *    unavailable in that case anyway (its availability is probed at amount 1 against this same bound).
+ *  - RESOURCES: cap is the quantity available of that resource.
+ *
+ * `range` is optional so callers can pass a possibly-missing side range straight through.
+ */
+export const goldCap = (range?: NormalizedSideRange): number | undefined => range?.gold.max;
+export const gptCap = (range?: NormalizedSideRange): number | undefined => {
+  const rate = range?.netGoldPerTurn;
+  return rate !== undefined && rate > 0 ? rate : undefined;
+};
+export const resourceCap = (
+  range: NormalizedSideRange | undefined,
+  resourceID: number | undefined
+): number | undefined => range?.resources.find((r) => r.resourceID === resourceID)?.quantityAvailable;
+
 /** Resolve a resource's display name from the giver's range, falling back to its ID. */
 function resourceName(resourceID: number | undefined, range?: NormalizedSideRange): string {
   const found = range?.resources.find((r) => r.resourceID === resourceID);

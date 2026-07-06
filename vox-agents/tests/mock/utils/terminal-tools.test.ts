@@ -107,6 +107,6 @@ describe('buildRequiredToolsNudge', () => {
 
   it('wraps the formatted list in the finalize reminder', () => {
     expect(buildRequiredToolsNudge(['accept-deal', 'propose-deal', 'reject-deal']))
-      .toBe('Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` with the exact provided format to finalize your decisions.');
+      .toBe('Make sure to call `accept-deal`, `propose-deal`, or `reject-deal` following the EXACT provided format to finalize your decisions.');
   });
 });

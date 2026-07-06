@@ -9,29 +9,7 @@ import {
 } from '@/components/deal/deal-catalog';
 import type { NormalizedSideRange } from '@/components/deal/deal-helpers';
 import type { TradeItem, PromiseTerm, PromiseTargetInfo } from '@/utils/types';
-
-/** A normalized range fixture; override the parts a test cares about. */
-const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange =>
-  ({
-    gold: { available: true, max: 500, reasons: [] },
-    goldPerTurn: { available: true, reasons: [] },
-    maps: { legal: true, reasons: [] },
-    openBorders: { legal: true, reasons: [] },
-    defensivePact: { legal: true, reasons: [] },
-    researchAgreement: { legal: true, reasons: [] },
-    peaceTreaty: { legal: true, reasons: [] },
-    allowEmbassy: { legal: true, reasons: [] },
-    declarationOfFriendship: { legal: true, reasons: [] },
-    vassalage: { legal: true, reasons: [] },
-    vassalageRevoke: { legal: true, reasons: [] },
-    resources: [],
-    cities: [],
-    techs: [],
-    thirdPartyPeace: [],
-    thirdPartyWar: [],
-    voteCommitments: [],
-    ...over,
-  }) as NormalizedSideRange;
+import { range } from './deal-test-fixtures';
 
 const build = (over: Partial<Parameters<typeof buildSideCatalog>[0]> = {}): InventoryCategory[] =>
   buildSideCatalog({
@@ -83,12 +61,12 @@ describe('deal-catalog', () => {
 
   it('shows the gold and GPT caps as inventory hints ("up to N" / "up to N/turn")', () => {
     const gold = cat(build(), 'gold').rows;
-    // Gold's treasury cap (existing behavior) and GPT's income cap (netGoldPerTurn) both hint.
+    // Gold's treasury cap and GPT's income cap (netGoldPerTurn = 42 in the shared fixture) both hint.
     expect(gold.find((r) => r.key === 'GOLD')!.secondary).toBe('up to 500');
-    expect(cat(build({ range: range({ netGoldPerTurn: 42 }) }), 'gold').rows
-      .find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBe('up to 42/turn');
+    expect(gold.find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBe('up to 42/turn');
     // Absent income (older/mock data) or ≤0 income ⇒ no GPT hint (the row is unavailable then anyway).
-    expect(cat(build(), 'gold').rows.find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBeUndefined();
+    expect(cat(build({ range: range({ netGoldPerTurn: undefined }) }), 'gold').rows
+      .find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBeUndefined();
     expect(cat(build({ range: range({ netGoldPerTurn: 0 }) }), 'gold').rows
       .find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBeUndefined();
   });

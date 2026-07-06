@@ -18,6 +18,8 @@ import {
   TOGGLE_ITEMS,
   SYMMETRIC_ITEM_TYPES,
   sideGives,
+  goldCap,
+  gptCap,
 } from './deal-helpers';
 import {
   PROMISE_TYPES,
@@ -307,24 +309,25 @@ export function buildSideCatalog(args: {
     targets,
   });
 
-  // 1. Gold + gold per turn.
+  // 1. Gold + gold per turn. The "up to N" hints reuse the shared per-row caps (deal-helpers), so the
+  //    inventory text and the offer editor's numeric max are one derivation. GPT is tagged "/turn" and
+  //    is omitted when income is ≤0 (gptCap returns undefined there — the row is unavailable anyway).
   const gold: InventoryRow[] = [];
   if (range) {
     const goldSeed = Math.min(GOLD_SEED, range.gold.max);
+    const treasuryCap = goldCap(range);
+    const incomeCap = gptCap(range);
     gold.push(itemRow(
       'GOLD', 'Gold', range.gold.available, range.gold.reasons,
       isSingletonSelected('GOLD', ownerID, currentItems),
       defaultItemFor('GOLD', ownerID, otherID, { gold: goldSeed }),
-      range.gold.max ? `up to ${range.gold.max}` : undefined
+      treasuryCap ? `up to ${treasuryCap}` : undefined
     ));
     gold.push(itemRow(
       'GOLD_PER_TURN', 'Gold per turn', range.goldPerTurn.available, range.goldPerTurn.reasons,
       isSingletonSelected('GOLD_PER_TURN', ownerID, currentItems),
       defaultItemFor('GOLD_PER_TURN', ownerID, otherID, { durations }),
-      // The tradable GPT cap is the giver's net income (netGoldPerTurn == calculateGoldRate()); mirror
-      // Gold's "up to N" hint, tagged "/turn" for the recurring nature. Omitted when income is ≤0
-      // (the row is unavailable then anyway).
-      range.netGoldPerTurn && range.netGoldPerTurn > 0 ? `up to ${range.netGoldPerTurn}/turn` : undefined
+      incomeCap !== undefined ? `up to ${incomeCap}/turn` : undefined
     ));
   }
 
