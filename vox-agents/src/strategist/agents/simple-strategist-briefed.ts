@@ -11,7 +11,7 @@ import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
-import { requestBriefing, assembleBriefings, briefingInstructionKeys } from "../../briefer/briefing-utils.js";
+import { requestBriefing, assembleBriefings, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
 
 /**
@@ -63,11 +63,12 @@ ${SimpleStrategistBase.playersInfoPrompt}
    */
   public async getInitialMessages(parameters: StrategistParameters, input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
     var state = getRecentGameState(parameters)!;
-    var instruction = parameters.workingMemory[briefingInstructionKeys.combined];
+    // Fold the focus-briefer instructions into one for the combined briefer
+    const instruction = buildCombinedInstruction(parameters);
 
     // Get the briefing via requestBriefing (reads instruction from workingMemory, deduplicates concurrent calls)
     const briefing = await requestBriefing("combined", state, context, parameters);
-    delete parameters.workingMemory[briefingInstructionKeys.combined];
+    clearBrieferInstructions(parameters);
     if (!briefing) throw new Error("Failed to generate strategic briefings.");
 
     // Get the information

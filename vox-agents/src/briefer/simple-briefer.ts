@@ -187,28 +187,4 @@ ${lastState.reports["briefing"]}`
   public getModel(_parameters: StrategistParameters, _input: unknown, overrides: Record<string, Model | string>): Model {
     return getModelConfig(this.name, "low", overrides);
   }
-
-  /**
-   * Gets extra tools that this agent provides to the context.
-   * These tools will be registered in addition to the agent's own tool representation.
-   * Override this method to provide custom tools specific to this agent.
-   *
-   * @returns Record of tool name to Tool instance, or empty object if no extra tools
-   */
-  public getExtraTools(context: VoxContext<StrategistParameters>): Record<string, Tool> {
-    return {
-      "focus-briefer": createSimpleTool({
-          name: "focus-briefer",
-          description: "Set the focus for your briefer's next report",
-          inputSchema: z.object({
-            Instruction: z.string().describe("A short paragraph to focus your briefer's **next report**, e.g. what kind of information to prioritize")
-          }),
-          execute: async (input, parameters) => {
-            // Store the instruction in working memory for the next briefing
-            parameters.workingMemory[briefingInstructionKeys.combined] = input.Instruction;
-            return `Briefer instruction set.`;
-          }
-        }, context)
-    };
-  }
 }

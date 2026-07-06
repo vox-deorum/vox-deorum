@@ -35,6 +35,34 @@ export const briefingInstructionKeys: Record<BriefingMode | "combined", string> 
 };
 
 /**
+ * Fold the three per-mode focus instructions (set by the focus-briefer tool) into a single
+ * instruction for the combined/simple briefer, persisting it under
+ * briefingInstructionKeys.combined so requestBriefing("combined", …) can read it back.
+ *
+ * @param parameters - Strategy parameters holding workingMemory
+ * @returns The combined instruction string (also stored in workingMemory)
+ */
+export function buildCombinedInstruction(parameters: StrategistParameters): string {
+  const instruction = [
+    `- Military: ${parameters.workingMemory[briefingInstructionKeys.Military] ?? "a general report."}`,
+    `- Economy: ${parameters.workingMemory[briefingInstructionKeys.Economy] ?? "a general report."}`,
+    `- Diplomacy: ${parameters.workingMemory[briefingInstructionKeys.Diplomacy] ?? "a general report."}`
+  ].join("\n\n");
+  parameters.workingMemory[briefingInstructionKeys.combined] = instruction;
+  return instruction;
+}
+
+/**
+ * Clear all briefer focus instructions from working memory once a briefing has been generated,
+ * so one turn's focus does not leak into the next.
+ */
+export function clearBrieferInstructions(parameters: StrategistParameters): void {
+  for (const key of Object.values(briefingInstructionKeys)) {
+    delete parameters.workingMemory[key];
+  }
+}
+
+/**
  * Find the briefing-bearing game state closest to a target turn — i.e. the nearest past
  * decision point. Only turns strictly before the current turn whose `reports` contain one of
  * `reportKeys` are considered; the one minimizing `|turn - targetTurn|` is returned.

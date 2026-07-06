@@ -11,7 +11,7 @@ import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
-import { requestBriefing, assembleBriefings, briefingInstructionKeys } from "../../briefer/briefing-utils.js";
+import { requestBriefing, assembleBriefings, briefingInstructionKeys, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
 
 /**
@@ -70,12 +70,8 @@ ${SimpleStrategistBase.briefingsResourcePrompt}`.trim()
     // Check the event length to decide between simple/specialized briefer. Read the decision
     // window (mergedEvents) when present, falling back to the immutable per-turn slice.
     if (JSON.stringify((state.mergedEvents ?? state.events)!).length <= 5000 || state.turn <= 1) {
-      // Assemble combined instruction from specialized instructions and store for simple-briefer
-      parameters.workingMemory[briefingInstructionKeys.combined] = [
-        `- Military: ${militaryInstruction ?? "a general report."}`,
-        `- Economy: ${economyInstruction ?? "a general report."}`,
-        `- Diplomacy: ${diplomacyInstruction ?? "a general report."}`
-      ].join("\n\n");
+      // Fold the specialized focus instructions into one for the combined briefer
+      const instruction = buildCombinedInstruction(parameters);
 
       // Use simple-briefer for fewer events (requestBriefing reads instruction from workingMemory)
       const briefing = await requestBriefing("combined", state, context, parameters);
@@ -84,7 +80,7 @@ ${SimpleStrategistBase.briefingsResourcePrompt}`.trim()
         throw new Error("Failed to generate strategic briefing.");
       }
 
-      briefingsContent = assembleBriefings(briefing, parameters.workingMemory[briefingInstructionKeys.combined] || undefined);
+      briefingsContent = assembleBriefings(briefing, instruction);
     } else {
       // Use specialized briefers for more complex situations (requestBriefing reads instructions from workingMemory)
       const [militaryBriefing, economyBriefing, diplomacyBriefing] = await Promise.all([
@@ -106,10 +102,7 @@ ${SimpleStrategistBase.briefingsResourcePrompt}`.trim()
     }
 
     // Clear the instructions from working memory
-    delete parameters.workingMemory[briefingInstructionKeys.Military];
-    delete parameters.workingMemory[briefingInstructionKeys.Economy];
-    delete parameters.workingMemory[briefingInstructionKeys.Diplomacy];
-    delete parameters.workingMemory[briefingInstructionKeys.combined];
+    clearBrieferInstructions(parameters);
 
     // Get the information
     await super.getInitialMessages(parameters, input, context);
