@@ -15,6 +15,7 @@
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
+import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../utils/logger.js';
 import { runRetrieve } from './retriever.js';
 import { runReplay } from './replayer.js';
@@ -32,6 +33,7 @@ processManager.register('contexts', async () => {
 });
 processManager.register('telemetry', async () => {
   await sqliteExporter.forceFlush();
+  await setTimeout(1000);
 });
 
 const { values } = parseArgs({

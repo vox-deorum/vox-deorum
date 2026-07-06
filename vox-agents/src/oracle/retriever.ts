@@ -68,7 +68,10 @@ export async function runRetrieve(config: OracleConfig, save = false): Promise<R
         if (retrieved.error) {
           logger.error(`Row ${i + 1} failed: ${retrieved.error}`);
         } else if (save) {
-          const trailBase = `${row.game_id}-p${row.player_id}-t${row.turn}`;
+          // Normalize the turn the same way getTrailBase does (parseInt), so a padded
+          // CSV turn like "030" writes t30.json instead of t030.json — otherwise replay,
+          // which looks up via getTrailBase, would miss the retrieved file.
+          const trailBase = `${row.game_id}-p${row.player_id}-t${parseInt(row.turn, 10)}`;
           fs.writeFileSync(
             path.join(retrieveDir, `${trailBase}.json`),
             JSON.stringify(retrieved, null, 2)

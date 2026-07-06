@@ -393,37 +393,6 @@ class ApiClient {
     return this.fetchJson<PlayersSummaryResponse>(`${this.baseUrl}/api/session/players-summary`);
   }
 
-  /**
-   * Stream session events via SSE
-   */
-  streamSessionEvents(
-    onMessage: (event: any) => void,
-    onError?: (error: Event) => void
-  ): () => void {
-    const key = 'session-events';
-    this.closeSseConnection(key);
-
-    const eventSource = new EventSource(`${this.baseUrl}/api/session/events`);
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type !== 'heartbeat') {
-          onMessage(data);
-        }
-      } catch (error) {
-        console.error('Failed to parse session event:', error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      if (onError) onError(error);
-    };
-
-    this.sseConnections.set(key, eventSource);
-    return () => this.closeSseConnection(key);
-  }
-
   // ============= Global Config API Methods =============
 
   /**

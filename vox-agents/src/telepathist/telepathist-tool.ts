@@ -71,7 +71,6 @@ export abstract class TelepathistTool<TInput = any> {
    * when content exceeds chunkMaxChars.
    */
   createTool(context: VoxContext<TelepathistParameters>): VercelTool {
-    this.mcpToolMap = context.mcpToolMap;
     const separator = '\n\n';
 
     return createSimpleTool({
@@ -79,10 +78,18 @@ export abstract class TelepathistTool<TInput = any> {
       description: this.description,
       inputSchema: this.inputSchema,
       execute: async (input, params) => {
-        const sections = await this.execute(input, params);
+        // This tool instance is a process-wide singleton shared across every chat, so
+        // per-call state (mcpToolMap, the summarize flag toggled by execute/
+        // executeDefaultFromSummaries) must not live on `this` — concurrent chats would
+        // clobber each other across awaits. Run the call against a per-invocation view
+        // whose writes shadow the shared prototype and vanish when it's collected.
+        const call = Object.create(this) as this;
+        call.mcpToolMap = context.mcpToolMap;
+
+        const sections = await call.execute(input, params);
         const assembled = sections.join(separator);
 
-        if (!this.summarize || assembled.length < summarizeThreshold) {
+        if (!call.summarize || assembled.length < summarizeThreshold) {
           return assembled;
         }
 
@@ -98,7 +105,7 @@ export abstract class TelepathistTool<TInput = any> {
         }
 
         // Multi-chunk summarization
-        const chunks = this.chunkSections(sections, separator);
+        const chunks = call.chunkSections(sections, separator);
         logger.info(`Summarizing ${this.name} result in ${chunks.length} chunks (${assembled.length} total chars)`, { inquiry });
 
         const chunkSummaries: string[] = [];

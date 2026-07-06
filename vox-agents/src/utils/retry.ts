@@ -63,7 +63,9 @@ export async function exponentialRetry<T>(
 
       const resetTimeout = (completed?: boolean) => {
         lastKnown = new Date();
-        hasCompleted  = hasCompleted ?? completed;
+        // Latch to true once completed; `?? completed` was a no-op since hasCompleted
+        // starts as `false` (non-nullish), so it never picked up the argument.
+        hasCompleted = hasCompleted || completed === true;
         if (timeoutHandle) {
           clearTimeout(timeoutHandle);
         }
@@ -114,12 +116,15 @@ export async function exponentialRetry<T>(
         throw lastError;
       }
 
-      if (attempt === maxRetries) {
-        logger.warn(`[${source}] Non-retryable error`, lastError);
+      // Explicitly non-retryable — don't burn attempts on it
+      if (isNonRetryable) {
+        logger.warn(`[${source}] Non-retryable error, terminating retry`, lastError);
         throw lastError;
       }
 
-      if (attempt === maxRetries || isNonRetryable) {
+      // Retries exhausted
+      if (attempt === maxRetries) {
+        logger.warn(`[${source}] Retries exhausted after ${maxRetries} attempts`, lastError);
         throw lastError;
       }
 

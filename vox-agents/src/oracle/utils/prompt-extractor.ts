@@ -165,7 +165,7 @@ export async function extractPrompt(
   const rawTools = parseJson(stepAttrs['step.tools']);
   const activeTools: string[] = Array.isArray(rawTools) ? rawTools : [];
   if (activeTools.length == 0) {
-    logger.warn('Failed to parse active tools for agent ${agentName} at turn ${turn}');
+    logger.warn(`Failed to parse active tools for agent ${agentName} at turn ${turn}`);
   }
 
   // Use model from step span if not on agent span

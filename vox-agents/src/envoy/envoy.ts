@@ -181,7 +181,12 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
         const kept = message.content.filter(
           (part) => part.type === 'text' || part.type === 'tool-call'
         ).map(part => {
-          if (this.includeTurnPrefix && part.type === 'text') part.text = `[Turn ${item.metadata.turn}] ${part.text}`;
+          // Return a fresh part rather than mutating in place: `message` is only a
+          // shallow copy, so these parts are still the cached thread's objects and an
+          // in-place prefix would accumulate "[Turn N][Turn N]…" across turns. Guard on
+          // the existing prefix as the string path (below) does.
+          if (this.includeTurnPrefix && part.type === 'text' && !part.text.startsWith('[Turn'))
+            return { ...part, text: `[Turn ${item.metadata.turn}] ${part.text}` };
           return part;
         });
         if (kept.length === 0) continue;
