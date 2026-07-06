@@ -320,7 +320,11 @@ export function buildSideCatalog(args: {
     gold.push(itemRow(
       'GOLD_PER_TURN', 'Gold per turn', range.goldPerTurn.available, range.goldPerTurn.reasons,
       isSingletonSelected('GOLD_PER_TURN', ownerID, currentItems),
-      defaultItemFor('GOLD_PER_TURN', ownerID, otherID, { durations })
+      defaultItemFor('GOLD_PER_TURN', ownerID, otherID, { durations }),
+      // The tradable GPT cap is the giver's net income (netGoldPerTurn == calculateGoldRate()); mirror
+      // Gold's "up to N" hint, tagged "/turn" for the recurring nature. Omitted when income is ≤0
+      // (the row is unavailable then anyway).
+      range.netGoldPerTurn && range.netGoldPerTurn > 0 ? `up to ${range.netGoldPerTurn}/turn` : undefined
     ));
   }
 

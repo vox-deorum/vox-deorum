@@ -55,7 +55,8 @@ describe('formatDealContext', () => {
     // Direction-grouped, friendly-labelled terms with the advisory per-item estimates.
     expect(out).toContain('## Player 1 Offers To Give Player 3');
     expect(out).toContain('### Gold: 50');
-    expect(out).toContain('Estimated value to Player 1 (them): 30');
+    // Player 1 is the giver here, so its advisory worth reads as a cost (negative).
+    expect(out).toContain('Estimated value to Player 1 (them): -30');
     expect(out).toContain('Estimated value to Player 3 (us): 25');
     expect(out).toContain('advisory');
   });

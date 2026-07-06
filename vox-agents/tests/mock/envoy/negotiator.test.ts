@@ -510,7 +510,8 @@ describe('getInitialMessages task determination', () => {
     // Per-item advisory estimates fold into the term (giver first), not a separate section.
     expect(text).toContain('### Gold: 40');
     expect(text).toContain('Estimated value to Carthage (them): 40');
-    expect(text).toContain('Estimated value to Germany (us): 35');
+    // Germany is the giver here, so its advisory worth reads as a cost (negative).
+    expect(text).toContain('Estimated value to Germany (us): -35');
     // Coop-war third-party context: both sides' public relationship + our leader's directive toward Rome.
     expect(text).toContain("Germany's (our) relationship to Rome (third-party): War");
     expect(text).toContain("Our leader's intention for Rome: Public -50/Private -30 (Keep Rome weak.)");

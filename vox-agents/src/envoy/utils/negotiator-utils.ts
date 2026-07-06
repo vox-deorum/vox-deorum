@@ -126,9 +126,10 @@ function valueClause(value: number | undefined, receiverName: string): string {
   return detailClause(bareValue(value, receiverName));
 }
 
-/** Append a "## <title>" block when it has rows. */
+/** Append a "### <title>" block when it has rows. The leading newline (the menu is join("\n")-ed)
+ * puts one blank line BEFORE each header and none after; the final .trim() drops any leading blank. */
 function pushMenuCategory(into: string[], title: string, rows: string[]): void {
-  if (rows.length > 0) into.push(`### ${title}\n`, ...rows);
+  if (rows.length > 0) into.push(`\n### ${title}`, ...rows);
 }
 
 /**

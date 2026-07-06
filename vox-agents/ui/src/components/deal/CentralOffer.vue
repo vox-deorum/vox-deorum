@@ -158,9 +158,11 @@ const editorMin = (item: TradeItem): number => item.itemType === 'GOLD' ? 0 : 1;
 const editorMax = (item: TradeItem): number | undefined =>
   item.itemType === 'GOLD'
     ? goldMax(item)
-    : item.itemType === 'RESOURCES'
-      ? resourceMax(item)
-      : undefined;
+    : item.itemType === 'GOLD_PER_TURN'
+      ? gptMax(item)
+      : item.itemType === 'RESOURCES'
+        ? resourceMax(item)
+        : undefined;
 /** Patch emitted for an editable item row's changed numeric value. */
 const editorPatch = (item: TradeItem, value: number): Partial<TradeItem> =>
   item.itemType === 'RESOURCES' ? { quantity: value } : { amount: value };
@@ -197,6 +199,13 @@ const balanceClass = (sideID: number) => {
 
 // ---- per-row editor caps ----------------------------------------------------------------
 const goldMax = (item: TradeItem): number | undefined => rangeFor(item.fromPlayerID)?.gold.max;
+// Max GPT a side can commit = its net income (netGoldPerTurn == calculateGoldRate(), the DLL bound:
+// CvDeal::IsPossibleToTradeItem rejects GPT above the giver's gold rate). Undefined/≤0 income ⇒ no
+// cap here; the row is already unavailable (disabled) in that case.
+const gptMax = (item: TradeItem): number | undefined => {
+  const rate = rangeFor(item.fromPlayerID)?.netGoldPerTurn;
+  return rate !== undefined && rate > 0 ? rate : undefined;
+};
 const resourceMax = (item: TradeItem): number | undefined =>
   rangeFor(item.fromPlayerID)?.resources.find((r) => r.resourceID === item.resourceID)?.quantityAvailable;
 </script>

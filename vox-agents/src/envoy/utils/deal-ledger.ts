@@ -249,8 +249,10 @@ function itemSubsection(
   const lines = [`### ${namedItemLabel(item, options.inspection)}`];
   const inspected = options.inspection?.items[index];
   if (inspected) {
-    // valueIfIGive is the giver's advisory value, valueIfIReceive the receiver's; giver first.
-    lines.push(`- Estimated value to ${ctx.civName(item.fromPlayerID)} (${sideTag(item.fromPlayerID, ctx)}): ${formatEstimate(inspected.valueIfIGive)}`);
+    // Giver first. The giver PARTS WITH the item, so its advisory worth is a cost to them and reads
+    // negative; the receiver GAINS it, so theirs stays positive. Negating is sentinel-safe (isSentinel
+    // uses Math.abs) and -0 renders as "0".
+    lines.push(`- Estimated value to ${ctx.civName(item.fromPlayerID)} (${sideTag(item.fromPlayerID, ctx)}): ${formatEstimate(-inspected.valueIfIGive)}`);
     lines.push(`- Estimated value to ${ctx.civName(item.toPlayerID)} (${sideTag(item.toPlayerID, ctx)}): ${formatEstimate(inspected.valueIfIReceive)}`);
     if (!inspected.legality) {
       lines.push(`- ILLEGAL right now: ${inspected.reasons.join("; ") || "no reason given"}`);

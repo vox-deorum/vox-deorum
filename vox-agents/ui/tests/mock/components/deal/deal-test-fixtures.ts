@@ -7,6 +7,7 @@ import type { NormalizedSideRange, PromiseTargetInfo } from '@/utils/types';
 
 /** A fully-legal tradable-range fixture; pass `over` to mark specific candidates illegal/absent. */
 export const range = (over: Partial<NormalizedSideRange> = {}): NormalizedSideRange => ({
+  netGoldPerTurn: 42,
   gold: { available: true, max: 500, reasons: [] },
   goldPerTurn: { available: true, reasons: [] },
   maps: { legal: true, reasons: [] },
@@ -42,9 +43,11 @@ export const dealStubs = {
   InputNumber: {
     // `size` is declared (though unused) so PrimeVue's `size="small"` is consumed as a prop rather
     // than falling through onto the native <input>, whose `size` attribute jsdom rejects as non-numeric.
-    props: ['modelValue', 'disabled', 'size'],
+    // `min`/`max` are surfaced as attributes so the per-row editor caps (Gold treasury, GPT income,
+    // resource quantity) are assertable in jsdom.
+    props: ['modelValue', 'disabled', 'size', 'min', 'max'],
     emits: ['update:modelValue'],
-    template: '<input class="number-stub" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
+    template: '<input class="number-stub" :disabled="disabled" :min="min" :max="max" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
   },
   InputText: {
     props: ['modelValue', 'disabled'],

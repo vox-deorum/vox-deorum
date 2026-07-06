@@ -81,6 +81,18 @@ describe('deal-catalog', () => {
     expect(cat(cats, 'strategic').rows[0]!.secondary).toBe('≤ 5');
   });
 
+  it('shows the gold and GPT caps as inventory hints ("up to N" / "up to N/turn")', () => {
+    const gold = cat(build(), 'gold').rows;
+    // Gold's treasury cap (existing behavior) and GPT's income cap (netGoldPerTurn) both hint.
+    expect(gold.find((r) => r.key === 'GOLD')!.secondary).toBe('up to 500');
+    expect(cat(build({ range: range({ netGoldPerTurn: 42 }) }), 'gold').rows
+      .find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBe('up to 42/turn');
+    // Absent income (older/mock data) or ≤0 income ⇒ no GPT hint (the row is unavailable then anyway).
+    expect(cat(build(), 'gold').rows.find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBeUndefined();
+    expect(cat(build({ range: range({ netGoldPerTurn: 0 }) }), 'gold').rows
+      .find((r) => r.key === 'GOLD_PER_TURN')!.secondary).toBeUndefined();
+  });
+
   it('keeps structurally impossible candidates (red, with reasons) rather than dropping them', () => {
     const cats = build({
       range: range({
