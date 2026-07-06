@@ -189,10 +189,12 @@ describe('LiveEnvoy.stopCheck (shared completion logic via Spokesperson)', () =>
     expect(spokesperson.stopCheck(parameters, thread(), steps[9], steps, ctx)).toBe(true);
   });
 
-  it('stops on raw spoken free text (the Anthropic fallback)', () => {
+  it('does not stop on raw free text: a live envoy speaks only through send-message', () => {
     const ctx = createFakeVoxContext().asContext();
     const spoken = step('We share your hope for peace.');
-    expect(spokesperson.stopCheck(parameters, thread(), spoken, [spoken], ctx)).toBe(true);
+    // Tools are forced (toolChoice="required"), so raw free text is never an authoritative reply
+    // (see LiveEnvoy.suppressFreeText) and does not end the turn; only a completion tool does.
+    expect(spokesperson.stopCheck(parameters, thread(), spoken, [spoken], ctx)).toBe(false);
   });
 });
 

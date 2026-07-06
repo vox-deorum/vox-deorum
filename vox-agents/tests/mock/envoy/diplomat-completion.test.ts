@@ -90,16 +90,18 @@ describe('Diplomat.stopCheck', () => {
     expect(diplomat.stopCheck(parameters, input, steps[9], steps, context)).toBe(true);
   });
 
-  it('stops on non-whitespace free text but not whitespace-only text', () => {
+  it('does not end the turn on raw free text: the diplomat speaks only through send-message', () => {
     const context = createFakeVoxContext().asContext();
     const whitespace = step('   ');
     const spoken = step('We welcome further discussion.');
 
+    // Tools are forced (toolChoice="required"), so raw free text is never an authoritative reply
+    // (see LiveEnvoy.suppressFreeText): neither an empty line nor a spoken one ends the turn.
     expect(diplomat.stopCheck(parameters, thread(), whitespace, [whitespace], context)).toBe(false);
-    expect(diplomat.stopCheck(parameters, thread(), spoken, [spoken], context)).toBe(true);
+    expect(diplomat.stopCheck(parameters, thread(), spoken, [spoken], context)).toBe(false);
   });
 
-  it('does not stop when a supporting tool is requested after free text', () => {
+  it('keeps working after free text, whether a supporting tool is pending or not', () => {
     const input = thread();
     const context = createFakeVoxContext().asContext();
     const spoken = step('That proposal has merit.');
@@ -107,9 +109,10 @@ describe('Diplomat.stopCheck', () => {
 
     // A pending supporting tool after a short speech keeps the diplomat working...
     expect(diplomat.stopCheck(parameters, input, laterTool, [spoken, laterTool], context)).toBe(false);
-    // ...and once that tool resolves and nothing is left pending, the earlier speech ends the turn.
+    // ...and once that tool resolves with nothing pending, the earlier free text still does not end
+    // the turn — only a completion tool (send-message / negotiator / closure) or the ceiling does.
     const done = step('');
-    expect(diplomat.stopCheck(parameters, input, done, [spoken, laterTool, done], context)).toBe(true);
+    expect(diplomat.stopCheck(parameters, input, done, [spoken, laterTool, done], context)).toBe(false);
   });
 
   it('does not stop when a step both speaks and requests a supporting tool', () => {

@@ -44,7 +44,8 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   /**
    * Force a tool call every step so "speak" is an explicit action (the send-message tool), not raw
    * free text. Honored on the deployed model; vox-context neutralizes it to "auto" on Anthropic,
-   * where the prompt steers instead and raw free text survives as the fallback reply.
+   * where the prompt steers the model back to send-message and any raw free text is a degraded
+   * fallback the envoy does not treat as an authoritative reply (see {@link suppressFreeText}).
    */
   public override toolChoice: string = "required";
 
@@ -143,15 +144,20 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
 
   /**
    * Keeps a live envoy working until it has spoken (via send-message), deliberately ended its turn
-   * through a completion tool, hit the hard step ceiling, or — on Anthropic, where the tool force is
-   * neutralized — produced raw spoken free text. The inherited Envoy check is still called so each
-   * response is persisted to the thread, but its generic terminal/maximum-step decisions do not
-   * govern live envoys; this shared rule, generalized over {@link getCompletionTools}, does.
+   * through a completion tool, or hit the hard step ceiling. The inherited Envoy check is still called
+   * so each response is persisted to the thread, but its generic terminal/maximum-step decisions do
+   * not govern live envoys; this shared rule, generalized over {@link getCompletionTools}, does.
+   *
+   * Raw free text does NOT end a forced-tool envoy's turn. A live envoy speaks only through
+   * send-message (see {@link suppressFreeText}), so on Anthropic — where the tool force is neutralized
+   * to "auto" — any free text is a degraded fallback the envoy ignores, working on until it actually
+   * calls a completion tool. Only a subclass that opts out of the force (toolChoice !== "required")
+   * treats free text as a completing reply.
    *
    * Order matters: a completion tool ends the turn wherever it appears; otherwise the hard ceiling is
    * checked BEFORE the "keep working" branch so a stuck support-tool loop always terminates; a pending
    * supporting (non-completion) tool on the latest step means the envoy means to keep working; finally,
-   * a spoken free-text turn with nothing left pending ends the loop (the Anthropic fallback).
+   * a spoken free-text turn ends the loop only for a non-required (auto) subclass.
    */
   public override stopCheck(
     parameters: StrategistParameters,
@@ -175,7 +181,11 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     // spoke a short line then asked for a briefing — so don't stop on that step.
     const hasPendingSupportTool = getValidCalls(lastStep).some(call => !completionTools.has(call.toolName));
     if (hasPendingSupportTool) return false;
-    // No pending tool and no completion tool: stop once it has spoken raw free text (Anthropic fallback).
+    // No pending tool and no completion tool. A forced-tool live envoy (toolChoice="required", the
+    // default) speaks ONLY through send-message, so raw free text is never an authoritative reply
+    // (see suppressFreeText) and must not end the turn: the envoy keeps working until it actually
+    // calls a completion tool or hits the ceiling above. Only a subclass that opts out of the tool
+    // force (toolChoice !== "required") treats raw spoken free text as a completing reply.
     return this.toolChoice !== "required" && allSteps.some(step => Boolean(step.text?.trim()));
   }
 
