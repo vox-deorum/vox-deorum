@@ -12,6 +12,7 @@ import { createLogger } from "../logger.js";
 import { Tool as VercelTool, dynamicTool } from 'ai';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { VoxContext } from "../../infra/vox-context.js";
+import { normalizeKeysToSchema } from "./normalize-keys.js";
 
 const tracer = trace.getTracer('vox-tools');
 
@@ -80,9 +81,26 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
 ): VercelTool {
   const logger = createLogger(`SimpleTool-${config.name}`);
 
+  // Realign tool-call key casing to the schema before validation, so a model that emits `message`
+  // for a `Message` field (or nested `Give:[{term}]` for `{Term}`) still validates. This backstops
+  // the tool-rescue middleware for paths that bypass it (e.g. gemma/hermes models, direct
+  // invocation). For a native game tool the middleware may already have normalized the same payload;
+  // that double pass is intentional and harmless because normalizeKeysToSchema is idempotent, so
+  // don't drop this layer to spare it — the bypass paths have no other backstop. The JSON Schema is
+  // derived once per tool build (not per call) from the schema itself; the wrap leaves the
+  // model-facing schema byte-identical and still surfaces genuine validation errors after
+  // normalization.
+  let inputSchema: ZodType = config.inputSchema;
+  try {
+    const jsonSchema = z.toJSONSchema(config.inputSchema, { io: "input" }) as Record<string, any>;
+    inputSchema = z.preprocess((value) => normalizeKeysToSchema(value, jsonSchema), config.inputSchema);
+  } catch {
+    // Schema not representable as JSON Schema: keep the raw schema rather than break tool creation.
+  }
+
   return dynamicTool({
     description: config.description,
-    inputSchema: config.inputSchema as any,
+    inputSchema: inputSchema as any,
     execute: async (input, options) => {
       const span = tracer.startSpan(`simple-tool.${config.name}`, {
         attributes: {

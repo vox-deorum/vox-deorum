@@ -415,6 +415,45 @@ describe('claude-code provider', () => {
         expect(result.content).toEqual([native]);
       });
 
+      // A schema with a nested array-of-objects, exercising the deep native-pass realignment.
+      const dealTools = [
+        { type: 'function', name: 'propose-deal', description: 'Propose a deal', inputSchema: {
+          type: 'object',
+          properties: {
+            Message: { type: 'string' },
+            Give: { type: 'array', items: { type: 'object', properties: { Term: { type: 'string' }, Amount: { type: 'integer' } } } },
+          },
+        } },
+      ];
+
+      it('wrapGenerate realigns a native game tool-call\'s key casing, nested keys included', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // A genuine (non-carrier) game tool-call the model emitted with lowercase top-level + nested keys.
+        const native = { type: 'tool-call', toolCallId: 'g1', toolName: 'propose-deal',
+          input: JSON.stringify({ message: 'hi', Give: [{ term: 'Gold Per Turn', amount: 3 }] }) };
+        const doGenerate = async () => ({ content: [native], finishReason: { unified: 'tool-calls', raw: 'tool_use' } });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, dealTools) });
+        const toolCalls = result.content.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ Message: 'hi', Give: [{ Term: 'Gold Per Turn', Amount: 3 }] });
+      });
+
+      it('wrapStream realigns a native game tool-call chunk\'s key casing, nested keys included', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-call', toolCallId: 'g1', toolName: 'propose-deal',
+            input: JSON.stringify({ message: 'hi', Give: [{ term: 'Gold Per Turn', amount: 3 }] }) },
+          { type: 'finish', finishReason: { unified: 'tool-calls', raw: 'tool_use' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, dealTools) });
+        const out = await drain(stream);
+        const toolCalls = out.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ Message: 'hi', Give: [{ Term: 'Gold Per Turn', Amount: 3 }] });
+      });
+
       it('wrapGenerate does not treat a carrier as droppable when structuredToolCalls is off', async () => {
         const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
         const carrier = { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper };

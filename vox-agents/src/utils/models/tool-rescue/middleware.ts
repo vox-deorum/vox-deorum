@@ -17,6 +17,7 @@ import { createLogger } from '../../logger.js';
 import type { ToolRescueOptions } from './types.js';
 import { createToolPrompts, convertPromptToolMessagesToText, reframeToolWording, buildToolCallArraySchema } from './prompt.js';
 import { rescueToolCallsFromText, isStructuredOutputToolName } from './extract.js';
+import { normalizeKeysToSchema, type JsonSchemaNode } from '../../tools/normalize-keys.js';
 
 const logger = createLogger("tool-rescue");
 
@@ -53,7 +54,7 @@ function recoverToolCalls(
   payload: string,
   source: ToolCallSource,
   availableTools: Set<string>,
-  toolSchemas: Map<string, string[]>,
+  toolSchemas: Map<string, JsonSchemaNode>,
   state: ToolCallRecoveryState,
   useJaison: boolean = true
 ): ReturnType<typeof rescueToolCallsFromText> {
@@ -88,16 +89,44 @@ function isCarrierToolName(name: string, toolNames: Set<string>, active: boolean
 }
 
 /**
- * Maps each function tool's canonical name to its top-level argument-property names, so the rescue
- * can realign the model's argument-key casing (e.g. `message` → the schema's `Message`).
+ * Maps each function tool's canonical name to its full JSON Schema, so both the rescue path and the
+ * native pass can realign the model's argument-key casing to the declared casing at every nesting
+ * level (e.g. `message` → `Message`, or `Give:[{term}]` → `Give:[{Term}]`).
  */
-function buildToolSchemaKeyMap(tools: readonly any[] | undefined): Map<string, string[]> {
-  const map = new Map<string, string[]>();
+function buildToolSchemaMap(tools: readonly any[] | undefined): Map<string, JsonSchemaNode> {
+  const map = new Map<string, JsonSchemaNode>();
   for (const tool of tools ?? []) {
-    const props = tool?.type === 'function' ? tool.inputSchema?.properties : undefined;
-    if (props && typeof props === 'object') map.set(tool.name, Object.keys(props));
+    const schema = tool?.type === 'function' ? tool.inputSchema : undefined;
+    if (schema && typeof schema === 'object') map.set(tool.name, schema);
   }
   return map;
+}
+
+/**
+ * Realign a native game tool-call part's argument-key casing to its schema before it reaches the AI
+ * SDK's validator. Native calls bypass the text-rescue path entirely, so without this a lowercase
+ * `term`/`amount` (or nested `Give:[{term}]`) fails validation for otherwise-valid input. Returns the
+ * original part unchanged when there is no schema, the input can't be parsed, or nothing was renamed
+ * (identity-preserving), so a genuine call is never rewritten or re-encoded.
+ */
+function normalizeToolCallPartKeys<T extends { input?: unknown }>(
+  part: T,
+  schema: JsonSchemaNode | undefined
+): T {
+  if (!schema) return part;
+  const raw = part.input;
+  let parsed: unknown;
+  if (raw && typeof raw === 'object') {
+    parsed = raw;
+  } else if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw); } catch { return part; }
+  } else {
+    return part;
+  }
+  const normalized = normalizeKeysToSchema(parsed, schema);
+  if (normalized === parsed) return part;
+  // Preserve the original input encoding: an object stays an object, a JSON string stays a string.
+  return { ...part, input: typeof raw === 'string' ? JSON.stringify(normalized) : normalized };
 }
 
 /**
@@ -260,6 +289,16 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
 
         // Extract tool names from the tool definitions
         const toolNames = params.tools ? new Set(params.tools.map((tool) => tool.name)) : new Set<string>();
+        const toolSchemas = buildToolSchemaMap(params.tools);
+
+        // Native pass: genuine game tool-call parts bypass the text-rescue path below, so realign
+        // their argument-key casing to the schema here (nested keys included) before the AI SDK
+        // validates them. Identity-preserving, so a correct call keeps its exact original part.
+        result.content = result.content.map((content) =>
+          content.type === "tool-call" && toolNames.has(content.toolName)
+            ? normalizeToolCallPartKeys(content, toolSchemas.get(content.toolName))
+            : content
+        );
 
         // Rescue tool calls from JSON text if we have tools but no *game* tool call yet.
         // We can't bail on any tool-call part existing: under constrained decoding the
@@ -270,7 +309,6 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
           content => content.type === "tool-call" && toolNames.has(content.toolName)
         );
         if (!hasGameToolCall && params.tools && params.tools.length > 0) {
-          const toolSchemas = buildToolSchemaKeyMap(params.tools);
           const newContents: typeof result.content = [];
           const rescuedCalls: LanguageModelV3ToolCall[] = [];
           const recoveryState = createToolCallRecoveryState();
@@ -352,7 +390,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
 
         // Extract tool names from the tool definitions
         const toolNames = new Set(params.tools.map((tool) => tool.name));
-        const toolSchemas = buildToolSchemaKeyMap(params.tools);
+        const toolSchemas = buildToolSchemaMap(params.tools);
 
         // Track if we've already found tool calls
         let toolCallsFound = false;
@@ -511,7 +549,10 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
                   }
                   break; // drop the carrier tool-call
                 }
-                controller.enqueue(chunk);
+                // Genuine native tool call: realign its argument-key casing to the schema (nested
+                // keys included) before it streams on to the AI SDK's validator. No-op for a
+                // correctly-cased call, so the chunk passes through untouched.
+                controller.enqueue(normalizeToolCallPartKeys(chunk, toolSchemas.get(chunk.toolName)));
                 break;
               }
               case "finish": {

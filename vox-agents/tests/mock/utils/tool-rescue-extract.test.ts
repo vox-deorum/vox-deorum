@@ -22,7 +22,9 @@ describe('isStructuredOutputToolName', () => {
 });
 
 describe('argument-key case normalization (toolSchemas)', () => {
-  const schemas = new Map([['send-message', ['Message']]]);
+  const schemas = new Map<string, any>([
+    ['send-message', { type: 'object', properties: { Message: { type: 'string' } } }],
+  ]);
   const named = new Set(['send-message']);
 
   it('rewrites a case-mismatched key to the schema casing (message → Message)', () => {
@@ -30,6 +32,20 @@ describe('argument-key case normalization (toolSchemas)', () => {
     const result = rescueToolCallsFromText(text, named, true, schemas);
     expect(result.toolCalls).toHaveLength(1);
     expect(JSON.parse(result.toolCalls[0].input)).toEqual({ Message: 'hi' });
+  });
+
+  it('rewrites nested keys inside array items (deep, schema-driven)', () => {
+    const dealSchemas = new Map<string, any>([
+      ['propose-deal', {
+        type: 'object',
+        properties: {
+          Give: { type: 'array', items: { type: 'object', properties: { Term: { type: 'string' }, Amount: { type: 'integer' } } } },
+        },
+      }],
+    ]);
+    const text = '{"action":"propose-deal","arguments":{"Give":[{"term":"Gold Per Turn","amount":3}]}}';
+    const result = rescueToolCallsFromText(text, new Set(['propose-deal']), true, dealSchemas);
+    expect(JSON.parse(result.toolCalls[0].input)).toEqual({ Give: [{ Term: 'Gold Per Turn', Amount: 3 }] });
   });
 
   it('leaves keys without a case-insensitive schema match untouched', () => {

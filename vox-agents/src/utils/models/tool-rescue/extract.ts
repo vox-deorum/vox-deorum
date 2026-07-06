@@ -11,6 +11,7 @@ import type { LanguageModelV3ToolCall } from '@ai-sdk/provider';
 // @ts-ignore - jaison doesn't have type definitions
 import jaison from 'jaison';
 import { createLogger } from '../../logger.js';
+import { normalizeKeysToSchema, type JsonSchemaNode } from '../../tools/normalize-keys.js';
 
 const logger = createLogger("tool-rescue");
 
@@ -87,37 +88,6 @@ function resolveToolName(candidate: string, availableTools: Set<string>): string
 }
 
 /**
- * Rewrites argument keys to the tool's real schema casing when they differ only by case
- * (e.g. the model emits `message` for a schema that declares `Message`). Under shape-only
- * constrained decoding the model is free to pick key casing, and a mismatch makes the tool's
- * `execute` reject otherwise-valid input. Only keys that case-insensitively match a schema
- * property are renamed, and only when the canonical key is not already claimed (in the input or
- * by an earlier rename); unknown keys, and colliding variants that would overwrite an existing
- * value, are left untouched so genuine mistakes still surface. Top-level keys only (game tools
- * are flat).
- */
-function normalizeArgKeys(
-  args: Record<string, unknown>,
-  schemaKeys: string[] | undefined
-): Record<string, unknown> {
-  if (!schemaKeys || schemaKeys.length === 0 || !args || typeof args !== 'object') return args;
-  const canonicalByLower = new Map(schemaKeys.map(key => [key.toLowerCase(), key]));
-  let changed = false;
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(args)) {
-    if (schemaKeys.includes(key)) { out[key] = value; continue; }
-    const canonical = canonicalByLower.get(key.toLowerCase());
-    if (canonical !== undefined && !(canonical in args) && !(canonical in out)) {
-      out[canonical] = value;
-      changed = true;
-    } else {
-      out[key] = value;
-    }
-  }
-  return changed ? out : args;
-}
-
-/**
  * Rescues tool calls from JSON text and transforms them into proper tool call format.
  * This function processes text that may contain JSON tool calls and converts them
  * to the format expected by the AI SDK.
@@ -134,7 +104,7 @@ export function rescueToolCallsFromText(
   text: string,
   availableTools: Set<string>,
   useJaison: boolean = true,
-  toolSchemas?: Map<string, string[]>
+  toolSchemas?: Map<string, JsonSchemaNode>
 ): { remainingText?: string, toolCalls: LanguageModelV3ToolCall[] } {
   // Check for delimiter-based tool call format: <|tool_call_begin|> functions.name:N <|tool_call_argument_begin|> {...} <|tool_call_end|>
   const delimiterRegex = /<\|tool_call_begin\|>\s*(?:functions\.)?(.+?)(?::(\d+))?\s*<\|tool_call_argument_begin\|>\s*([\s\S]*?)\s*<\|tool_call_end\|>/g;
@@ -165,7 +135,7 @@ export function rescueToolCallsFromText(
       type: 'tool-call',
       toolCallId: generateId(),
       toolName,
-      input: JSON.stringify(normalizeArgKeys(parsedArgs, toolSchemas?.get(toolName))),
+      input: JSON.stringify(normalizeKeysToSchema(parsedArgs, toolSchemas?.get(toolName))),
     });
   }
 
@@ -351,7 +321,7 @@ export function rescueToolCallsFromText(
       type: 'tool-call',
       toolCallId: generateId(),
       toolName: toolName!,
-      input: JSON.stringify(normalizeArgKeys(toolParameters!, toolSchemas?.get(toolName!))),
+      input: JSON.stringify(normalizeKeysToSchema(toolParameters!, toolSchemas?.get(toolName!))),
     });
   }
 
