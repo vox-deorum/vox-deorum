@@ -79,7 +79,6 @@ export async function runReplay(config: OracleConfig, rows?: RetrievedRow[]): Pr
 
     const override = config.modelOverride?.(retrieved.originalModel, retrieved.row, {
       framing: retrieved.framing,
-      toolPrompt: retrieved.toolPrompt,
     });
     const modelInputs: (string | Model)[] = override === undefined
       ? [retrieved.originalModel]
@@ -235,8 +234,8 @@ async function replaySingleRow(
     }
   }
 
-  // Build callback context from raw retrieved data. framing/toolPrompt are the original
-  // turn's recorded facts, exposed for experiments; they do NOT drive replay framing.
+  // Build callback context from raw retrieved data. framing is the original turn's recorded
+  // fact, exposed for experiments; it does NOT drive replay framing.
   const promptContext: OriginalPromptContext = {
     row: retrieved.row,
     system: retrieved.system,
@@ -245,7 +244,6 @@ async function replaySingleRow(
     originalModel: retrieved.originalModel,
     agentName: retrieved.agentName,
     framing: retrieved.framing,
-    toolPrompt: retrieved.toolPrompt,
   };
 
   // Apply modifyPrompt
@@ -260,8 +258,8 @@ async function replaySingleRow(
   // 'prompt'-mode model replaying a Claude-Code turn is told "tools", not "actions".
   // Experiments that want to reproduce the original 'action' view opt in explicitly
   // (e.g. modelOverride returning a model with options.framing, or applying
-  // reframeToolWording to ctx.system/ctx.toolPrompt). The source turn's framing never
-  // silently overrides the replay model here.
+  // reframeToolWording to ctx.system). The source turn's framing never silently
+  // overrides the replay model here.
 
   // Build parameters and input
   const parameters: OracleParameters = {

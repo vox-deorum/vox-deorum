@@ -238,44 +238,57 @@ describe('claude-code provider', () => {
       expect(joined).not.toContain('`send_message` tool');
     });
 
-    it('reports action framing plus the vanilla tool prompt via onToolFraming', async () => {
-      let info: { framing: string; toolPrompt?: string } | undefined;
+    it('reports action framing via onToolFraming', async () => {
+      let info: { framing: string } | undefined;
       const mw = toolRescueMiddleware({ prompt: true, framing: 'action', onToolFraming: (i) => { info = i; } });
       await (mw.transformParams as any)({
         params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
       });
       expect(info?.framing).toBe('action');
-      // The prompt is captured in VANILLA 'tool' wording, NOT the 'action' framing the model is sent.
-      expect(info?.toolPrompt).toContain('## Tool Calling');
-      expect(info?.toolPrompt).toContain('{ "tool": "<tool_name>", "arguments": { <parameters> } }');
-      expect(info?.toolPrompt).not.toContain('## Action Calling');
+      // Only the resolved framing fact is reported; the injected prompt itself is never stored.
+      expect(info).toEqual({ framing: 'action' });
     });
 
-    it('keeps the telemetry prompt convention-neutral (vanilla bare array, no wrapper) even under constrained decoding', async () => {
-      let info: { framing: string; toolPrompt?: string } | undefined;
+    it('reports only the framing fact under constrained decoding (no prompt payload)', async () => {
+      let info: { framing: string } | undefined;
       const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true, onToolFraming: (i) => { info = i; } });
       await (mw.transformParams as any)({
         params: { tools, toolChoice: { type: 'required' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
       });
-      expect(info?.framing).toBe('action');
-      // The wrapper object is a claude-code-only transport convention. The record stays the
-      // neutral vanilla bare-array 'tool' form so replay re-applies whichever convention ITS
-      // model dictates (non-CC → bare, CC → wrapper), rather than inheriting a CC-only shape.
-      expect(info?.toolPrompt).toContain('## Tool Calling');
-      expect(info?.toolPrompt).toMatch(/Respond ONLY with a JSON array/);
-      expect(info?.toolPrompt).not.toMatch(/"tools":\s*\[/);
-      expect(info?.toolPrompt).not.toContain('## Action Calling');
+      // Even when structuredToolCalls forces the wrapper transport, the callback still carries
+      // the framing fact alone — no prompt content is ever surfaced to telemetry.
+      expect(info).toEqual({ framing: 'action' });
     });
 
-    it("reports 'tool' framing with no prompt content via onToolFraming under the default framing", async () => {
-      let info: { framing: string; toolPrompt?: string } | undefined;
+    it("reports 'tool' framing via onToolFraming under the default framing", async () => {
+      let info: { framing: string } | undefined;
       const mw = toolRescueMiddleware({ prompt: true, onToolFraming: (i) => { info = i; } });
       await (mw.transformParams as any)({
         params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
       });
       expect(info?.framing).toBe('tool');
-      // Content is recorded only when adapted, so the default path carries the framing fact but no prompt.
-      expect(info?.toolPrompt).toBeUndefined();
+      expect(info).toEqual({ framing: 'tool' });
+    });
+
+    it('inserts the action protocol block right before the first user message', async () => {
+      const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
+      const out: any = await (mw.transformParams as any)({
+        params: {
+          tools,
+          toolChoice: { type: 'auto' },
+          prompt: [
+            { role: 'system', content: 'You are a diplomat.' },
+            { role: 'user', content: [{ type: 'text', text: 'hi' }] },
+          ],
+        },
+      });
+      // Leading agent-authored system prose stays first; the protocol block is the system
+      // message immediately preceding the first user message.
+      expect(out.prompt.map((m: any) => m.role)).toEqual(['system', 'system', 'user']);
+      expect(out.prompt[0].content).toContain('You are a diplomat.');
+      expect(out.prompt[1].content).toContain('## Action Calling');
+      const firstUserIdx = out.prompt.findIndex((m: any) => m.role === 'user');
+      expect(out.prompt[firstUserIdx - 1].content).toContain('## Action Calling');
     });
 
     it('pins responseFormat to the tool-call array contour for structuredToolCalls + required', async () => {
@@ -477,6 +490,26 @@ describe('claude-code provider', () => {
         expect(toolCalls).toHaveLength(1);
         expect(toolCalls[0].toolName).toBe('send-message');
         expect(out.some((c: any) => /structuredoutput/i.test(c.toolName ?? ''))).toBe(false);
+        // The truncated husk (`{"actions":}`) is consumed, never leaked downstream as free text.
+        expect(out.some((c: any) => c.type === 'text-delta' && String(c.delta).includes('actions'))).toBe(false);
+      });
+
+      it('wrapGenerate strips the wrapper husk text while keeping the carrier-rescued call', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // The text channel carries only the emptied envelope husk; the real call rides the carrier.
+        const doGenerate = async () => ({
+          content: [
+            { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: wrapper },
+            { type: 'text', text: '{"actions":}' },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        const toolCalls = result.content.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(toolCalls[0].toolName).toBe('send-message');
+        // Husk consumed: no leftover text part echoes the envelope.
+        expect(result.content.some((c: any) => c.type === 'text' && c.text.includes('actions'))).toBe(false);
       });
 
       it('wrapGenerate keeps legitimately repeated identical actions (no over-dedupe)', async () => {

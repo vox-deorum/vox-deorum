@@ -113,10 +113,35 @@ describe('rescueToolCallsFromText', () => {
       expect(JSON.parse(result.toolCalls[0].input)).toEqual({ x: 1 });
     });
 
-    it('treats a bare wrapper remnant as empty, not a failed rescue', () => {
+    it('strips a bare wrapper remnant instead of leaving it as free text', () => {
       // `{"actions":}` is the leftover shell of the constrained-decoding envelope after the
-      // real calls were extracted natively. It carries no tool call and must not warn.
+      // real calls were extracted natively. It carries no tool call, must not warn, and must
+      // be consumed rather than leaked downstream as free text.
       const text = '{"actions":}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.remainingText).toBeUndefined();
+    });
+
+    it('strips an empty-array wrapper remnant while keeping surrounding prose', () => {
+      const text = 'Sure. {"actions": []}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.remainingText).toBe('Sure.');
+    });
+
+    it('keeps a wrapper block that held a real-but-unavailable call (genuine failure, not a husk)', () => {
+      const text = '{"actions": [{"action": "nonexistent-tool", "arguments": {}}]}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.remainingText).toBe(text);
+    });
+
+    it('preserves prose held under a wrapper key instead of stripping it as a husk', () => {
+      // A wrapper key can carry genuine model prose (`{"actions": "<text>"}`) rather than an
+      // emptied array/null. That is NOT the husk — stripping it would silently discard the
+      // model's turn. It is kept as free text; only truly empty wrapper values are consumed.
+      const text = '{"actions": "I recommend building a settler to expand our empire."}';
       const result = rescueToolCallsFromText(text, tools);
       expect(result.toolCalls).toEqual([]);
       expect(result.remainingText).toBe(text);

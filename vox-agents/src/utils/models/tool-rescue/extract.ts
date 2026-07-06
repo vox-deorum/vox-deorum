@@ -26,6 +26,38 @@ function generateId(): string {
 }
 
 /**
+ * True when a parsed value is a bare constrained-decoding wrapper husk: a non-array object whose
+ * keys are all wrapper keys (`tools`/`actions`) AND whose every wrapper value is empty — an array
+ * (the emptied `{"actions": []}`) or nullish (the `{"actions":}` husk jaison repairs to
+ * `{actions: null}`). This is the empty envelope the provider leaves in text after diverting the
+ * real calls to the tool-call channel. A wrapper key holding a truthy non-array value — e.g.
+ * `{"actions": "I recommend a settler"}` — is NOT a husk but genuine model prose, and must be
+ * preserved rather than silently stripped; the value check is what distinguishes the two.
+ */
+function isWrapperShell(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const entries = Object.entries(value as Record<string, unknown>);
+  return entries.length > 0
+    && entries.every(([key, val]) => WRAPPER_KEYS.has(key) && (val == null || Array.isArray(val)));
+}
+
+/**
+ * Removes an extracted JSON block from its surrounding text, returning the leftover prose (trimmed)
+ * or undefined when nothing meaningful remains. Shared by the rescued-call path and the wrapper-shell
+ * husk path so both consume their JSON identically instead of leaving it as free text.
+ */
+function removeExtractedBlock(text: string, extractedContent: string): string | undefined {
+  if (!extractedContent || extractedContent === text) return undefined;
+  const blockIndex = text.indexOf(extractedContent);
+  // Defensive only: every caller derives extractedContent as a verbatim substring of text, so a
+  // miss shouldn't happen — fall back to the trimmed whole rather than splice at a bogus index.
+  if (blockIndex === -1) return text.trim() || undefined;
+  const before = text.substring(0, blockIndex).trim();
+  const after = text.substring(blockIndex + extractedContent.length).trim();
+  return (before + ' ' + after).trim() || undefined;
+}
+
+/**
  * True when a native tool-call name is the claude-code constrained-decoding carrier
  * (`claude-code-tool.StructuredOutput`, or an `mcp__…__StructuredOutput` variant).
  *
@@ -92,7 +124,11 @@ function normalizeArgKeys(
  *
  * @param text The text to process
  * @param availableTools Set of available tool names for validation
- * @returns Object containing rescued tool calls and remaining text (if any)
+ * @returns Rescued tool calls plus `remainingText`. Contract: `remainingText === text`
+ *   (byte-identical) means nothing was consumed — the caller should pass the original
+ *   text through untouched. Any other value (a shorter string, or `undefined`) means a
+ *   tool call or an empty wrapper husk (`{"actions":}`) was consumed out of the text, and
+ *   the caller should replace the original with `remainingText` (dropping it when `undefined`).
  */
 export function rescueToolCallsFromText(
   text: string,
@@ -262,6 +298,10 @@ export function rescueToolCallsFromText(
   // Check if it's an array of tool calls
   const toolCalls = Array.isArray(candidate) ? candidate : [candidate];
   const rescuedToolCalls: LanguageModelV3ToolCall[] = [];
+  // Set once any item looked like a real (but unrescuable) tool call — a wrong-shaped object or a
+  // call naming an unavailable tool. That makes the block a genuine failed rescue worth surfacing,
+  // NOT the empty wrapper husk, so it must never be silently stripped as one.
+  let sawUnrescuableCall = false;
 
   for (const toolCall of toolCalls) {
     if (!toolCall) continue;
@@ -284,18 +324,21 @@ export function rescueToolCallsFromText(
     }
 
     if (!patternFound) {
-      // A bare wrapper shell (only wrapper keys, no tool-call fields) is a harmless
-      // remnant of the constrained-decoding envelope, not a genuine parse failure.
-      const keys = Object.keys(toolCall);
-      const isWrapperRemnant = keys.length > 0 && keys.every(key => WRAPPER_KEYS.has(key));
-      if (keys.length > 0 && !isWrapperRemnant && useJaison)
-        logger.log("warn", `Failed to rescue tool call: no matching field pattern found from ${jsonText}`);
+      // A bare wrapper husk (only wrapper keys, all empty) is a harmless remnant of the
+      // constrained-decoding envelope, not a genuine parse failure. Anything else with keys
+      // (including a wrapper key holding non-empty prose) is a real, unrescuable call.
+      if (Object.keys(toolCall).length > 0 && !isWrapperShell(toolCall)) {
+        sawUnrescuableCall = true;
+        if (useJaison)
+          logger.log("warn", `Failed to rescue tool call: no matching field pattern found from ${jsonText}`);
+      }
       continue;
     }
 
     // Resolve to an available tool, tolerating underscore/hyphen differences in the emitted name.
     const resolvedName = resolveToolName(toolName!, availableTools);
     if (!resolvedName) {
+      sawUnrescuableCall = true;
       if (useJaison) logger.log("warn", `Failed to rescue tool call: non-existent or unavailable tool ${toolName}`, toolParameters);
       continue;
     }
@@ -312,24 +355,19 @@ export function rescueToolCallsFromText(
     });
   }
 
+  // Determine what was extracted - either the full markdown block or just the JSON content.
+  const extractedContent = codeBlockMatch ? codeBlockMatch[0] : jsonText;
+
   // Return whatever rescued cleanly; entries that failed validation were skipped individually above.
   if (rescuedToolCalls.length > 0) {
-    // If we extracted a JSON block, calculate remaining text
-    let remainingText: string | undefined;
+    return { toolCalls: rescuedToolCalls, remainingText: removeExtractedBlock(text, extractedContent) };
+  }
 
-    // Determine what was extracted - either the full markdown block or just the JSON content
-    const extractedContent = codeBlockMatch ? codeBlockMatch[0] : jsonText;
-
-    if (extractedContent && extractedContent !== text) {
-      // Remove the extracted content from the original text
-      const blockIndex = text.indexOf(extractedContent);
-      const before = text.substring(0, blockIndex).trim();
-      const after = text.substring(blockIndex + extractedContent.length).trim();
-      remainingText = (before + ' ' + after).trim();
-      if (!remainingText) remainingText = undefined;
-    }
-
-    return { toolCalls: rescuedToolCalls, remainingText };
+  // A bare constrained-decoding wrapper husk (`{"actions":}` / `{"actions": []}`) carries no tool
+  // call and no salvageable prose, so consume it like a rescued call's JSON rather than leak it as
+  // free text. A block that instead held a real-but-unrescuable call stays visible (fall through).
+  if (!sawUnrescuableCall && isWrapperShell(parsed)) {
+    return { toolCalls: [], remainingText: removeExtractedBlock(text, extractedContent) };
   }
 
   // If rescue failed, return original text

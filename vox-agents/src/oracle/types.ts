@@ -51,15 +51,9 @@ export interface OriginalPromptContext {
    * native (non-prompt) tool path, had no tools, or failed before recording. Informational
    * only — replay framing derives from the replay model, not this. To reproduce the
    * original framing, return a model with `options.framing` from `modelOverride` (which
-   * receives this value) or apply `reframeToolWording` to `system`/`toolPrompt` here.
+   * receives this value) or apply `reframeToolWording` to `system` here.
    */
   framing?: ToolCallFraming;
-  /**
-   * Injected tool prompt in vanilla 'tool' wording, recorded only when that turn
-   * was adapted to 'action' framing. Available for experiments (apply
-   * `reframeToolWording` to reproduce the action view); does not drive replay framing.
-   */
-  toolPrompt?: string;
 }
 
 /** Return type from the modifyPrompt callback. All fields optional -- undefined keeps original. */
@@ -94,18 +88,17 @@ export interface OracleConfig {
    * Override model per-row. Return a single model or an array for multi-model comparison.
    * Array = one ReplayResult per model per source row. Undefined = keep original.
    *
-   * The third argument carries the original turn's recorded prompt-mode facts
-   * (`framing`/`toolPrompt`, both `undefined` when the turn predates the telemetry or ran a
-   * native tool path — see `OriginalPromptContext.framing`). Return a Model with
-   * `options.framing` set to reproduce the original framing on the replay model; this is the
-   * sanctioned way to force framing, since replay framing otherwise derives solely from the
-   * replay model. Distinct source framings can thus be replayed faithfully even when the
-   * models resolve to the same name.
+   * The third argument carries the original turn's recorded prompt-mode framing
+   * (`undefined` when the turn predates the telemetry or ran a native tool path — see
+   * `OriginalPromptContext.framing`). Return a Model with `options.framing` set to reproduce
+   * the original framing on the replay model; this is the sanctioned way to force framing,
+   * since replay framing otherwise derives solely from the replay model. Distinct source
+   * framings can thus be replayed faithfully even when the models resolve to the same name.
    */
   modelOverride?: (
     originalModel: string,
     row: OracleRow,
-    original?: { framing?: ToolCallFraming; toolPrompt?: string }
+    original?: { framing?: ToolCallFraming }
   ) => string | Model | (string | Model)[] | undefined;
   /** Rewrite MCP tool JSON schemas before replay. Receives JSON-stringified { description, inputSchema }, returns modified JSON. */
   rewriteToolSchemas?: (toolJson: string) => string;
@@ -218,8 +211,6 @@ export interface ExtractedPrompt {
   agentName: string;
   /** The original turn's framing from step.tool_framing (undefined when unrecorded — see OriginalPromptContext.framing) */
   framing?: ToolCallFraming;
-  /** Injected tool prompt (vanilla wording) from step.tool_prompt; set only when the turn was adapted to 'action' framing */
-  toolPrompt?: string;
 }
 
 /** Raw telemetry data extracted for a single CSV row. No prompt modifications applied. */
@@ -240,8 +231,6 @@ export interface RetrievedRow {
   activeTools: string[];
   /** The original turn's framing from step.tool_framing (undefined when unrecorded — see OriginalPromptContext.framing) */
   framing?: ToolCallFraming;
-  /** Injected tool prompt (vanilla wording) from step.tool_prompt; set only when the turn was adapted to 'action' framing */
-  toolPrompt?: string;
   /** Set when extraction failed for this row */
   error?: string;
 }

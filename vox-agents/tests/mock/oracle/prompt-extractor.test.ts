@@ -407,7 +407,7 @@ describe('oracle prompt-extractor', () => {
       expect(result).toBeNull();
     });
 
-    it('surfaces explicit framing and the vanilla tool prompt for an action-adapted turn', async () => {
+    it('surfaces explicit framing for an action-adapted turn', async () => {
       await seedTurn({
         turn: 16,
         traceId: 'adapted',
@@ -415,15 +415,13 @@ describe('oracle prompt-extractor', () => {
           'step.messages': JSON.stringify([{ role: 'system', content: 'S' }, { role: 'user', content: 'u' }]),
           'step.tools': JSON.stringify(['set-flavors']),
           'step.tool_framing': 'action',
-          'step.tool_prompt': '## Tool Calling\n{ "tool": "<tool_name>", "arguments": { <parameters> } }',
         },
       });
       const result = await extractPrompt(db, 16);
       expect(result!.framing).toBe('action');
-      expect(result!.toolPrompt).toContain('## Tool Calling');
     });
 
-    it("reads explicit 'tool' framing with no toolPrompt for a normal prompt-mode turn", async () => {
+    it("reads explicit 'tool' framing for a normal prompt-mode turn", async () => {
       await seedTurn({
         turn: 18,
         traceId: 'plain',
@@ -435,14 +433,12 @@ describe('oracle prompt-extractor', () => {
       });
       const result = await extractPrompt(db, 18);
       expect(result!.framing).toBe('tool');
-      expect(result!.toolPrompt).toBeUndefined();
     });
 
-    it('leaves framing and toolPrompt undefined for a turn predating the attributes', async () => {
+    it('leaves framing undefined for a turn predating the attribute', async () => {
       await seedTurn({ turn: 17, traceId: 'legacy' });
       const result = await extractPrompt(db, 17);
       expect(result!.framing).toBeUndefined();
-      expect(result!.toolPrompt).toBeUndefined();
     });
 
     it('returns null when no step spans exist under the agent', async () => {

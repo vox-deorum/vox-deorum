@@ -765,13 +765,11 @@ export class VoxContext<TParameters extends AgentParameters> {
         });
 
         // Framing is recorded as an explicit fact, separate from prompt content:
-        // step.tool_framing carries the resolved framing for the step, while the vanilla
-        // injected prompt is captured only when we adapted to 'action'. A callback rather
+        // step.tool_framing carries the resolved framing for the step. A callback rather
         // than trace.getActiveSpan() because the model call runs through pLimit and can
         // resume in a sibling step's async context; this closure and the stepSpan
         // reference below are immune to that.
         let stepToolFraming: string | undefined;
-        let adaptedToolPrompt: string | undefined;
 
         // Execute a single step with concurrency limiting and retry
         // The steps are already awaited within the retry mechanism to properly catch streaming errors
@@ -780,7 +778,7 @@ export class VoxContext<TParameters extends AgentParameters> {
             // Model settings
             model: getModel(stepModel, {
               workingDirId: `${parameters.gameID}-${parameters.playerID}`,
-              onToolFraming: ({ framing, toolPrompt }) => { stepToolFraming = framing; adaptedToolPrompt = toolPrompt; },
+              onToolFraming: ({ framing }) => { stepToolFraming = framing; },
             }),
             providerOptions: stepProviderOptions,
             // Disable Vercel AI SDK's internal retry to let our wrapper handle it
@@ -812,18 +810,12 @@ export class VoxContext<TParameters extends AgentParameters> {
         const stepResults = result.steps;
         const stepResponse = stepResults[stepResults.length - 1];
 
-        // Record framing (an explicit fact) and, only when the step was adapted to 'action',
-        // the injected tool prompt in vanilla wording, next to step.messages/step.tools.
-        // These are set only when the tool-rescue middleware actually ran for this step —
-        // i.e. a prompt-mode model with tools whose call reached this point. Native/no-tool
-        // steps, batch replays (which bypass the middleware), and pre-completion failures
-        // leave both unset. Consumers key off step.tool_framing, never the mere presence of
-        // step.tool_prompt; Oracle reads the prompt vanilla.
+        // Record framing (an explicit fact) next to step.messages/step.tools. Set only when
+        // the tool-rescue middleware actually ran for this step — i.e. a prompt-mode model
+        // with tools whose call reached this point. Native/no-tool steps, batch replays
+        // (which bypass the middleware), and pre-completion failures leave it unset.
         if (stepToolFraming !== undefined) {
           stepSpan.setAttribute('step.tool_framing', stepToolFraming);
-        }
-        if (adaptedToolPrompt !== undefined) {
-          stepSpan.setAttribute('step.tool_prompt', adaptedToolPrompt);
         }
 
         // Stage 3: surface CLI-executed built-in tool calls (Read/Glob/Grep/…) as

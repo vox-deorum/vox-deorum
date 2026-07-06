@@ -122,7 +122,7 @@ export function resolveToolFraming(config: Model): ToolCallFraming {
  * const model = getModel(modelConfig, { workingDirId: `${gameID}-${playerID}` });
  * ```
  */
-export function getModel(config: Model, options?: { workingDirId?: string; onToolFraming?: (info: { framing: ToolCallFraming; toolPrompt?: string }) => void }): LanguageModel {
+export function getModel(config: Model, options?: { workingDirId?: string; onToolFraming?: (info: { framing: ToolCallFraming }) => void }): LanguageModel {
   var result: LanguageModelV3;
   // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming):
   // 'action' for claude-code, 'tool' for everything else.

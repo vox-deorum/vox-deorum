@@ -171,21 +171,14 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
       // Create tool instruction prompt with full tool schemas
       const toolPrompt = createToolPrompts(params.tools, toolChoice, framing, wrapToolCalls);
 
-      // Report the resolved framing as an explicit fact (recorded separately from any
-      // prompt content) plus, only when we adapted to 'action', the injected prompt in
-      // VANILLA 'tool' wording. Recording the framing value (not the mere presence of a
-      // stored prompt) keeps future prompt-storage changes from silently altering how a
-      // turn's framing reads. Deliberately vanilla AND unwrapped: the wrapper object is a
-      // claude-code-only constrained-decoding transport convention, so the neutral bare-array
-      // 'tool' form is the canonical record. Replay re-applies whichever convention its OWN
-      // model dictates (non-CC → bare, CC → wrapper) — freezing the wrapper here would leak a
-      // CC-only shape into a record a non-CC replay reads. Faithful CC reproduction comes from
-      // modelOverride returning a CC/options.framing model, not from this telemetry.
+      // Report the resolved framing as an explicit fact, recorded separately from any prompt
+      // content. Recording the framing value (not the mere presence of a stored prompt) keeps
+      // future prompt-storage changes from silently altering how a turn's framing reads. The
+      // injected prompt itself is deliberately NOT recorded: replay reconstructs it from the
+      // replay model's own framing/convention, so faithful reproduction comes from modelOverride
+      // returning a CC/options.framing model, not from stored prompt telemetry.
       if (options?.onToolFraming) {
-        const vanillaToolPrompt = framing === 'action'
-          ? createToolPrompts(params.tools, toolChoice, 'tool')
-          : undefined;
-        options.onToolFraming({ framing, toolPrompt: vanillaToolPrompt });
+        options.onToolFraming({ framing });
       }
 
       // For a constrained-decoding provider (claude-code) with forced tool use, pin the
@@ -205,7 +198,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
 
       // Uniformly reword agent-authored system prose to match the action framing.
       // Confined to system messages; the protocol block (toolPrompt) is already
-      // action-framed by construction and is prepended/merged below untouched.
+      // action-framed by construction and is inserted below untouched.
       if (framing === 'action') {
         convertedPrompt = convertedPrompt.map(message =>
           message.role === 'system'
@@ -214,12 +207,25 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         );
       }
 
-      // Build the modified prompt, respecting systemPromptFirst models that only
-      // accept a single system message. When set, merge the tool prompt into the
-      // first existing system message instead of prepending a new one.
+      // Build the modified prompt. Where the protocol block lands depends on framing:
+      //  - 'action' (claude-code): insert it right before the first user message, so the
+      //    action instructions sit adjacent to the turn the model is asked to act on rather
+      //    than buried above the leading system prose. Falls back to the front when the
+      //    conversation carries no user message yet (a leading system message is always valid).
+      //  - systemPromptFirst models (only accept a single system message at position 0, e.g.
+      //    Qwen): merge the tool prompt into the first existing system message.
+      //  - otherwise: prepend a new leading system message.
       let modifiedPrompt: LanguageModelV3Prompt;
       if (!toolPrompt) {
         modifiedPrompt = convertedPrompt;
+      } else if (framing === 'action') {
+        const firstUserIdx = convertedPrompt.findIndex(m => m.role === 'user');
+        const insertAt = firstUserIdx === -1 ? 0 : firstUserIdx;
+        modifiedPrompt = [
+          ...convertedPrompt.slice(0, insertAt),
+          { role: 'system', content: toolPrompt },
+          ...convertedPrompt.slice(insertAt),
+        ];
       } else if (options?.systemPromptFirst && convertedPrompt.length > 0 && convertedPrompt[0].role === 'system') {
         const firstMsg = convertedPrompt[0] as { role: 'system'; content: string };
         modifiedPrompt = [
@@ -273,13 +279,12 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
           for (const content of result.content) {
             if (content.type === "text") {
               const processed = recoverToolCalls(content.text, 'text', toolNames, toolSchemas, recoveryState);
-              if (processed.toolCalls.length > 0) {
-                // Remove the text that contained the tool calls if it was completely consumed
-                if (processed.remainingText) newContents.push({ type: 'text', text: processed.remainingText });
-                rescuedCalls.push(...processed.toolCalls);
-                continue;
-              }
-              newContents.push(content);
+              rescuedCalls.push(...processed.toolCalls);
+              // Honor remainingText per rescueToolCallsFromText's contract: byte-identical means
+              // untouched prose (keep the original part), anything else means a call or wrapper
+              // husk was consumed (push the remainder, or drop the part when nothing is left).
+              if (processed.remainingText === content.text) newContents.push(content);
+              else if (processed.remainingText) newContents.push({ type: 'text', text: processed.remainingText });
               continue;
             }
             // Drop the StructuredOutput carrier; its `{ actions: [...] }` payload is rescued
@@ -449,14 +454,14 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
                     toolSchemas,
                     recoveryState
                   );
+                  // Honor remainingText per rescueToolCallsFromText's contract: unchanged for
+                  // genuine prose, stripped when a call or wrapper husk was consumed. Emitted
+                  // before any tool calls so leading prose precedes them in the stream.
+                  emitRemainingText(processed.remainingText, controller, chunk.id);
                   if (processed.toolCalls.length > 0) {
-                    // Emit remaining text if any
-                    emitRemainingText(processed.remainingText, controller, chunk.id);
                     // Every text-authored call is authoritative, including identical repeats.
                     emitToolCallChunks(processed.toolCalls, controller);
                     toolCallsFound = true;
-                  } else {
-                    emitRemainingText(incompleteBuffer, controller, chunk.id);
                   }
                 }
                 controller.enqueue(chunk);

@@ -249,7 +249,7 @@ describe('oracle replayer (non-cache paths)', () => {
       expect(trailFiles).toEqual(['game-1-p2-t3.json']);
     });
 
-    it('passes the original turn framing/toolPrompt into modelOverride as its third argument', async () => {
+    it('passes the original turn framing into modelOverride as its third argument', async () => {
       const outputDir = makeTempDir();
       mockFreshExecution();
       const seen: Array<{ originalModel: string; original: unknown }> = [];
@@ -261,12 +261,12 @@ describe('oracle replayer (non-cache paths)', () => {
 
       await runReplay(
         baseConfig(outputDir, 'override-framing-arg', () => ({}), { modelOverride }),
-        [retrieved({ framing: 'action', toolPrompt: 'VANILLA_TOOL_PROMPT' })]
+        [retrieved({ framing: 'action' })]
       );
 
       expect(modelOverride).toHaveBeenCalledTimes(1);
       expect(seen[0].originalModel).toBe('oracle-test/original-model@low');
-      expect(seen[0].original).toEqual({ framing: 'action', toolPrompt: 'VANILLA_TOOL_PROMPT' });
+      expect(seen[0].original).toEqual({ framing: 'action' });
     });
 
     it('reproduces source framing when modelOverride returns a model with options.framing', async () => {
@@ -295,7 +295,7 @@ describe('oracle replayer (non-cache paths)', () => {
       await runReplay(
         baseConfig(outputDir, 'reproduce-framing', () => ({}), { modelOverride: modelOverride as any }),
         [
-          retrieved({ framing: 'action', toolPrompt: 'VANILLA', row: { ...baseRow, turn: '3' } }),
+          retrieved({ framing: 'action', row: { ...baseRow, turn: '3' } }),
           retrieved({ framing: 'tool', row: { ...baseRow, turn: '4' } }),
         ]
       );
