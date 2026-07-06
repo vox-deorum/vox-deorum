@@ -15,6 +15,21 @@ import { VoxContext } from "../infra/vox-context.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createSendMessageTool } from "./send-message-tool.js";
 import { getValidCalls } from "../utils/tools/terminal-tools.js";
+import type { DealRowRenderer } from "../utils/diplomacy/transcript-utils.js";
+
+/**
+ * Agent-specific context a live envoy layers around the chat record in normal mode. `preamble`
+ * messages sit BEFORE the chat record (grounding the transcript); `postscript` messages sit AFTER it
+ * but before the always-last hint; `dealRenderer` expands deal transcript rows inline within the chat
+ * record (or is omitted to leave their stored one-line Content). All fields are optional; base live
+ * envoys supply none. Returned as a unit so a subclass can derive them from a single, consistent
+ * reduction instead of recomputing the same fact from divergent sources.
+ */
+export interface LiveEnvoyContext {
+  preamble?: ModelMessage[];
+  postscript?: ModelMessage[];
+  dealRenderer?: DealRowRenderer;
+}
 
 /**
  * Envoy specialized for live game sessions with StrategistParameters.
@@ -48,31 +63,53 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   public override maxSteps: number = 10;
 
   /**
-   * Orchestrates initial messages with special message support. The always-present hint
-   * anchors identity/audience/turn in both modes; an add-on follows it — the special
-   * message's prompt in special mode, or the agent's default nudge in normal mode.
-   * Special mode skips conversation history (and disables tools via prepareStep).
+   * Orchestrates initial messages with special message support. The always-present hint anchors
+   * identity/audience/turn and is ALWAYS the final message for a live envoy — the last thing the model
+   * reads before it acts — in both modes; an add-on follows it — the special message's prompt in
+   * special mode, or the agent's default nudge in normal mode. In normal mode the agent's grounding
+   * brackets the conversation and its deal rows render inline — both assembled together by
+   * {@link getExtraContext}. Special mode skips history (and disables tools via prepareStep).
    */
   public async getInitialMessages(
     parameters: StrategistParameters,
     input: EnvoyThread,
-    _context: VoxContext<StrategistParameters>
+    context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
     const specialConfig = this.findLastSpecialMessage(input);
     const messages = this.getContextMessages(parameters, input);
     const addon = specialConfig ?? this.getDefaultAddon(parameters, input);
 
     if (!specialConfig) {
-      // Normal mode: include conversation history.
+      // Normal mode: layer the agent's grounding around the chat record (see {@link LiveEnvoyContext}
+      // for the bracket ordering and rationale) — `preamble` before it, `dealRenderer` inline within
+      // it, `postscript` after it but still before the always-last hint.
+      const extra = await this.getExtraContext(parameters, input, context);
+      if (extra.preamble?.length) messages.push(...extra.preamble);
       messages.push(...this.convertToModelMessages(
-        this.filterSpecialMessages(input.messages)
+        this.filterSpecialMessages(input.messages),
+        extra.dealRenderer
       ));
+      if (extra.postscript?.length) messages.push(...extra.postscript);
     }
     messages.push({
       role: "system",
       content: `${this.getHint(parameters, input)} ${addon}`.trim()
     });
     return messages;
+  }
+
+  /**
+   * Agent-specific context a live envoy layers around the chat record, assembled once per turn in
+   * normal mode (see {@link LiveEnvoyContext} for the layout and the single-source rationale). Base
+   * live envoys add nothing; a subclass (the diplomat) overrides this to ground the turn with its
+   * game state.
+   */
+  protected async getExtraContext(
+    _parameters: StrategistParameters,
+    _input: EnvoyThread,
+    _context: VoxContext<StrategistParameters>
+  ): Promise<LiveEnvoyContext> {
+    return {};
   }
 
   /**
@@ -139,7 +176,7 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     const hasPendingSupportTool = getValidCalls(lastStep).some(call => !completionTools.has(call.toolName));
     if (hasPendingSupportTool) return false;
     // No pending tool and no completion tool: stop once it has spoken raw free text (Anthropic fallback).
-    return allSteps.some(step => Boolean(step.text?.trim()));
+    return this.toolChoice !== "required" && allSteps.some(step => Boolean(step.text?.trim()));
   }
 
   /**

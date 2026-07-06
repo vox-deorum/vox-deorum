@@ -82,16 +82,16 @@ describe('buildDiplomacyBackgroundMessage', () => {
     expect(result.players).toEqual(players);
     expect(out).toContain('# Cities & Diplomatic Standing (with Rome)');
     // Cities: keyed by short name (Germany/Rome), NOT leader (Bismarck/Augustus Caesar).
-    expect(out).toContain('## Your cities (Germany)');
+    expect(out).toContain("## Germany's Cities (You)");
     expect(out).toContain('Berlin');
-    expect(out).toContain("## Rome's cities (visible)");
+    expect(out).toContain("## Rome's Cities (Visible Only)");
     expect(out).not.toContain('Bismarck');
     expect(out).not.toContain('Augustus Caesar');
     // Standing deal, viewer (Germany) first.
-    expect(out).toContain('Standing agreements currently in force with Rome');
+    expect(out).toContain('## Agreements Currently in Force with Rome');
     expect(out).toContain('Deal: **Germany** gives [Open Borders] ↔ **Rome** gives [Gold: 100] (12 turns remaining)');
     // Concluded deal: viewer is the From side, so its FromGives are the "we give" column, expiry derived.
-    expect(out).toContain('Recently concluded deals with Rome');
+    expect(out).toContain('## Recently Concluded Deals With Rome (Last 15 Turns)');
     expect(out).toContain('turn 18: Deal: **Germany** gives [Gold: 50] ↔ **Rome** gives [Open Borders] (will expire at turn 48)');
   });
 
@@ -118,9 +118,9 @@ describe('buildDiplomacyBackgroundMessage', () => {
 
     const { text: out } = await buildDiplomacyBackgroundMessage(context, params, thread());
 
-    expect(out).toContain('Standing agreements currently in force with Rome');
-    expect(out).not.toContain('Your cities');
-    expect(out).not.toContain('Recently concluded deals');
+    expect(out).toContain('## Agreements Currently in Force with Rome');
+    expect(out).not.toContain("Germany's Cities");
+    expect(out).not.toContain('Recently Concluded Deals');
   });
 
   it('excludes the counterpart\'s deals with third parties and flips direction when the viewer is the To side', async () => {

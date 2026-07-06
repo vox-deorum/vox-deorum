@@ -7,17 +7,17 @@
  */
 
 import { ModelMessage, StepResult, Tool } from "ai";
-import { LiveEnvoy } from "./live-envoy.js";
+import { LiveEnvoy, type LiveEnvoyContext } from "./live-envoy.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters, getRecentGameState } from "../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "./envoy-prompts.js";
 import { createCloseConversationTool } from "./close-conversation-tool.js";
-import { buildDealContextMessage } from "./utils/diplomat-utils.js";
+import { buildDealContextMessage, renderDealRowInline } from "./utils/diplomat-utils.js";
 import { buildDiplomacyBackgroundMessage } from "./utils/diplomacy-context.js";
 import { readActiveProposal } from "../utils/diplomacy/deal.js";
 import { counterpartOpenProposal } from "../utils/diplomacy/deal-reduce.js";
-import { terminalActionTools } from "../utils/diplomacy/transcript-utils.js";
+import { terminalActionTools, type DealRowRenderer } from "../utils/diplomacy/transcript-utils.js";
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.
@@ -123,33 +123,51 @@ export class Diplomat extends LiveEnvoy {
   }
 
   /**
-   * Adds the on-the-table deal to the diplomat's context so it "sees the deal at every step"
-   * (specs §7) — the active proposal's terms, the negotiator's rationale/message, and the
-   * per-item value snapshots — so it can voice each move faithfully and keep its intelligence
-   * current. Skipped in special-message (greeting) mode.
+   * Grounds the diplomat's turn so it "sees the deal at every step" (specs §7). The cities +
+   * standing/concluded-deals background becomes the `preamble`; the on-the-table proposal — ONLY when a
+   * deal is genuinely OPEN — becomes the `postscript`, carrying the negotiator's rationale/message and
+   * per-item value snapshots so the diplomat can voice each move faithfully; rejected/closed deals
+   * render inline at their proposal turn via the `dealRenderer` (see {@link renderDealRowInline}). See
+   * {@link LiveEnvoyContext} for how the base layers these around the chat record.
+   *
+   * The deal transcript is reduced ONCE here from the authoritative durable source (`readActiveProposal`,
+   * the same source `prepareStep`'s gate and the accept/reject routes use); the on-the-table block and
+   * the renderer's open-proposal pointer both derive from that single reduction — and the pointer keys
+   * off the block actually being emitted — so they can never disagree about which proposal is open.
+   * (Reducing the in-memory `input.messages` instead risked pointing at a block that was never emitted.)
+   * Called by the base only in normal mode, so greeting (special) mode adds none of this.
    */
-  public override async getInitialMessages(
+  protected override async getExtraContext(
     parameters: StrategistParameters,
     input: EnvoyThread,
     context: VoxContext<StrategistParameters>
-  ): Promise<ModelMessage[]> {
-    const messages = await super.getInitialMessages(parameters, input, context);
-    if (!this.isSpecialMode(input)) {
-      // Background first (cities + game deals), then the on-the-table proposal last so the most
-      // action-relevant item sits closest to the turn hint. The background fetch also returns the
-      // viewer-perspective players report, reused for the deal's third-party relationship context.
-      const background = await buildDiplomacyBackgroundMessage(context, parameters, input);
-      if (background.text) {
-        messages.push({ role: "user", content: background.text });
-      }
-      // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
-      const relationships = getRecentGameState(parameters)?.options?.Relationships;
-      const dealContext = await buildDealContextMessage(input, background.players, relationships);
-      if (dealContext) {
-        messages.push({ role: "user", content: dealContext });
-      }
-    }
-    return messages;
+  ): Promise<LiveEnvoyContext> {
+    // The cities/standing background and the durable deal reduction are independent fetches — run them
+    // together. buildDealContextMessage below needs both: background.players for third-party context,
+    // reduction for the open-deal terms.
+    const [background, reduction] = await Promise.all([
+      buildDiplomacyBackgroundMessage(context, parameters, input),
+      readActiveProposal(input.player1ID, input.player2ID),
+    ]);
+    const preamble: ModelMessage[] = background.text
+      ? [{ role: "user", content: background.text }]
+      : [];
+
+    // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
+    const relationships = getRecentGameState(parameters)?.options?.Relationships;
+    const dealContext = await buildDealContextMessage(input, reduction, background.players, relationships);
+    const postscript: ModelMessage[] = dealContext
+      ? [{ role: "user", content: dealContext }]
+      : [];
+
+    // The still-open proposal is shown in full in the on-the-table block, so the renderer points its
+    // transcript row at that block instead of repeating the terms; every other proposal renders its
+    // terms inline (see {@link renderDealRowInline}). Keyed off the block ACTUALLY being emitted
+    // (postscript non-empty), so the pointer can never reference a block that isn't there.
+    const openProposalID = postscript.length > 0 ? reduction.active?.ID : undefined;
+    const dealRenderer: DealRowRenderer = (row) => renderDealRowInline(row, input, openProposalID);
+
+    return { preamble, postscript, dealRenderer };
   }
 
   /**
@@ -202,11 +220,11 @@ You represent your government's interests and gather intelligence through diplom
   }
 
   /**
-   * The diplomat's normal-mode nudge appended after the hint: gather and relay intelligence, and
-   * speak through send-message. When a deal is on the table, the deal-context block (which lands
-   * after this hint, see getInitialMessages) closes with the overriding ask for that state.
+   * The diplomat's normal-mode nudge, concatenated onto the always-last hint: gather and relay
+   * intelligence, and speak through send-message. When a deal is OPEN, the on-the-table block (which
+   * lands right before this hint, see getExtraContext) states the action for that state directly.
    */
   protected override getDefaultAddon(): string {
-    return "When you need to speak directly to the counterpart, use the `send-message` tool.";
+    return "When you need to speak directly to the counterpart, use the `send-message` tool. When you need to propose a deal, use the `call-negotiator` tool.";
   }
 }

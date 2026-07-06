@@ -149,7 +149,7 @@ describe('accept-deal', () => {
     const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
-    const msg = await run(tools['accept-deal'], { rationale: 'Good enough.', Message: 'We have an accord.' });
+    const msg = await run(tools['accept-deal'], { Rationale: 'Good enough.', Message: 'We have an accord.' });
 
     expect(input.outcome).toMatchObject({ type: 'accept', proposalMessageID: 7, rationale: 'Good enough.', message: 'We have an accord.' });
     // The accepter is the negotiator's own seat (the LLM accepting the relayed deal); the outward
@@ -361,11 +361,15 @@ describe('negotiator completion', () => {
       { role: 'user' as const, content: 'Decide on the deal.' },
       { role: 'user' as const, content: NEGOTIATOR_NUDGE },
     ];
-    const textStep = { toolCalls: [], text: 'Still thinking...', response: { messages: [] } } as any;
+    // A step that called a SUPPORT tool (get-briefing) produced tool calls, so the empty-response
+    // rescue is skipped and only the continuation-nudge dedup runs. (A text-only step under the
+    // required tool-choice would instead trip the rescue, which is its own path.) The nudge is already
+    // the last message, so it must not be appended again.
+    const supportStep = { toolCalls: [{ toolName: 'get-briefing' }], text: '', response: { messages: [] } } as any;
 
-    const config = await negotiator.prepareStep({} as any, negotiatorInput(), textStep, [textStep], messages, ctx);
+    const config = await negotiator.prepareStep({} as any, negotiatorInput(), supportStep, [supportStep], messages, ctx);
 
-    // Duplicate guard: nothing appended, so prepareStep leaves messages untouched.
+    // Duplicate guard: the nudge is already last, so prepareStep leaves messages untouched.
     expect(config.messages).toBeUndefined();
   });
 
@@ -509,9 +513,9 @@ describe('getInitialMessages task determination', () => {
     expect(text).not.toContain('Inspection (advisory)');
     // Per-item advisory estimates fold into the term (giver first), not a separate section.
     expect(text).toContain('### Gold: 40');
-    expect(text).toContain('Estimated value to Carthage (them): 40');
-    // Germany is the giver here, so its advisory worth reads as a cost (negative).
-    expect(text).toContain('Estimated value to Germany (us): -35');
+    // Carthage is the giver here, so its advisory worth reads as a cost (negative); Germany receives.
+    expect(text).toContain('Estimated value to Carthage (them): -40');
+    expect(text).toContain('Estimated value to Germany (us): 35');
     // Coop-war third-party context: both sides' public relationship + our leader's directive toward Rome.
     expect(text).toContain("Germany's (our) relationship to Rome (third-party): War");
     expect(text).toContain("Our leader's intention for Rome: Public -50/Private -30 (Keep Rome weak.)");
@@ -622,7 +626,7 @@ describe('getInitialMessages task determination', () => {
     expect(callTool).toHaveBeenCalledWith('get-cities', expect.anything(), expect.anything());
     // The negotiator voices seat 3 (Germany), so the counterpart is Rome and its own cities render.
     expect(content(messages)).toContain('Cities & Diplomatic Standing (with Rome)');
-    expect(content(messages)).toContain('## Your cities (Germany)');
+    expect(content(messages)).toContain("## Germany's Cities (You)");
   });
 });
 

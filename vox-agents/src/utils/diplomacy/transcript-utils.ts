@@ -20,6 +20,13 @@ import { isDealMessage, type DealTranscriptMessage } from "../../../../mcp-serve
 import { sendMessageToolName } from "./send-message-tool-name.js";
 export type { TranscriptMessage } from "../../../../mcp-server/dist/utils/transcript-schema.js";
 
+/**
+ * Expands a deal transcript row into the inline conversation line the chat record renders in place of
+ * its bare stored Content, or undefined to keep that Content as-is. The diplomat supplies one (terms
+ * for a proposal, the answered-proposal reference for a reject/accept); other envoys leave it unset.
+ */
+export type DealRowRenderer = (row: DealTranscriptMessage) => string | undefined;
+
 /** Message types that contribute readable text to a conversation thread. */
 const CONVERSATION_TYPES = new Set(["text", "close"]);
 

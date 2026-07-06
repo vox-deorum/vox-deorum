@@ -10,7 +10,7 @@ import { VoxAgent, AgentParameters } from "../infra/vox-agent.js";
 import { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { formatToolResultOutput, stripTurnMarker } from "../utils/models/text-cleaning.js";
-import { audienceID, identityOf, roleOf } from "../utils/diplomacy/transcript-utils.js";
+import { audienceID, identityOf, roleOf, type DealRowRenderer } from "../utils/diplomacy/transcript-utils.js";
 import { sendMessageToolName } from "../utils/diplomacy/send-message-tool-name.js";
 
 /**
@@ -153,7 +153,10 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
    * Filters out tool-result messages and non-text parts from assistant messages
    * to reduce token usage. Only textual conversation content is preserved.
    */
-  protected convertToModelMessages(messages: MessageWithMetadata[]): ModelMessage[] {
+  protected convertToModelMessages(
+    messages: MessageWithMetadata[],
+    renderDeal?: DealRowRenderer
+  ): ModelMessage[] {
     const result: ModelMessage[] = [];
     for (const item of messages) {
       const message = { ...item.message };
@@ -183,6 +186,14 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
         });
         if (kept.length === 0) continue;
         message.content = kept;
+      }
+
+      // Deal rows carry their structured payload on `item.deal`. When a renderer is supplied (the
+      // diplomat's inline deal view), it expands the bare stored Content — "A deal was proposed." —
+      // into the deal's terms / answered-proposal reference; opting out (undefined) keeps the Content.
+      if (item.deal && renderDeal && typeof message.content === 'string') {
+        const rendered = renderDeal(item.deal);
+        if (rendered !== undefined) message.content = rendered;
       }
 
       // Format turn into string messages for context

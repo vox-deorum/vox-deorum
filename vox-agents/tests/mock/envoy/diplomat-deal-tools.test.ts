@@ -1,7 +1,9 @@
 /**
- * Tests for the diplomat's deal-context view (src/envoy/utils/diplomat-utils.ts): the
- * formatted "deal on the table" block the diplomat sees at every step (terms, the
- * negotiator's rationale/message, per-item value snapshots, status). Pure over a reduction.
+ * Tests for the diplomat's deal views (src/envoy/utils/diplomat-utils.ts): the "deal on the table"
+ * block (`formatDealContext`, terms + the negotiator's rationale/message + per-item value snapshots +
+ * status, pure over a reduction) AND the inline chat-record renderer (`renderDealRowInline`, which
+ * expands each deal transcript row into its conversation line — terms for a proposal, the answered
+ * proposal's ID for a reject/accept).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -13,9 +15,10 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 
 // Load the agent graph through the registry first (circular-import hazard, see negotiator.test).
 import '../../../src/infra/agent-registry.js';
-import { formatDealContext } from '../../../src/envoy/utils/diplomat-utils.js';
+import { formatDealContext, renderDealRowInline } from '../../../src/envoy/utils/diplomat-utils.js';
 import { deriveActiveProposal } from '../../../src/utils/diplomacy/deal-reduce.js';
 import type { TranscriptMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
+import type { EnvoyThread } from '../../../src/types/index.js';
 
 function msg(messageType: TranscriptMessage['MessageType'], payload: Record<string, unknown>, id = 1): TranscriptMessage {
   return {
@@ -165,5 +168,79 @@ describe('formatDealContext', () => {
     expect(out).toContain("Germany's (our) relationship to Rome (third-party): War");
     expect(out).toContain("Our leader's intention for Rome: Public -50/Private -30 (Keep Rome weak.)");
     expect(out).toContain("Egypt's (their) relationship to Rome (third-party): Denounced them");
+  });
+});
+
+describe('renderDealRowInline', () => {
+  // Viewer/agent seat is 3 (Germany); the counterpart is seat 1 (Egypt).
+  const thread = {
+    player1ID: 1, player2ID: 3, agent: 3,
+    player1Identity: { name: 'Egypt', leader: 'Cleopatra' },
+    player2Identity: { name: 'Germany', leader: 'Bismarck' },
+  } as unknown as EnvoyThread;
+
+  const gold50 = {
+    version: 1 as const,
+    items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD' as const, amount: 50 }],
+    promises: [],
+  };
+
+  function dealRow(
+    messageType: TranscriptMessage['MessageType'],
+    payload: Record<string, unknown>,
+    over: Partial<Pick<TranscriptMessage, 'ID' | 'SpeakerID' | 'Content'>> = {}
+  ): any {
+    return {
+      ID: over.ID ?? 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+      SpeakerID: over.SpeakerID ?? 1, MessageType: messageType, Content: over.Content ?? '',
+      Payload: payload, Turn: 1, CreatedAt: 0,
+    };
+  }
+
+  it('renders a proposal as its message plus direction-grouped, viewer-first, terms-only text', () => {
+    const deal = { ...gold50, message: 'Take this gold.' };
+    const out = renderDealRowInline(dealRow('deal-proposal', { Deal: deal }, { ID: 6 }), thread)!;
+    expect(out).toContain('A deal was proposed (#6): Take this gold.');
+    expect(out).toContain('# Egypt gives Germany');
+    expect(out).toContain('- Gold: 50');
+    // Terms only — advisory per-item values belong to the on-the-table block, not every history line.
+    expect(out).not.toContain('worth');
+    expect(out).not.toContain('advisory');
+  });
+
+  it('labels a counter as such and needs no outward message', () => {
+    const out = renderDealRowInline(dealRow('deal-counter', { Deal: gold50 }, { ID: 7 }), thread)!;
+    expect(out).toContain('A deal was countered (#7).');
+    expect(out).toContain('- Gold: 50');
+  });
+
+  it('points the currently-open proposal at the on-the-table block instead of repeating its terms', () => {
+    const deal = { ...gold50, message: 'Take this gold.' };
+    // openProposalID matches this row → terms are suppressed in favour of the pointer.
+    const out = renderDealRowInline(dealRow('deal-proposal', { Deal: deal }, { ID: 6 }), thread, 6)!;
+    expect(out).toContain('A deal was proposed (#6): Take this gold.');
+    expect(out).toContain('Deal On The Table');
+    expect(out).not.toContain('# Egypt gives Germany');
+    expect(out).not.toContain('- Gold: 50');
+  });
+
+  it('still renders full terms for a superseded proposal when another deal is open', () => {
+    // A different proposal (#9) is open, so #6 is history → its terms render inline as usual.
+    const out = renderDealRowInline(dealRow('deal-proposal', { Deal: gold50 }, { ID: 6 }), thread, 9)!;
+    expect(out).toContain('- Gold: 50');
+    expect(out).not.toContain('Deal On The Table');
+  });
+
+  it('names the answered proposal on a rejection so a bare decline reads as which deal it settled', () => {
+    const out = renderDealRowInline(
+      dealRow('deal-reject', { ProposalMessageID: 6 }, { SpeakerID: 3, Content: 'We will not accept this proposal.' }),
+      thread
+    );
+    expect(out).toBe('Rejected deal #6 — We will not accept this proposal.');
+  });
+
+  it('references the answered proposal on an acceptance', () => {
+    const out = renderDealRowInline(dealRow('deal-accept', { ProposalMessageID: 6 }, { Content: 'Agreed.' }), thread);
+    expect(out).toBe('Accepted deal #6 — Agreed.');
   });
 });
