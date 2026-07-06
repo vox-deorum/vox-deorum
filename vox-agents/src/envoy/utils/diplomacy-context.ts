@@ -69,10 +69,10 @@ function citiesSection(
   const own = cities[selfCiv];
   const theirs = cities[counterpartCiv];
   if (own && Object.keys(own).length > 0) {
-    blocks.push(`## Your cities (${selfCiv})\n\n${jsonToMarkdown(own)}`);
+    blocks.push(`## ${selfCiv}'s Cities (You)\n${jsonToMarkdown(own)}`);
   }
   if (theirs && Object.keys(theirs).length > 0) {
-    blocks.push(`## ${counterpartCiv}'s cities (visible)\n\n${jsonToMarkdown(theirs)}`);
+    blocks.push(`## ${counterpartCiv}'s Cities (Visible Only)\n${jsonToMarkdown(theirs)}`);
   }
   return blocks.length ? blocks.join("\n\n") : undefined;
 }
@@ -93,7 +93,7 @@ function standingDealsSection(
       framing: standingDealFraming(d.TurnsRemaining),
     })
   );
-  return `## Standing agreements currently in force with ${counterpartCiv}\n${rows.join("\n")}`;
+  return `## Agreements Currently in Force with ${counterpartCiv}\n${rows.join("\n")}`;
 }
 
 /** Render the pair's recently-concluded deals (viewer-first), most recent last, or undefined when none. */
@@ -138,7 +138,7 @@ function concludedDealsSection(
       framing: getDealExpirySuffix(payload, currentTurn),
     })}`;
   });
-  return `## Recently concluded deals with ${counterpartCiv} (last ${window} turns)\n${rows.join("\n")}`;
+  return `## Recently Concluded Deals With ${counterpartCiv} (Last ${window} Turns)\n${rows.join("\n")}`;
 }
 
 /** The diplomacy background plus the viewer-perspective players report both agents reuse. */
