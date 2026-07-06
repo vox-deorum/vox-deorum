@@ -1500,7 +1500,7 @@
           "description": "Append ID of the deal-proposal / deal-counter being enacted"
         },
         "Deal": {
-          "description": "Optional complete deal object. Omit to enact the terms stored on the referenced proposal. (Stage 6 uses this for DLL enactment.)",
+          "description": "Optional complete deal object. When provided it must match the terms stored on the referenced proposal. Omit to enact those stored terms directly.",
           "type": "object",
           "properties": {
             "version": {

@@ -13,10 +13,10 @@
  *  (3) what is on the table — the active proposal the diplomat relays (absent when proposing).
  *
  * It chooses EXACTLY ONE of three terminal tools per invocation, each returning an inward
- * `rationale` (reasoning for the diplomat, never voiced verbatim):
+ * `Rationale` (reasoning for the diplomat, never voiced verbatim):
  *  - `accept-deal`        — accept the on-the-table deal as-is (routes through enact-agent-deal);
  *  - `propose-deal` — author a draft deal (counter, or an opening proposal), with a
- *                            one-sentence outward `message`; stored as deal-counter / deal-proposal;
+ *                            one-sentence outward `Message`; stored as deal-counter / deal-proposal;
  *  - `reject-deal`        — decline the on-the-table deal as-is.
  *
  * Authority is baked into the chosen negotiator agent (specs §7) — there is no separate

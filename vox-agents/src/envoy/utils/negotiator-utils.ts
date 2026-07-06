@@ -416,7 +416,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
       description:
         "Accept the deal on the table. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced. Use only when a deal is on the table.",
       inputSchema: z.object({
-        rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
+        Rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart, conveying the acceptance."),
@@ -441,7 +441,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           });
           ni.outcome = {
             type: "accept",
-            rationale: args.rationale,
+            rationale: args.Rationale,
             message: args.Message,
             proposalMessageID: ni.activeProposal.messageID,
             enact,
@@ -564,7 +564,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
       description:
         "Reject the deal on the table. Provide your inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
-        rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
+        Rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart, conveying the rejection."),
@@ -591,7 +591,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           );
           ni.outcome = {
             type: "reject",
-            rationale: args.rationale,
+            rationale: args.Rationale,
             message: args.Message,
             proposalMessageID: ni.activeProposal.messageID,
             rejectMessageID: id,
