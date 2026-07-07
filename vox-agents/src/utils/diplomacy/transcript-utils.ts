@@ -234,8 +234,9 @@ export function carryOverTrace(
   for (const item of newMessages) {
     if (cursor >= donors.length) break;
     if (item.message.role !== "assistant" || typeof item.message.content !== "string") continue;
-    if (item.message.content === donors[cursor].message.content) {
-      item.metadata.trace = donors[cursor].metadata.trace;
+    const donor = donors[cursor];
+    if (donor && item.message.content === donor.message.content) {
+      item.metadata.trace = donor.metadata.trace;
       cursor++;
     }
   }
@@ -338,7 +339,7 @@ export function boundaryIndex(messages: MessageWithMetadata[], mark: number | un
   if (mark === undefined) return 0;
   let boundary = 0;
   while (boundary < messages.length) {
-    const id = messages[boundary].metadata.id;
+    const id = messages[boundary]?.metadata.id;
     if (id === undefined || id > mark) break;
     boundary++;
   }
