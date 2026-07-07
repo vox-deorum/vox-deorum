@@ -86,10 +86,25 @@ describe('DealMessageCard', () => {
     expect(wrapper.findAll('button')).toHaveLength(0);
   });
 
-  it('renders the rejected status (not actions) on the active proposal when it was rejected', () => {
-    // The rejection is shown as the proposal's status rather than a standalone reject card.
+  it('flips the active proposal to the Rejected status note (no actions) when it was rejected', () => {
+    // The proposal card flips to "Rejected" (mirroring the Accepted/Enacted flip); the reject's own
+    // outward line rides on its standalone reject card, not on this note.
     const wrapper = mountCard({ deal: dealMsg({ SpeakerID: 1 }), status: 'rejected' });
     expect(wrapper.text()).toContain('Rejected');
+    expect(wrapper.findAll('button')).toHaveLength(0);
+  });
+
+  it('renders a deal-reject row as its own outcome card carrying its message', () => {
+    // A reject is an answering move, so it renders as a standalone card like an accept/enacted row:
+    // its header names the rejecter and its Content is the voiced line. It is never "active", so it
+    // shows neither actions nor the "superseded" note.
+    const wrapper = mountCard({
+      deal: dealMsg({ ID: 8, MessageType: 'deal-reject', SpeakerID: 1, Content: 'We must decline this.' }),
+      isActive: false,
+    });
+    expect(wrapper.text()).toContain('Germany rejected the deal');
+    expect(wrapper.text()).toContain('We must decline this.');
+    expect(wrapper.text()).not.toContain('superseded');
     expect(wrapper.findAll('button')).toHaveLength(0);
   });
 });

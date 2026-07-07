@@ -307,7 +307,7 @@ describe('reject-deal', () => {
 
     const append = mcp.calls('append-message')[0]!.args;
     expect(append.MessageType).toBe('deal-reject');
-    // The outward Message is the deal-reject row's Content so the UI can surface it in the rejected notice.
+    // The outward Message is the deal-reject row's Content, rendered on the reject's own standalone card.
     expect(append.Content).toBe('We must decline this.');
     expect((append.Payload as any).ProposalMessageID).toBe(7);
     expect(input.outcome).toMatchObject({ type: 'reject', proposalMessageID: 7, rejectMessageID: 13, message: 'We must decline this.' });

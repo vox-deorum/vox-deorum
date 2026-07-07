@@ -581,8 +581,8 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             ni.activeProposal.messageID,
             ni.thread.agent
           );
-          // The outward Message is recorded as the deal-reject row's Content so the UI surfaces it as
-          // the diplomat's reply in the rejection notice (reject rows reduce to the proposal's status).
+          // The outward Message is recorded as the deal-reject row's Content so the UI renders it on the
+          // reject's own standalone card (and the reject still reduces the proposal's status to rejected).
           const { id } = await appendDealReject(
             ni.thread,
             ni.thread.agent,

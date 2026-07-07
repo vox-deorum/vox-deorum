@@ -1,11 +1,12 @@
 <!--
 Component: DealMessageCard
 Purpose: Inline rendering of a deal message inside the conversation stream (the second deal
-surface, alongside the configuring dialog). Shows a proposal/counter's terms (you give / they
-give) with the proposal-time value to you, or a reject notice. Accept / Reject act inline;
-Counter opens the dialog (the parent loads the active proposal there). Accepting a deal enacts it
-for real in-game (stage 6): the enactment route transfers its trade items and applies its promise
-commitments, then records the agreement.
+surface, alongside the configuring dialog). A proposal/counter shows its terms (you give / they
+give) with the proposal-time value to you; an accept/reject/enacted row renders as its own outcome
+card carrying the answering move's line. Accept / Reject act inline; Counter opens the dialog (the
+parent loads the active proposal there). Accepting a deal enacts it for real in-game (stage 6): the
+enactment route transfers its trade items and applies its promise commitments, then records the
+agreement.
 -->
 <template>
   <div class="deal-card" :class="{ 'deal-card-mine': mine }">
@@ -51,7 +52,6 @@ commitments, then records the agreement.
       </div>
       <div v-else-if="statusNote" class="deal-card-status" :class="statusClass">
         {{ statusNote }}
-        <span v-if="status === 'rejected' && statusMessage" class="deal-card-status-message">“{{ statusMessage }}”</span>
       </div>
     </template>
     <div v-else-if="isProposal && !isActive" class="deal-card-superseded">superseded</div>
@@ -78,8 +78,6 @@ const props = withDefaults(defineProps<{
   isActive: boolean;
   /** The latest proposal's status — `open` offers actions, else the card shows the outcome. */
   status?: DealStatus;
-  /** The negotiator's outward line on the answering move, shown in the rejected status notice. */
-  statusMessage?: string;
   /** Closed-this-turn lock disables actions. */
   locked?: boolean;
   /** Another deal action is already in flight from this conversation surface. */
@@ -184,7 +182,6 @@ const valueText = computed(() => {
 .deal-card-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
 .deal-card-superseded { font-size: 0.75rem; color: var(--p-text-muted-color); margin-top: 0.35rem; font-style: italic; }
 .deal-card-status { font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; }
-.deal-card-status-message { font-weight: 400; font-style: italic; }
 .status-rejected { color: var(--p-red-500); }
 .status-done { color: var(--p-green-500); }
 </style>

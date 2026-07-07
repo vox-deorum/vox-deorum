@@ -24,7 +24,6 @@
           :them-label="agentLabel ?? 'Them'"
           :is-active="item.deal.ID === activeDealID"
           :status="dealStatus"
-          :status-message="dealStatusMessage"
           :locked="dealLocked"
           :busy="dealActionBusy"
           @accept="$emit('deal-accept', $event)"
@@ -66,8 +65,6 @@ interface Props {
   activeDealID?: number;
   /** Status of the latest proposal: `open` offers actions, else it renders rejected/enacted. */
   dealStatus?: DealStatus;
-  /** The negotiator's outward line on the answering move, shown in the rejected status notice. */
-  dealStatusMessage?: string;
   /** Closed-this-turn lock disables deal-card actions. */
   dealLocked?: boolean;
   /** A deal action is currently in flight from the parent view. */

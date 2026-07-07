@@ -64,7 +64,6 @@ Purpose: Main chat interface for interacting with agents
         :them-i-d="thread.agent"
         :active-deal-i-d="activeDealID"
         :deal-status="dealStatus"
-        :deal-status-message="dealStatusMessage"
         :deal-locked="closedThisTurn"
         :deal-action-busy="dealBlocked"
         @deal-accept="onDealAccept"
@@ -212,13 +211,12 @@ const canSend = computed(() => !!thread.value && !isStreaming.value && !closedTh
 /** Inline deal actions are blocked by either their own write or an active agent reply. */
 const dealBlocked = computed(() => dealActionBusy.value || isStreaming.value);
 
-/** Messages filtered for display: hide special tokens and the card-less deal-reject row. */
+/** Messages filtered for display: hide the special {{{token}}} rows; every deal row renders a card. */
 const visibleMessages = computed(() => {
   if (!thread.value) return [];
   return thread.value.messages.filter(msg => {
-    // A deal-reject is kept in the thread only for status reduction — it renders as the
-    // *status* of the proposal it answers, never as its own card (see deal-reduce).
-    if (msg.deal) return msg.deal.MessageType !== 'deal-reject';
+    // Every deal row (proposal/counter/accept/reject/enacted) renders as its own inline card.
+    if (msg.deal) return true;
     if (msg.message.role === 'user' && typeof msg.message.content === 'string') {
       return !/^\{\{\{.+\}\}\}$/.test(msg.message.content);
     }
@@ -236,9 +234,6 @@ const dealReduction = computed(() => deriveActiveProposal(dealMessages.value));
 const activeDealID = computed(() => dealReduction.value.active?.ID);
 /** Status of the latest proposal, so its inline card can show open actions vs. rejected/enacted. */
 const dealStatus = computed(() => dealReduction.value.status);
-/** The negotiator's outward line on the answering move, surfaced in the rejected status notice
- *  (the deal-reject row itself is not rendered; accept/counter carry their line on their own card). */
-const dealStatusMessage = computed(() => dealReduction.value.statusMessage);
 
 // Use the thread messages composable
 const { sendMessage: sendThreadMessage, requestGreeting, proposeDeal } = useThreadMessages({

@@ -30,12 +30,6 @@ export interface DealReduction<M extends TranscriptMessage = TranscriptMessage> 
   active: M | null;
   /** Status of the active proposal (`none` when there is no active proposal). */
   status: DealStatus;
-  /**
-   * The outward line the answering move recorded (the negotiator's voiced message on the
-   * deal-accept / deal-reject that set the current status). Lets the UI surface that line in the
-   * outcome notice, chiefly the rejected case, whose deal-reject row is not rendered on its own.
-   */
-  statusMessage?: string;
   /** All proposal/counter messages in append order (proposal history). */
   proposals: M[];
 }
@@ -65,10 +59,9 @@ export function deriveActiveProposal<M extends TranscriptMessage>(messages: M[])
   // `enacted` is terminal. Acceptance is sticky: once the recipient has accepted the active
   // proposal, a later `deal-reject` referencing the same proposal cannot demote it (the
   // `status === "open"` guard): the next move against an accepted deal is a fresh
-  // counter/proposal, which supersedes it by becoming the new `active`. We track `enacted` rather
-  // than returning early so the answering move's outward line (`statusMessage`) is captured first.
+  // counter/proposal, which supersedes it by becoming the new `active`. We track `enacted`
+  // separately from `status` so an enacted deal keeps reporting its terminal state.
   let status: DealStatus = "open";
-  let statusMessage: string | undefined;
   let enacted = false;
   for (const m of messages) {
     if (answeredProposalID(m) !== active.ID) continue;
@@ -76,14 +69,12 @@ export function deriveActiveProposal<M extends TranscriptMessage>(messages: M[])
       enacted = true;
     } else if (m.MessageType === "deal-accept") {
       status = "accepted";
-      if (m.Content) statusMessage = m.Content;
     } else if (m.MessageType === "deal-reject" && status === "open") {
       status = "rejected";
-      if (m.Content) statusMessage = m.Content;
     }
   }
 
-  return { active, status: enacted ? "enacted" : status, proposals, statusMessage };
+  return { active, status: enacted ? "enacted" : status, proposals };
 }
 
 /** The active proposal's stored deal terms, or undefined when none is on the table. */
