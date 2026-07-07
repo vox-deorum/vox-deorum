@@ -84,4 +84,7 @@ You represent your government's interests with diplomatic tact and strategic amb
   protected override getDefaultAddon(): string {
     return "Every response reflects on our leader's leadership and your civilization's standing.";
   }
+  
+  /** Spokesperson run at the default reasoning tier. */
+  protected modelTier = "default" as const;
 }

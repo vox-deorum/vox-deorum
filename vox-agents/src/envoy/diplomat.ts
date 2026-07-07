@@ -228,4 +228,7 @@ You represent your government's interests and gather intelligence through diplom
   protected override getDefaultAddon(): string {
     return "When you need to speak directly to the counterpart, use the `send-message` tool. When you need to propose a deal, use the `call-negotiator` tool.";
   }
+  
+  /** Diplomats run at the default reasoning tier. */
+  protected modelTier = "default" as const;
 }

@@ -10,8 +10,6 @@ import { z } from "zod";
 import { Librarian } from "./librarian.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
-import { getModelConfig } from "../utils/models/models.js";
-import { Model } from "../types/index.js";
 
 /**
  * Keyword output schema for LLM JSON generation
@@ -209,15 +207,6 @@ Return JSON following this exact schema:
     return formatted.trim();
   }
 
-  /**
-   * Gets the language model to use for this agent execution.
-   * Uses low-tier model for keyword extraction.
-   */
-  public getModel(
-    _parameters: StrategistParameters,
-    _input: string[],
-    overrides: Record<string, Model | string>
-  ): Model {
-    return getModelConfig(this.name, "low", overrides);
-  }
+  /** Keyword extraction runs at the low reasoning tier. */
+  protected modelTier = "low" as const;
 }

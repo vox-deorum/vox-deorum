@@ -255,4 +255,7 @@ You can access additional information by calling the following tools.
   ): Promise<string | undefined> {
     return input.outcome ? summarizeMove(input.outcome, input.thread) : undefined;
   }
+  
+  /** Negotiators run at the high reasoning tier. */
+  protected modelTier = "high" as const;
 }

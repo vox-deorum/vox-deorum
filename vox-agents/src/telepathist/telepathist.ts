@@ -15,11 +15,10 @@ import { GetSituationTool } from './tools/get-situation.js';
 import { GetDecisionTool } from './tools/get-decision.js';
 import { GetConversationLogTool } from './tools/get-conversation-log.js';
 import { runPreparation } from './preparation/index.js';
-import { EnvoyThread, Model } from '../types/index.js';
+import { EnvoyThread } from '../types/index.js';
 import { VoxContext } from '../infra/vox-context.js';
 import { createLogger } from '../utils/logger.js';
 import { getValidCalls, hasOnlyTerminalCalls } from '../utils/tools/terminal-tools.js';
-import { getModelConfig } from '../utils/models/models.js';
 
 const logger = createLogger('Telepathist');
 
@@ -128,16 +127,8 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
     return allSteps.length >= 50;
   }
 
-  /**
-   * Gets the language model to use for this agent execution.
-   * Can return undefined to use the default model from VoxContext.
-   *
-   * @param parameters - The execution parameters
-   * @returns The language model to use, or undefined for default
-   */
-  public getModel(_parameters: TelepathistParameters, _input: unknown, overrides: Record<string, Model | string>): Model {
-    return getModelConfig(this.name, "high", overrides);
-  }
+  /** Telepathist runs at the high reasoning tier. */
+  protected modelTier = "high" as const;
 
   /**
    * Disables tools when in special message mode.

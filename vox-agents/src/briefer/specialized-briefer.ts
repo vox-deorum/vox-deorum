@@ -10,8 +10,6 @@ import { z } from "zod";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
-import { getModelConfig } from "../utils/models/models.js";
-import { Model } from "../types/index.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
@@ -366,16 +364,8 @@ ${lastState.reports[reportKey] ?? lastState.reports["briefing"]}`
     return output;
   }
 
-  /**
-   * Gets the language model to use for this agent execution
-   */
-  public getModel(
-    _parameters: StrategistParameters,
-    _input: unknown,
-    overrides: Record<string, Model | string>
-  ): Model {
-    return getModelConfig(this.name, "low", overrides);
-  }
+  /** Briefers run at the low reasoning tier. */
+  protected modelTier = "low" as const;
 
   /**
    * Gets extra tools that this agent provides to the context
