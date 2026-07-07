@@ -18,5 +18,5 @@ import { VoxContext } from "../infra/vox-context.js";
 export abstract class Strategist extends VoxAgent<StrategistParameters> {
   abstract readonly displayName: string;
   /** Strategists run at the default reasoning tier. */
-  protected modelTier = "default" as const;
+  protected reasoningTier = "default" as const;
 }

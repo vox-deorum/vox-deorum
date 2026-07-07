@@ -208,5 +208,5 @@ Return JSON following this exact schema:
   }
 
   /** Keyword extraction runs at the low reasoning tier. */
-  protected modelTier = "low" as const;
+  protected reasoningTier = "low" as const;
 }

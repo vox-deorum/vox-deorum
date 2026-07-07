@@ -174,5 +174,5 @@ ${lastState.reports["briefing"]}`
   }
   
   /** Briefers run at the low reasoning tier. */
-  protected modelTier = "low" as const;
+  protected reasoningTier = "low" as const;
 }

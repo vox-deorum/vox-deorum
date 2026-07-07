@@ -86,5 +86,5 @@ You represent your government's interests with diplomatic tact and strategic amb
   }
   
   /** Spokesperson run at the default reasoning tier. */
-  protected modelTier = "default" as const;
+  protected reasoningTier = "default" as const;
 }

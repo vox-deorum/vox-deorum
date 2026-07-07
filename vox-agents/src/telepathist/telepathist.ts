@@ -128,7 +128,7 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
   }
 
   /** Telepathist runs at the high reasoning tier. */
-  protected modelTier = "high" as const;
+  protected reasoningTier = "high" as const;
 
   /**
    * Disables tools when in special message mode.

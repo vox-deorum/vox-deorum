@@ -365,7 +365,7 @@ ${lastState.reports[reportKey] ?? lastState.reports["briefing"]}`
   }
 
   /** Briefers run at the low reasoning tier. */
-  protected modelTier = "low" as const;
+  protected reasoningTier = "low" as const;
 
   /**
    * Gets extra tools that this agent provides to the context

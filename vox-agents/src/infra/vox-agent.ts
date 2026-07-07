@@ -168,7 +168,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * non-default tier instead of overriding {@link getModel}; the base getModel forwards it to
    * getModelConfig. Undefined keeps getModelConfig's default resolution.
    */
-  protected modelTier?: 'minimal' | 'low' | 'medium' | 'high' | 'default';
+  protected reasoningTier?: 'minimal' | 'low' | 'medium' | 'high' | 'default';
 
   /**
    * Gets the language model to use for this agent execution.
@@ -178,7 +178,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * @returns The language model to use, or undefined for default
    */
   public getModel(_parameters: TParameters, _input: TInput, overrides: Record<string, Model | string>): Model {
-    return getModelConfig(this.name, this.modelTier, overrides);
+    return getModelConfig(this.name, this.reasoningTier, overrides);
   }
   
   /**

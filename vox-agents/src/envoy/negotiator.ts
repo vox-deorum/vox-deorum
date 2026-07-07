@@ -257,5 +257,5 @@ You can access additional information by calling the following tools.
   }
   
   /** Negotiators run at the high reasoning tier. */
-  protected modelTier = "high" as const;
+  protected reasoningTier = "high" as const;
 }

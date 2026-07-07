@@ -230,5 +230,5 @@ You represent your government's interests and gather intelligence through diplom
   }
   
   /** Diplomats run at the default reasoning tier. */
-  protected modelTier = "default" as const;
+  protected reasoningTier = "default" as const;
 }
