@@ -11,24 +11,11 @@ import type { ModelMessage } from 'ai';
 import { fuzzy } from 'fast-fuzzy';
 import { createLogger } from '../../utils/logger.js';
 import { cleanToolArtifacts } from '../../utils/models/text-cleaning.js';
-import type { TelemetryDatabase, Span, SpanAttributes } from '../../utils/telemetry/schema.js';
+import type { TelemetryDatabase, Span } from '../../utils/telemetry/schema.js';
+import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
 import type { ExtractedPrompt } from '../types.js';
 
 const logger = createLogger('OraclePromptExtractor');
-
-/**
- * Parse JSON attributes from a span record.
- */
-function parseAttributes(span: Span): SpanAttributes {
-  if (!span.attributes) return {};
-  try {
-    return typeof span.attributes === 'string'
-      ? JSON.parse(span.attributes)
-      : span.attributes as SpanAttributes;
-  } catch {
-    return {};
-  }
-}
 
 /**
  * Extract the original prompt data for a specific turn from a telemetry database.
@@ -121,7 +108,7 @@ export async function extractPrompt(
   }
 
   // Get the agent's model from its span attributes
-  const agentAttrs = parseAttributes(selectedAgentSpans[0]);
+  const agentAttrs = parseSpanAttributes(selectedAgentSpans[0]);
   const modelString = agentAttrs['model'] as string || '';
 
   // Find step spans (children of agent spans)
@@ -140,7 +127,7 @@ export async function extractPrompt(
 
   // Extract from the first step span (we only replay the initial prompt)
   const firstStep = stepSpans[0];
-  const stepAttrs = parseAttributes(firstStep);
+  const stepAttrs = parseSpanAttributes(firstStep);
 
   // Parse messages
   const rawMessages = parseJson(stepAttrs['step.messages']);
@@ -245,7 +232,7 @@ export async function findTurnByRationale(
 
   let foundAnyRationale = false;
   for (const span of toolCallSpans) {
-    const attrs = parseAttributes(span);
+    const attrs = parseSpanAttributes(span);
     if (!attrs['tool.input']) continue;
 
     const input = parseJson(attrs['tool.input']) as Record<string, unknown> | undefined;

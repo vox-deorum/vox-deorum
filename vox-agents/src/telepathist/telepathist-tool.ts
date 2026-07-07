@@ -18,6 +18,7 @@ import { buildToolSummaryInstruction, summarizeWithCache } from './summarizer.js
 import { createLogger } from '../utils/logger.js';
 import type { TelemetryDatabase, Span, SpanAttributes } from '../utils/telemetry/schema.js';
 import type { SummarizerInput } from './summarizer.js';
+import { parseSpanAttributes } from '../utils/telemetry/attributes.js';
 
 const logger = createLogger('TelepathistTool');
 
@@ -374,7 +375,7 @@ export abstract class TelepathistTool<TInput = any> {
    * Extract tool.input from a tool call span (parsed JSON from attributes)
    */
   protected getToolInput(span: Span): any {
-    const attrs = this.parseAttributes(span);
+    const attrs = parseSpanAttributes(span);
     if (!attrs['tool.input']) return undefined;
     try {
       return typeof attrs['tool.input'] === 'string'
@@ -389,7 +390,7 @@ export abstract class TelepathistTool<TInput = any> {
    * Extract tool.output from a tool call span (parsed JSON from attributes)
    */
   protected getToolOutput(span: Span): any {
-    const attrs = this.parseAttributes(span);
+    const attrs = parseSpanAttributes(span);
     if (!attrs['tool.output']) return undefined;
     try {
       return typeof attrs['tool.output'] === 'string'
@@ -417,19 +418,5 @@ export abstract class TelepathistTool<TInput = any> {
     }
 
     return jsonToMarkdown(output);
-  }
-
-  /**
-   * Safely parse JSON attributes from a span
-   */
-  protected parseAttributes(span: Span): SpanAttributes {
-    if (!span.attributes) return {};
-    try {
-      return typeof span.attributes === 'string'
-        ? JSON.parse(span.attributes)
-        : span.attributes as SpanAttributes;
-    } catch {
-      return {};
-    }
   }
 }
