@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express';
 import { sessionRegistry } from '../../infra/session-registry.js';
 import { StrategistSession } from '../../strategist/strategist-session.js';
 import { runStrategistLoop } from '../../strategist/loop.js';
+import { resolveMaxRepetitions } from '../../strategist/repetition.js';
 import { SessionConfig, StrategistSessionConfig } from '../../types/config.js';
 import { createLogger } from '../../utils/logger.js';
 import { getConfigsDir } from '../../utils/config.js';
@@ -140,18 +141,9 @@ export function createSessionRoutes(): Router {
         return;
       }
 
-      // Resolve repetition the same way console.ts does: 'auto' means run
-      // until the seating × seed cycle is finished, otherwise honor a numeric
-      // count, defaulting to a single run. If no cycle is enabled, auto is one run.
-      const isAutoRepetition = strategistConfig.repetition === 'auto';
-      const seatingEnabled =
-        strategistConfig.randomizeSeating !== undefined && strategistConfig.randomizeSeating !== false;
-      const cycleEnabled =
-        seatingEnabled ||
-        (Array.isArray(strategistConfig.randomSeeds) && strategistConfig.randomSeeds.length > 1);
-      const maxRepetitions = isAutoRepetition
-        ? (cycleEnabled ? Number.POSITIVE_INFINITY : 1)
-        : (typeof strategistConfig.repetition === 'number' ? strategistConfig.repetition : 1);
+      // Resolve repetition with the same shared policy as the console entry point
+      // (which now also warns when "auto" is set without a cycle enabled).
+      const { maxRepetitions, cycleEnabled, isAutoRepetition } = resolveMaxRepetitions(strategistConfig);
 
       // Kick off the loop in the background — sessions appear in
       // `sessionRegistry` as the loop creates them (the session lifecycle

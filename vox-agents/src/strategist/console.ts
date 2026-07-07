@@ -12,6 +12,7 @@ import { createLogger } from "../utils/logger.js";
 import { loadConfigFromFile, getConfigsDir } from "../utils/config.js";
 import { StrategistSession } from "./strategist-session.js";
 import { runStrategistLoop } from "./loop.js";
+import { resolveMaxRepetitions } from "./repetition.js";
 import { StrategistSessionConfig } from "../types/config.js";
 import { setTimeout } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
@@ -240,26 +241,9 @@ process.stdin.on('data', (key) => {
 async function main() {
   logger.info(`Starting in ${sessionConfig.gameMode} mode`);
 
-  // Resolve repetition. "auto" means "run until the seating × seed cycle
-  // completes" — only meaningful when the cycle is actually enabled. The loop
-  // itself terminates on `claimNextCell() === null` (cycle finished), so all
-  // we do here is set the cap.
-  const isAutoRepetition = sessionConfig.repetition === 'auto';
-  const seatingEnabled =
-    sessionConfig.randomizeSeating !== undefined && sessionConfig.randomizeSeating !== false;
-  const cycleEnabled =
-    seatingEnabled ||
-    (Array.isArray(sessionConfig.randomSeeds) && sessionConfig.randomSeeds.length > 1);
-  if (isAutoRepetition) {
-    // `randomizeSeating: 0` is a valid seed (truthy-as-seed), not "disabled".
-    if (!cycleEnabled) {
-      logger.warn(`repetition: "auto" requires randomizeSeating or a multi-entry randomSeeds; falling back to 1 run`);
-    }
-  }
-
-  const maxRepetitions = isAutoRepetition
-    ? (cycleEnabled ? Number.POSITIVE_INFINITY : 1)
-    : (typeof sessionConfig.repetition === 'number' ? sessionConfig.repetition : 1);
+  // "auto" repetition runs until the seating × seed cycle completes; the loop itself terminates
+  // on `claimNextCell() === null` (cycle finished), so here we only set the cap.
+  const { maxRepetitions, cycleEnabled, isAutoRepetition } = resolveMaxRepetitions(sessionConfig);
 
   try {
     await runStrategistLoop({
