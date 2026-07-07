@@ -72,14 +72,11 @@ export class BatchDb {
       .addColumn('batchId', 'text', col => col.primaryKey())
       .addColumn('provider', 'text', col => col.notNull())
       .addColumn('modelId', 'text', col => col.notNull())
-      .addColumn('fileId', 'text', col => col.notNull())
       .addColumn('status', 'text', col => col.notNull())
       .addColumn('outputFileId', 'text')
-      .addColumn('errorFileId', 'text')
       .addColumn('createdAt', 'text', col => col.notNull())
       .addColumn('completedAt', 'text')
       .addColumn('requestCount', 'integer', col => col.notNull())
-      .addColumn('retries', 'integer', col => col.notNull().defaultTo(0))
       .execute();
 
     // Indexes for common query patterns
@@ -279,7 +276,7 @@ export class BatchDb {
   async updateBatchStatus(
     batchId: string,
     status: string,
-    extras?: Partial<Pick<Batch, 'outputFileId' | 'errorFileId' | 'completedAt'>>
+    extras?: Partial<Pick<Batch, 'outputFileId' | 'completedAt'>>
   ): Promise<void> {
     await this.db
       .updateTable('batches')

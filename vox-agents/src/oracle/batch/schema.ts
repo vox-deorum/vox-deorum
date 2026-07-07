@@ -54,22 +54,16 @@ export interface BatchRecord {
   provider: string;
   /** Comma-separated model IDs included in this batch (for logging/debugging) */
   modelId: string;
-  /** OpenAI file ID of the uploaded JSONL input file */
-  fileId: string;
   /** Current batch status from the OpenAI API */
   status: string;
   /** OpenAI file ID of the output JSONL (set when completed) */
   outputFileId: string | null;
-  /** OpenAI file ID of the error JSONL (set when completed with errors) */
-  errorFileId: string | null;
   /** ISO timestamp of batch creation */
   createdAt: string;
   /** ISO timestamp of batch completion */
   completedAt: string | null;
   /** Number of requests in this batch */
   requestCount: number;
-  /** Number of times this batch has been retried after failure */
-  retries: Generated<number>;
 }
 
 /** Root database interface combining all tables */

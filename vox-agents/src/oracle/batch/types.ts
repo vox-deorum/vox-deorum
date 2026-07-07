@@ -58,16 +58,6 @@ export interface QueuedRequest {
 
 // ── Batch Status Helpers ──
 
-/** All possible batch status values (normalized across providers) */
-export type BatchStatus =
-  | 'validating'
-  | 'in_progress'
-  | 'completed'
-  | 'failed'
-  | 'expired'
-  | 'cancelling'
-  | 'cancelled';
-
 /**
  * Whether a batch status is terminal (no more polling needed).
  * Terminal statuses: completed, failed, expired, cancelled.
