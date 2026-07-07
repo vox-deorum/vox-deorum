@@ -9,7 +9,6 @@ import {
   computeCityAdjustedShare,
   computeRawShare,
   computePerPop,
-  computeGap,
   computeGapBidirectional,
   relativeDelta,
   relativePerPopDelta,
@@ -125,25 +124,6 @@ describe('computePerPop', () => {
 
   it('should divide metric by population', () => {
     expect(computePerPop(30, 10)).toBeCloseTo(3);
-  });
-});
-
-describe('computeGap', () => {
-  it('should return 0 for a null player value', () => {
-    expect(computeGap(null, [10, 20])).toBe(0);
-  });
-
-  it('should return 0 when the player is the leader', () => {
-    expect(computeGap(20, [10, 20, 5])).toBe(0);
-  });
-
-  it('should return a negative gap for trailing players', () => {
-    expect(computeGap(10, [10, 25, 5])).toBe(-15);
-  });
-
-  it('should return 0 when no other values exist', () => {
-    expect(computeGap(10, [null, null])).toBe(0);
-    expect(computeGap(10, [])).toBe(0);
   });
 });
 

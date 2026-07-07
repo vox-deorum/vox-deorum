@@ -83,26 +83,6 @@ export function buildSimilaritySql(hasEmbedding: boolean, weights: SimilarityWei
   return parts.join('\n    + ');
 }
 
-/**
- * Build a SQL expression for pairwise similarity between two candidate rows (a and b).
- * Used by reader.ts for MMR diversity selection within the candidate pool.
- * Defaults weights based on hasEmbedding.
- */
-export function buildPairwiseSimilaritySql(hasEmbedding: boolean, weights: SimilarityWeights = defaultWeights(hasEmbedding)): string {
-  const parts: string[] = [
-    `${weights.gameState} * list_cosine_similarity(a.game_state_vector, b.game_state_vector)`,
-    `${weights.neighbor} * list_cosine_similarity(a.neighbor_vector, b.neighbor_vector)`,
-  ];
-
-  if (hasEmbedding && weights.embedding > 0) {
-    parts.push(
-      `${weights.embedding} * COALESCE(list_cosine_similarity(a.situation_abstract_embedding, b.situation_abstract_embedding), 0)`
-    );
-  }
-
-  return parts.join('\n    + ');
-}
-
 // ---------------------------------------------------------------------------
 // MMR diversity selection
 // ---------------------------------------------------------------------------

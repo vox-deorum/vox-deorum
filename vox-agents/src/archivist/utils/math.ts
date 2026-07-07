@@ -78,22 +78,6 @@ export function computePerPop(
 }
 
 /**
- * Compute gap relative to leader.
- * Returns player.value - max(all.values). 0 for leader, negative for others.
- */
-export function computeGap(
-  playerValue: number | null,
-  allValues: (number | null)[]
-): number {
-  if (playerValue == null) return 0;
-  let maxVal = -Infinity;
-  for (const v of allValues) {
-    if (v != null && v > maxVal) maxVal = v;
-  }
-  return maxVal === -Infinity ? 0 : playerValue - maxVal;
-}
-
-/**
  * Compute bidirectional gap against the best OTHER player.
  * Returns bestOtherValue - playerValue.
  * Negative when leading, positive when behind, 0 when tied or no data.

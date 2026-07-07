@@ -6,7 +6,6 @@ import {
   cosineSimilarity,
   compositeSimilarity,
   buildSimilaritySql,
-  buildPairwiseSimilaritySql,
   diversitySelect,
   type CandidateRow,
   type VectorBundle,
@@ -113,20 +112,6 @@ describe('buildSimilaritySql', () => {
     const sql = buildSimilaritySql(false);
     expect(sql).not.toContain('$query_emb');
     expect(sql).toContain(`${retrievalNoEmbeddingWeights.gameState} * list_cosine_similarity(game_state_vector, $query_gs)`);
-  });
-});
-
-describe('buildPairwiseSimilaritySql', () => {
-  it('should reference both candidate rows a and b', () => {
-    const sql = buildPairwiseSimilaritySql(true);
-    expect(sql).toContain('a.game_state_vector, b.game_state_vector');
-    expect(sql).toContain('a.neighbor_vector, b.neighbor_vector');
-    expect(sql).toContain('a.situation_abstract_embedding, b.situation_abstract_embedding');
-  });
-
-  it('should omit the embedding term without embeddings', () => {
-    const sql = buildPairwiseSimilaritySql(false);
-    expect(sql).not.toContain('situation_abstract_embedding');
   });
 });
 
