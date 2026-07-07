@@ -61,7 +61,7 @@ ${SimpleStrategistBase.playersInfoPrompt}
   /**
    * Gets the initial messages for the conversation
    */
-  public async getInitialMessages(parameters: StrategistParameters, input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
+  public async getInitialMessages(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
     var state = getRecentGameState(parameters)!;
     // Fold the focus-briefer instructions into one for the combined briefer
     const instruction = buildCombinedInstruction(parameters);
@@ -71,8 +71,6 @@ ${SimpleStrategistBase.playersInfoPrompt}
     clearBrieferInstructions(parameters);
     if (!briefing) throw new Error("Failed to generate strategic briefings.");
 
-    // Get the information
-    await super.getInitialMessages(parameters, input, context);
     const { YouAre, ...SituationData } = parameters.metadata || {};
     const { Options, ...Strategy } = state.options || {};
     const filteredPlayers = getStrategicPlayersReport(state.players!);

@@ -425,7 +425,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     }
     const player = this.activePlayers.get(params.playerID);
     if (player) {
-      player.notifyTurn(params.turn, params.latestID);
+      player.notifyTurn(params.turn);
       this.turn = params.turn;  // Update current turn
     }
   }
@@ -551,7 +551,7 @@ ${overrideLine}Game.SetAIAutoPlay(2000, -1);`
     // The seat was paused above, so its turn 0 stays held until the human submits;
     // the execute() loop then enacts the decision and issues the first resume-game.
     if (params.turn === 0 && this.humanPlayerID !== undefined) {
-      this.activePlayers.get(this.humanPlayerID)?.notifyTurn(params.turn, params.latestID);
+      this.activePlayers.get(this.humanPlayerID)?.notifyTurn(params.turn);
     }
   }
 

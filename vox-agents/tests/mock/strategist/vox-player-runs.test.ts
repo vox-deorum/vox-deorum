@@ -49,7 +49,7 @@ describe('VoxPlayer per-turn root runs', () => {
       overridesSeen.push(options.overrides ?? {});
       return realWithRun(options, cb as never).then((result) => {
         if (overridesSeen.length === 1) {
-          player.notifyTurn(2, 200); // queue a second turn once turn 1 has settled (running=false)
+          player.notifyTurn(2); // queue a second turn once turn 1 has settled (running=false)
         } else {
           player.abort(true); // stop the loop after the second turn
         }
@@ -57,7 +57,7 @@ describe('VoxPlayer per-turn root runs', () => {
       });
     });
 
-    player.notifyTurn(1, 100);
+    player.notifyTurn(1);
     await player.execute();
 
     // Two roots, one per turn, each with run-local overrides.

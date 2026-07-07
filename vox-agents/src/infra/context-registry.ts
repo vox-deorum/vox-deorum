@@ -85,25 +85,6 @@ class ContextRegistry {
   }
 
   /**
-   * Check if a context is currently registered.
-   *
-   * @param contextId - The ID of the context to check
-   * @returns true if the context is registered, false otherwise
-   */
-  public has(contextId: string): boolean {
-    return this.contexts.has(contextId);
-  }
-
-  /**
-   * Get the count of active contexts.
-   *
-   * @returns The number of active contexts
-   */
-  public size(): number {
-    return this.contexts.size;
-  }
-
-  /**
    * Shutdown all active contexts.
    * Useful for graceful application shutdown or cleanup.
    *

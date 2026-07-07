@@ -44,8 +44,7 @@ import {
 // Friendly, game-facing labels for illegal-item error lines (single source of truth in mcp-server).
 import { formatItemLabel, itemTypeLabel } from "../../../../mcp-server/dist/utils/deal-format.js";
 import type {
-  NormalizedSideRange,
-  PromiseTargetInfo,
+  InspectDealResponse,
 } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
 
 const logger = createLogger("diplomacy:deal");
@@ -96,56 +95,11 @@ export class ProposalConflictError extends Error {
 /** Deal message types that carry proposed terms in Payload.Deal. */
 export type DealProposalType = "deal-proposal" | "deal-counter";
 
-/** One inspected trade term as `inspect-deal` returns it (index-aligned with the proposed items). */
-export interface InspectedTradeItem {
-  fromPlayerID: number;
-  toPlayerID: number;
-  itemType: string;
-  legality: boolean;
-  reasons: string[];
-  valueIfIGive: number;
-  valueIfIReceive: number;
-}
-
-/** One inspected promise term as `inspect-deal` returns it (index-aligned with promises). */
-export interface InspectedPromise {
-  promiserID: number;
-  recipientID: number;
-  promiseType: string;
-  targetPlayerID?: number;
-  duration?: number;
-  agreeabilityFactors?: {
-    promiserOpinionOfRecipient?: string[];
-    recipientOpinionOfPromiser?: string[];
-    recentDiplomaticEvents?: unknown;
-    note?: string;
-    [key: string]: unknown;
-  };
-}
-
-/** The full `inspect-deal` result for a pair + (optional) proposed deal. */
-export interface InspectDealResult {
-  items: InspectedTradeItem[];
-  promises: InspectedPromise[];
-  /** Per side (keyed by player ID as string): the full tradable range it could put on the table. */
-  tradableRange: Record<string, NormalizedSideRange>;
-  /** The game's standard deal duration in turns (Game.GetDealDuration); used to stamp duration-bearing terms. */
-  defaultDuration?: number;
-  /** The game's peace-deal duration in turns (Game.GetPeaceDuration); used for peace / third-party-peace terms. */
-  peaceDuration?: number;
-  /** The game's relationship duration in turns (Game.GetRelationshipDuration); used for Declaration of Friendship. */
-  relationshipDuration?: number;
-  /** Military promise binding window in turns (flat). */
-  militaryPromiseDuration?: number;
-  /** Expansion promise binding window in turns (game-speed scaled). */
-  expansionPromiseDuration?: number;
-  /** Border promise binding window in turns (game-speed scaled). */
-  borderPromiseDuration?: number;
-  /** Coop War preparation countdown in turns before the joint war auto-declares. */
-  coopWarPromiseDuration?: number;
-  /** Eligible third-party promise targets (Coop War majors) with display names. */
-  promiseTargets?: PromiseTargetInfo[];
-}
+/** The full `inspect-deal` result for a pair + (optional) proposed deal. Owned by the mcp-server
+ *  `inspect-deal` tool; aliased here under the agent-facing name so all deal code shares one
+ *  canonical shape (index-aligned `items` / `promises`, tradable ranges, and duration hints)
+ *  instead of a hand-maintained copy that can silently drift from the tool's return type. */
+export type InspectDealResult = InspectDealResponse;
 
 /** Unwrap the structured tool result (mcp tool results wrap the value under structuredContent). */
 function unwrap<T>(result: unknown): T {

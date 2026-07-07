@@ -80,13 +80,4 @@ export abstract class VoxSession<TConfig extends SessionConfig = SessionConfig> 
     // Could emit events here if needed in the future
   }
 
-  /**
-   * Common cleanup logic for all sessions.
-   * Aborts any pending operations and cleans up resources.
-   */
-  protected async cleanup(): Promise<void> {
-    this.abortController.abort();
-    // Additional cleanup can be added here as needed
-  }
-
 }

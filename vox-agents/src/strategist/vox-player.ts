@@ -30,7 +30,7 @@ export class VoxPlayer {
   public readonly context: VoxContext<StrategistParameters>;
   private parameters: StrategistParameters;
   private logger;
-  private pendingTurn?: { turn: number; latestID: number };
+  private pendingTurn?: number;
   private aborted = false;
   private running = false;
   private successful = false;
@@ -97,20 +97,19 @@ export class VoxPlayer {
    * Notifications are queued if the agent is still processing the previous turn.
    *
    * @param turn - The turn number
-   * @param latestID - Latest event ID from the game
    * @returns True if this is a new turn notification, false if duplicate
    */
-  notifyTurn(turn: number, latestID: number): boolean {
+  notifyTurn(turn: number): boolean {
     if (this.running) {
       this.logger.warn(`The ${this.playerConfig.strategist} is still working on turn ${this.parameters.turn}. Skipping turn ${turn}...`);
       this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters).then(() => {
         if (!this.running) this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
       });
-      return this.pendingTurn?.turn !== turn;
+      return this.pendingTurn !== turn;
     }
 
-    const result = this.pendingTurn?.turn !== turn;
-    this.pendingTurn = { turn, latestID };
+    const result = this.pendingTurn !== turn;
+    this.pendingTurn = turn;
     return result;
   }
 
@@ -141,7 +140,7 @@ export class VoxPlayer {
 
         while (!this.aborted) {
           const turnData = this.pendingTurn;
-          if (!turnData) {
+          if (turnData === undefined) {
             this.running = false;
             await setTimeout(10);
             continue;
@@ -152,7 +151,7 @@ export class VoxPlayer {
           // chats keep their own live turn. `after` starts at the persistent event cursor; the
           // cursor only advances after a successful refresh (below).
           this.pendingTurn = undefined;
-          const turn = turnData.turn;
+          const turn = turnData;
           const before = turn * 1000000 + 999999;
           const after = this.eventCursor;
           // lastDecisionTurn is seat-wide base state read by the strategist prompt; only the
@@ -373,12 +372,6 @@ export class VoxPlayer {
         event_from: eventWindow.fromTurn,
         event_to: eventWindow.toTurn
       });
-
-      // Without strategists, we just fake one.
-      if (this.playerConfig.strategist == "none") {
-        await setTimeout(2000);
-        return true;
-      }
 
       // Nested execution inside the established turn root: execute() uses the root's composed
       // parameters, inherits its cancellation, and accrues its tokens to the run handle.

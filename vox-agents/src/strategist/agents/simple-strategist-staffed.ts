@@ -104,8 +104,6 @@ ${SimpleStrategistBase.briefingsResourcePrompt}`.trim()
     // Clear the instructions from working memory
     clearBrieferInstructions(parameters);
 
-    // Get the information
-    await super.getInitialMessages(parameters, input, context);
     const { YouAre, ...SituationData } = parameters.metadata || {};
     const { Options, ...Strategy } = state.options || {};
 

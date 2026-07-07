@@ -113,11 +113,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   public toolChoice: string = "required";
 
   /**
-   * Whether we will only keep the last round of agent-tool exchanges (i.e. system + user + last reasoning (if any) + last text (if any) + last tool call + last tool result)
-   */
-  public onlyLastRound: boolean = false;
-
-  /**
    * When true, agent-tool invocations return immediately without waiting for completion.
    * The agent runs asynchronously in a detached trace context (root span).
    */
@@ -398,30 +393,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
       if (cleaned[cleaned.length - 1]?.content !== rescue)
         cleaned.push({ role: 'user', content: rescue });
       config.messages = cleaned;
-    } else if (this.onlyLastRound) {
-      // Keep all system and user messages, but only the last round of assistant/tool messages
-      const filteredMessages: ModelMessage[] = [];
-      let lastUserIndex = -1;
-
-      // Pass 1: keep all system and user messages
-      for (let i = 0; i < messages.length; i++) {
-        const message = messages[i];
-        filteredMessages.push(message);
-        lastUserIndex = i;
-        if (message.role !== 'system' && message.role !== 'user')
-          break;
-      }
-
-      // Pass 2: find the start of the last assistant round, then add it in order
-      let roundStart = messages.length;
-      for (let i = messages.length - 1; i > lastUserIndex; i--) {
-        roundStart = i;
-        if (messages[i].role === "assistant") break;
-      }
-      for (let i = roundStart; i < messages.length; i++)
-        filteredMessages.push(messages[i]);
-
-      config.messages = filteredMessages;
     }
 
     // Inject continuation nudge when loop continues past the first step

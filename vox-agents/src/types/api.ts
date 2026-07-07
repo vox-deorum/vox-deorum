@@ -162,33 +162,6 @@ export interface UploadResponse {
 // ============================================================================
 
 /**
- * Message sent to an agent for chat interaction
- */
-export interface ChatMessage {
-  /** The message content to send to the agent */
-  message: string;
-  /** Additional context data for the agent */
-  context?: Record<string, any>;
-}
-
-/**
- * Response from an agent chat interaction
- */
-export interface ChatResponse {
-  /** The agent's text response */
-  response: string;
-  /** Optional array of tool calls made by the agent */
-  toolCalls?: Array<{
-    /** Name of the tool that was called */
-    tool: string;
-    /** Arguments passed to the tool */
-    args: Record<string, any>;
-    /** Result returned from the tool */
-    result?: any;
-  }>;
-}
-
-/**
  * Information about an available agent
  */
 export interface AgentInfo {

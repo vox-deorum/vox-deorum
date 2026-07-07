@@ -91,8 +91,6 @@ Return JSON following this exact schema:
     input: string[],
     context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
-    await super.getInitialMessages(parameters, input, context);
-
     // Format contexts as numbered list
     const formattedContexts = input
       .map((ctx, idx) => {

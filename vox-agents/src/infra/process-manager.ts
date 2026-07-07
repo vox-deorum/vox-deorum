@@ -52,13 +52,6 @@ class ProcessManager {
   }
 
   /**
-   * Remove a named shutdown hook.
-   */
-  unregister(name: string): void {
-    this.hooks.delete(name);
-  }
-
-  /**
    * Execute all registered hooks in order, then exit.
    * Safe to call multiple times — only the first invocation runs hooks.
    */

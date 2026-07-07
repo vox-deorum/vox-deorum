@@ -71,16 +71,6 @@ class SessionRegistry {
   }
 
   /**
-   * Get a specific session by ID.
-   *
-   * @param sessionId - The ID of the session to retrieve
-   * @returns The VoxSession if found, undefined otherwise
-   */
-  public get<T extends VoxSession>(sessionId: string): T | undefined {
-    return this.sessions.get(sessionId) as T | undefined;
-  }
-
-  /**
    * Get the currently active game session.
    *
    * @returns The active VoxSession or undefined if none
@@ -108,31 +98,12 @@ class SessionRegistry {
   }
 
   /**
-   * Check if a session is currently registered.
-   *
-   * @param sessionId - The ID of the session to check
-   * @returns true if the session is registered, false otherwise
-   */
-  public has(sessionId: string): boolean {
-    return this.sessions.has(sessionId);
-  }
-
-  /**
    * Check if there is an active game session.
    *
    * @returns true if there is an active session, false otherwise
    */
   public hasActiveSession(): boolean {
     return this.activeSession !== undefined;
-  }
-
-  /**
-   * Get the count of registered sessions.
-   *
-   * @returns The number of registered sessions
-   */
-  public size(): number {
-    return this.sessions.size;
   }
 
   /**
