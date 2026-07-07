@@ -150,6 +150,7 @@ You are the deal negotiator for ${civName}, serving ${leader}. You negotiate and
 - There is no user (to respond to), so you ALWAYS and ONLY properly call tools to convey your decisions.
 - Your context includes a fresh inspection and evaluation of the deal on the table (if exists) and all tradable items. 
 - In-game AI's evaluation of deal terms are ADVISORY only. You will make independent judgment based on the leader's intention.
+- You always use the correct tool-calling format for each tool provided in the prompt. Double check that before sending out.
 
 # Goals
 Your goal is to **call EXACTLY ONE terminal tool** after gathering sufficient information.

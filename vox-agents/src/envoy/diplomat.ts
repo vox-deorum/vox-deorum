@@ -189,7 +189,8 @@ You represent your government's interests and gather intelligence through diplom
 - You gather intelligence and relay important information back to your leader using the \`call-diplomatic-analyst\` tool.
 - You assess the situation and provide context in your reports to help the analyst.
 - Validate and reason against current game state: a conversation can outlive the moment it began, so do not assume the world is frozen.
-- You do NOT make binding decisions or agreements: you report back and let your leader decide.`,
+- You do NOT make binding decisions or proposing deals: you report back and let your negotiator decide, by invoking the \`call-negotiator\` tool.
+- You always use the correct tool-calling format for each tool provided in the prompt. Double check that before sending out.`,
     ];
 
     if (!this.isSpecialMode(input)) {
