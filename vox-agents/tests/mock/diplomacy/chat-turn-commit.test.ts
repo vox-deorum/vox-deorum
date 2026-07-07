@@ -115,6 +115,48 @@ describe('beginChatTurn().complete() cache normalization', () => {
     expect(mcp.calls('append-message')).toHaveLength(1);
   });
 
+  it('rescues the full native trajectory onto the normalized reply row, never into the archive', async () => {
+    const t = thread('dipl:g:1:3#r');
+    const turn = await beginChatTurn(t, { kind: 'text', message: 'Thoughts?' }, 5);
+    const think = (text: string, signature?: string) => ({
+      type: 'reasoning', text, ...(signature ? { providerOptions: { anthropic: { signature } } } : {}),
+    });
+    // Two steps: a get-briefing step, then the spoken reply. One empty placeholder reasoning part
+    // rides along, as some providers emit.
+    t.messages.push(
+      assistant([think('They sound conciliatory.', 'sig-1'), { type: 'tool-call', toolName: 'get-briefing', toolCallId: 'b1', input: {} }]),
+      { message: { role: 'tool', content: [{ type: 'tool-result', toolName: 'get-briefing', toolCallId: 'b1', output: { type: 'text', value: 'Military: strong.' } }] as never }, metadata: { datetime: new Date(), turn: 5 } },
+      assistant([think(''), think('We can press our advantage.'), spoke('Let us speak plainly.')]),
+      sendResult(),
+    );
+
+    await turn.complete({ sendMessageOnly: true });
+    turn.finish();
+
+    expect(t.messages).toHaveLength(2);
+    const reply = t.messages[1];
+    expect(reply.message).toEqual({ role: 'assistant', content: 'Let us speak plainly.' });
+    // The trace replays the model's ACTUAL trajectory: signed reasoning, the get-briefing use paired
+    // with its result, then the send-message step reduced to its reasoning (the spoken text IS the
+    // reply row). Empty placeholders dropped; the send-message call/result never enter the trace.
+    expect(reply.metadata.trace).toEqual([
+      { role: 'assistant', content: [
+        { type: 'reasoning', text: 'They sound conciliatory.', providerOptions: { anthropic: { signature: 'sig-1' } } },
+        { type: 'tool-call', toolName: 'get-briefing', toolCallId: 'b1', input: {} },
+      ] },
+      { role: 'tool', content: [
+        { type: 'tool-result', toolName: 'get-briefing', toolCallId: 'b1', output: { type: 'text', value: 'Military: strong.' } },
+      ] },
+      { role: 'assistant', content: [{ type: 'reasoning', text: 'We can press our advantage.' }] },
+    ]);
+    expect(JSON.stringify(reply.metadata.trace)).not.toContain('send-message');
+    // The durable archive stays reply-text-only: no trace ever reaches mcp-server.
+    const appends = mcp.calls('append-message');
+    expect(appends).toHaveLength(2);
+    expect(JSON.stringify(appends[1].args)).not.toContain('reasoning');
+    expect(JSON.stringify(appends[1].args)).not.toContain('get-briefing');
+  });
+
   it('falls back to the shared retry line when the turn spoke only suppressed free text', async () => {
     const t = thread('dipl:g:1:3#c');
     const turn = await beginChatTurn(t, { kind: 'text', message: 'Well?' }, 5);
@@ -129,5 +171,51 @@ describe('beginChatTurn().complete() cache normalization', () => {
     const appends = mcp.calls('append-message');
     expect(appends).toHaveLength(2);
     expect(appends[1].args).toMatchObject({ MessageType: 'text', Content: retryMessage });
+  });
+
+  it('collapses a multi-step turn that never spoke to just the retry line — no transient tool rows cached', async () => {
+    const t = thread('dipl:g:1:3#retry-multi');
+    const turn = await beginChatTurn(t, { kind: 'text', message: 'Well?' }, 5);
+    // A multi-step run that gathered a briefing but never produced a send-message reply (stuck turn).
+    t.messages.push(
+      assistant([{ type: 'tool-call', toolName: 'get-briefing', toolCallId: 'b1', input: {} }]),
+      { message: { role: 'tool', content: [{ type: 'tool-result', toolName: 'get-briefing', toolCallId: 'b1', output: { type: 'text', value: 'Military: strong.' } }] as never }, metadata: { datetime: new Date(), turn: 5 } },
+      assistant([freeText('<|tool_call|> garbled, nothing usable')]),
+    );
+
+    await turn.complete({ sendMessageOnly: true });
+    turn.finish();
+
+    // Exactly the committed user row + the single archived retry line remain; the briefing tool traffic
+    // — which must never anchor the prompt cache — is collapsed away.
+    expect(t.messages).toHaveLength(2);
+    expect(t.messages[1].message).toEqual({ role: 'assistant', content: retryMessage });
+    expect(JSON.stringify(t.messages)).not.toContain('get-briefing');
+    expect(JSON.stringify(t.messages)).not.toContain('Military: strong.');
+  });
+
+  it('rolls back an incomplete run, leaving no transient rows in the cache (never cached)', async () => {
+    const t = thread('dipl:g:1:3#fail');
+    const turn = await beginChatTurn(t, { kind: 'text', message: 'Your terms?' }, 5);
+    // A multi-step run in progress — a get-briefing call + its result, then half-formed junk — when the
+    // run fails (error / disconnect), so complete() never runs.
+    t.messages.push(
+      assistant([{ type: 'tool-call', toolName: 'get-briefing', toolCallId: 'b1', input: {} }]),
+      { message: { role: 'tool', content: [{ type: 'tool-result', toolName: 'get-briefing', toolCallId: 'b1', output: { type: 'text', value: 'Military: strong.' } }] as never }, metadata: { datetime: new Date(), turn: 5 } },
+      assistant([freeText('half-formed <|tool_call|> junk')]),
+    );
+
+    // Failure path: finish() without complete() trims the unwritten reply slice.
+    turn.finish();
+
+    // Only the durably-committed incoming row survives — every transient run row is gone. Since
+    // getInitialMessages is a pure function of thread.messages, the next run assembles (and caches) the
+    // exact same prefix it would have before this failed run: the failed content never reaches the cache.
+    expect(t.messages).toHaveLength(1);
+    expect(t.messages[0].message).toEqual({ role: 'user', content: 'Your terms?' });
+    expect(JSON.stringify(t.messages)).not.toContain('get-briefing');
+    expect(JSON.stringify(t.messages)).not.toContain('junk');
+    // The incoming move was durably appended once (the commit); no reply was archived.
+    expect(mcp.calls('append-message')).toHaveLength(1);
   });
 });

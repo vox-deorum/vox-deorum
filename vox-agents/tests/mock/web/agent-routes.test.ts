@@ -304,6 +304,30 @@ describe('agent routes', () => {
         return input;
       });
 
+    it('marks pastMessageID at open and keeps it across a GET re-sync (refresh)', async () => {
+      const textRow = (id: number, speaker: number, content: string, turn = 4) => ({
+        ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+        SpeakerID: speaker, MessageType: 'text', Content: content, Payload: {}, Turn: turn, CreatedAt: 0,
+      });
+      const { mcp, chatId } = await openDiplomacy({
+        liveTurn: 5,
+        transcript: [textRow(7, 1, 'old question'), textRow(9, 3, 'old answer')],
+      });
+
+      // The open marked the settled past at the last hydrated row.
+      const opened = await request(app).get(`/api/agents/chat/${chatId}`);
+      expect(opened.body.pastMessageID).toBe(9);
+
+      // A mid-conversation refresh re-hydrates with rows persisted since (ID 12 written store-side,
+      // e.g. by a deal endpoint); the mark must NOT move — the new row stays in the ongoing exchange.
+      mcp.respondWith('read-transcript', structuredResult({
+        messages: [textRow(7, 1, 'old question'), textRow(9, 3, 'old answer'), textRow(12, 1, 'new question', 5)],
+      }));
+      const refreshed = await request(app).get(`/api/agents/chat/${chatId}`);
+      expect(refreshed.body.pastMessageID).toBe(9);
+      expect(refreshed.body.messages).toHaveLength(3);
+    });
+
     it('archives the caller text then the diplomat reply, in order (both text)', async () => {
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: replyWith('A measured reply.') });
       let nextID = 30;

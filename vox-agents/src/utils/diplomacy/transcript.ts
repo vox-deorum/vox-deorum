@@ -12,7 +12,8 @@
 
 import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
-import { hydrateMessages, deriveCloseTurn } from "./transcript-utils.js";
+import { hydrateMessages, deriveCloseTurn, carryOverTrace, boundaryIndex } from "./transcript-utils.js";
+import { countTokens } from "../models/token-counter.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
 
 export type { TranscriptMessage } from "./transcript-utils.js";
@@ -54,10 +55,47 @@ export async function readTranscript(playerAID: number, playerBID: number): Prom
  * refresh) keeps the thread the UI renders in sync with what was actually persisted, in append
  * order. The single place transcript→thread synchronization lives.
  */
-export async function syncThreadMessages(thread: EnvoyThread): Promise<void> {
+export async function syncThreadMessages(thread: EnvoyThread, opts?: { preserveTrace?: boolean }): Promise<void> {
   const transcript = await readTranscript(thread.player1ID, thread.player2ID);
+  const previous = thread.messages;
   thread.messages = hydrateMessages(transcript, thread.agent);
+  // The native trace lives ONLY in this cache (never in the store), so the wholesale replacement
+  // above would silently wipe it mid-conversation (a UI refresh, a deal action); re-attach it onto
+  // the matching rehydrated rows, best-effort, so caching survives a refresh between runs. Auto-
+  // compaction opts OUT (preserveTrace: false), since its whole job is to shed that retained fat.
+  if (opts?.preserveTrace ?? true) carryOverTrace(previous, thread.messages);
   thread.closeTurn = deriveCloseTurn(transcript);
+}
+
+/** Soft token ceiling for a diplomacy thread's ongoing (uncompacted) exchange before it auto-compacts. */
+export const AUTO_COMPACT_TOKEN_LIMIT = 100_000;
+
+/**
+ * Fold the retained ongoing exchange back into the compiled past block ("auto-compaction"): re-sync
+ * from the durable store WITHOUT carrying the native traces back over (so the retained fat is truly
+ * shed, not just left inert), then advance the open mark to the last hydrated row, so the whole record
+ * renders as the one stable past block on the next run. Shared by chat reopen and the
+ * {@link maybeAutoCompact} token gate.
+ */
+export async function autoCompact(thread: EnvoyThread): Promise<void> {
+  await syncThreadMessages(thread, { preserveTrace: false });
+  thread.pastMessageID = thread.messages.at(-1)?.metadata.id;
+}
+
+/**
+ * Auto-compact a diplomacy thread when its ongoing exchange (the rows after the open mark, INCLUDING
+ * each row's retained native trace) is estimated to exceed `limit` tokens, keeping the replayed
+ * prompt bounded across a long same-turn sitting. Must run BEFORE a run captures its reply boundary,
+ * since {@link autoCompact}'s wholesale re-sync would otherwise invalidate that index. A cheap JSON
+ * estimate is used because the shared token counter does not price tool-result / reasoning text.
+ */
+export async function maybeAutoCompact(thread: EnvoyThread, limit: number = AUTO_COMPACT_TOKEN_LIMIT): Promise<void> {
+  if (!thread.diplomacy) return;
+  const start = boundaryIndex(thread.messages, thread.pastMessageID);
+  if (start >= thread.messages.length) return;
+  const ongoing = thread.messages.slice(start);
+  const estimate = countTokens(JSON.stringify(ongoing.map((m) => m.metadata.trace ?? m.message)));
+  if (estimate > limit) await autoCompact(thread);
 }
 
 /**

@@ -43,6 +43,20 @@ export interface MessageWithMetadata {
 
     /** Game turn when this message was created */
     turn: number;
+
+    /** Durable store row ID (mcp-server transcript `ID`) for hydrated rows; live-pushed rows have none. */
+    id?: number;
+
+    /**
+     * The run's full native trajectory: the assistant reasoning + text + tool-call rows and the
+     * paired tool-result rows the model actually emitted, minus deal / terminal / analyst traffic
+     * that renders as its own card. Captured by the chat-turn commit when it normalizes the reply
+     * slice, and replayed byte-for-byte so signed thinking blocks and tool_use/tool_result pairs
+     * stay valid for the provider. Lives in vox-agents memory ONLY (never persisted to the
+     * mcp-server store), so it is absent after a reload/re-hydration (best-effort carried over by
+     * syncThreadMessages) and folded away by auto-compaction. Captured once, never mutated.
+     */
+    trace?: ModelMessage[];
   };
 
   /**
@@ -124,6 +138,15 @@ export interface EnvoyThread {
   /** Turn of the latest `close` special message, if the conversation has been closed.
    *  vox-agents derives open/closed status (and the same-turn resume lock) from this. */
   closeTurn?: number;
+
+  /**
+   * Durable store row ID marking where the thread was (re)opened from the UI. Rows with
+   * `metadata.id <= pastMessageID` render as the compiled past-conversations block; later rows
+   * (including all live-pushed ones, which carry no id) are the native ongoing exchange. Store
+   * IDs are monotonic, so the boundary survives mid-conversation re-hydration untouched.
+   * Undefined (empty transcript at open, or a never-hydrated observer thread) ⇒ all ongoing.
+   */
+  pastMessageID?: number;
 
   /** Optional metadata for the thread */
   metadata?: {

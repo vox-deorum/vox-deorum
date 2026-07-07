@@ -11,8 +11,8 @@
 import type { EnvoyThread, ChatMessageRequest } from "../../types/index.js";
 import type { DealTranscriptMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import { ModelMessage } from "ai";
-import { appendTranscriptMessage, audienceID, collectSpokenReply, retryMessage, needsRetryReply } from "./transcript.js";
-import { hydrateDealRow } from "./transcript-utils.js";
+import { appendTranscriptMessage, audienceID, collectSpokenReply, retryMessage, needsRetryReply, maybeAutoCompact } from "./transcript.js";
+import { collectTrace, hydrateDealRow } from "./transcript-utils.js";
 import { appendDealProposal, classifyDealSubmission } from "./deal.js";
 import { createLogger } from "../logger.js";
 
@@ -69,10 +69,11 @@ export interface ChatTurn {
 }
 
 /**
- * Begin a chat turn: take the per-thread lock, then commit the caller's move as the turn's commit
- * point — durably appended BEFORE the run, so any proposal/close row the diplomat's tools write
- * mid-run follows the move that prompted it — then mirror it into the cache so the diplomat sees it
- * and the live view renders it. The move is either a plain-text utterance (`{kind:'text'}`, never a
+ * Begin a chat turn: take the per-thread lock, auto-compact the ongoing exchange if it has outgrown
+ * the soft token ceiling (under the lock, so a concurrent turn can't re-sync the cache out from under
+ * an in-flight one), then commit the caller's move as the turn's commit point — durably appended
+ * BEFORE the run, so any proposal/close row the diplomat's tools write mid-run follows the move that
+ * prompted it — then mirror it into the cache so the diplomat sees it and the live view renders it. The move is either a plain-text utterance (`{kind:'text'}`, never a
  * {{{Greeting}}} trigger) or a structured deal proposal/counter (`{kind:'deal'}`, which computes the
  * value snapshots + durations server-side via `appendDealProposal`).
  *
@@ -91,6 +92,16 @@ export async function beginChatTurn(thread: EnvoyThread, commit: TurnCommit, tur
   const isSpecial = commit.kind === "text" && SPECIAL_MESSAGE.test(commit.message);
   let dealRow: DealTranscriptMessage | undefined;
   try {
+    // Bound the replayed prompt UNDER the lock, before committing this move or capturing the reply
+    // boundary: if the ongoing exchange (retained native traces included) has outgrown the soft token
+    // ceiling, fold it into the compiled past block now. autoCompact re-syncs thread.messages
+    // wholesale, so this is the only safe point for it: running it here, inside the per-thread lock and
+    // ahead of both the caller append and the replyStart capture, keeps a concurrent turn from
+    // re-syncing the array out from under an in-flight one and invalidating its reply index. It stays
+    // ahead of the caller append so this move remains part of the ongoing exchange, not the past block.
+    // No-op for non-diplomacy threads and when under the ceiling.
+    await maybeAutoCompact(thread);
+
     if (commit.kind === "deal") {
       // Proposing and countering are one action — submitting a deal. Under this per-thread lock, reconcile
       // the submission against the live offer state: the submitter's view (`expectedProposalID`, or
@@ -141,7 +152,8 @@ export async function beginChatTurn(thread: EnvoyThread, commit: TurnCommit, tur
         // tool), so a "lost my train of thought" line would contradict it (needsRetryReply is false).
         // Such a turn archives no reply row.
         const slice = thread.messages.slice(replyStart);
-        const reply = collectSpokenReply(slice, opts) || (needsRetryReply(slice, opts) ? retryMessage : "");
+        const spoken = collectSpokenReply(slice, opts);
+        const reply = spoken || (needsRetryReply(slice, opts) ? retryMessage : "");
         if (reply) {
           try {
             await appendTranscriptMessage(thread, thread.agent, "text", reply);
@@ -157,11 +169,19 @@ export async function beginChatTurn(thread: EnvoyThread, commit: TurnCommit, tur
         // prompts on the same history a reload would hydrate rather than resurfacing malformed junk. The
         // route splices any mid-run deal rows in at this same boundary afterward, ahead of this reply,
         // matching the durable order.
+        //
+        // The run's full native trajectory is the one thing rescued from the discarded slice: it
+        // rides the normalized reply row's metadata (vox-agents memory only, the durable append above
+        // stays reply-text-only) so the next run's prompt replays exactly what the model emitted
+        // (signed thinking, paired tool_use/tool_result), not a reconstruction. See collectTrace.
+        // Retained ONLY for a genuine spoken reply: a stuck turn that fell back to the retry line
+        // gathered nothing worth replaying, and its dead-end tool traffic must not anchor the cache.
+        const trace = spoken ? collectTrace(slice, opts) : [];
         thread.messages.splice(replyStart);
         if (reply) {
           thread.messages.push({
             message: { role: "assistant", content: reply },
-            metadata: { datetime: new Date(), turn },
+            metadata: { datetime: new Date(), turn, ...(trace.length ? { trace } : {}) },
           });
         }
       }

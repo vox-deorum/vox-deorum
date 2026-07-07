@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  stripTurnMarker,
+  stripSpokenEcho,
   cleanToolArtifacts,
   formatToolCallText,
   formatWrappedToolCallText,
@@ -22,19 +22,28 @@ import {
 } from '../../../src/utils/models/text-cleaning.js';
 
 describe('text-cleaning', () => {
-  describe('stripTurnMarker', () => {
-    it('removes a leading [Turn N] marker and surrounding whitespace', () => {
-      const out = stripTurnMarker('[Turn 12]   hello world');
-      expect(out).toBe('hello world');
+  describe('stripSpokenEcho', () => {
+    it('strips the turn marker and the EXACT self label after it', () => {
+      const out = stripSpokenEcho('[Turn 12] Brazil, the diplomat: We accept.', 'Brazil, the diplomat');
+      expect(out).toBe('We accept.');
     });
 
-    it('leaves text without a leading turn marker unchanged', () => {
-      expect(stripTurnMarker('no marker here')).toBe('no marker here');
+    it('strips a bare turn marker when no label was echoed (superseding stripTurnMarker)', () => {
+      expect(stripSpokenEcho('[Turn 12] We accept.', 'Brazil, the diplomat')).toBe('We accept.');
+      expect(stripSpokenEcho('[Turn 12] We accept.')).toBe('We accept.');
+      expect(stripSpokenEcho('[Turn 12]   hello world')).toBe('hello world');
+      expect(stripSpokenEcho('no marker here')).toBe('no marker here');
+      expect(stripSpokenEcho('intro [Turn 3] trailing')).toContain('[Turn 3]');
     });
 
-    it('only strips a leading marker, not one mid-string', () => {
-      const out = stripTurnMarker('intro [Turn 3] trailing');
-      expect(out).toContain('[Turn 3]');
+    it('never strips the label without a leading turn marker', () => {
+      const text = 'Brazil, the diplomat: We accept.';
+      expect(stripSpokenEcho(text, 'Brazil, the diplomat')).toBe(text);
+    });
+
+    it('leaves a generic word-colon opening and other civ labels untouched', () => {
+      expect(stripSpokenEcho('[Turn 3] Chairman: we accept', 'Brazil, the diplomat')).toBe('Chairman: we accept');
+      expect(stripSpokenEcho('[Turn 3] China, the leader: hello', 'Brazil, the diplomat')).toBe('China, the leader: hello');
     });
   });
 

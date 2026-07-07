@@ -52,6 +52,7 @@ import {
   audienceID,
   identityOf,
   syncThreadMessages,
+  autoCompact,
   isClosedThisTurn,
   retryMessage,
   needsRetryReply,
@@ -956,9 +957,11 @@ async function openDiplomacyChat(
     existing.contextId = targetContextId;
     existing.title = `${initiatorCiv ?? `Player ${initiatorID}`} ↔ ${targetCiv ?? `Player ${targetPlayerID}`}`;
     Object.assign(existing, ordered);
-    // Refresh the write-through cache from the durable store (source of truth) for the
-    // (possibly re-chosen) direction/voice.
-    await syncThreadMessages(existing);
+    // Re-open compacts: refresh the write-through cache from the durable store (source of truth) for
+    // the (possibly re-chosen) direction/voice, then fold everything hydrated up to here into the
+    // settled past (the compiled block in the envoy's prompt), so rows added from now on are the
+    // ongoing exchange.
+    await autoCompact(existing);
     existing.metadata!.updatedAt = new Date();
     return res.json({ ...existing, ...enrichChat(existing) });
   }
@@ -979,8 +982,10 @@ async function openDiplomacyChat(
       turn,
     }
   };
-  // Hydrate the new thread from the durable store (source of truth for the transcript).
-  await syncThreadMessages(thread);
+  // Hydrate the new thread from the durable store (source of truth) and mark the open point in one
+  // step: the hydrated history is the settled past (the compiled block in the envoy's prompt), so
+  // rows added from now on are the ongoing exchange.
+  await autoCompact(thread);
 
   chatSessions.set(id, thread);
   return res.json({ ...thread, ...enrichChat(thread) });

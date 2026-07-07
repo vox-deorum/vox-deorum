@@ -18,6 +18,8 @@ import {
   appendTranscriptMessage,
   appendCloseMessage,
   syncThreadMessages,
+  autoCompact,
+  maybeAutoCompact,
 } from '../../../src/utils/diplomacy/transcript.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
@@ -117,6 +119,57 @@ describe('syncThreadMessages', () => {
     expect(t.messages[0].deal).toBeUndefined();
   });
 
+  it('carries the memory-only native trace over onto the matching rehydrated rows', async () => {
+    const trace = [{ role: 'assistant', content: [{ type: 'reasoning', text: 'hold firm' }] }];
+    const t = thread({
+      messages: [
+        { message: { role: 'user', content: 'offer?' }, metadata: { datetime: new Date(0), turn: 5, id: 1 } },
+        // The normalized reply row carrying the trace; the store stamped a different turn (6 vs 5).
+        { message: { role: 'assistant', content: 'We decline.' }, metadata: { datetime: new Date(0), turn: 5, trace: trace as never } },
+        // A second reply with the SAME text but no trace: in-order matching must not steal for it.
+        { message: { role: 'assistant', content: 'We decline.' }, metadata: { datetime: new Date(0), turn: 5 } },
+      ],
+    });
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      row({ ID: 1, SpeakerID: 1, Content: 'offer?', Turn: 5 }),
+      row({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+      row({ ID: 3, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+    ] }));
+
+    await syncThreadMessages(t);
+
+    // The trace landed on the FIRST matching rehydrated row (in-order consumption), despite the
+    // store-stamped turn differing from the live snapshot the cache row was created with.
+    expect(t.messages[1].metadata.trace).toEqual(trace);
+    expect(t.messages[2].metadata.trace).toBeUndefined();
+    expect(t.messages[0].metadata.trace).toBeUndefined();
+  });
+
+  it('autoCompact folds the ongoing exchange into the past by advancing the open mark', async () => {
+    const trace = [{ role: 'assistant', content: [{ type: 'reasoning', text: 'x' }] }];
+    const t = thread({
+      pastMessageID: 1,
+      messages: [
+        { message: { role: 'user', content: 'offer?' }, metadata: { datetime: new Date(0), turn: 5, id: 1 } },
+        // A live-pushed reply carrying an in-memory trace (no store id yet) — the ongoing exchange.
+        { message: { role: 'assistant', content: 'We decline.' }, metadata: { datetime: new Date(0), turn: 5, trace: trace as never } },
+      ],
+    });
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      row({ ID: 1, SpeakerID: 1, Content: 'offer?', Turn: 5 }),
+      row({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+    ] }));
+
+    await autoCompact(t);
+
+    // Re-synced from the store, and the mark advanced to the last hydrated row: every row is now past,
+    // so the next run renders the compiled past block with no replayed native trace.
+    expect(t.messages.map((m) => m.metadata.id)).toEqual([1, 2]);
+    expect(t.pastMessageID).toBe(2);
+    // The retained fat is genuinely shed (not merely left inert): traces are NOT carried back over.
+    expect(t.messages.every((m) => m.metadata.trace === undefined)).toBe(true);
+  });
+
   it('derives the close turn from the latest close row', async () => {
     mcp.respondWith('read-transcript', structuredResult({ messages: [
       row({ ID: 1, MessageType: 'text', Turn: 4 }),
@@ -150,5 +203,50 @@ describe('appendCloseMessage', () => {
 
     expect(turn).toBe(42);
     expect(t.closeTurn).toBe(42);
+  });
+});
+
+describe('maybeAutoCompact (token gate)', () => {
+  const row = (over: Record<string, unknown>) => ({
+    ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+    SpeakerID: 1, MessageType: 'text', Content: '', Payload: {}, Turn: 1, CreatedAt: 0, ...over,
+  });
+  const withOngoing = () => thread({
+    diplomacy: true,
+    pastMessageID: 1,
+    messages: [
+      { message: { role: 'user', content: 'offer?' }, metadata: { datetime: new Date(0), turn: 5, id: 1 } },
+      // Live-pushed reply (no store id): the ongoing exchange the gate measures.
+      { message: { role: 'assistant', content: 'We decline.' }, metadata: { datetime: new Date(0), turn: 5 } },
+    ],
+  });
+
+  it('is a pure estimate under the limit: no store read, no compaction', async () => {
+    const t = withOngoing();
+    await maybeAutoCompact(t, 1_000_000);
+    expect(t.pastMessageID).toBe(1);
+    expect(t.messages).toHaveLength(2);
+    expect(mcp.calls('read-transcript')).toHaveLength(0);
+  });
+
+  it('auto-compacts when the ongoing exchange exceeds the limit', async () => {
+    const t = withOngoing();
+    mcp.respondWith('read-transcript', structuredResult({ messages: [
+      row({ ID: 1, SpeakerID: 1, Content: 'offer?', Turn: 5 }),
+      row({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+    ] }));
+
+    await maybeAutoCompact(t, 1); // a 1-token ceiling forces the gate
+
+    expect(t.pastMessageID).toBe(2);
+    expect(t.messages.map((m) => m.metadata.id)).toEqual([1, 2]);
+  });
+
+  it('is a no-op for non-diplomacy threads', async () => {
+    const t = thread({ diplomacy: false, messages: [
+      { message: { role: 'user', content: 'x' }, metadata: { datetime: new Date(0), turn: 5 } },
+    ] });
+    await maybeAutoCompact(t, 1);
+    expect(mcp.calls('read-transcript')).toHaveLength(0);
   });
 });

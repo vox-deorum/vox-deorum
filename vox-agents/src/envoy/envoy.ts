@@ -9,9 +9,75 @@ import { ModelMessage, StepResult, Tool } from "ai";
 import { VoxAgent, AgentParameters } from "../infra/vox-agent.js";
 import { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { formatToolResultOutput, stripTurnMarker } from "../utils/models/text-cleaning.js";
-import { audienceID, identityOf, roleOf, type DealRowRenderer } from "../utils/diplomacy/transcript-utils.js";
+import { formatToolResultOutput, stripSpokenEcho } from "../utils/models/text-cleaning.js";
+import { audienceID, boundaryIndex, collectSpokenReply, identityOf, roleOf, type DealRowRenderer } from "../utils/diplomacy/transcript-utils.js";
 import { sendMessageToolName } from "../utils/diplomacy/send-message-tool-name.js";
+
+/**
+ * Prompt-cache breakpoint strategy (Anthropic providers only; a no-op elsewhere).
+ *
+ * A live-envoy request carries three STATIC breakpoints, set once per assemble in
+ * {@link LiveEnvoy.getInitialMessages}: the game-context message, the compiled past block, and the
+ * last committed ongoing row. Every one anchors COMMITTED, byte-stable content — never in-flight
+ * tool traffic or reply text. That is the load-bearing invariant: because a failed run's transient
+ * rows are rolled back, and a completed run's tool traffic is collapsed to a single archived reply
+ * row, no failed / retry / rolled-back content can ever become a cache anchor.
+ *
+ * These anchors serve the two horizons that matter. Game state is assumed stable within a turn (the
+ * diplomacy screen blocks the game), so the base prompt is byte-identical across runs at the same
+ * turn:
+ *  - Between runs at the same turn — the next run re-reads the whole record up to the previous run's
+ *    last committed row from cache.
+ *  - Within a run's multi-step loop — steps only append tool rows after the anchors, so step 2+ read
+ *    the entire base prompt from cache. (Accumulated tool outputs past the last anchor are re-read
+ *    on each later step; that within-run tail is deliberately not cached — a moving breakpoint that
+ *    once did so was removed for simplicity.)
+ *
+ * Caching between game turns is out of scope (game state churns). A breakpoint only marks a
+ * cache-WRITE point; lookup matches by content prefix, not by where breakpoints sat last request.
+ */
+
+/**
+ * The breakpoint marker itself. Honored by the direct Anthropic provider, OpenRouter (whose
+ * provider falls back to the `anthropic` key) and Vertex Anthropic. Spread into a message's
+ * `providerOptions` to mark the end of a cacheable prefix; see the strategy note above.
+ */
+export const cacheBreakpoint = { anthropic: { cacheControl: { type: "ephemeral" as const } } };
+
+/**
+ * The Anthropic prompt cache accepts at most this many cache-control breakpoints per request; a
+ * request carrying more is rejected outright. A live-envoy assemble sets three of them (game
+ * context, past block, last ongoing row), leaving one slot of headroom. Named as a ceiling so the
+ * getInitialMessages guard can surface a future anchor that would otherwise push a request over the
+ * limit as a warning here, rather than as a provider error at request time.
+ */
+export const MAX_CACHE_BREAKPOINTS = 4;
+
+/**
+ * Attach an Anthropic cache breakpoint to the LAST message of `messages`, in place. The slot is
+ * replaced with an annotated copy — the message object itself is never mutated, and any existing
+ * `providerOptions` are spread through. No-op on an empty array. See the prompt-cache breakpoint
+ * strategy note above.
+ */
+export function markBreakpointOnLast(messages: ModelMessage[]): void {
+  const last = messages[messages.length - 1];
+  if (!last) return;
+  messages[messages.length - 1] = {
+    ...last,
+    providerOptions: { ...last.providerOptions, ...cacheBreakpoint },
+  } as ModelMessage;
+}
+
+/**
+ * Copy a stored trace {@link ModelMessage} for replay: a fresh row with a fresh parts array whose
+ * parts are shallow-copied, so the renderer never mutates the cached `metadata.trace`.
+ * `providerOptions` (e.g. Anthropic thinking-block signatures) ride by reference and are never mutated.
+ */
+function cloneModelMessage(message: ModelMessage): ModelMessage {
+  return Array.isArray(message.content)
+    ? { ...message, content: message.content.map((part) => ({ ...part })) } as ModelMessage
+    : { ...message };
+}
 
 /**
  * Default special messages shared by all envoy agents. Maps a triple-brace-enclosed
@@ -58,17 +124,29 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
     // Add the messages to the record with metadata
     const currentTurn = parameters.turn;
     const currentDatetime = new Date();
+    // The exact prefix the prompt renderer scaffolds spoken rows with — built by the SAME helper,
+    // so the strip can never drift from what the model actually saw and echoed.
+    const selfLabel = this.speakerLabel(input, input.agent);
 
     lastStep.response.messages.forEach(element => {
-      // Strip LLM-echoed turn markers from assistant text so convertToModelMessages
-      // can add the correct programmatic one on the next read.
+      // Strip LLM-echoed turn markers (and the model's own speaker label) from assistant text —
+      // and from send-message Message arguments, which are delivered verbatim and archived — so
+      // convertToModelMessages can add the correct programmatic prefix on the next read. This runs
+      // at commit time; the live stream (send-message-stream.ts) emits the raw argument, so on the
+      // rare turn a model echoes the scaffolding the live bubble shows it until a reload replaces
+      // it with this cleaned archive. Stripping the stream token-by-token is not worth that risk.
       if (element.role === 'assistant') {
         if (typeof element.content === 'string') {
-          element.content = stripTurnMarker(element.content);
+          element.content = stripSpokenEcho(element.content, selfLabel);
         } else if (Array.isArray(element.content)) {
           for (const part of element.content) {
             if (part.type === 'text') {
-              part.text = stripTurnMarker(part.text);
+              part.text = stripSpokenEcho(part.text, selfLabel);
+            } else if (part.type === 'tool-call' && part.toolName === sendMessageToolName) {
+              const args = part.input as { Message?: unknown } | undefined;
+              if (args && typeof args.Message === 'string') {
+                args.Message = stripSpokenEcho(args.Message, selfLabel);
+              }
             }
           }
         }
@@ -149,14 +227,103 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
 
   // Utilities
   /**
-   * Converts an array of MessageWithMetadata to ModelMessage array for LLM context.
-   * Filters out tool-result messages and non-text parts from assistant messages
-   * to reduce token usage. Only textual conversation content is preserved.
+   * Builds the display label of the seat speaking a row: `{civ}, the {role}` when both are on
+   * the thread (e.g. "Brazil, the diplomat"), the civ alone when the role is missing, and
+   * `Player {seat}` when even the identity is missing (observer seats). Unlike
+   * {@link formatUserDescription} this never throws, so it is safe for observer threads. The
+   * prompt renderers AND the echo-strip both build labels here, so they can never disagree.
+   */
+  protected speakerLabel(input: EnvoyThread, seat: number): string {
+    const civ = identityOf(input, seat)?.name?.trim();
+    if (!civ) return `Player ${seat}`;
+    const role = roleOf(input, seat)?.trim();
+    if (!role) return civ;
+    return /^the\s/i.test(role) ? `${civ}, ${role}` : `${civ}, the ${role}`;
+  }
+
+  /**
+   * Splits the raw thread record at the thread's open mark (`pastMessageID`, the durable store
+   * row ID recorded when the thread was opened from the UI): rows at or before the mark are the
+   * settled "past" (compiled into one stable block), everything after — including all live-pushed
+   * rows, which carry no store id — is the ongoing exchange (rendered as native messages). The
+   * split happens on the RAW array BEFORE special-message filtering so it can never misalign,
+   * then each side is filtered. With no mark (empty transcript at open, observer threads),
+   * everything is ongoing.
+   */
+  protected splitThreadMessages(input: EnvoyThread): { past: MessageWithMetadata[]; ongoing: MessageWithMetadata[] } {
+    const boundary = boundaryIndex(input.messages, input.pastMessageID);
+    return {
+      past: this.filterSpecialMessages(input.messages.slice(0, boundary)),
+      ongoing: this.filterSpecialMessages(input.messages.slice(boundary)),
+    };
+  }
+
+  /**
+   * Compiles settled past conversations into ONE stable text block — turn-aware (`# Turn N`
+   * headings) and speaker-aware (each row a blockquote labeled `{civ}, the {role} (me|the
+   * counterpart)`). Byte-stable for the whole sitting, so it anchors a prompt-cache breakpoint.
+   * Deal rows render through `renderDeal` (as in the per-message path); assistant rows that
+   * still carry rich parts reduce to their spoken text; empty rows are skipped. Returns
+   * undefined when nothing renders (then no message should be emitted at all).
+   */
+  protected formatPastConversations(
+    past: MessageWithMetadata[],
+    input: EnvoyThread,
+    renderDeal?: DealRowRenderer
+  ): string | undefined {
+    const lines: string[] = [];
+    let lastTurn: number | undefined;
+    for (const item of past) {
+      const role = item.message.role;
+      if (role !== "assistant" && role !== "user") continue;
+
+      // Resolve the row's text: deal rows expand through the renderer (falling back to their
+      // stored one-line content), plain rows use their string content, and a rich assistant row
+      // (edge case: an unnormalized live row aged past the mark) reduces to its spoken reply.
+      let content: string | undefined;
+      if (item.deal && renderDeal) {
+        content = renderDeal(item.deal) ?? (typeof item.message.content === "string" ? item.message.content : undefined);
+      } else if (typeof item.message.content === "string") {
+        content = item.message.content;
+      } else if (role === "assistant") {
+        content = collectSpokenReply([item]);
+      }
+      content = content?.trim();
+      if (!content) continue;
+
+      if (item.metadata.turn !== lastTurn) {
+        lines.push(`${lines.length ? "\n" : ""}# Turn ${item.metadata.turn}`);
+        lastTurn = item.metadata.turn;
+      }
+      const seat = role === "assistant" ? input.agent : audienceID(input);
+      const label = `${this.speakerLabel(input, seat)} (${seat === input.agent ? "me" : "the counterpart"})`;
+      lines.push(`${label}: ${content}`.split("\n").map(line => `> ${line}`).join("\n"));
+    }
+    if (lines.length === 0) return undefined;
+    return `The conversation so far between you and the counterpart:\n\n${lines.join("\n")}`;
+  }
+
+  /**
+   * Converts an array of MessageWithMetadata to a ModelMessage array for LLM context. Tool-result
+   * messages and non-text assistant parts are summarized or dropped to reduce token usage, EXCEPT a
+   * collapsed reply row carrying `metadata.trace`: its captured native trajectory (reasoning plus
+   * paired tool_use/tool_result rows) is replayed verbatim ahead of the spoken reply.
+   *
+   * When `input` is supplied (the live envoys' ongoing exchange), spoken rows additionally get a
+   * speaker label after the turn marker (`[Turn 12] Brazil, the diplomat: XXX`) under the same
+   * {@link includeTurnPrefix} gate, so label-free consumers (the telepathist) are unaffected.
    */
   protected convertToModelMessages(
     messages: MessageWithMetadata[],
-    renderDeal?: DealRowRenderer
+    renderDeal?: DealRowRenderer,
+    input?: EnvoyThread
   ): ModelMessage[] {
+    // The prefix a spoken row gets ahead of its text: turn marker, then the speaker label when
+    // thread data is available. Tool-result rows never go through this (they are not spoken).
+    const spokenPrefix = (item: MessageWithMetadata, role: "assistant" | "user"): string => {
+      const label = input ? `${this.speakerLabel(input, role === "assistant" ? input.agent : audienceID(input))}: ` : "";
+      return `[Turn ${item.metadata.turn}] ${label}`;
+    };
     const result: ModelMessage[] = [];
     for (const item of messages) {
       const message = { ...item.message };
@@ -176,17 +343,33 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
         continue;
       }
 
-      // For assistant messages with array content, keep text + tool-call, drop reasoning
+      // Faithful native-trajectory replay: a collapsed reply row carrying `metadata.trace` (the
+      // captured assistant reasoning/tool-call rows plus paired tool-result rows the model actually
+      // emitted, minus deal/terminal/analyst traffic) is replayed byte-for-byte AHEAD of the spoken
+      // reply, so signed thinking blocks and tool_use/tool_result pairs stay valid for the provider.
+      // Trace rows keep NO turn/speaker prefix (they are the model's own native output and must be
+      // byte-identical run to run for the prompt cache); the collapsed spoken row below still gets its
+      // prefix, and consecutive assistant messages merge provider-side into [reasoning..., text].
+      //
+      // EXPECTED, not a bug: the trace is memory-only, so a best-effort carryOverTrace miss on
+      // re-hydration drops it and this row renders as plain [text]. That is still valid; the only cost
+      // is at most a one-time prompt-cache miss for this row on the next run, which we accept.
+      if (message.role === 'assistant' && typeof message.content === 'string' && item.metadata.trace?.length) {
+        for (const traceMsg of item.metadata.trace) result.push(cloneModelMessage(traceMsg));
+      }
+
+      // For assistant messages with array content, keep reasoning + text + tool-call parts —
+      // reasoning is the model's own train of thought, preserved to maintain its context.
       if (message.role === 'assistant' && Array.isArray(message.content)) {
         const kept = message.content.filter(
-          (part) => part.type === 'text' || part.type === 'tool-call'
+          (part) => part.type === 'text' || part.type === 'tool-call' || part.type === 'reasoning'
         ).map(part => {
           // Return a fresh part rather than mutating in place: `message` is only a
           // shallow copy, so these parts are still the cached thread's objects and an
           // in-place prefix would accumulate "[Turn N][Turn N]…" across turns. Guard on
           // the existing prefix as the string path (below) does.
           if (this.includeTurnPrefix && part.type === 'text' && !part.text.startsWith('[Turn'))
-            return { ...part, text: `[Turn ${item.metadata.turn}] ${part.text}` };
+            return { ...part, text: `${spokenPrefix(item, 'assistant')}${part.text}` };
           return part;
         });
         if (kept.length === 0) continue;
@@ -201,9 +384,13 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
         if (rendered !== undefined) message.content = rendered;
       }
 
-      // Format turn into string messages for context
-      if (this.includeTurnPrefix && typeof message.content === 'string' && !message.content.startsWith("[Turn"))
-          message.content = `[Turn ${item.metadata.turn}] ${message.content}`;
+      // Format turn (and, for spoken rows with thread data, the speaker label) into string messages
+      if (this.includeTurnPrefix && typeof message.content === 'string' && !message.content.startsWith("[Turn")) {
+        const prefix = (message.role === 'assistant' || message.role === 'user')
+          ? spokenPrefix(item, message.role)
+          : `[Turn ${item.metadata.turn}] `;
+        message.content = `${prefix}${message.content}`;
+      }
 
       result.push(message);
     }

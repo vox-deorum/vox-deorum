@@ -14,12 +14,21 @@ interface ToolResultLike {
 }
 
 /**
- * Strips a leading `[Turn N]` marker from text.
- * The envoy adds turn markers programmatically via convertToModelMessages,
- * but LLMs sometimes echo them back — this removes the duplicate.
+ * Strips a leading `[Turn N]` marker — and, when the speaker's own label is known, the exact
+ * `{selfLabel}:` echo right after it — from a spoken line. The envoy prefixes its context rows
+ * with `[Turn N] {civ}, the {role}: `, so models sometimes echo that scaffolding back into their
+ * replies. ONLY the exact label is stripped (never a generic `word:` pattern), so legitimate
+ * openings like "Chairman: we accept" — or another civ's label — survive untouched. Called with no
+ * `selfLabel` it strips just the turn marker (superseding the former `stripTurnMarker`).
  */
-export function stripTurnMarker(text: string): string {
-  return text.replace(/^\[Turn \d+\]\s*/, '');
+export function stripSpokenEcho(text: string, selfLabel?: string): string {
+  const marker = text.match(/^\[Turn \d+\]\s*/);
+  if (!marker) return text;
+  let rest = text.slice(marker[0].length);
+  if (selfLabel && rest.startsWith(`${selfLabel}:`)) {
+    rest = rest.slice(selfLabel.length + 1).replace(/^[ \t]+/, '');
+  }
+  return rest;
 }
 
 /**

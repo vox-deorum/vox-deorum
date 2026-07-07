@@ -8,7 +8,7 @@
  */
 
 import { ModelMessage, StepResult, Tool } from "ai";
-import { Envoy } from "./envoy.js";
+import { Envoy, cacheBreakpoint, markBreakpointOnLast, MAX_CACHE_BREAKPOINTS } from "./envoy.js";
 import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
@@ -16,6 +16,9 @@ import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createSendMessageTool } from "./send-message-tool.js";
 import { getValidCalls } from "../utils/tools/terminal-tools.js";
 import type { DealRowRenderer } from "../utils/diplomacy/transcript-utils.js";
+import { createLogger } from "../utils/logger.js";
+
+const logger = createLogger("live-envoy");
 
 /**
  * Agent-specific context a live envoy layers around the chat record in normal mode. `preamble`
@@ -86,16 +89,39 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
       // it, `postscript` after it but still before the always-last hint.
       const extra = await this.getExtraContext(parameters, input, context);
       if (extra.preamble?.length) messages.push(...extra.preamble);
-      messages.push(...this.convertToModelMessages(
-        this.filterSpecialMessages(input.messages),
-        extra.dealRenderer
-      ));
+
+      // The chat record splits at the thread's open mark: settled past conversations compile into
+      // ONE byte-stable block (a static prompt-cache anchor), while the ongoing exchange stays
+      // native assistant/user messages (reasoning trail included) so the model keeps its context.
+      // The last ongoing message carries the last static anchor; because each exchange only appends
+      // committed rows, the next run at the same turn re-reads the whole record from cache. (See the
+      // breakpoint strategy note in envoy.ts.)
+      const { past, ongoing } = this.splitThreadMessages(input);
+      const pastBlock = this.formatPastConversations(past, input, extra.dealRenderer);
+      if (pastBlock) {
+        messages.push({ role: "user", content: pastBlock, providerOptions: { ...cacheBreakpoint } });
+      }
+      const ongoingMessages = this.convertToModelMessages(ongoing, extra.dealRenderer, input);
+      markBreakpointOnLast(ongoingMessages); // rides the last ongoing row; no-op when there are none
+      messages.push(...ongoingMessages);
       if (extra.postscript?.length) messages.push(...extra.postscript);
     }
     messages.push({
       role: "system",
       content: `${this.getHint(parameters, input)} ${addon}`.trim()
     });
+
+    // The Anthropic prompt cache rejects a request carrying more than MAX_CACHE_BREAKPOINTS
+    // cache-control anchors. This assemble sets three (game context, past block, last ongoing row);
+    // guard the ceiling so a future anchor added elsewhere surfaces as a warning here instead of a
+    // provider error at request time.
+    const breakpointCount = messages.filter((m) => m.providerOptions?.anthropic?.cacheControl).length;
+    if (breakpointCount > MAX_CACHE_BREAKPOINTS) {
+      logger.warn("Live envoy prompt exceeded the Anthropic cache-breakpoint ceiling", {
+        breakpointCount, max: MAX_CACHE_BREAKPOINTS,
+      });
+    }
+
     return messages;
   }
 
@@ -193,6 +219,11 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
    * Restricts special message mode (e.g., greetings) to the send-message tool only. With the tool
    * force honored on the deployed model an empty tool set would be uncompliable, so the greeting is
    * itself a send-message call streamed back as text — one path for all spoken output.
+   *
+   * No cache-breakpoint work here: the breakpoints are set once in getInitialMessages and anchored
+   * only on committed rows (see the prompt-cache breakpoint strategy note in envoy.ts), so a step's
+   * transient tool traffic — which is collapsed at commit or rolled back on failure — is never a
+   * cache anchor.
    */
   public override async prepareStep(
     parameters: StrategistParameters,

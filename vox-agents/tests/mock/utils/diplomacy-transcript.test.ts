@@ -16,6 +16,7 @@ import {
   isClosedThisTurn,
   joinAssistantText,
   collectSpokenReply,
+  collectTrace,
   tookTerminalAction,
   type TranscriptMessage,
 } from '../../../src/utils/diplomacy/transcript-utils.js';
@@ -105,10 +106,68 @@ describe('diplomacy transcript helpers', () => {
       expect(result.map(m => m.message.content)).toEqual(['A speaks', 'B replies', 'farewell', 'deal', '']);
       expect(result[0].metadata.turn).toBe(5);
       expect(result[0].metadata.datetime.getTime()).toBe(2000);
+      // The durable row ID rides along for the past/ongoing split by store ID.
+      expect(result.map(m => m.metadata.id)).toEqual([1, 2, 3, 4, 5]);
       // Deal rows carry their payload (for inline cards + reduction); text/close do not.
       expect(result.slice(0, 3).every(m => m.deal === undefined)).toBe(true);
       expect(result[3].deal?.MessageType).toBe('deal-proposal');
       expect(result[4].deal?.MessageType).toBe('deal-reject');
+    });
+  });
+
+  describe('collectTrace', () => {
+    const meta = () => ({ datetime: new Date(0), turn: 5 });
+    const asst = (content: unknown): MessageWithMetadata =>
+      ({ message: { role: 'assistant', content } as never, metadata: meta() });
+    const toolRow = (content: unknown): MessageWithMetadata =>
+      ({ message: { role: 'tool', content } as never, metadata: meta() });
+    const parts = (m: any) => (Array.isArray(m.content) ? m.content : []);
+
+    it('keeps the get-briefing use+result pair and reasoning; drops send-message/analyst/terminal traffic', () => {
+      const think = { type: 'reasoning', text: 'They sound wary.', providerOptions: { anthropic: { signature: 's1' } } };
+      const messages: MessageWithMetadata[] = [
+        asst([think, { type: 'tool-call', toolName: 'get-briefing', toolCallId: 'b1', input: {} }]),
+        toolRow([{ type: 'tool-result', toolName: 'get-briefing', toolCallId: 'b1', output: { type: 'text', value: 'Military: strong.' } }]),
+        asst([{ type: 'reasoning', text: 'Offer reassurance.' }, { type: 'tool-call', toolName: 'send-message', toolCallId: 's1c', input: { Message: 'We seek peace.' } }]),
+        // A terminal handoff + its result render as their own deal card, so they must NOT enter the trace.
+        asst([{ type: 'tool-call', toolName: 'call-negotiator', toolCallId: 'n1', input: {} }]),
+        toolRow([{ type: 'tool-result', toolName: 'call-negotiator', toolCallId: 'n1', output: { type: 'text', value: 'handoff' } }]),
+      ];
+
+      const trace = collectTrace(messages, { sendMessageOnly: true });
+      // assistant[reasoning, get-briefing call], tool[get-briefing result], assistant[reasoning].
+      expect(trace.map(m => m.role)).toEqual(['assistant', 'tool', 'assistant']);
+      expect(trace.flatMap(parts).filter((p: any) => p.type === 'tool-call').map((p: any) => p.toolName)).toEqual(['get-briefing']);
+      expect(trace.flatMap(parts).filter((p: any) => p.type === 'tool-result').map((p: any) => p.toolName)).toEqual(['get-briefing']);
+      expect(JSON.stringify(trace)).not.toContain('send-message');
+      expect(JSON.stringify(trace)).not.toContain('call-negotiator');
+      // Signatures ride along; the send-message step reduces to reasoning-only.
+      expect(parts(trace[0])[0]).toMatchObject({ type: 'reasoning', text: 'They sound wary.', providerOptions: { anthropic: { signature: 's1' } } });
+      expect(parts(trace[2]).map((p: any) => p.type)).toEqual(['reasoning']);
+    });
+
+    it('drops empty-text reasoning and, in sendMessageOnly mode, raw free text', () => {
+      const trace = collectTrace([
+        asst([{ type: 'reasoning', text: '  ' }, { type: 'text', text: 'garbled fallback' }, { type: 'reasoning', text: 'keep me' }]),
+      ], { sendMessageOnly: true });
+      expect(trace).toHaveLength(1);
+      expect(parts(trace[0]).map((p: any) => p.type)).toEqual(['reasoning']);
+      expect(parts(trace[0])[0].text).toBe('keep me');
+    });
+
+    it('drops an orphaned tool_use and an orphaned tool_result to stay provider-valid', () => {
+      const trace = collectTrace([
+        asst([{ type: 'tool-call', toolName: 'get-briefing', toolCallId: 'x1', input: {} }]), // result absent
+        toolRow([{ type: 'tool-result', toolName: 'get-briefing', toolCallId: 'y1', output: { type: 'text', value: 'stray' } }]), // no use
+      ], { sendMessageOnly: true });
+      expect(trace).toHaveLength(0);
+    });
+
+    it('shallow-copies rows and parts so the capture never aliases the slice', () => {
+      const part = { type: 'reasoning', text: 'thinking' };
+      const trace = collectTrace([asst([part])], { sendMessageOnly: true });
+      expect(parts(trace[0])[0]).not.toBe(part);
+      expect(parts(trace[0])[0]).toEqual({ type: 'reasoning', text: 'thinking' });
     });
   });
 
