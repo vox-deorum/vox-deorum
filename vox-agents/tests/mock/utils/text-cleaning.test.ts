@@ -15,6 +15,7 @@ import {
   stripTurnMarker,
   cleanToolArtifacts,
   formatToolCallText,
+  formatWrappedToolCallText,
   formatToolResultText,
   formatToolResultOutput,
   buildRescuePrompt,
@@ -140,6 +141,51 @@ describe('text-cleaning', () => {
       const fenced = out.match(/```json\n([\s\S]*)\n```/);
       const parsed = JSON.parse(fenced![1]);
       expect(parsed[0]).toEqual({ action: 'toolZ', arguments: { foo: 'bar' } });
+    });
+
+    it('emits a bare array with no wrapper key (bare-array regression boundary)', () => {
+      const out = formatToolCallText('toolA', { foo: 'bar' }, 'action');
+      const fenced = out.match(/```json\n([\s\S]*)\n```/);
+      const parsed = JSON.parse(fenced![1]);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed).not.toHaveProperty('actions');
+      expect(parsed).not.toHaveProperty('tools');
+    });
+  });
+
+  describe('formatWrappedToolCallText', () => {
+    it('wraps a single call under the given key with the framing name field', () => {
+      const out = formatWrappedToolCallText([{ toolName: 'toolZ', args: { foo: 'bar' } }], 'action', 'actions');
+      const fenced = out.match(/```json\n([\s\S]*)\n```/);
+      const parsed = JSON.parse(fenced![1]);
+      expect(parsed).toEqual({ actions: [{ action: 'toolZ', arguments: { foo: 'bar' } }] });
+    });
+
+    it('groups multiple calls into one wrapper array, preserving order', () => {
+      const out = formatWrappedToolCallText(
+        [{ toolName: 'a', args: { n: 1 } }, { toolName: 'b', args: { n: 2 } }],
+        'tool',
+        'tools',
+      );
+      const fenced = out.match(/```json\n([\s\S]*)\n```/);
+      const parsed = JSON.parse(fenced![1]);
+      expect(parsed.tools).toHaveLength(2);
+      expect(parsed.tools).toEqual([
+        { tool: 'a', arguments: { n: 1 } },
+        { tool: 'b', arguments: { n: 2 } },
+      ]);
+    });
+
+    it('parses a JSON-string argument into structured args and keeps an unparseable string raw', () => {
+      const out = formatWrappedToolCallText(
+        [{ toolName: 'a', args: '{"x":1}' }, { toolName: 'b', args: 'not json' }],
+        'action',
+        'actions',
+      );
+      const fenced = out.match(/```json\n([\s\S]*)\n```/);
+      const parsed = JSON.parse(fenced![1]);
+      expect(parsed.actions[0].arguments).toEqual({ x: 1 });
+      expect(parsed.actions[1].arguments).toBe('not json');
     });
   });
 

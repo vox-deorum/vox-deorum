@@ -62,17 +62,43 @@ export function cleanToolArtifacts(text: string): string {
 }
 
 /**
+ * Builds one tool-call object in the framing-keyed wire shape (`{ "<framing>": name, arguments }`),
+ * parsing a JSON-string argument into structured args and leaving anything unparseable as-is.
+ * Shared by the bare-array and wrapper-object emitters so both parse arguments identically.
+ */
+function toToolCallObject(toolName: string, args: unknown, framing: ToolCallFraming) {
+  let parsed = args;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch { /* keep as-is */ }
+  }
+  return { [framing]: toolName, arguments: parsed };
+}
+
+/**
  * Formats a tool call as a markdown JSON code block (prompt-mode representation).
  * `framing` selects the JSON name field: the framing literal IS the key, so
  * `'tool'` emits `{ "tool": ... }` and `'action'` emits `{ "action": ... }`,
  * matching the wire format that `createToolPrompts` instructs the model to use.
  */
 export function formatToolCallText(toolName: string, args: unknown, framing: ToolCallFraming = 'tool'): string {
-  let parsed = args;
-  if (typeof parsed === 'string') {
-    try { parsed = JSON.parse(parsed); } catch { /* keep as-is */ }
-  }
-  return '```json\n' + JSON.stringify([{ [framing]: toolName, arguments: parsed }], null, 2) + '\n```';
+  return '```json\n' + JSON.stringify([toToolCallObject(toolName, args, framing)], null, 2) + '\n```';
+}
+
+/**
+ * Formats one or more tool calls as a single wrapper-object JSON code block
+ * (`{ "<wrapKey>": [ { "<framing>": name, arguments }, ... ] }`). Used in prompt mode when
+ * constrained decoding forces the wrapper object, so the echoed history matches the wrapper-object
+ * shape `createToolPrompts(..., wrapped = true)` teaches instead of the bare-array `formatToolCallText`.
+ * `wrapKey` (the `listKey` from FRAMING_PRESETS: `actions`/`tools`) is passed in rather than derived
+ * here to keep this module free of a back-import from `prompt.ts` (which imports from this one).
+ */
+export function formatWrappedToolCallText(
+  calls: Array<{ toolName: string; args: unknown }>,
+  framing: ToolCallFraming,
+  wrapKey: string,
+): string {
+  const objs = calls.map(call => toToolCallObject(call.toolName, call.args, framing));
+  return '```json\n' + JSON.stringify({ [wrapKey]: objs }, null, 2) + '\n```';
 }
 
 /**

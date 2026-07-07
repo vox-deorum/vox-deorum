@@ -222,8 +222,11 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
       }
 
       // Convert existing tool-call/tool-result messages to text so the model
-      // sees a consistent text-based history instead of native tool parts it never produced
-      let convertedPrompt = convertPromptToolMessagesToText(params.prompt ?? [], framing);
+      // sees a consistent text-based history instead of native tool parts it never produced.
+      // Pass wrapToolCalls so the echoed prior calls take the SAME wrapper-object shape the
+      // injected instruction (line 201) and responseFormat schema (line 220) use, instead of a
+      // bare array that would contradict them and confuse a weak prompt-mode model.
+      let convertedPrompt = convertPromptToolMessagesToText(params.prompt ?? [], framing, wrapToolCalls);
 
       // Uniformly reword agent-authored system prose to match the action framing.
       // Confined to system messages; the protocol block (toolPrompt) is already

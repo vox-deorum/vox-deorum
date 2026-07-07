@@ -217,4 +217,90 @@ describe('convertPromptToolMessagesToText', () => {
     ] as any, 'action');
     expect(JSON.stringify(out)).toContain('# Action send_message Result');
   });
+
+  const wrapped = (text: string) => JSON.parse(text.match(/```json\n([\s\S]*)\n```/)![1]);
+
+  it('wraps a single emulated call under the actions key when wrapped', () => {
+    const out: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [
+        { type: 'tool-call', toolCallId: 'c1', toolName: 'send_message', input: { text: 'hi' } },
+      ] },
+    ] as any, 'action', true);
+    const parts = out[0].content;
+    expect(parts).toHaveLength(1);
+    expect(parts[0].type).toBe('text');
+    expect(wrapped(parts[0].text)).toEqual({ actions: [{ action: 'send_message', arguments: { text: 'hi' } }] });
+  });
+
+  it('groups multiple emulated calls into one wrapper text part, preserving order', () => {
+    const out: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [
+        { type: 'tool-call', toolCallId: 'c1', toolName: 'found_city', input: { name: 'Rome' } },
+        { type: 'tool-call', toolCallId: 'c2', toolName: 'send_message', input: { text: 'hi' } },
+      ] },
+    ] as any, 'action', true);
+    const parts = out[0].content;
+    expect(parts).toHaveLength(1);
+    expect(wrapped(parts[0].text).actions).toEqual([
+      { action: 'found_city', arguments: { name: 'Rome' } },
+      { action: 'send_message', arguments: { text: 'hi' } },
+    ]);
+  });
+
+  it('emits a bare array with no wrapper key when not wrapped (default)', () => {
+    const out: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [
+        { type: 'tool-call', toolCallId: 'c1', toolName: 'send_message', input: { text: 'hi' } },
+      ] },
+    ] as any, 'action');
+    const parsed = wrapped(out[0].content[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toEqual([{ action: 'send_message', arguments: { text: 'hi' } }]);
+    expect(JSON.stringify(out)).not.toContain('"actions"');
+  });
+
+  it('uses tools/tool under tool framing and actions/action under action framing when wrapped', () => {
+    const toolFramed: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [{ type: 'tool-call', toolCallId: 'c1', toolName: 'send_message', input: {} }] },
+    ] as any, 'tool', true);
+    const toolParsed = wrapped(toolFramed[0].content[0].text);
+    expect(toolParsed.tools[0]).toHaveProperty('tool', 'send_message');
+
+    const actionFramed: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [{ type: 'tool-call', toolCallId: 'c1', toolName: 'send_message', input: {} }] },
+    ] as any, 'action', true);
+    const actionParsed = wrapped(actionFramed[0].content[0].text);
+    expect(actionParsed.actions[0]).toHaveProperty('action', 'send_message');
+  });
+
+  it('leaves a provider-executed tool-call native and wraps only the emulated call', () => {
+    const out: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [
+        { type: 'tool-call', toolCallId: 'r1', toolName: 'Read', input: { file: 'x' }, providerExecuted: true },
+        { type: 'tool-call', toolCallId: 'c1', toolName: 'send_message', input: { text: 'hi' } },
+      ] },
+    ] as any, 'action', true);
+    const parts = out[0].content;
+    const readPart = parts.find((p: any) => p.type === 'tool-call');
+    expect(readPart.toolName).toBe('Read');
+    expect(readPart.providerExecuted).toBe(true);
+    const textPart = parts.find((p: any) => p.type === 'text');
+    expect(wrapped(textPart.text)).toEqual({ actions: [{ action: 'send_message', arguments: { text: 'hi' } }] });
+    expect(JSON.stringify(out)).not.toContain('"action": "Read"');
+  });
+
+  it('flushes a wrapper before interleaved prose, yielding separate wrapper parts', () => {
+    const out: any = convertPromptToolMessagesToText([
+      { role: 'assistant', content: [
+        { type: 'tool-call', toolCallId: 'c1', toolName: 'found_city', input: { name: 'Rome' } },
+        { type: 'text', text: 'thinking...' },
+        { type: 'tool-call', toolCallId: 'c2', toolName: 'send_message', input: { text: 'hi' } },
+      ] },
+    ] as any, 'action', true);
+    const parts = out[0].content;
+    expect(parts).toHaveLength(3);
+    expect(parts[1]).toEqual({ type: 'text', text: 'thinking...' });
+    expect(wrapped(parts[0].text).actions).toEqual([{ action: 'found_city', arguments: { name: 'Rome' } }]);
+    expect(wrapped(parts[2].text).actions).toEqual([{ action: 'send_message', arguments: { text: 'hi' } }]);
+  });
 });

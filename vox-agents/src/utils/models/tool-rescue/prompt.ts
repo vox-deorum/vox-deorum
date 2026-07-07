@@ -15,7 +15,7 @@ import {
   LanguageModelV3ProviderTool,
   LanguageModelV3ToolChoice,
 } from '@ai-sdk/provider';
-import { formatToolCallText, formatToolResultOutput } from '../text-cleaning.js';
+import { formatToolCallText, formatWrappedToolCallText, formatToolResultOutput } from '../text-cleaning.js';
 import type { ToolCallFraming } from './types.js';
 
 /**
@@ -99,7 +99,7 @@ export function createToolPrompts(tools: (LanguageModelV3FunctionTool | Language
       // for the wrapped `required` path; every other branch keeps the historical bare contour.
       if (wrapped) {
         return `${heading}
-You must use one or more ${noun}s from the list below. Respond ONLY with a JSON object in this exact format:
+You must use one or more ${noun}s from the list below. Respond ONLY with a JSON object in this exact format. MUST follow each ${noun}'s JSON schema to fill in the **arguments** object:
 \`\`\`json
 {
   "${listKey}": [
@@ -195,13 +195,28 @@ export function buildToolCallArraySchema(
  * Used in prompt mode so the model sees a consistent text-based conversation history
  * instead of native tool-call/tool-result parts it never produced.
  */
-export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt, framing: ToolCallFraming = 'tool'): LanguageModelV3Prompt {
+export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt, framing: ToolCallFraming = 'tool', wrapped: boolean = false): LanguageModelV3Prompt {
   const converted: LanguageModelV3Message[] = [];
+  // The pluralized wrapper key (`actions`/`tools`) the wrapped echo groups calls under, kept in
+  // lockstep with the injected instruction and responseFormat schema via the shared preset.
+  const { listKey } = FRAMING_PRESETS[framing];
 
   for (const message of prompt) {
     if (message.role === 'assistant') {
       // Convert tool-call/tool-result parts to text in a single pass
       const newContent: typeof message.content = [];
+      // When constrained decoding forces the wrapper object (`wrapped`), emulated tool calls are
+      // echoed as ONE `{ "<listKey>": [...] }` block per assistant message so the history matches
+      // the wrapper-object shape the instruction teaches (createToolPrompts wrapped=true) instead of
+      // a bare array. Buffer consecutive emulated calls and flush them before any non-emulated part
+      // and at message end. In the bare (non-wrapped) path this buffer stays empty — flushWrapped is
+      // a no-op and each call is emitted inline as its own bare-array block, byte-for-byte as before.
+      const pendingCalls: Array<{ toolName: string; args: unknown }> = [];
+      const flushWrapped = () => {
+        if (pendingCalls.length === 0) return;
+        newContent.push({ type: 'text', text: formatWrappedToolCallText(pendingCalls, framing, listKey) });
+        pendingCalls.length = 0;
+      };
       for (const part of message.content) {
         // Provider-executed parts belong to the host CLI's own tools (e.g. claude-code's
         // Read), not the prompt-emulated game tools. Leave them native so the provider
@@ -211,23 +226,28 @@ export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt, f
         // tool (client results arrive as a separate `tool` role message, handled below),
         // so it is left native as well.
         if (part.type === 'tool-result') {
+          flushWrapped();
           newContent.push(part);
           continue;
         }
         if (part.type === 'tool-call') {
           if (part.providerExecuted) {
+            flushWrapped();
             newContent.push(part);
             continue;
           }
-          let args = part.input;
-          if (typeof args === 'string') {
-            try { args = JSON.parse(args); } catch { /* keep as-is */ }
+          // toToolCallObject (inside both formatters) parses a JSON-string input, so pass it raw.
+          if (wrapped) {
+            pendingCalls.push({ toolName: part.toolName, args: part.input });
+          } else {
+            newContent.push({ type: 'text', text: formatToolCallText(part.toolName, part.input, framing) });
           }
-          newContent.push({ type: 'text', text: formatToolCallText(part.toolName, args, framing) });
           continue;
         }
+        flushWrapped();
         newContent.push(part);
       }
+      flushWrapped();
 
       converted.push({ ...message, content: newContent });
 
