@@ -9,8 +9,8 @@
  * mcp-server/src/knowledge/store.ts.
  */
 
-import { Kysely, SqliteDialect } from 'kysely';
-import Database from 'better-sqlite3';
+import { Kysely } from 'kysely';
+import { openSqliteKysely } from '../../utils/telemetry/sqlite-helpers.js';
 import { createLogger } from '../../utils/logger.js';
 import type { ChatCompletion } from './types.js';
 import type { BatchDatabase, BatchRequest, Batch, NewBatchRequest, NewBatch } from './schema.js';
@@ -32,13 +32,7 @@ export class BatchDb {
    * @param dbPath - Absolute or relative path to the SQLite database file
    */
   constructor(dbPath: string) {
-    const sqliteDb = new Database(dbPath);
-    sqliteDb.pragma('journal_mode = WAL');
-    sqliteDb.pragma('synchronous = NORMAL');
-
-    this.db = new Kysely<BatchDatabase>({
-      dialect: new SqliteDialect({ database: sqliteDb }),
-    });
+    this.db = openSqliteKysely<BatchDatabase>(dbPath).db;
 
     logger.info(`Batch database opened at ${dbPath}`);
   }

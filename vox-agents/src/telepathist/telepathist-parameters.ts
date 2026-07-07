@@ -6,8 +6,8 @@
  * for storing generated summaries and analyses.
  */
 
-import { Kysely, SqliteDialect } from 'kysely';
-import Database from 'better-sqlite3';
+import { Kysely } from 'kysely';
+import { openSqliteKysely, openSqliteKyselyReadonly } from '../utils/telemetry/sqlite-helpers.js';
 import { AgentParameters } from '../infra/vox-agent.js';
 import { createLogger } from '../utils/logger.js';
 import type { TelemetryDatabase } from '../utils/telemetry/schema.js';
@@ -95,20 +95,11 @@ export async function createTelepathistParameters(
   parsedId: GameIdentifierInfo
 ): Promise<TelepathistParameters> {
   // Open telemetry DB read-only
-  const sqliteDb = new Database(databasePath, { readonly: true });
-  const db = new Kysely<TelemetryDatabase>({
-    dialect: new SqliteDialect({ database: sqliteDb }),
-  });
+  const db = openSqliteKyselyReadonly<TelemetryDatabase>(databasePath).db;
 
   // Open/create telepathist DB for generated data
   const telepathistPath = databasePath.replace(/\.db$/, '.telepathist.db');
-  const telepathistSqlite = new Database(telepathistPath);
-  telepathistSqlite.pragma('journal_mode = WAL');
-  telepathistSqlite.pragma('synchronous = NORMAL');
-
-  const telepathistDb = new Kysely<TelepathistDatabase>({
-    dialect: new SqliteDialect({ database: telepathistSqlite }),
-  });
+  const telepathistDb = openSqliteKysely<TelepathistDatabase>(telepathistPath).db;
 
   /** Close both database connections */
   const close = async () => {

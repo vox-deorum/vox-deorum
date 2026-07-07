@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { TelepathistTool, inquiryField } from '../telepathist-tool.js';
 import { TelepathistParameters } from '../telepathist-parameters.js';
 import type { Span } from '../../utils/telemetry/schema.js';
+import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
 import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
 import { cleanToolArtifacts } from '../../utils/models/text-cleaning.js';
 import { agentRegistry } from '../../infra/agent-registry.js';
@@ -280,7 +281,7 @@ export class GetDecisionTool extends TelepathistTool<GetDecisionInput> {
     const reasoningParts: string[] = [];
 
     for (const step of stepSpans) {
-      const attrs = this.parseAttributes(step);
+      const attrs = parseSpanAttributes(step);
       const responses = attrs['step.responses'];
       if (!responses) continue;
 

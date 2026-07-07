@@ -8,8 +8,9 @@
 
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
-import { Kysely, SqliteDialect } from 'kysely';
+import { Kysely } from 'kysely';
 import Database from 'better-sqlite3';
+import { openSqliteKysely, openSqliteKyselyReadonly } from './sqlite-helpers.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
@@ -87,18 +88,7 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
       }
 
       const filename = path.join(contextDir, `${contextId}.db`);
-      const sqliteDb = new Database(filename);
-
-      // Enable WAL mode for better concurrent access
-      sqliteDb.pragma('journal_mode = WAL');
-      sqliteDb.pragma('synchronous = NORMAL');
-
-      // Create Kysely instance
-      const kyselyDb = new Kysely<TelemetryDatabase>({
-        dialect: new SqliteDialect({
-          database: sqliteDb,
-        }),
-      });
+      const { db: kyselyDb, sqlite: sqliteDb } = openSqliteKysely<TelemetryDatabase>(filename);
 
       // Create table if not exists - using camelCase for column names to match Kysely interface
       sqliteDb.exec(`
@@ -358,13 +348,7 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
         return null;
       }
 
-      const sqliteDb = new Database(fullPath, { readonly: true });
-
-      return new Kysely<TelemetryDatabase>({
-        dialect: new SqliteDialect({
-          database: sqliteDb,
-        }),
-      });
+      return openSqliteKyselyReadonly<TelemetryDatabase>(fullPath).db;
     } catch (error) {
       logger.error(`Error opening database file ${relativePath}`, error);
       return null;

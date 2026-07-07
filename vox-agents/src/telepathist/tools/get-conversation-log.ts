@@ -12,6 +12,7 @@ import { TelepathistParameters } from '../telepathist-parameters.js';
 import { cleanToolArtifacts, formatToolCallText, formatToolResultText } from '../../utils/models/text-cleaning.js';
 import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
 import type { Span } from '../../utils/telemetry/schema.js';
+import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
 
 const inputSchema = z.object({
   Turn: z.number().describe('The specific turn to retrieve conversation logs for.'),
@@ -77,7 +78,7 @@ export class GetConversationLogTool extends TelepathistTool<GetConversationLogIn
       let stepNumber = 0;
 
       for (const step of stepSpans) {
-        const attrs = this.parseAttributes(step);
+        const attrs = parseSpanAttributes(step);
 
         // Collect step content before deciding whether to include it
         const stepSections: string[] = [];

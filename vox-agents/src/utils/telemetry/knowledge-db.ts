@@ -13,8 +13,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import Database from 'better-sqlite3';
-import { Kysely, SqliteDialect, ParseJSONResultsPlugin } from 'kysely';
+import { Kysely, ParseJSONResultsPlugin } from 'kysely';
+import { openSqliteKyselyReadonly } from './sqlite-helpers.js';
 import { createLogger } from '../logger.js';
 import type { KnowledgeDatabase } from '../../../../mcp-server/dist/knowledge/schema/index.js';
 
@@ -30,15 +30,11 @@ export const GAME_DB_REGEX = /^(.+?)_(\d+)\.db$/;
  * @returns Kysely instance for querying, or null on failure
  */
 export function openReadonlyGameDb(dbPath: string): Kysely<KnowledgeDatabase> | null {
-  let sqliteDb: InstanceType<typeof Database> | undefined;
   try {
-    sqliteDb = new Database(dbPath, { readonly: true });
-    return new Kysely<KnowledgeDatabase>({
-      dialect: new SqliteDialect({ database: sqliteDb }),
+    return openSqliteKyselyReadonly<KnowledgeDatabase>(dbPath, {
       plugins: [new ParseJSONResultsPlugin()],
-    });
+    }).db;
   } catch (error) {
-    sqliteDb?.close();
     logger.error(`Failed to open game database: ${dbPath}`, { error });
     return null;
   }

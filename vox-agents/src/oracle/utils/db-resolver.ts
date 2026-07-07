@@ -8,8 +8,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import Database from 'better-sqlite3';
-import { Kysely, SqliteDialect } from 'kysely';
+import { Kysely } from 'kysely';
+import { openSqliteKyselyReadonly } from '../../utils/telemetry/sqlite-helpers.js';
 import { createLogger } from '../../utils/logger.js';
 import type { TelemetryDatabase } from '../../utils/telemetry/schema.js';
 
@@ -72,10 +72,7 @@ export function discoverDbPath(gameId: string, playerId: string, telemetryDir: s
  */
 export function openReadonlyDb(dbPath: string): Kysely<TelemetryDatabase> | null {
   try {
-    const sqliteDb = new Database(dbPath, { readonly: true });
-    return new Kysely<TelemetryDatabase>({
-      dialect: new SqliteDialect({ database: sqliteDb }),
-    });
+    return openSqliteKyselyReadonly<TelemetryDatabase>(dbPath).db;
   } catch (error) {
     logger.error(`Failed to open database: ${dbPath}`, { error });
     return null;
