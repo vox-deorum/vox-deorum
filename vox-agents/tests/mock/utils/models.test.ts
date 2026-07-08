@@ -586,8 +586,10 @@ describe('claude-code provider', () => {
         expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
       });
 
-      it('wrapGenerate keeps identical actions from separate text blocks', async () => {
+      it('wrapGenerate rescues only the last StructuredOutput attempt across separate text parts', async () => {
         const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Separate text parts in structured mode are retry ATTEMPTS at one forced output, not
+        // independent calls: only the last is the CLI-accepted one, so exactly one call survives.
         const doGenerate = async () => ({
           content: [
             { type: 'text', text: wrapper },
@@ -596,10 +598,27 @@ describe('claude-code provider', () => {
           finishReason: { unified: 'stop', raw: 'stop' },
         });
         const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
-        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
+        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(1);
       });
 
-      it('wrapStream keeps identical actions from separate text blocks', async () => {
+      it('wrapGenerate keeps call-free prose that precedes the winning attempt', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // A leading reasoning block (no calls) is NOT a superseded attempt: it must survive as text
+        // alongside the committed call, matching wrapStream, which streams such prose live.
+        const doGenerate = async () => ({
+          content: [
+            { type: 'text', text: 'Let me think about this.' },
+            { type: 'text', text: wrapper },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(1);
+        expect(result.content.some((c: any) => c.type === 'text' && c.text.includes('Let me think about this.'))).toBe(true);
+        expect(result.finishReason.unified).toBe('tool-calls');
+      });
+
+      it('wrapStream rescues only the last StructuredOutput attempt across separate text blocks', async () => {
         const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
         const chunks = [
           { type: 'stream-start', warnings: [] },
@@ -614,7 +633,165 @@ describe('claude-code provider', () => {
         const doStream = async () => ({ stream: streamFrom(chunks) });
         const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
         const out = await drain(stream);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(1);
+      });
+
+      it('wrapStream commits only the retried attempt when the first is malformed (the incident)', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Attempt #1 carries a literal newline inside a JSON string. The CLI strictly rejects it and
+        // retries, but jaison REPAIRS it during rescue — so without last-attempt-wins its call would
+        // resurrect and spawn a second agent alongside the accepted retry (the observed bug).
+        const attempt1 = '{"actions":[{"action":"send-message","arguments":{"message":"line one\nline two"}}]}';
+        expect(() => JSON.parse(attempt1)).toThrow(); // fixture precondition: strictly invalid JSON
+        const attempt2 = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'clean retry' } }] });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: 'so1', toolName: 'claude-code-tool.StructuredOutput' },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: attempt1 },
+          { type: 'text-end', id: 't1' },
+          { type: 'text-start', id: 't2' },
+          { type: 'text-delta', id: 't2', delta: attempt2 },
+          { type: 'text-end', id: 't2' },
+          { type: 'tool-input-end', id: 'so1' },
+          { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: attempt2 },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        const toolCalls = out.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(toolCalls[0].toolName).toBe('send-message');
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ message: 'clean retry' });
+        // The rejected attempt must not surface anywhere: not as a call, not as leaked text.
+        expect(out.some((c: any) => JSON.stringify(c).includes('line two'))).toBe(false);
+        expect(out.find((c: any) => c.type === 'finish').finishReason.unified).toBe('tool-calls');
+      });
+
+      it('wrapStream drops a valid-JSON attempt that the CLI schema-rejected before the retry', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Attempt #1 is well-formed JSON (so the mid-block STRICT parse would emit it eagerly if not
+        // suppressed) yet was schema-rejected by the CLI; only attempt #2 is accepted (its carrier).
+        const attempt1 = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'first valid' } }] });
+        const attempt2 = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'second valid' } }] });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: 'so1', toolName: 'claude-code-tool.StructuredOutput' },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: attempt1 },
+          { type: 'text-end', id: 't1' },
+          { type: 'text-start', id: 't2' },
+          { type: 'text-delta', id: 't2', delta: attempt2 },
+          { type: 'text-end', id: 't2' },
+          { type: 'tool-input-end', id: 'so1' },
+          { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: attempt2 },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        const toolCalls = out.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ message: 'second valid' });
+        expect(out.some((c: any) => JSON.stringify(c).includes('first valid'))).toBe(false);
+      });
+
+      it('wrapGenerate commits only the last attempt across text parts + matching carrier', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const attempt1 = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'first valid' } }] });
+        const attempt2 = JSON.stringify({ actions: [{ action: 'send-message', arguments: { message: 'second valid' } }] });
+        const doGenerate = async () => ({
+          content: [
+            { type: 'text', text: attempt1 },
+            { type: 'text', text: attempt2 },
+            { type: 'tool-call', toolCallId: 'so1', toolName: 'claude-code-tool.StructuredOutput', input: attempt2 },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        const toolCalls = result.content.filter((c: any) => c.type === 'tool-call');
+        expect(toolCalls).toHaveLength(1);
+        expect(JSON.parse(toolCalls[0].input)).toEqual({ message: 'second valid' });
+        expect(result.content.some((c: any) => c.type === 'text' && c.text.includes('first valid'))).toBe(false);
+        expect(result.finishReason.unified).toBe('tool-calls');
+      });
+
+      it('wrapStream surfaces attempt text and no call when no attempt validates', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        // Single attempt naming an unavailable tool, no carrier: nothing is rescuable, so the turn
+        // is not silently empty — the payload surfaces as a COMPLETE synthetic text part.
+        const badWrapper = JSON.stringify({ actions: [{ action: 'nonexistent-tool', arguments: {} }] });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: badWrapper },
+          { type: 'text-end', id: 't1' },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(0);
+        // A finish-time text part must be complete: matching start/delta/end all carrying the payload.
+        const synthetic = out.filter((c: any) => String(c.id ?? '').endsWith('-rescued'));
+        expect(synthetic.map((c: any) => c.type)).toEqual(['text-start', 'text-delta', 'text-end']);
+        expect(synthetic.find((c: any) => c.type === 'text-delta').delta).toContain('nonexistent-tool');
+        expect(out.find((c: any) => c.type === 'finish').finishReason.unified).toBe('stop');
+      });
+
+      it('wrapStream streams leading prose live and still commits the single attempt', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action', structuredToolCalls: true });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'text-start', id: 't0' },
+          { type: 'text-delta', id: 't0', delta: 'Let me think about this.' },
+          { type: 'text-end', id: 't0' },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: wrapper },
+          { type: 'text-end', id: 't1' },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
+        // Brace-free prose passes through as a live text-delta (not deferred to finish).
+        expect(out.some((c: any) => c.type === 'text-delta' && String(c.delta).includes('Let me think'))).toBe(true);
+        expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(1);
+      });
+
+      it('wrapStream keeps identical actions from separate text blocks in free-text (non-structured) mode', async () => {
+        // The deliberate no-dedup guarantee still holds where it is intended: NOT structured mode.
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
+        const action = JSON.stringify({ action: 'send-message', arguments: { message: 'hi' } });
+        const chunks = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'text-start', id: 't1' },
+          { type: 'text-delta', id: 't1', delta: action },
+          { type: 'text-end', id: 't1' },
+          { type: 'text-start', id: 't2' },
+          { type: 'text-delta', id: 't2', delta: action },
+          { type: 'text-end', id: 't2' },
+          { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: 1, outputTokens: 1 } },
+        ];
+        const doStream = async () => ({ stream: streamFrom(chunks) });
+        const { stream }: any = await (mw.wrapStream as any)({ doStream, params: await transformed(mw, gameTools) });
+        const out = await drain(stream);
         expect(out.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
+      });
+
+      it('wrapGenerate keeps identical actions from separate text parts in free-text (non-structured) mode', async () => {
+        const mw = toolRescueMiddleware({ prompt: true, framing: 'action' });
+        const action = JSON.stringify({ action: 'send-message', arguments: { message: 'hi' } });
+        const doGenerate = async () => ({
+          content: [
+            { type: 'text', text: action },
+            { type: 'text', text: action },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+        });
+        const result: any = await (mw.wrapGenerate as any)({ doGenerate, params: await transformed(mw, gameTools) });
+        expect(result.content.filter((c: any) => c.type === 'tool-call')).toHaveLength(2);
       });
 
       it('wrapGenerate preserves the carrier payload as text when nothing can be rescued', async () => {

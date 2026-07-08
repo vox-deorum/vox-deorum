@@ -54,6 +54,11 @@ export interface ToolRescueOptions {
    * as ordinary text, which the existing rescue then parses into tool calls, turning the
    * best-effort parse into a parse of schema-valid text. Only enable for providers whose
    * `responseFormat` triggers constrained decoding (claude-code); others ignore it or 400.
+   *
+   * The CLI strictly validates each forced-tool attempt and retries a rejected one within the
+   * same response, with each attempt surfacing as a separate text block. The rescue is therefore
+   * last-attempt-wins in this mode: only the final call-yielding attempt is committed, so a
+   * rejected-then-retried attempt can't execute alongside the accepted one.
    */
   structuredToolCalls?: boolean;
 }

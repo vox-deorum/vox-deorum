@@ -22,7 +22,7 @@ The system is made up of five components:
 Each component has its own AGENTS.md with detailed patterns. Read it before working in that directory.
 
 ## Use Subagents Whenever Appropriate
-Always delegate less important or complicated work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small but extensive edits.
+Always delegate less important or complicated work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku. DO NOT spawn Fable subagents. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small but extensive edits.
 
 ## Workflow Rules
 
