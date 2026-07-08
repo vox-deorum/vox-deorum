@@ -1,11 +1,11 @@
 /**
- * @module envoy/utils/give-take-menu
+ * @module envoy/utils/give-receive-menu
  *
- * Renders the negotiator's first-person GIVE/TAKE tradable menu (context 2): for each side, every legal
+ * Renders the negotiator's first-person GIVE/RECEIVE tradable menu (context 2): for each side, every legal
  * term grouped by category with advisory value, counts, and durations, and — on each heading — a
- * copyable `(e.g. "...")` example of the exact `propose-deal` string to author for that category. The
+ * copyable `(example format "...")` example of the exact `propose-deal` string to author for that category. The
  * menu doubles as the authoring template, so the labels/names here mirror what `ledger-resolver.ts`
- * parses back. {@link formatGiveTakeLedger} is the public entry; {@link Negotiator} composes it.
+ * parses back. {@link formatGiveReceiveLedger} is the public entry; {@link Negotiator} composes it.
  */
 
 import { isSentinel } from "../../../../mcp-server/dist/utils/deal-format.js";
@@ -41,7 +41,7 @@ function valueClause(value: number | undefined, receiverName: string): string {
   return detailClause(bareValue(value, receiverName));
 }
 
-/** Append a "### <title>" block when it has rows, tagging the heading with a copyable `(e.g. "...")`
+/** Append a "### <title>" block when it has rows, tagging the heading with a copyable `(example format "...")`
  * example so the model sees the exact propose-deal string form for that category. The leading newline
  * (the menu is join("\n")-ed) puts one blank line BEFORE each header and none after; the final .trim()
  * drops any leading blank. */
@@ -196,12 +196,12 @@ function formatSideMenu(
 }
 
 /**
- * Format the full first-person Give/Take ledger menu (context 2): what the negotiator's civ can GIVE
- * (its own tradable range) and what it can TAKE (the counterpart's range). Every heading carries a
- * quoted `(e.g. "...")` example of the exact propose-deal string the model should copy for that
+ * Format the full first-person Give/Receive ledger menu (context 2): what the negotiator's civ can GIVE
+ * (its own tradable range) and what it can RECEIVE (the counterpart's range). Every heading carries a
+ * quoted `(example format "...")` example of the exact propose-deal string the model should copy for that
  * category, so the menu doubles as the tool's authoring template.
  */
-export function formatGiveTakeLedger(
+export function formatGiveReceiveLedger(
   inspection: InspectDealResult,
   thread: EnvoyThread,
   players?: PlayersReport
@@ -224,7 +224,7 @@ export function formatGiveTakeLedger(
     inspection,
     relBullets
   );
-  const take = formatSideMenu(
+  const receive = formatSideMenu(
     inspection.tradableRange[String(counterpartID)],
     counterpartName,
     agentName,
@@ -234,9 +234,9 @@ export function formatGiveTakeLedger(
     relBullets
   );
   return [
-    "Each Give/Take entry is ONE plain string. Follow the quoted example on each heading below. " +
+    "Each Give/Receive entry is ONE plain string. Follow the quoted example on each heading below. " +
       "Add a number only for Gold, Gold Per Turn, or a resource quantity; durations and vote counts are fixed by the game.",
     give,
-    take,
+    receive,
   ].join("\n\n").trim();
 }

@@ -50,7 +50,7 @@ import type {
 
 const logger = createLogger("diplomacy:deal");
 
-/** One untradeable trade item, structured so programmatic consumers (the negotiator's Give/Take
+/** One untradeable trade item, structured so programmatic consumers (the negotiator's Give/Receive
  *  reframe) never have to parse the human-readable reason strings. */
 export interface IllegalTradeItem {
   itemType: string;

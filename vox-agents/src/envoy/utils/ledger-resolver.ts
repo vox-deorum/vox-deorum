@@ -1,11 +1,11 @@
 /**
  * @module envoy/utils/ledger-resolver
  *
- * Turns the negotiator's first-person Give/Take ledger into the directed, ID-bearing
+ * Turns the negotiator's first-person Give/Receive ledger into the directed, ID-bearing
  * {@link AuthoredTradeItem}/{@link PromiseTerm} arrays the deal store consumes.
  *
  * The negotiator authors deals as two lists of PLAIN STRINGS (`Give` = its own civ gives the
- * counterpart; `Take` = the counterpart gives its civ). Each string is parsed by the string grammar in
+ * counterpart; `Receive` = the counterpart gives its civ). Each string is parsed by the string grammar in
  * `./ledger-grammar.ts` ({@link parseEntry}) into a canonical label + optional name/amount. This module
  * then classifies that against the upfront `inspect-deal` tradable range (the same menu the model was
  * shown), resolves entity names to IDs, and reports precise, correctable errors — an unmatched entry
@@ -40,7 +40,7 @@ export { LEDGER_TERMS, type LedgerTermLabel } from "./ledger-grammar.js";
 
 /** A single ledger entry that could not be resolved, rendered back to the model as corrective feedback. */
 export interface LedgerResolutionError {
-  Side: "Give" | "Take";
+  Side: "Give" | "Receive";
   /** The raw authored string, quoted back verbatim so the model sees exactly what it wrote. */
   Entry: string;
   Problem: string;
@@ -186,8 +186,8 @@ export function formatResolutionErrors(errors: LedgerResolutionError[]): string 
 }
 
 /**
- * Resolve a Give/Take ledger of plain strings into directed trade items + promises with IDs. `Give`
- * entries run agent→counterpart and resolve against the agent's own range; `Take` entries run
+ * Resolve a Give/Receive ledger of plain strings into directed trade items + promises with IDs. `Give`
+ * entries run agent→counterpart and resolve against the agent's own range; `Receive` entries run
  * counterpart→agent and resolve against the counterpart's range. Each string is parsed by
  * {@link parseEntry}; misses become {@link LedgerResolutionError}s with suggestions instead of silently
  * dropped terms. Each resolved term is also gated against that side range's `.legal`/`.available` flags
@@ -197,14 +197,14 @@ export function formatResolutionErrors(errors: LedgerResolutionError[]): string 
  */
 export function resolveLedger(args: {
   give: string[];
-  take: string[];
+  receive: string[];
   agentID: number;
   counterpartID: number;
   giveRange: NormalizedSideRange | undefined;
-  takeRange: NormalizedSideRange | undefined;
+  receiveRange: NormalizedSideRange | undefined;
   promiseTargets: PromiseTargetInfo[];
 }): ResolvedLedger {
-  const { give, take, agentID, counterpartID, giveRange, takeRange, promiseTargets } = args;
+  const { give, receive, agentID, counterpartID, giveRange, receiveRange, promiseTargets } = args;
   const items: AuthoredTradeItem[] = [];
   const promises: PromiseTerm[] = [];
   const errors: LedgerResolutionError[] = [];
@@ -212,7 +212,7 @@ export function resolveLedger(args: {
   const voteCommittedBy = new Set<number>();
 
   const resolveSide = (
-    side: "Give" | "Take",
+    side: "Give" | "Receive",
     terms: string[],
     giverID: number,
     receiverID: number,
@@ -356,7 +356,7 @@ export function resolveLedger(args: {
   };
 
   resolveSide("Give", give, agentID, counterpartID, giveRange);
-  resolveSide("Take", take, counterpartID, agentID, takeRange);
+  resolveSide("Receive", receive, counterpartID, agentID, receiveRange);
 
   return { items, promises, errors };
 }

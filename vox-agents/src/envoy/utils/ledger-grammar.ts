@@ -1,7 +1,7 @@
 /**
  * @module envoy/utils/ledger-grammar
  *
- * The forgiving string grammar for the negotiator's Give/Take ledger: it parses one authored PLAIN
+ * The forgiving string grammar for the negotiator's Give/Receive ledger: it parses one authored PLAIN
  * STRING (a term copied from the rendered menu) into a canonical {@link LedgerTermLabel} plus an
  * optional entity/target name and quantity, or a correctable problem. It knows the vocabulary (labels,
  * aliases, named categories, targeted phrases) but nothing about IDs or legality — {@link resolveLedger}
@@ -31,7 +31,7 @@ import {
 } from "../../utils/text-match.js";
 
 /**
- * The friendly term labels the ledger uses, shared verbatim by the rendered GIVE/TAKE menu so the
+ * The friendly term labels the ledger uses, shared verbatim by the rendered GIVE/RECEIVE menu so the
  * model copies them directly. Trade-item agreement labels and promise labels are the canonical single
  * labels from AGREEMENT_METADATA / PROMISE_METADATA (deal-schema.ts), so the authored term and the
  * rendered menu never splinter.
@@ -69,7 +69,7 @@ export const LEDGER_TERMS = [
 
 export type LedgerTermLabel = (typeof LEDGER_TERMS)[number];
 
-/** One parsed Give/Take entry: the resolved canonical label plus an optional entity/target name and amount. */
+/** One parsed Give/Receive entry: the resolved canonical label plus an optional entity/target name and amount. */
 export interface ParsedTerm {
   term: LedgerTermLabel;
   name?: string;
@@ -315,7 +315,7 @@ function classify(
 }
 
 /**
- * Parse one authored Give/Take string into a {@link ParsedTerm}, or a correctable problem. Tries the
+ * Parse one authored Give/Receive string into a {@link ParsedTerm}, or a correctable problem. Tries the
  * full string first (so an entity name that ends in a digit or carries parentheses is protected),
  * then the same string minus a trailing parenthetical menu note, then with a trailing whole number
  * peeled off as the amount. The first attempt that classifies wins; a `guide` from any attempt is held

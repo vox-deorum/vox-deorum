@@ -39,7 +39,7 @@ import {
   NEGOTIATOR_TERMINAL_TOOLS,
   createNegotiatorTerminalTools,
   formatActiveProposalLedger,
-  formatGiveTakeLedger,
+  formatGiveReceiveLedger,
   summarizeMove,
   type NegotiatorInput,
 } from "./utils/negotiator-utils.js";
@@ -157,7 +157,7 @@ Your goal is to **call EXACTLY ONE terminal tool** after gathering sufficient in
 - Use the \`accept-deal\` tool to accept the on-the-table deal exactly as-is.
 - Use the \`reject-deal\` tool to decline the on-the-table deal exactly as-is.
 - Use the \`propose-deal\` tool to author a (counter) proposal. You must include a one-sentence outward \`Message\` for the diplomat to voice.
-  - Author two string lists: \`Give\` (what YOUR civ gives the counterpart) and \`Take\` (what the counterpart gives YOUR civ).
+  - Author \`Give\` (what YOUR civ gives the counterpart) and \`Receive\` (what the counterpart gives YOUR civ); each is a term string or a list of term strings.
     - Each entry is ONE plain string. Follow the quoted example on each Tradable Terms heading.
     - Append a number only for Gold, Gold Per Turn, or a resource quantity (e.g. "Gold 100", "Iron 2").
   - Joint wars need a third-party Civilization Name from the menu.
@@ -232,10 +232,10 @@ You can access additional information by calling the following tools.
       );
     }
 
-    // The Give/Take menu (context 2): the available terms, by NAME, that propose-deal expects.
+    // The Give/Receive menu (context 2): the available terms, by NAME, that propose-deal expects.
     sections.push(
        "# Tradable Terms\n" + (inspection
-          ? formatGiveTakeLedger(inspection, thread, background.players) :
+          ? formatGiveReceiveLedger(inspection, thread, background.players) :
           "(options unavailable)")
     );
 

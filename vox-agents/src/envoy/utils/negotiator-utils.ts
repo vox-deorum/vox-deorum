@@ -7,7 +7,7 @@
  * the `format*` / `summarize*` helpers render the model context and the diplomat-facing
  * summary, and {@link createNegotiatorTerminalTools} builds the three terminal tools
  * (accept / propose / reject) that persist the chosen move through the durable store. The
- * GIVE/TAKE menu renderer lives in `./give-take-menu.ts` (re-exported below).
+ * GIVE/RECEIVE menu renderer lives in `./give-receive-menu.ts` (re-exported below).
  */
 
 import { z } from "zod";
@@ -43,12 +43,29 @@ import {
   type DealLedgerOptions,
 } from "./deal-ledger.js";
 
-export { formatGiveTakeLedger } from "./give-take-menu.js";
+export { formatGiveReceiveLedger } from "./give-receive-menu.js";
 
 const logger = createLogger("negotiator");
 
 /** The negotiator's three terminal tool names — exactly one must be called per invocation. */
 export const NEGOTIATOR_TERMINAL_TOOLS = ["accept-deal", "propose-deal", "reject-deal"] as const;
+
+/**
+ * The schema for a `Give`/`Receive` argument: either a single term string or a list of them, so the
+ * model may author one term without wrapping it in a list. Defaults to an empty list; normalize the
+ * validated value to an array with {@link toTermList}.
+ */
+function termListSchema(description: string) {
+  return z
+    .union([z.string(), z.array(z.string())])
+    .default([])
+    .describe(description);
+}
+
+/** Normalize a `Give`/`Receive` argument (a lone term string or a list) to an array of term strings. */
+function toTermList(value: string | string[]): string[] {
+  return typeof value === "string" ? [value] : value;
+}
 
 /** The on-the-table deal from the counterpart being responded to. Absent when proposing outright. */
 export interface ActiveProposalContext {
@@ -90,7 +107,7 @@ export interface NegotiatorInput {
   activeProposal?: ActiveProposalContext;
   /**
    * The upfront `inspect-deal` result (tradable range + promise targets) computed in
-   * `getInitialMessages`. The `propose-deal` tool reads it to resolve the authored Give/Take NAMES
+   * `getInitialMessages`. The `propose-deal` tool reads it to resolve the authored Give/Receive NAMES
    * back into IDs without re-inspecting. Absent when the upfront inspection failed.
    */
   upfrontInspection?: InspectDealResult;
@@ -119,15 +136,15 @@ export function formatActiveProposalLedger(
 }
 
 /**
- * Reframe an {@link IllegalDealError} into first-person Give/Take feedback the model can act on. Each
- * structured detail whose giver is the negotiator's own seat is a Give; otherwise it is a Take. A
+ * Reframe an {@link IllegalDealError} into first-person Give/Receive feedback the model can act on. Each
+ * structured detail whose giver is the negotiator's own seat is a Give; otherwise it is a Receive. A
  * structural error carries no per-item details (the endpoint/targeting guards), so its human-readable
  * reasons are relayed verbatim. No deal was written, so the model can adjust and retry.
  */
 function formatIllegalDealError(error: IllegalDealError, agentID: number): string {
   const lines = error.details.length
     ? error.details.map((d) => {
-        const side = d.fromPlayerID === agentID ? "Give" : "Take";
+        const side = d.fromPlayerID === agentID ? "Give" : "Receive";
         return `- [${side}] ${itemTypeLabel(d.itemType)}: ${d.reasons.join("; ") || "not tradeable"}`;
       })
     : error.reasons.map((r) => `- ${r}`);
@@ -261,44 +278,44 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "propose-deal",
       description:
-        "Present a new or counter deal offer. Author two lists of plain strings: Give (what your civ gives the counterpart) and Take (what the counterpart gives your civ), each string a term copied from the GIVE/TAKE menu following the example on its heading. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
+        "Present a new or counter deal offer. Author Give (what your civ gives the counterpart) and Receive (what the counterpart gives your civ), each a term copied from the Give/Receive menu following the example on its heading. Give and Receive each accept a single term string or a list of them. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
         Rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart."),
-        Give: z
-          .array(z.string())
-          .default([])
-          .describe(
-            "Terms YOUR civ gives the counterpart, one plain string per term copied from the GIVE menu. " +
-              'Follow the quoted example on each heading, e.g. "Gold 100", "Iron 2", "Open Borders", ' +
-              '"Third-Party Peace with <Civilization>". Append a whole number only for Gold, Gold Per Turn, or a resource quantity.'
-          ),
-        Take: z
-          .array(z.string())
-          .default([])
-          .describe("Terms the counterpart gives YOUR civ, one plain string per term copied from the TAKE menu (same format as Give)."),
+        Give: termListSchema(
+          "Terms YOUR civ gives the counterpart. Each term should follow the EXACT format from the " +
+            'menu of what your civ can give following the example on its heading, e.g. "Gold 100", "Iron 2", ' +
+            '"Open Borders", "Third-Party Peace with <Civilization>".'
+        ),
+        Receive: termListSchema(
+          "Terms YOUR civ receives from the counterpart. Each term should follow the EXACT format from the " +
+            "menu of what the counterpart can give (same format as Give)."
+        ),
       }),
       execute: async (args, _parameters, options) => {
         const ni = input();
         if (!ni) return "No negotiation context is active.";
         const claimed = claimStep(options, "propose-deal");
         if (claimed) return `Ignored because ${claimed} was the first terminal tool call in this step.`;
-        if (args.Give.length === 0 && args.Take.length === 0) {
-          return "A proposal must include at least one term in Give or Take. Reject instead if you want no deal.";
+        // Give/Receive each accept a single term string or a list of them; normalize to arrays.
+        const give = toTermList(args.Give);
+        const receive = toTermList(args.Receive);
+        if (give.length === 0 && receive.length === 0) {
+          return "A proposal must include at least one term in Give or Receive. Reject instead if you want no deal.";
         }
 
         // Resolve the authored NAMES against the upfront tradable range (the same menu the model saw).
         const { agentID, counterpartID } = endpoints(ni.thread);
         const insp = ni.upfrontInspection;
         const { items, promises, errors } = resolveLedger({
-          give: args.Give,
-          take: args.Take,
+          give,
+          receive,
           agentID,
           counterpartID,
           giveRange: insp?.tradableRange[String(agentID)],
-          takeRange: insp?.tradableRange[String(counterpartID)],
+          receiveRange: insp?.tradableRange[String(counterpartID)],
           promiseTargets: insp?.promiseTargets ?? [],
         });
         if (errors.length > 0) {
@@ -343,7 +360,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           };
           return `${isCounter ? "Counter" : "Proposal"} recorded as deal message #${id}.`;
         } catch (error) {
-          // An untradeable term: reframe each per-item reason in Give/Take terms so the model can fix it.
+          // An untradeable term: reframe each per-item reason in Give/Receive terms so the model can fix it.
           if (error instanceof IllegalDealError) {
             return formatIllegalDealError(error, agentID);
           }

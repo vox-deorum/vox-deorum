@@ -1,8 +1,8 @@
 /**
- * Unit tests for the Give/Take ledger resolver (src/envoy/utils/ledger-resolver.ts): parsing each
+ * Unit tests for the Give/Receive ledger resolver (src/envoy/utils/ledger-resolver.ts): parsing each
  * authored plain string into a directed, ID-bearing trade item / promise off the inspect-deal tradable
  * range. Covers the string grammar (fixed labels, aliases, entity names, targeted phrases, trailing
- * amounts, parenthetical menu notes), direction (Give = agent→counterpart, Take = counterpart→agent),
+ * amounts, parenthetical menu notes), direction (Give = agent→counterpart, Receive = counterpart→agent),
  * the menu-legality gate, and the correctable error branches (unknown entry with suggestions, category
  * word without a name, targeted phrase without a target, one-vote-per-side). Pure — no game/LLM.
  */
@@ -35,14 +35,14 @@ function sideRange(partial: any = {}): any {
   };
 }
 
-function resolve(give: string[], take: string[] = [], opts: any = {}) {
+function resolve(give: string[], receive: string[] = [], opts: any = {}) {
   return resolveLedger({
     give,
-    take,
+    receive,
     agentID: AGENT,
     counterpartID: COUNTERPART,
     giveRange: opts.giveRange ?? sideRange(),
-    takeRange: opts.takeRange ?? sideRange(),
+    receiveRange: opts.receiveRange ?? sideRange(),
     promiseTargets: opts.promiseTargets ?? [],
   });
 }
@@ -54,7 +54,7 @@ describe('resolveLedger directions', () => {
     expect(items).toEqual([{ fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'GOLD', amount: 50 }]);
   });
 
-  it('directs a Take from the counterpart to the agent', () => {
+  it('directs a Receive from the counterpart to the agent', () => {
     const { items } = resolve([], ['Open Borders']);
     expect(items).toEqual([{ fromPlayerID: COUNTERPART, toPlayerID: AGENT, itemType: 'OPEN_BORDERS' }]);
   });
@@ -366,8 +366,8 @@ describe('resolveLedger menu-legality gate', () => {
 
   it('validates each authored side of a mutual pact independently (no double-report)', () => {
     const giveRange = sideRange({ defensivePact: { legal: false, reasons: ['Already allied'] } });
-    const takeRange = sideRange({ defensivePact: { legal: true, reasons: [] } });
-    const { items, errors } = resolve(['Defensive Pact'], ['Defensive Pact'], { giveRange, takeRange });
+    const receiveRange = sideRange({ defensivePact: { legal: true, reasons: [] } });
+    const { items, errors } = resolve(['Defensive Pact'], ['Defensive Pact'], { giveRange, receiveRange });
     expect(items).toEqual([{ fromPlayerID: COUNTERPART, toPlayerID: AGENT, itemType: 'DEFENSIVE_PACT' }]);
     expect(errors).toHaveLength(1);
     expect(errors[0].Side).toBe('Give');
@@ -377,11 +377,11 @@ describe('resolveLedger menu-legality gate', () => {
     // Call resolveLedger directly so the undefined range is not defaulted by the test helper.
     const { items, errors } = resolveLedger({
       give: ['Allow Embassy', 'Gold 50'],
-      take: [],
+      receive: [],
       agentID: AGENT,
       counterpartID: COUNTERPART,
       giveRange: undefined,
-      takeRange: undefined,
+      receiveRange: undefined,
       promiseTargets: [],
     });
     expect(errors).toEqual([]);

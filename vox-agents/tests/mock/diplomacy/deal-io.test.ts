@@ -280,7 +280,7 @@ describe('appendDealProposal', () => {
     // no identities set) — never the raw enum. It reaches the UI toast verbatim.
     expect(err.message).toContain('Resource #9 ×1 (Player 1 → Player 3): Bonus resources cannot be traded.');
     expect(err.message).not.toContain('RESOURCES');
-    // Structured details let the negotiator reframe Give/Take without parsing the message.
+    // Structured details let the negotiator reframe Give/Receive without parsing the message.
     expect(err.details).toEqual([
       { itemType: 'RESOURCES', fromPlayerID: 1, toPlayerID: 3, reasons: ['Bonus resources cannot be traded.'] },
     ]);

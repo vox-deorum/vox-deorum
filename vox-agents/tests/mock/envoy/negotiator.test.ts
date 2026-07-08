@@ -208,7 +208,7 @@ describe('propose-deal', () => {
       Rationale: 'Start modest.',
       Message: 'I offer 50 gold for your map.',
       Give: ['Gold 50'],
-      Take: [],
+      Receive: [],
     });
 
     const append = mcp.calls('append-message')[0]!.args;
@@ -222,7 +222,29 @@ describe('propose-deal', () => {
     expect(input.outcome).toMatchObject({ type: 'propose', dealMessageID: 11, deal: payloadDeal });
   });
 
-  it('resolves a Take string into a counter directed from the counterpart', async () => {
+  it('accepts a single term string (not just a list) for Give and Receive', async () => {
+    mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
+    mcp.respondWith('append-message', structuredResult({ ID: 14, Turn: 5 }));
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: legalInspection });
+    const tools = createNegotiatorTerminalTools(makeContext(input));
+
+    // Give/Receive each arrive as a bare string, not wrapped in a list.
+    await run(tools['propose-deal'], {
+      Rationale: 'Simple swap.',
+      Message: 'Gold for open borders.',
+      Give: 'Gold 50',
+      Receive: 'Open Borders',
+    });
+
+    const payloadDeal = (mcp.calls('append-message')[0]!.args.Payload as any).Deal;
+    expect(payloadDeal.items).toEqual([
+      { fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 },
+      { fromPlayerID: 1, toPlayerID: 3, itemType: 'OPEN_BORDERS' },
+    ]);
+    expect(input.outcome).toMatchObject({ type: 'propose', dealMessageID: 14 });
+  });
+
+  it('resolves a Receive string into a counter directed from the counterpart', async () => {
     setOpenProposal();
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
     mcp.respondWith('append-message', structuredResult({ ID: 12, Turn: 5 }));
@@ -236,12 +258,12 @@ describe('propose-deal', () => {
       Rationale: 'Ask for more.',
       Message: 'Add open borders and we have a deal.',
       Give: [],
-      Take: ['Open Borders'],
+      Receive: ['Open Borders'],
     });
 
     const append = mcp.calls('append-message')[0]!.args;
     expect(append.MessageType).toBe('deal-counter');
-    // A Take runs from the counterpart (1) to the negotiator's own seat (3).
+    // A Receive runs from the counterpart (1) to the negotiator's own seat (3).
     expect((append.Payload as any).Deal.items).toEqual([{ fromPlayerID: 1, toPlayerID: 3, itemType: 'OPEN_BORDERS' }]);
     expect(input.outcome).toMatchObject({ type: 'counter', dealMessageID: 12 });
   });
@@ -249,8 +271,8 @@ describe('propose-deal', () => {
   it('refuses an empty proposal (no terms)', async () => {
     const input = negotiatorInput();
     const tools = createNegotiatorTerminalTools(makeContext(input));
-    const msg = await run(tools['propose-deal'], { Rationale: 'x', Message: 'y', Give: [], Take: [] });
-    expect(msg).toContain('at least one term in Give or Take');
+    const msg = await run(tools['propose-deal'], { Rationale: 'x', Message: 'y', Give: [], Receive: [] });
+    expect(msg).toContain('at least one term in Give or Receive');
     expect(input.outcome).toBeUndefined();
     expect(mcp.calls('append-message')).toHaveLength(0);
   });
@@ -263,7 +285,7 @@ describe('propose-deal', () => {
       Rationale: 'Trade iron.',
       Message: 'My iron for your gold.',
       Give: ['Irn'],
-      Take: [],
+      Receive: [],
     });
 
     expect(msg).toContain('Iron'); // suggested the closest available name
@@ -273,7 +295,7 @@ describe('propose-deal', () => {
     expect(mcp.calls('append-message')).toHaveLength(0);
   });
 
-  it('reframes an untradeable item as Give/Take feedback, writing nothing', async () => {
+  it('reframes an untradeable item as Give/Receive feedback, writing nothing', async () => {
     // The fresh inspection inside appendDealProposal reports the gold term as illegal.
     mcp.respondWith('inspect-deal', structuredResult({
       items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', legality: false, reasons: ['You have no gold.'], valueIfIGive: 0, valueIfIReceive: 0 }],
@@ -287,7 +309,7 @@ describe('propose-deal', () => {
       Rationale: 'Pay up.',
       Message: 'Here is gold.',
       Give: ['Gold 50'],
-      Take: [],
+      Receive: [],
     });
 
     expect(msg).toContain('[Give] Gold');
@@ -305,7 +327,7 @@ describe('propose-deal', () => {
       Rationale: 'Start modest.',
       Message: 'I offer 50 gold.',
       Give: ['Gold 50'],
-      Take: [],
+      Receive: [],
     });
 
     expect(msg).toContain('already open');
@@ -549,7 +571,7 @@ describe('getInitialMessages task determination', () => {
 
     expect(input.activeProposal).toBeUndefined();
     expect(content(messages)).toContain('no deal from the counterpart');
-    // The Give/Take menu is rendered (first-person, by seat name).
+    // The Give/Receive menu is rendered (first-person, by seat name).
     expect(content(messages)).toContain('Can Give');
     expect(input.upfrontInspection).toBeDefined();
     expect(mcp.calls('inspect-deal')[0]!.args).not.toHaveProperty('ProposedDeal');
@@ -566,7 +588,7 @@ describe('getInitialMessages task determination', () => {
       militaryPromiseDuration: 20,
       coopWarPromiseDuration: 10,
       tradableRange: {
-        '1': emptySideRange(), // the counterpart (take side); inspect-deal always returns both seats
+        '1': emptySideRange(), // the counterpart (receive side); inspect-deal always returns both seats
         '3': {
           gold: { available: false, max: 0, reasons: [] },
           goldPerTurn: { available: false, reasons: [] },
@@ -630,12 +652,12 @@ describe('getInitialMessages task determination', () => {
 
     const text = content(await negotiator.getInitialMessages(params, input, {} as any));
 
-    // The intro teaches the one-string-per-entry grammar; headings carry a quoted (e.g. "...") example.
-    expect(text).toContain('Each Give/Take entry is ONE plain string');
-    expect(text).toContain('### Gold (e.g. "Gold 100")');
-    expect(text).toContain('### Strategic Resources (e.g. "Iron 1")');
+    // The intro teaches the one-string-per-entry grammar; headings carry a quoted (example format "...") example.
+    expect(text).toContain('Each Give/Receive entry is ONE plain string');
+    expect(text).toContain('### Gold (example format "Gold 100")');
+    expect(text).toContain('### Strategic Resources (example format "Iron 1")');
     // Untargeted promises always render, so the Promises heading always has an example.
-    expect(text).toContain(`### Promises (e.g. "${PROMISE_METADATA.MILITARY.label}")`);
+    expect(text).toContain(`### Promises (example format "${PROMISE_METADATA.MILITARY.label}")`);
   });
 
   it('does not forward the seat own pending proposal (notes it awaits a reply)', async () => {
