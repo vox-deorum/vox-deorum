@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Plan"
+  short_description: "Build, review, and revise an approved plan in a loop"
+  default_prompt: "Use $implement-plan to carry out the approved plan: distill it into an executive plan, ask any clarifying questions, delegate the implementation to subagents, have fresh-context subagents review the changes, then loop — reconcile, re-align, revise, re-review — until both the review and the user are satisfied."
