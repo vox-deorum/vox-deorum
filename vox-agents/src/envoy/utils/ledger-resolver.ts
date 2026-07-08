@@ -1,24 +1,25 @@
 /**
  * @module envoy/utils/ledger-resolver
  *
- * Turns the negotiator's first-person Give/Take ledger (friendly term labels + entity NAMES) into the
- * directed, ID-bearing {@link AuthoredTradeItem}/{@link PromiseTerm} arrays the deal store consumes.
+ * Turns the negotiator's first-person Give/Take ledger into the directed, ID-bearing
+ * {@link AuthoredTradeItem}/{@link PromiseTerm} arrays the deal store consumes.
  *
- * The negotiator authors deals by NAME (a Civilization / City / Resource / Technology / Vote name copied
- * from the rendered menu) and by side (`Give` = its own civ gives the counterpart; `Take` = the
- * counterpart gives its civ). This module resolves each name against the upfront `inspect-deal` tradable
- * range (the same menu it was shown) and reports precise, correctable errors — unknown/misspelled names
- * with the closest available suggestions, or whole categories that are empty on that side — so a failed
- * proposal can be fixed without ever exposing numeric IDs to the model. It also gates each authored term
- * against that same range's `.legal`/`.available` flags (the exact flags the rendered menu filters on),
- * so the model can only author terms that were actually on its menu; an off-menu term (e.g. a Declaration
- * of Friendship with an un-met civ) is rejected here, up front, instead of slipping through to
- * `appendDealProposal` where the game reports it untradeable — often with the reason misattributed to a
- * different item in the same deal. `appendDealProposal` still re-inspects and hard-gates as the backstop;
- * when the upfront range is unavailable (inspection failed) this module degrades to pass-through.
+ * The negotiator authors deals as two lists of PLAIN STRINGS (`Give` = its own civ gives the
+ * counterpart; `Take` = the counterpart gives its civ). Each string is parsed by the string grammar in
+ * `./ledger-grammar.ts` ({@link parseEntry}) into a canonical label + optional name/amount. This module
+ * then classifies that against the upfront `inspect-deal` tradable range (the same menu the model was
+ * shown), resolves entity names to IDs, and reports precise, correctable errors — an unmatched entry
+ * with the closest available suggestions, a category word written without its name, a targeted phrase
+ * without a target.
+ *
+ * It also gates each resolved term against that same range's `.legal`/`.available` flags (the exact
+ * flags the rendered menu filters on), so an off-menu term (e.g. a Declaration of Friendship with an
+ * un-met civ) is rejected here, up front, rather than slipping through to `appendDealProposal` where
+ * the game reports it untradeable — often with the reason misattributed to a different item in the
+ * same deal. `appendDealProposal` still re-inspects and hard-gates as the backstop; when the upfront
+ * range is unavailable (inspection failed) this module degrades to pass-through for fixed labels.
  */
 
-import { z } from "zod";
 import type {
   CandidateLegality,
   NormalizedSideRange,
@@ -30,110 +31,24 @@ import type {
   PromiseTerm,
   TradeItem,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import { closestNames, findByName, namesOf } from "../../utils/text-match.js";
+import { parseEntry, targetExample, type LedgerTermLabel } from "./ledger-grammar.js";
 
-/**
- * The friendly term labels the ledger uses, shared verbatim by the rendered GIVE/TAKE menu and the
- * tool schema so the model copies them directly. Trade-item agreement labels and promise labels are
- * the canonical single labels from AGREEMENT_METADATA / PROMISE_METADATA (deal-schema.ts), so the
- * authored term and the rendered menu never splinter.
- */
-export const LEDGER_TERMS = [
-  "Gold",
-  "Gold Per Turn",
-  "Resource",
-  "City",
-  "Technology",
-  "Allow Embassy",
-  "Open Borders",
-  "Maps",
-  // Agreement labels MUST mirror AGREEMENT_METADATA[*].label (canonical source of truth in
-  // deal-schema.ts); a drift guard test asserts it. Kept as a literal tuple because `z.enum` needs one.
-  "Declaration of Friendship",
-  "Defensive Pact",
-  "Research Agreement",
-  "Peace Treaty",
-  "Vassalage",
-  "Revoke Vassalage",
-  "Third-Party Peace",
-  "Third-Party War",
-  "Vote Commitment",
-  // Promise labels below MUST mirror PROMISE_METADATA[*].label (the canonical source of truth in
-  // deal-schema.ts). A drift guard test asserts they stay in sync; this list stays a literal tuple
-  // because `z.enum(LEDGER_TERMS)` requires one. The non-honored promises (Won't spread religion /
-  // spy / bully / attack city-state) are absent because they are not in the contract — re-add here
-  // (and uncomment them in the metadata) if the DLL ever enforces them.
-  "Won't attack / will move troops away",
-  "Won't settle near you",
-  "Won't buy plots near your cities",
-  "Won't dig your antiquity sites",
-  "Will join a cooperative war",
-] as const;
+// The vocabulary lives in the grammar module; re-exported so callers and the drift-guard tests keep a
+// single import site for the ledger's term surface.
+export { LEDGER_TERMS, type LedgerTermLabel } from "./ledger-grammar.js";
 
-export type LedgerTermLabel = (typeof LEDGER_TERMS)[number];
-
-/**
- * Normalize a term for forgiving matching: fold case, map curly apostrophes to straight, the dash
- * family to a plain hyphen, and collapse internal whitespace. Lets a casing/punctuation slip
- * ("won't attack", a curly apostrophe, an en-dash in "Third-Party") resolve to its canonical label
- * instead of tripping enum validation and forcing a retry.
- */
-function normalizeTerm(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .replace(/[‘’]/g, "'")
-    .replace(/[‐-―]/g, "-")
-    .replace(/\s+/g, " ");
-}
-
-/** Normalized-form → canonical label, built once for the preprocess step below. */
-const TERM_BY_NORMALIZED = new Map<string, LedgerTermLabel>(
-  LEDGER_TERMS.map((t) => [normalizeTerm(t), t])
-);
-
-/** Resolve a friendly term label to its canonical spelling, allowing harmless punctuation slips. */
-function canonicalLedgerTerm(term: string): LedgerTermLabel | undefined {
-  return TERM_BY_NORMALIZED.get(normalizeTerm(term));
-}
-
-/** One authored ledger entry, used in both `Give` and `Take`. */
-export const LedgerTermSchema = z.object({
-  // Forgive minor casing/punctuation differences by mapping to the canonical label before the enum
-  // validates; an unrecognized term still falls through to the standard enum error.
-  Term: z.preprocess(
-    (v) => (typeof v === "string" ? canonicalLedgerTerm(v) ?? v : v),
-    z.enum(LEDGER_TERMS).describe("The kind of term, exactly as labelled in the GIVE/TAKE menu.")
-  ),
-  Name: z
-    .string()
-    .optional()
-    .describe(
-      "Exact name from the menu: a Civilization Name (Third-Party Peace/War, Cooperative War, " +
-        "city-state promises), City Name, Resource Name, Technology Name, or Vote Commitment name. " +
-        "Copy it verbatim; never a number."
-    ),
-  Amount: z
-    .number()
-    .int()
-    .optional()
-    .describe(
-      "The quantity for this term: Gold amount, Gold-per-turn amount, or Resource quantity per turn " +
-        "(defaults to 1 for resources). Ignored for other terms."
-    ),
-});
-export type LedgerTerm = z.infer<typeof LedgerTermSchema>;
-
-/** A single ledger term that could not be resolved, rendered back to the model as corrective feedback. */
+/** A single ledger entry that could not be resolved, rendered back to the model as corrective feedback. */
 export interface LedgerResolutionError {
   Side: "Give" | "Take";
-  Term: string;
-  Name?: string;
+  /** The raw authored string, quoted back verbatim so the model sees exactly what it wrote. */
+  Entry: string;
   Problem: string;
-  /** Closest available names from the relevant menu category (when the miss was a name lookup). */
+  /** Closest available terms/names for that side (when the miss was a lookup). */
   Suggestions?: string[];
 }
 
-/** The resolved ledger: directed trade items + promises, plus any per-term resolution errors. */
+/** The resolved ledger: directed trade items + promises, plus any per-entry resolution errors. */
 export interface ResolvedLedger {
   items: AuthoredTradeItem[];
   promises: PromiseTerm[];
@@ -168,7 +83,7 @@ const TERM_MAP: Record<LedgerTermLabel, ResolvedKind> = {
   "Won't settle near you": { kind: "promise", promiseType: "EXPANSION" },
   "Won't buy plots near your cities": { kind: "promise", promiseType: "BORDER" },
   "Won't dig your antiquity sites": { kind: "promise", promiseType: "NO_DIGGING" },
-  // Omitted to match LEDGER_TERMS — the tactical AI doesn't honor these (see note above):
+  // Omitted to match LEDGER_TERMS — the tactical AI doesn't honor these (see note there):
   // "Won't spread my religion to you": { kind: "promise", promiseType: "NO_CONVERT" },
   // "Won't spy on you": { kind: "promise", promiseType: "SPY" },
   // "Won't bully your protected city-state": { kind: "promise", promiseType: "BULLY_CITY_STATE" },
@@ -179,7 +94,7 @@ const TERM_MAP: Record<LedgerTermLabel, ResolvedKind> = {
 /**
  * Toggle/agreement itemType → its `CandidateLegality` slot on a {@link NormalizedSideRange}. Built from
  * the single source of truth (`AGREEMENT_METADATA`) so the resolver's legality gate keys off the exact
- * same field the rendered menu ({@link formatSideMenu}) filters on. Named items (resources/cities/techs/
+ * same field the rendered menu (`formatSideMenu`) filters on. Named items (resources/cities/techs/
  * third-party/votes) are NOT here — those are gated inside {@link lookupByName} against their own `.legal`.
  */
 const RANGE_KEY_BY_ITEM_TYPE = new Map<TradeItem["itemType"], string>(
@@ -216,39 +131,6 @@ function availabilityProblem(
   return cand?.reasons && cand.reasons.length > 0 ? cand.reasons.join("; ") : generic;
 }
 
-/** Levenshtein distance between two strings (small inputs; iterative DP). */
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  let prev = Array.from({ length: n + 1 }, (_, i) => i);
-  let curr = new Array<number>(n + 1);
-  for (let i = 1; i <= m; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-    }
-    [prev, curr] = [curr, prev];
-  }
-  return prev[n];
-}
-
-/** Up to `limit` available names ranked closest to `query` (substring matches first, then distance). */
-function closestNames(names: string[], query: string, limit = 3): string[] {
-  const q = query.toLowerCase();
-  return names
-    .map((name) => {
-      const lower = name.toLowerCase();
-      const contains = lower.includes(q) || q.includes(lower);
-      return { name, score: levenshtein(lower, q) - (contains ? 100 : 0) };
-    })
-    .sort((a, b) => a.score - b.score)
-    .slice(0, limit)
-    .map((r) => r.name);
-}
-
 /** A named candidate row from a side range (resources/cities/techs/third-party/votes). Carries the
  *  candidate's own structural legality so an off-menu (illegal) named term is rejected like a toggle. */
 interface NamedCandidate {
@@ -257,33 +139,28 @@ interface NamedCandidate {
   reasons?: string[];
 }
 
-/** Find a candidate by case-insensitive exact name; first match wins. */
-function findByName<T extends NamedCandidate>(list: readonly T[], name: string): T | undefined {
-  const q = name.toLowerCase();
-  return list.find((c) => (c.name ?? "").toLowerCase() === q);
-}
-
 /**
- * Resolve a named candidate against one category of a side's range, with uniform feedback: a missing
- * name, an empty category, or an unknown name (with the closest available suggestions). Returns the
- * matched candidate, or a `problem` (+ suggestions) for the caller to record as a {@link LedgerResolutionError}.
+ * Resolve a named candidate against one category of a side's range, with uniform feedback: an empty
+ * category, or an unknown name (with the closest available suggestions), or an off-menu name flagged
+ * untradeable. Returns the matched candidate, or a `problem` (+ suggestions) for the caller to record.
+ *
+ * For resources/cities/techs/votes the grammar's `matchNamed` has already proven the name resolves, so
+ * only the `legal === false` gate below is reachable; for third-party peace/war the target arrives
+ * unvalidated from the phrase regex, so the empty/not-found branches are load-bearing.
  */
 function lookupByName<T extends NamedCandidate>(
   list: readonly T[],
   name: string | undefined,
-  labels: { term: string; noun: string; nounPlural: string },
+  labels: { noun: string; nounPlural: string },
   sideLower: string
 ): { match: T } | { problem: string; suggestions?: string[] } {
-  if (!name) return { problem: `${labels.term} needs a \`Name\` from the menu.` };
+  if (!name) return { problem: `name the ${labels.noun} from the menu.` };
   if (list.length === 0) return { problem: `there are no ${labels.nounPlural} available to ${sideLower}.` };
   const match = findByName(list, name);
   if (!match) {
     return {
       problem: `no ${labels.noun} named "${name}" is available to ${sideLower}.`,
-      suggestions: closestNames(
-        list.map((c) => c.name ?? "").filter((n) => n.length > 0),
-        name
-      ),
+      suggestions: closestNames(namesOf(list), name),
     };
   }
   // On the menu by name but flagged untradeable in the current game state (the menu shows only legal
@@ -297,19 +174,30 @@ function lookupByName<T extends NamedCandidate>(
   return { match };
 }
 
+/** Render resolution errors back to the model as a single corrective block (no deal was written). */
+export function formatResolutionErrors(errors: LedgerResolutionError[]): string {
+  const lines = errors.map((e) => {
+    const head = `- [${e.Side}] "${e.Entry}": ${e.Problem}`;
+    return e.Suggestions && e.Suggestions.length > 0
+      ? `${head} Did you mean: ${e.Suggestions.join(", ")}?`
+      : head;
+  });
+  return ["Could not author the deal. Fix these entries and call propose-deal again:", ...lines].join("\n");
+}
+
 /**
- * Resolve a Give/Take ledger into directed trade items + promises with IDs. `Give` terms run
- * agent→counterpart and resolve names against the agent's own range; `Take` terms run
- * counterpart→agent and resolve against the counterpart's range. Names are matched case-insensitively
- * against the rendered menu; misses become {@link LedgerResolutionError}s with suggestions instead of
- * silently dropped terms. Each resolved term is also gated against that side range's `.legal`/`.available`
- * flags (the same ones the menu filters on), so an off-menu term becomes a correctable error here rather
- * than an untradeable-item failure at storage; an absent range (inspection failed) skips the gate and
- * relies on `appendDealProposal`'s re-inspection as the backstop.
+ * Resolve a Give/Take ledger of plain strings into directed trade items + promises with IDs. `Give`
+ * entries run agent→counterpart and resolve against the agent's own range; `Take` entries run
+ * counterpart→agent and resolve against the counterpart's range. Each string is parsed by
+ * {@link parseEntry}; misses become {@link LedgerResolutionError}s with suggestions instead of silently
+ * dropped terms. Each resolved term is also gated against that side range's `.legal`/`.available` flags
+ * (the same ones the menu filters on), so an off-menu term becomes a correctable error here rather than
+ * an untradeable-item failure at storage; an absent range (inspection failed) skips the gate and relies
+ * on `appendDealProposal`'s re-inspection as the backstop.
  */
 export function resolveLedger(args: {
-  give: LedgerTerm[];
-  take: LedgerTerm[];
+  give: string[];
+  take: string[];
   agentID: number;
   counterpartID: number;
   giveRange: NormalizedSideRange | undefined;
@@ -325,41 +213,40 @@ export function resolveLedger(args: {
 
   const resolveSide = (
     side: "Give" | "Take",
-    terms: LedgerTerm[],
+    terms: string[],
     giverID: number,
     receiverID: number,
     range: NormalizedSideRange | undefined
   ): void => {
-    for (const t of terms) {
-      const rawTerm = t.Term;
-      const term = canonicalLedgerTerm(rawTerm) ?? rawTerm;
-      const mapped = TERM_MAP[term as LedgerTermLabel] as ResolvedKind | undefined;
+    for (const raw of terms) {
       const fail = (problem: string, suggestions?: string[]): void => {
-        errors.push({ Side: side, Term: term, Name: t.Name, Problem: problem, Suggestions: suggestions });
+        errors.push({ Side: side, Entry: raw, Problem: problem, Suggestions: suggestions });
       };
 
-      if (!mapped) {
-        errors.push({ Side: side, Term: rawTerm, Name: t.Name, Problem: "unknown ledger term." });
+      const parsedEntry = parseEntry(raw, range, promiseTargets);
+      if ("problem" in parsedEntry) {
+        fail(parsedEntry.problem, parsedEntry.suggestions);
         continue;
       }
+      const { term, name, amount } = parsedEntry.parsed;
+      // parseEntry only ever yields a valid LedgerTermLabel, so the mapping is always present.
+      const mapped = TERM_MAP[term];
 
       if (mapped.kind === "promise") {
         const promiseType = mapped.promiseType;
         const promise: PromiseTerm = { promiserID: giverID, recipientID: receiverID, promiseType };
         if (TARGETED_PROMISE_TYPES.has(promiseType)) {
-          if (!t.Name) {
-            fail("this promise needs a third-party `Name` from the menu.");
+          if (!name) {
+            fail(`name the ally civilization, e.g. "${targetExample(term)}".`);
             continue;
           }
           // Coop War targets a major the giver can validly go to war alongside.
-          const eligible = promiseTargets.filter(
-            (pt) => pt.kind === "major" && pt.coopWarEligible !== false
-          );
-          const match = findByName(eligible, t.Name);
+          const eligible = promiseTargets.filter((pt) => pt.kind === "major" && pt.coopWarEligible !== false);
+          const match = findByName(eligible, name);
           if (!match) {
             fail(
-              `no eligible target named "${t.Name}" for this promise.`,
-              closestNames(eligible.map((e) => e.name ?? `player ${e.playerID}`), t.Name)
+              `no eligible target named "${name}" for this promise.`,
+              closestNames(eligible.map((e) => e.name ?? `player ${e.playerID}`), name)
             );
             continue;
           }
@@ -375,8 +262,8 @@ export function resolveLedger(args: {
       switch (itemType) {
         case "GOLD":
         case "GOLD_PER_TURN": {
-          if (t.Amount === undefined || t.Amount <= 0) {
-            fail(`${term} needs a positive \`Amount\`.`);
+          if (amount === undefined || amount <= 0) {
+            fail(`${term} needs a positive whole amount, e.g. "${term} 100".`);
             continue;
           }
           const problem = availabilityProblem(range, itemType, side.toLowerCase());
@@ -384,26 +271,26 @@ export function resolveLedger(args: {
             fail(problem);
             continue;
           }
-          items.push({ ...base, amount: t.Amount });
+          items.push({ ...base, amount });
           break;
         }
         case "RESOURCES": {
-          const r = lookupByName(range?.resources ?? [], t.Name, { term: "Resource", noun: "resource", nounPlural: "resources" }, side.toLowerCase());
+          const r = lookupByName(range?.resources ?? [], name, { noun: "resource", nounPlural: "resources" }, side.toLowerCase());
           if (!("match" in r)) {
             fail(r.problem, r.suggestions);
             continue;
           }
           // Quantity defaults to 1; reject non-positive amounts and cap to what the side actually holds.
-          const qty = t.Amount ?? 1;
+          const qty = amount ?? 1;
           if (qty <= 0) {
-            fail("Resource quantity (`Amount`) must be a positive number.");
+            fail("resource quantity must be a positive whole number.");
             continue;
           }
           items.push({ ...base, resourceID: r.match.resourceID, quantity: Math.min(qty, r.match.quantityAvailable) });
           break;
         }
         case "CITIES": {
-          const c = lookupByName(range?.cities ?? [], t.Name, { term: "City", noun: "city", nounPlural: "cities" }, side.toLowerCase());
+          const c = lookupByName(range?.cities ?? [], name, { noun: "city", nounPlural: "cities" }, side.toLowerCase());
           if (!("match" in c)) {
             fail(c.problem, c.suggestions);
             continue;
@@ -412,7 +299,7 @@ export function resolveLedger(args: {
           break;
         }
         case "TECHS": {
-          const tech = lookupByName(range?.techs ?? [], t.Name, { term: "Technology", noun: "technology", nounPlural: "technologies" }, side.toLowerCase());
+          const tech = lookupByName(range?.techs ?? [], name, { noun: "technology", nounPlural: "technologies" }, side.toLowerCase());
           if (!("match" in tech)) {
             fail(tech.problem, tech.suggestions);
             continue;
@@ -423,7 +310,7 @@ export function resolveLedger(args: {
         case "THIRD_PARTY_PEACE":
         case "THIRD_PARTY_WAR": {
           const list = itemType === "THIRD_PARTY_PEACE" ? range?.thirdPartyPeace : range?.thirdPartyWar;
-          const tp = lookupByName(list ?? [], t.Name, { term, noun: "third party", nounPlural: `${term.toLowerCase()} targets` }, side.toLowerCase());
+          const tp = lookupByName(list ?? [], name, { noun: "third party", nounPlural: `${term.toLowerCase()} targets` }, side.toLowerCase());
           if (!("match" in tp)) {
             fail(tp.problem, tp.suggestions);
             continue;
@@ -432,7 +319,7 @@ export function resolveLedger(args: {
           break;
         }
         case "VOTE_COMMITMENT": {
-          const v = lookupByName(range?.voteCommitments ?? [], t.Name, { term: "Vote Commitment", noun: "vote commitment", nounPlural: "vote commitments" }, side.toLowerCase());
+          const v = lookupByName(range?.voteCommitments ?? [], name, { noun: "vote commitment", nounPlural: "vote commitments" }, side.toLowerCase());
           if (!("match" in v)) {
             fail(v.problem, v.suggestions);
             continue;
@@ -472,15 +359,4 @@ export function resolveLedger(args: {
   resolveSide("Take", take, counterpartID, agentID, takeRange);
 
   return { items, promises, errors };
-}
-
-/** Render resolution errors back to the model as a single corrective block (no deal was written). */
-export function formatResolutionErrors(errors: LedgerResolutionError[]): string {
-  const lines = errors.map((e) => {
-    const head = `- [${e.Side}] ${e.Term}${e.Name ? ` "${e.Name}"` : ""}: ${e.Problem}`;
-    return e.Suggestions && e.Suggestions.length > 0
-      ? `${head} Did you mean: ${e.Suggestions.join(", ")}?`
-      : head;
-  });
-  return ["Could not author the deal. Fix these terms and call propose-deal again:", ...lines].join("\n");
 }

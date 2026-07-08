@@ -6,7 +6,8 @@
  * composes these: {@link NegotiatorInput} / {@link NegotiatorMove} shape the move it produces,
  * the `format*` / `summarize*` helpers render the model context and the diplomat-facing
  * summary, and {@link createNegotiatorTerminalTools} builds the three terminal tools
- * (accept / propose / reject) that persist the chosen move through the durable store.
+ * (accept / propose / reject) that persist the chosen move through the durable store. The
+ * GIVE/TAKE menu renderer lives in `./give-take-menu.ts` (re-exported below).
  */
 
 import { z } from "zod";
@@ -29,38 +30,20 @@ import {
   type InspectDealResult,
   type EnactDealResult,
 } from "../../utils/diplomacy/deal.js";
+import { itemTypeLabel } from "../../../../mcp-server/dist/utils/deal-format.js";
 import {
-  isSentinel,
-  itemTypeLabel,
-} from "../../../../mcp-server/dist/utils/deal-format.js";
-import {
-  LedgerTermSchema,
   resolveLedger,
   formatResolutionErrors,
 } from "./ledger-resolver.js";
+import type { DealPayload } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import {
-  durationForPromiseType,
-  AGREEMENT_METADATA,
-  PROMISE_METADATA,
-  PROMISE_TYPES,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
-import type {
-  DealDurations,
-  DealPayload,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
-import type { NormalizedSideRange } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
-import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
-import {
-  civNameFor,
-  detailClause,
-  durationPhrase,
   endpoints,
   formatDealLedger,
   ledgerContextFor,
-  renderPromiseDuration,
-  thirdPartyRelationshipBullets,
   type DealLedgerOptions,
 } from "./deal-ledger.js";
+
+export { formatGiveTakeLedger } from "./give-take-menu.js";
 
 const logger = createLogger("negotiator");
 
@@ -113,194 +96,6 @@ export interface NegotiatorInput {
   upfrontInspection?: InspectDealResult;
   /** Set by the terminal tool the negotiator calls. */
   outcome?: NegotiatorMove;
-}
-
-/** A bare advisory-value phrase ("worth ~N to <civ>" / "no usable estimate"), or "" when absent. */
-function bareValue(value: number | undefined, receiverName: string): string {
-  if (value === undefined) return "";
-  return isSentinel(value) ? "no usable estimate" : `worth ~${Math.round(value)} to ${receiverName}`;
-}
-
-/** A parenthesized advisory-value clause for a menu row, or "" when no estimate is available. */
-function valueClause(value: number | undefined, receiverName: string): string {
-  return detailClause(bareValue(value, receiverName));
-}
-
-/** Append a "### <title>" block when it has rows. The leading newline (the menu is join("\n")-ed)
- * puts one blank line BEFORE each header and none after; the final .trim() drops any leading blank. */
-function pushMenuCategory(into: string[], title: string, rows: string[]): void {
-  if (rows.length > 0) into.push(`\n### ${title}`, ...rows);
-}
-
-/**
- * Render one side's tradable range as a first-person "What <Giver> Can Give" menu (only legal terms),
- * with the friendly term labels and entity NAMES the `propose-deal` tool expects, plus advisory value
- * (to the receiver), available counts, net income, and city population/HP. `receiverName` frames the
- * advisory values; `promiseTargets` drives the targeted-promise rows.
- */
-function formatSideMenu(
-  range: NormalizedSideRange,
-  giverName: string,
-  receiverName: string,
-  subline: string,
-  promiseTargets: InspectDealResult["promiseTargets"],
-  durations: DealDurations,
-  relBullets?: (targetName: string) => string[]
-): string {
-  const head = `## What ${giverName} Can Give`;
-  const out: string[] = [head, `- ${subline}`];
-
-  // Gold + gold per turn (net income shows how much GPT the side can sustain; GPT runs for a term).
-  const goldRows: string[] = [];
-  if (range.gold.available) goldRows.push(`- Gold (up to ${range.gold.max})`);
-  if (range.goldPerTurn.available) {
-    goldRows.push(`- Gold Per Turn${detailClause(
-      range.netGoldPerTurn !== undefined ? `${giverName}'s net income: ${range.netGoldPerTurn}/turn` : undefined,
-      durationPhrase("GOLD_PER_TURN", durations)
-    )}`);
-  }
-  pushMenuCategory(out, "Gold", goldRows);
-
-  // Resources, bucketed luxury then strategic (count + duration + advisory value).
-  const resourceRows = (category: "luxury" | "strategic"): string[] =>
-    range.resources
-      .filter((r) => r.legal && r.category === category)
-      .map((r) => {
-        return `- ${r.name ?? `Resource #${r.resourceID}`}${detailClause(
-          `${r.quantityAvailable} available`,
-          durationPhrase("RESOURCES", durations),
-          bareValue(r.valueToReceiver, receiverName)
-        )}`;
-      });
-  pushMenuCategory(out, "Luxury Resources", resourceRows("luxury"));
-  pushMenuCategory(out, "Strategic Resources", resourceRows("strategic"));
-
-  // World Congress vote commitments (votes + advisory value).
-  const voteRows = range.voteCommitments
-    .filter((v) => v.legal)
-    .map((v) => {
-      return `- ${v.name ?? `Resolution #${v.resolutionID}`}${detailClause(
-        `${v.numVotes} ${v.numVotes === 1 ? "vote" : "votes"}`,
-        bareValue(v.valueToReceiver, receiverName)
-      )}`;
-    });
-  pushMenuCategory(out, "World Congress", voteRows);
-
-  // Agreements: single-shot toggles + the four mutual pacts (tagged). Each shows its fixed term
-  // length where it carries one; mutual pacts are tagged and omit the (symmetric) advisory value.
-  const agreementRows = AGREEMENT_METADATA.flatMap(({ rangeKey, label, itemType, mutual }) => {
-    const cand = range[rangeKey as keyof NormalizedSideRange] as NormalizedSideRange["maps"] | undefined;
-    if (!cand?.legal) return [];
-    return [`- ${label}${detailClause(
-      mutual ? "Mutual" : undefined,
-      durationPhrase(itemType, durations),
-      mutual ? undefined : bareValue(cand.valueToReceiver, receiverName)
-    )}`];
-  });
-  pushMenuCategory(out, "Agreements", agreementRows);
-
-  // Cities (population + HP + advisory value).
-  const cityRows = range.cities
-    .filter((c) => c.legal)
-    .map((c) => {
-      return `- ${c.name}${detailClause(
-        c.population !== undefined ? `Population ${c.population}` : undefined,
-        c.hitPoints !== undefined && c.maxHitPoints !== undefined ? `HP ${c.hitPoints}/${c.maxHitPoints}` : undefined,
-        bareValue(c.valueToReceiver, receiverName)
-      )}`;
-    });
-  pushMenuCategory(out, "Cities", cityRows);
-
-  // Technologies.
-  const techRows = range.techs
-    .filter((t) => t.legal)
-    .map((t) => `- ${t.name ?? `Tech #${t.techID}`}${valueClause(t.valueToReceiver, receiverName)}`);
-  pushMenuCategory(out, "Technologies", techRows);
-
-  // Third-party peace & war (target civ names + advisory value; peace runs for the peace-deal term).
-  // Each legal target trails the two sides' public relationship to it (relBullets), indented.
-  const peaceDur = durationPhrase("THIRD_PARTY_PEACE", durations);
-  const tpBullets = (name: string | undefined): string[] => (name ? relBullets?.(name) ?? [] : []);
-  const tpRows = [
-    ...range.thirdPartyPeace
-      .filter((t) => t.legal)
-      .flatMap((t) => [
-        `- Third-Party Peace with ${t.name ?? `team ${t.teamID}`}${detailClause(
-          peaceDur,
-          bareValue(t.valueToReceiver, receiverName)
-        )}`,
-        ...tpBullets(t.name),
-      ]),
-    ...range.thirdPartyWar
-      .filter((t) => t.legal)
-      .flatMap((t) => [
-        `- Third-Party War on ${t.name ?? `team ${t.teamID}`}${valueClause(t.valueToReceiver, receiverName)}`,
-        ...tpBullets(t.name),
-      ]),
-  ];
-  pushMenuCategory(out, "Third-Party Peace & War", tpRows);
-
-  // Promises: the untargeted ones (with their term length), plus Coop War listing eligible major
-  // target NAMES and its preparation countdown. Only AI-honored promises are offered.
-  const promiseRows = PROMISE_TYPES.filter((t) => !PROMISE_METADATA[t].targeted).map(
-    (promiseType) =>
-      `- ${PROMISE_METADATA[promiseType].label}${detailClause(renderPromiseDuration(promiseType, durationForPromiseType(promiseType, durations)))}`
-  );
-  const coopTargets = (promiseTargets ?? []).filter((t) => t.kind === "major" && t.coopWarEligible !== false);
-  if (coopTargets.length) {
-    promiseRows.push(`- ${PROMISE_METADATA.COOP_WAR.label}${detailClause(
-      `targets: ${coopTargets.map((t) => t.name ?? `player ${t.playerID}`).join(", ")}`,
-      renderPromiseDuration("COOP_WAR", durationForPromiseType("COOP_WAR", durations))
-    )}`);
-    for (const t of coopTargets) promiseRows.push(...tpBullets(t.name));
-  }
-  pushMenuCategory(out, "Promises", promiseRows);
-
-  return out.join("\n").trim();
-}
-
-/**
- * Format the full first-person Give/Take ledger menu (context 2): what the negotiator's civ can GIVE
- * (its own tradable range) and what it can TAKE (the counterpart's range). Names and labels here are
- * exactly what the `propose-deal` tool expects, so this menu is a faithful template for the schema.
- */
-export function formatGiveTakeLedger(
-  inspection: InspectDealResult,
-  thread: EnvoyThread,
-  players?: PlayersReport
-): string {
-  const { agentID, counterpartID } = endpoints(thread);
-  const name = civNameFor(thread);
-  const ctx = ledgerContextFor(thread);
-  // Menu sub-bullets carry only the public relationship status (no set-relationship directive;
-  // that stays a deal-ledger detail), indented two spaces under the third-party candidate row.
-  const relBullets = (targetName: string) =>
-    thirdPartyRelationshipBullets(targetName, ctx, players, { indent: "  " });
-  const agentName = name(agentID);
-  const counterpartName = name(counterpartID);
-  const give = formatSideMenu(
-    inspection.tradableRange[String(agentID)],
-    agentName,
-    counterpartName,
-    `Potential terms ${agentName} (YOUR civ) can give ${counterpartName}`,
-    inspection.promiseTargets,
-    inspection,
-    relBullets
-  );
-  const take = formatSideMenu(
-    inspection.tradableRange[String(counterpartID)],
-    counterpartName,
-    agentName,
-    `Potential terms ${counterpartName} can give ${agentName} (YOUR civ)`,
-    inspection.promiseTargets,
-    inspection,
-    relBullets
-  );
-  return [
-    "Send NAMES exactly as written below. Term durations or vote counts are fixed.",
-    give,
-    take,
-  ].join("\n\n").trim();
 }
 
 /**
@@ -466,22 +261,24 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
     {
       name: "propose-deal",
       description:
-        "Present a new or counter deal offer. Author both Give (what your civ gives the counterpart) and Take (what the counterpart gives your civ) lists with EXACT term labels and names from the GIVE/TAKE menu. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
+        "Present a new or counter deal offer. Author two lists of plain strings: Give (what your civ gives the counterpart) and Take (what the counterpart gives your civ), each string a term copied from the GIVE/TAKE menu following the example on its heading. Provide an inward rationale for the diplomat and a single-sentence outward message to be voiced.",
       inputSchema: z.object({
         Rationale: z.string().describe("Inward reasoning for the diplomat (not voiced verbatim)."),
         Message: z
           .string()
           .describe("One single sentence the diplomat will voice to the counterpart."),
         Give: z
-          .array(LedgerTermSchema)
+          .array(z.string())
           .default([])
           .describe(
-            "Terms YOUR civ gives the counterpart. Use NAMES from the GIVE menu. Durations are fixed by the game."
+            "Terms YOUR civ gives the counterpart, one plain string per term copied from the GIVE menu. " +
+              'Follow the quoted example on each heading, e.g. "Gold 100", "Iron 2", "Open Borders", ' +
+              '"Third-Party Peace with <Civilization>". Append a whole number only for Gold, Gold Per Turn, or a resource quantity.'
           ),
         Take: z
-          .array(LedgerTermSchema)
+          .array(z.string())
           .default([])
-          .describe("Terms the counterpart gives YOUR civ. Use NAMES from the TAKE menu."),
+          .describe("Terms the counterpart gives YOUR civ, one plain string per term copied from the TAKE menu (same format as Give)."),
       }),
       execute: async (args, _parameters, options) => {
         const ni = input();

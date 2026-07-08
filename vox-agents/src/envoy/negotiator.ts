@@ -157,12 +157,12 @@ Your goal is to **call EXACTLY ONE terminal tool** after gathering sufficient in
 - Use the \`accept-deal\` tool to accept the on-the-table deal exactly as-is.
 - Use the \`reject-deal\` tool to decline the on-the-table deal exactly as-is.
 - Use the \`propose-deal\` tool to author a (counter) proposal. You must include a one-sentence outward \`Message\` for the diplomat to voice.
-  - Author by NAME using two lists: \`Give\` (what YOUR civ gives the counterpart) and \`Take\` (what the counterpart gives YOUR civ).
-    - Each ledger entry has \`Term\`, \`Name\`, and \`Amount\`. Copy each \`Term\` label and \`Name\` EXACTLY from the GIVE/TAKE menu. Never use numeric IDs.
-    - Gold, Gold Per Turn, and resources need an \`Amount\` for quantity.
-  - Joint wars needs a third-party Civilization Name from the menu.
-    - "${PROMISE_METADATA.COOP_WAR.label}" creates a joint war that begins after a short countdown. 
-    - Use Third-Party War to start a war right now.
+  - Author two string lists: \`Give\` (what YOUR civ gives the counterpart) and \`Take\` (what the counterpart gives YOUR civ).
+    - Each entry is ONE plain string. Follow the quoted example on each Tradable Terms heading.
+    - Append a number only for Gold, Gold Per Turn, or a resource quantity (e.g. "Gold 100", "Iron 2").
+  - Joint wars need a third-party Civilization Name from the menu.
+    - "${PROMISE_METADATA.COOP_WAR.label} on <Civilization>" creates a joint war that begins after a short countdown.
+    - "Third-Party War on <Civilization>" starts a war right now.
 
 # Resources
 You can access additional information by calling the following tools.
