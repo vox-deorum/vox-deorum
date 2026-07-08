@@ -569,6 +569,10 @@
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
                   },
+                  "name": {
+                    "description": "Display name of the referenced entity (resource/city/tech/team/resolution), auto-filled server-side from the inspection so read surfaces label it without a live range; not author-set",
+                    "type": "string"
+                  },
                   "resourceID": {
                     "description": "RESOURCES: the resource type ID",
                     "type": "integer",
@@ -1561,6 +1565,10 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
+                  },
+                  "name": {
+                    "description": "Display name of the referenced entity (resource/city/tech/team/resolution), auto-filled server-side from the inspection so read surfaces label it without a live range; not author-set",
+                    "type": "string"
                   },
                   "resourceID": {
                     "description": "RESOURCES: the resource type ID",
