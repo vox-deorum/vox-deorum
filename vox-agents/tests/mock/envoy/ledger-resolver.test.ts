@@ -202,6 +202,99 @@ describe('resolveLedger mutual agreements', () => {
   });
 });
 
+describe('resolveLedger menu-legality gate', () => {
+  it('rejects an off-menu term and attributes the error to it, not to a legal sibling (reported bug)', () => {
+    // Un-met civs: embassy is legal (on the menu), a Declaration of Friendship is not. The model authored
+    // the off-menu DoF alongside two legal embassies. The DoF must be the (only) rejected term; the
+    // embassies must resolve. Previously the DoF slipped through and the game misattributed the failure.
+    const giveRange = sideRange({
+      declarationOfFriendship: { legal: false, reasons: ['Not tradeable under current game state'] },
+    });
+    const { items, errors } = resolve(
+      [{ Term: 'Allow Embassy' }, { Term: 'Declaration of Friendship' }],
+      [{ Term: 'Allow Embassy' }],
+      { giveRange }
+    );
+    expect(items).toEqual([
+      { fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'ALLOW_EMBASSY' },
+      { fromPlayerID: COUNTERPART, toPlayerID: AGENT, itemType: 'ALLOW_EMBASSY' },
+    ]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({ Side: 'Give', Term: 'Declaration of Friendship' });
+    expect(errors[0].Problem).toContain('Not tradeable under current game state');
+    expect(errors.some((e) => e.Term === 'Allow Embassy')).toBe(false);
+  });
+
+  it('passes a toggle that is legal on the menu', () => {
+    const { items, errors } = resolve([{ Term: 'Allow Embassy' }]);
+    expect(errors).toEqual([]);
+    expect(items).toEqual([{ fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'ALLOW_EMBASSY' }]);
+  });
+
+  it('rejects a toggle flagged illegal on the menu', () => {
+    const giveRange = sideRange({ allowEmbassy: { legal: false, reasons: ['They lack the required tech'] } });
+    const { items, errors } = resolve([{ Term: 'Allow Embassy' }], [], { giveRange });
+    expect(items).toEqual([]);
+    expect(errors[0]).toMatchObject({ Side: 'Give', Term: 'Allow Embassy' });
+    expect(errors[0].Problem).toContain('tech');
+  });
+
+  it('rejects an optional toggle the ruleset hides from the range (absent key = not legal)', () => {
+    // Default sideRange() omits researchAgreement (ruleset-hidden). Authoring it must be rejected cleanly.
+    const { items, errors } = resolve([{ Term: 'Research Agreement' }]);
+    expect(items).toEqual([]);
+    expect(errors[0]).toMatchObject({ Side: 'Give', Term: 'Research Agreement' });
+  });
+
+  it('passes an optional toggle when the range includes it as legal', () => {
+    const giveRange = sideRange({ researchAgreement: { legal: true, reasons: [] } });
+    const { items, errors } = resolve([{ Term: 'Research Agreement' }], [], { giveRange });
+    expect(errors).toEqual([]);
+    expect(items).toEqual([{ fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'RESEARCH_AGREEMENT' }]);
+  });
+
+  it('gates gold on availability', () => {
+    const giveRange = sideRange({ gold: { available: false, max: 0, reasons: ['You have no gold to trade'] } });
+    const { items, errors } = resolve([{ Term: 'Gold', Amount: 50 }], [], { giveRange });
+    expect(items).toEqual([]);
+    expect(errors[0].Problem).toContain('gold');
+  });
+
+  it('rejects a named candidate flagged illegal on the menu', () => {
+    const giveRange = sideRange({ techs: [{ techID: 1, name: 'Banking', legal: false, reasons: ['Brokering is blocked'] }] });
+    const { items, errors } = resolve([{ Term: 'Technology', Name: 'Banking' }], [], { giveRange });
+    expect(items).toEqual([]);
+    expect(errors[0].Problem).toContain('not available');
+  });
+
+  it('validates each authored side of a mutual pact independently (no double-report)', () => {
+    const giveRange = sideRange({ defensivePact: { legal: false, reasons: ['Already allied'] } });
+    const takeRange = sideRange({ defensivePact: { legal: true, reasons: [] } });
+    const { items, errors } = resolve([{ Term: 'Defensive Pact' }], [{ Term: 'Defensive Pact' }], { giveRange, takeRange });
+    expect(items).toEqual([{ fromPlayerID: COUNTERPART, toPlayerID: AGENT, itemType: 'DEFENSIVE_PACT' }]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].Side).toBe('Give');
+  });
+
+  it('degrades to pass-through when the side range is unavailable (inspection failed)', () => {
+    // Call resolveLedger directly so the undefined range is not defaulted by the test helper.
+    const { items, errors } = resolveLedger({
+      give: [{ Term: 'Allow Embassy' }, { Term: 'Gold', Amount: 50 }],
+      take: [],
+      agentID: AGENT,
+      counterpartID: COUNTERPART,
+      giveRange: undefined,
+      takeRange: undefined,
+      promiseTargets: [],
+    });
+    expect(errors).toEqual([]);
+    expect(items).toEqual([
+      { fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'ALLOW_EMBASSY' },
+      { fromPlayerID: AGENT, toPlayerID: COUNTERPART, itemType: 'GOLD', amount: 50 },
+    ]);
+  });
+});
+
 describe('resolveLedger promises', () => {
   it('emits an untargeted promise directed by side', () => {
     const { promises } = resolve([{ Term: PROMISE_METADATA.MILITARY.label }]);

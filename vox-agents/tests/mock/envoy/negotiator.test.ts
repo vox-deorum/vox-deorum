@@ -90,6 +90,23 @@ const emptyInspection = {
   tradableRange: { '1': emptySideRange(), '3': emptySideRange() },
 };
 
+/** A side range where every toggle/gold is legal/available — for tests that author an ON-MENU term and
+ *  need to reach the code past resolution (the resolver now gates authored terms against the menu). */
+function legalSideRange() {
+  const r = emptySideRange();
+  r.gold = { available: true, max: 500, reasons: [] };
+  r.goldPerTurn = { available: true, reasons: [] };
+  for (const key of ['maps', 'allowEmbassy', 'openBorders', 'declarationOfFriendship', 'defensivePact', 'researchAgreement', 'peaceTreaty', 'vassalage', 'vassalageRevoke'] as const) {
+    (r as any)[key] = { legal: true, reasons: [] };
+  }
+  return r;
+}
+
+const legalInspection = {
+  items: [], promises: [], promiseTargets: [],
+  tradableRange: { '1': legalSideRange(), '3': legalSideRange() },
+};
+
 /** An inspection whose GIVE side (seat 3) holds a named resource, so name resolution can be exercised. */
 const namedInspection = {
   items: [],
@@ -184,7 +201,7 @@ describe('propose-deal', () => {
   it('resolves a Give term by name/amount into a directed deal-proposal (opening)', async () => {
     mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
     mcp.respondWith('append-message', structuredResult({ ID: 11, Turn: 5 }));
-    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: emptyInspection });
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: legalInspection });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
     await run(tools['propose-deal'], {
@@ -211,7 +228,7 @@ describe('propose-deal', () => {
     mcp.respondWith('append-message', structuredResult({ ID: 12, Turn: 5 }));
     const input = negotiatorInput({
       activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } },
-      upfrontInspection: emptyInspection,
+      upfrontInspection: legalInspection,
     });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
@@ -262,7 +279,7 @@ describe('propose-deal', () => {
       promises: [],
       tradableRange: {},
     }));
-    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: emptyInspection });
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: legalInspection });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
     const msg = await run(tools['propose-deal'], {
@@ -280,7 +297,7 @@ describe('propose-deal', () => {
 
   it('does not create an opening proposal while another proposal is open', async () => {
     setOpenProposal();
-    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: emptyInspection });
+    const input = negotiatorInput({ intent: 'open trade', upfrontInspection: legalInspection });
     const tools = createNegotiatorTerminalTools(makeContext(input));
 
     const msg = await run(tools['propose-deal'], {

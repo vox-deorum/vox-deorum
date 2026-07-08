@@ -9,16 +9,22 @@
  * counterpart gives its civ). This module resolves each name against the upfront `inspect-deal` tradable
  * range (the same menu it was shown) and reports precise, correctable errors — unknown/misspelled names
  * with the closest available suggestions, or whole categories that are empty on that side — so a failed
- * proposal can be fixed without ever exposing numeric IDs to the model. It performs NO legality checks;
- * structural legality stays in `appendDealProposal` (which inspects and gates before storing).
+ * proposal can be fixed without ever exposing numeric IDs to the model. It also gates each authored term
+ * against that same range's `.legal`/`.available` flags (the exact flags the rendered menu filters on),
+ * so the model can only author terms that were actually on its menu; an off-menu term (e.g. a Declaration
+ * of Friendship with an un-met civ) is rejected here, up front, instead of slipping through to
+ * `appendDealProposal` where the game reports it untradeable — often with the reason misattributed to a
+ * different item in the same deal. `appendDealProposal` still re-inspects and hard-gates as the backstop;
+ * when the upfront range is unavailable (inspection failed) this module degrades to pass-through.
  */
 
 import { z } from "zod";
 import type {
+  CandidateLegality,
   NormalizedSideRange,
   PromiseTargetInfo,
 } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
-import { TARGETED_PROMISE_TYPES } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import { AGREEMENT_METADATA, TARGETED_PROMISE_TYPES } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
   AuthoredTradeItem,
   PromiseTerm,
@@ -170,6 +176,46 @@ const TERM_MAP: Record<LedgerTermLabel, ResolvedKind> = {
   "Will join a cooperative war": { kind: "promise", promiseType: "COOP_WAR" },
 };
 
+/**
+ * Toggle/agreement itemType → its `CandidateLegality` slot on a {@link NormalizedSideRange}. Built from
+ * the single source of truth (`AGREEMENT_METADATA`) so the resolver's legality gate keys off the exact
+ * same field the rendered menu ({@link formatSideMenu}) filters on. Named items (resources/cities/techs/
+ * third-party/votes) are NOT here — those are gated inside {@link lookupByName} against their own `.legal`.
+ */
+const RANGE_KEY_BY_ITEM_TYPE = new Map<TradeItem["itemType"], string>(
+  AGREEMENT_METADATA.map((a) => [a.itemType, a.rangeKey])
+);
+
+/**
+ * The reason an authored toggle/gold term is NOT available to author against the given side range, or
+ * `undefined` when it is available (or cannot be judged). This is the author-time mirror of the menu's
+ * `.legal`/`.available` filter:
+ *  - an ABSENT range means the upfront inspection failed (no menu was shown), so there is no ground truth
+ *    to enforce — return `undefined` and let `appendDealProposal`'s own inspection be the backstop;
+ *  - gold/gold-per-turn gate on `range.gold.available` / `range.goldPerTurn.available`;
+ *  - a toggle whose candidate is present-and-illegal — or absent entirely (a ruleset-hidden research
+ *    agreement / vassalage the side can never offer) — is rejected, carrying the candidate's own reason
+ *    line when the game gave one.
+ */
+function availabilityProblem(
+  range: NormalizedSideRange | undefined,
+  itemType: TradeItem["itemType"],
+  sideLower: string
+): string | undefined {
+  if (!range) return undefined;
+  const generic = `not available to ${sideLower} under the current game state`;
+  if (itemType === "GOLD" || itemType === "GOLD_PER_TURN") {
+    const slot = itemType === "GOLD" ? range.gold : range.goldPerTurn;
+    if (slot.available) return undefined;
+    return slot.reasons.length > 0 ? slot.reasons.join("; ") : generic;
+  }
+  const rangeKey = RANGE_KEY_BY_ITEM_TYPE.get(itemType);
+  if (!rangeKey) return undefined; // named items are gated in lookupByName instead
+  const cand = range[rangeKey as keyof NormalizedSideRange] as CandidateLegality | undefined;
+  if (cand?.legal) return undefined;
+  return cand?.reasons && cand.reasons.length > 0 ? cand.reasons.join("; ") : generic;
+}
+
 /** Levenshtein distance between two strings (small inputs; iterative DP). */
 function levenshtein(a: string, b: string): number {
   const m = a.length;
@@ -203,9 +249,12 @@ function closestNames(names: string[], query: string, limit = 3): string[] {
     .map((r) => r.name);
 }
 
-/** A named candidate row from a side range (resources/cities/techs/third-party/votes). */
+/** A named candidate row from a side range (resources/cities/techs/third-party/votes). Carries the
+ *  candidate's own structural legality so an off-menu (illegal) named term is rejected like a toggle. */
 interface NamedCandidate {
   name?: string;
+  legal?: boolean;
+  reasons?: string[];
 }
 
 /** Find a candidate by case-insensitive exact name; first match wins. */
@@ -237,6 +286,14 @@ function lookupByName<T extends NamedCandidate>(
       ),
     };
   }
+  // On the menu by name but flagged untradeable in the current game state (the menu shows only legal
+  // named candidates, so this catches an off-menu one the model named anyway). `legal` is undefined only
+  // for bare-name test lists — real inspect-deal candidates always carry it — so this never over-rejects.
+  if (match.legal === false) {
+    return {
+      problem: `${labels.noun} "${name}" is not available to ${sideLower}: ${(match.reasons ?? []).join("; ") || "not tradeable under current game state"}`,
+    };
+  }
   return { match };
 }
 
@@ -245,7 +302,10 @@ function lookupByName<T extends NamedCandidate>(
  * agent→counterpart and resolve names against the agent's own range; `Take` terms run
  * counterpart→agent and resolve against the counterpart's range. Names are matched case-insensitively
  * against the rendered menu; misses become {@link LedgerResolutionError}s with suggestions instead of
- * silently dropped terms. No legality is checked here — that happens at storage time.
+ * silently dropped terms. Each resolved term is also gated against that side range's `.legal`/`.available`
+ * flags (the same ones the menu filters on), so an off-menu term becomes a correctable error here rather
+ * than an untradeable-item failure at storage; an absent range (inspection failed) skips the gate and
+ * relies on `appendDealProposal`'s re-inspection as the backstop.
  */
 export function resolveLedger(args: {
   give: LedgerTerm[];
@@ -319,6 +379,11 @@ export function resolveLedger(args: {
             fail(`${term} needs a positive \`Amount\`.`);
             continue;
           }
+          const problem = availabilityProblem(range, itemType, side.toLowerCase());
+          if (problem) {
+            fail(problem);
+            continue;
+          }
           items.push({ ...base, amount: t.Amount });
           break;
         }
@@ -386,10 +451,19 @@ export function resolveLedger(args: {
           });
           break;
         }
-        default:
+        default: {
           // Single-shot toggles (embassy, open borders, maps, mutual agreements, vassalage): no data.
+          // Gate against the authored side's menu legality so the model can't author an off-menu toggle
+          // (e.g. a Declaration of Friendship with an un-met civ) that would later fail inspection with a
+          // reason misattributed to another item in the deal. An absent range degrades to pass-through.
+          const problem = availabilityProblem(range, itemType, side.toLowerCase());
+          if (problem) {
+            fail(problem);
+            continue;
+          }
           items.push(base);
           break;
+        }
       }
     }
   };
