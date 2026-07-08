@@ -427,6 +427,13 @@ export interface SessionStatus {
    * meaningful once `state === 'stopped'`.
    */
   succeeded?: boolean;
+
+  /**
+   * Whether the session is paused. Orthogonal to `state` (which stays
+   * `'running'` while paused): the agent loops are held in place, so no new LLM
+   * runs start and the game stalls, but nothing is aborted.
+   */
+  paused?: boolean;
 }
 
 /**
@@ -509,6 +516,30 @@ export interface StopSessionResponse {
   success: boolean;
   /** Success message */
   message: string;
+}
+
+/**
+ * POST /api/session/pause response
+ */
+export interface PauseSessionResponse {
+  /** Whether the pause was applied */
+  success: boolean;
+  /** Success message */
+  message: string;
+  /** Resulting paused state (echoed so the UI can reconcile immediately) */
+  paused: boolean;
+}
+
+/**
+ * POST /api/session/resume response
+ */
+export interface ResumeSessionResponse {
+  /** Whether the resume was applied */
+  success: boolean;
+  /** Success message */
+  message: string;
+  /** Resulting paused state (echoed so the UI can reconcile immediately) */
+  paused: boolean;
 }
 
 /**

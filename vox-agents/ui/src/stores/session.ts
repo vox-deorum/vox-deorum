@@ -94,6 +94,42 @@ export async function stopSession() {
 }
 
 /**
+ * Pause the current session (no new LLM runs; the game stalls in place)
+ */
+export async function pauseSession() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    await apiClient.pauseSession();
+    await fetchSessionStatus();
+  } catch (err: any) {
+    error.value = err.message || 'Failed to pause session';
+    throw err;
+  } finally {
+    loading.value = false;
+  }
+}
+
+/**
+ * Resume a paused session
+ */
+export async function resumeSession() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    await apiClient.resumeSession();
+    await fetchSessionStatus();
+  } catch (err: any) {
+    error.value = err.message || 'Failed to resume session';
+    throw err;
+  } finally {
+    loading.value = false;
+  }
+}
+
+/**
  * Clean up on unmount
  */
 export function cleanup() {

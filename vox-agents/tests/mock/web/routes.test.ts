@@ -309,6 +309,48 @@ describe('session routes', () => {
     });
   });
 
+  describe('POST /api/session/pause', () => {
+    it('returns 404 when there is no active session', async () => {
+      vi.spyOn(sessionRegistry, 'getActive').mockReturnValue(undefined);
+      const res = await request(app).post('/api/session/pause');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toMatch(/no active/i);
+    });
+
+    it('pauses the active session and echoes the paused state', async () => {
+      const pause = vi.fn(() => {});
+      vi.spyOn(sessionRegistry, 'getActive').mockReturnValue({
+        id: 's1', pause, isPaused: () => true,
+      } as never);
+      const res = await request(app).post('/api/session/pause');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.paused).toBe(true);
+      expect(pause).toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /api/session/resume', () => {
+    it('returns 404 when there is no active session', async () => {
+      vi.spyOn(sessionRegistry, 'getActive').mockReturnValue(undefined);
+      const res = await request(app).post('/api/session/resume');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toMatch(/no active/i);
+    });
+
+    it('resumes the active session and echoes the paused state', async () => {
+      const resume = vi.fn(() => {});
+      vi.spyOn(sessionRegistry, 'getActive').mockReturnValue({
+        id: 's1', resume, isPaused: () => false,
+      } as never);
+      const res = await request(app).post('/api/session/resume');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.paused).toBe(false);
+      expect(resume).toHaveBeenCalled();
+    });
+  });
+
   describe('GET /api/session/players-summary', () => {
     it('returns 404 when there is no active session', async () => {
       vi.spyOn(sessionRegistry, 'getActive').mockReturnValue(undefined);

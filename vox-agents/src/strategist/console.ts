@@ -228,6 +228,20 @@ process.stdin.on('data', (key) => {
       logger.info('Ctrl+A pressed again: Cancelled shutdown after current session');
     }
   }
+  // Ctrl+P is ASCII code 16 - toggle pause/resume on the active session
+  else if (key[0] === 16) {
+    if (session) {
+      if (session.isPaused()) {
+        logger.info('Ctrl+P pressed: Resuming session');
+        session.resume();
+      } else {
+        logger.info('Ctrl+P pressed: Pausing session (no new agent runs; game stalls in place)');
+        session.pause();
+      }
+    } else {
+      logger.info('Ctrl+P pressed: No active session to pause');
+    }
+  }
   // Ctrl+C is ASCII code 3 - immediate shutdown via processManager
   else if (key[0] === 3) {
     processManager.shutdown('SIGINT');

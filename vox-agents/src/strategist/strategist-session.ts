@@ -284,6 +284,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       turn: this.turn,
       error: this.errorMessage,
       succeeded: this.succeeded,
+      paused: this.isPaused(),
     };
   }
 

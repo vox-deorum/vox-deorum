@@ -18,6 +18,8 @@ import {
   error as sessionError,
   fetchSessionStatus,
   stopSession,
+  pauseSession,
+  resumeSession,
   cleanup
 } from '../stores/session';
 import type { SessionConfig, StrategistSessionConfig } from '../utils/types';
@@ -85,6 +87,19 @@ function getMapSize(config: SessionConfig): string {
   if (playerCount <= 10) return 'Large';
   return 'Huge';
 }
+
+/**
+ * Whether the active session is paused (orthogonal to state, which stays 'running')
+ */
+const isPaused = computed(() => !!sessionStatus.value?.session?.paused);
+
+/**
+ * Whether pause/resume is allowed for the current session state
+ */
+const canTogglePause = computed(() => {
+  const state = sessionStatus.value?.session?.state;
+  return state === 'running' || state === 'recovering';
+});
 
 /**
  * Get state severity for PrimeVue components
@@ -185,6 +200,35 @@ async function startSessionWithGameMode(mode: GameMode) {
   } finally {
     startingSession.value = false;
     pendingConfig.value = null;
+  }
+}
+
+/**
+ * Toggle pause/resume on the active session. Pause is reversible, so no confirm.
+ */
+async function togglePause() {
+  const wasPaused = isPaused.value;
+  try {
+    if (wasPaused) {
+      await resumeSession();
+    } else {
+      await pauseSession();
+    }
+    toast.add({
+      severity: 'success',
+      summary: wasPaused ? 'Session Resumed' : 'Session Paused',
+      detail: wasPaused
+        ? 'Game session resumed'
+        : 'Game session paused — no new agent runs will start',
+      life: 3000
+    });
+  } catch (err: any) {
+    toast.add({
+      severity: 'error',
+      summary: wasPaused ? 'Failed to Resume' : 'Failed to Pause',
+      detail: err.message || 'Failed to toggle pause',
+      life: 5000
+    });
   }
 }
 
@@ -352,6 +396,7 @@ onUnmounted(() => {
         <template #start>
           <h3>Active Session</h3>
           <Tag class="ml-2" :severity="stateSeverity" :value="sessionStatus.session.state.toUpperCase()" />
+          <Tag v-if="isPaused" class="ml-2" severity="warning" value="PAUSED" />
         </template>
         <template #end>
           <Button
@@ -361,6 +406,16 @@ onUnmounted(() => {
             size="small"
             @click="showPlayersDialog = true"
             :disabled="sessionLoading"
+            class="mr-2"
+          />
+          <Button
+            :label="isPaused ? 'Resume' : 'Pause'"
+            :icon="isPaused ? 'pi pi-play' : 'pi pi-pause'"
+            severity="secondary"
+            size="small"
+            @click="togglePause"
+            :disabled="!canTogglePause"
+            :loading="sessionLoading"
             class="mr-2"
           />
           <Button

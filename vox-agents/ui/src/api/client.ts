@@ -22,6 +22,8 @@ import type {
   SaveSessionConfigResponse,
   DeleteSessionConfigResponse,
   StopSessionResponse,
+  PauseSessionResponse,
+  ResumeSessionResponse,
   PlayersSummaryResponse,
   SessionConfig,
   // Config types
@@ -382,6 +384,24 @@ class ApiClient {
    */
   async stopSession(): Promise<StopSessionResponse> {
     return this.fetchJson<StopSessionResponse>(`${this.baseUrl}/api/session/stop`, {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Pause the current session (no new LLM runs; the game stalls in place)
+   */
+  async pauseSession(): Promise<PauseSessionResponse> {
+    return this.fetchJson<PauseSessionResponse>(`${this.baseUrl}/api/session/pause`, {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Resume a paused session
+   */
+  async resumeSession(): Promise<ResumeSessionResponse> {
+    return this.fetchJson<ResumeSessionResponse>(`${this.baseUrl}/api/session/resume`, {
       method: 'POST'
     });
   }

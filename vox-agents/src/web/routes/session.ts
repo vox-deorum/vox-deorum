@@ -24,6 +24,8 @@ import type {
   SaveSessionConfigResponse,
   DeleteSessionConfigResponse,
   StopSessionResponse,
+  PauseSessionResponse,
+  ResumeSessionResponse,
   PlayersSummaryResponse,
   ErrorResponse,
   PlayersReport
@@ -308,6 +310,67 @@ export function createSessionRoutes(): Router {
     } catch (error) {
       logger.error('Failed to stop session', { error });
       const errorResponse: ErrorResponse = { error: `Failed to stop session: ${(error as Error).message}` };
+      res.status(500).json(errorResponse);
+    }
+  });
+
+  /**
+   * POST /api/session/pause
+   * Pause the currently active session: no new LLM runs start and the game
+   * stalls in place. In-flight runs finish; nothing is aborted.
+   */
+  router.post('/pause', (_req: Request, res: Response<PauseSessionResponse | ErrorResponse>) => {
+    const session = sessionRegistry.getActive();
+
+    if (!session) {
+      const errorResponse: ErrorResponse = { error: 'No active session' };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    try {
+      logger.info(`Pausing session ${session.id}`);
+      session.pause();
+
+      const response: PauseSessionResponse = {
+        success: true,
+        message: 'Session paused successfully',
+        paused: session.isPaused()
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Failed to pause session', { error });
+      const errorResponse: ErrorResponse = { error: `Failed to pause session: ${(error as Error).message}` };
+      res.status(500).json(errorResponse);
+    }
+  });
+
+  /**
+   * POST /api/session/resume
+   * Resume a paused session; agent loops pick their held turns back up.
+   */
+  router.post('/resume', (_req: Request, res: Response<ResumeSessionResponse | ErrorResponse>) => {
+    const session = sessionRegistry.getActive();
+
+    if (!session) {
+      const errorResponse: ErrorResponse = { error: 'No active session' };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    try {
+      logger.info(`Resuming session ${session.id}`);
+      session.resume();
+
+      const response: ResumeSessionResponse = {
+        success: true,
+        message: 'Session resumed successfully',
+        paused: session.isPaused()
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Failed to resume session', { error });
+      const errorResponse: ErrorResponse = { error: `Failed to resume session: ${(error as Error).message}` };
       res.status(500).json(errorResponse);
     }
   });

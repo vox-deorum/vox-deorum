@@ -29,6 +29,14 @@ export abstract class VoxSession<TConfig extends SessionConfig = SessionConfig> 
   /** Abort controller for graceful shutdown */
   protected abortController = new AbortController();
 
+  /**
+   * Pause flag, orthogonal to `state`: while paused the session's agent loops
+   * hold in place (no new LLM runs start) and the game stalls, but the session
+   * stays `'running'`. Distinct from stop, which aborts. Survives crash recovery
+   * (the strategist loops re-read it), so a recovered game stays stalled.
+   */
+  protected paused = false;
+
   /** Error message if session failed */
   protected errorMessage?: string;
 
@@ -65,6 +73,26 @@ export abstract class VoxSession<TConfig extends SessionConfig = SessionConfig> 
    */
   getTurn(): number | undefined {
     return this.turn;
+  }
+
+  /** Whether the session is currently paused (agent loops held in place). */
+  isPaused(): boolean {
+    return this.paused;
+  }
+
+  /**
+   * Pause the session: freeze the agent loops so no new LLM runs start and the
+   * game stalls. Any in-flight run finishes normally. No-op once the session is
+   * tearing down.
+   */
+  pause(): void {
+    if (this.state === 'stopping' || this.state === 'stopped') return;
+    this.paused = true;
+  }
+
+  /** Resume a paused session; agent loops pick their held turns back up. */
+  resume(): void {
+    this.paused = false;
   }
 
   /**

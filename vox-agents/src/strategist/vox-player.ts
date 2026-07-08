@@ -139,6 +139,17 @@ export class VoxPlayer {
         await this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
 
         while (!this.aborted) {
+          // Pause gate: while the session is paused, don't start a new turn.
+          // Sitting above the pendingTurn read means a run already in flight
+          // finishes normally (it's past the gate), while no new run starts and
+          // any queued turn is retained in pendingTurn for when we resume. With
+          // the loop held, the seat never completes its turn, so the game stalls.
+          if (this.context.session?.isPaused()) {
+            this.running = false;
+            await setTimeout(200);
+            continue;
+          }
+
           const turnData = this.pendingTurn;
           if (turnData === undefined) {
             this.running = false;
