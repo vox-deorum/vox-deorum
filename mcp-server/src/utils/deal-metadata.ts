@@ -204,3 +204,78 @@ export const SYMMETRIC_TRADE_ITEM_TYPES: ReadonlySet<TradeItemType> = new Set(
 export const SYMMETRIC_PROMISE_TYPES: ReadonlySet<PromiseType> = new Set(
   PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].symmetric)
 );
+
+/**
+ * The item fields {@link resolveItemName} reads to identify the referenced entity — structurally
+ * satisfied by a `TradeItem` (so a real item passes without a cast). Kept minimal and zod-free here.
+ */
+export interface NamedItemRef {
+  itemType: string;
+  resourceID?: number;
+  cityID?: number;
+  techID?: number;
+  thirdPartyTeamID?: number;
+  resolutionID?: number;
+  voteChoice?: number;
+  repeal?: boolean;
+}
+
+/**
+ * The tradable-range shape {@link resolveItemName} reads — structurally satisfied by the inspect-deal
+ * `NormalizedSideRange` (which carries all six arrays; its `cities[].name` is a required string,
+ * assignable to the optional here). Declared here so this base contract stays free of the tool's type.
+ */
+export interface ItemNameRange {
+  resources: Array<{ resourceID: number; name?: string }>;
+  cities: Array<{ cityID: number; name?: string }>;
+  techs: Array<{ techID: number; name?: string }>;
+  thirdPartyPeace: Array<{ teamID: number; name?: string }>;
+  thirdPartyWar: Array<{ teamID: number; name?: string }>;
+  voteCommitments: Array<{ resolutionID: number; voteChoice: number; repeal: boolean; name?: string }>;
+}
+
+/**
+ * Finds the vote-commitment candidate a {@link NamedItemRef} refers to, matched on resolution, vote
+ * choice, and repeal flag. Generic over the candidate shape so a caller passing the richer inspect
+ * range (which also carries `numVotes`) keeps those extra fields on the returned candidate. This is
+ * the SINGLE vote-match rule shared by {@link resolveItemName} (for the name) and the UI vote label
+ * (for the count), so the two can never disagree on which candidate a vote item resolves to.
+ */
+export function findVoteCommitment<T extends { resolutionID: number; voteChoice: number; repeal: boolean }>(
+  item: NamedItemRef,
+  candidates: readonly T[] | undefined
+): T | undefined {
+  return candidates?.find(
+    (v) => v.resolutionID === item.resolutionID && v.voteChoice === item.voteChoice && !!v.repeal === !!item.repeal
+  );
+}
+
+/**
+ * The localized display name of whatever entity a data-bearing trade item references
+ * (resource / city / tech / third-party team / World Congress resolution), looked up in the giver's
+ * tradable range. Returns `undefined` for types that carry no entity name (gold, toggles, pacts) or
+ * when the range lacks the candidate (or no range is supplied).
+ *
+ * This is the SINGLE ID→name mapping the write-time stamp ({@link stampItemNames} in deal.ts) and
+ * every label surface (deal-format / deal-ledger / deal-helpers) share, so a new data-bearing type is
+ * handled here and nowhere else — the surfaces only pick the wrapper prose.
+ */
+export function resolveItemName(item: NamedItemRef, range: ItemNameRange | undefined): string | undefined {
+  if (!range) return undefined;
+  switch (item.itemType) {
+    case "RESOURCES":
+      return range.resources.find((r) => r.resourceID === item.resourceID)?.name;
+    case "CITIES":
+      return range.cities.find((c) => c.cityID === item.cityID)?.name;
+    case "TECHS":
+      return range.techs.find((t) => t.techID === item.techID)?.name;
+    case "THIRD_PARTY_PEACE":
+      return range.thirdPartyPeace.find((t) => t.teamID === item.thirdPartyTeamID)?.name;
+    case "THIRD_PARTY_WAR":
+      return range.thirdPartyWar.find((t) => t.teamID === item.thirdPartyTeamID)?.name;
+    case "VOTE_COMMITMENT":
+      return findVoteCommitment(item, range.voteCommitments)?.name;
+    default:
+      return undefined;
+  }
+}

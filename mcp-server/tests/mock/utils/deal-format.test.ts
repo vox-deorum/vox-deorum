@@ -22,7 +22,7 @@ import {
   SENTINEL_LABEL,
 } from '../../../src/utils/deal-format.js';
 import type { DealPayload, TradeItem } from '../../../src/utils/deal-schema.js';
-import { PROMISE_METADATA } from '../../../src/utils/deal-schema.js';
+import { PROMISE_METADATA, resolveItemName } from '../../../src/utils/deal-schema.js';
 
 const INT_MAX = 2147483647;
 
@@ -109,6 +109,19 @@ describe('formatItemLabel / itemTypeLabel / formatPromiseLabel', () => {
     expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'CITIES', cityID: 4 } as TradeItem)).toBe('City #4');
     expect(itemTypeLabel('OPEN_BORDERS')).toBe('Open Borders');
   });
+  it('prefers the server-stamped `name` for every data-bearing type (no live range on this path)', () => {
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'RESOURCES', resourceID: 7, quantity: 2, duration: 30, name: 'Iron' } as TradeItem)
+    ).toBe('Iron ×2 (30t)');
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'CITIES', cityID: 4, name: 'Antium' } as TradeItem)).toBe('Antium');
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'TECHS', techID: 2, name: 'Bronze Working' } as TradeItem)).toBe('Bronze Working');
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 3, name: 'Greece' } as TradeItem)
+    ).toBe('War with Greece');
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'VOTE_COMMITMENT', resolutionID: 9, numVotes: 2, name: 'Ban Luxury: Silk' } as TradeItem)
+    ).toBe('Vote: Ban Luxury: Silk (2 votes)');
+  });
   it('labels promises in the promiser voice and resolves a third-party target name', () => {
     // Labels come from the canonical PROMISE_METADATA (single source of truth).
     expect(formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'NO_DIGGING' })).toBe(PROMISE_METADATA.NO_DIGGING.label);
@@ -177,5 +190,37 @@ describe('formatDealTermsByDirection', () => {
     expect(out).toContain('# Rome promises Germany');
     expect(out).toContain(`- ${PROMISE_METADATA.COOP_WAR.label} (target: player 5)`);
     expect(out).not.toContain('Per-item values');
+  });
+});
+
+describe('resolveItemName', () => {
+  // A minimal side range (structurally a NormalizedSideRange) — one candidate per data-bearing type.
+  const range = {
+    resources: [{ resourceID: 7, name: 'Iron' }],
+    cities: [{ cityID: 4, name: 'Antium' }],
+    techs: [{ techID: 2, name: 'Bronze Working' }],
+    thirdPartyPeace: [{ teamID: 5, name: 'Greece' }],
+    thirdPartyWar: [{ teamID: 3, name: 'Persia' }],
+    voteCommitments: [{ resolutionID: 9, voteChoice: 1, repeal: false, name: 'Ban Luxury: Silk' }],
+  };
+
+  it('resolves each data-bearing type from the giver range', () => {
+    expect(resolveItemName({ itemType: 'RESOURCES', resourceID: 7 }, range)).toBe('Iron');
+    expect(resolveItemName({ itemType: 'CITIES', cityID: 4 }, range)).toBe('Antium');
+    expect(resolveItemName({ itemType: 'TECHS', techID: 2 }, range)).toBe('Bronze Working');
+    expect(resolveItemName({ itemType: 'THIRD_PARTY_PEACE', thirdPartyTeamID: 5 }, range)).toBe('Greece');
+    expect(resolveItemName({ itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 3 }, range)).toBe('Persia');
+    expect(
+      resolveItemName({ itemType: 'VOTE_COMMITMENT', resolutionID: 9, voteChoice: 1, repeal: false }, range)
+    ).toBe('Ban Luxury: Silk');
+  });
+
+  it('returns undefined for name-less types, a missing candidate, a vote mismatch, or no range', () => {
+    expect(resolveItemName({ itemType: 'GOLD' }, range)).toBeUndefined();
+    expect(resolveItemName({ itemType: 'DEFENSIVE_PACT' }, range)).toBeUndefined();
+    expect(resolveItemName({ itemType: 'RESOURCES', resourceID: 999 }, range)).toBeUndefined();
+    // Same resolution but the wrong choice / repeal flag is a different candidate → no match.
+    expect(resolveItemName({ itemType: 'VOTE_COMMITMENT', resolutionID: 9, voteChoice: 2, repeal: false }, range)).toBeUndefined();
+    expect(resolveItemName({ itemType: 'RESOURCES', resourceID: 7 }, undefined)).toBeUndefined();
   });
 });

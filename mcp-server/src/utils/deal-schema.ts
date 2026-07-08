@@ -57,10 +57,14 @@ export * from "./deal-metadata.js";
  *    DECLARATION_OF_FRIENDSHIP: duration (auto-filled)
  *  - MAPS / ALLOW_EMBASSY / VASSALAGE / VASSALAGE_REVOKE: no extra data
  *
- * `duration` is NOT author-supplied: it is a fixed game constant (deal / peace / relationship
- * duration, by item type — see {@link durationForItemType}) that the server stamps onto every
- * duration-bearing item ({@link applyDealDurations}). Authors use {@link AuthoredTradeItemSchema},
- * which omits it; it is present here because the stored/inspected canonical term carries it.
+ * Neither `duration` nor `name` is author-supplied — both are stamped server-side onto the stored
+ * canonical term (from the fresh inspection) and stripped from {@link AuthoredTradeItemSchema}:
+ *  - `duration` is a fixed game constant (deal / peace / relationship duration, by item type — see
+ *    {@link durationForItemType}), stamped onto every duration-bearing item ({@link applyDealDurations}).
+ *  - `name` is the referenced entity's localized display name, stamped so read surfaces without a live
+ *    tradable range (the inline deal card, the diplomat/negotiator prompt) can label the item instead of
+ *    showing a bare `#<id>` (see `stampItemNames` in deal.ts, resolved once via {@link resolveItemName}).
+ * Both are present here because the stored/inspected canonical term carries them.
  */
 export const TradeItemSchema = z.object({
   fromPlayerID: z.number().int().describe("The side giving this item"),
@@ -68,6 +72,7 @@ export const TradeItemSchema = z.object({
   itemType: z.enum(TRADE_ITEM_TYPES).describe("Trade item type"),
   amount: z.number().int().optional().describe("Gold or gold-per-turn amount"),
   duration: z.number().int().optional().describe("Duration in turns (auto-filled server-side from the game's fixed per-type duration; not author-set)"),
+  name: z.string().optional().describe("Display name of the referenced entity (resource/city/tech/team/resolution), auto-filled server-side from the inspection so read surfaces label it without a live range; not author-set"),
   resourceID: z.number().int().optional().describe("RESOURCES: the resource type ID"),
   quantity: z.number().int().optional().describe("RESOURCES: quantity per turn"),
   cityID: z.number().int().optional().describe("CITIES: the giver's city ID"),
@@ -82,14 +87,15 @@ export type TradeItem = z.infer<typeof TradeItemSchema>;
 
 /**
  * The author-facing trade item — what the negotiator's `propose-deal` tool and the Web deal editor
- * may author. Identical to {@link TradeItemSchema} but WITHOUT `duration`: durations are fixed game
- * constants, never author-chosen, so they are stripped from proposable terms and stamped server-side
- * instead (see {@link applyDealDurations}). Assignable to {@link TradeItem} (duration optional there).
+ * may author. Identical to {@link TradeItemSchema} but WITHOUT the server-stamped `duration` and `name`:
+ * durations are fixed game constants (never author-chosen) and the display name is resolved from the
+ * inspection, so both are stripped from proposable terms and stamped server-side instead (see
+ * {@link applyDealDurations} and `stampItemNames`). Assignable to {@link TradeItem} (both optional there).
  *
  * The mutual agreements (see {@link SYMMETRIC_TRADE_ITEM_TYPES}) are auto-completed onto both sides
  * server-side ({@link symmetrizeDeal}), so an author may list one side and the deal becomes mutual.
  */
-export const AuthoredTradeItemSchema = TradeItemSchema.omit({ duration: true });
+export const AuthoredTradeItemSchema = TradeItemSchema.omit({ duration: true, name: true });
 export type AuthoredTradeItem = z.infer<typeof AuthoredTradeItemSchema>;
 
 /**

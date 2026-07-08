@@ -150,3 +150,44 @@ describe('Diplomat.stopCheck', () => {
     ]);
   });
 });
+
+describe('Diplomat.stopCheck malformed terminal retry (retryMalformedTerminalCalls)', () => {
+  /** A step whose named calls can be individually marked invalid (malformed input that never ran). */
+  function invalidStep(calls: Array<{ toolName: string; invalid?: boolean }>, text = '') {
+    return {
+      text,
+      toolCalls: calls,
+      toolResults: [],
+      response: { messages: [{ role: 'assistant', content: text }] },
+    } as any;
+  }
+  const context = () => createFakeVoxContext().asContext();
+
+  it('keeps working when the only completion call is malformed (below the ceiling)', () => {
+    // A malformed call-negotiator never executed; the turn stays open so the model can redo the handoff
+    // rather than ending on an action that never happened.
+    const bad = invalidStep([{ toolName: 'call-negotiator', invalid: true }]);
+    expect(diplomat.stopCheck(parameters, thread(), bad, [bad], context())).toBe(false);
+  });
+
+  it('keeps working when a valid send-message and a malformed call-negotiator share a step', () => {
+    // The mixed step the toggle targets: the line was spoken, but the handoff was malformed. Before the
+    // toggle the valid send-message ended the turn and dropped the handoff; now the turn stays open.
+    const mixed = invalidStep([{ toolName: 'send-message' }, { toolName: 'call-negotiator', invalid: true }]);
+    expect(diplomat.stopCheck(parameters, thread(), mixed, [mixed], context())).toBe(false);
+  });
+
+  it('still stops at the hard step ceiling even when the last completion call is malformed', () => {
+    // The retry is bounded by maxSteps (10): below it the malformed call keeps the turn open; at it, stop.
+    const bad = () => invalidStep([{ toolName: 'call-negotiator', invalid: true }]);
+    const nine = Array.from({ length: 9 }, bad);
+    expect(diplomat.stopCheck(parameters, thread(), nine[8], nine, context())).toBe(false);
+    const ten = Array.from({ length: 10 }, bad);
+    expect(diplomat.stopCheck(parameters, thread(), ten[9], ten, context())).toBe(true);
+  });
+
+  it('is unchanged for a well-formed completion step (still stops)', () => {
+    const spoke = invalidStep([{ toolName: 'send-message' }]);
+    expect(diplomat.stopCheck(parameters, thread(), spoke, [spoke], context())).toBe(true);
+  });
+});

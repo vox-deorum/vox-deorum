@@ -24,6 +24,7 @@ import {
 } from "../../../../mcp-server/dist/utils/deal-format.js";
 import {
   durationForItemType,
+  resolveItemName,
   PROMISE_METADATA,
 } from "../../../../mcp-server/dist/utils/deal-schema.js";
 import type {
@@ -79,44 +80,33 @@ export function renderPromiseDuration(promiseType: PromiseTerm["promiseType"], t
 }
 
 /**
- * Friendly label for an on-the-table item, resolving resource/city/tech/team/vote IDs to NAMES via
- * the inspection range. Duration-bearing terms append their stamped, fixed term length ("lasts N
- * turns") off the item's own `duration` (set server-side by `applyDealDurations`).
+ * Friendly label for an on-the-table item. The referenced entity's NAME comes from the item's
+ * server-stamped `name` (filled at the write chokepoint) first, then a live lookup in the inspection
+ * range via the shared {@link resolveItemName} — so both a stored proposal and an in-flight inspection
+ * label by name; only a name-less/unresolved term falls back to its `#<id>`. Duration-bearing terms
+ * append their stamped, fixed term length ("lasts N turns") off the item's own `duration` (set
+ * server-side by `applyDealDurations`).
  */
 export function namedItemLabel(item: TradeItem, inspection?: InspectDealResult): string {
-  const giverRange = inspection?.tradableRange[String(item.fromPlayerID)];
   const dur = item.duration ? ` (lasts ${item.duration} turns)` : "";
+  const name = item.name ?? resolveItemName(item, inspection?.tradableRange[String(item.fromPlayerID)]);
   switch (item.itemType) {
     case "GOLD":
       return `Gold: ${item.amount ?? 0}`;
     case "GOLD_PER_TURN":
       return `Gold Per Turn: ${item.amount ?? 0}${dur}`;
-    case "RESOURCES": {
-      const r = giverRange?.resources.find((x) => x.resourceID === item.resourceID);
-      return `Resource: ${r?.name ?? `#${item.resourceID}`} x${item.quantity ?? 1}${dur}`;
-    }
-    case "CITIES": {
-      const c = giverRange?.cities.find((x) => x.cityID === item.cityID);
-      return `City: ${c?.name ?? `#${item.cityID}`}`;
-    }
-    case "TECHS": {
-      const t = giverRange?.techs.find((x) => x.techID === item.techID);
-      return `Technology: ${t?.name ?? `#${item.techID}`}`;
-    }
-    case "THIRD_PARTY_PEACE": {
-      const t = giverRange?.thirdPartyPeace.find((x) => x.teamID === item.thirdPartyTeamID);
-      return `Third-Party Peace with ${t?.name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
-    }
-    case "THIRD_PARTY_WAR": {
-      const t = giverRange?.thirdPartyWar.find((x) => x.teamID === item.thirdPartyTeamID);
-      return `Third-Party War on ${t?.name ?? `team ${item.thirdPartyTeamID}`}`;
-    }
-    case "VOTE_COMMITMENT": {
-      const v = giverRange?.voteCommitments.find(
-        (x) => x.resolutionID === item.resolutionID && x.voteChoice === item.voteChoice && !!x.repeal === !!item.repeal
-      );
-      return `Vote Commitment: ${v?.name ?? `resolution ${item.resolutionID}`}`;
-    }
+    case "RESOURCES":
+      return `Resource: ${name ?? `#${item.resourceID}`} x${item.quantity ?? 1}${dur}`;
+    case "CITIES":
+      return `City: ${name ?? `#${item.cityID}`}`;
+    case "TECHS":
+      return `Technology: ${name ?? `#${item.techID}`}`;
+    case "THIRD_PARTY_PEACE":
+      return `Third-Party Peace with ${name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
+    case "THIRD_PARTY_WAR":
+      return `Third-Party War on ${name ?? `team ${item.thirdPartyTeamID}`}`;
+    case "VOTE_COMMITMENT":
+      return `Vote Commitment: ${name ?? `resolution ${item.resolutionID}`}`;
     default:
       return `${itemTypeLabel(item.itemType)}${dur}`;
   }
@@ -283,7 +273,11 @@ function promiseSubsection(
   return lines.join("\n");
 }
 
-/** One directional section (`## <Giver> Offers To Give <Receiver>` + its term subsections), or undefined. */
+/**
+ * One directional section: `## <Giver> Offers To Give <Receiver>` + its term subsections. Always
+ * rendered — a side giving nothing shows the heading with a `(Nothing)` body, so the reader is told
+ * explicitly that side gives nothing rather than the whole direction being silently omitted.
+ */
 function directionSection(
   deal: DealPayload,
   giverID: number,
@@ -291,7 +285,7 @@ function directionSection(
   ctx: DealLedgerContext,
   options: DealLedgerOptions,
   targetNames: Record<number, string>
-): string | undefined {
+): string {
   const subsections: string[] = [];
   deal.items.forEach((item, index) => {
     if (item.fromPlayerID === giverID && item.toPlayerID === receiverID) {
@@ -303,8 +297,8 @@ function directionSection(
       subsections.push(promiseSubsection(promise, ctx, options, targetNames));
     }
   }
-  if (subsections.length === 0) return undefined;
-  return `## ${ctx.civName(giverID)} Offers To Give ${ctx.civName(receiverID)}\n${subsections.join("\n\n")}`;
+  const body = subsections.length ? subsections.join("\n\n") : "(Nothing)";
+  return `## ${ctx.civName(giverID)} Offers To Give ${ctx.civName(receiverID)}\n${body}`;
 }
 
 /**
@@ -333,13 +327,13 @@ export function formatDealLedger(
   const intention = counterpartIntentionSection(ctx, options.relationships);
   if (intention) blocks.push(intention);
 
-  // Viewer's giving side first, then the counterpart's.
+  // Viewer's giving side first, then the counterpart's. Both directions are always rendered — a side
+  // giving nothing shows a `(Nothing)` body — so the reader is never left to infer an omitted side.
   for (const [giverID, receiverID] of [
     [ctx.viewerID, ctx.counterpartID],
     [ctx.counterpartID, ctx.viewerID],
   ] as const) {
-    const section = directionSection(deal, giverID, receiverID, ctx, options, targetNames);
-    if (section) blocks.push(section);
+    blocks.push(directionSection(deal, giverID, receiverID, ctx, options, targetNames));
   }
 
   return blocks.join("\n\n");

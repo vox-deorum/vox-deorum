@@ -677,6 +677,10 @@ describe('getOutput', () => {
     expect(out).toContain('Proposed terms:');
     expect(out).toContain('Player 3 Offers To Give Player 1');
     expect(out).toContain('### Gold: 50');
+    // The side that gives nothing is rendered explicitly, not omitted, so the
+    // reader is told outright that player 1 gives nothing rather than inferring it from a missing block.
+    expect(out).toContain('Player 1 Offers To Give Player 3');
+    expect(out).toContain('(Nothing)');
   });
 
   it('returns undefined when no terminal tool recorded a move', async () => {

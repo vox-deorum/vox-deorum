@@ -22,6 +22,8 @@ import {
   TARGETED_PROMISE_TYPES,
   AGREEMENT_METADATA,
   SYMMETRIC_TRADE_ITEM_TYPES,
+  resolveItemName,
+  findVoteCommitment,
 } from '../../../../../mcp-server/dist/utils/deal-metadata.js';
 
 /**
@@ -161,14 +163,11 @@ export const resourceCap = (
   resourceID: number | undefined
 ): number | undefined => range?.resources.find((r) => r.resourceID === resourceID)?.quantityAvailable;
 
-/** Resolve a resource's display name from the giver's range, falling back to its ID. */
-function resourceName(resourceID: number | undefined, range?: NormalizedSideRange): string {
-  const found = range?.resources.find((r) => r.resourceID === resourceID);
-  return found?.name ?? `Resource #${resourceID}`;
-}
-
 /**
- * A short human label for a trade item, using the giver's range for game-facing names.
+ * A short human label for a trade item. The referenced entity's NAME comes from the item's
+ * server-stamped `name` (stored proposals — so the inline deal card labels by name without a live
+ * range) first, then a live lookup in the giver's `range` via the shared {@link resolveItemName} (the
+ * editor, mid-edit before the write stamps a name). Only a name-less/unresolved term falls back to `#<id>`.
  *
  * `amountInEditor` is for the central offer, where the amount/quantity lives in an inline input and
  * the fixed duration is rendered as a trailing "× N turns": the three editor-bearing types
@@ -185,6 +184,7 @@ export function formatItemLabel(
   // Fixed duration suffix shown for every duration-bearing item, unless the caller renders the
   // duration elsewhere (the central offer shows it on the editor line for Gold/turn & Resources).
   const dur = !opts?.omitDuration && item.duration ? ` (${item.duration}t)` : '';
+  const name = item.name ?? resolveItemName(item, range);
   switch (item.itemType) {
     case 'GOLD':
       return opts?.amountInEditor ? 'Gold:' : `Gold: ${item.amount ?? 0}`;
@@ -192,33 +192,26 @@ export function formatItemLabel(
       // In the central offer the per-turn nature is carried by the trailing "× N turns", so the
       // prefix is just "Gold:"; the read-only callers keep the explicit "Gold/turn: N".
       return opts?.amountInEditor ? 'Gold:' : `Gold/turn: ${item.amount ?? 0}${dur}`;
-    case 'RESOURCES':
-      return opts?.amountInEditor
-        ? `${resourceName(item.resourceID, range)}:`
-        : `${resourceName(item.resourceID, range)} ×${item.quantity ?? 0}${dur}`;
-    case 'CITIES': {
-      const city = range?.cities.find((c) => c.cityID === item.cityID);
-      return city ? `City: ${city.name}` : `City #${item.cityID}`;
+    case 'RESOURCES': {
+      const resource = name ?? `Resource #${item.resourceID}`;
+      return opts?.amountInEditor ? `${resource}:` : `${resource} ×${item.quantity ?? 0}${dur}`;
     }
-    case 'TECHS': {
-      const tech = range?.techs.find((t) => t.techID === item.techID);
-      return tech?.name ? `Tech: ${tech.name}` : `Tech #${item.techID}`;
-    }
-    case 'THIRD_PARTY_PEACE': {
-      const team = range?.thirdPartyPeace.find((t) => t.teamID === item.thirdPartyTeamID);
-      return `Peace with ${team?.name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
-    }
-    case 'THIRD_PARTY_WAR': {
-      const team = range?.thirdPartyWar.find((t) => t.teamID === item.thirdPartyTeamID);
-      return `War with ${team?.name ?? `team ${item.thirdPartyTeamID}`}`;
-    }
+    case 'CITIES':
+      return name ? `City: ${name}` : `City #${item.cityID}`;
+    case 'TECHS':
+      return name ? `Tech: ${name}` : `Tech #${item.techID}`;
+    case 'THIRD_PARTY_PEACE':
+      return `Peace with ${name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
+    case 'THIRD_PARTY_WAR':
+      return `War with ${name ?? `team ${item.thirdPartyTeamID}`}`;
     case 'VOTE_COMMITMENT': {
-      const vote = range?.voteCommitments.find(
-        (v) => v.resolutionID === item.resolutionID && v.voteChoice === item.voteChoice && v.repeal === !!item.repeal
-      );
-      const name = vote?.name ?? `resolution ${item.resolutionID}`;
+      // Name and vote COUNT resolve to the SAME candidate via the shared `findVoteCommitment` match,
+      // so the two can't disagree on which resolution a vote item points at; the count still prefers
+      // the item's own numVotes and the name still prefers the server-stamped `name` (via `name` above).
+      const vote = findVoteCommitment(item, range?.voteCommitments);
       const votes = item.numVotes ?? vote?.numVotes;
-      return `Vote: ${name}${votes !== undefined ? ` (${votes} ${votes === 1 ? 'vote' : 'votes'})` : ''}`;
+      const voteName = name ?? `resolution ${item.resolutionID}`;
+      return `Vote: ${voteName}${votes !== undefined ? ` (${votes} ${votes === 1 ? 'vote' : 'votes'})` : ''}`;
     }
     default: {
       const toggle = TOGGLE_ITEMS.find((t) => t.itemType === item.itemType);

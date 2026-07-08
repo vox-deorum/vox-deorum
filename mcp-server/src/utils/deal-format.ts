@@ -110,10 +110,11 @@ export function itemTypeLabel(itemType: string): string {
 const PROMISE_NEEDS_TARGET = TARGETED_PROMISE_TYPES;
 
 /**
- * A short human label for a trade item. Unlike the web board there is no live tradable range on the
- * diplomat path, so resource/city/tech/team NAMES fall back to their IDs; amounts/quantities/votes
- * and the fixed duration come off the item itself. (e.g. "Allow Embassy", "Gold: 50", "Resource #7
- * ×2 (30t)", "City #4".)
+ * A short human label for a trade item. There is no live tradable range on the diplomat path, so
+ * resource/city/tech/team/resolution NAMES come from the item's server-stamped `name` (filled at the
+ * write chokepoint from the inspection — see `stampItemNames` in deal.ts); only a legacy/unstamped row
+ * with no `name` falls back to its `#<id>`. Amounts/quantities/votes and the fixed duration come off the
+ * item itself. (e.g. "Allow Embassy", "Gold: 50", "Iron ×2 (30t)", "Rome".)
  */
 export function formatItemLabel(item: TradeItem): string {
   const dur = item.duration ? ` (${item.duration}t)` : "";
@@ -123,19 +124,19 @@ export function formatItemLabel(item: TradeItem): string {
     case "GOLD_PER_TURN":
       return `Gold/turn: ${item.amount ?? 0}${dur}`;
     case "RESOURCES":
-      return `Resource #${item.resourceID} ×${item.quantity ?? 0}${dur}`;
+      return `${item.name ?? `Resource #${item.resourceID}`} ×${item.quantity ?? 0}${dur}`;
     case "CITIES":
-      return `City #${item.cityID}`;
+      return item.name ?? `City #${item.cityID}`;
     case "TECHS":
-      return `Tech #${item.techID}`;
+      return item.name ?? `Tech #${item.techID}`;
     case "THIRD_PARTY_PEACE":
-      return `Peace with team ${item.thirdPartyTeamID}${dur}`;
+      return `Peace with ${item.name ?? `team ${item.thirdPartyTeamID}`}${dur}`;
     case "THIRD_PARTY_WAR":
-      return `War with team ${item.thirdPartyTeamID}`;
+      return `War with ${item.name ?? `team ${item.thirdPartyTeamID}`}`;
     case "VOTE_COMMITMENT": {
       const votes = item.numVotes;
       const tail = votes !== undefined ? ` (${votes} ${votes === 1 ? "vote" : "votes"})` : "";
-      return `Vote: resolution ${item.resolutionID}${tail}`;
+      return `Vote: ${item.name ?? `resolution ${item.resolutionID}`}${tail}`;
     }
     default:
       return (ITEM_TYPE_LABELS[item.itemType] ?? item.itemType) + dur;

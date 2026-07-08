@@ -135,6 +135,15 @@ describe('deal-helpers', () => {
     expect(formatItemLabel(item({ itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 6 }))).toBe('War with team 6');
   });
 
+  it('prefers the item\'s server-stamped name on the card path (no live range)', () => {
+    // The inline deal card calls formatItemLabel(item) with no range; the stamped name is what lets it
+    // show the game-facing label instead of "#<id>" (the range-less fallback above).
+    expect(formatItemLabel(item({ itemType: 'RESOURCES', resourceID: 8, quantity: 1, name: 'Iron' }))).toBe('Iron ×1');
+    expect(formatItemLabel(item({ itemType: 'CITIES', cityID: 9, name: 'Berlin' }))).toBe('City: Berlin');
+    expect(formatItemLabel(item({ itemType: 'TECHS', techID: 2, name: 'Steel' }))).toBe('Tech: Steel');
+    expect(formatItemLabel(item({ itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 6, name: 'Greece' }))).toBe('War with Greece');
+  });
+
   it('labels promises and resolves a target display name when metadata is supplied', () => {
     const coop: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 3 };
     const dig: PromiseTerm = { promiserID: 0, recipientID: 1, promiseType: 'NO_DIGGING' };

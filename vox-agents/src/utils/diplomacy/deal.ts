@@ -34,6 +34,7 @@ import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 import {
   DealPayloadSchema,
   applyDealDurations,
+  resolveItemName,
   symmetrizeDeal,
   TARGETED_PROMISE_TYPES,
   isDealMessage,
@@ -198,15 +199,35 @@ export function computeValueMaps(
 }
 
 /**
+ * Stamp each data-bearing item's referenced entity name (resource / city / tech / third-party team /
+ * vote resolution) from a fresh inspection, so the stored deal carries the localized display name and
+ * read surfaces without a live tradable range (the inline card, the diplomat/negotiator prompt) can
+ * label it instead of a bare `#<id>`. Names are resolved once via the shared {@link resolveItemName}
+ * (the single ID→name mapping), keyed by the giver's range; items with no name (gold/toggles/pacts) or
+ * a missing candidate are left unchanged. Returns a new deal; the input is not mutated.
+ */
+function stampItemNames(deal: DealPayload, inspection: InspectDealResult): DealPayload {
+  return {
+    ...deal,
+    items: deal.items.map((item) => {
+      const name = resolveItemName(item, inspection.tradableRange[String(item.fromPlayerID)]);
+      return name ? { ...item, name } : item;
+    }),
+  };
+}
+
+/**
  * Append a `deal-proposal` / `deal-counter` to the durable store, computing and attaching
  * the proposal-time per-item value snapshots from a fresh inspection before the archival
  * write. The speaker is the endpoint authoring the move (the human/caller in stage-4
  * preview).
  *
- * Durations are not author-supplied (specs §3): before archival the deal is normalized via
- * `applyDealDurations`, stamping each duration-bearing item's fixed game duration (deal / peace /
- * relationship, by type) from the fresh inspection. So the stored `Payload.Deal` always carries the
- * right durations, whether it came from the Web editor or an agent that proposed none.
+ * Durations and display names are not author-supplied (specs §3): before archival the deal is
+ * normalized via `applyDealDurations` (stamping each duration-bearing item's fixed game duration —
+ * deal / peace / relationship, by type) and `stampItemNames` (stamping each data-bearing item's
+ * referenced entity name), both from the fresh inspection. So the stored `Payload.Deal` always carries
+ * the right durations and a name any read surface can show without a live range, whether it came from
+ * the Web editor or an agent that proposed neither.
  *
  * The transcript Content is derived from `deal.message` (the proposal's one-line note); callers no
  * longer pass it separately. A blank message falls back to a per-type default.
@@ -274,9 +295,12 @@ export async function appendDealProposal(
 
   const { value1, value2 } = computeValueMaps(inspection, thread.player1ID, thread.player2ID);
 
-  // Stamp the fixed per-type durations from the fresh inspection so the archived deal never carries
-  // an author-supplied or missing duration (the durations match what the inspection just valued).
-  const storedDeal = applyDealDurations(symmetricDeal, inspection);
+  // Stamp the fixed per-type durations AND the referenced entity's display name from the fresh
+  // inspection, so the archived deal never carries an author-supplied/missing duration and read
+  // surfaces without a live range (the inline deal card, the diplomat/negotiator prompt) can label
+  // each item by name instead of a bare `#<id>`. Both come from the same inspection that just valued
+  // the deal, so no extra call — durations first, then names off the identical range.
+  const storedDeal = stampItemNames(applyDealDurations(symmetricDeal, inspection), inspection);
 
   const payload = { Deal: storedDeal, Value1: value1, Value2: value2 };
 
