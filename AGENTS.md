@@ -1,5 +1,8 @@
 # AGENTS.md
 
+## Use Subagents Whenever Appropriate
+ALWAYS delegate less critical/lower-level work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku. Specify which agent you used. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small but extensive edits.
+
 ## Project Overview
 
 Vox Deorum is LLM-enhanced AI for Civilization V, built on the Community Patch framework.
@@ -20,9 +23,6 @@ The system is made up of five components:
 | Civ 5 Mod | `civ5-mod/` | Lua hooks and UI for game integration. |
 
 Each component has its own AGENTS.md with detailed patterns. Read it before working in that directory.
-
-## Use Subagents Whenever Appropriate
-Always delegate less critical/lower-level work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku. Specify which agent you used. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small but extensive edits.
 
 ## Workflow Rules
 

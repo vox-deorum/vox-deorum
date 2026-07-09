@@ -20,6 +20,7 @@ import dotenv from 'dotenv';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { toolRescueMiddleware } from './tool-rescue/middleware.js';
+import { claudeCodeSystemMiddleware } from './claude-code-prompt.js';
 import type { ToolCallFraming } from './tool-rescue/types.js';
 import { Agent } from 'undici';
 import os from 'node:os';
@@ -255,6 +256,17 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
     result = wrapLanguageModel({
       model: result,
       middleware: extractReasoningMiddleware({ tagName: config.options.thinkMiddleware })
+    });
+  }
+  // For claude-code, normalize the prompt's system messages BEFORE they reach the provider, which
+  // otherwise keeps only the LAST system message and drops the rest (main prompt, game situation,
+  // and the tool-rescue-injected schema block). Wrapped here so it lands INNER to the tool
+  // middleware below (AI-SDK middleware transformParams runs outermost-first), letting it run AFTER
+  // tool-rescue injects its instructions so the merged leading system message carries the schemas.
+  if (config.provider === 'claude-code') {
+    result = wrapLanguageModel({
+      model: result,
+      middleware: claudeCodeSystemMiddleware()
     });
   }
   // Wrap it for tool calling

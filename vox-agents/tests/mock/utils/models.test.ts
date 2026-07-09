@@ -897,6 +897,44 @@ describe('claude-code provider', () => {
       expect(sys.content).toContain('## Action Calling');
       expect(sys.content).not.toContain('## Tool Calling');
     });
+
+    // Regression for the negotiator/diplomat prompt shape: a main system prompt + game context,
+    // then a TRAILING system nudge after the user messages. Without normalization the provider
+    // keeps only the trailing nudge, dropping the main prompt and the injected action schemas.
+    // Asserts the surviving system message carries both leading systems plus the schema block,
+    // and the trailing nudge is demoted to a user message.
+    it('preserves the action schema block when the agent appends a trailing system message', async () => {
+      const model = getModel({ provider: 'claude-code', name: 'haiku', options: { toolMiddleware: 'prompt' } });
+      await (model as any).doGenerate({
+        tools,
+        toolChoice: { type: 'required' },
+        prompt: [
+          { role: 'system', content: 'You are the deal negotiator for Brazil.' },
+          { role: 'system', content: '# Situation ...' },
+          { role: 'user', content: [{ type: 'text', text: '# Victory Progress ...' }] },
+          { role: 'user', content: [{ type: 'text', text: '# Diplomat Briefing ...' }] },
+          { role: 'system', content: 'Use exactly one tool in the provided format.' },
+        ],
+        providerOptions: {},
+      });
+      const finalPrompt = mocks.model.doGenerateCalls.at(-1).prompt;
+      // Exactly one system message survives normalization (the one the provider keeps).
+      const systems = finalPrompt.filter((m: any) => m.role === 'system');
+      expect(systems).toHaveLength(1);
+      const sys = systems[0].content as string;
+      // It carries the agent's main prompt, the game context, AND the injected action schemas.
+      expect(sys).toContain('You are the deal negotiator for Brazil.');
+      expect(sys).toContain('# Situation ...');
+      expect(sys).toContain('## Available Actions');
+      // The trailing nudge is demoted to a user message (its text survives inline, not dropped).
+      // The upstream tool-rescue middleware reframes "tool" wording to "action" for action-framed
+      // providers (reframeToolWording), so match the reframed text, not the seeded input.
+      const nudge = finalPrompt.find(
+        (m: any) => m.role === 'user' && Array.isArray(m.content)
+          && m.content.some((c: any) => c.text?.includes('exactly one action in the provided format'))
+      );
+      expect(nudge).toBeDefined();
+    });
   });
 });
 
