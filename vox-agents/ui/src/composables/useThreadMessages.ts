@@ -16,6 +16,12 @@ export interface UseThreadMessagesOptions {
   thread: Ref<EnvoyThread | null>;
   sessionId: Ref<string>;
   isStreaming: Ref<boolean>;
+  /**
+   * The authoritative current game turn (the server's chat-response enrichment, kept fresh by the
+   * host). Used to stamp optimistic/streamed rows so they carry the same turn marker hydrated rows
+   * get from the store — `thread.metadata.turn` is only the turn at open time and goes stale.
+   */
+  currentTurn?: Ref<number | undefined>;
   onNewChunk?: () => void;
   /**
    * A user-sent message could not be delivered. `commit` says whether retrying is safe: 'uncommitted'
@@ -42,10 +48,13 @@ export interface UseThreadMessagesOptions {
 }
 
 export function useThreadMessages(options: UseThreadMessagesOptions) {
-  const { thread, sessionId, isStreaming, onNewChunk, onSendFailed, onGreetingFailed, onDealFailed } = options;
+  const { thread, sessionId, isStreaming, currentTurn, onNewChunk, onSendFailed, onGreetingFailed, onDealFailed } = options;
 
   /** Trim the thread's messages back to `length`, no-op if the thread went away mid-stream. */
   const rollbackTo = (length: number) => thread.value?.messages.splice(length);
+
+  /** The turn to stamp on new rows: the live enrichment turn, falling back to the open-time turn. */
+  const turnNow = () => currentTurn?.value ?? thread.value?.metadata?.turn ?? 0;
 
   /**
    * Append the authoritative deal rows the local thread is missing (by ID) onto the end, leaving every
@@ -89,8 +98,6 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
   ): (() => void) | undefined => {
     if (!thread.value) return;
 
-    const currentTurn = thread.value.metadata?.turn || 0;
-
     // Prepare for assistant response with array content for multi-part support. Its index is the
     // rollback point for an unrecoverable failure (keep the caller's message, drop the partial reply).
     // It's a `let` because a deal turn splices its committed row in just before this on `connected`,
@@ -100,7 +107,7 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
       message: assistantMessage,
       metadata: {
         datetime: new Date(),
-        turn: currentTurn
+        turn: turnNow()
       }
     });
     let assistantStart = thread.value.messages.length - 1;
@@ -274,10 +281,9 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
    */
   const sendMessage = async (message: string): Promise<(() => void) | undefined> => {
     if (!message.trim()) return;
-    const turn = thread.value?.metadata?.turn || 0;
     // Optimistically render the user's message; a failed send removes exactly this row + the placeholder.
     return beginTurn(
-      [{ message: { role: 'user', content: message }, metadata: { datetime: new Date(), turn } }],
+      [{ message: { role: 'user', content: message }, metadata: { datetime: new Date(), turn: turnNow() } }],
       { kind: 'text', chatId: sessionId.value, message },
       (error, commit) => onSendFailed?.(message, error, commit),
     );

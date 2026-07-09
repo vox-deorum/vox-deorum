@@ -240,6 +240,7 @@ const { sendMessage: sendThreadMessage, requestGreeting, proposeDeal } = useThre
   thread,
   sessionId,
   isStreaming,
+  currentTurn,
   onNewChunk: () => {
     // Increment the event counter to trigger a reactive update
     newChunkEvent.value++;

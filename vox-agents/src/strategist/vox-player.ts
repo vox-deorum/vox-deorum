@@ -146,7 +146,8 @@ export class VoxPlayer {
           // the loop held, the seat never completes its turn, so the game stalls.
           if (this.context.session?.isPaused()) {
             this.running = false;
-            await setTimeout(200);
+            await setTimeout(500);
+            await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
             continue;
           }
 
