@@ -18,9 +18,6 @@ agreement.
 
     <template v-if="isProposal">
       <div v-if="dealMessage" class="deal-card-message">“{{ dealMessage }}”</div>
-      <div v-if="dealRationale" class="deal-card-rationale" v-tooltip.bottom="dealRationale">
-        <i class="pi pi-comment" /> rationale
-      </div>
       <!-- Two aligned columns ("You give" | "They give"), mirroring the deal screen's central
            offer: each side lists the items it gives then the promises it pledges. -->
       <div class="deal-card-columns">
@@ -117,9 +114,8 @@ const headline = computed(() => {
   }
 });
 
-/** The one-sentence outward line and inward rationale carried on the draft deal. */
+/** The one-sentence outward line carried on the draft deal. */
 const dealMessage = computed(() => props.deal.Payload?.Deal?.message ?? '');
-const dealRationale = computed(() => props.deal.Payload?.Deal?.rationale ?? '');
 
 const items = computed<TradeItem[]>(() => props.deal.Payload?.Deal?.items ?? []);
 const promises = computed<PromiseTerm[]>(() => props.deal.Payload?.Deal?.promises ?? []);
@@ -177,7 +173,6 @@ const valueText = computed(() => {
 .deal-card-promise { color: var(--p-text-muted-color); }
 .deal-card-empty { color: var(--p-text-muted-color); font-size: 0.8rem; }
 .deal-card-message { font-style: italic; margin-bottom: 0.3rem; }
-.deal-card-rationale { font-size: 0.75rem; color: var(--p-text-muted-color); margin-bottom: 0.3rem; cursor: help; }
 .deal-card-value { font-size: 0.8rem; color: var(--p-text-muted-color); margin-top: 0.25rem; }
 .deal-card-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
 .deal-card-superseded { font-size: 0.75rem; color: var(--p-text-muted-color); margin-top: 0.35rem; font-style: italic; }
