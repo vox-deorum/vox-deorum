@@ -170,8 +170,8 @@ export async function getTechnology(techType: string) {
     TechsUnlocked: techsUnlocked.map(t => t.Description!),
     UnitsUnlocked: unitsUnlocked.map(u => u.Description!),
     BuildingsUnlocked: buildingsUnlocked.filter(b => b.MaxGlobalInstances == 0 && b.MaxPlayerInstances == 0).map(b => b.Description!),
-    NationalWondersUnlocked: buildingsUnlocked.filter(b => b.MaxPlayerInstances == 0).map(b => b.Description!),
-    WorldWondersUnlocked: buildingsUnlocked.filter(b => b.MaxPlayerInstances == 0).map(b => b.Description!),
+    NationalWondersUnlocked: buildingsUnlocked.filter(b => b.MaxPlayerInstances == 1).map(b => b.Description!),
+    WorldWondersUnlocked: buildingsUnlocked.filter(b => b.MaxGlobalInstances == 1).map(b => b.Description!),
     ImprovementsUnlocked: improvementsUnlocked.map(i => i.Description!),
     ResourcesRevealed: resourcesRevealed.map(r => r.Description!),
   };

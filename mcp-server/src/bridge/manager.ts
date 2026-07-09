@@ -48,14 +48,14 @@ export interface GameEvent {
 }
 
 /**
- * Queued Lua function call request
+ * Queued Lua function call request. These promises are only ever resolved
+ * (never rejected): callers always receive a LuaResponse, with failures carried
+ * as `{ success: false, error }`. Shutdown settles them the same way.
  */
 interface QueuedLuaCall {
   functionName: string;
   args: any[];
   resolve: (value: LuaResponse) => void;
-  reject: (error: any) => void;
-  timestamp: number;
 }
 
 /**
@@ -71,7 +71,6 @@ export class BridgeManager extends EventEmitter {
   private isDllConnected: boolean = false;
   private httpClient: HttpClient;
   private eventPipeBuffer: string = '';
-  private connectionMethod: 'eventPipe' | 'sse' | null = null;
 
   /**
    * Create a new BridgeManager instance
@@ -141,13 +140,11 @@ export class BridgeManager extends EventEmitter {
       };
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this.luaCallQueue.push({
         functionName,
         args,
-        resolve,
-        reject,
-        timestamp: Date.now()
+        resolve
       });
     });
   }
@@ -200,10 +197,6 @@ export class BridgeManager extends EventEmitter {
         if (this.queueOverflowing) {
           await this.resumeGame();
           this.queueOverflowing = false;
-        }
-        if (batch.length === 0) {
-          await sleep(20);
-          return;
         }
         logger.info(`Batch executing ${batch.length} Lua calls, ${this.luaCallQueue.length} remaining...`);
       }
@@ -276,10 +269,11 @@ export class BridgeManager extends EventEmitter {
       }
     };
 
-    if (reason !== "BridgeManager shutting down")
-      this.luaCallQueue.forEach(call => {
-        call.resolve(error);
-      });
+    // Always settle pending calls, including on shutdown. Skipping this left any
+    // awaiting caller hanging forever when the manager stopped.
+    this.luaCallQueue.forEach(call => {
+      call.resolve(error);
+    });
 
     this.luaCallQueue = [];
   }
@@ -306,8 +300,10 @@ export class BridgeManager extends EventEmitter {
     const pipePath = `\\\\.\\pipe\\tmp-app.${pipeName}`;
     logger.info(`Attempting to connect to event pipe: ${pipePath}`);
 
-    // Clean up existing socket if any
+    // Clean up existing socket if any. Drop its listeners first so a late 'close'
+    // from the old socket can't drive reconnection against the new one.
     if (this.eventPipeSocket) {
+      this.eventPipeSocket.removeAllListeners();
       this.eventPipeSocket.destroy();
       this.eventPipeSocket = null;
     }
@@ -319,7 +315,6 @@ export class BridgeManager extends EventEmitter {
     this.eventPipeSocket.on('connect', () => {
       logger.info('Event pipe connection established');
       this.eventPipeConnected = true;
-      this.connectionMethod = 'eventPipe';
       this.emit('connected');
       this.clearRetryTimeout();
     });
@@ -367,8 +362,14 @@ export class BridgeManager extends EventEmitter {
     this.eventPipeSocket.on('error', (error: Error) => {
       this.eventPipeConnected = false;
 
-      // Fallback to SSE on error
+      // The pipe is unavailable, so fall back to SSE. connectSSE() is now a no-op
+      // when an SSE stream is already open or connecting, so repeated pipe-retry
+      // failures no longer tear down and reopen a healthy fallback stream (~1s churn).
       logger.error('Event pipe connection failed, falling back to SSE', error);
+      // Unlike disconnectStreams() and the cleanup at the top of connectEventPipe(),
+      // we intentionally keep this socket's listeners. This is a live failure (not a
+      // shutdown), so letting the following 'close' emit 'disconnected' and schedule a
+      // reconnect is desired, alongside the immediate connectSSE() fallback below.
       if (this.eventPipeSocket) {
         this.eventPipeSocket.destroy();
         this.eventPipeSocket = null;
@@ -413,19 +414,27 @@ export class BridgeManager extends EventEmitter {
       return;
     }
 
+    // If SSE is already open or mid-connect, leave it alone. This method used to
+    // unconditionally tear down and reopen the stream, which (paired with the
+    // event-pipe retry loop) reconnected SSE roughly once a second.
+    if (this.sseConnection && this.sseConnection.readyState !== EventSource.CLOSED) {
+      logger.debug('SSE connection already active, not reconnecting');
+      return;
+    }
+
     if (this.sseConnection) {
       this.sseConnection.close();
+      this.sseConnection = null;
     }
 
     try {
-      logger.info('Connecting to SSE stream' + (this.connectionMethod === 'eventPipe' ? ' (fallback from event pipe)' : ''));
+      logger.info('Connecting to SSE stream');
       this.sseConnection = new EventSource(`${this.baseUrl}/events`, {
         fetch
       });
 
       this.sseConnection.onopen = () => {
         logger.info('SSE connection established');
-        this.connectionMethod = 'sse';
         this.emit('connected');
         this.clearRetryTimeout();
       };
@@ -483,22 +492,24 @@ export class BridgeManager extends EventEmitter {
   public disconnectStreams(): void {
     this.clearRetryTimeout();
 
-    // Disconnect event pipe if connected
+    // Disconnect event pipe if connected. Drop listeners first so its 'close'
+    // does not try to fall back to SSE while we are intentionally shutting down.
     if (this.eventPipeSocket) {
+      this.eventPipeSocket.removeAllListeners();
       this.eventPipeSocket.destroy();
       this.eventPipeSocket = null;
       this.eventPipeConnected = false;
       logger.info('Event pipe connection closed');
     }
 
-    // Disconnect SSE if connected
+    // Disconnect SSE if connected. Clear onerror first so the manual close does
+    // not schedule a reconnect.
     if (this.sseConnection) {
+      this.sseConnection.onerror = null;
       this.sseConnection.close();
       this.sseConnection = null;
       logger.info('SSE connection closed');
     }
-
-    this.connectionMethod = null;
   }
 
   /**

@@ -224,8 +224,8 @@ Scripts are executed within the game context via BridgeManager
 - Event processing: Async with queue management
 
 ### Auto-Pause Management
-- Pause game when queue length exceeds threshold (50)
-- Resume game when queue drains below threshold
+- Each cycle drains a batch of up to 50 calls; pause the game when 25 or more calls still remain queued after that
+- Resume game when the queue drains below that threshold
 - Track overflow state to prevent pause/resume thrashing
 - Coordinate with game mutex manager
 

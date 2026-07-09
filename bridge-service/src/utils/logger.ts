@@ -227,14 +227,9 @@ export function logStartup(serviceName: string, version: string, port?: number):
   logSeparator();
 }
 
-// Log unhandled errors
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception: ' + error.message, error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at: ' + promise?.toString() + ', reason:', reason);
-});
+// Process-level crash handling lives in index.ts (which owns the service
+// lifecycle and runs a graceful shutdown on uncaughtException). The logger,
+// a leaf utility imported by everything, deliberately registers no process
+// handlers so it cannot pre-empt that graceful path with an early exit.
 
 export default logger;
