@@ -146,14 +146,9 @@ end
 -- or autoplay off) native popups show on their own and we must not poke.
 local function vdNeedsFlush()
 	local autoplay = Game.GetAIAutoPlay()
-	local ap = Game.GetActivePlayer()
-	local player = Players[ap]
-	local isObserver = (player ~= nil) and player:IsObserver()
-	vdLog("vdNeedsFlush: autoplay=" .. tostring(autoplay)
-		.. " activePlayer=" .. tostring(ap)
-		.. " isObserver=" .. tostring(isObserver))
 	if autoplay == nil or autoplay <= 0 then return false end
-	return player ~= nil and isObserver
+	local player = Players[Game.GetActivePlayer()]
+	return player ~= nil and player:IsObserver()
 end
 
 -- Set while a poke's leaderhead is open; cleared on auto-leave. A single poke
@@ -315,10 +310,9 @@ end
 
 -- Reparent the strip INTO the EUI top-panel context so it sits above that
 -- context's own frame (which otherwise occludes/consumes clicks for a strip
--- parented under it on WorldView) and shares the top panel's input layer. Also
--- hide EUI's right-side button cluster (TopPanelDiploStack) -- those are the dead
--- "old panel" buttons our strip replaces; the left-side data readouts stay.
--- The top panel does not exist when this addin's Lua first runs, so retry.
+-- parented under it on WorldView) and shares the top panel's input layer. The top
+-- panel does not exist when this addin's Lua first runs, so this is retried (via
+-- vdShowScreenBar) until it succeeds.
 local m_vdScreenBarEmbedded = false
 local function vdEnsureScreenBar()
 	if m_vdScreenBarEmbedded then return true end
@@ -329,40 +323,56 @@ local function vdEnsureScreenBar()
 	if ok then
 		m_vdScreenBarEmbedded = true
 		vdLog("screen bar embedded onto " .. (topPanel ~= nil and "/InGame/TopPanel" or "/InGame/WorldView"))
-		-- Hide EUI's round overview-launcher buttons (DiploCorner's button stack:
-		-- Diplomacy/Vassal/League/Espionage/etc.) which our strip replaces. Keep the
-		-- menu (TopPanel) and the met-civ leader icons (DiploList, a sibling) -- so
-		-- hide the stack, NOT the whole DiploCorner context. Best-effort: the stack
-		-- sits under unnamed wrappers, so if the path does not resolve this is a
-		-- no-op and the buttons stay (report and we hide them another way).
-		pcall(function()
-			local stack = ContextPtr:LookUpControl("/InGame/WorldView/DiploCorner/DiploCornerStack")
-			if stack ~= nil then stack:SetHide(true); vdLog("hid EUI DiploCornerStack") else vdLog("DiploCornerStack not found by path") end
-		end)
 	end
 	return ok
 end
-vdEnsureScreenBar()
-if Events ~= nil and Events.LoadScreenClose ~= nil then
-	Events.LoadScreenClose.Add(vdEnsureScreenBar)
+
+-- Hide EUI's round overview-launcher buttons (DiploCorner's button stack:
+-- Diplomacy/Vassal/League/Espionage/etc.) that our strip replaces, or restore
+-- them when our strip is not up. Keep the menu (TopPanel) and the met-civ leader
+-- icons (DiploList, a sibling), so toggle the stack, NOT the whole DiploCorner
+-- context. Idempotent and kept separate from the one-time embed so it can be
+-- re-asserted after EUI/JFD rebuild the corner on an observed-civ switch. Best-
+-- effort: if the path does not resolve (unnamed wrappers) this is a no-op.
+local function vdSetEuiOverviewHidden(hidden)
+	pcall(function()
+		local stack = ContextPtr:LookUpControl("/InGame/WorldView/DiploCorner/DiploCornerStack")
+		if stack ~= nil then stack:SetHide(hidden) end
+	end)
 end
 
--- Show the strip only during the strategist freeze (the same state vdNeedsFlush
--- gates the poke on); hide it otherwise so it never clutters ordinary play.
+-- The strip is visible exactly during the strategist freeze: observer + AI
+-- autoplay (vdNeedsFlush), the same state that gates the poke. That is a game
+-- state, NOT a human-decision state: in pure AI-strategist observation no decision
+-- panel ever opens, so we cannot key visibility off the panel lifecycle. EUI's own
+-- overview buttons are hidden only while our replacement is actually up.
 local function vdShowScreenBar()
 	vdEnsureScreenBar()
-	Controls.VDScreenBar:SetHide(not vdNeedsFlush())
+	local show = vdNeedsFlush()
+	Controls.VDScreenBar:SetHide(not show)
+	vdSetEuiOverviewHidden(show)
 end
 local function vdHideScreenBar()
 	Controls.VDScreenBar:SetHide(true)
 end
 
--- Mirror the trigger's own show/hide lifecycle: the strip is available whenever
--- the trigger/chip is (strategist mode), and tucked away while the modal panel is
--- open or submitting so it does not sit over the dialog.
-LuaEvents.VoxDeorumHumanDecision.Add(function() vdShowScreenBar() end)
+-- Evaluate now, then re-evaluate on the game-lifecycle events that drive the strip
+-- without any human input: LoadScreenClose (game becomes interactive; also the
+-- embed retry) and GameplaySetActivePlayer (the observed civ is switched, when
+-- EUI/JFD rebuild the top/diplo corner, so we must re-hide their buttons). Both
+-- fire under AI autoplay; the AI Observer interface itself relies on them.
+vdShowScreenBar()
+if Events ~= nil then
+	if Events.LoadScreenClose ~= nil then Events.LoadScreenClose.Add(vdShowScreenBar) end
+	if Events.GameplaySetActivePlayer ~= nil then Events.GameplaySetActivePlayer.Add(vdShowScreenBar) end
+end
+
+-- Human-strategist mode (when a human owns a seat) still tucks the strip away
+-- behind its modal decision panel and restores it afterward; harmless no-ops in
+-- pure AI-strategist observation where these events never fire.
+LuaEvents.VoxDeorumHumanDecision.Add(vdShowScreenBar)
 LuaEvents.VoxDeorumHumanPanelHidden.Add(vdShowScreenBar)
-LuaEvents.VoxDeorumHumanPanelSubmitted.Add(function() vdShowScreenBar() end)
+LuaEvents.VoxDeorumHumanPanelSubmitted.Add(vdShowScreenBar)
 LuaEvents.VoxDeorumHumanPanelOpened.Add(vdHideScreenBar)
 LuaEvents.VoxDeorumHumanPanelSubmitting.Add(vdHideScreenBar)
 
