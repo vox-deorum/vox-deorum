@@ -121,10 +121,10 @@ export class MCPServer {
         _meta: tool.metadata
       },
       (async (args: z.infer<typeof tool.inputSchema>) => {
-        logger.warn(`Handling tool request ${tool.name}`, args);
+        logger.debug(`Handling tool request ${tool.name}`, args);
         try {
           const results = await tool.execute(args);
-          logger.warn(`Finishing tool request ${tool.name}`);
+          logger.debug(`Finishing tool request ${tool.name}`);
           // If tool already returns CallToolResult, use it directly
           if (results && typeof results === 'object' && 'content' in results) {
             return results;

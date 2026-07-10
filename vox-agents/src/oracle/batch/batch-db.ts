@@ -229,22 +229,6 @@ export class BatchDb {
       .execute();
   }
 
-  /**
-   * Get all requests that are submitted to a specific batch.
-   * Used during result download to match responses back to requests.
-   *
-   * @param batchId - OpenAI batch ID
-   * @returns All submitted requests in the batch
-   */
-  async getSubmittedByBatch(batchId: string): Promise<BatchRequest[]> {
-    return await this.db
-      .selectFrom('requests')
-      .selectAll()
-      .where('batchId', '=', batchId)
-      .where('status', '=', 'submitted')
-      .execute();
-  }
-
   // ── Batch Operations ──
 
   /**

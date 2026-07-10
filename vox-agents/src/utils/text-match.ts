@@ -29,7 +29,7 @@ export function normalizeForMatch(s: string): string {
 }
 
 /** Levenshtein distance between two strings (small inputs; iterative DP). */
-export function levenshtein(a: string, b: string): number {
+function levenshtein(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
   if (m === 0) return n;

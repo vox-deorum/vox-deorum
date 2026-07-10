@@ -2,7 +2,6 @@
  * Pause Manager - Manages manual game pause state and player pause list synced with DLL
  */
 
-import { EventEmitter } from 'events';
 import { createLogger } from '../utils/logger.js';
 import { dllConnector } from './dll-connector.js';
 import { IPCMessage, PauseMessage, ProductionModeMessage } from '../types/event.js';
@@ -23,19 +22,16 @@ try {
 /**
  * Manager for game pause state, synchronized with DLL
  */
-class PauseManager extends EventEmitter {
+class PauseManager {
   // Local state for player pause list (synced with DLL)
   private pausedPlayerIds: Set<number> = new Set();
-  // Manual pause state (only external/manual pauses)
+  // Manual pause state (only external/manual pauses); the game is paused while mutex !== null
   private mutex: any = null;
-  private isPaused = false;
   private readonly mutexName = 'TurnByTurn';
   // Vox Deorum: Production mode state (synced with DLL)
   private productionMode = false;
 
   constructor() {
-    super();
-
     // Listen for DLL reconnection to resync state
     dllConnector.on('connected', () => {
       this.handleDllReconnected();
@@ -71,11 +67,10 @@ class PauseManager extends EventEmitter {
    */
   pauseGame(): boolean {
     if (!Mutex) return false;
-    if (this.isPaused) return true;
+    if (this.mutex) return true;
 
     try {
       this.mutex = new Mutex(this.mutexName);
-      this.isPaused = true;
       logger.debug('Game paused successfully');
       return true;
     } catch (error) {
@@ -94,7 +89,6 @@ class PauseManager extends EventEmitter {
     try {
       this.mutex.release();
       this.mutex = null;
-      this.isPaused = false;
       logger.debug('Game resumed successfully');
       return true;
     } catch (error) {
@@ -107,7 +101,7 @@ class PauseManager extends EventEmitter {
    * Check if game is paused
    */
   isGamePaused(): boolean {
-    return this.isPaused;
+    return this.mutex !== null;
   }
 
   /**
@@ -182,20 +176,6 @@ class PauseManager extends EventEmitter {
   }
 
   /**
-   * Update the active player (called when game events indicate turn change)
-   * Note: With DLL handling pausing, this is mainly for logging
-   */
-  setActivePlayer(playerId: number): void {
-    logger.debug(`Active player set to ${playerId}`);
-
-    // The DLL handles the actual pausing based on its internal state
-    // We just track for UI/API responses
-    if (this.pausedPlayerIds.has(playerId)) {
-      logger.info(`Player ${playerId} is in paused list - DLL will pause`);
-    }
-  }
-
-  /**
    * Set production mode (synced with DLL for AI turn cooldown)
    */
   setProductionMode(enabled: boolean): void {
@@ -216,7 +196,7 @@ class PauseManager extends EventEmitter {
    * Clean up resources
    */
   finalize(): void {
-    if (this.mutex && this.isPaused) {
+    if (this.mutex) {
       try {
         this.mutex.release();
         logger.info('Mutex released during finalization');
@@ -225,7 +205,6 @@ class PauseManager extends EventEmitter {
       }
     }
     this.mutex = null;
-    this.isPaused = false;
     this.pausedPlayerIds.clear();
   }
 }

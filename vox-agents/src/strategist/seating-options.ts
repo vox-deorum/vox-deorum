@@ -18,7 +18,7 @@ export function buildSeatingManagerOptions(config: StrategistSessionConfig): Sea
     configSlots,
     // For 'start' mode this matches `computePlayerCount` (max(playerIds)+1);
     // load/wait modes have no authoritative count at construction time, so we
-    // use the same fallback the old `ensureSeatingClaim` used.
+    // fall back to the highest configured slot index plus one.
     totalSeats: configSlots.length > 0 ? Math.max(...configSlots) + 1 : 1,
     seedCount: seedSets.length,
     seedSets,

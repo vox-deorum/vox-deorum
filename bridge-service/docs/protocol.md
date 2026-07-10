@@ -223,20 +223,14 @@ See [protocol.md](#auto-pause-on-player-turn-events) for detailed pause logic.
 
 ### Auto-Pause on Player Turn Events
 
-The Bridge Service automatically handles game pausing based on registered paused players:
+The DLL performs the pause check internally using the paused player set synced from the Bridge Service:
 
-1. **PlayerDoTurn Event**
-   - Bridge receives event with `PlayerID` in payload
-   - Calls `pauseManager.setActivePlayer(PlayerID)`
-   - If player is in paused list, game auto-pauses
-   - If player is not in paused list and no manual pause, game auto-resumes
+1. **Player Turn Events (`PlayerDoTurn` / `PlayerDoneTurn`)**
+   - The DLL checks the active player against its internal paused set during `ProcessMessages()`
+   - If the active player is in the paused set, the game auto-pauses; otherwise it proceeds
+   - The Bridge Service forwards these events to SSE clients but does not drive the pause decision
 
-2. **PlayerDoneTurn Event**
-   - Bridge receives event with `NextPlayerID` in payload
-   - Calls `pauseManager.setActivePlayer(NextPlayerID)`
-   - Same auto-pause/resume logic applies for the next player
-
-3. **DLL Disconnection**
+2. **DLL Disconnection**
    - On disconnect, Bridge clears all paused players
    - Prevents stuck pauses when game restarts
 

@@ -5,16 +5,14 @@
  * Condenses full game reports into key insights for strategic decision-making.
  */
 
-import { ModelMessage, Tool } from "ai";
-import { z } from "zod";
+import { ModelMessage } from "ai";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
-import { createSimpleTool } from "../utils/tools/simple-tools.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { SimpleStrategistBase } from "../strategist/agents/simple-strategist-base.js";
-import { briefingInstructionKeys, getLastBriefingState } from "./briefing-utils.js";
+import { getLastBriefingState } from "./briefing-utils.js";
 
 /**
  * A simple briefer agent that analyzes the game state and produces a concise briefing.

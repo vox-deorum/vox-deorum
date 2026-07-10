@@ -31,7 +31,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * single text content item, while object and array results ride in
  * structuredContent.
  */
-export function unwrapMCPResult(rawResult: unknown): unknown {
+function unwrapMCPResult(rawResult: unknown): unknown {
   if (!isRecord(rawResult)) return rawResult;
   if (rawResult.isError === true) return rawResult;
 

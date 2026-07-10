@@ -43,7 +43,7 @@ const colors = {
  * Get level-specific styling for log messages.
  *
  * @param level - The log level (ERROR, WARN, INFO, DEBUG)
- * @returns Object containing color, background, and icon for the level
+ * @returns Object containing color and icon for the level
  */
 const getLevelStyle = (level: string) => {
   const upperLevel = level.toUpperCase();
@@ -51,31 +51,26 @@ const getLevelStyle = (level: string) => {
     case 'ERROR':
       return {
         color: colors.red,
-        bg: colors.bgRed,
         icon: '❌',
       };
     case 'WARN':
       return {
         color: colors.yellow,
-        bg: colors.bgYellow,
         icon: '⚠️ ',
       };
     case 'INFO':
       return {
         color: colors.blue,
-        bg: colors.bgBlue,
         icon: 'ℹ️ ',
       };
     case 'DEBUG':
       return {
         color: colors.gray,
-        bg: colors.gray,
         icon: '🔍',
       };
     default:
       return {
         color: colors.white,
-        bg: colors.white,
         icon: '📝',
       };
   }
@@ -153,7 +148,6 @@ const customFormat = winston.format.combine(
 
     // Enhanced format for development
     const coloredTimestamp = `${colors.dim}${timestamp}${colors.reset}`;
-    const coloredLevel = `${colors.bright}${style.color}${colors.reset}`;
     const contextStr = context ? ` ${colors.cyan}[${context}]${colors.reset}` : '';
     const coloredMessage = `${style.color}${message}${colors.reset}`;
 
@@ -167,7 +161,7 @@ const customFormat = winston.format.combine(
       metaStr = `\n  ${colors.gray}${formattedMeta}${colors.reset}`;
     }
 
-    return `${coloredTimestamp} ${coloredLevel}${style.icon}${contextStr} ${coloredMessage}${metaStr}`;
+    return `${coloredTimestamp} ${style.icon}${contextStr} ${coloredMessage}${metaStr}`;
   })
 );
 

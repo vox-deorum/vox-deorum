@@ -72,18 +72,3 @@ export function weightedFuzzySearch(
     .sort((a, b) => b.score - a.score)
     .map(result => result.item);
 }
-
-/**
- * Adds a field value to the fields array with the specified weight
- * @param fields - Array to add field values to
- * @param value - The field value to add (will be checked for existence)
- * @param weight - Number of times to add the field (higher = more important)
- */
-export function addFieldWithWeight(fields: string[], value: unknown, weight: number): void {
-  if (value) {
-    for (let i = 0; i < weight; i++) {
-      fields.push(String(value));
-    }
-  }
-}
-

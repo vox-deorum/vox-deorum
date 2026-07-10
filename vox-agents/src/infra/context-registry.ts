@@ -76,22 +76,13 @@ class ContextRegistry {
   }
 
   /**
-   * Get all active context IDs.
-   *
-   * @returns Array of all active context IDs
-   */
-  public getIds(): string[] {
-    return Array.from(this.contexts.keys());
-  }
-
-  /**
    * Shutdown all active contexts.
    * Useful for graceful application shutdown or cleanup.
    *
    * @returns Promise that resolves when all contexts are shut down
    */
   public async shutdownAll(): Promise<void> {
-    const contextIds = this.getIds();
+    const contextIds = Array.from(this.contexts.keys());
 
     if (contextIds.length === 0) return;
     this.logger.info(`Shutting down ${contextIds.length} active contexts`);

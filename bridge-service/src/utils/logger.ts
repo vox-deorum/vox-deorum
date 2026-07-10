@@ -196,37 +196,6 @@ export function createLogger(context: string): winston.Logger {
   return logger.child({ context });
 }
 
-/**
- * Log a visual separator for better readability
- */
-export function logSeparator(title?: string, level: 'info' | 'debug' = 'info'): void {
-  const separator = '─'.repeat(60);
-  if (title) {
-    const paddedTitle = ` ${title} `;
-    const totalLength = 60;
-    const sideLength = Math.max(0, Math.floor((totalLength - paddedTitle.length) / 2));
-    const leftSide = '─'.repeat(sideLength);
-    const rightSide = '─'.repeat(totalLength - sideLength - paddedTitle.length);
-    logger[level](`${leftSide}${paddedTitle}${rightSide}`);
-  } else {
-    logger[level](separator);
-  }
-}
-
-/**
- * Log startup information with enhanced formatting
- */
-export function logStartup(serviceName: string, version: string, port?: number): void {
-  logSeparator(`${serviceName} v${version}`, 'info');
-  logger.info('🚀 Service starting up...');
-  if (port) {
-    logger.info(`🌐 Server will listen on port ${port}`);
-  }
-  logger.info(`📊 Log level: ${logger.level}`);
-  logger.info(`🏗️  Environment: ${process.env.NODE_ENV || 'development'}`);
-  logSeparator();
-}
-
 // Process-level crash handling lives in index.ts (which owns the service
 // lifecycle and runs a graceful shutdown on uncaughtException). The logger,
 // a leaf utility imported by everything, deliberately registers no process

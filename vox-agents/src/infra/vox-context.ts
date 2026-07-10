@@ -743,7 +743,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         const stepModel = stepConfig.model || model;
         const stepProviderOptions = buildProviderOptions(stepConfig.model || model);
         const stepActiveTools = stepConfig.activeTools || agent.getActiveTools(parameters);
-        const stepToolChoice = stepConfig.toolChoice || (stepActiveTools && stepActiveTools.length > 0 ? agent.toolChoice : "auto");
+        const stepToolChoice = stepActiveTools && stepActiveTools.length > 0 ? agent.toolChoice : "auto";
         const stepOutputSchema = stepConfig.outputSchema;
 
         // Prepare tool-result messages by converting nested objects to markdown

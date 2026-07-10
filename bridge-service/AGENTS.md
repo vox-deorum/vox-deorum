@@ -4,8 +4,8 @@ This guide provides essential patterns and conventions for the Bridge Service th
 
 ## Architecture Patterns
 
-### Singleton Services with Event Emitters
-All major components extend EventEmitter and are exported as singleton instances for consistent state management.
+### Singleton Services
+Core components are exported as singleton instances for consistent state management. Only `DLLConnector` extends `EventEmitter`, because callers subscribe to its DLL-driven events (`game_event`, `connected`, `disconnected`, and so on). The other singletons (`BridgeService`, `PauseManager`, `EventPipe`) are plain classes that expose their behaviour through direct method calls.
 
 ### Layered Architecture
 - `src/index.ts` - Express setup and middleware
@@ -55,11 +55,10 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 
 ### Game Pause Manager Pattern
 - Track paused player IDs using a Set for efficient lookups
-- Distinguish between manual and automatic pauses with separate flags
-- Auto-pause for registered players when they become active
-- Auto-resume for unregistered players to maintain game flow
-- **Always distinguish manual from automatic state changes** to prevent conflicts
-- Syncs pause state with DLL via IPC messages
+- Manual pause is held through a named Windows mutex; the paused state is derived from `mutex !== null` rather than a separate boolean flag
+- Sync the paused player set with the DLL via IPC messages
+- The DLL performs the actual turn-based pausing from its own paused set, so the bridge does not track the active player
+- Clear the paused player set on DLL disconnect to avoid stuck pauses
 
 ### Function Registry Pattern
 - Use Map for dynamic function registration and management
@@ -108,7 +107,7 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 1. **Don't forget request cleanup** - Always clear timeouts on response
 2. **Check connection state** - Verify `res.destroyed` before SSE writes
 3. **Handle batch parsing errors** - Individual message failures shouldn't crash batch processing
-4. **Distinguish pause types** - Manual vs automatic pauses need different handling
+4. **Understand pause ownership** - Manual pause is held via the mutex; the DLL owns turn-based pausing from its synced player set
 5. **Clean up on shutdown** - Implement graceful cleanup in all services
 
 ## Development Workflow
@@ -121,11 +120,11 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 5. Create batch variant if applicable
 
 ### Adding New Services
-1. Extend EventEmitter
-2. Export singleton instance
-3. Implement shutdown() method
-4. Register with BridgeService
-5. Add error recovery logic
+1. Export a singleton instance
+2. Implement a shutdown()/stop() method
+3. Register with BridgeService
+4. Add error recovery logic
+5. Only extend EventEmitter when callers need to subscribe to asynchronous events (as DLLConnector does)
 
 ### Debugging
 - Enable debug logs: `LOG_LEVEL=debug`

@@ -10,7 +10,7 @@ The source lives in `src/archivist/`. The entry point is:
 npm run archivist -- -a <archive-path> -o <output.duckdb>
 ```
 
-In-source reference material — the full pipeline plan and the exact episode table schema — stays with the component in `src/archivist/plan.md` and `src/archivist/schema.md`.
+The exact episode table schema is documented in [`vox-agents/docs/developers/vox-agents/schema.md`](../../../vox-agents/docs/developers/vox-agents/schema.md).
 
 ## What an episode is
 

@@ -10,7 +10,6 @@ import type { Kysely } from 'kysely';
 import type { ModelMessage } from 'ai';
 import { fuzzy } from 'fast-fuzzy';
 import { createLogger } from '../../utils/logger.js';
-import { cleanToolArtifacts } from '../../utils/models/text-cleaning.js';
 import type { TelemetryDatabase, Span } from '../../utils/telemetry/schema.js';
 import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
 import type { ExtractedPrompt } from '../types.js';

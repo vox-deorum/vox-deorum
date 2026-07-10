@@ -5,7 +5,6 @@
  * Used for testing or running games without LLM-based decision making.
  */
 
-import { ModelMessage, StepResult, Tool } from "ai";
 import { Strategist } from "../strategist.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { StrategistParameters } from "../strategy-parameters.js";
@@ -34,25 +33,5 @@ export class NoneStrategist extends Strategist {
    */
   public async getSystem(_parameters: StrategistParameters, context: VoxContext<StrategistParameters>): Promise<string> {
     return "";
-  }
-  
-  /**
-   * Gets the initial messages for the conversation
-   */
-  public async getInitialMessages(parameters: StrategistParameters, input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
-    // Return the messages
-    return [];
-  }
-  
-  /**
-   * Determines whether the agent should stop execution
-   */
-  public stopCheck(
-    _parameters: StrategistParameters,
-    _input: unknown,
-    _lastStep: StepResult<Record<string, Tool>>,
-    _allSteps: StepResult<Record<string, Tool>>[]
-  ): boolean {
-    return true;
   }
 }

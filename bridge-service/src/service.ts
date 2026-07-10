@@ -9,7 +9,6 @@
  * Follows the singleton pattern for consistent state management.
  */
 
-import { EventEmitter } from 'events';
 import { createLogger } from './utils/logger.js';
 import { dllConnector } from './services/dll-connector.js';
 import { luaManager } from './services/lua-manager.js';
@@ -23,14 +22,10 @@ const logger = createLogger('BridgeService');
  * Bridge Service class for coordinating all service components
  *
  * @class BridgeService
- * @extends EventEmitter
  *
  * @description
  * Main orchestration class that manages the lifecycle of all Bridge Service components.
  * Coordinates startup, shutdown, and provides health/statistics monitoring.
- *
- * @fires BridgeService#started - Emitted when service successfully starts
- * @fires BridgeService#shutdown - Emitted when service successfully shuts down
  *
  * @example
  * ```typescript
@@ -48,12 +43,11 @@ const logger = createLogger('BridgeService');
  * await bridgeService.shutdown();
  * ```
  */
-export class BridgeService extends EventEmitter {
+export class BridgeService {
   private startTime: Date;
   private isRunning: boolean = false;
 
   constructor() {
-    super();
     this.startTime = new Date();
   }
 
@@ -64,12 +58,9 @@ export class BridgeService extends EventEmitter {
    * Initializes and starts all Bridge Service components:
    * 1. Connects to the DLL via IPC
    * 2. Starts the event pipe (if enabled)
-   * 3. Emits 'started' event on successful startup
    *
    * @returns Promise that resolves when all components are started
    * @throws Error if DLL connection fails
-   *
-   * @fires BridgeService#started
    */
   public async start(): Promise<void> {
     logger.info('Starting Bridge Service...');
@@ -80,8 +71,6 @@ export class BridgeService extends EventEmitter {
 
     // Start event pipe if enabled
     await eventPipe.start();
-
-    this.emit('started');
   }
 
   /**
@@ -91,12 +80,9 @@ export class BridgeService extends EventEmitter {
    * Gracefully shuts down all Bridge Service components:
    * 1. Disconnects from the DLL
    * 2. Stops the event pipe
-   * 3. Emits 'shutdown' event on successful shutdown
    *
    * @returns Promise that resolves when all components are stopped
    * @throws Error if shutdown encounters errors
-   *
-   * @fires BridgeService#shutdown
    */
   public async shutdown(): Promise<void> {
     if (!this.isRunning) return;
@@ -110,7 +96,6 @@ export class BridgeService extends EventEmitter {
       // Stop event pipe
       await eventPipe.stop();
       logger.info('Bridge Service shut down successfully');
-      this.emit('shutdown');
     } catch (error) {
       logger.error('Error during shutdown:', error);
       throw error;

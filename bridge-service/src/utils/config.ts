@@ -37,7 +37,6 @@ import { createLogger } from './logger.js';
  * @property rest.host - HTTP server bind address
  * @property gamepipe - DLL IPC connection configuration
  * @property gamepipe.id - Named pipe identifier for DLL connection
- * @property gamepipe.retry - Reconnection retry interval in milliseconds
  * @property eventpipe - Event broadcasting configuration
  * @property eventpipe.enabled - Whether event pipe is enabled
  * @property eventpipe.name - Named pipe identifier for event broadcasting
@@ -51,7 +50,6 @@ export interface ServiceConfig {
   };
   gamepipe: {
     id: string;
-    retry: number;
   };
   eventpipe: {
     enabled: boolean;
@@ -73,8 +71,7 @@ const defaultConfig: ServiceConfig = {
     host: '127.0.0.1'
   },
   gamepipe: {
-    id: 'vox-deorum-bridge',
-    retry: 5000
+    id: 'vox-deorum-bridge'
   },
   eventpipe: {
     enabled: false,
@@ -127,8 +124,7 @@ export function loadConfig(): ServiceConfig {
       host: process.env.HOST || fileConfig.rest?.host || defaultConfig.rest.host
     },
     gamepipe: {
-      id: process.env.gamepipe_ID || fileConfig.gamepipe?.id || defaultConfig.gamepipe.id,
-      retry: parseInt(process.env.gamepipe_RETRY || '') || fileConfig.gamepipe?.retry || defaultConfig.gamepipe.retry
+      id: process.env.gamepipe_ID || fileConfig.gamepipe?.id || defaultConfig.gamepipe.id
     },
     eventpipe: {
       enabled: eventPipeEnabledOverride ?? fileConfig.eventpipe?.enabled ?? defaultConfig.eventpipe.enabled,
@@ -144,7 +140,7 @@ export function loadConfig(): ServiceConfig {
 
   logger.info('Configuration loaded:', {
     rest: config.rest,
-    gamepipe: { id: config.gamepipe.id, retry: config.gamepipe.retry },
+    gamepipe: { id: config.gamepipe.id },
     eventpipe: config.eventpipe,
     logging: { level: config.logging.level }
   });

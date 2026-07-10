@@ -7,7 +7,7 @@
 
 /** The ONLY input to the retrieval pipeline */
 export interface EpisodeQuery {
-  gameStateVector: number[];     // 33d
+  gameStateVector: number[];     // 35d
   neighborVector: number[];      // 32d
   situationAbstract?: string;    // optional — pipeline generates embedding when provided
 
@@ -22,7 +22,7 @@ export interface EpisodeQuery {
   denouncements: number;         // proximity-scored (±1 = half credit)
 
   candidateLimit?: number;       // pre-diversity pool (default 20)
-  resultLimit?: number;          // final count (default 5)
+  resultLimit?: number;          // final count (default 3)
 }
 
 /** Outcome snapshot at a future horizon */

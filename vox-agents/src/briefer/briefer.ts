@@ -1,5 +1,5 @@
 /**
- * @module strategist/strategist
+ * @module briefer/briefer
  *
  * Base briefer agent implementation. All briefers inherit from this class.
  */

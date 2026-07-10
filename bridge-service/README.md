@@ -119,8 +119,7 @@ Create `config.json` in the bridge-service root:
     "host": "127.0.0.1"
   },
   "gamepipe": {
-    "id": "vox-deorum-bridge",
-    "retry": 5000
+    "id": "vox-deorum-bridge"
   },
   "eventpipe": {
     "enabled": true,

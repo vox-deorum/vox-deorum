@@ -178,13 +178,6 @@ export class HttpClient {
   }
 
   /**
-   * Get the base URL
-   */
-  getBaseUrl(): string {
-    return this.baseUrl;
-  }
-
-  /**
    * Shutdown the client and close connections
    */
   async shutdown(): Promise<void> {

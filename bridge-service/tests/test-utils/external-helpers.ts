@@ -236,22 +236,3 @@ export async function unregisterExternalFunction(
   // Wait for unregistration to propagate
   await delay(100);
 }
-
-/**
- * Clean up all external function registrations
- */
-export async function cleanupAllExternalFunctionsHelper(
-  app: Application
-): Promise<void> {
-  // Get list of all registered functions
-  const response = await request(app).get('/external/functions');
-  
-  if (response.status === 200 && response.body.success) {
-    const functions = response.body.result.functions || [];
-    
-    // Unregister each function
-    for (const func of functions) {
-      await unregisterExternalFunction(app, func.name);
-    }
-  }
-}

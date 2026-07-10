@@ -59,7 +59,6 @@ const { values } = parseArgs({
 // Graceful shutdown state
 // ---------------------------------------------------------------------------
 
-let shuttingdown = false;
 let shuttingdownAfter = false;
 let rl: readline.Interface | null = null;
 

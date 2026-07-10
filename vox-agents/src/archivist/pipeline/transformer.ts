@@ -3,7 +3,7 @@
  *
  * Pure computation module that transforms RawEpisode + TurnContext into Episode.
  * Computes city-adjusted shares, per-pop metrics, gaps, ideology, religion,
- * game state vector (33d), and neighbor vector (32d).
+ * game state vector (35d), and neighbor vector (32d).
  * No async, no I/O — all data comes from the extraction phase.
  */
 

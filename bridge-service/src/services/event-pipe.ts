@@ -3,7 +3,6 @@
  */
 
 import ipc from 'node-ipc';
-import { EventEmitter } from 'events';
 import { createLogger } from '../utils/logger.js';
 import { config } from '../utils/config.js';
 import { GameEvent } from '../types/event.js';
@@ -13,13 +12,11 @@ const logger = createLogger('EventPipe');
 /**
  * EventPipe service for broadcasting events through a named pipe using node-ipc
  */
-export class EventPipe extends EventEmitter {
+export class EventPipe {
   private isServing: boolean = false;
-  private shuttingDown: boolean = false;
   private connectedClientsCount: number = 0;
 
   constructor() {
-    super();
     this.setupIPC();
   }
 
@@ -46,8 +43,6 @@ export class EventPipe extends EventEmitter {
       logger.warn('Event pipe server already running');
       return;
     }
-
-    this.shuttingDown = false;
 
     return new Promise((resolve) => {
       ipc.serve(() => {
@@ -91,7 +86,7 @@ export class EventPipe extends EventEmitter {
    * Broadcast a batch of events to all connected clients
    */
   broadcastBatch(events: GameEvent[]): void {
-    if (!config.eventpipe.enabled || !this.isServing || this.shuttingDown || events.length === 0) {
+    if (!config.eventpipe.enabled || !this.isServing || events.length === 0) {
       return;
     }
 
@@ -116,7 +111,6 @@ export class EventPipe extends EventEmitter {
     }
 
     logger.info('Shutting down event pipe server');
-    this.shuttingDown = true;
 
     // Send goodbye message to all clients
     try {

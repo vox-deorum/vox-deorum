@@ -78,7 +78,7 @@ The `NarratorWorkspace` class (in `workspace.ts`) manages context, DB access, an
 ### CLI
 
 ```
-npm run narrator -- --workspace <path> --stage <name> --config <file> [--force]
+npm run narrator -- --workspace <path> --stage <name> --config <file>
 ```
 
 ### Workspace

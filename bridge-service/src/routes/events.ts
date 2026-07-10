@@ -182,22 +182,9 @@ export function getSSEStats(): {
 }
 
 // Listen for game events from DLL and broadcast to SSE clients
+// The DLL performs turn based pausing internally using the paused player set
+// synced from the pause manager, so no active player tracking is done here.
 dllConnector.on('game_event', (eventData: GameEventMessage) => {
-  // Handle player turn events for auto-pause functionality
-  if (eventData.event === 'PlayerDoTurn' && eventData.payload) {
-    const playerId = eventData.payload["PlayerID"]
-    if (typeof playerId === 'number') {
-      pauseManager.setActivePlayer(playerId);
-      logger.debug(`Active player changed to ${playerId} (PlayerDoTurn event)`);
-    }
-  } else if (eventData.event === 'PlayerDoneTurn' && eventData.payload?.args) {
-    const nextPlayerId = eventData.payload["NextPlayerID"]
-    if (typeof nextPlayerId === 'number') {
-      pauseManager.setActivePlayer(nextPlayerId);
-      logger.debug(`Active player changed to ${nextPlayerId} (PlayerDoneTurn event)`);
-    }
-  }
-
   broadcastEvent({
     type: eventData.event,
     id: eventData.id,

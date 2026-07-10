@@ -1,8 +1,9 @@
 /**
- * @module types/agents
+ * @module types/chat
  *
- * Chat-related types for Vox Agents.
- * Contains core agent definitions.
+ * Chat-related types for Vox Agents: the streaming event callback and the
+ * Envoy chat thread input/output structures (metadata and messages for a
+ * conversation thread).
  */
 
 import type { StreamTextOnChunkCallback, ToolSet } from "ai";
@@ -10,12 +11,6 @@ import type { StreamTextOnChunkCallback, ToolSet } from "ai";
 export interface StreamingEventCallback {
   OnChunk: StreamTextOnChunkCallback<ToolSet>
 }
-/**
- * @module envoy/envoy-thread
- *
- * Data structure for Envoy's chat thread input/output.
- * Contains the metadata and messages for a conversation thread.
- */
 
 import type { ModelMessage } from "ai";
 import type { DealTranscriptMessage } from "../../../mcp-server/dist/utils/deal-schema.js";

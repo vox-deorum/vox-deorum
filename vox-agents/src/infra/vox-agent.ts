@@ -388,7 +388,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   ) {
     const config: {
       model?: Model;
-      toolChoice?: string;
       activeTools?: string[];
       messages?: ModelMessage[];
       outputSchema?: ZodObject;
@@ -418,7 +417,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
     }
 
     // Handle messages
-    const toolChoice = config.toolChoice || this.toolChoice;
+    const toolChoice = this.toolChoice;
     if (lastStep === null) {
       config.messages = [...messages];
     } else if (lastStep.toolCalls.length === 0 && (toolChoice === "required" || toolChoice === "tool" || !lastStep.text?.trim())) {

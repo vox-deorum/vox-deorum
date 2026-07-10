@@ -1,5 +1,5 @@
 /**
- * @module utils/game-state-vector
+ * @module archivist/pipeline/game-state-vector
  *
  * Adapter that converts live MCP report types (PlayersReport, CitiesReport,
  * VictoryProgressReport) into the archivist pipeline's input types (TurnContext,

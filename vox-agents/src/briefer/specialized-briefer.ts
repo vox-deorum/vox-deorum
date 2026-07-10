@@ -295,11 +295,10 @@ export class SpecializedBriefer extends Briefer<SpecializedBrieferInput> {
   public async getInitialMessages(
     parameters: StrategistParameters,
     input: SpecializedBrieferInput,
-    context: VoxContext<StrategistParameters>
+    _context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
     const config = modeConfigs[input.mode];
     const state = getRecentGameState(parameters)!;
-    await Briefer.prototype.getInitialMessages.call(this, parameters, input.instruction, context);
     const { YouAre, ...SituationData } = parameters.metadata || {};
 
     // Filter events to the appropriate category. Read the decision window (mergedEvents) when an

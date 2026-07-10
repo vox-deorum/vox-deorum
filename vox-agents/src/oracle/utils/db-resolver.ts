@@ -78,8 +78,3 @@ export function openReadonlyDb(dbPath: string): Kysely<TelemetryDatabase> | null
     return null;
   }
 }
-
-/** Clear the DB path cache (useful for testing) */
-export function clearDbCache(): void {
-  dbPathCache.clear();
-}

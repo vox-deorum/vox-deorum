@@ -32,13 +32,15 @@ const logger = createLogger('DLLConnector');
  *
  * @interface PendingRequest
  * @template T - Type of the expected response data
+ *
+ * @remarks
+ * This request never rejects. Both successful and error responses are delivered
+ * through settle as APIResponse values (errors are failed APIResponse objects,
+ * never thrown or promise-rejected), so a single settle callback covers every path.
  */
 interface PendingRequest<T = any> {
-  id: string;
-  resolve: (value: APIResponse<T>) => void;
-  reject: (error: APIResponse<T>) => void;
+  settle: (response: APIResponse<T>) => void;
   timeout: NodeJS.Timeout;
-  timestamp: Date;
 }
 
 /**
@@ -98,7 +100,6 @@ export class DLLConnector extends EventEmitter {
    */
   private setupIPC(): void {
     ipc.config.id = 'bridge-service';
-    ipc.config.retry = config.gamepipe.retry;
     ipc.config.maxRetries = false; // Infinite retries
     ipc.config.silent = true; // We'll handle our own logging
     ipc.config.rawBuffer = true;
@@ -222,12 +223,8 @@ export class DLLConnector extends EventEmitter {
     if (request) {
       clearTimeout(request.timeout);
       this.pendingRequests.delete(data.id);
-      
-      if (data.success) {
-        request.resolve(data);
-      } else {
-        request.reject(data);
-      }
+
+      request.settle(data);
     } else {
       logger.warn('Received response for unknown request: ' + data.id);
     }
@@ -247,7 +244,7 @@ export class DLLConnector extends EventEmitter {
     // so this loop is a no-op during graceful shutdown but handles unexpected disconnects.
     for (const [, request] of this.pendingRequests) {
       clearTimeout(request.timeout);
-      request.reject(respondError(
+      request.settle(respondError(
         ErrorCode.DLL_DISCONNECTED,
         'Lost connection to DLL while waiting for a response'
       ));
@@ -260,7 +257,7 @@ export class DLLConnector extends EventEmitter {
 
     // Attempt reconnection (infinite retries)
     this.reconnectAttempts++;
-    const delay = Math.min(200 * Math.pow(1.5, this.reconnectAttempts), 5000); // Cap exponential backoff at 10 attempts
+    const delay = Math.min(200 * Math.pow(1.5, this.reconnectAttempts), 5000); // Cap exponential backoff at 5000ms
     
     logger.debug(`Attempting reconnection ${this.reconnectAttempts} in ${delay}ms`);
     
@@ -313,10 +310,7 @@ export class DLLConnector extends EventEmitter {
     const promises = messagesWithIds.map(messageWithId => {
       return new Promise<APIResponse<T>>((resolve) => {
         const request: PendingRequest<T> = {
-          id: messageWithId.id,
-          resolve,
-          reject: resolve,
-          timestamp: new Date(),
+          settle: resolve,
           timeout: guardTimeout(() => {
             if (this.pendingRequests.delete(messageWithId.id)) {
               logger.error('Message timeout: ' + messageWithId.id);
@@ -421,7 +415,7 @@ export class DLLConnector extends EventEmitter {
     // Clear pending requests
     for (const [, request] of this.pendingRequests) {
       clearTimeout(request.timeout);
-      request.reject(respondError(
+      request.settle(respondError(
         ErrorCode.DLL_DISCONNECTED,
         'The service was shutting down'
       ));

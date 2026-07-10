@@ -500,7 +500,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
     // Persist the resolved seating map (and cycle coordinates, if any) into
     // the per-game telemetry metadata. The seating claim is guaranteed to
-    // exist here because `ensureSeatingClaim()` ran before startGame.
+    // exist here because it was supplied at construction or recovered from the
+    // launched game above, before the players are created.
     const seatingMap = this.seatingClaim!.seatingMap;
     await this.writeSeatingMetadata();
 

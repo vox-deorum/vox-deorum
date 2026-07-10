@@ -4,8 +4,8 @@
  * Singleton read-only DuckDB connection for the episode retrieval pipeline.
  * Implements a three-stage retrieval process:
  *   Stage 1 - Two-pass composite scoring (fuzzy attributes + vector similarity)
- *   Stage 2 - Outcome fetching at future horizons (5, 10, 20, 30 turns)
- *   Stage 3 - MMR diversity selection to reduce redundancy in final results
+ *   Stage 2 - MMR diversity selection to reduce redundancy in final results
+ *   Stage 3 - Outcome fetching at future horizons (5, 10, 20, 30 turns)
  */
 
 import { DuckDBConnection } from '@duckdb/node-api';
@@ -26,12 +26,11 @@ const logger = createLogger('Archivist:Reader');
 // ---------------------------------------------------------------------------
 
 let connection: DuckDBConnection | null = null;
-let dbPath: string | null = null;
 
 /** Get or create the singleton DuckDB connection using the configured episode DB path. */
 async function getConnection(): Promise<DuckDBConnection> {
   if (connection) return connection;
-  dbPath = config.episodeDbPath;
+  const dbPath = config.episodeDbPath;
   const instance = await getEpisodeDbInstance(dbPath);
   connection = await instance.connect();
   logger.info(`Connected to episode database: ${dbPath}`);
@@ -316,14 +315,4 @@ export async function findEpisodes(query: EpisodeQuery): Promise<EpisodeResult[]
     const outcomes = outcomeMap.get(key) ?? [];
     return buildResult(candidate, outcomes);
   });
-}
-
-/** Close the singleton DuckDB connection and reset state. */
-export async function closeReader(): Promise<void> {
-  if (connection) {
-    connection.disconnectSync();
-    connection = null;
-    dbPath = null;
-    logger.info('Reader connection closed');
-  }
 }

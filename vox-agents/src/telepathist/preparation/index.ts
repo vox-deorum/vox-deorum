@@ -11,8 +11,6 @@ import { VoxContext } from '../../infra/vox-context.js';
 import { prepareTurnSummaries } from './turn-preparation.js';
 import { preparePhaseSummaries } from './phase-preparation.js';
 
-export { type TurnSummaryOutput, type PhaseSummaryOutput, turnSummarySchema, phaseSummarySchema } from './instructions.js';
-
 /**
  * Runs the full preparation pipeline: turn summaries then phase summaries.
  * Called during session initialization ({{{Initialize}}} message).

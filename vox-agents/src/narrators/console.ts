@@ -6,7 +6,7 @@
  * the matching session class, run start(), exit. No game loop, no readline.
  *
  * Usage:
- *   npm run narrator -- --stage <name> --config <file> [--workspace <path>] [--force]
+ *   npm run narrator -- --stage <name> --config <file> [--workspace <path>]
  *
  * Stages: assemble | select | script | voice | video
  */
@@ -33,7 +33,6 @@ const { values } = parseArgs({
     stage: { type: 'string', short: 's' },
     config: { type: 'string', short: 'c' },
     workspace: { type: 'string', short: 'w' },
-    force: { type: 'boolean', short: 'f', default: false },
   },
   strict: false,
   allowPositionals: false,
@@ -42,7 +41,6 @@ const { values } = parseArgs({
 const stage = values.stage as string | undefined;
 const configFile = values.config as string | undefined;
 const workspaceOverride = values.workspace as string | undefined;
-const force = values.force as boolean;
 
 if (!stage) {
   logger.error('Missing required --stage argument (assemble|select|script|voice|video)');
@@ -135,7 +133,6 @@ async function main() {
   logger.info(`Narrator stage '${stage}' starting`, {
     config: resolvedConfigPath,
     workspace: sessionConfig.workspace,
-    force,
   });
   try {
     session = createStageSession(stage!, sessionConfig);

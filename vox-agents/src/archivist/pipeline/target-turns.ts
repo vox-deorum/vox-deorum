@@ -17,7 +17,7 @@ export interface WorkerStats {
 
 /**
  * Compute the set of turns that need summaries: landmark turns plus their
- * consequence turns (at +5/+10/+15/+20 horizons used by the reader's outcome pipeline).
+ * consequence turns (at +5/+10/+20/+30 horizons used by the reader's outcome pipeline).
  * Snaps consequence turns to nearby existing summaries within {@link horizonTolerance}
  * to avoid redundant LLM calls when a close-enough summary already exists.
  */

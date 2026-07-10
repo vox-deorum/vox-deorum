@@ -22,7 +22,7 @@ const logger = createLogger('OracleModelResolver');
  * @param modelString - The model string from span attributes
  * @returns Parsed components
  */
-export function parseModelString(modelString: string): {
+function parseModelString(modelString: string): {
   fullKey: string;
   provider: string;
   name: string;

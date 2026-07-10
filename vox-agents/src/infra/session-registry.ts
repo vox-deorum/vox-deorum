@@ -80,62 +80,12 @@ class SessionRegistry {
   }
 
   /**
-   * Get all registered sessions.
-   *
-   * @returns Array of all active sessions
-   */
-  public getAll(): VoxSession[] {
-    return Array.from(this.sessions.values());
-  }
-
-  /**
-   * Get all session IDs.
-   *
-   * @returns Array of all session IDs
-   */
-  public getIds(): string[] {
-    return Array.from(this.sessions.keys());
-  }
-
-  /**
    * Check if there is an active game session.
    *
    * @returns true if there is an active session, false otherwise
    */
   public hasActiveSession(): boolean {
     return this.activeSession !== undefined;
-  }
-
-  /**
-   * Shutdown all active sessions gracefully.
-   * Useful for application shutdown or cleanup.
-   *
-   * @returns Promise that resolves when all sessions are stopped
-   */
-  public async shutdownAll(): Promise<void> {
-    if (this.sessions.size === 0) {
-      return;
-    }
-
-    this.logger.info(`Shutting down ${this.sessions.size} active sessions`);
-
-    // Stop all sessions in parallel
-    const shutdownPromises = this.getAll().map(async (session) => {
-      try {
-        await session.stop();
-      } catch (error) {
-        this.logger.error(`Failed to stop session ${session.id}:`, error);
-        // Continue with other shutdowns even if one fails
-      }
-    });
-
-    await Promise.allSettled(shutdownPromises);
-
-    // Clear all references
-    this.sessions.clear();
-    this.activeSession = undefined;
-
-    this.logger.info('All sessions shutdown complete');
   }
 }
 

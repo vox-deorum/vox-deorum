@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "node ../node_modules/typescript/bin/tsc && cd ui && npm run build",
+    "build": "rimraf dist && node ../node_modules/typescript/bin/tsc && cd ui && npm run build",
     "dev": "tsx watch --import ./src/instrumentation.ts src/index.ts",
     "start": "npm run build && npm run start:dist --",
     "start:dist": "node --inspect --import ./dist/instrumentation.js --experimental-loader=@opentelemetry/instrumentation/hook.mjs dist/index.js",

@@ -110,9 +110,8 @@ export async function startHttpServer(setupSignalHandlers = true): Promise<() =>
     });
   });
 
-  // Map to store transports and server IDs by session ID
+  // Map to store transports by session ID
   const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
-  const serverIds: { [sessionId: string]: string } = {};
 
   // Handle POST requests for client-to-server communication
   app.post('/mcp', async (req, res) => {
@@ -129,20 +128,16 @@ export async function startHttpServer(setupSignalHandlers = true): Promise<() =>
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => newSessionId,
         onsessioninitialized: async (sessionId) => {
-          // Store the transport and use sessionId as serverId
+          // Store the transport keyed by sessionId
           transports[sessionId] = transport;
-          serverIds[sessionId] = sessionId;
-          
+
           // Create and connect server using sessionId
           mcpServer.createServer(sessionId);
           await mcpServer.connect(sessionId, transport);
         },
         onsessionclosed(sessionId) {
-          const serverId = serverIds[sessionId];
-          if (serverId) {
-            mcpServer.removeServer(serverId);
-            delete serverIds[sessionId];
-          }
+          // Tear down the server and transport for the closed session
+          mcpServer.removeServer(sessionId);
           delete transports[sessionId];
         },
         // DNS rebinding protection is disabled by default for backwards compatibility. If you are running this server
