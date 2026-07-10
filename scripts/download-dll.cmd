@@ -102,7 +102,7 @@ where gh >nul 2>&1
 if !errorlevel! equ 0 (
     echo   Using GitHub CLI to download release assets...
 
-    gh release download "%RELEASE_TAG%" ^
+    call gh release download "%RELEASE_TAG%" ^
         --repo "%REPO%" ^
         --pattern "%DLL_NAME%" ^
         --pattern "%PDB_NAME%" ^
