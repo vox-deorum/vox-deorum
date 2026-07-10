@@ -89,17 +89,23 @@ export const defaultConfig: VoxAgentsConfig = {
       name: 'sonnet',
       // prompt-mode tool calling is forced unconditionally in getModel's
       // 'claude-code' case (no native tool calling), so it is not set here.
-      options: {}
+      options: {
+        concurrencyLimit: 1
+      }
     },
     'claude-code/opus': {
       provider: 'claude-code',
       name: 'opus',
-      options: {}
+      options: {
+        concurrencyLimit: 1
+      }
     },
     'claude-code/haiku': {
       provider: 'claude-code',
       name: 'haiku',
-      options: {}
+      options: {
+        concurrencyLimit: 1
+      }
     },
     'synthetic/hf:moonshotai/Kimi-K2.6': {
       provider: 'synthetic',
