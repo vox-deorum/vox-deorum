@@ -341,12 +341,21 @@ local function vdSetEuiOverviewHidden(hidden)
 	end)
 end
 
--- The strip is visible exactly during the strategist freeze: observer + AI
--- autoplay (vdNeedsFlush), the same state that gates the poke. That is a game
--- state, NOT a human-decision state: in pure AI-strategist observation no decision
--- panel ever opens, so we cannot key visibility off the panel lifecycle. EUI's own
--- overview buttons are hidden only while our replacement is actually up.
+-- Human-strategist mode pins the observer view to the human's seat via
+-- Game.SetObserverUIOverridePlayer (set before autoplay, serialized in saves); pure AI
+-- observation sets no override. That override is the mod's signal that a human owns a seat,
+-- so the strip and its EUI-button hiding apply only then. Mirrors the vdOverride idiom above.
+local function vdHumanStrategist()
+	local o = Game.GetObserverUIOverridePlayer()
+	return o ~= nil and o >= 0
+end
+
+-- Show the strip only in human-strategist mode (override present) and only during the
+-- strategist freeze: observer + AI autoplay (vdNeedsFlush), the same state that gates the
+-- poke. EUI's own overview buttons are hidden only while our replacement is actually up. In
+-- pure AI observation there is no override, so we bail out and never touch the observer UI.
 local function vdShowScreenBar()
+	if not vdHumanStrategist() then return end
 	vdEnsureScreenBar()
 	local show = vdNeedsFlush()
 	Controls.VDScreenBar:SetHide(not show)
@@ -356,11 +365,11 @@ local function vdHideScreenBar()
 	Controls.VDScreenBar:SetHide(true)
 end
 
--- Evaluate now, then re-evaluate on the game-lifecycle events that drive the strip
--- without any human input: LoadScreenClose (game becomes interactive; also the
--- embed retry) and GameplaySetActivePlayer (the observed civ is switched, when
--- EUI/JFD rebuild the top/diplo corner, so we must re-hide their buttons). Both
--- fire under AI autoplay; the AI Observer interface itself relies on them.
+-- Evaluate now, then re-evaluate on the game-lifecycle events that bring the strip up in
+-- human-strategist mode: LoadScreenClose (game becomes interactive; also the embed retry) and
+-- GameplaySetActivePlayer (fires when autoplay activation switches the active seat to the
+-- observer). All of these are no-ops in pure observation, where vdShowScreenBar bails on the
+-- missing override.
 vdShowScreenBar()
 if Events ~= nil then
 	if Events.LoadScreenClose ~= nil then Events.LoadScreenClose.Add(vdShowScreenBar) end
