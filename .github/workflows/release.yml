@@ -123,6 +123,8 @@ jobs:
 
       - name: Build installer
         shell: cmd
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo Running build-installer.cmd script...
           cd scripts

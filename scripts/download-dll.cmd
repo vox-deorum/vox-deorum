@@ -91,6 +91,10 @@ if "%BUILD_MODE%"=="debug" (
     set "PDB_NAME=CvGameCore_Expansion2-Release.pdb"
 )
 set "VERSION_NAME=version.txt"
+
+:: Remove stale files so a leftover from a previous run can't fake a successful download
+if exist "%TEMP_DIR%\%DLL_NAME%" del "%TEMP_DIR%\%DLL_NAME%"
+if exist "%TEMP_DIR%\%PDB_NAME%" del "%TEMP_DIR%\%PDB_NAME%"
 if exist "%TEMP_DIR%\%VERSION_NAME%" del "%TEMP_DIR%\%VERSION_NAME%"
 
 :: Try using gh CLI first
@@ -102,18 +106,12 @@ if !errorlevel! equ 0 (
         --repo "%REPO%" ^
         --pattern "%DLL_NAME%" ^
         --pattern "%PDB_NAME%" ^
+        --pattern "%VERSION_NAME%" ^
         --dir "%TEMP_DIR%" ^
         --clobber
 
-    if !errorlevel! equ 0 (
-        gh release download "%RELEASE_TAG%" ^
-            --repo "%REPO%" ^
-            --pattern "%VERSION_NAME%" ^
-            --dir "%TEMP_DIR%" ^
-            --clobber >nul 2>&1
-        if !errorlevel! neq 0 (
-            echo   [WARN] Failed to download %VERSION_NAME% (VP version metadata)
-        )
+    :: gh exit codes are unreliable from batch scripts; the downloaded file is the ground truth
+    if exist "%TEMP_DIR%\%DLL_NAME%" (
         echo   [OK] Downloaded via GitHub CLI
         goto :copy_files
     ) else (

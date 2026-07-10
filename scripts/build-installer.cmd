@@ -105,11 +105,12 @@ echo [4/6] Checking pre-built DLLs...
 if not exist "%PROJECT_ROOT%\scripts\release\CvGameCore_Expansion2.dll" (
     echo   Downloading pre-built DLLs...
     call "%PROJECT_ROOT%\scripts\download-dll.cmd"
-    if !errorlevel! neq 0 (
-        echo   [WARN] Failed to download pre-built DLLs
-    ) else (
-        echo   [OK] Pre-built DLLs ready
+    if not exist "%PROJECT_ROOT%\scripts\release\CvGameCore_Expansion2.dll" (
+        echo   [ERROR] Pre-built DLL is missing and could not be downloaded.
+        echo   The installer requires scripts\release\CvGameCore_Expansion2.dll.
+        exit /b 1
     )
+    echo   [OK] Pre-built DLLs ready
 ) else (
     echo   [OK] Pre-built DLLs found
 )
