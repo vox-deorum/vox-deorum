@@ -253,6 +253,74 @@ describe('rescueToolCallsFromText', () => {
     });
   });
 
+  describe('flattened tool calls (name field with sibling arguments)', () => {
+    const ksqTools = new Set(['keep-status-quo']);
+    const ksqSchemas = new Map<string, any>([
+      ['keep-status-quo', { type: 'object', properties: { PlayerID: { type: 'number' }, Rationale: { type: 'string' } } }],
+    ]);
+
+    it('rescues the claude-code payload: array item with action + flattened Rationale', () => {
+      const text = '[\n  {\n    "action": "keep-status-quo",\n    "Rationale": "Current strategy is on track."\n  }\n]';
+      const result = rescueToolCallsFromText(text, ksqTools, true, ksqSchemas);
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0].toolName).toBe('keep-status-quo');
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ Rationale: 'Current strategy is on track.' });
+      expect(result.remainingText).toBeUndefined();
+    });
+
+    it('normalizes flattened argument-key casing via the schema (rationale → Rationale)', () => {
+      const text = '{"action": "keep-status-quo", "rationale": "hold"}';
+      const result = rescueToolCallsFromText(text, ksqTools, true, ksqSchemas);
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ Rationale: 'hold' });
+    });
+
+    it('rescues a flattened single object (not array)', () => {
+      const text = '{"action": "get-data", "x": 1}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls[0].toolName).toBe('get-data');
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ x: 1 });
+    });
+
+    it('rescues a bare no-argument call', () => {
+      const result = rescueToolCallsFromText('{"action": "end-turn"}', tools);
+      expect(result.toolCalls[0].toolName).toBe('end-turn');
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({});
+    });
+
+    it('drops a nullish nested params key instead of treating it as an argument', () => {
+      const result = rescueToolCallsFromText('{"action": "end-turn", "arguments": null}', tools);
+      expect(result.toolCalls[0].toolName).toBe('end-turn');
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({});
+    });
+
+    it('descends into the actions wrapper and rescues a flattened item inside it', () => {
+      const text = '{"actions": [{"action": "get-data", "x": 2}]}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls.map(tc => tc.toolName)).toEqual(['get-data']);
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ x: 2 });
+    });
+
+    it('nested pattern wins over the flattened interpretation when both are possible', () => {
+      const text = '{"action": "get-data", "arguments": {"x": 1}, "note": "ignored"}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(JSON.parse(result.toolCalls[0].input)).toEqual({ x: 1 });
+    });
+
+    it('keeps a flattened unknown tool unrescuable (text preserved)', () => {
+      const text = '{"action": "bogus", "x": 1}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.remainingText).toBe(text);
+    });
+
+    it('refuses an ambiguous object with two name fields', () => {
+      const text = '{"tool": "get-data", "action": "end-turn"}';
+      const result = rescueToolCallsFromText(text, tools);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.remainingText).toBe(text);
+    });
+  });
+
   describe('failure cases', () => {
     it('should return plain text untouched with no tool calls', () => {
       const text = 'Just a normal sentence without any JSON.';

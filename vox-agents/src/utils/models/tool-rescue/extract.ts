@@ -156,6 +156,9 @@ export function rescueToolCallsFromText(
     { nameField: 'action', parametersField: 'arguments' }
   ];
 
+  // Recognized parameter-field keys, for stripping nullish husks in the flattened fallback.
+  const parameterFields = new Set(fieldPatterns.map(p => p.parametersField));
+
   // First, try to extract the largest JSON block by finding balanced brackets/braces
   // This uses character-by-character parsing instead of regex
   function findJsonBlocks(str: string): string[] {
@@ -290,6 +293,33 @@ export function rescueToolCallsFromText(
         toolParameters = candidateParams;
         patternFound = true;
         break;
+      }
+    }
+
+    // Flattened fallback: some models (claude-code 'action' framing) hoist the arguments
+    // to the top level, e.g. `{"action": "keep-status-quo", "Rationale": "..."}`. Accept it
+    // only when exactly ONE recognized name field holds a string naming an available tool;
+    // all remaining siblings become the arguments. Nested patterns above always win, and
+    // an ambiguous object (two name fields) stays unrescuable rather than guessing.
+    if (!patternFound && toolCall && typeof toolCall === 'object' && !Array.isArray(toolCall)) {
+      const nameKeys = fieldPatterns
+        .map(p => p.nameField)
+        .filter(field => toolCall[field] && typeof toolCall[field] === 'string');
+      if (nameKeys.length === 1) {
+        const resolved = resolveToolName(toolCall[nameKeys[0]], availableTools);
+        if (!resolved) {
+          // A name-shaped field exists, so name the failure precisely rather than
+          // emitting the generic "no matching field pattern" warning.
+          sawUnrescuableCall = true;
+          if (useJaison) logger.log("warn", `Failed to rescue tool call: non-existent or unavailable tool ${toolCall[nameKeys[0]]}`, toolCall);
+          continue;
+        }
+        toolName = resolved;
+        // Siblings are the arguments; a recognized params key holding null/undefined is a
+        // husk of the nested shape (e.g. `{"action": "end-turn", "arguments": null}`), not an arg.
+        toolParameters = Object.fromEntries(Object.entries(toolCall).filter(([key, value]) =>
+          key !== nameKeys[0] && !(parameterFields.has(key) && value == null)));
+        patternFound = true;
       }
     }
 

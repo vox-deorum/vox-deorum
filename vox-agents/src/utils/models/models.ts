@@ -218,11 +218,14 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
         settings.allowedTools = allowed.map(t =>
           t === 'Write' || t === 'Edit' ? `${t}(./**)` : t); // path-scope writes to the temp cwd
       }
-      // reasoningEffort -> Claude Code `effort` (non-adaptive). 'minimal' disables thinking instead.
+      // reasoningEffort -> Claude Code `effort`. 'minimal' disables thinking; otherwise request
+      // adaptive thinking with summarized display (mirrors the direct anthropic path) so newer
+      // models (Sonnet 5+) return reasoning text instead of defaulting to display 'omitted'.
       if (opts.reasoningEffort === 'minimal') {
         settings.thinking = { type: 'disabled' };
       } else if (opts.reasoningEffort) {
         settings.effort = opts.reasoningEffort; // 'low' | 'medium' | 'high' ⊆ EffortLevel
+        settings.thinking = { type: 'adaptive', display: 'summarized' };
       }
       result = createClaudeCode()(config.name, settings);
       break;

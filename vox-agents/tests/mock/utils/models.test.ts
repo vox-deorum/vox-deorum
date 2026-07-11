@@ -94,14 +94,14 @@ describe('claude-code provider', () => {
       expect(mocks.captured.tools).toEqual([]);
     });
 
-    it('should map a non-minimal reasoningEffort to effort with no thinking override', () => {
+    it('should map a non-minimal reasoningEffort to effort with summarized adaptive thinking', () => {
       getModel({
         provider: 'claude-code',
         name: 'opus',
         options: { toolMiddleware: 'prompt', reasoningEffort: 'high' }
       });
       expect(mocks.captured.effort).toBe('high');
-      expect(mocks.captured.thinking).toBeUndefined();
+      expect(mocks.captured.thinking).toEqual({ type: 'adaptive', display: 'summarized' });
     });
 
     it('should map a minimal reasoningEffort to disabled thinking with no effort', () => {
