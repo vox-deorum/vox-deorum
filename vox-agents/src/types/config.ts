@@ -20,7 +20,7 @@ export type ToolMiddlewareType = 'prompt' | 'rescue' | 'gemma';
 /**
  * Valid reasoning effort levels, ordered from least to most thinking
  */
-export const ReasoningEfforts = ['minimal', 'low', 'medium', 'high', 'maximum'] as const;
+export const ReasoningEfforts = ['minimal', 'low', 'medium', 'high', 'max'] as const;
 
 /**
  * Reasoning effort level for reasoning models
