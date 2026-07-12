@@ -9,7 +9,7 @@
 import { Tool, StepResult, ModelMessage } from "ai";
 import { createLogger } from "../utils/logger.js";
 import { z, ZodObject } from "zod";
-import { Model } from "../types/index.js";
+import { Model, ReasoningEffort } from "../types/index.js";
 import { VoxContext } from "./vox-context.js";
 import { getModelConfig, resolveToolFraming } from "../utils/models/models.js";
 import { getValidCalls, hasOnlyTerminalCalls, isTerminalTool, buildRequiredToolsNudge } from "../utils/tools/terminal-tools.js";
@@ -177,7 +177,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * non-default tier instead of overriding {@link getModel}; the base getModel forwards it to
    * getModelConfig. Undefined keeps getModelConfig's default resolution.
    */
-  protected reasoningTier?: 'minimal' | 'low' | 'medium' | 'high' | 'default';
+  protected reasoningTier?: ReasoningEffort | 'default';
 
   /**
    * Gets the language model to use for this agent execution.

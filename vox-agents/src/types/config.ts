@@ -18,6 +18,16 @@ export type TransportType = 'stdio' | 'http';
 export type ToolMiddlewareType = 'prompt' | 'rescue' | 'gemma';
 
 /**
+ * Valid reasoning effort levels, ordered from least to most thinking
+ */
+export const ReasoningEfforts = ['minimal', 'low', 'medium', 'high', 'maximum'] as const;
+
+/**
+ * Reasoning effort level for reasoning models
+ */
+export type ReasoningEffort = typeof ReasoningEfforts[number];
+
+/**
  * LLM model configuration for backend processing
  */
 export interface LLMConfig {
@@ -28,7 +38,7 @@ export interface LLMConfig {
     toolMiddleware?: ToolMiddlewareType;
     thinkMiddleware?: string;
     concurrencyLimit?: number;
-    reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
+    reasoningEffort?: ReasoningEffort;
     systemPromptFirst?: boolean;
     /**
      * claude-code only: built-in CLI tools to enable. Undefined/empty = pure text

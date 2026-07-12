@@ -9,7 +9,8 @@
 import { config } from '../../utils/config.js';
 import { getModelConfig } from '../../utils/models/models.js';
 import { createLogger } from '../../utils/logger.js';
-import type { Model } from '../../types/index.js';
+import type { Model, ReasoningEffort } from '../../types/index.js';
+import { ReasoningEfforts } from '../../types/config.js';
 
 const logger = createLogger('OracleModelResolver');
 
@@ -26,7 +27,7 @@ function parseModelString(modelString: string): {
   fullKey: string;
   provider: string;
   name: string;
-  reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high';
+  reasoningEffort?: ReasoningEffort;
 } {
   // Split off reasoning effort suffix
   const atIndex = modelString.lastIndexOf('@');
@@ -46,9 +47,8 @@ function parseModelString(modelString: string): {
   const name = slashIndex !== -1 ? baseString.substring(slashIndex + 1) : baseString;
 
   // Validate reasoning effort
-  const validEfforts = ['minimal', 'low', 'medium', 'high'];
-  const normalizedEffort = reasoningEffort && validEfforts.includes(reasoningEffort)
-    ? reasoningEffort as 'minimal' | 'low' | 'medium' | 'high'
+  const normalizedEffort = reasoningEffort && (ReasoningEfforts as readonly string[]).includes(reasoningEffort)
+    ? reasoningEffort as ReasoningEffort
     : undefined;
 
   return {

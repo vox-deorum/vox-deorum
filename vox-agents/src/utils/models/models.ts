@@ -7,7 +7,7 @@
 
 import { type EmbeddingModel, LanguageModel, ProviderMetadata, extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import { config } from '../config.js';
-import type { Model } from '../../types/index.js';
+import type { Model, ReasoningEffort } from '../../types/index.js';
 import { createOpenRouter, LanguageModelV3 } from '@openrouter/ai-sdk-provider';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
@@ -51,7 +51,7 @@ const CLAUDE_CODE_BLOCKED_TOOLS = ['Bash'];
  */
 export function getModelConfig(
   name: string = 'default',
-  reasoning?: 'minimal' | 'low' | 'medium' | 'high' | 'default',
+  reasoning?: ReasoningEffort | 'default',
   overrides?: Record<string, Model | string>
 ): Model {
   // Check overrides first
