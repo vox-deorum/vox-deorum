@@ -157,8 +157,6 @@ function handleClose() {
 </template>
 
 <style scoped>
-@import '@/styles/config.css';
-
 .model-options-content {
   display: flex;
   flex-direction: column;

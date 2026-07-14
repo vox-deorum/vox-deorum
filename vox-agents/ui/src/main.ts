@@ -9,6 +9,11 @@ import Civ5Theme from './styles/civ5-theme'
 import 'primeicons/primeicons.css'
 import 'primeflex/primeflex.css'
 import './styles/global.css'
+import './styles/states.css'
+import './styles/data-table.css'
+import './styles/panel.css'
+import './styles/chat-launch.css'
+import './styles/config.css'
 
 // Check if .env file exists before initializing the app
 async function initializeApp() {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
@@ -8,8 +8,7 @@ import { RouterView } from 'vue-router'
 import Tag from 'primevue/tag'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
-import { healthStatus } from './stores/health'
-import '/node_modules/primeflex/primeflex.css'
+import { healthStatus, startHealthPolling } from './stores/health'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,6 +18,7 @@ const drawerVisible = ref(true)
 
 // Dark mode state
 const isDarkMode = ref(false)
+let stopHealthPolling: (() => void) | null = null
 
 // Toggle dark mode
 const toggleDarkMode = () => {
@@ -33,11 +33,18 @@ const toggleDarkMode = () => {
 
 // Load dark mode preference on mount
 onMounted(() => {
+  stopHealthPolling = startHealthPolling()
   const savedDarkMode = localStorage.getItem('darkMode')
   if (savedDarkMode === 'true') {
     isDarkMode.value = true
     document.documentElement.classList.add('dark-mode')
   }
+})
+
+// Stop root-level polling when the application is unmounted.
+onUnmounted(() => {
+  stopHealthPolling?.()
+  stopHealthPolling = null
 })
 
 // Navigation menu items formatted for PrimeVue Menu component

@@ -319,10 +319,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@import '@/styles/states.css';
-@import '@/styles/data-table.css';
-@import '@/styles/panel.css';
-
 .traces-content {
   flex: 1;
   overflow: hidden;

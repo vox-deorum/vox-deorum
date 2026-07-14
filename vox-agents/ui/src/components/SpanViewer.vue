@@ -153,7 +153,6 @@ import {
   flattenSpanTree,
   type SpanNode
 } from '../api/telemetry-utils';
-import '/node_modules/primeflex/primeflex.css';
 
 // Props
 const props = defineProps<{
@@ -362,10 +361,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import '@/styles/data-table.css';
-@import '@/styles/states.css';
-@import '@/styles/panel.css';
-
 .spans-content {
   flex: 1;
   overflow: hidden;

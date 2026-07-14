@@ -85,7 +85,7 @@
           <div class="col-expand text-wrap">
             {{ item.message }}
             <div v-if="item.params" class="params-list">
-              <ParamsList :params="item.params" :depth="0" />
+              <ParamsList :params="item.params" />
             </div>
           </div>
         </div>
@@ -100,13 +100,11 @@ import { logs, isConnected, clearLogs as clearLogsStore } from '../stores/logs';
 import { getLevelEmoji, formatTimestamp, levelHierarchy } from '../api/log-utils';
 import { VList } from 'virtua/vue';
 import Button from 'primevue/button';
-import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import MultiSelect from 'primevue/multiselect';
 import SelectButton from 'primevue/selectbutton';
 import Toolbar from 'primevue/toolbar';
 import ParamsList from './ParamsList.vue';
-import '/node_modules/primeflex/primeflex.css'
 
 // State
 const autoscroll = ref(true);
@@ -174,10 +172,6 @@ const clearLogs = () => clearLogsStore();
 </script>
 
 <style scoped>
-@import '@/styles/data-table.css';
-@import '@/styles/states.css';
-@import '@/styles/panel.css';
-
 .logs-view {
   height: 100%;
   display: flex;
