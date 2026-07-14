@@ -21,6 +21,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { toolRescueMiddleware } from './tool-rescue/middleware.js';
 import { claudeCodeSystemMiddleware } from './claude-code-prompt.js';
+import { claudeCodeResponseMiddleware, guardClaudeCodeQueryUsageLimits } from './claude-code-response.js';
 import type { ToolCallFraming } from './tool-rescue/types.js';
 import { Agent } from 'undici';
 import os from 'node:os';
@@ -190,6 +191,9 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
       const opts = config.options ?? {};
       const settings: ClaudeCodeSettings = {
         settingSources: [], // explicit: never load CLAUDE.md / .claude/settings.json into agent prompts
+        // Inspect raw assistant messages before the provider applies structured-output validation,
+        // which otherwise replaces subscription-limit prose with a schema error.
+        onQueryCreated: guardClaudeCodeQueryUsageLimits,
       };
       // Built-in CLI tools are an explicit opt-in. Layering: `tools` bounds what is *in
       // context* (availability), `allowedTools` is what may *run* (permission), and
@@ -228,6 +232,11 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
         settings.thinking = { type: 'adaptive', display: 'summarized' };
       }
       result = createClaudeCode()(config.name, settings);
+      // Preserve the raw hook's streamed usage-limit error through AI SDK wrapping.
+      result = wrapLanguageModel({
+        model: result,
+        middleware: claudeCodeResponseMiddleware()
+      });
       break;
     }
     case "aws":

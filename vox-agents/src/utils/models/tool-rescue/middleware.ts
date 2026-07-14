@@ -24,6 +24,7 @@ import type { ToolRescueOptions } from './types.js';
 import { createToolPrompts, convertPromptToolMessagesToText, reframeToolWording, buildToolCallArraySchema } from './prompt.js';
 import { rescueToolCallsFromText, isStructuredOutputToolName } from './extract.js';
 import { normalizeKeysToSchema, type JsonSchemaNode } from '../../tools/normalize-keys.js';
+import { preserveModelError } from '../preserved-model-error.js';
 
 const logger = createLogger("tool-rescue");
 
@@ -496,7 +497,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         // Re-throw the error to let the retry mechanism handle it
         logger.error("Error in wrapGenerate middleware, passing down");
         // Preserve context length errors so they survive the AI SDK's error wrapping
-        ((params as any).providerOptions ??= {}).error = error;
+        preserveModelError(params, error);
         throw error;
       }
     },
@@ -784,7 +785,7 @@ export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModel
         // Re-throw the error to let the retry mechanism handle it
         logger.error("Error in wrapStream middleware, passing down");
         // Preserve context length errors so they survive the AI SDK's error wrapping
-        ((params as any).providerOptions ??= {}).error = error;
+        preserveModelError(params, error);
         throw error;
       }
     }

@@ -15,20 +15,47 @@ import path from 'node:path';
 // Hoisted holder so the (hoisted) vi.mock factory can record the captured settings and
 // expose the created model instance (for reading transformed generate params via its
 // built-in doGenerateCalls recorder).
-const mocks = vi.hoisted(() => ({ captured: undefined as any, model: undefined as any }));
+const mocks = vi.hoisted(() => ({
+  captured: undefined as any,
+  model: undefined as any,
+  queryMessages: undefined as any[] | undefined,
+}));
 
 vi.mock('ai-sdk-provider-claude-code', () => {
   const factory = vi.fn((_id: string, settings: any) => {
     mocks.captured = settings;
-    // A static generate result so the wrapped model's doGenerate can be invoked without
-    // triggering tool-call rescue (plain text, no game-tool JSON).
     mocks.model = new MockLanguageModelV3({
-      doGenerate: {
-        content: [{ type: 'text', text: 'ok' }],
-        finishReason: { unified: 'stop', raw: 'stop' },
-        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
-        warnings: [],
-      } as any,
+      doGenerate: async (options: any) => {
+        // Simulate the provider's structured-output path, where it consumes raw SDK
+        // messages before deciding whether a JSON response was produced.
+        if (mocks.queryMessages && options.responseFormat?.type === 'json') {
+          const sdkMessages: any = (async function* () {
+            for (const message of mocks.queryMessages!) yield message;
+          })();
+          const query: any = {
+            next: sdkMessages.next.bind(sdkMessages),
+            return: sdkMessages.return.bind(sdkMessages),
+            throw: sdkMessages.throw.bind(sdkMessages),
+            // The real Claude Query returns its internal iterator instead of itself.
+            [Symbol.asyncIterator]: () => sdkMessages,
+          };
+          settings.onQueryCreated?.(query);
+          try {
+            for await (const _message of query) { /* provider consumes the query */ }
+          } catch (error) {
+            const providerError = new Error((error as Error).message) as Error & { isRetryable: false };
+            providerError.isRetryable = false;
+            throw providerError;
+          }
+          throw new Error('Structured output was requested but no JSON was returned.');
+        }
+        return {
+          content: [{ type: 'text', text: 'ok' }],
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+          warnings: [],
+        } as any;
+      },
     });
     return mocks.model;
   });
@@ -66,6 +93,7 @@ const SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'E
 describe('claude-code provider', () => {
   beforeEach(() => {
     mocks.captured = undefined;
+    mocks.queryMessages = undefined;
   });
 
   describe('getModelConfig registration', () => {
@@ -87,6 +115,32 @@ describe('claude-code provider', () => {
   });
 
   describe('getModel settings translation', () => {
+    it('rejects a raw usage-limit notice before required-tool structured validation', async () => {
+      const notice = "You've hit your weekly limit · resets Jul 14, 10pm (America/Phoenix)";
+      mocks.queryMessages = [{
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: notice }] },
+      }];
+      const model = getModel({ provider: 'claude-code', name: 'sonnet' });
+      const tools = [{
+        type: 'function',
+        name: 'send_message',
+        description: 'Send a message',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      }];
+
+      await expect((model as any).doGenerate({
+        prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
+        providerOptions: {},
+        tools,
+        toolChoice: { type: 'required' },
+      })).rejects.toMatchObject({
+        message: notice,
+        isRetryable: false,
+      });
+      expect(mocks.model.doGenerateCalls[0].responseFormat).toMatchObject({ type: 'json' });
+    });
+
     it('should isolate filesystem settings and disable all built-in tools', () => {
       getModel({ provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt' } });
       expect(mocks.captured).toBeDefined();

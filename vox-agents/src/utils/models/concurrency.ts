@@ -18,6 +18,7 @@ import { VoxContext } from '../../infra/vox-context.js';
 import { AgentParameters } from '../../infra/vox-agent.js';
 import { hasBatchManager, getBatchManager } from '../../oracle/batch/batch-manager.js';
 import { convertToStepResult } from '../../oracle/batch/format-converter.js';
+import { takePreservedModelError } from './preserved-model-error.js';
 
 const logger = createLogger('concurrency');
 
@@ -212,10 +213,9 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
         return response;
       } catch (error) {
         // Resurface context length errors that the AI SDK swallowed into AI_NoOutputGeneratedError
-        const streamError = (modifiedParams as any).providerOptions.error;
-        if (streamError) {
-          delete (modifiedParams as any).providerOptions.error;
-          throw streamError;
+        const streamError = takePreservedModelError(modifiedParams);
+        if (streamError.found) {
+          throw streamError.error;
         }
         throw error;
       }
