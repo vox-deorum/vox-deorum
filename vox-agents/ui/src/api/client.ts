@@ -51,14 +51,14 @@ import type {
 import type { TextStreamPart, ToolSet } from 'ai';
 
 /** The `connected` SSE event payload: fired post-commit; for a deal turn it carries the committed row. */
-export interface ConnectedData {
+interface ConnectedData {
   sessionId?: string;
   /** The authoritative committed deal row (deal turns only) — the UI inserts it and closes the dialog. */
   deal?: DealTranscriptMessage;
 }
 
 /** The terminal `done` SSE event payload: the turn succeeded. */
-export interface DoneData {
+interface DoneData {
   sessionId?: string;
   messageCount?: number;
   /**
@@ -161,36 +161,16 @@ class ApiClient {
     onError?: (error: Event) => void,
     onHeartbeat?: () => void
   ): () => void {
-    // Close existing connection if any
-    this.closeSseConnection('logs');
-
-    const eventSource = new EventSource(`${this.baseUrl}/api/logs/stream`);
-
-    eventSource.addEventListener("log", (event: MessageEvent) => {
-      try {
-        const rawLog = JSON.parse(event.data);
-        const processedLog = extractLogParams(rawLog);
-        onMessage(processedLog);
-      } catch (error) {
-        console.error('Failed to parse log message:', error);
-      }
-    });
-
-    eventSource.addEventListener("heartbeat", () => {
-      onHeartbeat?.();
-    });
-
-    eventSource.onerror = (error) => {
-      if (onError) onError(error);
-    };
-
-    // Store connection for cleanup
-    this.sseConnections.set('logs', eventSource);
-
-    // Return cleanup function
-    return () => {
-      this.closeSseConnection('logs');
-    };
+    return this.streamEventSource(
+      'logs',
+      '/api/logs/stream',
+      'log',
+      (data) => extractLogParams(JSON.parse(data)),
+      onMessage,
+      'log message',
+      onError,
+      onHeartbeat,
+    );
   }
 
   // ============= Telemetry API Methods =============
@@ -237,30 +217,16 @@ class ApiClient {
     onHeartbeat?: () => void
   ): () => void {
     const key = `session-${sessionId}`;
-    this.closeSseConnection(key);
-
-    const eventSource = new EventSource(
-      `${this.baseUrl}/api/telemetry/sessions/${encodeURIComponent(sessionId)}/stream`
+    return this.streamEventSource(
+      key,
+      `/api/telemetry/sessions/${encodeURIComponent(sessionId)}/stream`,
+      'span',
+      (data) => JSON.parse(data) as Span[],
+      onMessage,
+      'span data',
+      onError,
+      onHeartbeat,
     );
-
-    eventSource.addEventListener("span", (event) => {
-      try {
-        onMessage(JSON.parse(event.data));
-      } catch (error) {
-        console.error('Failed to parse span data:', error);
-      }
-    });
-
-    eventSource.addEventListener("heartbeat", () => {
-      onHeartbeat?.();
-    });
-
-    eventSource.onerror = (error) => {
-      if (onError) onError(error);
-    };
-
-    this.sseConnections.set(key, eventSource);
-    return () => this.closeSseConnection(key);
   }
 
   /**
@@ -305,24 +271,10 @@ class ApiClient {
     const formData = new FormData();
     formData.append('database', file);
 
-    const response = await fetch(`${this.baseUrl}/api/telemetry/upload`, {
+    return this.fetchJson<UploadResponse>(`${this.baseUrl}/api/telemetry/upload`, {
       method: 'POST',
       body: formData
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = 'Upload failed';
-      try {
-        const error: ErrorResponse = JSON.parse(errorText);
-        errorMessage = error.error || errorMessage;
-      } catch {
-        errorMessage = errorText || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-
-    return response.json();
   }
 
   // ============= Session API Methods =============
@@ -700,6 +652,35 @@ class ApiClient {
   // ============= Utility Methods =============
 
   /**
+   * Open one native EventSource stream with shared replacement, parsing, heartbeat, error,
+   * registration, and cleanup behavior.
+   */
+  private streamEventSource<T>(
+    key: string,
+    path: string,
+    eventName: string,
+    parse: (data: string) => T,
+    onMessage: (message: T) => void,
+    parseLabel: string,
+    onError?: (error: Event) => void,
+    onHeartbeat?: () => void,
+  ): () => void {
+    this.closeSseConnection(key);
+    const eventSource = new EventSource(`${this.baseUrl}${path}`);
+    eventSource.addEventListener(eventName, (event: MessageEvent) => {
+      try {
+        onMessage(parse(event.data));
+      } catch (error) {
+        console.error(`Failed to parse ${parseLabel}:`, error);
+      }
+    });
+    eventSource.addEventListener('heartbeat', () => onHeartbeat?.());
+    eventSource.onerror = (error) => onError?.(error);
+    this.sseConnections.set(key, eventSource);
+    return () => this.closeSseConnection(key);
+  }
+
+  /**
    * Close a specific SSE connection
    */
   private closeSseConnection(key: string): void {
@@ -723,6 +704,3 @@ class ApiClient {
 
 // Export singleton instance
 export const api = new ApiClient();
-
-// Also export as apiClient for backward compatibility
-export const apiClient = api;

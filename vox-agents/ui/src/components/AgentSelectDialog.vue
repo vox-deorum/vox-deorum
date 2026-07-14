@@ -6,18 +6,19 @@
  * Used in ChatView, TelemetrySessionView, TelemetryDatabaseView, and TelemetryTraceView.
  */
 
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import ProgressSpinner from 'primevue/progressspinner';
-import AutoComplete from 'primevue/autocomplete';
-import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import type { AgentInfo, Span, CreateChatRequest, PlayerAssignment, ParticipantIdentity } from '@/utils/types';
 import { userRoleSuggestions } from '@/utils/types';
-import { apiClient } from '@/api/client';
+import { api } from '@/api/client';
+import DiplomacyLaunchForm from './chat-launch/DiplomacyLaunchForm.vue';
+import ObserverIdentityForm from './chat-launch/ObserverIdentityForm.vue';
+import type { PlayerOption } from './chat-launch/types';
+import { useChatLauncher } from '@/composables/useChatLauncher';
 
 // Props interface
 interface Props {
@@ -35,23 +36,15 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
-const router = useRouter();
-
-/** Option for the player/civ dropdown */
-interface PlayerOption {
-  label: string;
-  value: number | 'observer';
-}
 
 /** Hardcoded identity for the observer seat — the dialog is the single source of identities. */
 const OBSERVER_IDENTITY: ParticipantIdentity = { name: 'an observer', leader: '' };
 
 // State
 const loading = ref(false);
-const error = ref<string | null>(null);
+const loadError = ref<string | null>(null);
 const agents = ref<AgentInfo[]>([]);
 const selectedAgent = ref<AgentInfo | null>(null);
-const isCreatingSession = ref(false);
 
 // Step management
 const currentStep = ref<'agent' | 'identity'>('agent');
@@ -79,6 +72,13 @@ const assignments = ref<Record<number, PlayerAssignment>>({});
 const diplomacyInitiator = ref<PlayerOption | null>(null);
 const voiceOverride = ref<AgentInfo | null>(null);
 const initiatorRole = ref('the diplomat');
+let agentsLoadPromise: Promise<void> | null = null;
+let playersLoadPromise: { contextId: string; promise: Promise<void> } | null = null;
+let loadedPlayersContextId: string | undefined;
+let playersLoadGeneration = 0;
+
+const { isCreatingSession, launchError, launchChat, clearLaunchError } = useChatLauncher(closeDialog);
+const error = computed(() => loadError.value ?? launchError.value);
 
 /** Major-civ player options (no observer) for the diplomacy selectors. */
 const civPlayerOptions = computed(() => playerOptions.value.filter(o => o.value !== 'observer'));
@@ -168,72 +168,97 @@ const filteredAgents = computed(() => {
 const chattableAgents = computed(() => filteredAgents.value.filter(a => a.name !== 'negotiator'));
 
 // Methods
-async function loadAgents() {
+async function loadAgents(): Promise<void> {
+  loadError.value = null;
+  clearLaunchError();
+  if (agents.value.length > 0) return;
+  if (agentsLoadPromise) return agentsLoadPromise;
   loading.value = true;
-  error.value = null;
 
-  try {
-    const response = await apiClient.getAgents();
-    agents.value = response.agents || [];
-  } catch (err) {
-    console.error('Error loading agents:', err);
-    error.value = err instanceof Error ? err.message : 'Failed to load agents';
-  } finally {
-    loading.value = false;
-  }
+  agentsLoadPromise = (async () => {
+    try {
+      const response = await api.getAgents();
+      agents.value = response.agents || [];
+    } catch (err) {
+      console.error('Error loading agents:', err);
+      loadError.value = err instanceof Error ? err.message : 'Failed to load agents';
+    } finally {
+      loading.value = false;
+      agentsLoadPromise = null;
+    }
+  })();
+  return agentsLoadPromise;
 }
 
 /** Load player options for the identity step */
-async function loadPlayerOptions() {
+async function loadPlayerOptions(): Promise<void> {
   const observerOption: PlayerOption = { label: 'Observer', value: 'observer' };
+  const requestedContextId = props.contextId;
 
   // Only load real players for active game contexts
-  if (!props.contextId) {
+  if (!requestedContextId) {
     playerOptions.value = [observerOption];
     return;
   }
 
-  playersLoading.value = true;
-  try {
-    const response = await apiClient.getPlayersSummary();
-    const options: PlayerOption[] = [];
-    const civs: Record<number, string> = {};
-    const identities: Record<number, ParticipantIdentity> = {};
+  if (loadedPlayersContextId === requestedContextId && playerOptions.value.length > 1) return;
+  if (playersLoadPromise?.contextId === requestedContextId) return playersLoadPromise.promise;
 
-    for (const [playerId, data] of Object.entries(response.players)) {
-      if (typeof data === 'object' && data !== null) {
-        const id = parseInt(playerId);
-        options.push({
-          label: `${data.Leader} of ${data.Civilization}`,
-          value: id
-        });
-        civs[id] = data.Civilization;
-        identities[id] = { name: data.Civilization, leader: data.Leader };
+  const generation = ++playersLoadGeneration;
+  const promise = (async () => {
+    playersLoading.value = true;
+    try {
+      const response = await api.getPlayersSummary();
+      const options: PlayerOption[] = [];
+      const civs: Record<number, string> = {};
+      const identities: Record<number, ParticipantIdentity> = {};
+
+      for (const [playerId, data] of Object.entries(response.players)) {
+        if (typeof data === 'object' && data !== null) {
+          const id = parseInt(playerId);
+          options.push({ label: `${data.Leader} of ${data.Civilization}`, value: id });
+          civs[id] = data.Civilization;
+          identities[id] = { name: data.Civilization, leader: data.Leader };
+        }
+      }
+      if (generation !== playersLoadGeneration || !props.visible || props.contextId !== requestedContextId) return;
+      playerCivs.value = civs;
+      playerIdentities.value = identities;
+      options.push(observerOption);
+      playerOptions.value = options;
+      assignments.value = response.assignments ?? {};
+      loadedPlayersContextId = requestedContextId;
+      const humanSeat = Object.entries(assignments.value).find(([, assignment]) => assignment.strategist === 'human-strategist');
+      if (humanSeat) diplomacyInitiator.value = options.find(option => option.value === parseInt(humanSeat[0])) ?? null;
+      applyTargetVoiceDefault();
+    } catch (err) {
+      console.error('Failed to load players:', err);
+      if (generation === playersLoadGeneration && props.visible && props.contextId === requestedContextId) {
+        playerOptions.value = [observerOption];
+      }
+    } finally {
+      if (generation === playersLoadGeneration) {
+        playersLoading.value = false;
+        playersLoadPromise = null;
       }
     }
-    playerCivs.value = civs;
-    playerIdentities.value = identities;
+  })();
+  playersLoadPromise = { contextId: requestedContextId, promise };
+  return promise;
+}
 
-    options.push(observerOption);
-    playerOptions.value = options;
-    assignments.value = response.assignments ?? {};
-
-    // Default the diplomacy initiator to the human-control seat when one exists.
-    const humanSeat = Object.entries(assignments.value)
-      .find(([, a]) => a.strategist === 'human-strategist');
-    if (humanSeat) {
-      diplomacyInitiator.value = options.find(o => o.value === parseInt(humanSeat[0])) ?? null;
-    }
-
-    // Default the voice to the (derived) target seat's configured diplomat.
-    applyTargetVoiceDefault();
-  } catch (err) {
-    console.error('Failed to load players:', err);
-    // Gracefully degrade: show only observer
-    playerOptions.value = [observerOption];
-  } finally {
-    playersLoading.value = false;
-  }
+/** Invalidate player data and pending work when the dialog context changes. */
+function resetPlayerContext(): void {
+  playersLoadGeneration++;
+  playersLoadPromise = null;
+  loadedPlayersContextId = undefined;
+  playersLoading.value = false;
+  playerOptions.value = [];
+  playerCivs.value = {};
+  playerIdentities.value = {};
+  assignments.value = {};
+  diplomacyInitiator.value = null;
+  voiceOverride.value = null;
 }
 
 /** Default the voice to the derived target seat's configured diplomat. */
@@ -249,38 +274,21 @@ function applyTargetVoiceDefault() {
 /** Open (or reopen) a civ↔civ diplomacy conversation. */
 async function confirmDiplomacy() {
   if (!canStartDiplomacy.value || !props.contextId) return;
-
-  isCreatingSession.value = true;
-  error.value = null;
-  try {
-    const initiatorID = diplomacyInitiator.value!.value as number;
-    const targetID = derivedTargetPlayerID.value!;
-    const request: CreateChatRequest = {
-      mode: 'diplomacy',
-      contextId: props.contextId,
-      targetPlayerID: targetID,
-      // Both identities travel from the dialog's non-FOW summary so the backend never re-resolves
-      // them (the target seat's live context can carry a FOW-limited/empty players map).
-      targetIdentity: playerIdentities.value[targetID],
-      callerPlayerID: initiatorID,
-      callerIdentity: playerIdentities.value[initiatorID],
-      callerRole: initiatorRole.value.trim() || undefined,
-    };
-    // Only send an explicit voice when the operator overrode the seat's default diplomat.
-    if (voiceOverride.value) request.agentName = voiceOverride.value.name;
-
-    const turn = props.span?.attributes?.turn || props.span?.turn || props.turn;
-    if (turn !== undefined) request.turn = turn;
-
-    const session = await apiClient.createAgentChat(request);
-    router.push({ name: 'chat-detail', params: { sessionId: session.id } });
-    closeDialog();
-  } catch (err) {
-    console.error('Failed to open diplomacy conversation:', err);
-    error.value = err instanceof Error ? err.message : 'Failed to open conversation';
-  } finally {
-    isCreatingSession.value = false;
-  }
+  const initiatorID = diplomacyInitiator.value!.value as number;
+  const targetID = derivedTargetPlayerID.value!;
+  const request: CreateChatRequest = {
+    mode: 'diplomacy',
+    contextId: props.contextId,
+    targetPlayerID: targetID,
+    targetIdentity: playerIdentities.value[targetID],
+    callerPlayerID: initiatorID,
+    callerIdentity: playerIdentities.value[initiatorID],
+    callerRole: initiatorRole.value.trim() || undefined,
+  };
+  if (voiceOverride.value) request.agentName = voiceOverride.value.name;
+  const turn = props.span?.attributes?.turn || props.span?.turn || props.turn;
+  if (turn !== undefined) request.turn = turn;
+  await launchChat(request, 'Failed to open conversation');
 }
 
 /** Filter role suggestions for autocomplete */
@@ -293,7 +301,8 @@ function searchRoles(event: { query: string }) {
 
 /** React to a conversation-mode switch by loading players for the diplomacy selectors. */
 function onConversationModeChange() {
-  error.value = null;
+  loadError.value = null;
+  clearLaunchError();
   if (conversationMode.value === 'diplomacy' && civPlayerOptions.value.length === 0) {
     loadPlayerOptions();
   }
@@ -307,7 +316,8 @@ function onConversationModeChange() {
 async function selectAgent(agent: AgentInfo) {
   if (agent.diplomacyOnly) {
     selectedAgent.value = null;
-    error.value = null;
+    loadError.value = null;
+    clearLaunchError();
     conversationMode.value = 'diplomacy';
     if (civPlayerOptions.value.length === 0) await loadPlayerOptions();
     voiceOverride.value = agent;
@@ -332,104 +342,61 @@ function proceedToIdentity() {
   loadPlayerOptions();
 }
 
-function closeDialog() {
+/** Close the dialog and clear all selections, context data, and errors. */
+function closeDialog(): void {
   dialogVisible.value = false;
   selectedAgent.value = null;
   currentStep.value = 'agent';
   conversationMode.value = 'observer';
   userRole.value = '';
   selectedPlayerOption.value = null;
-  diplomacyInitiator.value = null;
-  voiceOverride.value = null;
   initiatorRole.value = 'the diplomat';
-  // Drop the cached seat civ/identity so reopening for a different session re-resolves them.
-  playerCivs.value = {};
-  playerIdentities.value = {};
-  error.value = null;
+  resetPlayerContext();
+  loadError.value = null;
+  clearLaunchError();
 }
 
-async function confirmSelection() {
+/** Create an observer-style chat using the selected agent and caller identity. */
+async function confirmSelection(): Promise<void> {
   if (!selectedAgent.value || !canStartChat.value) return;
+  const request: CreateChatRequest = { agentName: selectedAgent.value.name };
 
-  isCreatingSession.value = true;
-  error.value = null;
-
-  try {
-    // Build the session creation request
-    const request: CreateChatRequest = {
-      agentName: selectedAgent.value.name
-    };
-
-    // Add context based on what's provided
-    if (props.contextId) {
-      request.contextId = props.contextId;
-    } else if (props.databasePath) {
-      // Ensure proper path format
-      const fullPath = props.databasePath.includes('/')
-        ? props.databasePath
-        : `telemetry/${props.databasePath}`;
-      request.databasePath = fullPath;
-    }
-
-    // Add turn if provided (from props or span)
-    const turn = props.span?.attributes?.turn || props.span?.turn || props.turn;
-    if (turn !== undefined) {
-      request.turn = turn;
-    }
-
-    // Caller identity (endpoint A): a real seat or the observer sentinel. The identity is sent
-    // either way so the backend never re-resolves it (a real seat from the non-FOW summary, the
-    // hardcoded observer identity otherwise).
-    request.callerRole = userRole.value.trim();
-    if (selectedPlayerOption.value && selectedPlayerOption.value.value !== 'observer') {
-      const callerID = selectedPlayerOption.value.value as number;
-      request.callerPlayerID = callerID;
-      request.callerIdentity = playerIdentities.value[callerID];
-    } else {
-      request.callerPlayerID = -1;
-      request.callerIdentity = OBSERVER_IDENTITY;
-    }
-
-    // Create the chat thread
-    const session = await apiClient.createAgentChat(request);
-
-    console.log('Created chat thread:', {
-      session,
-      agent: selectedAgent.value,
-      span: props.span,
-      request
-    });
-
-    // Navigate to chat session
-    router.push({
-      name: 'chat-detail',
-      params: { sessionId: session.id }
-    });
-
-    // Close dialog after navigation
-    closeDialog();
-  } catch (err) {
-    console.error('Failed to create chat session:', err);
-    error.value = err instanceof Error ? err.message : 'Failed to create session';
-  } finally {
-    isCreatingSession.value = false;
+  if (props.contextId) {
+    request.contextId = props.contextId;
+  } else if (props.databasePath) {
+    request.databasePath = props.databasePath.includes('/') ? props.databasePath : `telemetry/${props.databasePath}`;
   }
-}
 
-// Load agents when dialog opens
-onMounted(() => {
-  loadAgents();
-});
+  const turn = props.span?.attributes?.turn || props.span?.turn || props.turn;
+  if (turn !== undefined) request.turn = turn;
+
+  request.callerRole = userRole.value.trim();
+  if (selectedPlayerOption.value && selectedPlayerOption.value.value !== 'observer') {
+    const callerID = selectedPlayerOption.value.value as number;
+    request.callerPlayerID = callerID;
+    request.callerIdentity = playerIdentities.value[callerID];
+  } else {
+    request.callerPlayerID = -1;
+    request.callerIdentity = OBSERVER_IDENTITY;
+  }
+  await launchChat(request, 'Failed to create session');
+}
 
 // Resolve the chosen seat's civilization as soon as the dialog opens so the header can
 // title itself "Chat with {civ}" regardless of conversation mode.
 watch(
-  () => props.visible,
-  (visible) => {
-    if (visible && props.contextId && Object.keys(playerCivs.value).length === 0) {
-      loadPlayerOptions();
+  () => [props.visible, props.contextId] as const,
+  ([visible, contextId], previous) => {
+    const contextChanged = previous !== undefined && contextId !== previous[1];
+    if (!visible) {
+      resetPlayerContext();
+      return;
     }
-  }
+    if (contextChanged) resetPlayerContext();
+    void loadAgents();
+    if (contextId && Object.keys(playerCivs.value).length === 0) void loadPlayerOptions();
+  },
+  { immediate: true }
 );
 </script>
 
@@ -480,39 +447,17 @@ watch(
       </div>
 
       <!-- Diplomacy form -->
-      <div v-else-if="conversationMode === 'diplomacy'" class="identity-step">
-        <div class="identity-form">
-          <label for="dipl-initiator">Speaking as (your seat)</label>
-          <Select
-            id="dipl-initiator"
-            v-model="diplomacyInitiator"
-            :options="civPlayerOptions"
-            optionLabel="label"
-            placeholder="Select your seat..."
-            :loading="playersLoading"
-          />
-
-          <label for="dipl-role">Your role</label>
-          <AutoComplete
-            id="dipl-role"
-            v-model="initiatorRole"
-            :suggestions="filteredRoles"
-            @complete="searchRoles"
-            placeholder="e.g., the leader, a diplomat..."
-            :dropdown="true"
-          />
-
-          <label for="dipl-voice">Voice (defaults to the target seat's diplomat)</label>
-          <Select
-            id="dipl-voice"
-            v-model="voiceOverride"
-            :options="chattableAgents"
-            optionLabel="name"
-            placeholder="Use the configured diplomat"
-            showClear
-          />
-        </div>
-      </div>
+      <DiplomacyLaunchForm
+        v-else-if="conversationMode === 'diplomacy'"
+        v-model:initiator="diplomacyInitiator"
+        v-model:role="initiatorRole"
+        v-model:voice="voiceOverride"
+        :initiatorOptions="civPlayerOptions"
+        :suggestions="filteredRoles"
+        :voiceOptions="chattableAgents"
+        :playersLoading="playersLoading"
+        @search-roles="searchRoles"
+      />
 
       <!-- Agent Table (observer chat) -->
       <div v-else class="data-table">
@@ -559,29 +504,14 @@ watch(
         <p>{{ error }}</p>
       </div>
 
-      <div class="identity-step">
-        <div class="identity-form">
-          <label for="user-role">Your Role</label>
-          <AutoComplete
-            id="user-role"
-            v-model="userRole"
-            :suggestions="filteredRoles"
-            @complete="searchRoles"
-            placeholder="e.g., a diplomat, the leader, a military general..."
-            :dropdown="true"
-          />
-
-          <label for="user-player">Representing</label>
-          <Select
-            id="user-player"
-            v-model="selectedPlayerOption"
-            :options="playerOptions"
-            optionLabel="label"
-            placeholder="Select a player or observer..."
-            :loading="playersLoading"
-          />
-        </div>
-      </div>
+      <ObserverIdentityForm
+        v-model:role="userRole"
+        v-model:player="selectedPlayerOption"
+        :suggestions="filteredRoles"
+        :playerOptions="playerOptions"
+        :playersLoading="playersLoading"
+        @search-roles="searchRoles"
+      />
     </template>
 
     <template #footer>
@@ -627,9 +557,6 @@ watch(
 </template>
 
 <style scoped>
-@import '@/styles/states.css';
-@import '@/styles/data-table.css';
-
 .context-tags {
   display: flex;
   gap: 0.5rem;
@@ -646,21 +573,4 @@ watch(
   background-color: var(--p-content-hover-background);
 }
 
-/* Identity step styles */
-.identity-step {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.identity-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.identity-form label {
-  font-weight: 600;
-  color: var(--p-text-color);
-}
 </style>

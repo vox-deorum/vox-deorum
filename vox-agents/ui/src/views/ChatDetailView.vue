@@ -367,35 +367,35 @@ const confirmDelete = () => {
   showDeleteDialog.value = true;
 };
 
-/**
- * Accept the active proposal. The endpoint mirrors the deal-accept/enacted rows into the thread and
- * returns it, so we adopt that response directly — a status flip must not re-fetch and flatten the
- * conversation's live reasoning/tool-call traces.
- */
-const onDealAccept = async (id: number) => {
+/** Run an inline accept or reject mutation with the shared busy and error lifecycle. */
+const runInlineDealAction = async (
+  id: number,
+  action: (chatId: string, request: { proposalMessageID: number }) => ReturnType<typeof api.acceptDeal>,
+  failureSummary: string,
+): Promise<void> => {
   if (dealBlocked.value) return;
   dealActionBusy.value = true;
   try {
-    applyThread(await api.acceptDeal(sessionId.value, { proposalMessageID: id }));
+    applyThread(await action(sessionId.value, { proposalMessageID: id }));
   } catch (err) {
-    toast.add({ severity: 'error', summary: 'Failed to accept', detail: err instanceof Error ? err.message : 'Unknown error', life: 4000 });
+    toast.add({
+      severity: 'error',
+      summary: failureSummary,
+      detail: err instanceof Error ? err.message : 'Unknown error',
+      life: 4000,
+    });
   } finally {
     dealActionBusy.value = false;
   }
 };
 
+/** Accept the active proposal and adopt the returned thread. */
+const onDealAccept = (id: number): Promise<void> =>
+  runInlineDealAction(id, api.acceptDeal.bind(api), 'Failed to accept');
+
 /** Reject (decline or retract) the active proposal from its inline card; adopt the returned thread. */
-const onDealReject = async (id: number) => {
-  if (dealBlocked.value) return;
-  dealActionBusy.value = true;
-  try {
-    applyThread(await api.rejectDeal(sessionId.value, { proposalMessageID: id }));
-  } catch (err) {
-    toast.add({ severity: 'error', summary: 'Failed to reject', detail: err instanceof Error ? err.message : 'Unknown error', life: 4000 });
-  } finally {
-    dealActionBusy.value = false;
-  }
-};
+const onDealReject = (id: number): Promise<void> =>
+  runInlineDealAction(id, api.rejectDeal.bind(api), 'Failed to reject');
 
 /** Counter opens the deal dialog, which loads the active proposal for editing. */
 const onDealCounter = (_id: number) => {
@@ -433,7 +433,6 @@ onUnmounted(() => {
 
 <style scoped>
 @import '@/styles/chat.css';
-@import '@/styles/states.css';
 
 .closed-notice {
   padding: 0.5rem 1rem;

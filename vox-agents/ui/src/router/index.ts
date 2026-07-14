@@ -1,9 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import TelemetryView from '../views/TelemetryView.vue'
-import LogsView from '../views/LogsView.vue'
-import SessionView from '../views/SessionView.vue'
-import ConfigView from '../views/ConfigView.vue'
-import ChatView from '../views/ChatView.vue'
 import { api } from '../api/client'
 
 let envExists = true
@@ -11,9 +6,8 @@ let envExists = true
 try {
   const { exists } = await api.checkEnvFile()
   envExists = exists
-  console.log(".env file exists: " + exists)
-} catch (error) {
-  console.error('Failed to check .env file:', error)
+} catch {
+  // Keep the session page as the fallback when the environment check is unavailable.
 }
 
 const router = createRouter({
@@ -26,7 +20,7 @@ const router = createRouter({
     {
       path: '/telemetry',
       name: 'telemetry',
-      component: TelemetryView
+      component: () => import('../views/TelemetryView.vue')
     },
     {
       path: '/telemetry/session/:sessionId',
@@ -46,22 +40,22 @@ const router = createRouter({
     {
       path: '/logs',
       name: 'logs',
-      component: LogsView
+      component: () => import('../views/LogsView.vue')
     },
     {
       path: '/session',
       name: 'session',
-      component: SessionView
+      component: () => import('../views/SessionView.vue')
     },
     {
       path: '/config',
       name: 'config',
-      component: ConfigView
+      component: () => import('../views/ConfigView.vue')
     },
     {
       path: '/chat',
       name: 'chat',
-      component: ChatView
+      component: () => import('../views/ChatView.vue')
     },
     {
       path: '/chat/:sessionId',

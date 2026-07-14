@@ -7,20 +7,13 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
-import ProgressSpinner from 'primevue/progressspinner';
-import SpanViewer from '@/components/SpanViewer.vue';
 import AgentSelectDialog from '@/components/AgentSelectDialog.vue';
+import TelemetrySpanPage from '@/components/TelemetrySpanPage.vue';
+import { useTelemetrySpanPage } from '@/composables/useTelemetrySpanPage';
 import { api } from '@/api/client';
-import type { Span } from '../utils/types';
 
 const route = useRoute();
 const router = useRouter();
-
-// State
-const loading = ref(false);
-const error = ref<string | null>(null);
-const spans = ref<Span[]>([]);
-const rootSpan = ref<Span | null>(null);
 
 // Dialog state
 const showAgentDialog = ref(false);
@@ -33,6 +26,12 @@ const filename = computed(() => {
 });
 
 const traceId = computed(() => route.params.traceId as string);
+
+const { loading, error, spans, rootSpan, load } = useTelemetrySpanPage(
+  async () => (await api.getTraceSpans(filename.value, traceId.value)).spans,
+  (loadedSpans) => loadedSpans.find((span) => !span.parentSpanId) ?? loadedSpans[0] ?? null,
+  'Failed to load trace spans'
+);
 
 /**
  * Go back to database view
@@ -48,21 +47,7 @@ function goBack() {
  * Load spans for the trace
  */
 async function loadTraceSpans() {
-  loading.value = true;
-  error.value = null;
-
-  try {
-    const response = await api.getTraceSpans(filename.value, traceId.value);
-    spans.value = response.spans;
-
-    // Find root span
-    rootSpan.value = spans.value.find(s => !s.parentSpanId) || spans.value[0]!;
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load trace spans';
-    console.error('Error loading trace:', err);
-  } finally {
-    loading.value = false;
-  }
+  await load();
 }
 
 /**
@@ -73,24 +58,22 @@ function openAgentDialog() {
 }
 
 onMounted(() => {
-  loadTraceSpans();
+  void loadTraceSpans();
 });
 </script>
 
 <template>
   <div class="telemetry-trace-view">
-    <!-- Header with navigation -->
-    <div class="page-header">
-      <div class="page-header-left">
-        <Button
-          icon="pi pi-arrow-left"
-          text
-          rounded
-          @click="goBack"
-        />
-        <h1>{{ rootSpan?.name || 'Trace View' }}</h1>
-      </div>
-      <div class="page-header-controls">
+    <TelemetrySpanPage
+      :title="rootSpan?.name || 'Trace View'"
+      :loading="loading"
+      loading-message="Loading trace spans..."
+      :error="error"
+      :spans="spans"
+      :root-span="rootSpan"
+      @back="goBack"
+    >
+      <template #controls>
         <Button
           icon="pi pi-comment"
           @click="openAgentDialog"
@@ -98,28 +81,8 @@ onMounted(() => {
           severity="primary"
           size="small"
         />
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-container">
-      <ProgressSpinner />
-      <p>Loading trace spans...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="error-container">
-      <i class="pi pi-exclamation-triangle"></i>
-      <p>{{ error }}</p>
-      <Button label="Go Back" @click="goBack" />
-    </div>
-
-    <!-- Use SpanViewer component -->
-    <SpanViewer
-      v-if="rootSpan"
-      :spans="spans"
-      :root-span="rootSpan"
-    />
+      </template>
+    </TelemetrySpanPage>
 
     <!-- Agent Selection Dialog -->
     <AgentSelectDialog
@@ -130,7 +93,3 @@ onMounted(() => {
     />
   </div>
 </template>
-
-<style scoped>
-@import '@/styles/states.css';
-</style>

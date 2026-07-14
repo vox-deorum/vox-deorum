@@ -4,8 +4,13 @@
  */
 
 import { ref } from 'vue';
-import { apiClient } from '../api/client';
-import type { SessionStatusResponse } from '@/utils/types';
+import { api } from '../api/client';
+import type {
+  PauseSessionResponse,
+  ResumeSessionResponse,
+  SessionStatusResponse,
+  StopSessionResponse
+} from '@/utils/types';
 
 // Session status state
 export const sessionStatus = ref<SessionStatusResponse | null>(null);
@@ -14,124 +19,129 @@ export const error = ref<string | null>(null);
 
 // Polling interval reference
 let pollInterval: number | null = null;
+let statusRequest: Promise<SessionStatusResponse> | null = null;
+let pollingConsumers = 0;
+const activeSessionStates = new Set(['starting', 'running', 'recovering', 'stopping']);
 
-/**
- * Fetch current session status from the server
- */
-export async function fetchSessionStatus() {
-  try {
-    error.value = null;
-    const response = await apiClient.getSessionStatus();
-    sessionStatus.value = response;
+type SessionActionResponse = StopSessionResponse | PauseSessionResponse | ResumeSessionResponse;
 
-    // Start or stop polling based on session state
-    // Poll during active states: starting, running, recovering, stopping
-    const activeStates = ['starting', 'running', 'recovering', 'stopping'];
-    if (response.active && response.session && activeStates.includes(response.session.state)) {
-      startPolling();
-    } else {
-      stopPolling();
-    }
+/** Return whether a status response still needs active polling. */
+function isActiveSession(response: SessionStatusResponse): boolean {
+  return !!response.active && !!response.session && activeSessionStates.has(response.session.state);
+}
 
-    return response;
-  } catch (err: any) {
-    error.value = err.message || 'Failed to fetch session status';
-    console.error('Error fetching session status:', err);
-    throw err;
+/** Keep the interval aligned with current status and mounted polling owners. */
+function syncPolling(response: SessionStatusResponse): void {
+  if (pollingConsumers > 0 && isActiveSession(response)) {
+    startPolling();
+  } else {
+    stopPolling();
   }
+}
+
+/** Start one session status request and publish its response. */
+function requestSessionStatus(): Promise<SessionStatusResponse> {
+  error.value = null;
+  statusRequest = api.getSessionStatus().then((response) => {
+    sessionStatus.value = response;
+    syncPolling(response);
+    return response;
+  }).catch((caught) => {
+    error.value = caught instanceof Error ? caught.message : 'Failed to fetch session status';
+    throw caught;
+  }).finally(() => {
+    statusRequest = null;
+  });
+  return statusRequest;
+}
+
+/** Fetch current session status, reusing an ordinary request already in progress. */
+export function fetchSessionStatus(): Promise<SessionStatusResponse> {
+  return statusRequest ?? requestSessionStatus();
+}
+
+/** Fetch status after every earlier request has settled so mutations get a fresh read. */
+export async function fetchFreshSessionStatus(): Promise<SessionStatusResponse> {
+  while (statusRequest) {
+    try {
+      await statusRequest;
+    } catch {
+      // The fresh request still needs to run if an earlier polling request failed.
+    }
+  }
+  return requestSessionStatus();
 }
 
 /**
  * Start polling for session status updates
  */
-export function startPolling() {
-  // Don't start if already polling
-  if (pollInterval) return;
+function startPolling(): void {
+  if (pollInterval !== null || pollingConsumers === 0) return;
 
-  // Poll every 2 seconds
-  pollInterval = setInterval(async () => {
-    try {
-      const response = await apiClient.getSessionStatus();
-      sessionStatus.value = response;
-
-      // Stop polling if session is no longer in an active state
-      const activeStates = ['starting', 'running', 'recovering', 'stopping'];
-      if (!response.active || !response.session || !activeStates.includes(response.session.state)) {
-        stopPolling();
-      }
-    } catch (err) {
-      console.error('Error polling session status:', err);
-    }
+  pollInterval = window.setInterval(() => {
+    void fetchSessionStatus().catch(() => undefined);
   }, 2000);
 }
 
 /**
  * Stop polling for session status
  */
-export function stopPolling() {
-  if (pollInterval) {
-    clearInterval(pollInterval);
+function stopPolling(): void {
+  if (pollInterval !== null) {
+    window.clearInterval(pollInterval);
     pollInterval = null;
   }
+}
+
+/** Start status loading for one mounted consumer and return its cleanup handle. */
+export function startSessionPolling(): () => void {
+  pollingConsumers++;
+  void fetchSessionStatus().catch(() => undefined);
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    pollingConsumers = Math.max(0, pollingConsumers - 1);
+    if (pollingConsumers === 0) stopPolling();
+  };
 }
 
 /**
  * Stop the current session
  */
-export async function stopSession() {
+async function runSessionAction(
+  action: () => Promise<SessionActionResponse>,
+  fallbackMessage: string
+): Promise<void> {
   loading.value = true;
   error.value = null;
-
   try {
-    await apiClient.stopSession();
-    await fetchSessionStatus();
-  } catch (err: any) {
-    error.value = err.message || 'Failed to stop session';
-    throw err;
+    await action();
+    await fetchFreshSessionStatus();
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : fallbackMessage;
+    throw caught;
   } finally {
     loading.value = false;
   }
+}
+
+/** Stop the current session. */
+export function stopSession(): Promise<void> {
+  return runSessionAction(() => api.stopSession(), 'Failed to stop session');
 }
 
 /**
  * Pause the current session (no new LLM runs; the game stalls in place)
  */
-export async function pauseSession() {
-  loading.value = true;
-  error.value = null;
-
-  try {
-    await apiClient.pauseSession();
-    await fetchSessionStatus();
-  } catch (err: any) {
-    error.value = err.message || 'Failed to pause session';
-    throw err;
-  } finally {
-    loading.value = false;
-  }
+export function pauseSession(): Promise<void> {
+  return runSessionAction(() => api.pauseSession(), 'Failed to pause session');
 }
 
 /**
  * Resume a paused session
  */
-export async function resumeSession() {
-  loading.value = true;
-  error.value = null;
-
-  try {
-    await apiClient.resumeSession();
-    await fetchSessionStatus();
-  } catch (err: any) {
-    error.value = err.message || 'Failed to resume session';
-    throw err;
-  } finally {
-    loading.value = false;
-  }
-}
-
-/**
- * Clean up on unmount
- */
-export function cleanup() {
-  stopPolling();
+export function resumeSession(): Promise<void> {
+  return runSessionAction(() => api.resumeSession(), 'Failed to resume session');
 }

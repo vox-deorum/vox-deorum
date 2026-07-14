@@ -9,14 +9,14 @@ const push = vi.fn()
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }))
 
 vi.mock('@/api/client', () => ({
-  apiClient: {
+  api: {
     getAgents: vi.fn(),
     getPlayersSummary: vi.fn(),
     createAgentChat: vi.fn(),
   },
 }))
 
-import { apiClient } from '@/api/client'
+import { api } from '@/api/client'
 
 // Lightweight stand-ins for the PrimeVue chrome.
 const Dialog = {
@@ -85,6 +85,21 @@ const PLAYERS = {
 }
 
 const CONTEXT_ID = 'game-abc-player-1'
+const SECOND_CONTEXT_ID = 'game-def-player-2'
+
+type Deferred<T> = {
+  promise: Promise<T>
+  resolve: (value: T) => void
+}
+
+/** Create a promise whose completion can be ordered explicitly by a test. */
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(complete => {
+    resolve = complete
+  })
+  return { promise, resolve }
+}
 
 /** Mount the dialog hidden, then open it so the visible-watcher fires (as in real usage). */
 async function openDialog() {
@@ -107,9 +122,9 @@ function clickButton(wrapper: any, label: string) {
 describe('AgentSelectDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(apiClient.getAgents as any).mockResolvedValue(AGENTS)
-    ;(apiClient.getPlayersSummary as any).mockResolvedValue(PLAYERS)
-    ;(apiClient.createAgentChat as any).mockResolvedValue({ id: 'sess-1' })
+    ;(api.getAgents as any).mockResolvedValue(AGENTS)
+    ;(api.getPlayersSummary as any).mockResolvedValue(PLAYERS)
+    ;(api.createAgentChat as any).mockResolvedValue({ id: 'sess-1' })
   })
 
   it('titles the dialog after the chosen seat civ and drops the session-id tag', async () => {
@@ -145,7 +160,7 @@ describe('AgentSelectDialog', () => {
     await clickButton(wrapper, 'Start Conversation')
     await flushPromises()
 
-    expect(apiClient.createAgentChat).toHaveBeenCalledWith(
+    expect(api.createAgentChat).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'diplomacy',
         contextId: CONTEXT_ID,
@@ -180,7 +195,7 @@ describe('AgentSelectDialog', () => {
     await clickButton(wrapper, 'Start Chat')
     await flushPromises()
 
-    expect(apiClient.createAgentChat).toHaveBeenCalledWith(
+    expect(api.createAgentChat).toHaveBeenCalledWith(
       expect.objectContaining({
         agentName: 'diplomat',
         contextId: CONTEXT_ID,
@@ -188,5 +203,125 @@ describe('AgentSelectDialog', () => {
         callerIdentity: { name: 'an observer', leader: '' },
       })
     )
+  })
+
+  it('clears a failed chat launch when retrying with cached agents', async () => {
+    vi.mocked(api.getAgents).mockResolvedValue({
+      agents: [{ name: 'telepathist', description: 'database analyst', tags: ['telepathist'] }],
+    })
+    vi.mocked(api.createAgentChat)
+      .mockRejectedValueOnce(new Error('Chat creation failed'))
+      .mockResolvedValueOnce({
+        id: 'sess-retried',
+        agent: 0,
+        gameID: 'example',
+        player1ID: -1,
+        player2ID: 0,
+        contextType: 'database',
+        contextId: '',
+        messages: [],
+      })
+    const wrapper = mount(AgentSelectDialog, {
+      props: { visible: false, databasePath: 'telemetry/example.db' },
+      global: { stubs },
+    })
+
+    await wrapper.setProps({ visible: true })
+    await flushPromises()
+    await wrapper.find('.table-row').trigger('click')
+    await clickButton(wrapper, 'Start Chat')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Chat creation failed')
+    await clickButton(wrapper, 'Retry')
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Chat creation failed')
+    expect(api.getAgents).toHaveBeenCalledTimes(1)
+
+    await clickButton(wrapper, 'Start Chat')
+    await flushPromises()
+    expect(api.createAgentChat).toHaveBeenCalledTimes(2)
+    expect(push).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'chat-detail', params: { sessionId: 'sess-retried' } })
+    )
+  })
+
+  it('deduplicates the agent registry request across a close and reopen', async () => {
+    const pendingAgents = deferred<typeof AGENTS>()
+    ;(api.getAgents as any).mockReturnValue(pendingAgents.promise)
+    const wrapper = mount(AgentSelectDialog, {
+      props: { visible: false, databasePath: 'telemetry/example.db' },
+      global: { stubs },
+    })
+
+    await wrapper.setProps({ visible: true })
+    await wrapper.setProps({ visible: false })
+    await wrapper.setProps({ visible: true })
+
+    expect(api.getAgents).toHaveBeenCalledTimes(1)
+    pendingAgents.resolve(AGENTS)
+    await flushPromises()
+    await wrapper.setProps({ visible: false })
+    await wrapper.setProps({ visible: true })
+    expect(api.getAgents).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores player data from a closed context after reopening another context', async () => {
+    const firstPlayers = deferred<typeof PLAYERS>()
+    const secondPlayers = deferred<typeof PLAYERS>()
+    ;(api.getPlayersSummary as any)
+      .mockReturnValueOnce(firstPlayers.promise)
+      .mockReturnValueOnce(secondPlayers.promise)
+    const wrapper = mount(AgentSelectDialog, {
+      props: { visible: true, contextId: CONTEXT_ID },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    await wrapper.setProps({ visible: false })
+    await wrapper.setProps({ visible: true, contextId: SECOND_CONTEXT_ID })
+    secondPlayers.resolve({
+      players: {
+        '1': { Leader: 'Augustus', Civilization: 'Rome' },
+        '2': { Leader: 'Cleopatra', Civilization: 'Egypt' },
+      },
+      assignments: PLAYERS.assignments,
+    })
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('Chat with Egypt')
+
+    firstPlayers.resolve(PLAYERS)
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('Chat with Egypt')
+    expect(api.getPlayersSummary).toHaveBeenCalledTimes(2)
+  })
+
+  it('invalidates an in-flight player request when context changes while open', async () => {
+    const firstPlayers = deferred<typeof PLAYERS>()
+    const secondPlayers = deferred<typeof PLAYERS>()
+    ;(api.getPlayersSummary as any)
+      .mockReturnValueOnce(firstPlayers.promise)
+      .mockReturnValueOnce(secondPlayers.promise)
+    const wrapper = mount(AgentSelectDialog, {
+      props: { visible: true, contextId: CONTEXT_ID },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    await wrapper.setProps({ contextId: SECOND_CONTEXT_ID })
+    firstPlayers.resolve(PLAYERS)
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('Select Agent')
+
+    secondPlayers.resolve({
+      players: {
+        '1': { Leader: 'Augustus', Civilization: 'Rome' },
+        '2': { Leader: 'Cleopatra', Civilization: 'Egypt' },
+      },
+      assignments: PLAYERS.assignments,
+    })
+    await flushPromises()
+    expect(wrapper.find('h2').text()).toBe('Chat with Egypt')
+    expect(api.getPlayersSummary).toHaveBeenCalledTimes(2)
   })
 })

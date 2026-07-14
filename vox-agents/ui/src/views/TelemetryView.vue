@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import Card from 'primevue/card';
 import Button from 'primevue/button';
 import FileUpload from 'primevue/fileupload';
 import Tag from 'primevue/tag';
@@ -9,7 +8,7 @@ import Toolbar from 'primevue/toolbar';
 import ProgressSpinner from 'primevue/progressspinner';
 import GameSessionsList from '@/components/GameSessionsList.vue';
 import { api } from '@/api/client';
-import { activeSessions, databases, loading, fetchTelemetryData } from '@/stores/telemetry';
+import { activeSessions, databases, loading, fetchTelemetryData, startTelemetryPolling } from '@/stores/telemetry';
 import type { TelemetryMetadata } from '../utils/types';
 import { formatFileSize, formatISODate } from '@/api/telemetry-utils';
 
@@ -63,9 +62,17 @@ async function onUpload(event: any) {
   }
 }
 
+let stopPolling: (() => void) | null = null;
+
+/** Start scoped telemetry polling when the view mounts. */
 onMounted(() => {
-  // Initial load of telemetry data
-  fetchTelemetryData();
+  stopPolling = startTelemetryPolling();
+});
+
+/** Stop telemetry polling when the view unmounts. */
+onUnmounted(() => {
+  stopPolling?.();
+  stopPolling = null;
 });
 </script>
 
@@ -161,10 +168,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-@import '@/styles/global.css';
-@import '@/styles/data-table.css';
-@import '@/styles/states.css';
-@import '@/styles/panel.css';
-</style>

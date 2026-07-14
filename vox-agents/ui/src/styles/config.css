@@ -14,8 +14,8 @@
   margin-bottom: 1.5rem;
 }
 
-.config-card :deep(.p-card-title),
-.config-section :deep(.p-card-title) {
+.config-card .p-card-title,
+.config-section .p-card-title {
   font-size: 1rem;
   font-weight: 600;
   display: flex;
@@ -23,93 +23,93 @@
   gap: 0.5rem;
 }
 
-.config-card :deep(.p-card-subtitle),
-.config-section :deep(.p-card-subtitle) {
+.config-card .p-card-subtitle,
+.config-section .p-card-subtitle {
   color: var(--p-text-muted-color);
   font-size: 0.875rem;
 }
 
-.config-card :deep(.p-card-body),
-.config-section :deep(.p-card-body) {
+.config-card .p-card-body,
+.config-section .p-card-body {
   padding: 1rem;
 }
 
-.config-card :deep(.p-card-content),
-.config-section :deep(.p-card-content) {
+.config-card .p-card-content,
+.config-section .p-card-content {
   padding-top: 0.75rem;
 }
 
 /* List Layouts */
-.mappings-list, .models-list, .settings-grid {
+:is(.config-card, .config-section, .model-options-content) :is(.mappings-list, .models-list, .settings-grid) {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
 /* Field Layouts - Unified row styles */
-.field-row {
+:is(.config-card, .config-section, .model-options-content) .field-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
 
-.field-row:last-child {
+:is(.config-card, .config-section, .model-options-content) .field-row:last-child {
   margin-bottom: 0;
 }
 
-.field-row label {
+:is(.config-card, .config-section, .model-options-content) .field-row label {
   min-width: 120px;
   font-weight: 500;
   color: var(--p-text-color);
 }
 
-.field-input {
+:is(.config-card, .config-section, .model-options-content) .field-input {
   flex: 1;
   max-width: 300px;
 }
 
 /* Input Sizing */
-.config-name-input {
+:is(.config-card, .config-section, .model-options-content) .config-name-input {
   flex: 1;
 }
 
-.agent-input {
+:is(.config-card, .config-section, .model-options-content) .agent-input {
   flex: 1;
   min-width: 150px;
 }
 
-.model-dropdown,
-.provider-dropdown {
+:is(.config-card, .config-section, .model-options-content) .model-dropdown,
+:is(.config-card, .config-section, .model-options-content) .provider-dropdown {
   flex: 1.5;
   min-width: 200px;
 }
 
-.model-name {
+:is(.config-card, .config-section, .model-options-content) .model-name {
   flex: 3;
   min-width: 200px;
 }
 
 /* Labels */
-.player-label {
+:is(.config-card, .config-section, .model-options-content) .player-label {
   min-width: 80px;
   font-weight: 500;
 }
 
 /* Buttons */
-.delete-btn {
+:is(.config-card, .config-section, .model-options-content) .delete-btn {
   flex-shrink: 0;
   width: 2.5rem; /* Match PrimeVue icon-only button so the delete column lines up across rows */
 }
 
 /* Checkbox Styles */
-.checkbox-wrapper {
+:is(.config-card, .config-section, .model-options-content) .checkbox-wrapper {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.checkbox-label {
+:is(.config-card, .config-section, .model-options-content) .checkbox-label {
   margin: 0;
   font-weight: normal;
   color: var(--p-text-muted-color);
@@ -117,18 +117,18 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .field-row {
+  :is(.config-card, .config-section, .model-options-content) .field-row {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .field-row label {
+  :is(.config-card, .config-section, .model-options-content) .field-row label {
     min-width: unset;
   }
 
-  .field-input,
-  .model-dropdown,
-  .provider-dropdown {
+  :is(.config-card, .config-section, .model-options-content) .field-input,
+  :is(.config-card, .config-section, .model-options-content) .model-dropdown,
+  :is(.config-card, .config-section, .model-options-content) .provider-dropdown {
     max-width: 100%;
     width: 100%;
   }

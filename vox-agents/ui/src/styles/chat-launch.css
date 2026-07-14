@@ -1,0 +1,16 @@
+.chat-launch-identity-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chat-launch-identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-launch-identity-form label {
+  color: var(--p-text-color);
+  font-weight: 600;
+}

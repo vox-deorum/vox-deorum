@@ -1,26 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import Button from 'primevue/button';
 import Message from 'primevue/message';
-import Tag from 'primevue/tag';
-import Toolbar from 'primevue/toolbar';
-import ProgressSpinner from 'primevue/progressspinner';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
+import ActiveSessionPanel from '../components/ActiveSessionPanel.vue';
 import ConfigDialog from '../components/ConfigDialog.vue';
 import GameModeDialog from '../components/GameModeDialog.vue';
 import PlayersSummaryDialog from '../components/PlayersSummaryDialog.vue';
+import SessionConfigList from '../components/SessionConfigList.vue';
 import type { GameMode } from '../components/GameModeDialog.vue';
-import { apiClient } from '../api/client';
+import { api } from '../api/client';
 import {
   sessionStatus,
   loading as sessionLoading,
   error as sessionError,
-  fetchSessionStatus,
+  fetchFreshSessionStatus,
   stopSession,
   pauseSession,
   resumeSession,
-  cleanup
+  startSessionPolling
 } from '../stores/session';
 import type { SessionConfig, StrategistSessionConfig } from '../utils/types';
 
@@ -50,96 +48,16 @@ const showPlayersDialog = ref(false);
 
 // Starting session state
 const startingSession = ref(false);
+let releaseSessionPolling: (() => void) | null = null;
 
 // Services
 const confirm = useConfirm();
 const toast = useToast();
 
 /**
- * Calculate total player count from config (rounded to nearest even, matching backend logic)
- */
-function getPlayerCount(config: SessionConfig): number {
-  const stratConfig = config as StrategistSessionConfig;
-  if (!stratConfig.llmPlayers || Object.keys(stratConfig.llmPlayers).length === 0) return 0;
-  const playerIds = Object.keys(stratConfig.llmPlayers).map(Number);
-  const rawCount = Math.max(...playerIds) + 1;
-  return Math.ceil(rawCount / 2) * 2;
-}
-
-/**
- * Count LLM-controlled players (excludes none-strategist)
- */
-function getLlmPlayerCount(config: SessionConfig): number {
-  const stratConfig = config as StrategistSessionConfig;
-  if (!stratConfig.llmPlayers) return 0;
-  return Object.values(stratConfig.llmPlayers).filter(p => p.strategist !== 'none-strategist').length;
-}
-
-/**
- * Get estimated map size name based on player count
- */
-function getMapSize(config: SessionConfig): string {
-  const playerCount = getPlayerCount(config);
-  if (playerCount <= 2) return 'Duel';
-  if (playerCount <= 4) return 'Tiny';
-  if (playerCount <= 6) return 'Small';
-  if (playerCount <= 8) return 'Standard';
-  if (playerCount <= 10) return 'Large';
-  return 'Huge';
-}
-
-/**
  * Whether the active session is paused (orthogonal to state, which stays 'running')
  */
 const isPaused = computed(() => !!sessionStatus.value?.session?.paused);
-
-/**
- * Whether pause/resume is allowed for the current session state
- */
-const canTogglePause = computed(() => {
-  const state = sessionStatus.value?.session?.state;
-  return state === 'running' || state === 'recovering';
-});
-
-/**
- * Get state severity for PrimeVue components
- */
-const stateSeverity = computed(() => {
-  if (!sessionStatus.value?.session) return undefined;
-
-  const state = sessionStatus.value.session.state;
-  switch (state) {
-    case 'starting': return 'info';
-    case 'running': return 'success';
-    case 'recovering': return 'warning';
-    case 'stopping': return 'warning';
-    case 'stopped': return undefined;
-    case 'error': return 'danger';
-    default: return undefined;
-  }
-});
-
-/**
- * Calculate elapsed time from session start
- */
-const elapsedTime = computed(() => {
-  if (!sessionStatus.value?.session?.startTime) return '';
-
-  const start = new Date(sessionStatus.value.session.startTime);
-  const now = new Date();
-  const elapsed = Math.floor((now.getTime() - start.getTime()) / 1000);
-
-  const hours = Math.floor(elapsed / 3600);
-  const minutes = Math.floor((elapsed % 3600) / 60);
-  const seconds = elapsed % 60;
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
-});
 
 /**
  * Load configurations from server
@@ -149,11 +67,10 @@ async function loadConfigs() {
   configError.value = null;
 
   try {
-    const response = await apiClient.getSessionConfigs();
+    const response = await api.getSessionConfigs();
     configs.value = response.configs;
-  } catch (err: any) {
-    configError.value = err.message || 'Failed to load configurations';
-    console.error('Error loading configs:', err);
+  } catch (caught) {
+    configError.value = caught instanceof Error ? caught.message : 'Failed to load configurations';
   } finally {
     loadingConfigs.value = false;
   }
@@ -182,19 +99,19 @@ async function startSessionWithGameMode(mode: GameMode) {
       gameMode: mode
     };
 
-    await apiClient.startSession(configWithMode);
-    await fetchSessionStatus();
+    await api.startSession(configWithMode);
+    await fetchFreshSessionStatus();
     toast.add({
       severity: 'success',
       summary: 'Session Started',
       detail: `Game session started in ${mode} mode`,
       life: 3000
     });
-  } catch (err: any) {
+  } catch (caught) {
     toast.add({
       severity: 'error',
       summary: 'Failed to Start',
-      detail: err.message || 'Failed to start session',
+      detail: caught instanceof Error ? caught.message : 'Failed to start session',
       life: 5000
     });
   } finally {
@@ -219,14 +136,14 @@ async function togglePause() {
       summary: wasPaused ? 'Session Resumed' : 'Session Paused',
       detail: wasPaused
         ? 'Game session resumed'
-        : 'Game session paused — no new agent runs will start',
+        : 'Game session paused: no new agent runs will start',
       life: 3000
     });
-  } catch (err: any) {
+  } catch (caught) {
     toast.add({
       severity: 'error',
       summary: wasPaused ? 'Failed to Resume' : 'Failed to Pause',
-      detail: err.message || 'Failed to toggle pause',
+      detail: caught instanceof Error ? caught.message : 'Failed to toggle pause',
       life: 5000
     });
   }
@@ -250,11 +167,11 @@ function confirmStopSession() {
           detail: 'Game session stopped successfully',
           life: 3000
         });
-      } catch (err: any) {
+      } catch (caught) {
         toast.add({
           severity: 'error',
           summary: 'Failed to Stop',
-          detail: err.message || 'Failed to stop session',
+          detail: caught instanceof Error ? caught.message : 'Failed to stop session',
           life: 5000
         });
       }
@@ -276,7 +193,7 @@ function confirmDeleteConfig(config: SessionConfig) {
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        await apiClient.deleteSessionConfig(configFilename);
+        await api.deleteSessionConfig(configFilename);
         await loadConfigs();
         toast.add({
           severity: 'success',
@@ -284,11 +201,11 @@ function confirmDeleteConfig(config: SessionConfig) {
           detail: 'Configuration deleted successfully',
           life: 3000
         });
-      } catch (err: any) {
+      } catch (caught) {
         toast.add({
           severity: 'error',
           summary: 'Failed to Delete',
-          detail: err.message || 'Failed to delete configuration',
+          detail: caught instanceof Error ? caught.message : 'Failed to delete configuration',
           life: 5000
         });
       }
@@ -348,7 +265,7 @@ async function handleConfigSave(name: string, config: StrategistSessionConfig) {
     // Ensure the config has the correct name
     config.name = name;
 
-    await apiClient.saveSessionConfig(name, config);
+    await api.saveSessionConfig(name, config);
     await loadConfigs();
     showConfigDialog.value = false;
     toast.add({
@@ -357,11 +274,11 @@ async function handleConfigSave(name: string, config: StrategistSessionConfig) {
       detail: 'Configuration saved successfully',
       life: 3000
     });
-  } catch (err: any) {
+  } catch (caught) {
     toast.add({
       severity: 'error',
       summary: 'Failed to Save',
-      detail: err.message || 'Failed to save configuration',
+      detail: caught instanceof Error ? caught.message : 'Failed to save configuration',
       life: 5000
     });
   }
@@ -370,15 +287,14 @@ async function handleConfigSave(name: string, config: StrategistSessionConfig) {
 
 // Initialize on mount
 onMounted(async () => {
-  await Promise.all([
-    fetchSessionStatus(),
-    loadConfigs()
-  ]);
+  releaseSessionPolling = startSessionPolling();
+  await loadConfigs();
 });
 
 // Cleanup on unmount
 onUnmounted(() => {
-  cleanup();
+  releaseSessionPolling?.();
+  releaseSessionPolling = null;
 });
 </script>
 
@@ -390,205 +306,32 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Active Session Panel -->
-    <div v-if="sessionStatus?.active && sessionStatus.session" class="panel-container mb-4">
-      <Toolbar>
-        <template #start>
-          <h3>Active Session</h3>
-          <Tag class="ml-2" :severity="stateSeverity" :value="sessionStatus.session.state.toUpperCase()" />
-          <Tag v-if="isPaused" class="ml-2" severity="warning" value="PAUSED" />
-        </template>
-        <template #end>
-          <Button
-            label="View Players"
-            icon="pi pi-users"
-            severity="info"
-            size="small"
-            @click="showPlayersDialog = true"
-            :disabled="sessionLoading"
-            class="mr-2"
-          />
-          <Button
-            :label="isPaused ? 'Resume' : 'Pause'"
-            :icon="isPaused ? 'pi pi-play' : 'pi pi-pause'"
-            severity="secondary"
-            size="small"
-            @click="togglePause"
-            :disabled="!canTogglePause"
-            :loading="sessionLoading"
-            class="mr-2"
-          />
-          <Button
-            label="Stop Session"
-            icon="pi pi-stop"
-            severity="danger"
-            size="small"
-            @click="confirmStopSession"
-            :loading="sessionLoading"
-          />
-        </template>
-      </Toolbar>
-
-      <div class="data-table">
-        <!-- Session Details Table -->
-        <div class="table-row" v-if="sessionStatus.session.config?.name">
-          <div class="col-fixed-150">Configuration</div>
-          <div class="col-expand">{{ sessionStatus.session.config.name }}</div>
-        </div>
-        <div class="table-row">
-          <div class="col-fixed-150">Session ID</div>
-          <div class="col-expand">{{ sessionStatus.session.id }}</div>
-        </div>
-        <div class="table-row" v-if="sessionStatus.session.gameID">
-          <div class="col-fixed-150">Game ID</div>
-          <div class="col-expand">{{ sessionStatus.session.gameID }}</div>
-        </div>
-        <div class="table-row" v-if="sessionStatus.session.turn !== undefined">
-          <div class="col-fixed-150">Current Turn</div>
-          <div class="col-expand">{{ sessionStatus.session.turn }}</div>
-        </div>
-        <div class="table-row" v-if="elapsedTime">
-          <div class="col-fixed-150">Duration</div>
-          <div class="col-expand">{{ elapsedTime }}</div>
-        </div>
-        <div class="table-row">
-          <div class="col-fixed-150">Observe</div>
-          <div class="col-expand">
-            <i :class="sessionStatus.session.config.autoPlay ? 'pi pi-check text-green-500' : 'pi pi-times text-red-500'"></i>
-            {{ sessionStatus.session.config.autoPlay ? 'Yes' : 'No' }}
-          </div>
-        </div>
-        <div class="table-row">
-          <div class="col-fixed-150">Game Mode</div>
-          <div class="col-expand">{{ sessionStatus.session.config.gameMode }}</div>
-        </div>
-        <div class="table-row" v-if="sessionStatus.session.config.repetition">
-          <div class="col-fixed-150">Repetitions</div>
-          <div class="col-expand">{{ sessionStatus.session.config.repetition }}</div>
-        </div>
-        <div class="table-row error" v-if="sessionStatus.session.error">
-          <div class="col-fixed-150">Error</div>
-          <div class="col-expand text-wrap">{{ sessionStatus.session.error }}</div>
-        </div>
-      </div>
-    </div>
+    <ActiveSessionPanel
+      v-if="sessionStatus?.active && sessionStatus.session"
+      :session="sessionStatus.session"
+      :loading="sessionLoading"
+      @view-players="showPlayersDialog = true"
+      @toggle-pause="togglePause"
+      @stop="confirmStopSession"
+    />
 
     <!-- Session Error -->
     <Message v-if="sessionError" severity="error" :closable="false" class="mb-4">
       {{ sessionError }}
     </Message>
 
-    <!-- Configurations Panel -->
-    <div class="panel-container">
-      <Toolbar>
-        <template #start>
-          <h3>Configurations</h3>
-        </template>
-        <template #end>
-          <Button
-            icon="pi pi-plus"
-            label="New Config"
-            severity="success"
-            size="small"
-            @click="openConfigDialog('add')"
-          />
-        </template>
-      </Toolbar>
-
-      <!-- Loading State -->
-      <div v-if="loadingConfigs" class="table-loading">
-        <ProgressSpinner />
-        <span class="ml-2">Loading configurations...</span>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="configError" class="p-3">
-        <Message severity="error" :closable="false">
-          {{ configError }}
-        </Message>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="configs.length === 0" class="table-empty">
-        <i class="pi pi-inbox"></i>
-        <p>No configurations found</p>
-        <Button
-          label="Create First Config"
-          icon="pi pi-plus"
-          @click="openConfigDialog('add')"
-        />
-      </div>
-
-      <!-- Configurations Table -->
-      <div v-else class="data-table">
-        <!-- Header row -->
-        <div class="table-header">
-          <div class="col-expand">Name</div>
-          <div class="col-fixed-100">Type</div>
-          <div class="col-fixed-100">Players</div>
-          <div class="col-fixed-100">Map</div>
-          <div class="col-fixed-80">Observe</div>
-          <div class="col-fixed-250">Actions</div>
-        </div>
-
-        <!-- Table rows -->
-        <div class="table-body">
-          <div v-for="(config, index) in configs" :key="index" class="table-row">
-            <div class="col-expand text-truncate">{{ config.name }}</div>
-            <div class="col-fixed-100">
-              <Tag value="Strategist" severity="info" />
-            </div>
-            <div class="col-fixed-100">
-              {{ getLlmPlayerCount(config) }} / {{ getPlayerCount(config) }}
-            </div>
-            <div class="col-fixed-100">
-              {{ getMapSize(config) }}
-            </div>
-            <div class="col-fixed-80">
-              <i :class="config.autoPlay ? 'pi pi-check text-green-500' : 'pi pi-times text-red-500'"></i>
-            </div>
-            <div class="col-fixed-250">
-              <div class="flex gap-2">
-                <Button
-                  icon="pi pi-play"
-                  severity="success"
-                  size="small"
-                  rounded
-                  v-tooltip="'Start Session'"
-                  @click="showGameModeSelection(config)"
-                  :disabled="sessionStatus?.active || startingSession"
-                  :loading="startingSession"
-                />
-                <Button
-                  icon="pi pi-pencil"
-                  severity="info"
-                  size="small"
-                  rounded
-                  v-tooltip="'Edit Config'"
-                  @click="openConfigDialog('edit', config)"
-                />
-                <Button
-                  icon="pi pi-copy"
-                  severity="secondary"
-                  size="small"
-                  rounded
-                  v-tooltip="'Duplicate Config'"
-                  @click="duplicateConfig(config)"
-                />
-                <Button
-                  icon="pi pi-trash"
-                  severity="danger"
-                  size="small"
-                  rounded
-                  v-tooltip="'Delete Config'"
-                  @click="confirmDeleteConfig(config)"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <SessionConfigList
+      :configs="configs"
+      :loading="loadingConfigs"
+      :error="configError"
+      :session-active="!!sessionStatus?.active"
+      :starting-session="startingSession"
+      @create="openConfigDialog('add')"
+      @start="showGameModeSelection"
+      @edit="openConfigDialog('edit', $event)"
+      @duplicate="duplicateConfig"
+      @delete="confirmDeleteConfig"
+    />
 
     <!-- Configuration Dialog -->
     <ConfigDialog
@@ -612,9 +355,3 @@ onUnmounted(() => {
     />
   </div>
 </template>
-
-<style scoped>
-@import '@/styles/data-table.css';
-@import '@/styles/states.css';
-@import '@/styles/panel.css';
-</style>

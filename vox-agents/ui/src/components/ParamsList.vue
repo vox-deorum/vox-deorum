@@ -3,18 +3,23 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
+import { h, type VNode } from 'vue';
 
-interface Props {
-  params: any;
-  depth?: number;
+type DisplayPrimitive = string | number | boolean | null | undefined;
+type DisplayValue = DisplayPrimitive | DisplayValue[] | DisplayObject;
+
+interface DisplayObject {
+  [key: string]: DisplayValue;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  depth: 0
-});
+interface Props {
+  params: DisplayValue;
+}
 
-const renderValue = (value: any, key?: string | number): any => {
+const props = defineProps<Props>();
+
+/** Render a log parameter value recursively with syntax-aware styling. */
+const renderValue = (value: DisplayValue): VNode => {
   // Handle null/undefined
   if (value === null) return h('span', { class: 'param-null' }, 'null');
   if (value === undefined) return h('span', { class: 'param-undefined' }, 'undefined');
@@ -33,32 +38,27 @@ const renderValue = (value: any, key?: string | number): any => {
         h('li', { key: index },
           [
             h('span', { class: 'param-key' }, `[${index}]: `),
-            renderValue(item, index)
+            renderValue(item)
           ]
         )
       )
     );
   }
 
-  // Handle objects
-  if (typeof value === 'object') {
-    const entries = Object.entries(value);
-    if (entries.length === 0) return h('span', { class: 'param-empty' }, '{}');
+  // Handle objects. All remaining values are objects after the exhaustive primitive checks.
+  const entries = Object.entries(value);
+  if (entries.length === 0) return h('span', { class: 'param-empty' }, '{}');
 
-    return h('ul', { class: 'param-object' },
-      entries.map(([k, v]) =>
-        h('li', { key: k },
-          [
-            h('span', { class: 'param-key' }, `${k}: `),
-            renderValue(v, k)
-          ]
-        )
+  return h('ul', { class: 'param-object' },
+    entries.map(([k, v]) =>
+      h('li', { key: k },
+        [
+          h('span', { class: 'param-key' }, `${k}: `),
+          renderValue(v)
+        ]
       )
-    );
-  }
-
-  // Fallback
-  return h('span', { class: 'param-unknown' }, String(value));
+    )
+  );
 };
 </script>
 
@@ -105,7 +105,4 @@ li {
   color: var(--p-gray-500);
 }
 
-.param-unknown {
-  color: var(--p-text-muted-color);
-}
 </style>

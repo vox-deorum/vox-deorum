@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import ProgressSpinner from 'primevue/progressspinner';
@@ -9,7 +8,14 @@ import ChatSessionsList from '@/components/ChatSessionsList.vue';
 import GameSessionsList from '@/components/GameSessionsList.vue';
 import AgentSelectDialog from '@/components/AgentSelectDialog.vue';
 import DeleteSessionDialog from '@/components/DeleteSessionDialog.vue';
-import { activeSessions, chatSessions, loading, loadingChats, fetchTelemetryData, fetchChatData } from '@/stores/telemetry';
+import {
+  activeSessions,
+  chatSessions,
+  loading,
+  loadingChats,
+  refreshChatDataAfterDelete,
+  startChatPolling
+} from '@/stores/telemetry';
 import type { EnvoyThread } from '@/utils/types';
 
 /**
@@ -29,7 +35,6 @@ const sessionToDelete = ref<EnvoyThread | null>(null);
  */
 const hasActiveSessions = computed(() => activeSessions.value.length > 0);
 const hasChatSessions = computed(() => chatSessions.value.length > 0);
-const hasAnySessions = computed(() => hasActiveSessions.value || hasChatSessions.value);
 
 /**
  * Handle game session selection for starting new chat
@@ -72,9 +77,8 @@ function handleChatDelete(sessionId: string) {
 /**
  * Handle successful deletion
  */
-function handleDeleteSuccess() {
-  // Refresh the chat list
-  fetchChatData();
+function handleDeleteSuccess(sessionId: string) {
+  void refreshChatDataAfterDelete(sessionId);
 }
 
 /**
@@ -91,9 +95,18 @@ function goToTelemetryView() {
   router.push({ name: 'telemetry' });
 }
 
-// Fetch sessions on mount
-fetchTelemetryData();
-fetchChatData();
+let stopPolling: (() => void) | null = null;
+
+/** Start scoped session polling when the chat view mounts. */
+onMounted(() => {
+  stopPolling = startChatPolling();
+});
+
+/** Stop session polling when the chat view unmounts. */
+onUnmounted(() => {
+  stopPolling?.();
+  stopPolling = null;
+});
 </script>
 
 <template>
@@ -163,9 +176,6 @@ fetchChatData();
 </template>
 
 <style scoped>
-@import '@/styles/global.css';
-@import '@/styles/states.css';
-
 .empty-action-container {
   display: flex;
   gap: 1rem;

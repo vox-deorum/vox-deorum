@@ -5,7 +5,7 @@
  */
 
 import { ref, shallowRef } from 'vue';
-import { apiClient } from '../api/client';
+import { api } from '../api/client';
 import type { LogEntry } from '@/utils/types';
 
 // Reactive state
@@ -55,7 +55,7 @@ function connect() {
   }
 
   // Establish new SSE connection
-  cleanupSse = apiClient.streamLogs(
+  cleanupSse = api.streamLogs(
     (log) => {
       addLog(log);
       isConnected.value = true;

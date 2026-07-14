@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import Card from 'primevue/card';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
 import Message from 'primevue/message';
 import ProgressSpinner from 'primevue/progressspinner';
-import Dropdown from 'primevue/dropdown';
 import { useConfirm } from 'primevue/useconfirm';
-import { apiClient } from '../api/client';
+import { api } from '../api/client';
 import type { AgentMapping, LLMConfig, VoxAgentsConfig, AgentInfo } from '../utils/types';
-import { llmProviders, apiKeyFields } from '../utils/types';
+import { apiKeyFields } from '../utils/types';
+import AgentModelMappings from '../components/config/AgentModelMappings.vue';
+import ApiKeysSection from '../components/config/ApiKeysSection.vue';
+import ModelDefinitions from '../components/config/ModelDefinitions.vue';
+import PathSettingsSection from '../components/config/PathSettingsSection.vue';
 import ModelOptionsDialog from '../components/ModelOptionsDialog.vue';
 import {
   parseLLMConfig,
   buildLLMConfig,
-  updateModelId,
   getAgentsUsingModel,
   validateMappings
 } from '../utils/config-utils';
@@ -46,15 +45,15 @@ const editingModel = ref<LLMConfig | null>(null);
 // Computed available chat models for agent dropdowns (excludes embedding models)
 const availableModels = computed(() => {
   return modelDefinitions.value
-    .filter(m => !m.options?.embeddingSize)
-    .map(m => ({ label: m.id, value: m.id }));
+    .filter(m => !m.options?.embeddingSize && m.id)
+    .map(m => ({ label: m.id!, value: m.id! }));
 });
 
 // Computed available embedding models for the embedder dropdown
 const embeddingModels = computed(() => {
   return modelDefinitions.value
-    .filter(m => m.options?.embeddingSize)
-    .map(m => ({ label: m.id, value: m.id }));
+    .filter(m => m.options?.embeddingSize && m.id)
+    .map(m => ({ label: m.id!, value: m.id! }));
 });
 
 // Computed agent types from dynamic registry
@@ -83,7 +82,7 @@ onMounted(async () => {
 // Load agents from server
 async function loadAgents() {
   try {
-    const data = await apiClient.getAgents();
+    const data = await api.getAgents();
     agents.value = data.agents;
   } catch (err: any) {
     error.value = err.message || 'Failed to load agents';
@@ -97,7 +96,7 @@ async function loadConfig() {
   error.value = null;
 
   try {
-    const data = await apiClient.getCurrentConfig();
+    const data = await api.getCurrentConfig();
 
     // Initialize API keys with empty strings for missing keys
     const loadedKeys: Record<string, string> = {};
@@ -126,29 +125,14 @@ async function loadConfig() {
   }
 }
 
-// LLM Configuration Functions
-function addMapping() {
-  agentMappings.value.push({
-    agent: agentTypes.value[0]?.value || 'default',
-    model: availableModels.value[0]?.value || ''
-  });
-}
-
-function deleteMapping(index: number) {
-  agentMappings.value.splice(index, 1);
-}
-
-function addModel() {
-  modelDefinitions.value.push({
-    id: '',
-    provider: 'openrouter',
-    name: '',
-    options: {}
-  });
-}
-
-function confirmDeleteModel(modelId: string) {
-  const inUse = getAgentsUsingModel(modelId, agentMappings.value);
+/** Ask for confirmation when deleting the last definition of an assigned model. */
+function confirmDeleteModel(modelIndex: number): void {
+  const modelId = modelDefinitions.value[modelIndex]?.id;
+  if (modelId === undefined) return;
+  const hasDuplicateDefinition = modelDefinitions.value.some((model, index) =>
+    index !== modelIndex && model.id === modelId
+  );
+  const inUse = hasDuplicateDefinition ? [] : getAgentsUsingModel(modelId, agentMappings.value);
 
   if (inUse.length > 0) {
     confirm.require({
@@ -159,71 +143,36 @@ function confirmDeleteModel(modelId: string) {
       acceptClass: 'p-button-danger',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
-      accept: () => deleteModel(modelId)
+      accept: () => deleteModel(modelIndex)
     });
   } else {
-    deleteModel(modelId);
+    deleteModel(modelIndex);
   }
 }
 
-function deleteModel(modelId: string) {
-  // Remove from definitions
-  const index = modelDefinitions.value.findIndex(m => m.id === modelId);
-  if (index !== -1) {
-    modelDefinitions.value.splice(index, 1);
+/** Remove the selected row and clear mappings only when its model ID no longer exists. */
+function deleteModel(modelIndex: number): void {
+  const modelId = modelDefinitions.value[modelIndex]?.id;
+  if (modelId === undefined) return;
+  modelDefinitions.value = modelDefinitions.value.filter((_, index) => index !== modelIndex);
+  if (modelId && !modelDefinitions.value.some(model => model.id === modelId)) {
+    agentMappings.value = agentMappings.value.filter(mapping => mapping.model !== modelId);
   }
-
-  // Remove any mappings using this model
-  agentMappings.value = agentMappings.value.filter(m => m.model !== modelId);
 }
 
 /** Open the options dialog for the given model */
-function openModelOptions(model: LLMConfig) {
+function openModelOptions(model: LLMConfig): void {
   editingModel.value = model;
   modelOptionsVisible.value = true;
 }
 
 /** Apply options emitted from the dialog back onto the model */
-function applyModelOptions(options: LLMConfig['options']) {
-  if (editingModel.value) {
-    editingModel.value.options = options;
-  }
-}
-
-/** Returns true if the model has any non-default options configured */
-function hasModelOptions(model: LLMConfig): boolean {
-  if (!model.options) return false;
-  return Object.values(model.options).some(v => v !== null && v !== undefined && v !== '' && v !== false);
-}
-
-/** Returns a compact summary of configured options for the tooltip */
-function modelOptionsSummary(model: LLMConfig): string {
-  if (!hasModelOptions(model)) return 'Model options';
-  const opts = model.options!;
-  const parts: string[] = [];
-  if (opts.toolMiddleware) parts.push(`Tool: ${opts.toolMiddleware}`);
-  if (opts.reasoningEffort) parts.push(`Reasoning: ${opts.reasoningEffort}`);
-  if (opts.thinkMiddleware) parts.push('Think tag postprocessing: on');
-  if (opts.concurrencyLimit != null) parts.push(`Concurrency: ${opts.concurrencyLimit}`);
-  if (opts.systemPromptFirst) parts.push('Sys first: on');
-  if (opts.embeddingSize) parts.push(`Embedding: ${opts.embeddingSize}d`);
-  return parts.join(' | ');
-}
-
-/** Duplicate a model with a unique auto-generated name */
-function duplicateModel(model: LLMConfig) {
-  const existingIds = new Set(modelDefinitions.value.map(m => m.id));
-  let newName = model.name;
-  let suffix = 2;
-  while (existingIds.has(`${model.provider}/${newName}`)) {
-    newName = `${model.name}-${suffix}`;
-    suffix++;
-  }
-  modelDefinitions.value.push({
-    ...JSON.parse(JSON.stringify(model)),
-    name: newName,
-    id: `${model.provider}/${newName}`
-  });
+function applyModelOptions(options: LLMConfig['options']): void {
+  const target = editingModel.value;
+  if (!target) return;
+  const updated = { ...target, options };
+  modelDefinitions.value = modelDefinitions.value.map(model => model === target ? updated : model);
+  editingModel.value = updated;
 }
 
 // Save configuration (API keys and config)
@@ -252,7 +201,7 @@ async function saveConfig() {
       llms: buildLLMConfig(agentMappings.value, modelDefinitions.value, embedderModel.value)
     };
 
-    await apiClient.updateCurrentConfig({
+    await api.updateCurrentConfig({
       apiKeys: nonEmptyKeys,
       config: updatedConfig
     });
@@ -310,306 +259,34 @@ async function saveConfig() {
       </Message>
     </div>
 
-    <!-- Main Content -->
-    <!-- LLM API Keys Section -->
-    <Card class="config-card">
-      <template #title>
-        <i class="pi pi-key" /> LLM API Keys
-      </template>
-      <template #subtitle>
-        You would need them to play with LLMs. API keys are stored locally and never uploaded
-      </template>
-      <template #content>
-        <table class="api-keys-table">
-          <tbody>
-            <tr v-for="field in apiKeyFields" :key="field.key">
-              <td class="label-cell">
-                <label :for="field.key">{{ field.label }}</label>
-                <a
-                  v-if="field.helpLink"
-                  :href="field.helpLink"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="help-link"
-                  v-tooltip.top="field.helpTooltip"
-                >
-                  <i class="pi pi-question-circle"></i>
-                </a>
-                <span
-                  v-else-if="field.helpTooltip"
-                  class="help-icon"
-                  v-tooltip.top="field.helpTooltip"
-                >
-                  <i class="pi pi-question-circle"></i>
-                </span>
-              </td>
-              <td class="input-cell">
-                <Password
-                  v-if="field.type === 'password'"
-                  :id="field.key"
-                  v-model="apiKeys[field.key]"
-                  :inputClass="'password-field'"
-                  :placeholder="`Enter ${field.label}`"
-                  toggleMask
-                  :feedback="false"
-                />
-                <InputText
-                  v-else
-                  :id="field.key"
-                  v-model="apiKeys[field.key]"
-                  :placeholder="field.placeholder || `Enter ${field.label}`"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </template>
-    </Card>
+    <ApiKeysSection v-model="apiKeys" />
 
-    <!-- Path Settings Section -->
-    <Card v-if="config" class="config-card">
-      <template #title>
-        <i class="pi pi-folder" /> Path Settings
-      </template>
-      <template #subtitle>
-        File and directory paths used by the application
-      </template>
-      <template #content>
-        <div class="field-row">
-          <label for="configsDir">
-            Game Configs
-            <span class="help-icon" v-tooltip.top="'Directory containing session configuration files'">
-              <i class="pi pi-question-circle"></i>
-            </span>
-          </label>
-          <InputText
-            id="configsDir"
-            v-model="config.configsDir"
-            placeholder="configs"
-            class="field-input"
-          />
-        </div>
-        <div class="field-row">
-          <label for="episodeDbPath">
-            Episode Database
-            <span class="help-icon" v-tooltip.top="'Path to the DuckDB database for archived game episodes'">
-              <i class="pi pi-question-circle"></i>
-            </span>
-          </label>
-          <InputText
-            id="episodeDbPath"
-            v-model="config.episodeDbPath"
-            placeholder="episodes.duckdb"
-            class="field-input"
-          />
-        </div>
-      </template>
-    </Card>
+    <PathSettingsSection v-if="config" :config="config" @update:config="config = $event" />
 
-    <!-- Card 1: Agent-Model Mappings -->
-    <Card class="config-card">
-      <template #title>
-        <i class="pi pi-link" /> Agent-Model Assignments
-        <Button
-          label="Add Mapping"
-          icon="pi pi-plus"
-          text
-          size="small"
-          @click="addMapping"
-          :disabled="availableModels.length === 0"
-          style="margin-left: auto"
-        />
-      </template>
-      <template #subtitle>
-        If you need to use other models, add model configurations below.
-      </template>
-      <template #content>
-        <div class="mappings-list">
-          <div v-for="(mapping, index) in agentMappings" :key="index" class="field-row">
-            <Dropdown
-              v-model="mapping.agent"
-              :options="agentTypes"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select agent type"
-              class="agent-input"
-            />
-            <Dropdown
-              v-model="mapping.model"
-              :options="availableModels"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select model"
-              class="model-dropdown"
-              :disabled="availableModels.length === 0"
-            />
-            <Button
-              icon="pi pi-trash"
-              text
-              severity="danger"
-              @click="deleteMapping(index)"
-              class="delete-btn"
-            />
-          </div>
-          <div class="field-row">
-            <span class="agent-input embedder-label">Embedder</span>
-            <Dropdown
-              v-model="embedderModel"
-              :options="embeddingModels"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="No embedding model"
-              showClear
-              class="model-dropdown"
-            />
-            <Button
-              icon="pi pi-trash"
-              text
-              severity="danger"
-              class="delete-btn"
-              style="visibility: hidden"
-              aria-hidden="true"
-              tabindex="-1"
-            />
-          </div>
-        </div>
-      </template>
-    </Card>
+    <AgentModelMappings
+      v-model:mappings="agentMappings"
+      v-model:embedderModel="embedderModel"
+      :agentTypes="agentTypes"
+      :availableModels="availableModels"
+      :embeddingModels="embeddingModels"
+    />
 
-    <!-- Card 2: Model Definitions -->
-    <Card class="config-card">
-      <template #title>
-        <i class="pi pi-box" /> Model Configurations
-        <Button
-          label="Add Model"
-          icon="pi pi-plus"
-          text
-          size="small"
-          @click="addModel"
-          style="margin-left: auto"
-        />
-      </template>
-      <template #subtitle>
-        Make sure to configure API keys above for providers you want to use
-      </template>
-      <template #content>
-        <div class="models-list">
-          <div v-for="(model, index) in modelDefinitions" :key="index" class="field-row">
-            <Dropdown
-              v-model="model.provider"
-              :options="llmProviders"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select provider"
-              class="provider-dropdown"
-              @change="updateModelId(model)"
-            />
-            <InputText
-              v-model="model.name"
-              placeholder="Model name"
-              class="model-name"
-              @input="updateModelId(model)"
-            />
-            <Button
-              icon="pi pi-sliders-h"
-              text
-              :severity="hasModelOptions(model) ? 'info' : 'secondary'"
-              v-tooltip.top="modelOptionsSummary(model)"
-              @click="openModelOptions(model)"
-              class="delete-btn"
-            />
-            <Button
-              icon="pi pi-copy"
-              text
-              severity="secondary"
-              v-tooltip.top="'Duplicate model'"
-              @click="duplicateModel(model)"
-              class="delete-btn"
-            />
-            <Button
-              icon="pi pi-trash"
-              text
-              severity="danger"
-              @click="confirmDeleteModel(model.id!)"
-              class="delete-btn"
-            />
-          </div>
-        </div>
+    <ModelDefinitions
+      v-model:models="modelDefinitions"
+      @open-options="openModelOptions"
+      @delete-model="confirmDeleteModel"
+    />
 
-        <ModelOptionsDialog
-          v-model:visible="modelOptionsVisible"
-          :model="editingModel"
-          @apply="applyModelOptions"
-        />
-      </template>
-    </Card>
+    <ModelOptionsDialog
+      v-model:visible="modelOptionsVisible"
+      :model="editingModel"
+      @apply="applyModelOptions"
+    />
   </div>
 </template>
 
 <style scoped>
-/* Import shared styles */
-@import '@/styles/states.css';
-@import '@/styles/config.css';
-
-/* Page-specific styles */
 .status-messages {
   margin-bottom: 1.5rem;
-}
-
-/* API keys table specific styles */
-.api-keys-table {
-  width: 100%;
-  vertical-align: middle;
-}
-
-.api-keys-table .label-cell {
-  padding-right: 1rem;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.api-keys-table .label-cell label {
-  margin-right: 0.5rem;
-}
-
-.help-icon {
-  color: var(--p-text-secondary-color);
-  font-size: 0.875rem;
-  vertical-align: middle;
-  transition: color 0.2s;
-  margin-left: 0.25rem;
-}
-
-.api-keys-table .help-link,
-.api-keys-table .help-icon {
-  color: var(--p-text-secondary-color);
-  font-size: 0.875rem;
-  vertical-align: middle;
-  transition: color 0.2s;
-}
-
-.api-keys-table .help-link:hover {
-  color: var(--p-primary-color);
-}
-
-.api-keys-table .input-cell input,
-.api-keys-table .input-cell :deep(.p-password input),
-.api-keys-table .input-cell :deep(.p-inputtext) {
-  width: 28rem !important;
-}
-
-.embedder-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--p-text-muted-color);
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-}
-
-/* Path Settings: widen the label column so the longest label ("Episode
-   Database") fits, keeping both input fields aligned like the API keys table. */
-.field-row label {
-  min-width: 170px;
 }
 </style>

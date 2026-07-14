@@ -122,51 +122,31 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     // no card and the dialog open — `onError` uses this to reconcile the missing row from the store.
     let dealRowReceived = false;
 
-    // Streaming text/reasoning parts are mutated in place as deltas arrive. `thread` is a deep `ref`,
-    // so `contents` is a reactive array: `contents.push(obj)` stores the RAW object, but the view reads
-    // it back through a reactive proxy. We must re-read the just-pushed element (`contents[len-1]`) and
-    // mutate THAT proxy — mutating the local raw object would bypass the proxy's set-trap and never
-    // trigger a re-render, freezing the display at the first delta.
-    let currentText: LanguageModelV3TextPart | null = null;
-    let currentTextID: string = "";
-    let currentReasoning: LanguageModelV3ReasoningPart | null = null;
-    let currentReasoningID: string = "";
+    const streamedParts: Partial<Record<'text' | 'reasoning', { id: string; index: number }>> = {};
+
+    /** Append a text or reasoning delta while mutating the in-array reactive proxy. */
+    const appendDelta = (type: 'text' | 'reasoning', id: string, text: string): void => {
+      const current = streamedParts[type];
+      if (!current || current.id !== id) {
+        contents.push({ type, text });
+        streamedParts[type] = { id, index: contents.length - 1 };
+        return;
+      }
+      const content = contents[current.index];
+      if (content?.type === type) content.text += text;
+    };
 
     return api.streamAgentMessage(
       request,
       (part) => {
         switch (part.type) {
           case "text-delta":
-            // Handle text streaming
-            if (part.id !== currentTextID) {
-              // New text part, create and add to contents
-              currentTextID = part.id;
-              currentText = { type: "text", text: part.text };
-              contents.push(currentText);
-              // Re-read the in-array reactive proxy so subsequent deltas mutate reactively (see above).
-              currentText = contents[contents.length - 1] as LanguageModelV3TextPart;
-            } else if (currentText) {
-              // Continue streaming to existing text part
-              currentText.text += part.text;
-            }
-            // Trigger event on meaningful text chunk
+            appendDelta('text', part.id, part.text);
             onNewChunk?.();
             break;
 
           case "reasoning-delta":
-            // Handle reasoning streaming (for models that support it)
-            if (part.id !== currentReasoningID) {
-              // New reasoning part, create and add to contents
-              currentReasoningID = part.id;
-              currentReasoning = { type: "reasoning", text: part.text };
-              contents.push(currentReasoning);
-              // Re-read the in-array reactive proxy so subsequent deltas mutate reactively (see above).
-              currentReasoning = contents[contents.length - 1] as LanguageModelV3ReasoningPart;
-            } else if (currentReasoning) {
-              // Continue streaming to existing reasoning part
-              currentReasoning.text += part.text;
-            }
-            // Trigger event on reasoning chunk
+            appendDelta('reasoning', part.id, part.text);
             onNewChunk?.();
             break;
 

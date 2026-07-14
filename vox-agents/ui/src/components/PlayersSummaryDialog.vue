@@ -8,8 +8,8 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
-import { apiClient } from '@/api/client';
-import { activeSessions } from '@/stores/telemetry';
+import { api } from '@/api/client';
+import { activeSessions, startActiveSessionPolling } from '@/stores/telemetry';
 import type { TelemetrySession } from '@/utils/types';
 
 // Props interface
@@ -34,6 +34,7 @@ const playersData = ref<Record<string, any>>({});
 const assignments = ref<Record<number, { strategist: string; model?: string; configSlot: number }>>({});
 const lastUpdated = ref<Date | null>(null);
 let pollInterval: number | null = null;
+let releaseSessionPolling: (() => void) | null = null;
 
 // Computed properties
 const dialogVisible = computed({
@@ -57,7 +58,7 @@ async function loadPlayers() {
   error.value = null;
 
   try {
-    const response = await apiClient.getPlayersSummary();
+    const response = await api.getPlayersSummary();
     playersData.value = response.players;
     assignments.value = response.assignments ?? {};
     lastUpdated.value = new Date();
@@ -145,12 +146,15 @@ function formatLastUpdated(): string {
 watch(dialogVisible, (visible) => {
   if (visible) {
     loadPlayers();
+    releaseSessionPolling = startActiveSessionPolling();
 
     // Poll every 60 seconds
     pollInterval = window.setInterval(() => {
       loadPlayers();
     }, 60000);
   } else {
+    releaseSessionPolling?.();
+    releaseSessionPolling = null;
     // Clear interval when dialog closes
     if (pollInterval !== null) {
       clearInterval(pollInterval);
@@ -161,6 +165,8 @@ watch(dialogVisible, (visible) => {
 
 // Cleanup on unmount
 onUnmounted(() => {
+  releaseSessionPolling?.();
+  releaseSessionPolling = null;
   if (pollInterval !== null) {
     clearInterval(pollInterval);
     pollInterval = null;
@@ -247,9 +253,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-@import '@/styles/states.css';
-@import '@/styles/data-table.css';
-
 .header-content {
   display: flex;
   align-items: center;
