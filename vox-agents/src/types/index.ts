@@ -17,5 +17,8 @@ export * from './telemetry.js';
 // Agent system types
 export * from './chat.js';
 
+// Web chat boundary types
+export type * from './web-chat.js';
+
 // UI constants
 export * from './constants.js';

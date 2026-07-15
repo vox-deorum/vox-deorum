@@ -9,11 +9,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import fs from 'fs/promises';
 import { installMockMcpClient, structuredResult } from '../../helpers/mock-mcp-client.js';
+
+const telepathistMocks = vi.hoisted(() => ({
+  createParameters: vi.fn(),
+}));
 
 vi.mock('../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
+});
+
+vi.mock('../../../src/telepathist/telepathist-parameters.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../src/telepathist/telepathist-parameters.js')>(
+    '../../../src/telepathist/telepathist-parameters.js',
+  );
+  return { ...actual, createTelepathistParameters: telepathistMocks.createParameters };
 });
 
 import { createAgentRoutes } from '../../../src/web/routes/agent.js';
@@ -21,6 +33,7 @@ import { retryMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { pacingInterruptionRegistry } from '../../../src/strategist/pacing/registry.js';
+import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
 
 function makeApp() {
   const app = express();
@@ -79,8 +92,23 @@ function makeMockContext(opts: {
   return ctx;
 }
 
+/** Return the configured span exporter, installing a no-op test exporter when instrumentation is absent. */
+function getTestSpanExporter(): VoxSpanExporter {
+  try {
+    return VoxSpanExporter.getInstance();
+  } catch {
+    const exporter = {
+      createContext: vi.fn(async () => {}),
+      closeContext: vi.fn(async () => {}),
+    };
+    VoxSpanExporter.setInstance(exporter as unknown as VoxSpanExporter);
+    return exporter as unknown as VoxSpanExporter;
+  }
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
+  telepathistMocks.createParameters.mockReset();
   installMockMcpClient();
 });
 
@@ -898,6 +926,188 @@ describe('agent routes', () => {
       // orderPair(3, -1): player1 is the observer/audience seat.
       expect(res.body.player1Identity).toEqual({ name: 'an observer', leader: '' });
       expect(res.body.audienceCiv).toBe('an observer');
+    });
+  });
+
+  describe('POST /api/agents/chat - diplomacy reopen', () => {
+    it('should reuse the pair thread while reversing direction and replacing its voice', async () => {
+      const gameID = 'stage2-reopen';
+      const mcp = installMockMcpClient();
+      let transcript: unknown[] = [];
+      mcp.onTool('read-transcript', () => structuredResult({ messages: transcript }));
+
+      const contexts = new Map([
+        [`${gameID}-player-1`, makeMockContext({
+          baseParameters: { turn: 12, gameID, playerID: 1, gameStates: { 12: { options: {}, players: {} } } },
+        })],
+        [`${gameID}-player-3`, makeMockContext({
+          baseParameters: { turn: 12, gameID, playerID: 3, gameStates: { 12: { options: {}, players: {} } } },
+        })],
+      ]);
+      vi.spyOn(contextRegistry, 'get').mockImplementation((id: string) => contexts.get(id) as any);
+      vi.spyOn(agentRegistry, 'get').mockImplementation((name: string) => (
+        name === 'diplomat' || name === 'spokesperson'
+          ? { name, description: name, tags: [] } as any
+          : undefined
+      ));
+
+      const first = await request(app).post('/api/agents/chat').send({
+        mode: 'diplomacy',
+        contextId: `${gameID}-player-3`,
+        callerPlayerID: 1,
+        callerRole: 'Roman ruler',
+        callerIdentity: { name: 'Rome', leader: 'Caesar' },
+        targetPlayerID: 3,
+        targetIdentity: { name: 'Maya', leader: 'Pacal' },
+        agentName: 'diplomat',
+      });
+      expect(first.status).toBe(200);
+      expect(first.body).toMatchObject({
+        id: `dipl:${gameID}:1:3`,
+        agent: 3,
+        contextId: `${gameID}-player-3`,
+        player1Role: 'Roman ruler',
+        player2Role: 'diplomat',
+        title: 'Caesar of Rome ↔ Pacal of Maya',
+      });
+
+      transcript = [{
+        ID: 41,
+        Player1ID: 1,
+        Player2ID: 3,
+        Player1Role: 'Roman ruler',
+        Player2Role: 'diplomat',
+        SpeakerID: 3,
+        MessageType: 'text',
+        Content: 'An earlier answer.',
+        Payload: {},
+        Turn: 12,
+        CreatedAt: 0,
+      }];
+      const reopened = await request(app).post('/api/agents/chat').send({
+        mode: 'diplomacy',
+        contextId: `${gameID}-player-1`,
+        callerPlayerID: 3,
+        callerRole: 'Mayan ruler',
+        callerIdentity: { name: 'Maya', leader: 'Pacal' },
+        targetPlayerID: 1,
+        targetIdentity: { name: 'Rome', leader: 'Caesar' },
+        agentName: 'spokesperson',
+      });
+
+      expect(reopened.status).toBe(200);
+      expect(reopened.body).toMatchObject({
+        id: first.body.id,
+        agent: 1,
+        contextId: `${gameID}-player-1`,
+        player1ID: 1,
+        player1Role: 'spokesperson',
+        player1Identity: { name: 'Rome', leader: 'Caesar' },
+        player2ID: 3,
+        player2Role: 'Mayan ruler',
+        player2Identity: { name: 'Maya', leader: 'Pacal' },
+        title: 'Pacal of Maya ↔ Caesar of Rome',
+        voicedID: 1,
+        voicedCiv: 'Caesar of Rome',
+        audienceCiv: 'Pacal of Maya',
+        pastMessageID: 41,
+      });
+      expect(reopened.body.metadata.createdAt).toBe(first.body.metadata.createdAt);
+      expect(mcp.calls('read-transcript')).toHaveLength(2);
+
+      const deleted = await request(app).delete(`/api/agents/chat/${first.body.id}`);
+      expect(deleted.status).toBe(200);
+    });
+  });
+
+  describe('POST /api/agents/chat - database-backed ordinary chat', () => {
+    /** Open an ordinary telepathist chat without touching a real database. */
+    async function openDatabaseChat() {
+      const databasePath = 'C:\\telemetry\\stage2-database-player-6.db';
+      const close = vi.fn(async () => {});
+      const parameters = {
+        playerID: 6,
+        gameID: 'stage2-database',
+        turn: 42,
+        databasePath,
+        db: {},
+        telepathistDb: {},
+        civilizationName: 'Maya',
+        leaderName: 'Pacal',
+        availableTurns: [42],
+        close,
+      };
+
+      vi.spyOn(fs, 'access').mockResolvedValue(undefined);
+      vi.spyOn(getTestSpanExporter(), 'createContext').mockResolvedValue(undefined);
+      telepathistMocks.createParameters.mockResolvedValue(parameters);
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({
+        name: 'talkative-telepathist',
+        description: 'Post-game analyst',
+        tags: [],
+      } as any);
+
+      const response = await request(app).post('/api/agents/chat').send({
+        agentName: 'talkative-telepathist',
+        databasePath,
+        callerRole: 'Observer',
+        callerIdentity: { name: 'an observer', leader: '' },
+      });
+
+      expect(response.status).toBe(200);
+      return { response, databasePath, parameters };
+    }
+
+    /** Delete a test database chat while making shutdown unregister the context like production. */
+    async function deleteDatabaseChat(chatId: string, contextId: string) {
+      const context = contextRegistry.get(contextId)!;
+      const shutdown = vi.spyOn(context, 'shutdown').mockImplementation(async () => {
+        contextRegistry.unregister(context.id);
+      });
+      const response = await request(app).delete(`/api/agents/chat/${chatId}`);
+      return { response, shutdown };
+    }
+
+    it('should initialize the telepathist context and preserve its database identity', async () => {
+      const { response, databasePath, parameters } = await openDatabaseChat();
+
+      expect(fs.access).toHaveBeenCalledWith(databasePath);
+      expect(telepathistMocks.createParameters).toHaveBeenCalledWith(
+        databasePath,
+        expect.objectContaining({ gameID: 'stage2-database', playerID: 6 }),
+      );
+      expect(response.body).toMatchObject({
+        agent: 6,
+        gameID: 'stage2-database',
+        contextId: 'stage2-database-telepath-6',
+        contextType: 'database',
+        databasePath,
+        diplomacy: false,
+        player1ID: -1,
+        player1Role: 'Observer',
+        player1Identity: { name: 'an observer', leader: '' },
+        player2ID: 6,
+        player2Role: 'talkative-telepathist',
+        player2Identity: { name: 'Maya', leader: 'Pacal' },
+        voicedCiv: 'Pacal of Maya',
+        audienceCiv: 'an observer',
+      });
+      expect(contextRegistry.get(response.body.contextId)?.getBaseParameters()).toBe(parameters);
+
+      await deleteDatabaseChat(response.body.id, response.body.contextId);
+    });
+
+    it('should shut down and remove a database-backed chat when deleted', async () => {
+      const { response: opened } = await openDatabaseChat();
+      const { response: deleted, shutdown } = await deleteDatabaseChat(opened.body.id, opened.body.contextId);
+
+      expect(deleted.status).toBe(200);
+      expect(deleted.body).toEqual({ success: true });
+      expect(shutdown).toHaveBeenCalledTimes(1);
+      expect(contextRegistry.get(opened.body.contextId)).toBeUndefined();
+
+      const missing = await request(app).get(`/api/agents/chat/${opened.body.id}`);
+      expect(missing.status).toBe(404);
     });
   });
 
