@@ -9,7 +9,7 @@ nul
 
 # Oracle telemetry output (also ignored in vox-agents/.gitignore; covered here
 # in case a run writes it at the repo root)
-telemetry/
+/telemetry/
 
 # DLL cache directory
 scripts/.dll-cache

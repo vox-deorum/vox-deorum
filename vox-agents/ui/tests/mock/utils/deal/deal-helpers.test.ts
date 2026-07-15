@@ -14,7 +14,7 @@ import {
   goldCap,
   gptCap,
   resourceCap,
-} from '@/components/deal/deal-helpers';
+} from '@/utils/deal/deal-helpers';
 import type { TradeItem, PromiseTerm, InspectedTradeItem, PromiseTargetInfo } from '@/utils/types';
 import { range } from './deal-test-fixtures';
 

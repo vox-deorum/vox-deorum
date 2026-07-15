@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import Button from 'primevue/button';
-import SessionListPanel from './SessionListPanel.vue';
+import SessionListPanel from '../shared/SessionListPanel.vue';
 import type { TelemetrySession } from '@/utils/types';
 
 /**

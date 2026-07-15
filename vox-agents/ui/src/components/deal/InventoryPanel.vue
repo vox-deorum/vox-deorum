@@ -76,7 +76,7 @@ a tooltip); singletons already on the table are shown selected.
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { InventoryCategory, InventoryRow, InventoryTarget, AddTermPayload } from './deal-catalog';
+import type { InventoryCategory, InventoryRow, InventoryTarget, AddTermPayload } from '@/utils/deal/deal-catalog';
 
 const props = defineProps<{
   /** Which physical column this panel occupies. */

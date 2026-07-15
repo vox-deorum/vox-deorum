@@ -10,8 +10,8 @@ import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
-import type { LLMConfig, ToolMiddlewareType } from '../utils/types';
-import { toolMiddlewareOptions } from '../utils/types';
+import type { LLMConfig, ToolMiddlewareType } from '@/utils/types';
+import { toolMiddlewareOptions } from '@/utils/types';
 
 const props = defineProps<{
   visible: boolean;

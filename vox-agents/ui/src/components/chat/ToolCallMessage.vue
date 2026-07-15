@@ -15,7 +15,7 @@
 /** Compact inline tool call status with click-to-inspect detail dialog. */
 
 import { ref, computed } from 'vue';
-import DetailDialog, { type DetailEntry } from '../DetailDialog.vue';
+import DetailDialog, { type DetailEntry } from '../shared/DetailDialog.vue';
 
 interface Props {
   toolName: string;

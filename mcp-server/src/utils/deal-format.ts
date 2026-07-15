@@ -16,7 +16,7 @@
  * (already-localized, string-form) deals: the active standing deals from `get-players` and the
  * `DealMade` events from `get-diplomatic-events`. Those have NO advisory value estimates.
  *
- * This is the browser-free twin of `vox-agents/ui/src/components/deal/deal-helpers.ts` (which renders
+ * This is the browser-free twin of `vox-agents/ui/src/utils/deal/deal-helpers.ts` (which renders
  * the same vocabulary for the web deal board); the toggle/promise labels and the sentinel wording are
  * kept in sync between the two. Types come straight from the pinned deal contract. It lives in
  * mcp-server so both server tools and the vox-agents runtime (via `mcp-server/dist`) share it.

@@ -14,8 +14,8 @@ import Card from 'primevue/card';
 import type {
   PacingInterruption,
   StrategistSessionConfig
-} from '../utils/types';
-import { api } from '../api/client';
+} from '@/utils/types';
+import { api } from '@/api/client';
 import PlayerConfigEditor from './config/PlayerConfigEditor.vue';
 import SessionRunControls from './config/SessionRunControls.vue';
 import {

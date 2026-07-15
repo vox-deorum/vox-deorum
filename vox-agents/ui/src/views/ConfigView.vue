@@ -11,7 +11,7 @@ import AgentModelMappings from '../components/config/AgentModelMappings.vue';
 import ApiKeysSection from '../components/config/ApiKeysSection.vue';
 import ModelDefinitions from '../components/config/ModelDefinitions.vue';
 import PathSettingsSection from '../components/config/PathSettingsSection.vue';
-import ModelOptionsDialog from '../components/ModelOptionsDialog.vue';
+import ModelOptionsDialog from '../components/config/ModelOptionsDialog.vue';
 import {
   parseLLMConfig,
   buildLLMConfig,

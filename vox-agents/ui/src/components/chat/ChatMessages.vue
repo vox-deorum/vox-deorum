@@ -49,7 +49,7 @@ import { VList } from 'virtua/vue';
 import ChatMessage from './ChatMessage.vue';
 import DealMessageCard from '../deal/DealMessageCard.vue';
 import type { MessageWithMetadata } from '@/utils/types';
-import type { DealStatus } from '../deal/deal-reduce';
+import type { DealStatus } from '@/utils/deal/deal-reduce';
 
 interface Props {
   /** Rendered stream items: ordinary chat messages plus inline deal cards (a row's `deal`). */

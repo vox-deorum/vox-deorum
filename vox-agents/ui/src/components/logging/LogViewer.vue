@@ -96,8 +96,8 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue';
-import { logs, isConnected, clearLogs as clearLogsStore } from '../stores/logs';
-import { getLevelEmoji, formatTimestamp, levelHierarchy } from '../api/log-utils';
+import { logs, isConnected, clearLogs as clearLogsStore } from '@/stores/logs';
+import { getLevelEmoji, formatTimestamp, levelHierarchy } from '@/api/log-utils';
 import { VList } from 'virtua/vue';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';

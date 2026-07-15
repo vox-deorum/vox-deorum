@@ -4,10 +4,10 @@ import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import ProgressSpinner from 'primevue/progressspinner';
-import ChatSessionsList from '@/components/ChatSessionsList.vue';
-import GameSessionsList from '@/components/GameSessionsList.vue';
-import AgentSelectDialog from '@/components/AgentSelectDialog.vue';
-import DeleteSessionDialog from '@/components/DeleteSessionDialog.vue';
+import ChatSessionsList from '@/components/chat/ChatSessionsList.vue';
+import GameSessionsList from '@/components/telemetry/GameSessionsList.vue';
+import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue';
+import DeleteSessionDialog from '@/components/chat/DeleteSessionDialog.vue';
 import {
   activeSessions,
   chatSessions,

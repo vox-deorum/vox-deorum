@@ -12,7 +12,7 @@ import Tag from 'primevue/tag';
 import Paginator from 'primevue/paginator';
 import ProgressSpinner from 'primevue/progressspinner';
 import Toolbar from 'primevue/toolbar';
-import AgentSelectDialog from '@/components/AgentSelectDialog.vue';
+import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue';
 import { api } from '@/api/client';
 import type { Span } from '../utils/types';
 import {

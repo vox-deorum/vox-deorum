@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import ParamsList from '@/components/ParamsList.vue'
+import ParamsList from '@/components/logging/ParamsList.vue'
 
 describe('ParamsList', () => {
   it('renders object entries with typed value classes', () => {

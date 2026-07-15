@@ -15,9 +15,9 @@ import SelectButton from 'primevue/selectbutton';
 import type { AgentInfo, Span, CreateChatRequest, PlayerAssignment, ParticipantIdentity } from '@/utils/types';
 import { userRoleSuggestions } from '@/utils/types';
 import { api } from '@/api/client';
-import DiplomacyLaunchForm from './chat-launch/DiplomacyLaunchForm.vue';
-import ObserverIdentityForm from './chat-launch/ObserverIdentityForm.vue';
-import type { PlayerOption } from './chat-launch/types';
+import DiplomacyLaunchForm from './DiplomacyLaunchForm.vue';
+import ObserverIdentityForm from './ObserverIdentityForm.vue';
+import type { PlayerOption } from './types';
 import { useChatLauncher } from '@/composables/useChatLauncher';
 
 // Props interface

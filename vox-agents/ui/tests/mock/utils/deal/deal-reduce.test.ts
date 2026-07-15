@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveActiveProposal } from '@/components/deal/deal-reduce';
+import { deriveActiveProposal } from '@/utils/deal/deal-reduce';
 import type { DealTranscriptMessage } from '@/utils/types';
 
 let nextId = 1;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import PlayersSummaryDialog from '@/components/PlayersSummaryDialog.vue';
+import PlayersSummaryDialog from '@/components/session/PlayersSummaryDialog.vue';
 import { api } from '@/api/client';
 
 const stubs = {

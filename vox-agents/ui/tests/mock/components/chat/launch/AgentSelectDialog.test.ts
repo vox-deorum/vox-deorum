@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { defineComponent } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
-import AgentSelectDialog from '@/components/AgentSelectDialog.vue'
+import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue'
 
 // --- Mocks -----------------------------------------------------------------
 

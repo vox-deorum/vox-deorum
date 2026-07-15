@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
-import GameSessionsList from '@/components/GameSessionsList.vue';
+import GameSessionsList from '@/components/telemetry/GameSessionsList.vue';
 import type { TelemetrySession } from '@/utils/types';
 
 const stubs = {

@@ -6,8 +6,8 @@ import {
   isSingletonSelected,
   offerPromisesForSide,
   type InventoryCategory,
-} from '@/components/deal/deal-catalog';
-import type { NormalizedSideRange } from '@/components/deal/deal-helpers';
+} from '@/utils/deal/deal-catalog';
+import type { NormalizedSideRange } from '@/utils/deal/deal-helpers';
 import type { TradeItem, PromiseTerm, PromiseTargetInfo } from '@/utils/types';
 import { range } from './deal-test-fixtures';
 

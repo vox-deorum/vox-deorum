@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
-import SessionListPanel from '@/components/SessionListPanel.vue';
+import SessionListPanel from '@/components/shared/SessionListPanel.vue';
 
 const stubs = {
   Toolbar: { template: '<div class="p-toolbar"><slot name="start" /></div>' },

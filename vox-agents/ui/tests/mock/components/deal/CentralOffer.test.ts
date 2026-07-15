@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 
 import CentralOffer from '@/components/deal/CentralOffer.vue';
-import { range, carthageTarget, dealStubs } from './deal-test-fixtures';
+import { range, carthageTarget, dealStubs } from '../../utils/deal/deal-test-fixtures';
 
 const inspected = (over: Record<string, unknown> = {}) => ({
   fromPlayerID: 0, toPlayerID: 1, itemType: 'OPEN_BORDERS',

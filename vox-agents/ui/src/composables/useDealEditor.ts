@@ -8,9 +8,9 @@ import type {
   PromiseTargetInfo,
   TradeItem,
 } from '@/utils/types';
-import { buildSideCatalog, type AddTermPayload } from '@/components/deal/deal-catalog';
-import { addItemWithMirror, removeItemWithMirror } from '@/components/deal/deal-helpers';
-import { deriveActiveProposal, type DealReduction } from '@/components/deal/deal-reduce';
+import { buildSideCatalog, type AddTermPayload } from '@/utils/deal/deal-catalog';
+import { addItemWithMirror, removeItemWithMirror } from '@/utils/deal/deal-helpers';
+import { deriveActiveProposal, type DealReduction } from '@/utils/deal/deal-reduce';
 
 /** The thread returned after a blocking accept or reject action. */
 export type DealThreadResponse = Awaited<ReturnType<typeof api.acceptDeal>>;

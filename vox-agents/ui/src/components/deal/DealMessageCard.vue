@@ -59,9 +59,9 @@ agreement.
 import { computed } from 'vue';
 import Button from 'primevue/button';
 import type { DealTranscriptMessage, TradeItem, PromiseTerm } from '@/utils/types';
-import type { DealStatus } from './deal-reduce';
-import { formatItemLabel, formatPromiseLabel, formatValue, storedBalanceToSide } from './deal-helpers';
-import { offerColumnsFor } from './deal-catalog';
+import type { DealStatus } from '@/utils/deal/deal-reduce';
+import { formatItemLabel, formatPromiseLabel, formatValue, storedBalanceToSide } from '@/utils/deal/deal-helpers';
+import { offerColumnsFor } from '@/utils/deal/deal-catalog';
 
 const props = withDefaults(defineProps<{
   deal: DealTranscriptMessage;

@@ -33,8 +33,8 @@ import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
-import { api } from '../api/client';
-import type { EnvoyThread } from '../utils/types';
+import { api } from '@/api/client';
+import type { EnvoyThread } from '@/utils/types';
 
 // Props
 const props = withDefaults(defineProps<{

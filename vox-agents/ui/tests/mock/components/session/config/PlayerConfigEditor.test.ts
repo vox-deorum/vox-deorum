@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import PlayerConfigEditor from '@/components/config/PlayerConfigEditor.vue'
+import PlayerConfigEditor from '@/components/session/config/PlayerConfigEditor.vue'
 import type { PlayerConfig } from '@/utils/types'
 
 const player: PlayerConfig = {

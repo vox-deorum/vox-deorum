@@ -141,8 +141,8 @@ import { VList } from 'virtua/vue';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
-import DetailDialog, { type DetailEntry } from './DetailDialog.vue';
-import type { Span } from '../utils/types';
+import DetailDialog, { type DetailEntry } from '../shared/DetailDialog.vue';
+import type { Span } from '@/utils/types';
 import {
   formatDuration,
   formatTimestamp,
@@ -152,7 +152,7 @@ import {
   buildSpanTree,
   flattenSpanTree,
   type SpanNode
-} from '../api/telemetry-utils';
+} from '@/api/telemetry-utils';
 
 // Props
 const props = defineProps<{

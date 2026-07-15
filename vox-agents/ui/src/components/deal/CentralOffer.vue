@@ -97,8 +97,8 @@ import {
   goldCap,
   gptCap,
   resourceCap,
-} from './deal-helpers';
-import { offerColumnsFor } from './deal-catalog';
+} from '@/utils/deal/deal-helpers';
+import { offerColumnsFor } from '@/utils/deal/deal-catalog';
 
 const props = defineProps<{
   items: TradeItem[];

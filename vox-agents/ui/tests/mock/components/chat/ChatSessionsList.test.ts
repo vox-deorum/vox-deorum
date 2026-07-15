@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import ChatSessionsList from '@/components/ChatSessionsList.vue'
+import ChatSessionsList from '@/components/chat/ChatSessionsList.vue'
 import type { EnvoyThread } from '@/utils/types'
 
 // Lightweight stand-ins for the PrimeVue chrome so we don't need the PrimeVue plugin.

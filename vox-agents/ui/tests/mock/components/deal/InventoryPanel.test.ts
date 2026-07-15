@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 
 import InventoryPanel from '@/components/deal/InventoryPanel.vue';
-import { buildSideCatalog } from '@/components/deal/deal-catalog';
+import { buildSideCatalog } from '@/utils/deal/deal-catalog';
 import type { NormalizedSideRange, PromiseTargetInfo } from '@/utils/types';
-import { range, carthageTarget } from './deal-test-fixtures';
+import { range, carthageTarget } from '../../utils/deal/deal-test-fixtures';
 
 /** Build this side's categories the way DealScreen does, owner=0 (you), other=1 (counterpart). */
 const cats = (over: Partial<NormalizedSideRange> = {}, promiseTargets: PromiseTargetInfo[] = []) =>

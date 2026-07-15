@@ -7,8 +7,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
-import AgentSelectDialog from '@/components/AgentSelectDialog.vue';
-import TelemetrySpanPage from '@/components/TelemetrySpanPage.vue';
+import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue';
+import TelemetrySpanPage from '@/components/telemetry/TelemetrySpanPage.vue';
 import { useTelemetrySpanPage } from '@/composables/useTelemetrySpanPage';
 import { api } from '@/api/client';
 

@@ -150,9 +150,9 @@ import { useToast } from 'primevue/usetoast';
 import { api } from '../api/client';
 import type { EnvoyThread, DealPayload } from '../utils/types';
 import ChatMessages from '../components/chat/ChatMessages.vue';
-import DeleteSessionDialog from '../components/DeleteSessionDialog.vue';
+import DeleteSessionDialog from '../components/chat/DeleteSessionDialog.vue';
 import DealScreen from '../components/deal/DealScreen.vue';
-import { deriveActiveProposal } from '../components/deal/deal-reduce';
+import { deriveActiveProposal } from '../utils/deal/deal-reduce';
 // Pure transcript helpers shared with the backend (via @vox) so labels and the close-lock
 // comparison can never drift from the server's `isClosedThisTurn` / role derivation.
 import { roleOf, agentName as agentNameOf, audienceID, isClosedThisTurn } from '@vox/utils/diplomacy/transcript-utils';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
-import SessionConfigList from '@/components/SessionConfigList.vue';
+import SessionConfigList from '@/components/session/SessionConfigList.vue';
 import type { StrategistSessionConfig } from '@/utils/types';
 
 const stubs = {

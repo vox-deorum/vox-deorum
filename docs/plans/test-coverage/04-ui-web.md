@@ -15,7 +15,7 @@ Note: `supertest` is already a dev dependency in the monorepo (used by bridge-se
 
 ## Vue components (vox-agents/ui)
 
-Existing: `tests/mock/components/ParamsList.test.ts`, `TextMessage.test.ts` (note `TextMessage.vue` lives under `components/chat/`). The conversation/transcript surface is the **`components/chat/` set** — there is no `ConversationPanel`, and **no human-decision/`DecisionPanel` component exists** (nothing in `ui/src` consumes present-decision/human-decision). Target real, high-value untested components:
+Existing: `tests/mock/components/logging/ParamsList.test.ts`, `tests/mock/components/chat/TextMessage.test.ts` (note `TextMessage.vue` lives under `components/chat/`). The conversation/transcript surface is the **`components/chat/` set** — there is no `ConversationPanel`, and **no human-decision/`DecisionPanel` component exists** (nothing in `ui/src` consumes present-decision/human-decision). Target real, high-value untested components:
 
 | New test file | Target | Cases | Mocking |
 |---|---|---|---|
@@ -24,7 +24,7 @@ Existing: `tests/mock/components/ParamsList.test.ts`, `TextMessage.test.ts` (not
 | `tests/mock/components/chat/ToolCallMessage.test.ts` | chat/ToolCallMessage.vue | Spinner vs completed icon, tool name rendering, detail dialog entries for input/output, click opens details | Vue Test Utils; stub `DetailDialog` |
 | `tests/mock/components/chat/ToolResultMessage.test.ts` | chat/ToolResultMessage.vue | Low-priority legacy/standalone component: string result, JSON-ish result, null/undefined hidden state | Vue Test Utils; stub `vue-json-pretty` |
 | `tests/mock/components/chat/ReasoningMessage.test.ts` | chat/ReasoningMessage.vue | Reasoning block render + collapse | Vue Test Utils |
-| `tests/mock/components/ChatSessionsList.test.ts` | [ChatSessionsList.vue](../../../vox-agents/ui/src/components/ChatSessionsList.vue) | Session list render, fallback title/agent naming, selection emit, resume/delete emits without also selecting the row, hidden actions, empty state slot | Vue Test Utils; stub PrimeVue children if needed |
+| `tests/mock/components/chat/ChatSessionsList.test.ts` | [ChatSessionsList.vue](../../../vox-agents/ui/src/components/chat/ChatSessionsList.vue) | Session list render, fallback title/agent naming, selection emit, resume/delete emits without also selecting the row, hidden actions, empty state slot | Vue Test Utils; stub PrimeVue children if needed |
 | `tests/mock/api/client.test.ts` | [api/client.ts](../../../vox-agents/ui/src/api/client.ts) | Untested `ui/src/api` helper (log-utils/telemetry-utils already covered): fetch URL/method/body shaping for active endpoints, error mapping for JSON and text failures, upload errors, connection replacement/cleanup for logs/session/agent SSE streams | Stub `fetch`, `EventSource`, and `sse.js` `SSE` explicitly; close all connections after each test |
 
 > Confirmed against `ui/src/components/` on review. If a conversation/decision UI is added later (e.g. tied to `present-decision`), add its tests then — it does not exist yet.

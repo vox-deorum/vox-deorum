@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import ActiveSessionPanel from '@/components/ActiveSessionPanel.vue';
+import ActiveSessionPanel from '@/components/session/ActiveSessionPanel.vue';
 import type { SessionStatus, StrategistSessionConfig } from '@/utils/types';
 
 const stubs = {

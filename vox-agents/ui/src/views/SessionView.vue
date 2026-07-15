@@ -3,12 +3,12 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import Message from 'primevue/message';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import ActiveSessionPanel from '../components/ActiveSessionPanel.vue';
-import ConfigDialog from '../components/ConfigDialog.vue';
-import GameModeDialog from '../components/GameModeDialog.vue';
-import PlayersSummaryDialog from '../components/PlayersSummaryDialog.vue';
-import SessionConfigList from '../components/SessionConfigList.vue';
-import type { GameMode } from '../components/GameModeDialog.vue';
+import ActiveSessionPanel from '../components/session/ActiveSessionPanel.vue';
+import ConfigDialog from '../components/session/ConfigDialog.vue';
+import GameModeDialog from '../components/session/GameModeDialog.vue';
+import PlayersSummaryDialog from '../components/session/PlayersSummaryDialog.vue';
+import SessionConfigList from '../components/session/SessionConfigList.vue';
+import type { GameMode } from '../components/session/GameModeDialog.vue';
 import { api } from '../api/client';
 import {
   sessionStatus,

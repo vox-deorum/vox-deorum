@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import LogViewer from '../components/LogViewer.vue';
+import LogViewer from '@/components/logging/LogViewer.vue';
 </script>
 
 <template>
