@@ -293,6 +293,8 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
     } catch (error) {
       logger.error(`Error closing database for context ${contextId}`, error);
       throw error;
+    } finally {
+      customFolders.delete(contextId);
     }
   }
 

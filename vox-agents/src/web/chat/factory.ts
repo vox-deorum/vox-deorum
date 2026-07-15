@@ -43,6 +43,11 @@ const logger = createLogger('webui:chat-factory');
 /** The observer endpoint sentinel shared with the diplomacy transcript store. */
 const observerID = -1;
 
+/** The one context source selected for an ordinary chat. */
+type OrdinaryContextSource =
+  | { type: 'live'; contextId: string }
+  | { type: 'database'; databasePath: string };
+
 /** A validation failure that the Express adapter can map to the existing HTTP response. */
 export class ChatOpenError extends Error {
   /** Create a typed chat-open error with its HTTP status. */
@@ -53,6 +58,20 @@ export class ChatOpenError extends Error {
     super(message);
     this.name = 'ChatOpenError';
   }
+}
+
+/** Require an ordinary chat to select one live context or one telemetry database. */
+function resolveOrdinaryContextSource(
+  contextId: string | undefined,
+  databasePath: string | undefined,
+): OrdinaryContextSource {
+  if (contextId && !databasePath) return { type: 'live', contextId };
+  if (databasePath && !contextId) return { type: 'database', databasePath };
+
+  throw new ChatOpenError(
+    400,
+    'Exactly one of contextId or databasePath is required for an ordinary conversation',
+  );
 }
 
 /** Project two participants onto the store's canonical ascending player order. */
@@ -187,26 +206,28 @@ export function createChatThreadFactory(
       );
     }
 
+    const source = resolveOrdinaryContextSource(contextId, databasePath);
+    const id = dependencies.createOrdinaryThreadId();
     let gameID = 'unknown';
     let voicedID = 0;
-    const contextType = databasePath ? 'database' : 'live';
-    let effectiveContextId = contextId;
+    let effectiveContextId: string;
     let voicedIdentity: ParticipantIdentity | undefined;
 
-    if (contextId) {
-      const existingContext = dependencies.getContext(contextId);
+    if (source.type === 'live') {
+      const existingContext = dependencies.getContext(source.contextId);
       if (!existingContext) {
-        throw new ChatOpenError(400, `Connection not found: ${contextId}`);
+        throw new ChatOpenError(400, `Connection not found: ${source.contextId}`);
       }
 
-      logger.info(`Using existing VoxContext: ${contextId}`);
-      const identifier = parseContextIdentifier(contextId);
+      effectiveContextId = source.contextId;
+      logger.info(`Using existing VoxContext: ${source.contextId}`);
+      const identifier = parseContextIdentifier(source.contextId);
       gameID = identifier.gameID;
       voicedID = identifier.playerID;
       voicedIdentity = civIdentity(existingContext, voicedID);
-    } else if (databasePath) {
+    } else {
       try {
-        const telepathist = await dependencies.createTelepathistContext(databasePath);
+        const telepathist = await dependencies.createTelepathistContext(source.databasePath, id);
         effectiveContextId = telepathist.contextId;
         gameID = telepathist.gameID;
         voicedID = telepathist.playerID;
@@ -214,7 +235,7 @@ export function createChatThreadFactory(
         logger.info(`Created new VoxContext for telepathist mode: ${effectiveContextId}`);
       } catch (error) {
         logger.error('Failed to create telepathist context', { error });
-        throw new ChatOpenError(400, `Failed to initialize database: ${databasePath}`);
+        throw new ChatOpenError(400, `Failed to initialize database: ${source.databasePath}`);
       }
     }
 
@@ -224,13 +245,12 @@ export function createChatThreadFactory(
     const audienceRole = callerRole?.trim() || 'Observer';
     const callerIdentity = sentCallerIdentity
       ?? (callerID >= 0
-        ? civIdentity(dependencies.getContext(effectiveContextId!), callerID)
+        ? civIdentity(dependencies.getContext(effectiveContextId), callerID)
         : undefined);
     const ordered = orderParticipants(
       { id: voicedID, role: requestedAgentName, identity: voicedIdentity },
       { id: callerID, role: audienceRole, identity: callerIdentity },
     );
-    const id = dependencies.createOrdinaryThreadId();
     const thread: EnvoyThread = {
       id,
       agent: voicedID,
@@ -238,9 +258,9 @@ export function createChatThreadFactory(
       gameID,
       ...ordered,
       diplomacy: false,
-      contextType,
-      contextId: effectiveContextId!,
-      databasePath,
+      contextType: source.type,
+      contextId: effectiveContextId,
+      databasePath: source.type === 'database' ? source.databasePath : undefined,
       messages: [],
       metadata: {
         createdAt: new Date(),
@@ -257,12 +277,16 @@ export function createChatThreadFactory(
 }
 
 /** Create and initialize the production context for a database-backed chat. */
-async function createProductionTelepathistContext(databasePath: string): Promise<TelepathistChatContext> {
+async function createProductionTelepathistContext(
+  databasePath: string,
+  threadId: string,
+): Promise<TelepathistChatContext> {
   let context: VoxContext<TelepathistParameters> | undefined;
   try {
     await fs.access(databasePath);
     const identifier = parseDatabaseIdentifier(databasePath);
-    const contextId = `${identifier.gameID}-telepath-${identifier.playerID}`;
+    const instance = threadId.replaceAll('-', '');
+    const contextId = `${identifier.gameID}-telepath_${instance}-${identifier.playerID}`;
 
     void VoxSpanExporter.getInstance().createContext(contextId, 'telepathist');
     context = new VoxContext<TelepathistParameters>({}, contextId);

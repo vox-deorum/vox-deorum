@@ -207,8 +207,8 @@ export interface ListPacingInterruptionsResponse {
  * Request to create a new chat thread.
  *
  * Two shapes share this endpoint:
- * - **Observer / ordinary chat** (`mode` omitted): the operator picks a `contextId`
- *   (or `databasePath`) — its player becomes the voiced endpoint B — plus a free-form
+ * - **Observer / ordinary chat** (`mode` omitted): the operator picks exactly one `contextId`
+ *   or `databasePath`; its player becomes the voiced endpoint B, plus a free-form
  *   caller role/affiliation describing endpoint A (`callerRole` / `callerPlayerID`,
  *   the latter `-1`/omitted for the observer).
  * - **Diplomacy** (`mode: 'diplomacy'`): a civ↔civ conversation between two seats.

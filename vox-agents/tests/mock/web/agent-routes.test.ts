@@ -34,6 +34,7 @@ import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { pacingInterruptionRegistry } from '../../../src/strategist/pacing/registry.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { parseContextIdentifier } from '../../../src/utils/telemetry/identifier-parser.js';
 
 function makeApp() {
   const app = express();
@@ -1021,6 +1022,16 @@ describe('agent routes', () => {
   });
 
   describe('POST /api/agents/chat - database-backed ordinary chat', () => {
+    /** Send one database-backed ordinary-chat request. */
+    async function postDatabaseChat(databasePath: string) {
+      return request(app).post('/api/agents/chat').send({
+        agentName: 'talkative-telepathist',
+        databasePath,
+        callerRole: 'Observer',
+        callerIdentity: { name: 'an observer', leader: '' },
+      });
+    }
+
     /** Open an ordinary telepathist chat without touching a real database. */
     async function openDatabaseChat() {
       const databasePath = 'C:\\telemetry\\stage2-database-player-6.db';
@@ -1047,12 +1058,7 @@ describe('agent routes', () => {
         tags: [],
       } as any);
 
-      const response = await request(app).post('/api/agents/chat').send({
-        agentName: 'talkative-telepathist',
-        databasePath,
-        callerRole: 'Observer',
-        callerIdentity: { name: 'an observer', leader: '' },
-      });
+      const response = await postDatabaseChat(databasePath);
 
       expect(response.status).toBe(200);
       return { response, databasePath, parameters };
@@ -1079,7 +1085,7 @@ describe('agent routes', () => {
       expect(response.body).toMatchObject({
         agent: 6,
         gameID: 'stage2-database',
-        contextId: 'stage2-database-telepath-6',
+        contextId: `stage2-database-telepath_${response.body.id.replaceAll('-', '')}-6`,
         contextType: 'database',
         databasePath,
         diplomacy: false,
@@ -1108,6 +1114,53 @@ describe('agent routes', () => {
 
       const missing = await request(app).get(`/api/agents/chat/${opened.body.id}`);
       expect(missing.status).toBe(404);
+    });
+
+    it('should isolate contexts for two chats over the same database', async () => {
+      const databasePath = 'C:\\telemetry\\stage2-isolated-player-6.db';
+      vi.spyOn(fs, 'access').mockResolvedValue(undefined);
+      vi.spyOn(getTestSpanExporter(), 'createContext').mockResolvedValue(undefined);
+      telepathistMocks.createParameters.mockImplementation(async () => ({
+        playerID: 6,
+        gameID: 'stage2-isolated',
+        turn: 42,
+        databasePath,
+        db: {},
+        telepathistDb: {},
+        civilizationName: 'Maya',
+        leaderName: 'Pacal',
+        availableTurns: [42],
+        close: vi.fn(async () => {}),
+      }));
+      vi.spyOn(agentRegistry, 'get').mockReturnValue({
+        name: 'talkative-telepathist',
+        description: 'Post-game analyst',
+        tags: [],
+      } as any);
+
+      const first = await postDatabaseChat(databasePath);
+      const second = await postDatabaseChat(databasePath);
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(first.body.contextId).not.toBe(second.body.contextId);
+      expect(parseContextIdentifier(first.body.contextId)).toEqual({
+        gameID: 'stage2-isolated',
+        playerID: 6,
+      });
+      expect(parseContextIdentifier(second.body.contextId)).toEqual({
+        gameID: 'stage2-isolated',
+        playerID: 6,
+      });
+      expect(contextRegistry.get(first.body.contextId)).toBeDefined();
+      expect(contextRegistry.get(second.body.contextId)).toBeDefined();
+
+      await deleteDatabaseChat(first.body.id, first.body.contextId);
+      expect(contextRegistry.get(first.body.contextId)).toBeUndefined();
+      expect(contextRegistry.get(second.body.contextId)).toBeDefined();
+
+      await deleteDatabaseChat(second.body.id, second.body.contextId);
+      expect(contextRegistry.get(second.body.contextId)).toBeUndefined();
     });
   });
 

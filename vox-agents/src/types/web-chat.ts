@@ -4,7 +4,11 @@
  * Shared dependency and transport contracts for the Web chat boundary.
  */
 
-import type { CreateChatRequest, PlayerAssignment } from './api.js';
+import type {
+  ChatMessageRequest,
+  CreateChatRequest,
+  PlayerAssignment,
+} from './api.js';
 import type { EnvoyThread, ParticipantIdentity } from './chat.js';
 import type { DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
 
@@ -50,7 +54,10 @@ export interface ChatThreadFactoryDependencies<TContext = unknown> {
   compactThread: (thread: EnvoyThread) => Promise<void>;
   createOrdinaryThreadId: () => string;
   createDiplomacyThreadId: (gameID: string, player1ID: number, player2ID: number) => string;
-  createTelepathistContext: (databasePath: string) => Promise<TelepathistChatContext>;
+  createTelepathistContext: (
+    databasePath: string,
+    threadId: string,
+  ) => Promise<TelepathistChatContext>;
 }
 
 /** The open operations produced by a configured chat thread factory. */
@@ -103,11 +110,11 @@ export interface ChatTurnRejection {
   error: string;
 }
 
-/** The untrusted route input, including legacy text bodies that omit `kind`. */
-export interface ChatTurnRequest {
-  chatId?: string;
-  kind?: 'text' | 'deal';
-  message?: string;
-  deal?: unknown;
-  expectedProposalID?: unknown;
-}
+/** The legacy text request accepted before text moves carried an explicit discriminator. */
+export type LegacyChatTextRequest = Omit<
+  Extract<ChatMessageRequest, { kind: 'text' }>,
+  'kind'
+> & { kind?: never };
+
+/** The canonical chat move contract plus the one supported legacy text shape. */
+export type ChatTurnRequest = ChatMessageRequest | LegacyChatTextRequest;

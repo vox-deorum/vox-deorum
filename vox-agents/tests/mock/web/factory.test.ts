@@ -87,7 +87,10 @@ describe('chat thread factory', () => {
         turn: 125,
       });
 
-      expect(createTelepathistContext).toHaveBeenCalledWith('fixtures/archive-game-player-4.db');
+      expect(createTelepathistContext).toHaveBeenCalledWith(
+        'fixtures/archive-game-player-4.db',
+        'ordinary-thread',
+      );
       expect(thread).toMatchObject({
         id: 'ordinary-thread',
         agent: 4,
@@ -104,6 +107,65 @@ describe('chat thread factory', () => {
         metadata: { turn: 125 },
       });
       expect(threads.get('ordinary-thread')).toBe(thread);
+    });
+
+    it('should reject ordinary chats without exactly one context source', async () => {
+      const createTelepathistContext = vi.fn(async () => {
+        throw new Error('Unexpected telepathist context creation');
+      });
+      const { dependencies } = createDependencies({
+        getContext: () => fakeContext(),
+        createTelepathistContext,
+      });
+      const factory = createChatThreadFactory(dependencies);
+
+      await expect(factory.openOrdinaryChat({
+        agentName: 'talkative-telepathist',
+      })).rejects.toThrow('Exactly one of contextId or databasePath is required');
+      await expect(factory.openOrdinaryChat({
+        agentName: 'talkative-telepathist',
+        contextId: 'game-1-player-2',
+        databasePath: 'fixtures/game-1-player-2.db',
+      })).rejects.toThrow('Exactly one of contextId or databasePath is required');
+      expect(createTelepathistContext).not.toHaveBeenCalled();
+    });
+
+    it('should give each database thread its own context instance', async () => {
+      const threadIds = ['ordinary-a', 'ordinary-b'];
+      const createTelepathistContext = vi.fn(async (_databasePath: string, threadId: string) => ({
+        contextId: `archive-game-telepath_${threadId}-4`,
+        gameID: 'archive-game',
+        playerID: 4,
+        identity: { name: 'Arabia', leader: 'Harun al-Rashid' },
+      }));
+      const { dependencies } = createDependencies({
+        createOrdinaryThreadId: () => threadIds.shift()!,
+        createTelepathistContext,
+      });
+      const factory = createChatThreadFactory(dependencies);
+
+      const first = await factory.openOrdinaryChat({
+        agentName: 'talkative-telepathist',
+        databasePath: 'fixtures/archive-game-player-4.db',
+      });
+      const second = await factory.openOrdinaryChat({
+        agentName: 'talkative-telepathist',
+        databasePath: 'fixtures/archive-game-player-4.db',
+      });
+
+      expect(first.contextId).toBe('archive-game-telepath_ordinary-a-4');
+      expect(second.contextId).toBe('archive-game-telepath_ordinary-b-4');
+      expect(first.contextId).not.toBe(second.contextId);
+      expect(createTelepathistContext).toHaveBeenNthCalledWith(
+        1,
+        'fixtures/archive-game-player-4.db',
+        'ordinary-a',
+      );
+      expect(createTelepathistContext).toHaveBeenNthCalledWith(
+        2,
+        'fixtures/archive-game-player-4.db',
+        'ordinary-b',
+      );
     });
   });
 
