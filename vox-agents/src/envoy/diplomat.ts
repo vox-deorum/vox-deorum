@@ -123,17 +123,17 @@ export class Diplomat extends LiveEnvoy {
   }
 
   /**
-   * Grounds the diplomat's turn so it "sees the deal at every step" (specs §7). The cities +
-   * standing/concluded-deals background becomes the `preamble`; the on-the-table proposal — ONLY when a
-   * deal is genuinely OPEN — becomes the `postscript`, carrying the negotiator's rationale/message and
-   * per-item value snapshots so the diplomat can voice each move faithfully; rejected/closed deals
-   * render inline at their proposal turn via the `dealRenderer` (see {@link renderDealRowInline}). See
-   * {@link LiveEnvoyContext} for how the base layers these around the chat record.
+   * Grounds the diplomat's turn so it sees live deal context at every step (specs §7). The cities plus
+   * standing/concluded-deals background becomes the `preamble`. The `postscript` always lists possible
+   * deal items and, when a deal is genuinely open, begins with the on-the-table proposal carrying the
+   * negotiator's rationale, message, and per-item value snapshots. Rejected and closed deals render
+   * inline at their proposal turn via the `dealRenderer` (see {@link renderDealRowInline}). See
+   * {@link LiveEnvoyContext} for how the base layers these sections around the chat record.
    *
    * The deal transcript is reduced ONCE here from the authoritative durable source (`readActiveProposal`,
-   * the same source `prepareStep`'s gate and the accept/reject routes use); the on-the-table block and
-   * the renderer's open-proposal pointer both derive from that single reduction — and the pointer keys
-   * off the block actually being emitted — so they can never disagree about which proposal is open.
+   * the same source `prepareStep`'s gate and the accept/reject routes use). The optional on-the-table
+   * block and the renderer's open-proposal pointer both derive from that single reduction, and the pointer
+   * keys off the block actually being emitted, so they can never disagree about which proposal is open.
    * (Reducing the in-memory `input.messages` instead risked pointing at a block that was never emitted.)
    * Called by the base only in normal mode, so greeting (special) mode adds none of this.
    */
@@ -156,16 +156,13 @@ export class Diplomat extends LiveEnvoy {
     // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
     const relationships = getRecentGameState(parameters)?.options?.Relationships;
     const dealContext = await buildDealContextMessage(input, reduction, background.players, relationships);
-    const postscript: ModelMessage[] = dealContext
-      ? [{ role: "user", content: dealContext }]
-      : [];
+    const postscript: ModelMessage[] = [{ role: "user", content: dealContext.text }];
 
     // The still-open proposal is shown in full in the on-the-table block, so the renderer points its
     // transcript row at that block instead of repeating the terms; every other proposal renders its
-    // terms inline (see {@link renderDealRowInline}). Keyed off the block ACTUALLY being emitted
-    // (postscript non-empty), so the pointer can never reference a block that isn't there.
-    const openProposalID = postscript.length > 0 ? reduction.active?.ID : undefined;
-    const dealRenderer: DealRowRenderer = (row) => renderDealRowInline(row, input, openProposalID);
+    // terms inline (see {@link renderDealRowInline}). The composer returns the ID only when it actually
+    // emitted that proposal's on-the-table block, independently of the possible-items section.
+    const dealRenderer: DealRowRenderer = (row) => renderDealRowInline(row, input, dealContext.openProposalID);
 
     return { preamble, postscript, dealRenderer };
   }

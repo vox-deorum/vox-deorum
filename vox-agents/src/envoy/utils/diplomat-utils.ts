@@ -1,12 +1,11 @@
 /**
  * @module envoy/utils/diplomat-utils
  *
- * The on-the-table deal context the diplomat sees on every step (interactive-diplomacy stage 5).
+ * The live deal context the diplomat sees on every step (interactive-diplomacy stage 5).
  * The diplomat NEVER authors deal terms — it hands the conversational context to its negotiator
  * through the `call-negotiator` agent-tool and voices the negotiator's move out. This module only
- * renders the active proposal (terms, the negotiator's rationale/message, advisory per-item value
- * estimates, third-party relationship context, and status) into the diplomat's model context via the
- * shared {@link formatDealLedger} so it can voice each move faithfully.
+ * renders the active proposal and the currently possible legal deal items into the diplomat's model
+ * context so it can discuss negotiations faithfully without authoring or deciding terms.
  */
 
 import type { EnvoyThread } from "../../types/index.js";
@@ -14,7 +13,10 @@ import type { DealReduction } from "../../utils/diplomacy/deal-reduce.js";
 import { inspectDeal, type InspectDealResult } from "../../utils/diplomacy/deal.js";
 import { createLogger } from "../../utils/logger.js";
 import { identityOf } from "../../utils/diplomacy/transcript-utils.js";
-import type { DealPayload, DealTranscriptMessage } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import {
+  DealPayloadSchema,
+  type DealTranscriptMessage,
+} from "../../../../mcp-server/dist/utils/deal-schema.js";
 import { formatDealTermsByDirection } from "../../../../mcp-server/dist/utils/deal-format.js";
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
 import {
@@ -22,6 +24,7 @@ import {
   type DealLedgerContext,
   type RelationshipDirectives,
 } from "./deal-ledger.js";
+import { formatGiveReceiveLedger } from "./give-receive-menu.js";
 
 const logger = createLogger("diplomat-deal");
 
@@ -30,6 +33,32 @@ export interface DealContextOptions {
   inspection?: InspectDealResult;
   players?: PlayersReport;
   relationships?: RelationshipDirectives;
+}
+
+/** The diplomat's rendered live deal context and the proposal actually emitted as open. */
+export interface DiplomatDealContext {
+  text: string;
+  openProposalID?: number;
+}
+
+/** Format possible items only when the inspection has complete endpoint ranges. */
+function formatPossibleDealItems(
+  inspection: InspectDealResult | undefined,
+  thread: EnvoyThread,
+  players?: PlayersReport
+): string {
+  const hasCompleteTradableRange = Boolean(
+    inspection?.tradableRange?.[String(thread.player1ID)] &&
+    inspection?.tradableRange?.[String(thread.player2ID)]
+  );
+  if (!inspection || !hasCompleteTradableRange) return "(options unavailable)";
+
+  try {
+    return formatGiveReceiveLedger(inspection, thread, players, { presentation: "diplomat" });
+  } catch (error) {
+    logger.warn("Could not format possible deal items for diplomat context", { error });
+    return "(options unavailable)";
+  }
 }
 
 /**
@@ -50,8 +79,9 @@ export function formatDealContext(
   if (!active) return undefined;
 
   const payload = (active.Payload ?? {}) as Record<string, unknown>;
-  const deal = payload.Deal as DealPayload | undefined;
-  if (!deal) return undefined;
+  const parsedDeal = DealPayloadSchema.safeParse(payload.Deal);
+  if (!parsedDeal.success) return undefined;
+  const deal = parsedDeal.data;
 
   const resolveName = civName ?? ((id: number) => `Player ${id}`);
   const counterpartID = active.Player1ID === viewerID ? active.Player2ID : active.Player1ID;
@@ -90,35 +120,43 @@ export function formatDealContext(
 }
 
 /**
- * Format the on-the-table deal block for the diplomat's model input from an already-computed durable
- * reduction — ONLY for a genuinely OPEN deal (the actionable one), inspected fresh for per-term value
- * + third-party context. A rejected/accepted/enacted deal is NOT rendered here: it is shown inline in
- * the diplomat's chat record at its proposal turn (see {@link renderDealRowInline}), so it no longer
- * masquerades as a "Deal On The Table". The caller passes the SAME reduction it uses to pick the
- * inline renderer's open-proposal pointer, so the block and that pointer can never disagree about
- * which proposal is open. `players`/`relationships` (from the caller's already-fetched game state)
- * supply the third-party relationship lines. Returns undefined when no deal is open on the table.
+ * Compose the diplomat's live deal context from one fresh inspection. The currently possible deal items
+ * are always included. When an open proposal exists, that same inspection includes the proposed deal and
+ * supplies its advisory values. The returned proposal ID is present only when its on-the-table block was
+ * actually emitted, so the inline transcript renderer cannot point at a missing block.
  */
 export async function buildDealContextMessage(
   thread: EnvoyThread,
   reduction: DealReduction,
   players?: PlayersReport,
   relationships?: RelationshipDirectives
-): Promise<string | undefined> {
-  if (reduction.status !== "open") return undefined;
-
-  const deal = (reduction.active?.Payload as Record<string, unknown> | undefined)?.Deal as DealPayload | undefined;
+): Promise<DiplomatDealContext> {
+  const candidateDeal = (reduction.active?.Payload as Record<string, unknown> | undefined)?.Deal;
+  const parsedOpenDeal = reduction.status === "open" ? DealPayloadSchema.safeParse(candidateDeal) : undefined;
+  const openDeal = parsedOpenDeal?.success ? parsedOpenDeal.data : undefined;
   let inspection: InspectDealResult | undefined;
-  if (deal) {
-    try {
-      inspection = await inspectDeal(thread.player1ID, thread.player2ID, deal);
-    } catch (error) {
-      logger.warn("Could not inspect active deal for diplomat context", { error });
-    }
+  try {
+    inspection = await inspectDeal(thread.player1ID, thread.player2ID, openDeal);
+  } catch (error) {
+    logger.warn("Could not inspect possible deal items for diplomat context", { error });
   }
 
   const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
-  return formatDealContext(reduction, thread.agent, civName, { inspection, players, relationships });
+  const dealContext = openDeal
+    ? formatDealContext(reduction, thread.agent, civName, {
+        inspection,
+        players,
+        relationships,
+      })
+    : undefined;
+  const blocks: string[] = [];
+  if (dealContext) blocks.push(dealContext);
+  blocks.push("# Possible Deal Items\n" + formatPossibleDealItems(inspection, thread, players));
+
+  return {
+    text: blocks.join("\n\n"),
+    openProposalID: dealContext ? reduction.active?.ID : undefined,
+  };
 }
 
 /**
@@ -144,8 +182,9 @@ export function renderDealRowInline(
   switch (row.MessageType) {
     case "deal-proposal":
     case "deal-counter": {
-      const deal = row.Payload.Deal;
-      if (!deal) return undefined;
+      const parsedDeal = DealPayloadSchema.safeParse(row.Payload.Deal);
+      if (!parsedDeal.success) return undefined;
+      const deal = parsedDeal.data;
       const verb = row.MessageType === "deal-counter" ? "countered" : "proposed";
       const message = deal.message?.trim();
       const header = message

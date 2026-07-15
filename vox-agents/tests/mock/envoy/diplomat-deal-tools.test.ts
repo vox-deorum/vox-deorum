@@ -6,7 +6,8 @@
  * proposal's ID for a reject/accept).
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { installMockMcpClient, structuredResult } from '../../helpers/mock-mcp-client.js';
 
 vi.mock('../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
@@ -15,10 +16,23 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 
 // Load the agent graph through the registry first (circular-import hazard, see negotiator.test).
 import '../../../src/infra/agent-registry.js';
-import { formatDealContext, renderDealRowInline } from '../../../src/envoy/utils/diplomat-utils.js';
+import {
+  buildDealContextMessage,
+  formatDealContext,
+  renderDealRowInline,
+} from '../../../src/envoy/utils/diplomat-utils.js';
+import { formatGiveReceiveLedger } from '../../../src/envoy/utils/give-receive-menu.js';
 import { deriveActiveProposal } from '../../../src/utils/diplomacy/deal-reduce.js';
+import type { InspectDealResult } from '../../../src/utils/diplomacy/deal.js';
 import type { TranscriptMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 import type { EnvoyThread } from '../../../src/types/index.js';
+import type { DealPayload, DealTranscriptMessage } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import type { NormalizedSideRange } from '../../../../mcp-server/dist/tools/knowledge/inspect-deal.js';
+
+let mcp: ReturnType<typeof installMockMcpClient>;
+beforeEach(() => {
+  mcp = installMockMcpClient();
+});
 
 function msg(messageType: TranscriptMessage['MessageType'], payload: Record<string, unknown>, id = 1): TranscriptMessage {
   return {
@@ -26,6 +40,210 @@ function msg(messageType: TranscriptMessage['MessageType'], payload: Record<stri
     SpeakerID: 3, MessageType: messageType, Content: '', Payload: payload, Turn: 1, CreatedAt: 0,
   };
 }
+
+/** A complete empty tradable range with every game toggle represented. */
+function emptySideRange(): NormalizedSideRange {
+  return {
+    gold: { available: false, max: 0, reasons: [] },
+    goldPerTurn: { available: false, reasons: [] },
+    resources: [], cities: [], techs: [], thirdPartyPeace: [], thirdPartyWar: [], voteCommitments: [],
+    maps: { legal: false, reasons: [] },
+    allowEmbassy: { legal: false, reasons: [] },
+    openBorders: { legal: false, reasons: [] },
+    declarationOfFriendship: { legal: false, reasons: [] },
+    defensivePact: { legal: false, reasons: [] },
+    researchAgreement: { legal: false, reasons: [] },
+    peaceTreaty: { legal: false, reasons: [] },
+    vassalage: { legal: false, reasons: [] },
+    vassalageRevoke: { legal: false, reasons: [] },
+  };
+}
+
+/** A valid 50-gold deal with optional field overrides. */
+function goldDeal(overrides: Partial<DealPayload> = {}): DealPayload {
+  return {
+    version: 1,
+    items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 50 }],
+    promises: [],
+    ...overrides,
+  };
+}
+
+/** An incoming gold proposal from the counterpart. */
+function incomingGoldProposal(options: { id?: number; deal?: DealPayload } = {}): DealTranscriptMessage {
+  const { id = 5, deal = goldDeal() } = options;
+  return {
+    ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
+    SpeakerID: 1, MessageType: 'deal-proposal', Content: '', Payload: { Deal: deal }, Turn: 1, CreatedAt: 0,
+  };
+}
+
+/** Diplomat thread: seat 3 is Germany and the counterpart is Rome. */
+function diplomatThread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
+  return {
+    id: 'dipl:g:1:3', agent: 3, gameID: 'g', player1ID: 1, player2ID: 3,
+    player1Role: 'the leader', player2Role: 'diplomat', diplomacy: true,
+    player1Identity: { name: 'Rome', leader: 'Caesar' },
+    player2Identity: { name: 'Germany', leader: 'Bismarck' },
+    contextType: 'live', contextId: 'g-player-3', messages: [],
+    ...partial,
+  };
+}
+
+/** Inspection with one legal row whose value can identify the exact result that was rendered. */
+function inspectionWithIron(overrides: Partial<InspectDealResult> = {}): InspectDealResult {
+  return {
+    items: [], promises: [], promiseTargets: [],
+    tradableRange: {
+      '1': {
+        ...emptySideRange(),
+        resources: [{
+          resourceID: 7, name: 'Iron', category: 'strategic', quantityAvailable: 4,
+          legal: true, reasons: [], valueToReceiver: 77,
+        }],
+      },
+      '3': { ...emptySideRange(), gold: { available: true, max: 125, reasons: [] } },
+    },
+    ...overrides,
+  };
+}
+
+describe('formatGiveReceiveLedger presentation', () => {
+  it('keeps legal deal rows while removing authoring cues from diplomat awareness', () => {
+    const inspection = inspectionWithIron();
+    const thread = diplomatThread();
+
+    const diplomat = formatGiveReceiveLedger(inspection, thread, undefined, { presentation: 'diplomat' });
+
+    for (const row of ['- Gold (up to 125)', '- Iron (4 available, worth ~77 to Germany)']) {
+      expect(diplomat).toContain(row);
+    }
+    expect(diplomat).not.toContain('Each Give/Receive entry is ONE plain string');
+    expect(diplomat).not.toContain('example format');
+    expect(diplomat).not.toContain('propose-deal');
+  });
+});
+
+describe('buildDealContextMessage', () => {
+  it('inspects the bare pair once and shows possible items when no proposal is open', async () => {
+    mcp.respondWith('inspect-deal', structuredResult(inspectionWithIron()));
+
+    const result = await buildDealContextMessage(
+      diplomatThread(),
+      deriveActiveProposal([]),
+    );
+
+    expect(mcp.calls('inspect-deal')).toHaveLength(1);
+    expect(mcp.calls('inspect-deal')[0]!.args).not.toHaveProperty('ProposedDeal');
+    expect(result.openProposalID).toBeUndefined();
+    expect(result.text).toContain('# Possible Deal Items');
+    expect(result.text).toContain('- Iron (4 available, worth ~77 to Germany)');
+    expect(result.text).not.toContain('Deal On The Table');
+  });
+
+  it('uses one exact proposal inspection for the on-table ledger and possible items', async () => {
+    const deal = goldDeal({ message: 'Gold for peace.' });
+    const proposal = incomingGoldProposal({ deal });
+    const inspection = inspectionWithIron({
+      items: [{
+        fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: true, reasons: [],
+        valueIfIGive: 40, valueIfIReceive: 35,
+      }],
+    });
+    mcp.respondWith('inspect-deal', structuredResult(inspection));
+
+    const result = await buildDealContextMessage(
+      diplomatThread(),
+      deriveActiveProposal([proposal]),
+    );
+
+    expect(mcp.calls('inspect-deal')).toHaveLength(1);
+    expect(mcp.calls('inspect-deal')[0]!.args.ProposedDeal).toEqual(deal);
+    expect(result.openProposalID).toBe(5);
+    expect(result.text).toContain('# Deal On The Table (#5');
+    expect(result.text).toContain('Estimated value to Germany (us): 35');
+    expect(result.text).toContain('# Possible Deal Items');
+    expect(result.text).toContain('- Iron (4 available, worth ~77 to Germany)');
+  });
+
+  it('keeps open terms and marks possible items unavailable when inspection fails', async () => {
+    const proposal = incomingGoldProposal();
+    mcp.failWith('inspect-deal', 'game unavailable');
+
+    const result = await buildDealContextMessage(
+      diplomatThread(),
+      deriveActiveProposal([proposal]),
+    );
+
+    expect(mcp.calls('inspect-deal')).toHaveLength(1);
+    expect(result.openProposalID).toBe(5);
+    expect(result.text).toContain('# Deal On The Table (#5');
+    expect(result.text).toContain('### Gold: 50');
+    expect(result.text).toContain('# Possible Deal Items');
+    expect(result.text).toContain('(options unavailable)');
+  });
+
+  it('does not create an on-table pointer for a closed proposal and preserves its historical terms', async () => {
+    const proposal = incomingGoldProposal();
+    const accepted = msg('deal-accept', { ProposalMessageID: 5 }, 6);
+    mcp.respondWith('inspect-deal', structuredResult(inspectionWithIron()));
+
+    const result = await buildDealContextMessage(
+      diplomatThread(),
+      deriveActiveProposal([proposal, accepted]),
+    );
+    const historical = renderDealRowInline(proposal, diplomatThread(), result.openProposalID)!;
+
+    expect(result.openProposalID).toBeUndefined();
+    expect(result.text).not.toContain('Deal On The Table');
+    expect(result.text).toContain('# Possible Deal Items');
+    expect(historical).toContain('- Gold: 50');
+    expect(historical).not.toContain('Deal On The Table');
+  });
+
+  it('uses the schema-parsed defaults for an open proposal with omitted collections', async () => {
+    const compact = msg('deal-proposal', { Deal: { version: 1 } }, 9);
+    mcp.respondWith('inspect-deal', structuredResult(inspectionWithIron()));
+
+    const result = await buildDealContextMessage(
+      diplomatThread(),
+      deriveActiveProposal([compact]),
+    );
+
+    expect(mcp.calls('inspect-deal')).toHaveLength(1);
+    expect(mcp.calls('inspect-deal')[0]!.args.ProposedDeal).toEqual({ version: 1, items: [], promises: [] });
+    expect(result.openProposalID).toBe(9);
+    expect(result.text).toContain('# Deal On The Table (#9');
+    expect(result.text).toContain('(Nothing)');
+    expect(result.text).toContain('# Possible Deal Items');
+  });
+
+  it('keeps valid open-ledger values but marks an incomplete possible-items range unavailable', async () => {
+    const proposal = incomingGoldProposal();
+    mcp.respondWith('inspect-deal', structuredResult(inspectionWithIron({
+      items: [{
+        fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', legality: true, reasons: [],
+        valueIfIGive: 40, valueIfIReceive: 35,
+      }],
+      promises: [],
+      promiseTargets: [],
+      tradableRange: { '1': emptySideRange() },
+    })));
+
+    const result = await buildDealContextMessage(
+      diplomatThread(),
+      deriveActiveProposal([proposal]),
+    );
+
+    expect(result.openProposalID).toBe(5);
+    expect(result.text).toContain('# Deal On The Table (#5');
+    expect(result.text).toContain('### Gold: 50');
+    expect(result.text).toContain('Estimated value to Germany (us): 35');
+    expect(result.text).toContain('# Possible Deal Items');
+    expect(result.text).toContain('(options unavailable)');
+  });
+
+});
 
 describe('formatDealContext', () => {
   it('returns undefined when no deal is on the table', () => {
@@ -229,6 +447,12 @@ describe('renderDealRowInline', () => {
     const out = renderDealRowInline(dealRow('deal-proposal', { Deal: gold50 }, { ID: 6 }), thread, 9)!;
     expect(out).toContain('- Gold: 50');
     expect(out).not.toContain('Deal On The Table');
+  });
+
+  it('returns undefined for an invalid truthy historical Deal payload', () => {
+    const invalid = dealRow('deal-proposal', { Deal: {} }, { ID: 8, Content: 'Stored fallback.' });
+
+    expect(renderDealRowInline(invalid, thread)).toBeUndefined();
   });
 
   it('names the answered proposal on a rejection so a bare decline reads as which deal it settled', () => {

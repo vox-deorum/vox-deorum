@@ -48,6 +48,10 @@ That call is fire-and-forget. The handoff forks a detached root run that keeps t
 
 The distinction to keep in mind (and in any UI copy): **talk to a spokesperson to learn about a civilization; talk to a diplomat and the civilization may learn about you.**
 
+Diplomats also see the deal items the game currently allows each side to offer. This is conversational
+awareness only. Diplomats still hand deal construction and every accept, counter, or reject decision
+to the negotiator.
+
 ## How a chat reaches an envoy
 
 A chat thread is created through `POST /api/agents/chat` with a live context ID, which attaches the thread to the player's existing `VoxContext`. Messages then arrive via `POST /api/agents/message`, which appends the user message to the thread, executes the thread's agent, and streams text, reasoning, and tool-call events back as SSE.

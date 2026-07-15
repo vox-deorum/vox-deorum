@@ -1,11 +1,11 @@
 /**
  * @module envoy/utils/give-receive-menu
  *
- * Renders the negotiator's first-person GIVE/RECEIVE tradable menu (context 2): for each side, every legal
- * term grouped by category with advisory value, counts, and durations, and — on each heading — a
- * copyable `(example format "...")` example of the exact `propose-deal` string to author for that category. The
- * menu doubles as the authoring template, so the labels/names here mirror what `ledger-resolver.ts`
- * parses back. {@link formatGiveReceiveLedger} is the public entry; {@link Negotiator} composes it.
+ * Renders the shared first-person GIVE/RECEIVE tradable menu (context 2): for each side, every legal
+ * term grouped by category with advisory value, counts, and durations. Negotiators also receive a
+ * copyable example on each heading, while diplomats receive the same live rows for awareness only.
+ * The labels and names mirror what `ledger-resolver.ts` parses back. {@link formatGiveReceiveLedger}
+ * is the public entry; negotiators and diplomats compose it with their role-specific presentation.
  */
 
 import { isSentinel } from "../../../../mcp-server/dist/utils/deal-format.js";
@@ -29,6 +29,14 @@ import {
   renderPromiseDuration,
   thirdPartyRelationshipBullets,
 } from "./deal-ledger.js";
+
+/** Role-specific framing for the same legal Give/Receive rows. */
+export type GiveReceivePresentation = "negotiator" | "diplomat";
+
+/** Options controlling how the shared legal deal-item menu is presented. */
+export interface GiveReceiveLedgerOptions {
+  presentation?: GiveReceivePresentation;
+}
 
 /** A bare advisory-value phrase ("worth ~N to <civ>" / "no usable estimate"), or "" when absent. */
 function bareValue(value: number | undefined, receiverName: string): string {
@@ -63,10 +71,15 @@ function formatSideMenu(
   subline: string,
   promiseTargets: InspectDealResult["promiseTargets"],
   durations: DealDurations,
+  presentation: GiveReceivePresentation,
   relBullets?: (targetName: string) => string[]
 ): string {
   const head = `## What ${giverName} Can Give`;
   const out: string[] = [head, `- ${subline}`];
+  // Diplomats need the live legal rows, but not the copyable authoring examples supplied to negotiators.
+  const pushCategory = (title: string, rows: string[], example?: string): void => {
+    pushMenuCategory(out, title, rows, presentation === "negotiator" ? example : undefined);
+  };
 
   // Gold + gold per turn (net income shows how much GPT the side can sustain; GPT runs for a term).
   // The example shows the amount-appended form the propose-deal string grammar expects.
@@ -83,7 +96,7 @@ function formatSideMenu(
   const goldExample = range.gold.available
     ? `Gold ${Math.min(100, Math.max(1, range.gold.max))}`
     : `Gold Per Turn ${Math.max(1, Math.min(20, range.netGoldPerTurn ?? 10))}`;
-  pushMenuCategory(out, "Gold", goldRows, goldExample);
+  pushCategory("Gold", goldRows, goldExample);
 
   // Resources, bucketed luxury then strategic (count + duration + advisory value). The example appends
   // a quantity to the first legal resource in the bucket.
@@ -99,8 +112,8 @@ function formatSideMenu(
     list[0]?.name ? `${list[0].name} 1` : undefined;
   const luxury = legalResources("luxury");
   const strategic = legalResources("strategic");
-  pushMenuCategory(out, "Luxury Resources", luxury.map(resourceRow), resourceExample(luxury));
-  pushMenuCategory(out, "Strategic Resources", strategic.map(resourceRow), resourceExample(strategic));
+  pushCategory("Luxury Resources", luxury.map(resourceRow), resourceExample(luxury));
+  pushCategory("Strategic Resources", strategic.map(resourceRow), resourceExample(strategic));
 
   // World Congress vote commitments (votes + advisory value). The example is the first resolution name.
   const legalVotes = range.voteCommitments.filter((v) => v.legal);
@@ -111,7 +124,7 @@ function formatSideMenu(
         bareValue(v.valueToReceiver, receiverName)
       )}`
   );
-  pushMenuCategory(out, "World Congress", voteRows, legalVotes[0]?.name);
+  pushCategory("World Congress", voteRows, legalVotes[0]?.name);
 
   // Agreements: single-shot toggles + the four mutual pacts (tagged). Each shows its fixed term
   // length where it carries one; mutual pacts are tagged and omit the (symmetric) advisory value.
@@ -127,7 +140,7 @@ function formatSideMenu(
       mutual ? undefined : bareValue(cand!.valueToReceiver, receiverName)
     )}`;
   });
-  pushMenuCategory(out, "Agreements", agreementRows, legalAgreements[0]?.label);
+  pushCategory("Agreements", agreementRows, legalAgreements[0]?.label);
 
   // Cities (population + HP + advisory value). The example is the first city name.
   const legalCities = range.cities.filter((c) => c.legal);
@@ -139,14 +152,14 @@ function formatSideMenu(
         bareValue(c.valueToReceiver, receiverName)
       )}`
   );
-  pushMenuCategory(out, "Cities", cityRows, legalCities[0]?.name);
+  pushCategory("Cities", cityRows, legalCities[0]?.name);
 
   // Technologies. The example is the first technology name.
   const legalTechs = range.techs.filter((t) => t.legal);
   const techRows = legalTechs.map(
     (t) => `- ${t.name ?? `Tech #${t.techID}`}${valueClause(t.valueToReceiver, receiverName)}`
   );
-  pushMenuCategory(out, "Technologies", techRows, legalTechs[0]?.name);
+  pushCategory("Technologies", techRows, legalTechs[0]?.name);
 
   // Third-party peace & war (target civ names + advisory value; peace runs for the peace-deal term).
   // Each legal target trails the two sides' public relationship to it (relBullets), indented. The
@@ -173,7 +186,7 @@ function formatSideMenu(
     : legalWar[0]?.name
       ? `Third-Party War on ${legalWar[0].name}`
       : undefined;
-  pushMenuCategory(out, "Third-Party Peace & War", tpRows, tpExample);
+  pushCategory("Third-Party Peace & War", tpRows, tpExample);
 
   // Promises: the untargeted ones (with their term length), then one Coop War row per eligible major
   // target (each row is copyable verbatim as its own propose-deal string). Only AI-honored promises
@@ -190,22 +203,24 @@ function formatSideMenu(
     promiseRows.push(...tpBullets(t.name));
   }
   const promiseExample = untargetedPromises[0] ? PROMISE_METADATA[untargetedPromises[0]].label : undefined;
-  pushMenuCategory(out, "Promises", promiseRows, promiseExample);
+  pushCategory("Promises", promiseRows, promiseExample);
 
   return out.join("\n").trim();
 }
 
 /**
- * Format the full first-person Give/Receive ledger menu (context 2): what the negotiator's civ can GIVE
- * (its own tradable range) and what it can RECEIVE (the counterpart's range). Every heading carries a
- * quoted `(example format "...")` example of the exact propose-deal string the model should copy for that
- * category, so the menu doubles as the tool's authoring template.
+ * Format the full first-person Give/Receive ledger menu (context 2): what the agent's civ can GIVE
+ * (its own tradable range) and what it can RECEIVE (the counterpart's range). Negotiator presentation
+ * adds quoted examples so the menu doubles as a tool-authoring template. Diplomat presentation keeps
+ * the same legal rows without those authoring cues.
  */
 export function formatGiveReceiveLedger(
   inspection: InspectDealResult,
   thread: EnvoyThread,
-  players?: PlayersReport
+  players?: PlayersReport,
+  options: GiveReceiveLedgerOptions = {}
 ): string {
+  const presentation = options.presentation ?? "negotiator";
   const { agentID, counterpartID } = endpoints(thread);
   const name = civNameFor(thread);
   const ctx = ledgerContextFor(thread);
@@ -222,6 +237,7 @@ export function formatGiveReceiveLedger(
     `Potential terms ${agentName} (YOUR civ) can give ${counterpartName}`,
     inspection.promiseTargets,
     inspection,
+    presentation,
     relBullets
   );
   const receive = formatSideMenu(
@@ -231,11 +247,15 @@ export function formatGiveReceiveLedger(
     `Potential terms ${counterpartName} can give ${agentName} (YOUR civ)`,
     inspection.promiseTargets,
     inspection,
+    presentation,
     relBullets
   );
   return [
-    "Each Give/Receive entry is ONE plain string. Follow the quoted example on each heading below. " +
-      "Add a number only for Gold, Gold Per Turn, or a resource quantity; durations and vote counts are fixed by the game.",
+    presentation === "negotiator"
+      ? "Each Give/Receive entry is ONE plain string. Follow the quoted example on each heading below. " +
+        "Add a number only for Gold, Gold Per Turn, or a resource quantity; durations and vote counts are fixed by the game."
+      : "These are the currently possible deal items for conversational awareness only. " +
+        "Do not construct or approve terms yourself; the negotiator remains responsible for deal decisions.",
     give,
     receive,
   ].join("\n\n").trim();
