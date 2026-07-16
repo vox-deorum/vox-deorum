@@ -12,7 +12,7 @@ The goal in one line: two major civilizations — each voiced by a human or an L
 | 4 | [04-deal-screen.md](04-deal-screen.md) | ✅ Done | Three-panel in-game trade-board replica, driven by `inspect-deal` (enriched data layer, read-only `IsValidCoopWarTarget` binding, and the categorized-inventory / central-offer UI all delivered). |
 | 5 | [05-negotiator.md](05-negotiator.md) | ✅ Done | Negotiator agent + diplomat deal context + the single `call-negotiator` handoff (self-contained negotiator; per-seat dispatch); both sides reach agreement (recorded via a **stub** `enact-agent-deal` that stores the transcript, no in-game effect). |
 | 6 | [06-dll-enact-deal.md](06-dll-enact-deal.md) | Next | **Only gameplay change:** DLL enactment — `Deal:Enact()` + `Player:SetPromise()` (trade items + all nine promises, including Coop War) — wired into the **existing** `enact-agent-deal` MCP tool (stubbed in stage 5) — real enactment flips on. |
-| 7 | [07-ingame-panel.md](07-ingame-panel.md) | *Later phase* | In-game diplomacy panel addon modeled on the human-control panel. |
+| 7 | [07-ingame-panel.md](07-ingame-panel.md) | *Later phase — planned* | In-game diplomacy panel: staged sub-plan in [07-ingame-panel/](07-ingame-panel/) (UI-first: Converse entry + native-notification delivery + chat panel → vendored trade screen → transport → wiring → hardening), reusing the Web chat engine and deal actions. |
 | 8 | [08-directions.md](08-directions.md) | *Later phase* | LLM→human + LLM→LLM directions and per-direction config gating. |
 | 9 | [09-additivity-review.md](09-additivity-review.md) | Planned | Static review for additivity/comparability (the normal pathway and AI valuation stay untouched). |
 
