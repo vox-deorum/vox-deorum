@@ -9,9 +9,9 @@ import { contextRegistry } from '../../infra/context-registry.js';
 import type { StrategistParameters } from '../../strategist/strategy-parameters.js';
 import { ensureGameState } from '../../strategist/strategy-parameters.js';
 import type {
+  ChatMessageRequest,
   ChatStreamSink,
   ChatTurnRejection,
-  ChatTurnRequest,
   EnvoyThread,
   StreamingEventCallback,
 } from '../../types/index.js';
@@ -45,22 +45,39 @@ import { chatThreadStore } from './store.js';
 
 const logger = createLogger('webui:chat-turn');
 
-/** Build the durable turn commit or return a pre-stream validation error. */
-function parseCommit(
-  request: ChatTurnRequest,
-  thread: EnvoyThread,
-): TurnCommit | ChatTurnRejection {
-  const chatId = request.chatId!;
-  if (request.kind === 'deal') {
-    if (!thread.diplomacy) {
-      return { status: 400, error: 'Only diplomacy conversations support deal actions.' };
+/** Test whether an untrusted request body is a record whose fields can be inspected safely. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Parse the untrusted route body into the canonical discriminated chat request contract. */
+function parseRequest(request: unknown): ChatMessageRequest | ChatTurnRejection {
+  if (!isRecord(request)) {
+    return { status: 400, error: 'Chat request body must be an object.' };
+  }
+
+  if (typeof request.chatId !== 'string' || request.chatId.trim().length === 0) {
+    return { status: 400, error: 'Chat ID is required' };
+  }
+  const chatId = request.chatId;
+
+  if (request.kind === 'text') {
+    if (typeof request.message !== 'string' || request.message.trim().length === 0) {
+      return { status: 400, error: 'Message is required' };
     }
+    return { kind: 'text', chatId, message: request.message };
+  }
+
+  if (request.kind === 'deal') {
     const parsed = DealPayloadSchema.safeParse(request.deal);
     if (!parsed.success) {
       return { status: 400, error: `Invalid deal payload: ${parsed.error.message}` };
     }
-    if (request.expectedProposalID !== undefined && typeof request.expectedProposalID !== 'number') {
-      return { status: 400, error: 'expectedProposalID must be a number when provided.' };
+    if (request.expectedProposalID !== undefined
+      && (typeof request.expectedProposalID !== 'number'
+        || !Number.isSafeInteger(request.expectedProposalID)
+        || request.expectedProposalID <= 0)) {
+      return { status: 400, error: 'expectedProposalID must be a positive safe integer when provided.' };
     }
     return {
       kind: 'deal',
@@ -69,10 +86,27 @@ function parseCommit(
       expectedProposalID: request.expectedProposalID,
     };
   }
-  if (request.message) {
-    return { kind: 'text', chatId, message: request.message };
+
+  return { status: 400, error: 'kind must be either "text" or "deal".' };
+}
+
+/** Build the durable turn commit or return a pre-stream validation error. */
+function parseCommit(
+  request: ChatMessageRequest,
+  thread: EnvoyThread,
+): TurnCommit | ChatTurnRejection {
+  if (request.kind === 'deal') {
+    if (!thread.diplomacy) {
+      return { status: 400, error: 'Only diplomacy conversations support deal actions.' };
+    }
+    return {
+      kind: 'deal',
+      chatId: request.chatId,
+      deal: request.deal,
+      expectedProposalID: request.expectedProposalID,
+    };
   }
-  return { status: 400, error: 'Message is required' };
+  return request;
 }
 
 /** Test whether a parsed commit result is a pre-stream rejection. */
@@ -108,11 +142,12 @@ function emitSpoken(sink: ChatStreamSink, text: string, id: string): void {
  * A returned rejection is always pre-stream. Undefined means the request committed and emitted.
  */
 export async function runChatTurn(
-  request: ChatTurnRequest,
+  body: unknown,
   sink: ChatStreamSink,
 ): Promise<ChatTurnRejection | undefined> {
+  const request = parseRequest(body);
+  if (isRejection(request)) return request;
   const { chatId } = request;
-  if (!chatId) return { status: 400, error: 'Chat ID is required' };
 
   const thread = chatThreadStore.get(chatId);
   if (!thread) return { status: 404, error: 'Chat thread not found' };

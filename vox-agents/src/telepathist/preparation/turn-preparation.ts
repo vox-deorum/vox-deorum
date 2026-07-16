@@ -112,7 +112,7 @@ export async function prepareTurnSummaries(
               throw error;
             }
             return parsed;
-          }, logger, undefined, `turn-${turn}`);
+          }, logger, { source: `turn-${turn}` });
 
           if (contextExceeded) {
             contextExceededTurns.add(turn);

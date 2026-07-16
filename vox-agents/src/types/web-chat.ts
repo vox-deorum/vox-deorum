@@ -4,11 +4,7 @@
  * Shared dependency and transport contracts for the Web chat boundary.
  */
 
-import type {
-  ChatMessageRequest,
-  CreateChatRequest,
-  PlayerAssignment,
-} from './api.js';
+import type { CreateChatRequest, PlayerAssignment } from './api.js';
 import type { EnvoyThread, ParticipantIdentity } from './chat.js';
 import type { DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
 
@@ -109,12 +105,3 @@ export interface ChatTurnRejection {
   status: number;
   error: string;
 }
-
-/** The legacy text request accepted before text moves carried an explicit discriminator. */
-export type LegacyChatTextRequest = Omit<
-  Extract<ChatMessageRequest, { kind: 'text' }>,
-  'kind'
-> & { kind?: never };
-
-/** The canonical chat move contract plus the one supported legacy text shape. */
-export type ChatTurnRequest = ChatMessageRequest | LegacyChatTextRequest;

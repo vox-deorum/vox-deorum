@@ -2,7 +2,7 @@
  * Tests for Claude Code usage-limit handling at the provider boundary.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   claudeCodeResponseMiddleware,
   guardClaudeCodeQueryUsageLimits,
@@ -10,6 +10,11 @@ import {
 } from '../../../src/utils/models/claude-code-response.js';
 
 const notice = "You've hit your weekly limit · resets Jul 14, 10pm (America/Phoenix)";
+const fallbackDelay = 5 * 60 * 1000;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 /** Build a stream from fixed provider parts. */
 function streamFrom(parts: any[]): ReadableStream<any> {
@@ -57,7 +62,8 @@ describe('Claude Code usage-limit handling', () => {
 
     await expect(query[Symbol.asyncIterator]().next()).rejects.toMatchObject({
       message: notice,
-      isRetryable: false,
+      isRetryable: true,
+      retryAt: expect.any(Number),
     });
   });
 
@@ -86,7 +92,8 @@ describe('Claude Code usage-limit handling', () => {
 
     await expect(query[Symbol.asyncIterator]().next()).rejects.toMatchObject({
       message: notice,
-      isRetryable: false,
+      isRetryable: true,
+      retryAt: expect.any(Number),
     });
     expect(returnCalls).toBe(1);
   });
@@ -109,8 +116,16 @@ describe('Claude Code usage-limit handling', () => {
       doStream: async () => ({ stream: streamFrom([{ type: 'error', error: new Error(notice) }]) }),
     });
 
-    await expect(drain(result.stream)).rejects.toMatchObject({ message: notice, isRetryable: false });
-    expect(params.providerOptions.error).toMatchObject({ message: notice, isRetryable: false });
+    await expect(drain(result.stream)).rejects.toMatchObject({
+      message: notice,
+      isRetryable: true,
+      retryAt: expect.any(Number),
+    });
+    expect(params.providerOptions.error).toMatchObject({
+      message: notice,
+      isRetryable: true,
+      retryAt: expect.any(Number),
+    });
   });
 
   it('rejects a usage-limit notice returned as streamed text', async () => {
@@ -128,8 +143,16 @@ describe('Claude Code usage-limit handling', () => {
       }),
     });
 
-    await expect(drain(result.stream)).rejects.toMatchObject({ message: notice, isRetryable: false });
-    expect(params.providerOptions.error).toMatchObject({ message: notice, isRetryable: false });
+    await expect(drain(result.stream)).rejects.toMatchObject({
+      message: notice,
+      isRetryable: true,
+      retryAt: expect.any(Number),
+    });
+    expect(params.providerOptions.error).toMatchObject({
+      message: notice,
+      isRetryable: true,
+      retryAt: expect.any(Number),
+    });
   });
 
   it('passes through ordinary provider stream parts', async () => {
@@ -147,5 +170,117 @@ describe('Claude Code usage-limit handling', () => {
     });
 
     expect(await drain(result.stream)).toEqual(parts);
+  });
+
+  it.each([
+    ['milliseconds', 60_000, (now: number) => now + 60_000],
+    ['seconds', 60_000, (now: number) => (now + 60_000) / 1000],
+  ])('uses a rejected SDK reset timestamp expressed in %s', async (_label, offset, resetAt) => {
+    const now = Date.UTC(2026, 6, 15, 15, 45);
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const query = queryFrom([
+      {
+        type: 'rate_limit_event',
+        rate_limit_info: { status: 'rejected', resetsAt: resetAt(now) },
+      },
+      { type: 'assistant', message: { content: [{ type: 'text', text: notice }] } },
+    ]);
+    guardClaudeCodeQueryUsageLimits(query);
+    const iterator = query[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toMatchObject({
+      done: false,
+      value: { type: 'rate_limit_event' },
+    });
+    await expect(iterator.next()).rejects.toMatchObject({
+      message: notice,
+      isRetryable: true,
+      retryAt: now + offset + 15_000,
+    });
+  });
+
+  it.each([
+    ['stale', (now: number) => now - 1],
+    ['too distant', (now: number) => now + 8 * 24 * 60 * 60 * 1000 + 1],
+    ['invalid', () => Number.NaN],
+  ])('falls back slowly for a %s rejected reset timestamp', async (_label, resetAt) => {
+    const now = Date.UTC(2026, 6, 15, 15, 45);
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const query = queryFrom([
+      {
+        type: 'rate_limit_event',
+        rate_limit_info: { status: 'rejected', resetsAt: resetAt(now) },
+      },
+      { type: 'assistant', message: { content: [{ type: 'text', text: notice }] } },
+    ]);
+    guardClaudeCodeQueryUsageLimits(query);
+    const iterator = query[Symbol.asyncIterator]();
+    await iterator.next();
+
+    await expect(iterator.next()).rejects.toMatchObject({ retryAt: now + fallbackDelay });
+  });
+
+  it.each(['allowed', 'allowed_warning'])('does not retain an SDK %s reset timestamp', async (status) => {
+    const now = Date.UTC(2026, 6, 15, 15, 45);
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const query = queryFrom([
+      {
+        type: 'rate_limit_event',
+        rate_limit_info: { status, resetsAt: now + 60_000 },
+      },
+      { type: 'assistant', message: { content: [{ type: 'text', text: notice }] } },
+    ]);
+    guardClaudeCodeQueryUsageLimits(query);
+    const iterator = query[Symbol.asyncIterator]();
+    await iterator.next();
+
+    await expect(iterator.next()).rejects.toMatchObject({ retryAt: now + fallbackDelay });
+  });
+
+  it('keeps raw reset metadata request-local when provider errors are replaced concurrently', async () => {
+    const now = Date.UTC(2026, 6, 15, 15, 45);
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const middleware = claudeCodeResponseMiddleware();
+
+    /** Simulate the provider consuming a guarded query and replacing its thrown error. */
+    const wrapProviderRequest = async (resetDelay: number) => {
+      const params: any = { prompt: [], providerOptions: {} };
+      const result = await (middleware.wrapStream as any)({
+        params,
+        doStream: async () => {
+          const query = queryFrom([
+            {
+              type: 'rate_limit_event',
+              rate_limit_info: { status: 'rejected', resetsAt: now + resetDelay },
+            },
+            { type: 'assistant', message: { content: [{ type: 'text', text: notice }] } },
+          ]);
+          guardClaudeCodeQueryUsageLimits(query);
+          const iterator = query[Symbol.asyncIterator]();
+          await iterator.next();
+          await Promise.resolve();
+          try {
+            await iterator.next();
+          } catch (error) {
+            const replacement = Object.assign(new Error((error as Error).message), {
+              isRetryable: false,
+            });
+            return { stream: streamFrom([{ type: 'error', error: replacement }]) };
+          }
+          throw new Error('Expected the guarded query to reject its usage-limit notice.');
+        },
+      });
+      return { params, result };
+    };
+
+    const [first, second] = await Promise.all([
+      wrapProviderRequest(60_000),
+      wrapProviderRequest(120_000),
+    ]);
+
+    await expect(drain(first.result.stream)).rejects.toMatchObject({ retryAt: now + 75_000 });
+    await expect(drain(second.result.stream)).rejects.toMatchObject({ retryAt: now + 135_000 });
+    expect(first.params.providerOptions.error).toMatchObject({ retryAt: now + 75_000 });
+    expect(second.params.providerOptions.error).toMatchObject({ retryAt: now + 135_000 });
   });
 });

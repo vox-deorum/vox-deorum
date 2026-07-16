@@ -108,6 +108,7 @@ The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS B
 Two pieces of middleware sit between agents and providers:
 
 - Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking.
+- Claude Code subscription limits wait until the provider's reset time, with a slow fallback when no valid reset is supplied.
 - The tool-rescue middleware (`src/utils/models/tool-rescue/`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
 
 ## Where this sits in the stack

@@ -11,6 +11,18 @@ import { setTimeout } from 'node:timers/promises';
 /** Pattern matching context-length-exceeded errors from LLM providers. */
 const contextLengthPattern = /input.*tokens.*is longer than.*context.length|token limit|context length|maximum input|maximum context|ContextWindowExceeded|max_tokens/i;
 
+/** Named retry policy and cancellation settings. */
+export interface ExponentialRetryOptions {
+  handleReject?: () => boolean;
+  source?: string;
+  maxRetries?: number;
+  initialDelay?: number;
+  maxDelay?: number;
+  backoffFactor?: number;
+  executionTimeout?: number;
+  abortSignal?: AbortSignal;
+}
+
 /** Check whether an error indicates the input exceeded the model's context window. */
 export function isContextLengthError(error: unknown): boolean {
   if (!error) return false;
@@ -23,32 +35,31 @@ export function isContextLengthError(error: unknown): boolean {
  * Executes an async function with exponential backoff retry logic
  * @param fn - The async function to execute, receives a progress callback to prevent timeout
  * @param logger - Winston logger instance for logging retry attempts
- * @param handleReject - A custom handler for timeout reject. True = log as a warning only.
- * @param source - Source identifier for logging (e.g., model name)
- * @param maxRetries - Maximum number of retry attempts (default: 100)
- * @param initialDelay - Initial delay in milliseconds (default: 5000)
- * @param maxDelay - Maximum delay in milliseconds (default: 120000)
- * @param backoffFactor - Exponential backoff multiplier (default: 1.5)
- * @param executionTimeout - Maximum time to wait after each progress update (default: 5 minutes)
+ * @param options - Named retry policy and cancellation settings
  * @returns The result of the successful function execution
  * @throws The last error if all retries are exhausted
  */
 export async function exponentialRetry<T>(
   fn: (updateProgress: (completed?: boolean) => void, iteration: number) => Promise<T>,
   logger: Logger,
-  handleReject?: () => boolean,
-  source: string = 'unknown',
-  maxRetries: number = 100,
-  initialDelay: number = 5000,
-  maxDelay: number = 180000,
-  backoffFactor: number = 1.2,
-  executionTimeout: number = 300000 // 5 minutes
+  options: ExponentialRetryOptions = {},
 ): Promise<T> {
+  const {
+    handleReject,
+    source = 'unknown',
+    maxRetries = 100,
+    initialDelay = 5000,
+    maxDelay = 180000,
+    backoffFactor = 1.2,
+    executionTimeout = 300000,
+    abortSignal,
+  } = options;
   let lastError: Error;
   let delay = initialDelay;
   let hasCompleted = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    abortSignal?.throwIfAborted();
     try {
       // Timeout support
       let timeoutHandle: NodeJS.Timeout | null = null;
@@ -105,6 +116,7 @@ export async function exponentialRetry<T>(
       if (timeoutHandle) clearTimeout(timeoutHandle);
       return result;
     } catch (error) {
+      abortSignal?.throwIfAborted();
       lastError = error as Error;
 
       // Check if error is explicitly marked as non-retryable
@@ -128,16 +140,34 @@ export async function exponentialRetry<T>(
         throw lastError;
       }
 
-      // Calculate next delay with exponential backoff
+      // Calculate the ordinary exponential delay, then honor any provider-directed minimum.
       const currentDelay = Math.min(delay, maxDelay);
+      const now = Date.now();
+      const retryAt = error && typeof error === 'object' && 'retryAt' in error
+        && typeof error.retryAt === 'number' && Number.isFinite(error.retryAt)
+        && error.retryAt > now
+        ? error.retryAt
+        : undefined;
+      const hintedDelay = retryAt === undefined ? undefined : retryAt - now;
+      const baseDelay = hintedDelay === undefined
+        ? currentDelay
+        : Math.max(currentDelay, hintedDelay);
 
-      // Add jitter to prevent thundering herd
-      const jitter = Math.random() * 0.1 * currentDelay;
-      const totalDelay = currentDelay + jitter;
+      // Long provider-directed waits need only a small stagger, while ordinary retries keep
+      // their proportional jitter.
+      const jitter = hintedDelay === undefined
+        ? Math.random() * 0.1 * currentDelay
+        : Math.random() * 5000;
+      const totalDelay = baseDelay + jitter;
+      const scheduledRetryAt = now + totalDelay;
 
       // Log retry attempt
-      logger.warn(`[${source}] Retry attempt ${attempt + 1}/${maxRetries} after error, delaying ${Math.round(totalDelay)}ms`, lastError);
-      await setTimeout(totalDelay);
+      logger.warn(
+        `[${source}] Retry attempt ${attempt + 1}/${maxRetries} after error, delaying ${Math.round(totalDelay)}ms until ${new Date(scheduledRetryAt).toISOString()}`,
+        lastError
+      );
+      abortSignal?.throwIfAborted();
+      await setTimeout(totalDelay, undefined, { signal: abortSignal });
 
       // Increase delay for next attempt
       delay *= backoffFactor;

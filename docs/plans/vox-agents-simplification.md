@@ -36,7 +36,7 @@ Non-obvious behaviors that must survive every move. Each is locked by a test bef
 
 Checkpoint: strategy cache tests, pacing tests, and `vox-player-runs` pass; the type check reports no import cycles.
 
-## Stage 2: Put chat behavior behind web-layer boundaries
+## Stage 2: Put chat behavior behind web-layer boundaries (Done)
 
 `src/web/routes/agent.ts` (1108 lines) mixes the thread cache, route registration, a ~300-line turn/SSE handler, deal-status actions, both thread-construction paths, and enrichment helpers. New modules go under `src/web/chat/` and compose the `src/utils/diplomacy/` seams — `chat-turn-commit.ts`, the transcript utilities, and `deal.ts` — without becoming second owners of locking, archival, rollback, or reconciliation policy.
 
@@ -72,7 +72,7 @@ Checkpoint: MCP deal-metadata tests, envoy ledger tests, diplomacy deal tests, a
 - Give both transports one shared connection registry.
 - Split domain modules (telemetry, session, config, chat, deal) under `ui/src/api/`. The deal module depends on the chat stream transport — propose/counter route through `streamAgentMessage` — and date revival moves into a shared chat/deal deserialization helper. Compose and export the same `api` singleton and `SendCommitState`.
 
-Checkpoint: `client.test.ts`, `useThreadMessages.test.ts`, store tests, and chat-launch tests pass; no new `any` or `unknown` at the API boundary.
+Checkpoint: `client.test.ts`, `useThreadMessages.test.ts`, store tests, and chat-launch tests pass; no more `any` or `unknown` at the API boundary.
 
 ## Stage 5: Isolate batch workflow orchestration
 

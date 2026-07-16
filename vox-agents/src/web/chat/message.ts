@@ -5,7 +5,7 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import type { ChatStreamSink, ChatTurnRequest } from '../../types/index.js';
+import type { ChatStreamSink, ErrorResponse } from '../../types/index.js';
 import { runChatTurn } from './turn.js';
 
 /** Register the unified text and deal message route. */
@@ -14,7 +14,7 @@ export function createAgentMessageRoutes(): Router {
 
   router.post(
     '/agents/message',
-    async (req: Request<{}, {}, ChatTurnRequest>, res: Response): Promise<void> => {
+    async (req: Request<{}, {}, unknown>, res: Response<ErrorResponse>): Promise<void> => {
       let connected = false;
 
       /** Write one SSE event using the route's only wire-format adapter. */

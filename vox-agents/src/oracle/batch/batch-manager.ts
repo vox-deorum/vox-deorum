@@ -381,7 +381,13 @@ class BatchManager {
           update(true);
           return result;
         },
-        logger, undefined, 'batch-submit', this.maxBatchRetries, 5000, 60000
+        logger,
+        {
+          source: 'batch-submit',
+          maxRetries: this.maxBatchRetries,
+          initialDelay: 5000,
+          maxDelay: 60000,
+        },
       );
 
       const batchId = batchResult.id;

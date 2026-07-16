@@ -135,7 +135,6 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
 
     // Retry with caveats
     return exponentialRetry(async (update, iteration) => {
-      if (params.abortSignal?.aborted) return;
       context.timeoutRefresh = () => {
         update();
         toolCount++;
@@ -219,11 +218,17 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
         }
         throw error;
       }
-    }, context.logger, undefined, modelName,
-      /* maxRetries */ 100, /* initialDelay */ 5000, /* maxDelay */ 180000, /* backoffFactor */ 1.2,
-      /* executionTimeout */ process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google'
+    }, context.logger, {
+      source: modelName,
+      maxRetries: 100,
+      initialDelay: 5000,
+      maxDelay: 180000,
+      backoffFactor: 1.2,
+      executionTimeout: process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google'
         ? 900000  // 15 minutes for flex tier (queued requests)
-        : 300000) // 5 minutes default
+        : 300000, // 5 minutes default
+      abortSignal: params.abortSignal,
+    })
   });
 }
 

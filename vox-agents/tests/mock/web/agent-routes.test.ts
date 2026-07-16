@@ -182,15 +182,47 @@ describe('agent routes', () => {
 
   describe('POST /api/agents/message guards', () => {
     it('requires a chatId', async () => {
-      const res = await request(app).post('/api/agents/message').send({ message: 'hi' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', message: 'hi' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/chat id/i);
+    });
+
+    it('rejects a text-shaped request without a discriminator', async () => {
+      const res = await request(app)
+        .post('/api/agents/message')
+        .send({ chatId: 'nope', message: 'hi' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/kind/i);
+    });
+
+    it('rejects an unknown discriminator', async () => {
+      const res = await request(app)
+        .post('/api/agents/message')
+        .send({ kind: 'unknown', chatId: 'nope', message: 'hi' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/kind/i);
+    });
+
+    it('requires a non-empty message for text requests', async () => {
+      const res = await request(app)
+        .post('/api/agents/message')
+        .send({ kind: 'text', chatId: 'nope', message: '   ' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/message/i);
+    });
+
+    it('requires a valid deal payload for deal requests', async () => {
+      const res = await request(app)
+        .post('/api/agents/message')
+        .send({ kind: 'deal', chatId: 'nope' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/deal payload/i);
     });
 
     it('returns 404 for an unknown thread', async () => {
       const res = await request(app)
         .post('/api/agents/message')
-        .send({ chatId: 'nope', message: 'hi' });
+        .send({ kind: 'text', chatId: 'nope', message: 'hi', ignored: true });
       expect(res.status).toBe(404);
     });
 
@@ -216,6 +248,7 @@ describe('agent routes', () => {
       expect(opened.status).toBe(200);
 
       const response = await request(app).post('/api/agents/message').send({
+        kind: 'text',
         chatId: opened.body.id,
         message: 'Do not retain this',
       });
@@ -254,7 +287,7 @@ describe('agent routes', () => {
       });
       const chatId = await openLiveChat(ctx);
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'hi' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'hi' });
       expect(res.status).toBe(200);
 
       // The whole request ran in one root opened at the live turn (7), carrying the SSE progress sink.
@@ -284,7 +317,7 @@ describe('agent routes', () => {
       ctx.execute = vi.fn(() => new Promise(() => {}));
       const chatId = await openLiveChat(ctx);
 
-      const pending = request(app).post('/api/agents/message').send({ chatId, message: 'hi' });
+      const pending = request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'hi' });
       // superagent dispatches lazily — attach a handler so the request is actually sent.
       const settled = pending.then(() => {}, () => {});
       // Let the request reach the hanging execute, then simulate a client disconnect.
@@ -362,7 +395,7 @@ describe('agent routes', () => {
       let nextID = 30;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(200);
 
       const appends = mcp.calls('append-message');
@@ -379,7 +412,7 @@ describe('agent routes', () => {
       let nextID = 70;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(200);
       expect(res.text).toMatch(/event: done/);
 
@@ -405,7 +438,7 @@ describe('agent routes', () => {
       let nextID = 80;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(200);
       expect(res.text).toMatch(/event: done/);
 
@@ -421,7 +454,7 @@ describe('agent routes', () => {
       let nextID = 40;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: '{{{Greeting}}}' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: '{{{Greeting}}}' });
       expect(res.status).toBe(200);
 
       // Only the diplomat's reply is archived; the special trigger is not a real utterance.
@@ -433,7 +466,7 @@ describe('agent routes', () => {
       // store gets nothing (the prior bug left a phantom row, rolling back only the in-memory copy).
       const { mcp, chatId } = await openDiplomacy({ liveTurn: undefined });
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(503);
       expect(res.body.error).toMatch(/live game turn is not available/i);
       expect(mcp.calls('append-message')).toHaveLength(0);
@@ -446,7 +479,7 @@ describe('agent routes', () => {
       };
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [closeRow] });
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'still there?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'still there?' });
       expect(res.status).toBe(409);
       expect(res.body.error).toMatch(/closed this turn/i);
       expect(mcp.calls('append-message')).toHaveLength(0); // a locked conversation is never archived or run
@@ -461,7 +494,7 @@ describe('agent routes', () => {
       let nextID = 50;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'back again' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'back again' });
       expect(res.status).toBe(200);
       expect(mcp.calls('append-message').map((c) => c.args.Content)).toEqual(['back again', 'Back to talks.']);
     });
@@ -476,7 +509,7 @@ describe('agent routes', () => {
       let nextID = 80;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(200);
       expect(res.text).toMatch(/event: error/);
       expect(res.text).not.toMatch(/event: done/);
@@ -619,7 +652,7 @@ describe('agent routes', () => {
       let nextID = 60;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(200);
       expect(res.text).toMatch(/event: done/);
       // The diplomat's mid-run counter (ID 77) is reconciled and carried on `done`, not lost until reload.
@@ -662,15 +695,21 @@ describe('agent routes', () => {
       expect(mcp.calls('append-message')).toHaveLength(0);
     });
 
-    it('rejects a deal turn whose expectedProposalID is not a number (400) before committing anything', async () => {
-      // The only shape-level requirement left for a deal turn (propose and counter are one action): when
-      // expectedProposalID is supplied it must be a number, so the under-lock reconcile can compare it.
+    it.each([
+      ['not a number', 'not-a-number'],
+      ['zero', 0],
+      ['negative', -1],
+      ['fractional', 1.5],
+      ['outside the safe integer range', Number.MAX_SAFE_INTEGER + 1],
+    ])('rejects an expectedProposalID that is %s before committing anything', async (_label, expectedProposalID) => {
+      // Proposal IDs are positive integer transcript row identities. Reject invalid identities before
+      // the under-lock reconcile can misclassify them as conflicts with a real active proposal.
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5 });
       const res = await request(app).post('/api/agents/message').send({
         kind: 'deal',
         chatId,
         deal: { version: 1, items: [], promises: [] },
-        expectedProposalID: 'not-a-number',
+        expectedProposalID,
       });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/expectedProposalID/i);
@@ -710,7 +749,7 @@ describe('agent routes', () => {
       let nextID = 90;
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: 'Will you trade?' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Will you trade?' });
       expect(res.status).toBe(200);
       expect(res.text).toMatch(/event: error/);
       expect(res.text).not.toMatch(/event: done/);
@@ -727,7 +766,7 @@ describe('agent routes', () => {
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, execute: failing });
       mcp.onTool('append-message', () => structuredResult({ ID: 1, Turn: 5 }));
 
-      const res = await request(app).post('/api/agents/message').send({ chatId, message: '{{{Greeting}}}' });
+      const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: '{{{Greeting}}}' });
       expect(res.status).toBe(200);
       expect(res.text).toMatch(/event: error/);
 
@@ -756,11 +795,11 @@ describe('agent routes', () => {
 
       // Fire the first turn but don't await its completion — superagent dispatches lazily on .then(), so
       // the trailing .then() kicks it off; it then parks in the gated execute, holding the thread lock.
-      const first = request(app).post('/api/agents/message').send({ chatId, message: 'First message' }).then((r) => r);
+      const first = request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'First message' }).then((r) => r);
       await vi.waitFor(() => expect(slow).toHaveBeenCalledTimes(1));
 
       // The second concurrent turn is rejected up front, before committing or streaming anything.
-      const second = await request(app).post('/api/agents/message').send({ chatId, message: 'Second message' });
+      const second = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'Second message' });
       expect(second.status).toBe(409);
       expect(second.body.error).toMatch(/already being generated/i);
 
@@ -789,7 +828,7 @@ describe('agent routes', () => {
       mcp.onTool('append-message', () => structuredResult({ ID: nextID++, Turn: 5 }));
 
       // Park the first turn inside the gated execute, holding the thread lock (see the concurrent-turn test).
-      const first = request(app).post('/api/agents/message').send({ chatId, message: 'First message' }).then((r) => r);
+      const first = request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'First message' }).then((r) => r);
       await vi.waitFor(() => expect(slow).toHaveBeenCalledTimes(1));
 
       // Both a reject and a close are locked out while the turn streams — neither writes anything.

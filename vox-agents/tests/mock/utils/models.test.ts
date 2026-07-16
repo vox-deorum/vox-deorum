@@ -43,9 +43,7 @@ vi.mock('ai-sdk-provider-claude-code', () => {
           try {
             for await (const _message of query) { /* provider consumes the query */ }
           } catch (error) {
-            const providerError = new Error((error as Error).message) as Error & { isRetryable: false };
-            providerError.isRetryable = false;
-            throw providerError;
+            throw error;
           }
           throw new Error('Structured output was requested but no JSON was returned.');
         }
@@ -136,7 +134,8 @@ describe('claude-code provider', () => {
         toolChoice: { type: 'required' },
       })).rejects.toMatchObject({
         message: notice,
-        isRetryable: false,
+        isRetryable: true,
+        retryAt: expect.any(Number),
       });
       expect(mocks.model.doGenerateCalls[0].responseFormat).toMatchObject({ type: 'json' });
     });

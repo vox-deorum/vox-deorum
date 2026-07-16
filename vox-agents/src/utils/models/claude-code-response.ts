@@ -1,12 +1,26 @@
 /**
- * Converts raw Claude Code usage-limit notices into non-retryable model errors.
+ * Converts raw Claude Code usage-limit notices into reset-aware retryable errors.
  */
 
 import type { LanguageModelMiddleware } from 'ai';
 import type { Query } from 'ai-sdk-provider-claude-code';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { preserveModelError } from './preserved-model-error.js';
 
 const noticeIntroductions = ["You've hit your ", 'You’ve hit your '];
+const fallbackDelay = 5 * 60 * 1000;
+const maximumResetDelay = 8 * 24 * 60 * 60 * 1000;
+const resetGracePeriod = 15 * 1000;
+const rawUsageLimitErrorStorage = new AsyncLocalStorage<PreserveClaudeCodeUsageLimitError>();
+
+/** A retryable Claude Code subscription-limit failure. */
+export interface ClaudeCodeUsageLimitError extends Error {
+  isRetryable: true;
+  retryAt: number;
+}
+
+/** Receive the raw usage-limit error before the provider replaces it. */
+export type PreserveClaudeCodeUsageLimitError = (error: ClaudeCodeUsageLimitError) => void;
 
 /** Return whether text begins with a Claude Code usage-limit introduction. */
 export function isClaudeCodeUsageLimitNotice(text: string): boolean {
@@ -19,11 +33,29 @@ function canStartClaudeCodeUsageLimitNotice(text: string): boolean {
     introduction.startsWith(text) || text.startsWith(introduction));
 }
 
-/** Build an error that stops the retry loop. */
-function createUsageLimitError(notice: string): Error & { isRetryable: false } {
-  const error = new Error(notice) as Error & { isRetryable: false };
+/** Normalize a Claude reset timestamp to epoch milliseconds with a short grace period. */
+function normalizeResetAt(resetAt: unknown, now: number): number | undefined {
+  if (typeof resetAt !== 'number' || !Number.isFinite(resetAt)) return undefined;
+  const milliseconds = resetAt < 1_000_000_000_000 ? resetAt * 1000 : resetAt;
+  if (milliseconds <= now || milliseconds > now + maximumResetDelay) return undefined;
+  return milliseconds + resetGracePeriod;
+}
+
+/** Return a validated absolute retry timestamp or the slow fallback. */
+function resolveRetryAt(resetAt: unknown, now: number = Date.now()): number {
+  return normalizeResetAt(resetAt, now) ?? now + fallbackDelay;
+}
+
+/** Build a retryable usage-limit error. */
+function createUsageLimitError(
+  notice: string,
+  retryAt: number = Date.now() + fallbackDelay,
+  cause?: unknown
+): ClaudeCodeUsageLimitError {
+  const error = new Error(notice, cause === undefined ? undefined : { cause }) as ClaudeCodeUsageLimitError;
   error.name = 'ClaudeCodeUsageLimitError';
-  error.isRetryable = false;
+  error.isRetryable = true;
+  error.retryAt = retryAt;
   return error;
 }
 
@@ -32,6 +64,27 @@ function getUsageLimitNotice(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('message' in error)) return undefined;
   const message = (error as { message?: unknown }).message;
   return typeof message === 'string' && isClaudeCodeUsageLimitNotice(message) ? message : undefined;
+}
+
+/** Return whether an error can be reused without losing retry metadata. */
+function isReusableUsageLimitError(error: unknown): error is ClaudeCodeUsageLimitError {
+  const now = Date.now();
+  return error instanceof Error
+    && error.name === 'ClaudeCodeUsageLimitError'
+    && (error as Partial<ClaudeCodeUsageLimitError>).isRetryable === true
+    && typeof (error as Partial<ClaudeCodeUsageLimitError>).retryAt === 'number'
+    && Number.isFinite((error as Partial<ClaudeCodeUsageLimitError>).retryAt)
+    && (error as Partial<ClaudeCodeUsageLimitError>).retryAt! > now
+    && (error as Partial<ClaudeCodeUsageLimitError>).retryAt! <= now + maximumResetDelay + resetGracePeriod;
+}
+
+/** Reuse an original Claude error or rebuild it while retaining its cause and retry hint. */
+function toUsageLimitError(notice: string, original?: unknown): ClaudeCodeUsageLimitError {
+  if (isReusableUsageLimitError(original)) return original;
+  const retryAt = original && typeof original === 'object' && 'retryAt' in original
+    ? resolveRetryAt(original.retryAt)
+    : resolveRetryAt(undefined);
+  return createUsageLimitError(notice, retryAt, original);
 }
 
 /** Return text only when an SDK message is a text-only assistant response. */
@@ -45,15 +98,25 @@ function getAssistantText(message: any): string | undefined {
 }
 
 /** Reject a raw notice before provider structured-output validation can replace it. */
-export function guardClaudeCodeQueryUsageLimits(query: Query): void {
+export function guardClaudeCodeQueryUsageLimits(
+  query: Query,
+  preserveError?: PreserveClaudeCodeUsageLimitError
+): void {
   const originalIterator = query[Symbol.asyncIterator].bind(query);
   const source = { [Symbol.asyncIterator]: originalIterator };
 
   (query as any)[Symbol.asyncIterator] = async function* () {
+    let rejectedResetAt: unknown;
     for await (const message of source) {
+      if (message?.type === 'rate_limit_event'
+        && message.rate_limit_info?.status === 'rejected') {
+        rejectedResetAt = message.rate_limit_info.resetsAt;
+      }
       const text = getAssistantText(message);
       if (text !== undefined && isClaudeCodeUsageLimitNotice(text)) {
-        throw createUsageLimitError(text);
+        const error = createUsageLimitError(text, resolveRetryAt(rejectedResetAt));
+        (preserveError ?? rawUsageLimitErrorStorage.getStore())?.(error);
+        throw error;
       }
       yield message;
     }
@@ -65,7 +128,11 @@ export function claudeCodeResponseMiddleware(): LanguageModelMiddleware {
   return {
     specificationVersion: 'v3',
     wrapStream: async ({ doStream, params }) => {
-      const { stream, ...rest } = await doStream();
+      let rawUsageLimitError: ClaudeCodeUsageLimitError | undefined;
+      const { stream, ...rest } = await rawUsageLimitErrorStorage.run(
+        (error) => { rawUsageLimitError = error; },
+        doStream,
+      );
       const heldParts: any[] = [];
       let initialText = '';
       let checkingText = true;
@@ -74,9 +141,9 @@ export function claudeCodeResponseMiddleware(): LanguageModelMiddleware {
         ...rest,
         stream: stream.pipeThrough(new TransformStream({
           transform(part, controller) {
-            /** Reject the current response as a non-retryable usage-limit error. */
-            const rejectNotice = (notice: string): void => {
-              const error = createUsageLimitError(notice);
+            /** Reject the current response as a reset-aware usage-limit error. */
+            const rejectNotice = (notice: string, original?: unknown): void => {
+              const error = toUsageLimitError(notice, original);
               preserveModelError(params, error);
               controller.error(error);
             };
@@ -91,7 +158,9 @@ export function claudeCodeResponseMiddleware(): LanguageModelMiddleware {
               const notice = getUsageLimitNotice(part.error)
                 ?? (isClaudeCodeUsageLimitNotice(initialText) ? initialText : undefined);
               if (notice !== undefined) {
-                rejectNotice(notice);
+                const original = rawUsageLimitError ?? part.error;
+                rawUsageLimitError = undefined;
+                rejectNotice(notice, original);
                 return;
               }
             }
@@ -138,7 +207,7 @@ export function claudeCodeResponseMiddleware(): LanguageModelMiddleware {
           },
           flush(controller) {
             if (checkingText && isClaudeCodeUsageLimitNotice(initialText)) {
-              const error = createUsageLimitError(initialText);
+              const error = toUsageLimitError(initialText);
               preserveModelError(params, error);
               controller.error(error);
               return;

@@ -3,7 +3,7 @@
 NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED!
 
 ## Use Subagents Whenever Appropriate
-ALWAYS delegate less critical/lower-level work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku, or from GPT Sol to Terra/Luna. Report which model you used to spawn that agent in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small but batch edits. For single-file edits, do it yourself.
+ALWAYS delegate less critical/lower-level BATCH work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku, or from GPT Sol to Terra/Luna. Report which model you used to spawn that agent in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small edits in batches.
 
 ## Project Overview
 

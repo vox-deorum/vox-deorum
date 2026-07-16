@@ -16,6 +16,48 @@ afterEach(() => {
 });
 
 describe('chat turn runner', () => {
+  it('should reject null request bodies before reading their fields', async () => {
+    const sink: ChatStreamSink = {
+      connected: vi.fn(),
+      message: vi.fn(),
+      error: vi.fn(),
+      done: vi.fn(),
+      onDisconnect: vi.fn(),
+    };
+
+    await expect(runChatTurn(null, sink)).resolves.toEqual({
+      status: 400,
+      error: 'Chat request body must be an object.',
+    });
+  });
+
+  it.each([
+    ['zero', 0],
+    ['negative', -1],
+    ['fractional', 1.5],
+    ['not finite', Number.NaN],
+    ['infinite', Number.POSITIVE_INFINITY],
+    ['outside the safe integer range', Number.MAX_SAFE_INTEGER + 1],
+  ])('should reject an expectedProposalID that is %s', async (_label, expectedProposalID) => {
+    const sink: ChatStreamSink = {
+      connected: vi.fn(),
+      message: vi.fn(),
+      error: vi.fn(),
+      done: vi.fn(),
+      onDisconnect: vi.fn(),
+    };
+
+    await expect(runChatTurn({
+      kind: 'deal',
+      chatId: 'missing',
+      deal: { version: 1, items: [], promises: [] },
+      expectedProposalID,
+    }, sink)).resolves.toEqual({
+      status: 400,
+      error: 'expectedProposalID must be a positive safe integer when provided.',
+    });
+  });
+
   it('should release the turn lock when stream setup throws after commit', async () => {
     const thread: EnvoyThread = {
       id: 'turn-setup-failure',
@@ -49,7 +91,7 @@ describe('chat turn runner', () => {
     };
 
     try {
-      await expect(runChatTurn({ chatId: thread.id, message: 'Hello' }, sink)).resolves.toBeUndefined();
+      await expect(runChatTurn({ kind: 'text', chatId: thread.id, message: 'Hello' }, sink)).resolves.toBeUndefined();
       expect(streamError).toHaveBeenCalledWith({ message: 'Failed to execute agent: socket setup failed' });
 
       const nextTurn = await beginChatTurn(

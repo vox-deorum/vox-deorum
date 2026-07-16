@@ -94,7 +94,7 @@ export async function preparePhaseSummaries(
               throw error;
             }
             return result;
-          }, logger, undefined, `phase-${phase.fromTurn}-${phase.toTurn}`);
+          }, logger, { source: `phase-${phase.fromTurn}-${phase.toTurn}` });
 
           if (parsed) {
             context.streamProgress?.(`Phase ${phase.fromTurn}–${phase.toTurn}: ${parsed.narrative}`);
