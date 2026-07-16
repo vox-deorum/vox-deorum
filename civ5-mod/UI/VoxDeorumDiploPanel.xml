@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Full-screen mock diplomacy conversation panel.
+  Message bubbles adapt @schnetziomi5's diplomacy-message-log design:
+  GridBlackIndent8 body, Grid9Frame gold edge, and an outside-corner portrait.
+-->
+<Context Font="TwCenMT16" FontStyle="Shadow" ColorSet="Beige_Black_Alpha">
+	<Instance Name="TurnInstance">
+		<Container ID="Row" Size="900,38">
+			<Grid ID="Pill" Anchor="C,C" Size="190,28" Style="GridBlackIndent8">
+				<Grid Anchor="C,C" Size="194,32" Style="Grid9Frame"/>
+				<Label ID="Text" Anchor="C,C" Font="TwCenMT16"/>
+			</Grid>
+		</Container>
+	</Instance>
+	<Instance Name="MessageInstance">
+		<Container ID="Row" Size="900,116">
+			<Button ID="CardButton" Anchor="L,T" Offset="48,0" Size="760,108" StateOffsetIncrement="0,0">
+				<Grid ID="Bubble" Anchor="L,T" Size="760,108" Style="GridBlackIndent8">
+					<Grid ID="Border" Anchor="C,C" Size="764,112" Style="Grid9Frame"/>
+					<Label ID="LeftTitle" Anchor="L,T" Offset="42,12" Font="TwCenMT20" FontStyle="Shadow"/>
+					<Label ID="RightTitle" Anchor="R,T" Offset="42,12" Font="TwCenMT20" FontStyle="Shadow"/>
+					<Label ID="LeftText" Anchor="L,T" Offset="42,38" WrapWidth="672" LeadingOffset="-5" Font="TwCenMT18"/>
+					<Label ID="RightText" Anchor="R,T" Offset="42,38" WrapWidth="672" LeadingOffset="-5" Font="TwCenMT18"/>
+					<Label ID="DealStatus" Anchor="R,B" Offset="42,10" Font="TwCenMT16"/>
+					<Label ID="TheyHeader" Anchor="L,T" Offset="42,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_THEY_GIVE"/>
+					<Label ID="YouHeader" Anchor="L,T" Offset="390,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_YOU_GIVE"/>
+					<Label ID="TheyGive" Anchor="L,T" Offset="42,100" WrapWidth="310" LeadingOffset="-5" Font="TwCenMT16"/>
+					<Label ID="YouGive" Anchor="L,T" Offset="390,100" WrapWidth="310" LeadingOffset="-5" Font="TwCenMT16"/>
+					<Box ID="DealDivider" Anchor="L,T" Offset="370,74" Size="1,80" Color="204,170,90,140"/>
+					<Label ID="Pending" Anchor="L,B" Offset="42,10" Font="TwCenMT16" Color="128,128,128,255"/>
+				</Grid>
+				<Image ID="LeftHeadFrame" Anchor="L,T" Offset="-32,-18" Texture="IconFrame64.dds" Size="64,64">
+					<Image ID="LeftHead" Anchor="C,C" Size="64,64">
+						<Image ID="LeftCivIconBG" Size="32,32" Anchor="C,C" Offset="0,18" TextureOffset="32,0" Texture="CivIconBGSizes.dds">
+							<Image ID="LeftCivIconShadow" Size="24,24" Anchor="C,C" Offset="1,1" Color="Black.128"/>
+							<Image ID="LeftCivIcon" Size="24,24" Anchor="C,C"/>
+						</Image>
+					</Image>
+				</Image>
+				<Image ID="RightHeadFrame" Anchor="R,T" Offset="-32,-18" Texture="IconFrame64.dds" Size="64,64">
+					<Image ID="RightHead" Anchor="C,C" Size="64,64">
+						<Image ID="RightCivIconBG" Size="32,32" Anchor="C,C" Offset="0,18" TextureOffset="32,0" Texture="CivIconBGSizes.dds">
+							<Image ID="RightCivIconShadow" Size="24,24" Anchor="C,C" Offset="1,1" Color="Black.128"/>
+							<Image ID="RightCivIcon" Size="24,24" Anchor="C,C"/>
+						</Image>
+					</Image>
+				</Image>
+			</Button>
+		</Container>
+	</Instance>
+	<Instance Name="StatusInstance">
+		<Container ID="Row" Size="900,40">
+			<Label ID="Text" Anchor="L,C" Offset="30,0" WrapWidth="690" Font="TwCenMT18"/>
+			<GridButton ID="RetryButton" Hidden="1" Anchor="R,C" Offset="30,0" Size="120,30" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_RETRY" Font="TwCenMT16"/>
+			</GridButton>
+		</Container>
+	</Instance>
+	<Image ID="Backdrop" Anchor="C,C" Size="Full,Full" Texture="alexander.dds"/>
+	<Box ID="Dim" Style="BGBlock_ClearTopBar"/>
+	<Grid ID="MainGrid" Anchor="C,C" Size="1050,740" Style="Grid9DetailFive140" ConsumeMouse="1">
+		<Box Style="MenuLeftSideTreatment"/>
+		<Box Style="MenuRightSideTreatment"/>
+		<Grid ID="HeaderPill" Anchor="C,T" Offset="0,18" Size="230,32" Style="GridBlackIndent8">
+			<Grid Anchor="C,C" Size="234,36" Style="Grid9Frame"/>
+			<Label ID="HeaderTurn" Anchor="C,C" Font="TwCenMT18"/>
+		</Grid>
+		<GridButton ID="CloseButton" Anchor="R,T" Offset="18,14" Size="36,32" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_DIPLO_GOODBYE_TT">
+			<Label Anchor="C,C" String="X" Font="TwCenMT20"/>
+		</GridButton>
+		<GridButton ID="LoadEarlierButton" Anchor="C,T" Offset="0,58" Size="190,28" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
+		</GridButton>
+		<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,94" Size="930,472" Vertical="1" AutoScrollBar="1">
+			<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
+			<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
+			<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
+			<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
+		</ScrollPanel>
+		<Box Anchor="C,B" Offset="0,126" Size="930,1" Color="204,170,90,160"/>
+		<Box ID="InputFrame" Anchor="L,B" Offset="60,80" Size="730,38" Color="0,0,0,180">
+			<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="710,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
+		</Box>
+		<GridButton ID="SendButton" Anchor="R,B" Offset="60,82" Size="180,34" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_SEND" Font="TwCenMT18"/>
+		</GridButton>
+		<Label ID="InputReason" Hidden="1" Anchor="C,B" Offset="0,86" WrapWidth="900" Font="TwCenMT18"/>
+		<GridButton ID="ProposeButton" Anchor="L,B" Offset="60,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL" Font="TwCenMT18"/>
+		</GridButton>
+		<GridButton ID="WarButton" Anchor="C,B" Offset="0,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_DECLARE_WAR" Font="TwCenMT18"/>
+		</GridButton>
+		<GridButton ID="GoodbyeButton" Anchor="R,B" Offset="60,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_GOODBYE" Font="TwCenMT18"/>
+		</GridButton>
+		<Box ID="WarDim" Hidden="1" Anchor="C,C" Size="1050,740" Color="0,0,0,210" ConsumeMouse="1">
+			<Grid ID="WarConfirm" Anchor="C,C" Size="620,210" Style="Grid9DetailFive140">
+				<Label Anchor="C,T" Offset="0,34" String="TXT_KEY_VD_DIPLO_DECLARE_WAR_CONFIRM" WrapWidth="540" Font="TwCenMT22"/>
+				<GridButton ID="WarYesButton" Anchor="L,B" Offset="60,34" Size="200,34" Style="SmallButton" StateOffsetIncrement="0,0">
+					<Label Anchor="C,C" String="TXT_KEY_YES" Font="TwCenMT18"/>
+				</GridButton>
+				<GridButton ID="WarNoButton" Anchor="R,B" Offset="60,34" Size="200,34" Style="SmallButton" StateOffsetIncrement="0,0">
+					<Label Anchor="C,C" String="TXT_KEY_NO" Font="TwCenMT18"/>
+				</GridButton>
+			</Grid>
+		</Box>
+	</Grid>
+</Context>

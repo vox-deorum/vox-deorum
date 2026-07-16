@@ -137,11 +137,11 @@ In a live VP+EUI game with the mod deployed (`deploy.bat`, MD5s refreshed):
 
 1. The leader screen shows **Converse** alongside Discuss/Trade/Demand/War, all natives still functional; clicking it leaves the leader scene, posts **one native notification**, and opens the panel on the mock conversation for that leader.
 2. Clicking the **notification** re-opens the panel for the right counterpart and removes the notification. It survives end-turn ×2 and a save/load; right-click dismiss still works; a game without the mod is unaffected (guarded branch inert).
-3. Mock rows render correctly in the @schnetziomi5 bubble design: `{{{Greeting}}}` hidden; counterpart bubbles left / own bubbles right, each with the speaker's leader portrait and civ badge on the bubble corner and the "Leader of Civ" title line; a turn pill separates rows from different turns; the header pill shows turn ~ date; deal rows render as the same bubbles carrying the deal message plus the two-column They give | You give list (promises folded in, no balance), each fully clickable: the mock chain proves the reducer picks exactly one active open proposal (respond mode) with all earlier ones view-only; closed-this-turn mock locks input with an explanatory row.
+3. Mock rows render correctly in the @schnetziomi5 bubble design: `{{{Greeting}}}` is hidden; counterpart bubbles sit left and player bubbles sit right; each bubble shows the speaker's leader portrait, civilization badge, and "Leader of Civ" title; turn pills separate turns and the header shows turn plus date. Deal rows use the same bubble with the message and two-column They give and You give list, including promises and no balance. The full card is clickable. The mock chain proves that the reducer selects one active open proposal in respond mode, leaves earlier proposals view-only, and locks input with an explanatory row when the conversation is closed this turn.
 4. Every pending/streaming/timeout state animates visibly: at no point does a static screen suggest a hang.
 5. **Declare War** appears only while at peace with the counterpart and war is declarable; confirming it actually declares war (native, no bridge), after which the button disappears.
 6. No errors in `Lua.log`; a print probe confirms which NotificationPanel/LeaderHeadRoot copies actually loaded ((3a) vs UI_bc1).
 
 ## Done when
 
-A player in a live game can walk the whole conversation surface: leader screen → Converse → notification → panel with correctly derived deal cards and visibly alive progress states: with everything behind it still mock data.
+A player in a live game can walk the whole mock-backed conversation surface: leader screen → Converse → notification → panel with correctly derived deal cards and visible progress states.

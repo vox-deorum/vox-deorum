@@ -1,6 +1,6 @@
 # Stage 7.05: hardening, regression, parity review
 
-> Part of the stage-7 sub-plan ([specs.md](specs.md); index [../07-ingame-panel.md](../07-ingame-panel.md)). The closing pass: degradation paths, size/edge sweeps, native-screen regression, and a comparability review against the Web flow: the human-control plan's `08-comparability-review.md` precedent.
+> Part of the stage-7 sub-plan ([specs.md](specs.md); index [../07-ingame-panel.md](../07-ingame-panel.md)). This closing pass covers degradation paths, size and edge sweeps, native-screen regression, and comparison with the Web flow. It follows the human-control plan's `08-comparability-review.md` precedent.
 
 ## Objective
 

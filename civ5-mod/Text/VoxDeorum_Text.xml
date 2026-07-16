@@ -352,5 +352,33 @@
 		<Row Tag="TXT_KEY_VD_HUMAN_PERSONA_DECEPTIVEBIAS">
 			<Text>Tendency to be deceptively friendly (1-10)</Text>
 		</Row>
+		<!-- Interactive diplomacy panel and leader-screen launcher. -->
+		<Row Tag="TXT_KEY_VD_CONVERSE"><Text>Converse</Text></Row>
+		<Row Tag="TXT_KEY_VD_CONVERSE_TT"><Text>Continue this conversation through your Vox Deorum envoy.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_LOAD_EARLIER"><Text>Load earlier...</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_SEND"><Text>Send</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"><Text>Propose Deal</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_DECLARE_WAR"><Text>Declare War!</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE"><Text>Goodbye</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE_TT"><Text>Hide this conversation panel. The conversation remains available.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_RETRY"><Text>Retry</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_THEY_GIVE"><Text>THEY GIVE</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_YOU_GIVE"><Text>YOU GIVE</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_NOTHING"><Text>Nothing</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_LOADING"><Text>Loading conversation</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_LOADING_EARLIER"><Text>Loading earlier messages</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_THINKING"><Text>[ICON_STAR] Envoy is thinking</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_BUSY"><Text>The envoy is composing</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_SENDING"><Text>sending...</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_ACCEPTING"><Text>Accepting</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_REJECTING"><Text>Rejecting</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_PROPOSING"><Text>Proposing</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_NOT_DELIVERED"><Text>[COLOR_NEGATIVE_TEXT]Not delivered.[ENDCOLOR]</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_ENVOY_UNAVAILABLE"><Text>[COLOR_NEGATIVE_TEXT]The envoy seems unavailable.[ENDCOLOR]</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_CLOSED"><Text>Conversation closed this turn.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_NO_ENVOY"><Text>This leader has no envoy available.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_DECLARE_WAR_CONFIRM"><Text>Are you sure you want to declare war? This uses the native game action and takes effect immediately.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_NOTIFICATION_SUMMARY"><Text>Diplomatic message</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_NOTIFICATION_MESSAGE"><Text>Your envoy has opened a correspondence. Click to return to the conversation.</Text></Row>
 	</Language_en_US>
 </GameData>

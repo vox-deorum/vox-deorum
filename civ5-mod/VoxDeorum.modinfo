@@ -26,7 +26,7 @@
   <Blocks />
   <Files>
     <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
-    <File md5="62057A7048B5D57FEC994BCA7D1F0788" import="0">Text/VoxDeorum_Text.xml</File>
+    <File md5="F02B94B05FA1241D705B5A803D1EC6DF" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
@@ -34,12 +34,18 @@
     <File md5="6452B033FCDA2F344C0E4D046440F5D5" import="0">UI/VoxDeorumHumanPanel.xml</File>
     <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/VoxDeorumHumanTrigger.lua</File>
     <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/VoxDeorumHumanTrigger.xml</File>
+    <File md5="2C0A96C6FB90A61392A5BA0AC6C2F54D" import="1">UI/VoxDeorumConverse.lua</File>
+    <File md5="8A190A042B2CD528C1FCDEFCCB5C6F7D" import="0">UI/VoxDeorumConverse.xml</File>
+    <File md5="CF86B4BBC2E0AD0FD123C36224DD95B6" import="1">UI/VoxDeorumDiploPanel.lua</File>
+    <File md5="0B878C14D5C2BB89437AAF1B92597019" import="0">UI/VoxDeorumDiploPanel.xml</File>
+    <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>
     <OnModActivated>
       <UpdateDatabase>SQL/VoxDeorum_Options.sql</UpdateDatabase>
       <UpdateDatabase>Text/VoxDeorum_Text.xml</UpdateDatabase>
       <UpdateDatabase>Text/VoxDeorum_Text.sql</UpdateDatabase>
+      <UpdateDatabase>XML/VoxDeorum_Notifications.xml</UpdateDatabase>
     </OnModActivated>
   </Actions>
   <EntryPoints>
@@ -58,6 +64,14 @@
     <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumHumanTrigger.xml">
       <Name>VoxDeorumHumanTrigger</Name>
       <Description>Human-control trigger widget for reopening the decision panel</Description>
+    </EntryPoint>
+    <EntryPoint type="DiplomacyUIAddin" file="UI/VoxDeorumConverse.xml">
+      <Name>VoxDeorumConverse</Name>
+      <Description>Conversation launcher embedded in the leader screen</Description>
+    </EntryPoint>
+    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumDiploPanel.xml">
+      <Name>VoxDeorumDiploPanel</Name>
+      <Description>Mock-driven leader conversation panel</Description>
     </EntryPoint>
   </EntryPoints>
 </Mod>

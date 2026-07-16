@@ -41,8 +41,8 @@ With the game, bridge-service, mcp-server, and a vox-agents interactive session 
 3. A >100-message transcript reflushes as multiple ordered `append` batches, each under the wire budget; an artificially oversized single push fails loudly with the `overflowed()` error, not silently.
 4. Text containing `!@#$%^!` survives both directions sanitized (typed into the event via `lua-executor`; embedded in a seeded transcript row).
 5. Duplicate delivery: re-emitting the same generated event ID is ignored. Two rapid `PanelOpened` events produce ordered atomic reflushes on the push FIFO, including while a chat event occupies the action FIFO. A final row committed during a reflush remains visible after the reflush completes.
-6. Restart the bridge-service mid-session: the mod-registered push functions are still callable afterwards (or the fallback re-registration hook fires): resolving the specs open risk.
+6. Restart bridge-service mid-session. Confirm that the mod-registered push functions remain callable, or that the fallback re-registration hook fires. This resolves the open risk from the specs.
 
 ## Done when
 
-Every pinned contract crosses the wire correctly in both directions under probe, sizes and duplicates behave as specified, and the read-only reflush/paging path serves real transcripts: leaving stage 04 nothing but connecting real handlers to real UI.
+Every pinned contract crosses the wire correctly in both directions under probe. Sizes and duplicates behave as specified, and the read-only reflush and paging path serves real transcripts. Stage 04 only needs to connect real handlers to the UI.

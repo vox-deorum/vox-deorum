@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GameData>
+	<!-- This data-driven type is rendered by EUI's generic notification instance. -->
+	<Notifications>
+		<Row>
+			<NotificationType>NOTIFICATION_VOX_DEORUM_DIPLOMACY</NotificationType>
+		</Row>
+	</Notifications>
+</GameData>
