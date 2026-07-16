@@ -42,7 +42,7 @@ All emitted as `Game.BroadcastEvent(name, payload, true)`. `generateId = true` i
 
 | Event | Payload beyond common fields | Meaning |
 |---|---|---|
-| `DiplomacyPanelOpened` |: | Panel opened for a pair; requests a conversation reflush (read-only). |
+| `DiplomacyPanelOpened` | none | Panel opened for a pair; requests a conversation reflush (read-only). |
 | `DiplomacyChatMessage` | `Text` (≤ 2000 chars, delimiter-sanitized) | Human sent a message; runs the diplomat. |
 | `DiplomacyDealAction` | `Action ∈ propose\|counter\|accept\|reject`, `Deal?` (DealPayload v1), `ProposalMessageID?`, `Text?` | Deal move. `Deal` required for propose/counter; `ProposalMessageID` required for counter/accept/reject (for counter it becomes `expectedProposalID`, the Web's stale-submission guard). |
 | `DiplomacyTranscriptRequest` | `BeforeID` | Page older history (`ID < BeforeID`, read-only). |
@@ -128,14 +128,14 @@ Verified against the code; this is the contract between this plan and the existi
 
 **New (no Web counterpart exists):**
 
-- The four game-event schemas and whitelist entries; the `call-lua-function` mcp tool; the ingame-bridge module with separate per-pair refresh, action, and push FIFOs; the notification posting path; everything under `civ5-mod/UI/`.
+- The four game-event schemas and whitelist entries; the `call-lua-function` mcp tool; the ingame-bridge module with separate per-pair action and push FIFOs; the notification posting path; everything under `civ5-mod/UI/`.
 
 ## Design decisions and non-goals
 
 - **No new durable idempotency machinery.** The existing transcript-level `deal-enacted` key prevents the important duplicate: double enactment. A rare duplicated text row is cosmetic. Deduplicate overlapping pipe and SSE delivery by generated event ID.
-- **No flush or stream generation counters.** A single human drives one panel. The refresh FIFO serializes reflushes, and the independent push FIFO preserves Lua-call order across refresh and stream producers. `Begin` resets the pair log, and the panel deduplicates rows by ID. The action FIFO never blocks a reopen behind a live turn.
+- **No flush or stream generation counters.** A single human drives one panel. Each complete reflush is one atomic push-FIFO task, so its read, `Begin`, and message batches cannot interleave with live pushes. `Begin` resets the pair log, and the panel deduplicates rows by ID. The action FIFO never blocks a reopen behind a live turn.
 - **No live Web⇄game sync** (parent specs §6): shared storage, not mirroring. Each surface refreshes on open. Notably the Web has no server-push into an open chat either: its open view updates only through the user's own streaming request.
-- **Separate queues have separate owners.** MCP notification dispatch is fire-and-forget. A refresh FIFO serializes read-only opens and page requests. An action FIFO serializes mutating chat and deal events. A push FIFO orders Lua calls from both paths and continues running while an action is active. This lets a reopen report `Begin.busy` and lets stream deltas arrive before `runChatTurn` completes. The panel still permits only one in-flight user action per pair. Residual `ThreadBusyError` cases surface as error status.
+- **Separate queues have separate owners.** MCP notification dispatch is fire-and-forget. An action FIFO serializes mutating chat, deal, and conditional greeting tasks. A push FIFO orders Lua calls and owns atomic read-only reflush tasks. It continues running while an action is active, so a reopen can report `Begin.busy` and stream deltas can arrive before `runChatTurn` completes. A conditional greeting rereads the transcript inside the action FIFO before applying `shouldRequestGreeting`, preventing duplicate greetings from rapid opens. The panel still permits only one in-flight user action per pair. Residual `ThreadBusyError` cases surface as error status.
 - **Local draft and legality, server enactment.** Plain Lua `draftItems` and `draftPromises` own the open edit. The screen rebuilds `UI.GetScratchDeal()` from that model before local legality, valuation, rendering, and submission. Server-side tools may reuse the scratch deal without destroying the draft. Enactment and every transcript write stay server-side. The mod never writes transcript rows; `deal-accept` and `deal-enacted` still come only from `enact-agent-deal`.
 - **Declare War is a panel-local native action.** Offer it only while the teams are at peace and `CanDeclareWar` holds. After confirmation, call `Network.SendChangeWar(counterpartTeam, true)`, matching the native flow. It never touches the bridge or transcript because agents already observe live war state through existing knowledge tools.
 

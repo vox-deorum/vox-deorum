@@ -27,8 +27,8 @@ Vendor the game's own trade screen into the mod and adapt it minimally: opened f
 The vendored screen keeps the native trade screen's two-column pocket/table shape (the diff stays minimal); the additions are the two balance labels, the promises category, and the replaced button row. Left column = the counterpart, right column = the active player, exactly like the native screen.
 
 ```
-╔══════════════════════════════════════════════════════════════════════════╗
-║ [leader icon]  Negotiating with Napoleon: France          Turn 143   [X] ║
+╔════════════════════════════════════════════════════════════════════════════╗
+║ [leader icon]  Negotiating with Napoleon: France          Turn 143   [X]   ║
 ╠═══════════════════════════════════╦════════════════════════════════════════╣
 ║        NAPOLEON OFFERS            ║             YOU OFFER                  ║
 ║  Balance for them:  +180 ▲        ║   Balance for you:  +65 ▲              ║  ← per-side totals summed
@@ -43,24 +43,24 @@ The vendored screen keeps the native trade screen's two-column pocket/table shap
 ║   ▸ Luxury Resources        ▼     ║    ▸ Luxury Resources          ▼       ║    expandable; every entry
 ║       Wine (6)  Silk (2)          ║        Ivory (3)                       ║    gated by IsPossibleToTrade-
 ║   ▸ Strategic Resources     ▼     ║    ▸ Strategic Resources       ▼       ║    Item(... h2h=true)
-║       Horses (4)                  ║        Iron (4)  Coal (✗ embargo)      ║  ← structurally illegal: greyed
+║       Horses (4)                  ║        Iron (4)  Coal (✗ embargo)     ║  ← structurally illegal: greyed
 ║   ▸ Cities                        ║    ▸ Cities                            ║    + GetReasonsItemUntradeable
 ║   ▸ Technologies                  ║    ▸ Technologies                      ║    tooltip; AI-politics-only
 ║   ▸ World Congress Votes          ║    ▸ World Congress Votes              ║    blocks show ENABLED (h2h)
-║   ▸ Open Borders ✓ · Embassy ✓    ║    ▸ Defensive Pact · Research Agr.    ║  ← single-shot toggles
+║   ▸ Open Borders ✓ · Embassy ✓   ║    ▸ Defensive Pact · Research Agr.    ║  ← single-shot toggles
 ║   ▸ Third-Party Peace / War       ║    ▸ Third-Party Peace / War           ║
 ║   ▸ Promises                ▼     ║    ▸ Promises                  ▼       ║  ← NEW category: PROMISE_TYPES
 ║       No spying (30t)             ║        No settling near (50t)          ║    with durations; Coop War
 ║       Coop War vs…          ▼     ║        No spying (30t)                 ║    expands to eligible targets
-║         Attila ✓  Gandhi ✗        ║                                        ║    (coopWarEligible port)
+║         Attila ✓  Gandhi ✗       ║                                        ║    (coopWarEligible port)
 ╠═══════════════════════════════════╩════════════════════════════════════════╣
-║   Incoming proposal #482: respond:                                        ║  ← mode from how the chat
+║   Incoming proposal #482: respond:                                       ║  ← mode from how the chat
 ║        [ Accept ]        [ Counter ]        [ Reject ]        [ Back ]     ║    panel's card was opened:
-║  : your own open proposal::                                              ║    incoming open / own open /
+║   Your own open proposal:                                                  ║    incoming open / own open /
 ║        [ Counter ]       [ Retract ]                          [ Back ]     ║    settled-or-superseded
-║  : settled or superseded proposal (view-only)::                          ║    (view-only) / empty-open
+║   Settled or superseded proposal (view-only):                              ║    (view-only) / empty-open
 ║                                                               [ Back ]     ║    (authoring)
-║  : or authoring mode::                                                   ║
+║   Authoring mode:                                                          ║
 ║        [ Propose ]                                            [ Cancel ]   ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 ```
