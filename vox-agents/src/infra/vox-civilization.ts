@@ -132,6 +132,17 @@ export class VoxCivilization {
     return 5; // Huge (12+ players)
   }
 
+  private static readonly AI_OBSERVER_MOD_ID = '970aae10-1004-4c8a-af2d-8d601de5ec02';
+  private static readonly AI_OBSERVER_MOD_NAME = 'AI Observer (JFD)';
+
+  /** Renders a modId -> name record as a Lua table literal. */
+  private static toModsLua(mods: Record<string, string>): string {
+    const entries = Object.entries(mods)
+      .map(([id, name]) => `  ["${id}"] = "${name}"`)
+      .join(',\n');
+    return entries.length > 0 ? `{\n${entries}\n}` : '{}';
+  }
+
   /**
    * Builds a Lua table literal string for required mods,
    * conditionally including AI Observer based on aiObserverEnabled.
@@ -144,12 +155,24 @@ export class VoxCivilization {
       '04c67ca5-d408-4b9e-be1b-bbc00e67fd8e': 'Vox Deorum',
     };
     if (this.aiObserverEnabled) {
-      mods['970aae10-1004-4c8a-af2d-8d601de5ec02'] = 'AI Observer (JFD)';
+      mods[VoxCivilization.AI_OBSERVER_MOD_ID] = VoxCivilization.AI_OBSERVER_MOD_NAME;
     }
-    const entries = Object.entries(mods)
-      .map(([id, name]) => `  ["${id}"] = "${name}"`)
-      .join(',\n');
-    return `{\n${entries}\n}`;
+    return VoxCivilization.toModsLua(mods);
+  }
+
+  /**
+   * Builds a Lua table literal string for mods to explicitly disable before
+   * activation. Civ5 persists the enabled-mods set across launches, so a mod
+   * enabled by a previous session stays enabled until something turns it off.
+   * Only the AI Observer is force-disabled when unwanted — players may have
+   * other modmods enabled that we must leave alone.
+   */
+  private buildDisabledModsLua(): string {
+    const mods: Record<string, string> = {};
+    if (!this.aiObserverEnabled) {
+      mods[VoxCivilization.AI_OBSERVER_MOD_ID] = VoxCivilization.AI_OBSERVER_MOD_NAME;
+    }
+    return VoxCivilization.toModsLua(mods);
   }
 
   /**
@@ -203,6 +226,7 @@ export class VoxCivilization {
       WORLD_SIZE: worldSize.toString(),
       PLAYER_SLOTS: `{ ${playerSlots} }`,
       REQUIRED_MODS: this.buildRequiredModsLua(),
+      DISABLED_MODS: this.buildDisabledModsLua(),
     });
   }
 
@@ -327,11 +351,13 @@ export class VoxCivilization {
       } else if (luaName === 'LoadGame.lua') {
         await this.generateFromTemplate('LoadGame.template.lua', 'LoadGame.temp.lua', {
           REQUIRED_MODS: this.buildRequiredModsLua(),
+          DISABLED_MODS: this.buildDisabledModsLua(),
         });
         actualLuaName = 'LoadGame.temp.lua';
       } else if (luaName === 'LoadMods.lua') {
         await this.generateFromTemplate('LoadMods.template.lua', 'LoadMods.temp.lua', {
           REQUIRED_MODS: this.buildRequiredModsLua(),
+          DISABLED_MODS: this.buildDisabledModsLua(),
         });
         actualLuaName = 'LoadMods.temp.lua';
       }

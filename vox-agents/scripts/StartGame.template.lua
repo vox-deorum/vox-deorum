@@ -34,6 +34,18 @@ local function activateMods()
     end
   end
 
+  -- Civ5 persists the enabled-mods set across launches, so a mod enabled by a
+  -- previous session stays on until explicitly disabled. Only force-disable the
+  -- mods listed here (ours) -- the player's other modmods are left alone.
+  local disabledMods = {{DISABLED_MODS}}
+  for modId, modName in pairs(disabledMods) do
+    local modVersion = Modding.GetLatestInstalledModVersion(modId)
+    if modVersion and modVersion ~= -1 then
+      Modding.DisableMod(modId, modVersion)
+      print("Disabled: " .. modName .. " (" .. modId .. ", " .. modVersion .. ")")
+    end
+  end
+
   print("Activating enabled mods...")
   Modding.ActivateEnabledMods()
 end
