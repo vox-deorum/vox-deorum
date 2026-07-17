@@ -1,6 +1,6 @@
 # MCP Server Tool Reference
 
-Concise reference for all 34 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
+Concise reference for all 41 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
 
 ## Architecture
 
@@ -32,12 +32,14 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `get-military-strategies` | AI military strategy info with production/overall flavors |
 | `get-flavors` | Flavor descriptions for AI preference tuning |
 
-## Knowledge Query Tools (11)
+## Knowledge Query Tools (13)
 
 | Tool | Description | Key Input |
 |------|-------------|-----------|
 | `get-events` | Recent game events, consolidated by turn with smart grouping | `Turn?`, `Type?`, `After?`, `Before?`, `PlayerID?`, `Original?` |
 | `get-diplomatic-events` | Diplomatic events (wars, peace, deals, city-state, espionage, world congress) grouped by turn | `PlayerID`, `OtherPlayerID?`, `FromTurn?`, `ToTurn?`, `Formatted?` |
+| `read-transcript` | Read the durable, append-ID-ordered conversation between two endpoints, optionally filtered by message type or speaker role | `PlayerAID`, `PlayerBID`, `MessageType?`, `Role?` |
+| `inspect-deal` | Inspect a draft deal against live game state, including legality, advisory values, promise factors, and each side's tradable range | `PlayerAID`, `PlayerBID`, `ProposedDeal?` |
 | `get-players` | Player summary with scores, era, resources, military, and diplomatic opinions | `PlayerID?` (0-21) |
 | `get-opinions` | Diplomatic opinions to/from a player with all alive major civilizations | `PlayerID` (0-21), `RevealAll?` |
 | `get-cities` | City info from a player's perspective with visibility filtering | `PlayerID?` (0-21), `Owner?` |
@@ -48,7 +50,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `get-military-report` | Military report with units by AI type and tactical zones | `PlayerID` (0-21) |
 | `get-victory-progress` | Victory progress for all players, filtered by diplomatic visibility | `PlayerID?` (0-21) |
 
-## Action Tools (10)
+## Action Tools (14)
 
 | Tool | Description | Key Input |
 |------|-------------|-----------|
@@ -62,13 +64,18 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `set-policy` | Set next policy or branch selection by name | `PlayerID`, `Policy`, `Rationale` |
 | `keep-status-quo` | Maintain current strategy/flavors with documented rationale | `PlayerID`, `Mode?`: "Flavor" or "Strategy", `Rationale` |
 | `relay-message` | Relay diplomatic or intelligence message as a game event; `Importance` 7+ interrupts important-event pacing | `PlayerID`, `FromPlayerID`, `Message`: "Diplomatic"/"Intelligence", `Content`, `Confidence` (0-9), `Importance` (0-9), `Categories`, `Memo`, `VisibleTo?` |
+| `append-message` | Append an archival message to a durable diplomatic transcript; returns the stored message's canonical fields | `PlayerAID`, `PlayerBID`, `PlayerARole?`, `PlayerBRole?`, `SpeakerID`, `MessageType`, `Content`, `Payload?`, `Turn?` |
+| `enact-agent-deal` | Enact the deal stored on a proposal, then record acceptance and enactment; returns record IDs plus `AlreadyEnacted` and `Enacted` status | `ProposalMessageID`, `Deal?`, `AccepterID?`, `Content?` |
+| `post-notification` | Post a native notification to a human player; returns `true` only when Civ V creates it and `false` when Civ V rejects it | `PlayerID`, `CounterpartID?` (different from `PlayerID`), nonblank `Summary` (1-200 characters), nonblank `Message` (1-2000 characters) |
+| `present-decision` | Present current Flavor-mode strategic options to the in-game human-control panel; returns whether delivery succeeded | `PlayerID`, `Turn?` (default: current turn) |
 
-## Game Control Tools (2)
+## Game Control Tools (3)
 
 | Tool | Description | Key Input |
 |------|-------------|-----------|
 | `pause-game` | Pause the game during a specific player's turn | `PlayerID` (0-21) |
 | `resume-game` | Resume the game during a specific player's turn | `PlayerID` (0-21) |
+| `set-production-mode` | Enable or disable the DLL's production mode (AI turn cooldown); returns whether the bridge update succeeded | `enabled`: boolean |
 
 ## Tool Development
 

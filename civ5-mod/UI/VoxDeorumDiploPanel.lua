@@ -6,7 +6,6 @@ include("IconSupport")
 
 local DELIMITER = "!@#$%^!"
 local DELIMITER_PATTERN = string.gsub(DELIMITER, "%W", "%%%1")
-local NOTIFICATION_NAME = "NOTIFICATION_VOX_DEORUM_DIPLOMACY"
 local BUBBLE_WIDTH = 760
 local STATUS_KEYS = {
 	open = "TXT_KEY_VD_DIPLO_STATUS_OPEN", accepted = "TXT_KEY_VD_DIPLO_STATUS_ACCEPTED",
@@ -20,7 +19,7 @@ local m_phase, m_phaseArg, m_streamingText = "loading", nil, ""
 local m_hasMore, m_loadingEarlier = false, false
 local m_dotSeconds, m_dotCount, m_animated = 0, 1, {}
 local m_tail = { sending = {}, streaming = {}, status = {}, closed = {} }
-local m_notificationIDs, m_notificationOwner = {}, {}
+local m_notificationIDs, m_notificationOwner, m_notificationMessages = {}, {}, {}
 local m_warPromptOpen = false
 
 ContextPtr:SetHide(true)
@@ -426,21 +425,18 @@ local function onUpdate(delta)
 	if VoxDeorumDiploUI.driver ~= nil and VoxDeorumDiploUI.driver.onUpdate ~= nil then VoxDeorumDiploUI.driver.onUpdate(delta) end
 end
 
--- Post one native diplomacy notification.
-local function postNotification(playerID, counterpartID, summary, message)
-	local player = Players[playerID]; if player == nil then return false end
-	player:AddNotificationName(NOTIFICATION_NAME, sanitizeText(message), sanitizeText(summary), -1, -1, counterpartID, counterpartID); return true
-end
-
--- Track diplomacy notifications in both directions.
+-- Track diplomacy notifications in both directions, caching each message for
+-- the counterpart-less activation path.
 local function onNotificationAdded(id, notificationType, tooltip, summary, gameValue, extraGameData, playerID)
 	local expected = NotificationTypes and NotificationTypes.NOTIFICATION_VOX_DEORUM_DIPLOMACY
 	if expected == nil or notificationType ~= expected or playerID ~= Game.GetActivePlayer() then return end
 	m_notificationIDs[gameValue] = m_notificationIDs[gameValue] or {}; m_notificationIDs[gameValue][id] = true; m_notificationOwner[id] = gameValue
+	m_notificationMessages[id] = tooltip
 end
 
 -- Prune indexes after native or programmatic removal.
 local function onNotificationRemoved(id)
+	m_notificationMessages[id] = nil
 	local owner = m_notificationOwner[id]; if owner == nil then return end
 	local ids = m_notificationIDs[owner]
 	if ids ~= nil then ids[id] = nil; if next(ids) == nil then m_notificationIDs[owner] = nil end end
@@ -480,10 +476,19 @@ end
 -- Open from the leader-screen action.
 local function onConverseOpen(counterpartID) showPanel(counterpartID) end
 
--- Open only valid notification targets, then dismiss their pair notifications.
+-- A valid counterpart opens the conversation and dismisses its pair notifications;
+-- a counterpart-less notification shows its cached message in a text dialog. The
+-- message is read before removal, since UI.RemoveNotification prunes the cache.
 local function onNotificationActivated(notificationID, counterpartID, extra)
-	if not isValidCounterpart(counterpartID) then return end
-	UI.RemoveNotification(notificationID); dismissPairNotifications(counterpartID); showPanel(counterpartID)
+	if isValidCounterpart(counterpartID) then
+		UI.RemoveNotification(notificationID); dismissPairNotifications(counterpartID); showPanel(counterpartID)
+	else
+		local message = m_notificationMessages[notificationID]
+		UI.RemoveNotification(notificationID)
+		if message ~= nil and message ~= "" then
+			UI.AddPopup{ Type = ButtonPopupTypes.BUTTONPOPUP_TEXT, Data1 = 800, Text = message }
+		end
+	end
 end
 
 -- Send one sanitized non-empty value through the driver.
@@ -548,7 +553,6 @@ end
 VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, driver = {} }
 
 buildTailPool()
-Game.RegisterFunction("VoxDeorumPostNotification", postNotification)
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)
 LuaEvents.VoxDeorumDiploOpen.Add(onConverseOpen); LuaEvents.VoxDeorumDiplomacyNotificationActivated.Add(onNotificationActivated)
 Controls.CloseButton:RegisterCallback(Mouse.eLClick, hidePanel); Controls.GoodbyeButton:RegisterCallback(Mouse.eLClick, hidePanel)
