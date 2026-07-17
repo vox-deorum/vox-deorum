@@ -66,6 +66,10 @@ Registration is **game-side**: `VoxDeorumDiploPanel.lua` registers each function
 
 There is no separate deal-state push. Reflushes and increments carry transcript rows, and the panel derives state from them. For example, Reject follows this path: the player opens the active proposal in respond mode and selects Reject → the card shows an animated rejecting row → the panel emits `DiplomacyDealAction{reject, ProposalMessageID}` → the bridge runs the shared reject action with the thread lock and open-proposal guard → the bridge appends and pushes the `deal-reject` row → the panel adds the row, reruns the reducer, returns the proposal to view-only, and clears the pending state. This matches the Web client receiving a new message.
 
+The panel renderer is append-only during normal operation. Each visible append builds one new message instance, existing proposal cards refresh in place, and dot animation only changes pooled tail labels. The scroll follows new content only when it was already at the bottom. Open, reset, and user-requested prepends may rebuild the transcript; prepends restore the prior visible position approximately.
+
+The durable transcript stores raw markdown so the Web can continue rendering it with `marked`. At the game boundary, pushed transcript `Content` passes through `markdownToCiv5`, while notification summaries and messages pass through `markdownToPlain`. Raw Civ 5 markup tags embedded in content pass through the game conversion unchanged.
+
 ### Client-side derivation (the panel mirrors the Web client)
 
 The Web runs these on the browser side; the panel ports them to Lua (small, accepted duplications with cross-reference comments both ways: the same pattern as the `inspect-deal.lua` helper ports):
@@ -73,6 +77,7 @@ The Web runs these on the browser side; the panel ports them to Lua (small, acce
 - **`deriveActiveProposal`** (`vox-agents/src/utils/diplomacy/deal-reduce.ts`, ~40 lines; re-exported to the browser via `ui/src/utils/deal/deal-reduce.ts`): the latest `deal-proposal`/`deal-counter` is the active proposal; later `deal-accept`/`deal-reject`/`deal-enacted` referencing its `Payload.ProposalMessageID` set its status (acceptance sticky, enacted terminal); earlier proposals are superseded history. In the panel a proposal/counter row renders as the same message bubble as text (proposer's portrait and title line), carrying the deal's outward `message` and a two-column term list; the **entire bubble is clickable**: the active open proposal opens the deal screen in respond mode, where the actions live: incoming: Accept / Counter / Reject; your own: Counter / Retract (retract emits `Action="reject"`, matching the Web); settled or superseded proposals open view-only. Accept/reject/enacted rows render as ordinary bubbles, so outcomes read as part of the conversation.
 - **`isClosedThisTurn`** (`transcript-utils.ts`): derived from the last `close` row's `Turn` vs the current turn; locks input and deal actions until a later turn. The server still enforces this on every action: the derivation is display-only.
 - **Special-row filtering**: rows whose `Content` is a `{{{token}}}` trigger (e.g. `{{{Greeting}}}`) are hidden from display, as `visibleMessages` does on the Web.
+- **Notification tracking**: the panel tracks notification IDs in both directions. `Events.NotificationRemoved` prunes IDs after right-click dismissal or any native removal, and activation validates the counterpart before consuming pair notifications.
 
 ### Pending resolution (no tokens)
 
@@ -148,7 +153,7 @@ Verified against the code; this is the contract between this plan and the existi
 - VFS rename discipline: every vendored file must be renamed (`import="1"` same-name files silently override VP's originals for all native consumers).
 - Turn-boundary drift: submission runs an advisory local legality check against current game state. Enactment repeats the check authoritatively because the conversation and queued action may outlive the turn (parent specs §8).
 - Delta throttle (~1/s) keeps the push stream far from the bridge's ≥25-pending auto-pause threshold.
-- Per-batch instance building on huge reflushes: batches arrive as separate lua-calls; lazy-render older pages if profiling ever shows a frame hitch.
+- Append-only instance building on huge reflushes: batches arrive as separate Lua calls and build each visible row once. Lazy-render older pages if profiling ever shows a frame hitch.
 - Accepted Lua ports of shared logic (`deriveActiveProposal`, `inspect-deal.lua` helpers): cross-reference comments on both sides so drift is caught in review.
 - Delimiter sanitization is accepted infra debt (the framing itself is content-sensitive).
 

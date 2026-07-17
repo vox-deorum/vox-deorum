@@ -369,7 +369,7 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_LOADING_EARLIER"><Text>Loading earlier messages</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_THINKING"><Text>[ICON_STAR] Envoy is thinking</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_BUSY"><Text>The envoy is composing</Text></Row>
-		<Row Tag="TXT_KEY_VD_DIPLO_SENDING"><Text>sending...</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_SENDING"><Text>sending</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_ACCEPTING"><Text>Accepting</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_REJECTING"><Text>Rejecting</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_PROPOSING"><Text>Proposing</Text></Row>
@@ -380,5 +380,13 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_DECLARE_WAR_CONFIRM"><Text>Are you sure you want to declare war? This uses the native game action and takes effect immediately.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_NOTIFICATION_SUMMARY"><Text>Diplomatic message</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_NOTIFICATION_MESSAGE"><Text>Your envoy has opened a correspondence. Click to return to the conversation.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_SPEAKER_TITLE"><Text>{1_Leader} of {2_Civ}</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_UNKNOWN_LEADER"><Text>Unknown leader</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_UNKNOWN_CIV"><Text>Unknown civilization</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_OPEN"><Text>Open</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_ACCEPTED"><Text>Accepted</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_REJECTED"><Text>Rejected</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_ENACTED"><Text>Enacted</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_SUPERSEDED"><Text>Superseded</Text></Row>
 	</Language_en_US>
 </GameData>

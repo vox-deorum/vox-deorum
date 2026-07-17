@@ -74,10 +74,12 @@
 		</GridButton>
 		<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,94" Size="930,472" Vertical="1" AutoScrollBar="1">
 			<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
+			<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
 			<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
 			<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
 			<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
 		</ScrollPanel>
+		<Label ID="PanelStatus" Hidden="1" Anchor="C,C" Offset="0,-60" WrapWidth="800" Font="TwCenMT22"/>
 		<Box Anchor="C,B" Offset="0,126" Size="930,1" Color="204,170,90,160"/>
 		<Box ID="InputFrame" Anchor="L,B" Offset="60,80" Size="730,38" Color="0,0,0,180">
 			<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="710,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
