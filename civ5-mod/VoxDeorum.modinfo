@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Mod id="04c67ca5-d408-4b9e-be1b-bbc00e67fd8e" version="1">
   <Properties>
-    <Name>(1b) Vox Deorum</Name>
-    <Teaser>(0.1) Bringing LLMs to Vox Populi</Teaser>
+    <Name>(5) Vox Deorum</Name>
+    <Teaser>Bringing LLMs to Vox Populi - formerly 1b</Teaser>
     <Description>Companion mod for Vox Deorum, a Vox Populi modmod that brings LLM and Civ together.</Description>
     <Authors>John Chen</Authors>
     <SpecialThanks>Vox Populi Discord Server</SpecialThanks>
@@ -21,6 +21,8 @@
   </Properties>
   <Dependencies>
     <Mod id="d1b6328c-ff44-4b0d-aad7-c657f83610cd" minversion="0" maxversion="999" title="Community Patch" />
+    <Mod id="8411a7a8-dad3-4622-a18e-fcc18324c799" minversion="0" maxversion="999" title="(2) Vox Populi" />
+    <Mod id="24923240-e4fb-4bf6-8f0e-6e5b6cf4d3c2" minversion="0" maxversion="999" title="(3a) VP - EUI Compatibility Files" />
   </Dependencies>
   <References />
   <Blocks />
@@ -35,8 +37,9 @@
     <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/VoxDeorumHumanTrigger.lua</File>
     <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/VoxDeorumHumanTrigger.xml</File>
     <File md5="51019DAD724C64015E52F76203AEF3F6" import="1">UI/VoxDeorumSeat.lua</File>
-    <File md5="A8E76812335ED1A5C2FC13DE175E320B" import="1">UI/VoxDeorumConverse.lua</File>
-    <File md5="8A190A042B2CD528C1FCDEFCCB5C6F7D" import="0">UI/VoxDeorumConverse.xml</File>
+    <File md5="0B48244A3288243E652E725E4769CCDC" import="1">UI/VoxDeorumConverse.lua</File>
+    <File md5="916D11B7E1F531288A4EA566894E97AC" import="1">UI/LeaderHeadRoot.lua</File>
+    <File md5="F72A8A907AF7A24517A900793216B7F9" import="1">UI/LeaderHeadRoot.xml</File>
     <File md5="62598B91A0F44729D68AF51637B017B7" import="1">UI/VoxDeorumDiploPanel.lua</File>
     <File md5="990578FB1A22CF32C471C14005AE22FD" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
     <File md5="9D98F9C466CDB21E075C35D50CE7F6A7" import="0">UI/VoxDeorumDiploPanel.xml</File>
@@ -66,10 +69,6 @@
     <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumHumanTrigger.xml">
       <Name>VoxDeorumHumanTrigger</Name>
       <Description>Human-control trigger widget for reopening the decision panel</Description>
-    </EntryPoint>
-    <EntryPoint type="DiplomacyUIAddin" file="UI/VoxDeorumConverse.xml">
-      <Name>VoxDeorumConverse</Name>
-      <Description>Conversation launcher embedded in the leader screen</Description>
     </EntryPoint>
     <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumDiploPanel.xml">
       <Name>VoxDeorumDiploPanel</Name>

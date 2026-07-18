@@ -4,7 +4,7 @@ The `civ5-mod` is the Civilization V mod layer that sits directly on top of the 
 
 The mod contains no C++ of its own. It is an ordinary Civ V mod that the game's mod system loads, and everything it does is database edits, a map script, and a small in-game Lua addin.
 
-It is published as **"(1b) Vox Deorum"**, a companion mod to the broader Vox Deorum project. It declares a hard dependency on **Community Patch**: the modified gamecore must already be in place for any of this to mean anything. The mod's definition lives in `VoxDeorum.modinfo` — read that file first. It names every file the mod ships, what runs on activation, and the two entry points the game hooks into.
+It is published as **"(5) Vox Deorum"**, a companion mod to the broader Vox Deorum project. It declares a hard dependency on **Community Patch**: the modified gamecore must already be in place for any of this to mean anything. The mod's definition lives in `VoxDeorum.modinfo` — read that file first. It names every file the mod ships, what runs on activation, and the two entry points the game hooks into.
 
 ## What the mod adds
 
@@ -22,7 +22,7 @@ The mod's job is small but pivotal. Four things travel in the package.
 
 Loading follows the standard Civ V mod lifecycle, declared entirely in `VoxDeorum.modinfo`:
 
-1. The player enables **"(1b) Vox Deorum"** in the game's MODS menu. Because Community Patch is listed as a dependency, the gamecore DLL is already the modified one by the time this mod activates.
+1. The player enables **"(5) Vox Deorum"** in the game's MODS menu. Because Community Patch is listed as a dependency, the gamecore DLL is already the modified one by the time this mod activates.
 2. On activation, the mod's `OnModActivated` actions run the three database scripts (`VoxDeorum_Options.sql`, `VoxDeorum_Text.xml`, `VoxDeorum_Text.sql`) via `UpdateDatabase`. This is the moment the `IPC_CHANNEL` and `EVENTS_*` options get set, so the connection service comes alive when the game starts.
 3. At game start the two entry points take effect: the map script generates the world, and the `InGameUIAddin` loads its listeners into the UI runtime.
 

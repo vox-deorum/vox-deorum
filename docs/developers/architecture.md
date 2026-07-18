@@ -37,7 +37,7 @@ The gamecore is strict about *when* its state may change. So the service does al
 
 ### Civ 5 Mod — the switch that arms it
 
-The modified DLL ships with its outside channel **dormant**. The [civ5-mod](civ5-mod/overview.md) is what turns it on. It is a small Lua/SQL/XML package published as "(1b) Vox Deorum". On activation, the mod:
+The modified DLL ships with its outside channel **dormant**. The [civ5-mod](civ5-mod/overview.md) is what turns it on. It is a small Lua/SQL/XML package published as "(5) Vox Deorum". On activation, the mod:
 
 - Flips the gamecore options that enable the named-pipe channel and the game-event stream.
 - Registers a reproducible map script for research.

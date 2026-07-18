@@ -4,7 +4,7 @@
  * General-purpose: a diplomacy reply sets CounterpartID so clicking the
  * notification opens the conversation; any other LLM->human message omits it, and
  * clicking then shows Message in a text dialog. The notification is delivered by
- * the (1b) Vox Deorum mod's NOTIFICATION_VOX_DEORUM_DIPLOMACY type and survives
+ * civ5-mod's NOTIFICATION_VOX_DEORUM_DIPLOMACY type and survives
  * across turns until the player dismisses it.
  *
  * This replaces the previously mod-registered VoxDeorumPostNotification: a UI

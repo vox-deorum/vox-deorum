@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- DiplomacyUIAddin embedded beside the native leader-screen action buttons. -->
-<Context Font="TwCenMT18" FontStyle="Shadow" ColorSet="Beige_Black_Alpha">
-	<GridButton ID="ConverseButton" Hidden="1" Style="FrameButton200" String="TXT_KEY_VD_CONVERSE" ToolTip="TXT_KEY_VD_CONVERSE_TT"/>
-</Context>

@@ -67,5 +67,5 @@ echo.
 echo You can now:
 echo 1. Launch Civilization V
 echo 2. Go to MODS menu
-echo 3. Enable "(1b) Vox Deorum"
+echo 3. Enable "(5) Vox Deorum"
 echo.
