@@ -6,6 +6,7 @@ local PHASES = {
 	{ name = "closed", seconds = 2.8 }, { name = "normal", seconds = 3.5 },
 	{ name = "sending", seconds = 2.8 }, { name = "thinking", seconds = 2.8 },
 	{ name = "streaming", seconds = 3.2 }, { name = "deal-pending", seconds = 2.8 },
+	{ name = "pure-observer", seconds = 4.5 },
 	{ name = "ack-timeout", seconds = 3.5 }, { name = "reply-timeout", seconds = 3.5 },
 }
 local STREAM_TEXT = "Consider it carefully. My patience has limits, but there may still be room for agreement."
@@ -14,6 +15,7 @@ local m_phaseIndex, m_phaseSeconds = 1, 0
 local m_loadingEarlier, m_loadingEarlierSeconds = false, 0
 local m_optimisticText, m_counterAppended, m_streamCommitted = "We accept your terms.", false, false
 local m_nextID, m_dealStep = 300, 0
+local m_observerPhaseLogged = false
 
 -- Build one sample deal from the current conversation pair.
 local function buildDealA()
@@ -70,8 +72,15 @@ end
 -- Apply one mock phase through the public UI surface.
 local function applyPhase()
 	local name = PHASES[m_phaseIndex].name
+	VoxDeorumDiploUI.setMockPureObserver(name == "pure-observer")
+	if name == "pure-observer" and not m_observerPhaseLogged then
+		print("Vox Deorum: stage-01 mock is showing pure-observer presentation")
+		m_observerPhaseLogged = true
+	end
 	if name == "closed" then
 		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn); VoxDeorumDiploUI.setPhase("normal")
+	elseif name == "pure-observer" then
+		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn + 1); VoxDeorumDiploUI.setPhase("normal")
 	else
 		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn + 1)
 		if name == "sending" then VoxDeorumDiploUI.setPhase(name, m_optimisticText)

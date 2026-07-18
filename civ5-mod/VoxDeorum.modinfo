@@ -26,7 +26,7 @@
   <Blocks />
   <Files>
     <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
-    <File md5="049ADDD27E9ECF9AB5D7AC657BB3ECD4" import="0">Text/VoxDeorum_Text.xml</File>
+    <File md5="BC0805C2B4C83D1C08DE166C3785C107" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
@@ -34,10 +34,11 @@
     <File md5="6452B033FCDA2F344C0E4D046440F5D5" import="0">UI/VoxDeorumHumanPanel.xml</File>
     <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/VoxDeorumHumanTrigger.lua</File>
     <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/VoxDeorumHumanTrigger.xml</File>
-    <File md5="2C0A96C6FB90A61392A5BA0AC6C2F54D" import="1">UI/VoxDeorumConverse.lua</File>
+    <File md5="51019DAD724C64015E52F76203AEF3F6" import="1">UI/VoxDeorumSeat.lua</File>
+    <File md5="A8E76812335ED1A5C2FC13DE175E320B" import="1">UI/VoxDeorumConverse.lua</File>
     <File md5="8A190A042B2CD528C1FCDEFCCB5C6F7D" import="0">UI/VoxDeorumConverse.xml</File>
-    <File md5="AF964468BCC0C91E49F62A6C3C8870B6" import="1">UI/VoxDeorumDiploPanel.lua</File>
-    <File md5="4828C5DA846329DDA5D0D22A9EA5BC3D" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
+    <File md5="62598B91A0F44729D68AF51637B017B7" import="1">UI/VoxDeorumDiploPanel.lua</File>
+    <File md5="990578FB1A22CF32C471C14005AE22FD" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
     <File md5="9D98F9C466CDB21E075C35D50CE7F6A7" import="0">UI/VoxDeorumDiploPanel.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>

@@ -3,6 +3,7 @@
 -- Deal reduction mirrors vox-agents/src/utils/diplomacy/deal-reduce.ts.
 
 include("IconSupport")
+include("VoxDeorumSeat")
 
 local DELIMITER = "!@#$%^!"
 local DELIMITER_PATTERN = string.gsub(DELIMITER, "%W", "%%%1")
@@ -21,8 +22,26 @@ local m_dotSeconds, m_dotCount, m_animated = 0, 1, {}
 local m_tail = { sending = {}, streaming = {}, status = {}, closed = {} }
 local m_notificationIDs, m_notificationOwner, m_notificationMessages = {}, {}, {}
 local m_warPromptOpen = false
+local m_isPureObserver, m_mockPureObserver = false, false
 
 ContextPtr:SetHide(true)
+
+-- Return whether observer-only presentation applies to this panel session.
+local function isPureObserverMode()
+	return m_isPureObserver or m_mockPureObserver
+end
+
+-- Return whether the current UI still controls the effective seat bound on open.
+local function hasSeatAuthorityNow()
+	return not isPureObserverMode() and not VoxDeorumSeat.IsPureObserver() and VoxDeorumSeat.EffectiveSeat() == m_activePlayerID
+end
+
+-- Return whether the active observer is acting for its pinned civilization seat.
+local function isHumanStrategist()
+	local activePlayerID = Game.GetActivePlayer()
+	local activePlayer = Players[activePlayerID]
+	return activePlayer ~= nil and activePlayer:IsObserver() and not VoxDeorumSeat.IsPureObserver() and activePlayerID ~= m_activePlayerID
+end
 
 -- Fit the panel inside a 1024x720 screen while preserving the footer.
 local function layoutPanel()
@@ -91,6 +110,7 @@ end
 
 -- Return a localized speaker title.
 local function speakerTitle(playerID)
+	if isPureObserverMode() and playerID == m_activePlayerID then return Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_OBSERVER") end
 	local player = Players[playerID]
 	local leaderName, civName = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_UNKNOWN_LEADER"), Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_UNKNOWN_CIV")
 	if player ~= nil then
@@ -103,6 +123,10 @@ end
 
 -- Hook a leader portrait and civilization badge into a bubble.
 local function hookSpeaker(playerID, controls, ownSide)
+	if isPureObserverMode() and ownSide and playerID == m_activePlayerID then
+		controls.RightHeadFrame:SetHide(true)
+		return
+	end
 	local player = Players[playerID]
 	if player == nil then return end
 	local leader, head = GameInfo.Leaders[player:GetLeaderType()], ownSide and controls.RightHead or controls.LeftHead
@@ -140,8 +164,14 @@ end
 -- Produce the two deal term columns.
 local function dealColumns(deal)
 	local they, you = {}, {}
-	for _, item in ipairs((deal and deal.items) or {}) do table.insert(item.fromPlayerID == m_counterpartID and they or you, itemLabel(item)) end
-	for _, promise in ipairs((deal and deal.promises) or {}) do table.insert(promise.promiserID == m_counterpartID and they or you, promiseLabel(promise)) end
+	for _, item in ipairs((deal and deal.items) or {}) do
+		if item.fromPlayerID == m_counterpartID then table.insert(they, itemLabel(item))
+		elseif item.fromPlayerID == m_activePlayerID then table.insert(you, itemLabel(item)) end
+	end
+	for _, promise in ipairs((deal and deal.promises) or {}) do
+		if promise.promiserID == m_counterpartID then table.insert(they, promiseLabel(promise))
+		elseif promise.promiserID == m_activePlayerID then table.insert(you, promiseLabel(promise)) end
+	end
 	if #they == 0 then table.insert(they, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_NOTHING")) end
 	if #you == 0 then table.insert(you, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_NOTHING")) end
 	return table.concat(they, "[NEWLINE]"), table.concat(you, "[NEWLINE]")
@@ -165,7 +195,8 @@ end
 
 -- Open one deal card in respond or view mode.
 local function openDeal(row, respond)
-	LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, row.Payload and row.Payload.Deal or nil, respond and row.ID or nil)
+	local proposalID = respond and hasSeatAuthorityNow() and row.ID or nil
+	LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, row.Payload and row.Payload.Deal or nil, proposalID)
 end
 
 -- Apply the shared bubble geometry for one message instance.
@@ -233,7 +264,7 @@ local function refreshDealRow(row, reduction)
 	local pending = pendingProposalID(reduction) == row.ID
 	instance.Pending:SetHide(not pending)
 	if pending then addAnimated(instance.Pending, Locale.ConvertTextKey(pendingLabelKey()) .. " ") end
-	record.respond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn)
+	record.respond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and hasSeatAuthorityNow()
 	instance.CardButton:SetDisabled(pending); instance.CardButton:SetAlpha((pending or row.Pending) and 0.55 or 1)
 end
 
@@ -322,15 +353,20 @@ local function refreshInput()
 	elseif m_phase == "reply-timeout" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_ENVOY_UNAVAILABLE")
 	elseif m_phase ~= "normal" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_BUSY") end
 	Controls.InputFrame:SetHide(reason ~= nil); Controls.SendButton:SetHide(reason ~= nil); Controls.InputReason:SetHide(reason == nil); Controls.InputReason:SetText(reason or "")
-	Controls.ProposeButton:SetDisabled(reason ~= nil)
+	local hasSeatAuthority = hasSeatAuthorityNow()
+	Controls.ProposeButton:SetHide(not hasSeatAuthority)
+	Controls.ProposeButton:SetDisabled(reason ~= nil or not hasSeatAuthority)
 end
 
--- Return whether the active player may declare war on the counterpart right now.
+-- Return whether the effective seat may declare war on the counterpart right now.
 local function canDeclareWarNow()
+	if not hasSeatAuthorityNow() then return false end
 	local active, other = Players[m_activePlayerID], Players[m_counterpartID]
 	if active == nil or other == nil then return false end
 	local activeTeam, otherTeamID = Teams[active:GetTeam()], other:GetTeam()
-	return not activeTeam:IsAtWar(otherTeamID) and activeTeam:CanDeclareWar(otherTeamID)
+	if activeTeam:IsAtWar(otherTeamID) then return false end
+	if isHumanStrategist() then return activeTeam:CanDeclareWar(otherTeamID, m_activePlayerID) end
+	return activeTeam:CanDeclareWar(otherTeamID)
 end
 
 -- Update native war-action visibility.
@@ -350,6 +386,14 @@ local function rebuildRows(stickToBottom)
 	Controls.TranscriptStack:DestroyAllChildren(); m_rowInstances, m_lastBuiltTurn = {}, nil
 	for _, row in ipairs(m_rows) do buildRowInstance(row) end
 	refreshState(stickToBottom)
+end
+
+-- Force observer presentation for the stage-01 mock without changing real seat state.
+local function setMockPureObserver(flag)
+	local nextValue = flag == true
+	if m_mockPureObserver == nextValue then return end
+	m_mockPureObserver = nextValue
+	rebuildRows(isAtBottom())
 end
 
 -- Clear the panel before a new pair or server reflush.
@@ -453,13 +497,14 @@ end
 -- Return whether a target is a live major civilization.
 local function isValidCounterpart(counterpartID)
 	local other = Players[counterpartID]
-	return other ~= nil and other:IsAlive() and not other:IsMinorCiv() and not other:IsBarbarian()
+	return counterpartID ~= VoxDeorumSeat.EffectiveSeat() and other ~= nil and other:IsAlive() and not other:IsMinorCiv() and not other:IsBarbarian()
 end
 
 -- Show the dormant addin and ask the driver to populate it.
 local function showPanel(counterpartID)
 	if not isValidCounterpart(counterpartID) then return end
-	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = Game.GetActivePlayer(), counterpartID, Game.GetGameTurn(), false
+	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = VoxDeorumSeat.EffectiveSeat(), counterpartID, Game.GetGameTurn(), false
+	m_isPureObserver, m_mockPureObserver = VoxDeorumSeat.IsPureObserver(), false
 	Controls.WarDim:SetHide(true); reset(nil); ContextPtr:SetHide(false); ContextPtr:SetUpdate(onUpdate)
 	local driver = VoxDeorumDiploUI.driver
 	if driver ~= nil and driver.onOpen ~= nil then driver.onOpen(m_counterpartID, m_activePlayerID) end
@@ -512,18 +557,25 @@ local function onSend() sendText(Controls.InputBox:GetText()) end
 
 -- Open deal authoring when input is available.
 local function onProposeDeal()
-	if not inputIsLocked() then LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, nil, nil) end
+	if hasSeatAuthorityNow() and not inputIsLocked() then LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, nil, nil) end
 end
 
 -- Show the native-war confirmation overlay.
-local function onDeclareWar() m_warPromptOpen = true; Controls.WarDim:SetHide(false) end
+local function onDeclareWar()
+	if not canDeclareWarNow() then return end
+	m_warPromptOpen = true; Controls.WarDim:SetHide(false)
+end
 
 -- Cancel native-war confirmation.
 local function cancelDeclareWar() m_warPromptOpen = false; Controls.WarDim:SetHide(true) end
 
 -- Confirm native war against current team state.
 local function confirmDeclareWar()
-	if canDeclareWarNow() then Network.SendChangeWar(Players[m_counterpartID]:GetTeam(), true) end
+	if canDeclareWarNow() then
+		local counterpartTeamID = Players[m_counterpartID]:GetTeam()
+		if isHumanStrategist() then Teams[Players[m_activePlayerID]:GetTeam()]:DeclareWar(counterpartTeamID, false, m_activePlayerID)
+		else Network.SendChangeWar(counterpartTeamID, true) end
+	end
 	cancelDeclareWar(); refreshWarButton()
 end
 
@@ -550,7 +602,7 @@ local function showHideHandler(isHide, isInit)
 end
 
 -- Expose the stable interface shared by mock and transport drivers.
-VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, driver = {} }
+VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, setMockPureObserver = setMockPureObserver, driver = {} }
 
 buildTailPool()
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)

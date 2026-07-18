@@ -381,6 +381,7 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_NOTIFICATION_SUMMARY"><Text>Diplomatic message</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_NOTIFICATION_MESSAGE"><Text>Your envoy has opened a correspondence. Click to return to the conversation.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_SPEAKER_TITLE"><Text>{1_Leader} of {2_Civ}</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_OBSERVER"><Text>Observer</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_UNKNOWN_LEADER"><Text>Unknown leader</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_UNKNOWN_CIV"><Text>Unknown civilization</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_OPEN"><Text>Open</Text></Row>
