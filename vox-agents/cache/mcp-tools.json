@@ -1714,6 +1714,50 @@
     }
   },
   {
+    "name": "post-notification",
+    "description": "Post a native in-game notification to a human player. Set CounterpartID for a diplomacy reply; omit it for a general message.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "PlayerID": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21,
+          "description": "The player who receives the notification"
+        },
+        "CounterpartID": {
+          "description": "Optional diplomacy counterpart: when set, clicking opens the conversation with this player; when omitted, clicking shows Message in a dialog",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21
+        },
+        "Summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Short notification headline (shown in the notification panel)"
+        },
+        "Message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Full notification body (shown as tooltip, and in the dialog for counterpart-less notifications)"
+        }
+      },
+      "required": [
+        "PlayerID",
+        "Summary",
+        "Message"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "autoComplete": [
+        "PlayerID"
+      ]
+    }
+  },
+  {
     "name": "present-decision",
     "description": "Present a turn's strategic options to the in-game human-control panel (fetches get-options and fires VoxDeorumHumanDecision into the game).",
     "inputSchema": {
