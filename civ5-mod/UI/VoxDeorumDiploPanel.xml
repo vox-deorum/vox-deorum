@@ -22,7 +22,6 @@
 					<Grid ID="Border" Anchor="C,C" Size="758,50" Style="Grid9Frame"/>
 					<Label ID="LeftText" Anchor="L,T" Offset="42,10" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
 					<Label ID="RightText" Anchor="R,T" Offset="42,10" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
-					<Label ID="DealStatus" Anchor="R,B" Offset="42,10" Font="TwCenMT16"/>
 					<Label ID="TheyHeader" Anchor="L,T" Offset="42,40" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_THEY_GIVE"/>
 					<Label ID="YouHeader" Anchor="L,T" Offset="378,40" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_YOU_GIVE"/>
 					<Label ID="TheyGive" Anchor="L,T" Offset="42,64" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>

@@ -384,10 +384,11 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_OBSERVER"><Text>Observer</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_UNKNOWN_LEADER"><Text>Unknown leader</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_UNKNOWN_CIV"><Text>Unknown civilization</Text></Row>
-		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_OPEN"><Text>Open</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_DEAL_PREFIX"><Text>{1_Status} deal:</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_OPEN"><Text>Proposed</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_SUPERSEDED"><Text>Expired</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_ACCEPTED"><Text>Accepted</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_REJECTED"><Text>Rejected</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_ENACTED"><Text>Enacted</Text></Row>
-		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_SUPERSEDED"><Text>Superseded</Text></Row>
 	</Language_en_US>
 </GameData>

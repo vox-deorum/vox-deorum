@@ -15,6 +15,7 @@ local STATUS_KEYS = {
 	superseded = "TXT_KEY_VD_DIPLO_STATUS_SUPERSEDED",
 }
 local STATUS_COLORS = {
+	open = "COLOR_YELLOW",
 	accepted = "COLOR_POSITIVE_TEXT", rejected = "COLOR_NEGATIVE_TEXT",
 	enacted = "COLOR_POSITIVE_TEXT", superseded = "COLOR_GREY",
 }
@@ -94,6 +95,14 @@ end
 -- Wrap display text in one of Civilization V's named text colors.
 local function colorText(value, color)
 	return "[" .. color .. "]" .. tostring(value or "") .. "[ENDCOLOR]"
+end
+
+-- Combine a deal's current status and message into one summary line.
+local function dealSummary(row, status)
+	local statusText = Locale.ConvertTextKey(STATUS_KEYS[status] or STATUS_KEYS.superseded)
+	local prefix = colorText(Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_DEAL_PREFIX", statusText), STATUS_COLORS[status] or "COLOR_GREY")
+	local content = sanitizeText(row.Content)
+	return prefix .. (string.match(content, "^%s*$") == nil and (" " .. content) or "")
 end
 
 -- Return whether a transcript row is a hidden trigger token.
@@ -249,20 +258,31 @@ local function sizeBubble(instance, height)
 	instance.CardButton:SetSizeVal(m_geometry.bubbleWidth, height); instance.Bubble:SetSizeVal(m_geometry.bubbleWidth, height); instance.Border:SetSizeVal(m_geometry.bubbleWidth + 4, height + 4)
 end
 
+-- Reposition deal terms and size the card after its summary or pending state changes.
+local function resizeDealBubble(instance, pending)
+	local textControl = instance.LeftText:IsHidden() and instance.RightText or instance.LeftText
+	local dealTop = 14 + textControl:GetSizeY()
+	instance.TheyHeader:SetOffsetY(dealTop); instance.YouHeader:SetOffsetY(dealTop)
+	instance.TheyGive:SetOffsetY(dealTop + 24); instance.YouGive:SetOffsetY(dealTop + 24); instance.DealDivider:SetOffsetY(dealTop - 2)
+	local termsHeight = math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY())
+	instance.DealDivider:SetSizeY(termsHeight + 28)
+	sizeBubble(instance, dealTop + 24 + termsHeight + (pending and 30 or 14))
+end
+
 -- Bind all bubble details that do not depend on later rows.
 local function bindStaticRow(row, instance)
 	local own = row.SpeakerID == m_activePlayerID
-	local content = sanitizeText(row.Content)
+	local isDeal, deal = row.MessageType == "deal-proposal" or row.MessageType == "deal-counter", row.Payload and row.Payload.Deal
+	local content = isDeal and dealSummary(row, "open") or sanitizeText(row.Content)
 	local hasContent = string.match(content, "^%s*$") == nil
 	instance.LeftText:SetHide(own or not hasContent); instance.LeftHeadFrame:SetHide(own)
 	instance.RightText:SetHide(not own or not hasContent); instance.RightHeadFrame:SetHide(not own)
 	instance.CardButton:SetOffsetX(own and (m_geometry.rowWidth - m_geometry.bubbleWidth - 48) or 48)
 	instance.LeftText:SetWrapWidth(m_geometry.textWrapWidth); instance.RightText:SetWrapWidth(m_geometry.textWrapWidth)
 	local textControl = own and instance.RightText or instance.LeftText
-	local isDeal, deal = row.MessageType == "deal-proposal" or row.MessageType == "deal-counter", row.Payload and row.Payload.Deal
 	textControl:SetText(content); hookSpeaker(row.SpeakerID, instance, own)
 	instance.TheyHeader:SetHide(not isDeal); instance.YouHeader:SetHide(not isDeal); instance.TheyGive:SetHide(not isDeal); instance.YouGive:SetHide(not isDeal)
-	instance.DealDivider:SetHide(not isDeal); instance.DealStatus:SetHide(true); instance.Pending:SetHide(true)
+	instance.DealDivider:SetHide(not isDeal); instance.Pending:SetHide(true)
 	local measuredTextHeight = hasContent and textControl:GetSizeY() or 0
 	local height = 10 + math.max(24, measuredTextHeight) + 12
 	if isDeal then
@@ -273,13 +293,10 @@ local function bindStaticRow(row, instance)
 		instance.TheyHeader:SetOffsetX(42); instance.TheyGive:SetOffsetX(42); instance.TheyGive:SetWrapWidth(m_geometry.dealColumnWidth)
 		instance.YouHeader:SetOffsetX(m_geometry.dealYouX); instance.YouGive:SetOffsetX(m_geometry.dealYouX); instance.YouGive:SetWrapWidth(m_geometry.dealColumnWidth)
 		instance.DealDivider:SetOffsetX(m_geometry.dealDividerX)
-		local dealTop = hasContent and (14 + measuredTextHeight) or 14
-		instance.TheyHeader:SetOffsetY(dealTop); instance.YouHeader:SetOffsetY(dealTop); instance.TheyGive:SetOffsetY(dealTop + 24); instance.YouGive:SetOffsetY(dealTop + 24); instance.DealDivider:SetOffsetY(dealTop - 2)
-		local termsHeight = math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY())
-		instance.DealDivider:SetSizeY(termsHeight + 28)
-		height = dealTop + 24 + termsHeight + 28
+		resizeDealBubble(instance, false)
+	else
+		sizeBubble(instance, height)
 	end
-	sizeBubble(instance, height)
 	instance.CardButton:SetDisabled(not isDeal); instance.CardButton:SetAlpha(row.Pending and 0.55 or 1)
 	return isDeal
 end
@@ -316,9 +333,9 @@ local function refreshDealRow(row, reduction)
 	if record == nil then return end
 	local instance, active = record.controls, reduction.active ~= nil and reduction.active.ID == row.ID
 	local status = active and reduction.status or "superseded"
-	local statusText = Locale.ToUpper(Locale.ConvertTextKey(STATUS_KEYS[status] or STATUS_KEYS.superseded))
-	instance.DealStatus:SetText(colorText(statusText, STATUS_COLORS[status] or "COLOR_GREY")); instance.DealStatus:SetHide(status == "open")
 	local pending = pendingProposalID(reduction) == row.ID
+	local textControl = row.SpeakerID == m_activePlayerID and instance.RightText or instance.LeftText
+	textControl:SetText(dealSummary(row, status)); resizeDealBubble(instance, pending)
 	instance.Pending:SetHide(not pending)
 	if pending then addAnimated(instance.Pending, Locale.ConvertTextKey(pendingLabelKey()) .. " ") end
 	record.respond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and hasSeatAuthorityNow()
