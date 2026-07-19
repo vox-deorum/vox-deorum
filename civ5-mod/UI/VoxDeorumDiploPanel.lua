@@ -46,9 +46,9 @@ local function isPureObserverMode()
 	return m_isPureObserver or m_mockPureObserver
 end
 
--- Return whether the current UI still controls the effective seat bound on open.
-local function hasSeatAuthorityNow()
-	return not isPureObserverMode() and not VoxDeorumSeat.IsPureObserver() and VoxDeorumSeat.EffectiveSeat() == m_activePlayerID
+-- Return whether the current UI still controls the deal actor bound on open.
+local function isBoundActorCurrent()
+	return VoxDeorumSeat.EffectiveSeat() == m_activePlayerID
 end
 
 -- Return whether the active observer is acting for its pinned civilization seat.
@@ -248,7 +248,7 @@ end
 
 -- Open one deal card in respond or view mode.
 local function openDeal(row, respond)
-	local proposalID = respond and hasSeatAuthorityNow() and row.ID or nil
+	local proposalID = respond and isBoundActorCurrent() and row.ID or nil
 	LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, row.Payload and row.Payload.Deal or nil, proposalID)
 end
 
@@ -261,7 +261,7 @@ end
 -- Reposition deal terms and size the card after its summary or pending state changes.
 local function resizeDealBubble(instance, pending)
 	local textControl = instance.LeftText:IsHidden() and instance.RightText or instance.LeftText
-	local dealTop = 14 + textControl:GetSizeY()
+	local dealTop = 18 + textControl:GetSizeY()
 	instance.TheyHeader:SetOffsetY(dealTop); instance.YouHeader:SetOffsetY(dealTop)
 	instance.TheyGive:SetOffsetY(dealTop + 24); instance.YouGive:SetOffsetY(dealTop + 24); instance.DealDivider:SetOffsetY(dealTop - 2)
 	local termsHeight = math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY())
@@ -338,7 +338,7 @@ local function refreshDealRow(row, reduction)
 	textControl:SetText(dealSummary(row, status)); resizeDealBubble(instance, pending)
 	instance.Pending:SetHide(not pending)
 	if pending then addAnimated(instance.Pending, Locale.ConvertTextKey(pendingLabelKey()) .. " ") end
-	record.respond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and hasSeatAuthorityNow()
+	record.respond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and isBoundActorCurrent()
 	instance.CardButton:SetDisabled(pending); instance.CardButton:SetAlpha((pending or row.Pending) and 0.55 or 1)
 end
 
@@ -420,15 +420,15 @@ local function refreshInput()
 	if animated then addAnimated(Controls.InputReason, reason .. " ") else Controls.InputReason:SetText(reason or "") end
 	local canRetry = (m_phase == "ack-timeout" or m_phase == "reply-timeout") and not m_loadingEarlier
 	Controls.InputRetryButton:SetHide(not canRetry)
-	local hasSeatAuthority = hasSeatAuthorityNow()
-	Controls.ProposeButton:SetHide(not hasSeatAuthority)
-	Controls.ProposeButton:SetDisabled(reason ~= nil or not hasSeatAuthority)
+	local canInteractWithDeals = isBoundActorCurrent()
+	Controls.ProposeButton:SetHide(not canInteractWithDeals)
+	Controls.ProposeButton:SetDisabled(reason ~= nil or not canInteractWithDeals)
 	reflowActionStack()
 end
 
 -- Return whether the effective seat may declare war on the counterpart right now.
 local function canDeclareWarNow()
-	if not hasSeatAuthorityNow() then return false end
+	if isPureObserverMode() or VoxDeorumSeat.IsPureObserver() or not isBoundActorCurrent() then return false end
 	local active, other = Players[m_activePlayerID], Players[m_counterpartID]
 	if active == nil or other == nil then return false end
 	local activeTeam, otherTeamID = Teams[active:GetTeam()], other:GetTeam()
@@ -761,7 +761,7 @@ local function onSend() sendText(Controls.InputBox:GetText()) end
 
 -- Open deal authoring when input is available.
 local function onProposeDeal()
-	if hasSeatAuthorityNow() and not inputIsLocked() then LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, nil, nil) end
+	if isBoundActorCurrent() and not inputIsLocked() then LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, nil, nil) end
 end
 
 -- Show the native-war confirmation overlay.
