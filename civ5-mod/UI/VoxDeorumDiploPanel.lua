@@ -257,7 +257,7 @@ end
 local function resizeDealBubble(instance, pending)
 	local textControl = instance.LeftText:IsHidden() and instance.RightText or instance.LeftText
 	local dealTop = 18 + textControl:GetSizeY()
-	instance.TheyHeader:SetOffsetY(dealTop); instance.YouHeader:SetOffsetY(dealTop)
+	instance.TheyHeader:SetOffsetY(dealTop + 2); instance.YouHeader:SetOffsetY(dealTop + 2)
 	instance.TheyGive:SetOffsetY(dealTop + 24); instance.YouGive:SetOffsetY(dealTop + 24); instance.DealDivider:SetOffsetY(dealTop - 2)
 	local termsHeight = math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY())
 	instance.DealDivider:SetSizeY(termsHeight + 28)
@@ -621,7 +621,7 @@ local function presentPanel(counterpartID, mode)
 	cancelPending()
 	local wasQueued = m_presentation == "leader"
 	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = VoxDeorumSeat.EffectiveSeat(), counterpartID, Game.GetGameTurn(), false
-	m_isPureObserver = VoxDeorumSeat.IsPureObserver()
+	m_isPureObserver, m_mockPureObserver = VoxDeorumSeat.IsPureObserver(), false
 	populateHeader()
 	m_presentation = mode
 	Controls.WarDim:SetHide(true); Controls.MainGrid:SetHide(false)
@@ -805,7 +805,7 @@ local function showHideHandler(isHide, isInit)
 end
 
 -- Expose the stable interface shared by mock and transport drivers.
-VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, driver = {} }
+VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, setMockPureObserver = setMockPureObserver, driver = {} }
 
 buildTailPool()
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)
