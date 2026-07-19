@@ -193,20 +193,51 @@ local function prettyType(value)
 	return string.gsub(string.lower(string.gsub(tostring(value or "Trade item"), "_", " ")), "(%a)([%w']*)", titleWord)
 end
 
+local ITEM_ICONS = {
+	GOLD = "[ICON_GOLD]", GOLD_PER_TURN = "[ICON_GOLD]", CITIES = "[ICON_CAPITAL]",
+	TECHS = "[ICON_RESEARCH]", MAPS = "[ICON_TRADE]", OPEN_BORDERS = "[ICON_MOVES]",
+	DEFENSIVE_PACT = "[ICON_STRENGTH]", RESEARCH_AGREEMENT = "[ICON_RESEARCH]",
+	PEACE_TREATY = "[ICON_PEACE]", THIRD_PARTY_PEACE = "[ICON_PEACE]",
+	THIRD_PARTY_WAR = "[ICON_WAR]", ALLOW_EMBASSY = "[ICON_DIPLOMAT]",
+	DECLARATION_OF_FRIENDSHIP = "[ICON_TEAM]", VOTE_COMMITMENT = "[ICON_INFLUENCE]",
+	VASSALAGE = "[ICON_SILVER_FIST]", VASSALAGE_REVOKE = "[ICON_SILVER_FIST]",
+}
+
+-- Format an optional deal duration consistently.
+local function durationSuffix(duration)
+	return duration and (" (" .. tostring(duration) .. " turns)") or ""
+end
+
 -- Format one canonical trade item.
 local function itemLabel(item)
-	local kind, duration = item.itemType, item.duration and (" (" .. tostring(item.duration) .. "t)") or ""
-	if kind == "GOLD" then return tostring(item.amount or 0) .. " Gold" end
-	if kind == "GOLD_PER_TURN" then return tostring(item.amount or 0) .. " Gold per turn" .. duration end
-	if kind == "RESOURCES" then return tostring(item.quantity or 0) .. " " .. (item.name or ("Resource #" .. tostring(item.resourceID))) .. duration end
-	return (item.name or prettyType(kind)) .. duration
+	local kind, duration = item.itemType, durationSuffix(item.duration)
+	local icon = ITEM_ICONS[kind]
+	local prefix = icon and (icon .. " ") or ""
+	if kind == "GOLD" then return prefix .. tostring(item.amount or 0) .. " Gold" end
+	if kind == "GOLD_PER_TURN" then return prefix .. tostring(item.amount or 0) .. " Gold per Turn" .. duration end
+	if kind == "RESOURCES" then
+		local resource = item.resourceID ~= nil and GameInfo.Resources[item.resourceID] or nil
+		local resourceIcon = resource and resource.IconString or nil
+		local resourcePrefix = resourceIcon ~= nil and resourceIcon ~= "" and (resourceIcon .. " ") or ""
+		return resourcePrefix .. tostring(item.quantity or 0) .. " " .. (item.name or ("Resource #" .. tostring(item.resourceID))) .. duration
+	end
+	if kind == "THIRD_PARTY_PEACE" then return prefix .. "Peace with " .. (item.name or prettyType(kind)) .. duration end
+	if kind == "THIRD_PARTY_WAR" then return prefix .. "War with " .. (item.name or prettyType(kind)) .. duration end
+	if kind == "ALLOW_EMBASSY" then return prefix .. "Embassy" .. duration end
+	if kind == "DECLARATION_OF_FRIENDSHIP" then return prefix .. "Declaration of Friendship" .. duration end
+	if kind == "VOTE_COMMITMENT" then
+		local votes = item.numVotes ~= nil and (" (" .. tostring(item.numVotes) .. " votes)") or ""
+		return prefix .. (item.name or prettyType(kind)) .. votes .. duration
+	end
+	if kind == "VASSALAGE_REVOKE" then return prefix .. "Revoke Vassalage" .. duration end
+	return prefix .. (item.name or prettyType(kind)) .. duration
 end
 
 -- Format one canonical promise term.
 local function promiseLabel(promise)
 	local names = { MILITARY = "Won't attack / will move troops away", EXPANSION = "Won't settle near you", BORDER = "Won't buy plots near your cities", NO_DIGGING = "Won't dig your antiquity sites", COOP_WAR = "Will join a cooperative war" }
-	local duration = promise.duration and (" (" .. tostring(promise.duration) .. "t)") or ""
-	return (names[promise.promiseType] or prettyType(promise.promiseType)) .. duration .. " (promise)"
+	local duration = durationSuffix(promise.duration)
+	return "[ICON_DIPLOMAT] Promise: " .. (names[promise.promiseType] or prettyType(promise.promiseType)) .. duration
 end
 
 -- Produce the two deal term columns.
