@@ -190,10 +190,11 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 - There is exactly **one conversation per pair of major-civ players** in a game, so the store needs **no thread identity, no thread table, and no status column**:
   - a message is keyed by the game and a **player pair ordered by `playerID`** (`Player1ID = min(playerID)`, `Player2ID = max(playerID)`), plus the speaker for each row;
   - the conversation *is* the ID-ordered list of appended messages between them.
-- The transcript message type enum is exactly: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, `deal-enacted`.
+- The transcript message type enum is exactly: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, `deal-enacted`, plus four **game-sourced** types written only by the game-event bridge (never by `append-message`): `declare-war`, `friendship`, `denounce`, `promise`.
+- **The transcript also records in-game diplomacy** (stage 1.1): the game-event bridge turns `DealMade` into a `deal-enacted` row (`Payload.Source = 'game'`, no `ProposalMessageID`), and `DeclareWar` / `FriendshipDeclared` / `PlayerDenounced` / `PromiseChanged` into the four game-sourced row types, so the conversation is the complete bilateral record. Chat-enacted deals and chat-made promises are not double-recorded — the game events carry `EnactedByAgent` / `MadeViaAgentDeal` flags and the bridge skips them. Game rows use the `game` role on both endpoints.
 - This persists across restarts and is what the Web reads. It does **not** store LLM internals (reasoning, agent scratch state, tool traces), which stay transient in vox-agents and may be lost between restarts. Deal proposal messages carry `Payload.Deal` and may carry `Payload.Value1` / `Payload.Value2`, but not legality or live DLL state.
 - Both participant visibility flags are set on every transcript row. The transcript is private to the two civs, but either side can read the same ordered conversation.
-- `append-message` is an archival write only. It does not stream responses, notify clients, run agents, enact deals, or decide whether a deal is current/accepted. Web and agent orchestration layers perform those actions separately, then append the resulting transcript messages.
+- `append-message` is an archival write only. It does not stream responses, notify clients, run agents, enact deals, or decide whether a deal is current/accepted. Web and agent orchestration layers perform those actions separately, then append the resulting transcript messages. It refuses the game-sourced types (and `deal-accept` / `deal-enacted`), which have dedicated writers.
 
 #### Threads live only in vox-agents
 
@@ -277,6 +278,7 @@ Durable transcript storage and the deal bridge:
   - Legality and estimation are unified here — there is no separate estimate tool.
 - A non-read-only **enact-agent-deal** tool that calls the new DLL enactment bindings (`Deal:Enact` + `Player:SetPromise`) with a complete deal object, passing both the trade items **and the promise commitment list**. The DLL surface is stateless; the tool is transcript-aware — it takes the proposal message ID, checks for a prior `deal-enacted` on it (idempotent), enacts, and records `deal-enacted` on success. Callers reduce the transcript only to choose the proposal to enact.
 - Tools follow the existing `ToolBase` / `LuaFunctionTool` pattern and registry (`tools/index.ts`).
+- A **game-event → transcript bridge** (stage 1.1) hooked into game-event handling: in-game `DealMade` (unless `EnactedByAgent`), `DeclareWar`, `FriendshipDeclared`, `PlayerDenounced`, and `PromiseChanged` (unless `MadeViaAgentDeal`) become transcript rows for the affected pair, idempotent across DLL reconnects (rows carry the source `EventID` and are purged with the event resync).
 
 ### `vox-agents`
 
@@ -301,6 +303,7 @@ The *only* gameplay code change:
 - Inspection reuses `lIsPossibleToTradeItem` / `lGetReasonsItemUntradeable`, which already exist on the Lua-exposed `CvDeal` (`CvLuaDeal.cpp`) but are not yet wrapped by mcp-server — **plus a new read-only getter** that wraps `CvDealAI::GetTradeItemValue` per item, both directions, for the value estimates. The legality/reason wrapper passes the same `bTreatAsHumanToHuman = true` override so the screen's per-term legality matches what enactment will allow.
 - The **defaulted `bTreatAsHumanToHuman` override** on `IsPossibleToTradeItem` / `AreAllTradeItemsValid`, plus the matching inspection/reason wrapper path (§4): a backward-compatible signature extension whose default reproduces the existing computed value, so the stock deal screen and AI paths are unchanged. `CvDealAI` is untouched.
 - **No `TradeableItems` enum change, no new save fields, and no new acceptability/valuation logic** (promise agreeability is factor-based reasoning in the agent, § Deal valuation visible to both agents). Requires a DLL rebuild (no version bump); the normal pathway behaves exactly as before.
+- Stage 1.1 adds **event forwarding only** (no gameplay change): an `EnactedByAgent` flag on the `DealMade` event, and new `PromiseChanged` / `FriendshipDeclared` / `PlayerDenounced` events fired from the existing promise/DoF/denounce state setters.
 
 ### Web UI (`vox-agents/ui`)
 

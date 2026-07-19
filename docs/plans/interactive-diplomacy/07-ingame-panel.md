@@ -6,7 +6,7 @@
 
 ## Objective
 
-Give a human playing their own civilization the Web v1 diplomacy experience inside Civ V, and extend Converse to observer sessions: a human strategist acts fully as the pinned civilization, while a pure observer uses the spokesperson voice and its live concrete observer slot. All three live-attested states can negotiate deals, including proposing, countering, accepting, rejecting, retracting, inspecting, and enacting them. Pure observers still cannot declare war. Add a **Converse** button without changing existing leader-screen options, a native-styled **chat panel** over the durable pair transcript, streamed replies, and a vendored trade screen with local human-to-human legality and values. Include promises and enact accepted deals through the stage-6 `enact-agent-deal` entrypoint. Native notifications preserve replies across turns, like ancient-world mail. The Web and game share storage and agents, but do not synchronize in real time (specs §6, §9).
+Give a human playing their own civilization the Web v1 diplomacy experience inside Civ V, and extend Converse to observer sessions: a human strategist acts fully as the pinned civilization, while a pure observer uses the spokesperson voice and its live concrete observer slot. All three live-attested states can negotiate deals, including proposing, countering, accepting, rejecting, retracting, inspecting, and enacting them. Pure observers still cannot declare war. Add a **Converse** button without changing existing leader-screen options, a native-styled **chat panel** over the durable pair transcript, streamed replies, and the game's own trade screen reused in place with local human-to-human legality. Include promises and enact accepted deals through the stage-6 `enact-agent-deal` entrypoint. Native notifications preserve replies across turns, like ancient-world mail. The Web and game share storage and agents, but do not synchronize in real time (specs §6, §9).
 
 The panel is a **second client of the existing backend**: it reuses the Web chat engine (`runChatTurn`), the deal helpers (extracted into transport-neutral actions where they were route-shaped), the transcript store, and the Web's client-side derivation model: the server pushes transcript **rows**; the panel derives deal state in Lua exactly as the browser does with `deriveActiveProposal`.
 
@@ -20,8 +20,8 @@ The panel is a **second client of the existing backend**: it reuses the Web chat
  │  the push fns, derives deal    │ ─────────► │  call-lua-function tool        │
  │  state from rows               │            │ vox-agents (all logic):        │
  │ Native notifications (01)      │ ◄───────── │  ingame-bridge → runChatTurn / │
- │ Vendored trade screen (02):     │  4 push    │  deal action helpers /         │
- │  local legality/values         │  functions │  enact-agent-deal              │
+ │ Native trade screen reused (02):│  4 push    │  deal action helpers /         │
+ │  local h2h legality            │  functions │  enact-agent-deal              │
  └────────────────────────────────┘            └────────────────────────────────┘
 ```
 
@@ -32,7 +32,7 @@ Build order is **UI-first**: the two mod-UI stages run entirely on mock data in 
 | Stage | Plan | Objective |
 |---|---|---|
 | 7.01 | [01-ui-groundwork.md](07-ingame-panel/01-ui-groundwork.md) | Mock-driven Converse button, native notification channel, and chat panel, plus an observer retrofit of the shipped stage-01 Lua. Smoke test: Converse posts one notification; clicking it opens the panel. |
-| 7.02 | [02-deal-screen-ui.md](07-ingame-panel/02-deal-screen-ui.md) | Vendored, renamed trade screen driven by a mock `DealPayload` against real game state: local h2h legality/values, promises category, DealPayload-v1 serialization ending at stub emits. |
+| 7.02 | [02-deal-screen-ui.md](07-ingame-panel/02-deal-screen-ui.md) | Native VP EUI trade screen reused in place (included, not copied) driven by a mock `DealPayload` against real game state: local h2h legality via a scratch-deal proxy, native deal-value bar, promises category, DealPayload-v1 serialization ending at stub emits. |
 | 7.03 | [03-transport.md](07-ingame-panel/03-transport.md) | DLL buffer and pool fixes, event schemas and whitelist, generic `call-lua-function`, paginated transcript reads, and an end-to-end probe of the ingame-bridge skeleton. |
 | 7.04 | [04-wiring.md](07-ingame-panel/04-wiring.md) | Live conversation through `runChatTurn` with a game streaming sink, deal moves through the extracted shared actions, enactment, notifications on replies, greeting parity, spokesperson downgrade, and observer notification targeting. |
 | 7.05 | [05-hardening.md](07-ingame-panel/05-hardening.md) | Degradation, watch-item and regression sweeps; comparability review vs the Web flow. |
