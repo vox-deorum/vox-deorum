@@ -16,20 +16,18 @@
 		</Container>
 	</Instance>
 	<Instance Name="MessageInstance">
-		<Container ID="Row" Size="894,116">
-			<Button ID="CardButton" Anchor="L,T" Offset="48,0" Size="754,108" StateOffsetIncrement="0,0">
-				<Grid ID="Bubble" Anchor="L,T" Size="754,108" Style="GridBlackIndent8">
-					<Grid ID="Border" Anchor="C,C" Size="758,112" Style="Grid9Frame"/>
-					<Label ID="LeftTitle" Anchor="L,T" Offset="42,12" Font="TwCenMT20" FontStyle="Shadow"/>
-					<Label ID="RightTitle" Anchor="R,T" Offset="42,12" Font="TwCenMT20" FontStyle="Shadow"/>
-					<Label ID="LeftText" Anchor="L,T" Offset="42,38" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
-					<Label ID="RightText" Anchor="R,T" Offset="42,38" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
+		<Container ID="Row" Size="894,50">
+			<Button ID="CardButton" Anchor="L,T" Offset="48,0" Size="754,46" StateOffsetIncrement="0,0">
+				<Grid ID="Bubble" Anchor="L,T" Size="754,46" Style="GridBlackIndent8">
+					<Grid ID="Border" Anchor="C,C" Size="758,50" Style="Grid9Frame"/>
+					<Label ID="LeftText" Anchor="L,T" Offset="42,10" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
+					<Label ID="RightText" Anchor="R,T" Offset="42,10" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
 					<Label ID="DealStatus" Anchor="R,B" Offset="42,10" Font="TwCenMT16"/>
-					<Label ID="TheyHeader" Anchor="L,T" Offset="42,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_THEY_GIVE"/>
-					<Label ID="YouHeader" Anchor="L,T" Offset="378,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_YOU_GIVE"/>
-					<Label ID="TheyGive" Anchor="L,T" Offset="42,100" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>
-					<Label ID="YouGive" Anchor="L,T" Offset="378,100" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>
-					<Box ID="DealDivider" Anchor="L,T" Offset="368,74" Size="1,80" Color="204,170,90,140"/>
+					<Label ID="TheyHeader" Anchor="L,T" Offset="42,40" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_THEY_GIVE"/>
+					<Label ID="YouHeader" Anchor="L,T" Offset="378,40" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_YOU_GIVE"/>
+					<Label ID="TheyGive" Anchor="L,T" Offset="42,64" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>
+					<Label ID="YouGive" Anchor="L,T" Offset="378,64" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>
+					<Box ID="DealDivider" Anchor="L,T" Offset="368,38" Size="1,80" Color="204,170,90,140"/>
 					<Label ID="Pending" Anchor="L,B" Offset="42,10" Font="TwCenMT16" Color="128,128,128,255"/>
 				</Grid>
 				<Image ID="LeftHeadFrame" Anchor="L,T" Offset="-32,-18" Texture="IconFrame64.dds" Size="64,64">
@@ -58,7 +56,23 @@
 	</Instance>
 	<Box ID="MainGrid" Anchor="C,B" Size="1050,620" Color="0,0,0,0" ConsumeMouse="1">
 		<Box ID="ContentColumn" Anchor="L,B" Size="1004,620" Color="0,0,0,0">
-			<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,18" Size="924,512" Vertical="1" AutoScrollBar="1">
+			<Grid ID="HeaderBar" Anchor="C,T" Offset="0,6" Size="924,36" Style="GridBlackIndent8">
+				<Image ID="HeaderLeftCivIconBG" Size="32,32" Anchor="L,C" Offset="10,0" TextureOffset="32,0" Texture="CivIconBGSizes.dds">
+					<Image ID="HeaderLeftCivIconShadow" Size="24,24" Anchor="C,C" Offset="1,1" Color="Black.128"/>
+					<Image ID="HeaderLeftCivIcon" Size="24,24" Anchor="C,C"/>
+				</Image>
+				<Label ID="HeaderLeftTitle" Anchor="L,C" Offset="50,0" TruncateWidth="270" Font="TwCenMT20" FontStyle="Shadow"/>
+				<GridButton ID="LoadEarlierButton" Anchor="C,C" Size="180,28" Style="SmallButton" StateOffsetIncrement="0,0">
+					<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
+				</GridButton>
+				<Label ID="HeaderRightTitle" Anchor="R,C" Offset="50,0" TruncateWidth="270" Font="TwCenMT20" FontStyle="Shadow"/>
+				<Image ID="HeaderRightCivIconBG" Size="32,32" Anchor="R,C" Offset="10,0" TextureOffset="32,0" Texture="CivIconBGSizes.dds">
+					<Image ID="HeaderRightCivIconShadow" Size="24,24" Anchor="C,C" Offset="1,1" Color="Black.128"/>
+					<Image ID="HeaderRightCivIcon" Size="24,24" Anchor="C,C"/>
+				</Image>
+			</Grid>
+			<Box ID="HeaderRule" Anchor="C,T" Offset="0,44" Size="924,1" Color="204,170,90,160"/>
+			<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,50" Size="924,512" Vertical="1" AutoScrollBar="1">
 				<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="894,0" Padding="4" StackGrowth="Bottom"/>
 				<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="894,0" Padding="4" StackGrowth="Bottom"/>
 				<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
@@ -80,7 +94,6 @@
 				</GridButton>
 			</Grid>
 		</Box>
-		<GridButton ID="LoadEarlierButton" Anchor="R,T" Offset="40,16" Style="FrameButton200" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER"/>
 		<Stack ID="ActionStack" Anchor="R,B" Offset="40,40" Padding="10" StackGrowth="Top">
 			<GridButton ID="GoodbyeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_GOODBYE" ToolTip="TXT_KEY_VD_DIPLO_GOODBYE_TT"/>
 			<GridButton ID="ProposeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"/>

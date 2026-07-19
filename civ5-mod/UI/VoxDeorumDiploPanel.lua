@@ -63,11 +63,12 @@ local function layoutPanel()
 	local targetH = math.max(520, math.floor(screenH * 0.70))
 	local columnW = math.max(760, screenW - RESERVED_RIGHT - OUTER_GUTTER)
 	local columnX = math.max(12, math.floor((screenW - RESERVED_RIGHT - columnW) / 2))
-	local transcriptW, transcriptH = columnW - 80, math.max(260, targetH - 104)
+	local transcriptW, transcriptH = columnW - 80, math.max(260, targetH - 136)
 	local rowW, bubbleW = transcriptW - 30, math.min(1120, transcriptW - 170)
 	local inputW = math.max(400, columnW - 320)
 	local inputStatusW = columnW - 120
 	local dealColumnW = math.floor((bubbleW - 42 - 60 - 20) / 2)
+	local headerTitleW = math.max(120, math.min(270, math.floor(transcriptW / 2) - 150))
 	m_geometry = {
 		contentWidth = columnW, transcriptWidth = transcriptW, rowWidth = rowW,
 		bubbleWidth = bubbleW, textWrapWidth = bubbleW - 88, inputWidth = inputW,
@@ -77,6 +78,9 @@ local function layoutPanel()
 	Controls.MainGrid:SetSizeVal(screenW, targetH); Controls.ContentColumn:SetSizeVal(columnW, targetH); Controls.ContentColumn:SetOffsetVal(columnX, 0); Controls.WarDim:SetSizeVal(screenW, targetH)
 	Controls.TranscriptScroll:SetSizeVal(transcriptW, transcriptH); Controls.TranscriptBar:SetSizeY(math.max(200, transcriptH - 42))
 	Controls.TranscriptStack:SetSizeX(rowW); Controls.TailStack:SetSizeX(rowW); Controls.FooterDivider:SetSizeX(transcriptW)
+	Controls.HeaderBar:SetSizeX(transcriptW); Controls.HeaderRule:SetSizeX(transcriptW)
+	Controls.HeaderLeftTitle:SetTruncateWidth(headerTitleW); Controls.HeaderRightTitle:SetTruncateWidth(headerTitleW)
+	Controls.HeaderBar:ReprocessAnchoring()
 	Controls.InputFrame:SetSizeX(inputW); Controls.InputFrameBorder:SetSizeVal(inputW + 4, 42); Controls.InputBox:SetSizeX(inputW - 20)
 	Controls.InputStatusSlot:SetSizeVal(inputStatusW, 38); Controls.InputReason:SetWrapWidth(math.max(320, inputStatusW - 160))
 	Controls.MainGrid:ReprocessAnchoring(); Controls.ContentColumn:ReprocessAnchoring(); Controls.TranscriptScroll:CalculateInternalSize()
@@ -148,20 +152,33 @@ local function speakerTitle(playerID)
 	return Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_SPEAKER_TITLE", leaderName, civName)
 end
 
+-- Return the player whose artwork represents a conversation speaker.
+local function speakerIconPlayerID(playerID)
+	if isPureObserverMode() and playerID == m_activePlayerID then return GameDefines.BARBARIAN_PLAYER end
+	return playerID
+end
+
 -- Hook a leader portrait and civilization badge into a bubble.
 local function hookSpeaker(playerID, controls, ownSide)
-	if isPureObserverMode() and ownSide and playerID == m_activePlayerID then
-		controls.RightHeadFrame:SetHide(true)
-		return
-	end
-	local player = Players[playerID]
+	local iconPlayerID = speakerIconPlayerID(playerID)
+	local player = Players[iconPlayerID]
 	if player == nil then return end
 	local leader, head = GameInfo.Leaders[player:GetLeaderType()], ownSide and controls.RightHead or controls.LeftHead
 	if leader ~= nil and IconHookup ~= nil then IconHookup(leader.PortraitIndex, 64, leader.IconAtlas, head) end
 	if CivIconHookup ~= nil then
-		if ownSide then CivIconHookup(playerID, 32, controls.RightCivIcon, controls.RightCivIconBG, controls.RightCivIconShadow, false, true)
-		else CivIconHookup(playerID, 32, controls.LeftCivIcon, controls.LeftCivIconBG, controls.LeftCivIconShadow, false, true) end
+		if ownSide then CivIconHookup(iconPlayerID, 32, controls.RightCivIcon, controls.RightCivIconBG, controls.RightCivIconShadow, false, true)
+		else CivIconHookup(iconPlayerID, 32, controls.LeftCivIcon, controls.LeftCivIconBG, controls.LeftCivIconShadow, false, true) end
 	end
+end
+
+-- Bind both conversation sides into the compact header bar above the transcript.
+local function populateHeader()
+	Controls.HeaderLeftTitle:SetText(speakerTitle(m_counterpartID))
+	Controls.HeaderRightTitle:SetText(speakerTitle(m_activePlayerID))
+	if CivIconHookup ~= nil then CivIconHookup(m_counterpartID, 32, Controls.HeaderLeftCivIcon, Controls.HeaderLeftCivIconBG, Controls.HeaderLeftCivIconShadow, false, true) end
+	local ownIconPlayerID = speakerIconPlayerID(m_activePlayerID)
+	if CivIconHookup ~= nil then CivIconHookup(ownIconPlayerID, 32, Controls.HeaderRightCivIcon, Controls.HeaderRightCivIconBG, Controls.HeaderRightCivIconShadow, false, true) end
+	Controls.HeaderRightCivIconBG:SetHide(false)
 end
 
 -- Capitalize one schema word.
@@ -237,17 +254,17 @@ local function bindStaticRow(row, instance)
 	local own = row.SpeakerID == m_activePlayerID
 	local content = sanitizeText(row.Content)
 	local hasContent = string.match(content, "^%s*$") == nil
-	instance.LeftTitle:SetHide(own); instance.LeftText:SetHide(own or not hasContent); instance.LeftHeadFrame:SetHide(own)
-	instance.RightTitle:SetHide(not own); instance.RightText:SetHide(not own or not hasContent); instance.RightHeadFrame:SetHide(not own)
+	instance.LeftText:SetHide(own or not hasContent); instance.LeftHeadFrame:SetHide(own)
+	instance.RightText:SetHide(not own or not hasContent); instance.RightHeadFrame:SetHide(not own)
 	instance.CardButton:SetOffsetX(own and (m_geometry.rowWidth - m_geometry.bubbleWidth - 48) or 48)
 	instance.LeftText:SetWrapWidth(m_geometry.textWrapWidth); instance.RightText:SetWrapWidth(m_geometry.textWrapWidth)
-	local textControl, titleControl = own and instance.RightText or instance.LeftText, own and instance.RightTitle or instance.LeftTitle
+	local textControl = own and instance.RightText or instance.LeftText
 	local isDeal, deal = row.MessageType == "deal-proposal" or row.MessageType == "deal-counter", row.Payload and row.Payload.Deal
-	titleControl:SetText(speakerTitle(row.SpeakerID)); textControl:SetText(content); hookSpeaker(row.SpeakerID, instance, own)
+	textControl:SetText(content); hookSpeaker(row.SpeakerID, instance, own)
 	instance.TheyHeader:SetHide(not isDeal); instance.YouHeader:SetHide(not isDeal); instance.TheyGive:SetHide(not isDeal); instance.YouGive:SetHide(not isDeal)
 	instance.DealDivider:SetHide(not isDeal); instance.DealStatus:SetHide(true); instance.Pending:SetHide(true)
 	local measuredTextHeight = hasContent and textControl:GetSizeY() or 0
-	local height = 38 + math.max(24, measuredTextHeight) + 16
+	local height = 10 + math.max(24, measuredTextHeight) + 12
 	if isDeal then
 		local they, you = dealColumns(deal)
 		instance.TheyHeader:SetText(colorText(Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_THEY_GIVE"), "COLOR_POSITIVE_TEXT"))
@@ -256,7 +273,7 @@ local function bindStaticRow(row, instance)
 		instance.TheyHeader:SetOffsetX(42); instance.TheyGive:SetOffsetX(42); instance.TheyGive:SetWrapWidth(m_geometry.dealColumnWidth)
 		instance.YouHeader:SetOffsetX(m_geometry.dealYouX); instance.YouGive:SetOffsetX(m_geometry.dealYouX); instance.YouGive:SetWrapWidth(m_geometry.dealColumnWidth)
 		instance.DealDivider:SetOffsetX(m_geometry.dealDividerX)
-		local dealTop = hasContent and (38 + measuredTextHeight + 6) or 42
+		local dealTop = hasContent and (14 + measuredTextHeight) or 14
 		instance.TheyHeader:SetOffsetY(dealTop); instance.YouHeader:SetOffsetY(dealTop); instance.TheyGive:SetOffsetY(dealTop + 24); instance.YouGive:SetOffsetY(dealTop + 24); instance.DealDivider:SetOffsetY(dealTop - 2)
 		local termsHeight = math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY())
 		instance.DealDivider:SetSizeY(termsHeight + 28)
@@ -314,9 +331,9 @@ local function refreshDealRows(reduction)
 end
 
 -- Size a transient bubble after changing wrapped text.
-local function resizeTailMessage(instance)
+local function resizeTailMessage(instance, extraBottom)
 	local textControl = instance.LeftText:IsHidden() and instance.RightText or instance.LeftText
-	local height = 38 + math.max(24, textControl:GetSizeY()) + 16
+	local height = 10 + math.max(24, textControl:GetSizeY()) + 12 + (extraBottom or 0)
 	sizeBubble(instance, height)
 end
 
@@ -342,9 +359,9 @@ local function refreshTail(reduction)
 	if m_phase == "sending" then
 		local text = type(m_phaseArg) == "string" and sanitizeText(m_phaseArg) or ""
 		bindTailMessage(m_tail.sending, m_activePlayerID, text); m_tail.sending.Row:SetHide(false)
-		local title = m_tail.sending.RightTitle:IsHidden() and m_tail.sending.LeftTitle or m_tail.sending.RightTitle
-		local prefix = speakerTitle(m_activePlayerID) .. " (" .. Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_SENDING") .. " "
-		addAnimated(title, prefix, ")")
+		m_tail.sending.Pending:SetHide(false)
+		addAnimated(m_tail.sending.Pending, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_SENDING") .. " ")
+		resizeTailMessage(m_tail.sending, 22)
 	elseif m_phase == "streaming" then
 		bindTailMessage(m_tail.streaming, m_counterpartID, m_streamingText); m_tail.streaming.Row:SetHide(false)
 	end
@@ -476,6 +493,7 @@ local function setMockPureObserver(flag)
 	local nextValue = flag == true
 	if m_mockPureObserver == nextValue then return end
 	m_mockPureObserver = nextValue
+	populateHeader()
 	rebuildRows(isAtBottom())
 end
 
@@ -601,6 +619,7 @@ local function presentPanel(counterpartID, mode)
 	local wasQueued = m_presentation == "leader"
 	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = VoxDeorumSeat.EffectiveSeat(), counterpartID, Game.GetGameTurn(), false
 	m_isPureObserver, m_mockPureObserver = VoxDeorumSeat.IsPureObserver(), false
+	populateHeader()
 	m_presentation = mode
 	Controls.WarDim:SetHide(true); Controls.MainGrid:SetHide(false)
 	reset(nil)
