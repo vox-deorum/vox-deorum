@@ -355,7 +355,7 @@
 		<!-- Interactive diplomacy panel and leader-screen launcher. -->
 		<Row Tag="TXT_KEY_VD_CONVERSE"><Text>Converse</Text></Row>
 		<Row Tag="TXT_KEY_VD_CONVERSE_TT"><Text>Continue this conversation through your Vox Deorum envoy.</Text></Row>
-		<Row Tag="TXT_KEY_VD_DIPLO_LOAD_EARLIER"><Text>Load earlier...</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_LOAD_EARLIER"><Text>(Load earlier)</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_SEND"><Text>Send</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"><Text>Propose Deal</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_DECLARE_WAR"><Text>Declare War!</Text></Row>

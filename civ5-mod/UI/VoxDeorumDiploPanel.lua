@@ -8,6 +8,7 @@ include("VoxDeorumSeat")
 local DELIMITER = "!@#$%^!"
 local DELIMITER_PATTERN = string.gsub(DELIMITER, "%W", "%%%1")
 local BUBBLE_WIDTH = 760
+local RESERVED_RIGHT = 264
 local STATUS_KEYS = {
 	open = "TXT_KEY_VD_DIPLO_STATUS_OPEN", accepted = "TXT_KEY_VD_DIPLO_STATUS_ACCEPTED",
 	rejected = "TXT_KEY_VD_DIPLO_STATUS_REJECTED", enacted = "TXT_KEY_VD_DIPLO_STATUS_ENACTED",
@@ -19,7 +20,7 @@ local m_lastBuiltTurn, m_currentTurn = nil, 0
 local m_phase, m_phaseArg, m_streamingText = "loading", nil, ""
 local m_hasMore, m_loadingEarlier = false, false
 local m_dotSeconds, m_dotCount, m_animated = 0, 1, {}
-local m_tail = { sending = {}, streaming = {}, status = {}, closed = {} }
+local m_tail = { sending = {}, streaming = {}, status = {} }
 local m_notificationIDs, m_notificationOwner, m_notificationMessages = {}, {}, {}
 local m_warPromptOpen = false
 local m_isPureObserver, m_mockPureObserver = false, false
@@ -47,15 +48,16 @@ local function isHumanStrategist()
 	return activePlayer ~= nil and activePlayer:IsObserver() and not VoxDeorumSeat.IsPureObserver() and activePlayerID ~= m_activePlayerID
 end
 
--- Size the bottom band to roughly half the screen so the animated leaderhead
--- stays visible above it, keeping the content column centered and the footer.
+-- Size the bottom band to roughly 70 percent of the screen and reserve room
+-- for the native-aligned action column on the right.
 local function layoutPanel()
 	local screenW, screenH = UIManager:GetScreenSizeVal()
-	local targetH = math.max(480, math.min(620, math.floor(screenH * 0.52)))
-	local columnW = math.max(1000, math.min(1050, screenW - 24))
-	local transcriptW, transcriptH = math.min(930, columnW - 80), math.max(220, targetH - 228)
+	local targetH = math.max(520, math.floor(screenH * 0.70))
+	local columnW = math.max(1000, math.min(1050, screenW - RESERVED_RIGHT - 12))
+	local columnX = math.max(12, math.floor((screenW - RESERVED_RIGHT - columnW) / 2))
+	local transcriptW, transcriptH = math.min(930, columnW - 80), math.max(260, targetH - 104)
 	local inputW = math.max(620, columnW - 320)
-	Controls.MainGrid:SetSizeVal(screenW, targetH); Controls.ContentColumn:SetSizeVal(columnW, targetH); Controls.WarDim:SetSizeVal(screenW, targetH)
+	Controls.MainGrid:SetSizeVal(screenW, targetH); Controls.ContentColumn:SetSizeVal(columnW, targetH); Controls.ContentColumn:SetOffsetVal(columnX, 0); Controls.WarDim:SetSizeVal(screenW, targetH)
 	Controls.TranscriptScroll:SetSizeVal(transcriptW, transcriptH); Controls.TranscriptBar:SetSizeY(math.max(200, transcriptH - 42))
 	Controls.InputFrame:SetSizeX(inputW); Controls.InputFrameBorder:SetSizeVal(inputW + 4, 42); Controls.InputBox:SetSizeX(inputW - 20)
 	Controls.MainGrid:ReprocessAnchoring(); Controls.ContentColumn:ReprocessAnchoring(); Controls.TranscriptScroll:CalculateInternalSize()
@@ -291,47 +293,30 @@ local function bindTailMessage(instance, speakerID, text)
 	bindStaticRow({ SpeakerID = speakerID, MessageType = "text", Content = text }, instance); instance.CardButton:SetDisabled(true); resizeTailMessage(instance)
 end
 
--- Build the four transient tail rows once.
+-- Build the three transient tail rows once.
 local function buildTailPool()
 	ContextPtr:BuildInstanceForControl("MessageInstance", m_tail.sending, Controls.TailStack); ContextPtr:BuildInstanceForControl("MessageInstance", m_tail.streaming, Controls.TailStack)
-	ContextPtr:BuildInstanceForControl("StatusInstance", m_tail.status, Controls.TailStack); ContextPtr:BuildInstanceForControl("StatusInstance", m_tail.closed, Controls.TailStack)
+	ContextPtr:BuildInstanceForControl("StatusInstance", m_tail.status, Controls.TailStack)
 	for _, instance in pairs(m_tail) do instance.Row:SetHide(true) end
-	m_tail.status.RetryButton:RegisterCallback(Mouse.eLClick, function()
-		if VoxDeorumDiploUI.driver ~= nil and VoxDeorumDiploUI.driver.onRetry ~= nil then VoxDeorumDiploUI.driver.onRetry() end
-	end)
 end
 
--- Apply the current phase to pooled tail rows and the centered status label.
+-- Apply message phases and older-page loading to pooled tail rows.
 local function refreshTail(reduction)
 	m_animated = {}
 	for _, instance in pairs(m_tail) do instance.Row:SetHide(true) end
-	m_tail.status.RetryButton:SetHide(true); Controls.PanelStatus:SetHide(true)
 	local bodyHidden = m_phase == "loading" or m_phase == "no-envoy"
 	Controls.TranscriptScroll:SetHide(bodyHidden)
-	if m_phase == "loading" then
-		Controls.PanelStatus:SetHide(false); addAnimated(Controls.PanelStatus, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_LOADING") .. " ")
-	elseif m_phase == "no-envoy" then
-		Controls.PanelStatus:SetText(Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_NO_ENVOY")); Controls.PanelStatus:SetHide(false)
-	elseif m_phase == "sending" then
+	if m_phase == "sending" then
 		local text = type(m_phaseArg) == "string" and sanitizeText(m_phaseArg) or ""
 		local prefix = text .. " (" .. Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_SENDING") .. " "
 		bindTailMessage(m_tail.sending, m_activePlayerID, prefix .. "...)"); m_tail.sending.Row:SetHide(false)
 		local control = m_tail.sending.RightText:IsHidden() and m_tail.sending.LeftText or m_tail.sending.RightText
 		addAnimated(control, prefix, ")")
-	elseif m_phase == "thinking" and not m_loadingEarlier then
-		m_tail.status.Row:SetHide(false); addAnimated(m_tail.status.Text, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_THINKING") .. " ")
 	elseif m_phase == "streaming" then
 		bindTailMessage(m_tail.streaming, m_counterpartID, m_streamingText); m_tail.streaming.Row:SetHide(false)
-	elseif (m_phase == "ack-timeout" or m_phase == "reply-timeout") and not m_loadingEarlier then
-		local key = m_phase == "ack-timeout" and "TXT_KEY_VD_DIPLO_NOT_DELIVERED" or "TXT_KEY_VD_DIPLO_ENVOY_UNAVAILABLE"
-		m_tail.status.Text:SetText(Locale.ConvertTextKey(key)); m_tail.status.RetryButton:SetHide(false); m_tail.status.Row:SetHide(false)
 	end
 	if m_loadingEarlier then
-		m_tail.status.RetryButton:SetHide(true)
 		m_tail.status.Row:SetHide(false); addAnimated(m_tail.status.Text, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_LOADING_EARLIER") .. " ")
-	end
-	if not bodyHidden and isClosedThisTurn(m_rows, m_currentTurn) then
-		m_tail.closed.Text:SetText(Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_CLOSED")); m_tail.closed.RetryButton:SetHide(true); m_tail.closed.Row:SetHide(false)
 	end
 	refreshDealRows(reduction)
 end
@@ -349,19 +334,28 @@ local function inputIsLocked()
 	return isClosedThisTurn(m_rows, m_currentTurn) or m_phase ~= "normal"
 end
 
+-- Reflow the native-aligned action stack after changing child visibility.
+local function reflowActionStack()
+	Controls.ActionStack:CalculateSize(); Controls.ActionStack:ReprocessAnchoring()
+end
+
 -- Apply visible input gating with an explanatory row.
 local function refreshInput()
-	local reason = nil
-	if m_phase == "loading" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_LOADING")
+	local reason, animated = nil, false
+	if m_phase == "loading" then reason, animated = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_LOADING"), true
 	elseif m_phase == "no-envoy" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_NO_ENVOY")
 	elseif isClosedThisTurn(m_rows, m_currentTurn) then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_CLOSED")
 	elseif m_phase == "ack-timeout" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_NOT_DELIVERED")
 	elseif m_phase == "reply-timeout" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_ENVOY_UNAVAILABLE")
-	elseif m_phase ~= "normal" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_BUSY") end
-	Controls.InputFrame:SetHide(reason ~= nil); Controls.SendButton:SetHide(reason ~= nil); Controls.InputReason:SetHide(reason == nil); Controls.InputReason:SetText(reason or "")
+	elseif m_phase ~= "normal" then reason, animated = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_THINKING"), true end
+	Controls.InputFrame:SetHide(reason ~= nil); Controls.SendButton:SetHide(reason ~= nil); Controls.InputReason:SetHide(reason == nil)
+	if animated then addAnimated(Controls.InputReason, reason .. " ") else Controls.InputReason:SetText(reason or "") end
+	local canRetry = (m_phase == "ack-timeout" or m_phase == "reply-timeout") and not m_loadingEarlier
+	Controls.InputRetryButton:SetHide(not canRetry)
 	local hasSeatAuthority = hasSeatAuthorityNow()
 	Controls.ProposeButton:SetHide(not hasSeatAuthority)
 	Controls.ProposeButton:SetDisabled(reason ~= nil or not hasSeatAuthority)
+	reflowActionStack()
 end
 
 -- Return whether the effective seat may declare war on the counterpart right now.
@@ -378,6 +372,7 @@ end
 -- Update native war-action visibility.
 local function refreshWarButton() 
 	Controls.WarButton:SetHide(not canDeclareWarNow())
+	reflowActionStack()
 end
 
 -- Refresh row-dependent state without rebuilding durable instances.
@@ -714,6 +709,10 @@ Events.AILeaderMessage.Add(onPanelAILeaderMessage); Events.LeavingLeaderViewMode
 LuaEvents.VoxDeorumDiploOpen.Add(onConverseOpen); LuaEvents.VoxDeorumDiplomacyNotificationActivated.Add(onNotificationActivated)
 Controls.GoodbyeButton:RegisterCallback(Mouse.eLClick, hidePanel)
 Controls.LoadEarlierButton:RegisterCallback(Mouse.eLClick, onLoadEarlier); Controls.InputBox:RegisterCallback(onInputChanged); Controls.SendButton:RegisterCallback(Mouse.eLClick, onSend)
+-- Retry a timed-out request through whichever conversation driver is active.
+Controls.InputRetryButton:RegisterCallback(Mouse.eLClick, function()
+	if VoxDeorumDiploUI.driver ~= nil and VoxDeorumDiploUI.driver.onRetry ~= nil then VoxDeorumDiploUI.driver.onRetry() end
+end)
 Controls.ProposeButton:RegisterCallback(Mouse.eLClick, onProposeDeal); Controls.WarButton:RegisterCallback(Mouse.eLClick, onDeclareWar)
 Controls.WarYesButton:RegisterCallback(Mouse.eLClick, confirmDeclareWar); Controls.WarNoButton:RegisterCallback(Mouse.eLClick, cancelDeclareWar)
 ContextPtr:SetInputHandler(inputHandler); ContextPtr:SetShowHideHandler(showHideHandler)
