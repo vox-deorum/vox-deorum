@@ -80,9 +80,7 @@
 				</GridButton>
 			</Grid>
 		</Box>
-		<GridButton ID="LoadEarlierButton" Anchor="R,T" Offset="40,16" Size="200,28" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
-		</GridButton>
+		<GridButton ID="LoadEarlierButton" Anchor="R,T" Offset="40,16" Style="FrameButton200" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER"/>
 		<Stack ID="ActionStack" Anchor="R,B" Offset="40,40" Padding="10" StackGrowth="Top">
 			<GridButton ID="GoodbyeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_GOODBYE" ToolTip="TXT_KEY_VD_DIPLO_GOODBYE_TT"/>
 			<GridButton ID="ProposeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"/>
