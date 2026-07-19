@@ -7,12 +7,21 @@ include("VoxDeorumSeat")
 
 local DELIMITER = "!@#$%^!"
 local DELIMITER_PATTERN = string.gsub(DELIMITER, "%W", "%%%1")
-local BUBBLE_WIDTH = 760
 local RESERVED_RIGHT = 264
+local OUTER_GUTTER = 12
 local STATUS_KEYS = {
 	open = "TXT_KEY_VD_DIPLO_STATUS_OPEN", accepted = "TXT_KEY_VD_DIPLO_STATUS_ACCEPTED",
 	rejected = "TXT_KEY_VD_DIPLO_STATUS_REJECTED", enacted = "TXT_KEY_VD_DIPLO_STATUS_ENACTED",
 	superseded = "TXT_KEY_VD_DIPLO_STATUS_SUPERSEDED",
+}
+local STATUS_COLORS = {
+	accepted = "COLOR_POSITIVE_TEXT", rejected = "COLOR_NEGATIVE_TEXT",
+	enacted = "COLOR_POSITIVE_TEXT", superseded = "COLOR_GREY",
+}
+local m_geometry = {
+	contentWidth = 1004, transcriptWidth = 924, rowWidth = 894, bubbleWidth = 754,
+	textWrapWidth = 666, inputWidth = 684, inputStatusWidth = 884,
+	dealColumnWidth = 316, dealYouX = 378, dealDividerX = 368,
 }
 local m_counterpartID, m_activePlayerID = -1, -1
 local m_rows, m_rowByID, m_rowInstances = {}, {}, {}
@@ -48,29 +57,39 @@ local function isHumanStrategist()
 	return activePlayer ~= nil and activePlayer:IsObserver() and not VoxDeorumSeat.IsPureObserver() and activePlayerID ~= m_activePlayerID
 end
 
--- Size the bottom band to roughly 70 percent of the screen and reserve room
--- for the native-aligned action column on the right.
+-- Size the panel and record the shared geometry used by every row instance.
 local function layoutPanel()
 	local screenW, screenH = UIManager:GetScreenSizeVal()
 	local targetH = math.max(520, math.floor(screenH * 0.70))
-	local columnW = math.max(1000, math.min(1050, screenW - RESERVED_RIGHT - 12))
+	local columnW = math.max(760, screenW - RESERVED_RIGHT - OUTER_GUTTER)
 	local columnX = math.max(12, math.floor((screenW - RESERVED_RIGHT - columnW) / 2))
-	local transcriptW, transcriptH = math.min(930, columnW - 80), math.max(260, targetH - 104)
-	local inputW = math.max(620, columnW - 320)
+	local transcriptW, transcriptH = columnW - 80, math.max(260, targetH - 104)
+	local rowW, bubbleW = transcriptW - 30, math.min(1120, transcriptW - 170)
+	local inputW = math.max(400, columnW - 320)
+	local inputStatusW = columnW - 120
+	local dealColumnW = math.floor((bubbleW - 42 - 60 - 20) / 2)
+	m_geometry = {
+		contentWidth = columnW, transcriptWidth = transcriptW, rowWidth = rowW,
+		bubbleWidth = bubbleW, textWrapWidth = bubbleW - 88, inputWidth = inputW,
+		inputStatusWidth = inputStatusW, dealColumnWidth = dealColumnW,
+		dealYouX = 42 + dealColumnW + 20, dealDividerX = 42 + dealColumnW + 10,
+	}
 	Controls.MainGrid:SetSizeVal(screenW, targetH); Controls.ContentColumn:SetSizeVal(columnW, targetH); Controls.ContentColumn:SetOffsetVal(columnX, 0); Controls.WarDim:SetSizeVal(screenW, targetH)
 	Controls.TranscriptScroll:SetSizeVal(transcriptW, transcriptH); Controls.TranscriptBar:SetSizeY(math.max(200, transcriptH - 42))
+	Controls.TranscriptStack:SetSizeX(rowW); Controls.TailStack:SetSizeX(rowW); Controls.FooterDivider:SetSizeX(transcriptW)
 	Controls.InputFrame:SetSizeX(inputW); Controls.InputFrameBorder:SetSizeVal(inputW + 4, 42); Controls.InputBox:SetSizeX(inputW - 20)
+	Controls.InputStatusSlot:SetSizeVal(inputStatusW, 38); Controls.InputReason:SetWrapWidth(math.max(320, inputStatusW - 160))
 	Controls.MainGrid:ReprocessAnchoring(); Controls.ContentColumn:ReprocessAnchoring(); Controls.TranscriptScroll:CalculateInternalSize()
-end
-
--- Recompute safe bounds when the game resolution changes.
-local function onSystemUpdateUI(uiType)
-	if uiType == SystemUpdateUIType.ScreenResize then layoutPanel() end
 end
 
 -- Strip the named-pipe delimiter from text.
 local function sanitizeText(value)
 	return string.gsub(tostring(value or ""), DELIMITER_PATTERN, "")
+end
+
+-- Wrap display text in one of Civilization V's named text colors.
+local function colorText(value, color)
+	return "[" .. color .. "]" .. tostring(value or "") .. "[ENDCOLOR]"
 end
 
 -- Return whether a transcript row is a hidden trigger token.
@@ -209,27 +228,39 @@ end
 
 -- Apply the shared bubble geometry for one message instance.
 local function sizeBubble(instance, height)
-	instance.Row:SetSizeVal(900, height + 8); instance.CardButton:SetSizeVal(BUBBLE_WIDTH, height); instance.Bubble:SetSizeVal(BUBBLE_WIDTH, height); instance.Border:SetSizeVal(BUBBLE_WIDTH + 4, height + 4)
+	instance.Row:SetSizeVal(m_geometry.rowWidth, height + 4)
+	instance.CardButton:SetSizeVal(m_geometry.bubbleWidth, height); instance.Bubble:SetSizeVal(m_geometry.bubbleWidth, height); instance.Border:SetSizeVal(m_geometry.bubbleWidth + 4, height + 4)
 end
 
 -- Bind all bubble details that do not depend on later rows.
 local function bindStaticRow(row, instance)
 	local own = row.SpeakerID == m_activePlayerID
-	instance.LeftTitle:SetHide(own); instance.LeftText:SetHide(own); instance.LeftHeadFrame:SetHide(own)
-	instance.RightTitle:SetHide(not own); instance.RightText:SetHide(not own); instance.RightHeadFrame:SetHide(not own)
-	instance.CardButton:SetOffsetX(own and 92 or 48)
+	local content = sanitizeText(row.Content)
+	local hasContent = string.match(content, "^%s*$") == nil
+	instance.LeftTitle:SetHide(own); instance.LeftText:SetHide(own or not hasContent); instance.LeftHeadFrame:SetHide(own)
+	instance.RightTitle:SetHide(not own); instance.RightText:SetHide(not own or not hasContent); instance.RightHeadFrame:SetHide(not own)
+	instance.CardButton:SetOffsetX(own and (m_geometry.rowWidth - m_geometry.bubbleWidth - 48) or 48)
+	instance.LeftText:SetWrapWidth(m_geometry.textWrapWidth); instance.RightText:SetWrapWidth(m_geometry.textWrapWidth)
 	local textControl, titleControl = own and instance.RightText or instance.LeftText, own and instance.RightTitle or instance.LeftTitle
-	local isDeal, deal, content = row.MessageType == "deal-proposal" or row.MessageType == "deal-counter", row.Payload and row.Payload.Deal, row.Content
-	titleControl:SetText(speakerTitle(row.SpeakerID)); textControl:SetText(sanitizeText(content)); hookSpeaker(row.SpeakerID, instance, own)
+	local isDeal, deal = row.MessageType == "deal-proposal" or row.MessageType == "deal-counter", row.Payload and row.Payload.Deal
+	titleControl:SetText(speakerTitle(row.SpeakerID)); textControl:SetText(content); hookSpeaker(row.SpeakerID, instance, own)
 	instance.TheyHeader:SetHide(not isDeal); instance.YouHeader:SetHide(not isDeal); instance.TheyGive:SetHide(not isDeal); instance.YouGive:SetHide(not isDeal)
-	instance.DealDivider:SetHide(not isDeal); instance.DealStatus:SetHide(not isDeal); instance.Pending:SetHide(true)
-	local textHeight = math.max(24, textControl:GetSizeY())
-	local height = 38 + textHeight + 16
+	instance.DealDivider:SetHide(not isDeal); instance.DealStatus:SetHide(true); instance.Pending:SetHide(true)
+	local measuredTextHeight = hasContent and textControl:GetSizeY() or 0
+	local height = 38 + math.max(24, measuredTextHeight) + 16
 	if isDeal then
-		local they, you = dealColumns(deal); instance.TheyGive:SetText(they); instance.YouGive:SetText(you)
-		local dealTop = 38 + textHeight + 14
+		local they, you = dealColumns(deal)
+		instance.TheyHeader:SetText(colorText(Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_THEY_GIVE"), "COLOR_POSITIVE_TEXT"))
+		instance.YouHeader:SetText(colorText(Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_YOU_GIVE"), "COLOR_NEGATIVE_TEXT"))
+		instance.TheyGive:SetText(they); instance.YouGive:SetText(you)
+		instance.TheyHeader:SetOffsetX(42); instance.TheyGive:SetOffsetX(42); instance.TheyGive:SetWrapWidth(m_geometry.dealColumnWidth)
+		instance.YouHeader:SetOffsetX(m_geometry.dealYouX); instance.YouGive:SetOffsetX(m_geometry.dealYouX); instance.YouGive:SetWrapWidth(m_geometry.dealColumnWidth)
+		instance.DealDivider:SetOffsetX(m_geometry.dealDividerX)
+		local dealTop = hasContent and (38 + measuredTextHeight + 6) or 42
 		instance.TheyHeader:SetOffsetY(dealTop); instance.YouHeader:SetOffsetY(dealTop); instance.TheyGive:SetOffsetY(dealTop + 24); instance.YouGive:SetOffsetY(dealTop + 24); instance.DealDivider:SetOffsetY(dealTop - 2)
-		height = dealTop + 24 + math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY()) + 28
+		local termsHeight = math.max(instance.TheyGive:GetSizeY(), instance.YouGive:GetSizeY())
+		instance.DealDivider:SetSizeY(termsHeight + 28)
+		height = dealTop + 24 + termsHeight + 28
 	end
 	sizeBubble(instance, height)
 	instance.CardButton:SetDisabled(not isDeal); instance.CardButton:SetAlpha(row.Pending and 0.55 or 1)
@@ -240,7 +271,7 @@ end
 local function buildRowInstance(row)
 	if isSpecialRow(row.Content) then return end
 	if m_lastBuiltTurn ~= row.Turn then
-		local turn = {}; ContextPtr:BuildInstanceForControl("TurnInstance", turn, Controls.TranscriptStack); turn.Text:SetText(turnLabel(row.Turn))
+		local turn = {}; ContextPtr:BuildInstanceForControl("TurnInstance", turn, Controls.TranscriptStack); turn.Row:SetSizeX(m_geometry.rowWidth); turn.Text:SetText(turnLabel(row.Turn))
 	end
 	m_lastBuiltTurn = row.Turn
 	local instance = {}; ContextPtr:BuildInstanceForControl("MessageInstance", instance, Controls.TranscriptStack)
@@ -268,7 +299,8 @@ local function refreshDealRow(row, reduction)
 	if record == nil then return end
 	local instance, active = record.controls, reduction.active ~= nil and reduction.active.ID == row.ID
 	local status = active and reduction.status or "superseded"
-	instance.DealStatus:SetText(Locale.ToUpper(Locale.ConvertTextKey(STATUS_KEYS[status] or STATUS_KEYS.superseded)))
+	local statusText = Locale.ToUpper(Locale.ConvertTextKey(STATUS_KEYS[status] or STATUS_KEYS.superseded))
+	instance.DealStatus:SetText(colorText(statusText, STATUS_COLORS[status] or "COLOR_GREY")); instance.DealStatus:SetHide(status == "open")
 	local pending = pendingProposalID(reduction) == row.ID
 	instance.Pending:SetHide(not pending)
 	if pending then addAnimated(instance.Pending, Locale.ConvertTextKey(pendingLabelKey()) .. " ") end
@@ -297,6 +329,7 @@ end
 local function buildTailPool()
 	ContextPtr:BuildInstanceForControl("MessageInstance", m_tail.sending, Controls.TailStack); ContextPtr:BuildInstanceForControl("MessageInstance", m_tail.streaming, Controls.TailStack)
 	ContextPtr:BuildInstanceForControl("StatusInstance", m_tail.status, Controls.TailStack)
+	m_tail.status.Row:SetSizeX(m_geometry.rowWidth); m_tail.status.Text:SetWrapWidth(m_geometry.rowWidth - 60)
 	for _, instance in pairs(m_tail) do instance.Row:SetHide(true) end
 end
 
@@ -308,14 +341,15 @@ local function refreshTail(reduction)
 	Controls.TranscriptScroll:SetHide(bodyHidden)
 	if m_phase == "sending" then
 		local text = type(m_phaseArg) == "string" and sanitizeText(m_phaseArg) or ""
-		local prefix = text .. " (" .. Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_SENDING") .. " "
-		bindTailMessage(m_tail.sending, m_activePlayerID, prefix .. "...)"); m_tail.sending.Row:SetHide(false)
-		local control = m_tail.sending.RightText:IsHidden() and m_tail.sending.LeftText or m_tail.sending.RightText
-		addAnimated(control, prefix, ")")
+		bindTailMessage(m_tail.sending, m_activePlayerID, text); m_tail.sending.Row:SetHide(false)
+		local title = m_tail.sending.RightTitle:IsHidden() and m_tail.sending.LeftTitle or m_tail.sending.RightTitle
+		local prefix = speakerTitle(m_activePlayerID) .. " (" .. Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_SENDING") .. " "
+		addAnimated(title, prefix, ")")
 	elseif m_phase == "streaming" then
 		bindTailMessage(m_tail.streaming, m_counterpartID, m_streamingText); m_tail.streaming.Row:SetHide(false)
 	end
 	if m_loadingEarlier then
+		m_tail.status.Row:SetSizeX(m_geometry.rowWidth); m_tail.status.Text:SetWrapWidth(m_geometry.rowWidth - 60)
 		m_tail.status.Row:SetHide(false); addAnimated(m_tail.status.Text, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_LOADING_EARLIER") .. " ")
 	end
 	refreshDealRows(reduction)
@@ -348,7 +382,7 @@ local function refreshInput()
 	elseif m_phase == "ack-timeout" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_NOT_DELIVERED")
 	elseif m_phase == "reply-timeout" then reason = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_ENVOY_UNAVAILABLE")
 	elseif m_phase ~= "normal" then reason, animated = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_THINKING"), true end
-	Controls.InputFrame:SetHide(reason ~= nil); Controls.SendButton:SetHide(reason ~= nil); Controls.InputReason:SetHide(reason == nil)
+	Controls.InputFrame:SetHide(reason ~= nil); Controls.SendButton:SetHide(reason ~= nil); Controls.InputStatusSlot:SetHide(reason == nil); Controls.InputReason:SetHide(reason == nil)
 	if animated then addAnimated(Controls.InputReason, reason .. " ") else Controls.InputReason:SetText(reason or "") end
 	local canRetry = (m_phase == "ack-timeout" or m_phase == "reply-timeout") and not m_loadingEarlier
 	Controls.InputRetryButton:SetHide(not canRetry)
@@ -387,6 +421,54 @@ local function rebuildRows(stickToBottom)
 	Controls.TranscriptStack:DestroyAllChildren(); m_rowInstances, m_lastBuiltTurn = {}, nil
 	for _, row in ipairs(m_rows) do buildRowInstance(row) end
 	refreshState(stickToBottom)
+end
+
+-- Capture the first durable row visible at the top of the transcript viewport.
+local function captureScrollAnchor()
+	local viewport = Controls.TranscriptScroll:GetSizeY()
+	local contentHeight = Controls.TranscriptStack:GetSizeY() + Controls.TailStack:GetSizeY()
+	local scrollTop = Controls.TranscriptScroll:GetScrollValue() * math.max(0, contentHeight - viewport)
+	local anchorID, proportion = nil, 0
+	for _, row in ipairs(m_rows) do
+		local record = m_rowInstances[row.ID]
+		if record ~= nil then
+			local rowY = record.controls.Row:GetOffsetY()
+			local rowHeight = math.max(1, record.controls.Row:GetSizeY())
+			if scrollTop < rowY then
+				anchorID, proportion = row.ID, 0
+				break
+			elseif scrollTop < rowY + rowHeight then
+				anchorID = row.ID
+				proportion = math.max(0, math.min(1, (scrollTop - rowY) / rowHeight))
+				break
+			end
+		end
+	end
+	return { id = anchorID, proportion = proportion, fallback = scrollTop }
+end
+
+-- Restore the same proportional point within a rebuilt durable row.
+local function restoreScrollAnchor(anchor)
+	local viewport = Controls.TranscriptScroll:GetSizeY()
+	local contentHeight = Controls.TranscriptStack:GetSizeY() + Controls.TailStack:GetSizeY()
+	local scrollTop = anchor.fallback
+	local record = anchor.id ~= nil and m_rowInstances[anchor.id] or nil
+	if record ~= nil then
+		local proportion = math.max(0, math.min(1, anchor.proportion or 0))
+		local rowHeight = record.controls.Row:GetSizeY()
+		local withinRow = math.min(math.max(0, rowHeight - 1), proportion * rowHeight)
+		scrollTop = record.controls.Row:GetOffsetY() + withinRow
+	end
+	Controls.TranscriptScroll:SetScrollValue(math.max(0, math.min(1, scrollTop / math.max(1, contentHeight - viewport))))
+end
+
+-- Rebuild wrapped rows after a resolution change and preserve scroll intent.
+local function onSystemUpdateUI(uiType)
+	if uiType ~= SystemUpdateUIType.ScreenResize then return end
+	local stickToBottom = isAtBottom()
+	local anchor = not stickToBottom and captureScrollAnchor() or nil
+	layoutPanel(); rebuildRows(stickToBottom)
+	if anchor ~= nil then restoreScrollAnchor(anchor) end
 end
 
 -- Force observer presentation for the stage-01 mock without changing real seat state.

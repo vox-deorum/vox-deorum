@@ -40,9 +40,9 @@
     <File md5="1C2EC246EE80D6D8848D73CDD50F9515" import="1">UI/VoxDeorumConverse.lua</File>
     <File md5="538888784994F3ED7AD1C8438727CA79" import="1">UI/LeaderHeadRoot.lua</File>
     <File md5="F72A8A907AF7A24517A900793216B7F9" import="1">UI/LeaderHeadRoot.xml</File>
-    <File md5="59CF52D71B4C8348B6F9C0DEB7EA2F0C" import="1">UI/VoxDeorumDiploPanel.lua</File>
-    <File md5="556DF46A8F4323E58580DA06F0654EE2" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
-    <File md5="95A466C89A05E6015405A53594FC522C" import="0">UI/VoxDeorumDiploPanel.xml</File>
+    <File md5="A8DD76C696F0E6CC78CD1BDB89B0ACF5" import="1">UI/VoxDeorumDiploPanel.lua</File>
+    <File md5="2AB2FDF4F0DDC60FBE7F55A40CA62680" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
+    <File md5="FA5F8CF8A4F507950A158F0229A4C432" import="0">UI/VoxDeorumDiploPanel.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>

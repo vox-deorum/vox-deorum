@@ -60,7 +60,7 @@ local function buildMockRows()
 		{ ID = 101, Turn = t - 1, SpeakerID = them, MessageType = "text", Content = "{{{Greeting}}}" },
 		{ ID = 102, Turn = t - 1, SpeakerID = us, MessageType = "text", Content = "The settlements are on land we claimed fairly, but I am open to discussing it." },
 		{ ID = 103, Turn = t - 1, SpeakerID = them, MessageType = "text", Content = "[COLOR_YELLOW]Terms[ENDCOLOR][NEWLINE][ICON_BULLET] 120 Gold now" },
-		{ ID = 200, Turn = t, SpeakerID = them, MessageType = "deal-proposal", Content = "A first offer for peace along our border.", Payload = { Deal = dealA } },
+		{ ID = 200, Turn = t, SpeakerID = them, MessageType = "deal-proposal", Content = "", Payload = { Deal = dealA } },
 		{ ID = 201, Turn = t, SpeakerID = us, MessageType = "deal-reject", Content = "That arrangement asks too much of us.", Payload = { ProposalMessageID = 200 } },
 		{ ID = 202, Turn = t, SpeakerID = us, MessageType = "deal-proposal", Content = "Then consider this balanced exchange.", Payload = { Deal = dealB } },
 		{ ID = 203, Turn = t, SpeakerID = them, MessageType = "deal-accept", Content = "I accept those terms.", Payload = { ProposalMessageID = 202 } },

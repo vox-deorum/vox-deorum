@@ -8,7 +8,7 @@
 -->
 <Context Font="TwCenMT16" FontStyle="Shadow" ColorSet="Beige_Black_Alpha">
 	<Instance Name="TurnInstance">
-		<Container ID="Row" Size="900,38">
+		<Container ID="Row" Size="894,38">
 			<Grid ID="Pill" Anchor="C,C" Size="190,28" Style="GridBlackIndent8">
 				<Grid Anchor="C,C" Size="194,32" Style="Grid9Frame"/>
 				<Label ID="Text" Anchor="C,C" Font="TwCenMT16"/>
@@ -16,20 +16,20 @@
 		</Container>
 	</Instance>
 	<Instance Name="MessageInstance">
-		<Container ID="Row" Size="900,116">
-			<Button ID="CardButton" Anchor="L,T" Offset="48,0" Size="760,108" StateOffsetIncrement="0,0">
-				<Grid ID="Bubble" Anchor="L,T" Size="760,108" Style="GridBlackIndent8">
-					<Grid ID="Border" Anchor="C,C" Size="764,112" Style="Grid9Frame"/>
+		<Container ID="Row" Size="894,116">
+			<Button ID="CardButton" Anchor="L,T" Offset="48,0" Size="754,108" StateOffsetIncrement="0,0">
+				<Grid ID="Bubble" Anchor="L,T" Size="754,108" Style="GridBlackIndent8">
+					<Grid ID="Border" Anchor="C,C" Size="758,112" Style="Grid9Frame"/>
 					<Label ID="LeftTitle" Anchor="L,T" Offset="42,12" Font="TwCenMT20" FontStyle="Shadow"/>
 					<Label ID="RightTitle" Anchor="R,T" Offset="42,12" Font="TwCenMT20" FontStyle="Shadow"/>
-					<Label ID="LeftText" Anchor="L,T" Offset="42,38" WrapWidth="672" LeadingOffset="-5" Font="TwCenMT18"/>
-					<Label ID="RightText" Anchor="R,T" Offset="42,38" WrapWidth="672" LeadingOffset="-5" Font="TwCenMT18"/>
+					<Label ID="LeftText" Anchor="L,T" Offset="42,38" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
+					<Label ID="RightText" Anchor="R,T" Offset="42,38" WrapWidth="666" LeadingOffset="-5" Font="TwCenMT18"/>
 					<Label ID="DealStatus" Anchor="R,B" Offset="42,10" Font="TwCenMT16"/>
 					<Label ID="TheyHeader" Anchor="L,T" Offset="42,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_THEY_GIVE"/>
-					<Label ID="YouHeader" Anchor="L,T" Offset="390,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_YOU_GIVE"/>
-					<Label ID="TheyGive" Anchor="L,T" Offset="42,100" WrapWidth="310" LeadingOffset="-5" Font="TwCenMT16"/>
-					<Label ID="YouGive" Anchor="L,T" Offset="390,100" WrapWidth="310" LeadingOffset="-5" Font="TwCenMT16"/>
-					<Box ID="DealDivider" Anchor="L,T" Offset="370,74" Size="1,80" Color="204,170,90,140"/>
+					<Label ID="YouHeader" Anchor="L,T" Offset="378,76" Font="TwCenMT16" FontStyle="Shadow" String="TXT_KEY_VD_DIPLO_YOU_GIVE"/>
+					<Label ID="TheyGive" Anchor="L,T" Offset="42,100" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>
+					<Label ID="YouGive" Anchor="L,T" Offset="378,100" WrapWidth="316" LeadingOffset="-5" Font="TwCenMT16"/>
+					<Box ID="DealDivider" Anchor="L,T" Offset="368,74" Size="1,80" Color="204,170,90,140"/>
 					<Label ID="Pending" Anchor="L,B" Offset="42,10" Font="TwCenMT16" Color="128,128,128,255"/>
 				</Grid>
 				<Image ID="LeftHeadFrame" Anchor="L,T" Offset="-32,-18" Texture="IconFrame64.dds" Size="64,64">
@@ -52,33 +52,35 @@
 		</Container>
 	</Instance>
 	<Instance Name="StatusInstance">
-		<Container ID="Row" Size="900,40">
-			<Label ID="Text" Anchor="L,C" Offset="30,0" WrapWidth="690" Font="TwCenMT18"/>
+		<Container ID="Row" Size="894,40">
+			<Label ID="Text" Anchor="L,C" Offset="30,0" WrapWidth="834" Font="TwCenMT18"/>
 		</Container>
 	</Instance>
 	<Box ID="MainGrid" Anchor="C,B" Size="1050,620" Color="0,0,0,0" ConsumeMouse="1">
-		<Box ID="ContentColumn" Anchor="L,B" Size="1050,620" Color="0,0,0,0">
-			<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,18" Size="930,512" Vertical="1" AutoScrollBar="1">
-				<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
-				<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
+		<Box ID="ContentColumn" Anchor="L,B" Size="1004,620" Color="0,0,0,0">
+			<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,18" Size="924,512" Vertical="1" AutoScrollBar="1">
+				<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="894,0" Padding="4" StackGrowth="Bottom"/>
+				<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="894,0" Padding="4" StackGrowth="Bottom"/>
 				<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
 				<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
 				<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
 			</ScrollPanel>
-			<Box Anchor="C,B" Offset="0,74" Size="930,1" Color="204,170,90,160"/>
-			<Grid ID="InputFrame" Anchor="L,B" Offset="60,24" Size="730,38" Style="GridBlackIndent8">
-				<Grid ID="InputFrameBorder" Anchor="C,C" Size="734,42" Style="Grid9Frame"/>
-				<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="710,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
+			<Box ID="FooterDivider" Anchor="C,B" Offset="0,74" Size="924,1" Color="204,170,90,160"/>
+			<Grid ID="InputFrame" Anchor="L,B" Offset="60,24" Size="684,38" Style="GridBlackIndent8">
+				<Grid ID="InputFrameBorder" Anchor="C,C" Size="688,42" Style="Grid9Frame"/>
+				<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="664,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
 			</Grid>
 			<GridButton ID="SendButton" Anchor="R,B" Offset="60,26" Size="180,34" Style="SmallButton" StateOffsetIncrement="0,0">
 				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_SEND" Font="TwCenMT18"/>
 			</GridButton>
-			<Label ID="InputReason" Hidden="1" Anchor="L,B" Offset="60,30" WrapWidth="640" Font="TwCenMT18"/>
-			<GridButton ID="InputRetryButton" Hidden="1" Anchor="R,B" Offset="60,26" Size="120,30" Style="SmallButton" StateOffsetIncrement="0,0">
-				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_RETRY" Font="TwCenMT16"/>
-			</GridButton>
+			<Grid ID="InputStatusSlot" Hidden="1" Anchor="L,B" Offset="60,24" Size="884,38" Style="GridBlackIndent8">
+				<Label ID="InputReason" Hidden="1" Anchor="L,C" Offset="10,0" WrapWidth="724" Font="TwCenMT18"/>
+				<GridButton ID="InputRetryButton" Hidden="1" Anchor="R,C" Offset="10,0" Size="120,30" Style="SmallButton" StateOffsetIncrement="0,0">
+					<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_RETRY" Font="TwCenMT16"/>
+				</GridButton>
+			</Grid>
 		</Box>
-		<GridButton ID="LoadEarlierButton" Anchor="R,T" Offset="40,18" Size="200,28" Style="SmallButton" StateOffsetIncrement="0,0">
+		<GridButton ID="LoadEarlierButton" Anchor="R,T" Offset="40,16" Size="200,28" Style="SmallButton" StateOffsetIncrement="0,0">
 			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
 		</GridButton>
 		<Stack ID="ActionStack" Anchor="R,B" Offset="40,40" Padding="10" StackGrowth="Top">
