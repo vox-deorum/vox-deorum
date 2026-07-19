@@ -37,12 +37,12 @@
     <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/VoxDeorumHumanTrigger.lua</File>
     <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/VoxDeorumHumanTrigger.xml</File>
     <File md5="51019DAD724C64015E52F76203AEF3F6" import="1">UI/VoxDeorumSeat.lua</File>
-    <File md5="0B48244A3288243E652E725E4769CCDC" import="1">UI/VoxDeorumConverse.lua</File>
+    <File md5="1C2EC246EE80D6D8848D73CDD50F9515" import="1">UI/VoxDeorumConverse.lua</File>
     <File md5="538888784994F3ED7AD1C8438727CA79" import="1">UI/LeaderHeadRoot.lua</File>
     <File md5="F72A8A907AF7A24517A900793216B7F9" import="1">UI/LeaderHeadRoot.xml</File>
-    <File md5="EF527CBB06B959DD87E4B67195D9A4AE" import="1">UI/VoxDeorumDiploPanel.lua</File>
+    <File md5="6A8ACA50F965E7ECC87041DA6DCB04BD" import="1">UI/VoxDeorumDiploPanel.lua</File>
     <File md5="556DF46A8F4323E58580DA06F0654EE2" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
-    <File md5="75A26BD52521C1B5C04B7268BCF13B1E" import="0">UI/VoxDeorumDiploPanel.xml</File>
+    <File md5="3AC83C69F556BA13A8317756F6A4BD48" import="0">UI/VoxDeorumDiploPanel.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>

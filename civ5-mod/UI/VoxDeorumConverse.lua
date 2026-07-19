@@ -5,6 +5,8 @@
 -- LeaderHeadRoot.xml) directly -- no cross-context lookups. The button sits in
 -- the native action stack (VoxDeorumDiploStack) beside Discuss/Trade/War and is
 -- shown when the leader on screen is a met, living, major civilization.
+-- Clicking it keeps the animated leader scene up; the conversation panel
+-- overlays it as a higher-priority popup (the trade-screen pattern).
 
 include("VoxDeorumSeat")
 
@@ -42,12 +44,14 @@ local function onLeavingLeaderViewMode()
 	setConverseHidden(true)
 end
 
--- Leave the native leader scene, then open Vox Deorum for the tracked leader.
+-- Open Vox Deorum over the still-live leader scene. Root-up is left true and
+-- the button stays visible: the panel queues itself above this context, and
+-- when it dequeues on Goodbye the root options (including Converse) return
+-- via OnShowHide without a fresh AILeaderMessage. Seed the speech balloon the
+-- same way OnTrade does so no stale line shows on return.
 local function onConverseClicked()
 	if not canConverse(m_diploPlayerID) then return end
-	setConverseHidden(true)
-	UI.SetLeaderHeadRootUp(false)
-	UI.RequestLeaveLeader()
+	Controls.LeaderSpeech:SetText(Locale.ConvertTextKey("TXT_KEY_DIPLOMACY_ANYTHING_ELSE"))
 	LuaEvents.VoxDeorumDiploOpen(m_diploPlayerID)
 end
 

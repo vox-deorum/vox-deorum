@@ -23,6 +23,10 @@ local m_tail = { sending = {}, streaming = {}, status = {}, closed = {} }
 local m_notificationIDs, m_notificationOwner, m_notificationMessages = {}, {}, {}
 local m_warPromptOpen = false
 local m_isPureObserver, m_mockPureObserver = false, false
+local PENDING_POKE_TIMEOUT = 3.0
+local m_presentation = nil -- nil | "pending" | "leader" | "static"
+local m_sceneLeaderID = -1
+local m_pendingCounterpartID, m_pendingSeconds = -1, 0
 
 ContextPtr:SetHide(true)
 
@@ -43,16 +47,18 @@ local function isHumanStrategist()
 	return activePlayer ~= nil and activePlayer:IsObserver() and not VoxDeorumSeat.IsPureObserver() and activePlayerID ~= m_activePlayerID
 end
 
--- Fit the panel inside a 1024x720 screen while preserving the footer.
+-- Size the bottom band to roughly half the screen so the animated leaderhead
+-- stays visible above it, keeping the content column centered and the footer.
 local function layoutPanel()
 	local screenW, screenH = UIManager:GetScreenSizeVal()
-	local targetW, targetH = math.max(1000, math.min(1050, screenW - 24)), math.max(640, math.min(740, screenH - 16))
-	local transcriptW, transcriptH = math.min(930, targetW - 80), math.max(360, targetH - 228)
-	local inputW = math.max(620, targetW - 320)
-	Controls.MainGrid:SetSizeVal(targetW, targetH); Controls.WarDim:SetSizeVal(targetW, targetH)
+	local targetH = math.max(480, math.min(620, math.floor(screenH * 0.52)))
+	local columnW = math.max(1000, math.min(1050, screenW - 24))
+	local transcriptW, transcriptH = math.min(930, columnW - 80), math.max(220, targetH - 228)
+	local inputW = math.max(620, columnW - 320)
+	Controls.MainGrid:SetSizeVal(screenW, targetH); Controls.ContentColumn:SetSizeVal(columnW, targetH); Controls.WarDim:SetSizeVal(screenW, targetH)
 	Controls.TranscriptScroll:SetSizeVal(transcriptW, transcriptH); Controls.TranscriptBar:SetSizeY(math.max(200, transcriptH - 42))
 	Controls.InputFrame:SetSizeX(inputW); Controls.InputFrameBorder:SetSizeVal(inputW + 4, 42); Controls.InputBox:SetSizeX(inputW - 20)
-	Controls.MainGrid:ReprocessAnchoring(); Controls.TranscriptScroll:CalculateInternalSize()
+	Controls.MainGrid:ReprocessAnchoring(); Controls.ContentColumn:ReprocessAnchoring(); Controls.TranscriptScroll:CalculateInternalSize()
 end
 
 -- Recompute safe bounds when the game resolution changes.
@@ -370,7 +376,7 @@ local function canDeclareWarNow()
 end
 
 -- Update native war-action visibility.
-local function refreshWarButton()
+local function refreshWarButton() 
 	Controls.WarButton:SetHide(not canDeclareWarNow())
 end
 
@@ -500,33 +506,118 @@ local function isValidCounterpart(counterpartID)
 	return counterpartID ~= VoxDeorumSeat.EffectiveSeat() and other ~= nil and other:IsAlive() and not other:IsMinorCiv() and not other:IsBarbarian()
 end
 
--- Show the dormant addin and ask the driver to populate it.
-local function showPanel(counterpartID)
+-- Abort a pending leaderhead poke and return the context to dormancy.
+local function cancelPending()
+	if m_presentation ~= "pending" then return end
+	m_presentation, m_pendingCounterpartID, m_pendingSeconds = nil, -1, 0
+	ContextPtr:ClearUpdate(); ContextPtr:SetHide(true); Controls.MainGrid:SetHide(false)
+end
+
+-- Show the panel in an explicit presentation mode: "leader" overlays the live
+-- animated leaderhead as a popup above LeaderHeadRoot (the TradeLogic pattern);
+-- "static" is the dimmed full-screen fallback for mocks, pure observers, and
+-- failed pokes. The mode is passed explicitly rather than sniffed from
+-- UI.GetLeaderHeadRootUp() to avoid event-ordering races.
+local function presentPanel(counterpartID, mode)
 	if not isValidCounterpart(counterpartID) then return end
+	cancelPending()
+	local wasQueued = m_presentation == "leader"
 	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = VoxDeorumSeat.EffectiveSeat(), counterpartID, Game.GetGameTurn(), false
 	m_isPureObserver, m_mockPureObserver = VoxDeorumSeat.IsPureObserver(), false
-	Controls.WarDim:SetHide(true); reset(nil); ContextPtr:SetHide(false); ContextPtr:SetUpdate(onUpdate)
+	m_presentation = mode
+	Controls.WarDim:SetHide(true); Controls.MainGrid:SetHide(false)
+	reset(nil)
+	-- Keep at most one popup-stack entry across re-opens and mode switches.
+	if mode == "leader" then
+		if not wasQueued then UIManager:QueuePopup(ContextPtr, PopupPriority.LeaderTrade) end
+	elseif wasQueued then
+		UIManager:DequeuePopup(ContextPtr)
+	end
+	ContextPtr:SetHide(false); ContextPtr:SetUpdate(onUpdate)
 	local driver = VoxDeorumDiploUI.driver
 	if driver ~= nil and driver.onOpen ~= nil then driver.onOpen(m_counterpartID, m_activePlayerID) end
 end
 
--- Hide the addin without mutating the conversation.
+-- Close without mutating the conversation. Over-leader mode dequeues back to
+-- the native root options: root-up was never cleared, so LeaderHeadRoot's
+-- show-handler restores Discuss/Trade/Converse/War when it resurfaces.
 local function hidePanel()
-	m_warPromptOpen = false
+	if m_presentation == "pending" then cancelPending(); return end
+	if m_presentation == nil then return end
+	local wasLeader = m_presentation == "leader"
+	m_presentation, m_warPromptOpen = nil, false
 	local driver = VoxDeorumDiploUI.driver
 	if driver ~= nil and driver.onHide ~= nil then driver.onHide() end
-	Controls.WarDim:SetHide(true); ContextPtr:ClearUpdate(); ContextPtr:SetHide(true)
+	Controls.WarDim:SetHide(true); ContextPtr:ClearUpdate()
+	if wasLeader then UIManager:DequeuePopup(ContextPtr) end
+	ContextPtr:SetHide(true)
 end
 
--- Open from the leader-screen action.
-local function onConverseOpen(counterpartID) showPanel(counterpartID) end
+-- Convert an open over-leader panel to the static fallback without touching
+-- the conversation or the driver (scene torn down or another audience arrived).
+local function demoteToStatic()
+	m_presentation = "static"
+	UIManager:DequeuePopup(ContextPtr)
+	ContextPtr:SetHide(false)
+end
+
+-- Tick the poke timeout on a visible-but-empty context; a hidden context
+-- cannot rely on SetUpdate ticking. Never calls driver.onUpdate: the driver
+-- has not been opened yet.
+local function onPendingUpdate(delta)
+	m_pendingSeconds = m_pendingSeconds + delta
+	if m_pendingSeconds >= PENDING_POKE_TIMEOUT then
+		local counterpartID = m_pendingCounterpartID
+		cancelPending(); presentPanel(counterpartID, "static")
+	end
+end
+
+-- Ask the engine to raise the leaderhead for a notification open; the panel
+-- opens over it when the matching AILeaderMessage arrives, or falls back to
+-- the static presentation on poke failure or timeout.
+local function beginPendingOpen(counterpartID)
+	m_presentation, m_pendingCounterpartID, m_pendingSeconds = "pending", counterpartID, 0
+	Controls.MainGrid:SetHide(true); ContextPtr:SetHide(false)
+	ContextPtr:SetUpdate(onPendingUpdate)
+	local ok = pcall(function() Players[counterpartID]:DoBeginDiploWithHuman() end)
+	if not ok then cancelPending(); presentPanel(counterpartID, "static") end
+end
+
+-- Open from the leader-screen action, over the scene when it shows this leader.
+local function onConverseOpen(counterpartID)
+	presentPanel(counterpartID, m_sceneLeaderID == counterpartID and "leader" or "static")
+end
+
+-- Track the leader on the native scene: resolve pending pokes, and step aside
+-- (demote to static) when a different audience arrives mid-conversation so the
+-- incoming leader UI is unobstructed.
+local function onPanelAILeaderMessage(diploPlayerID)
+	m_sceneLeaderID = diploPlayerID or -1
+	if m_presentation == "pending" then
+		local counterpartID = m_pendingCounterpartID
+		cancelPending()
+		presentPanel(counterpartID, m_sceneLeaderID == counterpartID and "leader" or "static")
+	elseif m_presentation == "leader" and m_sceneLeaderID ~= m_counterpartID then
+		demoteToStatic()
+	end
+end
+
+-- Fall back to the static presentation if the engine tears the scene down
+-- under an open panel; a pending poke instead rides out its timeout.
+local function onPanelLeavingLeaderView()
+	m_sceneLeaderID = -1
+	if m_presentation == "leader" then demoteToStatic() end
+end
 
 -- A valid counterpart opens the conversation and dismisses its pair notifications;
 -- a counterpart-less notification shows its cached message in a text dialog. The
 -- message is read before removal, since UI.RemoveNotification prunes the cache.
 local function onNotificationActivated(notificationID, counterpartID, extra)
 	if isValidCounterpart(counterpartID) then
-		UI.RemoveNotification(notificationID); dismissPairNotifications(counterpartID); showPanel(counterpartID)
+		UI.RemoveNotification(notificationID); dismissPairNotifications(counterpartID)
+		if m_sceneLeaderID == counterpartID then presentPanel(counterpartID, "leader")
+		elseif VoxDeorumSeat.IsPureObserver() or m_sceneLeaderID ~= -1 then presentPanel(counterpartID, "static")
+		else beginPendingOpen(counterpartID) end
 	else
 		local message = m_notificationMessages[notificationID]
 		UI.RemoveNotification(notificationID)
@@ -569,14 +660,23 @@ end
 -- Cancel native-war confirmation.
 local function cancelDeclareWar() m_warPromptOpen = false; Controls.WarDim:SetHide(true) end
 
--- Confirm native war against current team state.
+-- Confirm native war against current team state. Our declare path bypasses
+-- FROM_UI_DIPLO_EVENT_HUMAN_DECLARES_WAR, so the leaderhead would keep a stale
+-- mood; after declaring over the live scene, close and leave the audience.
 local function confirmDeclareWar()
-	if canDeclareWarNow() then
+	local declared = canDeclareWarNow()
+	if declared then
 		local counterpartTeamID = Players[m_counterpartID]:GetTeam()
 		if isHumanStrategist() then Teams[Players[m_activePlayerID]:GetTeam()]:DeclareWar(counterpartTeamID, false, m_activePlayerID)
 		else Network.SendChangeWar(counterpartTeamID, true) end
 	end
-	cancelDeclareWar(); refreshWarButton()
+	cancelDeclareWar()
+	if declared and m_presentation == "leader" then
+		hidePanel()
+		pcall(function() UI.SetLeaderHeadRootUp(false); UI.RequestLeaveLeader() end)
+	else
+		refreshWarButton()
+	end
 end
 
 -- Show the loading-earlier tail and ask the driver for a page.
@@ -596,9 +696,13 @@ local function inputHandler(uiMsg, wParam)
 	return false
 end
 
--- Clear updates if another context hides the panel.
+-- Keep the per-frame update armed across popup-stack show/hide cycles. Never
+-- calls driver.onHide or hidePanel here: dequeue-triggered hides must not
+-- double-fire the driver or recurse.
 local function showHideHandler(isHide, isInit)
-	if isHide and not isInit then ContextPtr:ClearUpdate() end
+	if isInit then return end
+	if isHide then ContextPtr:ClearUpdate()
+	elseif m_presentation == "leader" or m_presentation == "static" then ContextPtr:SetUpdate(onUpdate) end
 end
 
 -- Expose the stable interface shared by mock and transport drivers.
@@ -606,6 +710,7 @@ VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, pr
 
 buildTailPool()
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)
+Events.AILeaderMessage.Add(onPanelAILeaderMessage); Events.LeavingLeaderViewMode.Add(onPanelLeavingLeaderView)
 LuaEvents.VoxDeorumDiploOpen.Add(onConverseOpen); LuaEvents.VoxDeorumDiplomacyNotificationActivated.Add(onNotificationActivated)
 Controls.GoodbyeButton:RegisterCallback(Mouse.eLClick, hidePanel)
 Controls.LoadEarlierButton:RegisterCallback(Mouse.eLClick, onLoadEarlier); Controls.InputBox:RegisterCallback(onInputChanged); Controls.SendButton:RegisterCallback(Mouse.eLClick, onSend)

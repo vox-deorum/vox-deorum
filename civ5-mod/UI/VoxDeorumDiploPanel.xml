@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Full-screen mock diplomacy conversation panel.
-  Message bubbles adapt @schnetziomi5's diplomacy-message-log design:
+  Diplomacy conversation panel: a full-width translucent band docked to the
+  bottom of the screen so the engine-rendered animated leaderhead stays visible
+  above it. The static fallback (no leader scene) uses the same band over the
+  map. Message bubbles adapt @schnetziomi5's diplomacy-message-log design:
   GridBlackIndent8 body, Grid9Frame gold edge, and an outside-corner portrait.
 -->
 <Context Font="TwCenMT16" FontStyle="Shadow" ColorSet="Beige_Black_Alpha">
@@ -57,38 +59,39 @@
 			</GridButton>
 		</Container>
 	</Instance>
-	<Box ID="Dim" Style="BGBlock_ClearTopBar"/>
-	<Box ID="MainGrid" Anchor="C,C" Size="1050,740" Color="0,0,0,0" ConsumeMouse="1">
-		<GridButton ID="LoadEarlierButton" Anchor="C,T" Offset="0,18" Size="190,28" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
-		</GridButton>
-		<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,54" Size="930,512" Vertical="1" AutoScrollBar="1">
-			<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
-			<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
-			<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
-			<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
-			<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
-		</ScrollPanel>
-		<Label ID="PanelStatus" Hidden="1" Anchor="C,C" Offset="0,-60" WrapWidth="800" Font="TwCenMT22"/>
-		<Box Anchor="C,B" Offset="0,126" Size="930,1" Color="204,170,90,160"/>
-		<Grid ID="InputFrame" Anchor="L,B" Offset="60,80" Size="730,38" Style="GridBlackIndent8">
-			<Grid ID="InputFrameBorder" Anchor="C,C" Size="734,42" Style="Grid9Frame"/>
-			<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="710,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
-		</Grid>
-		<GridButton ID="SendButton" Anchor="R,B" Offset="60,82" Size="180,34" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_SEND" Font="TwCenMT18"/>
-		</GridButton>
-		<Label ID="InputReason" Hidden="1" Anchor="C,B" Offset="0,86" WrapWidth="900" Font="TwCenMT18"/>
-		<GridButton ID="ProposeButton" Anchor="L,B" Offset="60,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL" Font="TwCenMT18"/>
-		</GridButton>
-		<GridButton ID="WarButton" Anchor="C,B" Offset="0,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_DECLARE_WAR" Font="TwCenMT18"/>
-		</GridButton>
-		<GridButton ID="GoodbyeButton" Anchor="R,B" Offset="60,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_GOODBYE" Font="TwCenMT18"/>
-		</GridButton>
-		<Box ID="WarDim" Hidden="1" Anchor="C,C" Size="1050,740" Color="0,0,0,210" ConsumeMouse="1">
+	<Box ID="MainGrid" Anchor="C,B" Size="1050,620" Color="0,0,0,0" ConsumeMouse="1">
+		<Box ID="ContentColumn" Anchor="C,B" Size="1050,620" Color="0,0,0,0">
+			<GridButton ID="LoadEarlierButton" Anchor="C,T" Offset="0,18" Size="190,28" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
+			</GridButton>
+			<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,54" Size="930,512" Vertical="1" AutoScrollBar="1">
+				<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
+				<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
+				<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
+				<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
+				<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
+			</ScrollPanel>
+			<Label ID="PanelStatus" Hidden="1" Anchor="C,C" Offset="0,-60" WrapWidth="800" Font="TwCenMT22"/>
+			<Box Anchor="C,B" Offset="0,126" Size="930,1" Color="204,170,90,160"/>
+			<Grid ID="InputFrame" Anchor="L,B" Offset="60,80" Size="730,38" Style="GridBlackIndent8">
+				<Grid ID="InputFrameBorder" Anchor="C,C" Size="734,42" Style="Grid9Frame"/>
+				<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="710,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
+			</Grid>
+			<GridButton ID="SendButton" Anchor="R,B" Offset="60,82" Size="180,34" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_SEND" Font="TwCenMT18"/>
+			</GridButton>
+			<Label ID="InputReason" Hidden="1" Anchor="C,B" Offset="0,86" WrapWidth="900" Font="TwCenMT18"/>
+			<GridButton ID="ProposeButton" Anchor="L,B" Offset="60,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL" Font="TwCenMT18"/>
+			</GridButton>
+			<GridButton ID="WarButton" Anchor="C,B" Offset="0,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_DECLARE_WAR" Font="TwCenMT18"/>
+			</GridButton>
+			<GridButton ID="GoodbyeButton" Anchor="R,B" Offset="60,28" Size="220,34" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_GOODBYE" Font="TwCenMT18"/>
+			</GridButton>
+		</Box>
+		<Box ID="WarDim" Hidden="1" Anchor="C,C" Size="1050,620" Color="0,0,0,210" ConsumeMouse="1">
 			<Grid ID="WarConfirm" Anchor="C,C" Size="620,210" Style="Grid9DetailFive140">
 				<Label Anchor="C,T" Offset="0,34" String="TXT_KEY_VD_DIPLO_DECLARE_WAR_CONFIRM" WrapWidth="540" Font="TwCenMT22"/>
 				<GridButton ID="WarYesButton" Anchor="L,B" Offset="60,34" Size="200,34" Style="SmallButton" StateOffsetIncrement="0,0">
