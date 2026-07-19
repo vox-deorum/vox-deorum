@@ -1,4 +1,6 @@
 -- Stage 7.01 mock driver. Stage 7.04 replaces this include with the transport driver.
+-- The mock always plays the normal seated demo, whatever seat it runs under:
+-- observers can do everything except Declare War, a native path outside its scope.
 
 local NOTIFICATION_NAME = "NOTIFICATION_VOX_DEORUM_DIPLOMACY"
 local STREAM_CHUNK_SECONDS = 0.8
@@ -23,7 +25,6 @@ local PHASES = {
 	{ name = "closed", seconds = 5.0 }, { name = "normal", seconds = 6.0 },
 	{ name = "sending", seconds = 5.0 }, { name = "thinking", seconds = 5.0 },
 	{ name = "streaming", seconds = #STREAM_CUTS * STREAM_CHUNK_SECONDS + 1.5 }, { name = "deal-pending", seconds = 5.0 },
-	{ name = "pure-observer", seconds = 7.0 },
 	{ name = "ack-timeout", seconds = 6.0 }, { name = "reply-timeout", seconds = 6.0 },
 }
 local m_counterpartID, m_activePlayerID, m_mockTurn = -1, -1, 0
@@ -32,7 +33,6 @@ local m_lastStreamChunk = 0
 local m_loadingEarlier, m_loadingEarlierSeconds = false, 0
 local m_optimisticText, m_counterAppended, m_streamCommitted = "We accept your terms.", false, false
 local m_nextID, m_dealStep = 300, 0
-local m_observerPhaseLogged = false
 
 -- Build one sample deal from the current conversation pair.
 local function buildDealA()
@@ -89,15 +89,8 @@ end
 -- Apply one mock phase through the public UI surface.
 local function applyPhase()
 	local name = PHASES[m_phaseIndex].name
-	VoxDeorumDiploUI.setMockPureObserver(name == "pure-observer")
-	if name == "pure-observer" and not m_observerPhaseLogged then
-		print("Vox Deorum: stage-01 mock is showing pure-observer presentation")
-		m_observerPhaseLogged = true
-	end
 	if name == "closed" then
 		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn); VoxDeorumDiploUI.setPhase("normal")
-	elseif name == "pure-observer" then
-		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn + 1); VoxDeorumDiploUI.setPhase("normal")
 	else
 		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn + 1)
 		if name == "sending" then VoxDeorumDiploUI.setPhase(name, m_optimisticText)

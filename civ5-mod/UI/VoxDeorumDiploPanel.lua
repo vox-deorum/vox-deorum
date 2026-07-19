@@ -33,18 +33,13 @@ local m_dotSeconds, m_dotCount, m_animated = 0, 1, {}
 local m_tail = { sending = {}, streaming = {}, status = {} }
 local m_notificationIDs, m_notificationOwner, m_notificationMessages = {}, {}, {}
 local m_warPromptOpen = false
-local m_isPureObserver, m_mockPureObserver = false, false
+local m_isPureObserver = false
 local PENDING_POKE_TIMEOUT = 3.0
 local m_presentation = nil -- nil | "pending" | "leader" | "static"
 local m_sceneLeaderID = -1
 local m_pendingCounterpartID, m_pendingSeconds = -1, 0
 
 ContextPtr:SetHide(true)
-
--- Return whether observer-only presentation applies to this panel session.
-local function isPureObserverMode()
-	return m_isPureObserver or m_mockPureObserver
-end
 
 -- Return whether the current UI still controls the deal actor bound on open.
 local function isBoundActorCurrent()
@@ -150,7 +145,7 @@ end
 
 -- Return a localized speaker title.
 local function speakerTitle(playerID)
-	if isPureObserverMode() and playerID == m_activePlayerID then return Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_OBSERVER") end
+	if m_isPureObserver and playerID == m_activePlayerID then return Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_OBSERVER") end
 	local player = Players[playerID]
 	local leaderName, civName = Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_UNKNOWN_LEADER"), Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_UNKNOWN_CIV")
 	if player ~= nil then
@@ -163,7 +158,7 @@ end
 
 -- Return the player whose artwork represents a conversation speaker.
 local function speakerIconPlayerID(playerID)
-	if isPureObserverMode() and playerID == m_activePlayerID then return GameDefines.BARBARIAN_PLAYER end
+	if m_isPureObserver and playerID == m_activePlayerID then return GameDefines.BARBARIAN_PLAYER end
 	return playerID
 end
 
@@ -428,7 +423,7 @@ end
 
 -- Return whether the effective seat may declare war on the counterpart right now.
 local function canDeclareWarNow()
-	if isPureObserverMode() or VoxDeorumSeat.IsPureObserver() or not isBoundActorCurrent() then return false end
+	if VoxDeorumSeat.IsPureObserver() or not isBoundActorCurrent() then return false end
 	local active, other = Players[m_activePlayerID], Players[m_counterpartID]
 	if active == nil or other == nil then return false end
 	local activeTeam, otherTeamID = Teams[active:GetTeam()], other:GetTeam()
@@ -503,15 +498,6 @@ local function onSystemUpdateUI(uiType)
 	local anchor = not stickToBottom and captureScrollAnchor() or nil
 	layoutPanel(); rebuildRows(stickToBottom)
 	if anchor ~= nil then restoreScrollAnchor(anchor) end
-end
-
--- Force observer presentation for the stage-01 mock without changing real seat state.
-local function setMockPureObserver(flag)
-	local nextValue = flag == true
-	if m_mockPureObserver == nextValue then return end
-	m_mockPureObserver = nextValue
-	populateHeader()
-	rebuildRows(isAtBottom())
 end
 
 -- Clear the panel before a new pair or server reflush.
@@ -635,7 +621,7 @@ local function presentPanel(counterpartID, mode)
 	cancelPending()
 	local wasQueued = m_presentation == "leader"
 	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = VoxDeorumSeat.EffectiveSeat(), counterpartID, Game.GetGameTurn(), false
-	m_isPureObserver, m_mockPureObserver = VoxDeorumSeat.IsPureObserver(), false
+	m_isPureObserver = VoxDeorumSeat.IsPureObserver()
 	populateHeader()
 	m_presentation = mode
 	Controls.WarDim:SetHide(true); Controls.MainGrid:SetHide(false)
@@ -819,7 +805,7 @@ local function showHideHandler(isHide, isInit)
 end
 
 -- Expose the stable interface shared by mock and transport drivers.
-VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, setMockPureObserver = setMockPureObserver, driver = {} }
+VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, prependRows = prependRows, setPhase = setPhase, setStreamingText = setStreamingText, setHasMore = setHasMore, setCurrentTurn = setCurrentTurn, driver = {} }
 
 buildTailPool()
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)
