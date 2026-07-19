@@ -1,17 +1,34 @@
 -- Stage 7.01 mock driver. Stage 7.04 replaces this include with the transport driver.
 
 local NOTIFICATION_NAME = "NOTIFICATION_VOX_DEORUM_DIPLOMACY"
+local STREAM_CHUNK_SECONDS = 0.8
+local STREAM_TEXT = "Consider it carefully. My patience has limits, but there may still be room for agreement if your people show good faith. Withdraw your scouts from our frontier and honor the promises already made. Do that, and we can discuss trade, open borders, and a lasting peace."
+
+-- Build cumulative word-boundary cut points for four-word streaming chunks.
+local function buildStreamCuts(text)
+	local cuts, searchFrom, wordCount = {}, 1, 0
+	while true do
+		local _, wordEnd = string.find(text, "%S+", searchFrom)
+		if wordEnd == nil then break end
+		wordCount, searchFrom = wordCount + 1, wordEnd + 1
+		if wordCount % 4 == 0 then table.insert(cuts, wordEnd) end
+	end
+	if cuts[#cuts] ~= string.len(text) then table.insert(cuts, string.len(text)) end
+	return cuts
+end
+
+local STREAM_CUTS = buildStreamCuts(STREAM_TEXT)
 local PHASES = {
-	{ name = "loading", seconds = 1.8 }, { name = "no-envoy", seconds = 2.8 },
-	{ name = "closed", seconds = 2.8 }, { name = "normal", seconds = 3.5 },
-	{ name = "sending", seconds = 2.8 }, { name = "thinking", seconds = 2.8 },
-	{ name = "streaming", seconds = 3.2 }, { name = "deal-pending", seconds = 2.8 },
-	{ name = "pure-observer", seconds = 4.5 },
-	{ name = "ack-timeout", seconds = 3.5 }, { name = "reply-timeout", seconds = 3.5 },
+	{ name = "loading", seconds = 3.0 }, { name = "no-envoy", seconds = 5.0 },
+	{ name = "closed", seconds = 5.0 }, { name = "normal", seconds = 6.0 },
+	{ name = "sending", seconds = 5.0 }, { name = "thinking", seconds = 5.0 },
+	{ name = "streaming", seconds = #STREAM_CUTS * STREAM_CHUNK_SECONDS + 1.5 }, { name = "deal-pending", seconds = 5.0 },
+	{ name = "pure-observer", seconds = 7.0 },
+	{ name = "ack-timeout", seconds = 6.0 }, { name = "reply-timeout", seconds = 6.0 },
 }
-local STREAM_TEXT = "Consider it carefully. My patience has limits, but there may still be room for agreement."
 local m_counterpartID, m_activePlayerID, m_mockTurn = -1, -1, 0
 local m_phaseIndex, m_phaseSeconds = 1, 0
+local m_lastStreamChunk = 0
 local m_loadingEarlier, m_loadingEarlierSeconds = false, 0
 local m_optimisticText, m_counterAppended, m_streamCommitted = "We accept your terms.", false, false
 local m_nextID, m_dealStep = 300, 0
@@ -84,7 +101,7 @@ local function applyPhase()
 	else
 		VoxDeorumDiploUI.setCurrentTurn(m_mockTurn + 1)
 		if name == "sending" then VoxDeorumDiploUI.setPhase(name, m_optimisticText)
-		elseif name == "streaming" then m_streamCommitted = false; VoxDeorumDiploUI.setPhase(name); VoxDeorumDiploUI.setStreamingText("")
+		elseif name == "streaming" then m_streamCommitted, m_lastStreamChunk = false, 0; VoxDeorumDiploUI.setPhase(name); VoxDeorumDiploUI.setStreamingText("")
 		elseif name == "deal-pending" then
 			if m_dealStep >= 4 then VoxDeorumDiploUI.setPhase("normal")
 			else VoxDeorumDiploUI.setPhase(name, m_dealStep == 0 and 207 or 208) end
@@ -143,12 +160,15 @@ end
 local function onUpdate(delta)
 	if m_loadingEarlier then
 		m_loadingEarlierSeconds = m_loadingEarlierSeconds + delta
-		if m_loadingEarlierSeconds >= 1.5 then m_loadingEarlier, m_loadingEarlierSeconds = false, 0; VoxDeorumDiploUI.prependRows(buildOlderRows(), false) end
+		if m_loadingEarlierSeconds >= 2.5 then m_loadingEarlier, m_loadingEarlierSeconds = false, 0; VoxDeorumDiploUI.prependRows(buildOlderRows(), false) end
 	end
 	m_phaseSeconds = m_phaseSeconds + delta
 	if PHASES[m_phaseIndex].name == "streaming" then
-		local count = math.floor(math.min(1, m_phaseSeconds / PHASES[m_phaseIndex].seconds) * string.len(STREAM_TEXT))
-		VoxDeorumDiploUI.setStreamingText(string.sub(STREAM_TEXT, 1, count))
+		local chunk = math.min(#STREAM_CUTS, math.floor(m_phaseSeconds / STREAM_CHUNK_SECONDS) + 1)
+		if chunk ~= m_lastStreamChunk then
+			m_lastStreamChunk = chunk
+			VoxDeorumDiploUI.setStreamingText(string.sub(STREAM_TEXT, 1, STREAM_CUTS[chunk]))
+		end
 	end
 	if m_phaseSeconds >= PHASES[m_phaseIndex].seconds then
 		local oldName = PHASES[m_phaseIndex].name

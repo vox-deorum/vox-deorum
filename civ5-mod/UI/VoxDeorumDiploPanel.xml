@@ -57,22 +57,12 @@
 			</GridButton>
 		</Container>
 	</Instance>
-	<Image ID="Backdrop" Anchor="C,C" Size="Full,Full" Texture="alexander.dds"/>
 	<Box ID="Dim" Style="BGBlock_ClearTopBar"/>
-	<Grid ID="MainGrid" Anchor="C,C" Size="1050,740" Style="Grid9DetailFive140" ConsumeMouse="1">
-		<Box Style="MenuLeftSideTreatment"/>
-		<Box Style="MenuRightSideTreatment"/>
-		<Grid ID="HeaderPill" Anchor="C,T" Offset="0,18" Size="230,32" Style="GridBlackIndent8">
-			<Grid Anchor="C,C" Size="234,36" Style="Grid9Frame"/>
-			<Label ID="HeaderTurn" Anchor="C,C" Font="TwCenMT18"/>
-		</Grid>
-		<GridButton ID="CloseButton" Anchor="R,T" Offset="18,14" Size="36,32" Style="SmallButton" StateOffsetIncrement="0,0" ToolTip="TXT_KEY_VD_DIPLO_GOODBYE_TT">
-			<Label Anchor="C,C" String="X" Font="TwCenMT20"/>
-		</GridButton>
-		<GridButton ID="LoadEarlierButton" Anchor="C,T" Offset="0,58" Size="190,28" Style="SmallButton" StateOffsetIncrement="0,0">
+	<Box ID="MainGrid" Anchor="C,C" Size="1050,740" Color="0,0,0,0" ConsumeMouse="1">
+		<GridButton ID="LoadEarlierButton" Anchor="C,T" Offset="0,18" Size="190,28" Style="SmallButton" StateOffsetIncrement="0,0">
 			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_LOAD_EARLIER" Font="TwCenMT16"/>
 		</GridButton>
-		<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,94" Size="930,472" Vertical="1" AutoScrollBar="1">
+		<ScrollPanel ID="TranscriptScroll" Anchor="C,T" Offset="0,54" Size="930,512" Vertical="1" AutoScrollBar="1">
 			<Stack ID="TranscriptStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
 			<Stack ID="TailStack" Anchor="L,T" Offset="0,0" Size="900,0" Padding="8" StackGrowth="Bottom"/>
 			<ScrollBar ID="TranscriptBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
@@ -81,9 +71,10 @@
 		</ScrollPanel>
 		<Label ID="PanelStatus" Hidden="1" Anchor="C,C" Offset="0,-60" WrapWidth="800" Font="TwCenMT22"/>
 		<Box Anchor="C,B" Offset="0,126" Size="930,1" Color="204,170,90,160"/>
-		<Box ID="InputFrame" Anchor="L,B" Offset="60,80" Size="730,38" Color="0,0,0,180">
+		<Grid ID="InputFrame" Anchor="L,B" Offset="60,80" Size="730,38" Style="GridBlackIndent8">
+			<Grid ID="InputFrameBorder" Anchor="C,C" Size="734,42" Style="Grid9Frame"/>
 			<EditBox ID="InputBox" Anchor="L,C" Offset="10,0" Size="710,28" Font="TwCenMT18" MaxLength="2000" CallOnChar="1"/>
-		</Box>
+		</Grid>
 		<GridButton ID="SendButton" Anchor="R,B" Offset="60,82" Size="180,34" Style="SmallButton" StateOffsetIncrement="0,0">
 			<Label Anchor="C,C" String="TXT_KEY_VD_DIPLO_SEND" Font="TwCenMT18"/>
 		</GridButton>
@@ -108,5 +99,5 @@
 				</GridButton>
 			</Grid>
 		</Box>
-	</Grid>
+	</Box>
 </Context>

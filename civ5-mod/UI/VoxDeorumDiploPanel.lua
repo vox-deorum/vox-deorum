@@ -47,11 +47,11 @@ end
 local function layoutPanel()
 	local screenW, screenH = UIManager:GetScreenSizeVal()
 	local targetW, targetH = math.max(1000, math.min(1050, screenW - 24)), math.max(640, math.min(740, screenH - 16))
-	local transcriptW, transcriptH = math.min(930, targetW - 80), math.max(360, targetH - 268)
+	local transcriptW, transcriptH = math.min(930, targetW - 80), math.max(360, targetH - 228)
 	local inputW = math.max(620, targetW - 320)
 	Controls.MainGrid:SetSizeVal(targetW, targetH); Controls.WarDim:SetSizeVal(targetW, targetH)
 	Controls.TranscriptScroll:SetSizeVal(transcriptW, transcriptH); Controls.TranscriptBar:SetSizeY(math.max(200, transcriptH - 42))
-	Controls.InputFrame:SetSizeX(inputW); Controls.InputBox:SetSizeX(inputW - 20)
+	Controls.InputFrame:SetSizeX(inputW); Controls.InputFrameBorder:SetSizeVal(inputW + 4, 42); Controls.InputBox:SetSizeX(inputW - 20)
 	Controls.MainGrid:ReprocessAnchoring(); Controls.TranscriptScroll:CalculateInternalSize()
 end
 
@@ -377,7 +377,7 @@ end
 -- Refresh row-dependent state without rebuilding durable instances.
 local function refreshState(stickToBottom)
 	local reduction = deriveActiveProposal(m_rows)
-	Controls.HeaderTurn:SetText(turnLabel(m_currentTurn)); Controls.LoadEarlierButton:SetHide(not m_hasMore or m_phase == "loading" or m_phase == "no-envoy"); Controls.LoadEarlierButton:SetDisabled(m_loadingEarlier)
+	Controls.LoadEarlierButton:SetHide(not m_hasMore or m_phase == "loading" or m_phase == "no-envoy"); Controls.LoadEarlierButton:SetDisabled(m_loadingEarlier)
 	refreshTail(reduction); refreshInput(); refreshWarButton(); reflowTranscript(stickToBottom)
 end
 
@@ -457,7 +457,7 @@ local function setHasMore(flag)
 	m_hasMore = flag == true; Controls.LoadEarlierButton:SetHide(not m_hasMore or m_phase == "loading" or m_phase == "no-envoy")
 end
 
--- Change the turn used by header and closure derivation.
+-- Change the turn used by closure derivation.
 local function setCurrentTurn(turn)
 	local stick = isAtBottom(); m_currentTurn = tonumber(turn) or Game.GetGameTurn(); refreshState(stick)
 end
@@ -607,7 +607,7 @@ VoxDeorumDiploUI = { reset = reset, setRows = setRows, appendRow = appendRow, pr
 buildTailPool()
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)
 LuaEvents.VoxDeorumDiploOpen.Add(onConverseOpen); LuaEvents.VoxDeorumDiplomacyNotificationActivated.Add(onNotificationActivated)
-Controls.CloseButton:RegisterCallback(Mouse.eLClick, hidePanel); Controls.GoodbyeButton:RegisterCallback(Mouse.eLClick, hidePanel)
+Controls.GoodbyeButton:RegisterCallback(Mouse.eLClick, hidePanel)
 Controls.LoadEarlierButton:RegisterCallback(Mouse.eLClick, onLoadEarlier); Controls.InputBox:RegisterCallback(onInputChanged); Controls.SendButton:RegisterCallback(Mouse.eLClick, onSend)
 Controls.ProposeButton:RegisterCallback(Mouse.eLClick, onProposeDeal); Controls.WarButton:RegisterCallback(Mouse.eLClick, onDeclareWar)
 Controls.WarYesButton:RegisterCallback(Mouse.eLClick, confirmDeclareWar); Controls.WarNoButton:RegisterCallback(Mouse.eLClick, cancelDeclareWar)
