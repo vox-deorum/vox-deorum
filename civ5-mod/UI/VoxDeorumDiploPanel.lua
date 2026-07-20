@@ -4,9 +4,8 @@
 
 include("IconSupport")
 include("VoxDeorumSeat")
+include("VoxDeorumDealUtils")
 
-local DELIMITER = "!@#$%^!"
-local DELIMITER_PATTERN = string.gsub(DELIMITER, "%W", "%%%1")
 local RESERVED_RIGHT = 264
 local OUTER_GUTTER = 12
 local STATUS_KEYS = {
@@ -38,6 +37,8 @@ local PENDING_POKE_TIMEOUT = 3.0
 local m_presentation = nil -- nil | "pending" | "leader" | "static"
 local m_sceneLeaderID = -1
 local m_pendingCounterpartID, m_pendingSeconds = -1, 0
+local m_dealScreenPriorPresentation = nil
+local m_dealOpenError = nil
 
 ContextPtr:SetHide(true)
 
@@ -84,7 +85,7 @@ end
 
 -- Strip the named-pipe delimiter from text.
 local function sanitizeText(value)
-	return string.gsub(tostring(value or ""), DELIMITER_PATTERN, "")
+	return VoxDeorumDealUtils.StripDelimiter(value)
 end
 
 -- Wrap display text in one of Civilization V's named text colors.
@@ -272,10 +273,18 @@ local function addAnimated(control, prefix, suffix)
 	table.insert(m_animated, entry); applyAnimated(entry)
 end
 
--- Open one deal card in respond or view mode.
-local function openDeal(row, respond)
-	local proposalID = respond and isBoundActorCurrent() and row.ID or nil
-	LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, row.Payload and row.Payload.Deal or nil, proposalID)
+-- Open one deal card with the explicit mode derived by the transcript reducer.
+local function openDeal(row, mode)
+	local deal = row.Payload and row.Payload.Deal or nil
+	if deal == nil then return end
+	m_dealOpenError = nil
+	local proposalID = (mode == "incoming" or mode == "own") and row.ID or nil
+	LuaEvents.VoxDeorumOpenDealScreen({
+		counterpartID = m_counterpartID,
+		mode = mode or "view",
+		deal = deal,
+		proposalMessageID = proposalID,
+	})
 end
 
 -- Apply the shared bubble geometry for one message instance.
@@ -335,8 +344,8 @@ local function buildRowInstance(row)
 	end
 	m_lastBuiltTurn = row.Turn
 	local instance = {}; ContextPtr:BuildInstanceForControl("MessageInstance", instance, Controls.TranscriptStack)
-	local record = { row = row, controls = instance, respond = false }; record.isDeal = bindStaticRow(row, instance)
-	if record.isDeal then instance.CardButton:RegisterCallback(Mouse.eLClick, function() openDeal(record.row, record.respond) end) end
+	local record = { row = row, controls = instance, mode = "view" }; record.isDeal = bindStaticRow(row, instance)
+	if record.isDeal then instance.CardButton:RegisterCallback(Mouse.eLClick, function() openDeal(record.row, record.mode) end) end
 	m_rowInstances[row.ID] = record
 end
 
@@ -364,7 +373,8 @@ local function refreshDealRow(row, reduction)
 	textControl:SetText(dealSummary(row, status)); resizeDealBubble(instance, pending)
 	instance.Pending:SetHide(not pending)
 	if pending then addAnimated(instance.Pending, Locale.ConvertTextKey(pendingLabelKey()) .. " ") end
-	record.respond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and isBoundActorCurrent()
+	local canRespond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and isBoundActorCurrent()
+	record.mode = canRespond and (row.SpeakerID == m_activePlayerID and "own" or "incoming") or "view"
 	instance.CardButton:SetDisabled(pending); instance.CardButton:SetAlpha((pending or row.Pending) and 0.55 or 1)
 end
 
@@ -408,7 +418,10 @@ local function refreshTail(reduction)
 	elseif m_phase == "streaming" then
 		bindTailMessage(m_tail.streaming, m_counterpartID, m_streamingText); m_tail.streaming.Row:SetHide(false)
 	end
-	if m_loadingEarlier then
+	if m_dealOpenError ~= nil then
+		m_tail.status.Row:SetSizeX(m_geometry.rowWidth); m_tail.status.Text:SetWrapWidth(m_geometry.rowWidth - 60)
+		m_tail.status.Row:SetHide(false); m_tail.status.Text:SetText(m_dealOpenError)
+	elseif m_loadingEarlier then
 		m_tail.status.Row:SetSizeX(m_geometry.rowWidth); m_tail.status.Text:SetWrapWidth(m_geometry.rowWidth - 60)
 		m_tail.status.Row:SetHide(false); addAnimated(m_tail.status.Text, Locale.ConvertTextKey("TXT_KEY_VD_DIPLO_LOADING_EARLIER") .. " ")
 	end
@@ -534,6 +547,7 @@ end
 -- Clear the panel before a new pair or server reflush.
 local function reset(meta)
 	m_rows, m_rowByID, m_rowInstances, m_lastBuiltTurn, m_streamingText = {}, {}, {}, nil, ""
+	m_dealOpenError = nil
 	m_hasMore, m_loadingEarlier = meta and meta.hasMore == true or false, false
 	if meta == nil then m_phase = "loading" elseif meta.hasEnvoy == false then m_phase = "no-envoy" elseif meta.busy then m_phase = "thinking" else m_phase = "normal" end
 	m_phaseArg, m_dotSeconds, m_dotCount = nil, 0, 1
@@ -675,7 +689,7 @@ local function hidePanel()
 	if m_presentation == "pending" then cancelPending(); return end
 	if m_presentation == nil then return end
 	local wasLeader = m_presentation == "leader"
-	m_presentation, m_warPromptOpen = nil, false
+	m_presentation, m_warPromptOpen, m_dealOpenError = nil, false, nil
 	local driver = VoxDeorumDiploUI.driver
 	if driver ~= nil and driver.onHide ~= nil then driver.onHide() end
 	Controls.WarDim:SetHide(true); ContextPtr:ClearUpdate()
@@ -689,6 +703,34 @@ local function demoteToStatic()
 	m_presentation = "static"
 	UIManager:DequeuePopup(ContextPtr)
 	ContextPtr:SetHide(false)
+end
+
+-- Demote the conversation beneath the deal screen while retaining its live state.
+local function demotePanelForDeal()
+	if m_dealScreenPriorPresentation ~= nil or m_presentation == nil or m_presentation == "pending" then return end
+	m_dealScreenPriorPresentation = m_presentation
+	if m_presentation == "leader" then demoteToStatic() end
+end
+
+-- Restore the conversation and optionally show a deal-open failure inline.
+local function restorePanelAfterDeal(errorText, errorIsLiteral)
+	local prior = m_dealScreenPriorPresentation
+	m_dealScreenPriorPresentation = nil
+	if errorText ~= nil then
+		local message = errorIsLiteral and tostring(errorText) or Locale.ConvertTextKey(errorText)
+		m_dealOpenError = colorText(sanitizeText(message), "COLOR_NEGATIVE_TEXT")
+	end
+	if prior ~= nil and m_presentation ~= nil then
+		if prior == "leader" and m_sceneLeaderID == m_counterpartID then
+			m_presentation = "leader"
+			UIManager:QueuePopup(ContextPtr, PopupPriority.LeaderTrade)
+			ContextPtr:SetHide(false)
+		else
+			m_presentation = "static"
+			ContextPtr:SetHide(false)
+		end
+	end
+	if errorText ~= nil and m_presentation ~= nil then refreshState(true) end
 end
 
 -- Tick the poke timeout on a visible-but-empty context; a hidden context
@@ -778,7 +820,10 @@ local function onSend() sendText(Controls.InputBox:GetText()) end
 
 -- Open deal authoring when input is available.
 local function onProposeDeal()
-	if isBoundActorCurrent() and not inputIsLocked() then LuaEvents.VoxDeorumOpenDealScreen(m_counterpartID, nil, nil) end
+	if isBoundActorCurrent() and not inputIsLocked() then
+		m_dealOpenError = nil
+		LuaEvents.VoxDeorumOpenDealScreen({ counterpartID = m_counterpartID, mode = "author" })
+	end
 end
 
 -- Show the native-war confirmation overlay.
@@ -842,6 +887,7 @@ buildTailPool()
 Events.NotificationAdded.Add(onNotificationAdded); Events.NotificationRemoved.Add(onNotificationRemoved)
 Events.AILeaderMessage.Add(onPanelAILeaderMessage); Events.LeavingLeaderViewMode.Add(onPanelLeavingLeaderView)
 LuaEvents.VoxDeorumDiploOpen.Add(onConverseOpen); LuaEvents.VoxDeorumDiplomacyNotificationActivated.Add(onNotificationActivated)
+LuaEvents.VoxDeorumDiploPanelDemoteForDeal.Add(demotePanelForDeal); LuaEvents.VoxDeorumDiploPanelRestoreAfterDeal.Add(restorePanelAfterDeal)
 Controls.GoodbyeButton:RegisterCallback(Mouse.eLClick, hidePanel)
 Controls.LoadEarlierButton:RegisterCallback(Mouse.eLClick, onLoadEarlier); Controls.InputBox:RegisterCallback(onInputChanged); Controls.SendButton:RegisterCallback(Mouse.eLClick, onSend)
 -- Retry a timed-out request through whichever conversation driver is active.

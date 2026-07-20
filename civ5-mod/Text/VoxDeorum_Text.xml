@@ -359,6 +359,12 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_SEND"><Text>Send</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"><Text>Propose Deal</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_DECLARE_WAR"><Text>Declare War!</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_AUTHOR"><Text>Mock: Author</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_INCOMING"><Text>Mock: Incoming</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_OWN"><Text>Mock: Own Open</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_VIEW"><Text>Mock: View</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_SUCCESS"><Text>Mock: Success</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_ERROR"><Text>Mock: Error</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE"><Text>Goodbye</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE_TT"><Text>Hide this conversation panel. The conversation remains available.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_RETRY"><Text>Retry</Text></Row>
@@ -390,5 +396,32 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_ACCEPTED"><Text>Accepted</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_REJECTED"><Text>Rejected</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_STATUS_ENACTED"><Text>Enacted</Text></Row>
+
+		<!-- Vox Deorum deal authoring and review screen. -->
+		<Row Tag="TXT_KEY_VD_DEAL_PROMISES"><Text>Promises</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_MILITARY"><Text>Limit military buildup</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_EXPANSION"><Text>Limit expansion</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_BORDER"><Text>Keep forces away from the border</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_NO_DIGGING"><Text>Stop excavating artifacts</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_COOP_WAR"><Text>Prepare for a cooperative war</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_SELECT_TARGET"><Text>Select a target civilization</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_MESSAGE_HINT"><Text>Add an optional one-sentence message</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_STATUS_PENDING"><Text>Sending deal</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_INVALID_REQUEST"><Text>This deal request is incomplete or invalid.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_EMPTY"><Text>Add at least one trade term or promise before sending this deal.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_ACTOR_CHANGED"><Text>The civilization you are directing changed. Reopen the deal before continuing.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_REBUILD"><Text>One or more deal terms are no longer available. Review the deal and try again.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_PROMISE_INVALID"><Text>One or more promises cannot be made right now. Review the promises and try again.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_OPEN"><Text>The deal screen could not open.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_NO_DRIVER"><Text>The deal screen driver is unavailable.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_PROPOSE"><Text>Propose</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_CANCEL"><Text>Cancel</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_ACCEPT"><Text>Accept</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_COUNTER"><Text>Counter</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_REJECT"><Text>Reject</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_RETRACT"><Text>Retract</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_BACK"><Text>Back</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_MOCK_SUCCESS"><Text>The mock envoy completed the deal action.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_MOCK_ERROR"><Text>The mock envoy refused this action. Your draft is still open.</Text></Row>
 	</Language_en_US>
 </GameData>

@@ -172,13 +172,13 @@ If a facade is unsafe or unwritable, callback replacement does not replace the n
 
    DO NOT create a local ceiling as a deal is very unlikely to go over that. In that event, we will raise the buffer space.
 
-   Propose and Counter send the deal to `driver.onAction`. Accept, Reject, and Retract send only the proposal ID; Retract uses the reject action. The wrapper immediately shows a localized animated pending state and disables actions. The mock driver must demonstrate delayed success and delayed error recovery. The screen never calls `Deal:Enact()` and never writes transcript rows.
+   Propose and Counter send the deal to `driver.onAction`. Accept, Reject, and Retract send only the proposal ID, using distinct `accept`, `reject`, and `retract` driver kinds. Stage 7.04 deliberately maps the local `retract` kind to the backend's canonical reject action after preserving its proposer-owned meaning. The wrapper immediately shows a localized animated pending state and disables actions. The mock driver must demonstrate delayed success and delayed error recovery. The screen never calls `Deal:Enact()` and never writes transcript rows.
 
 8. **Coordinate popup presentation and provide a debug entry.**
 
    First try normal `PopupPriority.LeaderTrade` queueing over the conversation panel. If same-priority layering is unstable, call an explicit panel hook that demotes the panel to its existing static presentation while preserving its transcript and driver state, then restore the prior presentation when the deal screen closes. No context may remain hidden in the popup queue.
 
-   Make the ordinary request-table LuaEvent callable from FireTuner. Ship full-category mock requests for empty authoring, incoming, own-open, view-only, delayed success, and delayed error. Do not add a production keybind.
+   Make the ordinary request-table LuaEvent callable from FireTuner. Ship full-category mock requests for empty authoring, incoming, own-open, view-only, delayed success, and delayed error. While the mock panel driver is installed, expose those six scenarios as mock-only buttons above the normal bottom-right action group. Keep the controls hidden when the mock driver is replaced. Do not add a production keybind.
 
 ## Reuse
 

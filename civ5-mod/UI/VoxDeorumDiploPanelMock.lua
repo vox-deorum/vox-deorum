@@ -33,6 +33,31 @@ local m_lastStreamChunk = 0
 local m_loadingEarlier, m_loadingEarlierSeconds = false, 0
 local m_optimisticText, m_counterAppended, m_streamCommitted = "We accept your terms.", false, false
 local m_nextID, m_dealStep = 300, 0
+local dealMockButtons = {
+	{ control = Controls.MockDealAuthorButton, scenario = "author" },
+	{ control = Controls.MockDealIncomingButton, scenario = "incoming" },
+	{ control = Controls.MockDealOwnButton, scenario = "own" },
+	{ control = Controls.MockDealViewButton, scenario = "view" },
+	{ control = Controls.MockDealSuccessButton, scenario = "success" },
+	{ control = Controls.MockDealErrorButton, scenario = "error" },
+}
+
+-- Open one deal-screen mock scenario for the panel's current counterpart.
+local function onDealMockButton(index)
+	local entry = dealMockButtons[index]
+	if entry ~= nil and m_counterpartID >= 0 then LuaEvents.VoxDeorumOpenDealScreenMock(entry.scenario, m_counterpartID) end
+end
+
+-- Reveal and bind controls that exist only for the removable mock driver.
+local function initializeDealMockButtons()
+	for index, entry in ipairs(dealMockButtons) do
+		entry.control:SetVoid1(index)
+		entry.control:RegisterCallback(Mouse.eLClick, onDealMockButton)
+		entry.control:SetHide(false)
+	end
+	Controls.ActionStack:CalculateSize()
+	Controls.ActionStack:ReprocessAnchoring()
+end
 
 -- Build one sample deal from the current conversation pair.
 local function buildDealA()
@@ -178,3 +203,4 @@ end
 
 VoxDeorumDiploUI.driver = { onOpen = onOpen, onSend = onSend, onRetry = onRetry, onLoadEarlier = onLoadEarlier, onUpdate = onUpdate, onHide = function() end }
 LuaEvents.VoxDeorumDiploOpen.Add(postMockNotification)
+initializeDealMockButtons()

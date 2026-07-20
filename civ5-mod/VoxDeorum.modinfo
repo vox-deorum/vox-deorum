@@ -28,7 +28,7 @@
   <Blocks />
   <Files>
     <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
-    <File md5="12BC90EE02E56B34771565C337C2B63E" import="0">Text/VoxDeorum_Text.xml</File>
+    <File md5="C10BE65BF1683FCF92FE1C61B9F2F14F" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
@@ -38,11 +38,15 @@
     <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/VoxDeorumHumanTrigger.xml</File>
     <File md5="51019DAD724C64015E52F76203AEF3F6" import="1">UI/VoxDeorumSeat.lua</File>
     <File md5="1C2EC246EE80D6D8848D73CDD50F9515" import="1">UI/VoxDeorumConverse.lua</File>
-    <File md5="538888784994F3ED7AD1C8438727CA79" import="1">UI/LeaderHeadRoot.lua</File>
+    <File md5="AD7D071B1AAF6A72D8BC740509107C45" import="1">UI/LeaderHeadRoot.lua</File>
     <File md5="F72A8A907AF7A24517A900793216B7F9" import="1">UI/LeaderHeadRoot.xml</File>
-    <File md5="A8DD76C696F0E6CC78CD1BDB89B0ACF5" import="1">UI/VoxDeorumDiploPanel.lua</File>
-    <File md5="2AB2FDF4F0DDC60FBE7F55A40CA62680" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
-    <File md5="FA5F8CF8A4F507950A158F0229A4C432" import="0">UI/VoxDeorumDiploPanel.xml</File>
+    <File md5="36483B40FE43DB02E31DC5DE423B231A" import="1">UI/VoxDeorumDiploPanel.lua</File>
+    <File md5="A18F1050F029B4883B25F5FEB0ACCEAB" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
+    <File md5="4DB829C5E3E3CAE0208A01F24BFB1B4D" import="0">UI/VoxDeorumDiploPanel.xml</File>
+    <File md5="682988C25AF6138242AA7E63D61D9E9D" import="1">UI/VoxDeorumDealUtils.lua</File>
+    <File md5="C98D9C89547BD4CE29BBB4E721BC0ACC" import="1">UI/VoxDeorumDealScreen.lua</File>
+    <File md5="BFCF2DCEEC83303ECE5E6B094C59B793" import="1">UI/VoxDeorumDealScreenMock.lua</File>
+    <File md5="FEE5C2E64224CC98994CD0490D5B0B04" import="0">UI/VoxDeorumDealScreen.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>
@@ -73,6 +77,10 @@
     <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumDiploPanel.xml">
       <Name>VoxDeorumDiploPanel</Name>
       <Description>Mock-driven leader conversation panel</Description>
+    </EntryPoint>
+    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumDealScreen.xml">
+      <Name>VoxDeorumDealScreen</Name>
+      <Description>Native-shaped Vox Deorum deal authoring and review screen</Description>
     </EntryPoint>
   </EntryPoints>
 </Mod>

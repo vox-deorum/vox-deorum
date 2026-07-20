@@ -97,6 +97,12 @@
 			<GridButton ID="GoodbyeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_GOODBYE" ToolTip="TXT_KEY_VD_DIPLO_GOODBYE_TT"/>
 			<GridButton ID="ProposeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"/>
 			<GridButton ID="WarButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_DECLARE_WAR"/>
+			<GridButton ID="MockDealErrorButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_ERROR"/>
+			<GridButton ID="MockDealSuccessButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_SUCCESS"/>
+			<GridButton ID="MockDealViewButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_VIEW"/>
+			<GridButton ID="MockDealOwnButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_OWN"/>
+			<GridButton ID="MockDealIncomingButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_INCOMING"/>
+			<GridButton ID="MockDealAuthorButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_AUTHOR"/>
 		</Stack>
 		<Box ID="WarDim" Hidden="1" Anchor="C,C" Size="1050,620" Color="0,0,0,210" ConsumeMouse="1">
 			<Grid ID="WarConfirm" Anchor="C,C" Size="620,210" Style="Grid9DetailFive140">
