@@ -1,192 +1,220 @@
-# Plan: Add "codex" LLM Provider via codex-openai-proxy
+# Add the Codex LLM provider
 
-## Context
+> Implementation plan. Add `codex` as a native-tool LLM provider backed by `codex-openai-proxy`. The proxy starts only when a Codex model is first used, authenticates with the player's ChatGPT account, and owns all Codex-specific protocol behavior.
 
-vox-agents talks to LLM providers through the Vercel AI SDK factory in `vox-agents/src/utils/models/models.ts`. We want to support OpenAI Codex models through [codex-app-server-to-proxy](https://github.com/CIVITAS-John/codex-app-server-to-proxy) (npm: `codex-openai-proxy`, pinned **`0.1.0-rc.2`** — the current `next` dist-tag; note the `latest` tag is stale at rc.0, so the exact pin is load-bearing), a local OpenAI-compatible bridge (`127.0.0.1:8787`, `POST /v1/chat/completions` streaming + function tools, `GET /health`, `GET /ready` — 503 until authenticated).
+## Goal and success criteria
 
-Design constraints:
-1. **ChatGPT auth on first launch** → proxy starts lazily, only when a codex model is first *used*. Because stdio is piped (not a TTY), first-run auth uses the **device-code flow** (no auto-opened browser) — the URL surfaces through our logs.
-2. **Proxy terminates with vox-agents** (win32 primary, cross-platform).
-3. Protocol adaptation needed: `tool_choice` supports only `auto`/`none` (vox defaults to `required`, [vox-agent.ts:113](../../vox-agents/src/infra/vox-agent.ts) → [vox-context.ts:746](../../vox-agents/src/infra/vox-context.ts)); and the proxy surfaces **already-executed internal Codex activity** (commands, file ops, MCP calls) as standard `tool_calls` paired with nonstandard `tool_results`, which the generic AI SDK path misreads as unknown client tools.
+Vox agents can select a model such as `codex/gpt-5.4-mini` in the existing model configuration and use the normal AI SDK tool loop without an OpenAI API key.
 
-**Confirmed keepers:** synchronous `getModel`; lazy startup inside the `fetch` option; promise-coalesced first launch; free-form `provider` string (no type/schema change); embeddings unchanged.
+The integration is complete when:
 
-## Files
+- Starting Vox without a Codex model does not download or launch the proxy.
+- The first Codex request downloads the exact pinned proxy and Codex CLI through `npx` when they are not already cached.
+- Existing Codex authentication is reused, or first-run device authentication is visible in Vox logs.
+- Game tools execute through the normal AI SDK function-tool flow, including proxy-supported tool-result continuation and retry.
+- Codex host tools are disabled by default. Explicitly enabled host tools follow the same deny-by-default safety model as the Claude Code provider.
+- An owned proxy process exits with Vox. A compatible proxy that was already running is adopted and left running.
+- Non-Codex providers, embeddings, batch experiments, and existing model configuration keep their current behavior.
 
-- **New:** `vox-agents/src/utils/models/codex-proxy.ts` — `CodexProxyManager` class (injectable seams) + module singleton
-- **New:** `vox-agents/src/utils/models/codex-middleware.ts` — protocol adaptation middleware
-- **Edit:** `vox-agents/src/utils/models/models.ts` — `case "codex":`
-- **Edit:** `vox-agents/src/utils/retry.ts` + `vox-agents/src/utils/models/concurrency.ts` — per-attempt cancellation; batch-mode codex gate
-- **Edit:** `vox-agents/src/infra/vox-agent.ts` — skip `removeUsedTools` filtering for codex step models (mid-thread consistency)
-- **Edit:** `vox-agents/src/utils/config/defaults.ts`, `vox-agents/src/types/constants.ts`, `vox-agents/.env.default`
-- **New tests** under `vox-agents/tests/` (mock tier)
-- **Docs:** `docs/players/configuration.md`, `docs/players/troubleshooting.md`, `docs/developers/vox-agents/overview.md`
+## Current state
 
-## Step 1 — `codex-proxy.ts` lifecycle manager
+- `vox-agents/src/utils/models/models.ts` constructs every LLM provider synchronously. A custom `fetch` function can perform lazy asynchronous startup without changing `getModel()`.
+- Model providers and model names are open-ended configuration strings. The UI already accepts an arbitrary model name, so Codex does not need a built-in model registry.
+- `streamTextWithConcurrency()` applies the existing per-model concurrency limit and owns the outer retry loop.
+- `codex-openai-proxy@0.1.0-rc.2` depends exactly on `@openai/codex@0.144.5` and launches that package-owned executable. Installing the proxy at the workspace root and invoking it through `npx` both download Codex.
+- The published proxy supports implicit client-tool continuation by matching pending tool-call IDs. A corrected tool-result request refreshes the pending deadline. Accepted results are consumed once so a retry cannot apply them twice.
+- The published proxy still exposes several behaviors that Vox should not patch locally: limited `tool_choice` support, observational internal activity represented as function calls, immutable continuation bindings, and no per-request host-tool allowlist. These are proxy contract issues.
 
-`CodexProxyManager` class with **injectable seams** for testability (`spawnFn`, `killFn`, `probeFetch`, logger), exported as a module singleton. State:
+## Design decisions
 
-```ts
-interface ProxyState { mode: 'owned' | 'adopted'; child?: ChildProcess; generation: number; }
-let state: ProxyState | null = null;
-let startPromise: Promise<void> | null = null;   // PENDING-ONLY (see below)
-let generation = 0;                               // monotonic; bumped on every start AND on stop
-```
+### Keep installation lazy
 
-**Env config** (duration values are **validated duration strings** — the proxy CLI parses bare numbers as *milliseconds*, per the [CLI parser](https://github.com/CIVITAS-John/codex-app-server-to-proxy/blob/main/src/core/config.ts)):
-- `CODEX_PROXY_PORT` — default `8787`
-- `CODEX_PROXY_COMMAND` — default `npx --yes codex-openai-proxy@0.1.0-rc.2`; manager appends `serve --root "<root>" --port <port> --request-timeout <dur> --tool-timeout <dur> --shutdown-timeout 5s`
-- `CODEX_PROXY_ROOT` — default dedicated empty dir `path.join(os.tmpdir(), 'vox-codex-root')` (mkdir recursive; must be a stable absolute path — continuation state is keyed **per root**) — Codex needs no repo filesystem access. The persistent state store itself lives under `~/.codex-openai-proxy` (proxy default `--state-dir`), NOT inside the root, so a tmpdir root doesn't endanger persistence
-- `CODEX_PROXY_REQUEST_TIMEOUT` — default `"3600s"` (proxy default is 30s — must be passed explicitly; the request deadline aborts downstream Codex work and closes open streams)
-- `CODEX_PROXY_TOOL_TIMEOUT` — default `"600s"` (governs both the login/startup deadline and the suspended-tool-call deadline; proxy default 5 min)
-- `CODEX_PROXY_STARTUP_TIMEOUT` — ms, default `3_600_000`
-- `CODEX_PROXY_API_KEY` — default `"local"`
+Launch an exact proxy version with `npx --yes codex-openai-proxy@<version>`. Do not add the proxy to the root dependencies.
 
-**URL helpers (two, to prevent path mistakes):** `getCodexProxyApiBase()` → `http://127.0.0.1:<port>/v1` (for `createOpenAICompatible`, which appends `/chat/completions`); `getCodexProxyOrigin()` → `http://127.0.0.1:<port>` (for `/health`, `/ready` probes).
+The proxy already brings its compatible Codex CLI as an exact dependency. A root dependency would place Codex in every release installer even when the player never uses this provider. The lazy path keeps Codex optional, at the cost of requiring npm registry access on the first Codex request.
 
-**`ensureCodexProxy()`:**
-1. If `state?.mode === 'adopted'`: re-probe `GET <origin>/health` (~1s timeout) every call — external proxies die without child events. Probe failure → clear `state` and fall through to a fresh start (become owner). Owned mode: child events are authoritative, no probe.
-2. If `state` is healthy → resolve immediately.
-3. If `startPromise` (an in-flight startup) exists → return it.
-4. Else start: `const p = startProxy(++generation); startPromise = p; p.finally(() => { if (startPromise === p) startPromise = null; })`. **Pending-only + identity-guarded**: success and failure both clear it (so a dead adopted proxy can trigger a real respawn later), and a stale settle can't erase a newer startup's promise.
+Do not launch the moving `next` tag. The implementation must pin the exact version that passes the proxy contract checks below.
 
-**`startProxy(gen)`** — after **every** `await` (probes, spawn, each poll tick), check `gen === generation`; if stale (a `stopCodexProxy()` or newer start happened), abort without touching state — startup must never install a child after shutdown:
-1. **Adopt probe:** `GET /health` OK → `state = { mode: 'adopted', generation: gen }`, log adoption, go to readiness poll.
-2. **Spawn (owned):** single command string with explicit duration flags.
-   - win32: `spawnFn(cmd, { shell: true, windowsHide: true, stdio: ['ignore','pipe','pipe'] })` (Node ≥20.12 blocks `npx.cmd` without shell).
-   - POSIX: add `detached: true` → own process group, killable as a tree via `process.kill(-pid, sig)`.
-3. **Log piping:** the proxy writes **structured JSON records to stderr** (including normal info and device-code instructions). Parse each stderr line as JSON and route by its `level` field to the matching winston level (fallback `warn` for unparsable lines); stdout lines → `logger.info`. Never map all stderr to warn, and never `stdio: 'inherit'`.
-4. **One-time registration** (guard boolean): `processManager.register('codex-proxy', stopCodexProxy)`; plus sync `process.on('exit')` best-effort kill (win32 `taskkill /PID <pid> /F /T`; POSIX `process.kill(-pid,'SIGKILL')`) guarded by owned-child-alive — covers `uncaughtException → process.exit(1)`.
-5. **Identity-guarded child events:** `exit`/`error` handlers close over `gen`; no-op unless `state?.generation === gen`. If `processManager.isShuttingDown` ignore; else log, clear `state` (and `startPromise` via its own guard) → lazy respawn on next request.
-6. **Readiness poll:** `GET /ready` every 1s until 200 or `CODEX_PROXY_STARTUP_TIMEOUT`, **racing against**: (a) owned child exit → fail fast with exit code + manual-launch hint; (b) adopted health loss → stop polling and restart as owner (don't poll a corpse for an hour); (c) generation staleness → silent abort. While `/health` OK but `/ready` not (auth-pending): after 15s, `warn` every 15s: "Codex proxy is waiting for ChatGPT authentication — open the device-code URL shown above and complete login (first run only)". Deadline → kill child, throw with the manual command (`npx --yes codex-openai-proxy@0.1.0-rc.2 serve --root <dir>`).
+### Keep Codex protocol behavior in the proxy
 
-**`stopCodexProxy()`:** `generation++` first (invalidates any in-flight startup, including its poll loop); then if owned: SIGTERM the tree (win32: graceful `taskkill /PID /T`, then after ~8s `taskkill /PID /F /T`; POSIX: `process.kill(-pid,'SIGTERM')`, wait ≤8s, then `SIGKILL` the group) — ≥ the proxy's `--shutdown-timeout 5s` we pass at launch. Adopted: nothing to kill. Clear `state`, `startPromise`.
+Vox will use `@ai-sdk/openai-compatible` without custom parsing of raw chunks, reasoning fields, or internal activity. When the proxy does not produce safe standard Chat Completions behavior, fix and publish the proxy, then update the exact pin.
 
-**Documented limitation:** suspended client tool calls (held in memory ~`--tool-timeout`) and active requests are lost on proxy restart; completed `previous_response_id` threads **survive** via the persistent state store under `~/.codex-openai-proxy`, keyed per `--root`. Retry gives request-level recovery.
+This boundary also means Vox does not register model slugs, translate Codex internal activity, add Codex-specific telemetry, or maintain a second continuation implementation.
 
-## Step 2 — `codex-middleware.ts` protocol adaptation
+### Mirror the Claude Code host-tool policy
 
-`codexMiddleware(): LanguageModelMiddleware`:
+Add `options.codexTools?: string[]` to model configuration:
 
-1. **`transformParams`:** map `toolChoice` `{type:'required'}` / `{type:'tool'}` → `{type:'auto'}` (debug log) — otherwise every normal agent turn fails. Also set `includeRawChunks: true` so `wrapStream` can see raw proxy chunks.
-2. **Internal-activity filtering — correlate by raw `tool_results`, not by name.** Name-complement filtering is unsafe (hides genuinely hallucinated tool calls; a name collision would let an already-executed internal call through as a client tool). The compatible provider drops the nonstandard `tool_results` field, but the raw data remains available: `response.body` in `wrapGenerate`, raw chunks (via `includeRawChunks`) in `wrapStream`. An internal call is one whose ID appears in `tool_results` — filter exactly those IDs:
-   - *Generate:* parse `response.body`'s `tool_results`, drop tool-call content parts with matching IDs; log dropped activity at debug (Codex's actions stay observable).
-   - *Stream:* collect internal IDs from raw chunks' `tool_results`; `tool-input-delta`/`tool-input-end` carry only an ID (no `toolName`), so track accepted/rejected IDs from `tool-input-start` onward and filter `tool-input-*`/`tool-call` parts by ID.
-   - `finishReason` is a V3 **object** — read/write `finishReason.unified` (and streamed `finish` parts). Per the [README](https://github.com/CIVITAS-John/codex-app-server-to-proxy/blob/main/README.md), internal activity **never causes `finish_reason: "tool_calls"`**, so no normalization as a primary mechanism — keep only a defensive debug log if every call in a `tool_calls`-finish got filtered.
-   - History replay is already safe proxy-side: internal-activity entries in a replayed assistant message are automatically stripped by the proxy, so filtered/unfiltered history both work.
-   - Implementation option to evaluate first: add a proxy-side flag to mark or suppress internal activity (we own the proxy) — would simplify this middleware to a no-op on that path; the raw-correlation design above works against the pinned version regardless.
-3. **Reasoning passthrough (nice-to-have):** the proxy returns a nonstandard top-level `reasoning` summary string that the compatible provider drops. Where present in `response.body` / raw chunks, surface it as a reasoning content part so the agent traces keep Codex's thinking summaries.
-4. **Mid-thread consistency constraint:** the proxy **rejects** requests that change `tools`, `reasoning_effort`, or `x_codex` between a tool call and its tool results. This is not hypothetical: `removeUsedTools` ([vox-agent.ts:108](../../vox-agents/src/infra/vox-agent.ts)) filters `activeTools` between steps inside one streamText loop (`prepareStep`, vox-agent.ts:396-417), so the request carrying tool results presents a shrunken tool list → rejected — and `SimpleStrategistBase` ships with it enabled ([simple-strategist-base.ts:27](../../vox-agents/src/strategist/agents/simple-strategist-base.ts)). Fix: in `prepareStep`, skip the used-tools filtering when the resolved step model's provider is `'codex'` (debug log why), and document the constraint. Also ensure reasoning-effort overrides stay constant across a step loop (they do today — resolved once per `getModel`).
+- Missing or empty means no Codex host tools.
+- Vox forwards `['everything']` unchanged. The pinned proxy expands it to a versioned, vetted non-shell set.
+- Any other value is an explicit allowlist.
+- Shell and arbitrary command execution remain blocked even when requested.
+- Network access remains disabled unless the selected capability explicitly requires and enables it.
+- File writes are limited to a temporary directory keyed by game and player, using the existing `workingDirId` passed to `getModel()`.
 
-## Step 3 — `models.ts` new case
+The proxy must enforce tool availability. A temporary working directory and a read-only sandbox are not substitutes for disabling tools.
 
-After `case "synthetic":` (~line 164). Shared module-level dispatcher (no per-request `Agent` construction):
+## Step 1: Establish the proxy contract
 
-```ts
-const codexDispatcher = new Agent({
-  headersTimeout: 3_600_000, bodyTimeout: 3_600_000,
-  connectTimeout: 30_000, keepAliveTimeout: 600_000,
-});
+Before changing Vox, validate the latest proxy package against the real AI SDK adapter. If any check fails, fix the proxy, publish a new prerelease, and use that exact version throughout this plan.
 
-case "codex":
-  result = createOpenAICompatible({
-    baseURL: getCodexProxyApiBase(),          // .../v1 — provider appends /chat/completions
-    name: "codex",
-    apiKey: process.env.CODEX_PROXY_API_KEY ?? "local",
-    includeUsage: true,                        // streamed responses carry usage metadata
-    fetch: (async (url, options) => {
-      // Race shared startup against THIS request's abort signal: a timed-out attempt
-      // stops waiting, but the global startup (OAuth may be in progress) continues.
-      await raceWithAbort(ensureCodexProxy(), options?.signal);
-      return fetch(url, { ...options, dispatcher: codexDispatcher });
-    }) as typeof fetch,
-  }).chatModel(config.name);
-  result = wrapLanguageModel({ model: result, middleware: codexMiddleware() });
-  break;
-```
+The required contract is:
 
-- `raceWithAbort(promise, signal)`: small helper (in codex-proxy.ts or utils) rejecting with an `AbortError` when the signal fires, with listener cleanup; never cancels the underlying startup.
-- Middleware order: `codexMiddleware` innermost, standard tail (default `toolRescueMiddleware()`) outside — filtering must run before tool-rescue sees the response.
-- `buildProviderOptions`: no change (default branch emits `{ codex: model.options }`; verified `reasoningEffort` → `reasoning_effort`). `getEmbeddingModel`: no change.
+1. The package owns and pins the compatible Codex CLI executable.
+2. `tool_choice: "required"`, `"auto"`, and `"none"` are accepted with behavior suitable for the normal Vox tool loop.
+3. Standard `tool_calls` contain only client-defined functions that the client must execute. Already-executed Codex activity may remain in an extension field, but must not appear as an executable client call.
+4. Reasoning uses fields already understood by `@ai-sdk/openai-compatible`. Vox does not parse a second proprietary stream.
+5. Client tool results can continue a pending Codex turn using the standard assistant and tool messages emitted by the AI SDK. Corrected retries remain possible until results are accepted, and accepted results are applied once.
+6. The proxy retains the original tool and policy binding while accepting a continuation. Changes made by Vox between AI SDK steps do not require a provider check in `VoxAgent.prepareStep()`.
+7. Host tools are disabled by default and can be enabled only through a validated per-request allowlist. The proxy enforces the working-directory, sandbox, network, and blocked-shell rules.
+8. `/health` identifies the service, proxy version, and protocol version. `/ready` distinguishes a listening process from an authenticated, usable one.
 
-## Step 4 — Retry-layer per-attempt cancellation (scoped honestly)
+Define the request extension as `providerOptions.codex.x_codex` in Vox and `x_codex` in the serialized request body. Its integration fields are `cwd` and `host_tools`. Vox sends an empty `host_tools` array by default, an explicit allowlist unchanged, or the `everything` sentinel unchanged. The proxy validates and expands the value, blocks shell capabilities, and derives the effective sandbox and network policy. Verify this exact round trip through the real compatible adapter before publishing the proxy.
 
-[retry.ts](../../vox-agents/src/utils/retry.ts) races each attempt against a timeout but never aborts the loser — it can deliver a duplicate completion later, and the `isTimedOut` latch disables timeout scheduling for subsequent attempts. Fix in `exponentialRetry`:
+Keep captured streaming and non-streaming fixtures for this exact version. They become the contract inputs for the Vox adapter tests.
 
-- Per-attempt `AbortController`; extend callback to `fn(updateProgress, attempt, attemptSignal)`. Timeout handler aborts the controller in addition to rejecting the race.
-- **`handleReject` decision:** a *rescued* timeout (`handleReject()` returns true) does NOT abort — rescue means "let it keep running"; only unrescued timeouts abort. Documented in the jsdoc.
-- Move per-attempt state (`isTimedOut`, timer handle) inside the loop so each attempt gets fresh timeout scheduling.
-- `finally` per attempt: clear the execution timer and remove the parent `options.abortSignal` listener (no leaks across 100 retries).
-- Race parent cancellation **directly** in the `Promise.race` (a callback that ignores signals never settles just because a signal aborted).
-- Consumer wiring — this fix is only as cross-cutting as its consumers: `streamTextWithConcurrency` ([concurrency.ts:137](../../vox-agents/src/utils/models/concurrency.ts)) threads `attemptSignal` into `streamText`'s `abortSignal` (merge caller signal via `AbortSignal.any`) and gates late `onChunk`/`onStepFinish`/transform callbacks on `!attemptSignal.aborted` (in addition to the existing `maxIteration !== iteration` guard). Other `exponentialRetry` callers (batch submission, telepathist) don't consume the signal yet — unchanged behavior, noted as follow-up, not claimed fixed.
+## Step 2: Add the lazy proxy manager
 
-## Step 5 — Batch mode gate
+Create `vox-agents/src/utils/models/codex-proxy.ts` with a testable `CodexProxyManager` and a module singleton.
 
-"Batch path unchanged" is false in practice: when batch mode is active, **every** request routes through `getBatchManager().enqueue` ([concurrency.ts:90](../../vox-agents/src/utils/models/concurrency.ts)) and `getBatchEndpoint` throws a generic error for unlisted providers. Add an explicit, intentional gate beside the existing prompt-mode rejection (concurrency.ts:96):
+### Configuration
 
-```ts
-if (modelConfig.provider === 'codex') {
-  throw new Error(
-    `Batch mode does not support the local codex provider ('codex/${modelConfig.name}'): ` +
-    `requests go through a local ChatGPT-authenticated proxy with no batch API. ` +
-    `Run without batch mode or choose a batch-capable model.`);
-}
-```
+Support these environment variables and validate them before spawning:
 
-(Chosen over silent live fallback for consistency with the prompt-mode precedent — batch experiments shouldn't silently mix live traffic.)
+- `CODEX_PROXY_PORT`, default `8787`, as an integer from 1 through 65535.
+- `CODEX_PROXY_COMMAND`, default `npx --yes codex-openai-proxy@<exact-version>`.
+- `CODEX_PROXY_ROOT`, default a stable absolute directory under the OS temporary directory.
+- `CODEX_PROXY_REQUEST_TIMEOUT`, default shorter than the Codex outer attempt deadline.
+- `CODEX_PROXY_TOOL_TIMEOUT`, used for first-run login and suspended client tools.
+- `CODEX_PROXY_STARTUP_TIMEOUT`, a positive millisecond duration.
 
-## Step 6 — Registry, UI, env, docs
+The manager appends the proxy's `serve`, `--root`, `--port`, timeout, and graceful-shutdown arguments. Treat a custom command as trusted operator configuration. Validate every appended value and test Windows quoting for paths containing spaces and shell metacharacters.
 
-**`defaults.ts`** (`concurrencyLimit: 2` — one ChatGPT account):
+Expose separate helpers for the origin and API base so health probes never acquire the `/v1` prefix.
 
-```ts
-'codex/gpt-5.4-mini':  { provider: 'codex', name: 'gpt-5.4-mini',  options: { concurrencyLimit: 2 } },
-'codex/gpt-5.6-luna':  { provider: 'codex', name: 'gpt-5.6-luna',  options: { concurrencyLimit: 2 } },
-'codex/gpt-5.6-terra': { provider: 'codex', name: 'gpt-5.6-terra', options: { concurrencyLimit: 2 } },
-'codex/gpt-5.6-sol':   { provider: 'codex', name: 'gpt-5.6-sol',   options: { concurrencyLimit: 2 } },
-```
+### State and startup
 
-Only `gpt-5.4-mini` is documented and there's no models endpoint — **validate each slug with a live completion during implementation**; drop/adjust rejected entries.
+Represent stopped, starting, ready-owned, and ready-adopted states explicitly.
 
-**`constants.ts`:** add `{ label: 'Codex (ChatGPT)', value: 'codex' }` to `llmProviders` — label + value only (the dropdown data shape supports nothing else).
+`ensureCodexProxy()` runs from the provider's custom `fetch` function:
 
-**`vox-agents/.env.default`:** add commented `CODEX_PROXY_PORT/COMMAND/ROOT/REQUEST_TIMEOUT/TOOL_TIMEOUT/STARTUP_TIMEOUT/API_KEY` entries with defaults.
+1. Return immediately from a ready-owned state whose child is still alive.
+2. Return the same in-flight promise to every caller while startup is in progress.
+3. Probe `/health` on the configured port.
+4. Adopt the process only when its service, version, and protocol identity match the pinned contract. Wait for `/ready` before returning.
+5. If the port is unused, spawn the pinned command and record ownership immediately, before waiting for readiness.
+6. If the port belongs to an incompatible or unidentified service, fail this Codex request with a clear port and version message. Vox itself remains running.
+7. Poll `/ready` until authentication succeeds, the owned child exits, the adopted process disappears, the caller aborts, or the startup deadline expires.
 
-**Docs** (no `vox-agents/README.md` exists):
-- `docs/players/configuration.md`: enabling codex models, first-run device-code auth (URL appears in logs — piped stdio means no auto-opened browser), env vars, npx needs network on first launch.
-- `docs/players/troubleshooting.md`: stuck auth (run the serve command manually once), port conflicts (`CODEX_PROXY_PORT`), orphan/restart behavior.
-- `docs/developers/vox-agents/overview.md`: architecture note — lazy subprocess lifecycle, middleware, security posture (loopback-only bind, `Origin`-header requests rejected, but **no local bearer-token check**: any process running as the user can call the proxy; apiKey is a placeholder), restart semantics (suspended tools/active requests lost; completed `previous_response_id` threads persist under `~/.codex-openai-proxy` per root), and the mid-thread consistency rule (`tools`/`reasoning_effort`/`x_codex` frozen between a tool call and its results — `removeUsedTools` incompatible with codex models).
+Re-probe a ready-adopted process on every `ensureCodexProxy()` call because it has no child events. If it disappears, clear the adopted state and start an owned process. If it disappears during readiness polling, make the same transition within the current startup. Owned child exit and error events clear only the matching generation. A connection-level failure from the provider fetch also invalidates the matching ready state so the existing outer retry can run startup again.
 
-## Edge cases handled
+Use an identity-guarded startup promise whose success and failure handlers clear only that promise. Do not discard a promise returned by `finally`, since a failed startup could create an unhandled rejection.
 
-| Risk | Handling |
-|---|---|
-| `tool_choice: required` | middleware → `auto` |
-| Internal activity as tool_calls | raw `tool_results` ID correlation (collision-safe, keeps hallucination detection) |
-| Duration flags misparsed as ms | duration strings (`3600s`), validated env vars |
-| Concurrent first calls | coalesced pending-only `startPromise` |
-| Adopted proxy dies (incl. mid-poll) | per-call re-probe; poll races health loss → respawn as owner |
-| Stale starts/settles/child events | generation stamp checked after every await; identity-guarded promise clear |
-| Shutdown during startup | `stopCodexProxy` bumps generation → in-flight startup self-aborts |
-| Timed-out attempt waits on OAuth | fetch races startup vs request signal (startup itself uncancelled) |
-| Duplicate completions after timeout | per-attempt AbortController + aborted-gated late callbacks |
-| Proxy graceful shutdown cut short | `--shutdown-timeout 5s` + ≥8s wait before force-kill |
-| POSIX shell/npx tree survives | `detached: true` + process-group kill |
-| Batch mode | explicit descriptive rejection in `streamTextWithConcurrency` |
-| Mid-thread `tools`/`reasoning_effort` change rejected | `prepareStep` skips `removeUsedTools` filtering for codex models (affects `SimpleStrategistBase`) |
-| Proxy overload (100 concurrent, 429 `overloaded`) | `concurrencyLimit: 2` keeps vox far below the cap |
+Race each caller's wait against its abort signal without cancelling the shared authentication process. A stopped or superseded startup must reject its current waiters and must never install a stale child as ready.
+
+Classify invalid configuration, an incompatible port occupant, missing npm tooling, and an authentication deadline as non-retryable errors. Treat an owned child crash or a lost compatible proxy as retryable. This prevents the outer retry loop from launching the same terminal failure repeatedly.
+
+### Logging and shutdown
+
+- Parse structured proxy records from stderr and route each record through the matching Winston level.
+- Preserve the device-login URL and instructions in logs, while redacting tokens and other sensitive fields.
+- Register one asynchronous shutdown hook with `ProcessManager`.
+- On Windows, terminate the owned process tree gracefully, wait longer than the proxy's shutdown timeout, then force termination if necessary.
+- On POSIX, launch an owned process group, send `SIGTERM`, then use `SIGKILL` after the grace period.
+- Add a synchronous best-effort exit handler for fatal paths that call `process.exit()` directly.
+- Never terminate an adopted proxy.
+
+Active requests and suspended client-tool calls do not survive an owned proxy restart. Completed proxy continuations may survive through the proxy state directory.
+
+## Step 3: Register the provider
+
+Edit `vox-agents/src/utils/models/models.ts` and `vox-agents/src/infra/vox-context.ts`:
+
+1. Add `case "codex"` using `createOpenAICompatible()` with the proxy API base, provider name `codex`, fixed non-secret placeholder API key `local`, usage enabled, and a shared long-lived Undici dispatcher. The adapter may send the placeholder as an inert local authorization header, but Vox does not expose it as configuration.
+2. Use a custom `fetch` that awaits `ensureCodexProxy()`, respects the request abort signal, and then sends the request through the shared dispatcher.
+3. Permit an unset tool middleware or `rescue`, both of which preserve native function tools while rescuing malformed calls. Reject `prompt` or `gemma` with a clear error instead of silently changing the tool protocol.
+4. Create the game-and-player working-directory identity once per step and pass it to both `getModel()` and `buildProviderOptions()`. This keeps provider construction and the request policy on the same temporary directory.
+5. Extend `buildProviderOptions()` with that runtime identity. Its Codex branch converts `codexTools` and the identity into the stable proxy policy required by Step 1, then forwards only supported provider fields such as reasoning effort and that policy. Do not leak Vox-only settings such as `concurrencyLimit`, `toolMiddleware`, `codexTools`, `framing`, or `systemPromptFirst` into the HTTP body.
+
+Do not add Codex middleware, model defaults, embedding support, or response parsing.
+
+## Step 4: Integrate with execution policy
+
+Edit `vox-agents/src/utils/models/concurrency.ts`:
+
+- Reject Codex explicitly when the Oracle batch manager is active. The local ChatGPT-authenticated proxy has no batch API, and live fallback would mix execution modes.
+- Give Codex an inactivity timeout longer than the sum of the proxy startup and request deadlines, plus a small shutdown margin. Proxy streaming and game-tool activity continue refreshing it through the existing progress callbacks. The proxy must finish or cancel its own request before Vox considers an outer retry.
+- Keep the existing per-model concurrency behavior. Do not add an account-wide Codex limiter or a Codex-specific default.
+
+Leave `retry.ts`, `VoxAgent.prepareStep()`, and MCP execution unchanged. Proxy-supported continuation and the contract from Step 1 own Codex game-tool retries and binding stability.
+
+## Step 5: Configuration and documentation
+
+Edit `vox-agents/src/types/config.ts` to add and document `codexTools`.
+
+Edit `vox-agents/src/types/constants.ts` to add `{ label: 'Codex (ChatGPT)', value: 'codex' }` to the provider dropdown. Do not add entries to `defaults.ts`; players enter any model name exposed to their Codex account.
+
+Update `vox-agents/.env.default` with the proxy lifecycle variables and correct its general API-key guidance. Do not add a proxy API-key setting. The adapter's fixed `local` placeholder is not a credential and does not authenticate the loopback proxy.
+
+Update:
+
+- `docs/players/configuration.md`: explain ChatGPT authentication, arbitrary Codex model names, the first-use npm download, host-tool configuration, and the relevant environment variables. Correct the general claim that every provider requires an API key.
+- `docs/players/troubleshooting.md`: cover device login, npm or network failure, incompatible port occupants, startup timeouts, and manual foreground launch.
+- `docs/developers/vox-agents/overview.md`: describe the lazy subprocess, proxy-owned protocol boundary, adoption rules, default-denied host tools, and restart semantics.
+- `vox-agents/AGENTS.md`: record the Codex provider boundary and the rule that protocol defects are fixed in the proxy rather than parsed in Vox.
 
 ## Verification
 
-**Mock tests** (`vox-agents/tests/`, mock tier — no live tier; `tests/real` is unwired):
-1. *Lifecycle* (via injectable `spawnFn`/`killFn`/`probeFetch` seams; plus one real-child fixture — a tiny node script as fake proxy — for command construction and tree termination): concurrent `ensureCodexProxy` coalescing; failed start retryable; **adopted proxy dies → next ensure respawns as owner** (regression for the pending-only promise); stale generation events ignored; stop-during-startup installs nothing; readiness poll fails fast on child exit.
-2. *Middleware:* `required`/`tool` → `auto`; internal-call filtering in generate + stream via raw `tool_results` IDs, including **name-collision** (internal call named like a client tool → still filtered) and **hallucinated tool** (unknown name, no tool_result → passes through to tool-rescue); ID-only `tool-input-delta`/`end` filtering; `finishReason.unified` handling; usage passthrough with `includeUsage`; nonstandard `reasoning` summary surfaced as a reasoning part.
-3. *Retry:* timed-out attempt gets aborted; rescued (`handleReject`) timeout does not abort; fresh timeout per attempt; parent-signal race settles a signal-ignoring callback; no timer/listener leaks.
-4. *Batch gate:* codex model + active batch manager → descriptive throw.
-5. *prepareStep gate:* `removeUsedTools` agent + codex step model → tool list unchanged between steps; non-codex model → filtering still applies.
+### Proxy contract
 
-**Manual live checks:**
-1. Standalone serve with pinned version → device-code auth → `curl <origin>/ready` → one completion per model slug (validates all four entries).
-2. Lazy start: non-codex default → no proxy process; codex default via `config.json` → proxy appears at first LLM call; a full agent turn with game tools completes (proves `required`→`auto` + filtering under real internal activity).
-3. Lifecycle: Ctrl+C → tree gone; induced crash → sync `'exit'` kill; `taskkill /F` vox-agents → next run adopts orphan; kill proxy mid-run → next request respawns and succeeds.
-4. `npm run type-check` + full mock suite green.
+Run the captured-fixture and live contract checks before pinning the proxy version:
+
+1. Standard streaming and non-streaming text responses work through `@ai-sdk/openai-compatible`.
+2. Required, automatic, and disabled tool choice behave as expected.
+3. A game tool call suspends the Codex turn, accepts the AI SDK's assistant and tool messages, tolerates a corrected retry, and applies the result once.
+4. Internal Codex activity never becomes an executable client tool call.
+5. Default configuration exposes no Codex host tools.
+6. An explicit safe allowlist exposes only the requested tools, blocks shell execution, confines writes to the temporary working directory, and leaves network disabled unless selected.
+7. Health responses provide the identity needed for safe adoption.
+
+### Vox mock tests
+
+Add tests under `vox-agents/tests/mock/` for:
+
+- Concurrent lazy callers sharing one startup.
+- Failed startup remaining retryable.
+- Owned and adopted readiness behavior.
+- Stop during startup and stale child events.
+- Lazy failure for an occupied incompatible port.
+- Owned process-tree shutdown and adopted-process preservation.
+- Provider construction and the exact outbound request body.
+- Vox-only model options being absent from the proxy request.
+- Default-empty and explicit host-tool policies.
+- Rejection of non-native tool middleware.
+- Batch-mode rejection and the Codex attempt deadline.
+- Captured proxy fixtures completing a full AI SDK game-tool loop without client-side Codex parsing.
+
+Use fake timers and injected process, probe, platform, and shutdown functions so the mock suite does not wait on production timeouts or install signal handlers.
+
+### Manual checks
+
+1. Start Vox with a non-Codex model and confirm that no proxy or npm download occurs.
+2. Select a Codex model with an empty npm cache, complete device authentication from the logged instructions, and finish a game-tool turn.
+3. Restart Vox and confirm that authentication is reused.
+4. Run with host tools omitted and confirm that Codex performs no command, file, network, MCP, or app activity.
+5. Enable a safe host-tool subset and confirm the temporary-directory and network boundaries.
+6. Stop Vox normally and through its fatal exit path, then confirm that the owned process tree is gone.
+7. Start a compatible proxy manually and confirm lazy adoption without later termination.
+8. Occupy the configured port with another service and confirm that only the first Codex request fails.
+
+Finish with `npm run build:all` and `npm run test:all` from the repository root.
+
+## Out of scope
+
+- Codex embeddings or Oracle batch support.
+- A built-in Codex model catalog or model discovery UI.
+- An account-wide Codex concurrency limit.
+- Advanced `codexTools` controls in the configuration UI. Configuration-file support matches the existing Claude Code tool option.
+- Vox-side parsing of Codex reasoning or internal activity.
+- Codex-specific telemetry spans.
+- Installing Codex in every Vox release for offline-first use.
