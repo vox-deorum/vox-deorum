@@ -146,7 +146,7 @@ If a facade is unsafe or unwritable, callback replacement does not replace the n
 
    Let native `DoUpdateButtons` update the existing `PeaceDeal`, `PeaceValue`, and `PeaceMax` controls through `GetTotalValueToMeNormal` and its war variants. Do not add per-item value calls or another balance label.
 
-   After each native update, the wrapper reapplies its own action visibility and enabled state. Native AI political acceptability may display `Impossible`, but it never blocks Propose or Counter. Only structural legality, mode, an empty term set, pending state, actor drift, and payload size may block submission. Accept additionally requires unchanged incoming terms and no outgoing counter message.
+   After each native update, the wrapper reapplies its own action visibility and enabled state. Native AI political acceptability may display `Impossible`, but it never blocks Propose or Counter. Only structural legality, mode, an empty term set, pending state, actor drift may block submission. Accept additionally requires unchanged incoming terms and no outgoing counter message.
 
 6. **Add the authorable promises as wrapper-owned terms.**
 
@@ -170,7 +170,7 @@ If a facade is unsafe or unwritable, callback replacement does not replace the n
    6. build `DealPayload` v1 from the draft and sanitized outgoing public message, without `rationale`; and
    7. apply a conservative recursive size estimate to the full future event envelope.
 
-   Use a 48 KiB local ceiling as margin below stage 7.03's 64 KiB game-event document. Count string bytes, scalar values, table keys, array entries, and fixed per-node overhead. This is a loud client-side guard, not authoritative transport validation.
+   DO NOT create a local ceiling as a deal is very unlikely to go over that. In that event, we will raise the buffer space.
 
    Propose and Counter send the deal to `driver.onAction`. Accept, Reject, and Retract send only the proposal ID; Retract uses the reject action. The wrapper immediately shows a localized animated pending state and disables actions. The mock driver must demonstrate delayed success and delayed error recovery. The screen never calls `Deal:Enact()` and never writes transcript rows.
 
@@ -218,7 +218,6 @@ If a facade is unsafe or unwritable, callback replacement does not replace the n
 - **Callback or event replacement:** if native callbacks or the clear event remain active, omit those registrations in the fallback file.
 - **Pure-observer native assumptions:** this stage must prove the pinned full-deal capability against the concrete observer slot. A failure requires a plan-level design decision before stage 7.04.
 - **Shared scratch races:** the draft remains authoritative, and the fingerprint state machine restores only unexpected mismatches.
-- **Payload sizing:** the 48 KiB estimator is conservative. Stage 7.03 owns the real 64 KiB serializer capacity and overflow failure.
 
 ## Out of scope
 
