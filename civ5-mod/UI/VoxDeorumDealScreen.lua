@@ -355,8 +355,8 @@ end
 local function calculateWrapperStacks()
 	Controls.VoxReviewStack:CalculateSize(); Controls.VoxReviewPanel:CalculateInternalSize()
 	Controls.VoxPromiseTableStack:CalculateSize(); Controls.VoxPromiseTablePanel:CalculateInternalSize()
-	Controls.VoxUsPromisePocketStack:CalculateSize(); Controls.VoxUsPromisePocketStack:CalculateInternalSize()
-	Controls.VoxThemPromisePocketStack:CalculateSize(); Controls.VoxThemPromisePocketStack:CalculateInternalSize()
+	Controls.VoxUsPromisePocketStack:CalculateSize(); Controls.VoxUsPromisePocketPanel:CalculateInternalSize()
+	Controls.VoxThemPromisePocketStack:CalculateSize(); Controls.VoxThemPromisePocketPanel:CalculateInternalSize()
 	Controls.VoxTargetStack:CalculateSize(); Controls.VoxTargetPanel:CalculateInternalSize()
 end
 
