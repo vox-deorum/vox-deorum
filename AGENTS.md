@@ -1,9 +1,10 @@
 # AGENTS.md
 
-NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED!
+NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets externally staged, it is from the human reviewer.
 
 ## Use Subagents Whenever Appropriate
-ALWAYS delegate less critical/lower-level BATCH work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku, or from GPT Sol to Terra/Luna. Report which model you used to spawn that agent in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting small edits in batches.
+
+ALWAYS delegate less critical/lower-level BATCH work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku, or from GPT Sol to Terra (reviewing/implementing)/Luna (exploring/batch editing). Report which model you used to spawn that agent in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches.
 
 ## Project Overview
 
@@ -46,24 +47,13 @@ Do not produce layered writings (e.g., instead of X we chose to do Y) that docum
 - Winston logger only: never use `console.log/error/warn` in production code (it is fine in tests).
 - camelCase for exported constants (for example, `export const apiKeyFields`).
 - Comment everywhere: every function, at least, needs a comment.
-- Acceptable `any` usage: Kysely dynamic queries, Lua and game data boundaries, `Player${i}` access, third-party interop, and arbitrary JSON.
-- Express route responses: union with `ErrorResponse` instead of casting `as any`.
-- Backend sends complete data; the frontend decides formatting.
-- Use the `// Vox Deorum:` prefix for C++ modifications outside CvConnectionService.
+- Use the `// Vox Deorum:` prefix for Vox Populi/Community Patch modifications outside CvConnectionService.
 
 ## Documentation Rules
 
-Documentation is centralized in `/docs/` and serves two audiences: players (how to play) and developers (what the repo does and how its pieces fit). See `docs/plan.md` for the organization.
+Documentation is centralized in `/docs/` and serves two audiences: players (how to play) and developers (what the repo does and how its pieces fit).
 
 - Update docs in the same change that alters behavior, configuration, or setup, and never create docs proactively.
 - Keep the detail light. Avoid raw code in docs; describe the behavior and name the source file instead.
 - No line-number anchors. They drift, so refer to files, functions, or concepts by name.
 - Component `docs/` folders are only for component-specific reference material (for example, `mcp-server/docs/events/`). Don't add new root-level markdown inside components.
-
-## Key Files
-
-- `docs/plan.md`
-- `*/AGENTS.md`
-- `*/tests/setup.ts`
-- `*/src/config.ts`
-- `*/vitest.config.ts`

@@ -10,7 +10,7 @@ The screen supports three states:
 
 | State | Content | Actions |
 |---|---|---|
-| `author` | An empty native editor | Propose, Cancel |
+| `author` | An empty native editor at peace, or an editor seeded with paired peace treaties at war | Propose, Cancel |
 | `incoming` | The counterpart's immutable proposal | Accept, Counter, Reject |
 | `own` | The player's immutable proposal | Counter, Retract |
 
@@ -22,14 +22,14 @@ The implementation must:
 - retain the native deal-value bar as advisory information;
 - make the five canonical promises a normal editor category;
 - preserve independent author and counter drafts when another caller reuses the global scratch deal;
-- act through the effective seat in normal, human-strategist, and pure-observer games; and
+- act through the effective seat in normal and human-strategist games, while keeping the mock seat-agnostic; and
 - leave the native VP trade screen unchanged when the Vox screen is not open.
 
 ## Existing contracts and boundaries
 
 `VoxDeorumDealUtils.lua` remains the DealPayload v1 helper. Its normalize, validation, duration, fingerprint, and text-sanitization helpers are the single Lua representation of ordinary items and promises.
 
-`VoxDeorumOpenDealScreen` accepts `{ counterpartID, mode, deal?, proposalMessageID? }`. `mode` is `author`, `incoming`, or `own`. Incoming and own requests require a schema-valid `deal` and an open proposal ID. The mount validates that the counterpart is a living major civilization, binds `actorID = VoxDeorumSeat.EffectiveSeat()`, normalizes the deal, removes `rationale`, and rejects malformed requests before showing the context.
+`VoxDeorumOpenDealScreen` accepts `{ counterpartID, mode, deal?, proposalMessageID? }`. `mode` is `author`, `incoming`, or `own`. Incoming and own requests require a schema-valid `deal` and an open proposal ID. The mount validates that the counterpart is a living major civilization, binds `actorID = VoxDeorumSeat.EffectiveSeat()`, normalizes the deal, removes `rationale`, and rejects malformed requests before showing the context. It then calls `VoxDeorumOpenDeal(actorID, counterpartID)` while the TradeLogic context is hidden and requires a true result before calling `ContextPtr:SetHide(false)`. Showing the context first is invalid because TradeLogic computes its third-party trade controls during the show handler from the bound native participants.
 
 The screen exposes `VoxDeorumDealUI.driver.onAction(action)` and `VoxDeorumDealUI.resolve(result)`, and listens for `LuaEvents.VoxDeorumDealActionResolved(result)`. It enters a visible pending state before calling the driver. A successful result closes the screen. An error returns to the same author editor, counter editor, or proposal review with its reason visible.
 
@@ -51,7 +51,7 @@ Accept sends the mounted proposal ID only. Reject sends the mounted proposal ID 
 
 ### Entering and leaving the editor
 
-Author mode enters the native editor with an empty scratch deal, an empty promise list, and a blank optional outgoing message.
+Author mode enters the native editor with an empty promise list and a blank optional outgoing message. At peace, it has no ordinary items. When the two teams are at war, `VoxDeorumOpenDeal` automatically seeds the paired native peace treaties. Those terms remain part of the draft and are required for the deal to validate.
 
 Counter first rechecks the immutable proposal. If every ordinary item and promise is legal, `evaluateItems` projects the normalized original ordinary items into the scratch and retains that successful projection. The counter editor takes its ordinary draft from the decoded scratch, its promise draft from the normalized original promises, and starts with a blank outgoing message. It then hides the blocker and exposes the native controls.
 
@@ -88,7 +88,7 @@ In editor states only, the wrapper decodes the scratch after TradeLogic display 
 
 Promises remain wrapper-owned. `evaluatePromises(promises, actorID, counterpartID)` is used for proposal review, Accept, Counter entry, promise-pocket enablement, Propose, and Send Counter. It returns an availability result and a reason for each failed logical promise.
 
-The check requires a known promise type, a canonical duration, and two distinct valid deal endpoints. The counterpart must be a living major civilization. The actor must be the current effective seat, which may be a normal major seat, a pinned strategist seat, or the live pure-observer slot. The promiser and recipient must be those two endpoints in one of the two valid directions. Duplicate logical commitments are invalid. A normalized Coop War twin pair is one commitment for duplicate checks and one visible commitment in the editor.
+The check requires a known promise type, a canonical duration, and two distinct valid deal endpoints. The counterpart must be a living major civilization. The actor must be the current effective seat, which is a normal major seat or a pinned strategist seat for supported live deal flows. A pure observer whose concrete slot falls outside native `CvDeal` participant limits does not enter this screen for a live deal. The promiser and recipient must be those two endpoints in one of the two valid directions. Duplicate logical commitments are invalid. A normalized Coop War twin pair is one commitment for duplicate checks and one visible commitment in the editor.
 
 Promise-specific checks are:
 
@@ -103,9 +103,9 @@ The copied trade-screen XML adds the promise pocket button, kind chooser, Coop W
 
 The Vox context includes `civ5-dll/(3a) VP - EUI Compatibility Files/LUA/TradeLogic.lua` directly. It has no facade, proxy, or copied `TradeLogic.lua` under `civ5-mod`. Every change to a vendored VP Lua, XML, or DLL file has a `Vox Deorum:` marker and defaults to native behavior when the Vox state is unset.
 
-Add a parameterized `VoxDeorumOpenDeal(actorID, counterpartID)` entry to TradeLogic. It stores the Vox human-to-human flag and effective-seat ID in chunk locals, initializes the native trade context, and refreshes it. The wrapper owns visibility, input, and driver actions. Its post-include setup removes the engine-wide trade-table clear callback, replaces the Propose and Cancel callbacks, installs the Vox input handler, and chains the native show-hide handler.
+Add a parameterized `VoxDeorumOpenDeal(actorID, counterpartID)` entry to TradeLogic. It validates both native participant IDs before mutation, requires the TradeLogic context to remain hidden, assigns the effective seat to native `g_iUs`, enables the Vox human-to-human flag, initializes the native trade context, and refreshes it. TradeLogic display classification uses `g_iUs` while the Vox flag is active. The wrapper owns visibility, input, and driver actions. Its post-include setup removes the engine-wide trade-table clear callback, replaces the Propose and Cancel callbacks, installs the Vox input handler, and chains the native show-hide handler.
 
-Pass the stored human-to-human flag to every TradeLogic `IsPossibleToTradeItem`, `GetReasonsItemUntradeable`, `Add*`, `ChangeGoldTrade`, `ChangeGoldPerTurnTrade`, and `ChangeResourceTrade` call. Preserve native AI valuation calls unchanged. Use the stored seat as the fallback player for TradeLogic display classification. Emit the existing vox-gated reset, clear-table, display, and update LuaEvents only while the Vox state is active.
+Pass the stored human-to-human flag to every TradeLogic `IsPossibleToTradeItem`, `GetReasonsItemUntradeable`, `Add*`, `ChangeGoldTrade`, `ChangeGoldPerTurnTrade`, and `ChangeResourceTrade` call. Preserve native AI valuation calls unchanged. Emit the existing vox-gated reset, clear-table, display, and update LuaEvents only while the Vox state is active. Before synchronously emitting `VoxDeorumTradeLogicUpdateButtons`, TradeLogic disables the native Propose and Cancel controls. The wrapper owns that update event: it replaces the callbacks, then re-enables and configures only the controls valid for the mounted state. If its listener is absent or misses a refresh, the native callbacks remain inert.
 
 Extend the three DLL `Change*` methods and their Lua bindings with an optional trailing human-to-human argument, defaulting to false. Thread it to their native legality checks while preserving each binding's boolean return.
 
@@ -130,7 +130,9 @@ Verify the following before stage 7.04:
 7. Test all promise failures: invalid principals, direction, type, or duration; duplicate commitments; existing Military, Expansion, and Border promises; duplicate No Digging; invalid, unmet, or already-preparing Coop War targets; and missing promise APIs. Confirm a pre-existing No Digging alone remains legal.
 8. Test every promise in the editor, including one visible Coop War commitment with normalized twins, target filtering, and removal. Confirm promises are rechecked before every authored submission.
 9. Test Declaration of Friendship and human-to-human gold, GPT, and resource amount edits in both directions. Invalid amounts retain the prior native value.
-10. Test author, incoming, and own states with normal play, a pinned human strategist, and a pure observer. Confirm the effective seat supplies participants, legality, value, presentation columns, and serialized actor. Confirm mock success and error preserve the correct review or editor state, and that no bridge traffic or native enactment occurs.
+10. Test author, incoming, and own states with normal play and a pinned human strategist. Run the unchanged normal-seat mock in a pure-observer session only to confirm presentation; it is not proof of live deal support. Confirm the effective seat supplies participants, legality, value, presentation columns, and serialized actor for supported seats. Confirm mock success and error preserve the correct review or editor state, and that no bridge traffic or native enactment occurs.
+11. Confirm the mount calls `VoxDeorumOpenDeal` before showing the TradeLogic context. A call made while the context is already visible returns false without changing the native trade state. On a first-ever correctly ordered open, third-party war and peace controls use the mounted participants without a Lua error. Confirm author mode begins with no ordinary items at peace and with required paired peace treaties at war.
+12. Remove the wrapper's update listener, then force a TradeLogic refresh and confirm stock Propose and Cancel remain disabled. Restore the listener and confirm it synchronously reconfigures the footer and invokes only wrapper callbacks for each mounted state.
 
 ## Out of scope
 
