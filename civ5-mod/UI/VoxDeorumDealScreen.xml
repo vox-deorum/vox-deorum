@@ -345,7 +345,7 @@
 			<!-- Propose Button -->
 			<GridButton Style="FrameButton200" String="TXT_KEY_DIPLO_PROPOSE" ID="ProposeButton" Font="TwCenMT22"/>
 			<!-- Vox Deorum: incoming reviews use a third native-footer action for Reject. -->
-			<GridButton Style="FrameButton200" ID="VoxThirdAction" Font="TwCenMT18" Hidden="1"/>
+			<GridButton Style="FrameButton200" ID="VoxThirdAction" Font="TwCenMT22" Hidden="1"/>
 			<!-- CBP -->
 			<GridButton Style="FrameButton200" String="TXT_KEY_DIPLO_PROPOSE" ID="DenounceButton" Font="TwCenMT22"  Hidden="1"/>
 		</Stack>
