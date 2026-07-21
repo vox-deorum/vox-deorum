@@ -2,7 +2,7 @@
 
 > Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 >
-> **Status: stage 7.01 is implemented; its observer support is a retrofit, and stages 7.02 through 7.05 remain planned.** This index links the pinned contracts in [07-ingame-panel/specs.md](07-ingame-panel/specs.md) and five independently verifiable stages under [07-ingame-panel/](07-ingame-panel/). It depends on stages 1–6.
+> **Status: stages 7.01 and 7.02 are implemented; stage 7.01 observer support is a retrofit, and stages 7.03 through 7.05 remain planned.** This index links the pinned contracts in [07-ingame-panel/specs.md](07-ingame-panel/specs.md) and five independently verifiable stages under [07-ingame-panel/](07-ingame-panel/). It depends on stages 1 through 6.
 
 ## Objective
 

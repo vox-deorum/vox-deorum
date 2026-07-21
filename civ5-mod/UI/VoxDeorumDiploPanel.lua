@@ -275,13 +275,14 @@ end
 
 -- Open one deal card with the explicit mode derived by the transcript reducer.
 local function openDeal(row, mode)
+	if mode ~= "incoming" and mode ~= "own" then return end
 	local deal = row.Payload and row.Payload.Deal or nil
 	if deal == nil then return end
 	m_dealOpenError = nil
 	local proposalID = (mode == "incoming" or mode == "own") and row.ID or nil
 	LuaEvents.VoxDeorumOpenDealScreen({
 		counterpartID = m_counterpartID,
-		mode = mode or "view",
+		mode = mode,
 		deal = deal,
 		proposalMessageID = proposalID,
 	})
@@ -332,7 +333,7 @@ local function bindStaticRow(row, instance)
 	else
 		sizeBubble(instance, height)
 	end
-	instance.CardButton:SetDisabled(not isDeal); instance.CardButton:SetAlpha(row.Pending and 0.55 or 1)
+	instance.CardButton:SetDisabled(true); instance.CardButton:SetAlpha(row.Pending and 0.55 or 1)
 	return isDeal
 end
 
@@ -344,8 +345,7 @@ local function buildRowInstance(row)
 	end
 	m_lastBuiltTurn = row.Turn
 	local instance = {}; ContextPtr:BuildInstanceForControl("MessageInstance", instance, Controls.TranscriptStack)
-	local record = { row = row, controls = instance, mode = "view" }; record.isDeal = bindStaticRow(row, instance)
-	if record.isDeal then instance.CardButton:RegisterCallback(Mouse.eLClick, function() openDeal(record.row, record.mode) end) end
+	local record = { row = row, controls = instance, mode = nil }; record.isDeal = bindStaticRow(row, instance)
 	m_rowInstances[row.ID] = record
 end
 
@@ -374,8 +374,9 @@ local function refreshDealRow(row, reduction)
 	instance.Pending:SetHide(not pending)
 	if pending then addAnimated(instance.Pending, Locale.ConvertTextKey(pendingLabelKey()) .. " ") end
 	local canRespond = active and reduction.status == "open" and not pending and not isClosedThisTurn(m_rows, m_currentTurn) and isBoundActorCurrent()
-	record.mode = canRespond and (row.SpeakerID == m_activePlayerID and "own" or "incoming") or "view"
-	instance.CardButton:SetDisabled(pending); instance.CardButton:SetAlpha((pending or row.Pending) and 0.55 or 1)
+	record.mode = canRespond and (row.SpeakerID == m_activePlayerID and "own" or "incoming") or nil
+	instance.CardButton:SetDisabled(pending or not canRespond); instance.CardButton:SetAlpha((pending or row.Pending) and 0.55 or 1)
+	if canRespond then instance.CardButton:RegisterCallback(Mouse.eLClick, function() openDeal(record.row, record.mode) end) end
 end
 
 -- Refresh every proposal after a row or phase change.

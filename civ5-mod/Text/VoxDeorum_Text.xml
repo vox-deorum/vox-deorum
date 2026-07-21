@@ -362,7 +362,6 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_AUTHOR"><Text>Mock: Author</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_INCOMING"><Text>Mock: Incoming</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_OWN"><Text>Mock: Own Open</Text></Row>
-		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_VIEW"><Text>Mock: View</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_SUCCESS"><Text>Mock: Success</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_ERROR"><Text>Mock: Error</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE"><Text>Goodbye</Text></Row>

@@ -28,7 +28,7 @@
   <Blocks />
   <Files>
     <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
-    <File md5="C10BE65BF1683FCF92FE1C61B9F2F14F" import="0">Text/VoxDeorum_Text.xml</File>
+    <File md5="A0A17D6B3AA87AEA54AE59419574D7E1" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
@@ -40,13 +40,13 @@
     <File md5="1C2EC246EE80D6D8848D73CDD50F9515" import="1">UI/VoxDeorumConverse.lua</File>
     <File md5="AD7D071B1AAF6A72D8BC740509107C45" import="1">UI/LeaderHeadRoot.lua</File>
     <File md5="F72A8A907AF7A24517A900793216B7F9" import="1">UI/LeaderHeadRoot.xml</File>
-    <File md5="36483B40FE43DB02E31DC5DE423B231A" import="1">UI/VoxDeorumDiploPanel.lua</File>
-    <File md5="A18F1050F029B4883B25F5FEB0ACCEAB" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
-    <File md5="4DB829C5E3E3CAE0208A01F24BFB1B4D" import="0">UI/VoxDeorumDiploPanel.xml</File>
+    <File md5="23D894FD5E774671B22289EE63C7F74E" import="1">UI/VoxDeorumDiploPanel.lua</File>
+    <File md5="B176A7F531F763423A113B96D401A563" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
+    <File md5="5214E12B73BF81CAFEB005BA6F88DFAC" import="0">UI/VoxDeorumDiploPanel.xml</File>
     <File md5="682988C25AF6138242AA7E63D61D9E9D" import="1">UI/VoxDeorumDealUtils.lua</File>
-    <File md5="C98D9C89547BD4CE29BBB4E721BC0ACC" import="1">UI/VoxDeorumDealScreen.lua</File>
-    <File md5="BFCF2DCEEC83303ECE5E6B094C59B793" import="1">UI/VoxDeorumDealScreenMock.lua</File>
-    <File md5="FEE5C2E64224CC98994CD0490D5B0B04" import="0">UI/VoxDeorumDealScreen.xml</File>
+    <File md5="02B89DC50A540CC083DB419855CDA4DD" import="1">UI/VoxDeorumDealScreen.lua</File>
+    <File md5="FC6279833079C898E1B72C188F48028D" import="1">UI/VoxDeorumDealScreenMock.lua</File>
+    <File md5="6C45FC31A0D98B139BB8F61BD2014FCD" import="0">UI/VoxDeorumDealScreen.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>
