@@ -345,7 +345,7 @@ local function buildRowInstance(row)
 	end
 	m_lastBuiltTurn = row.Turn
 	local instance = {}; ContextPtr:BuildInstanceForControl("MessageInstance", instance, Controls.TranscriptStack)
-	local record = { row = row, controls = instance, mode = nil }; record.isDeal = bindStaticRow(row, instance)
+	local record = { row = row, controls = instance, mode = nil }; bindStaticRow(row, instance)
 	m_rowInstances[row.ID] = record
 end
 
