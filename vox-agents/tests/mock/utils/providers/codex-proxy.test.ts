@@ -151,6 +151,84 @@ describe('CodexProxyManager startup', () => {
     expect(manager.state).toBe('ready-owned');
   });
 
+  it('should replace an adopted proxy that times out during a reprobe', async () => {
+    let probeCount = 0;
+    const probeTimeout = vi.fn(async (operation: Promise<unknown>) => {
+      probeCount += 1;
+      if (probeCount === 3) throw new CodexProxyProbeTimeoutError();
+      return operation;
+    });
+    const spawn = vi.fn(() => createChild());
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(response(200, { status: 'ok' }))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }))
+      .mockResolvedValueOnce(response(200, { status: 'ok' }))
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }));
+    const manager = createManager(fetch, spawn, { probeTimeout: probeTimeout as any });
+
+    await manager.ensureCodexProxy();
+    await manager.ensureCodexProxy();
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(manager.state).toBe('ready-owned');
+  });
+
+  it('should install an owned state when an adopted proxy disappears during startup', async () => {
+    const spawn = vi.fn(() => createChild());
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(response(200, { status: 'ok' }))
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }));
+    const manager = createManager(fetch, spawn);
+
+    await manager.ensureCodexProxy();
+    await manager.ensureCodexProxy();
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(manager.state).toBe('ready-owned');
+  });
+
+  it('should share one restart across concurrent failed adopted reprobes', async () => {
+    let releaseSlowHealth: ((value: Response) => void) | undefined;
+    const slowHealth = new Promise<Response>((resolve) => { releaseSlowHealth = resolve; });
+    let releaseOwnedReady: ((value: Response) => void) | undefined;
+    const ownedReady = new Promise<Response>((resolve) => { releaseOwnedReady = resolve; });
+    let markOwnedProbeStarted: (() => void) | undefined;
+    const ownedProbeStarted = new Promise<void>((resolve) => { markOwnedProbeStarted = resolve; });
+    let markSlowReadyStarted: (() => void) | undefined;
+    const slowReadyStarted = new Promise<void>((resolve) => { markSlowReadyStarted = resolve; });
+    let fetchCount = 0;
+    const fetch = vi.fn(() => {
+      fetchCount += 1;
+      if (fetchCount === 1) return Promise.resolve(response(200, { status: 'ok' }));
+      if (fetchCount === 2) return Promise.resolve(response(200, { status: 'ready' }));
+      if (fetchCount === 3) return slowHealth;
+      if (fetchCount >= 4 && fetchCount <= 6) return Promise.reject(new TypeError('connection refused'));
+      if (fetchCount === 7) {
+        markOwnedProbeStarted?.();
+        return ownedReady;
+      }
+      markSlowReadyStarted?.();
+      return Promise.resolve(response(200, { status: 'ready' }));
+    });
+    const spawn = vi.fn(() => createChild());
+    const manager = createManager(fetch as any, spawn);
+
+    await manager.ensureCodexProxy();
+    const slowReprobe = manager.ensureCodexProxy();
+    const fastReprobe = manager.ensureCodexProxy();
+    await ownedProbeStarted;
+    releaseSlowHealth?.(response(503, { status: 'not_ready' }));
+    await slowReadyStarted;
+    releaseOwnedReady?.(response(200, { status: 'ready' }));
+    await Promise.all([slowReprobe, fastReprobe]);
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(manager.state).toBe('ready-owned');
+  });
+
   it('should reject an incompatible occupied port without retrying', async () => {
     const manager = createManager(vi.fn().mockResolvedValue(response(200, { status: 'different-service' })));
 

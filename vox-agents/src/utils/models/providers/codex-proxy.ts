@@ -233,12 +233,21 @@ export class CodexProxyManager {
     this.registerLifecycle();
     if (this.stateValue === 'ready-owned' && isChildAlive(this.child)) return;
     if (this.stateValue === 'ready-adopted') {
+      const observedGeneration = this.generation;
       const config = this.getConfig();
       const deadline = this.dependencies.now() + config.startupTimeoutMs;
-      const health = await this.probe('/health', signal, deadline, config);
-      const ready = await this.probe('/ready', signal, deadline, config);
-      if (health?.response.ok && this.isCompatibleHealth(health.body) && ready?.response.ok && isReadyBody(ready.body)) return;
-      this.clearState();
+      let responsive = false;
+      try {
+        const health = await this.probe('/health', signal, deadline, config);
+        const ready = await this.probe('/ready', signal, deadline, config);
+        responsive = Boolean(health?.response.ok && this.isCompatibleHealth(health.body) && ready?.response.ok && isReadyBody(ready.body));
+      } catch (error) {
+        if (!(error instanceof CodexProxyProbeTimeoutError)) throw error;
+        this.dependencies.logger.warn('The adopted Codex proxy did not answer a loopback reprobe.');
+      }
+      if (responsive && observedGeneration === this.generation && this.stateValue === 'ready-adopted') return;
+      if (observedGeneration === this.generation && this.stateValue === 'ready-adopted') this.clearState();
+      else if (this.stateValue === 'ready-adopted' || this.stateValue === 'ready-owned' && isChildAlive(this.child)) return;
     }
     const starting = this.starting ?? this.start();
     return raceAbort(starting, signal);
@@ -343,16 +352,16 @@ export class CodexProxyManager {
       }
       this.logReportedProxyVersion(health.body);
       this.child = undefined;
-      await this.waitForReady(generation, config, true, deadline);
-      this.installReady(generation, 'ready-adopted');
+      const state = await this.waitForReady(generation, config, true, deadline);
+      this.installReady(generation, state);
       return;
     }
     if (health) {
       throw new CodexProxyError(`Port ${config.port} is occupied and its /health endpoint returned HTTP ${health.response.status}.`, false);
     }
     await this.spawnOwned(generation, config);
-    await this.waitForReady(generation, config, false, deadline);
-    this.installReady(generation, 'ready-owned');
+    const state = await this.waitForReady(generation, config, false, deadline);
+    this.installReady(generation, state);
   }
 
   /** Launches the pinned proxy command and captures its structured stderr diagnostics. */
@@ -443,7 +452,12 @@ export class CodexProxyManager {
   }
 
   /** Polls readiness while keeping adopted disappearance and owned crashes distinct. */
-  private async waitForReady(generation: number, config: CodexProxyConfig, adopted: boolean, deadline: number): Promise<void> {
+  private async waitForReady(
+    generation: number,
+    config: CodexProxyConfig,
+    adopted: boolean,
+    deadline: number,
+  ): Promise<Extract<CodexProxyState, 'ready-owned' | 'ready-adopted'>> {
     for (;;) {
       if (this.stopped || generation !== this.generation) throw this.childFailure ?? new CodexProxyError('Codex proxy startup was stopped.', true);
       if (!adopted && !isChildAlive(this.child)) throw new CodexProxyError('The owned Codex proxy exited during startup.', true);
@@ -460,7 +474,7 @@ export class CodexProxyManager {
         }
         throw error;
       }
-      if (ready?.response.ok && isReadyBody(ready.body)) return;
+      if (ready?.response.ok && isReadyBody(ready.body)) return adopted ? 'ready-adopted' : 'ready-owned';
       if (adopted && ready === undefined) {
         await this.spawnOwned(generation, config);
         adopted = false;
