@@ -7,7 +7,7 @@ import {
   claudeCodeResponseMiddleware,
   guardClaudeCodeQueryUsageLimits,
   isClaudeCodeUsageLimitNotice,
-} from '../../../src/utils/models/claude-code-response.js';
+} from '../../../../src/utils/models/providers/claude-code-response.js';
 
 const notice = "You've hit your weekly limit · resets Jul 14, 10pm (America/Phoenix)";
 const fallbackDelay = 5 * 60 * 1000;

@@ -8,7 +8,7 @@ ALWAYS delegate less critical/lower-level BATCH work to subagents with less capa
 
 ## Project Overview
 
-Vox Deorum is LLM-enhanced AI for Civilization V, built on the Community Patch framework.
+Vox Deorum (VD, do not use Vox alone) is LLM-enhanced AI for Civilization V, built on the Community Patch framework.
 
 ```
 Civ 5 ↔ DLL ↔ Bridge Service ↔ MCP Server ↔ Vox Agents → LLM

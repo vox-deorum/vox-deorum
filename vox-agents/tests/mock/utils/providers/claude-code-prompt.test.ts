@@ -1,6 +1,6 @@
 /**
  * Tests for the claude-code system-message normalization
- * (`utils/models/claude-code-prompt.ts`). The claude-code provider flattens a prompt keeping only
+ * (`utils/models/providers/claude-code-prompt.ts`). The claude-code provider flattens a prompt keeping only
  * the LAST system message, so these assert the leading system run is merged into one and any later
  * system message is demoted to a user message: `system,system,user,system` becomes
  * `system(1+2),user,user`. A prompt with at most one system message is returned untouched.
@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeClaudeCodeSystemMessages,
   claudeCodeSystemMiddleware,
-} from '../../../src/utils/models/claude-code-prompt.js';
+} from '../../../../src/utils/models/providers/claude-code-prompt.js';
 
 /** A user message in the v3 provider prompt shape (content is an array of parts). */
 const user = (text: string) => ({ role: 'user' as const, content: [{ type: 'text' as const, text }] });

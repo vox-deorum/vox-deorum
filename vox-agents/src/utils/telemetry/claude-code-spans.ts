@@ -4,7 +4,7 @@
  * Stage 3 of the claude-code provider: surface CLI-executed built-in tool calls
  * as vox-agents telemetry spans.
  *
- * When `claudeCodeTools` are enabled, the Claude Code CLI runs its built-in
+ * When `hostTools` are enabled, the Claude Code CLI runs its built-in
  * tools (Read/Glob/Grep/WebFetch/…) inside its own agent loop, entirely outside
  * the AI-SDK tool-execution path that produces the existing `mcp-tool.*` spans.
  * The provider surfaces each such call as AI-SDK `tool-call` / `tool-result` /

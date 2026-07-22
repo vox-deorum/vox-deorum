@@ -19,6 +19,7 @@ import { AgentParameters } from '../../infra/vox-agent.js';
 import { hasBatchManager, getBatchManager } from '../../oracle/batch/batch-manager.js';
 import { convertToStepResult } from '../../oracle/batch/format-converter.js';
 import { takePreservedModelError } from './preserved-model-error.js';
+import { getCodexExecutionTimeout } from './providers/codex-proxy.js';
 
 const logger = createLogger('concurrency');
 
@@ -27,6 +28,17 @@ const modelLimiters = new Map<string, ReturnType<typeof pLimit>>();
 
 /** Monotonic counter to ensure unique chunk IDs across streamText calls */
 let streamCallCounter = 0;
+
+/** Return the inactivity deadline appropriate for the configured provider. */
+export function getExecutionTimeout(modelConfig: Model | undefined): number {
+  if (modelConfig?.provider === 'codex') {
+    return getCodexExecutionTimeout();
+  }
+
+  return process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google'
+    ? 900_000
+    : 300_000;
+}
 
 /**
  * Get or create a p-limit instance for a specific model.
@@ -88,6 +100,16 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
   // This bypasses streaming, per-model concurrency limiting, and retry logic entirely —
   // the batch API handles all of that server-side.
   if (hasBatchManager() && modelConfig) {
+    // Codex authenticates through its local ChatGPT proxy, which has no batch API. Sending it
+    // through Oracle's live fallback would silently mix the experiment's execution modes.
+    if (modelConfig.provider === 'codex') {
+      throw new Error(
+        `Batch mode cannot replay Codex model '${modelConfig.provider}/${modelConfig.name}': ` +
+        'the local ChatGPT proxy does not support Oracle batch requests. Run this experiment ' +
+        'without batch mode, or override to a batch-capable model.'
+      );
+    }
+
     // The batch path serializes params.messages/params.tools directly to the provider's
     // native request; it never invokes the model's tool-rescue middleware. For a prompt-mode
     // model that means native tools would be sent, system prose would not be reworded, and no
@@ -224,9 +246,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       initialDelay: 5000,
       maxDelay: 180000,
       backoffFactor: 1.2,
-      executionTimeout: process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google'
-        ? 900000  // 15 minutes for flex tier (queued requests)
-        : 300000, // 5 minutes default
+      executionTimeout: getExecutionTimeout(modelConfig),
       abortSignal: params.abortSignal,
     })
   });

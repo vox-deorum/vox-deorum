@@ -16,7 +16,7 @@ The stack is five components ([architecture.md](architecture.md)): a C++ game DL
 | **Git with LFS** | Cloning the repository and its submodules. |
 | **Python 3.x** | Used by the DLL build scripts and a few mod tooling scripts. |
 | **A Visual C++ toolchain (v90 / VS2008 toolset)** | Only if you build the DLL — see [Building the DLL](#building-the-dll). |
-| **At least one LLM provider API key** | Needed to actually run agents (OpenAI, Anthropic, Google, OpenRouter, or a local OpenAI-compatible endpoint). |
+| **At least one LLM provider credential** | Use an API key for API-backed providers, a local endpoint, or ChatGPT device login for Codex. |
 
 ## Clone and install
 
@@ -55,7 +55,7 @@ Exact installer links, install order, common errors, the deploy step, and the de
 
 Agents need provider credentials and, optionally, a strategist configuration:
 
-1. **Provider keys.** In `vox-agents/`, copy the environment template (`.env.default` → `.env`) and add at least one provider API key. `.env.default` documents every available option.
+1. **Provider credentials.** In `vox-agents/`, copy the environment template (`.env.default` → `.env`) and configure the provider you will use. API-backed providers need a key. Codex downloads its pinned proxy on first use and prompts for ChatGPT device login when no existing Codex session is available.
 2. **Models.** Model definitions live in `vox-agents/config.json` under `llms`, which maps keys like `openai/gpt-5-mini` to a provider and model, with `default` and `embedder` aliases. The framework is provider-agnostic and resolves each agent's model through its `getModel()` hook. You can assign different models to different agents — or different strategists to different players in the same game. See [vox-agents/overview.md](vox-agents/overview.md).
 3. **Players and strategist.** To control which civilizations the AI plays and how, copy one of the files in `vox-agents/configs/` and edit it: `llmPlayers` (which player IDs the AI controls), `autoPlay`, the chosen `strategist`, and `gameMode` (`start` for a new game, `load` for a save). See [vox-agents/strategist.md](vox-agents/strategist.md).
 

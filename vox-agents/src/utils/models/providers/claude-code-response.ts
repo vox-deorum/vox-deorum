@@ -5,7 +5,7 @@
 import type { LanguageModelMiddleware } from 'ai';
 import type { Query } from 'ai-sdk-provider-claude-code';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { preserveModelError } from './preserved-model-error.js';
+import { preserveModelError } from '../preserved-model-error.js';
 
 const noticeIntroductions = ["You've hit your ", 'You’ve hit your '];
 const fallbackDelay = 5 * 60 * 1000;

@@ -1,8 +1,8 @@
 # Configuration
 
-The AI civilizations in Vox Deorum are powered by a large language model, and you decide which one. This page covers setting up an API key, choosing a provider and model, controlling cost, and running a local model for free.
+The AI civilizations in Vox Deorum are powered by a large language model, and you decide which one. This page covers provider credentials, choosing a model, controlling cost, and running a local model for free.
 
-**The short version:** open the **Config view** in the dashboard (the web page at `http://localhost:5555` that opens when you launch Vox Deorum), paste in an API key for one provider, and pick a model. That is enough to start playing. The rest of this page explains your options.
+**The short version:** open the **Config view** in the dashboard (the web page at `http://localhost:5555` that opens when you launch Vox Deorum), configure a provider, and pick a model. Most hosted providers need an API key. Codex uses your ChatGPT login instead.
 
 ## Provider, model, and API key
 
@@ -10,11 +10,11 @@ Three terms come up throughout this page:
 
 - A **provider** is the LLM service you use, such as OpenAI, Anthropic, or Google.
 - A **model** is the specific "brain" doing the thinking within that service, such as `openai/gpt-5-mini`.
-- An **API key** is the credential that lets Vox Deorum talk to a provider on your behalf. You need at least one.
+- A **credential** lets Vox Deorum use the provider on your behalf. Most providers use an API key. Codex authenticates through ChatGPT.
 
-## Setting your API key
+## Setting provider credentials
 
-The easiest place to manage keys is the **Config view in the dashboard**. Paste your key into the matching field and save. There are no files to edit by hand.
+The easiest place to manage API keys is the **Config view in the dashboard**. Paste your key into the matching field and save. Codex needs no key in the dashboard.
 
 The installer also offers to set a key the first time you install. Either way, you can always return to the dashboard to add more keys or change them.
 
@@ -24,12 +24,13 @@ Keys are stored on your own machine and are sent only to the provider you are us
 
 Vox Deorum is provider-agnostic. Use whichever LLM service you prefer, and mix several if you like. Supported options:
 
-| Provider | What it is | Where to get a key |
+| Provider | What it is | Credential |
 | --- | --- | --- |
 | OpenAI | GPT models | <https://platform.openai.com/api-keys> |
 | Anthropic | Claude models | <https://console.anthropic.com/account/keys> |
 | Google AI | Gemini models | <https://aistudio.google.com/apikey> |
 | OpenRouter | One account that resells many providers' models | <https://openrouter.ai/keys> |
+| Codex (ChatGPT) | Codex models available to your ChatGPT account | ChatGPT device login on first use |
 | Any OpenAI-compatible endpoint | Includes local models (see below) | n/a |
 
 If you are just starting out and want the widest selection from one account, OpenRouter is the simplest. Otherwise, pick the provider whose models you want and add that key.
@@ -47,6 +48,22 @@ From the dashboard's **Config view** you can see the available models and pick w
 You can assign different models to different jobs, and you can even hand different AI civilizations in the same game to different models. For example, give the main opponents a strong model and let minor ones run on something cheap.
 
 A sensible starting point is a mid-tier model from your chosen provider. Move up or down once you have seen how it plays.
+
+## Using Codex with ChatGPT
+
+Set the provider to `codex` and enter any Codex model name available to your ChatGPT account, for example `gpt-5.4-mini`. Vox does not maintain a separate Codex model catalog.
+
+The first Codex request runs the exact pinned `codex-openai-proxy@0.1.0-rc.2` package through `npx`. npm downloads the proxy and its compatible Codex CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox logs. The proxy starts lazily, so using another provider does not download or launch it.
+
+The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. A custom command is trusted operator configuration, and Vox appends the required `serve` arguments.
+
+Proxy rc.2 has accepted limitations: it supports only automatic or disabled tool choice, exposes already-executed internal activity in function-shaped response entries, requires continuation policy to remain unchanged, and cannot enforce a per-request host-tool allowlist. Vox maps agents that normally require a tool call to automatic tool choice for Codex. It also rejects every non-empty `hostTools` setting for Codex and sends a read-only, network-disabled policy.
+
+## Host tools
+
+The model option is named `hostTools`. Missing or empty means no provider host tools. For Claude Code, `['everything']` expands to its vetted non-shell set, while any other list is an explicit allowlist. File writes are confined to a temporary game-and-player directory.
+
+The old `claudeCodeTools` name has been removed. A Claude Code model that still uses it fails with: `The \`claudeCodeTools\` option was renamed to \`hostTools\`. Update this model configuration.`
 
 ## Controlling cost
 
@@ -67,4 +84,4 @@ Expect a trade-off. Local models are free and private, but a model small enough 
 
 ## If something doesn't work
 
-Missing or malformed keys and unreachable endpoints are the most common setup problems. See [Troubleshooting](troubleshooting.md) for the specific symptoms and fixes.
+Missing credentials, Codex login problems, and unreachable endpoints are the most common setup problems. See [Troubleshooting](troubleshooting.md) for the specific symptoms and fixes.

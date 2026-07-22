@@ -25,7 +25,7 @@ vi.mock('../../../src/oracle/batch/format-converter.js', () => ({
   convertToStepResult: mocks.convertToStepResult,
 }));
 
-import { streamTextWithConcurrency, withModelConfig } from '../../../src/utils/models/concurrency.js';
+import { getExecutionTimeout, streamTextWithConcurrency, withModelConfig } from '../../../src/utils/models/concurrency.js';
 
 // The guard runs before any retry/streaming machinery, touching only context.timeoutRefresh.
 const fakeContext = { timeoutRefresh: () => {} } as any;
@@ -52,6 +52,18 @@ describe('streamTextWithConcurrency batch guard', () => {
     expect(mocks.enqueue).not.toHaveBeenCalled();
   });
 
+  it('rejects a Codex model when the batch manager is active', async () => {
+    const params = withModelConfig(
+      { model: {} as any, messages: [] } as any,
+      { provider: 'codex', name: 'gpt-5.4-mini', options: {} } as any
+    );
+
+    await expect(streamTextWithConcurrency(params, fakeContext)).rejects.toThrow(
+      /Batch mode cannot replay Codex model 'codex\/gpt-5\.4-mini'/
+    );
+    expect(mocks.enqueue).not.toHaveBeenCalled();
+  });
+
   it('routes a native tool-calling model through the batch manager unchanged', async () => {
     const params = withModelConfig(
       { model: {} as any, messages: [] } as any,
@@ -63,5 +75,22 @@ describe('streamTextWithConcurrency batch guard', () => {
     expect(mocks.enqueue).toHaveBeenCalledTimes(1);
     expect(mocks.convertToStepResult).toHaveBeenCalledWith({ id: 'chat-completion' });
     expect(result).toEqual({ steps: ['converted', { id: 'chat-completion' }] });
+  });
+});
+
+describe('getExecutionTimeout', () => {
+  it('uses configured Codex startup and request deadlines plus shutdown margin', () => {
+    const startupTimeout = process.env.CODEX_PROXY_STARTUP_TIMEOUT;
+    const requestTimeout = process.env.CODEX_PROXY_REQUEST_TIMEOUT;
+    process.env.CODEX_PROXY_STARTUP_TIMEOUT = '10m';
+    process.env.CODEX_PROXY_REQUEST_TIMEOUT = '20m';
+    try {
+      expect(getExecutionTimeout({ provider: 'codex', name: 'gpt-5.4-mini' } as any)).toBe(1_845_000);
+    } finally {
+      if (startupTimeout === undefined) delete process.env.CODEX_PROXY_STARTUP_TIMEOUT;
+      else process.env.CODEX_PROXY_STARTUP_TIMEOUT = startupTimeout;
+      if (requestTimeout === undefined) delete process.env.CODEX_PROXY_REQUEST_TIMEOUT;
+      else process.env.CODEX_PROXY_REQUEST_TIMEOUT = requestTimeout;
+    }
   });
 });

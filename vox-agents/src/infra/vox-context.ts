@@ -741,7 +741,10 @@ export class VoxContext<TParameters extends AgentParameters> {
         // Apply prepared configuration
         messages = stepConfig.messages || messages;
         const stepModel = stepConfig.model || model;
-        const stepProviderOptions = buildProviderOptions(stepConfig.model || model);
+        // Use one identity for construction and request options so any provider
+        // working-directory policy remains stable across a single step.
+        const runtimeIdentity = { workingDirId: `${parameters.gameID}-${parameters.playerID}` };
+        const stepProviderOptions = buildProviderOptions(stepModel, runtimeIdentity);
         const stepActiveTools = stepConfig.activeTools || agent.getActiveTools(parameters);
         const stepToolChoice = stepActiveTools && stepActiveTools.length > 0 ? agent.toolChoice : "auto";
         const stepOutputSchema = stepConfig.outputSchema;
@@ -777,7 +780,7 @@ export class VoxContext<TParameters extends AgentParameters> {
           withModelConfig({
             // Model settings
             model: getModel(stepModel, {
-              workingDirId: `${parameters.gameID}-${parameters.playerID}`,
+              ...runtimeIdentity,
               onToolFraming: ({ framing }) => { stepToolFraming = framing; },
             }),
             providerOptions: stepProviderOptions,
@@ -791,7 +794,7 @@ export class VoxContext<TParameters extends AgentParameters> {
             // Tools
             tools: this.tools,
             activeTools: stepActiveTools,
-            toolChoice: stepModel.provider === "anthropic" && stepToolChoice === "required" ? "auto" : stepToolChoice as any,
+            toolChoice: ["anthropic", "codex"].includes(stepModel.provider) && stepToolChoice === "required" ? "auto" : stepToolChoice as any,
             experimental_context: parameters,
             // Output schema for tool as agent
             output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,

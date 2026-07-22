@@ -26,6 +26,7 @@ export const llmProviders = [
   { label: 'OpenRouter', value: 'openrouter' },
   { label: 'Anthropic', value: 'anthropic' },
   { label: 'Claude Code', value: 'claude-code' },
+  { label: 'Codex (ChatGPT)', value: 'codex' },
   { label: 'OpenAI', value: 'openai' },
   { label: 'Google AI', value: 'google' },
   { label: 'AWS Bedrock', value: 'aws' },

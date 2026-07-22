@@ -11,7 +11,6 @@ import type { Model, ReasoningEffort } from '../../types/index.js';
 import { createOpenRouter, LanguageModelV3 } from '@openrouter/ai-sdk-provider';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createClaudeCode, type ClaudeCodeSettings } from 'ai-sdk-provider-claude-code';
 import { hermesToolMiddleware } from '@ai-sdk-tool/parser';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createVertex } from '@ai-sdk/google-vertex';
@@ -20,23 +19,16 @@ import dotenv from 'dotenv';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { toolRescueMiddleware } from './tool-rescue/middleware.js';
-import { claudeCodeSystemMiddleware } from './claude-code-prompt.js';
-import {
-  claudeCodeResponseMiddleware,
-  guardClaudeCodeQueryUsageLimits,
-} from './claude-code-response.js';
+import { buildClaudeCodeModel } from './providers/claude-code.js';
+import { claudeCodeSystemMiddleware } from './providers/claude-code-prompt.js';
+import { buildCodexModel, buildCodexProviderOptions } from './providers/codex.js';
+import type { ModelRuntimeIdentity } from './providers/host-tools.js';
 import type { ToolCallFraming } from './tool-rescue/types.js';
 import { Agent } from 'undici';
-import os from 'node:os';
-import fs from 'node:fs';
-import path from 'node:path';
+
+export type { ModelRuntimeIdentity } from './providers/host-tools.js';
 
 dotenv.config();
-
-// Vetted safe built-in CLI tools that claude-code's `['everything']` expands to (Bash excluded).
-const CLAUDE_CODE_SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'TodoWrite'];
-// Never enabled, even if explicitly listed.
-const CLAUDE_CODE_BLOCKED_TOOLS = ['Bash'];
 
 /**
  * Get a LLM model config by name.
@@ -187,61 +179,16 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
       result = createAnthropic()(config.name);
       break;
     case "claude-code": {
-      // Drives the local Claude Agent SDK / Claude Code CLI subprocess. It has no
-      // native AI-SDK tool calling, so game tools MUST be prompt-emulated — force
-      // prompt mode by rebinding config so the middleware tail's "prompt" branch runs.
-      config = { ...config, options: { ...config.options, toolMiddleware: 'prompt' } };
-      const opts = config.options ?? {};
-      const settings: ClaudeCodeSettings = {
-        settingSources: [], // explicit: never load CLAUDE.md / .claude/settings.json into agent prompts
-        // Inspect raw assistant messages before the provider applies structured-output validation,
-        // which otherwise replaces subscription-limit prose with a schema error.
-        onQueryCreated: guardClaudeCodeQueryUsageLimits,
-      };
-      // Built-in CLI tools are an explicit opt-in. Layering: `tools` bounds what is *in
-      // context* (availability), `allowedTools` is what may *run* (permission), and
-      // `dontAsk` denies the rest without prompting. `cwd` is NOT a sandbox (it only
-      // resolves relative paths), so the path confinement of Write/Edit comes from the
-      // `(./**)` rules plus dontAsk's deny-by-default, not from `cwd` itself.
-      const requested = opts.claudeCodeTools;
-      if (!requested || requested.length === 0) {
-        settings.tools = []; // pure text: disable all built-in CLI tools (zero host tool execution)
-      } else {
-        const expanded = (requested.length === 1 && requested[0] === 'everything')
-          ? CLAUDE_CODE_SAFE_TOOLS
-          : requested;
-        // Bash (and anything else in CLAUDE_CODE_BLOCKED_TOOLS) is dropped here, so it is
-        // absent from both `tools` and `allowedTools`; with dontAsk deny-by-default that
-        // keeps it blocked. We deliberately do NOT also set `disallowedTools`: the provider
-        // ignores it whenever `allowedTools` is present and warns on every request if both
-        // are supplied, so the allowlist alone is the single permission mechanism.
-        const allowed = expanded.filter(t => !CLAUDE_CODE_BLOCKED_TOOLS.includes(t));
-        const id = options?.workingDirId ?? 'default';
-        const dir = path.join(os.tmpdir(), 'vox-claude-code', id);
-        fs.mkdirSync(dir, { recursive: true });
-        settings.cwd = dir;
-        settings.tools = allowed;                    // availability: bare names only
-        settings.permissionMode = 'dontAsk';         // never prompt; deny anything not pre-approved below
-        settings.allowedTools = allowed.map(t =>
-          t === 'Write' || t === 'Edit' ? `${t}(./**)` : t); // path-scope writes to the temp cwd
-      }
-      // reasoningEffort -> Claude Code `effort`. 'minimal' disables thinking; otherwise request
-      // adaptive thinking with summarized display (mirrors the direct anthropic path) so newer
-      // models (Sonnet 5+) return reasoning text instead of defaulting to display 'omitted'.
-      if (opts.reasoningEffort === 'minimal') {
-        settings.thinking = { type: 'disabled' };
-      } else if (opts.reasoningEffort) {
-        settings.effort = opts.reasoningEffort; // 'low' | 'medium' | 'high' ⊆ EffortLevel
-        settings.thinking = { type: 'adaptive', display: 'summarized' };
-      }
-      result = createClaudeCode()(config.name, settings);
-      // Preserve the raw hook's streamed usage-limit error through AI SDK wrapping.
-      result = wrapLanguageModel({
-        model: result,
-        middleware: claudeCodeResponseMiddleware()
-      });
+      // The provider builder rebinds configuration to forced prompt mode. The
+      // middleware tail below must use that rebound value to preserve tool behavior.
+      const claudeCode = buildClaudeCodeModel(config, options);
+      result = claudeCode.model;
+      config = claudeCode.config;
       break;
     }
+    case "codex":
+      result = buildCodexModel(config);
+      break;
     case "aws":
       result = createAmazonBedrock()(config.name);
       break;
@@ -334,13 +281,23 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
  * })
  * // Returns: { openrouter: { reasoning: { effort: 'medium' } } }
  */
-export function buildProviderOptions(model: Model): ProviderMetadata {
+export function buildProviderOptions(model: Model, runtimeIdentity?: ModelRuntimeIdentity): ProviderMetadata {
   let result: ProviderMetadata;
 
   const isVertexAnthropic = model.provider === 'google' && model.name.startsWith('claude-');
   const providerOptionsKey = isVertexAnthropic ? 'anthropic' : model.provider;
 
-  if (!model.options) {
+  // Claude Code applies every configuration setting at construction time.
+  if (model.provider === 'claude-code') {
+    result = {};
+  }
+
+  // Codex permits only its compatible adapter fields and proxy extension.
+  else if (model.provider === 'codex') {
+    result = buildCodexProviderOptions(model, runtimeIdentity);
+  }
+
+  else if (!model.options) {
     result = { [providerOptionsKey]: {} };
   }
 

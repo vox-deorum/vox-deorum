@@ -9,6 +9,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **MCP tools**: Always read `mcp-server/src/tools/index.ts` to know which tools actually exist
 - **Embedding models**: Set `options.embeddingSize` on model config. Use `embedder` alias in `config.llms`. Call `getEmbeddingModel()` from `utils/models/models.ts`
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
+- **Provider modules**: Provider-specific implementations live in `src/utils/models/providers/` and may import shared types or sibling helpers, but never `models.ts`.
 - **Use Map for registries** (players, handlers, etc.)
 - **Graceful cancellation** — each root run owns its `AbortController`; pass the active root's signal (resolved from `AsyncLocalStorage`) to async operations. `context.abort()` cancels every active root
 

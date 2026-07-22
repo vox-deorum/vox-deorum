@@ -1,5 +1,5 @@
 /**
- * @module utils/models/claude-code-prompt
+ * @module utils/models/providers/claude-code-prompt
  *
  * A `transformParams`-only middleware that normalizes the system messages of a prompt for the
  * `ai-sdk-provider-claude-code` provider. That provider flattens an AI-SDK prompt into a single

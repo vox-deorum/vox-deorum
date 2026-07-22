@@ -60,6 +60,20 @@ class StepAgent extends VoxAgent<StrategistParameters> {
   override stopCheck(): boolean { return true; } // stop after one step
 }
 
+/** Minimal Codex agent that exercises the production required-tool compatibility mapping. */
+class CodexStepAgent extends VoxAgent<StrategistParameters> {
+  readonly description = 'one-step Codex compatibility test agent';
+  constructor(public readonly name: string) { super(); }
+  /** Selects a Codex model without contacting the real provider. */
+  override getModel(): Model { return { provider: 'codex', name: 'test' } as Model; }
+  /** Supplies the minimal system prompt required by the execution loop. */
+  async getSystem(): Promise<string> { return 'system'; }
+  /** Keeps a tool active so the agent's default required choice is evaluated. */
+  override getActiveTools(): string[] { return ['test-tool']; }
+  /** Stops after the mocked model step. */
+  override stopCheck(): boolean { return true; }
+}
+
 /** Agent that performs a nested execute() inside its initial-message hook, then runs its own step. */
 class NestingAgent extends VoxAgent<StrategistParameters> {
   readonly description = 'nesting test agent';
@@ -89,6 +103,7 @@ beforeAll(() => {
   agentRegistry.register(new StepAgent('test-step-a') as any);
   agentRegistry.register(new StepAgent('test-step-b') as any);
   agentRegistry.register(new StepAgent('test-step-child') as any);
+  agentRegistry.register(new CodexStepAgent('test-step-codex') as any);
   agentRegistry.register(new NestingAgent('test-nesting', 'test-step-child') as any);
   agentRegistry.register(new DiplomacyOnlyAgent('test-diplomacy-only') as any);
 });
@@ -99,6 +114,17 @@ beforeEach(() => {
 });
 
 describe('VoxContext.execute token accounting', () => {
+  it('maps the default required tool choice to auto for Codex', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-codex-tool-choice');
+    const base = makeStrategistParameters();
+
+    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
+      await ctx.execute('test-step-codex', {});
+    });
+
+    expect(stc).toHaveBeenCalledWith(expect.objectContaining({ toolChoice: 'auto' }), ctx);
+  });
+
   it('routes one execution to the active root sink, the seat totals, and the ExecuteTokenOutput', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'exec-tokens-1');
     const base = makeStrategistParameters();

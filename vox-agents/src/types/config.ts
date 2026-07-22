@@ -41,13 +41,13 @@ export interface LLMConfig {
     reasoningEffort?: ReasoningEffort;
     systemPromptFirst?: boolean;
     /**
-     * claude-code only: built-in CLI tools to enable. Undefined/empty = pure text
-     * model (no tool execution). ['everything'] = a vetted safe set. Any other list
-     * = an explicit whitelist. Bash is NEVER enabled, even if listed. When enabled,
-     * the CLI runs under dontAsk in a temp folder keyed to gameID-playerID, with
-     * Write/Edit path-scoped to that folder.
+     * Host tools to enable for providers that support them. Undefined or empty means
+     * no provider host tools. ['everything'] selects the provider's vetted safe set,
+     * and any other list is an explicit allowlist. Shell tools remain blocked, and
+     * enabled file writes are limited to a game-and-player temp directory. The pinned
+     * Codex proxy cannot enforce allowlists, so Codex rejects every non-empty value.
      */
-    claudeCodeTools?: string[];
+    hostTools?: string[];
     /**
      * Explicit prompt-mode terminology override. Normally resolved automatically
      * (`'action'` for claude-code, else `'tool'`); set here mainly by Oracle replay

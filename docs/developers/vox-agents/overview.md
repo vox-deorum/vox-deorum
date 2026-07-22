@@ -103,7 +103,9 @@ Three global registries tie the process together:
 
 Model definitions live in `vox-agents/config.json` under `llms`. Each entry maps a key like `openai/gpt-5-mini` to a provider and model name, with a `default` alias and an `embedder` alias for embedding models.
 
-The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS Bedrock, and OpenAI-compatible endpoints are supported, with API keys supplied via `.env` (see `src/utils/models/models.ts`). Agents resolve their model through `getModel()`, so a config can assign different models to different agents, or different strategists to different players in the same game.
+The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS Bedrock, Codex, and OpenAI-compatible endpoints are supported. API-backed providers read keys from `.env`; Codex uses the player's ChatGPT login. Agents resolve their model through `getModel()`, so a config can assign different models to different agents, or different strategists to different players in the same game.
+
+Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`. The shared `hostTools` policy is deny-by-default. Claude Code can enable its vetted non-shell tools in a scoped temporary directory. The pinned Codex proxy cannot enforce per-request tool allowlists, so Codex rejects non-empty `hostTools` and runs with a read-only, network-disabled request policy. Vox Deorum adopts a listener with compatible health, protocol, and readiness shapes without requiring the pinned package version. If `/health` reports a version, Vox logs it for diagnostics.
 
 Two pieces of middleware sit between agents and providers:
 

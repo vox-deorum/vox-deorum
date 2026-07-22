@@ -85,7 +85,7 @@ async function drain(stream: ReadableStream<any>): Promise<any[]> {
   return out;
 }
 
-// The vetted safe set that claude-code's ['everything'] expands to (mirrors models.ts).
+// The vetted safe set that claude-code's ['everything'] expands to.
 const SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'TodoWrite'];
 
 describe('claude-code provider', () => {
@@ -113,6 +113,14 @@ describe('claude-code provider', () => {
   });
 
   describe('getModel settings translation', () => {
+    it('fails fast when the removed claudeCodeTools option is present', () => {
+      expect(() => getModel({
+        provider: 'claude-code',
+        name: 'sonnet',
+        options: { claudeCodeTools: ['Read'] },
+      })).toThrow('The `claudeCodeTools` option was renamed to `hostTools`');
+    });
+
     it('rejects a raw usage-limit notice before required-tool structured validation', async () => {
       const notice = "You've hit your weekly limit · resets Jul 14, 10pm (America/Phoenix)";
       mocks.queryMessages = [{
@@ -182,7 +190,7 @@ describe('claude-code provider', () => {
 
     it("expands ['everything'] to the vetted safe set, path-scopes Write/Edit, blocks Bash, and creates the temp cwd", () => {
       getModel(
-        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', claudeCodeTools: ['everything'] } },
+        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', hostTools: ['everything'] } },
         { workingDirId: 'g1-3' }
       );
       // Availability: the full vetted set, never Bash.
@@ -204,7 +212,7 @@ describe('claude-code provider', () => {
 
     it('filters Bash out of an explicit whitelist', () => {
       getModel(
-        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', claudeCodeTools: ['Read', 'Bash'] } },
+        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', hostTools: ['Read', 'Bash'] } },
         { workingDirId: 'g2-1' }
       );
       expect(mocks.captured.tools).toEqual(['Read']);
@@ -911,7 +919,7 @@ describe('claude-code provider', () => {
           {
             provider: 'claude-code',
             name: 'sonnet',
-            options: { toolMiddleware: 'prompt', claudeCodeTools: ['Read'] },
+            options: { toolMiddleware: 'prompt', hostTools: ['Read'] },
           },
           { workingDirId: 'g3-1' }
         );
@@ -995,22 +1003,22 @@ describe('resolveToolFraming', () => {
   it("returns 'action' for claude-code regardless of built-in CLI tools", () => {
     // With built-in CLI tools...
     expect(resolveToolFraming(
-      { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: ['Read'] } }
+      { provider: 'claude-code', name: 'sonnet', options: { hostTools: ['Read'] } }
     )).toBe('action');
     expect(resolveToolFraming(
-      { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: ['everything'] } }
+      { provider: 'claude-code', name: 'sonnet', options: { hostTools: ['everything'] } }
     )).toBe('action');
-    // ...and for pure-text claude-code (no or empty claudeCodeTools).
+    // ...and for pure-text claude-code (no or empty hostTools).
     expect(resolveToolFraming({ provider: 'claude-code', name: 'sonnet' })).toBe('action');
     expect(resolveToolFraming(
-      { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: [] } }
+      { provider: 'claude-code', name: 'sonnet', options: { hostTools: [] } }
     )).toBe('action');
   });
 
-  it("returns 'tool' for any non-claude-code provider, even if claudeCodeTools is set", () => {
+  it("returns 'tool' for any non-claude-code provider, even if hostTools is set", () => {
     expect(resolveToolFraming({ provider: 'openrouter', name: 'x' })).toBe('tool');
     expect(resolveToolFraming(
-      { provider: 'openrouter', name: 'x', options: { claudeCodeTools: ['Read'] } }
+      { provider: 'openrouter', name: 'x', options: { hostTools: ['Read'] } }
     )).toBe('tool');
   });
 
@@ -1019,7 +1027,7 @@ describe('resolveToolFraming', () => {
     expect(resolveToolFraming({ provider: 'openrouter', name: 'x', options: { framing: 'action' } })).toBe('action');
     // An explicit 'tool' override beats the claude-code+built-in-tools default.
     expect(resolveToolFraming(
-      { provider: 'claude-code', name: 'sonnet', options: { claudeCodeTools: ['Read'], framing: 'tool' } }
+      { provider: 'claude-code', name: 'sonnet', options: { hostTools: ['Read'], framing: 'tool' } }
     )).toBe('tool');
   });
 });
