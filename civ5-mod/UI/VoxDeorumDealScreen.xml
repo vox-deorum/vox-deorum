@@ -369,8 +369,8 @@
 			</Box>
 		</Box>
 	</Grid>
-	<Grid Anchor="C,B" Offset="0,145" Size="600,34" Style="GridBlackIndent8" ID="VoxStatusFrame" Hidden="1">
-		<Label Anchor="C,C" WrapWidth="580" ID="VoxStatusText" Font="TwCenMT16"/>
+	<Grid Anchor="C,B" Offset="0,145" Size="500,34" Style="GridBlackIndent8" ID="VoxStatusFrame" Hidden="1">
+		<Label Anchor="C,C" WrapWidth="480" ID="VoxStatusText" Font="TwCenMT16"/>
 	</Grid>
 	<!-- Vox Deorum: pending cover blocks every wrapper and native editor control. -->
 	<Box Anchor="C,C" Size="Full,Full" Color="0,0,0,0" ConsumeMouseButton="1" ConsumeMouseOver="1" ID="VoxPendingCover" Hidden="1"/>

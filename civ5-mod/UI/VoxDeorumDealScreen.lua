@@ -95,6 +95,7 @@ end
 local function setStatus(value, literal)
 	lastStatus = literal and tostring(value or "") or Locale.ConvertTextKey(value or "")
 	Controls.VoxStatusText:SetText(lastStatus)
+	Controls.VoxStatusFrame:SetHide(lastStatus == "")
 end
 
 -- Permanently clear the mounted proposal's validation tooltip after its first edit.
@@ -564,7 +565,9 @@ local function renderStatus(promiseReason)
 	for _, reason in ipairs(draftProjectionFailures) do reasons[#reasons + 1] = reason end
 	if combinationReason ~= nil then reasons[#reasons + 1] = combinationReason end
 	if promiseReason ~= nil then reasons[#reasons + 1] = promiseReason end
-	Controls.VoxStatusText:SetText(reasons[1] or lastStatus)
+	local status = reasons[1] or lastStatus
+	Controls.VoxStatusText:SetText(status)
+	Controls.VoxStatusFrame:SetHide(status == "")
 	Controls.VoxStatusFrame:SetToolTipString(validationTooltipDismissed and "" or table.concat(reasons, "[NEWLINE]"))
 end
 
@@ -584,7 +587,6 @@ refresh = function()
 	renderPromisePockets(); renderCoopTargets(); renderPromiseTableRows(promiseAvailability)
 	recalcPocket(true); recalcPocket(false); recalcTable(true); recalcTable(false)
 	Controls.VoxPendingCover:SetHide(not pending)
-	Controls.VoxStatusFrame:SetHide(false)
 	Controls.VoxMessageFrame:SetHide(mode ~= "author" and not changed)
 	Controls.VoxMessageInput:SetDisabled(pending)
 	Controls.WhatDoYouWantButton:SetHide(true); Controls.WhatWillYouGiveMeButton:SetHide(true)
