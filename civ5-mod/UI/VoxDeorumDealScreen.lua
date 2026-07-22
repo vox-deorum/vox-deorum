@@ -9,19 +9,21 @@ if Events.ClearDiplomacyTradeTable.Remove ~= nil and type(DoClearDeal) == "funct
 ContextPtr:SetHide(true)
 
 local deal = UI.GetScratchDeal()
-local actorID, counterpartID, mode, reviewMode, proposalMessageID = -1, -1, nil, nil, nil
+local actorID, counterpartID, mode, proposalMessageID = -1, -1, nil, nil
 local baselineItems, baselinePromises, draftItems, draftPromises = {}, {}, {}, {}
-local originalMessage, outgoingMessage, expectedSignature = "", "", nil
-local mounted, pending, rebuilding, settingMessage, nativeRedrawInProgress, mockMountAuthorized, mockMode = false, false, false, false, false, false, false
+local baselineProjectionFailures, draftProjectionFailures, combinationReason = {}, {}, nil
+local originalMessage, outgoingMessage, expectedSignature, mountFingerprint, lastStatus = "", "", nil, nil, ""
+local mounted, pending, rebuilding, settingMessage, nativeRedrawInProgress, mountingInProgress, validationTooltipDismissed, mockMountAuthorized, mockMode = false, false, false, false, false, false, false, false, false
 local queuedAsPopup = false
 local pendingSeconds, clobberSeconds, targetPromiserID = 0, 0, nil
 local coopWarTargetAvailability = {}
 local refresh
-local reviewIM = InstanceManager:new("VoxReviewRow", "Container", Controls.VoxReviewStack)
-local usPromiseIM = InstanceManager:new("VoxPromisePocketEntry", "Button", Controls.VoxUsPromisePocketStack)
-local themPromiseIM = InstanceManager:new("VoxPromisePocketEntry", "Button", Controls.VoxThemPromisePocketStack)
-local promiseIM = InstanceManager:new("VoxPromiseTableEntry", "Container", Controls.VoxPromiseTableStack)
-local targetIM = InstanceManager:new("VoxPromiseTargetEntry", "Button", Controls.VoxTargetStack)
+local usPromiseIM = InstanceManager:new("VoxPromisePocketEntry", "Button", Controls.VoxUsPocketPromiseStack)
+local themPromiseIM = InstanceManager:new("VoxPromisePocketEntry", "Button", Controls.VoxThemPocketPromiseStack)
+local usPromiseTableIM = InstanceManager:new("VoxPromiseTableEntry", "Container", Controls.VoxUsTablePromiseStack)
+local themPromiseTableIM = InstanceManager:new("VoxPromiseTableEntry", "Container", Controls.VoxThemTablePromiseStack)
+local usCoopTargetIM = InstanceManager:new("VoxPromiseTargetEntry", "Button", Controls.VoxUsPocketCoopWarStack)
+local themCoopTargetIM = InstanceManager:new("VoxPromiseTargetEntry", "Button", Controls.VoxThemPocketCoopWarStack)
 
 local promiseKeys = {
 	MILITARY = "TXT_KEY_VD_DEAL_PROMISE_MILITARY", EXPANSION = "TXT_KEY_VD_DEAL_PROMISE_EXPANSION",
@@ -30,6 +32,9 @@ local promiseKeys = {
 }
 local promiseKinds = { "MILITARY", "EXPANSION", "BORDER", "NO_DIGGING", "COOP_WAR" }
 local promiseDurationKinds = { MILITARY = true, EXPANSION = true, BORDER = true, COOP_WAR = true }
+local footerActions = { propose = 1, cancel = 2, accept = 3, counter = 4, reject = 5, retract = 6, reset = 7 }
+local buttonActions = {}
+for action, index in pairs(footerActions) do buttonActions[index] = action end
 local itemNameKeys = {
 	GOLD = "TXT_KEY_VD_DEAL_ITEM_GOLD", GOLD_PER_TURN = "TXT_KEY_VD_DEAL_ITEM_GOLD_PER_TURN", MAPS = "TXT_KEY_VD_DEAL_ITEM_MAPS", RESOURCES = "TXT_KEY_VD_DEAL_ITEM_RESOURCES", CITIES = "TXT_KEY_VD_DEAL_ITEM_CITIES",
 	OPEN_BORDERS = "TXT_KEY_VD_DEAL_ITEM_OPEN_BORDERS", DEFENSIVE_PACT = "TXT_KEY_VD_DEAL_ITEM_DEFENSIVE_PACT", RESEARCH_AGREEMENT = "TXT_KEY_VD_DEAL_ITEM_RESEARCH_AGREEMENT",
@@ -58,6 +63,11 @@ local function normalizePromises(promises) return VoxDeorumDealUtils.NormalizePr
 -- Return a stable ordinary-term fingerprint.
 local function itemFingerprint(items) return VoxDeorumDealUtils.ItemFingerprint(items, Game) end
 
+-- Return a stable item-and-promise fingerprint that excludes the outgoing message.
+local function semanticFingerprint(items, promises)
+	return VoxDeorumDealUtils.SemanticFingerprint(items, promises, Game, GameDefines)
+end
+
 -- Return a participant-aware scratch signature.
 local function scratchSignature(items)
 	return tostring(deal:GetFromPlayer()) .. ":" .. tostring(deal:GetToPlayer()) .. "\n" .. itemFingerprint(items)
@@ -81,9 +91,20 @@ local function mockBypassesLegality()
 	return mockMode and driver ~= nil and driver.bypassLegality == true
 end
 
--- Set a localized or literal status message.
-local function setStatus(text, literal)
-	Controls.VoxStatusText:SetText(literal and tostring(text or "") or Locale.ConvertTextKey(text or ""))
+-- Store and display a localized or literal action status message.
+local function setStatus(value, literal)
+	lastStatus = literal and tostring(value or "") or Locale.ConvertTextKey(value or "")
+	Controls.VoxStatusText:SetText(lastStatus)
+end
+
+-- Permanently clear the mounted proposal's validation tooltip after its first edit.
+local function dismissValidationTooltip()
+	if validationTooltipDismissed then return end
+	validationTooltipDismissed = true
+	Controls.VoxStatusFrame:SetToolTipString("")
+	local wasHidden = Controls.VoxStatusFrame:IsHidden()
+	Controls.VoxStatusFrame:SetHide(true)
+	if not wasHidden then Controls.VoxStatusFrame:SetHide(false) end
 end
 
 -- Decode one native iterator tuple into a canonical ordinary item.
@@ -161,42 +182,80 @@ local function clearScratch()
 	expectedSignature = nil
 end
 
--- Validate and transactionally project ordinary terms into the shared scratch deal.
-local function evaluateItems(items, retainScratch)
+-- Project ordinary terms into the scratch deal according to one clear failure policy.
+local function projectItemCore(items, failurePolicy)
 	local payload = { version = 1, items = items or {}, promises = {}, message = nil }
 	local intended = normalizeItems(items)
-	local availability = {}
-	for index = 1, #intended do availability[index] = { available = true } end
 	if not VoxDeorumDealUtils.ValidatePayload(payload, actorID, counterpartID) then
 		local reason = text("TXT_KEY_VD_DEAL_ERROR_MALFORMED_TERMS")
-		for index = 1, #availability do availability[index] = { available = false, reason = reason } end
 		clearScratch()
-		return false, reason, nil, availability, nil
+		return false, reason, {}, failurePolicy.collectFailures and { reason } or nil
 	end
+	local failures = {}
 	rebuilding = true
 	deal:ClearItems(); deal:SetFromPlayer(actorID); deal:SetToPlayer(counterpartID)
-	for index, item in ipairs(intended) do
+	for _, item in ipairs(intended) do
 		local before = deal:GetNumItems()
 		if not addItem(item) or deal:GetNumItems() == before then
-			local reason = text("TXT_KEY_VD_DEAL_ERROR_ITEM_UNAVAILABLE", text(itemNameKeys[item.itemType] or "TXT_KEY_VD_DEAL_ITEM_TERM"))
-			availability[index] = { available = false, reason = reason }
-			rebuilding = false; clearScratch()
-			return false, reason, nil, availability, nil
+			local reason = text(failurePolicy.unavailableKey, text(itemNameKeys[item.itemType] or "TXT_KEY_VD_DEAL_ITEM_TERM"))
+			if not failurePolicy.collectFailures then
+				rebuilding = false; clearScratch()
+				return false, reason, nil, nil
+			end
+			failures[#failures + 1] = reason
 		end
 	end
 	rebuilding = false
 	local decoded = decodeScratch()
-	if scratchSignature(decoded) ~= tostring(actorID) .. ":" .. tostring(counterpartID) .. "\n" .. itemFingerprint(intended) then
+	if not failurePolicy.collectFailures and scratchSignature(decoded) ~= scratchSignature(intended) then
 		local reason = text("TXT_KEY_VD_DEAL_ERROR_NATIVE_DRAFT_CHANGED")
-		clearScratch(); return false, reason, nil, availability, reason
+		clearScratch(); return false, reason, nil, nil
 	end
-	local ok, valid = pcall(deal.AreAllTradeItemsValid, deal, true)
-	if not ok or valid ~= true then
-		local reason = text("TXT_KEY_VD_DEAL_ERROR_COMBINATION")
-		clearScratch(); return false, reason, nil, availability, reason
+	if not failurePolicy.collectFailures then
+		local ok, valid = pcall(deal.AreAllTradeItemsValid, deal, true)
+		if not ok or valid ~= true then
+			local reason = text("TXT_KEY_VD_DEAL_ERROR_COMBINATION")
+			clearScratch(); return false, reason, nil, nil
+		end
 	end
+	return true, nil, decoded, failures
+end
+
+-- Validate ordinary terms transactionally, retaining the scratch only when requested.
+local function evaluateItems(items, retainScratch)
+	local ok, reason, decoded = projectItemCore(items, { collectFailures = false, unavailableKey = "TXT_KEY_VD_DEAL_ERROR_ITEM_UNAVAILABLE" })
+	if not ok then return false, reason end
 	if retainScratch then expectedSignature = scratchSignature(decoded) else clearScratch() end
-	return true, nil, decoded, availability, nil
+	return true, nil
+end
+
+-- Probe the native aggregate legality of the currently projected scratch deal.
+local function probeCombination()
+	local ok, valid = pcall(deal.AreAllTradeItemsValid, deal, true)
+	if ok and valid == true then combinationReason = nil else combinationReason = text("TXT_KEY_VD_DEAL_ERROR_COMBINATION") end
+	return combinationReason == nil
+end
+
+-- Best-effort project an editable item list and return every term the native deal rejects.
+local function projectItems(items)
+	local _, _, _, failures = projectItemCore(items, { collectFailures = true, unavailableKey = "TXT_KEY_VD_DEAL_ERROR_ORIGINAL_TERM_UNAVAILABLE" })
+	draftItems = decodeScratch()
+	expectedSignature = scratchSignature(draftItems)
+	probeCombination()
+	return failures or {}
+end
+
+-- Project the immutable mounted proposal and clear failures from any prior edited draft.
+local function projectBaseline(items)
+	baselineProjectionFailures = projectItems(items)
+	draftProjectionFailures = {}
+	return baselineProjectionFailures
+end
+
+-- Project the current edited draft without changing immutable baseline failures.
+local function projectDraft(items)
+	draftProjectionFailures = projectItems(items)
+	return draftProjectionFailures
 end
 
 -- Safely invoke a player binding and distinguish unavailable APIs from false results.
@@ -280,145 +339,18 @@ local function evaluatePromises(promises)
 	return allAvailable, firstReason, normalized, availability
 end
 
--- Localize a database row without trusting optional display fields.
-local function databaseName(row, fallback)
-	if row == nil then return fallback end
-	local key = row.Description or row.ShortDescription or row.Type
-	if key == nil then return fallback end
-	local ok, value = pcall(Locale.ConvertTextKey, key)
-	return ok and value or fallback
-end
-
--- Resolve a player display name without letting a missing binding break review.
+-- Resolve a player display name without letting a missing binding break rendering.
 local function playerName(playerID)
 	local player = Players[playerID]
 	local ok, value = playerCall(player, "GetName")
 	return ok and type(value) == "string" and value ~= "" and value or text("TXT_KEY_VD_DEAL_FALLBACK_PLAYER", playerID)
 end
 
--- Resolve a representative major-civilization name for a team.
-local function teamName(teamID)
-	for playerID = 0, (GameDefines.MAX_MAJOR_CIVS or 0) - 1 do
-		local ok, currentTeam = playerCall(Players[playerID], "GetTeam")
-		if ok and currentTeam == teamID then return playerName(playerID) end
-	end
-	return text("TXT_KEY_VD_DEAL_FALLBACK_TEAM", teamID)
-end
-
--- Append a duration to one immutable term label.
-local function withDuration(label, duration)
-	if duration == nil then return label end
-	return label .. text("TXT_KEY_VD_DEAL_DURATION", duration)
-end
-
--- Find a live league proposal name for a vote commitment.
-local function resolutionName(item)
-	if type(Game.GetActiveLeague) ~= "function" then return text("TXT_KEY_VD_DEAL_FALLBACK_RESOLUTION", item.resolutionID) end
-	local leagueOK, league = pcall(Game.GetActiveLeague)
-	if not leagueOK or league == nil then return text("TXT_KEY_VD_DEAL_FALLBACK_RESOLUTION", item.resolutionID) end
-	local method = item.repeal and "GetRepealProposals" or "GetEnactProposals"
-	if type(league[method]) ~= "function" then return text("TXT_KEY_VD_DEAL_FALLBACK_RESOLUTION", item.resolutionID) end
-	local proposalsOK, proposals = pcall(league[method], league)
-	if not proposalsOK or type(proposals) ~= "table" then return text("TXT_KEY_VD_DEAL_FALLBACK_RESOLUTION", item.resolutionID) end
-	for _, proposal in ipairs(proposals) do
-		if proposal.ID == item.resolutionID then return databaseName(GameInfo.Resolutions[proposal.Type], text("TXT_KEY_VD_DEAL_FALLBACK_RESOLUTION", item.resolutionID)) end
-	end
-	return text("TXT_KEY_VD_DEAL_FALLBACK_RESOLUTION", item.resolutionID)
-end
-
--- Format every canonical ordinary item with its identifying live details.
-local function itemLabel(item)
-	local label = text(itemNameKeys[item.itemType] or "TXT_KEY_VD_DEAL_ITEM_TERM")
-	if item.itemType == "GOLD" then label = label .. ": " .. tostring(item.amount)
-	elseif item.itemType == "GOLD_PER_TURN" then label = label .. ": " .. tostring(item.amount)
-	elseif item.itemType == "RESOURCES" then label = databaseName(GameInfo.Resources[item.resourceID], text("TXT_KEY_VD_DEAL_FALLBACK_RESOURCE", item.resourceID)) .. ": " .. tostring(item.quantity)
-	elseif item.itemType == "CITIES" then
-		local cityOK, city = playerCall(Players[item.fromPlayerID], "GetCityByID", item.cityID)
-		local nameOK, name = false, nil
-		if cityOK then nameOK, name = playerCall(city, "GetName") end
-		label = nameOK and name or (label .. ": " .. tostring(item.cityID))
-	elseif item.itemType == "THIRD_PARTY_PEACE" or item.itemType == "THIRD_PARTY_WAR" then label = label .. ": " .. teamName(item.thirdPartyTeamID)
-	elseif item.itemType == "TECHS" then label = databaseName(GameInfo.Technologies[item.techID], text("TXT_KEY_VD_DEAL_FALLBACK_TECHNOLOGY", item.techID))
-	elseif item.itemType == "VOTE_COMMITMENT" then
-		label = resolutionName(item) .. text("TXT_KEY_VD_DEAL_VOTE_DETAIL", item.voteChoice, item.numVotes, text(item.repeal and "TXT_KEY_VD_DEAL_VOTE_REPEAL" or "TXT_KEY_VD_DEAL_VOTE_ENACT"))
-	end
-	return withDuration(label, item.duration)
-end
-
 -- Return a complete readable promise row label.
 local function promiseLabel(promise)
 	local label = Locale.ConvertTextKey(promiseKeys[promise.promiseType])
 	if promise.targetPlayerID ~= nil then label = label .. ": " .. playerName(promise.targetPlayerID) end
-	return withDuration(label, promise.duration)
-end
-
--- Recalculate wrapper stacks after their contents change.
-local function calculateWrapperStacks()
-	Controls.VoxReviewStack:CalculateSize(); Controls.VoxReviewStack:ReprocessAnchoring(); Controls.VoxReviewPanel:CalculateInternalSize()
-	Controls.VoxPromiseTableStack:CalculateSize(); Controls.VoxPromiseTableStack:ReprocessAnchoring(); Controls.VoxPromiseTablePanel:CalculateInternalSize()
-	Controls.VoxUsPromisePocketStack:CalculateSize(); Controls.VoxUsPromisePocketStack:ReprocessAnchoring(); Controls.VoxUsPromisePocketPanel:CalculateInternalSize()
-	Controls.VoxThemPromisePocketStack:CalculateSize(); Controls.VoxThemPromisePocketStack:ReprocessAnchoring(); Controls.VoxThemPromisePocketPanel:CalculateInternalSize()
-	Controls.VoxTargetStack:CalculateSize(); Controls.VoxTargetStack:ReprocessAnchoring(); Controls.VoxTargetPanel:CalculateInternalSize()
-end
-
--- Render immutable proposal terms without consulting the scratch deal.
-local function renderReview(items, promises, itemAvailability, promiseAvailability, combinationReason)
-	reviewIM:ResetInstances()
-	-- Add one two-column row with visible unavailable styling.
-	local function addRow(us, them, reason)
-		local row = reviewIM:GetInstance()
-		row.UsLabel:SetText(us or ""); row.ThemLabel:SetText(them or "")
-		row.StatusLabel:SetText(reason ~= nil and "[COLOR_NEGATIVE_TEXT]" .. text("TXT_KEY_VD_DEAL_STATUS_UNAVAILABLE") .. "[ENDCOLOR]" or "")
-		row.Unavailable:SetHide(reason == nil)
-		row.Container:SetToolTipString(reason or "")
-	end
-	for index, item in ipairs(items) do
-		local availability = itemAvailability and itemAvailability[index]
-		local reason = availability and not availability.available and availability.reason or nil
-		local text = itemLabel(item)
-		if item.fromPlayerID == actorID then addRow(text, nil, reason) else addRow(nil, text, reason) end
-	end
-	local shownCoop = {}
-	for index, promise in ipairs(promises) do
-		local key = promise.promiseType == "COOP_WAR" and commitmentKey(promise) or nil
-		if key == nil or not shownCoop[key] then
-			if key ~= nil then shownCoop[key] = true end
-			local availability = promiseAvailability and promiseAvailability[index]
-			local reason = availability and not availability.available and availability.reason or nil
-			if key ~= nil then
-				for twinIndex, twin in ipairs(promises) do
-					local twinAvailability = commitmentKey(twin) == key and promiseAvailability and promiseAvailability[twinIndex] or nil
-					if twinAvailability and not twinAvailability.available then reason = twinAvailability.reason break end
-				end
-			end
-			if promise.promiserID == actorID then addRow(promiseLabel(promise), nil, reason) else addRow(nil, promiseLabel(promise), reason) end
-		end
-	end
-	if combinationReason ~= nil then addRow(text("TXT_KEY_VD_DEAL_REVIEW_COMBINATION"), nil, combinationReason) end
-	calculateWrapperStacks()
-end
-
--- Begin selecting a promise type from one side of the editor.
-local function addPromise(promiser, index)
-	if pending or mode == "incoming" or mode == "own" then return end
-	local kind = promiseKinds[index]
-	if kind == "COOP_WAR" then targetPromiserID = promiser; refresh(); return end
-	local candidate = copy(draftPromises)
-	candidate[#candidate + 1] = { promiserID = promiser, recipientID = counterpartOf(promiser), promiseType = kind }
-	local ok, reason, normalized = evaluatePromises(candidate)
-	if ok then draftPromises = normalized else setStatus(reason, true) end
-	refresh()
-end
-
--- Add a selected cooperative-war promise pair.
-local function chooseCoopTarget(target)
-	if targetPromiserID == nil then return end
-	local candidate = copy(draftPromises)
-	candidate[#candidate + 1] = { promiserID = targetPromiserID, recipientID = counterpartOf(targetPromiserID), promiseType = "COOP_WAR", targetPlayerID = target }
-	local ok, reason, normalized = evaluatePromises(candidate)
-	if ok then draftPromises = normalized else setStatus(reason, true) end
-	targetPromiserID = nil
-	refresh()
+	return label
 end
 
 -- Append one candidate promise to the current editor draft.
@@ -428,15 +360,43 @@ local function candidatePromises(promiserID, promiseType, targetPlayerID)
 	return candidate
 end
 
+-- Validate, commit, and render one promise candidate.
+local function tryAddPromise(promiserID, promiseType, targetPlayerID)
+	local ok, reason, normalized = evaluatePromises(candidatePromises(promiserID, promiseType, targetPlayerID))
+	if ok then draftPromises = normalized; dismissValidationTooltip() else setStatus(reason, true) end
+	refresh()
+	return ok
+end
+
+-- Begin selecting a promise type from one side of the editor.
+local function addPromise(promiser, index)
+	if pending then return end
+	local kind = promiseKinds[index]
+	if kind == "COOP_WAR" then
+		targetPromiserID = targetPromiserID == promiser and nil or promiser
+		refresh(); return
+	end
+	tryAddPromise(promiser, kind)
+end
+
+-- Add a selected cooperative-war promise pair.
+local function chooseCoopTarget(target)
+	if targetPromiserID == nil then return end
+	local promiserID = targetPromiserID
+	targetPromiserID = nil
+	tryAddPromise(promiserID, "COOP_WAR", target)
+end
+
 -- Remove a visible promise, including the normalized cooperative-war twin.
 local function removePromise(index)
-	if pending or mode == "incoming" or mode == "own" then return end
+	if pending then return end
 	local selected, kept = draftPromises[index], {}
 	if selected == nil then return end
 	for _, promise in ipairs(draftPromises) do
 		if promise ~= selected and not (selected.promiseType == "COOP_WAR" and promise.promiseType == "COOP_WAR" and promise.targetPlayerID == selected.targetPlayerID) then kept[#kept + 1] = promise end
 	end
 	draftPromises = normalizePromises(kept)
+	dismissValidationTooltip()
 	refresh()
 end
 
@@ -463,9 +423,56 @@ local function coopWarChoiceAvailability(promiserID)
 	return false, reason
 end
 
--- Render promise controls for the current editor state.
-local function renderPromiseEditor()
-	local editable = mounted and (mode == "author" or mode == "counter") and not pending
+-- Recalculate one side of the native pocket after promise content changes.
+local function recalcPocket(isUs)
+	local promiseStack = isUs and Controls.VoxUsPocketPromiseStack or Controls.VoxThemPocketPromiseStack
+	local coopStack = isUs and Controls.VoxUsPocketCoopWarStack or Controls.VoxThemPocketCoopWarStack
+	local pocketStack = isUs and Controls.UsPocketStack or Controls.ThemPocketStack
+	local panel = isUs and Controls.UsPocketPanel or Controls.ThemPocketPanel
+	coopStack:CalculateSize(); coopStack:ReprocessAnchoring()
+	promiseStack:CalculateSize(); promiseStack:ReprocessAnchoring()
+	pocketStack:CalculateSize(); pocketStack:ReprocessAnchoring()
+	panel:CalculateInternalSize(); panel:ReprocessAnchoring()
+end
+
+-- Recalculate one side of the native table after promise rows change.
+local function recalcTable(isUs)
+	local promiseStack = isUs and Controls.VoxUsTablePromiseStack or Controls.VoxThemTablePromiseStack
+	local tableStack = isUs and Controls.UsTableStack or Controls.ThemTableStack
+	local panel = isUs and Controls.UsTablePanel or Controls.ThemTablePanel
+	promiseStack:CalculateSize(); promiseStack:ReprocessAnchoring()
+	tableStack:CalculateSize(); tableStack:ReprocessAnchoring()
+	panel:CalculateInternalSize(); panel:ReprocessAnchoring()
+end
+
+-- Collapse both wrapper-owned pocket categories to their native-style default state.
+local function collapsePromiseCategories()
+	Controls.VoxUsPocketPromiseStack:SetHide(true); Controls.VoxThemPocketPromiseStack:SetHide(true)
+	Controls.VoxUsPocketCoopWarStack:SetHide(true); Controls.VoxThemPocketCoopWarStack:SetHide(true)
+	Controls.VoxUsPocketPromise:SetText("[ICON_PLUS] " .. text("TXT_KEY_VD_DEAL_PROMISES"))
+	Controls.VoxThemPocketPromise:SetText("[ICON_PLUS] " .. text("TXT_KEY_VD_DEAL_PROMISES"))
+	targetPromiserID = nil
+	recalcPocket(true); recalcPocket(false)
+end
+
+-- Toggle one wrapper-owned promise category using the native sub-stack pattern.
+local function togglePromiseCategory(isUs, _, control)
+	local promiseStack = isUs == 1 and Controls.VoxUsPocketPromiseStack or Controls.VoxThemPocketPromiseStack
+	local coopStack = isUs == 1 and Controls.VoxUsPocketCoopWarStack or Controls.VoxThemPocketCoopWarStack
+	if promiseStack:IsHidden() then
+		promiseStack:SetHide(false)
+		control:SetText("[ICON_MINUS] " .. text("TXT_KEY_VD_DEAL_PROMISES"))
+	else
+		promiseStack:SetHide(true); coopStack:SetHide(true)
+		control:SetText("[ICON_PLUS] " .. text("TXT_KEY_VD_DEAL_PROMISES"))
+		if (isUs == 1 and targetPromiserID == actorID) or (isUs ~= 1 and targetPromiserID == counterpartID) then targetPromiserID = nil end
+	end
+	recalcPocket(isUs == 1)
+end
+
+-- Render the five promise choices into both native pocket categories.
+local function renderPromisePockets()
+	local editable = mounted and not pending
 	for _, setup in ipairs({ { usPromiseIM, actorID }, { themPromiseIM, counterpartID } }) do
 		setup[1]:ResetInstances()
 		for index, kind in ipairs(promiseKinds) do
@@ -480,31 +487,85 @@ local function renderPromiseEditor()
 			instance.Button:RegisterCallback(Mouse.eLClick, addPromise)
 		end
 	end
-	promiseIM:ResetInstances()
-	local seen = {}
+end
+
+-- Render the current Coop War target chooser beneath the selected side.
+local function renderCoopTargets()
+	usCoopTargetIM:ResetInstances(); themCoopTargetIM:ResetInstances()
+	Controls.VoxUsPocketCoopWarStack:SetHide(targetPromiserID ~= actorID)
+	Controls.VoxThemPocketCoopWarStack:SetHide(targetPromiserID ~= counterpartID)
+	if targetPromiserID == nil then return end
+	local manager = targetPromiserID == actorID and usCoopTargetIM or themCoopTargetIM
+	for playerID = 0, GameDefines.MAX_MAJOR_CIVS - 1 do
+		if livingMajor(playerID) and playerID ~= actorID and playerID ~= counterpartID then
+			local availability = coopWarTargetAvailability[targetPromiserID] and coopWarTargetAvailability[targetPromiserID][playerID] or nil
+			local targetOK = availability and availability.available or false
+			local targetReason = availability and availability.reason or text("TXT_KEY_VD_DEAL_ERROR_NO_COOP_TARGET")
+			local instance = manager:GetInstance()
+			instance.Label:SetText(playerName(playerID)); instance.Button:SetVoid1(playerID); instance.Button:SetDisabled(pending or not targetOK)
+			instance.Button:SetToolTipString(targetOK and "" or targetReason); instance.Button:RegisterCallback(Mouse.eLClick, chooseCoopTarget)
+		end
+	end
+end
+
+-- Render removable promises into their native table sides.
+local function renderPromiseTableRows(promiseAvailability)
+	usPromiseTableIM:ResetInstances(); themPromiseTableIM:ResetInstances()
+	local usCount, themCount, seen = 0, 0, {}
+	-- Add one native-style promise row to a table-side manager.
+	local function addRow(manager, index, promise, reason)
+		local instance = manager:GetInstance()
+		local label, duration = promiseLabel(promise), tostring(promise.duration or "")
+		if reason ~= nil then
+			label = "[COLOR_NEGATIVE_TEXT]" .. label .. "[ENDCOLOR]"
+			duration = "[COLOR_NEGATIVE_TEXT]" .. duration .. "[ENDCOLOR]"
+		end
+		instance.Label:SetText(label); instance.Duration:SetText(duration)
+		instance.Button:SetVoid1(index); instance.Button:SetDisabled(pending); instance.Button:SetToolTipString(reason or "")
+		instance.Button:RegisterCallback(Mouse.eLClick, removePromise)
+	end
 	for index, promise in ipairs(draftPromises) do
-		local key = promise.promiseType == "COOP_WAR" and commitmentKey(promise) or tostring(index)
-		if not seen[key] then
-			seen[key] = true
-			local instance = promiseIM:GetInstance()
-			instance.Label:SetText(promiseLabel(promise)); instance.Duration:SetText(tostring(promise.duration or "")); instance.Button:SetVoid1(index); instance.Button:SetDisabled(not editable)
-			instance.Button:RegisterCallback(Mouse.eLClick, removePromise)
-		end
-	end
-	targetIM:ResetInstances()
-	if targetPromiserID ~= nil then
-		for playerID = 0, GameDefines.MAX_MAJOR_CIVS - 1 do
-			if livingMajor(playerID) and playerID ~= actorID and playerID ~= counterpartID then
-				local availability = coopWarTargetAvailability[targetPromiserID] and coopWarTargetAvailability[targetPromiserID][playerID] or nil
-				local targetOK = availability and availability.available or false
-				local targetReason = availability and availability.reason or text("TXT_KEY_VD_DEAL_ERROR_NO_COOP_TARGET")
-				local instance = targetIM:GetInstance()
-				instance.Label:SetText(playerName(playerID)); instance.Button:SetVoid1(playerID); instance.Button:SetDisabled(not targetOK)
-				instance.Button:SetToolTipString(targetOK and "" or targetReason); instance.Button:RegisterCallback(Mouse.eLClick, chooseCoopTarget)
+		local availability = promiseAvailability and promiseAvailability[index]
+		local reason = availability and not availability.available and availability.reason or nil
+		if promise.promiseType == "COOP_WAR" then
+			local key = commitmentKey(promise)
+			if not seen[key] then
+				seen[key] = true
+				for twinIndex, twin in ipairs(draftPromises) do
+					local twinAvailability = commitmentKey(twin) == key and promiseAvailability and promiseAvailability[twinIndex] or nil
+					if twinAvailability and not twinAvailability.available then reason = twinAvailability.reason break end
+				end
+				addRow(usPromiseTableIM, index, promise, reason); addRow(themPromiseTableIM, index, promise, reason)
+				usCount, themCount = usCount + 1, themCount + 1
 			end
+		elseif promise.promiserID == actorID then
+			addRow(usPromiseTableIM, index, promise, reason); usCount = usCount + 1
+		else
+			addRow(themPromiseTableIM, index, promise, reason); themCount = themCount + 1
 		end
 	end
-	calculateWrapperStacks()
+	Controls.VoxUsTablePromiseStack:SetHide(usCount == 0); Controls.VoxThemTablePromiseStack:SetHide(themCount == 0)
+end
+
+-- Return whether the visible proposal draft differs semantically from its mount state.
+local function isChanged()
+	return mountFingerprint ~= nil and semanticFingerprint(draftItems, draftPromises) ~= mountFingerprint
+end
+
+-- Return whether the unchanged incoming proposal is unsafe to accept.
+local function acceptBlocked(promisesOK)
+	return #baselineProjectionFailures > 0 or combinationReason ~= nil or not promisesOK
+end
+
+-- Render the highest-priority validation status and expose every reason in its tooltip.
+local function renderStatus(promiseReason)
+	local reasons = {}
+	for _, reason in ipairs(baselineProjectionFailures) do reasons[#reasons + 1] = reason end
+	for _, reason in ipairs(draftProjectionFailures) do reasons[#reasons + 1] = reason end
+	if combinationReason ~= nil then reasons[#reasons + 1] = combinationReason end
+	if promiseReason ~= nil then reasons[#reasons + 1] = promiseReason end
+	Controls.VoxStatusText:SetText(reasons[1] or lastStatus)
+	Controls.VoxStatusFrame:SetToolTipString(validationTooltipDismissed and "" or table.concat(reasons, "[NEWLINE]"))
 end
 
 -- Configure a native footer button for one wrapper action.
@@ -512,63 +573,82 @@ local function configureButton(control, textKey, action, visible, enabled)
 	control:SetHide(not visible); control:SetText(visible and Locale.ConvertTextKey(textKey) or ""); control:SetVoid1(action or -1); control:SetDisabled(not enabled)
 end
 
--- Render footer, interaction blocker, and wrapper-owned controls.
-refresh = function(skipScratchProjection)
+-- Render the single editable deal path and its fingerprint-driven footer.
+refresh = function()
 	if not mounted then return end
-	local editing = mode == "author" or mode == "counter"
-	local itemsOK, itemAvailability, combinationReason = true, {}, nil
-	if skipScratchProjection and editing then
-		for index = 1, #draftItems do itemAvailability[index] = { available = true } end
-	else
-		itemsOK, _, _, itemAvailability, combinationReason = evaluateItems(editing and draftItems or baselineItems, editing)
-	end
-	local promisesOK, _, _, promiseAvailability = evaluatePromises(editing and draftPromises or baselinePromises)
-	if mockBypassesLegality() then
-		itemsOK, combinationReason = true, nil
-		for index = 1, #(editing and draftItems or baselineItems) do itemAvailability[index] = { available = true } end
-	end
-	local review = not editing
-	if editing then cacheCoopWarTargetAvailability() else coopWarTargetAvailability = {} end
-	Controls.InteractionBlocker:SetHide(not review and not pending)
+	local combinationOK = probeCombination()
+	local promisesOK, promiseReason, normalizedPromises, promiseAvailability = evaluatePromises(draftPromises)
+	draftPromises = normalizedPromises
+	local changed = isChanged()
+	cacheCoopWarTargetAvailability()
+	renderPromisePockets(); renderCoopTargets(); renderPromiseTableRows(promiseAvailability)
+	recalcPocket(true); recalcPocket(false); recalcTable(true); recalcTable(false)
 	Controls.VoxPendingCover:SetHide(not pending)
-	Controls.VoxTargetFrame:SetHide(not editing or targetPromiserID == nil)
-	Controls.VoxReviewPanel:SetHide(not review)
-	Controls.VoxPromiseFrame:SetHide(not editing)
 	Controls.VoxStatusFrame:SetHide(false)
-	Controls.VoxMessageFrame:SetHide(not editing)
-	Controls.VoxMessageInput:SetDisabled(not editing or pending)
+	Controls.VoxMessageFrame:SetHide(mode ~= "author" and not changed)
+	Controls.VoxMessageInput:SetDisabled(pending)
 	Controls.WhatDoYouWantButton:SetHide(true); Controls.WhatWillYouGiveMeButton:SetHide(true)
 	Controls.WhatWillMakeThisWorkButton:SetHide(true); Controls.WhatWillEndThisWarButton:SetHide(true)
 	Controls.WhatConcessionsButton:SetHide(true); Controls.DenounceButton:SetHide(true)
-	if review then renderReview(baselineItems, baselinePromises, itemAvailability, promiseAvailability, combinationReason) else renderPromiseEditor() end
+	renderStatus(promiseReason)
 	local terms = #draftItems + #draftPromises > 0
+	local actorReady = not pending and effectiveSeatIsCurrent()
 	if mode == "author" then
-		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_PROPOSE", 1, true, not pending and effectiveSeatIsCurrent() and itemsOK and promisesOK and terms)
-		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_CANCEL", 2, true, not pending)
+		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_PROPOSE", footerActions.propose, true, actorReady and combinationOK and promisesOK and terms)
+		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_CANCEL", footerActions.cancel, true, not pending)
 		configureButton(Controls.VoxThirdAction, "", nil, false, false)
-	elseif mode == "counter" then
-		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_COUNTER", 4, true, not pending and effectiveSeatIsCurrent() and itemsOK and promisesOK and terms)
-		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_BACK", 7, true, not pending)
-		configureButton(Controls.VoxThirdAction, "", nil, false, false)
+	elseif changed then
+		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_COUNTER", footerActions.counter, true, actorReady and combinationOK and promisesOK and terms)
+		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_CANCEL", footerActions.cancel, true, not pending)
+		configureButton(Controls.VoxThirdAction, "TXT_KEY_VD_DEAL_ACTION_RESET", footerActions.reset, true, not pending)
 	elseif mode == "incoming" then
-		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_ACCEPT", 3, true, not pending and effectiveSeatIsCurrent() and itemsOK and promisesOK)
-		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_COUNTER", 4, true, not pending and effectiveSeatIsCurrent() and itemsOK and promisesOK)
-		configureButton(Controls.VoxThirdAction, "TXT_KEY_VD_DEAL_ACTION_REJECT", 5, true, not pending and effectiveSeatIsCurrent())
+		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_ACCEPT", footerActions.accept, true, actorReady and not acceptBlocked(promisesOK))
+		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_CANCEL", footerActions.cancel, true, not pending)
+		configureButton(Controls.VoxThirdAction, "TXT_KEY_VD_DEAL_ACTION_REJECT", footerActions.reject, true, actorReady)
 	else
-		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_COUNTER", 4, true, not pending and effectiveSeatIsCurrent() and itemsOK and promisesOK)
-		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_RETRACT", 6, true, not pending and effectiveSeatIsCurrent())
+		configureButton(Controls.ProposeButton, "TXT_KEY_VD_DEAL_ACTION_RETRACT", footerActions.retract, true, actorReady)
+		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_CANCEL", footerActions.cancel, true, not pending)
 		configureButton(Controls.VoxThirdAction, "", nil, false, false)
 	end
 	Controls.VoxFooterStack:CalculateSize(); Controls.VoxFooterStack:ReprocessAnchoring()
 end
 
--- Recover the editor draft if another caller has reused the global scratch deal.
+-- Redraw native deal controls without letting wrapper update hooks re-enter refresh.
+local function redrawNative()
+	nativeRedrawInProgress = true
+	local ok, reason = pcall(function() DisplayDeal(); DoUpdateButtons() end)
+	nativeRedrawInProgress = false
+	if not ok then error(reason) end
+end
+
+-- Show the in-field message prompt only while the input is empty.
+local function renderMessagePlaceholder()
+	Controls.VoxMessagePlaceholder:SetHide(Controls.VoxMessageInput:GetText() ~= "")
+end
+
+-- Restore the mounted proposal to the same fresh state used for a new incoming or own mount.
+local function remountBaseline()
+	draftPromises = copy(baselinePromises); projectBaseline(baselineItems)
+	mountFingerprint = semanticFingerprint(draftItems, draftPromises)
+	targetPromiserID, outgoingMessage, lastStatus = nil, "", ""
+	settingMessage = true; Controls.VoxMessageInput:SetText(""); settingMessage = false
+	renderMessagePlaceholder(); collapsePromiseCategories(); redrawNative()
+end
+
+-- Reproject the editor draft if another caller has reused the global scratch deal.
+local function restoreScratchDraftIfChanged(allowPending)
+	if not mounted or (pending and not allowPending) or rebuilding or mountingInProgress or expectedSignature == nil then return end
+	if scratchSignature(decodeScratch()) == expectedSignature then return false end
+	local itemsOK = evaluateItems(draftItems, true)
+	if itemsOK then draftProjectionFailures = {}; probeCombination() else projectDraft(draftItems) end
+	return true
+end
+
+-- Recover and redraw the editor draft after a periodic scratch-clobber check.
 local function recoverClobber()
-	if not mounted or pending or rebuilding or (mode ~= "author" and mode ~= "counter") or expectedSignature == nil then return end
-	if scratchSignature(decodeScratch()) ~= expectedSignature then
-		evaluateItems(draftItems, true)
-		DisplayDeal(); DoUpdateButtons()
-	end
+	if not restoreScratchDraftIfChanged() then return end
+	redrawNative()
+	refresh()
 end
 
 -- Serialize only client-owned DealPayload fields.
@@ -577,15 +657,37 @@ local function serializeDraft()
 	return { version = 1, items = copy(normalizeItems(draftItems)), promises = copy(normalizePromises(draftPromises)), message = message ~= "" and message or nil }
 end
 
+-- Restore a visible draft after strict native validation rejects it.
+local function restoreDraftAfterValidationFailure(items, reason)
+	projectDraft(items)
+	redrawNative()
+	setStatus(reason, true); refresh()
+end
+
+-- Validate and package one authored proposal or counter action.
+local function buildAuthoredPacket(action, bypassLegality)
+	local itemsOK, itemReason = evaluateItems(draftItems, true)
+	if itemsOK then draftProjectionFailures = {} end
+	local promisesOK, promiseReason, normalizedPromises = evaluatePromises(draftPromises)
+	draftPromises = normalizedPromises
+	if not itemsOK and not bypassLegality then restoreDraftAfterValidationFailure(draftItems, itemReason); return nil end
+	if not promisesOK and not bypassLegality then setStatus(promiseReason, true); return nil end
+	if #draftItems + #draftPromises == 0 then setStatus("TXT_KEY_VD_DEAL_ERROR_EMPTY"); return nil end
+	local packet = { kind = action, deal = serializeDraft() }
+	if action == "counter" then packet.expectedProposalID = proposalMessageID end
+	return packet
+end
+
 -- Clear mounted state and return focus to the conversation panel.
 local function resetMountState()
-	actorID, counterpartID, mode, reviewMode, proposalMessageID = -1, -1, nil, nil, nil
+	actorID, counterpartID, mode, proposalMessageID = -1, -1, nil, nil
 	baselineItems, baselinePromises, draftItems, draftPromises = {}, {}, {}, {}
-	originalMessage, outgoingMessage, expectedSignature = "", "", nil
-	mounted, pending, nativeRedrawInProgress, targetPromiserID = false, false, false, nil
+	baselineProjectionFailures, draftProjectionFailures, combinationReason = {}, {}, nil
+	originalMessage, outgoingMessage, expectedSignature, mountFingerprint, lastStatus = "", "", nil, nil, ""
+	mounted, pending, nativeRedrawInProgress, mountingInProgress, validationTooltipDismissed, targetPromiserID = false, false, false, false, false, nil
 	pendingSeconds, clobberSeconds = 0, 0
 	mockMountAuthorized, mockMode, coopWarTargetAvailability = false, false, {}
-	Controls.VoxTargetFrame:SetHide(true)
+	Controls.VoxUsPocketCoopWarStack:SetHide(true); Controls.VoxThemPocketCoopWarStack:SetHide(true)
 end
 
 -- Clear mounted state and return focus to the conversation panel.
@@ -603,34 +705,40 @@ local function dispatch(action)
 	if pending then return end
 	if not mounted then return end
 	if action == "cancel" then closeScreen(); return end
-	if action == "back" then
-		clearScratch(); targetPromiserID, mode = nil, reviewMode or "author"
+	if action == "reset" then
+		if mode == "author" then return end
+		dismissValidationTooltip()
+		remountBaseline()
 		refresh(); return
 	end
 	if not effectiveSeatIsCurrent() then setStatus("TXT_KEY_VD_DEAL_ERROR_ACTOR_CHANGED"); return end
 	local bypassLegality = mockBypassesLegality()
-	local packet = { kind = action }
-	if action == "propose" or (action == "counter" and (mode == "author" or mode == "counter")) then
-		local itemsOK, itemReason = evaluateItems(draftItems, true)
-		local promisesOK, promiseReason = evaluatePromises(draftPromises)
-		if not itemsOK and not bypassLegality then setStatus(itemReason, true); return end
-		if not promisesOK and not bypassLegality then setStatus(promiseReason, true); return end
-		if #draftItems + #draftPromises == 0 then setStatus("TXT_KEY_VD_DEAL_ERROR_EMPTY"); return end
-		packet.deal = serializeDraft()
-		if action == "counter" then packet.expectedProposalID = proposalMessageID end
-	elseif action == "accept" or action == "counter" then
-		local itemsOK, itemReason, decoded = evaluateItems(baselineItems, action == "counter")
+	local packet
+	if action == "propose" then
+		packet = buildAuthoredPacket(action, bypassLegality)
+		if packet == nil then return end
+	elseif action == "counter" then
+		if mode == "author" or not isChanged() then return end
+		packet = buildAuthoredPacket(action, bypassLegality)
+		if packet == nil then return end
+	elseif action == "accept" then
+		packet = { kind = action }
+		if mode ~= "incoming" or isChanged() then return end
+		local itemsOK, itemReason = evaluateItems(baselineItems, true)
 		local promisesOK, promiseReason = evaluatePromises(baselinePromises)
-		if not itemsOK and not bypassLegality then setStatus(itemReason, true); return end
-		if not promisesOK and not bypassLegality then setStatus(promiseReason, true); return end
-		if action == "counter" then
-			draftItems, draftPromises, outgoingMessage, mode = decoded or normalizeItems(baselineItems), copy(baselinePromises), "", "counter"
-			Controls.VoxMessageInput:SetText(""); refresh(true)
-			nativeRedrawInProgress = true; DisplayDeal(); DoUpdateButtons(); nativeRedrawInProgress = false
-			return
+		if not itemsOK and not bypassLegality then
+			remountBaseline()
+			setStatus(itemReason, true); refresh(); return
 		end
+		if not promisesOK and not bypassLegality then setStatus(promiseReason, true); return end
 		packet.proposalMessageID = proposalMessageID
-	elseif action == "reject" or action == "retract" then packet.proposalMessageID = proposalMessageID end
+	elseif action == "reject" then
+		if mode ~= "incoming" or isChanged() then return end
+		packet = { kind = action, proposalMessageID = proposalMessageID }
+	elseif action == "retract" then
+		if mode ~= "own" or isChanged() then return end
+		packet = { kind = action, proposalMessageID = proposalMessageID }
+	else return end
 	pending, pendingSeconds = true, 0; setStatus("TXT_KEY_VD_DEAL_STATUS_PENDING"); refresh()
 	local driver = VoxDeorumDealUI.driver
 	if driver ~= nil and type(driver.onAction) == "function" then
@@ -641,25 +749,27 @@ end
 
 -- Map a footer void value to the canonical driver action vocabulary.
 local function onButton(index)
-	local actions = { [1] = "propose", [2] = "cancel", [3] = "accept", [4] = "counter", [5] = "reject", [6] = "retract", [7] = "back" }
-	if actions[index] ~= nil then dispatch(actions[index]) end
+	if buttonActions[index] ~= nil then dispatch(buttonActions[index]) end
 end
 
 -- Keep the outgoing message safe for named-pipe serialization.
 local function onMessageChanged()
 	if settingMessage then return end
-	local raw, clean = Controls.VoxMessageInput:GetText(), VoxDeorumDealUtils.StripDelimiter(Controls.VoxMessageInput:GetText())
+	local raw = Controls.VoxMessageInput:GetText()
+	local clean = VoxDeorumDealUtils.StripDelimiter(raw)
 	if raw ~= clean then settingMessage = true; Controls.VoxMessageInput:SetText(clean); settingMessage = false end
 	outgoingMessage = clean
+	dismissValidationTooltip()
+	renderMessagePlaceholder()
 end
 
--- Resolve one driver result while preserving the mounted editor or review on error.
+-- Resolve one driver result while preserving the mounted editor on error.
 local function resolve(result)
 	if not mounted or not pending then return end
 	if result ~= nil and result.success == true then closeScreen(); return end
 	pending = false; setStatus(result and result.reason or text("TXT_KEY_VD_DEAL_ERROR_ACTION_FAILED"), true)
+	redrawNative()
 	refresh()
-	if mode == "author" or mode == "counter" then DisplayDeal(); DoUpdateButtons() end
 end
 
 -- Advance pending animation, detect scratch clobbers, and service the mock driver.
@@ -687,16 +797,26 @@ local function mount(request, mountActorID, isMockMount, allowMockAuthorization)
 	if (request.mode == "incoming" or request.mode == "own") and (not isInteger(request.proposalMessageID) or request.proposalMessageID < 0 or not VoxDeorumDealUtils.ValidatePayload(request.deal, mountActorID, request.counterpartID)) then return end
 	if request.mode == "author" and request.deal ~= nil then return end
 	if mounted then closeScreen() end
-	actorID, counterpartID, mode, reviewMode, proposalMessageID = mountActorID, request.counterpartID, request.mode, request.mode, request.proposalMessageID
+	actorID, counterpartID, mode, proposalMessageID = mountActorID, request.counterpartID, request.mode, request.proposalMessageID
 	mockMode, mockMountAuthorized = isMockMount == true, allowMockAuthorization == true
 	local source = request.deal or { version = 1, items = {}, promises = {} }
 	baselineItems, baselinePromises = normalizeItems(source.items), normalizePromises(source.promises)
-	draftItems, draftPromises = copy(baselineItems), copy(baselinePromises)
-	originalMessage, outgoingMessage, mounted, pending = VoxDeorumDealUtils.SanitizeMessage(source.message), "", true, false
-	if type(VoxDeorumOpenDeal) ~= "function" or VoxDeorumOpenDeal(actorID, counterpartID) ~= true then clearScratch(); resetMountState(); return end
-	if mode == "author" then draftItems = decodeScratch() end
+	draftItems = copy(baselineItems)
+	originalMessage, outgoingMessage, lastStatus, mounted, pending = VoxDeorumDealUtils.SanitizeMessage(source.message), "", "", true, false
+	validationTooltipDismissed = false
+	mountingInProgress = true
+	if type(VoxDeorumOpenDeal) ~= "function" or VoxDeorumOpenDeal(actorID, counterpartID) ~= true then
+		mountingInProgress = false; clearScratch(); resetMountState(); return
+	end
+	if mode == "author" then
+		draftItems = decodeScratch(); baselineProjectionFailures, draftProjectionFailures = {}, {}; expectedSignature = scratchSignature(draftItems); mountFingerprint = nil; probeCombination()
+		settingMessage = true; Controls.VoxMessageInput:SetText(""); settingMessage = false
+		renderMessagePlaceholder()
+	else
+		remountBaseline()
+	end
+	mountingInProgress = false
 	LuaEvents.VoxDeorumDiploPanelDemoteForDeal(); Controls.DiscussionText:SetText(originalMessage)
-	settingMessage = true; Controls.VoxMessageInput:SetText(""); settingMessage = false
 	-- Present as a popup so the screen renders above the leaderhead scene (the TradeLogic pattern).
 	if not queuedAsPopup then queuedAsPopup = true; UIManager:QueuePopup(ContextPtr, PopupPriority.LeaderTrade) end
 	ContextPtr:SetHide(false); ContextPtr:SetUpdate(onUpdate); refresh()
@@ -729,14 +849,35 @@ local function onInput(message, key)
 	return false
 end
 
--- Reclaim native footer state after every Vox-only TradeLogic refresh.
+-- Return whether a native refresh belongs to wrapper-controlled projection work.
+local function nativeEventSuppressed()
+	return not mounted or mountingInProgress or nativeRedrawInProgress or rebuilding
+end
+
+-- Reclaim native footer state only after a genuine native ordinary-term edit.
 local function onTradeLogicUpdate()
-	if mounted then
-		if mode == "author" or mode == "counter" then
-			if not nativeRedrawInProgress then draftItems = decodeScratch(); expectedSignature = scratchSignature(draftItems) end
-			refresh(nativeRedrawInProgress)
-		else refresh() end
-	end
+	if nativeEventSuppressed() then return end
+	local items = decodeScratch()
+	local signature = scratchSignature(items)
+	if signature == expectedSignature then return end
+	dismissValidationTooltip()
+	draftProjectionFailures = {}
+	draftItems, expectedSignature = items, signature
+	refresh()
+end
+
+-- Restore wrapper-owned promise rows after the native table rebuilds.
+local function onTradeLogicTableRefresh()
+	if nativeEventSuppressed() then return end
+	local _, _, _, promiseAvailability = evaluatePromises(draftPromises)
+	renderPromiseTableRows(promiseAvailability); recalcTable(true); recalcTable(false)
+end
+
+-- Restore wrapper-owned promise pockets after the native pocket rebuilds.
+local function onTradeLogicPocketRefresh()
+	if nativeEventSuppressed() then return end
+	cacheCoopWarTargetAvailability(); renderPromisePockets(); renderCoopTargets()
+	recalcPocket(true); recalcPocket(false)
 end
 
 if GenerationalInstanceManager == nil then error("Vox Deorum requires the EUI GenerationalInstanceManager.") end
@@ -744,18 +885,31 @@ Controls.ProposeButton:RegisterCallback(Mouse.eLClick, onButton)
 Controls.CancelButton:RegisterCallback(Mouse.eLClick, onButton)
 Controls.VoxThirdAction:RegisterCallback(Mouse.eLClick, onButton)
 Controls.VoxMessageInput:RegisterCallback(onMessageChanged)
+Controls.VoxUsPocketPromise:SetVoid1(1); Controls.VoxThemPocketPromise:SetVoid1(0)
+Controls.VoxUsPocketPromise:RegisterCallback(Mouse.eLClick, togglePromiseCategory)
+Controls.VoxThemPocketPromise:RegisterCallback(Mouse.eLClick, togglePromiseCategory)
 ContextPtr:SetInputHandler(onInput)
 -- Chain the native trade handler installed by include("TradeLogic"); popup-stack
--- hides must re-arm the per-frame update without re-running open/close logic.
+-- hides must resume the per-frame update without re-running open/close logic.
 local nativeTradeShowHide = OnShowHide
 ContextPtr:SetShowHideHandler(function(isHide, isInit)
 	nativeTradeShowHide(isHide, isInit)
 	if isInit then return end
 	if isHide then ContextPtr:ClearUpdate()
-	elseif mounted then ContextPtr:SetUpdate(onUpdate) end
+	elseif mounted then
+		-- Native show restores the mounted participants but may leave another caller's terms in the shared scratch deal.
+		restoreScratchDraftIfChanged(true)
+		local resumeOK, resumed = false, false
+		if type(VoxDeorumResumeHumanToHumanEditor) == "function" then resumeOK, resumed = pcall(VoxDeorumResumeHumanToHumanEditor) end
+		if resumeOK and resumed then redrawNative(); refresh() end
+		collapsePromiseCategories(); ContextPtr:SetUpdate(onUpdate)
+	end
 end)
 LuaEvents.VoxDeorumOpenDealScreen.Add(open)
 LuaEvents.VoxDeorumDealActionResolved.Add(resolve)
+LuaEvents.VoxDeorumTradeLogicClearTable.Add(onTradeLogicTableRefresh)
+LuaEvents.VoxDeorumTradeLogicDisplayDeal.Add(onTradeLogicTableRefresh)
+LuaEvents.VoxDeorumTradeLogicResetDisplay.Add(onTradeLogicPocketRefresh)
 LuaEvents.VoxDeorumTradeLogicUpdateButtons.Add(onTradeLogicUpdate)
 VoxDeorumDealUI = { driver = {}, onAction = dispatch, resolve = resolve, open = open, openMock = openMock, close = closeScreen }
 

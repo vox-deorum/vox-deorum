@@ -1,4 +1,4 @@
--- Stage 7.02 delayed driver. Stage 7.04 replaces only this final include.
+-- Stage 7.02 delayed driver. bypassLegality skips wrapper gates only, while native projection stays real. Stage 7.04 replaces only this final include.
 
 local MOCK_DELAY_SECONDS = 1.25
 local m_mockSeconds = 0
@@ -42,13 +42,32 @@ local function selectMockPair(requestedCounterpartID)
 	return actor, counterpart
 end
 
--- Build a small schema-complete deal that is safe to mount without assuming tradable inventory.
+-- Return the first resource that the proposer can visibly offer to the native editor.
+local function firstAvailableResource(playerID)
+	local player = Players[playerID]
+	if player == nil or GameInfo == nil or type(GameInfo.Resources) ~= "function" then return nil end
+	for resource in GameInfo.Resources() do
+		local ok, amount = pcall(player.GetNumResourceAvailable, player, resource.ID, false)
+		if ok and type(amount) == "number" and amount > 0 then return resource.ID end
+	end
+	return nil
+end
+
+-- Build a schema-complete deal with native-projection examples and one promise.
 local function buildMockDeal(actorID, counterpartID, own)
 	local promiser = own and actorID or counterpartID
 	local recipient = own and counterpartID or actorID
+	local items = {
+		{ fromPlayerID = promiser, toPlayerID = recipient, itemType = "GOLD", amount = 10 },
+		{ fromPlayerID = recipient, toPlayerID = promiser, itemType = "OPEN_BORDERS" },
+	}
+	local resourceID = firstAvailableResource(promiser)
+	if resourceID ~= nil then
+		items[#items + 1] = { fromPlayerID = promiser, toPlayerID = recipient, itemType = "RESOURCES", resourceID = resourceID, quantity = 1 }
+	end
 	return {
 		version = 1,
-		items = {},
+		items = items,
 		promises = { { promiserID = promiser, recipientID = recipient, promiseType = "NO_DIGGING" } },
 		message = own and "Let us put this understanding in writing." or "Respect our lands and we can move forward.",
 	}
@@ -60,8 +79,8 @@ local function buildMockRequest(name, actorID, counterpartID)
 	if name == "author" then return { counterpartID = counterpartID, mode = "author" }
 	elseif name == "incoming" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7001 }
 	elseif name == "own" then return { counterpartID = counterpartID, mode = "own", deal = buildMockDeal(actorID, counterpartID, true), proposalMessageID = 7002 }
-	elseif name == "success" then return { counterpartID = counterpartID, mode = "author", mockResult = "success" }
-	elseif name == "error" then return { counterpartID = counterpartID, mode = "author", mockResult = "error" } end
+	elseif name == "success" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7003, mockResult = "success" }
+	elseif name == "error" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7004, mockResult = "error" } end
 	return nil
 end
 
@@ -89,6 +108,7 @@ local function openMock(name, counterpartID)
 	if request ~= nil then VoxDeorumDealUI.openMock(request, actorID) end
 end
 
+-- bypassLegality affects wrapper gates only. Native projection still exposes unavailable terms.
 VoxDeorumDealUI.driver = { bypassLegality = true, onOpen = onMockOpen, onAction = onMockAction, onUpdate = onMockUpdate }
 VoxDeorumDealMock = { Open = openMock, BuildRequest = buildNamedMockRequest }
 LuaEvents.VoxDeorumOpenDealScreenMock.Add(openMock)

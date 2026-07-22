@@ -47,7 +47,7 @@ See [Configuration](configuration.md) for where to get keys and how to choose a 
 Codex is downloaded and started only on its first request. Check the Vox logs for the specific failure:
 
 - For device login, open the logged verification URL and follow its instructions before `CODEX_PROXY_STARTUP_TIMEOUT` expires. Restarting Vox Deorum reuses a completed Codex login.
-- If the configured port is occupied, stop the other service or change `CODEX_PROXY_PORT`.
+- If the configured port is occupied, stop the other service or change `CODEX_PROXY_PORT`. Vox Deorum accepts a listener with compatible health, protocol, and readiness shapes without requiring the pinned package version. When `/health` reports a proxy version, Vox Deorum includes it in the logs for diagnostics.
 - If startup times out during login, raise `CODEX_PROXY_STARTUP_TIMEOUT` and, when needed, `CODEX_PROXY_TOOL_TIMEOUT`.
 
 For foreground diagnosis, run the command below from a console and keep its structured stderr visible:

@@ -403,7 +403,6 @@
 		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_BORDER"><Text>Keep forces away from the border</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_NO_DIGGING"><Text>Stop excavating artifacts</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_COOP_WAR"><Text>Prepare for a cooperative war</Text></Row>
-		<Row Tag="TXT_KEY_VD_DEAL_SELECT_TARGET"><Text>Select a target civilization</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_MESSAGE_HINT"><Text>Add an optional one-sentence message</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_STATUS_PENDING"><Text>Sending deal</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_INVALID_REQUEST"><Text>This deal request is incomplete or invalid.</Text></Row>
@@ -415,6 +414,7 @@
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_NO_DRIVER"><Text>The deal screen driver is unavailable.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_MALFORMED_TERMS"><Text>The deal terms are malformed.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_ITEM_UNAVAILABLE"><Text>{1_Str} is no longer available.</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ERROR_ORIGINAL_TERM_UNAVAILABLE"><Text>Original term unavailable: {1_Str}</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_NATIVE_DRAFT_CHANGED"><Text>The native trade draft changed while it was being checked.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_COMBINATION"><Text>These trade terms cannot be combined right now.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_ACTOR_UNAVAILABLE"><Text>The acting civilization is no longer available.</Text></Row>
@@ -461,14 +461,13 @@
 		<Row Tag="TXT_KEY_VD_DEAL_VOTE_DETAIL"><Text>: choice {1_Num}, {2_Num} votes, {3_Str}</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_VOTE_REPEAL"><Text>repeal</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_VOTE_ENACT"><Text>enact</Text></Row>
-		<Row Tag="TXT_KEY_VD_DEAL_REVIEW_COMBINATION"><Text>Trade combination</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ACTION_PROPOSE"><Text>Propose</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ACTION_CANCEL"><Text>Cancel</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ACTION_ACCEPT"><Text>Accept</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ACTION_COUNTER"><Text>Counter</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ACTION_REJECT"><Text>Reject</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ACTION_RETRACT"><Text>Retract</Text></Row>
-		<Row Tag="TXT_KEY_VD_DEAL_ACTION_BACK"><Text>Back</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_ACTION_RESET"><Text>Reset</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_MOCK_SUCCESS"><Text>The mock envoy completed the deal action.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_MOCK_ERROR"><Text>The mock envoy refused this action. Your draft is still open.</Text></Row>
 	</Language_en_US>

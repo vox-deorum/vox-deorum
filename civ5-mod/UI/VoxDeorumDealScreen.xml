@@ -65,31 +65,24 @@
 			<Label String="" Offset="10,0" Anchor="R,C" ID="DurationEdit"/>
 		</Container>
 	</Instance>
-	<!-- Vox Deorum: wrapper-owned promise chooser and immutable review rows. -->
+	<!-- Vox Deorum: wrapper-owned promise controls that extend the native trade stacks. -->
 	<Instance Name="VoxPromisePocketEntry">
 		<Button Style="TradeItemButton" Anchor="L,C" ID="Button">
 			<Label Anchor="L,C" Offset="5,0" Font="TwCenMT14" ID="Label"/>
 		</Button>
 	</Instance>
 	<Instance Name="VoxPromiseTableEntry">
-		<Container Anchor="L,C" Size="340,26" ID="Container">
-			<Label Anchor="L,C" Offset="5,0" Font="TwCenMT14" ID="Label"/>
-			<Label Anchor="R,C" Offset="-105,0" Font="TwCenMT14" ID="Duration"/>
-			<GridButton Style="FrameButton100" Anchor="R,C" Offset="0,0" Font="TwCenMT14" ID="Button"/>
+		<Container Size="195,24" ID="Container">
+			<Button Style="TradeItemButton" Anchor="L,T" ID="Button">
+				<Label Anchor="L,C" Offset="5,0" Font="TwCenMT14" ID="Label"/>
+			</Button>
+			<Label Anchor="R,C" Offset="10,0" Font="TwCenMT14" ID="Duration"/>
 		</Container>
 	</Instance>
 	<Instance Name="VoxPromiseTargetEntry">
-		<Button Style="TradeItemButton" Anchor="L,C" ID="Button">
-			<Label Anchor="L,C" Offset="5,0" Font="TwCenMT14" ID="Label"/>
+		<Button Style="TradeItemButton" Anchor="L,C" TextOffset="32,0" ID="Button">
+			<Label Anchor="L,C" Offset="32,0" Font="TwCenMT14" ID="Label"/>
 		</Button>
-	</Instance>
-	<Instance Name="VoxReviewRow">
-		<Container Anchor="L,C" Size="720,28" ID="Container">
-			<Box Anchor="C,C" Size="716,24" Color="128,0,0,96" ID="Unavailable" Hidden="1"/>
-			<Label Anchor="L,C" Offset="6,0" Font="TwCenMT14" ID="UsLabel"/>
-			<Label Anchor="C,C" Offset="0,0" Font="TwCenMT14" ID="ThemLabel"/>
-			<Label Anchor="R,C" Offset="-6,0" Font="TwCenMT14" ID="StatusLabel"/>
-		</Container>
 	</Instance>
 	<Grid Size="500,237" Anchor="C,B" Offset="0,100" Style="Grid9Detail48">
 		<!--   UsPocket    -->
@@ -131,6 +124,10 @@
 						<Button Style="TradeItemButton" Anchor="L,C" String="TXT_KEY_DIPLO_MAKE_PEACE_WITH" TextOffset="30,0" ID="UsPocketOtherPlayerPeace"/>
 						<Button Style="TradeItemButton" Anchor="L,C" String="TXT_KEY_DIPLO_DECLARE_WAR_ON" TextOffset="30,0" ID="UsPocketOtherPlayerWar"/>
 					</Stack>
+					<!-- Vox Deorum: native-style promise category and inline Coop War targets. -->
+					<Button Style="TradeItemButton" Anchor="L,C" String="[ICON_PLUS] TXT_KEY_VD_DEAL_PROMISES" ID="VoxUsPocketPromise"/>
+					<Stack Anchor="L,T" Offset="0,0" Size="128,0" StackGrowth="Bottom" Padding="0" Hidden="1" ID="VoxUsPocketPromiseStack"/>
+					<Stack Anchor="L,T" Offset="0,0" Size="128,0" StackGrowth="Bottom" Padding="0" Hidden="1" ID="VoxUsPocketCoopWarStack"/>
 				</Stack>
 				<ScrollBar Offset="0.0" Style="VertSlider" Anchor="R,C" AnchorSide="O,I" Length="256"/>
 				<UpButton Offset="0.2" Style="ScrollBarUp" Anchor="R,T" AnchorSide="O,I"/>
@@ -182,6 +179,10 @@
 						<Button Style="TradeItemButton" Anchor="L,C" String="TXT_KEY_DIPLO_MAKE_PEACE_WITH" TextOffset="30,0" ID="ThemPocketOtherPlayerPeace"/>
 						<Button Style="TradeItemButton" Anchor="L,C" String="TXT_KEY_DIPLO_DECLARE_WAR_ON" TextOffset="30,0" ID="ThemPocketOtherPlayerWar"/>
 					</Stack>
+					<!-- Vox Deorum: native-style promise category and inline Coop War targets. -->
+					<Button Style="TradeItemButton" Anchor="L,C" String="[ICON_PLUS] TXT_KEY_VD_DEAL_PROMISES" ID="VoxThemPocketPromise"/>
+					<Stack Anchor="L,T" Offset="0,0" Size="128,0" StackGrowth="Bottom" Padding="0" Hidden="1" ID="VoxThemPocketPromiseStack"/>
+					<Stack Anchor="L,T" Offset="0,0" Size="128,0" StackGrowth="Bottom" Padding="0" Hidden="1" ID="VoxThemPocketCoopWarStack"/>
 				</Stack>
 				<ScrollBar Offset="7.0" Style="VertSlider" Anchor="L,C" AnchorSide="O,I" Length="256"/>
 				<UpButton Offset="7.2" Style="ScrollBarUp" Anchor="L,T" AnchorSide="O,I"/>
@@ -261,6 +262,10 @@
 							<Label Anchor="R,B" Offset="5,0" Font="TwCenMT14" ID="UsMakePeaceDuration"/>
 						</Box>
 					</Stack>
+					<!-- Vox Deorum: wrapper-owned promise rows follow native grouped trade rows. -->
+					<Stack Anchor="L,T" Offset="0,4" Size="128,0" StackGrowth="Bottom" Padding="5" Hidden="1" ID="VoxUsTablePromiseStack">
+						<Label Anchor="L,C" Offset="5,0" String="TXT_KEY_VD_DEAL_PROMISES" Font="TwCenMT14"/>
+					</Stack>
 				</Stack>
 				<ScrollBar Offset="4.0" Style="VertSlider" Anchor="R,C" AnchorSide="O,I" Length="180"/>
 				<UpButton Offset="4.2" Style="ScrollBarUp" Anchor="R,T" AnchorSide="O,I"/>
@@ -321,6 +326,10 @@
 							<Label Anchor="R,B" Offset="5,0" Font="TwCenMT14" ID="ThemMakePeaceDuration"/>
 						</Box>
 					</Stack>
+					<!-- Vox Deorum: wrapper-owned promise rows follow native grouped trade rows. -->
+					<Stack Anchor="L,T" Offset="0,4" Size="128,0" StackGrowth="Bottom" Padding="5" Hidden="1" ID="VoxThemTablePromiseStack">
+						<Label Anchor="L,C" Offset="5,0" String="TXT_KEY_VD_DEAL_PROMISES" Font="TwCenMT14"/>
+					</Stack>
 				</Stack>
 				<ScrollBar Offset="-0.0" Style="VertSlider" Anchor="L,C" AnchorSide="O,I" Length="180"/>
 				<UpButton Offset="-0.2" Style="ScrollBarUp" Anchor="L,T" AnchorSide="O,I"/>
@@ -344,52 +353,25 @@
 			<GridButton Style="FrameButton200" String="TXT_KEY_CANCEL_BUTTON" ID="CancelButton" Font="TwCenMT22"/>
 			<!-- Propose Button -->
 			<GridButton Style="FrameButton200" String="TXT_KEY_DIPLO_PROPOSE" ID="ProposeButton" Font="TwCenMT22"/>
-			<!-- Vox Deorum: incoming reviews use a third native-footer action for Reject. -->
-			<GridButton Style="FrameButton200" ID="VoxThirdAction" Font="TwCenMT22" Hidden="1"/>
+			<!-- Vox Deorum: third native-footer action carries Reject or Reset. -->
+			<GridButton Style="FrameButton200" String="TXT_KEY_VD_DEAL_ACTION_REJECT" ID="VoxThirdAction" Font="TwCenMT22" Hidden="1"/>
 			<!-- CBP -->
 			<GridButton Style="FrameButton200" String="TXT_KEY_DIPLO_PROPOSE" ID="DenounceButton" Font="TwCenMT22"  Hidden="1"/>
 		</Stack>
 	</Grid>
 	<!-- Vox Deorum: wrapper controls are layered after the copied native screen. -->
-	<Grid Anchor="C,B" Offset="0,456" Size="520,56" Style="GridBlackIndent8" ID="VoxMessageFrame" Hidden="1">
-		<Label Anchor="L,T" Offset="8,4" String="TXT_KEY_VD_DEAL_MESSAGE_HINT" Font="TwCenMT14"/>
-		<Box Anchor="C,B" Offset="0,5" Size="500,25" Color="255,255,200,255" ConsumeMouseButton="1" ConsumeMouseOver="1">
+	<!-- Vox Deorum: one-line authoring field sits between the deal tables and footer. -->
+	<Grid Anchor="C,B" Offset="0,114" Size="520,30" Style="GridBlackIndent8" ID="VoxMessageFrame" Hidden="1">
+		<Box Anchor="C,C" Size="500,25" Color="255,255,200,255" ConsumeMouseButton="1" ConsumeMouseOver="1">
 			<Box Anchor="C,C" Size="496,21" Color="0,0,0,255">
-				<EditBox EditMode="1" Size="490,19" Anchor="C,C" ID="VoxMessageInput" Font="TwCenMT14" MaxLength="240"/>
+				<EditBox EditMode="1" CallOnChar="1" Size="490,19" Anchor="C,C" ID="VoxMessageInput" Font="TwCenMT14" MaxLength="240"/>
+				<Label Anchor="L,C" Offset="5,0" String="TXT_KEY_VD_DEAL_MESSAGE_HINT" Font="TwCenMT14" ID="VoxMessagePlaceholder"/>
 			</Box>
 		</Box>
 	</Grid>
-	<Grid Anchor="C,B" Offset="0,250" Size="760,188" Style="GridBlackIndent8" ID="VoxPromiseFrame" Hidden="1">
-		<Label Anchor="C,T" Offset="0,5" String="TXT_KEY_VD_DEAL_PROMISES" Font="TwCenMT18"/>
-		<ScrollPanel Anchor="L,T" Offset="12,30" Size="190,145" Vertical="1" ID="VoxUsPromisePocketPanel">
-			<Stack Anchor="L,T" StackGrowth="Bottom" Padding="2" ID="VoxUsPromisePocketStack"/>
-			<ScrollBar Offset="0,0" Style="VertSlider" Anchor="R,C" AnchorSide="O,I" Length="125"/>
-		</ScrollPanel>
-		<ScrollPanel Anchor="R,T" Offset="12,30" Size="190,145" Vertical="1" ID="VoxThemPromisePocketPanel">
-			<Stack Anchor="R,T" StackGrowth="Bottom" Padding="2" ID="VoxThemPromisePocketStack"/>
-			<ScrollBar Offset="0,0" Style="VertSlider" Anchor="L,C" AnchorSide="O,I" Length="125"/>
-		</ScrollPanel>
-		<ScrollPanel Anchor="C,T" Offset="0,30" Size="350,145" Vertical="1" ID="VoxPromiseTablePanel">
-			<Stack Anchor="C,T" StackGrowth="Bottom" Padding="2" ID="VoxPromiseTableStack"/>
-			<ScrollBar Offset="0,0" Style="VertSlider" Anchor="R,C" AnchorSide="O,I" Length="125"/>
-		</ScrollPanel>
-		<Grid Anchor="C,C" Size="465,150" Style="GridBlackIndent8" ID="VoxTargetFrame" Hidden="1">
-			<Label Anchor="C,T" Offset="0,5" String="TXT_KEY_VD_DEAL_SELECT_TARGET" Font="TwCenMT18"/>
-			<ScrollPanel Anchor="C,T" Offset="0,30" Size="430,110" Vertical="1" ID="VoxTargetPanel">
-				<Stack Anchor="L,T" StackGrowth="Bottom" Padding="2" ID="VoxTargetStack"/>
-				<ScrollBar Offset="0,0" Style="VertSlider" Anchor="R,C" AnchorSide="O,I" Length="90"/>
-			</ScrollPanel>
-		</Grid>
-	</Grid>
-	<ScrollPanel Anchor="C,B" Offset="0,204" Size="720,162" Vertical="1" Style="GridBlackIndent8" ID="VoxReviewPanel" Hidden="1">
-		<Stack Anchor="C,T" StackGrowth="Bottom" Padding="2" ID="VoxReviewStack"/>
-		<ScrollBar Offset="0,0" Style="VertSlider" Anchor="R,C" AnchorSide="O,I" Length="142"/>
-	</ScrollPanel>
 	<Grid Anchor="C,B" Offset="0,145" Size="600,34" Style="GridBlackIndent8" ID="VoxStatusFrame" Hidden="1">
 		<Label Anchor="C,C" WrapWidth="580" ID="VoxStatusText" Font="TwCenMT16"/>
 	</Grid>
-	<!-- Vox Deorum: review blocker covers the body and promise controls above the footer. -->
-	<Box Anchor="C,B" Offset="0,50" Size="980,480" Color="0,0,0,0" ConsumeMouseButton="1" ConsumeMouseOver="1" ID="InteractionBlocker" Hidden="1"/>
 	<!-- Vox Deorum: pending cover blocks every wrapper and native editor control. -->
 	<Box Anchor="C,C" Size="Full,Full" Color="0,0,0,0" ConsumeMouseButton="1" ConsumeMouseOver="1" ID="VoxPendingCover" Hidden="1"/>
 </Context>
