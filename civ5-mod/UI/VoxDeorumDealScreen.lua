@@ -13,6 +13,7 @@ local actorID, counterpartID, mode, reviewMode, proposalMessageID = -1, -1, nil,
 local baselineItems, baselinePromises, draftItems, draftPromises = {}, {}, {}, {}
 local originalMessage, outgoingMessage, expectedSignature = "", "", nil
 local mounted, pending, rebuilding, settingMessage, nativeRedrawInProgress, mockMountAuthorized, mockMode = false, false, false, false, false, false, false
+local queuedAsPopup = false
 local pendingSeconds, clobberSeconds, targetPromiserID = 0, 0, nil
 local coopWarTargetAvailability = {}
 local refresh
@@ -353,11 +354,11 @@ end
 
 -- Recalculate wrapper stacks after their contents change.
 local function calculateWrapperStacks()
-	Controls.VoxReviewStack:CalculateSize(); Controls.VoxReviewPanel:CalculateInternalSize()
-	Controls.VoxPromiseTableStack:CalculateSize(); Controls.VoxPromiseTablePanel:CalculateInternalSize()
-	Controls.VoxUsPromisePocketStack:CalculateSize(); Controls.VoxUsPromisePocketPanel:CalculateInternalSize()
-	Controls.VoxThemPromisePocketStack:CalculateSize(); Controls.VoxThemPromisePocketPanel:CalculateInternalSize()
-	Controls.VoxTargetStack:CalculateSize(); Controls.VoxTargetPanel:CalculateInternalSize()
+	Controls.VoxReviewStack:CalculateSize(); Controls.VoxReviewStack:ReprocessAnchoring(); Controls.VoxReviewPanel:CalculateInternalSize()
+	Controls.VoxPromiseTableStack:CalculateSize(); Controls.VoxPromiseTableStack:ReprocessAnchoring(); Controls.VoxPromiseTablePanel:CalculateInternalSize()
+	Controls.VoxUsPromisePocketStack:CalculateSize(); Controls.VoxUsPromisePocketStack:ReprocessAnchoring(); Controls.VoxUsPromisePocketPanel:CalculateInternalSize()
+	Controls.VoxThemPromisePocketStack:CalculateSize(); Controls.VoxThemPromisePocketStack:ReprocessAnchoring(); Controls.VoxThemPromisePocketPanel:CalculateInternalSize()
+	Controls.VoxTargetStack:CalculateSize(); Controls.VoxTargetStack:ReprocessAnchoring(); Controls.VoxTargetPanel:CalculateInternalSize()
 end
 
 -- Render immutable proposal terms without consulting the scratch deal.
@@ -558,6 +559,7 @@ refresh = function(skipScratchProjection)
 		configureButton(Controls.CancelButton, "TXT_KEY_VD_DEAL_ACTION_RETRACT", 6, true, not pending and effectiveSeatIsCurrent())
 		configureButton(Controls.VoxThirdAction, "", nil, false, false)
 	end
+	Controls.VoxFooterStack:CalculateSize(); Controls.VoxFooterStack:ReprocessAnchoring()
 end
 
 -- Recover the editor draft if another caller has reused the global scratch deal.
@@ -588,7 +590,10 @@ end
 
 -- Clear mounted state and return focus to the conversation panel.
 local function closeScreen()
-	clearScratch(); ContextPtr:ClearUpdate(); ContextPtr:SetHide(true)
+	clearScratch(); ContextPtr:ClearUpdate()
+	-- Dequeue before the restore event so the panel's re-queue ends up on top.
+	if queuedAsPopup then queuedAsPopup = false; UIManager:DequeuePopup(ContextPtr) end
+	ContextPtr:SetHide(true)
 	resetMountState()
 	LuaEvents.VoxDeorumDiploPanelRestoreAfterDeal(nil, false)
 end
@@ -692,6 +697,8 @@ local function mount(request, mountActorID, isMockMount, allowMockAuthorization)
 	if mode == "author" then draftItems = decodeScratch() end
 	LuaEvents.VoxDeorumDiploPanelDemoteForDeal(); Controls.DiscussionText:SetText(originalMessage)
 	settingMessage = true; Controls.VoxMessageInput:SetText(""); settingMessage = false
+	-- Present as a popup so the screen renders above the leaderhead scene (the TradeLogic pattern).
+	if not queuedAsPopup then queuedAsPopup = true; UIManager:QueuePopup(ContextPtr, PopupPriority.LeaderTrade) end
 	ContextPtr:SetHide(false); ContextPtr:SetUpdate(onUpdate); refresh()
 	local driver = VoxDeorumDealUI.driver
 	if driver ~= nil and type(driver.onOpen) == "function" then driver.onOpen(request) end
@@ -738,6 +745,15 @@ Controls.CancelButton:RegisterCallback(Mouse.eLClick, onButton)
 Controls.VoxThirdAction:RegisterCallback(Mouse.eLClick, onButton)
 Controls.VoxMessageInput:RegisterCallback(onMessageChanged)
 ContextPtr:SetInputHandler(onInput)
+-- Chain the native trade handler installed by include("TradeLogic"); popup-stack
+-- hides must re-arm the per-frame update without re-running open/close logic.
+local nativeTradeShowHide = OnShowHide
+ContextPtr:SetShowHideHandler(function(isHide, isInit)
+	nativeTradeShowHide(isHide, isInit)
+	if isInit then return end
+	if isHide then ContextPtr:ClearUpdate()
+	elseif mounted then ContextPtr:SetUpdate(onUpdate) end
+end)
 LuaEvents.VoxDeorumOpenDealScreen.Add(open)
 LuaEvents.VoxDeorumDealActionResolved.Add(resolve)
 LuaEvents.VoxDeorumTradeLogicUpdateButtons.Add(onTradeLogicUpdate)

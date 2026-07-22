@@ -339,7 +339,7 @@
 		<GridButton Style="FrameButton460" Anchor="C,B" Offset="0,-42" ID="WhatWillEndThisWarButton" String="TXT_KEY_DIPLO_END_CONFLICT" Font="TwCenMT22"/>
 		<!-- What do you want (demand) -->
 		<GridButton Style="FrameButton460" Anchor="C,B" Offset="0,-42" ID="WhatConcessionsButton" String="TXT_KEY_DIPLO_WHAT_WANT" Font="TwCenMT22"/>
-		<Stack Anchor="C,B" Offset="0,-84" Size="128,128" StackGrowth="Right" Padding="12">
+		<Stack Anchor="C,B" Offset="0,-84" Size="128,128" StackGrowth="Right" Padding="12" ID="VoxFooterStack">
 			<!-- Cancel Button -->
 			<GridButton Style="FrameButton200" String="TXT_KEY_CANCEL_BUTTON" ID="CancelButton" Font="TwCenMT22"/>
 			<!-- Propose Button -->

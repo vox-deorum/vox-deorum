@@ -44,9 +44,9 @@
     <File md5="B176A7F531F763423A113B96D401A563" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
     <File md5="5214E12B73BF81CAFEB005BA6F88DFAC" import="0">UI/VoxDeorumDiploPanel.xml</File>
     <File md5="682988C25AF6138242AA7E63D61D9E9D" import="1">UI/VoxDeorumDealUtils.lua</File>
-    <File md5="5AC23AEEEFF4CD15EBB4880C1A141B39" import="1">UI/VoxDeorumDealScreen.lua</File>
+    <File md5="D9AB4E13BAE444BE05EF847030FF0B87" import="1">UI/VoxDeorumDealScreen.lua</File>
     <File md5="FC6279833079C898E1B72C188F48028D" import="1">UI/VoxDeorumDealScreenMock.lua</File>
-    <File md5="6C45FC31A0D98B139BB8F61BD2014FCD" import="0">UI/VoxDeorumDealScreen.xml</File>
+    <File md5="388BA47AFE449D81A23425CC2463EF5E" import="0">UI/VoxDeorumDealScreen.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>

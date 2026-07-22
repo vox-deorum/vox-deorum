@@ -6,6 +6,14 @@ echo Deploying Vox Deorum Mod to Civ5 MODS
 echo ========================================
 echo.
 
+echo Updating modinfo MD5 hashes...
+python "%~dp0update_md5.py"
+if %ERRORLEVEL% neq 0 (
+    echo Error: update_md5.py failed - aborting deployment
+    exit /b 1
+)
+echo.
+
 REM Get the actual Documents folder path using PowerShell
 for /f "usebackq tokens=*" %%i in (`powershell -Command "[Environment]::GetFolderPath('MyDocuments')"`) do set "DOCUMENTS=%%i"
 
