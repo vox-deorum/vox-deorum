@@ -107,6 +107,103 @@ describe('useThreadMessages', () => {
     expect(isStreaming.value).toBe(false);
   });
 
+  it('replaces preliminary tool progress by call ID and preserves provenance', async () => {
+    const onNewChunk = vi.fn();
+    const { sendMessage } = useThreadMessages({
+      thread,
+      sessionId,
+      isStreaming,
+      onNewChunk,
+      onSendFailed,
+      onGreetingFailed,
+      onDealFailed,
+    });
+    await sendMessage('Inspect the map');
+    cb.onMessage({
+      type: 'tool-call',
+      toolCallId: 'host-1',
+      toolName: 'command',
+      input: { command: 'dir' },
+      providerExecuted: true,
+      dynamic: true,
+    });
+    cb.onMessage({
+      type: 'tool-result',
+      toolCallId: 'host-1',
+      toolName: 'command',
+      output: { status: 'started', progress: 'starting' },
+      providerExecuted: true,
+      dynamic: true,
+    });
+    cb.onMessage({
+      type: 'tool-result',
+      toolCallId: 'host-1',
+      toolName: 'command',
+      output: { status: 'in_progress', progress: 'working' },
+      providerExecuted: true,
+      dynamic: true,
+    });
+    cb.onMessage({
+      type: 'tool-result',
+      toolCallId: 'host-1',
+      toolName: 'command',
+      output: { status: 'completed', exitCode: 0 },
+      providerExecuted: true,
+      dynamic: true,
+      preliminary: false,
+    });
+
+    const content = thread.value!.messages[1]!.message.content as Array<Record<string, unknown>>;
+    expect(content).toHaveLength(2);
+    expect(content[0]).toMatchObject({
+      type: 'tool-call',
+      toolCallId: 'host-1',
+      providerExecuted: true,
+      dynamic: true,
+    });
+    expect(content[1]).toMatchObject({
+      type: 'tool-result',
+      toolCallId: 'host-1',
+      output: { status: 'completed', exitCode: 0 },
+      providerExecuted: true,
+      dynamic: true,
+      preliminary: false,
+    });
+    expect(onNewChunk).toHaveBeenCalledTimes(3);
+  });
+
+  it('replaces progress with a terminal tool error', async () => {
+    const { sendMessage } = setup();
+    await sendMessage('Inspect the map');
+    cb.onMessage({
+      type: 'tool-result',
+      toolCallId: 'host-2',
+      toolName: 'web-search',
+      output: { status: 'in_progress' },
+      providerExecuted: true,
+      dynamic: true,
+      preliminary: true,
+    });
+    cb.onMessage({
+      type: 'tool-error',
+      toolCallId: 'host-2',
+      toolName: 'web-search',
+      error: { message: 'search failed' },
+      providerExecuted: true,
+      dynamic: true,
+    });
+
+    const content = thread.value!.messages[1]!.message.content as Array<Record<string, unknown>>;
+    expect(content).toHaveLength(1);
+    expect(content[0]).toMatchObject({
+      type: 'tool-error',
+      toolCallId: 'host-2',
+      error: { message: 'search failed' },
+      providerExecuted: true,
+      dynamic: true,
+    });
+  });
+
   it('surfaces a greeting failure (not silent) and rolls the placeholder back', async () => {
     const { requestGreeting } = setup();
     await requestGreeting();

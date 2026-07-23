@@ -50,6 +50,14 @@ describe('hasOnlyTerminalCalls', () => {
     expect(hasOnlyTerminalCalls(step, mcpToolMap as any)).toBe(true);
   });
 
+  it('ignores a provider-executed call that collides with a game tool name', () => {
+    const step = { toolCalls: [
+      { toolName: 'end_turn', providerExecuted: true },
+      { toolName: 'look' },
+    ] };
+    expect(hasOnlyTerminalCalls(step, mcpToolMap as any)).toBe(false);
+  });
+
   it('ignores an invalid call alongside a terminal game action', () => {
     // An invalid call never executes; it must not read as non-terminal and force
     // another step after the terminal action already ran.

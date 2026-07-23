@@ -105,13 +105,18 @@ Model definitions live in `vox-agents/config.json` under `llms`. Each entry maps
 
 The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS Bedrock, Codex, and OpenAI-compatible endpoints are supported. API-backed providers read keys from `.env`; Codex uses the player's ChatGPT login. Agents resolve their model through `getModel()`, so a config can assign different models to different agents, or different strategists to different players in the same game.
 
-Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`. The shared `hostTools` policy is deny-by-default and speaks in three meta-tools: `Read`, `Write` (which implies `Read`), and `Web`. They are validated once in `host-tools.ts` and mapped per provider. Claude Code expands them to its vetted non-shell tool lists in a scoped temporary directory. Codex maps them onto the proxy's per-request `x_codex` policy: `Write` selects a workspace-write sandbox in a working directory under the proxy root, `Web` selects live search, and the floor stays read-only with search disabled. Vox Deorum adopts a listener with compatible health, protocol, and readiness shapes without requiring the pinned package version. If `/health` reports a version, Vox logs it for diagnostics.
+Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`. The shared `hostTools` policy is deny-by-default and speaks in three meta-tools: `Read`, `Write` (which implies `Read`), and `Web`. They are validated once in `host-tools.ts` and mapped per provider. Claude Code expands them to its vetted non-shell tool lists and always gives an enabled CLI an isolated temporary cwd. Codex creates a working directory only for Read or Write. It maps no filesystem access and Web-only access to a disabled sandbox with no local environments, Read to read-only, Write to workspace-write, and Web independently to live search. Codex Read and Write therefore enable command-capable local execution inside the selected sandbox.
+
+The managed Codex proxy is pinned to rc.3 and starts lazily. A listener already occupying its port is rejected because `/health` and `/ready` do not expose enough identity to verify the required activity contract. `CODEX_PROXY_COMMAND` remains a trusted launch override.
 
 Two pieces of middleware sit between agents and providers:
 
 - Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking.
 - Claude Code subscription limits wait until the provider's reset time, with a slow fallback when no valid reset is supplied.
+- Codex response middleware converts rc.3 observational `tool_calls` and `tool_results` into provider-executed AI SDK lifecycles, removes them from replay history, and leaves client game tools executable.
 - The tool-rescue middleware (`src/utils/models/tool-rescue/`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
+
+Provider-executed Claude Code and Codex calls are shown in the dashboard and recorded as retrospective built-in tool spans. Preliminary progress is not a successful outcome. A failed or missing terminal result records an error.
 
 ## Where this sits in the stack
 

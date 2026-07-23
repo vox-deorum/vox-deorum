@@ -17,8 +17,12 @@
         v-if="part.type === 'tool-call'"
         :tool-name="part.toolName"
         :args="part.input"
-        :result="toolResultsByCallId.get(part.toolCallId)"
-        :completed="completedToolCallIds.has(part.toolCallId)"
+        :result="toolOutcomesByCallId.get(part.toolCallId)?.value"
+        :completed="toolOutcomesByCallId.get(part.toolCallId)?.completed ?? false"
+        :failed="toolOutcomesByCallId.get(part.toolCallId)?.failed ?? false"
+        :preliminary="toolOutcomesByCallId.get(part.toolCallId)?.preliminary ?? false"
+        :provider-executed="part.providerExecuted"
+        :dynamic="part.dynamic"
       />
       <!-- Tool results are shown inline on the tool-call block -->
     </template>
@@ -45,26 +49,75 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Collect tool call IDs that have a matching tool-result
-const completedToolCallIds = computed(() => {
-  const ids = new Set<string>();
-  if (Array.isArray(props.message.content)) {
-    for (const part of props.message.content) {
-      if (part.type === 'tool-result') {
-        ids.add(part.toolCallId);
-      }
-    }
-  }
-  return ids;
-});
+/** Tool-call shape retained from the provider stream for dashboard rendering. */
+interface DisplayToolCall {
+  type: 'tool-call';
+  toolCallId: string;
+  toolName: string;
+  input?: unknown;
+  providerExecuted?: boolean;
+  dynamic?: boolean;
+}
 
-// Map tool call IDs to their result data for the detail dialog
-const toolResultsByCallId = computed(() => {
-  const map = new Map<string, unknown>();
+/** Latest progress or terminal tool-result shape retained by the accumulator. */
+interface DisplayToolResult {
+  type: 'tool-result';
+  toolCallId: string;
+  output: unknown;
+  preliminary?: boolean;
+}
+
+/** Terminal tool error shape accepted from providers that surface one directly. */
+interface DisplayToolError {
+  type: 'tool-error';
+  toolCallId: string;
+  error: unknown;
+}
+
+/** Content variants this component renders or folds into a rendered tool call. */
+type DisplayPart =
+  | { type: 'text'; text: string }
+  | { type: 'reasoning'; text: string }
+  | DisplayToolCall
+  | DisplayToolResult
+  | DisplayToolError;
+
+/** Return the model content variants understood by this component. */
+const displayParts = (): DisplayPart[] => {
+  if (!Array.isArray(props.message.content)) return [];
+  return props.message.content
+    .filter((part) => ['text', 'reasoning', 'tool-call', 'tool-result', 'tool-error'].includes(part.type))
+    .map((part) => part as DisplayPart);
+};
+
+/** Test whether a structured provider result reports failure. */
+const isFailedOutput = (output: unknown): boolean =>
+  typeof output === 'object' && output !== null && 'status' in output && output.status === 'failed';
+
+/** Keep the latest progress or terminal outcome for each tool call. */
+const toolOutcomesByCallId = computed(() => {
+  const map = new Map<string, {
+    value: unknown;
+    completed: boolean;
+    failed: boolean;
+    preliminary: boolean;
+  }>();
   if (Array.isArray(props.message.content)) {
-    for (const part of props.message.content) {
+    for (const part of displayParts()) {
       if (part.type === 'tool-result') {
-        map.set(part.toolCallId, part.output);
+        map.set(part.toolCallId, {
+          value: part.output,
+          completed: part.preliminary !== true,
+          failed: isFailedOutput(part.output),
+          preliminary: part.preliminary === true,
+        });
+      } else if (part.type === 'tool-error') {
+        map.set(part.toolCallId, {
+          value: part.error,
+          completed: true,
+          failed: true,
+          preliminary: false,
+        });
       }
     }
   }
@@ -80,8 +133,8 @@ const contentParts = computed(() => {
     const cleaned = cleanToolArtifacts(props.message.content);
     if (cleaned) parts.push({ type: 'text', text: cleaned });
   } else if (Array.isArray(props.message.content)) {
-    for (const part of props.message.content) {
-      if (part.type === 'tool-result') {
+    for (const part of displayParts()) {
+      if (part.type === 'tool-result' || part.type === 'tool-error') {
         // Skip - shown inline on the tool-call block
       } else if (part.type === 'text') {
         const cleaned = cleanToolArtifacts(part.text);

@@ -167,6 +167,28 @@ describe('createSendMessageStreamer', () => {
     expect(emitted).toEqual([]);
   });
 
+  it('passes through provider-executed send-message collisions without speaking them', () => {
+    const { emitted, streamer } = makeSink();
+    expect(
+      streamer.handleChunk({
+        type: 'tool-call',
+        toolCallId: 'builtin-call',
+        toolName: 'send-message',
+        input: { Message: 'not spoken' },
+        providerExecuted: true,
+      })
+    ).toBe(false);
+    expect(
+      streamer.handleChunk({
+        type: 'tool-result',
+        toolCallId: 'builtin-call',
+        toolName: 'send-message',
+        providerExecuted: true,
+      })
+    ).toBe(false);
+    expect(emitted).toEqual([]);
+  });
+
   it('passes through native text-delta chunks (greetings / Anthropic fallback)', () => {
     const { emitted, streamer } = makeSink();
     expect(streamer.handleChunk({ type: 'text-delta', id: 't', delta: 'free text' } as StreamChunk)).toBe(false);

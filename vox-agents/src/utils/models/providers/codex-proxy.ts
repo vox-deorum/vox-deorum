@@ -16,9 +16,9 @@ import { createLogger } from '../../logger.js';
 import { processManager } from '../../../infra/process-manager.js';
 
 /** The published proxy contract accepted by this integration. */
-export const codexProxyVersion = '0.1.0-rc.2';
+export const codexProxyVersion = '0.1.0-rc.3';
 
-/** The proxy request deadline, kept below Vox's outer Codex attempt deadline. */
+/** The proxy request deadline, kept below Vox Deorum's outer Codex attempt deadline. */
 export const codexProxyRequestTimeoutDefault = 30_000;
 
 /** The login and suspended-tool deadline accepted by the proxy CLI. */
@@ -33,7 +33,7 @@ export const codexProxyShutdownGracePeriod = 15_000;
 /** Extra time for the proxy to complete cancellation before Vox Deorum retries. */
 export const codexExecutionTimeoutMargin = 30_000;
 
-/** The proxy's own graceful HTTP shutdown deadline passed to its rc.2 CLI. */
+/** The proxy's own graceful HTTP shutdown deadline passed to its rc.3 CLI. */
 export const codexProxyShutdownTimeoutDefault = 10_000;
 
 /** The stable root used when a caller does not configure a narrower proxy root. */
@@ -46,7 +46,7 @@ export const codexProxyCommandDefault = `npx --yes codex-openai-proxy@${codexPro
 export const codexProxyProbeTimeoutDefault = 5_000;
 
 /** The explicit lifecycle states exposed for focused tests and diagnostics. */
-export type CodexProxyState = 'stopped' | 'starting' | 'ready-owned' | 'ready-adopted';
+export type CodexProxyState = 'stopped' | 'starting' | 'ready';
 
 /** A child surface that keeps the manager independent from Node's concrete ChildProcess. */
 export interface CodexProxyChild {
@@ -169,7 +169,7 @@ export function splitCodexProxyCommand(command: string): string[] {
   return words;
 }
 
-/** Adds only the exact rc.2 serve options, without involving a command shell. */
+/** Adds only the exact rc.3 serve options, without involving a command shell. */
 export function buildCodexProxyCommand(config: CodexProxyConfig): { command: string; args: string[] } {
   const [command, ...configuredArgs] = splitCodexProxyCommand(config.command);
   if (!command) throw new CodexProxyError('CODEX_PROXY_COMMAND must include an executable.', false);
@@ -231,24 +231,7 @@ export class CodexProxyManager {
   async ensureCodexProxy(signal?: AbortSignal): Promise<void> {
     if (this.stopped) throw new CodexProxyError('The Codex proxy manager has stopped.', false);
     this.registerLifecycle();
-    if (this.stateValue === 'ready-owned' && isChildAlive(this.child)) return;
-    if (this.stateValue === 'ready-adopted') {
-      const observedGeneration = this.generation;
-      const config = this.getConfig();
-      const deadline = this.dependencies.now() + config.startupTimeoutMs;
-      let responsive = false;
-      try {
-        const health = await this.probe('/health', signal, deadline, config);
-        const ready = await this.probe('/ready', signal, deadline, config);
-        responsive = Boolean(health?.response.ok && this.isCompatibleHealth(health.body) && ready?.response.ok && isReadyBody(ready.body));
-      } catch (error) {
-        if (!(error instanceof CodexProxyProbeTimeoutError)) throw error;
-        this.dependencies.logger.warn('The adopted Codex proxy did not answer a loopback reprobe.');
-      }
-      if (responsive && observedGeneration === this.generation && this.stateValue === 'ready-adopted') return;
-      if (observedGeneration === this.generation && this.stateValue === 'ready-adopted') this.clearState();
-      else if (this.stateValue === 'ready-adopted' || this.stateValue === 'ready-owned' && isChildAlive(this.child)) return;
-    }
+    if (this.stateValue === 'ready' && isChildAlive(this.child)) return;
     const starting = this.starting ?? this.start();
     return raceAbort(starting, signal);
   }
@@ -263,10 +246,7 @@ export class CodexProxyManager {
 
   /** Invalidates a failed loopback connection so the outer retry can reacquire the proxy. */
   invalidateConnection(): void {
-    if (this.stateValue === 'ready-adopted') {
-      this.dependencies.logger.warn('Invalidating the Codex proxy after a loopback connection failure.');
-      this.clearState();
-    } else if (this.stateValue === 'ready-owned' && this.child?.pid) {
+    if (this.stateValue === 'ready' && this.child?.pid) {
       this.dependencies.logger.warn('Restarting the owned Codex proxy after a loopback connection failure.');
       const child = this.child;
       void this.start(child);
@@ -334,7 +314,7 @@ export class CodexProxyManager {
     if (generation === this.generation) this.clearState();
   }
 
-  /** Adopts a compatible listener or owns a newly spawned proxy until it is ready. */
+  /** Refuses an existing listener, then owns a newly spawned proxy until it is ready. */
   private async startGeneration(generation: number, config: CodexProxyConfig): Promise<void> {
     const deadline = this.dependencies.now() + config.startupTimeoutMs;
     let health: Awaited<ReturnType<CodexProxyManager['probe']>>;
@@ -342,26 +322,14 @@ export class CodexProxyManager {
       health = await this.probe('/health', undefined, deadline, config);
     } catch (error) {
       if (error instanceof CodexProxyProbeTimeoutError) {
-        throw new CodexProxyError(`Port ${config.port} is occupied by a service that did not answer the Codex proxy health probe.`, false, { cause: error });
+        throw occupiedPortError(config.port, error);
       }
       throw error;
     }
-    if (health?.response.ok) {
-      if (!this.isCompatibleHealth(health.body)) {
-        throw new CodexProxyError(`Port ${config.port} is occupied by a service that is not a compatible Codex proxy.`, false);
-      }
-      this.logReportedProxyVersion(health.body);
-      this.child = undefined;
-      const state = await this.waitForReady(generation, config, true, deadline);
-      this.installReady(generation, state);
-      return;
-    }
-    if (health) {
-      throw new CodexProxyError(`Port ${config.port} is occupied and its /health endpoint returned HTTP ${health.response.status}.`, false);
-    }
+    if (health) throw occupiedPortError(config.port);
     await this.spawnOwned(generation, config);
-    const state = await this.waitForReady(generation, config, false, deadline);
-    this.installReady(generation, state);
+    await this.waitForReady(generation, config, deadline);
+    this.installReady(generation);
   }
 
   /** Launches the pinned proxy command and captures its structured stderr diagnostics. */
@@ -399,7 +367,11 @@ export class CodexProxyManager {
     this.ownedChildren.add(child);
     this.child = child;
     this.attachChild(generation, child);
-    this.dependencies.logger.info(`Starting codex-openai-proxy@${codexProxyVersion} on port ${config.port}.`);
+    if (config.command === codexProxyCommandDefault) {
+      this.dependencies.logger.info(`Starting codex-openai-proxy@${codexProxyVersion} on port ${config.port}.`);
+    } else {
+      this.dependencies.logger.info(`Starting the configured CODEX_PROXY_COMMAND on port ${config.port}.`);
+    }
   }
 
   /** Wires generation-guarded child lifecycle events and proxy stderr forwarding. */
@@ -451,16 +423,15 @@ export class CodexProxyManager {
     this.handleChildEnded(generation, child, errorMessage(error));
   }
 
-  /** Polls readiness while keeping adopted disappearance and owned crashes distinct. */
+  /** Polls the owned proxy's rc.3 readiness endpoint until it authenticates. */
   private async waitForReady(
     generation: number,
     config: CodexProxyConfig,
-    adopted: boolean,
     deadline: number,
-  ): Promise<Extract<CodexProxyState, 'ready-owned' | 'ready-adopted'>> {
+  ): Promise<void> {
     for (;;) {
       if (this.stopped || generation !== this.generation) throw this.childFailure ?? new CodexProxyError('Codex proxy startup was stopped.', true);
-      if (!adopted && !isChildAlive(this.child)) throw new CodexProxyError('The owned Codex proxy exited during startup.', true);
+      if (!isChildAlive(this.child)) throw new CodexProxyError('The owned Codex proxy exited during startup.', true);
       let ready: Awaited<ReturnType<CodexProxyManager['probe']>>;
       try {
         ready = await this.probe('/ready', undefined, deadline, config);
@@ -474,12 +445,7 @@ export class CodexProxyManager {
         }
         throw error;
       }
-      if (ready?.response.ok && isReadyBody(ready.body)) return adopted ? 'ready-adopted' : 'ready-owned';
-      if (adopted && ready === undefined) {
-        await this.spawnOwned(generation, config);
-        adopted = false;
-        continue;
-      }
+      if (ready?.response.ok && isReadyBody(ready.body)) return;
       if (this.dependencies.now() >= deadline) {
         throw new CodexProxyError(`Codex proxy on port ${config.port} did not become authenticated before CODEX_PROXY_STARTUP_TIMEOUT elapsed.`, false);
       }
@@ -487,11 +453,11 @@ export class CodexProxyManager {
     }
   }
 
-  /** Installs a terminal ready state only if its startup generation remains current. */
-  private installReady(generation: number, state: Extract<CodexProxyState, 'ready-owned' | 'ready-adopted'>): void {
+  /** Installs an owned ready state only if its startup generation remains current. */
+  private installReady(generation: number): void {
     if (this.stopped || generation !== this.generation) throw new CodexProxyError('Codex proxy startup was superseded.', true);
-    this.stateValue = state;
-    this.dependencies.logger.info(`Codex proxy is ready (${state === 'ready-owned' ? 'owned' : 'adopted'}).`);
+    this.stateValue = 'ready';
+    this.dependencies.logger.info('Codex proxy is ready.');
   }
 
   /** Probes a loopback endpoint, returning undefined only for connection-level absence. */
@@ -518,20 +484,6 @@ export class CodexProxyManager {
       if (isConnectionFailure(error)) return undefined;
       throw new CodexProxyError(`Could not probe the Codex proxy: ${errorMessage(error)}`, true, { cause: error });
     }
-  }
-
-  /** Accepts the minimal health shape without coupling adoption to a package version. */
-  private isCompatibleHealth(body: unknown): boolean {
-    if (!isRecord(body) || body.status !== 'ok') return false;
-    const protocol = body.protocol_version ?? body.protocol;
-    return protocol === undefined || protocol === '1';
-  }
-
-  /** Logs a proxy-reported version for diagnostics without using it as an adoption gate. */
-  private logReportedProxyVersion(body: unknown): void {
-    if (!isRecord(body)) return;
-    const version = body.proxy_version ?? body.version;
-    if (typeof version === 'string') this.dependencies.logger.info(`Detected Codex proxy version ${redactProxyText(version)}.`);
   }
 
   /** Resets volatile lifecycle fields while invalidating every earlier child generation. */
@@ -571,7 +523,7 @@ function parseInteger(name: string, value: string, minimum: number, maximum: num
   return number;
 }
 
-/** Parses the same millisecond, second, and minute duration contour accepted by rc.2. */
+/** Parses the same millisecond, second, and minute duration contour accepted by rc.3. */
 function parseDuration(name: string, value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   value = value.trim();
@@ -623,9 +575,18 @@ function isChildAlive(child: CodexProxyChild | undefined): boolean {
   return child !== undefined && child.exitCode === null && !child.killed;
 }
 
-/** Recognizes the ready payload emitted by the audited rc.2 server. */
+/** Recognizes the ready payload emitted by the audited rc.3 server. */
 function isReadyBody(body: unknown): boolean {
   return isRecord(body) && body.status === 'ready';
+}
+
+/** Explains why rc.3 cannot safely use a listener it did not start itself. */
+function occupiedPortError(port: number, cause?: unknown): CodexProxyError {
+  return new CodexProxyError(
+    `Port ${port} is occupied by an existing listener. Stop the listener or change CODEX_PROXY_PORT.`,
+    false,
+    cause === undefined ? undefined : { cause },
+  );
 }
 
 /** Narrows an unknown JSON payload to a record. */

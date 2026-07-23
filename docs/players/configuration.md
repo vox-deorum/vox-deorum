@@ -51,26 +51,32 @@ A sensible starting point is a mid-tier model from your chosen provider. Move up
 
 ## Using Codex with ChatGPT
 
-Set the provider to `codex` and enter any Codex model name available to your ChatGPT account, for example `gpt-5.4-mini`. Vox does not maintain a separate Codex model catalog.
+Set the provider to `codex` and enter any Codex model name available to your ChatGPT account, for example `gpt-5.4-mini`. Vox Deorum does not maintain a separate Codex model catalog.
 
-The first Codex request runs the exact pinned `codex-openai-proxy@0.1.0-rc.2` package through `npx`. npm downloads the proxy and its compatible Codex CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox logs. The proxy starts lazily, so using another provider does not download or launch it.
+The first Codex request runs the exact pinned `codex-openai-proxy@0.1.0-rc.3` package through `npx`. npm downloads the proxy and its bundled `@openai/codex@0.144.5` CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox Deorum logs. The proxy starts lazily, so using another provider does not download or launch it.
 
-The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. A custom command is trusted operator configuration, and Vox appends the required `serve` arguments.
+The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. A custom command is trusted operator configuration, and Vox Deorum appends the required `serve` arguments.
 
-Proxy rc.2 has accepted limitations: it supports only automatic or disabled tool choice, exposes already-executed internal activity in function-shaped response entries, and requires continuation policy to remain unchanged. Vox maps agents that normally require a tool call to automatic tool choice for Codex.
+Proxy rc.3 supports automatic or disabled tool choice and requires continuation policy to remain unchanged. Vox Deorum maps agents that normally require a tool call to automatic tool choice for Codex. Codex command, file, web, MCP, and app activity appears in the dashboard as provider-executed tool progress. Vox Deorum does not dispatch that activity as game tools.
 
 ## Host tools
 
 The model option is named `hostTools` and accepts a short list of meta-tools shared by every provider that can run local capabilities:
 
-- `Read`: read files (for Claude Code: Read, Glob, and Grep).
+- `Read`: enable the provider's read-capable local environment (for Claude Code: Read, Glob, and Grep).
 - `Write`: create and edit files inside a temporary game-and-player working directory. `Write` always implies `Read`.
-- `Web`: search and fetch from the web.
+- `Web`: search and fetch from the web without granting a Codex local execution environment.
 - `['everything']`: all three.
 
-Missing or empty means no host tools. Any other name, including old concrete tool names like `Glob` or `Bash`, fails fast with `Unsupported hostTools entries`, and shell access is never available.
+Missing or empty means no host tools. Any other name, including old concrete tool names like `Glob` or `Bash`, fails fast with `Unsupported hostTools entries`.
 
-Claude Code expands each meta-tool to its vetted non-shell tool set and confines writes to the temporary directory. Codex maps `Write` to a workspace-write sandbox rooted in the same kind of directory under the proxy root (network stays off) and `Web` to live web search; without host tools it keeps the read-only, search-disabled floor.
+Claude Code expands each meta-tool to its vetted non-shell tool set and retains an isolated temporary cwd even for Web-only access. Codex treats the capabilities differently:
+
+- Missing, empty, or Web-only access uses `sandbox: "disabled"` with no `cwd` and no filesystem workspace. Web-only independently enables live search.
+- Read uses a read-only sandbox in an isolated working directory.
+- Write uses a workspace-write sandbox in that directory. Network remains off unless Web is also enabled.
+
+Codex Read and Write enable Codex's local execution environment, including command execution within the selected sandbox. Only `sandbox: "disabled"` removes that environment. If a managed Codex policy restricts sandbox modes, it must still permit native read-only because rc.3 realizes disabled mode as read-only with an empty environment list.
 
 The old `claudeCodeTools` name has been removed. A Claude Code model that still uses it fails with: `The \`claudeCodeTools\` option was renamed to \`hostTools\`. Update this model configuration.`
 

@@ -48,6 +48,11 @@
   color: var(--p-green-500);
 }
 
+.tool-error-icon,
+.tool-failed .tool-status-name {
+  color: var(--p-red-600);
+}
+
 .tool-status-name {
   color: var(--p-primary-600);
   font-weight: 500;

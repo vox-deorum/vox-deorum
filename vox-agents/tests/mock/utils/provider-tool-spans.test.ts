@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
-import { emitClaudeCodeToolSpans } from "../../../src/utils/telemetry/claude-code-spans.js";
+import { emitProviderExecutedToolSpans } from "../../../src/utils/telemetry/provider-tool-spans.js";
 
 /** Minimal span recorder standing in for an OTel span. */
 class FakeSpan {
@@ -38,7 +38,7 @@ function makeTracer() {
 
 const ATTRS = { contextId: "ctx-1", turn: 7 };
 
-describe("emitClaudeCodeToolSpans", () => {
+describe("emitProviderExecutedToolSpans", () => {
   it("should emit one span per provider-executed tool-call, ignoring game-tool parts", () => {
     const content = [
       { type: "text", text: "hello" },
@@ -65,7 +65,7 @@ describe("emitClaudeCodeToolSpans", () => {
     ];
 
     const { tracer, spans } = makeTracer();
-    const count = emitClaudeCodeToolSpans(content, tracer, ATTRS);
+    const count = emitProviderExecutedToolSpans('claude-code', content, tracer, ATTRS);
 
     expect(count).toBe(1);
     expect(spans).toHaveLength(1);
@@ -103,7 +103,7 @@ describe("emitClaudeCodeToolSpans", () => {
     ];
 
     const { tracer, spans } = makeTracer();
-    const count = emitClaudeCodeToolSpans(content, tracer, ATTRS);
+    const count = emitProviderExecutedToolSpans('claude-code', content, tracer, ATTRS);
 
     expect(count).toBe(1);
     const span = spans[0];
@@ -134,7 +134,7 @@ describe("emitClaudeCodeToolSpans", () => {
     ];
 
     const { tracer, spans } = makeTracer();
-    emitClaudeCodeToolSpans(content, tracer, ATTRS);
+    emitProviderExecutedToolSpans('claude-code', content, tracer, ATTRS);
 
     // Structured payloads must be JSON-serialized, never collapsed to "[object Object]".
     expect(spans[0].attributes["tool.output"]).toBe(
@@ -143,7 +143,7 @@ describe("emitClaudeCodeToolSpans", () => {
     expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
   });
 
-  it("should emit a span for a provider-executed call with no matching result", () => {
+  it("should mark a provider-executed call with no terminal result as an error", () => {
     const content = [
       {
         type: "tool-call",
@@ -155,18 +155,80 @@ describe("emitClaudeCodeToolSpans", () => {
     ];
 
     const { tracer, spans } = makeTracer();
-    const count = emitClaudeCodeToolSpans(content, tracer, ATTRS);
+    const count = emitProviderExecutedToolSpans('claude-code', content, tracer, ATTRS);
 
     expect(count).toBe(1);
     expect(spans[0].attributes["tool.output"]).toBeUndefined();
-    expect(spans[0].status?.code).toBe(SpanStatusCode.OK);
+    expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
+  });
+
+  it("should ignore preliminary results and use the later Codex failure", () => {
+    const content = [
+      {
+        type: "tool-call",
+        toolCallId: "c1",
+        toolName: "command",
+        input: { command: "false" },
+        providerExecuted: true,
+        dynamic: true,
+      },
+      {
+        type: "tool-result",
+        toolCallId: "c1",
+        toolName: "command",
+        output: { status: "in_progress", progress: "running" },
+        providerExecuted: true,
+        dynamic: true,
+      },
+      {
+        type: "tool-result",
+        toolCallId: "c1",
+        toolName: "command",
+        output: { status: "failed", exitCode: 1, error: { message: "failed" } },
+        providerExecuted: true,
+        dynamic: true,
+      },
+    ];
+
+    const { tracer, spans } = makeTracer();
+    const count = emitProviderExecutedToolSpans('codex', content, tracer, ATTRS);
+
+    expect(count).toBe(1);
+    expect(spans[0].name).toBe("codex-tool.command");
+    expect(spans[0].attributes["tool.type"]).toBe("codex-builtin");
+    expect(spans[0].attributes["tool.output"]).toBe(JSON.stringify(content[2]!.output));
+    expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
+  });
+
+  it("should not treat a preliminary-only outcome as success", () => {
+    const content = [
+      {
+        type: "tool-call",
+        toolCallId: "c2",
+        toolName: "web-search",
+        input: {},
+        providerExecuted: true,
+      },
+      {
+        type: "tool-result",
+        toolCallId: "c2",
+        toolName: "web-search",
+        output: { status: "in_progress" },
+        providerExecuted: true,
+      },
+    ];
+
+    const { tracer, spans } = makeTracer();
+    emitProviderExecutedToolSpans('codex', content, tracer, ATTRS);
+    expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
   });
 
   it("should return 0 for non-array content or content without provider-executed parts", () => {
     const { tracer, spans } = makeTracer();
-    expect(emitClaudeCodeToolSpans(undefined, tracer, ATTRS)).toBe(0);
+    expect(emitProviderExecutedToolSpans('claude-code', undefined, tracer, ATTRS)).toBe(0);
     expect(
-      emitClaudeCodeToolSpans(
+      emitProviderExecutedToolSpans(
+        'claude-code',
         [{ type: "tool-call", toolCallId: "g", toolName: "send-message", input: {} }],
         tracer,
         ATTRS

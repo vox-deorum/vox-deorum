@@ -44,19 +44,23 @@ See [Configuration](configuration.md) for where to get keys and how to choose a 
 
 ## Codex does not start or finish login
 
-Codex is downloaded and started only on its first request. Check the Vox logs for the specific failure:
+Codex is downloaded and started only on its first request. Check the Vox Deorum logs for the specific failure:
 
 - For device login, open the logged verification URL and follow its instructions before `CODEX_PROXY_STARTUP_TIMEOUT` expires. Restarting Vox Deorum reuses a completed Codex login.
-- If the configured port is occupied, stop the other service or change `CODEX_PROXY_PORT`. Vox Deorum accepts a listener with compatible health, protocol, and readiness shapes without requiring the pinned package version. When `/health` reports a proxy version, Vox Deorum includes it in the logs for diagnostics.
+- If the configured port is occupied, stop the other service or change `CODEX_PROXY_PORT`. Vox Deorum does not adopt an existing listener because the proxy health endpoints do not identify its version or capabilities.
 - If startup times out during login, raise `CODEX_PROXY_STARTUP_TIMEOUT` and, when needed, `CODEX_PROXY_TOOL_TIMEOUT`.
 
 For foreground diagnosis, run the command below from a console and keep its structured stderr visible:
 
 ```text
-npx --yes codex-openai-proxy@0.1.0-rc.2 serve --root C:\absolute\temporary\codex-root --port 8787 --request-timeout 30000ms --tool-timeout 300000ms --shutdown-timeout 10000ms
+npx --yes codex-openai-proxy@0.1.0-rc.3 serve --root C:\absolute\temporary\codex-root --port 8787 --request-timeout 30000ms --tool-timeout 300000ms --shutdown-timeout 10000ms
 ```
 
 Do not configure a proxy API key. The adapter's `local` value is an inert placeholder for the OpenAI-compatible client, not a credential.
+
+An upgrade or proxy restart expires any client tool call that was waiting for its result because pending continuations are process-local. Retry the model turn if you see `expired_tool_continuation`. Vox Deorum's older rc.2 requests already sent an explicit sandbox, so rc.3's omitted-sandbox migration warning does not normally apply. A custom proxy command must still implement the rc.3 request and activity contract.
+
+If Codex reports that disabled mode is forbidden by managed policy, permit native read-only. rc.3 implements disabled mode as native read-only with no local environments.
 
 ## The AI stops responding partway through a game
 

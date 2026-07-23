@@ -8,10 +8,20 @@
  * hard error. Tests that actually care about SSE should stub `apiClient.streamLogs`
  * and friends and drive the callbacks directly.
  *
- * We also use fake timers so the stores' `setInterval` polling can't leak real timers
- * across tests; `shouldAdvanceTime` keeps microtasks/fetch flowing.
+ * Vue Test Utils wrappers are unmounted before timer and mock cleanup so component
+ * watchers cannot survive into later files. Fake timers also keep stores'
+ * `setInterval` polling from leaking real timers across tests; `shouldAdvanceTime`
+ * keeps microtasks and fetches flowing.
  */
 import { vi, beforeEach, afterEach } from 'vitest'
+import { enableAutoUnmount } from '@vue/test-utils'
+
+let unmountWrappers: () => void = () => undefined
+
+// Capture Vue Test Utils' tracked-wrapper cleanup so teardown order is explicit.
+enableAutoUnmount((cleanup) => {
+  unmountWrappers = cleanup
+})
 
 class FakeEventSource {
   url: string
@@ -38,6 +48,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  unmountWrappers()
   vi.runOnlyPendingTimers()
   vi.useRealTimers()
   vi.restoreAllMocks()

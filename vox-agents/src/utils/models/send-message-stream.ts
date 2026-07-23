@@ -38,6 +38,7 @@ export interface StreamChunk {
   toolName?: string;
   delta?: string;
   input?: unknown;
+  providerExecuted?: boolean;
 }
 
 /** A streamer routes every stream chunk; `handleChunk` returns true when the chunk was swallowed. */
@@ -177,6 +178,10 @@ export function createSendMessageStreamer(
 
   return {
     handleChunk(chunk: StreamChunk): boolean {
+      // Provider-executed tools are host activity, even when a built-in reuses the
+      // send-message name. Leave them intact for telemetry and dashboard rendering.
+      if (chunk.providerExecuted === true) return false;
+
       switch (chunk.type) {
         case "tool-input-start":
           if (chunk.toolName === sendMessageToolName && chunk.id != null) {

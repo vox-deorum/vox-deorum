@@ -5,7 +5,7 @@
 
 import type { Ref } from 'vue';
 import type { EnvoyThread, ChatMessageRequest, MessageWithMetadata, DealPayload, DealTranscriptMessage } from '@/utils/types';
-import type { LanguageModelV3TextPart, LanguageModelV3ReasoningPart, LanguageModelV3ToolCallPart, LanguageModelV3ToolResultPart } from '@ai-sdk/provider';
+import type { LanguageModelV3TextPart, LanguageModelV3ReasoningPart } from '@ai-sdk/provider';
 import { api, type SendCommitState } from '@/api/client';
 import type { ModelMessage } from 'ai';
 // Pure transcript helper (shared with the backend via @vox) — hydrate the server's committed deal row
@@ -46,6 +46,35 @@ export interface UseThreadMessagesOptions {
    */
   onDealFailed?: (error: string, commit: SendCommitState) => void;
 }
+
+/** Tool outcome fields retained while live SSE parts are accumulated. */
+interface StreamedToolOutcome {
+  type: 'tool-result' | 'tool-error';
+  toolCallId: string;
+  toolName: string;
+  output?: unknown;
+  error?: unknown;
+  providerExecuted?: boolean;
+  dynamic?: boolean;
+  preliminary?: boolean;
+}
+
+/** Tool-call fields retained from the live AI SDK stream. */
+interface StreamedToolCall {
+  type: 'tool-call';
+  toolCallId: string;
+  toolName: string;
+  input: unknown;
+  providerExecuted?: boolean;
+  dynamic?: boolean;
+}
+
+/** Content parts stored in the live assistant placeholder. */
+type StreamedAssistantPart =
+  | LanguageModelV3TextPart
+  | LanguageModelV3ReasoningPart
+  | StreamedToolCall
+  | StreamedToolOutcome;
 
 export function useThreadMessages(options: UseThreadMessagesOptions) {
   const { thread, sessionId, isStreaming, currentTurn, onNewChunk, onSendFailed, onGreetingFailed, onDealFailed } = options;
@@ -111,9 +140,7 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
       }
     });
     let assistantStart = thread.value.messages.length - 1;
-    const contents = thread.value.messages[assistantStart]!.message.content as Array<
-      LanguageModelV3TextPart | LanguageModelV3ReasoningPart | LanguageModelV3ToolCallPart | LanguageModelV3ToolResultPart
-    >;
+    const contents = thread.value.messages[assistantStart]!.message.content as StreamedAssistantPart[];
 
     // The terminal 'done' commits the exchange server-side; a trailing error after it must not undo it.
     let done = false;
@@ -123,6 +150,7 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     let dealRowReceived = false;
 
     const streamedParts: Partial<Record<'text' | 'reasoning', { id: string; index: number }>> = {};
+    const toolOutcomeIndexes = new Map<string, number>();
 
     /** Append a text or reasoning delta while mutating the in-array reactive proxy. */
     const appendDelta = (type: 'text' | 'reasoning', id: string, text: string): void => {
@@ -134,6 +162,27 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
       }
       const content = contents[current.index];
       if (content?.type === type) content.text += text;
+    };
+
+    /** Replace progress for one tool call, or append its first observed outcome. */
+    const accumulateToolOutcome = (outcome: StreamedToolOutcome): void => {
+      const existingIndex = toolOutcomeIndexes.get(outcome.toolCallId);
+      if (existingIndex === undefined) {
+        contents.push(outcome);
+        toolOutcomeIndexes.set(outcome.toolCallId, contents.length - 1);
+      } else {
+        contents.splice(existingIndex, 1, outcome);
+      }
+      onNewChunk?.();
+    };
+
+    /** Recover preliminary state that AI SDK core omits from provider tool results. */
+    const isStructuredPreliminary = (output: unknown): boolean => {
+      if (typeof output !== 'object' || output === null || !('status' in output)) return false;
+      return output.status === 'pending'
+        || output.status === 'started'
+        || output.status === 'in_progress'
+        || output.status === 'in-progress';
     };
 
     return api.streamAgentMessage(
@@ -156,20 +205,35 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
               type: "tool-call",
               toolCallId: part.toolCallId,
               toolName: part.toolName,
-              input: part.input
+              input: part.input,
+              providerExecuted: part.providerExecuted,
+              // AI SDK core drops dynamic on a provider-executed call when its
+              // name collides with a declared static client tool.
+              dynamic: part.dynamic ?? part.providerExecuted,
             });
             break;
 
           case "tool-result":
-            // Handle tool result
-            contents.push({
+            accumulateToolOutcome({
               type: "tool-result",
               toolCallId: part.toolCallId,
               toolName: part.toolName,
-              output: part.output
+              output: part.output,
+              providerExecuted: part.providerExecuted,
+              dynamic: part.dynamic ?? part.providerExecuted,
+              preliminary: part.preliminary === true || isStructuredPreliminary(part.output),
             });
-            // Trigger event on tool result
-            onNewChunk?.();
+            break;
+
+          case "tool-error":
+            accumulateToolOutcome({
+              type: "tool-error",
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              error: part.error,
+              providerExecuted: part.providerExecuted,
+              dynamic: part.dynamic ?? part.providerExecuted,
+            });
             break;
 
           default:

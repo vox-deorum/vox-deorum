@@ -1,9 +1,10 @@
 /**
- * Codex model construction and its rc.2 proxy request policy.
+ * Codex model construction and its rc.3 proxy request policy.
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { LanguageModelV3 } from '@ai-sdk/provider';
+import { wrapLanguageModel } from 'ai';
 import { Agent } from 'undici';
 import type { ProviderMetadata } from 'ai';
 import type { Model } from '../../../types/index.js';
@@ -15,6 +16,7 @@ import {
   getCodexProxyConfig,
 } from './codex-proxy.js';
 import type { CodexProxyConfig } from './codex-proxy.js';
+import { codexActivityMiddleware } from './codex-response.js';
 import { resolveHostToolAccess } from './host-tools.js';
 import type { ModelRuntimeIdentity } from './host-tools.js';
 
@@ -49,7 +51,7 @@ export function buildCodexModel(config: Model): LanguageModelV3 {
 
   const proxyConfig = getCodexProxyConfig();
   const dispatcher = getCodexDispatcher(proxyConfig);
-  return createOpenAICompatible({
+  const model = createOpenAICompatible({
     baseURL: getCodexProxyApiBase(proxyConfig.port),
     name: 'codex',
     apiKey: 'local',
@@ -64,11 +66,14 @@ export function buildCodexModel(config: Model): LanguageModelV3 {
       }
     },
   }).chatModel(config.name);
+  // This inner wrapper normalizes rc.3 activity before the generic rescue
+  // wrapper installed by models.ts sees the response.
+  return wrapLanguageModel({ model, middleware: codexActivityMiddleware() });
 }
 
 /** The per-request Codex policy extension accepted by the pinned proxy. */
 export type CodexRequestExtension = {
-  sandbox: 'read-only' | 'workspace-write';
+  sandbox: 'disabled' | 'read-only' | 'workspace-write';
   web_search: 'disabled' | 'live';
   cwd?: string;
 };
@@ -77,7 +82,8 @@ export type CodexRequestExtension = {
  * Maps resolved host meta-tool access onto the proxy's per-request policy:
  * Write selects a workspace-write sandbox in an isolated working directory
  * under the proxy root (which Codex itself enforces, network stays off), and
- * Web enables live search. The read-only, search-disabled floor is the default.
+ * Web enables live search. File access is disabled unless Read or Write is
+ * explicitly granted, and Web alone never creates a working directory.
  */
 export function buildCodexProviderOptions(
   model: Model,
@@ -86,9 +92,10 @@ export function buildCodexProviderOptions(
   const access = resolveHostToolAccess(model.options?.hostTools, {
     workingDirectoryBase: getCodexProxyConfig().root,
     workingDirId: runtimeIdentity?.workingDirId,
+    workingDirectoryTools: ['Read', 'Write'],
   });
   const extension: CodexRequestExtension = {
-    sandbox: access.write ? 'workspace-write' : 'read-only',
+    sandbox: access.write ? 'workspace-write' : access.read ? 'read-only' : 'disabled',
     web_search: access.web ? 'live' : 'disabled',
   };
   // The proxy requires cwd to be its --root or a descendant; the working

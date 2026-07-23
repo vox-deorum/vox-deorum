@@ -32,6 +32,13 @@ describe('ToolCallMessage', () => {
     expect(wrapper.find('.tool-completed').exists()).toBe(true)
   })
 
+  it('shows a distinct failed icon for a terminal provider failure', () => {
+    const wrapper = mountCall({ toolName: 'command', completed: true, failed: true })
+    expect(wrapper.find('.pi-times-circle').exists()).toBe(true)
+    expect(wrapper.find('.pi-check-circle').exists()).toBe(false)
+    expect(wrapper.find('.tool-failed').exists()).toBe(true)
+  })
+
   it('builds detail entries for both input and output', () => {
     const wrapper = mountCall({
       toolName: 'get-players',
@@ -59,5 +66,24 @@ describe('ToolCallMessage', () => {
     await wrapper.find('.tool-status').trigger('click')
 
     expect(wrapper.findComponent(DetailDialogStub).props('visible')).toBe(true)
+  })
+
+  it('shows provider provenance and labels failed output as an error', () => {
+    const wrapper = mountCall({
+      toolName: 'command',
+      result: { status: 'failed' },
+      completed: true,
+      failed: true,
+      providerExecuted: true,
+      dynamic: true,
+      preliminary: false,
+    })
+    expect(wrapper.text()).toContain('Provider tool')
+    const entries = wrapper.findComponent(DetailDialogStub).props('entries')
+    expect(entries[0]).toMatchObject({ label: 'Error', value: { status: 'failed' } })
+    expect(entries[1]).toMatchObject({
+      label: 'Execution',
+      value: { providerExecuted: true, dynamic: true, preliminary: false },
+    })
   })
 })

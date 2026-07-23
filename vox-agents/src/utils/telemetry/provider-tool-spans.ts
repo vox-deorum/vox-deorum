@@ -1,17 +1,12 @@
 /**
- * @module utils/telemetry/claude-code-spans
+ * @module utils/telemetry/provider-tool-spans
  *
- * Stage 3 of the claude-code provider: surface CLI-executed built-in tool calls
- * as vox-agents telemetry spans.
+ * Surfaces provider-executed built-in tool calls as Vox Deorum telemetry spans.
  *
- * When `hostTools` are enabled, the Claude Code CLI runs its built-in
- * tools (Read/Glob/Grep/WebFetch/…) inside its own agent loop, entirely outside
- * the AI-SDK tool-execution path that produces the existing `mcp-tool.*` spans.
- * The provider surfaces each such call as AI-SDK `tool-call` / `tool-result` /
- * `tool-error` content parts stamped `providerExecuted: true`. We read those
- * parts off the last {@link StepResult}'s `content` and emit one retrospective
- * point-in-time span per call, mirroring the `mcp-tool.*` shape so downstream
- * telemetry treats built-in tools uniformly.
+ * Claude Code and Codex run host tools outside the AI SDK tool-execution path
+ * that produces the existing `mcp-tool.*` spans. Their providers surface each
+ * call as `providerExecuted` content parts. This helper reads the final step
+ * content and emits one retrospective point-in-time span per call.
  *
  * These are NOT timed wrappers: the tools already ran inside the CLI, so each
  * span is opened and immediately ended purely to record the call/result.
@@ -43,6 +38,33 @@ interface ProviderExecutedToolPart {
   output?: unknown;
   error?: unknown;
   providerExecuted?: boolean;
+  preliminary?: boolean;
+}
+
+/** Providers whose built-in activity is normalized into AI SDK content parts. */
+export type BuiltInToolProvider = 'claude-code' | 'codex';
+
+/** Test whether a structured result reports a provider-side failure. */
+function isFailedOutput(output: unknown): boolean {
+  return typeof output === 'object'
+    && output !== null
+    && 'status' in output
+    && output.status === 'failed';
+}
+
+/** Test whether structured provider output is a non-terminal progress update. */
+function isPreliminaryOutput(output: unknown): boolean {
+  if (typeof output !== 'object' || output === null || !('status' in output)) return false;
+  return output.status === 'pending'
+    || output.status === 'started'
+    || output.status === 'in_progress'
+    || output.status === 'in-progress';
+}
+
+/** Serialize a telemetry value without collapsing structured data to a generic string. */
+function serializeValue(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
 /**
@@ -58,7 +80,8 @@ interface ProviderExecutedToolPart {
  * @param attributes - Context identity (`contextId`) and the current game turn.
  * @returns The number of spans emitted.
  */
-export function emitClaudeCodeToolSpans(
+export function emitProviderExecutedToolSpans(
+  provider: BuiltInToolProvider,
   content: unknown,
   tracer: Tracer,
   attributes: { contextId: string; turn: unknown }
@@ -72,6 +95,8 @@ export function emitClaudeCodeToolSpans(
     if (
       (part?.type === 'tool-result' || part?.type === 'tool-error') &&
       part.providerExecuted === true &&
+      part.preliminary !== true &&
+      !isPreliminaryOutput(part.output) &&
       typeof part.toolCallId === 'string'
     ) {
       resultsById.set(part.toolCallId, part);
@@ -85,11 +110,11 @@ export function emitClaudeCodeToolSpans(
     const toolName = call.toolName ?? 'unknown';
     const result = typeof call.toolCallId === 'string' ? resultsById.get(call.toolCallId) : undefined;
 
-    const span = tracer.startSpan(`claude-code-tool.${toolName}`, {
+    const span = tracer.startSpan(`${provider}-tool.${toolName}`, {
       kind: SpanKind.CLIENT,
       attributes: {
         'tool.name': toolName,
-        'tool.type': 'claude-code-builtin',
+        'tool.type': `${provider}-builtin`,
         'vox.context.id': attributes.contextId,
         'game.turn': String(attributes.turn),
         'tool.input': JSON.stringify(call.input),
@@ -100,19 +125,24 @@ export function emitClaudeCodeToolSpans(
       // AI-SDK core converts every provider tool-result with `isError: true`
       // into a `tool-error` content part before it reaches `StepResult.content`,
       // so a failing call always arrives as `tool-error` here.
-      if (result?.type === 'tool-error') {
+      if (result?.type === 'tool-error' || result?.type === 'tool-result' && isFailedOutput(result.output)) {
         // The provider's serializeToolError() usually stringifies the error, but
         // the raw tool_result + is_error path can surface object/array payloads.
         // Store strings as-is (single-encoding parity with mcp-tool.* spans) and
         // JSON-serialize structured values so they never collapse to "[object Object]".
-        const error = result.error;
-        span.setAttribute('tool.output', typeof error === 'string' ? error : JSON.stringify(error));
+        const failure = result.type === 'tool-error' ? result.error : result.output;
+        const serialized = serializeValue(failure);
+        if (serialized !== undefined) span.setAttribute('tool.output', serialized);
         span.setStatus({ code: SpanStatusCode.ERROR, message: `Built-in tool ${toolName} failed` });
-      } else {
-        if (result?.type === 'tool-result') {
-          span.setAttribute('tool.output', JSON.stringify(result.output));
-        }
+      } else if (result?.type === 'tool-result') {
+        const serialized = serializeValue(result.output);
+        if (serialized !== undefined) span.setAttribute('tool.output', serialized);
         span.setStatus({ code: SpanStatusCode.OK });
+      } else {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: `Built-in tool ${toolName} ended without a terminal result`,
+        });
       }
     } finally {
       span.end();

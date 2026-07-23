@@ -27,13 +27,17 @@ export interface HostToolAccess {
 export interface HostToolAccessOptions extends ModelRuntimeIdentity {
   /** Absolute directory under which per-run working directories are created. */
   workingDirectoryBase: string;
+  /** Meta-tools whose enabled access requires an isolated working directory. */
+  workingDirectoryTools?: readonly HostMetaTool[];
 }
 
 /**
  * Resolve a deny-by-default meta-tool request and create a working directory
- * only when at least one capability is enabled. `['everything']` enables every
- * meta-tool, `Write` implies `Read`, and any other name fails fast so a stale
- * concrete tool name cannot silently produce a weaker or stronger policy.
+ * only when an enabled capability needs one. Working-directory capabilities
+ * default to Read, Write, and Web, so Claude Code preserves its Web-only cwd.
+ * `['everything']` enables every meta-tool, `Write` implies `Read`, and any
+ * other name fails fast so a stale concrete tool name cannot silently produce
+ * a weaker or stronger policy.
  */
 export function resolveHostToolAccess(
   requestedTools: readonly string[] | undefined,
@@ -51,12 +55,16 @@ export function resolveHostToolAccess(
 
   const enabled = new Set<string>(everything ? hostMetaTools : requestedTools);
   const write = enabled.has('Write');
-  const workingDirectory = path.join(options.workingDirectoryBase, options.workingDirId ?? 'default');
-  fs.mkdirSync(workingDirectory, { recursive: true });
+  const workingDirectoryTools = options.workingDirectoryTools ?? hostMetaTools;
+  const needsWorkingDirectory = workingDirectoryTools.some((tool) => enabled.has(tool));
+  const workingDirectory = needsWorkingDirectory
+    ? path.join(options.workingDirectoryBase, options.workingDirId ?? 'default')
+    : undefined;
+  if (workingDirectory) fs.mkdirSync(workingDirectory, { recursive: true });
   return {
     read: write || enabled.has('Read'),
     write,
     web: enabled.has('Web'),
-    workingDirectory,
+    ...(workingDirectory === undefined ? {} : { workingDirectory }),
   };
 }

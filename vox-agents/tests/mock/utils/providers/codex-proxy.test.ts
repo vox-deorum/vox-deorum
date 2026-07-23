@@ -43,7 +43,7 @@ function createManager(fetch: typeof globalThis.fetch, spawn = vi.fn(() => creat
 }
 
 describe('codex proxy command configuration', () => {
-  it('should append exactly the rc.2 serve options without shell quoting', () => {
+  it('should append exactly the rc.3 serve options without shell quoting', () => {
     const config = getCodexProxyConfig({
       CODEX_PROXY_COMMAND: '"C:\\Program Files\\node\\npx.cmd" --yes proxy',
       CODEX_PROXY_ROOT: 'C:\\Temp & Files\\vox',
@@ -67,10 +67,10 @@ describe('CodexProxyManager startup', () => {
   it('should register shutdown hooks only when the manager is first used', async () => {
     const registerShutdown = vi.fn();
     const registerExit = vi.fn();
-    const fetch = vi.fn((url: string) => Promise.resolve(
-      response(200, url.endsWith('/health') ? { status: 'ok' } : { status: 'ready' }),
-    ));
-    const manager = createManager(fetch as any, vi.fn(), { registerShutdown, registerExit });
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValue(response(200, { status: 'ready' }));
+    const manager = createManager(fetch as any, vi.fn(() => createChild()), { registerShutdown, registerExit });
 
     expect(registerShutdown).not.toHaveBeenCalled();
     expect(registerExit).not.toHaveBeenCalled();
@@ -93,22 +93,23 @@ describe('CodexProxyManager startup', () => {
     await Promise.all([manager.ensureCodexProxy(), manager.ensureCodexProxy()]);
 
     expect(spawn).toHaveBeenCalledTimes(1);
-    expect(manager.state).toBe('ready-owned');
+    expect(manager.state).toBe('ready');
   });
 
-  it('should adopt a compatible health shape without requiring the pinned proxy version', async () => {
+  it('should refuse a responsive pre-existing listener without spawning', async () => {
     const spawn = vi.fn(() => createChild());
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const fetch = vi.fn()
       .mockResolvedValueOnce(response(200, { status: 'ok', proxy_version: '0.2.0' }))
       .mockResolvedValueOnce(response(200, { status: 'ready' }));
-    const manager = createManager(fetch, spawn, { logger });
+    const manager = createManager(fetch, spawn);
 
-    await manager.ensureCodexProxy();
+    await expect(manager.ensureCodexProxy()).rejects.toMatchObject<CodexProxyError>({
+      retryable: false,
+      message: 'Port 8787 is occupied by an existing listener. Stop the listener or change CODEX_PROXY_PORT.',
+    });
 
     expect(spawn).not.toHaveBeenCalled();
-    expect(manager.state).toBe('ready-adopted');
-    expect(logger.info).toHaveBeenCalledWith('Detected Codex proxy version 0.2.0.');
+    expect(manager.state).toBe('stopped');
   });
 
   it('should resolve injected configuration once across readiness probes', async () => {
@@ -133,106 +134,13 @@ describe('CodexProxyManager startup', () => {
     expect(fetch.mock.calls.every(([url]) => String(url).startsWith('http://127.0.0.1:8787/'))).toBe(true);
   });
 
-  it('should reacquire ownership when an adopted proxy disappears', async () => {
-    const spawn = vi.fn(() => createChild());
-    const fetch = vi.fn()
-      .mockResolvedValueOnce(response(200, { status: 'ok' }))
-      .mockResolvedValueOnce(response(200, { status: 'ready' }))
-      .mockRejectedValueOnce(new TypeError('connection refused'))
-      .mockRejectedValueOnce(new TypeError('connection refused'))
-      .mockRejectedValueOnce(new TypeError('connection refused'))
-      .mockResolvedValueOnce(response(200, { status: 'ready' }));
-    const manager = createManager(fetch, spawn);
-
-    await manager.ensureCodexProxy();
-    await manager.ensureCodexProxy();
-
-    expect(spawn).toHaveBeenCalledTimes(1);
-    expect(manager.state).toBe('ready-owned');
-  });
-
-  it('should replace an adopted proxy that times out during a reprobe', async () => {
-    let probeCount = 0;
-    const probeTimeout = vi.fn(async (operation: Promise<unknown>) => {
-      probeCount += 1;
-      if (probeCount === 3) throw new CodexProxyProbeTimeoutError();
-      return operation;
-    });
-    const spawn = vi.fn(() => createChild());
-    const fetch = vi.fn()
-      .mockResolvedValueOnce(response(200, { status: 'ok' }))
-      .mockResolvedValueOnce(response(200, { status: 'ready' }))
-      .mockResolvedValueOnce(response(200, { status: 'ok' }))
-      .mockRejectedValueOnce(new TypeError('connection refused'))
-      .mockResolvedValueOnce(response(200, { status: 'ready' }));
-    const manager = createManager(fetch, spawn, { probeTimeout: probeTimeout as any });
-
-    await manager.ensureCodexProxy();
-    await manager.ensureCodexProxy();
-
-    expect(spawn).toHaveBeenCalledTimes(1);
-    expect(manager.state).toBe('ready-owned');
-  });
-
-  it('should install an owned state when an adopted proxy disappears during startup', async () => {
-    const spawn = vi.fn(() => createChild());
-    const fetch = vi.fn()
-      .mockResolvedValueOnce(response(200, { status: 'ok' }))
-      .mockRejectedValueOnce(new TypeError('connection refused'))
-      .mockResolvedValueOnce(response(200, { status: 'ready' }));
-    const manager = createManager(fetch, spawn);
-
-    await manager.ensureCodexProxy();
-    await manager.ensureCodexProxy();
-
-    expect(fetch).toHaveBeenCalledTimes(3);
-    expect(spawn).toHaveBeenCalledTimes(1);
-    expect(manager.state).toBe('ready-owned');
-  });
-
-  it('should share one restart across concurrent failed adopted reprobes', async () => {
-    let releaseSlowHealth: ((value: Response) => void) | undefined;
-    const slowHealth = new Promise<Response>((resolve) => { releaseSlowHealth = resolve; });
-    let releaseOwnedReady: ((value: Response) => void) | undefined;
-    const ownedReady = new Promise<Response>((resolve) => { releaseOwnedReady = resolve; });
-    let markOwnedProbeStarted: (() => void) | undefined;
-    const ownedProbeStarted = new Promise<void>((resolve) => { markOwnedProbeStarted = resolve; });
-    let markSlowReadyStarted: (() => void) | undefined;
-    const slowReadyStarted = new Promise<void>((resolve) => { markSlowReadyStarted = resolve; });
-    let fetchCount = 0;
-    const fetch = vi.fn(() => {
-      fetchCount += 1;
-      if (fetchCount === 1) return Promise.resolve(response(200, { status: 'ok' }));
-      if (fetchCount === 2) return Promise.resolve(response(200, { status: 'ready' }));
-      if (fetchCount === 3) return slowHealth;
-      if (fetchCount >= 4 && fetchCount <= 6) return Promise.reject(new TypeError('connection refused'));
-      if (fetchCount === 7) {
-        markOwnedProbeStarted?.();
-        return ownedReady;
-      }
-      markSlowReadyStarted?.();
-      return Promise.resolve(response(200, { status: 'ready' }));
-    });
-    const spawn = vi.fn(() => createChild());
-    const manager = createManager(fetch as any, spawn);
-
-    await manager.ensureCodexProxy();
-    const slowReprobe = manager.ensureCodexProxy();
-    const fastReprobe = manager.ensureCodexProxy();
-    await ownedProbeStarted;
-    releaseSlowHealth?.(response(503, { status: 'not_ready' }));
-    await slowReadyStarted;
-    releaseOwnedReady?.(response(200, { status: 'ready' }));
-    await Promise.all([slowReprobe, fastReprobe]);
-
-    expect(spawn).toHaveBeenCalledTimes(1);
-    expect(manager.state).toBe('ready-owned');
-  });
-
-  it('should reject an incompatible occupied port without retrying', async () => {
+  it('should reject an occupied port without retrying', async () => {
     const manager = createManager(vi.fn().mockResolvedValue(response(200, { status: 'different-service' })));
 
-    await expect(manager.ensureCodexProxy()).rejects.toMatchObject<CodexProxyError>({ retryable: false });
+    await expect(manager.ensureCodexProxy()).rejects.toMatchObject<CodexProxyError>({
+      retryable: false,
+      message: expect.stringContaining('Stop the listener or change CODEX_PROXY_PORT.'),
+    });
     expect(manager.state).toBe('stopped');
   });
 
@@ -290,7 +198,7 @@ describe('CodexProxyManager startup', () => {
     await manager.ensureCodexProxy();
 
     expect(spawn).toHaveBeenCalledTimes(2);
-    expect(manager.state).toBe('ready-owned');
+    expect(manager.state).toBe('ready');
   });
 
   it('should recover from a retryable owned proxy crash', async () => {
@@ -310,7 +218,7 @@ describe('CodexProxyManager startup', () => {
     await manager.ensureCodexProxy();
 
     expect(spawn).toHaveBeenCalledTimes(2);
-    expect(manager.state).toBe('ready-owned');
+    expect(manager.state).toBe('ready');
   });
 
   it('should use Node and npm\'s npx CLI for the default Windows command', async () => {
@@ -329,8 +237,29 @@ describe('CodexProxyManager startup', () => {
     expect(command).toBe('C:\\Program Files\\nodejs\\node.exe');
     expect(args.slice(0, 4)).toEqual([
       'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npx-cli.js',
-      '--yes', `codex-openai-proxy@0.1.0-rc.2`, 'serve',
+      '--yes', `codex-openai-proxy@0.1.0-rc.3`, 'serve',
     ]);
+  });
+
+  it('should retain a custom command and log it without claiming the pinned proxy', async () => {
+    const child = createChild();
+    const spawn = vi.fn(() => child);
+    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const manager = createManager(
+      vi.fn()
+        .mockRejectedValueOnce(new TypeError('connection refused'))
+        .mockResolvedValue(response(200, { status: 'ready' })),
+      spawn,
+      { env: { CODEX_PROXY_COMMAND: 'custom-proxy --diagnostic' }, logger },
+    );
+
+    await manager.ensureCodexProxy();
+
+    expect(spawn).toHaveBeenCalledWith('custom-proxy', expect.arrayContaining([
+      '--diagnostic', 'serve', '--root', expect.any(String), '--port', '8787',
+    ]), expect.any(Object));
+    expect(logger.info).toHaveBeenCalledWith('Starting the configured CODEX_PROXY_COMMAND on port 8787.');
+    expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining('codex-openai-proxy@'));
   });
 
   it('should reject a missing Windows npm CLI before spawning', async () => {
@@ -438,7 +367,7 @@ describe('CodexProxyManager startup', () => {
     await expect(aborted).rejects.toThrow('caller cancelled');
     resolveReady?.();
     await shared;
-    expect(manager.state).toBe('ready-owned');
+    expect(manager.state).toBe('ready');
   });
 });
 
@@ -495,15 +424,7 @@ describe('CodexProxyManager shutdown', () => {
     expect(manager.state).toBe('stopped');
   });
 
-  it('should preserve an adopted proxy while stopping an owned process tree', async () => {
-    const adoptedTerminate = vi.fn();
-    const adopted = createManager(vi.fn()
-      .mockResolvedValueOnce(response(200, { status: 'ok' }))
-      .mockResolvedValueOnce(response(200, { status: 'ready' })), vi.fn(), { terminateTree: adoptedTerminate });
-    await adopted.ensureCodexProxy();
-    await adopted.shutdown();
-    expect(adoptedTerminate).not.toHaveBeenCalled();
-
+  it('should stop an owned process tree during shutdown', async () => {
     const ownedChild = createChild(77);
     const terminate = vi.fn(async () => { ownedChild.exitCode = 0; });
     const owned = createManager(vi.fn()

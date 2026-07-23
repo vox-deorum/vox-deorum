@@ -1,8 +1,10 @@
 <template>
-  <div class="tool-status" :class="{ 'tool-completed': completed }" @click="showDetails = true">
+  <div class="tool-status" :class="{ 'tool-completed': completed, 'tool-failed': failed }" @click="showDetails = true">
     <i v-if="!completed" class="pi pi-spin pi-spinner tool-status-icon" />
+    <i v-else-if="failed" class="pi pi-times-circle tool-status-icon tool-error-icon" />
     <i v-else class="pi pi-check-circle tool-status-icon tool-success-icon" />
     <span class="tool-status-name">{{ toolName }}</span>
+    <span v-if="providerExecuted" class="text-muted text-small">Provider tool</span>
   </div>
   <DetailDialog
     v-model:visible="showDetails"
@@ -22,6 +24,10 @@ interface Props {
   args?: unknown;
   result?: unknown;
   completed?: boolean;
+  failed?: boolean;
+  preliminary?: boolean;
+  providerExecuted?: boolean;
+  dynamic?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -34,7 +40,18 @@ const detailEntries = computed<DetailEntry[]>(() => {
     entries.push({ label: 'Input', value: props.args });
   }
   if (props.result !== undefined) {
-    entries.push({ label: 'Output', value: props.result, dividerBefore: true });
+    entries.push({ label: props.failed ? 'Error' : 'Output', value: props.result, dividerBefore: true });
+  }
+  if (props.providerExecuted) {
+    entries.push({
+      label: 'Execution',
+      value: {
+        providerExecuted: true,
+        dynamic: props.dynamic === true,
+        preliminary: props.preliminary === true,
+      },
+      dividerBefore: true,
+    });
   }
   return entries;
 });

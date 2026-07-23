@@ -59,6 +59,29 @@ describe('resolveHostToolAccess', () => {
     });
   });
 
+  it('keeps the default working directory for Web-only provider access', () => {
+    const access = resolveHostToolAccess(['Web'], { workingDirectoryBase: base, workingDirId: 'web-only' });
+
+    expect(access).toEqual({
+      read: false,
+      write: false,
+      web: true,
+      workingDirectory: path.join(base, 'web-only'),
+    });
+    expect(fs.existsSync(access.workingDirectory!)).toBe(true);
+  });
+
+  it('does not create a working directory when Web is outside the provider policy', () => {
+    const access = resolveHostToolAccess(['Web'], {
+      workingDirectoryBase: base,
+      workingDirId: 'codex-web-only',
+      workingDirectoryTools: ['Read', 'Write'],
+    });
+
+    expect(access).toEqual({ read: false, write: false, web: true });
+    expect(fs.existsSync(base)).toBe(false);
+  });
+
   it('fails fast on names outside the meta-tool vocabulary', () => {
     for (const requested of [['Bash'], ['Glob'], ['Read', 'Bash'], [everythingHostTools, 'Read']]) {
       expect(() => resolveHostToolAccess(requested, { workingDirectoryBase: base }))
