@@ -27,6 +27,18 @@ export const ReasoningEfforts = ['minimal', 'low', 'medium', 'high', 'max'] as c
  */
 export type ReasoningEffort = typeof ReasoningEfforts[number];
 
+/** Provider-independent capabilities accepted by the `hostTools` model option. */
+export const hostMetaTools = ['Read', 'Write', 'Web'] as const;
+
+/** One provider-independent host capability. */
+export type HostMetaTool = (typeof hostMetaTools)[number];
+
+/** Sentinel that enables every host meta-tool. */
+export const everythingHostTools = 'everything';
+
+/** A validated host meta-tool selection. */
+export type HostTools = HostMetaTool[] | [typeof everythingHostTools];
+
 /**
  * LLM model configuration for backend processing
  */
@@ -41,13 +53,14 @@ export interface LLMConfig {
     reasoningEffort?: ReasoningEffort;
     systemPromptFirst?: boolean;
     /**
-     * Host tools to enable for providers that support them. Undefined or empty means
-     * no provider host tools. ['everything'] selects the provider's vetted safe set,
-     * and any other list is an explicit allowlist. Shell tools remain blocked, and
-     * enabled file writes are limited to a game-and-player temp directory. The pinned
-     * Codex proxy cannot enforce allowlists, so Codex rejects every non-empty value.
+     * Host meta-tools to enable for providers that can execute local capabilities.
+     * Undefined or empty means none. Valid entries are 'Read', 'Write', and 'Web';
+     * ['everything'] enables all three, Write implies Read, and any other name
+     * fails fast. Claude Code expands each meta-tool to its vetted non-shell tool
+     * set, while Codex maps Write to a workspace-write sandbox and Web to live
+     * search. File writes stay confined to a game-and-player working directory.
      */
-    hostTools?: string[];
+    hostTools?: HostTools;
     /**
      * Explicit prompt-mode terminology override. Normally resolved automatically
      * (`'action'` for claude-code, else `'tool'`); set here mainly by Oracle replay

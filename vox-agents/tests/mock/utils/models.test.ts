@@ -85,8 +85,8 @@ async function drain(stream: ReadableStream<any>): Promise<any[]> {
   return out;
 }
 
-// The vetted safe set that claude-code's ['everything'] expands to.
-const SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'TodoWrite'];
+// The concrete tool list that claude-code's ['everything'] meta-tools expand to.
+const SAFE_TOOLS = ['Read', 'Glob', 'Grep', 'Write', 'Edit', 'WebFetch', 'WebSearch', 'TodoWrite'];
 
 describe('claude-code provider', () => {
   beforeEach(() => {
@@ -198,7 +198,7 @@ describe('claude-code provider', () => {
       expect(mocks.captured.tools).not.toContain('Bash');
       // Permission: Write/Edit path-scoped to the temp cwd, everything else bare.
       expect(mocks.captured.allowedTools).toEqual([
-        'Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write(./**)', 'Edit(./**)', 'TodoWrite',
+        'Read', 'Glob', 'Grep', 'Write(./**)', 'Edit(./**)', 'WebFetch', 'WebSearch', 'TodoWrite',
       ]);
       // disallowedTools is deliberately unset: the provider ignores it whenever
       // allowedTools is present (and warns if both are supplied). Bash stays blocked by
@@ -210,13 +210,20 @@ describe('claude-code provider', () => {
       expect(fs.existsSync(mocks.captured.cwd)).toBe(true);
     });
 
-    it('filters Bash out of an explicit whitelist', () => {
+    it('expands the Read meta-tool to search tools plus TodoWrite bookkeeping', () => {
       getModel(
-        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', hostTools: ['Read', 'Bash'] } },
+        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', hostTools: ['Read'] } },
         { workingDirId: 'g2-1' }
       );
-      expect(mocks.captured.tools).toEqual(['Read']);
-      expect(mocks.captured.allowedTools).toEqual(['Read']);
+      expect(mocks.captured.tools).toEqual(['Read', 'Glob', 'Grep', 'TodoWrite']);
+      expect(mocks.captured.allowedTools).toEqual(['Read', 'Glob', 'Grep', 'TodoWrite']);
+    });
+
+    it('fails fast on concrete tool names outside the meta-tool vocabulary', () => {
+      expect(() => getModel(
+        { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt', hostTools: ['Read', 'Bash'] } },
+        { workingDirId: 'g2-2' }
+      )).toThrow('Unsupported hostTools entries');
     });
 
     it('stays pure text (tools: []) with no cwd/permission settings when no built-in tools requested', () => {

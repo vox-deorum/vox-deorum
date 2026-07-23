@@ -15,6 +15,7 @@ import {
   getCodexProxyConfig,
 } from './codex-proxy.js';
 import type { CodexProxyConfig } from './codex-proxy.js';
+import { resolveHostToolAccess } from './host-tools.js';
 import type { ModelRuntimeIdentity } from './host-tools.js';
 
 /** Long-lived loopback dispatchers shared by Codex models with the same deadline. */
@@ -65,24 +66,36 @@ export function buildCodexModel(config: Model): LanguageModelV3 {
   }).chatModel(config.name);
 }
 
+/** The per-request Codex policy extension accepted by the pinned proxy. */
+export type CodexRequestExtension = {
+  sandbox: 'read-only' | 'workspace-write';
+  web_search: 'disabled' | 'live';
+  cwd?: string;
+};
+
 /**
- * Builds the narrowly whitelisted Codex extension supported by proxy rc.2.
- * rc.2 cannot enforce host-tool allowlists, so non-empty hostTools fail closed.
+ * Maps resolved host meta-tool access onto the proxy's per-request policy:
+ * Write selects a workspace-write sandbox in an isolated working directory
+ * under the proxy root (which Codex itself enforces, network stays off), and
+ * Web enables live search. The read-only, search-disabled floor is the default.
  */
 export function buildCodexProviderOptions(
   model: Model,
-  _runtimeIdentity?: ModelRuntimeIdentity,
+  runtimeIdentity?: ModelRuntimeIdentity,
 ): ProviderMetadata {
-  const requestedHostTools = model.options?.hostTools;
-  if (requestedHostTools && requestedHostTools.length > 0) {
-    throw new Error('Codex hostTools require a proxy version that supports validated host-tool allowlists. Leave hostTools empty for codex-openai-proxy@0.1.0-rc.2.');
-  }
-  const options: {
-    x_codex: { sandbox: 'read-only'; web_search: 'disabled' };
-    reasoningEffort?: string;
-  } = {
-    x_codex: { sandbox: 'read-only', web_search: 'disabled' },
+  const access = resolveHostToolAccess(model.options?.hostTools, {
+    workingDirectoryBase: getCodexProxyConfig().root,
+    workingDirId: runtimeIdentity?.workingDirId,
+  });
+  const extension: CodexRequestExtension = {
+    sandbox: access.write ? 'workspace-write' : 'read-only',
+    web_search: access.web ? 'live' : 'disabled',
   };
+  // The proxy requires cwd to be its --root or a descendant; the working
+  // directory is created under that root, so containment holds by construction.
+  if (access.workingDirectory) extension.cwd = access.workingDirectory;
+
+  const options: { x_codex: CodexRequestExtension; reasoningEffort?: string } = { x_codex: extension };
   if (model.options?.reasoningEffort !== undefined) options.reasoningEffort = model.options.reasoningEffort;
   return { codex: options };
 }

@@ -57,11 +57,20 @@ The first Codex request runs the exact pinned `codex-openai-proxy@0.1.0-rc.2` pa
 
 The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. A custom command is trusted operator configuration, and Vox appends the required `serve` arguments.
 
-Proxy rc.2 has accepted limitations: it supports only automatic or disabled tool choice, exposes already-executed internal activity in function-shaped response entries, requires continuation policy to remain unchanged, and cannot enforce a per-request host-tool allowlist. Vox maps agents that normally require a tool call to automatic tool choice for Codex. It also rejects every non-empty `hostTools` setting for Codex and sends a read-only, network-disabled policy.
+Proxy rc.2 has accepted limitations: it supports only automatic or disabled tool choice, exposes already-executed internal activity in function-shaped response entries, and requires continuation policy to remain unchanged. Vox maps agents that normally require a tool call to automatic tool choice for Codex.
 
 ## Host tools
 
-The model option is named `hostTools`. Missing or empty means no provider host tools. For Claude Code, `['everything']` expands to its vetted non-shell set, while any other list is an explicit allowlist. File writes are confined to a temporary game-and-player directory.
+The model option is named `hostTools` and accepts a short list of meta-tools shared by every provider that can run local capabilities:
+
+- `Read`: read files (for Claude Code: Read, Glob, and Grep).
+- `Write`: create and edit files inside a temporary game-and-player working directory. `Write` always implies `Read`.
+- `Web`: search and fetch from the web.
+- `['everything']`: all three.
+
+Missing or empty means no host tools. Any other name, including old concrete tool names like `Glob` or `Bash`, fails fast with `Unsupported hostTools entries`, and shell access is never available.
+
+Claude Code expands each meta-tool to its vetted non-shell tool set and confines writes to the temporary directory. Codex maps `Write` to a workspace-write sandbox rooted in the same kind of directory under the proxy root (network stays off) and `Web` to live web search; without host tools it keeps the read-only, search-disabled floor.
 
 The old `claudeCodeTools` name has been removed. A Claude Code model that still uses it fails with: `The \`claudeCodeTools\` option was renamed to \`hostTools\`. Update this model configuration.`
 

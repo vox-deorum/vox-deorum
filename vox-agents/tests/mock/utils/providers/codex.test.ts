@@ -1,26 +1,36 @@
 /** Tests for the Codex compatible-provider boundary. */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const proxyMocks = vi.hoisted(() => ({
   ensureCodexProxy: vi.fn<() => Promise<void>>(),
   invalidateConnection: vi.fn(),
 }));
 
-vi.mock('../../../../src/utils/models/providers/codex-proxy.js', () => ({
-  ensureCodexProxy: proxyMocks.ensureCodexProxy,
-  getCodexExecutionTimeout: () => 375_000,
-  getCodexProxyApiBase: () => 'http://127.0.0.1:8787/v1',
-  getCodexProxyConfig: () => ({
-    port: 8787,
-    startupTimeoutMs: 300_000,
-    requestTimeoutMs: 30_000,
-    shutdownGracePeriodMs: 15_000,
-  }),
-  codexProxyManager: { invalidateConnection: proxyMocks.invalidateConnection },
-}));
+vi.mock('../../../../src/utils/models/providers/codex-proxy.js', async () => {
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  return {
+    ensureCodexProxy: proxyMocks.ensureCodexProxy,
+    getCodexExecutionTimeout: () => 375_000,
+    getCodexProxyApiBase: () => 'http://127.0.0.1:8787/v1',
+    getCodexProxyConfig: () => ({
+      port: 8787,
+      root: join(tmpdir(), 'vox-codex-provider-test'),
+      startupTimeoutMs: 300_000,
+      requestTimeoutMs: 30_000,
+      shutdownGracePeriodMs: 15_000,
+    }),
+    codexProxyManager: { invalidateConnection: proxyMocks.invalidateConnection },
+  };
+});
 
 import { buildCodexModel, buildCodexProviderOptions } from '../../../../src/utils/models/providers/codex.js';
+
+const testProxyRoot = path.join(os.tmpdir(), 'vox-codex-provider-test');
 
 /** Creates a standard non-streaming Chat Completions response. */
 function completion(message: Record<string, unknown>, finishReason: string): Response {
@@ -61,12 +71,14 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  fs.rmSync(testProxyRoot, { recursive: true, force: true });
 });
 
 describe('Codex provider options', () => {
-  it('sends the rc.2 default-denied extension when host tools are empty', () => {
+  it('sends the default-denied extension without a cwd when host tools are empty', () => {
     expect(buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }))
       .toEqual({ codex: { x_codex: { sandbox: 'read-only', web_search: 'disabled' } } });
+    expect(fs.existsSync(testProxyRoot)).toBe(false);
   });
 
   it('whitelists reasoning effort and excludes unrelated Vox options', () => {
@@ -83,10 +95,54 @@ describe('Codex provider options', () => {
     });
   });
 
-  it.each([['everything'], ['Read'], ['Bash']])('rejects unsupported non-empty hostTools %j', (hostTools) => {
+  it('maps everything to a workspace-write sandbox with live search in a scoped cwd', () => {
+    expect(buildCodexProviderOptions(
+      { provider: 'codex', name: 'gpt-5.4-mini', options: { hostTools: ['everything'] } },
+      { workingDirId: 'g1-2' },
+    )).toEqual({
+      codex: {
+        x_codex: {
+          sandbox: 'workspace-write',
+          web_search: 'live',
+          cwd: path.join(testProxyRoot, 'g1-2'),
+        },
+      },
+    });
+    expect(fs.existsSync(path.join(testProxyRoot, 'g1-2'))).toBe(true);
+  });
+
+  it('keeps Read on the read-only, search-disabled floor with an isolated cwd', () => {
+    expect(buildCodexProviderOptions(
+      { provider: 'codex', name: 'gpt-5.4-mini', options: { hostTools: ['Read'] } },
+    )).toEqual({
+      codex: {
+        x_codex: {
+          sandbox: 'read-only',
+          web_search: 'disabled',
+          cwd: path.join(testProxyRoot, 'default'),
+        },
+      },
+    });
+  });
+
+  it('enables live search for Web without granting write access', () => {
+    expect(buildCodexProviderOptions(
+      { provider: 'codex', name: 'gpt-5.4-mini', options: { hostTools: ['Web'] } },
+    )).toEqual({
+      codex: {
+        x_codex: {
+          sandbox: 'read-only',
+          web_search: 'live',
+          cwd: path.join(testProxyRoot, 'default'),
+        },
+      },
+    });
+  });
+
+  it('rejects names outside the meta-tool vocabulary', () => {
     expect(() => buildCodexProviderOptions({
-      provider: 'codex', name: 'gpt-5.4-mini', options: { hostTools },
-    })).toThrow('Codex hostTools require a proxy version');
+      provider: 'codex', name: 'gpt-5.4-mini', options: { hostTools: ['Bash'] },
+    })).toThrow('Unsupported hostTools entries');
   });
 });
 

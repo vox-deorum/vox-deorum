@@ -2,18 +2,35 @@
  * Claude Code model construction and host-tool translation.
  */
 
+import os from 'node:os';
+import path from 'node:path';
 import { wrapLanguageModel } from 'ai';
 import type { LanguageModelV3 } from '@ai-sdk/provider';
 import { createClaudeCode, type ClaudeCodeSettings } from 'ai-sdk-provider-claude-code';
 import type { Model } from '../../../types/index.js';
 import { claudeCodeResponseMiddleware, guardClaudeCodeQueryUsageLimits } from './claude-code-response.js';
-import { resolveHostToolPolicy } from './host-tools.js';
-import type { ModelRuntimeIdentity } from './host-tools.js';
+import { resolveHostToolAccess } from './host-tools.js';
+import type { HostToolAccess, ModelRuntimeIdentity } from './host-tools.js';
 
-/** Vetted Claude Code tools exposed by the shared `everything` sentinel. */
-export const claudeCodeSafeTools = ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Write', 'Edit', 'TodoWrite'];
-/** Claude Code tools that must remain unavailable even in an explicit allowlist. */
-export const claudeCodeBlockedTools = ['Bash'];
+/** Concrete Claude Code tools granted by each host meta-tool. */
+export const claudeCodeMetaToolExpansion: Record<'Read' | 'Write' | 'Web', readonly string[]> = {
+  Read: ['Read', 'Glob', 'Grep'],
+  Write: ['Write', 'Edit'],
+  Web: ['WebFetch', 'WebSearch'],
+};
+
+/**
+ * Expands resolved meta-tool access into the concrete Claude Code tool list.
+ * TodoWrite bookkeeping rides along whenever any capability is enabled.
+ */
+export function expandClaudeCodeTools(access: HostToolAccess): string[] {
+  const tools: string[] = [];
+  if (access.read) tools.push(...claudeCodeMetaToolExpansion.Read);
+  if (access.write) tools.push(...claudeCodeMetaToolExpansion.Write);
+  if (access.web) tools.push(...claudeCodeMetaToolExpansion.Web);
+  if (tools.length > 0) tools.push('TodoWrite');
+  return tools;
+}
 
 /** The constructed Claude Code model and its prompt-mode rebound configuration. */
 export interface ClaudeCodeModelBuildResult {
@@ -42,23 +59,22 @@ export function buildClaudeCodeModel(
     settingSources: [],
     onQueryCreated: guardClaudeCodeQueryUsageLimits,
   };
-  const hostToolPolicy = resolveHostToolPolicy(options.hostTools, {
-    everythingExpansion: claudeCodeSafeTools,
-    blockedTools: claudeCodeBlockedTools,
-    workingDirectoryNamespace: 'vox-claude-code',
+  const hostToolAccess = resolveHostToolAccess(options.hostTools, {
+    workingDirectoryBase: path.join(os.tmpdir(), 'vox-claude-code'),
     workingDirId: runtimeIdentity?.workingDirId,
   });
+  const hostTools = expandClaudeCodeTools(hostToolAccess);
 
-  if (hostToolPolicy.allowedTools.length === 0) {
+  if (hostTools.length === 0) {
     settings.tools = [];
   } else {
     // Availability is bounded by `tools`; `allowedTools` and dontAsk enforce
     // permissions. Do not set disallowedTools because the provider warns when
     // it is combined with an allowlist.
-    settings.cwd = hostToolPolicy.workingDirectory;
-    settings.tools = hostToolPolicy.allowedTools;
+    settings.cwd = hostToolAccess.workingDirectory;
+    settings.tools = hostTools;
     settings.permissionMode = 'dontAsk';
-    settings.allowedTools = hostToolPolicy.allowedTools.map((tool) =>
+    settings.allowedTools = hostTools.map((tool) =>
       tool === 'Write' || tool === 'Edit' ? `${tool}(./**)` : tool);
   }
 
