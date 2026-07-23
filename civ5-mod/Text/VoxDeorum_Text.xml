@@ -363,7 +363,7 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_INCOMING"><Text>Mock: Incoming</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_OWN"><Text>Mock: Own Open</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_UNAVAILABLE"><Text>Mock: Unavailable</Text></Row>
-		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_SUCCESS"><Text>Mock: Success</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_COOP_WAR"><Text>Mock: Coop War</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_ERROR"><Text>Mock: Error</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE"><Text>Goodbye</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE_TT"><Text>Hide this conversation panel. The conversation remains available.</Text></Row>

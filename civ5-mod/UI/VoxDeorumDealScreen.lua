@@ -14,7 +14,7 @@ local baselineItems, baselinePromises, draftItems, draftPromises = {}, {}, {}, {
 local combinationReason, filteredFingerprint = nil, nil
 local removalReasons, actionStatus = {}, ""
 local originalMessage, outgoingMessage, expectedSignature = "", "", nil
-local mounted, pending, rebuilding, settingMessage, nativeRedrawInProgress, mountingInProgress, validationTooltipDismissed, mockMountAuthorized, mockMode, mockBypassLegality = false, false, false, false, false, false, false, false, false, false
+local mounted, pending, rebuilding, settingMessage, nativeRedrawInProgress, mountingInProgress, validationTooltipDismissed, mockMountAuthorized = false, false, false, false, false, false, false, false
 local counterRequired, editedSinceFilter, removalNoticeVisible = false, false, false
 local queuedAsPopup = false
 local pendingSeconds, clobberSeconds, targetPromiserID = 0, 0, nil
@@ -34,6 +34,7 @@ local promiseKeys = {
 }
 local promiseKinds = { "MILITARY", "EXPANSION", "BORDER", "NO_DIGGING", "COOP_WAR" }
 local promiseDurationKinds = { MILITARY = true, EXPANSION = true, BORDER = true, COOP_WAR = true }
+local coopWarReasonKeys = { ["target-invalid"] = "TXT_KEY_VD_DEAL_ERROR_COOP_TARGET_INVALID", contact = "TXT_KEY_VD_DEAL_ERROR_COOP_TARGET_CONTACT", ["target-unavailable"] = "TXT_KEY_VD_DEAL_ERROR_COOP_TARGET_UNAVAILABLE", ["state-unavailable"] = "TXT_KEY_VD_DEAL_ERROR_COOP_STATE", preparing = "TXT_KEY_VD_DEAL_ERROR_COOP_PREPARING" }
 local footerActions = { propose = 1, cancel = 2, accept = 3, counter = 4, reject = 5, retract = 6, reset = 7 }
 local buttonActions = {}
 for action, index in pairs(footerActions) do buttonActions[index] = action end
@@ -83,11 +84,6 @@ end
 -- Return whether the mounted effective seat is still current.
 local function effectiveSeatIsCurrent()
 	return actorID >= 0 and (mockMountAuthorized or VoxDeorumSeat.EffectiveSeat() == actorID)
-end
-
--- Return whether this mock mount has opted out of projection legality gates.
-local function mockBypassesLegality()
-	return mockMode and mockBypassLegality == true
 end
 
 -- Store and display a localized or literal action status message.
@@ -275,20 +271,6 @@ local function probeCombination()
 	return combinationReason == nil
 end
 
--- Safely invoke a player binding and distinguish unavailable APIs from false results.
-local function playerCall(player, method, ...)
-	if player == nil or type(player[method]) ~= "function" then return false, nil end
-	local ok, value = pcall(player[method], player, ...)
-	return ok, value
-end
-
--- Safely invoke a team binding and distinguish unavailable APIs from false results.
-local function teamCall(team, method, ...)
-	if team == nil or type(team[method]) ~= "function" then return false, nil end
-	local ok, value = pcall(team[method], team, ...)
-	return ok, value
-end
-
 -- Return a stable logical commitment key, collapsing Coop War twins.
 local function commitmentKey(promise)
 	if promise.promiseType == "COOP_WAR" then return "COOP_WAR:" .. tostring(promise.targetPlayerID) end
@@ -296,7 +278,7 @@ local function commitmentKey(promise)
 end
 
 -- Validate every promise and return an explanatory reason for the first failure.
-local function evaluatePromises(promises, bypassProjection)
+local function evaluatePromises(promises)
 	local normalized, availability = normalizePromises(promises), {}
 	for index = 1, #normalized do availability[index] = { available = true } end
 	local allAvailable, firstReason = true, nil
@@ -310,8 +292,6 @@ local function evaluatePromises(promises, bypassProjection)
 		for index = 1, #normalized do fail(index, reason) end
 		return false, reason, normalized, availability
 	end
-	-- Projection-time presentation mocks can skip promise legality. Add-time paths do not pass this flag.
-	if bypassProjection and mockBypassesLegality() then return true, nil, normalized, availability end
 	for index, promise in ipairs(normalized) do
 		local kind = promise.promiseType
 		local expectedDuration = promiseKeys[kind] ~= nil and VoxDeorumDealUtils.DurationForPromise(kind, Game, GameDefines) or nil
@@ -321,31 +301,14 @@ local function evaluatePromises(promises, bypassProjection)
 		if not ((promise.promiserID == actorID and promise.recipientID == counterpartID) or (promise.promiserID == counterpartID and promise.recipientID == actorID)) then fail(index, text("TXT_KEY_VD_DEAL_ERROR_PROMISE_PARTICIPANTS")) end
 		local recipient = Players[promise.recipientID]
 		if kind == "MILITARY" or kind == "EXPANSION" or kind == "BORDER" then
-			local method = "GetNumTurns" .. string.sub(kind, 1, 1) .. string.lower(string.sub(kind, 2)) .. "Promise"
-			local apiOK, turns = playerCall(recipient, method, promise.promiserID)
+			local apiOK, turns = VoxDeorumDealUtils.TryCall(recipient, VoxDeorumDealUtils.PromiseStateGetter(kind), promise.promiserID)
 			if not apiOK or type(turns) ~= "number" then fail(index, text("TXT_KEY_VD_DEAL_ERROR_PROMISE_STATE"))
 			elseif turns >= 0 then fail(index, text("TXT_KEY_VD_DEAL_ERROR_PROMISE_ACTIVE")) end
 		elseif kind == "COOP_WAR" then
-			local target = promise.targetPlayerID
-			if not livingMajor(target) or target == actorID or target == counterpartID then
-				fail(index, text("TXT_KEY_VD_DEAL_ERROR_COOP_TARGET_INVALID"))
-			else
-				local actorTeamOK, actorTeamID = playerCall(Players[actorID], "GetTeam")
-				local counterpartTeamOK, counterpartTeamID = playerCall(Players[counterpartID], "GetTeam")
-				local targetTeamOK, targetTeamID = playerCall(Players[target], "GetTeam")
-				local actorContactOK, actorMet = false, false
-				local counterpartContactOK, counterpartMet = false, false
-				if actorTeamOK and targetTeamOK then actorContactOK, actorMet = teamCall(Teams[actorTeamID], "IsHasMet", targetTeamID) end
-				if counterpartTeamOK and targetTeamOK then counterpartContactOK, counterpartMet = teamCall(Teams[counterpartTeamID], "IsHasMet", targetTeamID) end
-				if not actorContactOK or not counterpartContactOK or not actorMet or not counterpartMet then fail(index, text("TXT_KEY_VD_DEAL_ERROR_COOP_TARGET_CONTACT")) end
-				local firstOK, first = playerCall(Players[actorID], "IsValidCoopWarTarget", target, false)
-				local secondOK, second = playerCall(Players[counterpartID], "IsValidCoopWarTarget", target, false)
-				if not firstOK or not secondOK or not first or not second then fail(index, text("TXT_KEY_VD_DEAL_ERROR_COOP_TARGET_UNAVAILABLE")) end
-				local preparing = type(CoopWarStates) == "table" and CoopWarStates.COOP_WAR_STATE_PREPARING or nil
-				local stateOKa, stateA = playerCall(Players[actorID], "GetCoopWarAcceptedState", counterpartID, target)
-				local stateOKb, stateB = playerCall(Players[counterpartID], "GetCoopWarAcceptedState", actorID, target)
-				if preparing == nil or not stateOKa or not stateOKb then fail(index, text("TXT_KEY_VD_DEAL_ERROR_COOP_STATE"))
-				elseif stateA == preparing or stateB == preparing then fail(index, text("TXT_KEY_VD_DEAL_ERROR_COOP_PREPARING")) end
+			local legal, firstReason, finalReason = VoxDeorumDealUtils.IsLegalCoopWarTarget(actorID, counterpartID, promise.targetPlayerID, Players, Teams, GameDefines, CoopWarStates)
+			if not legal then
+				fail(index, text(coopWarReasonKeys[firstReason] or "TXT_KEY_VD_DEAL_ERROR_COOP_STATE"))
+				if finalReason ~= firstReason then fail(index, text(coopWarReasonKeys[finalReason] or "TXT_KEY_VD_DEAL_ERROR_COOP_STATE")) end
 			end
 		end
 	end
@@ -391,8 +354,8 @@ local function uniqueReasons(reasons)
 end
 
 -- Project promises only, preserving ordinary scratch terms when a promise later becomes unavailable.
-local function projectPromises(promises, bypassProjection)
-	local _, _, normalizedPromises, availability = evaluatePromises(promises, bypassProjection)
+local function projectPromises(promises)
+	local _, _, normalizedPromises, availability = evaluatePromises(promises)
 	local visiblePromises, reasons = {}, {}
 	for _, group in ipairs(orderedGroups(normalizedPromises, commitmentKey, function()
 		return { entries = {}, indices = {}, available = true, reason = nil }
@@ -415,7 +378,7 @@ local function projectProposal(items, promises)
 	if not effectiveSeatIsCurrent() or not livingMajor(actorID) or not livingMajor(counterpartID) then return { blockingReason = text("TXT_KEY_VD_DEAL_ERROR_ACTOR_UNAVAILABLE"), visibleItems = {}, visiblePromises = {}, droppedReasons = {} } end
 	local itemResult = projectItems(items)
 	if itemResult.blockingReason ~= nil then return { blockingReason = itemResult.blockingReason, visibleItems = {}, visiblePromises = {}, droppedReasons = {} } end
-	local visiblePromises, promiseReasons = projectPromises(promises, true)
+	local visiblePromises, promiseReasons = projectPromises(promises)
 	local reasons = copy(itemResult.droppedReasons)
 	for _, reason in ipairs(promiseReasons) do reasons[#reasons + 1] = reason end
 	local result = { visibleItems = itemResult.visibleItems, visiblePromises = visiblePromises, droppedReasons = uniqueReasons(reasons) }
@@ -448,7 +411,7 @@ end
 -- Resolve a player display name without letting a missing binding break rendering.
 local function playerName(playerID)
 	local player = Players[playerID]
-	local ok, value = playerCall(player, "GetName")
+	local ok, value = VoxDeorumDealUtils.TryCall(player, "GetName")
 	return ok and type(value) == "string" and value ~= "" and value or text("TXT_KEY_VD_DEAL_FALLBACK_PLAYER", playerID)
 end
 
@@ -681,16 +644,16 @@ end
 
 -- Reconcile changed promise legality without rebuilding ordinary native terms.
 local function reconcileDraft()
-	local promisesOK, _, normalizedPromises = evaluatePromises(draftPromises, true)
+	local promisesOK, _, normalizedPromises = evaluatePromises(draftPromises)
 	draftPromises = normalizedPromises
 	if mode ~= "author" and not promisesOK then
-		local visiblePromises, reasons = projectPromises(draftPromises, true)
+		local visiblePromises, reasons = projectPromises(draftPromises)
 		draftPromises = copy(visiblePromises)
 		if #reasons > 0 then
 			counterRequired, filteredFingerprint = true, semanticFingerprint(draftItems, draftPromises)
 			removalReasons, removalNoticeVisible, validationTooltipDismissed = reasons, true, false
 		end
-		promisesOK = select(1, evaluatePromises(draftPromises, true))
+		promisesOK = select(1, evaluatePromises(draftPromises))
 	end
 	return probeCombination(), promisesOK
 end
@@ -779,7 +742,7 @@ local function serializeDraft()
 end
 
 -- Validate and package one authored proposal or counter action.
-local function buildAuthoredPacket(action, bypassLegality)
+local function buildAuthoredPacket(action)
 	if action == "counter" then
 		local result = applyProjection(draftItems, draftPromises, false)
 		if result == nil then refresh(); return nil end
@@ -788,11 +751,11 @@ local function buildAuthoredPacket(action, bypassLegality)
 	elseif action == "propose" then
 		local itemResult = projectItems(draftItems)
 		if itemResult.blockingReason ~= nil then setStatus(itemResult.blockingReason, true); refresh(); return nil end
-		if #itemResult.droppedReasons > 0 and not bypassLegality then setStatus(itemResult.droppedReasons[1], true); redrawNative(); refresh(); return nil end
+		if #itemResult.droppedReasons > 0 then setStatus(itemResult.droppedReasons[1], true); redrawNative(); refresh(); return nil end
 		local promisesOK, promiseReason, normalizedPromises = evaluatePromises(draftPromises)
 		draftPromises = normalizedPromises
-		if not promisesOK and not bypassLegality then setStatus(promiseReason, true); refresh(); return nil end
-		if not probeCombination() and not bypassLegality then refresh(); return nil end
+		if not promisesOK then setStatus(promiseReason, true); refresh(); return nil end
+		if not probeCombination() then refresh(); return nil end
 	end
 	if #draftItems + #draftPromises == 0 then setStatus("TXT_KEY_VD_DEAL_ERROR_EMPTY"); return nil end
 	local packet = { kind = action, deal = serializeDraft() }
@@ -809,7 +772,7 @@ local function resetMountState()
 	mounted, pending, nativeRedrawInProgress, mountingInProgress, validationTooltipDismissed, targetPromiserID = false, false, false, false, false, nil
 	counterRequired, editedSinceFilter, removalNoticeVisible = false, false, false
 	pendingSeconds, clobberSeconds = 0, 0
-	mockMountAuthorized, mockMode, mockBypassLegality, coopWarTargetAvailability = false, false, false, {}
+	mockMountAuthorized, coopWarTargetAvailability = false, {}
 	Controls.VoxUsPocketCoopWarStack:SetHide(true); Controls.VoxThemPocketCoopWarStack:SetHide(true)
 end
 
@@ -835,14 +798,13 @@ local function dispatch(action)
 	end
 	if not effectiveSeatIsCurrent() then setStatus("TXT_KEY_VD_DEAL_ERROR_ACTOR_CHANGED"); refresh(); return end
 	if not livingMajor(actorID) or not livingMajor(counterpartID) then setStatus("TXT_KEY_VD_DEAL_ERROR_ACTOR_UNAVAILABLE"); refresh(); return end
-	local bypassLegality = mockBypassesLegality()
 	local packet
 	if action == "propose" then
-		packet = buildAuthoredPacket(action, bypassLegality)
+		packet = buildAuthoredPacket(action)
 		if packet == nil then return end
 	elseif action == "counter" then
 		if mode == "author" or (not counterRequired and not isChanged()) then return end
-		packet = buildAuthoredPacket(action, bypassLegality)
+		packet = buildAuthoredPacket(action)
 		if packet == nil then return end
 	elseif action == "accept" then
 		packet = { kind = action }
@@ -916,7 +878,7 @@ local function onUpdate(delta)
 end
 
 -- Mount one validated request for an explicitly authorized native actor.
-local function mount(request, mountActorID, isMockMount, allowMockAuthorization)
+local function mount(request, mountActorID, allowMockAuthorization)
 	if type(request) ~= "table" or (request.mode ~= "author" and request.mode ~= "incoming" and request.mode ~= "own") then return end
 	if not isInteger(mountActorID) or not isInteger(request.counterpartID) or not livingMajor(mountActorID) or not livingMajor(request.counterpartID) or request.counterpartID == mountActorID then return end
 	if (request.mode == "incoming" or request.mode == "own") and (not isInteger(request.proposalMessageID) or request.proposalMessageID <= 0 or not VoxDeorumDealUtils.ValidatePayload(request.deal, mountActorID, request.counterpartID)) then return end
@@ -924,7 +886,7 @@ local function mount(request, mountActorID, isMockMount, allowMockAuthorization)
 	if request.mode == "author" and request.deal ~= nil then return end
 	if mounted then closeScreen() end
 	actorID, counterpartID, mode, proposalMessageID = mountActorID, request.counterpartID, request.mode, request.proposalMessageID
-	mockMode, mockMountAuthorized, mockBypassLegality = isMockMount == true, allowMockAuthorization == true, isMockMount == true and request.mockBypassLegality == true
+	mockMountAuthorized = allowMockAuthorization == true
 	local source = request.deal or { version = 1, items = {}, promises = {} }
 	-- Mount has validated the wire shape, so store canonical promises for reset and accept.
 	baselineItems, baselinePromises = normalizeItems(source.items), normalizePromises(source.promises)
@@ -955,7 +917,7 @@ end
 local function open(request)
 	local seat = VoxDeorumSeat.EffectiveSeat()
 	if not isInteger(seat) or not livingMajor(seat) then return end
-	mount(request, seat, false, false)
+	mount(request, seat, false)
 end
 
 -- Mount a mock request for a vetted native actor without widening the public event contract.
@@ -964,7 +926,7 @@ local function openMock(request, demoActorID)
 	local seatSupportsNative = isInteger(seat) and livingMajor(seat)
 	if seatSupportsNative and demoActorID ~= seat then return end
 	if not isInteger(demoActorID) or not livingMajor(demoActorID) then return end
-	mount(request, demoActorID, true, not seatSupportsNative)
+	mount(request, demoActorID, not seatSupportsNative)
 end
 
 -- Keep Escape within the wrapper without invoking stock diplomacy exits.

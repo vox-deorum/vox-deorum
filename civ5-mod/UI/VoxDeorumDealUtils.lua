@@ -15,6 +15,20 @@ local knownItems = {
 	TECHS = true, VASSALAGE = true, VASSALAGE_REVOKE = true,
 }
 local promiseDurationGetters = { MILITARY = "GetMilitaryPromiseDuration", EXPANSION = "GetExpansionPromiseDuration", BORDER = "GetBorderPromiseDuration" }
+local promiseStateGetters = { MILITARY = "GetNumTurnsMilitaryPromise", EXPANSION = "GetNumTurnsExpansionPromise", BORDER = "GetNumTurnsBorderPromise" }
+
+-- Safely invoke one object method while preserving false return values.
+function VoxDeorumDealUtils.TryCall(object, method, ...)
+	if object == nil or type(method) ~= "string" then return false, nil end
+	local methodOK, callback = pcall(function(value, name) return value[name] end, object, method)
+	if not methodOK or type(callback) ~= "function" then return false, nil end
+	return pcall(callback, object, ...)
+end
+
+-- Return the native state getter for one standard promise type.
+function VoxDeorumDealUtils.PromiseStateGetter(promiseType)
+	return promiseStateGetters[promiseType]
+end
 
 -- Return a deep data-only copy that preserves shared table references.
 function VoxDeorumDealUtils.DeepCopy(value, seen)
@@ -161,7 +175,40 @@ function VoxDeorumDealUtils.IsLivingMajor(playerID, players, gameDefines)
 	players, gameDefines = players or Players, gameDefines or GameDefines
 	if not VoxDeorumDealUtils.IsInteger(playerID) or type(gameDefines) ~= "table" or playerID < 0 or playerID >= gameDefines.MAX_MAJOR_CIVS then return false end
 	local player = players and players[playerID] or nil
-	return player ~= nil and player:IsAlive() and not player:IsMinorCiv() and not player:IsBarbarian()
+	local aliveOK, alive = VoxDeorumDealUtils.TryCall(player, "IsAlive")
+	local minorOK, minor = VoxDeorumDealUtils.TryCall(player, "IsMinorCiv")
+	local barbarianOK, barbarian = VoxDeorumDealUtils.TryCall(player, "IsBarbarian")
+	return aliveOK and minorOK and barbarianOK and alive == true and minor ~= true and barbarian ~= true
+end
+
+-- Return whether both principals may legally prepare a cooperative war against one target.
+function VoxDeorumDealUtils.IsLegalCoopWarTarget(actorID, counterpartID, targetID, players, teams, gameDefines, coopWarStates)
+	players, teams, gameDefines, coopWarStates = players or Players, teams or Teams, gameDefines or GameDefines, coopWarStates or CoopWarStates
+	if not VoxDeorumDealUtils.IsLivingMajor(targetID, players, gameDefines) or targetID == actorID or targetID == counterpartID then return false, "target-invalid", "target-invalid" end
+	local firstReason, finalReason = nil, nil
+	-- Preserve the screen's first status reason and final projection reason while evaluating every gate.
+	local function reject(reason)
+		firstReason, finalReason = firstReason or reason, reason
+	end
+	local actor, counterpart, target = players and players[actorID] or nil, players and players[counterpartID] or nil, players and players[targetID] or nil
+	local actorTeamOK, actorTeamID = VoxDeorumDealUtils.TryCall(actor, "GetTeam")
+	local counterpartTeamOK, counterpartTeamID = VoxDeorumDealUtils.TryCall(counterpart, "GetTeam")
+	local targetTeamOK, targetTeamID = VoxDeorumDealUtils.TryCall(target, "GetTeam")
+	if not actorTeamOK or not counterpartTeamOK or not targetTeamOK or type(actorTeamID) ~= "number" or type(counterpartTeamID) ~= "number" or type(targetTeamID) ~= "number" then reject("contact")
+	else
+		local actorMetOK, actorMet = VoxDeorumDealUtils.TryCall(teams and teams[actorTeamID] or nil, "IsHasMet", targetTeamID)
+		local counterpartMetOK, counterpartMet = VoxDeorumDealUtils.TryCall(teams and teams[counterpartTeamID] or nil, "IsHasMet", targetTeamID)
+		if not actorMetOK or not counterpartMetOK or actorMet ~= true or counterpartMet ~= true then reject("contact") end
+	end
+	local actorValidOK, actorValid = VoxDeorumDealUtils.TryCall(actor, "IsValidCoopWarTarget", targetID, false)
+	local counterpartValidOK, counterpartValid = VoxDeorumDealUtils.TryCall(counterpart, "IsValidCoopWarTarget", targetID, false)
+	if not actorValidOK or not counterpartValidOK or actorValid ~= true or counterpartValid ~= true then reject("target-unavailable") end
+	local preparing = type(coopWarStates) == "table" and coopWarStates.COOP_WAR_STATE_PREPARING or nil
+	local actorStateOK, actorState = VoxDeorumDealUtils.TryCall(actor, "GetCoopWarAcceptedState", counterpartID, targetID)
+	local counterpartStateOK, counterpartState = VoxDeorumDealUtils.TryCall(counterpart, "GetCoopWarAcceptedState", actorID, targetID)
+	if preparing == nil or not actorStateOK or not counterpartStateOK then reject("state-unavailable")
+	elseif actorState == preparing or counterpartState == preparing then reject("preparing") end
+	return firstReason == nil, firstReason, finalReason
 end
 
 -- Return whether a value is a finite Lua integer.

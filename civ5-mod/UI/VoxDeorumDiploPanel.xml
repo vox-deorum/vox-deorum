@@ -98,7 +98,7 @@
 			<GridButton ID="ProposeButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_PROPOSE_DEAL"/>
 			<GridButton ID="WarButton" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_DECLARE_WAR"/>
 			<GridButton ID="MockDealErrorButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_ERROR"/>
-			<GridButton ID="MockDealSuccessButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_SUCCESS"/>
+			<GridButton ID="MockDealCoopWarButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_COOP_WAR"/>
 			<GridButton ID="MockDealOwnButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_OWN"/>
 			<GridButton ID="MockDealUnavailableButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_UNAVAILABLE"/>
 			<GridButton ID="MockDealIncomingButton" Hidden="1" Style="FrameButton200" Offset="0,0" String="TXT_KEY_VD_DIPLO_MOCK_DEAL_INCOMING"/>

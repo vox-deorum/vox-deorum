@@ -38,7 +38,7 @@ local dealMockButtons = {
 	{ control = Controls.MockDealIncomingButton, scenario = "incoming" },
 	{ control = Controls.MockDealOwnButton, scenario = "own" },
 	{ control = Controls.MockDealUnavailableButton, scenario = "unavailable" },
-	{ control = Controls.MockDealSuccessButton, scenario = "success" },
+	{ control = Controls.MockDealCoopWarButton, scenario = "coop-war" },
 	{ control = Controls.MockDealErrorButton, scenario = "error" },
 }
 
