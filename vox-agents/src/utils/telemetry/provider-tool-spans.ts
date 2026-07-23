@@ -25,6 +25,7 @@
  */
 
 import { SpanKind, SpanStatusCode, type Tracer } from '@opentelemetry/api';
+import { classifyProviderActivityStatus } from '../models/providers/activity-status.js';
 
 /**
  * A CLI-executed tool part as it appears on `StepResult.content`. Only the
@@ -43,23 +44,6 @@ interface ProviderExecutedToolPart {
 
 /** Providers whose built-in activity is normalized into AI SDK content parts. */
 export type BuiltInToolProvider = 'claude-code' | 'codex';
-
-/** Test whether a structured result reports a provider-side failure. */
-function isFailedOutput(output: unknown): boolean {
-  return typeof output === 'object'
-    && output !== null
-    && 'status' in output
-    && output.status === 'failed';
-}
-
-/** Test whether structured provider output is a non-terminal progress update. */
-function isPreliminaryOutput(output: unknown): boolean {
-  if (typeof output !== 'object' || output === null || !('status' in output)) return false;
-  return output.status === 'pending'
-    || output.status === 'started'
-    || output.status === 'in_progress'
-    || output.status === 'in-progress';
-}
 
 /** Serialize a telemetry value without collapsing structured data to a generic string. */
 function serializeValue(value: unknown): string | undefined {
@@ -96,7 +80,7 @@ export function emitProviderExecutedToolSpans(
       (part?.type === 'tool-result' || part?.type === 'tool-error') &&
       part.providerExecuted === true &&
       part.preliminary !== true &&
-      !isPreliminaryOutput(part.output) &&
+      classifyProviderActivityStatus(part.output) !== 'preliminary' &&
       typeof part.toolCallId === 'string'
     ) {
       resultsById.set(part.toolCallId, part);
@@ -125,7 +109,10 @@ export function emitProviderExecutedToolSpans(
       // AI-SDK core converts every provider tool-result with `isError: true`
       // into a `tool-error` content part before it reaches `StepResult.content`,
       // so a failing call always arrives as `tool-error` here.
-      if (result?.type === 'tool-error' || result?.type === 'tool-result' && isFailedOutput(result.output)) {
+      if (
+        result?.type === 'tool-error'
+        || result?.type === 'tool-result' && classifyProviderActivityStatus(result.output) === 'failed'
+      ) {
         // The provider's serializeToolError() usually stringifies the error, but
         // the raw tool_result + is_error path can surface object/array payloads.
         // Store strings as-is (single-encoding parity with mcp-tool.* spans) and

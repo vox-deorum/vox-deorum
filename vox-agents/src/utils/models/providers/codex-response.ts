@@ -4,11 +4,13 @@
  */
 
 import type {
+  JSONValue,
   LanguageModelV3CallOptions,
   LanguageModelV3Content,
   LanguageModelV3Middleware,
   LanguageModelV3StreamPart,
 } from '@ai-sdk/provider';
+import { classifyProviderActivityStatus } from './activity-status.js';
 
 /** A non-retryable protocol violation from the pinned Codex proxy. */
 export class CodexProviderProtocolError extends Error {
@@ -117,7 +119,7 @@ async function withContinuationClassification<T>(operation: () => PromiseLike<T>
 }
 
 /** Return whether a value is a JSON value accepted by an AI SDK tool result. */
-function isJsonValue(value: unknown): boolean {
+function isJsonValue(value: unknown): value is JSONValue {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
   if (Array.isArray(value)) return value.every(isJsonValue);
   const record = asRecord(value);
@@ -194,18 +196,6 @@ function rawFinishReason(raw: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-/** Translate the proxy's lifecycle statuses to preliminary or final result state. */
-function activityStatus(status: unknown): { preliminary: boolean; failed: boolean } {
-  if (status === 'pending' || status === 'started' || status === 'in_progress' || status === 'in-progress') {
-    return { preliminary: true, failed: false };
-  }
-  if (status === 'completed') return { preliminary: false, failed: false };
-  if (status === 'failed' || status === 'error' || status === 'cancelled' || status === 'canceled' || status === 'interrupted') {
-    return { preliminary: false, failed: true };
-  }
-  throw protocolError(`tool result has unsupported status '${String(status)}'`);
-}
-
 /** Coordinates raw activity calls with adapter-owned client function calls. */
 class ActivityNormalizer {
   private readonly declaredNames: Set<string>;
@@ -274,7 +264,6 @@ class ActivityNormalizer {
         if (index !== undefined) this.pendingCandidateIdsByIndex.set(index, id);
         continue;
       }
-      if (this.clientCallIds.has(id)) throw protocolError(`activity tool '${name}' collides with client call ID '${id}'`);
       if (index !== undefined) this.callIdsByIndex.set(index, id);
 
       if (typeof functionValue?.arguments !== 'string') throw protocolError(`tool call '${id}' has non-string function arguments`);
@@ -326,18 +315,18 @@ class ActivityNormalizer {
       if (activity.finished) throw protocolError(`duplicate terminal activity result '${id}'`);
       const result = asRecord(raw?.result);
       if (!result || typeof result.status !== 'string' || !isJsonValue(result)) throw protocolError(`tool result '${id}' is malformed`);
-      const status = activityStatus(result.status);
-      if (activity.preliminary && status.preliminary) {
-        // Multiple progress updates are valid and replace the prior preliminary state downstream.
-      }
-      activity.preliminary ||= status.preliminary;
-      activity.finished = !status.preliminary;
+      const status = classifyProviderActivityStatus(result);
+      if (!status) throw protocolError(`tool result has unsupported status '${result.status}'`);
+      const preliminary = status === 'preliminary';
+      activity.preliminary ||= preliminary;
+      activity.finished = !preliminary;
       parts.push({
         type: 'tool-result',
         toolCallId: id,
         toolName: activity.toolName,
-        result: result as any,
-        ...(status.preliminary ? { preliminary: true } : {}),
+        result,
+        ...(preliminary ? { preliminary: true } : {}),
+        ...(status === 'failed' ? { isError: true } : {}),
         dynamic: true,
       });
     }
@@ -408,6 +397,7 @@ class ActivityNormalizer {
         toolCallId: activity.id,
         toolName: activity.toolName,
         result: { status: 'failed', error: { message: 'The Codex built-in activity ended before a final result.' } },
+        isError: true,
         dynamic: true,
       });
     }
@@ -451,7 +441,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
     wrapStream: async ({ doStream, params }) => {
       const response = await withContinuationClassification(doStream);
       const normalizer = new ActivityNormalizer(params);
-      const requestedRawChunks = rawChunkPreferences.get(params) ?? params.includeRawChunks === true;
+      const requestedRawChunks = rawChunkPreferences.get(params) ?? false;
       let sawFinish = false;
       let sawRawFinish = false;
       return {

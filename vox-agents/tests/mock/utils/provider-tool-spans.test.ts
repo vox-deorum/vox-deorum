@@ -223,6 +223,32 @@ describe("emitProviderExecutedToolSpans", () => {
     expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
   });
 
+  it.each(["failed", "error", "cancelled", "canceled", "interrupted"])(
+    "should mark structured Codex %s results as errors",
+    (status) => {
+      const content = [
+        {
+          type: "tool-call",
+          toolCallId: "c3",
+          toolName: "command",
+          input: {},
+          providerExecuted: true,
+        },
+        {
+          type: "tool-result",
+          toolCallId: "c3",
+          toolName: "command",
+          output: { status, error: { message: "stopped" } },
+          providerExecuted: true,
+        },
+      ];
+
+      const { tracer, spans } = makeTracer();
+      emitProviderExecutedToolSpans('codex', content, tracer, ATTRS);
+      expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
+    },
+  );
+
   it("should return 0 for non-array content or content without provider-executed parts", () => {
     const { tracer, spans } = makeTracer();
     expect(emitProviderExecutedToolSpans('claude-code', undefined, tracer, ATTRS)).toBe(0);

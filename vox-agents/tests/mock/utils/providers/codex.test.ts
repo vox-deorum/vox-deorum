@@ -31,6 +31,7 @@ vi.mock('../../../../src/utils/models/providers/codex-proxy.js', async () => {
 });
 
 import { buildCodexModel, buildCodexProviderOptions } from '../../../../src/utils/models/providers/codex.js';
+import { codexActivityMiddleware } from '../../../../src/utils/models/providers/codex-response.js';
 
 const testProxyRoot = path.join(os.tmpdir(), 'vox-codex-provider-test');
 
@@ -526,12 +527,18 @@ describe('Codex rc.3 built-in activity normalization', () => {
 
     expect(parts).toContainEqual({ type: 'tool-call', toolCallId: 'collision', toolName: 'found_city', input: '{"name":"Rome"}', providerExecuted: true, dynamic: true });
     const result = parts.find((part) => part.type === 'tool-result' && part.toolCallId === 'collision');
-    expect(result).toMatchObject({ type: 'tool-result', toolCallId: 'collision', toolName: 'found_city', result: { status: 'failed', error: { message: 'Codex declined the action.' } }, dynamic: true });
-    expect(result).not.toHaveProperty('isError');
+    expect(result).toMatchObject({
+      type: 'tool-result',
+      toolCallId: 'collision',
+      toolName: 'found_city',
+      result: { status: 'failed', error: { message: 'Codex declined the action.' } },
+      isError: true,
+      dynamic: true,
+    });
     expect(parts.some((part) => part.type === 'tool-input-start' && part.id === 'collision')).toBe(false);
   });
 
-  it('keeps progress structured and never executes a colliding built-in through AI SDK core', async () => {
+  it('promotes a provider failure and never executes a colliding built-in through AI SDK core', async () => {
     const localHandler = vi.fn();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamingCompletion(
       {
@@ -544,7 +551,7 @@ describe('Codex rc.3 built-in activity normalization', () => {
       },
       {
         id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
-        choices: [{ index: 0, delta: { tool_results: [{ id: 'collision', type: 'function', function: { name: 'found_city', arguments: '{"name":"Rome"}' }, result: { status: 'completed', content: 'Inspected.' } }] }, finish_reason: null }],
+        choices: [{ index: 0, delta: { tool_results: [{ id: 'collision', type: 'function', function: { name: 'found_city', arguments: '{"name":"Rome"}' }, result: { status: 'interrupted', error: { message: 'Inspection stopped.' } } }] }, finish_reason: null }],
       },
       {
         id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
@@ -577,8 +584,8 @@ describe('Codex rc.3 built-in activity normalization', () => {
       output: { status: 'in_progress', progress: 'Inspecting.' },
     }));
     expect(parts).toContainEqual(expect.objectContaining({
-      type: 'tool-result', toolCallId: 'collision', providerExecuted: true,
-      output: { status: 'completed', content: 'Inspected.' },
+      type: 'tool-error', toolCallId: 'collision', providerExecuted: true,
+      error: { status: 'interrupted', error: { message: 'Inspection stopped.' } },
     }));
   });
 
@@ -625,9 +632,43 @@ describe('Codex rc.3 built-in activity normalization', () => {
 
     expect(results).toHaveLength(3);
     expect(results.slice(0, 2).every((part) => part.preliminary === true)).toBe(true);
-    expect(results[2]).toMatchObject({ result: { status: 'failed', error: { message: expect.any(String) } } });
-    expect(results[2]).not.toHaveProperty('isError');
+    expect(results[2]).toMatchObject({
+      result: { status: 'failed', error: { message: expect.any(String) } },
+      isError: true,
+    });
   });
+
+  it.each(['failed', 'error', 'cancelled', 'canceled', 'interrupted'])(
+    'normalizes terminal %s activity as an error',
+    async (status) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion({
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          { id: 'status-result', type: 'function', function: { name: 'web_search', arguments: '{"query":"Rome"}' } },
+        ],
+        tool_results: [
+          {
+            id: 'status-result',
+            type: 'function',
+            function: { name: 'web_search', arguments: '{"query":"Rome"}' },
+            result: { status, error: { message: 'Activity did not complete.' } },
+          },
+        ],
+      }, 'stop')));
+      const response = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+        prompt: [{ role: 'user', content: [{ type: 'text', text: 'Find Rome.' }] }],
+        providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+      });
+
+      expect(response.content).toContainEqual(expect.objectContaining({
+        type: 'tool-result',
+        toolCallId: 'status-result',
+        result: { status, error: { message: 'Activity did not complete.' } },
+        isError: true,
+      }));
+    },
+  );
 
   it('supports interleaved activity and rejects orphan, duplicate, and all post-activity disconnects', async () => {
     const model = buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' });
@@ -692,5 +733,40 @@ describe('Codex rc.3 built-in activity normalization', () => {
     const activityCall = parts.findIndex((part) => part.type === 'tool-call' && part.toolCallId === 'search-raw');
     expect(firstRaw).toBeGreaterThanOrEqual(0);
     expect(firstRaw).toBeLessThan(activityCall);
+  });
+
+  it('suppresses internally enabled raw chunks when transformed parameters are cloned', async () => {
+    const middleware = codexActivityMiddleware();
+    const transformed = await middleware.transformParams!({
+      type: 'stream',
+      params: {
+        prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+        includeRawChunks: false,
+      } as any,
+      model: {} as any,
+    });
+    const wrapped = await middleware.wrapStream!({
+      doGenerate: async () => { throw new Error('not used'); },
+      doStream: async () => ({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'raw', rawValue: { choices: [{ delta: {}, finish_reason: null }] } });
+            controller.enqueue({
+              type: 'finish',
+              finishReason: { unified: 'stop', raw: 'stop' },
+              usage: { inputTokens: { total: 1 }, outputTokens: { total: 1 } },
+            });
+            controller.close();
+          },
+        }),
+      } as any),
+      params: { ...transformed },
+      model: {} as any,
+    });
+    const parts: any[] = [];
+    for await (const part of wrapped.stream) parts.push(part);
+
+    expect(parts.some((part) => part.type === 'raw')).toBe(false);
+    expect(parts.some((part) => part.type === 'finish')).toBe(true);
   });
 });

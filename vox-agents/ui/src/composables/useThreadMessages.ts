@@ -11,6 +11,7 @@ import type { ModelMessage } from 'ai';
 // Pure transcript helper (shared with the backend via @vox) — hydrate the server's committed deal row
 // (arriving on the `connected` SSE event) into a cache item exactly as a full re-hydrate would.
 import { hydrateDealRow } from '@vox/utils/diplomacy/transcript-utils';
+import { classifyProviderActivityStatus } from '@vox/utils/models/providers/activity-status';
 
 export interface UseThreadMessagesOptions {
   thread: Ref<EnvoyThread | null>;
@@ -176,15 +177,6 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
       onNewChunk?.();
     };
 
-    /** Recover preliminary state that AI SDK core omits from provider tool results. */
-    const isStructuredPreliminary = (output: unknown): boolean => {
-      if (typeof output !== 'object' || output === null || !('status' in output)) return false;
-      return output.status === 'pending'
-        || output.status === 'started'
-        || output.status === 'in_progress'
-        || output.status === 'in-progress';
-    };
-
     return api.streamAgentMessage(
       request,
       (part) => {
@@ -221,7 +213,7 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
               output: part.output,
               providerExecuted: part.providerExecuted,
               dynamic: part.dynamic ?? part.providerExecuted,
-              preliminary: part.preliminary === true || isStructuredPreliminary(part.output),
+              preliminary: part.preliminary === true || classifyProviderActivityStatus(part.output) === 'preliminary',
             });
             break;
 

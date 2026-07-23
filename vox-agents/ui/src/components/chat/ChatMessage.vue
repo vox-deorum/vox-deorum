@@ -36,6 +36,7 @@ import TextMessage from './TextMessage.vue';
 import ReasoningMessage from './ReasoningMessage.vue';
 import ToolCallMessage from './ToolCallMessage.vue';
 import { cleanToolArtifacts } from '@vox/utils/models/text-cleaning';
+import { classifyProviderActivityStatus } from '@vox/utils/models/providers/activity-status';
 
 interface Props {
   message: ModelMessage;
@@ -90,10 +91,6 @@ const displayParts = (): DisplayPart[] => {
     .map((part) => part as DisplayPart);
 };
 
-/** Test whether a structured provider result reports failure. */
-const isFailedOutput = (output: unknown): boolean =>
-  typeof output === 'object' && output !== null && 'status' in output && output.status === 'failed';
-
 /** Keep the latest progress or terminal outcome for each tool call. */
 const toolOutcomesByCallId = computed(() => {
   const map = new Map<string, {
@@ -105,11 +102,13 @@ const toolOutcomesByCallId = computed(() => {
   if (Array.isArray(props.message.content)) {
     for (const part of displayParts()) {
       if (part.type === 'tool-result') {
+        const status = classifyProviderActivityStatus(part.output);
+        const preliminary = part.preliminary === true || status === 'preliminary';
         map.set(part.toolCallId, {
           value: part.output,
-          completed: part.preliminary !== true,
-          failed: isFailedOutput(part.output),
-          preliminary: part.preliminary === true,
+          completed: !preliminary,
+          failed: status === 'failed',
+          preliminary,
         });
       } else if (part.type === 'tool-error') {
         map.set(part.toolCallId, {

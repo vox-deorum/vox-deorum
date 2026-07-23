@@ -120,7 +120,6 @@ describe('ChatMessage', () => {
           output: { status: 'in_progress' },
           providerExecuted: true,
           dynamic: true,
-          preliminary: true,
         },
       ],
     })
@@ -134,23 +133,26 @@ describe('ChatMessage', () => {
     })
   })
 
-  it('renders a structured failed result as a completed failure', () => {
-    const wrapper = mountMessage({
-      role: 'assistant',
-      content: [
-        { type: 'tool-call', toolName: 'command', input: {}, toolCallId: 'c1' },
-        {
-          type: 'tool-result',
-          toolName: 'command',
-          toolCallId: 'c1',
-          output: { status: 'failed', error: { message: 'boom' } },
-        },
-      ],
-    })
-    const call = wrapper.findComponent(ToolCallMessageStub)
-    expect(call.props('completed')).toBe(true)
-    expect(call.props('failed')).toBe(true)
-  })
+  it.each(['failed', 'error', 'cancelled', 'canceled', 'interrupted'])(
+    'renders a structured %s result as a completed failure',
+    (status) => {
+      const wrapper = mountMessage({
+        role: 'assistant',
+        content: [
+          { type: 'tool-call', toolName: 'command', input: {}, toolCallId: 'c1' },
+          {
+            type: 'tool-result',
+            toolName: 'command',
+            toolCallId: 'c1',
+            output: { status, error: { message: 'boom' } },
+          },
+        ],
+      })
+      const call = wrapper.findComponent(ToolCallMessageStub)
+      expect(call.props('completed')).toBe(true)
+      expect(call.props('failed')).toBe(true)
+    },
+  )
 
   it('folds a tool-error into its matching call', () => {
     const wrapper = mountMessage({
