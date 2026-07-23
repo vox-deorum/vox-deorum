@@ -107,13 +107,13 @@ The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS B
 
 Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`. The shared `hostTools` policy is deny-by-default and speaks in three meta-tools: `Read`, `Write` (which implies `Read`), and `Web`. They are validated once in `host-tools.ts` and mapped per provider. Claude Code expands them to its vetted non-shell tool lists and always gives an enabled CLI an isolated temporary cwd. Codex creates a working directory only for Read or Write. It maps no filesystem access and Web-only access to a disabled sandbox with no local environments, Read to read-only, Write to workspace-write, and Web independently to live search. Codex Read and Write therefore enable command-capable local execution inside the selected sandbox.
 
-The managed Codex proxy is pinned to rc.3 and starts lazily. A listener already occupying its port is rejected because `/health` and `/ready` do not expose enough identity to verify the required activity contract. `CODEX_PROXY_COMMAND` remains a trusted launch override.
+The managed Codex proxy is pinned and starts lazily. A listener already occupying its port is rejected because `/health` and `/ready` do not expose enough identity to verify the required activity contract. `CODEX_PROXY_COMMAND` remains a trusted launch override. See [Updating the Codex proxy](codex.md) for the version upgrade procedure.
 
 Two pieces of middleware sit between agents and providers:
 
 - Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking.
 - Claude Code subscription limits wait until the provider's reset time, with a slow fallback when no valid reset is supplied.
-- Codex response middleware converts rc.3 observational `tool_calls` and `tool_results` into provider-executed AI SDK lifecycles, removes them from replay history, and leaves client game tools executable.
+- Codex response middleware converts observational `tool_calls` and `tool_results` into provider-executed AI SDK lifecycles, removes them from replay history, and leaves client game tools executable.
 - The tool-rescue middleware (`src/utils/models/tool-rescue/`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
 
 Provider-executed Claude Code and Codex calls are shown in the dashboard and recorded as retrospective built-in tool spans. Preliminary progress is not a successful outcome. A failed or missing terminal result records an error.

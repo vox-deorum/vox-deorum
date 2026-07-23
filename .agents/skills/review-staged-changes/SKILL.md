@@ -7,7 +7,7 @@ description: Review Git staged changes for correctness risks and concrete mainta
 
 Review only the Git index. Treat tests as passed, remain read-only, and lead with actionable findings that improve correctness and make the code easier to understand and change safely.
 
-Throughout, *delegate* means hand the work to a **less expensive subagent** (e.g. Sonnet, GPT-5.5-medium) and reserve your own reasoning for synthesis and final judgment.
+Throughout, _delegate_ means hand the work to a **less expensive subagent** (e.g. Claude Sonnet, GPT-5.6-Terra/Luna) and reserve your own reasoning for synthesis and final judgment. Use editing-capable agents for the build; use read-only ones for reviews.
 
 ## Inspect the change
 
@@ -19,7 +19,7 @@ Delegate the following groundwork to the subagent first:
 4. Read surrounding staged source with `git show :path/to/file` when the working tree may differ from the index.
 5. Trace changed behavior across callers, types, persistence, API boundaries, UI state, and staged tests. Read unchanged context only when needed to establish impact.
 
-Do not review unstaged changes as part of the patch. Do not edit files, stage changes, run tests, builds, linters, or formatters. Read-only structural checks are acceptable when they answer a specific review question.
+Do not review unstaged changes as part of the patch. Do not edit files, stage changes, run tests, builds, linters, or formatters. Skip mechanical checks entirely — formatting, import ordering, naming conventions, unused variables, and anything else lint or a type checker would flag; assume automated tooling covers these and spend review effort only where semantic judgment is required. Read-only structural checks are acceptable when they answer a specific review question.
 
 ## Find correctness risks
 
@@ -64,7 +64,7 @@ Recommend an improvement when the staged design makes future changes harder, for
 
 After drafting the findings for a theme, delegate that group's draft to the subagent to check your reasoning and surface additional opportunities within the same theme before moving on. Fold its confirmed additions into the group.
 
-Do not report formatting preferences or subjective style in isolation. For each maintainability finding, name the future change, debugging task, or invariant that is unnecessarily difficult to reason about.
+Do not report formatting preferences, subjective style, or anything a linter or formatter would catch. For each maintainability finding, name the future change, debugging task, or invariant that is unnecessarily difficult to reason about.
 
 ## Report findings
 

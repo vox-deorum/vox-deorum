@@ -53,11 +53,11 @@ A sensible starting point is a mid-tier model from your chosen provider. Move up
 
 The default configuration includes common Codex models in the dashboard. You can also set the provider to `codex` and enter any other Codex model name available to your ChatGPT account.
 
-The first Codex request runs the exact pinned `codex-openai-proxy@0.1.0-rc.3` package through `npx`. npm downloads the proxy and its bundled `@openai/codex@0.144.5` CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox Deorum logs. The proxy starts lazily, so using another provider does not download or launch it.
+The first Codex request runs the `codex-openai-proxy` package through `npx`. npm downloads the proxy and its bundled CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox Deorum logs. The proxy starts lazily, so using another provider does not download or launch it.
 
 The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. A custom command is trusted operator configuration, and Vox Deorum appends the required `serve` arguments.
 
-Proxy rc.3 supports automatic or disabled tool choice and requires continuation policy to remain unchanged. Vox Deorum maps agents that normally require a tool call to automatic tool choice for Codex. Codex command, file, web, MCP, and app activity appears in the dashboard as provider-executed tool progress. Vox Deorum does not dispatch that activity as game tools.
+Proxy supports automatic or disabled tool choice and requires continuation policy to remain unchanged. Vox Deorum maps agents that normally require a tool call to automatic tool choice for Codex. Codex command, file, web, MCP, and app activity appears in the dashboard as provider-executed tool progress. Vox Deorum does not dispatch that activity as game tools.
 
 ## Host tools
 
@@ -76,7 +76,7 @@ Claude Code expands each meta-tool to its vetted non-shell tool set and retains 
 - Read uses a read-only sandbox in an isolated working directory.
 - Write uses a workspace-write sandbox in that directory. Network remains off unless Web is also enabled.
 
-Codex Read and Write enable Codex's local execution environment, including command execution within the selected sandbox. Only `sandbox: "disabled"` removes that environment. If a managed Codex policy restricts sandbox modes, it must still permit native read-only because rc.3 realizes disabled mode as read-only with an empty environment list.
+Codex Read and Write enable Codex's local execution environment, including command execution within the selected sandbox. Only `sandbox: "disabled"` removes that environment. If a managed Codex policy restricts sandbox modes, it must still permit native read-only because rc.4 realizes disabled mode as read-only with an empty environment list.
 
 The old `claudeCodeTools` name has been removed. A Claude Code model that still uses it fails with: `The \`claudeCodeTools\` option was renamed to \`hostTools\`. Update this model configuration.`
 
