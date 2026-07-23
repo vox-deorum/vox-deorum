@@ -1,5 +1,5 @@
 /**
- * Normalizes Codex rc.3 built-in activity from the proxy's raw compatible
+ * Normalizes Codex built-in activity from the proxy's raw compatible
  * response into AI SDK provider-executed dynamic tool parts.
  */
 
@@ -54,7 +54,7 @@ type RawToolCall = {
   function?: { name?: unknown; arguments?: unknown };
 };
 
-/** Loose representation of the proxy's rc.3 activity result shape. */
+/** Loose representation of the proxy's activity result shape. */
 type RawToolResult = {
   id?: unknown;
   function?: { name?: unknown; arguments?: unknown };
@@ -293,7 +293,7 @@ class ActivityNormalizer {
     return parts;
   }
 
-  /** Normalize raw rc.3 activity results after verifying their unique call correlation. */
+  /** Normalize raw activity results after verifying their unique call correlation. */
   ingestResults(rawResults: unknown): LanguageModelV3StreamPart[] {
     if (rawResults === undefined) return [];
     if (!Array.isArray(rawResults)) throw protocolError('tool_results is not an array');
@@ -428,7 +428,7 @@ class ActivityNormalizer {
   }
 }
 
-/** Normalize Codex raw rc.3 activity while preserving compatible adapter text and reasoning parsing. */
+/** Normalize Codex raw activity while preserving compatible adapter text and reasoning parsing. */
 export function codexActivityMiddleware(): LanguageModelV3Middleware {
   return {
     specificationVersion: 'v3',

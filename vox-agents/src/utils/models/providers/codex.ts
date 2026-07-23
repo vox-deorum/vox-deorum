@@ -1,5 +1,5 @@
 /**
- * Codex model construction and its rc.3 proxy request policy.
+ * Codex model construction and its proxy request policy.
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
@@ -66,7 +66,7 @@ export function buildCodexModel(config: Model): LanguageModelV3 {
       }
     },
   }).chatModel(config.name);
-  // This inner wrapper normalizes rc.3 activity before the generic rescue
+  // This inner wrapper normalizes activity before the generic rescue
   // wrapper installed by models.ts sees the response.
   return wrapLanguageModel({ model, middleware: codexActivityMiddleware() });
 }

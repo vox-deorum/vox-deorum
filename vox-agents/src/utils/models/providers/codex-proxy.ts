@@ -16,7 +16,7 @@ import { createLogger } from '../../logger.js';
 import { processManager } from '../../../infra/process-manager.js';
 
 /** The published proxy contract accepted by this integration. */
-export const codexProxyVersion = '0.1.0-rc.3';
+export const codexProxyVersion = '0.1.0-rc.4';
 
 /** The proxy request deadline, kept below Vox Deorum's outer Codex attempt deadline. */
 export const codexProxyRequestTimeoutDefault = 30_000;
@@ -33,7 +33,7 @@ export const codexProxyShutdownGracePeriod = 15_000;
 /** Extra time for the proxy to complete cancellation before Vox Deorum retries. */
 export const codexExecutionTimeoutMargin = 30_000;
 
-/** The proxy's own graceful HTTP shutdown deadline passed to its rc.3 CLI. */
+/** The proxy's own graceful HTTP shutdown deadline passed to its CLI. */
 export const codexProxyShutdownTimeoutDefault = 10_000;
 
 /** The stable root used when a caller does not configure a narrower proxy root. */
@@ -169,7 +169,7 @@ export function splitCodexProxyCommand(command: string): string[] {
   return words;
 }
 
-/** Adds only the exact rc.3 serve options, without involving a command shell. */
+/** Adds only the exact serve options, without involving a command shell. */
 export function buildCodexProxyCommand(config: CodexProxyConfig): { command: string; args: string[] } {
   const [command, ...configuredArgs] = splitCodexProxyCommand(config.command);
   if (!command) throw new CodexProxyError('CODEX_PROXY_COMMAND must include an executable.', false);
@@ -425,7 +425,7 @@ export class CodexProxyManager {
     this.handleChildEnded(generation, child, errorMessage(error));
   }
 
-  /** Polls the owned proxy's rc.3 readiness endpoint until it authenticates. */
+  /** Polls the owned proxy's readiness endpoint until it authenticates. */
   private async waitForReady(
     generation: number,
     config: CodexProxyConfig,
@@ -525,7 +525,7 @@ function parseInteger(name: string, value: string, minimum: number, maximum: num
   return number;
 }
 
-/** Parses the same millisecond, second, and minute duration contour accepted by rc.3. */
+/** Parses the millisecond, second, and minute duration contour. */
 function parseDuration(name: string, value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   value = value.trim();
@@ -577,12 +577,12 @@ function isChildAlive(child: CodexProxyChild | undefined): boolean {
   return child !== undefined && child.exitCode === null && !child.killed;
 }
 
-/** Recognizes the ready payload emitted by the audited rc.3 server. */
+/** Recognizes the ready payload emitted by the audited server. */
 function isReadyBody(body: unknown): boolean {
   return isRecord(body) && body.status === 'ready';
 }
 
-/** Explains why rc.3 cannot safely use a listener it did not start itself. */
+/** Explains why cannot safely use a listener it did not start itself. */
 function occupiedPortError(port: number, cause?: unknown): CodexProxyError {
   return new CodexProxyError(
     `Port ${port} is occupied by an existing listener. Stop the listener or change CODEX_PROXY_PORT.`,
