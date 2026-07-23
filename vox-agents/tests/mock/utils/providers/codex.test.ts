@@ -12,6 +12,10 @@ const proxyMocks = vi.hoisted(() => ({
   invalidateConnection: vi.fn(),
 }));
 
+const loggerMocks = vi.hoisted(() => ({
+  warn: vi.fn(),
+}));
+
 vi.mock('../../../../src/utils/models/providers/codex-proxy.js', async () => {
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
@@ -29,6 +33,10 @@ vi.mock('../../../../src/utils/models/providers/codex-proxy.js', async () => {
     codexProxyManager: { invalidateConnection: proxyMocks.invalidateConnection },
   };
 });
+
+vi.mock('../../../../src/utils/logger.js', () => ({
+  createLogger: () => ({ warn: loggerMocks.warn }),
+}));
 
 import { buildCodexModel, buildCodexProviderOptions } from '../../../../src/utils/models/providers/codex.js';
 import { codexActivityMiddleware } from '../../../../src/utils/models/providers/codex-response.js';
@@ -96,6 +104,7 @@ function capturedBodies(fetchMock: ReturnType<typeof vi.fn>): any[] {
 beforeEach(() => {
   proxyMocks.ensureCodexProxy.mockReset().mockResolvedValue(undefined);
   proxyMocks.invalidateConnection.mockReset();
+  loggerMocks.warn.mockReset();
 });
 
 afterEach(() => {
@@ -352,6 +361,82 @@ describe('Codex compatible adapter requests', () => {
       prompt: [{ role: 'user', content: [{ type: 'text', text: 'Continue.' }] }],
       providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
     })).rejects.toMatchObject({ isRetryable: false });
+  });
+});
+
+describe('Codex reasoning token diagnostics', () => {
+  it('warns once when a non-stream response omits reasoning token statistics', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+    )));
+
+    await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(loggerMocks.warn).toHaveBeenCalledOnce();
+    expect(loggerMocks.warn).toHaveBeenCalledWith(expect.stringContaining('reasoning_tokens'));
+  });
+
+  it('accepts an explicit zero from a non-stream response', async () => {
+    const response = completion({ role: 'assistant', content: 'Ready.' }, 'stop');
+    const body = await response.json() as any;
+    body.usage.completion_tokens_details = { reasoning_tokens: 0 };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })));
+
+    await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(loggerMocks.warn).not.toHaveBeenCalled();
+  });
+
+  it('warns once when a streamed response omits reasoning token statistics', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamingCompletion({
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: 1,
+      model: 'gpt-5.4-mini',
+      choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    })));
+
+    await streamParts(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }), {
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(loggerMocks.warn).toHaveBeenCalledOnce();
+    expect(loggerMocks.warn).toHaveBeenCalledWith(expect.stringContaining('reasoning_tokens'));
+  });
+
+  it('accepts an explicit zero from a streamed response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamingCompletion({
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: 1,
+      model: 'gpt-5.4-mini',
+      choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+      usage: {
+        prompt_tokens: 1,
+        completion_tokens: 1,
+        total_tokens: 2,
+        completion_tokens_details: { reasoning_tokens: 0 },
+      },
+    })));
+
+    await streamParts(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }), {
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(loggerMocks.warn).not.toHaveBeenCalled();
   });
 });
 

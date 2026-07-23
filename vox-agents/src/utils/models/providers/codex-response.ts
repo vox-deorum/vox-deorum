@@ -9,8 +9,13 @@ import type {
   LanguageModelV3Content,
   LanguageModelV3Middleware,
   LanguageModelV3StreamPart,
+  LanguageModelV3Usage,
 } from '@ai-sdk/provider';
+import { createLogger } from '../../logger.js';
 import { classifyProviderActivityStatus } from './activity-status.js';
+
+/** Provider-boundary logger for Codex response diagnostics. */
+const codexResponseLogger = createLogger('CodexResponse');
 
 /** A non-retryable protocol violation from the pinned Codex proxy. */
 export class CodexProviderProtocolError extends Error {
@@ -75,6 +80,17 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : undefined;
+}
+
+/** Warn when the compatible response omitted its optional reasoning-token statistic. */
+function logMissingReasoningTokenStatistics(usage: LanguageModelV3Usage): void {
+  const rawUsage = asRecord(usage.raw);
+  const completionDetails = asRecord(rawUsage?.completion_tokens_details);
+  if (typeof completionDetails?.reasoning_tokens !== 'number') {
+    codexResponseLogger.warn(
+      'Codex response omitted completion_tokens_details.reasoning_tokens; reasoning token usage will be estimated.',
+    );
+  }
 }
 
 /** Return a non-retryable error with a consistent proxy-protocol prefix. */
@@ -427,6 +443,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
     },
     wrapGenerate: async ({ doGenerate, params }) => {
       const response = await withContinuationClassification(doGenerate);
+      logMissingReasoningTokenStatistics(response.usage);
       const normalizer = new ActivityNormalizer(params);
       const payload = rawChoicePayload(response.response?.body);
       const activity = [
@@ -444,6 +461,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       const requestedRawChunks = rawChunkPreferences.get(params) ?? false;
       let sawFinish = false;
       let sawRawFinish = false;
+      let inspectedUsage = false;
       return {
         ...response,
         stream: response.stream.pipeThrough(new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
@@ -461,6 +479,10 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
             if (part.type === 'error') normalizer.failOnDisconnect();
             if (part.type === 'finish') {
               if (!sawRawFinish) normalizer.failOnDisconnect();
+              if (!inspectedUsage) {
+                logMissingReasoningTokenStatistics(part.usage);
+                inspectedUsage = true;
+              }
               for (const activity of normalizer.finishNormally()) controller.enqueue(activity);
               sawFinish = true;
             }
