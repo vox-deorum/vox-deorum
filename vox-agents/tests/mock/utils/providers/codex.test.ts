@@ -440,7 +440,7 @@ describe('Codex reasoning token diagnostics', () => {
   });
 });
 
-describe('Codex rc.3 built-in activity normalization', () => {
+describe('Codex built-in activity normalization', () => {
   it('normalizes raw non-stream activity into provider-executed dynamic tool parts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(completion({
       role: 'assistant',

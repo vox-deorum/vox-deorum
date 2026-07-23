@@ -43,7 +43,7 @@ function createManager(fetch: typeof globalThis.fetch, spawn = vi.fn(() => creat
 }
 
 describe('codex proxy command configuration', () => {
-  it('should append exactly the rc.3 serve options without shell quoting', () => {
+  it('should append exactly the serve options without shell quoting', () => {
     const config = getCodexProxyConfig({
       CODEX_PROXY_COMMAND: '"C:\\Program Files\\node\\npx.cmd" --yes proxy',
       CODEX_PROXY_ROOT: 'C:\\Temp & Files\\vox',
@@ -238,7 +238,7 @@ describe('CodexProxyManager startup', () => {
     expect(command).toBe('C:\\Program Files\\nodejs\\node.exe');
     expect(args.slice(0, 4)).toEqual([
       'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npx-cli.js',
-      '--yes', `codex-openai-proxy@0.1.0-rc.3`, 'serve',
+      '--yes', `codex-openai-proxy@0.1.0-rc.4`, 'serve',
     ]);
   });
 
