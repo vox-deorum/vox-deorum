@@ -57,6 +57,7 @@ describe('codex proxy command configuration', () => {
       command: 'C:\\Program Files\\node\\npx.cmd',
       args: [
         '--yes', 'proxy', 'serve', '--root', 'C:\\Temp & Files\\vox', '--port', '9123',
+        '--log-level', 'debug',
         '--request-timeout', '31000ms', '--tool-timeout', '120000ms', '--shutdown-timeout', '10000ms',
       ],
     });

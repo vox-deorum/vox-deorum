@@ -180,6 +180,8 @@ export function buildCodexProxyCommand(config: CodexProxyConfig): { command: str
       'serve',
       '--root', config.root,
       '--port', String(config.port),
+      // Debug logging enables the proxy's redacted app-server diagnostics.
+      '--log-level', 'debug',
       '--request-timeout', `${config.requestTimeoutMs}ms`,
       '--tool-timeout', `${config.toolTimeoutMs}ms`,
       '--shutdown-timeout', `${config.shutdownTimeoutMs}ms`,
