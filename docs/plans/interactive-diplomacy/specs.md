@@ -175,11 +175,11 @@ This walks through the **first phase, human→LLM**; the same flow runs in any d
 
 ### 5. Initiation directions and configurability
 
-- The spec covers **all initiation directions**, gated by configuration, even though implementation is phased:
+- The spec covers **all initiation directions**, even though implementation is phased:
   - **human→LLM** (first);
   - **LLM→human** — a diplomat tool that opens a conversation or sends a proposal to a human, who is notified;
   - **LLM→LLM** — peer diplomats and negotiators bargaining with each other.
-- **Config controls which directions are live.** A seat (or the session) can be configured to enable or disable initiating diplomacy, accepting incoming diplomacy, and which directions are in play. The exact flag shape is settled in design, but the spec requires that none of the three directions is hard-wired on or off.
+- **Direction configuration arrives with stage 8.** Stages 2 through 7 implement the first human→LLM direction as an enabled path wherever its Web or in-game surface exists. Stage 7 does not add a disabled or read-only panel mode. Stage 8 introduces the seat/session controls for initiating diplomacy, accepting incoming diplomacy, and selecting which directions are live; after that surface lands, none of the three directions remains hard-wired.
 - Diplomacy a strategist or diplomat starts is a **tool** the LLM may choose to use (subject to config), not an automatic behavior — consistent with how agents already opt into actions via tools.
 
 ### 6. Storage and sharing: durable transcripts, live deals
@@ -289,7 +289,7 @@ The diplomat and negotiator agents and the per-seat config generalization:
 - `diplomat` / `negotiator` fields on `PlayerConfig`.
 - Refactoring `EnvoyThread`, chat routes, endpoint labeling, context/parameter resolution, and `getPlayerAssignments` together so the target seat's configured diplomat/negotiator can be shown as defaults while still allowing local operator override.
 - Rewiring the web chat routes to persist transcripts through the mcp-server tools (the in-memory thread becomes a write-through cache).
-- The diplomacy-config surface for which initiation directions are enabled.
+- The stage-8 diplomacy-config surface for which initiation directions are enabled.
 
 ### `civ5-dll`
 
@@ -336,4 +336,4 @@ The *only* gameplay code change:
 - Both the negotiator and the diplomat see **per-term value and agreeability estimates** for a deal under discussion; these inform their reasoning and briefing but **never gate enactment** on the agent path.
 - The normal in-game deal pathway and AI valuation behave exactly as before; the agent path is a separate entrypoint, and no `TradeableItems` or save-format change is introduced.
 - Conversation transcripts persist in the mcp-server and survive a restart; the Web reads them through vox-agents; proposal messages store `Payload.Deal`, `deal-enacted` records successful orchestration, and current legality/game state are fetched live from the game.
-- Each LLM seat can be configured to use a different diplomat and negotiator agent (and model), and initiation can be enabled or disabled per direction — human↔LLM and, in later phases, LLM↔LLM.
+- Each LLM seat can be configured to use a different diplomat and negotiator agent (and model). After stage 8, initiation can also be enabled or disabled per direction: human↔LLM and LLM↔LLM.
