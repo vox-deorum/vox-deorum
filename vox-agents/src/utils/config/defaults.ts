@@ -30,33 +30,55 @@ export const defaultConfig: VoxAgentsConfig = {
   },
   llms: {
     default: 'openai-compatible/gpt-oss-120b',
-    'openai/gpt-5.4': {
+    'openai/gpt-5.6-sol': {
       provider: 'openai',
-      name: 'gpt-5.4'
+      name: 'gpt-5.6-sol'
+    },
+    'openai/gpt-5.6-terra': {
+      provider: 'openai',
+      name: 'gpt-5.6-terra'
+    },
+    'openai/gpt-5.6-luna': {
+      provider: 'openai',
+      name: 'gpt-5.6-luna'
     },
     'openai/gpt-5.4-mini': {
       provider: 'openai',
       name: 'gpt-5.4-mini'
     },
-    'openai/gpt-5.4-nano': {
-      provider: 'openai',
-      name: 'gpt-5.4-nano'
+    'codex/gpt-5.6-sol': {
+      provider: 'codex',
+      name: 'gpt-5.6-sol',
+      options: {
+        concurrencyLimit: 1
+      }
+    },
+    'codex/gpt-5.6-terra': {
+      provider: 'codex',
+      name: 'gpt-5.6-terra',
+      options: {
+        concurrencyLimit: 2
+      }
+    },
+    'codex/gpt-5.6-luna': {
+      provider: 'codex',
+      name: 'gpt-5.6-luna'
+    },
+    'codex/gpt-5.4-mini': {
+      provider: 'codex',
+      name: 'gpt-5.4-mini'
     },
     'google/Gemma-4-26B': {
       provider: 'google',
       name: 'gemma-4-26b-a4b-it'
     },
-    'google/Gemini-3.1-Pro': {
+    'google/Gemini-3.6-Flash': {
       provider: 'google',
-      name: 'gemini-3.1-pro-preview'
+      name: 'gemini-3.6-flash'
     },
-    'google/Gemini-3.5-Flash': {
+    'google/Gemini-3.5-Flash-Lite': {
       provider: 'google',
-      name: 'gemini-3.5-flash'
-    },
-    'google/Gemini-3.1-Flash-Lite': {
-      provider: 'google',
-      name: 'gemini-3.1-flash-lite-preview'
+      name: 'gemini-3.5-flash-lite-preview'
     },
     'openrouter/openai/gpt-oss-120b': {
       provider: 'openrouter',
@@ -76,13 +98,13 @@ export const defaultConfig: VoxAgentsConfig = {
       provider: 'anthropic',
       name: 'claude-haiku-4-5'
     },
-    'anthropic/claude-sonnet-4-6': {
+    'anthropic/claude-sonnet-5': {
       provider: 'anthropic',
-      name: 'claude-sonnet-4-6'
+      name: 'claude-sonnet-5'
     },
-    'anthropic/claude-opus-4-7': {
+    'anthropic/claude-opus-4-8': {
       provider: 'anthropic',
-      name: 'claude-opus-4-7'
+      name: 'claude-opus-4-8'
     },
     'claude-code/sonnet': {
       provider: 'claude-code',
