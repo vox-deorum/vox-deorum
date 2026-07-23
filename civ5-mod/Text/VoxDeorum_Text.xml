@@ -362,6 +362,7 @@
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_AUTHOR"><Text>Mock: Author</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_INCOMING"><Text>Mock: Incoming</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_OWN"><Text>Mock: Own Open</Text></Row>
+		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_UNAVAILABLE"><Text>Mock: Unavailable</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_SUCCESS"><Text>Mock: Success</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_MOCK_DEAL_ERROR"><Text>Mock: Error</Text></Row>
 		<Row Tag="TXT_KEY_VD_DIPLO_GOODBYE"><Text>Goodbye</Text></Row>
@@ -405,6 +406,7 @@
 		<Row Tag="TXT_KEY_VD_DEAL_PROMISE_COOP_WAR"><Text>Prepare for a cooperative war</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_MESSAGE_HINT"><Text>Add an optional one-sentence message</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_STATUS_PENDING"><Text>Sending deal</Text></Row>
+		<Row Tag="TXT_KEY_VD_DEAL_STATUS_TERMS_REMOVED"><Text>Unavailable terms were removed. Review and counter.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_INVALID_REQUEST"><Text>This deal request is incomplete or invalid.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_EMPTY"><Text>Add at least one trade term or promise before sending this deal.</Text></Row>
 		<Row Tag="TXT_KEY_VD_DEAL_ERROR_ACTOR_CHANGED"><Text>The civilization you are directing changed. Reopen the deal before continuing.</Text></Row>

@@ -156,6 +156,14 @@ function VoxDeorumDealUtils.SemanticFingerprint(items, promises, game, gameDefin
 	return table.concat(keys, "\n")
 end
 
+-- Return whether one ID identifies a living major civilization in the supplied game tables.
+function VoxDeorumDealUtils.IsLivingMajor(playerID, players, gameDefines)
+	players, gameDefines = players or Players, gameDefines or GameDefines
+	if not VoxDeorumDealUtils.IsInteger(playerID) or type(gameDefines) ~= "table" or playerID < 0 or playerID >= gameDefines.MAX_MAJOR_CIVS then return false end
+	local player = players and players[playerID] or nil
+	return player ~= nil and player:IsAlive() and not player:IsMinorCiv() and not player:IsBarbarian()
+end
+
 -- Return whether a value is a finite Lua integer.
 local function isInteger(value)
 	return type(value) == "number" and value == value and value % 1 == 0
@@ -224,4 +232,5 @@ end
 
 VoxDeorumDealUtils.ItemFields = itemFields
 VoxDeorumDealUtils.PromiseFields = promiseFields
+VoxDeorumDealUtils.SymmetricItems = symmetricItems
 VoxDeorumDealUtils.IsInteger = isInteger

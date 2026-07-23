@@ -361,7 +361,7 @@
 	</Grid>
 	<!-- Vox Deorum: wrapper controls are layered after the copied native screen. -->
 	<!-- Vox Deorum: one-line authoring field sits between the deal tables and footer. -->
-	<Grid Anchor="C,B" Offset="0,114" Size="520,30" Style="GridBlackIndent8" ID="VoxMessageFrame" Hidden="1">
+	<Grid Anchor="C,B" Offset="0,80" Size="520,30" Style="GridBlackIndent8" ID="VoxMessageFrame" Hidden="1">
 		<Box Anchor="C,C" Size="500,25" Color="255,255,200,255" ConsumeMouseButton="1" ConsumeMouseOver="1">
 			<Box Anchor="C,C" Size="496,21" Color="0,0,0,255">
 				<EditBox EditMode="1" CallOnChar="1" Size="490,19" Anchor="C,C" ID="VoxMessageInput" Font="TwCenMT14" MaxLength="240"/>

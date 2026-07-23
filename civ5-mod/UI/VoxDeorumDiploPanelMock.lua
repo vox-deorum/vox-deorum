@@ -37,6 +37,7 @@ local dealMockButtons = {
 	{ control = Controls.MockDealAuthorButton, scenario = "author" },
 	{ control = Controls.MockDealIncomingButton, scenario = "incoming" },
 	{ control = Controls.MockDealOwnButton, scenario = "own" },
+	{ control = Controls.MockDealUnavailableButton, scenario = "unavailable" },
 	{ control = Controls.MockDealSuccessButton, scenario = "success" },
 	{ control = Controls.MockDealErrorButton, scenario = "error" },
 }

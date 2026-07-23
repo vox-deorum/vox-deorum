@@ -1,4 +1,4 @@
--- Stage 7.02 delayed driver. bypassLegality skips wrapper gates only, while native projection stays real. Stage 7.04 replaces only this final include.
+-- Stage 7.02 delayed driver. Request-scoped legality bypasses preserve presentation scenarios. Stage 7.04 replaces only this final include.
 
 local MOCK_DELAY_SECONDS = 1.25
 local m_mockSeconds = 0
@@ -17,15 +17,21 @@ end
 
 -- Return whether one ID is a native living-major deal participant.
 local function isLivingMajor(playerID)
-	if type(playerID) ~= "number" or playerID % 1 ~= 0 or playerID < 0 or playerID >= GameDefines.MAX_MAJOR_CIVS then return false end
-	local player = Players[playerID]
-	return player ~= nil and player:IsAlive() and not player:IsMinorCiv() and not player:IsBarbarian()
+	return VoxDeorumDealUtils.IsLivingMajor(playerID, Players, GameDefines)
 end
 
 -- Find the first living major other than one excluded actor.
 local function findMockCounterpart(actorID)
 	for playerID = 0, GameDefines.MAX_MAJOR_CIVS - 1 do
 		if playerID ~= actorID and isLivingMajor(playerID) then return playerID end
+	end
+	return nil
+end
+
+-- Find a third living major for a cooperative-war presentation request.
+local function findMockCoopTarget(actorID, counterpartID)
+	for playerID = 0, GameDefines.MAX_MAJOR_CIVS - 1 do
+		if playerID ~= actorID and playerID ~= counterpartID and isLivingMajor(playerID) then return playerID end
 	end
 	return nil
 end
@@ -73,14 +79,44 @@ local function buildMockDeal(actorID, counterpartID, own)
 	}
 end
 
--- Build one of the five explicit stage-7.02 FireTuner scenarios.
+-- Build a legal-looking deal with deterministic unavailable ordinary and promise terms.
+local function buildUnavailableMockDeal(actorID, counterpartID, own)
+	local deal = buildMockDeal(actorID, counterpartID, own)
+	local promiser = own and actorID or counterpartID
+	local recipient = own and counterpartID or actorID
+	deal.items[#deal.items + 1] = { fromPlayerID = promiser, toPlayerID = recipient, itemType = "CITIES", cityID = -1 }
+	deal.promises = {
+		{ promiserID = promiser, recipientID = recipient, promiseType = "COOP_WAR", targetPlayerID = actorID },
+		{ promiserID = recipient, recipientID = promiser, promiseType = "COOP_WAR", targetPlayerID = actorID },
+	}
+	return deal
+end
+
+-- Build one symmetric Coop War payload for the presentation-only mock path.
+local function buildCoopWarMockDeal(actorID, counterpartID, singleDirection)
+	local targetID = findMockCoopTarget(actorID, counterpartID)
+	if targetID == nil then return nil end
+	local promises = { { promiserID = counterpartID, recipientID = actorID, promiseType = "COOP_WAR", targetPlayerID = targetID } }
+	if not singleDirection then promises[#promises + 1] = { promiserID = actorID, recipientID = counterpartID, promiseType = "COOP_WAR", targetPlayerID = targetID } end
+	return { version = 1, items = {}, promises = promises, message = "Let us prepare our joint war." }
+end
+
+-- Build one explicit stage-7.02 FireTuner scenario.
 local function buildMockRequest(name, actorID, counterpartID)
 	if counterpartID == nil then return nil end
-	if name == "author" then return { counterpartID = counterpartID, mode = "author" }
-	elseif name == "incoming" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7001 }
-	elseif name == "own" then return { counterpartID = counterpartID, mode = "own", deal = buildMockDeal(actorID, counterpartID, true), proposalMessageID = 7002 }
-	elseif name == "success" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7003, mockResult = "success" }
-	elseif name == "error" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7004, mockResult = "error" } end
+	if name == "author" then return { counterpartID = counterpartID, mode = "author", mockBypassLegality = true }
+	elseif name == "incoming" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7001, mockBypassLegality = true }
+	elseif name == "own" then return { counterpartID = counterpartID, mode = "own", deal = buildMockDeal(actorID, counterpartID, true), proposalMessageID = 7002, mockBypassLegality = true }
+	elseif name == "success" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7003, mockResult = "success", mockBypassLegality = true }
+	elseif name == "error" then return { counterpartID = counterpartID, mode = "incoming", deal = buildMockDeal(actorID, counterpartID, false), proposalMessageID = 7004, mockResult = "error", mockBypassLegality = true }
+	elseif name == "unavailable" then return { counterpartID = counterpartID, mode = "incoming", deal = buildUnavailableMockDeal(actorID, counterpartID, false), proposalMessageID = 7005 }
+	elseif name == "own-unavailable" then return { counterpartID = counterpartID, mode = "own", deal = buildUnavailableMockDeal(actorID, counterpartID, true), proposalMessageID = 7006 }
+	elseif name == "coop-war" or name == "coop-war-wire-invalid" then
+		local singleDirection = name == "coop-war-wire-invalid"
+		local coopDeal = buildCoopWarMockDeal(actorID, counterpartID, singleDirection)
+		if coopDeal == nil then return nil end
+		return { counterpartID = counterpartID, mode = "incoming", deal = coopDeal, proposalMessageID = singleDirection and 7008 or 7007, mockBypassLegality = true }
+	end
 	return nil
 end
 
@@ -108,7 +144,6 @@ local function openMock(name, counterpartID)
 	if request ~= nil then VoxDeorumDealUI.openMock(request, actorID) end
 end
 
--- bypassLegality affects wrapper gates only. Native projection still exposes unavailable terms.
-VoxDeorumDealUI.driver = { bypassLegality = true, onOpen = onMockOpen, onAction = onMockAction, onUpdate = onMockUpdate }
+VoxDeorumDealUI.driver = { onOpen = onMockOpen, onAction = onMockAction, onUpdate = onMockUpdate }
 VoxDeorumDealMock = { Open = openMock, BuildRequest = buildNamedMockRequest }
 LuaEvents.VoxDeorumOpenDealScreenMock.Add(openMock)
