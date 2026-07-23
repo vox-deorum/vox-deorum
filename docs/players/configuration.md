@@ -51,7 +51,7 @@ A sensible starting point is a mid-tier model from your chosen provider. Move up
 
 ## Using Codex with ChatGPT
 
-Set the provider to `codex` and enter any Codex model name available to your ChatGPT account, for example `gpt-5.4-mini`. Vox Deorum does not maintain a separate Codex model catalog.
+The default configuration includes common Codex models in the dashboard. You can also set the provider to `codex` and enter any other Codex model name available to your ChatGPT account.
 
 The first Codex request runs the exact pinned `codex-openai-proxy@0.1.0-rc.3` package through `npx`. npm downloads the proxy and its bundled `@openai/codex@0.144.5` CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox Deorum logs. The proxy starts lazily, so using another provider does not download or launch it.
 
