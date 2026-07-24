@@ -11,7 +11,7 @@
 
 import pLimit from 'p-limit';
 import { streamText, TextStreamPart, ToolSet } from 'ai';
-import { exponentialRetry } from '../retry.js';
+import { executionTimeoutDefault, exponentialRetry } from '../retry.js';
 import { createLogger } from '../logger.js';
 import type { Model } from '../../types/index.js';
 import { VoxContext } from '../../infra/vox-context.js';
@@ -37,7 +37,7 @@ export function getExecutionTimeout(modelConfig: Model | undefined): number {
 
   return process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google'
     ? 900_000
-    : 300_000;
+    : executionTimeoutDefault;
 }
 
 /**

@@ -8,6 +8,9 @@
 import { Logger } from "winston";
 import { setTimeout } from 'node:timers/promises';
 
+/** Shared inactivity budget for one model execution attempt. */
+export const executionTimeoutDefault = 300_000;
+
 /** Pattern matching context-length-exceeded errors from LLM providers. */
 const contextLengthPattern = /input.*tokens.*is longer than.*context.length|token limit|context length|maximum input|maximum context|ContextWindowExceeded|max_tokens/i;
 
@@ -51,7 +54,7 @@ export async function exponentialRetry<T>(
     initialDelay = 5000,
     maxDelay = 180000,
     backoffFactor = 1.2,
-    executionTimeout = 300000,
+    executionTimeout = executionTimeoutDefault,
     abortSignal,
   } = options;
   let lastError: Error;

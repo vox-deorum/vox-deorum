@@ -13,13 +13,14 @@ import { existsSync } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
 import type { SpawnOptions } from 'node:child_process';
 import { createLogger } from '../../logger.js';
+import { executionTimeoutDefault } from '../../retry.js';
 import { processManager } from '../../../infra/process-manager.js';
 
 /** The published proxy contract accepted by this integration. */
 export const codexProxyVersion = '0.1.0-rc.5';
 
-/** The proxy request deadline, kept below Vox Deorum's outer Codex attempt deadline. */
-export const codexProxyRequestTimeoutDefault = 30_000;
+/** The proxy request deadline, aligned with the shared model execution budget. */
+export const codexProxyRequestTimeoutDefault = executionTimeoutDefault;
 
 /** The login and suspended-tool deadline accepted by the proxy CLI. */
 export const codexProxyToolTimeoutDefault = 300_000;
