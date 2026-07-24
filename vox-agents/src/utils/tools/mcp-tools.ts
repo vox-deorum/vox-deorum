@@ -30,6 +30,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * value callers expect. The MCP server wraps primitive booleans/strings as a
  * single text content item, while object and array results ride in
  * structuredContent.
+ *
+ * Deliberately NOT `unwrapMcpResponse` (utils/models/mcp-response.ts): results here
+ * are fed back to an LLM, so isError envelopes must pass through as data rather than
+ * throw, and text-only primitives ("true"/"false") must be coerced, not rejected.
  */
 function unwrapMCPResult(rawResult: unknown): unknown {
   if (!isRecord(rawResult)) return rawResult;

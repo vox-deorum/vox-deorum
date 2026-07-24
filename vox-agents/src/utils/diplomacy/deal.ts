@@ -25,6 +25,7 @@
 
 import type { EnvoyThread } from "../../types/index.js";
 import { mcpClient } from "../models/mcp-client.js";
+import { unwrapMcpResponse } from "../models/mcp-response.js";
 import type { TranscriptMessage } from "./transcript-utils.js";
 import { hydrateDealRow, identityOf } from "./transcript-utils.js";
 import { appendCloseMessage, readTranscript } from "./transcript.js";
@@ -102,10 +103,9 @@ export type DealProposalType = "deal-proposal" | "deal-counter";
  *  instead of a hand-maintained copy that can silently drift from the tool's return type. */
 export type InspectDealResult = InspectDealResponse;
 
-/** Unwrap the structured tool result (mcp tool results wrap the value under structuredContent). */
-function unwrap<T>(result: unknown): T {
-  const raw = result as Record<string, unknown>;
-  return (raw?.structuredContent ?? raw) as T;
+/** Unwrap the structured tool result, throwing on MCP error envelopes. */
+function unwrap<T>(result: unknown, context: string): T {
+  return unwrapMcpResponse(result, context) as T;
 }
 
 /**
@@ -124,7 +124,7 @@ export async function inspectDeal(
   const args: Record<string, unknown> = { PlayerAID: playerAID, PlayerBID: playerBID };
   if (deal) args.ProposedDeal = deal;
   const result = await mcpClient.callTool("inspect-deal", args);
-  return unwrap<InspectDealResult>(result);
+  return unwrap<InspectDealResult>(result, "inspect-deal");
 }
 
 /** True when a directed term runs between the conversation's two endpoints. */
@@ -370,7 +370,7 @@ async function appendRaw(
     Content: content,
     Payload: payload,
   });
-  const row = unwrap<Partial<AppendedRow>>(result);
+  const row = unwrap<Partial<AppendedRow>>(result, "append-message");
   // A successful append-message echoes the full canonical row; a missing/non-numeric ID or Turn is a
   // store-contract violation, not a value to paper over (the UI references the proposal by ID, and the
   // authoritative row built from this carries the server-stamped Turn).
@@ -561,7 +561,7 @@ export async function enactAgentDeal(
     AlreadyEnacted?: boolean;
     Enacted?: boolean;
     Turn?: number;
-  }>(result);
+  }>(result, "enact-agent-deal");
   if (typeof row?.EnactedMessageID !== "number") {
     throw new Error("enact-agent-deal did not return a numeric EnactedMessageID");
   }

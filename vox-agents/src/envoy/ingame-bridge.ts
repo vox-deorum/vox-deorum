@@ -21,13 +21,15 @@ import { mcpClient, type GameEventNotification } from "../utils/models/mcp-clien
 import { unwrapMcpResponse } from "../utils/models/mcp-response.js";
 import { createLogger } from "../utils/logger.js";
 import type { StrategistParameters } from "../strategist/strategy-parameters.js";
+import { eventPipeDelimiter } from "../../../mcp-server/dist/bridge/protocol.js";
 
 const logger = createLogger("ingame-diplomacy-bridge");
 const wireBudget = 30 * 1024;
 const truncationNotice = "\n[Message truncated for in-game display.]";
-const pipeDelimiter = "!@#$%^!";
 const transcriptPageLimit = 100;
 const seenEventLimit = 1_000;
+/** Seats above this are not addressable by the game (Civ 5 MAX_PLAYERS). */
+const maxGameSeats = 64;
 const staleTransport = Symbol("stale-transport");
 
 /** Live session lookups that keep this bridge independent from StrategistSession internals. */
@@ -66,6 +68,8 @@ function enqueue(
   task: () => Promise<void>,
 ): void {
   const prior = queue.get(key) ?? Promise.resolve();
+  // The first catch converts a rejected prior task into a resolved value so this task
+  // still runs; removing it would let one failure poison every later task on this key.
   const next = prior.catch((error: unknown) => {
     logger.error("A prior in-game diplomacy task failed", { error, key });
   }).then(task).catch((error: unknown) => {
@@ -95,6 +99,11 @@ function parseEvent(data: Record<string, unknown> | undefined): DiplomacyEvent |
 /** Build the ordered-pair key shared by action and push FIFO maps. */
 function pairKey(playerID: number, counterpartID: number): string {
   return `${Math.min(playerID, counterpartID)}:${Math.max(playerID, counterpartID)}`;
+}
+
+/** Whether a value is a seat index the game-side panel transport can address. */
+function isAddressableSeat(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value < maxGameSeats;
 }
 
 /** Estimate one serialized Lua-call argument payload in UTF-8 wire bytes. */
@@ -146,8 +155,7 @@ function fitMessageRow(row: Record<string, unknown>, mode: "append" | "prepend")
 
 /** Convert raw durable content only at the game-bound Lua-call edge. */
 export function toGameContent(content: string): string {
-  // This delimiter must match the named bridge protocol delimiter in mcp-server.
-  return markdownToCiv5(content.replaceAll(pipeDelimiter, ""));
+  return markdownToCiv5(content.replaceAll(eventPipeDelimiter, ""));
 }
 
 /** Pack ordered transcript rows into conservative Lua-call batches. */
@@ -226,19 +234,18 @@ export class IngameBridge {
       logger.warn("Ignoring malformed in-game diplomacy event", { event: params.event, data: params.data });
       const playerID = params.data?.PlayerID;
       const counterpartID = params.data?.CounterpartID;
-      if (
-        typeof playerID === "number"
-        && Number.isInteger(playerID)
-        && typeof counterpartID === "number"
-        && Number.isInteger(counterpartID)
-      ) {
+      // Only report back to seats the game can actually address; otherwise a
+      // malformed payload would still produce a live Lua call for arbitrary IDs.
+      if (isAddressableSeat(playerID) && isAddressableSeat(counterpartID)) {
         void this.enqueueStatus(playerID, counterpartID, "Invalid diplomacy event.", this.captureGeneration());
       }
       return;
     }
     const resolved = this.resolveCaller(event);
     if (!resolved) {
-      void this.enqueueStatus(event.PlayerID, event.CounterpartID, "Invalid diplomacy caller.", this.captureGeneration());
+      if (isAddressableSeat(event.PlayerID) && isAddressableSeat(event.CounterpartID)) {
+        void this.enqueueStatus(event.PlayerID, event.CounterpartID, "Invalid diplomacy caller.", this.captureGeneration());
+      }
       return;
     }
     const guard = this.captureGeneration(resolved);
@@ -433,6 +440,10 @@ export class IngameBridge {
       () => appendTranscriptMessageRow(thread, caller.callerID, event.Text!, guard.gameID),
     );
     if (row === staleTransport) return;
+    // A concurrent reflush can read the just-committed row before this dedicated push
+    // lands, sending the same message ID twice. The panel deduplicates rows by ID
+    // (m_rowByID in VoxDeorumDiploPanel.lua) — that client-side dedup is part of the
+    // transport contract and must stay wired in stage 04.
     enqueue(this.pushQueue, pairKey(event.PlayerID, event.CounterpartID), async () => {
       if (!this.isCurrent(guard, caller)) return;
       for (const batch of packMessageBatches([row], "append")) {
@@ -450,6 +461,9 @@ export class IngameBridge {
   /** Queue a status update through the push FIFO without blocking an action queue worker. */
   private async enqueueStatus(playerID: number, counterpartID: number, detail: string, guard: TransportGeneration): Promise<void> {
     enqueue(this.pushQueue, pairKey(playerID, counterpartID), async () => {
+      // Deliberately checked without a caller: by the time a status is reported the
+      // counterpart context may itself be the stale/missing thing, so status pushes
+      // rely only on the generation and the captured game identity.
       if (!this.isCurrent(guard)) return;
       await this.push("VoxDeorumDiploStatus", [
       playerID,
@@ -473,8 +487,9 @@ export class IngameBridge {
       ...(guard.gameID !== undefined ? { ExpectedGameID: guard.gameID } : {}),
     });
     if (!this.isCurrent(guard, caller)) return false;
-    const unwrapped = unwrapMcpResponse(result);
-    const response = unwrapped.data as {
+    // Tool-level failures throw inside unwrapMcpResponse; this check covers the
+    // separate Lua-level failure reported inside a transport-level success.
+    const response = unwrapMcpResponse(result, `call-lua-function ${name}`) as {
       success?: unknown;
       error?: { code?: unknown; message?: unknown };
     };
@@ -482,7 +497,7 @@ export class IngameBridge {
       const code = typeof response.error?.code === "string" ? response.error.code : "LUA_CALL_FAILED";
       const message = typeof response.error?.message === "string"
         ? response.error.message
-        : unwrapped.text ?? `Lua function ${name} failed`;
+        : `Lua function ${name} failed`;
       throw new Error(`${code}: ${message}`);
     }
     return true;

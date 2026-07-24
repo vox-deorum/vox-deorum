@@ -359,7 +359,9 @@ describe('session routes', () => {
     });
 
     it('returns only the major players from the MCP get-players result', async () => {
-      vi.spyOn(sessionRegistry, 'getActive').mockReturnValue({ id: 's1' } as never);
+      vi.spyOn(sessionRegistry, 'getActive').mockReturnValue(
+        { id: 's1', getPlayerAssignments: () => undefined } as never,
+      );
       const mcp = installMockMcpClient();
       mcp.respondWith(
         'get-players',

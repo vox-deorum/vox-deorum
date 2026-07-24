@@ -265,6 +265,6 @@ describe("IngameBridge runtime transport", () => {
         guard: { generation: number; gameID?: string },
       ) => Promise<boolean>;
     }).push("VoxDeorumDiploBegin", [], { generation: 1, gameID: "game-a" }))
-      .rejects.toThrow("LUA_CALL_FAILED: The active game no longer matches.");
+      .rejects.toThrow("call-lua-function VoxDeorumDiploBegin failed: The active game no longer matches.");
   });
 });

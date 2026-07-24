@@ -4,6 +4,8 @@ node_modules
 dist
 /node
 /temp
+/logs
+.tmp/
 .env
 nul
 

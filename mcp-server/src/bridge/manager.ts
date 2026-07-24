@@ -10,24 +10,17 @@ import { createLogger } from '../utils/logger.js';
 import { config } from '../utils/config.js';
 import { LuaFunction } from './lua-function.js';
 import { HttpClient, HttpError } from './http-client.js';
-import { eventPipeDelimiter } from './protocol.js';
+import { eventPipeDelimiter, LuaResponseSchema } from './protocol.js';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fetch } from 'undici';
+import type * as z from 'zod';
 
 const logger = createLogger('BridgeManager');
 
 /**
- * Response from Bridge Service Lua calls
+ * Response from Bridge Service Lua calls, derived from the shared protocol schema.
  */
-export interface LuaResponse {
-  success: boolean;
-  result?: any;
-  error?: {
-    code: string;
-    message: string;
-    details?: string;
-  };
-}
+export type LuaResponse = z.infer<typeof LuaResponseSchema>;
 
 /**
  * Health check response from Bridge Service

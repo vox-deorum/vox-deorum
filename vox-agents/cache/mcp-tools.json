@@ -40,6 +40,36 @@
     "_meta": {}
   },
   {
+    "name": "call-lua-function",
+    "description": "Call a game-registered Lua function through the Bridge Service with structured arguments.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the Lua function registered by the game mod"
+        },
+        "Args": {
+          "type": "array",
+          "items": {},
+          "description": "Structured arguments passed to the registered Lua function"
+        },
+        "ExpectedGameID": {
+          "description": "Optional game identity guard that rejects calls after the active game changes.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "Name",
+        "Args"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {}
+  },
+  {
     "name": "get-game-settings",
     "description": "Retrieves static game metadata including game speed, map type/size, difficulty, start era, max turns, and enabled victory types",
     "inputSchema": {
@@ -471,6 +501,18 @@
         "Role": {
           "description": "Optional: only return messages whose speaker holds this free-form role (e.g. 'diplomat')",
           "type": "string"
+        },
+        "BeforeID": {
+          "description": "Optional: exclusive cursor for an older transcript page",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "Limit": {
+          "description": "Optional: maximum raw transcript rows to scan in a page",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
         }
       },
       "required": [
@@ -484,7 +526,9 @@
         "PlayerAID",
         "PlayerBID",
         "MessageType",
-        "Role"
+        "Role",
+        "BeforeID",
+        "Limit"
       ]
     }
   },
@@ -1471,6 +1515,11 @@
           "type": "integer",
           "minimum": -9007199254740991,
           "maximum": 9007199254740991
+        },
+        "ExpectedGameID": {
+          "description": "Optional game identity guard. Rejects the append when the active game has switched.",
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [

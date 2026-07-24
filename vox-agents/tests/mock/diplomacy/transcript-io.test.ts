@@ -57,10 +57,9 @@ describe('readTranscript', () => {
     expect(mcp.calls('read-transcript')[0].args).toEqual({ PlayerAID: 3, PlayerBID: 1 });
   });
 
-  it('accepts a bare object response (no structuredContent wrapper)', async () => {
-    const rows = [{ ID: 2 }];
-    mcp.respondWith('read-transcript', { messages: rows });
-    expect(await readTranscript(1, 3)).toEqual(rows);
+  it('throws on a response with no structuredContent instead of reading it as empty', async () => {
+    mcp.respondWith('read-transcript', { messages: [{ ID: 2 }] });
+    await expect(readTranscript(1, 3)).rejects.toThrow('read-transcript failed');
   });
 
   it('returns [] when messages is not an array', async () => {
@@ -88,6 +87,16 @@ describe('readTranscriptPage', () => {
     expect(await readTranscriptPage(1, 3)).toEqual({ messages: [], hasMore: false });
     expect(mcp.calls('read-transcript')[0].args).toEqual({ PlayerAID: 1, PlayerBID: 3 });
   });
+
+  it('throws the tool text on an isError envelope instead of returning an empty page', async () => {
+    mcp.respondWith('read-transcript', {
+      isError: true,
+      content: [{ type: 'text', text: 'store is switching games' }],
+    });
+
+    await expect(readTranscriptPage(1, 3))
+      .rejects.toThrow('read-transcript failed: store is switching games');
+  });
 });
 
 describe('appendTranscriptMessage', () => {
@@ -113,6 +122,16 @@ describe('appendTranscriptMessage', () => {
   it('returns undefined when the response omits a numeric Turn', async () => {
     mcp.respondWith('append-message', structuredResult({ ID: 5 }));
     expect(await appendTranscriptMessage(thread(), 3, 'text', 'reply')).toBeUndefined();
+  });
+
+  it('throws on an isError envelope instead of treating the append as committed', async () => {
+    mcp.respondWith('append-message', {
+      isError: true,
+      content: [{ type: 'text', text: 'append rejected' }],
+    });
+
+    await expect(appendTranscriptMessage(thread(), 3, 'text', 'reply'))
+      .rejects.toThrow('append-message failed: append rejected');
   });
 });
 

@@ -39,13 +39,7 @@ export {
 
 /** Read the full ordered transcript between two endpoints from the mcp-server store. */
 export async function readTranscript(playerAID: number, playerBID: number): Promise<TranscriptMessage[]> {
-  const result = await mcpClient.callTool("read-transcript", {
-    PlayerAID: playerAID,
-    PlayerBID: playerBID,
-  });
-  const structured = unwrapMcpResponse(result).data;
-  const arr = structured?.messages as unknown;
-  return Array.isArray(arr) ? (arr as TranscriptMessage[]) : [];
+  return (await readTranscriptPage(playerAID, playerBID)).messages;
 }
 
 /** A page of durable transcript rows plus its raw-store continuation metadata. */
@@ -72,7 +66,7 @@ export async function readTranscriptPage(
     ...(options.beforeID !== undefined ? { BeforeID: options.beforeID } : {}),
     ...(options.limit !== undefined ? { Limit: options.limit } : {}),
   });
-  const structured = unwrapMcpResponse(result).data;
+  const structured = unwrapMcpResponse(result, "read-transcript");
   const messages = Array.isArray(structured.messages) ? structured.messages as TranscriptMessage[] : [];
   return {
     messages,
@@ -146,17 +140,8 @@ export async function appendTranscriptMessage(
   messageType: "text" | "close",
   content: string
 ): Promise<number | undefined> {
-  const result = await mcpClient.callTool("append-message", {
-    PlayerAID: thread.player1ID,
-    PlayerBID: thread.player2ID,
-    PlayerARole: thread.player1Role,
-    PlayerBRole: thread.player2Role,
-    SpeakerID: speakerID,
-    MessageType: messageType,
-    Content: content,
-  });
-  const row = unwrapMcpResponse(result).data as { Turn?: unknown };
-  return typeof row?.Turn === "number" ? row.Turn : undefined;
+  const row = await callAppendMessage(thread, speakerID, messageType, content);
+  return typeof row.Turn === "number" ? row.Turn : undefined;
 }
 
 /** Append one text row and return the store's committed transcript projection for game transport. */
@@ -166,17 +151,7 @@ export async function appendTranscriptMessageRow(
   content: string,
   expectedGameID?: string,
 ): Promise<TranscriptPushMessage> {
-  const result = await mcpClient.callTool("append-message", {
-    PlayerAID: thread.player1ID,
-    PlayerBID: thread.player2ID,
-    PlayerARole: thread.player1Role,
-    PlayerBRole: thread.player2Role,
-    SpeakerID: speakerID,
-    MessageType: "text",
-    Content: content,
-    ...(expectedGameID !== undefined ? { ExpectedGameID: expectedGameID } : {}),
-  });
-  const row = unwrapMcpResponse(result).data as Partial<TranscriptPushMessage>;
+  const row = await callAppendMessage(thread, speakerID, "text", content, expectedGameID);
   if (
     typeof row.ID !== "number"
     || typeof row.SpeakerID !== "number"
@@ -187,6 +162,27 @@ export async function appendTranscriptMessageRow(
     throw new Error("append-message did not return a committed transcript row.");
   }
   return row as TranscriptPushMessage;
+}
+
+/** The single `append-message` call shared by every transcript append variant. */
+async function callAppendMessage(
+  thread: EnvoyThread,
+  speakerID: number,
+  messageType: "text" | "close",
+  content: string,
+  expectedGameID?: string,
+): Promise<Partial<TranscriptPushMessage>> {
+  const result = await mcpClient.callTool("append-message", {
+    PlayerAID: thread.player1ID,
+    PlayerBID: thread.player2ID,
+    PlayerARole: thread.player1Role,
+    PlayerBRole: thread.player2Role,
+    SpeakerID: speakerID,
+    MessageType: messageType,
+    Content: content,
+    ...(expectedGameID !== undefined ? { ExpectedGameID: expectedGameID } : {}),
+  });
+  return unwrapMcpResponse(result, "append-message") as Partial<TranscriptPushMessage>;
 }
 
 /**

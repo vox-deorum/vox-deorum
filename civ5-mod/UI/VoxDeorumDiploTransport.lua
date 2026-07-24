@@ -5,28 +5,43 @@ VoxDeorumDiploTransport = VoxDeorumDiploTransport or {}
 
 local m_registered = false
 
+-- Fire one LuaEvent, recording a throwing listener in Lua.log before rethrowing,
+-- so the DLL reports the push as failed and the server-side transport can react.
+local function fireGuarded(eventName, dispatch)
+	local ok, errorMessage = pcall(dispatch)
+	if not ok then
+		print("[VDDiploTransport] " .. eventName .. " listener error: " .. tostring(errorMessage))
+		error(errorMessage, 0)
+	end
+	return true
+end
+
 -- Dispatch a Begin push into this panel context.
 local function dispatchBegin(playerID, counterpartID, turn, meta)
-	LuaEvents.VoxDeorumDiploBegin(playerID, counterpartID, turn, meta)
-	return true
+	return fireGuarded("Begin", function()
+		LuaEvents.VoxDeorumDiploBegin(playerID, counterpartID, turn, meta)
+	end)
 end
 
 -- Dispatch a Messages push into this panel context.
 local function dispatchMessages(playerID, counterpartID, batch)
-	LuaEvents.VoxDeorumDiploMessages(playerID, counterpartID, batch)
-	return true
+	return fireGuarded("Messages", function()
+		LuaEvents.VoxDeorumDiploMessages(playerID, counterpartID, batch)
+	end)
 end
 
 -- Dispatch a Status push into this panel context.
 local function dispatchStatus(playerID, counterpartID, status)
-	LuaEvents.VoxDeorumDiploStatus(playerID, counterpartID, status)
-	return true
+	return fireGuarded("Status", function()
+		LuaEvents.VoxDeorumDiploStatus(playerID, counterpartID, status)
+	end)
 end
 
 -- Dispatch a Delta push into this panel context.
 local function dispatchDelta(playerID, counterpartID, text)
-	LuaEvents.VoxDeorumDiploDelta(playerID, counterpartID, text)
-	return true
+	return fireGuarded("Delta", function()
+		LuaEvents.VoxDeorumDiploDelta(playerID, counterpartID, text)
+	end)
 end
 
 -- Register one DLL-callable push function.

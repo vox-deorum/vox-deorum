@@ -166,7 +166,7 @@ describe('handleGameEvent', () => {
   it.each([
     ['DiplomacyPanelOpened', { CounterpartID: 3, Turn: 10 }],
     ['DiplomacyChatMessage', { CounterpartID: 3, Turn: 10, Text: 'Hello.' }],
-    ['DiplomacyDealAction', { CounterpartID: 3, Turn: 10, Action: 'propose' }],
+    ['DiplomacyDealAction', { CounterpartID: 3, Turn: 10, Action: 'propose', Deal: { Items: [] } }],
     ['DiplomacyTranscriptRequest', { CounterpartID: 3, Turn: 10, BeforeID: 99 }],
   ])('admits %s with a real observer seat, true AsObserver, and extra payload fields', async (type, fields) => {
     const payload = { PlayerID: 27, AsObserver: true, ExtraTransportField: { preserved: true }, ...fields };
@@ -182,10 +182,25 @@ describe('handleGameEvent', () => {
   it.each([
     ['DiplomacyPanelOpened', { CounterpartID: 3, Turn: 10 }],
     ['DiplomacyChatMessage', { CounterpartID: 3, Turn: 10, Text: 'Hello.' }],
-    ['DiplomacyDealAction', { CounterpartID: 3, Turn: 10, Action: 'propose' }],
+    ['DiplomacyDealAction', { CounterpartID: 3, Turn: 10, Action: 'propose', Deal: { Items: [] } }],
     ['DiplomacyTranscriptRequest', { CounterpartID: 3, Turn: 10, BeforeID: 99 }],
   ])('rejects %s when AsObserver is false', async (type, fields) => {
     await store.handleGameEvent(10_000_011, type, { PlayerID: 27, AsObserver: false, ...fields });
+
+    expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
+    expect(notifySpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['propose missing Deal', { Action: 'propose' }],
+    ['counter missing Deal', { Action: 'counter', ProposalMessageID: 7 }],
+    ['counter missing ProposalMessageID', { Action: 'counter', Deal: { Items: [] } }],
+    ['accept missing ProposalMessageID', { Action: 'accept' }],
+    ['reject missing ProposalMessageID', { Action: 'reject' }],
+  ])('rejects a DiplomacyDealAction %s (no write, no notify)', async (_label, fields) => {
+    await store.handleGameEvent(10_000_012, 'DiplomacyDealAction', {
+      PlayerID: 2, CounterpartID: 3, Turn: 10, ...fields,
+    });
 
     expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
     expect(notifySpy).not.toHaveBeenCalled();

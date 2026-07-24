@@ -41,7 +41,7 @@
     <File md5="AD7D071B1AAF6A72D8BC740509107C45" import="1">UI/LeaderHeadRoot.lua</File>
     <File md5="F72A8A907AF7A24517A900793216B7F9" import="1">UI/LeaderHeadRoot.xml</File>
     <File md5="A7D6D6DC304D8638BA91ECFEB45970FC" import="1">UI/VoxDeorumDiploPanel.lua</File>
-    <File md5="60A5E396865A9F1D782681F83C4E7238" import="1">UI/VoxDeorumDiploTransport.lua</File>
+    <File md5="9FD8EC8AF8784BE3C5BA8553650761B4" import="1">UI/VoxDeorumDiploTransport.lua</File>
     <File md5="AAC1C7054D705051A0CF6664AB3C8C6F" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
     <File md5="3EED259216C7612860EF452ECFD45576" import="0">UI/VoxDeorumDiploPanel.xml</File>
     <File md5="9F312CB3684D11E5CA3AB1149AD85C0D" import="1">UI/VoxDeorumDealUtils.lua</File>

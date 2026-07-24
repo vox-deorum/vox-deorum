@@ -31,6 +31,7 @@ import { getPlayerInformations } from "../../knowledge/getters/player-informatio
 import { orderPlayerPair, getDiplomaticMessageById } from "../../knowledge/getters/diplomatic-messages.js";
 import { MESSAGE_TYPES } from "../../utils/transcript-schema.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
+import { assertExpectedGame } from "../../utils/expected-game.js";
 
 /** The observer / no-seat endpoint sentinel (shared with the existing non-diplomacy chats). */
 const OBSERVER_ID = -1;
@@ -100,15 +101,7 @@ class AppendMessageTool extends ToolBase {
 
   async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
     const { PlayerAID, PlayerBID, PlayerARole, PlayerBRole, SpeakerID, MessageType, Content, Payload, Turn, ExpectedGameID } = args;
-    /** Reject a guarded transport write once the MCP server is serving another game database. */
-    const assertExpectedGame = (): void => {
-      if (ExpectedGameID === undefined) return;
-      const activeGameID = knowledgeManager.getGameId();
-      if (activeGameID !== ExpectedGameID) {
-        throw new Error(`append-message expected game ${ExpectedGameID}, but active game is ${activeGameID}`);
-      }
-    };
-    assertExpectedGame();
+    assertExpectedGame(this.name, ExpectedGameID);
 
     // Acceptance and the enactment record are never written through this archival tool:
     // acceptance must go through the enactment route (enact-agent-deal, stage 6), which
@@ -205,7 +198,7 @@ class AppendMessageTool extends ToolBase {
     // ignores it. Default Turn falls back to the server's current turn inside the store.
     // Repeat immediately before retaining the store reference. Earlier validation can await
     // cache-backed reads, during which a GameSwitched event may replace the active store.
-    assertExpectedGame();
+    assertExpectedGame(this.name, ExpectedGameID);
     const store = knowledgeManager.getStore();
     const resolvedTurn = Turn !== undefined && Turn >= 0 ? Turn : knowledgeManager.getTurn();
     const id = await store.storeTimedKnowledge("DiplomaticMessages", {

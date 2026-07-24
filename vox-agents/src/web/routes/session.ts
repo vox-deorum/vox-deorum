@@ -7,7 +7,6 @@
 
 import { Router, Request, Response } from 'express';
 import { sessionRegistry } from '../../infra/session-registry.js';
-import { StrategistSession } from '../../strategist/strategist-session.js';
 import { runStrategistLoop } from '../../strategist/loop.js';
 import { resolveMaxRepetitions } from '../../strategist/repetition.js';
 import { SessionConfig, StrategistSessionConfig } from '../../types/config.js';
@@ -31,6 +30,7 @@ import type {
   PlayersReport
 } from '../../types/api.js';
 import { mcpClient } from '../../utils/models/mcp-client.js';
+import { unwrapMcpResponse } from '../../utils/models/mcp-response.js';
 
 const logger = createLogger('webui:session-routes');
 
@@ -394,8 +394,7 @@ export function createSessionRoutes(): Router {
       const result = await mcpClient.callTool('get-players', {});
 
       // Extract the actual data from the MCP result structure
-      const rawResult = result as Record<string, unknown>;
-      let playersData = (rawResult.structuredContent ?? rawResult) as Record<string, unknown>;
+      let playersData = unwrapMcpResponse(result, 'get-players');
       playersData = (playersData.Result ?? playersData) as Record<string, unknown>;
 
       // Type the data properly as PlayersReport
@@ -411,9 +410,7 @@ export function createSessionRoutes(): Router {
       }
 
       // Get AI player assignments from the session if available
-      const assignments = session instanceof StrategistSession
-        ? session.getPlayerAssignments()
-        : undefined;
+      const assignments = session.getPlayerAssignments();
 
       const response: PlayersSummaryResponse = {
         players: filteredPlayers,
