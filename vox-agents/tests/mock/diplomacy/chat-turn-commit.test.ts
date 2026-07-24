@@ -18,7 +18,7 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
   return helper.mockMcpClientModule();
 });
 
-import { beginChatTurn } from '../../../src/utils/diplomacy/chat-turn-commit.js';
+import { beginChatTurn, isThreadBusy } from '../../../src/utils/diplomacy/chat-turn-commit.js';
 import { retryMessage } from '../../../src/utils/diplomacy/transcript-utils.js';
 import { sendMessageToolName } from '../../../src/utils/diplomacy/send-message-tool-name.js';
 
@@ -69,6 +69,17 @@ const sendResult = (): MessageWithMetadata => ({
 });
 
 describe('beginChatTurn().complete() cache normalization', () => {
+  it('reports the thread busy only while a turn owns its lock', async () => {
+    const t = thread('dipl:g:1:3#busy');
+    expect(isThreadBusy(t.id)).toBe(false);
+
+    const turn = await beginChatTurn(t, { kind: 'text', message: 'Greetings.' }, 5);
+    expect(isThreadBusy(t.id)).toBe(true);
+
+    turn.finish();
+    expect(isThreadBusy(t.id)).toBe(false);
+  });
+
   it('replaces the reply slice with the archived send-message text, dropping suppressed free text', async () => {
     const t = thread('dipl:g:1:3#a');
     const turn = await beginChatTurn(t, { kind: 'text', message: 'Greetings.' }, 5);

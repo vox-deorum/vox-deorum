@@ -18,16 +18,13 @@ import { LuaFunctionTool } from "../abstract/lua-function.js";
 import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-
-/** IPC named-pipe frame delimiter; must never appear inside notification text. */
-const DELIMITER = "!@#$%^!";
-
+import { eventPipeDelimiter } from "../../bridge/protocol.js";
 /** Sentinel counterpart for a notification with no diplomacy target. */
 const NO_COUNTERPART = -1;
 
 /** Normalize notification text and reject content that becomes blank at the IPC boundary. */
 function normalizeNotificationText(text: string, field: "Summary" | "Message"): string {
-  const normalized = text.split(DELIMITER).join("").trim();
+  const normalized = text.split(eventPipeDelimiter).join("").trim();
   if (!normalized) {
     throw new Error(`${field} must contain visible text after IPC sanitization`);
   }

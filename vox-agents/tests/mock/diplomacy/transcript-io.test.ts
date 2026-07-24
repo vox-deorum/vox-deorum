@@ -15,7 +15,9 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 
 import {
   readTranscript,
+  readTranscriptPage,
   appendTranscriptMessage,
+  appendTranscriptMessageRow,
   appendCloseMessage,
   syncThreadMessages,
   autoCompact,
@@ -67,6 +69,27 @@ describe('readTranscript', () => {
   });
 });
 
+describe('readTranscriptPage', () => {
+  it('passes optional paging arguments and returns the durable continuation metadata', async () => {
+    const rows = [{ ID: 8, Content: 'older row' }];
+    mcp.respondWith('read-transcript', structuredResult({ messages: rows, hasMore: true, NextBeforeID: 8 }));
+
+    const page = await readTranscriptPage(1, 3, { beforeID: 12, limit: 4 });
+
+    expect(mcp.calls('read-transcript')[0].args).toEqual({
+      PlayerAID: 1, PlayerBID: 3, BeforeID: 12, Limit: 4,
+    });
+    expect(page).toEqual({ messages: rows, hasMore: true, nextBeforeID: 8 });
+  });
+
+  it('omits absent paging arguments and normalizes missing metadata', async () => {
+    mcp.respondWith('read-transcript', structuredResult({ messages: [] }));
+
+    expect(await readTranscriptPage(1, 3)).toEqual({ messages: [], hasMore: false });
+    expect(mcp.calls('read-transcript')[0].args).toEqual({ PlayerAID: 1, PlayerBID: 3 });
+  });
+});
+
 describe('appendTranscriptMessage', () => {
   it('never sends Turn and shapes the row from the thread', async () => {
     mcp.respondWith('append-message', structuredResult({ Turn: 7 }));
@@ -90,6 +113,22 @@ describe('appendTranscriptMessage', () => {
   it('returns undefined when the response omits a numeric Turn', async () => {
     mcp.respondWith('append-message', structuredResult({ ID: 5 }));
     expect(await appendTranscriptMessage(thread(), 3, 'text', 'reply')).toBeUndefined();
+  });
+});
+
+describe('appendTranscriptMessageRow', () => {
+  it('returns the committed row projection used by the game transport', async () => {
+    const committed = {
+      ID: 17, SpeakerID: 3, MessageType: 'text', Content: 'A **durable** reply.',
+      Payload: { source: 'probe' }, Turn: 11,
+    };
+    mcp.respondWith('append-message', structuredResult(committed));
+
+    await expect(appendTranscriptMessageRow(thread(), 3, committed.Content)).resolves.toEqual(committed);
+    expect(mcp.calls('append-message')[0].args).toEqual({
+      PlayerAID: 1, PlayerBID: 3, PlayerARole: 'the leader', PlayerBRole: 'diplomat',
+      SpeakerID: 3, MessageType: 'text', Content: committed.Content,
+    });
   });
 });
 

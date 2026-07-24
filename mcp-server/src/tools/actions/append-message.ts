@@ -30,12 +30,15 @@ import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { orderPlayerPair, getDiplomaticMessageById } from "../../knowledge/getters/diplomatic-messages.js";
 import { MESSAGE_TYPES } from "../../utils/transcript-schema.js";
+import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 
 /** The observer / no-seat endpoint sentinel (shared with the existing non-diplomacy chats). */
 const OBSERVER_ID = -1;
 
 /** Default role descriptor for the observer endpoint when none is provided. */
 const OBSERVER_ROLE = "observer";
+/** Exact role used by the in-game pure observer's real, out-of-range seat. */
+const REAL_OBSERVER_ROLE = "Observer";
 
 /** Message types that carry proposed deal terms in Payload.Deal. */
 const PROPOSAL_TYPES = new Set(["deal-proposal", "deal-counter"]);
@@ -59,6 +62,7 @@ const AppendMessageInputSchema = z.object({
   Content: z.string().describe("Free-text message body"),
   Payload: z.record(z.string(), z.any()).optional().describe("Optional message metadata (Deal/Value1/Value2 for proposals, ProposalMessageID for responses)"),
   Turn: z.number().int().optional().describe("Game turn (defaults to the server's current turn; Web callers should omit)"),
+  ExpectedGameID: z.string().min(1).optional().describe("Optional game identity guard. Rejects the append when the active game has switched."),
 });
 
 /**
@@ -95,7 +99,16 @@ class AppendMessageTool extends ToolBase {
   };
 
   async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
-    const { PlayerAID, PlayerBID, PlayerARole, PlayerBRole, SpeakerID, MessageType, Content, Payload, Turn } = args;
+    const { PlayerAID, PlayerBID, PlayerARole, PlayerBRole, SpeakerID, MessageType, Content, Payload, Turn, ExpectedGameID } = args;
+    /** Reject a guarded transport write once the MCP server is serving another game database. */
+    const assertExpectedGame = (): void => {
+      if (ExpectedGameID === undefined) return;
+      const activeGameID = knowledgeManager.getGameId();
+      if (activeGameID !== ExpectedGameID) {
+        throw new Error(`append-message expected game ${ExpectedGameID}, but active game is ${activeGameID}`);
+      }
+    };
+    assertExpectedGame();
 
     // Acceptance and the enactment record are never written through this archival tool:
     // acceptance must go through the enactment route (enact-agent-deal, stage 6), which
@@ -127,6 +140,20 @@ class AppendMessageTool extends ToolBase {
     };
     const player1Role = roleOf(player1ID);
     const player2Role = roleOf(player2ID);
+    const endpointRoles = new Map([[player1ID, player1Role], [player2ID, player2Role]]);
+    const realObserverIDs = [player1ID, player2ID].filter(
+      (id) => id >= MaxMajorCivs && endpointRoles.get(id) === REAL_OBSERVER_ROLE
+    );
+    const outOfRangeIDs = [player1ID, player2ID].filter((id) => id >= MaxMajorCivs);
+    if (outOfRangeIDs.length !== realObserverIDs.length) {
+      throw new Error("An out-of-range transcript endpoint must use the exact Observer role");
+    }
+    if (realObserverIDs.length > 0) {
+      const counterpartID = player1ID === realObserverIDs[0] ? player2ID : player1ID;
+      if (realObserverIDs.length !== 1 || counterpartID < 0 || counterpartID >= MaxMajorCivs) {
+        throw new Error("A real observer endpoint must be paired with one in-range major civilization");
+      }
+    }
 
     // Major-civ validation against cached PlayerInformations (no live bridge call; only
     // falls back to fetching when the cache is empty). The observer endpoint (-1) is
@@ -134,7 +161,8 @@ class AppendMessageTool extends ToolBase {
     const infos = await readPublicKnowledgeBatch("PlayerInformations", getPlayerInformations);
     if (infos.length > 0) {
       for (const id of [player1ID, player2ID]) {
-        if (id === OBSERVER_ID) continue;
+        const isRealObserver = id >= MaxMajorCivs && endpointRoles.get(id) === REAL_OBSERVER_ROLE;
+        if (id === OBSERVER_ID || isRealObserver) continue;
         const info = infos.find((i) => i.Key === id);
         if (!info || info.IsMajor !== 1) {
           throw new Error(`Player ${id} is not a major civilization`);
@@ -175,6 +203,9 @@ class AppendMessageTool extends ToolBase {
     // be unsafe under concurrent appends to the same pair). Visibility is set only for
     // the real participant(s); the observer (-1) has no player slot and composeVisibility
     // ignores it. Default Turn falls back to the server's current turn inside the store.
+    // Repeat immediately before retaining the store reference. Earlier validation can await
+    // cache-backed reads, during which a GameSwitched event may replace the active store.
+    assertExpectedGame();
     const store = knowledgeManager.getStore();
     const resolvedTurn = Turn !== undefined && Turn >= 0 ? Turn : knowledgeManager.getTurn();
     const id = await store.storeTimedKnowledge("DiplomaticMessages", {

@@ -316,10 +316,12 @@ export class MCPClient extends EventEmitter {
    * Handler will be called whenever a game event notification is received.
    *
    * @param handler - Callback function to handle game state notifications
+   * @returns A function that removes this handler
    */
-  onNotification(handler: (data: GameEventNotification) => void): void {
+  onNotification(handler: (data: GameEventNotification) => void): () => void {
     this.on('notification', handler);
     logger.info('Registered game state update handler');
+    return () => this.off('notification', handler);
   }
 
   /**
@@ -327,10 +329,12 @@ export class MCPClient extends EventEmitter {
    * Handler will be called when tool execution fails.
    *
    * @param handler - Callback function to handle tool errors
+   * @returns A function that removes this handler
    */
-  onToolError(handler: (error: { toolName: string, error: unknown }) => void): void {
+  onToolError(handler: (error: { toolName: string, error: unknown }) => void): () => void {
     this.on('toolError', handler);
     logger.info('Registered tool error handler');
+    return () => this.off('toolError', handler);
   }
 
   /**

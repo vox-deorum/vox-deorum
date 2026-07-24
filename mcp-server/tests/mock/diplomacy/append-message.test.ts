@@ -9,6 +9,7 @@ import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic
 import { getVisibility } from '../../../src/utils/knowledge/visibility.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { knowledgeManager } from '../../../src/server.js';
 
 // The cache-empty branch falls back to a live Lua fetch; stub it to [] so no bridge is needed.
 vi.mock('../../../src/knowledge/getters/player-information.js', async (importOriginal) => {
@@ -65,6 +66,25 @@ describe('append-message guards', () => {
     await expect(tool.execute(args({ MessageType: 'deal-proposal' }) as any)).rejects.toThrow(/Payload.Deal/);
     await expect(tool.execute(args({ MessageType: 'deal-counter' }) as any)).rejects.toThrow(/Payload.Deal/);
   });
+
+  it('rejects a transport append when its expected game is not active', async () => {
+    vi.spyOn(knowledgeManager, 'getGameId').mockReturnValue('active-game');
+    await expect(
+      tool.execute(args({ ExpectedGameID: 'previous-game' }) as any)
+    ).rejects.toThrow(/expected game previous-game, but active game is active-game/);
+  });
+
+  it('rechecks the expected game after async validation before retaining the store', async () => {
+    const gameID = vi.spyOn(knowledgeManager, 'getGameId')
+      .mockReturnValueOnce('stable-game')
+      .mockReturnValue('switched-game');
+
+    await expect(
+      tool.execute(args({ ExpectedGameID: 'stable-game' }) as any)
+    ).rejects.toThrow(/expected game stable-game, but active game is switched-game/);
+    expect(gameID).toHaveBeenCalledTimes(2);
+    expect((await getDiplomaticMessages(1, 3)).messages).toHaveLength(0);
+  });
 });
 
 describe('append-message ordering & roles', () => {
@@ -87,8 +107,8 @@ describe('append-message ordering & roles', () => {
 
     // The row is actually persisted and readable as one ordered thread.
     const stored = await getDiplomaticMessages(1, 3);
-    expect(stored).toHaveLength(1);
-    expect(stored[0].Content).toBe('Greetings.');
+    expect(stored.messages).toHaveLength(1);
+    expect(stored.messages[0].Content).toBe('Greetings.');
   });
 });
 
@@ -99,6 +119,31 @@ describe('append-message observer endpoint', () => {
       args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 }) as any
     );
     expect(row).toMatchObject({ Player1ID: -1, Player1Role: 'observer', Player2ID: 5 });
+  });
+
+  it('accepts one real observer slot paired with a major, preserves the ordered pair, and limits visibility to the major', async () => {
+    await seedPlayer(store, 5);
+    const row = await tool.execute(
+      args({ PlayerAID: 27, PlayerBID: 5, PlayerARole: 'Observer', PlayerBRole: 'diplomat', SpeakerID: 27 }) as any
+    );
+
+    expect(row).toMatchObject({ Player1ID: 5, Player2ID: 27, Player1Role: 'diplomat', Player2Role: 'Observer' });
+    const [stored] = (await getDiplomaticMessages(27, 5)).messages;
+    expect(getVisibility(stored, 5)).toBe(2);
+    expect(getVisibility(stored, 0)).toBe(0);
+  });
+
+  it('rejects a real observer slot without a valid major counterpart', async () => {
+    await expect(
+      tool.execute(args({ PlayerAID: 27, PlayerBID: 28, PlayerARole: 'Observer', PlayerBRole: 'Observer', SpeakerID: 27 }) as any)
+    ).rejects.toThrow(/real observer endpoint/);
+  });
+
+  it('rejects an out-of-range endpoint whose role is not exactly Observer', async () => {
+    await seedPlayer(store, 5);
+    await expect(
+      tool.execute(args({ PlayerAID: 27, PlayerBID: 5, PlayerARole: 'observer', PlayerBRole: 'diplomat', SpeakerID: 27 }) as any)
+    ).rejects.toThrow(/exact Observer role/);
   });
 });
 
@@ -181,7 +226,7 @@ describe('append-message visibility flags', () => {
     await seedPlayer(store, 1);
     await seedPlayer(store, 3);
     await tool.execute(args() as any); // 1 ↔ 3
-    const [row] = await getDiplomaticMessages(1, 3);
+    const [row] = (await getDiplomaticMessages(1, 3)).messages;
     expect(getVisibility(row, 1)).toBe(2);
     expect(getVisibility(row, 3)).toBe(2);
     expect(getVisibility(row, 2)).toBe(0); // an uninvolved civ cannot see the private transcript
@@ -192,7 +237,7 @@ describe('append-message visibility flags', () => {
     await tool.execute(
       args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 }) as any
     );
-    const [row] = await getDiplomaticMessages(-1, 5);
+    const [row] = (await getDiplomaticMessages(-1, 5)).messages;
     expect(getVisibility(row, 5)).toBe(2);
     // The observer sentinel (-1) has no player slot; no other player gains visibility.
     expect(getVisibility(row, 0)).toBe(0);

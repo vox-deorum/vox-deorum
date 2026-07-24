@@ -30,6 +30,17 @@ export interface DiplomaticMessageFilters {
   messageType?: string;
   /** Only messages whose speaking endpoint holds this role (free-form descriptor). */
   speakerRole?: string;
+  /** Read only rows with IDs lower than this exclusive cursor. */
+  beforeID?: number;
+  /** Maximum raw rows to scan before any speaker-role filter. */
+  limit?: number;
+}
+
+/** One cursor-based transcript page with metadata based on the raw SQL scan. */
+export interface DiplomaticMessagePage {
+  messages: Selectable<DiplomaticMessage>[];
+  hasMore: boolean;
+  NextBeforeID?: number;
 }
 
 /**
@@ -39,13 +50,14 @@ export interface DiplomaticMessageFilters {
  * @param playerAID One endpoint (may be the observer sentinel -1)
  * @param playerBID The other endpoint
  * @param filters Optional message-type / speaker-role filters
- * @returns Matching messages between the pair, ordered by append ID
+ * @returns A page whose messages are ordered by append ID
  */
+/** Read a transcript as one page, retaining unbounded reads when no paging inputs are supplied. */
 export async function getDiplomaticMessages(
   playerAID: number,
   playerBID: number,
   filters: DiplomaticMessageFilters = {}
-): Promise<Selectable<DiplomaticMessage>[]> {
+): Promise<DiplomaticMessagePage> {
   const db = knowledgeManager.getStore().getDatabase();
   const { player1ID, player2ID } = orderPlayerPair(playerAID, playerBID);
 
@@ -60,13 +72,40 @@ export async function getDiplomaticMessages(
     query = query.where('MessageType', '=', filters.messageType);
   }
 
-  const rows = await query.orderBy('ID').execute();
+  const paged = filters.beforeID !== undefined || filters.limit !== undefined;
+  if (!paged) {
+    const rows = await query.orderBy('ID').execute();
+    return {
+      messages: filterSpeakerRole(rows, filters.speakerRole),
+      hasMore: false,
+    };
+  }
 
-  // The speaker's role is whichever ordered role matches SpeakerID; filter in JS
-  // (transcripts are bounded) since it is a per-row derived value, not a column.
-  if (filters.speakerRole !== undefined) {
+  if (filters.beforeID !== undefined) {
+    query = query.where('ID', '<', filters.beforeID);
+  }
+
+  const limit = filters.limit ?? 100;
+  const rawRows = await query.orderBy('ID', 'desc').limit(limit + 1).execute();
+  const scannedRows = rawRows.slice(0, limit);
+  const nextBeforeID = scannedRows[scannedRows.length - 1]?.ID;
+  const ascendingRows = [...scannedRows].reverse();
+
+  return {
+    messages: filterSpeakerRole(ascendingRows, filters.speakerRole),
+    hasMore: rawRows.length > limit,
+    NextBeforeID: nextBeforeID,
+  };
+}
+
+/** Filter already ordered transcript rows by the free-form role of their speaker. */
+function filterSpeakerRole(
+  rows: Selectable<DiplomaticMessage>[],
+  speakerRole: string | undefined
+): Selectable<DiplomaticMessage>[] {
+  if (speakerRole !== undefined) {
     return rows.filter(
-      (m) => (m.SpeakerID === m.Player1ID ? m.Player1Role : m.Player2Role) === filters.speakerRole
+      (message) => (message.SpeakerID === message.Player1ID ? message.Player1Role : message.Player2Role) === speakerRole
     );
   }
 

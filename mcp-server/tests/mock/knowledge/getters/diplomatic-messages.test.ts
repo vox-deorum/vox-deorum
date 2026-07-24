@@ -57,8 +57,8 @@ async function seedMsg(m: {
 }
 
 describe('getDiplomaticMessages (direct)', () => {
-  it('returns an empty array for a pair with no messages', async () => {
-    expect(await getDiplomaticMessages(4, 5)).toEqual([]);
+  it('returns an empty page for a pair with no messages', async () => {
+    expect(await getDiplomaticMessages(4, 5)).toMatchObject({ messages: [], hasMore: false });
   });
 
   it('orders the pair by min/max and reads identically regardless of argument order', async () => {
@@ -67,8 +67,8 @@ describe('getDiplomaticMessages (direct)', () => {
 
     const forward = await getDiplomaticMessages(1, 3);
     const reverse = await getDiplomaticMessages(3, 1);
-    expect(forward.map((m) => m.Content)).toEqual(['A', 'B']);
-    expect(reverse.map((m) => m.Content)).toEqual(['A', 'B']);
+    expect(forward.messages.map((m) => m.Content)).toEqual(['A', 'B']);
+    expect(reverse.messages.map((m) => m.Content)).toEqual(['A', 'B']);
   });
 
   it('filters speakerRole against Player1Role when the speaker is Player1ID', async () => {
@@ -78,7 +78,7 @@ describe('getDiplomaticMessages (direct)', () => {
     await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 3, content: 'fromDiplomat' });
 
     const leaderOnly = await getDiplomaticMessages(1, 3, { speakerRole: 'the leader' });
-    expect(leaderOnly.map((m) => m.Content)).toEqual(['fromLeader']);
+    expect(leaderOnly.messages.map((m) => m.Content)).toEqual(['fromLeader']);
   });
 
   it('combines the MessageType (SQL) and speakerRole (in-JS) filters', async () => {
@@ -90,7 +90,7 @@ describe('getDiplomaticMessages (direct)', () => {
       messageType: 'deal-proposal',
       speakerRole: 'the leader',
     });
-    expect(result.map((m) => m.Content)).toEqual(['leaderProposal']);
+    expect(result.messages.map((m) => m.Content)).toEqual(['leaderProposal']);
   });
 
   it('handles the observer sentinel (-1) as Player1ID of the pair', async () => {
@@ -98,7 +98,29 @@ describe('getDiplomaticMessages (direct)', () => {
     await seedMsg({ player1ID: -1, player2ID: 5, speakerID: 5, player1Role: 'observer', content: 'obs' });
 
     const result = await getDiplomaticMessages(5, -1);
-    expect(result.map((m) => m.Content)).toEqual(['obs']);
-    expect(result[0]).toMatchObject({ Player1ID: -1, Player2ID: 5 });
+    expect(result.messages.map((m) => m.Content)).toEqual(['obs']);
+    expect(result.messages[0]).toMatchObject({ Player1ID: -1, Player2ID: 5 });
+  });
+
+  it('pages the newest raw rows in ascending order with the lowest scanned ID as cursor', async () => {
+    for (const content of ['one', 'two', 'three', 'four']) {
+      await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 3, content });
+    }
+
+    const page = await getDiplomaticMessages(1, 3, { limit: 2 });
+    expect(page.messages.map((message) => message.Content)).toEqual(['three', 'four']);
+    expect(page.NextBeforeID).toBe(page.messages[0].ID);
+    expect(page.hasMore).toBe(true);
+  });
+
+  it('keeps the raw scan cursor and hasMore when a role filter removes the page rows', async () => {
+    await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 1, content: 'leader-old' });
+    await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 3, content: 'diplomat-newer' });
+    await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 3, content: 'diplomat-newest' });
+
+    const page = await getDiplomaticMessages(1, 3, { limit: 2, speakerRole: 'the leader' });
+    expect(page.messages).toEqual([]);
+    expect(page.NextBeforeID).toBeDefined();
+    expect(page.hasMore).toBe(true);
   });
 });

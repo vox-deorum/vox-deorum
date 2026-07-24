@@ -36,6 +36,10 @@ import { ContractStarted } from './ContractStarted.js';
 import { ContractsRefreshed } from './ContractsRefreshed.js';
 import { DealMade } from './DealMade.js';
 import { DeclareWar } from './DeclareWar.js';
+import { DiplomacyChatMessage } from './DiplomacyChatMessage.js';
+import { DiplomacyDealAction } from './DiplomacyDealAction.js';
+import { DiplomacyPanelOpened } from './DiplomacyPanelOpened.js';
+import { DiplomacyTranscriptRequest } from './DiplomacyTranscriptRequest.js';
 import { ElectionResultFailure } from './ElectionResultFailure.js';
 import { ElectionResultSuccess } from './ElectionResultSuccess.js';
 import { EspionageNotificationData } from './EspionageNotificationData.js';
@@ -172,6 +176,10 @@ export const eventSchemas = {
   'ContractsRefreshed': ContractsRefreshed,
   'DealMade': DealMade,
   'DeclareWar': DeclareWar,
+  'DiplomacyChatMessage': DiplomacyChatMessage,
+  'DiplomacyDealAction': DiplomacyDealAction,
+  'DiplomacyPanelOpened': DiplomacyPanelOpened,
+  'DiplomacyTranscriptRequest': DiplomacyTranscriptRequest,
   'ElectionResultFailure': ElectionResultFailure,
   'ElectionResultSuccess': ElectionResultSuccess,
   'EspionageNotificationData': EspionageNotificationData,

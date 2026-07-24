@@ -10,6 +10,7 @@ import { createLogger } from '../utils/logger.js';
 import { config } from '../utils/config.js';
 import { LuaFunction } from './lua-function.js';
 import { HttpClient, HttpError } from './http-client.js';
+import { eventPipeDelimiter } from './protocol.js';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fetch } from 'undici';
 
@@ -323,8 +324,8 @@ export class BridgeManager extends EventEmitter {
       // Append to buffer
       this.eventPipeBuffer += data;
 
-      // Process all complete messages (delimited by !@#$%^!)
-      const messages = this.eventPipeBuffer.split('!@#$%^!');
+      // Process all complete messages framed by the bridge event-pipe protocol.
+      const messages = this.eventPipeBuffer.split(eventPipeDelimiter);
 
       // Keep the last incomplete message in buffer (if any)
       this.eventPipeBuffer = messages.pop() || '';

@@ -88,6 +88,13 @@ describe('read-transcript', () => {
     expect(first).not.toHaveProperty('Player0');
     expect(first).not.toHaveProperty('Player1');
   });
+
+  it('exposes raw-scan paging metadata through the tool', async () => {
+    const page = await read.execute({ PlayerAID: 1, PlayerBID: 3, Limit: 2 } as any);
+
+    expect(page.messages.map((message) => message.Content)).toEqual(['B', 'deal']);
+    expect(page).toMatchObject({ hasMore: true, NextBeforeID: page.messages[0].ID });
+  });
 });
 
 describe('getDiplomaticMessageById', () => {

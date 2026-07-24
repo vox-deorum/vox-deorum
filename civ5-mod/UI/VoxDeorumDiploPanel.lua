@@ -664,6 +664,10 @@ end
 -- UI.GetLeaderHeadRootUp() to avoid event-ordering races.
 local function presentPanel(counterpartID, mode)
 	if not isValidCounterpart(counterpartID) then return end
+	-- Register DLL push functions whenever a valid panel presentation begins.
+	if VoxDeorumDiploTransport ~= nil and type(VoxDeorumDiploTransport.EnsureRegistered) == "function" then
+		VoxDeorumDiploTransport.EnsureRegistered()
+	end
 	cancelPending()
 	local wasQueued = m_presentation == "leader"
 	m_activePlayerID, m_counterpartID, m_currentTurn, m_warPromptOpen = VoxDeorumSeat.EffectiveSeat(), counterpartID, Game.GetGameTurn(), false
@@ -900,4 +904,5 @@ Controls.WarYesButton:RegisterCallback(Mouse.eLClick, confirmDeclareWar); Contro
 ContextPtr:SetInputHandler(inputHandler); ContextPtr:SetShowHideHandler(showHideHandler)
 layoutPanel(); Events.SystemUpdateUI.Add(onSystemUpdateUI)
 
+include("VoxDeorumDiploTransport")
 include("VoxDeorumDiploPanelMock")

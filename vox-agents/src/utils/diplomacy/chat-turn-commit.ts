@@ -37,6 +37,11 @@ export type TurnCommit = ChatMessageRequest;
  */
 const inFlight = new Set<string>();
 
+/** Test whether a chat turn or exclusive thread action currently owns this thread. */
+export function isThreadBusy(threadId: string): boolean {
+  return inFlight.has(threadId);
+}
+
 /** Thrown by `beginChatTurn` when a turn is already in flight for the thread (the route maps it to 409). */
 export class ThreadBusyError extends Error {
   constructor(threadId: string) {

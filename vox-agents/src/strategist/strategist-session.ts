@@ -10,6 +10,7 @@ import { createLogger } from "../utils/logger.js";
 import { mcpClient, type GameEventNotification } from "../utils/models/mcp-client.js";
 import { VoxPlayer } from "./vox-player.js";
 import { HumanDecisionBus, type HumanDecisionSubmission } from "./human-decision-bus.js";
+import { IngameBridge } from "../envoy/ingame-bridge.js";
 import { voxCivilization } from "../infra/vox-civilization.js";
 import { setTimeout } from 'node:timers/promises';
 import { VoxSession } from "../infra/vox-session.js";
@@ -41,6 +42,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
   private mcpKillCounter = 0;
   private dllConnected = false;
   private production?: ProductionController;
+  private removeNotificationListener?: () => void;
+  private removeToolErrorListener?: () => void;
   private readonly MAX_RECOVERY_ATTEMPTS = 3;
 
   /**
@@ -50,6 +53,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
    * `HumanDecision` notification resolves it; shutdown / game-switch cancel it.
    */
   private readonly humanDecisionBus = new HumanDecisionBus();
+
+  /** Per-session transport owner for the in-game diplomacy panel. */
+  private readonly ingameBridge = new IngameBridge({
+    getCounterpartContext: (playerID) => this.activePlayers.get(playerID)?.context,
+    getAssignments: () => this.getPlayerAssignments(),
+  });
 
   /**
    * Single owner of seeding + seed-cycle state, always constructed. In the
@@ -185,7 +194,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       });
 
       // Register notification handler for game events
-      mcpClient.onNotification(async (params) => {
+      this.removeNotificationListener = mcpClient.onNotification(async (params) => {
         if (this.abortController.signal.aborted) return;
 
         // The notification now has 'event' field instead of 'message'
@@ -201,6 +210,12 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
             break;
           case "HumanDecision":
             this.handleHumanDecision(params);
+            break;
+          case "DiplomacyPanelOpened":
+          case "DiplomacyChatMessage":
+          case "DiplomacyDealAction":
+          case "DiplomacyTranscriptRequest":
+            this.ingameBridge.handleNotification(params);
             break;
           case "DLLConnected":
             this.dllConnected = true;
@@ -231,7 +246,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
       const mcpKillCounter = this.mcpKillCounter;
       // Register tool error handler to kill game on critical MCP tool errors
-      mcpClient.onToolError(async ({ toolName, error }) => {
+      this.removeToolErrorListener = mcpClient.onToolError(async ({ toolName, error }) => {
         if (this.abortController.signal.aborted || mcpKillCounter !== this.mcpKillCounter) return;
         this.mcpKillCounter++;
         logger.error(`Critical MCP tool error in ${toolName}, killing game process`, error);
@@ -244,6 +259,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         throw new Error(this.errorMessage ?? 'Strategist session failed');
       }
     } catch (error) {
+      this.ingameBridge.dispose();
+      this.detachMcpListeners();
       logger.error('Session failed with error:', error);
       this.onStateChange('error', (error as Error).message);
       await voxCivilization.restoreRandomSeeds();
@@ -306,6 +323,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
     const wasVictory = this.victoryObserved;
     this.onStateChange('stopping');
+    this.ingameBridge.dispose();
+    this.detachMcpListeners();
     this.abortController.abort();
 
     // Abort all active players; on victory we mark them successful so their
@@ -346,6 +365,14 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       this.onStateChange('stopped');
       logger.info(`Strategist session shutdown complete (succeeded=${this.succeeded})`);
     }
+  }
+
+  /** Detach this session's handlers from the shared MCP client. */
+  private detachMcpListeners(): void {
+    this.removeNotificationListener?.();
+    this.removeNotificationListener = undefined;
+    this.removeToolErrorListener?.();
+    this.removeToolErrorListener = undefined;
   }
 
   /**
@@ -442,6 +469,9 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     // If nothing is changing, ignore this
     if (!params.gameID || params.gameID === this.lastGameID) return;
     if (this.state === 'stopping' || this.state === 'stopped') return;
+    // Invalidate queued diplomacy work before any await can yield into the new
+    // MCP database. Existing tasks re-check this generation after every await.
+    this.ingameBridge.resetForGame(params.gameID);
     // Stop existing production before switching game context
     await this.obsCall('stopProduction', () => this.production!.stop());
 

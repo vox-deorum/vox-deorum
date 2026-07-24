@@ -24,12 +24,7 @@ export const DEFAULT_NEGOTIATOR = "negotiator";
  * to the default when the configured negotiator is not a registered agent.
  */
 export function resolveNegotiator(thread: EnvoyThread): string {
-  // Duck-type the active session's per-seat assignments rather than importing StrategistSession
-  // (which would pull the strategist graph into this util and create a module-init cycle).
-  const active = sessionRegistry.getActive() as
-    | { getPlayerAssignments?: () => Record<number, { negotiator?: string } | undefined> }
-    | undefined;
-  const configured = active?.getPlayerAssignments?.()[thread.agent]?.negotiator;
+  const configured = sessionRegistry.getActive()?.getPlayerAssignments()?.[thread.agent]?.negotiator;
   const name = configured ?? DEFAULT_NEGOTIATOR;
   if (!agentRegistry.has(name)) {
     logger.warn(`Configured negotiator "${name}" is not registered; falling back to "${DEFAULT_NEGOTIATOR}"`);

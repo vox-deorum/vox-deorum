@@ -59,15 +59,15 @@ describe('diplomatic transcript persistence across a restart', () => {
 
     // Read as one ordered thread regardless of endpoint argument order.
     const rows = await getDiplomaticMessages(1, 3);
-    expect(rows.map((r) => r.Content)).toEqual(['Hello from 1.', 'Reply from 3.', '']);
-    expect(rows.map((r) => r.MessageType)).toEqual(['text', 'text', 'close']);
+    expect(rows.messages.map((r) => r.Content)).toEqual(['Hello from 1.', 'Reply from 3.', '']);
+    expect(rows.messages.map((r) => r.MessageType)).toEqual(['text', 'text', 'close']);
     // Free-form roles persisted, ordered to the stored pair (Player1 = min = 1 = 'the leader').
-    expect(rows[0].Player1Role).toBe('the leader');
-    expect(rows[0].Player2Role).toBe('diplomat');
+    expect(rows.messages[0].Player1Role).toBe('the leader');
+    expect(rows.messages[0].Player2Role).toBe('diplomat');
     // Append-ID order survived the restart (the getter orders by ID).
-    const ids = rows.map((r) => r.ID);
+    const ids = rows.messages.map((r) => r.ID);
     expect(ids).toEqual([...ids].sort((a, b) => a - b));
-    expect(rows[0].Turn).toBe(7);
+    expect(rows.messages[0].Turn).toBe(7);
 
     await store2.close();
   });

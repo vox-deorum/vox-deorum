@@ -1,6 +1,6 @@
 # MCP Server Tool Reference
 
-Concise reference for all 41 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
+Concise reference for all 42 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
 
 ## Architecture
 
@@ -9,12 +9,13 @@ Concise reference for all 41 tools exposed by the MCP Server. Tools are organize
 - Zod schemas for input/output validation with `.describe()` on each field
 - PlayerID range for major civs: 0-21 (`MaxMajorCivs - 1`)
 
-## General Tools (3)
+## General Tools (4)
 
 | Tool | Description | Key Input |
 |------|-------------|-----------|
 | `calculator` | Evaluates mathematical expressions using mathjs | `Expression`: string |
 | `lua-executor` | Executes raw Lua scripts in game context via Bridge Service | `Script`: string, `Description?`: string |
+| `call-lua-function` | Calls a Lua function registered by the game mod with structured arguments | `Name`: string, `Args`: array, `ExpectedGameID?` |
 | `search-database` | Fuzzy search across all database tools (techs, policies, buildings, civs, units, flavors) with reciprocal rank fusion reranking | `Keywords`: string[], `MaxResults?`: number (default: 10) |
 
 ## Database Query Tools (8)
@@ -38,7 +39,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 |------|-------------|-----------|
 | `get-events` | Recent game events, consolidated by turn with smart grouping | `Turn?`, `Type?`, `After?`, `Before?`, `PlayerID?`, `Original?` |
 | `get-diplomatic-events` | Diplomatic events (wars, peace, deals, city-state, espionage, world congress) grouped by turn | `PlayerID`, `OtherPlayerID?`, `FromTurn?`, `ToTurn?`, `Formatted?` |
-| `read-transcript` | Read the durable, append-ID-ordered conversation between two endpoints, optionally filtered by message type or speaker role | `PlayerAID`, `PlayerBID`, `MessageType?`, `Role?` |
+| `read-transcript` | Read the durable, append-ID-ordered conversation between two endpoints, optionally filtered by message type or speaker role, with optional older-page cursors | `PlayerAID`, `PlayerBID`, `MessageType?`, `Role?`, `BeforeID?`, `Limit?` |
 | `inspect-deal` | Inspect a draft deal against live game state, including legality, advisory values, promise factors, and each side's tradable range | `PlayerAID`, `PlayerBID`, `ProposedDeal?` |
 | `get-players` | Player summary with scores, era, resources, military, and diplomatic opinions | `PlayerID?` (0-21) |
 | `get-opinions` | Diplomatic opinions to/from a player with all alive major civilizations | `PlayerID` (0-21), `RevealAll?` |
@@ -49,6 +50,8 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `summarize-units` | Unit overview grouped by civilization and AI type, with military stats | `PlayerID` |
 | `get-military-report` | Military report with units by AI type and tactical zones | `PlayerID` (0-21) |
 | `get-victory-progress` | Victory progress for all players, filtered by diplomatic visibility | `PlayerID?` (0-21) |
+
+For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw ID scan before the optional `Role` filter. A filtered page can therefore contain no messages while `hasMore` is `true`.
 
 ## Action Tools (14)
 
@@ -64,7 +67,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `set-policy` | Set next policy or branch selection by name | `PlayerID`, `Policy`, `Rationale` |
 | `keep-status-quo` | Maintain current strategy/flavors with documented rationale | `PlayerID`, `Mode?`: "Flavor" or "Strategy", `Rationale` |
 | `relay-message` | Relay diplomatic or intelligence message as a game event; `Importance` 7+ interrupts important-event pacing | `PlayerID`, `FromPlayerID`, `Message`: "Diplomatic"/"Intelligence", `Content`, `Confidence` (0-9), `Importance` (0-9), `Categories`, `Memo`, `VisibleTo?` |
-| `append-message` | Append an archival message to a durable diplomatic transcript; returns the stored message's canonical fields | `PlayerAID`, `PlayerBID`, `PlayerARole?`, `PlayerBRole?`, `SpeakerID`, `MessageType`, `Content`, `Payload?`, `Turn?` |
+| `append-message` | Append an archival message to a durable diplomatic transcript; returns the stored message's canonical fields | `PlayerAID`, `PlayerBID`, `PlayerARole?`, `PlayerBRole?`, `SpeakerID`, `MessageType`, `Content`, `Payload?`, `Turn?`, `ExpectedGameID?` |
 | `enact-agent-deal` | Enact the deal stored on a proposal, then record acceptance and enactment; returns record IDs plus `AlreadyEnacted` and `Enacted` status | `ProposalMessageID`, `Deal?`, `AccepterID?`, `Content?` |
 | `post-notification` | Post a native notification to a human player; returns `true` only when Civ V creates it and `false` when Civ V rejects it | `PlayerID`, `CounterpartID?` (different from `PlayerID`), nonblank `Summary` (1-200 characters), nonblank `Message` (1-2000 characters) |
 | `present-decision` | Present current Flavor-mode strategic options to the in-game human-control panel; returns whether delivery succeeded | `PlayerID`, `Turn?` (default: current turn) |

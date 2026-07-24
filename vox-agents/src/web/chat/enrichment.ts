@@ -7,7 +7,6 @@
 import { contextRegistry } from '../../infra/context-registry.js';
 import { sessionRegistry } from '../../infra/session-registry.js';
 import type { VoxContext } from '../../infra/vox-context.js';
-import { StrategistSession } from '../../strategist/strategist-session.js';
 import {
   getRecentGameState,
   type StrategistParameters,
@@ -26,8 +25,7 @@ const logger = createLogger('webui:enrichment');
 
 /** Resolve the active strategist session's per-seat agent assignments, if available. */
 export function getActiveAssignments(): Record<number, PlayerAssignment> | undefined {
-  const session = sessionRegistry.getActive();
-  return session instanceof StrategistSession ? session.getPlayerAssignments() : undefined;
+  return sessionRegistry.getActive()?.getPlayerAssignments();
 }
 
 /** Resolve the seat assigned to the human strategist, if one exists. */

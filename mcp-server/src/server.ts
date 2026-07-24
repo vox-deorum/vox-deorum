@@ -205,6 +205,7 @@ export class MCPServer {
     "DLLConnected", "DLLDisconnected",
     "PlayerPanelSwitch", "AnimationStarted",
     "HumanDecision",
+    "DiplomacyPanelOpened", "DiplomacyChatMessage", "DiplomacyDealAction", "DiplomacyTranscriptRequest",
   ];
   /**
    * Send a notification to all clients through MCP notification protocol.

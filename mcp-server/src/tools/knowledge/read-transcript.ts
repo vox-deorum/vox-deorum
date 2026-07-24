@@ -21,12 +21,16 @@ const ReadTranscriptInputSchema = z.object({
   PlayerBID: z.number().int().min(-1).describe("The other endpoint's playerID (or -1 for the observer)"),
   MessageType: z.enum(MESSAGE_TYPES).optional().describe("Optional: only return messages of this type"),
   Role: z.string().optional().describe("Optional: only return messages whose speaker holds this free-form role (e.g. 'diplomat')"),
+  BeforeID: z.number().int().positive().optional().describe("Optional: exclusive cursor for an older transcript page"),
+  Limit: z.number().int().positive().optional().describe("Optional: maximum raw transcript rows to scan in a page"),
 });
 
 /** Output schema: the ordered list of messages, wrapped in an object so the MCP
  * `structuredContent` is a record (the SDK rejects a root-level array). */
 const ReadTranscriptOutputSchema = z.object({
   messages: z.array(TranscriptMessageSchema),
+  hasMore: z.boolean().optional(),
+  NextBeforeID: z.number().optional(),
 });
 
 /**
@@ -44,18 +48,20 @@ class ReadTranscriptTool extends ToolBase {
   readonly annotations: ToolAnnotations = { readOnlyHint: true };
 
   readonly metadata = {
-    autoComplete: ["PlayerAID", "PlayerBID", "MessageType", "Role"],
+    autoComplete: ["PlayerAID", "PlayerBID", "MessageType", "Role", "BeforeID", "Limit"],
   };
 
   async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
-    const messages = await getDiplomaticMessages(args.PlayerAID, args.PlayerBID, {
+    const page = await getDiplomaticMessages(args.PlayerAID, args.PlayerBID, {
       messageType: args.MessageType,
       speakerRole: args.Role,
+      beforeID: args.BeforeID,
+      limit: args.Limit,
     });
 
     // Project to the public message shape, dropping per-player visibility columns.
     return {
-      messages: messages.map((m) => ({
+      messages: page.messages.map((m) => ({
         ID: m.ID,
         Player1ID: m.Player1ID,
         Player2ID: m.Player2ID,
@@ -69,6 +75,8 @@ class ReadTranscriptTool extends ToolBase {
         Turn: m.Turn,
         CreatedAt: m.CreatedAt,
       })),
+      hasMore: page.hasMore,
+      NextBeforeID: page.NextBeforeID,
     };
   }
 }

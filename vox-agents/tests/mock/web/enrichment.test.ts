@@ -26,7 +26,6 @@ vi.mock('../../../src/utils/logger.js', () => ({
 
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { sessionRegistry } from '../../../src/infra/session-registry.js';
-import { StrategistSession } from '../../../src/strategist/strategist-session.js';
 import type { EnvoyThread, PlayerAssignment } from '../../../src/types/index.js';
 import {
   civIdentity,
@@ -83,14 +82,14 @@ beforeEach(() => {
 });
 
 describe('chat enrichment', () => {
-  it('resolves assignments only from an active strategist session', () => {
+  it('resolves assignments through the active session capability', () => {
     const assignments = {
       1: { strategist: 'human-strategist' },
       3: { strategist: 'simple-strategist' },
     } as Record<number, PlayerAssignment>;
-    const session = Object.create(StrategistSession.prototype) as StrategistSession;
-    session.getPlayerAssignments = vi.fn(() => assignments);
-    vi.spyOn(sessionRegistry, 'getActive').mockReturnValue(session);
+    vi.spyOn(sessionRegistry, 'getActive').mockReturnValue({
+      getPlayerAssignments: vi.fn(() => assignments),
+    } as never);
 
     expect(getActiveAssignments()).toBe(assignments);
     expect(resolveHumanSeat(assignments)).toBe(1);

@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { sql } from 'kysely';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
 import createEnactAgentDealTool from '../../../src/tools/actions/enact-agent-deal.js';
-import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
+import { getDiplomaticMessages as getDiplomaticMessagesPage } from '../../../src/knowledge/getters/diplomatic-messages.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
@@ -24,6 +24,11 @@ vi.mock('../../../src/knowledge/getters/player-information.js', async (importOri
 const append = createAppendMessageTool();
 const enact = createEnactAgentDealTool();
 let store: KnowledgeStore;
+/** Read just the message rows while the getter exposes paging metadata. */
+async function getDiplomaticMessages(...args: Parameters<typeof getDiplomaticMessagesPage>) {
+  return (await getDiplomaticMessagesPage(...args)).messages;
+}
+
 
 beforeEach(async () => {
   store = await setupDiplomacyStore(10);

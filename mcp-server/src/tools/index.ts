@@ -1,5 +1,6 @@
 import createCalculatorTool from "./general/calculator.js";
 import createLuaExecutorTool from "./general/lua-executor.js";
+import createCallLuaFunctionTool from "./general/call-lua-function.js";
 import createGetTechnologyTool from "./databases/get-technology.js";
 import createGetPolicyTool from "./databases/get-policy.js";
 import createGetBuildingTool from "./databases/get-building.js";
@@ -45,6 +46,7 @@ import type { MCPServer } from "../server.js";
 const toolFactories = {
     calculator: createCalculatorTool,
     luaExecutor: createLuaExecutorTool,
+    callLuaFunction: createCallLuaFunctionTool,
     getGameSettings: createGetGameSettingsTool,
     getMetadata: createGetMetadataTool,
     setMetadata: createSetMetadataTool,

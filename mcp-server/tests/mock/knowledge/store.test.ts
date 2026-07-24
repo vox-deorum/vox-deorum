@@ -162,4 +162,32 @@ describe('handleGameEvent', () => {
     expect(rows).toHaveLength(0);
     expect(notifySpy).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['DiplomacyPanelOpened', { CounterpartID: 3, Turn: 10 }],
+    ['DiplomacyChatMessage', { CounterpartID: 3, Turn: 10, Text: 'Hello.' }],
+    ['DiplomacyDealAction', { CounterpartID: 3, Turn: 10, Action: 'propose' }],
+    ['DiplomacyTranscriptRequest', { CounterpartID: 3, Turn: 10, BeforeID: 99 }],
+  ])('admits %s with a real observer seat, true AsObserver, and extra payload fields', async (type, fields) => {
+    const payload = { PlayerID: 27, AsObserver: true, ExtraTransportField: { preserved: true }, ...fields };
+
+    await store.handleGameEvent(10_000_010, type, payload);
+
+    const [row] = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
+    expect(row).toMatchObject({ Type: type });
+    expect(row.Payload).toMatchObject(payload);
+    expect(notifySpy).toHaveBeenCalledWith(type, 27, 10, 10_000_010, expect.objectContaining(payload));
+  });
+
+  it.each([
+    ['DiplomacyPanelOpened', { CounterpartID: 3, Turn: 10 }],
+    ['DiplomacyChatMessage', { CounterpartID: 3, Turn: 10, Text: 'Hello.' }],
+    ['DiplomacyDealAction', { CounterpartID: 3, Turn: 10, Action: 'propose' }],
+    ['DiplomacyTranscriptRequest', { CounterpartID: 3, Turn: 10, BeforeID: 99 }],
+  ])('rejects %s when AsObserver is false', async (type, fields) => {
+    await store.handleGameEvent(10_000_011, type, { PlayerID: 27, AsObserver: false, ...fields });
+
+    expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
+    expect(notifySpy).not.toHaveBeenCalled();
+  });
 });

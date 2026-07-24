@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 MODINFO = Path(__file__).parent / "VoxDeorum.modinfo"
-FILE_RE = re.compile(r'(<File\s+md5=")([0-9A-Fa-f]{32})("\s+import="[01]">)(.+?)(</File>)')
+FILE_RE = re.compile(r'(<File\s+md5=")((?:[0-9A-Fa-f]{32})?)("\s+import="[01]">)(.+?)(</File>)')
 
 
 def md5_of(path: Path) -> str:
