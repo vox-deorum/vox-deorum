@@ -152,7 +152,7 @@ Verified against the code; this is the contract between this plan and the existi
 - `readTranscript(a, b)` in `vox-agents/src/utils/diplomacy/transcript.ts`: returns exactly the `TranscriptMessage` projection the push functions carry; the read-only reflush path is built on it, untouched by thread state. It and `sendNotification` already accept observer slot IDs.
 - `withThreadLock` / `ThreadBusyError` in `chat-turn-commit.ts`, `requireCurrentOpenProposal`, `appendDealReject`, `enactAgentDeal`, `mirrorDealRowsBestEffort`, `currentTurnOf`, `audienceID`, `isClosedThisTurn`: the same primitives the deal routes compose.
 - `deriveActiveProposal` (`deal-reduce.ts`): semantics ported to the panel's Lua reducer.
-- The `{{{Greeting}}}` trigger convention stays **Web-only**. The panel never requests an LLM greeting turn; it shows a panel-local, display-only greeting row built from the counterpart leaderhead's standard localized discussion greeting (stage 04 item 6). The special-row filter still hides any `{{{token}}}` rows that arrive from Web-seeded history.
+- The `{{{Greeting}}}` trigger convention stays **Web-only**. The panel never requests an LLM greeting turn and shows no greeting row of its own; the special-row filter still hides any `{{{token}}}` rows that arrive from Web-seeded history.
 
 **Extended in small shared seams, not bridge-private forks:**
 
