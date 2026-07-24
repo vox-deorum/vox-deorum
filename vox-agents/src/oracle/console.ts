@@ -21,16 +21,11 @@ import { runRetrieve } from './retriever.js';
 import { runReplay } from './replayer.js';
 import type { OracleConfig } from './types.js';
 import { startWebServer } from '../web/server.js';
-import { contextRegistry } from '../infra/context-registry.js';
 import { sqliteExporter } from '../instrumentation.js';
 import { processManager } from '../infra/process-manager.js';
 
 const logger = createLogger('OracleCLI');
 
-// Register shutdown hooks with processManager
-processManager.register('contexts', async () => {
-  await contextRegistry.shutdownAll();
-});
 processManager.register('telemetry', async () => {
   await sqliteExporter.forceFlush();
   await setTimeout(1000);
