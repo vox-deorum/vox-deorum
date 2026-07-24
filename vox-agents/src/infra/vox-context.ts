@@ -794,7 +794,9 @@ export class VoxContext<TParameters extends AgentParameters> {
             // Tools
             tools: this.tools,
             activeTools: stepActiveTools,
-            toolChoice: ["anthropic", "codex"].includes(stepModel.provider) && stepToolChoice === "required" ? "auto" : stepToolChoice as any,
+            // Providers that reject a wire-level required tool choice (Anthropic, Codex) map it to
+            // auto in provider middleware installed by getModel, preserving the requirement in the prompt.
+            toolChoice: stepToolChoice as any,
             experimental_context: parameters,
             // Output schema for tool as agent
             output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,

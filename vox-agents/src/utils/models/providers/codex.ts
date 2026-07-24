@@ -17,6 +17,7 @@ import {
 } from './codex-proxy.js';
 import type { CodexProxyConfig } from './codex-proxy.js';
 import { codexActivityMiddleware } from './codex-response.js';
+import { requiredToolChoiceMiddleware } from './required-tool-choice.js';
 import { resolveHostToolAccess } from './host-tools.js';
 import type { ModelRuntimeIdentity } from './host-tools.js';
 
@@ -66,9 +67,13 @@ export function buildCodexModel(config: Model): LanguageModelV3 {
       }
     },
   }).chatModel(config.name);
-  // This inner wrapper normalizes activity before the generic rescue
-  // wrapper installed by models.ts sees the response.
-  return wrapLanguageModel({ model, middleware: codexActivityMiddleware() });
+  // The first middleware is outermost: it adapts a required tool choice before
+  // activity normalization, and both run inner to the generic rescue wrapper
+  // installed by models.ts.
+  return wrapLanguageModel({
+    model,
+    middleware: [requiredToolChoiceMiddleware(), codexActivityMiddleware()],
+  });
 }
 
 /** The per-request Codex policy extension accepted by the pinned proxy. */

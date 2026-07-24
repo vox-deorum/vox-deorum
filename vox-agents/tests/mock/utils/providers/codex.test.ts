@@ -1,7 +1,7 @@
 /** Tests for the Codex compatible-provider boundary. */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { streamText, tool } from 'ai';
+import { generateText, streamText, tool } from 'ai';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -21,13 +21,13 @@ vi.mock('../../../../src/utils/models/providers/codex-proxy.js', async () => {
   const { join } = await import('node:path');
   return {
     ensureCodexProxy: proxyMocks.ensureCodexProxy,
-    getCodexExecutionTimeout: () => 375_000,
+    getCodexExecutionTimeout: () => 645_000,
     getCodexProxyApiBase: () => 'http://127.0.0.1:8787/v1',
     getCodexProxyConfig: () => ({
       port: 8787,
       root: join(tmpdir(), 'vox-codex-provider-test'),
       startupTimeoutMs: 300_000,
-      requestTimeoutMs: 30_000,
+      requestTimeoutMs: 300_000,
       shutdownGracePeriodMs: 15_000,
     }),
     codexProxyManager: { invalidateConnection: proxyMocks.invalidateConnection },
@@ -213,6 +213,71 @@ describe('Codex model middleware', () => {
 });
 
 describe('Codex compatible adapter requests', () => {
+  it('turns required into auto while naming the client tools as the final-output requirement', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    const model = buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' });
+    const chooseResearchTool = {
+      ...foundCityTool(),
+      name: 'choose_research',
+      description: 'Choose the next technology.',
+    };
+
+    await model.doGenerate({
+      prompt: [
+        { role: 'system', content: 'Make sound strategic decisions.' },
+        { role: 'user', content: [{ type: 'text', text: 'Take the turn.' }] },
+      ],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+      tools: [foundCityTool(), chooseResearchTool],
+      toolChoice: { type: 'required' },
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body.tool_choice).toBe('auto');
+    expect(body.messages[0]).toMatchObject({ role: 'system' });
+    expect(body.messages[0].content).toContain('final-output requirement');
+    expect(body.messages[0].content).toContain('client-provided tools: `found_city`, `choose_research`');
+    expect(body.messages[0].content).toContain('Provider built-in tools do not satisfy this requirement');
+    expect(body.messages[0].content).toContain('instead of ending with plain text');
+  });
+
+  it('names only the client tools active for the current high-level step', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await generateText({
+      model: buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }),
+      prompt: 'Take the turn.',
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+      tools: {
+        found_city: tool({
+          description: 'Found a city.',
+          inputSchema: z.object({ name: z.string() }),
+        }),
+        choose_research: tool({
+          description: 'Choose the next technology.',
+          inputSchema: z.object({ technology: z.string() }),
+        }),
+      },
+      activeTools: ['choose_research'],
+      toolChoice: 'required',
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body.tool_choice).toBe('auto');
+    expect(body.messages[0].content).toContain('client-provided tools: `choose_research`');
+    expect(body.messages[0].content).not.toContain('`found_city`');
+    expect(body.tools).toHaveLength(1);
+    expect(body.tools[0].function.name).toBe('choose_research');
+  });
+
   it('serializes only the Codex extension, reasoning effort, and standard client tools', async () => {
     const fetchMock = vi.fn().mockResolvedValue(completion(
       { role: 'assistant', content: 'Ready.' },

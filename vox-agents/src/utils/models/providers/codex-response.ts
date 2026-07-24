@@ -1,6 +1,6 @@
 /**
- * Normalizes Codex built-in activity from the proxy's raw compatible
- * response into AI SDK provider-executed dynamic tool parts.
+ * Normalizes Codex built-in activity into AI SDK provider-executed dynamic
+ * tool parts.
  */
 
 import type {
@@ -13,6 +13,7 @@ import type {
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import { classifyProviderActivityStatus } from './activity-status.js';
+import { clientFunctionToolNames } from './required-tool-choice.js';
 
 /** Provider-boundary logger for Codex response diagnostics. */
 const codexResponseLogger = createLogger('CodexResponse');
@@ -165,9 +166,7 @@ function hasObjectInput(value: string): boolean {
 
 /** Return the declared client function names for collision classification. */
 function declaredFunctionNames(params: LanguageModelV3CallOptions): Set<string> {
-  return new Set((params.tools ?? [])
-    .filter((tool): tool is Extract<typeof tool, { type: 'function' }> => tool.type === 'function')
-    .map((tool) => tool.name));
+  return new Set(clientFunctionToolNames(params));
 }
 
 /** Remove provider-executed activity from prompt replay while retaining mixed client history. */

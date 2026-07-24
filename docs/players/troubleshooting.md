@@ -53,7 +53,7 @@ Codex is downloaded and started only on its first request. Check the Vox Deorum 
 For foreground diagnosis, run the command below from a console and keep its structured stderr visible:
 
 ```text
-npx --yes codex-openai-proxy@0.1.0-rc.5 serve --root C:\absolute\temporary\codex-root --port 8787 --request-timeout 30000ms --tool-timeout 300000ms --shutdown-timeout 10000ms
+npx --yes codex-openai-proxy@0.1.0-rc.5 serve --root C:\absolute\temporary\codex-root --port 8787 --request-timeout 300000ms --tool-timeout 300000ms --shutdown-timeout 10000ms
 ```
 
 Do not configure a proxy API key. The adapter's `local` value is an inert placeholder for the OpenAI-compatible client, not a credential.

@@ -55,9 +55,9 @@ The default configuration includes common Codex models in the dashboard. You can
 
 The first Codex request runs the `codex-openai-proxy` package through `npx`. npm downloads the proxy and its bundled CLI if they are not already cached. Existing Codex authentication is reused. Otherwise, follow the device-login URL and instructions in the Vox Deorum logs. The proxy starts lazily, so using another provider does not download or launch it.
 
-The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. A custom command is trusted operator configuration, and Vox Deorum appends the required `serve` arguments.
+The optional lifecycle settings are `CODEX_PROXY_PORT`, `CODEX_PROXY_COMMAND`, `CODEX_PROXY_ROOT`, `CODEX_PROXY_REQUEST_TIMEOUT`, `CODEX_PROXY_TOOL_TIMEOUT`, and `CODEX_PROXY_STARTUP_TIMEOUT`. Blank values use defaults. The default Codex request deadline follows the same five-minute model execution budget as other providers. A custom command is trusted operator configuration, and Vox Deorum appends the required `serve` arguments.
 
-Proxy supports automatic or disabled tool choice and requires continuation policy to remain unchanged. Vox Deorum maps agents that normally require a tool call to automatic tool choice for Codex. Codex command, file, web, MCP, and app activity appears in the dashboard as provider-executed tool progress. Vox Deorum does not dispatch that activity as game tools.
+Proxy supports automatic or disabled tool choice and requires continuation policy to remain unchanged. For agents that require a tool call, Vox Deorum uses automatic tool choice and adds a system instruction naming the client-provided tools that can satisfy the final-output requirement (Anthropic models, which also reject a required tool choice, get the same treatment). Codex may use its built-in tools first, but that activity does not satisfy the required client tool call. Codex command, file, web, MCP, and app activity appears in the dashboard as provider-executed tool progress. Vox Deorum does not dispatch that activity as game tools.
 
 ## Host tools
 

@@ -60,7 +60,7 @@ class StepAgent extends VoxAgent<StrategistParameters> {
   override stopCheck(): boolean { return true; } // stop after one step
 }
 
-/** Minimal Codex agent that exercises the production required-tool compatibility mapping. */
+/** Minimal Codex agent verifying vox-context leaves the required tool choice untouched. */
 class CodexStepAgent extends VoxAgent<StrategistParameters> {
   readonly description = 'one-step Codex compatibility test agent';
   constructor(public readonly name: string) { super(); }
@@ -114,7 +114,7 @@ beforeEach(() => {
 });
 
 describe('VoxContext.execute token accounting', () => {
-  it('maps the default required tool choice to auto for Codex', async () => {
+  it('passes the required tool choice through for provider middleware to adapt', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'exec-codex-tool-choice');
     const base = makeStrategistParameters();
 
@@ -122,7 +122,7 @@ describe('VoxContext.execute token accounting', () => {
       await ctx.execute('test-step-codex', {});
     });
 
-    expect(stc).toHaveBeenCalledWith(expect.objectContaining({ toolChoice: 'auto' }), ctx);
+    expect(stc).toHaveBeenCalledWith(expect.objectContaining({ toolChoice: 'required' }), ctx);
   });
 
   it('routes one execution to the active root sink, the seat totals, and the ExecuteTokenOutput', async () => {

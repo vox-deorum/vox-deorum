@@ -10,6 +10,7 @@ import {
   getCodexProxyConfig,
   splitCodexProxyCommand,
 } from '../../../../src/utils/models/providers/codex-proxy.js';
+import { executionTimeoutDefault } from '../../../../src/utils/retry.js';
 
 /** Creates an alive child process double with the manager's small required surface. */
 function createChild(pid = 42): any {
@@ -43,6 +44,10 @@ function createManager(fetch: typeof globalThis.fetch, spawn = vi.fn(() => creat
 }
 
 describe('codex proxy command configuration', () => {
+  it('should use the shared model execution timeout as its request deadline', () => {
+    expect(getCodexProxyConfig({}).requestTimeoutMs).toBe(executionTimeoutDefault);
+  });
+
   it('should append exactly the serve options without shell quoting', () => {
     const config = getCodexProxyConfig({
       CODEX_PROXY_COMMAND: '"C:\\Program Files\\node\\npx.cmd" --yes proxy',

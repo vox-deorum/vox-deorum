@@ -22,6 +22,7 @@ import { toolRescueMiddleware } from './tool-rescue/middleware.js';
 import { buildClaudeCodeModel } from './providers/claude-code.js';
 import { claudeCodeSystemMiddleware } from './providers/claude-code-prompt.js';
 import { buildCodexModel, buildCodexProviderOptions } from './providers/codex.js';
+import { requiredToolChoiceMiddleware } from './providers/required-tool-choice.js';
 import type { ModelRuntimeIdentity } from './providers/host-tools.js';
 import type { ToolCallFraming } from './tool-rescue/types.js';
 import { Agent } from 'undici';
@@ -162,11 +163,15 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
       const flexHeaders = process.env.USE_FLEX === 'true'
         ? { 'X-Vertex-AI-LLM-Shared-Request-Type': 'flex' } : undefined;
       if (isAnthropicModel) {
-        const provider = createVertexAnthropic({ 
-          headers: flexHeaders, 
+        const provider = createVertexAnthropic({
+          headers: flexHeaders,
           googleAuthOptions: { apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY } }
         );
-        result = provider(config.name);
+        // Claude on Vertex shares Anthropic's required-tool-choice rejection.
+        result = wrapLanguageModel({
+          model: provider(config.name),
+          middleware: requiredToolChoiceMiddleware()
+        });
       } else {
         const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
         result = useVertex
@@ -176,7 +181,12 @@ export function getModel(config: Model, options?: { workingDirId?: string; onToo
       break;
     }
     case "anthropic":
-      result = createAnthropic()(config.name);
+      // Anthropic rejects a wire-level required tool choice; the middleware
+      // maps it to auto and restates the requirement in the system prompt.
+      result = wrapLanguageModel({
+        model: createAnthropic()(config.name),
+        middleware: requiredToolChoiceMiddleware()
+      });
       break;
     case "claude-code": {
       // The provider builder rebinds configuration to forced prompt mode. The
