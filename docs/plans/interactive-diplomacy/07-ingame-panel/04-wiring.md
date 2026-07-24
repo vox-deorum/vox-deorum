@@ -1,58 +1,372 @@
-# Stage 7.04: vox-agents + civ5-mod: live conversation, streaming, deals, enactment
+# Stage 7.04: Wire live chat, deals, and notifications
 
-> Part of the stage-7 sub-plan ([specs.md](specs.md); index [../07-ingame-panel.md](../07-ingame-panel.md)). Connects the stage-01/02 UI to the stage-03 transport through the **existing Web chat engine**: `runChatTurn` and the deal helpers are reused; where logic today lives only in Express route bodies, it is extracted into shared action helpers, not duplicated.
+> Part of the stage-7 sub-plan ([specification](specs.md); [stage index](../07-ingame-panel.md)). Stages 7.01 and 7.02 delivered the panel and deal editor behind mock drivers. Stage 7.03 delivered the event transport, push functions, transcript paging, and bridge queues. This stage replaces the probes and mocks with the existing Web chat engine and real deal actions.
 
 ## Objective
 
-The human player converses with the counterpart's assigned LLM diplomat and uses every deal action — through the same engine, voice, durable thread, and validation as the Web — whatever seat the player occupies. The seat flavors (normal player, human strategist, pure observer; [specs.md](specs.md#observer-flavors-and-the-effective-seat)) differ only in which effective seat the event carries and in display cosmetics: observers exist for debugging and receive no special backend treatment. Messages run through `runChatTurn` with replies streamed into the panel, deal moves flow through the same validation the Web uses, accepted deals enact through `enact-agent-deal`, and replies landing while the panel is closed surface as native notifications across turns.
+Make the in-game diplomacy panel a second client of the Web conversation backend.
+
+The player can open a shared transcript, send a message, watch the counterpart's assigned diplomat stream a reply, negotiate and enact deals, and resume the conversation through native notifications. The normal player, human strategist, and pure observer paths use the same bridge and thread factory. Their only differences are the effective seat carried by the event and observer presentation.
+
+The implementation is complete when:
+
+- both clients use the same deterministic diplomacy thread and durable transcript;
+- `runChatTurn` owns every human message, proposal, and counter;
+- accept, reject, and retract use shared backend actions;
+- the panel receives authoritative transcript rows, not a second deal-state protocol;
+- accepted deals still enact only through `enact-agent-deal`;
+- promise terms that are already illegal are refused before a proposal is stored;
+- a pure observer can open VP's native deal presentation, while native item legality and backend enactment continue to reject unsupported participants;
+- successful replies and deal outcomes produce native notifications, including across turn boundaries.
+
+## Starting point and constraints
+
+The stage-03 bridge in `vox-agents/src/envoy/ingame-bridge.ts` already owns two independent per-pair queues:
+
+- the action FIFO serializes mutating chat and deal events;
+- the push FIFO orders Lua calls and atomic transcript reflushes without waiting for the action FIFO.
+
+`DiplomacyChatMessage` still uses the temporary `appendProbe`, and `DiplomacyDealAction` still reports that deal actions are not wired. `civ5-mod/UI/VoxDeorumDiploTransport.lua` still contains probe listeners, and both UI contexts still finish with mock-driver includes.
+
+The Web implementation already provides the reusable engine:
+
+- `runChatTurn` in `vox-agents/src/web/chat/turn.ts`;
+- `openDiplomacyChat` in `vox-agents/src/web/chat/factory.ts`;
+- the thread lock in `utils/diplomacy/chat-turn-commit.ts`;
+- proposal, rejection, and enactment helpers in `utils/diplomacy/deal.ts`;
+- durable transcript utilities in `utils/diplomacy/transcript.ts`.
+
+This stage may extend those interfaces, but it must not create a game-only chat engine or duplicate route logic.
+
+## Technical decisions
+
+1. **`runChatTurn` reports the durable rows it creates.** Streaming deltas are temporary presentation. The shared transcript writers expose each successful write to a turn-scoped collector, and `runChatTurn` forwards those exact rows through its sink in append order. This covers the caller row, final diplomat reply, deal-tool rows, and a possible `close` row without a second transcript read. The transcript remains authoritative, and the panel still deduplicates by transcript ID.
+
+2. **Proposal state belongs to the backend.** The panel and Lua driver do not decide whether a rejection is redundant or stale. The authoritative transcript write handles it atomically: repeating the same rejection returns the existing result without appending another row, while rejecting an accepted, countered, or superseded proposal is a conflict.
+
+3. **VP's observer deal presentation remains available.** VP can bind an observer slot as `g_iUs` and show the native trade screen. Vox Deorum removes its stricter presentation-only major-civilization checks. This does not make observer deal items legal: `CvDeal::IsPossibleToTradeItem`, `inspect-deal`, proposal validation, and enactment retain their existing participant limits.
+
+4. **One game action may be pending per pair.** No request token is added. The bridge pushes the committed row associated with the action, and the transport driver resolves the mounted deal editor only when that row matches the pending action. Re-pushing an existing row for an idempotent rejection is valid: the panel deduplicates it, while the deal-screen resolver still receives the acknowledgement.
+
+5. **Notifications report newly committed successful outcomes only.** A completed chat or deal turn and a state-changing accept, reject, or retract post a notification. An idempotent acknowledgement, validation conflict, transport failure, or pre-commit rejection does not post another one.
 
 ## Work items
 
-1. **Consolidate deal-action errors, then extract the route bodies into shared actions (`vox-agents/src/web/chat/deal.ts`).** The accept/reject Express handlers own real logic their leaf helpers lack: the diplomacy-thread guard (`resolveDealThread`), the closed-this-turn gate (`isDealLocked`), `withThreadLock` wrapping, the cache mirror (`mirrorDealRowsBestEffort`), and accept's conflict-vs-failure disambiguation. Extraction happens in two moves so the result is simpler than the sum of today's routes:
+### 1. Create a shared deal-action boundary
 
-   - **One typed error vocabulary first.** Change `requireCurrentOpenProposal` (`utils/diplomacy/deal.ts`) to throw `ProposalConflictError` instead of bare `Error`. Every transcript writer already serializes under the per-thread lock, so proposal state cannot change mid-action; the accept route's catch-time re-probe (calling `requireCurrentOpenProposal` a second time, outside the lock, just to tell 409 from 502) is **deleted, not extracted**. Add one shared closed-this-turn guard (throwing a typed error) that replaces both divergent copies in the code today — the inline gate in `runChatTurn` (which 503s on a missing live turn) and `isDealLocked` in the deal routes (which silently falls back to `thread.metadata?.turn ?? 0`); pick the `runChatTurn` semantics.
-   - **Then the transport-neutral actions.** `acceptDealAction(thread, proposalMessageID)` and `rejectDealAction(thread, proposalMessageID, content?)` compose the thread guard, the closed-this-turn guard, `withThreadLock`, the leaf helpers (`requireCurrentOpenProposal` + `enactAgentDeal`, or `appendDealReject`), and `mirrorDealRowsBestEffort`. The accepter/rejecter is derived inside via `audienceID(thread)`, not accepted as a parameter. Actions throw typed errors (`ThreadBusyError`, `ProposalConflictError`, `IllegalDealError`, the closed-this-turn error); each transport owns one small mapper: the Express routes keep their exact current status mapping (behavior-preserving — the existing route tests must pass unchanged), and the ingame-bridge maps the same types to `Status{error}`. The thread-busy message string, currently duplicated across four handlers, lives in one place.
+Refactor `vox-agents/src/web/chat/deal.ts` so Express routes contain only HTTP lookup, request parsing, and response mapping.
 
-2. **Replace the stage-03 chat probe: `DiplomacyChatMessage` on the action FIFO.** Caller validation is the same cheap shape check for every seat flavor: schema-valid event, `PlayerID ≠ CounterpartID`, counterpart seat context live. Events originate from our own mod over the local pipe; there is no seat-state attestation. Ensure the thread through `openDiplomacyChat` with the event `PlayerID` as `callerPlayerID` — never `resolveHumanSeat` (it has no result in observer or autoplay games), and never a hand-built thread ID (the factory owns `dipl:${gameID}:${min}:${max}`). The voice is always the counterpart's assigned diplomat, for every flavor; `AsObserver` contributes display fields only (`callerRole: 'Observer'`; the caller identity may be absent for an observer slot — the factory already tolerates that). Move the reopen-while-busy guard **into `openDiplomacyChat`**: when the existing thread is busy (`isThreadBusy`), update nothing and return it as-is. This removes caller-side orchestration from the bridge and closes the same latent hazard on the Web, where a reopen during a streaming turn re-syncs `thread.messages` out from under `beginChatTurn`'s reply index. Then: capture the baseline transcript ID, call `runChatTurn({kind:'text', chatId, message}, gameSink)` without a pre-append (`runChatTurn` commits the message), and after completion read rows above the baseline and queue them through the push FIFO as `Messages{append}`. The committed human row clears the optimistic sending row; the final reply always comes from the durable transcript, never from accumulated deltas. A `ChatTurnRejection` or archival failure queues `Status{error}`.
+First, make the error vocabulary consistent:
 
-   `DiplomacyPanelOpened` stays the stage-03 read-only reflush.
+- Change `requireCurrentOpenProposal` to throw `ProposalConflictError` for a missing, closed, superseded, malformed, or self-authored proposal instead of throwing bare `Error`.
+- Add a shared live-turn and closed-this-turn guard used by `runChatTurn`, accept, and reject. It must preserve the stricter `runChatTurn` behavior: a live thread without a current turn is unavailable, not turn zero or the thread's cached metadata turn.
+- Give the missing-live-turn and closed-this-turn cases distinct typed errors so both transports can map them without inspecting message text.
+- Keep the shared thread-busy message in one constant.
 
-3. **Add the game `ChatStreamSink` in `vox-agents/src/envoy/ingame-bridge.ts`.** A whitelist-of-known-chunk-types translator with a default-drop arm: accumulate `text-delta` chunks, convert the accumulated text through `markdownToCiv5`, and queue `VoxDeorumDiploDelta` about once per second. The progress sentinel and reasoning or tool chunks become `VoxDeorumDiploStatus` states only; an unknown chunk type maps to at most a generic status — content never crosses unless the type is explicitly whitelisted. Queue `connected.deal` as the authoritative committed proposal row and `done.deals` as durable mid-run rows. Queue errors as `Status{error}`. Every callback appends work to the independent push FIFO, which runs while the action FIFO is busy. At turn completion, capture and await the current push tail before final reconciliation. Do not await the action FIFO from one of its own handlers. `Begin.busy`, read through `isThreadBusy`, covers reopen-during-run.
+Then add transport-neutral actions:
 
-4. **Handle `DiplomacyDealAction` on the action FIFO.** The same cheap validation as chat — no capability gating and no per-flavor branching. Any caller the panel lets act may reach the deal path; an unsupported participant (e.g. an out-of-range pure-observer slot, a debugging aid) fails through the existing validation chain — TradeLogic's shipped range gate on the UI side, `inspectDeal`, `appendDealProposal`'s legality guard, native enactment — and surfaces as `Status{error}` with no partial writes. That is the intended behavior, not a gap.
+- `acceptDealAction(thread, proposalMessageID)`;
+- `rejectDealAction(thread, proposalMessageID, content?)`.
 
-   Before wiring the game action, close the proposal-time promise-validation gap. Today `appendDealProposal` refuses to archive an untradeable trade item but archives any schema-valid promise, so a dead-on-arrival promise (an already-made `MILITARY`/`EXPANSION`/`BORDER`, an ineligible Coop War) becomes the durable active offer and fails only when Accept reaches stage-6 enactment. The game deal screen blocks these client-side (`evaluatePromises` reads live promise state), but that gate covers game-screen authors only: the Web editor has no live promise-state read, and the negotiator's LLM-authored proposals and counters bypass every client screen — and their cards land in both UIs. `appendDealProposal` is the one chokepoint all three authors share, and it already runs a fresh `inspect-deal` before every write, so the fix adds no round trip. Nothing new is invented — each move widens or unifies something that already exists:
+Each action:
 
-   - **Widen `InspectedPromiseSchema`** (`mcp-server/src/tools/knowledge/inspect-deal.ts`) with the same `legality` + `reasons` fields `InspectedTradeItemSchema` already carries, next to the untouched advisory `agreeabilityFactors`. Consumers read a promise verdict exactly as they read an item verdict; no parallel promise-legality structure.
-   - **Unify the Lua checks** in `inspect-deal.lua`: factor enact mode's existing promise validation — admitted live endpoints, pair direction, duplicates, Coop War target and both-direction eligibility (including already-preparing), already-made `MILITARY`/`EXPANSION`/`BORDER` — into one function that read-only inspection now calls too. Inspection and enactment agree because they run the same code, not a copy.
-   - **Extend `appendDealProposal`'s existing rejection**: the illegal-item filter grows an illegal-promise arm over the same inspection result, throwing the same `IllegalDealError` with per-term reasons, relayed to the negotiator exactly as item reasons are today. No new error type, no separate guard.
-   - **`NO_DIGGING` stays unvalidated, explicitly**: the game exposes no made-state read and the front end already ignores its state (the deal screen checks only its wire shape), so inspection marks it always-legal; a repeat re-applies at enactment as a harmless no-op.
+1. checks that the thread is a live diplomacy thread;
+2. applies the shared live-turn and closed-this-turn guard;
+3. derives the acting endpoint with `audienceID(thread)`;
+4. runs under `withThreadLock`;
+5. calls the authoritative deal helper;
+6. hydrates the returned durable rows directly into the live cache;
+7. returns the durable outcome row or rows needed by non-Web transports.
 
-   Proposal-time legality can never be final — game state moves between proposal and Accept — so stage-6 enactment's full recheck remains the sole authority; this gate only stops offers that are dead on arrival.
+Keep thread lookup transport-specific. Express continues to resolve `chatId`; the in-game bridge passes an already opened `EnvoyThread`.
 
-   Propose and Counter call `runChatTurn({kind:'deal', chatId, deal, expectedProposalID: ProposalMessageID?}, gameSink)`, preserving the Web path for value snapshots, legality, and stale-proposal conflicts. Counter always carries the serialized edited draft and the mounted `ProposalMessageID` as `expectedProposalID`. Reset and Cancel are local-only editor actions and never reach the transport driver. Accept calls `acceptDealAction` and Reject calls `rejectDealAction` (the item-1 actions); their typed errors map to `Status{error}` through the bridge's one mapper. After each action, read rows above the baseline and queue them through the push FIFO. The panel reducer then updates card badges without a separate state channel. Keep the mounted deal editor while an action is pending. On a matching committed row, the panel context raises `LuaEvents.VoxDeorumDealActionResolved({ status = "success" })`; the deal-screen context resolves and closes. An error raises the same event with its reason and restores the existing controls, terms, and public message without reopening the screen.
+Move redundant-rejection handling into the mcp-server transcript write used by `appendDealReject`. The check and write must run in one store transaction:
 
-5. **Notifications.** After any completed reply or deal outcome, invoke the `post-notification` tool with `{ PlayerID, CounterpartID, Summary, Message }` (set `CounterpartID` so the click opens this pair's conversation). Use the counterpart leader name as the summary and a trimmed first line as the message, converting both through `markdownToPlain` in one shared helper before the call. Widen the `PlayerID` schema in `mcp-server/src/tools/actions/post-notification.ts` so observer slot IDs are valid instead of capping the field at `MaxMajorCivs - 1`. In `mcp-server/lua/post-notification.lua`, guard a pinned-seat redirect: when the active player is an observer whose UI override equals the target `PlayerID`, post to `Game.GetActivePlayer()` instead. `CvNotifications.cpp` displays notifications only for the active player, so this mirrors the existing goody-hut observer redirect in `CvPlayer.cpp` and lets a strategist receive notifications addressed to the pinned seat. Pure-observer events already carry the real observer slot and need no redirect. Always post; an open panel dismisses notifications for its pair. This delivers replies after the player leaves the panel, including on later turns, and leaves normal-seat posting unchanged.
+- if the referenced proposal is the active open offer, append `deal-reject`;
+- if that proposal already has a rejection by the same speaker, return the existing row with `AlreadyRejected: true` and do not write;
+- if a different proposal is active or the proposal is accepted, enacted, or superseded, return a conflict;
+- never append two terminal rejection rows for the same proposal.
 
-6. **Wire the panel and deal screen in `civ5-mod/UI/VoxDeorumDiploPanel.lua` and `VoxDeorumDealScreen.lua`.** Swap the panel and deal screen's final mock includes for transport drivers that implement `VoxDeorumDiploUI.driver` and `VoxDeorumDealUI.driver`; the panel's driver grows inside the stage-03 `VoxDeorumDiploTransport.lua` include, which already owns lazy push-function registration and the probe. The driver uses the shared effective-seat helper from stage 01 for every event and sets `AsObserver` only for a pure observer, as specified in [the canonical event contract](specs.md#game--server-four-broadcast-events). Stage 7.02 binds the seat through the parameterized `VoxDeorumOpenDeal` entry and TradeLogic's seat-aware `DisplayDeal` fallback; no `Game` override exists anywhere. Panel open fires `DiplomacyPanelOpened` and renders `Begin` and `Messages`. Send fires `DiplomacyChatMessage`, and Load earlier fires `DiplomacyTranscriptRequest`. Clicking a deal card raises the request-table `VoxDeorumOpenDealScreen` contract with the explicit mode, deal, and proposal ID. Replace the mock deal action driver with `DiplomacyDealAction`: Propose and Counter carry the serialized deal, while Accept, Reject, and Retract carry the proposal ID. Preserve `retract` as a distinct local driver kind, then map it deliberately to the canonical Reject event before broadcast. `DealPayload` records the effective seat as the human-side actor so a pinned strategist negotiates and enacts for that civilization. Keep the originating card and mounted editor pending until the matching row returns, and retain the two timeout tiers from the UI rules.
+Translate that backend conflict to `ProposalConflictError` at the vox-agents boundary. The Web mapper preserves its public status classes:
 
-## Reuse
+| Error | HTTP |
+|---|---:|
+| invalid request or `IllegalDealError` | 400 |
+| busy, closed this turn, or proposal conflict | 409 |
+| live turn unavailable | 503 |
+| store, bridge, inspection, or enactment failure | 502 |
 
-`runChatTurn` + `ChatStreamSink` (`web/chat/turn.ts`, `types/web-chat.ts`): the entire engine, unmodified; `openDiplomacyChat` (`web/chat/factory.ts`), now also owning the reopen-while-busy guard; `enactAgentDeal`, `appendDealReject`, `requireCurrentOpenProposal`, `withThreadLock`, `mirrorDealRowsBestEffort` (`web/chat/deal.ts`, composed inside the extracted actions); the typed deal errors (`ProposalConflictError`, `IllegalDealError`, `ThreadBusyError`) as the single cross-transport error vocabulary; `readTranscriptPage`/transcript utils (stage 03); `isThreadBusy` (stage 03); stage-6 `enact-agent-deal` idempotency (unchanged: double-accept is already refused at the transcript level).
+Delete accept's catch-time second call to `requireCurrentOpenProposal`. Typed failures and the backend transaction now distinguish conflict from infrastructure failure without a race-prone re-probe. Replace `mirrorDealRowsBestEffort` with a small direct hydrator for returned rows, and remove the full deal-transcript reread if it has no remaining caller.
 
-## Verify
+Update the existing Web route tests, shared action tests, and transcript-write tests to cover typed errors, idempotent rejection, and stale rejection. The Web UI behavior remains unchanged except that a repeated reject no longer creates a redundant row.
 
-Full loop in a live interactive game (all services up), against a pair that also has Web history:
+### 2. Make `runChatTurn` report every durable row
 
-1. Open the panel from Converse: the shared history renders in full, Web rows included, with any `{{{token}}}` special rows hidden.
-2. Send a message: optimistic row → status line ("Envoy is thinking…" / tool status) → streamed partial text → final reply row that **matches the durable transcript row**. Check IDs in the Web view. Reasoning and tool details remain revealable there, but their content never reaches the game.
-3. Leave the panel mid-run. A native notification arrives when the reply completes. Click it on a later turn and confirm that the conversation opens with the finished reply.
-4. Reopen mid-run: `Begin.busy` shows "envoy is composing…" before the turn completes; final rows arrive as ordered increments without another reflush. Confirm the reopen did not re-sync the thread cache (the factory's busy guard).
-5. Deals: propose with a promise from the reused native screen → the committed card appears from `connected.deal`; the negotiator counters → the counter card arrives; edit that incoming mount and confirm Counter carries the edited draft with `expectedProposalID`; Reset restores the original mount and re-enables Accept; accept in-game → items change hands, `deal-accept` + `deal-enacted` rows arrive, the card re-badges Enacted; a second accept is refused (existing idempotency). Reject re-badges the card via the panel reducer. A stale counter (server-side proposal changed) surfaces the 409-equivalent as an error status with the draft preserved. An ineligible Coop War, already-made standing promise, or malformed promise direction is rejected before any proposal row is stored in both the Web and game paths.
-6. The Web routes still pass their existing tests after the consolidation + extraction refactor (accept/reject/close from the Web UI unchanged, including status codes); the accept route's catch-time re-probe is gone.
-7. Repeat the full loop as a human strategist. Confirm the same assigned diplomat is used, deals enact for the pinned civ, notifications addressed to that civ display through the observer redirect, Declare War acts for the pinned team through the stage-01 Lua branch with correct originator attribution, and the same pair thread is visible on the Web.
-8. Debug pass as a pure observer: chat runs against the same assigned diplomat (caller displayed as Observer); a deal action from an unsupported observer slot fails with a clean `Status{error}` and no partial transcript or game writes.
+Add a turn-scoped transcript-write collector in vox-agents. Use `AsyncLocalStorage`, following the existing `VoxContext` pattern, so writes made by nested diplomat and negotiator tools remain associated with the active `runChatTurn` without adding transport parameters to every tool call.
+
+The collector:
+
+- is installed before `beginChatTurn` and remains active through completion or terminal failure;
+- accepts rows only for the active thread;
+- records a row only after the backing store confirms that the current operation wrote it;
+- deduplicates by transcript ID and exposes rows in ID order;
+- is a no-op for writes outside a captured turn.
+
+Make every relevant write-through helper return and record an exact `TranscriptPushMessage` projection:
+
+- `beginChatTurn` exposes the committed caller row for ordinary text, proposal, and counter requests, and uses that row's ID and turn in the live cache. A triple-brace trigger has no durable caller row.
+- `ChatTurn.complete` returns and records the archived diplomat reply row when there is one, and uses that exact row when normalizing the cached reply.
+- `appendDealProposal` continues to return its exact proposal or counter row and also records it.
+- `appendDealReject` returns the exact new or existing rejection row and records it only when the current call created it.
+- `appendCloseMessage` returns its close row as well as the stamped turn. `closeConversation` returns the ordered rejection and close rows it created.
+- `enact-agent-deal` adds full `deal-accept` and `deal-enacted` row projections while retaining its current ID and status fields. Its idempotent path returns the existing enacted row. Pass the active thread into `enactAgentDeal` from the shared action and negotiator so it can record only rows created by the current call for the captured thread.
+
+Widen the transport-neutral sink events:
+
+- `connected.rows` contains the durable caller row committed before the model run;
+- `done.rows` contains rows committed after `connected`, including terminal tool rows and the final archived reply;
+- `error.rows` contains any rows committed after `connected` but before a post-commit failure.
+
+Keep the existing `connected.deal` and `done.deals` fields as Web compatibility projections during this stage, but derive them from the same captured rows. Do not reread deal messages at the end of the turn.
+
+Every committed turn emits exactly one terminal sink event. Each terminal path snapshots the collector once, then sends either `done` or `error`.
+
+`runChatTurn` uses the captured deal rows to update `thread.messages` at the existing reply boundary before emitting `done`. This preserves the current cache ordering without the `knownDealIDs` scan and `readDealMessages` reconciliation.
+
+Stop treating final reply archival as best-effort. If the store refuses that append, `ChatTurn.complete` throws, `runChatTurn` emits `error` with any rows already committed after `connected`, and no `done` event is sent. A streamed draft therefore cannot be mistaken for a durable completed reply.
+
+Add focused tests for:
+
+- caller text, proposal, and counter rows in `connected.rows`;
+- final reply, proposal, rejection, enactment, and close rows in `done.rows`;
+- nested negotiator writes remaining inside the correct turn capture;
+- ID ordering and duplicate suppression;
+- rows committed before a post-commit failure appearing in `error.rows`;
+- final reply archival failure producing `error`, not `done`;
+- unchanged Web event payloads derived from the new row lists.
+
+### 3. Make thread reopening safe during a live turn
+
+Move the reopen-while-busy guard into `openDiplomacyChat`.
+
+When the deterministic pair thread already exists and `isThreadBusy(thread.id)` is true, return it without changing:
+
+- participant metadata;
+- agent or context assignment;
+- title or timestamps;
+- `thread.messages`;
+- compaction state.
+
+This protects both clients. A Web reopen can no longer compact and replace `thread.messages` after `beginChatTurn` captured its reply index. The in-game bridge also gets the existing thread so `Begin.busy` and `ThreadBusyError` describe the same live state.
+
+Add a factory test that opens a thread during an in-flight turn and proves that no dependency mutation or compaction occurs.
+
+### 4. Reject dead-on-arrival promises before archival
+
+`appendDealProposal` already rejects illegal ordinary trade items after a fresh `inspect-deal`, but promises currently receive only advisory agreeability factors. A schema-valid promise can therefore become the active durable offer even when enactment would reject it immediately.
+
+Close the gap at the shared proposal chokepoint:
+
+1. Widen `InspectedPromiseSchema` in `mcp-server/src/tools/knowledge/inspect-deal.ts` with `legality` and `reasons`, matching the existing inspected-item vocabulary. Keep `agreeabilityFactors` unchanged and advisory.
+2. Pass proposed promises into the read-only `inspect-deal.lua` invocation.
+3. In `mcp-server/lua/inspect-deal.lua`, extract enact mode's promise checks into one read-only validator used by both inspection and enactment. It covers:
+   - two distinct live endpoints and correct pair direction;
+   - duplicate logical commitments;
+   - a valid third-party Coop War target;
+   - both-direction Coop War eligibility;
+   - an already-preparing Coop War;
+   - existing `MILITARY`, `EXPANSION`, and `BORDER` promises.
+4. Return one legality result per input promise, aligned by index.
+5. Extend `appendDealProposal`'s existing `IllegalDealError` guard to include illegal promises and their per-term reasons. Broaden its structured detail type from trade items to deal terms so negotiator feedback does not parse display strings.
+
+`NO_DIGGING` remains always legal at inspection because the game exposes no made-state query and reapplying it at enactment is harmless. Enactment still repeats every check against current game state. Proposal-time inspection prevents only offers that are already impossible.
+
+Add mcp-server and vox-agents tests for each promise rule, including Web-authored and negotiator-authored proposals. Verify that an illegal promise writes no proposal row.
+
+### 5. Replace the chat probe with `runChatTurn`
+
+Widen the bridge's internal event parser so it retains the full canonical deal-action shape as well as chat text:
+
+- `Action`;
+- `Deal`;
+- `ProposalMessageID`;
+- `Text`.
+
+For `DiplomacyChatMessage`, keep the existing admission rule: valid event shape, different player and counterpart IDs, and a live counterpart context. Do not add seat attestation or flavor-specific capability logic.
+
+On the action FIFO:
+
+1. Open the pair with `openDiplomacyChat`, always passing the event `PlayerID` as `callerPlayerID`.
+2. Pass `callerRole: "Observer"` and no caller identity only when `AsObserver` is true.
+3. Call `runChatTurn({ kind: "text", chatId: thread.id, message: event.Text }, gameSink)`.
+4. Let the game sink push `connected.rows`, streaming deltas, and the terminal `done.rows` or `error.rows`.
+5. Await the push work queued by the sink.
+6. Post the successful-outcome notification from item 7 only when the sink reached `done`.
+
+Delete `appendProbe`. `runChatTurn` commits the caller row itself, so a pre-append would duplicate the message.
+
+A pre-stream `ChatTurnRejection` becomes `Status{error}`. A post-commit failure comes through `sink.error`, including any durable rows written before the failure. The streamed draft remains temporary and is replaced only when the durable final reply arrives in `done.rows`.
+
+### 6. Add the game stream sink and real deal handler
+
+Implement a `ChatStreamSink` adapter inside `vox-agents/src/envoy/ingame-bridge.ts`.
+
+#### Stream mapping
+
+The sink uses an explicit chunk allowlist:
+
+- `text-delta` with `id === "progress"` becomes a generic composing or tool status, never spoken text;
+- ordinary `text-delta` chunks append to one accumulated spoken reply;
+- about once per second, convert the accumulated reply with `markdownToCiv5` and enqueue `VoxDeorumDiploDelta`;
+- recognized reasoning and non-message tool chunks become generic `reasoning` or `tool` states without their content;
+- an unknown chunk is dropped, or produces at most one generic status;
+- `onDisconnect` is a no-op because there is no browser socket to cancel the game run.
+
+Sink callbacks never await the action FIFO. They only append work to the independent push FIFO.
+
+Push every row from `connected.rows`, `done.rows`, and `error.rows` through the existing `Messages{append}` path. The game sink also retains those rows as the outcome of the current action for pending-action resolution and notification text. At completion, snapshot and await the current per-pair push tail. Extend the queue helper so this tail can be observed without awaiting it from inside one of its own workers.
+
+#### Deal actions
+
+Handle `DiplomacyDealAction` on the action FIFO:
+
+- **Propose:** call `runChatTurn({ kind: "deal", chatId, deal }, gameSink)`.
+- **Counter:** call `runChatTurn({ kind: "deal", chatId, deal, expectedProposalID: ProposalMessageID }, gameSink)`.
+- **Accept:** call `acceptDealAction(thread, ProposalMessageID)`.
+- **Reject or retract:** call `rejectDealAction(thread, ProposalMessageID, Text)`. The game event uses canonical `reject`; retract remains a local driver intent.
+
+Propose and Counter receive their rows from the `runChatTurn` sink. Accept queues the exact rows returned by `acceptDealAction`; Reject and Retract queue the exact row returned by `rejectDealAction`. There is no post-action transcript query. Typed failures use one bridge mapper and become `Status{error}`.
+
+The game-side pending resolver uses durable rows:
+
+- proposal and counter resolve from the exact caller row in `connected.rows`;
+- accept resolves when the matching `deal-accept` and `deal-enacted` result rows arrive;
+- reject and retract resolve from the matching `deal-reject`, including an existing row returned by the backend's idempotent path;
+- an error raises `LuaEvents.VoxDeorumDealActionResolved({ success = false, reason = ... })`.
+
+The panel keeps the proposal card pending, and the deal screen keeps its mounted editor, until this resolution. On error, the existing screen resolver restores the same terms, promises, and public message.
+
+### 7. Post native notifications for successful outcomes
+
+Add one notification helper in vox-agents that:
+
+- accepts the caller, counterpart, and durable outcome rows;
+- uses the counterpart leader name as `Summary`;
+- selects the first non-empty line of the final counterpart reply or deal outcome as `Message`;
+- converts both fields through `markdownToPlain`;
+- strips the pipe delimiter and trims to the tool's schema limits;
+- calls `post-notification` with `PlayerID` and `CounterpartID`.
+
+Call it after:
+
+- a successfully completed text or deal turn;
+- a successful accept;
+- a newly written reject or retract.
+
+Do not call it for an idempotent rejection acknowledgement, validation error, conflict, unavailable turn, or transport failure.
+
+Observer notification delivery requires two mcp-server changes:
+
+1. Add a shared `MaxPlayers` bound beside `MaxMajorCivs`, and widen `post-notification`'s `PlayerID` to the full game-player range. `CounterpartID` remains a major civilization.
+2. In `mcp-server/lua/post-notification.lua`, redirect a notification addressed to a pinned seat to `Game.GetActivePlayer()` when the active player is an observer whose UI override equals that requested seat. A pure observer keeps its real observer slot, and normal play remains unchanged.
+
+The bridge always posts after a successful outcome. In `VoxDeorumDiploPanel.lua`, if a notification for the currently open pair is added, remove it immediately. Opening or clicking a conversation continues to dismiss all previously tracked notifications for that pair.
+
+### 8. Replace the Lua mocks with transport drivers
+
+Grow `civ5-mod/UI/VoxDeorumDiploTransport.lua` from the stage-03 probe into the real panel driver:
+
+- remove the `Lua.log` probe listeners;
+- keep lazy `Game.RegisterFunction` registration;
+- implement `onOpen`, `onSend`, `onLoadEarlier`, retry, and push-event handlers;
+- compute the effective seat once per outbound event with `VoxDeorumSeat`;
+- include `AsObserver = true` only for a pure observer;
+- emit `DiplomacyPanelOpened`, `DiplomacyChatMessage`, and `DiplomacyTranscriptRequest`;
+- translate `Begin`, `Messages`, `Status`, and `Delta` into the existing `VoxDeorumDiploUI` methods;
+- retain the panel's transport acknowledgement and reply-silence timeout tiers.
+
+Keep the existing `VoxDeorumDiploTransport` include and remove the following `VoxDeorumDiploPanelMock` include.
+
+Create `civ5-mod/UI/VoxDeorumDealTransport.lua` as the real `VoxDeorumDealUI.driver`, then include it from `VoxDeorumDealScreen.lua` in place of `VoxDeorumDealScreenMock`. The deal screen is a separate Lua context, so this driver registers its own functions and listens to the global diplomacy `Messages` and `Status` events instead of depending on the panel context's globals.
+
+The deal driver:
+
+- Propose and Counter serialize the edited deal;
+- Counter includes the mounted `proposalMessageID`;
+- Accept, Reject, and Retract include the proposal ID;
+- Retract maps deliberately to canonical `Action = "reject"`;
+- Reset and Cancel remain local and emit no event;
+- the event's `PlayerID` is the effective seat;
+- each item's and promise's human-side endpoint is that same effective seat;
+- the mounted screen stays pending until `VoxDeorumDealActionResolved`.
+
+Track the pending pair, action, and proposal ID in the deal context. Match incoming durable rows to that state before raising `VoxDeorumDealActionResolved`. Update `VoxDeorum.modinfo` to import the new transport file, refresh changed file hashes, and remove the unused mock-driver entries when the mock files are deleted.
+
+#### Preserve VP observer presentation
+
+Remove Vox Deorum's presentation-only major-civilization admission checks:
+
+- `VoxDeorumDealScreen.open` and `mount` accept the real effective seat when it is an addressable Civ player slot with `Players` and `Teams` entries, even when it is an observer;
+- `VoxDeorumOpenDeal` and `VoxDeorumResumeHumanToHumanEditor` accept distinct player slots below `MAX_CIV_PLAYERS`, matching VP's native `OnOpenPlayerDealScreen`;
+- keep the counterpart requirement as a living major civilization;
+- bind the observer slot directly as `g_iUs`; do not substitute a major seat and do not override `Game.GetActivePlayer()`.
+
+Keep native legality checks where they belong. Promise choice checks, ordinary item construction, `inspect-deal`, proposal archival, and enactment may report that an observer participant is unsupported. Those failures must restore the mounted editor and must not produce a partial transcript or game write.
+
+Remove the final `VoxDeorumDealScreenMock` include once the real driver is active.
+
+## Verification
+
+### Automated checks
+
+Run the repository build and test commands from the root:
+
+- `npm run build:all`;
+- `npm run test:all`.
+
+The focused coverage must include:
+
+- unchanged Web status classes for chat, accept, reject, and close;
+- typed proposal, closed-turn, missing-turn, and busy failures;
+- atomic idempotent rejection and stale rejection conflict;
+- no accept catch-time re-probe;
+- turn-scoped row capture across nested transcript writers;
+- `connected.rows`, `done.rows`, and `error.rows` ordering and compatibility projections;
+- final reply archival failure producing an error without a false completion;
+- exact accept and idempotent-reject rows returned without a transcript reread;
+- reopening a busy thread without mutation or compaction;
+- game-sink chunk allowlisting, progress-sentinel handling, delta throttling, and default drop;
+- push-tail ordering for captured durable rows;
+- every promise legality rule and no-write failures;
+- notification targeting and pinned-observer redirect;
+- full parsing of `DiplomacyDealAction`.
+
+### Live game checks
+
+With Civ V, bridge-service, mcp-server, and an interactive vox-agents session running:
+
+1. Open a pair that already has Web history. Confirm the full shared transcript renders and triple-brace control rows remain hidden.
+2. Send a message. Confirm the sequence is sending, composing or tool status, streamed draft, then the exact durable final row. The Web view must show the same transcript IDs and raw markdown.
+3. Leave during generation. Confirm a native notification arrives after the durable result, survives a turn boundary, and opens the correct pair.
+4. Keep the panel open through a reply. Confirm the notification is posted and immediately removed for the open pair.
+5. Reopen during generation. Confirm `Begin.busy`, ordered increments, and no cache resynchronization under the active turn.
+6. Propose and counter from the native editor. Confirm the exact committed card arrives in `connected.rows`, the edited counter carries `expectedProposalID`, and Reset remains local.
+7. Accept a proposal. Confirm `deal-accept` and `deal-enacted` arrive, game state changes, and a second accept is refused.
+8. Reject and retract. Retry the same action once and confirm the backend returns the existing outcome without appending a duplicate row. Attempt a stale rejection after a counter and confirm a clean conflict with the draft preserved.
+9. Submit an already-made standing promise, an ineligible Coop War, and a malformed promise direction through both Web and game paths. Confirm each is rejected before a proposal row is stored.
+10. Repeat as a human strategist. Confirm the pinned civilization's thread, diplomat, deal endpoints, enactment, notification redirect, and Web history all match normal play.
+11. Repeat as a pure observer. Confirm VP's native deal presentation opens with the real observer slot as `g_iUs`. Unsupported item or enactment actions must fail cleanly with no partial transcript or game-state write.
+
+## Out of scope
+
+- live mirroring into an already open Web chat;
+- a new deal-state push channel;
+- forward transcript cursors or post-action transcript reconciliation;
+- request tokens or stream generations;
+- widening native deal-item legality to make observer slots valid major-civilization participants;
+- changing the stage-8 direction configuration;
+- changing the Declare War path delivered by stage 7.01.
 
 ## Done when
 
-The stage-7 objective holds end to end: conversation, streamed replies, notification-carried cross-turn correspondence, deal negotiation with promises, and real enactment through `enact-agent-deal` — through the same engine, helpers, and transcript as the Web, for whatever seat the player occupies. Observer flavors ride the identical path as a debugging convenience, with display-only differences and natural failures where the native game cannot support an action.
+The in-game panel and Web are two clients of the same conversation system. They share the diplomat, thread, transcript, proposal validation, deal actions, and enactment path. Streaming remains responsive, final UI state comes from durable rows, notifications carry successful outcomes across turns, and every supported seat can open the same presentation without bypassing native authority.
