@@ -2,7 +2,7 @@
 
 This guide is for developers updating the managed `codex-openai-proxy` release used by vox-agents. Vox Deorum launches an exact version through `npx` on the first Codex request. The proxy is not a workspace dependency, so an update changes the source pin and its version-specific tests and documentation without running `npm install`.
 
-The current pin is `codex-openai-proxy@0.1.0-rc.4`, which bundles `@openai/codex@0.145.0`.
+The current pin is `codex-openai-proxy@0.1.0-rc.5`, which bundles `@openai/codex@0.145.0`.
 
 ## Check the release
 
