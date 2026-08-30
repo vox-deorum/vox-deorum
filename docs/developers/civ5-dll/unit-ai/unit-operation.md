@@ -96,9 +96,7 @@ This differs from [production](production.md#candidate-lifecycle). There is no s
 
 ## Flavors and boundaries
 
-Unit operation has no general flavor-to-action weight map. Flavors and AI strategy state usually act upstream by creating operations, choosing targets, or defining strategic demand. Current danger, reachable plots, tactical posture, army state, and role directives dominate the per-turn action.
-
-The one direct tactical flavor use, `FLAVOR_OFFENSE` in `TacticalAIHelpers::FindBestUnitAssignments`, is described in the [flavor overview](overview.md#flavors) together with the broader custom-flavor behavior.
+Unit operation has no general flavor-to-action weight map. Flavors usually shape upstream strategic demand or force composition. Current danger, reachable plots, tactical posture, army state, and role directives determine the per-turn action. See [military flavor effects](military-unit-operation.md#flavor-boundary) for the concrete military exceptions and indirect effects.
 
 ## Implementation trace
 

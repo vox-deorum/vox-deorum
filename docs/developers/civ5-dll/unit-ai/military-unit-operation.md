@@ -15,6 +15,16 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilita
 
 Operations and dominance zones are different layers. An operation coordinates a selected army across turns. A dominance zone groups nearby plots around a city or local area and supplies the posture for this turn's combat.
 
+## Flavor boundary
+
+Flavors do not generally select military operations, targets, or army approaches.
+
+- `FLAVOR_USE_NUKE` directly affects the chance of starting a nuclear operation.
+- `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape the recommended land and naval force allocation. They can therefore affect whether an attack has enough ready forces, but they do not choose its target or approach.
+- `FLAVOR_OFFENSE` also changes Tactical AI's assignment risk tolerance. That affects per-unit combat choices, not operation creation or campaign target selection.
+
+Ordinary military operations and their targets come from diplomatic and war state, threatened cities, path and approach scoring, reserves, and available units.
+
 ## How the layers connect
 
 ```mermaid
