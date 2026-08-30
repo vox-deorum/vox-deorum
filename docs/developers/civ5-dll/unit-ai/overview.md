@@ -1,6 +1,6 @@
 # Civilization V Unit AI: Overview
 
-This page is for C++ contributors who are new to the Vox Deorum DLL. It explains the unit AI in the **Vox Populi 5.2.7** baseline: how it decides which units to make, organize, modernize, and move.
+This page is for explaining the non-strategic AI in the **Vox Populi 5.2.7** baseline: how it decides which units to make, organize, modernize, and move.
 
 <!-- Instruction for further documentation: prioritize flavor over military/economic strategies, since Vox Deorum directly overrides flavors. -->
 
