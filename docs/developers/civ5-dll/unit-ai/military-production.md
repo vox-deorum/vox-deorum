@@ -53,6 +53,8 @@ Normally ordinary, operation, and army candidates all receive `CheckUnitBuildSan
 
 An operation production candidate is a preference, not a commitment. `CvCity::CheckForOperationUnits` is the separate route that can purchase a unit or explicitly commit the city to train one for an operation. `CvMilitaryAI::MakeEmergencyPurchases` considers final-unit purchases only when the player is not using the at-war strategy or is winning all wars. For a recruiting operation with exactly one uncommitted required slot, `CvAIOperation::BuyFinalUnit` can purchase a primary-role match and assign it to that slot.
 
+See [military organization](military-organization.md#reserves-and-production) for how reserve recruitment, production commitments, and direct purchases become formation membership.
+
 ## Implementation trace
 
 1. `CvMilitaryAI::SetRecommendedArmyNavySize` updates land and naval targets, plus the explorer target for major civilizations.

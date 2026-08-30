@@ -118,11 +118,15 @@ The [upgrade guide](upgrade.md) explains target resolution, eligibility, Homelan
 
 Organization maintains defense state, role-balance flags, attack targets, operations, armies, and `OperationSlot` assignments. `CvMilitaryAI::UpdateAttackTargets` and `UpdateOperations`, with `CvAIOperation` and `CvArmyAI`, build this state across turns. Open formation slots feed demand as production and purchase needs.
 
+The [military organization guide](military-organization.md) explains army membership, formation slots, recruitment, mustering, and release.
+
 Civilian operations reuse army and slot machinery when they need military escorts. Other civilian units have no general organization pass.
 
 ### Operation
 
 Military operation uses `CvTacticalAI::Update`, `CvAIOperation`, and `CvArmyAI` to analyze targets and dominance zones, move operation armies, and issue missions. Homeland AI then considers remaining military units for garrison, healing, sentry, patrol, and rebase moves.
+
+The [military unit operation overview](military-unit-operation.md) separates campaign goals, organization, and per-turn tactics.
 
 Civilian operation uses `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI`, `CvTradeAI`, `CvReligionAI`, and civilian `CvAIOperation` families to move, build, found cities, spread religion, trade, or use Great Person abilities. `CvPlayerAI::ProcessGreatPeople` supplies directives after a Great Person exists.
 
@@ -141,11 +145,8 @@ Civilian operation uses `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI
 ## Unit-operation guides
 
 - [Unit operation](unit-operation.md) explains the shared Tactical-to-Homeland handoff and per-turn control state.
-- [Military unit operation](military-unit-operation.md) explains persistent operations, tactical zones, armies, combat, and remaining military work.
+- [Military unit operation](military-unit-operation.md) is the overview of military campaign, organization, and tactical control.
+- [Military campaign](military-campaign.md) explains operation families, goals, retargeting, and abandonment.
+- [Military organization](military-organization.md) explains armies, formation slots, membership, and mustering.
+- [Military tactics](military-tactics.md) explains operation movement, dominance zones, combat priorities, and Homeland cleanup.
 - [Civilian unit operation](civilian-unit-operation.md) explains civilian operations, Homeland role passes, and civilian missions.
-
-<!--
-Keep these planned Unit AI guides:
-
-6. `military-organization.md`: How armies, operations, and formation slots maintain force structure.
--->

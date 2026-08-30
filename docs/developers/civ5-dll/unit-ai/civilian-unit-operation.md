@@ -72,7 +72,7 @@ The civilian portion of `CvHomelandAI::AssignHomelandMoves` runs in a deliberate
 7. Spaceship parts, treasure, trade units, and archaeologists run near the end.
 8. The unassigned review continues a valid mission or applies a movement, skip, or stranded-unit fallback.
 
-Earlier ownership still applies. A civilian in an operation has an army ID and is excluded from Homeland recruitment. A Great General with a field-command directive can be recruited by Tactical AI as combat support instead of reaching the ordinary Great General Homeland pass.
+Earlier ownership still applies. A civilian in an operation has an army ID and is excluded from Homeland recruitment. The [military organization guide](military-organization.md#organization-and-control) explains the shared operation, army, and slot machinery. A Great General with a field-command directive can be recruited by Tactical AI as combat support instead of reaching the ordinary Great General Homeland pass.
 
 ## Role behavior
 

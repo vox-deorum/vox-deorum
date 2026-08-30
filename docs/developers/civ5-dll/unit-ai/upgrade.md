@@ -101,6 +101,8 @@ flowchart LR
 
 `CvUnit::convert` carries forward or recalculates compatible promotions, experience, level, name, damage, origin, transport relationships, and ownership history. Promotions that no longer fit a changed combat class can become replacement experience. The target's upgrade rules decide whether movement ends. Squad membership is restored by `DoUpgradeTo`; army membership belongs to the caller, so Homeland removes the old unit from its slot and adds the replacement back to the same slot.
 
+See [military organization](military-organization.md#replacement-loss-and-release) for the surrounding army-slot lifecycle.
+
 `CvUnit::upgradePrice` starts with a base cost and the positive production difference between the unit types. Era, handicap, AI, unit discount, player modifier, exponent, and display-rounding settings then revise it. Minor civilizations and barbarians pay no upgrade price.
 
 ## Other upgrade paths
