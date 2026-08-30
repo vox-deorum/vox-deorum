@@ -1,6 +1,6 @@
-# Unit AI: Military Unit Operation
+# Unit AI: Military operation
 
-Military unit operation connects three layers. Campaign logic creates a persistent operation, organization assigns units to its army, and Tactical AI turns that state into missions each turn. The operation preserves a target, muster point, formation, and stage across turns. It does not replace local combat AI.
+Military operation connects three layers. Campaign logic creates a persistent operation, organization assigns units to its army, and Tactical AI turns that state into missions each turn. The operation preserves a target, muster point, formation, and stage across turns. It does not replace local combat AI.
 
 The shared [unit operation](unit-operation.md#per-turn-lifecycle) page explains the Tactical-to-Homeland handoff for all units. This page traces that military branch through the three layers.
 
@@ -49,7 +49,7 @@ An operation normally recruits a formation, gathers its assigned units around th
 
 ## Flavor boundary
 
-Military unit operation has no general flavor-to-action or flavor-to-operation weight map. `FLAVOR_USE_NUKE` directly affects nuclear-operation requests. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape force allocation and can therefore affect whether enough units are available. `FLAVOR_OFFENSE` also changes local combat-simulation risk thresholds in Tactical AI. These flavors do not choose a city target or operation approach. [Military campaign](military-campaign.md#flavors-and-tactical-zones) places them beside the actual operation requests.
+Military operation has no general flavor-to-action or flavor-to-operation weight map. `FLAVOR_USE_NUKE` directly affects nuclear-operation requests. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape force allocation and can therefore affect whether enough units are available. `FLAVOR_OFFENSE` also changes local combat-simulation risk thresholds in Tactical AI. These flavors do not choose a city target or operation approach. [Military campaign](military-campaign.md#flavors-and-tactical-zones) places them beside the actual operation requests.
 
 Per-turn action selection depends on current danger, reachable plots, tactical posture, army state, and role directives.
 

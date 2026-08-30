@@ -2,7 +2,7 @@
 
 Unit operation assigns actions to units that already exist. During the player unit update, it turns persistent operation state, tactical targets, role objectives, and remaining movement into missions such as moving, attacking, building, founding, trading, or skipping. It does not decide which units to create or when the empire should start a military campaign.
 
-This page explains the shared control flow. [Military unit operation](military-unit-operation.md) covers armies and combat units. [Civilian unit operation](civilian-unit-operation.md) covers civilian roles and missions.
+This page explains the shared control flow. [Military operation](military-operation.md) covers armies and combat units. [Civilian operation](civilian-unit-operation.md) covers civilian roles and missions.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvPlayerAI.cpp`, `CvTacticalAI.cpp`, `CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, and `CvUnit.cpp`.
 
@@ -96,7 +96,7 @@ This differs from [production](production.md#candidate-lifecycle). There is no s
 
 ## Flavors and boundaries
 
-Unit operation has no general flavor-to-action weight map. Flavors usually shape upstream strategic demand or force composition. Current danger, reachable plots, tactical posture, army state, and role directives determine the per-turn action. See [military flavor effects](military-unit-operation.md#flavor-boundary) for the concrete military exceptions and indirect effects.
+Unit operation has no general flavor-to-action weight map. Flavors usually shape upstream strategic demand or force composition. Current danger, reachable plots, tactical posture, army state, and role directives determine the per-turn action. See [military flavor effects](military-operation.md#flavor-boundary) for the concrete military exceptions and indirect effects.
 
 ## Implementation trace
 

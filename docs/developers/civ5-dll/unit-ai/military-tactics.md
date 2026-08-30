@@ -2,7 +2,7 @@
 
 Military tactics turns persistent campaign state and the current visible map into unit missions for this turn. Tactical AI moves operation armies first, then assigns local combat and support work to independent units. Homeland AI receives eligible military units left over.
 
-This page covers per-turn control. [Military campaign](military-campaign.md) explains why operations start and where they go. [Military organization](military-organization.md) explains armies, formation slots, recruitment, and mustering. [Military unit operation](military-unit-operation.md) is the overview of all three layers.
+This page covers per-turn control. [Military campaign](military-campaign.md) explains why operations start and where they go. [Military organization](military-organization.md) explains armies, formation slots, recruitment, and mustering. [Military operation](military-operation.md) is the overview of all three layers.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTacticalAI.cpp`, `CvTacticalAnalysisMap.cpp`, `CvAIOperation.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 

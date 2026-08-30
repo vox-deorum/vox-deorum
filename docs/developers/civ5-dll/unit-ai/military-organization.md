@@ -1,6 +1,6 @@
 # Unit AI: Military Organization
 
-Military operations give selected combat units a durable structure across turns. An operation holds the campaign state, an army records a formation, and each occupied formation slot identifies one unit. This page explains that organization and how it changes during recruiting, mustering, movement, and cleanup. For operation goals and the wider turn flow, see the [military operation overview](military-unit-operation.md).
+Military operations give selected combat units a durable structure across turns. An operation holds the campaign state, an army records a formation, and each occupied formation slot identifies one unit. This page explains that organization and how it changes during recruiting, mustering, movement, and cleanup. For operation goals and the wider turn flow, see the [military operation overview](military-operation.md).
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvTacticalAI.cpp`, `CvMilitaryAI.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 

@@ -1,6 +1,6 @@
 # Unit AI: Military Campaign
 
-Military campaign decides when an AI player creates a persistent military operation, where its army gathers, and what lasting goal it pursues. Tactical AI moves the operation army and handles local fighting, while campaign logic keeps the operation, muster point, target, and completion or abort state across turns. See [military unit operation](military-unit-operation.md) for the overall military unit-control model.
+Military campaign decides when an AI player creates a persistent military operation, where its army gathers, and what lasting goal it pursues. Tactical AI moves the operation army and handles local fighting, while campaign logic keeps the operation, muster point, target, and completion or abort state across turns. See [military operation](military-operation.md) for the overall military unit-control model.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvDiplomacyAI.cpp`, and `CvTacticalAnalysisMap.cpp`.
 

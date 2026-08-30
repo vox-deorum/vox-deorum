@@ -1,6 +1,6 @@
-# Unit AI: Civilian Unit Operation
+# Unit AI: Civilian operation
 
-Civilian unit operation turns role-owned objectives into movement, builds, and special missions for units that already exist. Most roles run through ordered Homeland AI passes. Settlers and selected Great People can instead enter persistent escorted operations. See [unit operation](unit-operation.md#per-turn-lifecycle) for recruitment, fallthrough, and processed-state rules.
+Civilian operation turns role-owned objectives into movement, builds, and special missions for units that already exist. Most roles run through ordered Homeland AI passes. Settlers and selected Great People can instead enter persistent escorted operations. See [unit operation](unit-operation.md#per-turn-lifecycle) for recruitment, fallthrough, and processed-state rules.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvEconomicAI.cpp`, `CvBuilderTaskingAI.cpp`, `CvTradeClasses.cpp`, `CvReligionClasses.cpp`, and `CvPlayerAI.cpp`.
 
