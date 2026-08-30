@@ -1,202 +1,132 @@
 # Civilization V Unit AI: Overview
 
-This page is for contributors who can read C++ but have not yet traced the Vox Deorum DLL. It describes the unit-AI behavior baseline of **Vox Populi 5.2.7**.
+This page is for C++ contributors who are new to the Vox Deorum DLL. It explains the unit AI in the **Vox Populi 5.2.7** baseline: how it decides which units to make, organize, modernize, and move.
 
-The code lives in `civ5-dll/CvGameCoreDLL_Expansion2`. A useful way to orient yourself is to follow four conceptual layers plus a parallel acquisition path:
+The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`. Read it in this conceptual order to trace dependencies. This conceptual order does not describe runtime precedence:
 
-1. **Production** selects the next buildable for each city.
-2. **Civilian demand** combines role-specific needs into production signals, purchase evaluations, and civilian operation objectives.
-3. **Allocation** decides how military capacity becomes standing forces, operations, tactical-zone activity, or military units left for Homeland handling. It also produces the military demand signals that production can consume.
-4. **Operation** decides what assigned or eligible units do this turn, on either the military or civilian track.
+1. **Demand** decides which units the empire needs.
+2. **Production** chooses what each city builds.
+3. **Acquisition** usually buys an ordinary unit immediately with gold or faith.
+4. **Upgrade** modernizes an eligible existing unit. Military upgrades can require army bookkeeping.
+5. **Organization** primarily maintains military forces and also supports escorted civilian operations.
+6. **Operation** chooses each eligible unit's action for this turn.
 
-Acquisition is a parallel creation path with separate military and civilian tracks. A role-specific need can start a gold or faith purchase evaluation. A game-rule trigger can instead spawn a Great Person or grant a free military or civilian unit. There is no universal acquisition planner or demand queue. Available military units enter allocation and recruitment, while available civilians enter Homeland processing or one of the four civilian operation families.
+Military demand is primarily `CvMilitaryAI`; civilian demand is spread across role-specific systems. The distinction matters because civilian units usually go from creation to operation, while military units can be assigned to armies and formation slots first.
 
-Civilian demand is likewise a distributed conceptual layer, not one `CvCivilianDemandAI` class. It performs no player-equivalent action. Automatic Great Person threshold spawns and free-unit grants begin outside this layer.
+Free-unit grants and Great Person spawns are automatic game rules, not AI decisions. They are outside this overview's decision model.
 
-This is a mental model, not a set of isolated classes. Information and feedback cross the boundaries. For example, allocation demand changes city production weights, an operation can expose a formation slot gap that production should help fill, and tactical results feed the next turn's defense and target assessments.
+## Dependencies
 
-## The layers at a glance
+The diagram shows information and state dependencies, not function-call order. World state, diplomacy, flavors, and the economy are shared inputs throughout.
 
 ```mermaid
 flowchart TD
-    F[Flavors and durable strategy state] -->|weighted inputs| P[Production scoring and selection]
-    W[World and player state<br/>threats, war plans, supply, cities, and flavors] --> A[Military allocation]
-    DI[Empire, city, and map state<br/>civilian counts/capacity, flavors, strategies, and role-specific rules] --> CD[Civilian demand<br/>distributed conceptual layer]
-    A -->|military demand signals| P
-    CD -->|family-specific production signals| P
-    P --> PA[[Set city build order<br/>enqueue selected build order]]
-    PA --> PC([Production completion])
-    PC -->|military unit| MU0[Available military unit]
-    PC -->|civilian unit| CU0[Available civilian unit]
-    AO --> MAE[Military purchase evaluation<br/>candidate, eligibility, affordability, and operation-slot need]
-    EC[City hurry choice and economic budget] --> MAE
-    EC --> CE
-    CD -->|role-specific purchase need| CE[Purchase evaluation<br/>candidate, eligibility, and affordability]
-    RG[Game-rule triggers<br/>threshold, building, policy, trait, event, or free-unit effect] --> MGE[Military grant trigger]
-    RG --> CGE[Civilian spawn or grant trigger<br/>progress state]
-    MAE --> MAP[[Purchase or invest in military unit]]
-    CE --> CAP[[Purchase or invest in civilian unit]]
-    MGE --> MGF([Free combat-unit grant])
-    CGE --> GP([Great Person spawn])
-    CGE --> CFG([Free civilian-unit grant])
-    MAP -->|immediate purchase| MU0
-    CAP -->|immediate purchase| CU0
-    MAP -->|invested build order| PC
-    CAP -->|invested build order| PC
-    MGF --> MU0
-    GP --> CU0
-    CFG --> CU0
-    MU0 --> A
-    A --> AO[Allocation output<br/>write targets, operation/army/slot assignments, and force/slot demand state<br/>not a unit mission]
-    AO --> MOS[Military operation decisions and state]
-    AO --> TA[Tactical AI]
-    TA --> T[Per-turn tactical targets, zones, and postures]
-    F -->|FLAVOR_OFFENSE risk tolerance| TA
-    MU0 -->|eligible unit| MOS
-    T --> MOS
-    MOS --> MUA[[Military unit action<br/>push mission: move, attack, pillage, fortify, or other action]]
-    CU0 --> H[Homeland and four civilian operation families]
-    H --> COS[Homeland assignments and directive state]
-    CD -->|operation objectives| COS
-    COS --> CUA[[Civilian unit action<br/>push mission or perform ability: move, build, found, spread, trade, or Great Person ability]]
-    MUA --> TP[TurnProcessed coordination state]
-    CUA --> TP
+    S[Shared state<br/>world, diplomacy, flavors, economy]
+    D[Demand]
+    P[Production]
+    A[Acquisition<br/>gold or faith purchase]
+    M[Available military unit]
+    C[Available civilian or<br/>unassigned military unit]
+    U[Upgrade, when eligible]
+    O[Organization<br/>operations, armies, slots]
+    R[Operation]
+    X[[Unit action]]
+
+    S --> D
+    S --> P
+    S --> A
+    D --> P
+    D --> A
+    P --> M
+    P --> C
+    A --> M
+    A --> C
+    M -->|eligible| U
+    U -->|replacement| M
+    M --> O
+    O -->|slot gaps| D
+    O --> R
+    C --> R
+    R --> X
 ```
 
-Legend: double-bordered nodes are player-equivalent in-game actions, plain rectangles are interim AI decisions or coordination state, and rounded nodes are automatic game events.
+Production and ordinary immediate acquisitions create available units. The upgrade loop shows the military case, where an improved unit returns to organization. Organization holds durable state; operation uses a unit in the current turn.
 
-The layers are not a strict call stack. `CvMilitaryAI::DoTurn` prepares military state and may create or update operations before unit movement. Later, `CvPlayerAI::AI_unitUpdate` runs `CvTacticalAI::Update`, then `CvHomelandAI::Update`, while operations move their armies as part of tactical processing.
+## Responsibilities in detail
 
-## Layer responsibilities
+### Demand
 
-Military and civilian production are two demand tracks feeding the same `CvCityStrategyAI::ChooseProduction` pass, not two independent production passes. Military demand originates in allocation and operation formation state, not production.
+Military demand turns strategy, war plans, force counts, threats, supply, and formation-slot gaps into recommended army and navy sizes, unit-production weights, and operation purchase needs. `CvMilitaryAI::DoTurn` coordinates this work, and `SetRecommendedArmyNavySize` calculates force targets.
 
-The table below is a quick scan; each layer's inputs, outputs, and technical interfaces are detailed in its own section under [Military and civilian tracks](#military-and-civilian-tracks).
+Civilian demand is distributed across Economic AI, city strategies, Trade AI, Religion AI, and related systems. These systems supply role-specific production signals, purchase checks, and objectives for settlers, workers, explorers, traders, religious units, antiquity and culture units, and diplomats.
 
-| Layer | Role in one line | Player-equivalent in-game action |
+### Production
+
+`CvUnitProductionAI` adds military and civilian candidates to one city comparison. `CvCityStrategyAI::ChooseProduction` weighs them with other buildables, then `CvCity::pushOrder` records the winner. Demand influences the weights, while production chooses the next city build order.
+
+### Acquisition
+
+Acquisition purchases ordinary units outright with gold or faith. `CvEconomicAI::DoHurry` makes ordinary gold-purchase decisions, `CvReligionAI::DoFaithPurchases` handles faith purchases, `CvCity::CheckForOperationUnits` can fill an operation slot, and `CvTacticalAI::PlotEmergencyPurchases` can respond to a threatened city. Emergency is a trigger for acquisition, not a separate system.
+
+`CvCity::IsCanPurchase` checks eligibility, and ordinary `CvCity::PurchaseUnit` paths create the unit. Economic savings plans can preserve gold for higher-priority purchases.
+
+> **Optional modmod note:** `MOD_BALANCE_UNIT_INVESTMENTS` can enable unit investments. In the VP 5.2.7 baseline, ordinary units are purchased outright. Spaceship-project units are the built-in exception and use an investment-style path.
+
+### Upgrade
+
+Upgrade is separate from acquisition. `CvUnit::DoUpgrade` replaces an eligible unit with a newer type while preserving valid history and state. `CvHomelandAI::PlotUpgradeMoves` is the main prioritizer: it scans all player units, ranks eligible upgrades by unit strength, immediate safety, domain, and experience, and requests `PURCHASE_TYPE_UNIT_UPGRADE` savings when gold is short. Civilian upgrade chains use the same replacement action.
+
+Tactical AI and `CvArmyAI::AddUnit` can also upgrade opportunistically. When an upgrade affects an army, callers restore the replacement to its relevant slot when appropriate.
+
+### Organization
+
+Organization maintains military strategies and defense state, attack targets, operations, armies, and `OperationSlot` assignments. `CvMilitaryAI::UpdateAttackTargets` and `UpdateOperations`, with `CvAIOperation` and `CvArmyAI`, build this state across turns. Open formation slots feed demand as production and purchase needs.
+
+Organization records a force's durable structure. Operation decides what its units do now. Civilian operations reuse army and slot machinery where needed, including military escorts, but civilian units otherwise have no general organization pass.
+
+### Operation
+
+Military operation uses `CvTacticalAI::Update`, `CvAIOperation`, and `CvArmyAI` to analyze targets and dominance zones, move operation armies, and issue missions such as movement, attacks, pillaging, or fortification. Homeland then considers eligible military units for garrison, healing, sentry, patrol, and rebase moves.
+
+Civilian operation uses `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI`, `CvTradeAI`, `CvReligionAI`, and the civilian `CvAIOperation` families to move, build, found cities, spread religion, trade, or use Great Person abilities. `CvPlayerAI::ProcessGreatPeople` supplies directives once a Great Person exists.
+
+## Force cleanup
+
+> `CvMilitaryAI::DisbandObsoleteUnits` is independent force cleanup. It does not read recommended army or navy targets, or formation demand. It considers healing, war safety, finances, supply, obsolescence, resources, and geographic usefulness. It can gift a selected unit to a city-state instead of disbanding it.
+
+## Execution order and conflicts
+
+This table shows the broad execution order for an AI turn. Earlier work can spend gold, use movement, or mark a unit processed, constraining later work.
+
+| Phase or system | What runs | Conflict consequence |
 | --- | --- | --- |
-| Military allocation | Turns threats, war plans, and supply into force targets, operations, armies, and formation-slot demand | None — interim state for production, acquisition, and operations |
-| Civilian demand | Emits production signals, purchase needs, and operation objectives from existing role-specific systems | None |
-| Military production | Weighs military candidates in the shared city build comparison | Sets the city build order if a military unit wins |
-| Civilian production | Weighs civilian candidates in the same comparison | Sets the city build order if a civilian unit wins |
-| Military acquisition | Evaluates gold or faith purchases for military needs; tracks free-unit triggers | Purchases or invests in a military unit |
-| Civilian acquisition | Evaluates role-specific civilian purchases; tracks Great Person progress and free-unit triggers | Purchases or invests in a civilian unit |
-| Military operation | Turns targets, zones, and postures into per-unit choices | Pushes missions such as move, attack, pillage, or fortify |
-| Civilian operation | Assigns Homeland roles and moves the four civilian operation families | Pushes missions or performs abilities |
+| Economic AI | `CvEconomicAI::DoTurn`, including `DoHurry` | Ordinary economic purchases run before Military AI purchases. `CanWithdrawMoneyForPurchase` honors existing savings reservations. |
+| Military AI | `CvMilitaryAI::DoTurn`: state updates, `UpdateOperations`, final-slot purchases through `MakeEmergencyPurchases` and `BuyFinalUnit`, then cleanup | A military purchase uses gold left after Economic AI. `DisbandObsoleteUnits` runs after the military purchase attempt. |
+| Religion and other player AIs | Includes `CvReligionAI::DoFaithPurchases` | Faith acquisition is a separate currency path from gold purchases. |
+| Cities | `CheckForOperationUnits`, then `doProduction` | A city can buy or queue an operation unit before production completes. Units completed before unit processing have movement and can act that turn. |
+| Tactical AI | Visibility and targets, recruitment, high-priority healing, operation armies, garrisons, then dominance zones and their emergency purchases | Tactical gets the first claim on eligible unit movement. Purchased units, including tactical emergency purchases, arrive with their moves already spent for the turn unless the unit type has `CanMoveAfterPurchase`. |
+| Homeland AI | Remaining eligible units, then late `PlotUpgradeMoves` inside `AssignHomelandMoves` | Upgrade savings are requested late, so they normally protect gold on later turns. Immediate upgrades use the gold still available. Tactical and army upgrades can occur earlier. |
 
-## Military and civilian tracks
+### Current-turn coordination
 
-### Military allocation
+Tactical and Homeland rebuild separate `m_CurrentTurnUnits` lists and do not transfer a worklist between systems. Army ID excludes army members from Homeland; remaining movement and `TurnProcessed` coordinate other claims. Homeland respects that state and does not issue a second move.
 
-**Conceptual input:** World and player state, existing units, and operation formation gaps. `CvMilitaryAI::DoTurn` coordinates the turn and also dispatches acquisition work.
+## Flavors
 
-**Interim output:** Recommended force counts, defense and strategy state, attack targets, operations, armies, and `OperationSlot` gaps. These are demand and assignment state, not unit missions.
+Flavors are weights, not commands. `CvFlavorManager` propagates personality and strategy values to player and city AI, while each caller decides how a flavor affects its own choices. Vox Deorum custom flavors can be set temporarily, expire after ten turns unless replaced, and drive forced economic or military strategies through configured thresholds; the entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::SetCustomFlavors`, and `CvFlavorManager::CheckCustomFlavorExpiration`.
 
-**Player-equivalent action:** None.
-
-**Technical interfaces:** `CvMilitaryAI::SetRecommendedArmyNavySize`, `UpdateAttackTargets`, and `UpdateOperations`, together with `CvAIOperation`, `CvArmyAI`, and `OperationSlot`.
-
-### Civilian demand
-
-**Conceptual input:** Empire, city, and map state, including civilian counts and capacity, flavors, strategies, and role-specific rules.
-
-**Interim output:** Family-specific production signals, purchase evaluations, and operation objectives for settlement, improvements, recon, trade, religion, antiquity or culture, diplomacy, and Great People.
-
-**Player-equivalent action:** None.
-
-**Technical interfaces:** Distributed across Economic AI, city strategies, Trade AI, Religion AI, Great Person rules, and related systems.
-
-### Military production
-
-**Conceptual input:** City state, available buildables, flavors, and military demand from allocation or formation gaps.
-
-**Interim output:** Military candidates and weights added to the shared city build comparison.
-
-**Player-equivalent action:** If a military unit wins that comparison, the city receives that unit as its selected build order.
-
-**Technical interfaces:** `CvUnitProductionAI`, `CvCityStrategyAI::ChooseProduction`, and `CvCity::pushOrder`.
-
-### Civilian production
-
-**Conceptual input:** City state, available buildables, flavors, and civilian demand signals for settlement, improvements, recon, trade, religion, antiquity, or diplomacy.
-
-**Interim output:** Civilian candidates and weights added to the same shared city build comparison. Great Person thresholds are handled by acquisition, not this build-order choice.
-
-**Player-equivalent action:** If a civilian unit wins that comparison, the city receives that unit as its selected build order.
-
-**Technical interfaces:** `CvUnitProductionAI`, `CvCityStrategyAI::ChooseProduction`, and `CvCity::pushOrder`.
-
-### Military acquisition
-
-**Conceptual input:** Military demand, especially an operation-slot need, plus available gold or faith. A game-rule trigger can also request a free combat unit without demand.
-
-**Interim output:** Candidate, eligibility, affordability, operation-slot, and purchase-versus-investment decisions. Free-unit rules maintain their own trigger state outside this demand path.
-
-**Player-equivalent action:** Spends currency to purchase a military unit immediately or invest in one and enqueue it for production. A free combat-unit grant is an automatic event. An immediate purchase or grant outputs an available military unit for allocation and recruitment.
-
-**Technical interfaces:** `CvMilitaryAI::MakeEmergencyPurchases`, `CvEconomicAI::DoHurry`, `CvCity::CheckForOperationUnits`, `CvCity::IsCanPurchase`, `CvCity::PurchaseUnit`, `CvCity::SpawnFreeUnit`, and `CvPlayer::addFreeUnit`.
-
-### Civilian acquisition
-
-**Conceptual input:** A role-specific civilian purchase need plus available gold or faith. Great Person progress can instead cross its spawn threshold, and game rules can grant a free civilian unit.
-
-**Interim output:** Candidate, eligibility, affordability, and purchase-versus-investment decisions, plus Great Person progress and free-unit trigger state. `CvPlayerAI::ProcessGreatPeople` assigns directives only after a Great Person exists.
-
-**Player-equivalent action:** Spends currency to purchase a civilian unit immediately or invest in one and enqueue it for production. Great Person spawning and free-unit grants are automatic events. An immediate purchase, spawn, or grant outputs an available civilian unit for Homeland or civilian-operation processing.
-
-**Technical interfaces:** `CvEconomicAI::DoHurry`, `CvReligionAI`, `CvCity::IsCanPurchase`, `CvCity::PurchaseUnit`, `CvCityCitizens::ChangeSpecialistGreatPersonProgressTimes100`, `CvCityCitizens::DoSpawnGreatPerson`, `CvCity::SpawnFreeUnit`, and `CvPlayer::addFreeUnit`.
-
-### Military operation
-
-**Conceptual input:** An assigned army or eligible military unit, its target or objective, and current map state.
-
-**Interim output:** Tactical targets, dominance zones and postures, path steps, attack or defense choices, and `TurnProcessed` coordination state.
-
-**Player-equivalent action:** Pushes missions such as move, attack, pillage, or fortify.
-
-**Technical interfaces:** `CvAIOperation::DoTurn`, `CvArmyAI`, `CvTacticalAI::Update`, `CvTacticalAI::ProcessDominanceZones`, `TacticalAIHelpers::FindBestUnitAssignments`, `CvTacticalAI::PlotOperationalArmyMoves`, and `CvUnit::PushMission`.
-
-### Civilian operation
-
-**Conceptual input:** An available civilian unit, its role or directive, civilian operation objectives, and current map state.
-
-**Interim output:** Homeland assignments, builder directives, trade and religious objectives, civilian operation targets, and `TurnProcessed` coordination state.
-
-**Player-equivalent action:** Pushes missions or performs abilities such as move, build, found, spread, trade, or a Great Person ability.
-
-**Technical interfaces:** `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI::ExecuteWorkerMove`, `CvAIOperationCivilian::PerformMission`, `CvTradeAI`, and `CvReligionAI`. The four `CvAIOperationCivilian` families are found city, merchant delegation, diplomat delegation, and musician concert tour.
-
-## Flavors are weighted preferences
-
-Flavors are weighted inputs, not orders. `CvFlavorManager` propagates personality and strategy changes to player and city recipients, while callers of `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` decide where each flavor matters. Availability, sanity checks, map conditions, and competing weights still apply.
-
-> **Vox Deorum:** `CvFlavorManager::SetCustomFlavors` stores custom values, propagates them to player and city recipients, and records when they were set. `CheckCustomFlavorExpiration` removes them after ten turns unless they are replaced. While they are active, `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` returns the custom personality value without adding a grand-strategy modifier. `CvLuaPlayer::lSetCustomFlavors` also derives forced economic and military strategies from flavor thresholds.
-
-`FLAVOR_OFFENSE` is the one direct flavor read in Tactical AI. `TacticalAIHelpers::FindBestUnitAssignments` uses it to increase risk tolerance by lowering the wounded-unit cutoff and, for a large group with high offense, allowing one additional risky position for a less-experienced unit. It does not choose targets, set aggression, or force attacks.
-
-Other custom flavors have different direct consumers. For example, `CvCitySpecializationAI::WeightProductionSubtypes` uses `FLAVOR_MOBILIZATION` to adjust military-training weight, while custom expansion changes settler production scoring. These are weights, not commands.
-
-## Two current-turn worklists
-
-The distinction between durable state and turn-local work is important:
-
-- Durable or longer-lived state includes personality and grand-strategy values, economic and military strategies, defense states, city specializations, operations and armies, and formation slots.
-- Turn-local or recomputed work includes tactical analysis targets, dominance zones and their postures, Homeland's current unit pool, missions, and each unit's `TurnProcessed` flag. These are rebuilt, consumed, or cleared as the turn proceeds.
-
-Tactical and Homeland processing deliberately maintain separate unit pools. `CvTacticalAI::RecruitUnits` rebuilds its own `m_CurrentTurnUnits` list from units eligible for tactical control. Army members are marked for operation movement by Tactical AI. `CvHomelandAI::RecruitUnits` separately rebuilds its own `m_CurrentTurnUnits` list, excluding army members and marking units with no remaining moves as processed.
-
-`CvTacticalAI` and `CvHomelandAI` do not pass one shared `m_CurrentTurnUnits` list, and neither list is transferred to the other subsystem. Handoff and coordination come from unit state: army ID, tactical or Homeland eligibility, remaining moves, and `TurnProcessed`. A mission consumes that state, and later processing respects it instead of issuing a second move.
+`FLAVOR_OFFENSE` has one narrow direct Tactical AI use: `TacticalAIHelpers::FindBestUnitAssignments` adjusts risk tolerance for wounded units and some large, high-offense groups. It does not choose targets or force attacks.
 
 ## Where to read next
 
 The remaining nine planned pages are:
 
-- `production.md`: the shared city build decision
-- `military-production.md`: military build choices
-- `civilian-production.md`: civilian build choices
-- `military-acquisition.md`: military purchases and grants
-- `civilian-acquisition.md`: civilian purchases, spawns, and grants
-- `military-allocation.md`: strategies, operations, and armies
-- `unit-operation.md`: the per-unit operation lifecycle
-- `military-unit-operation.md`: tactical movement
-- `civilian-unit-operation.md`: Homeland and civilian operations
+1. `production.md`: How cities compare unit candidates with other buildables.
+2. `military-production.md`: How military demand becomes production weights and build choices.
+3. `civilian-production.md`: How role-specific civilian needs shape production.
+4. `acquisition.md`: How gold and faith purchases create units, including emergency purchases.
+5. `upgrade.md`: How eligible units are replaced with newer unit types.
+6. `military-organization.md`: How armies, operations, and formation slots maintain force structure.
+7. `unit-operation.md`: How eligible units receive actions for the current turn.
+8. `military-unit-operation.md`: How tactical and Homeland AI move and use military units.
+9. `civilian-unit-operation.md`: How civilian units move, build, trade, and pursue role objectives.
