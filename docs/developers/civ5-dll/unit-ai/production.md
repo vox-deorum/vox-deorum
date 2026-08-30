@@ -1,31 +1,10 @@
 # Unit AI: Production
 
-This page describes the city production interface in the **Vox Populi 5.2.7** baseline. Its job is to decide whether to keep or replace the order at the head of a city's production queue. It does not decide what the empire needs, and it does not create the finished unit.
+City production chooses whether to keep the current queue head or replace it with one unit, building, project, or process. It turns legal city options, flavor-derived base weights, and current demand into an `OrderTypes` entry. It does not decide empire-wide needs or complete the selected item.
 
-The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvCityStrategyAI.cpp`, `CvUnitProductionAI.cpp`, `CvCityAI.cpp`, and `CvCity.cpp`.
+The common candidate lifecycle lives in `CvCityStrategyAI::ChooseProduction`. Unit-specific suitability rules are detailed in [military production](military-production.md) and [civilian production](civilian-production.md).
 
-## Inputs and outputs
-
-| Inputs | What they supply |
-| --- | --- |
-| Effective city flavors | The primary preference vector for units, buildings, projects, and processes. Vox Deorum custom flavors feed this vector directly when active. |
-| Legal build options | What this city can train, construct, create, or maintain now. |
-| Demand state | Unit-role shortages, operation and army slots, expansion needs, worker needs, trade priorities, and other subsystem recommendations. |
-| Local and empire state | Construction time, current production, city safety and development, resources, maintenance, supply, unit counts, and current priorities. |
-| Selection rules | Duration penalty, current-build inertia, the handicap cutoff for top choices, and interruption flags. |
-
-Production can retain the current order, replace it with one `OrderTypes` entry, or make no selection when no candidate has a positive legal weight. The possible orders are:
-
-- `ORDER_TRAIN` for a unit;
-- `ORDER_CONSTRUCT` for a building;
-- `ORDER_CREATE` for a project;
-- `ORDER_MAINTAIN` for a process.
-
-When the city selects an order, `CvCity::pushOrder` places it at the queue head. In the ordinary AI replacement path it clears the previous queue first. A rush flag records that the selected finite build exceeds the configured duration threshold, but production selection does not itself spend a currency or complete the order.
-
-The choice can also update two feedback counters. Skipping a viable settler increases later pressure to choose one. Skipping a requested operation unit does the same for operation production. Selecting that unit resets its counter.
-
-## Decision model
+## Candidate lifecycle
 
 ```mermaid
 flowchart LR
@@ -47,58 +26,61 @@ flowchart LR
     C --> O
 ```
 
-`CvCityStrategyAI::ChooseProduction` owns the comparison. It first builds one list of legal units, buildings, projects, and processes with positive base weights. A process enters that list only when raw production is at least five per turn, unless no other precheck candidate exists. Each candidate type then applies its own current-state suitability scoring. A negative result normally removes the candidate, and a positive result becomes its revised weight.
+The terms below describe one pass through `ChooseProduction`.
 
-The city discounts the survivors by turns remaining, then compares them on one scale. If its current unit, building, or project remains within half of the leading score, the city keeps it. Otherwise it makes a weighted choice from the leading band defined by `CityProductionChoiceCutoffThreshold`. A leading defense process is selected directly, and processes never receive current-build inertia.
+1. **Build precheck candidates.** A precheck candidate is a legal option with a positive base weight. The city collects ordinary units, buildings, projects, processes, and any requested units. A process is considered only when raw production is at least five per turn, unless no other precheck candidate exists. A legal defense process always receives base weight 100 in place of its flavor weight.
 
-If every candidate fails current-state suitability, the city falls back to the legal, positive-base-weight precheck list, including units that failed their unit suitability checks. This prevents an idle city, but means the suitability checks express preferences rather than unconditional rules.
+2. **Record the precheck list.** The `PRE` production log records these candidates after they are sorted. The list cannot contain an illegal option or one with a nonpositive base weight.
 
-## How flavors become base weights
+3. **Apply suitability.** Each candidate that reaches its current-state sanity check receives a suitability result. A positive result is the revised weight. A nonpositive result rejects the candidate from the normal comparison and records it as `SKIPPED`. A requested unit that fails the muster-city gate does not reach the sanity check, so it can disappear without a `SKIPPED` entry.
 
-Each city retains an effective flavor vector, built from Vox Deorum custom flavors or the normal Vox Populi sources as described in [the overview](overview.md#flavors). The active grand strategy is not part of this city vector.
+4. **Form survivors.** A survivor is a precheck candidate with a positive suitability result. The city discounts each survivor by its remaining construction time, sorts the results, and records them as `POST`. Like `PRE`, `POST` contains neither illegal nor nonpositive-base options.
 
-Each production AI maps that vector through the XML flavor affinities of its own entries. For a unit, `CvUnitProductionAI::AddFlavorWeights` compresses each signed city flavor, multiplies it by the unit's affinity for that flavor, and sums the results. The result is the unit's base weight. The military and civilian suitability layers revise that base weight before city production compares it with other buildables.
+5. **Use the all-failed fallback when necessary.** If there are no survivors, the city restores the precheck list. This all-failed fallback can select an option that suitability rejected, so suitability rules express current preferences rather than absolute prohibitions.
 
-These base weights are cached. `CvCityStrategyAI::FlavorUpdate` rebuilds them after a flavor update. A specialization change updates the stored city vector and marks production for reconsideration, but does not itself rebuild the cache, so the specialization's new weights can wait until the next flavor update.
+6. **Select an order.** The city keeps a current unit, building, or project whose weight stays at least half of the leading score, subject to interruption rules. A project tied to a valid victory condition is selected directly when it is within that half-of-leading band, even if it is not the current build. When the top choice is a defense process, it is also selected directly. Otherwise the city makes a weighted random choice among the candidates above `CityProductionChoiceCutoffThreshold` percent of the leading score. Processes do not receive current-build inertia. The winner becomes `ORDER_TRAIN`, `ORDER_CONSTRUCT`, `ORDER_CREATE`, or `ORDER_MAINTAIN` at the queue head.
 
-## Candidate contracts
+## Implementation trace
 
-| Candidate | Base input | Current-state adjustment |
-| --- | --- | --- |
-| Ordinary unit | Unit XML flavors combined with effective city flavors | `CvUnitProductionAI::CheckUnitBuildSanity` applies military or civilian role demand, local suitability, resources, supply, and economy. |
-| Operation unit | The next required formation role for which this city is the muster city | Receives a dedicated base value, offense pressure, unit flavor value, and skipped-request pressure before the unit check. |
-| Army unit | A trainable unit for an open required army slot | Receives a dedicated offense-weighted value before the unit check. |
-| Building | Building XML flavors combined with effective city flavors | `CvBuildingProductionAI::CheckBuildingBuildSanity` applies building-specific state. |
-| Project | Project XML flavors combined with effective city flavors | `CvProjectProductionAI::CheckProjectBuildSanity` applies project-specific state. |
-| Process | Process XML flavors combined with effective city flavors | `CvProcessProductionAI::CheckProcessBuildSanity` applies process-specific state. |
+The lifecycle begins when `CvCity::doProduction` requests a choice. `CvCityAI::AI_chooseProduction` handles spaceship and wonder boundaries, then `CvCityStrategyAI::ChooseProduction` builds, evaluates, and selects candidates. The type-specific production AI supplies the flavor weight and suitability result. Finally, `CvCity::pushOrder` records the selected order.
 
-Two universal gates in `CheckUnitBuildSanity` reject any ordinary unit request, military or civilian, before role-specific scoring: an AI-controlled puppet city, and an underdeveloped city with fewer than two buildings. Like other suitability rejections, these candidates remain available to the all-failed fallback.
-
-The special operation and army forms nominate a concrete military unit, but they still enter the same city comparison. Checked-list admission for both requires the next operation slot to name this city as its muster city. Otherwise an army nomination remains only in the precheck list and can win through the all-failed fallback. Neither form reserves the city's production or guarantees that a unit wins.
-
-## State and timing
-
-The per-city production AIs retain flavor-derived weights. `CvCityStrategyAI::FlavorUpdate` rebuilds them when effective flavors change. Demand and current-state inputs are read again when a production choice is made, so the final weight reflects the city and empire now, not only the last flavor update.
-
-`CvCity::doProduction` requests a choice when the city has no production, is maintaining a process, or has been marked dirty. Finishing the last queued order can also request another choice. Production therefore reacts at queue boundaries and explicit reconsideration points, not continuously during every production calculation.
-
-Several systems sit outside this interface:
+Related paths stay outside this lifecycle:
 
 - Player-level spaceship planning owns spaceship-part production.
-- Wonder specialization can preserve or directly start a selected wonder before the common comparison.
-- Purchase systems use related weights and sanity checks, but produce an immediate acquisition decision rather than a queue order.
-- The queue and later production processing turn the selected order into accumulated production and, eventually, a completed object.
+- Wonder specialization can preserve or directly start a selected wonder.
+- Purchase paths use related weights and suitability checks, but make an immediate acquisition rather than a queue order.
+- `CvCity::CheckForOperationUnits` can separately commit a city to an operation unit.
 
-## Reading the implementation
+## Candidate types
 
-Follow this path to inspect a specific choice:
+| Candidate type | Precheck source and base weight | Suitability result |
+| --- | --- | --- |
+| Ordinary unit candidate | A trainable unit with a positive flavor-derived base weight. | `CvUnitProductionAI::CheckUnitBuildSanity` applies shared, military, or civilian conditions. |
+| Operation-request candidate | The concrete unit returned for this city's next operation request. Its base weight combines the operation base value, offense flavor, the operation skip counter, and the unit's flavor-derived weight. | It is checked only while this city is the request's muster city. |
+| Army-request candidate | A concrete trainable unit for a free required army slot. Its base weight combines the army base value and offense flavor. | It uses the same muster-city gate as an operation-request candidate before its unit suitability check. |
+| Building candidate | A legal building with a positive flavor-derived base weight. | `CvBuildingProductionAI::CheckBuildingBuildSanity` applies building state. |
+| Project candidate | A legal project with a positive flavor-derived base weight. | `CvProjectProductionAI::CheckProjectBuildSanity` applies project state. |
+| Process candidate | A legal process with a positive flavor-derived base weight, except that a defense process receives 100. | `CvProcessProductionAI::CheckProcessBuildSanity` applies process state. |
 
-1. `CvCity::doProduction` determines whether a choice is needed.
-2. `CvCityAI::AI_chooseProduction` handles spaceship and wonder boundaries.
-3. `CvCityStrategyAI::ChooseProduction` constructs and compares all candidates.
-4. The relevant production AI supplies its base weight and sanity result.
-5. `CvCity::pushOrder` records the winner.
+The ordinary, operation-request, and army-request forms can name the same unit and still compete as separate candidates. Neither request reserves production or guarantees a win. The role, demand, and feasibility rules behind unit suitability belong in [military production](military-production.md) and [civilian production](civilian-production.md).
 
-With AI logging enabled, `ChooseProduction` records lists before and after its unit checks. Their difference shows whether an option was never legal, had no positive base weight, failed current-state checks, lost value to construction time, or remained eligible but lost the final choice.
+All non-purchase unit candidates are rejected in puppet cities. The fewer-than-two-buildings rejection also applies to non-purchase unit candidates, except while the city is under siege. A rejected unit can still return through the all-failed fallback.
 
-The unit-specific inputs are detailed in [military production](military-production.md) and [civilian production](civilian-production.md).
+## Flavors
+
+Each production AI maps the city's effective flavors through an entry's XML flavor affinities to make its base weight. Vox Deorum custom flavors are additive adjustments to the normal flavor state. [The flavor overview](overview.md#flavors) explains their inputs and lifetime.
+
+## Timing and feedback
+
+`CvCityStrategyAI::FlavorUpdate` rebuilds the flavor-derived caches in the per-city production AIs. A specialization change updates the city flavor state and marks production dirty, but its cached base weights wait for the next flavor update. Demand and suitability are evaluated again whenever a production choice runs.
+
+`CvCity::doProduction` requests a choice when the city has no production, maintains a process, or is marked dirty. Completing the final queued order can also request one. The lifecycle runs at queue boundaries and explicit reconsideration points, not during every production calculation.
+
+Two player-level counters provide feedback:
+
+- When an operation-request candidate enters precheck, the operation skip counter increments. Selecting that operation-request candidate resets it.
+- When an available settler is not started, the settler skip counter increments once for that production choice. Starting a settler, or having no available settler, resets it.
+
+## Reading production logs
+
+With AI logging enabled, use `PRE` to see legal positive-base candidates, `SKIPPED` for nonpositive sanity results, `POST` for duration-adjusted survivors, and `CHOSEN` for the selected order. Because selection is a weighted random choice among the leading candidates, `CHOSEN` is not always the first `POST` entry. A requested candidate can appear in `PRE` and disappear before `POST` without a `SKIPPED` entry when it fails the muster-city gate. Otherwise, comparing entries shows whether an option was absent before precheck, rejected by suitability, survived but lost, or returned through the all-failed fallback.
