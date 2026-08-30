@@ -61,6 +61,8 @@ Recruiting ends only after at least one required slot is filled. Optional member
 
 After the scan, every still-open required slot is stored as an operation need. A city can commit to train one of those slots. The commitment moves the slot from the need list to the committed list, and cancellation returns it to the need list. When the city finishes its unit, player and city bookkeeping clear the commitment and recruit the produced unit into the operation when it is suitable. This is a production commitment, not an immediate unit purchase. With exactly one uncommitted required slot during recruiting, the operation can instead buy a primary-role match in a suitable nearby city. See [military production](military-production.md) for the production candidate and purchase rules.
 
+Nuclear attack operations override these recruitment and completion hooks. Their slot-fill check accepts only an unassigned nuclear unit already standing on the muster plot instead of searching and scoring reserves, and their stage transition skips the normal formation-readiness and gathering checks. The mechanics in this section therefore describe every built-in military operation except the nuclear attack.
+
 ### Mustering and assignment
 
 Recruiting and gathering both point army positioning at the muster point. They are not idle stages. Tactical AI positions current army members around that point, while the operation waits for the required formation to arrive and then for the furthest member to be inside the gather tolerance.

@@ -148,5 +148,5 @@ Civilian operation uses `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI
 - [Military unit operation](military-unit-operation.md) is the overview of military campaign, organization, and tactical control.
 - [Military campaign](military-campaign.md) explains operation families, goals, retargeting, and abandonment.
 - [Military organization](military-organization.md) explains armies, formation slots, membership, and mustering.
-- [Military tactics](military-tactics.md) explains operation movement, dominance zones, combat priorities, and Homeland cleanup.
+- [Military tactics](military-tactics.md) explains operation movement, dominance zones, combat priorities, and the Homeland handoff.
 - [Civilian unit operation](civilian-unit-operation.md) explains civilian operations, Homeland role passes, and civilian missions.

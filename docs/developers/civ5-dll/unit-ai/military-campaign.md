@@ -70,13 +70,13 @@ flowchart TD
     class ATTACK,PILLAGE,RAPID,DEFENSE,NAVAL,NUCLEAR,GROUP family;
 ```
 
-The orange strategic inputs, blue tactical-zone input, and green operation families separate the sources of a campaign decision. The blue, dashed connections are deliberately narrow. A dominance zone normally chooses a local posture for Tactical AI, not a campaign. It crosses the boundary only where campaign selection needs local threat or deployment context. [Military tactics](military-tactics.md) explains zones and postures; [military organization](military-organization.md) explains how an operation turns its selected formation into an army.
+The orange strategic inputs, blue tactical-zone input, and green operation families separate the sources of a campaign decision. The blue, dashed connections are deliberately narrow. A dominance zone normally chooses a local posture for Tactical AI, not a campaign. It crosses the boundary only where campaign selection needs local threat or deployment context. [Military tactics](military-tactics.md#dominance-zones) explains zones and postures; [military organization](military-organization.md) explains how an operation turns its selected formation into an army.
 
 ### City attacks
 
 `UpdateAttackTargets` rebuilds enemy-city candidates from land and water paths every Military AI turn. For each path, it compares land, naval, and combined approaches. The selected approach must be the best of the three and have a score greater than 30. Candidate ranking then accounts for distance, city value, conquest and liberation value, and relevant city-state quests.
 
-Diplomacy AI can request a city attack while preparing a war, and Military AI can request one during an existing war when reserves and war state allow it. `RequestCityAttack` maps the chosen approach to `CITY_ATTACK_LAND`, `CITY_ATTACK_NAVAL`, or `CITY_ATTACK_COMBINED`. Bullying reuses the land or naval city-attack operation that fits the shared land or water area.
+Diplomacy AI can request a city attack while preparing a war, and Military AI can request one during an existing war when reserves and war state allow it. That war intent comes from `CvDiplomacyAI::DoUpdateWarTargets`, which turns approach scores and cooperative-war commitments into `CIV_APPROACH_WAR`. For an existing war, `CvDiplomacyAI::DoUpdateWarStates` grades each enemy into a `WarStateTypes` value from war score, endangered and besieged cities, important-city damage, and tactical dominance. `RequestCityAttack` maps the chosen approach to `CITY_ATTACK_LAND`, `CITY_ATTACK_NAVAL`, or `CITY_ATTACK_COMBINED`. Bullying reuses the land or naval city-attack operation that fits the shared land or water area.
 
 ### Operation families
 
@@ -127,7 +127,7 @@ flowchart LR
 | Moving to target | The army follows its operation goal until it reaches deployment range or is stopped. |
 | Successful or aborted | Cleanup removes the operation and releases its units for later control. |
 
-Ordinary military operations do not remain in the generic at-target state. Reaching deployment range marks them successful, then cleanup disbands the army. Carrier groups are different: they are never-ending operations and can keep moving as their deployment target changes. [Military organization](military-organization.md#organization-and-control) explains the operation-to-army relationship.
+Ordinary military operations do not remain in the generic at-target state, `AI_OPERATION_STATE_AT_TARGET`. Reaching deployment range marks them successful, then cleanup disbands the army. Carrier groups are different: they are never-ending operations and can keep moving as their deployment target changes. [Military organization](military-organization.md#organization-and-control) explains the operation-to-army relationship.
 
 ## Non-carrier target changes
 
@@ -217,8 +217,15 @@ flowchart TD
     STOP -->|no| CONTINUE
 ```
 
-During recruitment, a removed unit reopens its formation slot. During gathering, movement, or the at-target state, the operation aborts when filled slots fall below half the formation's original required slots, using integer division. A two-required-slot formation has a stricter exception: it aborts as soon as fewer than two slots remain filled. Offensive operations also remove badly hurt units and units whose latest checkpoint ETA has not improved over the oldest value in a three-sample window, which can trigger the same strength check.
+During recruitment, a removed unit reopens its formation slot. During gathering, movement, or the at-target state, the operation aborts when filled slots fall below half the formation's original required slots, using integer division. A two-required-slot formation has a stricter exception: it aborts as soon as fewer than two slots remain filled. Offensive operations also remove badly hurt units and units whose latest checkpoint ETA has not improved over the oldest value in a three-sample window, which can trigger the same strength check. A stalled army does not abort its operation by itself: blocked group movement only produces a diagnostic log line, and the operation ends only through those per-unit removals, the strength check, an invalid target, or the timeout.
 
 `UpdateOperations` can cancel operations in bulk when forced peace applies, when an opponent cannot be attacked, when a threatened-city list disappears for a domain, or when the war state requires a defensive pullback. A city-defense operation is not cancelled merely because its tactical zone is no longer enemy-dominated. It remains tied to its city until a target, loss, timeout, or strategic rule ends it.
 
-For formation recruitment and army membership, see [military organization](military-organization.md). For per-turn operation movement, Tactical ownership, and Homeland cleanup, see [military tactics](military-tactics.md).
+## Implementation trace
+
+1. `CvMilitaryAI::DoTurn` refreshes military counts, strategies, and war type, then runs `UpdateAttackTargets` and `UpdateOperations`, all before unit movement.
+2. `CvDiplomacyAI::DoUpdateWarTargets` and `DoUpdateWarStates` supply the war intent and per-enemy war state that gate offensive requests and defensive pullbacks.
+3. `CvPlayer::UpdateCityThreatCriteria` scores each city's threat from tactical dominance, borders, focus areas, and nearby enemies, producing the threatened-city ranking `UpdateOperations` consumes.
+4. Operation `Init` methods store the target and muster plots and set the army goal, and each family's `VerifyOrAdjustTarget` applies the retargeting rules above during operation checks.
+
+For formation recruitment and army membership, see [military organization](military-organization.md). For per-turn operation movement, Tactical ownership, and the Homeland handoff, see [military tactics](military-tactics.md).

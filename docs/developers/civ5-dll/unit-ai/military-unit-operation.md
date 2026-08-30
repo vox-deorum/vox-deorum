@@ -43,7 +43,7 @@ Tactical-zone territory and dominance provide several campaign inputs, including
 
 ## Armies and mustering
 
-Built-in military operations create one army. The operation structure can store several army IDs, but movement and stage transitions use only the first army ID. Each unit can have only one current Army ID.
+Built-in military operations create one army, and each unit can have only one current Army ID. [Military organization](military-organization.md#organization-and-control) explains why the stored army-ID list still behaves as a single army.
 
 An operation normally recruits a formation, gathers its assigned units around the current muster point, then moves toward its goal. It begins in the movement stage when no required slots are open, and gathering ends once the assigned units are within tolerance. Campaign progress can also relocate the muster point. During normal Tactical recruitment, army members are routed through operation movement instead of the independent pool, and Homeland AI skips them while their Army ID remains set. They can still receive army-controlled movement, safety moves, and nearby contact fights. [Military organization](military-organization.md#recruitment-and-stages) covers recruitment, stage changes, removal, and release.
 
