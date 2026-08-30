@@ -76,7 +76,7 @@ Flavors are preference values, not commands. `CvUnitProductionAI` combines a cit
 | Vox Deorum custom flavors active | `CvFlavorManager::SetCustomFlavors` maps supplied values to signed adjustments and adds them to city flavor recipients. City AI and specialization adjustments remain additive. | Direct personality reads return the custom values. `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy modifier. |
 | Normal Vox Populi | Randomized leader personality, active Economic and Military AI state adjustments, city state adjustments, and production specialization contribute to the city vector. Only state definitions with city-flavor rows change it. | Personality and grand-strategy reads use the normal Vox Populi path. |
 
-Custom flavor values expire after ten turns unless replaced. Their Lua entry point also rewrites selected Economic and Military AI state flags. Those flags can alter role gates and bonuses, but the rewrite does not apply the flags' normal XML flavor adjustments.
+Custom flavor values expire after a set number of turns unless replaced. Their Lua entry point also rewrites selected Economic and Military AI state flags. Those flags can alter role gates and bonuses, but the rewrite does not apply the flags' normal XML flavor adjustments.
 
 The relevant entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::SetCustomFlavors`, `CvFlavorManager::CheckCustomFlavorExpiration`, `CvCityStrategyAI::FlavorUpdate`, and `CvUnitProductionAI::AddFlavorWeights`.
 
@@ -102,13 +102,17 @@ Acquisition creates a unit immediately with gold or faith. `CvEconomicAI::DoHurr
 
 `CvCity::IsCanPurchase` checks eligibility, and the ordinary `CvCity::PurchaseUnit` paths create the unit. Emergency is a purchase trigger, not a separate system.
 
+The [acquisition guide](acquisition.md) explains shared eligibility, ordinary spending, formation purchases, emergency defense, and faith priorities.
+
 > **Optional modmod note:** `MOD_BALANCE_UNIT_INVESTMENTS` can enable unit investments. In the VP 5.2.7 baseline, ordinary units are purchased outright. Spaceship-project units are the built-in exception and use an investment-style path.
 
 ### Upgrade
 
-Upgrade is separate from acquisition. `CvUnit::DoUpgrade` replaces an eligible unit with a newer type while preserving valid history and state. `CvHomelandAI::PlotUpgradeMoves` ranks eligible upgrades by strength, safety, domain, and experience. It requests `PURCHASE_TYPE_UNIT_UPGRADE` savings when gold is short. Civilian upgrade chains use the same replacement action.
+Upgrade is separate from acquisition. `CvUnit::DoUpgrade` replaces an eligible unit with a newer type while preserving valid history and state. `CvHomelandAI::PlotUpgradeMoves` ranks upgrade candidates, performs what current gold and safety allow, and requests `PURCHASE_TYPE_UNIT_UPGRADE` savings when a ranked candidate remains after the pass. Civilian upgrade chains use the same replacement action.
 
 Tactical AI and `CvArmyAI::AddUnit` can also upgrade opportunistically. When an army unit is upgraded, callers restore the replacement to the relevant slot when appropriate.
+
+The [upgrade guide](upgrade.md) explains target resolution, eligibility, Homeland ranking and savings, opportunistic callers, and replacement state.
 
 ### Organization
 
@@ -126,19 +130,22 @@ Civilian operation uses `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI
 
 `CvMilitaryAI::DisbandObsoleteUnits` is independent force cleanup. It does not read recommended army or navy targets or formation demand. It considers healing, war safety, finances, supply, obsolescence, resources, and geographic usefulness. It can gift a selected unit to a city-state instead of disbanding it.
 
-## Production guides
+## Unit AI guides
 
 - [Production](production.md) explains how a city compares unit candidates with other buildables.
 - [Military production](military-production.md) explains how military demand becomes weighted unit candidates.
 - [Civilian production](civilian-production.md) explains how role-specific civilian needs become weighted unit candidates.
+- [Acquisition](acquisition.md) explains how gold and faith purchases create units, including operation and emergency purchases.
+- [Upgrade](upgrade.md) explains how eligible units are ranked and replaced with newer unit types.
+
+## Unit-operation guides
+
+- [Unit operation](unit-operation.md) explains the shared Tactical-to-Homeland handoff and per-turn control state.
+- [Military unit operation](military-unit-operation.md) explains persistent operations, tactical zones, armies, combat, and remaining military work.
+- [Civilian unit operation](civilian-unit-operation.md) explains civilian operations, Homeland role passes, and civilian missions.
 
 <!--
-Keep these planned Unit AI guides. They will be written soon:
+Keep these planned Unit AI guides:
 
-4. `acquisition.md`: How gold and faith purchases create units, including emergency purchases.
-5. `upgrade.md`: How eligible units are replaced with newer unit types.
 6. `military-organization.md`: How armies, operations, and formation slots maintain force structure.
-7. `unit-operation.md`: How eligible units receive actions for the current turn.
-8. `military-unit-operation.md`: How Tactical and Homeland AI move and use military units.
-9. `civilian-unit-operation.md`: How civilian units move, build, trade, and pursue role objectives.
 -->
