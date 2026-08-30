@@ -12,17 +12,24 @@ Every page should make its audience clear. Documentation here serves two audienc
 
 Do not assume the reader arrived from another page or already knows a repository convention. State prerequisites and important assumptions where they first matter, then link to the fuller explanation.
 
-## Lead with the useful answer
+## Present concepts clearly
 
-Put the page's purpose, prerequisites, and most common path near the top. Prefer a short table, numbered procedure, or small diagram when it makes a relationship easier to scan.
+Bring the page's core concept forward. Put its purpose, prerequisites, and most common path near the top, then introduce supporting concepts before details that depend on them. For all mentioned concepts, highlight each when it first appears, usually with bold text, and either define it there or link directly to its authoritative definition. Use the same term consistently after that introduction instead of defining it again. Describe each concept affirmatively through its purpose, behavior, and relationships.
 
-Remove background that does not help the reader make a decision or complete a task. Keep rationale when it explains a constraint that would otherwise look arbitrary, such as why a build step must run before another.
+Give every explanation a useful job. Remove background that does not help the reader make a decision or complete a task. Omit consequences that merely restate an obvious result of the preceding fact. Keep rationale when it explains a constraint that would otherwise look arbitrary, such as why a build step must run before another.
+
+Choose the format that defines or explains the material most efficiently:
+
+- Use bullets for parallel facts and numbered lists for ordered work.
+- Use tables for comparisons, mappings, and repeated fields.
+- Use small diagrams for flows, hierarchies, and relationships that prose cannot define accurately without becoming long or difficult to follow. Explain the takeaway near the diagram.
+- Use a short paragraph when the ideas form one continuous explanation.
 
 When rewriting an existing page, compare the removed text with the replacement. Preserve product rules, safety warnings, exceptions, and context that the intended reader still needs. If that context makes the page cover two distinct jobs, split it into focused pages and cross-link them rather than deleting it.
 
 ## Use shared terms and links
 
-Use the same names as the product and the architecture documentation, especially **agent**, **strategist**, **spokesperson**, **session**, **recording**, **replay**, **event**, **turn**, **bridge**, and **provider** and **model**. Define a specialized term on first use.
+Use the same names as the product and the architecture documentation, especially these terms: **agent**, **strategist**, **spokesperson**, **session**, **recording**, **replay**, **event**, **turn**, **bridge**, **provider**, and **model**.
 
 Link instead of duplicating:
 
@@ -40,10 +47,8 @@ Use relative links between pages in `docs/`. When referring to source code, name
 - Describe behavior and name the source file instead of pasting raw code; keep the deep implementation detail in the code and its TypeDoc reference.
 - When a command or short snippet genuinely helps, fence it and give it a language.
 - Use headings to make long pages scannable.
-- Use bullets for parallel facts and numbered lists for ordered work.
 - Avoid long runs of one-sentence bullets when a short paragraph reads better.
 - Add descriptive link text. Avoid "click here."
-- Keep diagrams small and explain the takeaway in nearby text.
 - Do not use line-number anchors.
 
 Before finishing, reread the page against this guide, confirm every relative link resolves, and check that it stays consistent with the [architecture](developers/architecture.md) overview and the [documentation index](README.md).
