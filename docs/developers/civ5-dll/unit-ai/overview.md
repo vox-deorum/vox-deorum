@@ -2,6 +2,8 @@
 
 This page is for C++ contributors who are new to the Vox Deorum DLL. It explains the unit AI in the **Vox Populi 5.2.7** baseline: how it decides which units to make, organize, modernize, and move.
 
+<!-- Instruction for further documentation: prioritize flavor over military/economic strategies, since Vox Deorum directly overrides flavors. -->
+
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`. Read it in this conceptual order to trace dependencies. This conceptual order does not describe runtime precedence:
 
 1. **Demand** decides which units the empire needs.
@@ -56,13 +58,13 @@ Production and ordinary immediate acquisitions create available units. The upgra
 
 ### Demand
 
-Military demand turns strategy, war plans, force counts, threats, supply, and formation-slot gaps into recommended army and navy sizes, unit-production weights, and operation purchase needs. `CvMilitaryAI::DoTurn` coordinates this work, and `SetRecommendedArmyNavySize` calculates force targets.
+Military demand turns current flavors, war plans, force counts, threats, and supply into recommended army and navy sizes, role-balance flags, formation gaps, and operation purchase needs. `CvMilitaryAI::DoTurn` coordinates this work, and `SetRecommendedArmyNavySize` calculates force targets. City production turns those inputs into weighted candidates.
 
 Civilian demand is distributed across Economic AI, city strategies, Trade AI, Religion AI, and related systems. These systems supply role-specific production signals, purchase checks, and objectives for settlers, workers, explorers, traders, religious units, antiquity and culture units, and diplomats.
 
 ### Production
 
-`CvUnitProductionAI` adds military and civilian candidates to one city comparison. `CvCityStrategyAI::ChooseProduction` weighs them with other buildables, then `CvCity::pushOrder` records the winner. Demand influences the weights, while production chooses the next city build order.
+`CvUnitProductionAI` produces weighted military and civilian candidates for one city. `CvCityStrategyAI::ChooseProduction` adjusts them for construction time, compares them with other buildables, then `CvCity::pushOrder` records the winner. Demand produces candidate weights, while city production chooses the next order.
 
 ### Acquisition
 
@@ -80,7 +82,7 @@ Tactical AI and `CvArmyAI::AddUnit` can also upgrade opportunistically. When an 
 
 ### Organization
 
-Organization maintains military strategies and defense state, attack targets, operations, armies, and `OperationSlot` assignments. `CvMilitaryAI::UpdateAttackTargets` and `UpdateOperations`, with `CvAIOperation` and `CvArmyAI`, build this state across turns. Open formation slots feed demand as production and purchase needs.
+Organization maintains defense state, role-balance flags, attack targets, operations, armies, and `OperationSlot` assignments. `CvMilitaryAI::UpdateAttackTargets` and `UpdateOperations`, with `CvAIOperation` and `CvArmyAI`, build this state across turns. Open formation slots feed demand as production and purchase needs.
 
 Organization records a force's durable structure. Operation decides what its units do now. Civilian operations reuse army and slot machinery where needed, including military escorts, but civilian units otherwise have no general organization pass.
 
@@ -113,17 +115,28 @@ Tactical and Homeland rebuild separate `m_CurrentTurnUnits` lists and do not tra
 
 ## Flavors
 
-Flavors are weights, not commands. `CvFlavorManager` propagates personality and strategy values to player and city AI, while each caller decides how a flavor affects its own choices. Vox Deorum custom flavors can be set temporarily, expire after ten turns unless replaced, and drive forced economic or military strategies through configured thresholds; the entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::SetCustomFlavors`, and `CvFlavorManager::CheckCustomFlavorExpiration`.
+Flavors are the primary preference vector, not commands. `CvUnitProductionAI` combines each city's effective flavor values with the XML flavor affinities of every unit type to produce base unit weights. Current game state can then revise or reject those candidates.
+
+Vox Deorum custom flavors take priority while active. `CvFlavorManager::SetCustomFlavors` maps the supplied values into signed deltas and applies them directly to city flavor recipients. Existing city AI and specialization deltas remain additive. Direct personality reads return the custom values, and `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy flavor modifier. The custom values expire after ten turns unless replaced.
+
+The custom-flavor Lua entry point also rewrites Economic and Military AI state. Selected flags are enabled by flavor thresholds or named game-state checks. Other non-exempt Economic flags and all other Military flags are disabled. These direct changes affect gates and bonuses, but do not apply the flags' normal XML flavor deltas.
+
+Without custom flavors, normal Vox Populi builds a city's effective vector from randomized leader personality values, the city-flavor deltas of active Economic and Military AI states, the city's own active states, and its production specialization. Only state definitions with city-flavor rows alter this vector.
+
+The relevant entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::SetCustomFlavors`, `CvFlavorManager::CheckCustomFlavorExpiration`, `CvCityStrategyAI::FlavorUpdate`, and `CvUnitProductionAI::AddFlavorWeights`.
 
 `FLAVOR_OFFENSE` has one narrow direct Tactical AI use: `TacticalAIHelpers::FindBestUnitAssignments` adjusts risk tolerance for wounded units and some large, high-offense groups. It does not choose targets or force attacks.
 
 ## Where to read next
 
-The remaining nine planned pages are:
+The production pages are:
 
-1. `production.md`: How cities compare unit candidates with other buildables.
-2. `military-production.md`: How military demand becomes production weights and build choices.
-3. `civilian-production.md`: How role-specific civilian needs shape production.
+1. [Production](production.md): How cities compare unit candidates with other buildables.
+2. [Military production](military-production.md): How military demand becomes weighted unit candidates.
+3. [Civilian production](civilian-production.md): How role-specific civilian needs shape production.
+
+The remaining six planned pages are:
+
 4. `acquisition.md`: How gold and faith purchases create units, including emergency purchases.
 5. `upgrade.md`: How eligible units are replaced with newer unit types.
 6. `military-organization.md`: How armies, operations, and formation slots maintain force structure.
