@@ -1,94 +1,76 @@
-# Unit AI: Operation
+# Unit AI: Operation Lifecycle
 
-**Operation** is the shared per-turn process that turns persistent-operation state, tactical targets, role objectives, and remaining movement into unit missions. A **persistent operation** is a `CvAIOperation` plan that retains an army, formation, muster point, target, and state across turns. **Military operation** applies this process to combat formations, while **civilian operation** applies it to civilian roles. This page defines the shared ownership rules.
+The **operation lifecycle** is the shared per-turn process that turns persistent-operation state, Tactical targets, role objectives, and available movement into unit missions. A **persistent operation** is a `CvAIOperation` plan that retains an army, formation, muster point, target, and state across turns. Military and civilian pages describe their own operation behavior. This page is the authority for shared lifecycle, control state, Tactical-to-Homeland handoff, and diagnostics.
 
-The primary implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvPlayerAI.cpp`, `CvTacticalAI.cpp`, `CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, and `CvUnit.cpp`.
+The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvPlayerAI.cpp`, `CvTacticalAI.cpp`, `CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, and `CvUnit.cpp`.
 
-## Per-turn lifecycle
+## Operation lifecycle
 
 ```mermaid
 flowchart TD
-    W[World and unit state] -->|later systems and next turn| S[Strategic and role updates]
+    W[World and unit state] --> S[Strategic and role updates]
     S --> O[Persistent operations, armies, targets, directives]
-    O --> T[Tactical AI update and recruitment]
-    W -->|same-turn state| T
-    T --> F[High-priority frontline healing]
-    F --> A[Persistent operation army movement and DoTurn]
-    A --> G[Urgent garrisons and zone combat]
-    G --> X[Remaining Tactical global passes]
-    X -->|unprocessed units with movement| H[Homeland recruitment]
+    O --> T[Tactical AI]
+    W --> T
+    T --> A[Healing, army movement, urgent combat, global passes]
+    A -->|unprocessed units with movement| H[Homeland AI]
     O --> H
-    W -->|same-turn state| H
+    W --> H
     H --> R[Ordered Homeland role passes]
-    A -->|updates operation and army state| O
-    A -->|army missions| M[Mission queues]
-    G -->|zone missions| M
-    X -->|global missions| M
-    R -->|Homeland missions| M
+    A --> M[Mission queues]
+    R --> M
     M --> W
+    A --> O
 ```
 
-Persistent operations provide durable context for Tactical work. Tactical and Homeland passes read current world and unit state, issue missions, and pass eligible units to later controllers. Completed missions update the state used by later systems and the next turn.
+For a normal AI player, `CvPlayerAI::AI_unitUpdate` runs Tactical AI before Homeland AI. Tactical AI refreshes targets, recruits combat and support units, heals urgent frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and completes its combat priorities. Homeland AI then rebuilds its candidate list from eligible units, refreshes role targets, and runs its ordered passes. The resulting missions change the state seen by later passes and by the next turn.
 
-`CvPlayerAI::AI_unitUpdate` calls Tactical AI before Homeland AI for a normal AI player. Tactical AI refreshes visibility and targets, then recruits combat and support units. Its high-priority pass heals frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and handles urgent garrisons. It then continues through zone combat, whose coordinated attack and positioning assignments come from the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression), and its remaining global priorities. Homeland AI rebuilds its own list from units that remain available, refreshes role targets, and runs its ordered civilian and military passes.
+`CvAIOperation::DoTurn` maintains reserve membership, target validity, movement progress, army and operation state, and abort reason. Cleanup releases Army IDs and removes obsolete armies or operations. See [military organization](military-organization.md) for formation stages and release, and [civilian operation](civilian-operation.md) for civilian-specific ownership.
 
-`CvAIOperation::DoTurn` updates reserve membership, checkpoint timing, target validity, movement progress, army state, operation state, and abort reason. Completion and cleanup release army IDs and remove obsolete armies or operations, allowing surviving units to enter later ownership paths.
+## Control state
 
-## Control state and claims
-
-| Concept | Definition and effect |
+| Concept | Purpose |
 | --- | --- |
-| **TurnProcessed** | A per-turn unit flag that prevents later AI controllers from claiming the unit. It can be set after a special action while movement remains. |
-| **Move tags** | Tactical and Homeland move categories that record the controller's last claim for diagnostics. Setting a Homeland tag clears the Tactical tag. The tags record current-turn work; operations, army membership, directives, and saved targets hold durable intent. |
-| **Army membership** | An army ID and formation slot that bind a unit to persistent-operation movement. Homeland recruitment excludes units whose army ID remains set. |
-| **Mission queue** | The unit's executable queue of movement, attack, build, or special missions. A valid unfinished mission can continue in the final review; fallback checks clear a contradictory current-turn queue. |
-| **Current-turn lists** | Separate Tactical and Homeland working lists. Each controller removes a unit when it calls `UnitProcessed`. |
+| **TurnProcessed** | Per-turn flag that prevents a later controller from claiming the unit. A special action can set it while movement remains. |
+| **Move tags** | Tactical and Homeland categories that record the controller's current-turn claim for diagnostics. A Homeland tag clears the Tactical tag. |
+| **Army membership** | An Army ID and formation slot that bind a unit to persistent-operation movement. Homeland recruitment excludes a unit while its Army ID is set. |
+| **Mission queue** | Executable movement, attack, build, or special missions. The final review can continue a valid unfinished mission and clears a contradictory queue. |
+| **Working lists** | Separate Tactical and Homeland candidate lists. Each controller removes a unit when it calls `UnitProcessed`. |
 
-Tactical and Homeland AI use the same general claim pattern: filter the current list, score or choose a local action, push missions, and record completed work. A unit neither claimed by an operation nor marked `TurnProcessed` can pass from Tactical AI to Homeland AI with remaining movement.
+Move tags record work this turn. Persistent operations, Army IDs, directives, and saved targets hold durable intent. **Activity state** is also durable: missions set a stance such as sleep, heal, sentry, intercept, or an unfinished mission. `CvUnit::doTurn` applies the matching wake checks so a controller can claim the unit again when appropriate.
 
-## Activity and automation
+| Activity | Wake behavior |
+| --- | --- |
+| Awake | Available for orders. |
+| Hold | Wakes on the next turn. |
+| Sleep | Wakes only when projected to die next turn. |
+| Heal | Wakes after damage last turn or at full health. |
+| Sentry | Wakes for a visible enemy, or sufficient danger or damage. |
+| Intercept | AI units wake every turn so interception duty is reconsidered. |
+| Mission | Wakes when its unfinished queue completes, fails, or clears. |
 
-Each unit also carries an **activity state** (`ActivityTypes`), a durable stance that persists across turns while the claims above reset every turn. Missions set it: a completed skip, sleep, fortify, heal, alert, or air-patrol mission parks the unit in the matching state, and a queued multi-turn mission keeps it in the mission state. `CvUnit::doTurn` runs the wake checks at the top of the unit's turn, returning the unit to awake so a controller can claim it again.
+**Automation** is the human-side entry to Homeland work. `CvHomelandAI::FindAutomatedUnits` gathers automated human units instead of the AI recruitment list, and role passes accept a matching [UnitAI role](concepts.md#unitai-roles) or automate type. Automation ends when the unit enters combat, receives a manual order, or finds no work.
 
-| Activity | Set by | Wakes when |
+## Tactical-to-Homeland handoff
+
+| Unit kind | Owner this turn | Later handling |
 | --- | --- | --- |
-| Awake | Default state and every wake check | Already awake and available for orders. |
-| Hold | Skip mission | Always, on the next turn. |
-| Sleep | Sleep or fortify mission | Only when the unit is projected to die next turn. |
-| Heal | Heal mission | The unit took damage last turn or reached full health. |
-| Sentry | Alert mission | An enemy enters sight range (attack range for aircraft), or danger or damage taken exceeds the unit's heal rate. |
-| Intercept | Air-patrol mission | Every turn for an AI unit, so interception duty is re-decided each turn. |
-| Mission | An unfinished mission queue | The queue completes, fails, or is cleared. |
-
-**Automation** (`AutomateTypes`) is the human-side entry into the same Homeland passes: a human can automate build, explore, trade, missionary, archaeologist, and diplomat work. For a human player, `CvHomelandAI::FindAutomatedUnits` replaces `RecruitUnits` and collects only automated units, and each role pass accepts a unit by its [role](concepts.md#unitai-roles) or its automate type, so an automated worker follows the same improvement logic as an AI worker. Automation cancels when the unit enters combat, receives a manual order, or its pass finds no remaining work.
-
-## Ownership and handoff
-
-| Unit kind | Initial owner | Handoff or later handling |
-| --- | --- | --- |
-| Persistent operation army member | Persistent operation through Tactical AI | Moves with its army until cleanup releases its army ID. |
+| Persistent-operation army member | Persistent operation through Tactical AI | Moves with its army until cleanup releases its Army ID. |
 | Independent combat, ranged, or combat-support unit | Tactical AI | Homeland AI receives it when Tactical leaves it unprocessed with movement. |
-| Explorer | Homeland AI | `CvUnit::canUseForTacticalAI` excludes land and sea explorer roles. |
+| Explorer | Homeland AI | Tactical eligibility excludes land and sea explorer roles. |
 | Ordinary civilian | Homeland AI | A role action, safety response, or escorted civilian operation supplies its work. |
-| Combat-ready aircraft | Tactical AI | Homeland receives aircraft retained for rebasing. |
-| Carrier or nuclear operation member | Persistent operation and army movement | Specialized operation logic supplies the target and formation behavior. |
-| Automated human unit | [Homeland automation](#activity-and-automation) | Normal AI operations and ordinary Tactical recruitment leave it to its automation path. |
+| Combat-ready aircraft | Tactical AI | Homeland can rebase aircraft Tactical AI retains. |
+| Carrier or nuclear operation member | Persistent operation | Specialized operation logic provides target and formation behavior. |
+| Automated human unit | Homeland automation | Normal AI operations and ordinary Tactical recruitment leave it to automation. |
 
-This **Tactical-to-Homeland handoff** gives Tactical AI the first claim on combat urgency. Homeland AI then handles upgrades, opportunity attacks, garrisoning, healing, sentry work, patrols, aircraft rebasing, civilian roles, and unassigned fallbacks.
+Tactical AI claims persistent-operation armies and combat urgency first. Homeland AI then handles eligible upgrades, opportunity attacks, garrisoning, healing, sentry work, patrols, rebasing, civilian roles, and fallbacks. The final Homeland review continues a valid mission, moves an idle unit toward friendly territory where possible, skips it, or applies stranded naval-unit handling.
 
-## Pass order and fallthrough
+## Diagnostics
 
-Tactical AI gives persistent-operation armies and urgent combat work early claims, then processes dominance zones, reinforcements, opportunistic global work, defensive positioning, and safety. Homeland AI runs specialized role passes in their configured order, moves endangered remaining units before routine military housekeeping, and ends with fallback handling.
+Trace a unit in this order: move tag, Army ID, `TurnProcessed`, remaining movement, then mission queue. For an army member, correlate the same turn in Tactical and operation logs.
 
-The final Homeland review continues a valid queued mission, sends an idle unit toward friendly territory where possible, skips it, or applies stranded naval-unit handling. Per-turn control comes from pass order, eligibility, local scoring, movement, and `TurnProcessed`. Strategy flavors primarily shape upstream demand and force composition. [Military operation](military-operation.md) documents the military flavor effects.
-
-## Implementation and diagnostics
-
-1. `CvPlayerAI::AI_unitUpdate` calls `CvTacticalAI::Update`, then `CvHomelandAI::Update`.
-2. `CvTacticalAI::RecruitUnits`, persistent-operation movement, and tactical passes claim army and tactical units.
-3. `CvAIOperation::DoTurn` and `Move` advance persistent-operation state and dispatch army movement.
-4. `CvHomelandAI::RecruitUnits`, `FindHomelandTargets`, and `AssignHomelandMoves` claim remaining units.
-5. `CvTacticalAI::UnitProcessed` or `CvHomelandAI::UnitProcessed` sets the relevant move tag and `TurnProcessed`.
-6. `CvUnit` executes the queued missions that change position, movement, health, ownership, and map state.
-
-With AI logging enabled, use `PlayerTacticalAILog.csv` for recruitment, zones, targets, and tactical assignments; `PlayerHomelandAILog.csv` for role passes and fallbacks; and `OperationalAILog.csv` for operation states, armies, targets, transitions, and aborts. Start from the unit's move tag, then inspect its army ID, `TurnProcessed`, remaining movement, and mission queue. For an army member, correlate the same turn in the operational and tactical logs.
+| Log | Use it for |
+| --- | --- |
+| `PlayerTacticalAILog.csv` | Recruitment, zones, targets, and tactical assignments. |
+| `PlayerHomelandAILog.csv` | Role passes and fallbacks. |
+| `OperationalAILog.csv` | Operation states, armies, targets, transitions, and aborts. |

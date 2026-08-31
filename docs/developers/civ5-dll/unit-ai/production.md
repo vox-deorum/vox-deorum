@@ -1,12 +1,12 @@
 # Unit AI: Production
 
-**City production** selects a **queue-head order**, the next order for one city. In the **Vox Populi 5.2.7** baseline, `CvCityStrategyAI::ChooseProduction` compares units, buildings, projects, and processes using legal options, flavor-derived preferences, and current demand. The selected order becomes `ORDER_TRAIN`, `ORDER_CONSTRUCT`, `ORDER_CREATE`, or `ORDER_MAINTAIN`.
+**City production** selects the next order for one city. In the **Vox Populi 5.2.7** baseline, `CvCityStrategyAI::ChooseProduction` compares legal units, buildings, projects, and processes using flavor preferences and current demand. The result becomes a train, construct, create, or maintain order.
 
 This page defines the shared comparison. [Military production](military-production.md) and [civilian production](civilian-production.md) define the demand and suitability rules that supply unit candidates.
 
 ## Candidate lifecycle
 
-A **candidate** is an option the city can compare. A **precheck candidate** is a legal option with a positive base weight. **Suitability** is the current-state evaluation that revises a candidate's weight or removes it from normal selection. A **survivor** is a candidate with a positive suitability result.
+A **candidate** is a legal option with a positive base weight. **Suitability** adjusts that weight for current conditions or removes the candidate from normal selection.
 
 ```mermaid
 flowchart LR
@@ -19,11 +19,11 @@ flowchart LR
     C --> O[[Queue-head order]]
 ```
 
-1. **Build the precheck list.** The city collects ordinary units, buildings, projects, processes, and requested units with positive base weights. A process enters the list when raw production is at least five per turn, or when no other precheck candidate exists. A legal defense process receives a base weight of 100.
-2. **Evaluate suitability.** The production AI for each candidate type returns a revised weight when the candidate reaches its sanity check. Positive results become survivors. Nonpositive results are excluded from normal selection and recorded as `SKIPPED`.
-3. **Adjust for duration.** The city divides every survivor's weight by `turnsLeft ^ (0.15 + 0.015 × turnsLeft)` (`CityStrategyAIHelpers::ReweightByTurnsLeft`), sorts the result, and records `POST`. The exponent grows with the remaining turns, so slow builds lose disproportionately more weight. The purchase path applies the same divisor to the precheck list before suitability instead of after it.
-4. **Restore the precheck list when all candidates fail.** The **all-failed fallback** uses the precheck list when suitability produces no survivors. It can therefore select a candidate that suitability rejected.
-5. **Select the queue head.** The city keeps a current unit, building, or project whose weight is at least half of the leading weight, subject to interruption rules. A valid victory-condition project within that band and a leading defense process are selected directly. Otherwise the city makes a weighted random choice among the candidates whose weight is at least `CityProductionChoiceCutoffThreshold` percent of the leading weight — the handicap value is 90 by default, so candidates within ten percent of the leader compete. Processes do not receive current-build inertia.
+1. **Build the precheck list.** The city collects legal options with positive base weights. Processes normally require at least five production per turn, but can enter when no other option does.
+2. **Evaluate suitability.** Each production AI adjusts its candidates for current conditions. Nonpositive results leave normal selection and are logged as `SKIPPED`.
+3. **Adjust for duration.** A nonlinear penalty lowers the weight of slow builds. Normal production applies it after suitability; purchase evaluation applies it before suitability.
+4. **Recover from an empty result.** If every candidate fails suitability, the **all-failed fallback** restores the precheck list. It can therefore select an option that suitability rejected.
+5. **Select the order.** Current production receives some inertia, and valid victory projects or defense processes can win directly. Otherwise the city chooses randomly among candidates close enough to the leading weight. Processes receive no current-build inertia.
 
 `PRE` records the sorted precheck list, and `POST` records the duration-adjusted survivors. Both lists contain only legal candidates with positive base weights.
 
@@ -37,7 +37,7 @@ flowchart LR
 | Puppet city | Every non-purchase unit candidate is rejected. |
 | Developing city | A city with fewer than two buildings rejects non-purchase unit candidates, except while under siege. |
 | Siege | During siege, ordinary noncombat candidates are rejected. Combat-capable explorers can remain eligible. |
-| Request muster city | An operation-request or army-request candidate reaches `CheckUnitBuildSanity` only when the next operation request names this city as its muster city. [Military production](military-production.md#shared-muster-city-gate) explains the army-request consequence. |
+| Request muster city | An operation-request or army-request candidate reaches `CheckUnitBuildSanity` only when the next operation request names this city as its muster city. [Military production](military-production.md#formation-requests-and-commitments) explains the army-request consequence. |
 
 An operation request and an army request can identify the same concrete unit as an ordinary candidate. Each form remains a separate candidate with its own weight.
 
@@ -46,13 +46,13 @@ An operation request and an army request can identify the same concrete unit as 
 | Candidate | Source | Base weight |
 | --- | --- | --- |
 | Ordinary unit | A trainable unit's XML flavor affinities mapped through the city's effective flavors. | Flavor-derived unit weight. |
-| Operation request | The concrete unit for the city's next operation slot. | Operation base value, offense flavor, operation skip counter, and the unit's flavor-derived weight. |
-| Army request | The concrete unit for a free required army slot. | Army base value and offense flavor. |
+| Operation request | The concrete unit for an operation's next required formation slot. | Operation base value, offense flavor, operation skip counter, and the unit's flavor-derived weight. |
+| Army request | The concrete unit for a free required formation slot selected across armies. | Army base value and offense flavor. |
 | Building | A legal building's XML flavor affinities. | Flavor-derived building weight. |
 | Project | A legal project's XML flavor affinities. | Flavor-derived project weight. |
 | Process | A legal process's XML flavor affinities. | Flavor-derived process weight, or 100 for a defense process. |
 
-**Effective flavors** are city preference values. Each production AI combines them with an entry's XML flavor affinities to form its base weight. For units, `CvUnitProductionAI::AddFlavorWeights` computes, per flavor, the unit's XML affinity multiplied by the signed square root of ten times the city flavor value, and sums the products. The square root compresses large swings in city flavors so the XML differences between unit types stay decisive. Vox Deorum custom flavors add signed adjustments to the normal flavor state. [Flavors](concepts.md#flavors) explains their inputs and duration.
+**Effective flavors** are city preference values. Each production AI combines them with an entry's XML flavor affinities to form its base weight. For each unit flavor, `CvUnitProductionAI::AddFlavorWeights` multiplies the unit's XML affinity by the signed square root of ten times the city flavor value, then sums the products. The square root compresses large swings in city flavors, keeping XML differences between unit types decisive. Vox Deorum custom flavors add signed adjustments to the normal flavor state. [Flavors](concepts.md#flavors) explains their inputs and duration.
 
 ## Timing and feedback
 
@@ -60,7 +60,7 @@ An operation request and an army request can identify the same concrete unit as 
 
 `CvCity::doProduction` requests a choice when a city has no production, maintains a process, or is marked dirty. Completing the final queued order also requests a choice.
 
-The **operation skip counter** is a player-level pressure value: entering an operation-request candidate in precheck increments it, and it resets only when a city selects that candidate or commits to it through `CvCity::CheckForOperationUnits`. The **settler skip counter** increments once when a city skips an available settler, then resets when a city starts a settler or no settler is available.
+Two player-level counters add pressure to repeatedly skipped needs. An operation request gains pressure whenever it enters precheck and resets after a related purchase, training selection, or committed order. A settler gains pressure when a city skips an available settler and resets when production starts one or no settler is available.
 
 ## Boundaries and implementation
 

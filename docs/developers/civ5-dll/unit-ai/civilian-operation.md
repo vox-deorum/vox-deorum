@@ -1,76 +1,81 @@
 # Unit AI: Civilian Operation
 
-A **civilian operation** is a persistent `CvAIOperation` that gives a civilian unit a durable target and, when needed, an escort army. A **role objective** is the strategic result a civilian role pursues, such as a settlement site, improvement, or religious action. A **directive** is a durable instruction for an individual Great Person, such as creating a work or constructing an improvement. A **Homeland pass** is an ordered `CvHomelandAI` role assignment pass for units outside an operation. An **escorted operation** recruits a military formation, gathers it with the civilian, and moves the pair through Tactical AI.
+A civilian role uses a **persistent operation** when it needs a durable target, multi-turn movement, or a military escort. The operation keeps the civilian under Tactical control until the mission completes or aborts. A role that can choose and execute work independently uses a **Homeland pass** instead, receiving a fresh objective and safety check each turn.
 
-The primary implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvEconomicAI.cpp`, `CvBuilderTaskingAI.cpp`, `CvTradeClasses.cpp`, `CvReligionClasses.cpp`, and `CvPlayerAI.cpp`. [Operation](operation.md) explains the shared per-turn ownership and processed-state rules.
+A **role objective** is the strategic result a civilian role pursues, such as a settlement site, improvement, or religious action. A **directive** is a durable instruction for an individual Great Person, such as creating a work or constructing an improvement. [Operation lifecycle](operation.md) is the authority for shared claims, processed state, and handoff.
 
-## Ownership map
-
-| Role or unit | Operation ownership | Homeland ownership |
-| --- | --- | --- |
-| Settler | Found-city operation supplies the durable settle target and optional escort. | First-city settlement and safe, immediate opportunistic founding. |
-| Great Merchant | Merchant-delegation operation performs foreign trade or city-state purchase. | Directives outside the delegation mission. |
-| Great Diplomat | Diplomat-delegation operation performs influence missions. | Embassy construction. Messenger units also use their direct Homeland mission. |
-| Great Musician | Concert-tour operation performs the one-shot tourism mission. | Directives outside the tour. |
-| Worker, work boat, explorer, ordinary religious unit, trade unit, archaeologist, spaceship part, treasure | No civilian operation path. | Role objectives, safety, movement, and final missions. |
-| Writer, artist, scientist, engineer, Great General, Great Admiral | No civilian operation path for their ordinary directives. | Great Person directive, support, or improvement action. |
-
-`CvPlayerAI::ProcessGreatPeople` supplies directives, and Homeland execution verifies the target and mission when the unit acts. Builder Tasking AI supplies worker directives and routes; Trade AI supplies route choices; Religion AI supplies founding, enhancement, spread, conversion, protection, and holy-site objectives.
-
-## Escorted-operation lifecycle
+The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvEconomicAI.cpp`, `CvBuilderTaskingAI.cpp`, `CvTradeClasses.cpp`, `CvReligionClasses.cpp`, and `CvPlayerAI.cpp`.
 
 ```mermaid
 flowchart LR
-    O[Role objective or directive] --> A{Civilian operation owns the unit?}
-    A -->|yes| I[Init selects civilian and target]
-    I --> M[Muster and recruit escort]
-    M --> G[Gather civilian and escort]
-    G --> T[Tactical escort movement]
-    T --> P[Operation stage and type-specific mission checks]
-    P -->|objective remains| N[Retain or retarget operation]
-    N -.->|next Tactical turn| T
-    P -->|completed| C[Complete operation and release unit]
-    A -->|no| H[Homeland role pass]
-    H --> S[Role-specific safety, target, and mission checks]
-    S -->|act this turn| R[Move, build, or perform role mission]
-    S -->|blocked or unsafe| V[Fresh role evaluation]
-    R --> V
-    V -.->|next Homeland turn| H
+    R[Role objective or directive] --> D{Needs durable target,<br/>multi-turn movement, or escort?}
+    D -->|Yes| O[Persistent operation<br/>Tactical movement]
+    D -->|No| H[Homeland pass<br/>fresh objective and safety check]
+    O --> F[Complete, retarget, or abort]
+    H --> M[Move, build, or use role mission]
 ```
 
-Takeaway: a civilian operation keeps its civilian under Tactical control until it completes or aborts. Civilians outside operations receive independent Homeland role evaluation each turn.
+## Ownership
 
-`CvAIOperationCivilian::Init` selects the civilian, target, and escort formation, then assigns the civilian to slot zero. It starts muster at the civilian's current plot. An escorted non-naval civilian outside owner territory relocates muster to the closest friendly city only when its current plot is also outside friendly territory. An escorted naval civilian outside owner territory seeks the closest friendly coastal city. The operation can remove the escort requirement when the civilian can reach the target immediately.
+| Role or unit | Persistent operation | Homeland pass |
+| --- | --- | --- |
+| Settler | Found-city operation keeps a settle target and optional escort. | First-city settlement and safe immediate founding. |
+| Great Merchant | Merchant delegation performs foreign trade or a city-state purchase. | Directives outside that mission. |
+| Great Diplomat | Diplomat delegation performs influence missions. | Embassy construction and messenger missions. |
+| Great Musician | Concert tour performs the tourism mission. | Directives outside the tour. |
+| Worker, work boat, explorer, ordinary religious unit, trade unit, archaeologist, spaceship part, treasure | No operation path. | Objective selection, safety, movement, and mission. |
+| Writer, artist, scientist, engineer, Great General, Great Admiral | No operation for ordinary directives. | Directive, support, or improvement action. |
 
-The operation recruits or waits for its escort, gathers the army, and uses `CvTacticalAI::PlotArmyMovesEscort` for movement. Its type-specific `PerformMission` validates range, movement, and mission legality before founding a city, conducting a delegation, or beginning a concert tour. A lost civilian ends the operation. The operation can retarget an eligible target. Invalid operation state ends through its normal abort path.
+`CvPlayerAI::ProcessGreatPeople` supplies directives. Builder Tasking AI supplies worker directives and routes, Trade AI supplies route choices, and Religion AI supplies religious objectives.
+
+## Escorted civilian operations
+
+`CvAIOperationCivilian::Init` selects the civilian and target, then starts with the civilian's plot as the muster point. For an escorted naval operation on a plot the player does not own, it looks for the closest friendly coastal city. An escorted land operation relocates only from non-friendly territory. It then creates the army, assigns the civilian to formation slot zero, and clears escort formation slot one when the civilian can reach the target this turn.
+
+The operation recruits and gathers the escort, then `CvTacticalAI::PlotArmyMovesEscort` moves the army. Its `PerformMission` verifies range, movement, and legality before founding a city, conducting a delegation, or beginning a concert tour. Losing the civilian ends the operation. The operation can retain a valid replacement target, but invalid state follows the normal abort path.
+
+```mermaid
+flowchart LR
+    I[Select civilian and target] --> P[Choose muster point plot]
+    P --> A[Create army from escort formation]
+    A --> S[Assign civilian to formation slot zero]
+    S --> E{Target reachable this turn?}
+    E -->|yes| C[Clear escort formation slot one]
+    E -->|no| K[Keep escort requirement]
+    C --> R[Recruit and gather]
+    K --> R
+    R --> T[Tactical escort movement]
+    T --> V[Validate and perform mission]
+    V -->|Retain or retarget<br/>next Tactical turn| T
+    V -->|Complete or abort| L[Release civilian and escort]
+```
+
+Army membership excludes an operated civilian from Homeland recruitment until release. See [military organization](military-organization.md) for the shared Army ID and formation-slot rules.
 
 ## Homeland role order
 
-`CvHomelandAI::AssignHomelandMoves` applies civilian roles in an order that gives urgent and specialized work the first claim:
+`CvHomelandAI::AssignHomelandMoves` gives urgent and specialized work the first claim:
 
-1. First-turn settlers found the initial city.
-2. [City-state gifts](cleanup.md#city-state-gifting), conservative healing, opportunistic settlement, and exploration run early.
-3. Great Person passes run before workers and religious units.
-4. Workers and religious units receive role actions.
-5. The safety pass moves endangered remaining units.
-6. Great Diplomat embassy and messenger missions run after military positioning.
-7. Spaceship parts, treasure, trade units, and archaeologists run near the end.
-8. The unassigned review continues a valid mission or applies movement, skip, or stranded-unit handling.
+1. First-turn settlement, city-state gifts, conservative healing, opportunistic settlement, and exploration.
+2. Great Person directives, then worker and religious actions.
+3. Safety moves for endangered remaining units.
+4. Embassy and messenger missions after military positioning.
+5. Spaceship parts, treasure, trade units, archaeologists, then the unassigned review.
 
-Army membership gives an operated civilian an army ID and excludes it from Homeland recruitment until the operation releases it. A Great General with a field-command directive can enter Tactical AI as combat support. [Military organization](military-organization.md#organization-and-control) defines the shared operation, army, and slot state.
+The final review continues a valid mission or applies movement, skip, or stranded-unit handling. A Great General with a field-command directive can instead enter Tactical AI as combat support.
 
-## Role execution
+## Role behavior
 
-| Role | Objective and execution |
+| Role | Homeland behavior |
 | --- | --- |
-| Settler and explorer | Economic AI evaluates settlement plots through [settlement-site evaluation](civilian-production.md#settler-demand). Homeland handles the initial city and an unassigned settler already on a safe site. Explorers, promoted into and retired from their [UnitAI role](concepts.md#unitai-roles) by Economic AI, repeatedly claim reachable unknown targets, avoid duplicate claims, and can remove stuck automation. |
-| Worker and work boat | `PlanImprovements` refreshes Builder Tasking AI. At peace, `PlanWorkerDistribution` allocates connected city regions by improvement need. Homeland applies movement, danger, regional transfer, and the final build mission. |
-| Great People | Writers, artists, scientists, and engineers execute their directive, such as a power, work, Golden Age, production hurry, or improvement. Generals and Admirals supply support or move to safe useful positions. Improvement directives use the worker path. |
-| Religion | Homeland moves prophets, missionaries, and inquisitors toward Religion AI objectives and issues their action after its legality check. |
-| Trade, archaeology, and delivery | Trade units travel to the selected origin, create a route, or follow their role fallback. Archaeologists select safe reachable sites and start the legal dig build. Spaceship parts and treasure deliver to their valid destination. |
+| Settler and explorer | Economic AI evaluates [settlement sites](civilian-production.md#settler-demand). Homeland handles the initial city and a safe settler already on a site. Explorers claim reachable unknown targets, avoid duplicate claims, and can remove stuck automation. |
+| Worker and work boat | [Worker demand](civilian-production.md#worker-demand) refreshes Builder Tasking AI. Homeland applies danger, regional transfer, movement, and the build mission. |
+| Great People | Directives trigger powers, works, Golden Ages, production hurry, improvements, support, or safe positioning. Improvement directives use the worker path. |
+| Religion | [Faith acquisition](acquisition.md#faith-priority-and-legality) supplies religious units and objectives. Homeland moves prophets, missionaries, and inquisitors, then checks action legality. |
+| Trade, archaeology, and delivery | [Trade](civilian-production.md#trade-unit-demand) and [archaeology](civilian-production.md#archaeologist-demand) supply demand. Units create routes, excavate safe reachable sites, or deliver spaceship parts and treasure to valid destinations. |
 
-## Safety and diagnostics
+The safety pass handles civilians left after their role pass. A role executor can choose a safe plot when its objective becomes unsafe; a persistent operation retains or retargets its goal for a later turn.
 
-Homeland's safety pass handles civilians remaining after their main role passes. A role executor can choose a safe plot when its objective becomes unsafe. Operations retain or retarget their durable goal for later turns, while Homeland roles receive a fresh objective evaluation on recruitment.
+## Diagnostics
 
-With AI logging enabled, use `PlayerHomelandAILog.csv` for role passes and `OperationalAILog.csv` for civilian operation state, armies, targets, transitions, and aborts. [Operation diagnostics](operation.md#implementation-and-diagnostics) covers cross-system diagnosis.
+Use `PlayerHomelandAILog.csv` for role passes and `OperationalAILog.csv` for civilian operation state, armies, targets, transitions, and aborts. Start with the shared [operation diagnostics](operation.md#diagnostics).

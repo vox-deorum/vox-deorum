@@ -1,158 +1,89 @@
 # Unit AI: Acquisition
 
-**Acquisition** spends gold or faith to obtain a unit immediately. A caller identifies the purpose, candidate, and city, and the city validates and executes the purchase. [Production](production.md) covers queue selection, while [military production](military-production.md) explains formation demand that can request an acquisition.
+**Acquisition** spends gold or faith to obtain a unit immediately. A caller establishes the need, concrete candidate, and city. The city then checks legality and executes the purchase. [Production](production.md) covers queue selection. For military formation demand, first read [formation requests and commitments](military-production.md#formation-requests-and-commitments): a weighted request can select a queue order without committing a formation slot, while city commitment and direct purchases have separate effects.
 
-The primary implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvEconomicAI.cpp`, `CvCityStrategyAI.cpp`, `CvReligionClasses.cpp`, `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvTacticalAI.cpp`, `CvCity.cpp`, and `CvUnitProductionAI.cpp`.
+The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvEconomicAI.cpp`, `CvCityStrategyAI.cpp`, `CvReligionClasses.cpp`, `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvTacticalAI.cpp`, `CvCity.cpp`, and `CvUnitProductionAI.cpp`.
 
-## Runtime route map
+## Common purchase path
 
-Each **purchase route** establishes why a unit is needed, selects a candidate, and applies route-specific policy before city execution. The routes run in this order: Economic AI, Military AI, Religion AI, City AI, then Tactical AI. Completed routes update the shared treasury, cooldown, resource, and placement state used by later routes. A **savings request** gives a purchase category a priority — and, for some categories, a reserved gold amount — in Economic AI's ledger ([savings priorities](#savings-priorities)).
+Most unit routes follow the same sequence: select a city and candidate, apply the route's funding and suitability policy, pass the city gate, and execute. The outcome can be a purchase, a gold investment, a queued production fallback, or no action. The route table below identifies the outcomes available to each caller.
+
+```mermaid
+flowchart LR
+    R[Purchase route] --> C[Candidate and city]
+    C --> F{Route policy permits spending?}
+    F -->|no| X[[Skip, save, or use production]]
+    F -->|yes| S{Candidate suitable?}
+    S -->|no| X
+    S -->|yes| G{City purchase gate}
+    G -->|no| X
+    G -->|yes| P[PurchaseUnit]
+    P --> I{Gold investment applies?}
+    I -->|yes| V[[Record investment and spend gold]]
+    I -->|no| U[[Create and initialize unit]]
+```
+
+`CvEconomicAI::CanWithdrawMoneyForPurchase` grants gold permission after higher-priority savings reservations. It does not spend gold. `CvUnitProductionAI::CheckUnitBuildSanity` applies strategy rules and, in purchase mode, a gold purchase precheck. `CvCity::IsCanPurchase` validates the specific unit and yield; `CvCity::PurchaseUnit` rechecks it, finds placement before payment, creates and initializes an immediate-purchase unit, spends the currency, and updates cooldowns. Immediate gold and faith purchases fire the city-trained hook with their purchase reason. Gold investments record investment state instead.
+
+Purchased units receive the applicable experience and damage rules and normally lose movement for the turn, unless the unit entry permits post-purchase movement. Faith purchases also initialize unit religion and update faith-purchased Great Person counters.
+
+## Purchase routes
+
+Routes run in this order: Economic AI, Military AI, Religion AI, City AI, then Tactical AI. Earlier routes can change the treasury, resources, cooldowns, or placement that a later route sees. A **savings request** gives a category priority and can reserve gold in Economic AI's ledger.
 
 | Route | Purpose and candidate | Currency and route policy |
 | --- | --- | --- |
 | Ordinary hurry | `CvEconomicAI::DoHurry` ranks each eligible city's leading flavor-weighted candidate and special diplomat candidates. | Gold. It keeps a game-speed and era-adjusted treasury cushion and respects savings requests. |
-| Final operation slot | `CvMilitaryAI::MakeEmergencyPurchases` fills the only remaining uncommitted slot in a recruiting operation. | The military helper tries gold, then faith when gold purchase execution does not complete. |
+| Final operation slot | `CvMilitaryAI::MakeEmergencyPurchases` fills the only remaining uncommitted slot in a recruiting persistent operation. | The military helper tries gold when permitted, then faith when no gold unit was obtained. |
 | City operation or army need | `CvCity::CheckForOperationUnits` selects a role through `CvUnitProductionAI::RecommendUnit`. | Gold. A suitable production candidate can replace a purchase candidate when training finishes soon. |
 | Tactical defense | `CvTacticalAI::PlotEmergencyPurchases` responds to a threatened land zone or besieged city. | The military helper chooses a ranged unit for an ungarrisoned city when appropriate, otherwise a defensive unit, then tries gold and faith. |
 | Religious priority | `CvReligionAI::DoFaithPurchases` and `DoFaithPurchasesInCities` prioritize religious units, Great People, buildings, and eligible leftover units. | Faith. Higher-priority choices may reserve faith for a later turn. |
 | Religious defense | `CvReligionAI::DoReligionDefenseInCities` reacts to a nearby foreign prophet. | Faith purchases an inquisitor in a city with the chosen religion. |
 
-Final-slot purchases require a player who is outside the at-war strategy or [winning every active war](concepts.md#war-states). Tactical emergency purchases avoid water zones and cities likely to fall. City operation purchases exclude razing, automated, minor-civilization, barbarian, and ordinary puppet cities; they also wait when average income is negative or a military unit is already queued.
+Final-slot purchases require a player outside the at-war strategy or [winning every active war](concepts.md#war-states). Tactical emergencies exclude water zones and cities likely to fall. City operation purchases exclude razing, automated, minor-civilization, barbarian, and ordinary puppet cities; they wait when average income is negative or a military unit is already queued.
 
-```mermaid
-flowchart LR
-    R[Purchase route] --> C[Candidate and city]
-    C --> Y{Gold route?}
-    Y -->|gold| P{Gold permission and resources available?}
-    Y -->|faith| F{Faith suitability?}
-    P -->|yes| D{Economic direct investment?}
-    P -->|no| X[[Skip, save, or use production]]
-    D -->|yes| I[[Set investment and spend gold]]
-    D -->|no| S{Immediate-purchase suitability?}
-    F -->|yes| G{City purchase gate}
-    F -->|no| X
-    S -->|yes| G
-    S -->|no| X
-    G -->|no| X
-    G -->|yes| U[PurchaseUnit]
-    U --> B{Gold investment applies?}
-    B -->|yes| I
-    B -->|no| L[Recheck gate and find placement]
-    L --> N[Create and initialize unit]
-    N --> A[[Caller bookkeeping and available unit]]
-```
+Direct military paths start from a required [UnitAI role](concepts.md#unitai-roles), resolve a trainable type with `RecommendUnit`, then apply suitability and city execution. `CvAIOperation::BuyFinalUnit` assigns a successful final-slot purchase to its formation slot. `CvMilitaryAI::BuyEmergencyUnit` requests gold permission and tries faith if gold execution yields no unit. Its purchase-mode suitability still uses the gold purchase precheck. See [formation requests and commitments](military-production.md#formation-requests-and-commitments) for when `CheckForOperationUnits` commits a slot, queues production, or assigns a purchase directly.
 
-Takeaway: a route can skip a purchase, preserve funds, use production, or set an investment. A gold `PurchaseUnit` call can also invest rather than create a unit.
+## Savings and investment
 
-## Shared execution boundaries
-
-| Boundary | Owner | Behavior |
-| --- | --- | --- |
-| **Gold permission** | `CvEconomicAI::CanWithdrawMoneyForPurchase` | Compares the requested amount with the treasury after higher-priority savings requests. It grants permission without spending gold. |
-| **Suitability** | `CvUnitProductionAI::CheckUnitBuildSanity` | Applies strategy checks and, in purchase mode, a gold purchase precheck. Economic AI, City AI operation needs, and the military helper use it. |
-| **Purchase gate** | `CvCity::IsCanPurchase` | Validates city state, placement, trainability, unlocks, currency, and the relevant cooldowns for a specific unit and yield. |
-| **Purchase execution** | `CvCity::PurchaseUnit` | Rechecks `IsCanPurchase`, finds placement before payment, creates and initializes the unit, spends the selected currency, and updates cooldowns. Gold and faith purchases fire the city-trained hook with their purchase reason. |
-| **Faith priority** | Religion AI | Orders faith spending from immediate religious goals to city-ranked leftover spending. It reads faith and religion state independently of the gold savings ledger. |
-
-Purchased units receive the purchase experience and damage rules, and normally finish their movement for the turn. A unit entry can allow movement after purchase. Faith purchases also initialize unit religion and update faith-purchased Great Person counters.
-
-```mermaid
-flowchart LR
-    E[Economic AI]
-    R[Religion AI]
-    M[Military AI]
-    T[Tactical AI]
-    C[City AI]
-    U[Unit Production AI]
-    S[Suitability]
-    G[Gold permission]
-    L[City legality]
-    P[PurchaseUnit]
-    X[Shared treasury, cooldowns,<br/>resources, and placement]
-    N[[Completed acquisition]]
-
-    T -->|emergency request| M
-    E --> U
-    M --> U
-    C --> U
-    R -.->|generic faith units| U
-    U --> S
-    E --> G
-    M --> G
-    C --> G
-    S --> L
-    R --> L
-    G -->|permits gold route| P
-    L -->|faith or prechecked route| P
-    M -->|gold denied or gold purchase fails:<br/>faith emergency fallback| P
-    X -.->|read| G
-    X -.->|read| L
-    P -.->|updates| X
-    P --> N
-```
-
-Takeaway: callers share suitability, funding, legality, and mutable purchase state. `PurchaseUnit` is their common execution point, and the military helper can enter it with faith after its gold attempt fails.
-
-## Savings priorities
-
-Economic AI keeps one savings request per purchase type in `CvEconomicAI::m_RequestedSavings`, holding an amount and a numeric priority; starting a new request for a type overwrites the previous one. Gold permission walks the requests in descending priority, subtracting each reserved amount from the treasury, and reaches the asking category with only what higher-priority reservations leave — permission requires that remainder to cover the requested cost. A permission check that names a priority also rewrites the stored priority for its category.
+Economic AI stores one savings request per purchase type. A newer request for that type replaces the previous one. Gold permission subtracts higher-priority reserved amounts before testing the caller's cost.
 
 | Request | Priority | Reserved amount |
 | --- | --- | --- |
-| Major-civilization trade deal | 1 | The planned deal's gold. |
-| Tile purchase | 2, overwritten by the plot score at each permission check | The tile cost. |
-| Minor-civilization gift | 150 plus 25 per diplomacy-flavor point; a flat 350 for a buyout or marriage | The planned gift, buyout, or marriage cost. |
-| Defensive building | 250 | None. |
-| Unit | 500 | None. |
-| Unit upgrade | 500 plus 100 per military-training-flavor point; at war the flavor counts fifty-fold | The first deferred candidate's [upgrade price](upgrade.md#ranking-and-gold-reservation). |
+| Major-civilization trade deal | 1 | Planned deal gold |
+| Tile purchase | 2, replaced by the plot score at each check | Tile cost |
+| Minor-civilization gift | 150 plus 25 per diplomacy-flavor point; 350 for buyout or marriage | Planned gift, buyout, or marriage cost |
+| Defensive building | 250 | None |
+| Unit | 500 | None |
+| Unit upgrade | 500 plus 100 per military-training-flavor point; at war the flavor counts fifty-fold | First deferred [upgrade price](upgrade.md#ranking-and-reservation) |
 
-The unit and defensive-building categories set a priority but never reserve gold: their emergency routes only pass the priority with the permission check, so the ledger holds an amount of zero for them. Only trade, tile, gift, and upgrade requests actually hold gold against later purchases. The wartime upgrade priority outranks every other request — military-training flavor 7 yields 35,500.
+Unit and defensive-building requests set priority but reserve no gold. Trade, tile, gift, and upgrade requests do reserve it. `DoHurry` also requires gold above twice the total reserved amount, excluding the zero-reservation categories. A wartime upgrade request with a positive military-training flavor outranks every other request in the table; a zero flavor ties the ordinary unit request.
 
-The ordinary hurry route reads the ledger a second way: before considering candidates, `DoHurry` requires gold above a buffer of twice every reserved amount (the unit and building categories excluded), so hurrying leaves other savings untouched with room to spare.
-
-## Ordinary gold execution and investment
-
-**Ordinary PurchaseUnit execution** creates a unit through `CvCity::PurchaseUnit`. `DoHurry` collects positive flavor-weighted unit and building candidates, adds operation and army candidates in gold mode, and adjusts their weights by construction time. It chooses city leaders and considers the empire-level list while gold remains above its cushion. Before an ordinary unit purchase, the immediate-purchase branch rechecks savings priorities, strategic resources, and `CheckUnitBuildSanity`.
-
-An **investment** is Economic AI's alternative gold branch for a spaceship-project unit, or for ordinary units when `MOD_BALANCE_UNIT_INVESTMENTS` is active. The branch spends gold and sets the city unit-class investment state. It proceeds from the selected candidate without an execution-time `IsCanPurchase` recheck, does not call `CreateUnit`, and does not fire `CityTrained` at investment time. Some direct routes can also place the invested unit in the production queue.
-
-An ordinary candidate, operation request, and army request can name the same unit independently. A successful operation purchase resets its operation skip counter, and a successful settler purchase resets the settler skip counter.
-
-Direct military routes begin with a required [UnitAI role](concepts.md#unitai-roles). They use `CvUnitProductionAI::RecommendUnit` to select a trainable concrete unit, then apply suitability and city execution. `CvAIOperation::BuyFinalUnit` assigns a successful purchase to the final open operation slot. `CvMilitaryAI::BuyEmergencyUnit` asks Economic AI for gold permission, then attempts faith after gold execution fails. Its purchase-mode suitability still applies the gold purchase precheck before that attempt.
+An **investment** spends gold and records city unit-class investment state instead of creating a unit. Economic AI uses it for spaceship-project units and, when `MOD_BALANCE_UNIT_INVESTMENTS` is active, ordinary units. It skips the execution-time `IsCanPurchase` recheck and the city-trained hook. Some direct routes can add the invested unit to the production queue. Successful operation and settler purchases reset their respective skip counters.
 
 ## Faith priority and legality
 
-Religion AI considers enhancement, a desired faith Great Person, domestic conversion, and foreign spread before emergency religious defense, founding savings, and city-ranked leftover spending. `CvReligionAI::DoTurn` reaches emergency defense only when `DoFaithPurchases` returns false. The leftover pass ranks cities by faith output, favors holy cities, and penalizes puppets. It then considers faith-enabled buildings and eligible units when the empire is converted, has positive gold income, and has supply capacity. Missionaries and inquisitors use dedicated demand paths; the `FLAVOR_RELIGION` personality flavor feeds missionary demand, with higher values unlocking purchases for progressively wider spread targets. Generic spending excludes them, special units, and units without a positive base faith cost.
+Religion AI considers enhancement, a desired faith Great Person, domestic conversion, and foreign spread first. It then considers religious defense, founding savings, and city-ranked leftovers. An early-stop result on a priority path preserves faith for a later turn, while a successful priority purchase can continue into later checks. Leftover spending ranks cities by faith output, favors holy cities, penalizes puppets, and then considers faith-enabled buildings and eligible units. The generic unit branch requires conversion, positive gold income, and supply capacity. It excludes missionaries and inquisitors, which use dedicated demand, as well as special units and units without a positive base faith cost.
 
 ```mermaid
 flowchart TD
-    F[Religion AI faith turn] --> H[Enhancement, desired Great Person,<br/>domestic conversion, and foreign spread]
-    H --> P{Priority returns an<br/>early-stop result?}
-    P -->|yes| Z[[Stop lower-priority spending]]
-    P -->|no| D{Emergency religious defense buys?}
-    D -->|yes| Z
-    D -->|no| S{Saving to found?}
-    S -->|yes| Z
-    S -->|no| L[City-ranked leftover spending]
+    P[Priority religious goals] --> E{Path returns early-stop?}
+    E -->|yes| S[[Preserve faith and stop<br/>lower-priority work]]
+    E -->|no, including a purchase that continues| D{Religious defense purchase?}
+    D -->|yes| X[[Stop lower-priority purchases]]
+    D -->|no| F{Saving to found?}
+    F -->|yes| S
+    F -->|no| L[City-ranked leftovers]
     L --> B[Faith-enabled buildings]
     B --> U[Eligible generic units]
 ```
 
-Takeaway: only priority paths that return an early-stop result preserve faith before defense and city-ranked leftovers run. A successful priority purchase can continue through the later checks.
-
 | Legality layer | Gold | Faith |
 | --- | --- | --- |
-| City and placement | Valid city state, placement, and trainability are required. | The same city and placement evaluation applies, with the applicable faith building exception for puppets. |
-| Unlocks | Normal unit, resource, instance-limit, and required-building checks apply. | Religion, belief, policy, era, domain, and trait rules apply. Air units require their specific faith route; naval units require the applicable trait route. |
+| City and placement | Valid city state, placement, and trainability are required. | The same evaluation applies, with the applicable faith-building exception for puppets. |
+| Unlocks | Normal unit, resource, instance-limit, and required-building checks apply. | Religion, belief, policy, era, domain, and trait rules apply. Air units need their specific faith route; naval units need the applicable trait route. |
 | Currency and cooldown | Treasury gold and local combat or civilian cooldowns apply. | Faith and global or local faith cooldowns apply, including local combat and civilian tracking. |
 
-The generic faith unit path calls `ChooseHurry` in unit-only faith mode. Its `CheckUnitBuildSanity` call uses the gold form of `IsCanPurchase` while purchase mode is active. This **generic-faith gold-legality quirk** can remove a faith-legal unit when the same city cannot buy it with gold. Dedicated religious purchases call the faith purchase gate directly.
+The generic faith unit path calls `ChooseHurry` in unit-only faith mode, but its purchase-mode sanity check uses the gold form of `IsCanPurchase`. This **generic-faith gold-legality quirk** can reject a faith-legal unit when the city cannot buy it with gold. Dedicated religious purchases use the faith gate directly.
 
-## Implementation and diagnostics
-
-1. A route identifies an ordinary spending, formation, defense, religious, or city need.
-2. City strategy or a route-specific helper selects candidates. Most unit routes call `CheckUnitBuildSanity`.
-3. Gold routes request Economic AI permission when their savings policy applies. City execution handles `IsCanPurchase` and `PurchaseUnit`; the Economic AI investment branch records an investment directly.
-4. The caller records the route outcome, such as filling an operation slot, resetting a skip counter, cleaning a queue, or promoting a late emergency unit.
-
-With AI logging enabled, city hurry logs show `PRE` candidates after entry and duration adjustment and `POST` candidates after suitability. `HurryCityPriorities.csv` records Economic AI's empire-level `BUY` list. Homeland, Tactical, and Religion logs record successful direct purchases. A `POST` candidate can later lose eligibility when an earlier route spends currency, reserves gold, consumes a resource, or occupies its placement.
+With AI logging enabled, city hurry logs show `PRE` candidates after entry and duration adjustment and `POST` candidates after suitability. `HurryCityPriorities.csv` records the empire `BUY` list; Homeland, Tactical, and Religion logs record direct purchases. For a candidate that disappears after `POST`, inspect earlier spending, savings reservations, strategic resources, and placement.

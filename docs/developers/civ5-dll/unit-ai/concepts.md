@@ -1,79 +1,56 @@
 # Unit AI: Shared Concepts
 
-This page defines the vocabulary that the unit AI guides share: flavors, strategy flags, UnitAI roles, supply, war states, the danger map, and dominance zones. Each concept is defined here once; the other guides link back instead of redefining it. The code lives in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvFlavorManager.cpp`, `CvEconomicAI.cpp`, `CvMilitaryAI.cpp`, `CvDiplomacyAI.cpp`, `CvPlayer.cpp`, `CvUnit.cpp`, `CvDangerPlots.cpp`, and `CvTacticalAnalysisMap.cpp`, in the **Vox Populi 5.2.7** baseline.
+This is the vocabulary guide for contributors working on the unit AI in the **Vox Populi 5.2.7** baseline. It defines terms used across the other guides, so they can focus on the decisions they own. The implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvFlavorManager.cpp`, `CvEconomicAI.cpp`, `CvMilitaryAI.cpp`, `CvDiplomacyAI.cpp`, `CvPlayer.cpp`, `CvUnit.cpp`, `CvDangerPlots.cpp`, and `CvTacticalAnalysisMap.cpp`.
+
+Use this page to understand a shared input before following it into production, a persistent operation, or the operation lifecycle.
 
 ## Flavors
 
-**Flavors** are numeric preference values. Player-level readers consume personality flavors directly, while `CvUnitProductionAI` combines a city's effective flavor values with each unit type's XML flavor affinities to form base weights. Current-state rules then revise or reject candidates.
+**Flavors** are numeric preferences. City production combines effective city flavors with a unit type's XML flavor affinities, then applies the current decision's rules. Other AI systems read personality flavors directly.
 
 | Mode | City flavor values | Direct personality reads |
 | --- | --- | --- |
-| Vox Deorum custom flavors active | `CvFlavorManager::SetCustomFlavors` maps supplied values to signed adjustments and adds them to city flavor recipients. City AI and specialization adjustments remain additive. | Direct reads return custom values. `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy modifier. |
-| Normal Vox Populi | Randomized leader personality, active Economic and Military AI state adjustments, city state adjustments, and production specialization contribute to the city vector. Only state definitions with city-flavor rows change it. | Personality and grand-strategy reads follow the normal Vox Populi path. |
+| Vox Deorum custom flavors active | `CvFlavorManager::SetCustomFlavors` adds signed custom adjustments to city flavor recipients. City AI and specialization adjustments remain additive. | Returns custom values. `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy modifier. |
+| Normal Vox Populi | Leader personality, active Economic and Military AI state, city state, and production specialization contribute to the city vector. Only state definitions with city-flavor rows change it. | Uses the normal Vox Populi personality and grand-strategy path. |
 
-Custom flavors arrive on a 0–100 scale where 50 is neutral. `SetCustomFlavors` maps each value through an exponential curve to a signed adjustment — gentle near the middle, steep at the extremes — and applies it to both the active personality flavors and the city flavor recipients. Direct personality reads rescale the raw 0–100 value instead: `GetPersonalityIndividualFlavor` maps it to the personality range, and `GetPersonalityFlavorForDiplomacy` maps it to 1–10.
+Custom values use a 0 to 100 scale, with 50 as neutral. The game converts them to signed adjustments, applies them to the active personality and city recipients, and expires them after ten turns unless they are replaced. `CvLuaPlayer::lSetCustomFlavors` also uses thresholds to rewrite selected Economic and Military AI [strategy flags](#strategy-flags). These flags still affect gates and bonuses, but do not apply their normal XML flavor adjustments. A strategy disabled through Lua cannot be adopted again for ten turns.
 
-Custom values expire ten turns after they are set unless replaced; `CvFlavorManager::CheckCustomFlavorExpiration` checks each turn. Their Lua entry point, `CvLuaPlayer::lSetCustomFlavors`, also rewrites selected Economic and Military AI [strategy flags](#strategy-flags) from custom-flavor thresholds. Those flags can alter role gates and bonuses, and the rewrite does not apply their normal XML flavor adjustments.
-
-Per-decision flavor effects belong to the page that owns the decision: production base weights in [production](production.md#candidate-sources-and-base-weights), force sizing in [military production](military-production.md), explorer and settler demand in [civilian production](civilian-production.md), and combat risk tolerance in [tactical simulation](military-tactical-simulation.md).
+Read the owning guide for a decision's specific flavor effect: [production weights](production.md#candidate-sources-and-base-weights), [force sizing](military-production.md), [civilian demand](civilian-production.md), or [Tactical AI risk tolerance](military-tactical-simulation.md).
 
 ## Strategy flags
 
-A **strategy flag** is a named, boolean AI state: an `AIEconomicStrategies`, `AIMilitaryStrategies`, or `AICityStrategies` row such as `ENOUGH_EXPANSION`, `LOSING_MONEY`, or `AT_WAR`. The XML row supplies metadata — weight thresholds, first eligible turn, minimum turns active, re-check cadence, tech prerequisite and obsoletion, and flavor payloads — while the trigger predicate itself is hardcoded in `CvEconomicAI.cpp`, `CvMilitaryAI.cpp`, or `CvCityStrategyAI.cpp` and dispatched by the row's type name.
+A **strategy flag** is a named Boolean AI state from `AIEconomicStrategies`, `AIMilitaryStrategies`, or `AICityStrategies`, such as `ENOUGH_EXPANSION`, `LOSING_MONEY`, or `AT_WAR`. XML supplies the timing, thresholds, prerequisites, obsoletion, and flavor payload. `CvEconomicAI.cpp`, `CvMilitaryAI.cpp`, and `CvCityStrategyAI.cpp` provide the trigger predicate selected by the row type.
 
-Adoption and ending run on different cadences. An inactive strategy tests its trigger every turn once allowed. An active strategy tests for ending only every `CheckTriggerTurnCount` turns after adoption, and never before `MinimumNumTurnsExecuted` turns have passed, so strategies resist flickering. Personality shifts the trigger thresholds through each row's `PersonalityFlavorThresholdMod` entries.
-
-Adoption does two things:
-
-- Broadcasts the row's flavor payload onto the active player and city flavors. The delta is stateless — ending the strategy applies the negation — so adopt and end must always pair.
-- Flips the boolean that other code reads directly as a gate or bonus.
-
-Vox Deorum adds one rule: a strategy disabled through the Lua API cannot re-adopt for ten turns.
+An inactive flag tests every eligible turn. An active flag tests for ending only at its configured cadence and never before its minimum duration, which prevents rapid switching. Personality can modify its thresholds. Starting a flag broadcasts its flavor payload and flips the state read by other code; ending it removes that same payload and clears the state.
 
 ## UnitAI roles
 
-A **UnitAI role** (`UnitAITypes`) describes the job a unit performs for the AI: attack, defense, exploration, settling, and so on. Each unit type declares one **default role** in its XML definition plus an **eligible set** of roles it may be recruited as — what the unit *is* versus what it *may serve as*. The live role is per unit and set at creation; `CvPlayer::initUnit` substitutes the XML default when the creator names no role.
-
-The role is the bridge from production to operation — most recruitment reads it:
+A **UnitAI role** (`UnitAITypes`) is the job a unit performs, such as attack, defense, exploration, or settling. A unit type declares a **default role** and an eligible role set. The live role belongs to the individual unit and defaults to the XML value when its creator supplies none.
 
 | Reader | Use of the role |
 | --- | --- |
-| Army recruitment | Matches a formation slot's roles against the unit's current role or its type's eligible set. [Military organization](military-organization.md) owns the matching rules. |
-| Tactical recruitment | `CvUnit::canUseForTacticalAI` rejects land and naval explorer roles (Homeland handles them) and carrier and nuclear roles (reserved for operations). |
-| Homeland role passes | Each civilian pass recruits units by live role. [Civilian operation](civilian-operation.md) lists the passes. |
-| Demand and force sizing | Counts units by role, such as explorers and settlers in [military production](military-production.md) force targets. |
+| Army recruitment | Matches a formation slot against the unit's live role or its type's eligible role set. [Military organization](military-organization.md) owns the matching rules. |
+| Tactical recruitment | Excludes land and naval explorers, which Homeland handles, and carrier and nuclear roles, which persistent operations reserve. |
+| Homeland role passes | Recruits civilian units by live role. [Civilian operation](civilian-operation.md) lists the passes. |
+| Demand and force sizing | Counts roles such as explorers and settlers. |
 
-Roles change during a unit's life:
-
-- `CvEconomicAI::DoReconState` promotes eligible units to the explorer role and demotes surplus explorers. The target is roughly one explorer per `54 − FLAVOR_RECON` frontier plots between known and unknown territory, halved at war, and abandoned entirely when [losing every war](#war-states). Native explorer types are preferred; a small hysteresis prevents role flapping.
-- A unit that can found a city may be flipped to the settler role for opportunistic settlement (`CvHomelandAI::ExecuteOpportunisticSettlementMoves`).
-- Leaving an army restores the XML *default* role, not the role the unit held before joining.
-- An [upgrade](upgrade.md) replaces the unit, so the replacement starts with its own type's default role.
+`CvEconomicAI::DoReconState` promotes suitable explorers and demotes surplus ones. Its target scales with the frontier, `FLAVOR_RECON`, and war state. Native explorers are preferred, and hysteresis limits rapid role changes. Homeland can assign a city-founding unit the settler role for opportunistic settlement. Leaving an army restores the XML default role, rather than the role held before recruitment. An [upgrade](upgrade.md) creates a replacement with its target type's default role.
 
 ## Supply
 
-The **hard supply cap** (`CvPlayer::GetNumUnitsSupplied`) is the number of military units a player supports without penalty. It sums per-source contributions, each eroded as the game advances:
+The **hard supply cap** (`CvPlayer::GetNumUnitsSupplied`) is the number of military units supported without penalty. It combines handicap and start-era supply, city and population supply, and expended Great People, then adjusts those sources for era, city count, handicap, and war weariness. Military-support units count; no-supply promotions or XML flags and contract units do not.
 
-- A handicap and start-era base, reduced per era.
-- A per-city amount from traits, buildings, and handicap, reduced with tech progress; puppets contribute less.
-- A per-population percentage, also tech-reduced.
-- Supply from expended Great People.
+Excess hard-cap units reduce food and production, capped at 70 percent. AI city production rejects supply-consuming combat units at the cap. A separate general build check blocks them for any player at fourteen or more units over the cap.
 
-The total is then divided down by about five percent per city, scaled by handicap bonuses, and reduced by war weariness. A unit counts against the cap when its type is flagged as military support; units with a no-supply promotion or XML flag and contract units are supply-free.
+The **soft supply cap** (`CvEconomicAI::GetSoftSupplyCap`) is an affordability target. It never exceeds the hard cap and keeps at least two units per city while preserving era-dependent minimum gold per turn. War lowers that minimum. Losing every active war allows a deficit and treats the hard cap as three units higher.
 
-Exceeding the hard cap costs five percent of production and food per excess unit, capped at 70 percent. Training locks follow: any city refuses to train a supply-consuming combat unit at fourteen or more units over, and AI production rejects such candidates as soon as demand reaches the cap (`CvUnitProductionAI::CheckUnitBuildSanity`).
-
-The **soft supply cap** (`CvEconomicAI::GetSoftSupplyCap`) is affordability rather than legality: the largest army — never above the hard cap, at least two units per city — whose maintenance still leaves a minimum gold per turn. The minimum is 2 in the Ancient era, 5 through the Medieval era, and 10 afterward; at war it drops to 1, and when losing every war it drops to −5 while the hard cap is treated as three units higher, letting a desperate player run a deficit.
-
-`CvMilitaryAI::SetRecommendedArmyNavySize` turns the soft cap into force targets. It carves out explorers first (at most a quarter of the cap), then splits the rest between land and naval by weights: defensive weight per city, settler, and exposed city scaled by `FLAVOR_DEFENSE`, offensive weight per attack target scaled by Boldness and `FLAVOR_OFFENSE`, and a naval share proportional to coastal cities and `FLAVOR_NAVAL`. [Military production](military-production.md) consumes the resulting targets.
-
-`CvMilitaryAI::UpdateDefenseState` grades the actual force against the targets. The land state is critical below the land target, neutral up to five-fourths of it, and enough beyond. The naval state is critical at half the naval target or less, needed up to the target, neutral to five-fourths, and enough beyond. Any city under siege forces the matching state to critical.
+`CvMilitaryAI::SetRecommendedArmyNavySize` reserves part of the soft cap for explorers and divides the rest between land and naval targets using defense, attack-target, coastal-city, and flavor weights. `CvMilitaryAI::UpdateDefenseState` compares the actual forces to those targets. A besieged city forces its matching defense state to critical.
 
 ## War states
 
-A **war state** (`WarStateTypes`) is the AI's per-enemy assessment of how a war is going, updated every turn by `CvDiplomacyAI::DoUpdateWarStates`.
+A **war state** (`WarStateTypes`) is the per-enemy assessment produced each turn by `CvDiplomacyAI::DoUpdateWarStates`.
 
-| Severity (worst first) | State |
+| Severity, worst first | State |
 | --- | --- |
 | 1 | Nearly defeated |
 | 2 | Defensive |
@@ -83,37 +60,33 @@ A **war state** (`WarStateTypes`) is the AI's per-enemy assessment of how a war 
 | 6 | Offensive |
 | 7 | Nearly won |
 
-Calm sits above stalemate: a quiet war ranks better than a contested one. The update scores both sides' cities in danger — each endangered city counts more when its zone is enemy-dominated or it is under siege, much more when it is in danger of falling, and the score multiplies threefold for a capital and twofold for a wonder or holy city — then cascades. One-sided serious danger decides the state outright; failing that, a war score at or beyond ±75 forces offensive or defensive; otherwise the danger ratio against personality-adjusted war-score thresholds picks the state. An offensive or defensive result intensifies to nearly won or nearly defeated at double the threshold. Calm requires a moderate war score, no serious danger, and no city captured by either side for ten turns.
+The update weighs danger to each side's cities, including siege, falling cities, capitals, wonders, and holy cities, then uses war score and danger thresholds. Calm is better than stalemate and requires no serious danger or recent city capture.
 
-`GetStateAllWars` aggregates the wars against major civilizations into winning, neutral, or losing:
+`GetStateAllWars` combines major-civilization wars into winning, neutral, or losing.
 
 | Per-war state | Contribution |
 | --- | --- |
 | Nearly won | +4 |
 | Offensive | +2, or +4 when the enemy is in serious danger |
 | Calm or stalemate | 0 |
-| Troubled | −1, or −2 when the player is in serious danger |
-| Defensive | −2, or −4 when the player is in serious danger |
+| Troubled | -1, or -2 when the player is in serious danger |
+| Defensive | -2, or -4 when the player is in serious danger |
 
-A total above +2 means winning; below −2 means losing. Two latches force losing regardless of the total: being nearly defeated in any war, or being defensive in any war while the capital is lost or has taken a quarter of its hit points in damage.
-
-The aggregate is the "winning or losing every war" signal other systems read: explorer demand collapses ([roles](#unitai-roles)), military disband and influence gifting are suspended ([cleanup](cleanup.md)), the [soft supply cap](#supply) gains its emergency allowance, and tactical zone priorities shift ([military tactics](military-tactics.md)).
+A total above +2 is winning; below -2 is losing. Being nearly defeated in any war, or defensive while the capital is lost or heavily damaged, also forces losing. This aggregate controls explorer demand, military disband and influence gifting, the soft-supply emergency allowance, and Tactical AI priorities.
 
 ## Danger
 
-The **danger map** (`CvDangerPlots`, one per player) records *who could hit each plot*, not a damage number: per plot, the enemy units that could attack it, the cities that could bombard it, the units that could capture a civilian there, a fog-danger count, and adjacent-citadel damage. Damage is computed lazily for the unit that asks, through `CvPlayer::GetPlotDanger` and `CvUnit::GetDanger`, so the same plot can be safe for a tank and lethal for a worker.
+The **danger map** (`CvDangerPlots`, one per player) records which enemies could attack a plot, bombard it, capture a civilian there, or threaten it from fog. It is not a fixed damage value. `CvPlayer::GetPlotDanger` and `CvUnit::GetDanger` calculate damage for the unit asking, so the same plot can be safe for a tank and lethal for a worker.
 
-The map is built by simulating every known hostile unit's reachable plots and ranged coverage, adding city bombard ranges, and adding uncertainty: invisible plots near enemy units, enemy cities, or known barbarian camps might hide attackers, so nearby plots gain fog danger. Citadel-adjacent damage counts double because it applies with certainty. An enemy unit that vanishes into fog is still counted for one turn at its last known position.
+The map simulates known hostile movement and range, city bombardment, nearby hidden threats, and adjacent citadel damage. A unit last seen entering fog remains for one turn. It refreshes in `CvPlayer::doTurnPostDiplomacy`, and a dirty map rebuilds on the next query. Queries account for special cases: air units take interception damage only; any reachable or capturable civilian reports maximum danger; and a garrisoned combat unit shares city damage. The optional `MOD_COMBATAI_TWO_PASS_DANGER` mode is off by default and rebuilds without friendly zone of control from units expected to die.
 
-The map refreshes once per turn in `CvPlayer::doTurnPostDiplomacy` and is marked dirty by war-state changes; a dirty map rebuilds lazily on the next query. The per-unit query has role-aware behavior: air units take only interception damage, a civilian reports maximum danger whenever an enemy could reach or capture it, and a garrisoned combat unit shares its city's damage rather than being targeted directly. Variants exist for a city with a hypothetical garrison and for a unit-agnostic plot estimate. An optional two-pass mode (`MOD_COMBATAI_TWO_PASS_DANGER`, off by default) re-runs the build ignoring zone of control from friendly units projected to die.
-
-Danger steers civilian safety, Homeland positioning, and — through path costs — nearly every AI move; [tactical simulation](military-tactical-simulation.md) explains how danger enters pathfinding.
+Danger steers civilian safety, Homeland positioning, and movement costs. [Military tactical simulation](military-tactical-simulation.md) explains its pathfinding use.
 
 ## Dominance zones
 
-A **dominance zone** is a tactical-map region that combines territory, nearby military strength, and a current combat assessment (`CvTacticalAnalysisMap.cpp`). Each player builds the map from its own perspective, lazily and at most once per game turn when Tactical AI needs it.
+A **dominance zone** is a Tactical AI region with territory, nearby military strength, and a combat assessment. `CvTacticalAnalysisMap.cpp` builds it lazily, at most once each game turn for each player's view.
 
-Every revealed plot within five plots of its nearest city joins that city's land or water zone. Cityless plots form **wilderness zones**, grouped by connected land or water areas. Zone construction also merges across small lakes and islands: neighboring plots join when they share an area or either connected area has fewer than four tiles. All unrevealed plots share one unknown zone.
+Revealed plots near a city join that city's land or water zone. Connected cityless areas form wilderness zones; small islands and lakes can merge nearby areas. Unrevealed plots share one unknown zone.
 
 | Zone | Territory |
 | --- | --- |
@@ -123,7 +96,7 @@ Every revealed plot within five plots of its nearest city joins that city's land
 | Wilderness zone | Neutral |
 | Unknown zone | None |
 
-Zones accumulate melee, ranged, naval, and naval-ranged strength. The unit owner's diplomatic side determines its contribution.
+Zones collect melee, ranged, naval, and naval-ranged strength.
 
 | Unit owner | Zone side |
 | --- | --- |
@@ -134,30 +107,6 @@ Zones accumulate melee, ranged, naval, and naval-ranged strength. The unit owner
 | Other player | Neutral, tracked separately from dominance |
 | Barbarian | Ignored |
 
-Army members contribute like other combat units. Civilians do not contribute, and the zone city adds its strength to its side's ranged total. A unit counts toward a city zone when it stands in the zone or within a recruitment range of the city that grows with the game era; a wilderness zone counts only units standing inside it.
+Combat units, army members, and cities contribute strength; civilians do not. Visibility, embarked or wrong-domain status, mobility, proximity to the zone city, and citadels modify that contribution. A side is dominant only with a large enough strength advantage, with extra caution in enemy territory; otherwise the zone is even. A zone with no strength has no visible units.
 
-```text
-city contribution = city strength value × remaining hit points / maximum hit points
-
-unit contribution = base attack or ranged strength × (100 + modifiers) / 100
-  modifiers, additive:
-    −50  embarked, not visible, or wrong domain for the zone
-    +50  range or base moves above 2
-    +50  within three plots of the zone city
-   +100  standing in an owned citadel
-
-overall strength = melee × 4/3 + ranged + naval + naval ranged
-```
-
-The unseen-unit modifier keeps a known but currently unseen enemy at half strength. The dominance margin, `AI_TACTICAL_MAP_DOMINANCE_PERCENTAGE`, is 70 in the game database.
-
-```text
-friendly dominant when enemy strength is zero and at least one friendly unit exists
-friendly dominant when round(100 × friendly / max(1, enemy)) > 100 + margin + (30 in enemy territory)
-enemy dominant when round(100 × enemy / max(1, friendly)) > 100 + margin
-even otherwise
-```
-
-No strength on either side yields no units visible. One enemy unit against at most one friendly unit yields even. The additional 30 in enemy territory accounts for unseen defenders. The friendly test clamps the margin to at least 10 and the enemy test clamps it to at most 90.
-
-Dominance zones exist so that Tactical AI can pick a per-zone **posture** and order local combat; [military tactics](military-tactics.md#postures-and-local-combat) explains posture selection and zone processing.
+Tactical AI uses dominance zones to choose a **posture** and order local combat. See [postures and local combat](military-tactics.md#postures-and-local-combat).
