@@ -23,33 +23,55 @@ The callers below use `FindAndExecuteBestUnitAssignments`. The first three come 
 | `CheckForEnemiesNearArmy` | A persistent-operation army meets enemies near its path. | Medium |
 | `PerformRangedOpportunityAttack` | One ranged unit can fire and still move. | Low |
 
-Aggression sets how much damage a plan values and how much risk it can accept. It scales attack value by the friendly-to-enemy force balance and a database weight. Higher levels accept lower post-attack health and more danger; ranged attacks take no counter-damage and skip melee survival checks.
+Aggression controls the melee counter-damage trade veto and provisional danger tolerance. The veto applies only when a melee attack takes counter-damage and has a safe reachable alternative. It scales expected damage dealt by the friendly-to-enemy force balance, database damage weight, and level multiplier without changing normal attack scoring. It rejects a non-killing attack when the scaled trade is unfavorable and projected HP or danger crosses the level's threshold. Ranged attacks take zero simulated counter-damage, so they skip the veto, but completed plans still face final end-position safety checks.
 
-| Level | Damage preference | Post-attack policy |
+| Level | Melee trade multiplier | Veto trigger for an unfavorable non-killing trade |
 | --- | --- | --- |
-| None | Does not plan attacks. | Marker only. |
-| Low | Prefers favorable trades. | Keeps a substantial health reserve. |
-| Medium | Accepts slightly unfavorable trades. | Keeps a smaller reserve. |
-| High | Trades freely. | Uses danger checks rather than a health floor. |
-| Braveheart | Takes extreme risks. | Used by barbarians. |
+| None | Not applicable | Not used by a current simulation entry point. |
+| Low | 0.7x | HP below 40 or danger above maximum HP. |
+| Medium | 1.1x | HP below 20 or danger above maximum HP. |
+| High | 2.3x | Danger above maximum HP. The literal HP threshold is -5, so there is no practical HP floor. |
+| Braveheart | 4.2x | Danger above maximum HP. The literal HP threshold is 0, so there is no survivable HP floor. |
 
-`FLAVOR_OFFENSE` can increase the casualty budget for large groups and lowers the health threshold at which a wounded unit may use any safe plot.
+Within this block, every non-Braveheart level rejects an attack below three projected HP, including a killing attack. Braveheart bypasses that veto and the final extreme-danger block, but retains adjacent-enemy death-trap and limited-visibility edge checks.
+
+`FLAVOR_OFFENSE` can allow one casualty for large groups and lowers the HP threshold below which wounded units stop following preferred-line positioning scores. Final danger validation still applies.
 
 ### Search procedure
 
 ```mermaid
 flowchart TD
-    C[Caller: units, target, aggression] --> B[Build initial position]
-    B --> S[Search position tree]
-    S -->|best completed position| E[Replay assignments as missions]
-    E -->|failed step or new enemy| R[Drop unusable units and retry]
-    R --> S
-    E --> M[Executed unit missions]
+    C[Caller: units, target, aggression] --> B[Build initial position and keep up to 13 units]
+    B --> U[Get reachable movement plots and ranged-attack plots for the current position]
+    U --> P[For each available valid unit, propose a small candidate set:<br/>move or remain, melee or ranged attack, pillage, and other valid actions]
+    P --> Q[Filter and score early choices:<br/>movement strategy, target preference, and provisional safety]
+    P --> F[Add a blocked fallback]
+    Q --> G[Merge and rank candidates from all units]
+    F --> G
+    G --> H{A friendly unit blocks a move?}
+    H -->|yes| W[Try a limited swap or one-step movement chain]
+    H -->|no| N[Create child positions]
+    W --> N
+    N --> I{Child complete?}
+    I -->|no| O[Queue incomplete child]
+    I -->|yes| A[Apply final end-position safety and plan acceptance]
+    A -->|reject| T{More queued positions within search bounds?}
+    A -->|accept| K[Keep completed child]
+    O --> T
+    K --> T
+    T -->|yes| U
+    T -->|no| V{Completed plan exists?}
+    V -->|yes| S[Select the best complete plan]
+    V -->|no| R[Drop unusable units when needed and retry from the current state]
+    S --> E[Replay assignments as missions]
+    E -->|failed step or new enemy| R
+    R --> B
+    E -->|success| M[Executed unit missions]
 ```
 
-The initial position covers the target area, nearby enemies, and participating units. It filters duplicate or inactive units and units stacked outside their native domain, except in cities. Each accepted unit receives a movement strategy from its default [UnitAI role](concepts.md#unitai-roles) and attack range: first line, second line, third line, support, or embarked. The strategy defines the enemy distance it should prefer.
+The initial position includes the target area, nearby enemies, and participating units. It filters duplicate or inactive units and units stacked outside their native domain, except in cities. Each retained unit receives a movement strategy from its default [UnitAI role](concepts.md#unitai-roles) and attack range: first line, second line, third line, support, or embarked. The strategy defines its preferred enemy distance. The [reachable-plots query](#reachable-plots) supplies movement candidates.
 
-The search accepts at most 13 units. When more are available, it keeps the units with the best single moves and blocks the rest for later passes. It begins with a broad, best-first search, then drives promising lines to completion through narrower depth-first expansion. Difficulty settings bound branches, choices per unit, and completed positions. Candidate moves come from cached [reachable plots](#reachable-plots). A blocked option lets a unit sit out rather than force a bad move, while swaps and chained moves resolve friendly blockers.
+At most 13 units enter the search. If more are available, it keeps the units with the best single moves and blocks the rest for later passes. It begins with broad, best-first expansion, then drives promising lines to completion through narrower depth-first expansion. Difficulty settings bound branches, choices per unit, and completed positions. A blocked assignment leaves the unit unprocessed, keeping its remaining actions available for later Tactical work.
 
 Equivalent sibling states are discarded, so action order does not create duplicate plans. A simulated move that reveals a new enemy records a restart, ending that branch and requiring a fresh run with current information.
 
@@ -57,7 +79,7 @@ Equivalent sibling states are discarded, so action order does not create duplica
 
 A position completes when all starting enemies are dead or all units have exhausted their options. The final safety check permits limited casualties, with one allowance per enemy killed and a bias toward protecting experienced units. If there is no kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. Ties consider movement toward the target, attacks in place, and healing.
 
-Danger checks become more permissive at higher aggression, but hard safety rules remain. Outside braveheart, units reject death traps, ranged and carrier positions that exceed their current hit points in danger, and positions whose health is too low for their danger. A non-killing melee attack also fails when a safer reachable retreat exists and the attack would leave the unit too weak or too exposed. Any attack that leaves fewer than three hit points fails outside braveheart.
+Provisional danger screening becomes more permissive at higher aggression, but final safety does not scale from Low through High. Every level retains adjacent-enemy death-trap and limited-visibility edge checks. Braveheart alone bypasses the remaining extreme-danger block, while frontline land cities and friendly citadels have specific exemptions. A non-killing melee attack also fails if a safer reachable retreat exists and it would leave the unit too weak or too exposed.
 
 `ExecuteUnitAssignments` replays the selected hypothetical plan against the real game. Each step verifies expected unit positions and target state, then verifies the result because combat may differ from the forecast. Replay ignores ordinary danger stopping because the plan has already evaluated danger, but it stops for a newly revealed enemy. A failed check, interrupted move, or restart triggers a new search. The wrapper retries up to four times, dropping unusable units when planning cannot find a complete position.
 
