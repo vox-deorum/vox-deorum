@@ -66,10 +66,19 @@ See [military production](military-production.md#formation-requests-and-commitme
 
 An army member remains in operation movement rather than the independent-unit pool. It can still receive army movement, safety moves, and nearby contact fights. Formation positioning leaves a member in place after it acts or exhausts movement. [Military tactics](military-tactics.md#operation-army-movement) covers those moves. Shared claim order and the later Homeland handoff are defined in [operation lifecycle](operation.md#tactical-to-homeland-handoff).
 
-`CvArmyAI::AddUnit` can transfer a unit after removing it from its previous army; concurrent membership is not supported. It also upgrades a unit before placement when an immediate upgrade is available. The Homeland upgrade pass is the exception to normal Army ID eligibility: it temporarily removes an army member, upgrades it, then restores the replacement to the same formation slot when successful.
+`CvArmyAI::AddUnit` can transfer a unit after removing it from its previous army; concurrent membership is not supported. It also upgrades a unit before placement when an immediate upgrade is available.
 
-Members leave when destroyed, explicitly removed, released, or removed by offensive maintenance. Removal clears the formation slot, Army ID, and operation move tag, then restores the unit's [default role](concepts.md#unitai-roles), which is the XML default rather than its role on joining. A surviving movable unit can rejoin the Tactical pool.
+| Removal trigger | Membership result |
+| --- | --- |
+| Unit destruction | Remove the dead unit from its formation slot. |
+| Operation or army teardown | Release every member when an operation finishes or aborts, an army is destroyed or reset, or its formation changes. |
+| Pre-move army maintenance | Release a member of an offensive operation that needs healing. Also release a member outside gathering tolerance when repeated checkpoint estimates show no progress. |
+| Tactical healing | Split a wounded member from a non-civilian army so it can heal independently, except while the army is waiting for reinforcements. |
+| Escort replacement | Temporarily detach a blocked escort and place a suitable nearby defender in its slot. |
+| Upgrade | The Homeland upgrade pass temporarily detaches an army member, upgrades it, then places the replacement in the same slot when successful. |
 
-During Recruiting, removal reopens a production need. Later losses apply the campaign's formation-strength abort rule. On success or abort, the operation releases every member. A successful deployment marks members as recently deployed, excluding them from reserve suitability for the configured temporary-zone interval, five turns by default.
+`CvArmyAI::RemoveUnit` clears the formation slot and Army ID, resets the Tactical move state, and restores the unit's [default role](concepts.md#unitai-roles), which is the XML default rather than its role on joining. A surviving unit returns to the current-turn Tactical pool only if it can still move. Temporary removal skips the operation notification for escort replacement and upgrades; other removals notify the operation.
+
+A non-temporary removal during Recruiting reopens a production need. Later losses apply the campaign's formation-strength abort rule; losing the civilian of an escorted operation or the carrier of a carrier group aborts the operation outright. On success or abort, the operation releases every member. A successful deployment marks members as recently deployed, excluding them from reserve suitability for the configured temporary-zone interval, five turns by default.
 
 Carrier groups place the carrier in the first formation slot. Carried aircraft stay outside the formation and rebase independently.

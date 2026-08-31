@@ -20,13 +20,25 @@ A **tactical target** is a plot worth acting on this turn. Its recorded type and
 
 ## Operation army movement
 
-`PlotOperationalArmyMoves` calls each persistent operation's `DoTurn`. Land, naval, and combined armies use `PlotArmyMovesCombat`; escorted civilian armies use the escort path. Recruiting and gathering armies move around their muster point, while moving armies follow their army goal.
+`PlotOperationalArmyMoves` calls each persistent operation's `DoTurn` as the first step of `ProcessDominanceZones`, before the per-zone posture loop. Land, naval, and combined armies use `PlotArmyMovesCombat`; escorted civilian armies use the escort path. Recruiting and gathering armies move around their muster point, while moving armies follow their army goal.
 
-When combat army movement cannot find a step path, it records `AI_ABORT_LOST_PATH`. Nearby enemies can hold an army at its center of mass while healthy members take an opportunity fight with suitable nearby friendly attackers, including members of another army. Contact and formation moves use reachable-plot and danger checks. A hostile local zone can therefore reject an unsafe fight.
+Operation state and the current turn target control army behavior; zone posture controls the independent-unit behavior in the next section. Both tables record the routine, behavior, and simulation aggression for their path. `PositionUnitsAroundTarget` is also used by non-army positioning passes.
+
+| Army phase or condition | C++ routine | Behavior | Simulation and aggression |
+| --- | --- | --- | --- |
+| No reachable step path | `PlotArmyMovesCombat` | Record `AI_ABORT_LOST_PATH` for the operation. | None |
+| Contact safety veto | `CheckForEnemiesNearArmy` | Skip the fight when the zone associated with the closest city to the selected enemy is enemy territory and enemy-dominated. Continue the operation without aborting it. | None |
+| Eligible enemy contact | `CheckForEnemiesNearArmy`, called by `PlotArmyMovesCombat` | Gather healthy army members and suitable nearby friendly attackers, including members of another army. A successful fight holds the army's movement target at its center of mass. | Medium |
+| Gather, advance, or hold formation | `ExecuteGatherMoves` → `PositionUnitsAroundTarget` | Move formation members toward the muster point, operation target, or current turn target, subject to reachable-plot and danger checks. | Initial simulation: Low. Subsequent positioning does not simulate. |
+| Unprocessed army member still in danger | `PositionUnitsAroundTarget` | Try to move the member to a safe healing plot or, failing that, the safest reachable plot. Finish its turn. | No new combat simulation |
+| Pre-move army maintenance | `CvArmyAI::UpdateCheckpointTurnsAndRemoveBadUnits` | Release members that are unfit to continue before moving the army. | None |
+| Escort replacement | `SwitchEscort` | Temporarily swap a blocked escort for a suitable nearby defender. | None |
+
+`CvArmyAI::RemoveUnit` can return a surviving, movable member to the current-turn independent-unit pool. It receives posture work only if its zone has not already been processed. [Military organization](military-organization.md#membership-and-release) lists the removal triggers and operation effects.
 
 ## Postures and local combat
 
-Tactical AI refreshes a **posture**, a current-turn strategy for each dominance zone, then processes zones from highest to lowest value. Territory, overall and ranged dominance, melee balance, and city danger choose the posture; water zones use naval strengths. The posture selects the local work and aggression passed to the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression).
+Tactical AI refreshes a **posture**, a current-turn strategy for each dominance zone, then processes zones from highest to lowest value. Territory, overall and ranged dominance, melee balance, and city danger choose the posture; water zones use naval strengths. After extracting the zone's targets, `ProcessDominanceZones` dispatches the posture routine that selects the local work and aggression passed to the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression).
 
 | Territory | Dominance and local condition | Posture |
 | --- | --- | --- |
@@ -43,17 +55,20 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 | Friendly | Enemy dominant | Hedgehog |
 | Friendly | Other | Counterattack |
 
-| Posture | Zone behavior | Aggression |
-| --- | --- | --- |
-| Withdraw | Retreat toward the safest neighboring zone; ranged units may take an opportunity shot afterward. | No posture attack; a simulated ranged opportunity uses Low. |
-| Hedgehog | Attack units and pull reinforcements before the normal pass. | Low |
-| Attrition | Attack units. | Low |
-| Exploit flanks | Attack units, then capture an undefended city when available. | Medium |
-| Counterattack | Attack units. | Medium |
-| Surgical city strike | Capture cities before attacking remaining units. | Medium |
-| Steamroll | Attack units, then capture cities. | High |
+| Zone posture | C++ routine | Behavior | Simulation and aggression |
+| --- | --- | --- | --- |
+| None | No routine | Do no posture-specific work. | None |
+| Withdraw | `PlotWithdrawMoves` → `ExecuteWithdrawMoves` | Retreat toward the safest neighboring zone or city. Take a ranged opportunity shot after a successful withdrawal when possible; if no safe route exists, pillage in place when worthwhile and move to the safest reachable plot. | No posture attack; the ranged opportunity exception uses Low when simulated. |
+| Hedgehog | `PlotHedgehogMoves` | Attack enemy units, then call `PlotReinforcementMoves` for early reinforcement before attacks in other zones. | Low |
+| Attrition | `PlotAttritionAttacks` | Attack enemy units with lower-risk target ordering. | Low |
+| Exploit flanks | `PlotExploitFlanksMoves` | Unit attacks → city capture. | Unit attacks: Medium. City capture: melee-count rule. |
+| Counterattack | `PlotCounterattackMoves` | Attack priority enemy-unit targets. | Medium |
+| Surgical city strike | `PlotSurgicalCityStrikeMoves` | City capture → remaining unit attacks. | City capture: melee-count rule. Unit attacks: Medium. |
+| Steamroll | `PlotSteamrollMoves` | Unit attacks → city capture. | Unit attacks: High. City capture: melee-count rule. |
 
-Nearby army members contribute to the zone strength assessment but do not inherit its posture. Positioning around the operation's current target uses low aggression, while nearby-enemy contact fights use medium. The operation's goal takes precedence over a conflicting zone posture: army members are absent from the independent-unit pool, operation movement runs before zone processing, and operation abort rules do not use zone dominance. Neighboring zones can still refine a posture. Examples include naval steamroll near a stronger enemy land zone and withdrawal outside friendly territory near an enemy-dominated zone in the same domain.
+The city-capture rule is independent of posture: `ExecuteCaptureCityMoves` uses Medium with up to two melee attackers and High with more than two.
+
+Nearby army members affect the friendly strength used to calculate a zone's posture, but army members do not enter these posture routines. Operation movement runs first and the operation's goal controls army movement; zone dominance affects an army only through the contact safety veto above. Neighboring zones can still refine a posture, including naval steamroll near a stronger enemy land zone and withdrawal outside friendly territory near an enemy-dominated zone in the same domain.
 
 ## Independent units and priorities
 
