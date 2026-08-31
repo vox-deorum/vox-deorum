@@ -40,9 +40,9 @@ Built-in military operations create one army. A member's **Army ID** is its curr
 
 ## Campaign inputs and tactical decisions
 
-Campaign logic uses war plans, paths, reserves, threatened cities, and selected tactical-zone facts to create operations. **Tactical zones** and their postures supply local threat, pillage, carrier-deployment, and nuclear-value inputs, then Tactical AI recomputes them every turn for local movement and combat. [Military campaign](military-campaign.md#tactical-zone-inputs) describes the narrow campaign inputs; [military tactics](military-tactics.md#dominance-zones) defines zones and postures.
+Campaign logic uses war plans, paths, reserves, threatened cities, and selected tactical-zone facts to create operations. **Tactical zones** and their postures supply local threat, pillage, carrier-deployment, and nuclear-value inputs, then Tactical AI recomputes them every turn for local movement and combat. [Military campaign](military-campaign.md#tactical-zone-inputs) describes the narrow campaign inputs; [shared concepts](concepts.md#dominance-zones) defines zones, and [military tactics](military-tactics.md#postures-and-local-combat) owns postures and zone processing.
 
-`FLAVOR_USE_NUKE` directly affects nuclear-operation requests. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape force allocation. `FLAVOR_OFFENSE` also adjusts Tactical AI combat-simulation risk thresholds. Family-specific campaign rules select the operation family, target, and approach.
+`FLAVOR_USE_NUKE` directly affects nuclear-operation requests. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape force allocation. `FLAVOR_OFFENSE` also adjusts Tactical AI risk thresholds in the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression). Family-specific campaign rules select the operation family, target, and approach.
 
 ## Implementation map
 
@@ -50,6 +50,6 @@ Campaign logic uses war plans, paths, reserves, threatened cities, and selected 
 | --- | --- | --- |
 | Campaign creation, targets, and completion | `CvDiplomacyAI::DoUpdateWarTargets`, `CvMilitaryAI::UpdateAttackTargets`, `CvMilitaryAI::UpdateOperations`, operation `Init` methods | [Military campaign](military-campaign.md) |
 | Army membership, recruitment, and mustering | `CvAIOperation::SetUpArmy`, `GrabUnitsFromTheReserves`, `CvArmyAI::AddUnit`, `CvArmyAI::RemoveUnit` | [Military organization](military-organization.md) |
-| Per-turn army and unit missions | `CvTacticalAI::Update`, `ProcessDominanceZones`, `PlotArmyMovesCombat`, `CvHomelandAI::AssignHomelandMoves` | [Military tactics](military-tactics.md) |
+| Per-turn army and unit missions | `CvTacticalAI::Update`, `ProcessDominanceZones`, `PlotArmyMovesCombat`, `CvHomelandAI::AssignHomelandMoves` | [Military tactics](military-tactics.md) and [military tactical simulation](military-tactical-simulation.md) |
 
 For logs and claim diagnostics, see [operation diagnostics](operation.md#implementation-and-diagnostics).

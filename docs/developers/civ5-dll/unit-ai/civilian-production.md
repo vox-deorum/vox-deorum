@@ -2,7 +2,7 @@
 
 **Civilian production** turns **role-owned demand**, a need calculated by a specific civilian system, into weighted unit candidates for a city. The shared [candidate lifecycle](production.md#candidate-lifecycle) compares each candidate with all other buildables. The shared [candidate gates](production.md#shared-candidate-gates) apply to every unit candidate.
 
-The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, chiefly `CvUnitProductionAI.cpp`, `CvCityStrategyAI.cpp`, `CvEconomicAI.cpp`, `CvTradeClasses.cpp`, and `CvMilitaryAI.cpp`. [Flavors](overview.md#flavors) defines the effective city preferences used for each base weight.
+The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, chiefly `CvUnitProductionAI.cpp`, `CvCityStrategyAI.cpp`, `CvEconomicAI.cpp`, `CvTradeClasses.cpp`, and `CvMilitaryAI.cpp`. [Flavors](concepts.md#flavors) defines the effective city preferences used for each base weight. The `ECONOMICAISTRATEGY_*` and `AICITYSTRATEGY_*` gates named below are [strategy flags](concepts.md#strategy-flags).
 
 ## Civilian demand
 
@@ -20,7 +20,7 @@ Each civilian role owns its own demand. A trainable unit with a positive flavor-
 
 ### Settler demand
 
-Economic AI supplies expansion state and settle-plot context, while city strategy supplies the city gates. In normal flavor mode, `ECONOMICAISTRATEGY_ENOUGH_EXPANSION` rejects the candidate. Custom flavors bypass that gate. `AICITYSTRATEGY_ENOUGH_SETTLERS`, imminent food growth, and a settler already on the city tile also reject it.
+Economic AI supplies expansion state and settle-plot context, while city strategy supplies the city gates. The settle-plot context comes from **settlement-site evaluation**, the subsystem in `civ5-dll/CvGameCoreDLL_Expansion2/CvSiteEvaluationClasses.cpp` that scores candidate city plots by their founding value. In normal flavor mode, `ECONOMICAISTRATEGY_ENOUGH_EXPANSION` rejects the candidate. Custom flavors bypass that gate, and in the score they replace the early-expansion bonus with a smooth adjustment of (expansion flavor − 5) × 30, so the flavor pushes settler weight continuously in both directions. `AICITYSTRATEGY_ENOUGH_SETTLERS`, imminent food growth, and a settler already on the city tile also reject it.
 
 ```mermaid
 flowchart LR
@@ -50,7 +50,7 @@ A non-friendly tactical dominance zone, a worker on the city tile, or `AICITYSTR
 
 ### Work-boat demand
 
-City strategy supplies the local `AICITYSTRATEGY_NEED_NAVAL_TILE_IMPROVEMENT` signal. Candidate evaluation then uses safe pathfinding to find reachable owned resources that still need a boat, including resources beyond the city's workable plots. It subtracts reachable boats and boats already training from that work.
+City strategy supplies the local `AICITYSTRATEGY_NEED_NAVAL_TILE_IMPROVEMENT` signal. Candidate evaluation then uses [safe pathfinding](military-tactical-simulation.md#danger-in-path-cost) to find reachable owned resources that still need a boat, including resources beyond the city's workable plots. It subtracts reachable boats and boats already training from that work.
 
 ```mermaid
 flowchart LR
@@ -65,7 +65,7 @@ No remaining work or a non-friendly naval tactical dominance zone rejects the ca
 
 ### Land-explorer demand
 
-Economic AI estimates land-exploration need from unrevealed terrain, recon flavor, war, and travel capability. Military AI turns that need into a supply-aware recommendation. See [military explorer demand](military-production.md#explorer-demand) for how that recommendation fits force demand.
+Economic AI estimates land-exploration need from unrevealed terrain, recon flavor, war, and travel capability. The explorer headcount target scales with `FLAVOR_RECON`, and its naval counterpart with `FLAVOR_NAVAL_RECON`; the same target drives explorer promotion and retirement, described under [UnitAI roles](concepts.md#unitai-roles). Military AI turns that need into a supply-aware recommendation. See [military explorer demand](military-production.md#explorer-demand) for how that recommendation fits force demand.
 
 ```mermaid
 flowchart LR

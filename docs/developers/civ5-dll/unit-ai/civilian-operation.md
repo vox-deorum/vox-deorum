@@ -49,7 +49,7 @@ The operation recruits or waits for its escort, gathers the army, and uses `CvTa
 `CvHomelandAI::AssignHomelandMoves` applies civilian roles in an order that gives urgent and specialized work the first claim:
 
 1. First-turn settlers found the initial city.
-2. Gifts, conservative healing, opportunistic settlement, and exploration run early.
+2. [City-state gifts](cleanup.md#city-state-gifting), conservative healing, opportunistic settlement, and exploration run early.
 3. Great Person passes run before workers and religious units.
 4. Workers and religious units receive role actions.
 5. The safety pass moves endangered remaining units.
@@ -63,7 +63,7 @@ Army membership gives an operated civilian an army ID and excludes it from Homel
 
 | Role | Objective and execution |
 | --- | --- |
-| Settler and explorer | Economic AI evaluates settlement plots. Homeland handles the initial city and an unassigned settler already on a safe site. Explorers repeatedly claim reachable unknown targets, avoid duplicate claims, and can remove stuck automation. |
+| Settler and explorer | Economic AI evaluates settlement plots through [settlement-site evaluation](civilian-production.md#settler-demand). Homeland handles the initial city and an unassigned settler already on a safe site. Explorers, promoted into and retired from their [UnitAI role](concepts.md#unitai-roles) by Economic AI, repeatedly claim reachable unknown targets, avoid duplicate claims, and can remove stuck automation. |
 | Worker and work boat | `PlanImprovements` refreshes Builder Tasking AI. At peace, `PlanWorkerDistribution` allocates connected city regions by improvement need. Homeland applies movement, danger, regional transfer, and the final build mission. |
 | Great People | Writers, artists, scientists, and engineers execute their directive, such as a power, work, Golden Age, production hurry, or improvement. Generals and Admirals supply support or move to safe useful positions. Improvement directives use the worker path. |
 | Religion | Homeland moves prophets, missionaries, and inquisitors toward Religion AI objectives and issues their action after its legality check. |

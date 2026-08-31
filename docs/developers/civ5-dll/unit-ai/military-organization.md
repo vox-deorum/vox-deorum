@@ -18,7 +18,7 @@ The operation owns the army, and each occupied formation slot gives its unit the
 
 An **operation** records its owner, enemy, type, stage, target, **muster point**, and army IDs. The muster point is the assembly plot, selected from a **muster city** when that family uses a city source. An **army** records its formation, current state, and **army goal**, the waypoint it is currently moving toward. The army goal usually matches the campaign's operation target once the army moves, while recruiting and gathering use the muster point.
 
-A **formation** is the definition of an army's required and optional roles. Each **formation slot** holds primary and secondary `UnitAI` roles, a required flag, and an assigned unit ID when occupied. The unit's **Army ID** is the unit-side record of that membership and drives its Tactical operation move tag.
+A **formation** is the definition of an army's required and optional roles. Each **formation slot** holds primary and secondary [UnitAI roles](concepts.md#unitai-roles), a required flag, and an assigned unit ID when occupied. A slot accepts a unit when either slot role matches the unit's current role or appears in its type's eligible-role set, and a slot with no primary role is a wildcard that accepts any suitable unit. Units currently serving as explorers or settlers are never recruited. The unit's **Army ID** is the unit-side record of that membership and drives its Tactical operation move tag.
 
 | Record | Control effect |
 | --- | --- |
@@ -53,7 +53,7 @@ Success preserves the completed deployment record for temporary reserve exclusio
 
 `CvAIOperation::SetUpArmy` performs the first reserve scan. `CvAIOperation::Move` repeats that scan only while the army is `ARMYAISTATE_WAITING_FOR_UNITS_TO_REINFORCE`. A scan ranks available units for all open slots and can fill several slots. It excludes units whose assignment, health, role, recent deployment, path, or domain makes them unsuitable.
 
-Recruiting advances after at least one required slot is filled. Optional slots can supply enough formation strength while required slots remain empty. Each remaining required slot becomes an operation need. A city can commit to train one need, moving it to the committed list. Cancellation returns it to the need list, and completion clears the commitment before suitable produced units join the operation. With exactly one uncommitted required slot during recruiting, the operation can buy a primary-role match in a suitable nearby city. [Military production](military-production.md) details candidate selection and purchase rules.
+Recruiting advances after at least one required slot is filled. Optional slots can supply enough formation strength while required slots remain empty. Each remaining required slot becomes an operation need. A city can commit to train one need, moving it to the committed list. The commitment does not reserve the trained unit: when the training order completes or is cancelled, the slot returns unconditionally to the need list and the finished unit joins the reserves unattached. Each operation's reserve scan rebuilds its need list from scratch and claims suitable free units in operation-processing order, so a different army can take the unit the city trained for its committed slot. Only a gold-purchased operation unit is placed directly into its slot: with exactly one uncommitted required slot during recruiting, the operation can buy a primary-role match in a suitable nearby city and assign it immediately. [Military production](military-production.md#weighted-request-and-commitment-paths) details candidate selection and purchase rules.
 
 **Nuclear attack operations** use specialized recruitment: their slot-fill check accepts an unassigned nuclear unit already on the muster plot, and their stage transition skips normal formation-readiness and gathering checks.
 
@@ -69,7 +69,7 @@ Members leave an army when they are destroyed, explicitly removed, released, or 
 
 - Offensive operations release badly hurt members for Tactical recovery.
 - Each army records checkpoint arrival estimates. It removes a member when the newest estimate in a three-sample window is at least two turns and has not improved over the oldest estimate.
-- Removal clears the slot, Army ID, and operation move tag, then restores the unit's default `UnitAI` role. A surviving movable unit can rejoin the current Tactical pool.
+- Removal clears the slot, Army ID, and operation move tag, then restores the unit's [default role](concepts.md#unitai-roles) — the XML default, not the role it held when it joined. A surviving movable unit can rejoin the current Tactical pool.
 
 During recruiting, removal reopens the slot as a production need. Later stages apply the formation-strength abort rules in [military campaign](military-campaign.md#abandonment-and-cleanup). On success or abort, the operation releases every member. Success marks members with the deployment turn, and reserve suitability excludes recently deployed units for the configured temporary-zone interval, five turns by default.
 

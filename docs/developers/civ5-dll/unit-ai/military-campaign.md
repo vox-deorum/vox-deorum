@@ -24,32 +24,70 @@ flowchart TD
 | Rapid response | Threatened land city, or nearby enemy land force during defense review | At war declaration, the threatened city is the target. Later, the city owning the selected enemy plot supplies the target, and the army seeks a blocking position. |
 | City defense | Threatened land city in an enemy-dominated tactical zone | The threatened city is the persistent target and initial destination. |
 | Naval superiority | Threatened coastal city with a valid adjacent water plot | Nearby friendly coastal water is muster, and water beside the threatened city is the target. |
-| Nuclear attack | Available nuclear unit and successful active-war launch decision | The highest-value eligible enemy city in range is the target. The selected unit's plot is muster. |
+| Nuclear attack | Available nuclear unit and successful [launch decision](#nuclear-campaigns) | The highest-value eligible enemy city in range is the target. The selected unit's plot is muster. |
 | Carrier group | Unassigned carrier that does not need healing | The nearest suitable deployment zone is preferred. Otherwise the carrier holds its current plot or adjacent coastal water when it begins in a city. |
 
 ### City attacks
 
 `UpdateAttackTargets` rebuilds enemy-city candidates from land and water paths each Military AI turn. Each path compares land, naval, and combined approaches. The selected approach must be best among the three and score above 30. Candidate ranking includes distance, city value, conquest value, liberation value, and relevant city-state quests.
 
-`CvDiplomacyAI::DoUpdateWarTargets` can request an attack while preparing war through `CIV_APPROACH_WAR`. In an existing war, `CvDiplomacyAI::DoUpdateWarStates` provides the per-enemy `WarStateTypes` value that gates attacks and defensive pullbacks. It evaluates war score, endangered and besieged cities, important-city damage, and tactical dominance. `RequestCityAttack` maps the selected approach to `CITY_ATTACK_LAND`, `CITY_ATTACK_NAVAL`, or `CITY_ATTACK_COMBINED`. Bullying uses the compatible land or naval city-attack operation.
+`CvDiplomacyAI::DoUpdateWarTargets` can request an attack while preparing war through `CIV_APPROACH_WAR`. In an existing war, the per-enemy [war state](concepts.md#war-states) gates attacks and defensive pullbacks. `RequestCityAttack` maps the selected approach to `CITY_ATTACK_LAND`, `CITY_ATTACK_NAVAL`, or `CITY_ATTACK_COMBINED`. Bullying uses the compatible land or naval city-attack operation.
 
 ### Specialized family selection
 
-Nuclear evaluation excludes cities likely to fall or originally owned by the attacker, scores units and improvements in the blast radius, and reduces value in a friendly-dominated land or water zone. A carrier deployment zone is movable water beside an enemy zone that has a valid player move plot. Its water zone cannot be enemy-dominated, the adjacent enemy land zone cannot be friendly-dominated, and another carrier operation cannot already target it. Initial carrier selection ranks those zones by city-distance from home without testing a carrier path.
+Nuclear stockpiling, launch decisions, and target scoring follow their own rules in [nuclear campaigns](#nuclear-campaigns). A carrier deployment zone is movable water beside an enemy zone that has a valid player move plot. Its water zone cannot be enemy-dominated, the adjacent enemy land zone cannot be friendly-dominated, and another carrier operation cannot already target it. Initial carrier selection ranks those zones by city-distance from home without testing a carrier path.
+
+### Muster selection
+
+For city attacks, the muster is chosen with the target rather than after it. `CvMilitaryAI::UpdateAttackTargets` tries every own city as a path origin: `GetArmyPathsFromCity` builds land and water army paths from that city to each enemy city, and `ScoreAttackTarget` scores every viable path. The origin city of the best-scoring path is stored as the muster, so the muster city is the best launching pad for that particular target, not simply the closest city.
+
+Other families derive their muster from the target or from the units involved:
+
+| Family | Muster source |
+| --- | --- |
+| Naval operations | The closest friendly coastal city that can sail toward the target. |
+| Land operations without a precomputed path | The closest own city within range of the target. |
+| Naval city attack on a non-coastal target | The closest own-and-enemy coastal city pair replaces both muster and target. |
+| Civilian operations | The civilian's own plot, or a nearby city when an escorted civilian starts outside friendly territory. |
+| Rapid response | The target plot itself. |
+| Nuclear attack | The selected nuclear unit's plot. |
+
+The muster point can also drift: while the army recruits and gathers, once its members cluster, `CvAIOperation::CheckTransitionToNextStage` can move the muster to the army's center of mass so latecomers head for where the army actually is. On the production side, only the city that owns the muster plot accepts the operation's unit request; [military production](military-production.md#shared-muster-city-gate) defines that gate.
+
+## Nuclear campaigns
+
+Nuclear weapons have their own stockpile strategy and launch ladder, and they bypass most of the operation machinery above.
+
+**Stockpiling.** The `MILITARYAISTRATEGY_NEED_NUKE` [strategy flag](concepts.md#strategy-flags) holds while the player owns fewer nuclear units than `FLAVOR_NUKE / 3`, keeping nuclear production attractive (`MilitaryAIHelpers::IsTestStrategy_NeedANuke`). It never activates in a no-nukes game, and the Nuclear Gandhi personality override keeps it permanently on.
+
+**Launching.** `CvMilitaryAI::DoNuke` reviews each war enemy during operation updates. It launches unconditionally when the player is losing badly — the enemy's relative military strength is immense, or the [war state](concepts.md#war-states) is nearly defeated — or, against a major civilization, after any nuclear exchange in either direction. Otherwise it rolls a number from zero to nine and launches when the roll is at most `FLAVOR_USE_NUKE`, the diplomacy personality flavor. That roll is attempted only when the AI is outmatched — enemy strength rated powerful, or the war troubled or worse — or its opinion of the enemy is hostile, or it pursues or nears world conquest, or the enemy is close to a victory condition. Against city-states, only the losing-badly branch fires.
+
+**Targeting.** A launch request creates the nuclear-attack operation, and `CvAIOperationNukeAttack::FindBestTarget` pairs every owned nuclear unit with every enemy city in its range, skipping cities in danger of falling and cities originally owned by the attacker. Each pairing scores the blast radius plot by plot:
+
+| Radius content | Score effect |
+| --- | --- |
+| Enemy plots, improvements, resources, and visible units | Add value; units and resources weigh far more than bare plots. |
+| Own plots, improvements, resources, and units | Subtract value symmetrically. |
+| Existing fallout in the target owner's territory | Subtracts heavily, steering repeat strikes elsewhere. |
+| Third-party plots, or units of a third party the AI does not already lean toward war with | Subtract 10000 each, because collateral damage starts a new war. |
+
+A pairing with a positive radius score then adds the city's economic value and remaining hit points, doubles for a capital, and halves for each of the city's land and water [dominance zones](concepts.md#dominance-zones) the attacker already dominates, sending nukes where conventional force is not winning. The best pairing sets the target city, and the selected unit's plot becomes the muster.
+
+**Firing.** The operation completes directly from recruiting, with no gathering or movement stage. Once its nuclear unit can strike the target, it orders every movable own unit out of the blast radius, then pushes the nuke mission itself. Nuclear units never enter the [tactical simulation](military-tactical-simulation.md): tactical recruitment excludes their [role](concepts.md#unitai-roles), and the launch bypasses Tactical AI entirely.
 
 ## Tactical-zone inputs
 
-A **dominance zone** is a per-turn tactical region with territory and local strength data. Its **posture** chooses local combat behavior. Campaign logic reads zone facts only where family selection needs local threat, borders, target value, or deployment context. [Military tactics](military-tactics.md#dominance-zones) defines both concepts and their calculations.
+A **dominance zone** is a per-turn tactical region with territory and local strength data. Its **posture** chooses local combat behavior. Campaign logic reads zone facts only where family selection needs local threat, borders, target value, or deployment context. [Shared concepts](concepts.md#dominance-zones) defines zones and their calculations; [military tactics](military-tactics.md#postures-and-local-combat) owns postures.
 
 | Zone fact | Campaign use |
 | --- | --- |
 | Enemy dominance at a threatened city | Requests city defense and can request naval superiority for a threatened coast. |
 | Enemy-zone border | Limits pillage candidates to enemy cities whose land zone borders an attacker zone. |
-| Friendly dominance | Reduces nuclear target value. |
+| Friendly dominance | Reduces [nuclear target](#nuclear-campaigns) value. |
 | Neighboring enemy and water zones | Defines carrier deployment areas. |
 | Local conditions, focus areas, and revealed foreign territory | Contribute to threatened-city ranking. |
 
-`FLAVOR_USE_NUKE` directly changes the chance of an eligible nuclear request. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape recommended force allocation. `FLAVOR_OFFENSE` also changes Tactical AI loss tolerance during combat simulation. Family selection and city-target scoring remain family-specific.
+`FLAVOR_USE_NUKE` sets the launch roll in [nuclear campaigns](#nuclear-campaigns). `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape recommended force allocation. `FLAVOR_OFFENSE` also changes Tactical AI loss tolerance in the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression). Family selection and city-target scoring remain family-specific.
 
 ## Persistent target lifecycle
 

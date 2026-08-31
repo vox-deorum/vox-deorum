@@ -21,9 +21,9 @@ flowchart LR
 
 1. **Build the precheck list.** The city collects ordinary units, buildings, projects, processes, and requested units with positive base weights. A process enters the list when raw production is at least five per turn, or when no other precheck candidate exists. A legal defense process receives a base weight of 100.
 2. **Evaluate suitability.** The production AI for each candidate type returns a revised weight when the candidate reaches its sanity check. Positive results become survivors. Nonpositive results are excluded from normal selection and recorded as `SKIPPED`.
-3. **Adjust for duration.** The city discounts every survivor by its remaining construction time, sorts the result, and records `POST`.
+3. **Adjust for duration.** The city divides every survivor's weight by `turnsLeft ^ (0.15 + 0.015 × turnsLeft)` (`CityStrategyAIHelpers::ReweightByTurnsLeft`), sorts the result, and records `POST`. The exponent grows with the remaining turns, so slow builds lose disproportionately more weight. The purchase path applies the same divisor to the precheck list before suitability instead of after it.
 4. **Restore the precheck list when all candidates fail.** The **all-failed fallback** uses the precheck list when suitability produces no survivors. It can therefore select a candidate that suitability rejected.
-5. **Select the queue head.** The city keeps a current unit, building, or project within half of the leading score, subject to interruption rules. A valid victory-condition project within that band and a leading defense process are selected directly. Otherwise the city makes a weighted random choice among candidates above `CityProductionChoiceCutoffThreshold` percent of the leading score. Processes do not receive current-build inertia.
+5. **Select the queue head.** The city keeps a current unit, building, or project whose weight is at least half of the leading weight, subject to interruption rules. A valid victory-condition project within that band and a leading defense process are selected directly. Otherwise the city makes a weighted random choice among the candidates whose weight is at least `CityProductionChoiceCutoffThreshold` percent of the leading weight — the handicap value is 90 by default, so candidates within ten percent of the leader compete. Processes do not receive current-build inertia.
 
 `PRE` records the sorted precheck list, and `POST` records the duration-adjusted survivors. Both lists contain only legal candidates with positive base weights.
 
@@ -52,7 +52,7 @@ An operation request and an army request can identify the same concrete unit as 
 | Project | A legal project's XML flavor affinities. | Flavor-derived project weight. |
 | Process | A legal process's XML flavor affinities. | Flavor-derived process weight, or 100 for a defense process. |
 
-**Effective flavors** are city preference values. Each production AI combines them with an entry's XML flavor affinities to form its base weight. Vox Deorum custom flavors add signed adjustments to the normal flavor state. [Flavors](overview.md#flavors) explains their inputs and duration.
+**Effective flavors** are city preference values. Each production AI combines them with an entry's XML flavor affinities to form its base weight. For units, `CvUnitProductionAI::AddFlavorWeights` computes, per flavor, the unit's XML affinity multiplied by the signed square root of ten times the city flavor value, and sums the products. The square root compresses large swings in city flavors so the XML differences between unit types stay decisive. Vox Deorum custom flavors add signed adjustments to the normal flavor state. [Flavors](concepts.md#flavors) explains their inputs and duration.
 
 ## Timing and feedback
 
@@ -60,7 +60,7 @@ An operation request and an army request can identify the same concrete unit as 
 
 `CvCity::doProduction` requests a choice when a city has no production, maintains a process, or is marked dirty. Completing the final queued order also requests a choice.
 
-The **operation skip counter** is a player-level pressure value: entering an operation-request candidate in precheck increments it, and selecting that candidate resets it. The **settler skip counter** increments once when a city skips an available settler, then resets when a city starts a settler or no settler is available.
+The **operation skip counter** is a player-level pressure value: entering an operation-request candidate in precheck increments it, and it resets only when a city selects that candidate or commits to it through `CvCity::CheckForOperationUnits`. The **settler skip counter** increments once when a city skips an available settler, then resets when a city starts a settler or no settler is available.
 
 ## Boundaries and implementation
 

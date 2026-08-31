@@ -1,6 +1,6 @@
 # Unit AI: Military Tactics
 
-**Military tactics** turns persistent operation state and the visible map into unit missions for the current turn. It moves operation armies first, assigns local combat and support to **independent units**, then passes eligible leftovers to Homeland AI. An independent unit is a movable, unprocessed combat-capable unit with no Army ID. [Military campaign](military-campaign.md) owns campaign creation and targets; [military organization](military-organization.md) owns armies, slots, recruitment, and release.
+**Military tactics** turns persistent operation state and the visible map into unit missions for the current turn. It moves operation armies first, assigns local combat and support to **independent units**, then passes eligible leftovers to Homeland AI. An independent unit is a movable, unprocessed combat-capable unit with no Army ID. Coordinated attacks and positioning are delegated to the [tactical simulation](military-tactical-simulation.md), while air units, barbarians, and a few specialized moves follow their own procedures on this page. [Military campaign](military-campaign.md) owns campaign creation and targets; [military organization](military-organization.md) owns armies, slots, recruitment, and release.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTacticalAI.cpp`, `CvTacticalAnalysisMap.cpp`, `CvAIOperation.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 
@@ -61,58 +61,11 @@ A tactical target is a plot worth acting on this turn. The refresh records its t
 
 ## Dominance zones
 
-A **dominance zone** is a tactical-map region that combines territory, nearby military strength, and a current combat assessment. Each player builds the map from its own perspective, lazily and at most once per game turn when Tactical AI needs it.
-
-Every revealed plot within five plots of its nearest city joins that city’s land or water zone. Cityless plots form **wilderness zones**, grouped by connected land or water areas. Zone construction also merges across small lakes and islands: neighboring plots join when they share an area or either connected area has fewer than four tiles. All unrevealed plots share one unknown zone.
-
-| Zone | Territory |
-| --- | --- |
-| City zone owned by the player's team | Friendly |
-| City zone whose team is at war with the player | Enemy |
-| Other city zone | Neutral |
-| Wilderness zone | Neutral |
-| Unknown zone | None |
-
-Zones accumulate melee, ranged, naval, and naval-ranged strength. The unit owner's diplomatic side determines its contribution.
-
-| Unit owner | Zone side |
-| --- | --- |
-| Team at war with the map's player | Enemy |
-| Map player's team | Friendly |
-| City-state ally on that city-state's map | Friendly |
-| Major civilization at war with exactly the same players | Friendly |
-| Other player | Neutral, tracked separately from dominance |
-| Barbarian | Ignored |
-
-Army members contribute like other combat units. Civilians do not contribute, and the zone city adds its strength to its side's ranged total.
-
-```text
-city contribution = city strength value × remaining hit points / maximum hit points
-
-unit contribution = base attack or ranged strength × (100 + modifiers) / 100
-  modifiers, additive:
-    −50  embarked, not visible, or wrong domain for the zone
-    +50  range or base moves above 2
-    +50  within three plots of the zone city
-   +100  standing in an owned citadel
-
-overall strength = melee × 4/3 + ranged + naval + naval ranged
-```
-
-The unseen-unit modifier keeps a known but currently unseen enemy at half strength. The dominance margin, `AI_TACTICAL_MAP_DOMINANCE_PERCENTAGE`, is 70: the game database sets this value, overriding the compiled fallback of 40.
-
-```text
-friendly dominant when enemy strength is zero and at least one friendly unit exists
-friendly dominant when round(100 × friendly / max(1, enemy)) > 100 + margin + (30 in enemy territory)
-enemy dominant when round(100 × enemy / max(1, friendly)) > 100 + margin
-even otherwise
-```
-
-No strength on either side yields no units visible. One enemy unit against at most one friendly unit yields even. The additional 30 in enemy territory accounts for unseen defenders. The friendly test clamps the margin to at least 10 and the enemy test clamps it to at most 90.
+A **dominance zone** is a tactical-map region that combines territory, nearby military strength, and a current combat assessment; [shared concepts](concepts.md#dominance-zones) defines zone construction, the territory and side classifications, and the strength and dominance formulas. Tactical AI is the map's main consumer: every refresh assigns each zone a posture from its current dominance, and zone combat processes zones in descending zone value. The rest of this page covers what Tactical AI does with the zones.
 
 ## Postures and local combat
 
-A **posture** is a current-turn zone strategy that orders its local attacks and sets the combat search's acceptable risk. Territory, overall dominance, ranged dominance, melee balance, and city danger select it during every refresh. Water zones use naval strengths.
+A **posture** is a current-turn zone strategy that orders its local attacks and sets the acceptable risk for the [tactical simulation](military-tactical-simulation.md). Territory, overall dominance, ranged dominance, melee balance, and city danger select it during every refresh. Water zones use naval strengths.
 
 | Territory | Dominance and local condition | Posture |
 | --- | --- | --- |
@@ -139,21 +92,25 @@ A **posture** is a current-turn zone strategy that orders its local attacks and 
 | Surgical city strike | Capture cities before attacking remaining units. | Medium |
 | Steamroll | Attack units, then capture cities. | High |
 
-```text
-low aggression:    damage dealt × 0.7, hit-point floor 70
-medium aggression: damage dealt × 1.1, hit-point floor 40
-high aggression:   damage dealt × 2.3, hit-point floor 20
-```
-
-The combat position search rejects a non-killing attack when weighted damage dealt is below damage received and the attacker would finish below its posture's hit-point floor. It also rejects a near-fatal melee attack when the attacker takes damage and has a safe reachable plot available, except at `AL_BRAVEHEART`. Reachability, danger, support, stacking, and remaining movement constrain every assignment.
+The aggression column names the level the zone's attacks pass to the tactical simulation, which turns it into a damage weight, a post-attack hit-point floor, and attack-rejection rules; [entry points and aggression](military-tactical-simulation.md#entry-points-and-aggression) documents the levels and their exact values.
 
 Postures direct independent units. Army members use fixed medium aggression for contact fights. An army still affects the zone's strength totals, and an enemy-dominated city zone at its destination can reject an unsafe contact fight. Tactical AI recomputes the posture from current-turn state at every refresh.
 
 Neighboring zones refine the initial posture: a water zone changes steamroll to exploit flanks when an adjacent enemy-dominated land zone outranges its naval ranged strength. A zone outside friendly territory changes to withdraw when a same-domain friendly neighbor is enemy-dominated and its city is not already about to fall.
 
+## Posture and operation precedence
+
+When an operation's goal conflicts with a zone's posture, the operation wins unconditionally. Recruitment never adds army members to Tactical AI's current-turn unit list, so posture handlers cannot see them; operation army moves run in the global high-priority pass, before any per-zone processing; and an operation abort weighs turn counts, ownership, and army strength, never zone dominance. A withdraw posture therefore cannot recall an army fighting in the same zone.
+
+Three interactions do run from posture to operation-adjacent behavior:
+
+- Reinforcement moves never reinforce into a zone whose posture is withdraw, and never pull a unit out of a zone that is not friendly-dominant unless that zone's posture is withdraw. Embarked units, and land units standing safe inside a city, may be taken regardless.
+- Pillage moves skip targets in withdraw zones: a unit retreating from a zone may still pillage on its way out, but nothing moves in just to pillage.
+- Withdraw moves skip units recently deployed from a completed operation while they hold more than half their hit points, so a fresh invasion force attacks instead of turning around.
+
 ## Independent units and priorities
 
-Routine Tactical recruitment accepts movable, unprocessed combat, ranged, air, and combat-support units with no Army ID. It excludes delayed-death units, explorers, carrier-role ships, and nuclear-role units. Combat-ready aircraft enter unless Tactical AI leaves them for Homeland rebasing. Tactical AI does not process human units, while a separate Homeland pass handles their automated units.
+Routine Tactical recruitment accepts movable, unprocessed combat, ranged, air, and combat-support units with no Army ID. It excludes delayed-death units, explorers, carrier-role ships, and nuclear-role units. Combat-ready aircraft enter unless Tactical AI leaves them for Homeland rebasing ([Air operations](#air-operations)). Tactical AI does not process human units, while a separate Homeland pass handles their automated units.
 
 For a normal civilization, `ProcessDominanceZones` gives earlier passes the first claim on units and targets.
 
@@ -177,12 +134,62 @@ Zone combat processes zones in descending **zone value**. The value combines the
 | Enemy dominance in friendly territory | ×8 |
 | Friendly dominance in enemy territory | ×8 |
 | Even dominance with a real fight in friendly or enemy territory | ×4 |
-| Enemy territory while winning every war | ×4 |
-| Friendly territory while losing | ×4 |
+| Enemy territory while [winning every war](concepts.md#war-states) | ×4 |
+| Friendly territory while [losing every war](concepts.md#war-states) | ×4 |
 
-The base value is `1 + square root of the zone city's economic value as a percentage of the player's best city`. A city-state whose ally the player fights resets city factors to 1. Barbarians follow their own camp, attack, pillage, roam, and safety order.
+The base value is `1 + square root of the zone city's economic value as a percentage of the player's best city`. A city-state whose ally the player fights resets city factors to 1. Barbarians skip zones and postures entirely and follow their own ladder ([Barbarian priorities](#barbarian-priorities)).
 
 Earlier passes claim units and targets first, while an assignment can leave movement for a later pass.
+
+## Air operations
+
+Air units split between the two AIs by one question, `CvTacticalAI::ShouldRebase`. Tactical AI recruits a combat-ready air unit only when the answer is no; the rest wait for Homeland AI's rebase pass. A unit should rebase when its base is unsafe — its city is in danger of falling, its carrier is projected to die, or it wants to heal while the base is threatened — or when it has no work: a fighter with no enemy air activity in range, a bomber or missile with no enemy unit target in range, and every air unit at peace.
+
+Recruited air units fight inside zone combat. When an attack on a tactical target begins, air sweeps clear enemy interceptors and air attacks strike, both before the ground units enter the tactical simulation; when the air strikes alone kill the defender, the ground attack never starts. Air units pick their own target near the attack plot:
+
+| Unit | Target valuation |
+| --- | --- |
+| Missile | Damage to the defending unit, with a bonus for a kill and a smaller one for hitting a unit inside a city. Missiles never strike an ungarrisoned city. |
+| Bomber or fighter | Damage, minus three per plot of distance, minus the target's expected air-strike defense damage; halved when an interceptor guards the target. |
+
+Fighters left at home fly air patrol. Each base keeps interceptors up to nearby enemy bombers divided by two plus enemy fighters divided by four, and a lone nearby bomber still draws one interceptor.
+
+Homeland AI moves everything that should rebase. Carriers first attach to their nearest city so they count as bases, then every own city and carrier is scored (`HomelandAIHelpers::ScoreAirBase`): a city in danger of falling, captured within the last three turns, or being razed at low population is unusable, and a usable base earns its zones' border scores, small bonuses for civilization traits that reward stationed air units, 8 per enemy unit target, and 20 per enemy city target within the unit's range. Units that should heal rebase to the lowest-scoring usable city — the quietest place — while combat-ready units rebase toward the highest-scoring base whose fighter and bomber mix stays balanced: `IsGoodUnitMix` admits a type only while its count stays under the other type's count plus three. A base beyond direct rebase range is reached in hops along a rebase step path (`PT_AIR_REBASE`, at most six legs), flying the first leg each turn.
+
+## Barbarian priorities
+
+The barbarian player skips zones and postures entirely: `AssignBarbarianMoves` extracts every target into one global list and works through a single priority ladder.
+
+| Priority | Work |
+| --- | --- |
+| 1 | Camp defense: garrison and hold every camp. |
+| 2 | Theft: a unit adjacent to a city steals from it, or takes over a weakened city-state. |
+| 3 | Unit attacks through the tactical simulation at braveheart, the most reckless aggression level, plus capture of vulnerable cities. |
+| 4 | Civilian attacks. |
+| 5 | Immediate pillage: improved resources first, then other improvements. |
+| 6 | Trade-route plunder, land then sea. |
+| 7 | Roaming toward the best target in range. |
+| 8 | Safety, last: a barbarian that reaches this pass did not attack this turn, so it always flees. |
+
+A camp's defender never leaves. A ranged defender shoots from the camp and stays put; a melee defender may take an adjacent attack, or grab an adjacent undefended civilian, only when it can return to the camp in the same turn, and it upgrades in place when eligible. An empty camp pulls the nearest available land unit within five turns of travel back to garrison duty.
+
+Roaming ranges come from the game handicap: the `BarbarianLandTargetRange` and `BarbarianSeaTargetRange` columns bound how far land and sea units look for prey. A land unit walks into an undefended civilian or improvement and pillages, but only approaches a combat target without lingering next to it; a unit with movement left after roaming stays unprocessed so a later pass can still use it — hit and run. Sea units roam the same way and never pillage. A captured civilian walks home toward a camp, searching for a destination up to 23 turns away.
+
+## Specialized execution
+
+Three kinds of moves bypass or extend the tactical simulation with their own procedures.
+
+### Amphibious landings
+
+`ExecuteLandingOperation` puts embarked units ashore around a coastal target — it runs after a city-capture attack for embarked units still at sea near the city. It is a greedy unit-to-plot assignment rather than a simulated position search. Every unit scores every coastal plot it can reach this turn by its hit points minus the plot's danger, minus ten per plot of distance from the target; ranged units prefer hills and may land on another landmass while the target stays in range, melee units must land on the target's landmass, and a net-positive attack on an enemy plot outranks any plain landing. Clustering bonuses — ten points when another candidate plot or a friendly unit is adjacent — concentrate the landing. Units then claim plots in descending score, discarding choices that conflict with a claimed plot or unit.
+
+### Paradrops
+
+Paradrops are opportunistic, not planned. When an immediate pillage pass targets an enemy citadel or improved resource, paratroopers within striking distance are tried before ground units; no other pass drops units, and the tactical simulation has no concept of a drop, so paradrops never appear in simulated attacks.
+
+### Support units
+
+Great generals, admirals, and siege towers never enter the tactical simulation. After a combat plan wins, a second search interleaves their moves before each attack so an aura arrives exactly when the attack it boosts is made; [support placement](military-tactical-simulation.md#support-placement) documents the scoring.
 
 ## Homeland handoff
 

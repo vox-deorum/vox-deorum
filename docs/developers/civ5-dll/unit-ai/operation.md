@@ -30,7 +30,7 @@ flowchart TD
 
 Persistent operations provide durable context for Tactical work. Tactical and Homeland passes read current world and unit state, issue missions, and pass eligible units to later controllers. Completed missions update the state used by later systems and the next turn.
 
-`CvPlayerAI::AI_unitUpdate` calls Tactical AI before Homeland AI for a normal AI player. Tactical AI refreshes visibility and targets, then recruits combat and support units. Its high-priority pass heals frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and handles urgent garrisons. It then continues through zone combat and its remaining global priorities. Homeland AI rebuilds its own list from units that remain available, refreshes role targets, and runs its ordered civilian and military passes.
+`CvPlayerAI::AI_unitUpdate` calls Tactical AI before Homeland AI for a normal AI player. Tactical AI refreshes visibility and targets, then recruits combat and support units. Its high-priority pass heals frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and handles urgent garrisons. It then continues through zone combat, whose coordinated attack and positioning assignments come from the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression), and its remaining global priorities. Homeland AI rebuilds its own list from units that remain available, refreshes role targets, and runs its ordered civilian and military passes.
 
 `CvAIOperation::DoTurn` updates reserve membership, checkpoint timing, target validity, movement progress, army state, operation state, and abort reason. Completion and cleanup release army IDs and remove obsolete armies or operations, allowing surviving units to enter later ownership paths.
 
@@ -46,6 +46,22 @@ Persistent operations provide durable context for Tactical work. Tactical and Ho
 
 Tactical and Homeland AI use the same general claim pattern: filter the current list, score or choose a local action, push missions, and record completed work. A unit neither claimed by an operation nor marked `TurnProcessed` can pass from Tactical AI to Homeland AI with remaining movement.
 
+## Activity and automation
+
+Each unit also carries an **activity state** (`ActivityTypes`), a durable stance that persists across turns while the claims above reset every turn. Missions set it: a completed skip, sleep, fortify, heal, alert, or air-patrol mission parks the unit in the matching state, and a queued multi-turn mission keeps it in the mission state. `CvUnit::doTurn` runs the wake checks at the top of the unit's turn, returning the unit to awake so a controller can claim it again.
+
+| Activity | Set by | Wakes when |
+| --- | --- | --- |
+| Awake | Default state and every wake check | Already awake and available for orders. |
+| Hold | Skip mission | Always, on the next turn. |
+| Sleep | Sleep or fortify mission | Only when the unit is projected to die next turn. |
+| Heal | Heal mission | The unit took damage last turn or reached full health. |
+| Sentry | Alert mission | An enemy enters sight range (attack range for aircraft), or danger or damage taken exceeds the unit's heal rate. |
+| Intercept | Air-patrol mission | Every turn for an AI unit, so interception duty is re-decided each turn. |
+| Mission | An unfinished mission queue | The queue completes, fails, or is cleared. |
+
+**Automation** (`AutomateTypes`) is the human-side entry into the same Homeland passes: a human can automate build, explore, trade, missionary, archaeologist, and diplomat work. For a human player, `CvHomelandAI::FindAutomatedUnits` replaces `RecruitUnits` and collects only automated units, and each role pass accepts a unit by its [role](concepts.md#unitai-roles) or its automate type, so an automated worker follows the same improvement logic as an AI worker. Automation cancels when the unit enters combat, receives a manual order, or its pass finds no remaining work.
+
 ## Ownership and handoff
 
 | Unit kind | Initial owner | Handoff or later handling |
@@ -56,7 +72,7 @@ Tactical and Homeland AI use the same general claim pattern: filter the current 
 | Ordinary civilian | Homeland AI | A role action, safety response, or escorted civilian operation supplies its work. |
 | Combat-ready aircraft | Tactical AI | Homeland receives aircraft retained for rebasing. |
 | Carrier or nuclear operation member | Persistent operation and army movement | Specialized operation logic supplies the target and formation behavior. |
-| Automated human unit | Homeland automation | Normal AI operations and ordinary Tactical recruitment leave it to its automation path. |
+| Automated human unit | [Homeland automation](#activity-and-automation) | Normal AI operations and ordinary Tactical recruitment leave it to its automation path. |
 
 This **Tactical-to-Homeland handoff** gives Tactical AI the first claim on combat urgency. Homeland AI then handles upgrades, opportunity attacks, garrisoning, healing, sentry work, patrols, aircraft rebasing, civilian roles, and unassigned fallbacks.
 

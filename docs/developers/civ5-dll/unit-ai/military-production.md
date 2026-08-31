@@ -20,7 +20,7 @@ Ordinary unit candidacy is flavor-derived rather than a demand type. [Candidate 
 
 ### Land-force demand
 
-`CvMilitaryAI::SetRecommendedArmyNavySize` calculates the land target. For major civilizations, it starts from the soft supply cap, reserves explorer capacity, and rebalances domain overages after allocating capacity to land and naval forces. Cities, active settlers, exposed cities, attack targets, and offense, defense, and naval signals shape the target. Minor civilizations use a simpler calculation.
+`CvMilitaryAI::SetRecommendedArmyNavySize` calculates the land target. For major civilizations, it starts from the [soft supply cap](concepts.md#supply), reserves explorer capacity, and rebalances domain overages after allocating capacity to land and naval forces. Cities, active settlers, exposed cities, attack targets, and offense, defense, and naval signals shape the target; the defensive, offensive, and naval weights scale with `FLAVOR_DEFENSE`, `FLAVOR_OFFENSE`, and `FLAVOR_NAVAL`, so [custom flavors](concepts.md#flavors) steer force sizing directly. Minor civilizations use a simpler calculation.
 
 ```mermaid
 flowchart LR
@@ -113,7 +113,7 @@ The shared [candidate gates](production.md#shared-candidate-gates) cover trainab
 
 ## Score effects
 
-`CvUnitProductionAI::CheckUnitBuildSanity` applies these effects after a candidate reaches suitability. The `MILITARYAISTRATEGY_*` names identify Vox Populi state flags that provide role gates and score signals. Vox Deorum custom flavors remain the main steering input, and the state flags continue to supply their role-specific effects.
+`CvUnitProductionAI::CheckUnitBuildSanity` applies these effects after a candidate reaches suitability. The `MILITARYAISTRATEGY_*` names identify Vox Populi [strategy flags](concepts.md#strategy-flags) that provide role gates and score signals. Vox Deorum custom flavors remain the main steering input, and the state flags continue to supply their role-specific effects. With custom flavors active, an explicit branch in `CvCitySpecializationAI.cpp` also shifts the empire's military-training specialization weight by `(FLAVOR_MOBILIZATION − 5) × 80`, steering whole cities toward or away from the military specialization whose flavor adjustments feed unit base weights.
 
 | Effect | Military signal |
 | --- | --- |
@@ -126,19 +126,36 @@ Both request weights read offense flavor through `GetPersonalityAndGrandStrategy
 
 ## Formation requests and the muster-city gate
 
-A **muster city** is the city named as the assembly point for an operation's next required slot. The formation-demand sections explain how requests are found and weighted. An operation candidate increments the operation skip counter when it enters precheck and resets the counter when selected. Normal queue suitability applies the current skip pressure to combat operation and army requests.
+A **muster city** is the city named as the assembly point for an operation's next required slot. The formation-demand sections explain how requests are found; this section explains what they weigh and where the normal queue accepts them. [Military campaign](military-campaign.md#muster-selection) explains how each operation family picks its muster in the first place.
+
+### Request weights and magnitudes
+
+`CvCityStrategyAI::ChooseProduction` seeds the two request types differently:
+
+| Request | Precheck weight |
+| --- | --- |
+| Operation request | 5000, plus 250 × (offense flavor + operation skip counter), plus the unit's flavor-derived weight. |
+| Army request | 750, plus 250 × offense flavor. No skip counter and no flavor-derived weight. |
+
+Suitability keeps adding: `CheckUnitBuildSanity` bonuses are additive, and a combat candidate carrying the operation flag gains 500 plus 100 per recorded skip. At the end, an occupied city with occupation unhappiness divides any unit candidate's final weight by five.
+
+The magnitudes are the point. Ordinary flavor-derived candidates typically weigh a few hundred, so a qualifying operation request outweighs them by roughly an order of magnitude and normally wins selection. The [operation skip counter](production.md#timing-and-feedback) also ratchets: it increments whenever the request merely enters precheck — in every city that lists it, selected or not — and resets only on selection or commitment, so a repeatedly passed-over request grows by 250 per skip at precheck plus 100 per skip at suitability.
 
 ### Shared muster-city gate
 
-The shared muster-city gate applies only during normal queue selection. Operation and army request candidates reach `CheckUnitBuildSanity` only when the next operation request names the current city as its muster city. This directs operation candidates to their assembly point, but it also affects army candidates whose slots may belong to another army. When no qualifying operation request exists, an army request can remain in `PRE` without reaching suitability. Hurry evaluation handles army requests separately without this gate. If all candidates fail suitability, the [all-failed fallback](production.md#candidate-lifecycle) restores that army request from the precheck list.
+The shared muster-city gate applies only during normal queue selection. `CvPlayerAI::PeekAtNextUnitToBuildForOperationSlot` walks the operations for the next free required slot and reports whether the asking city qualifies: the city must be the muster plot's owning city and have landmass or ocean access to that plot. Operation and army request candidates reach `CheckUnitBuildSanity` only when that check accepts the current city. This directs operation candidates to their assembly point, but it also affects army candidates whose slots may belong to another army. When no qualifying operation request exists, an army request can remain in `PRE` without reaching suitability. Hurry evaluation keeps this gate for operation requests but scores army requests without it — and without the operation flag, so they receive no operation bonus or skip pressure there. If all candidates fail suitability, the [all-failed fallback](production.md#candidate-lifecycle) restores that army request from the precheck list.
 
 ## Weighted request and commitment paths
 
-An operation-request candidate is a weighted ordinary-production candidate. It can lose to another candidate after shared selection.
+An operation-request candidate is a weighted ordinary-production candidate. It can lose to another candidate after shared selection, and even winning selection starts an ordinary training order without binding the unit to the slot.
 
-**Operation commitment** uses `CvCity::CheckForOperationUnits`. It can direct a city to train the unit or purchase it for an operation. **Final-slot purchase** is a separate military path: `CvMilitaryAI::MakeEmergencyPurchases` considers it when the player is not using the at-war strategy or is winning every war. For a recruiting operation with one uncommitted required slot, `CvAIOperation::BuyFinalUnit` can purchase a primary-role match and assign it to that slot.
+**Operation commitment** is a separate path in `CvCity::CheckForOperationUnits`, which runs during the city's turn. It resolves the next required slot's role to a concrete unit and buys that unit outright when the treasury allows. When it cannot buy, it can push a training order instead. At war that order goes to the head of the queue and commits the slot — the slot moves from the operation's need list to its committed list, and the city remembers the order; in peacetime the order is merely appended, without a commitment. That wartime training branch is the only place a slot is ever committed.
 
-[Military organization](military-organization.md#recruitment-and-stages) explains how reserve recruitment, commitments, and direct purchases become formation membership.
+The commitment does not bind the finished unit. When the training order completes, the city unconditionally returns the slot to the operation's need list, and the new unit enters play unattached. Each operation's reserve scan rebuilds its need list from scratch and claims any suitable free unit, so the unit joins whichever operation reaches it first — possibly a different army than the one whose slot prompted the build.
+
+A unit is placed directly into a slot only when gold changes hands. The purchase branch of `CheckForOperationUnits` fills the city's committed slot immediately when one exists and otherwise offers the purchased unit to the recruiting operation closest to completion. **Final-slot purchase** is a separate military path: `CvMilitaryAI::MakeEmergencyPurchases` considers it when the player is not using the at-war strategy or is winning every war. For a recruiting operation with one uncommitted required slot, `CvAIOperation::BuyFinalUnit` can purchase a primary-role match and assign it to that slot.
+
+[Military organization](military-organization.md#recruitment-and-stages) explains how reserve recruitment and direct purchases become formation membership.
 
 ## Implementation trace
 

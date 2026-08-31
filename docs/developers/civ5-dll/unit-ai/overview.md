@@ -2,9 +2,9 @@
 
 This guide introduces the non-strategic unit AI in the **Vox Populi 5.2.7** baseline. Its code lives in `civ5-dll/CvGameCoreDLL_Expansion2`.
 
-## The six responsibilities
+## The seven responsibilities
 
-The unit AI is easiest to navigate through six responsibilities. They describe ownership and information flow. [Runtime order](#runtime-order-and-conflicts) shows when the systems execute.
+The unit AI is easiest to navigate through seven responsibilities. They describe ownership and information flow. [Runtime order](#runtime-order-and-conflicts) shows when the systems execute.
 
 | Responsibility | Definition | Primary owner |
 | --- | --- | --- |
@@ -14,6 +14,7 @@ The unit AI is easiest to navigate through six responsibilities. They describe o
 | **Upgrade** | Replacement of an eligible existing unit with a newer type. | Homeland AI and unit upgrade code |
 | **Organization** | Durable military structure: persistent operations, armies, and formation slots. | Military AI, Operation AI, and Army AI |
 | **Operation** | Per-turn missions and actions for eligible units. | Tactical, Homeland, and role-specific civilian AI |
+| **Cleanup** | Removal or gifting of units the empire no longer needs. | Military, Economic, and Homeland AI |
 
 Free-unit grants and Great Person spawns follow their own game rules.
 
@@ -23,25 +24,33 @@ This diagram shows information and state relationships. World state, diplomacy, 
 
 ```mermaid
 flowchart TD
-    S[Shared state<br/>world, diplomacy, flavors, economy] --> D[Demand]
-    S --> P[Production]
-    S -->|gold or faith| A[Acquisition]
-    D --> P
-    D --> A
-    P --> M[Available military unit]
-    P --> C[Available civilian or unassigned military unit]
-    A --> M
-    A --> C
-    M -->|eligible unit| U[Upgrade]
-    U -->|replacement feedback| M
-    M --> O[Organization<br/>persistent operations, armies, formation slots]
-    O -->|open formation-slot gaps| D
-    O --> R[Operation]
-    C --> R
-    R --> X[[Unit action]]
+    S[Shared state<br/>world, diplomacy, flavors, economy]
+
+    subgraph Sourcing[Sourcing units]
+        D[Demand] --> P[Production]
+        D --> A[Acquisition]
+    end
+
+    subgraph Employing[Employing units]
+        O[Organization<br/>persistent operations, armies, formation slots] --> R[Operation]
+    end
+
+    S --> D
+    S --> P
+    S -->|gold or faith| A
+    P --> V[Available units]
+    A --> V
+    V -->|military units fill formation slots| O
+    V -->|civilians and remaining military units| R
+    O -->|open formation slots| D
+    R --> X[[Unit actions]]
+    V -->|eligible unit| U[Upgrade]
+    U -->|replacement| V
+    V -->|unneeded unit| C[Cleanup]
+    C -->|freed supply and gold| S
 ```
 
-Production and acquisition provide available units. Organization feeds its open formation slots back into demand. Operation directs each unit's actions for the turn.
+Production and acquisition fill a shared pool of available units. Organization claims military units for formation slots and feeds its open slots back into demand, while operation directs each unit's actions for the turn. Two stages maintain the pool itself: upgrade replaces eligible units with newer types, and cleanup removes unneeded ones, returning their supply and gold to the shared state that drives demand.
 
 ## Runtime order and conflicts
 
@@ -50,28 +59,17 @@ AI turn order determines which system has already spent gold, movement, or an el
 | Phase | Key work | Later-state effect |
 | --- | --- | --- |
 | Economic AI | `CvEconomicAI::DoTurn`, including `DoHurry` | Ordinary purchases honor savings reservations and spend gold before Military AI. |
-| Military AI | Updates state and operations, attempts final-slot purchases, and performs force cleanup | Uses gold that remains after Economic AI. |
+| Military AI | Updates state and operations, attempts final-slot purchases, and runs [military disband](cleanup.md#military-disband) | Uses gold that remains after Economic AI. |
 | Religion and player AI | `CvReligionAI::DoFaithPurchases` and related work | Faith uses a separate currency path. |
 | Cities | `CheckForOperationUnits`, then `doProduction` | A city can buy or queue an operation unit before normal production completes. Units completed here can act later that turn. |
 | Tactical AI | Recruits units, moves armies, considers emergency purchases, and handles zone combat | Claims eligible movement first. Purchased units usually arrive without movement unless their type can move after purchase. |
-| Homeland AI | Uses remaining eligible units and runs `PlotUpgradeMoves` late in `AssignHomelandMoves` | Upgrade savings protect future gold, while immediate upgrades use current gold. |
+| Homeland AI | Begins with [city-state gifting](cleanup.md#city-state-gifting), uses remaining eligible units, and runs `PlotUpgradeMoves` late in `AssignHomelandMoves` | Upgrade savings protect future gold, while immediate upgrades use current gold. |
 
 Tactical and Homeland AI rebuild separate `m_CurrentTurnUnits` lists. Army membership, remaining movement, and `TurnProcessed` coordinate their claims.
 
 ## Flavors
 
-**Flavors** are numeric preference values. `CvUnitProductionAI` combines a city's effective flavor values with each unit type's XML flavor affinities to form base weights. Current-state rules then revise or reject candidates.
-
-| Mode | City flavor values | Direct personality reads |
-| --- | --- | --- |
-| Vox Deorum custom flavors active | `CvFlavorManager::SetCustomFlavors` maps supplied values to signed adjustments and adds them to city flavor recipients. City AI and specialization adjustments remain additive. | Direct reads return custom values. `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy modifier. |
-| Normal Vox Populi | Randomized leader personality, active Economic and Military AI state adjustments, city state adjustments, and production specialization contribute to the city vector. Only state definitions with city-flavor rows change it. | Personality and grand-strategy reads follow the normal Vox Populi path. |
-
-Custom values expire after a set number of turns unless replaced. Their Lua entry point also rewrites selected Economic and Military AI state flags. Those flags can alter role gates and bonuses, and the rewrite does not apply their normal XML flavor adjustments.
-
-Relevant entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::SetCustomFlavors`, `CvFlavorManager::CheckCustomFlavorExpiration`, `CvCityStrategyAI::FlavorUpdate`, and `CvUnitProductionAI::AddFlavorWeights`.
-
-`FLAVOR_OFFENSE` also adjusts Tactical AI risk tolerance for wounded units and some large, high-offense groups in `TacticalAIHelpers::FindBestUnitAssignments`.
+**Flavors** are numeric preference values that steer decisions throughout the unit AI, from production base weights to combat risk tolerance. Vox Deorum can override the normal personality-derived values with custom flavors supplied through Lua. [Shared concepts](concepts.md#flavors) defines the mechanism: the custom and normal modes, expiration, and entry points. For the `FLAVOR_OFFENSE` effect on Tactical AI risk tolerance, see [entry points and aggression](military-tactical-simulation.md#entry-points-and-aggression).
 
 ## Responsibilities in detail
 
@@ -101,20 +99,23 @@ Relevant entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::Se
 
 `CvTacticalAI::Update`, `CvAIOperation`, and `CvArmyAI` run the per-turn work of military operations. Homeland AI then controls the remaining military units. `CvHomelandAI::AssignHomelandMoves`, `CvBuilderTaskingAI`, `CvTradeAI`, `CvReligionAI`, and civilian `CvAIOperation` families direct civilian operations and other civilian work. `CvPlayerAI::ProcessGreatPeople` supplies Great Person directives.
 
-## Force cleanup
+### Cleanup
 
-`CvMilitaryAI::DisbandObsoleteUnits` evaluates healing, war safety, finances, supply, obsolescence, resources, and geographic usefulness. It can gift a selected unit to a city-state.
+`CvMilitaryAI::DisbandObsoleteUnits` disbands or gifts away obsolete and unaffordable military units, `CvEconomicAI` runs fixed-order disband passes for civilian roles, and `CvHomelandAI::ExecuteUnitGift` gifts units to city-states. [Cleanup](cleanup.md) explains the triggers, candidate scoring, and gifting rules.
 
 ## Unit AI guides
 
+- [Concepts](concepts.md): shared vocabulary — roles, flavors, strategy flags, supply, war states, danger, and dominance zones.
 - [Production](production.md): shared city comparison and candidate gates.
 - [Military production](military-production.md#military-demand): military force targets and formation requests.
 - [Civilian production](civilian-production.md#civilian-demand): civilian role demand and scoring.
 - [Acquisition](acquisition.md): gold and faith purchases, including operation and emergency purchases.
-- [Upgrade](upgrade.md): upgrade ranking and replacement.
+- [Upgrade](upgrade.md): upgrade ranking, replacement, and promotion.
+- [Cleanup](cleanup.md): disbanding, civilian disband passes, and city-state gifting.
 - [Operation](operation.md): Tactical-to-Homeland handoff and per-turn control.
 - [Military operation](military-operation.md): campaign, organization, and tactical control.
 - [Military campaign](military-campaign.md): operation families, goals, retargeting, and abandonment.
 - [Military organization](military-organization.md): armies, formation slots, membership, and mustering.
-- [Military tactics](military-tactics.md): operation movement, dominance zones, combat priorities, and the Homeland handoff.
+- [Military tactics](military-tactics.md): operation movement, zone postures and combat priorities, air and barbarian handling, and the Homeland handoff.
+- [Military tactical simulation](military-tactical-simulation.md): coordinated combat planning and pathfinding as AI policy.
 - [Civilian operation](civilian-operation.md): civilian operations, Homeland role passes, and civilian missions.
