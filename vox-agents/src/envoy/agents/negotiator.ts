@@ -256,6 +256,6 @@ You can access additional information by calling the following tools.
     return input.outcome ? summarizeMove(input.outcome, input.thread) : undefined;
   }
   
-  /** Negotiators run at the high reasoning tier. */
-  protected reasoningTier = "high" as const;
+  /** Negotiators run at the default reasoning tier. */
+  protected reasoningTier = "default" as const;
 }

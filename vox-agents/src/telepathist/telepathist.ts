@@ -124,8 +124,8 @@ export abstract class Telepathist extends Envoy<TelepathistParameters> {
     return allSteps.length >= 50;
   }
 
-  /** Telepathist runs at the high reasoning tier. */
-  protected reasoningTier = "high" as const;
+  /** Telepathist runs at the default reasoning tier. */
+  protected reasoningTier = "default" as const;
 
   /**
    * Disables tools when in special message mode.
