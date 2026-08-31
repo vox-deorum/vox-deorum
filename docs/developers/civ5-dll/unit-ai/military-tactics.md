@@ -22,7 +22,7 @@ A **tactical target** is a plot worth acting on this turn. Its recorded type and
 
 `PlotOperationalArmyMoves` calls each persistent operation's `DoTurn`. Land, naval, and combined armies use `PlotArmyMovesCombat`; escorted civilian armies use the escort path. Recruiting and gathering armies move around their muster point, while moving armies follow their army goal.
 
-When combat army movement cannot find a step path, it records `AI_ABORT_LOST_PATH`. Nearby enemies can hold an army at its center of mass while healthy members take an opportunity fight with suitable independent support. Contact and formation moves use reachable-plot and danger checks. A hostile local zone can therefore reject an unsafe fight.
+When combat army movement cannot find a step path, it records `AI_ABORT_LOST_PATH`. Nearby enemies can hold an army at its center of mass while healthy members take an opportunity fight with suitable nearby friendly attackers, including members of another army. Contact and formation moves use reachable-plot and danger checks. A hostile local zone can therefore reject an unsafe fight.
 
 ## Postures and local combat
 
@@ -45,7 +45,7 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 
 | Posture | Zone behavior | Aggression |
 | --- | --- | --- |
-| Withdraw | Retreat toward the safest neighboring zone without attacks. | None |
+| Withdraw | Retreat toward the safest neighboring zone; ranged units may take an opportunity shot afterward. | No posture attack; a simulated ranged opportunity uses Low. |
 | Hedgehog | Attack units and pull reinforcements before the normal pass. | Low |
 | Attrition | Attack units. | Low |
 | Exploit flanks | Attack units, then capture an undefended city when available. | Medium |
@@ -53,7 +53,7 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 | Surgical city strike | Capture cities before attacking remaining units. | Medium |
 | Steamroll | Attack units, then capture cities. | High |
 
-Army members use fixed medium aggression for contact fights, although their strength affects the zone assessment. An operation's goal takes precedence over a conflicting zone posture: army members are absent from the independent-unit pool, operation movement runs before zone processing, and operation abort rules do not use zone dominance. Neighboring zones can still refine a posture. Examples include naval steamroll near a stronger enemy land zone and withdrawal outside friendly territory near an enemy-dominated zone in the same domain.
+Nearby army members contribute to the zone strength assessment but do not inherit its posture. Positioning around the operation's current target uses low aggression, while nearby-enemy contact fights use medium. The operation's goal takes precedence over a conflicting zone posture: army members are absent from the independent-unit pool, operation movement runs before zone processing, and operation abort rules do not use zone dominance. Neighboring zones can still refine a posture. Examples include naval steamroll near a stronger enemy land zone and withdrawal outside friendly territory near an enemy-dominated zone in the same domain.
 
 ## Independent units and priorities
 

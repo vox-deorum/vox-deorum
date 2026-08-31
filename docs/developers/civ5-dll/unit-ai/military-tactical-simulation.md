@@ -14,14 +14,43 @@ A unit that finishes the selected plan is committed and processed under the shar
 
 ### Entry points and aggression
 
-The callers below use `FindAndExecuteBestUnitAssignments`. The first three come from [Tactical zone and army processing](military-tactics.md#independent-units-and-priorities).
+Aggression is supplied by the caller rather than chosen inside the simulation. A [zone posture](military-tactics.md#postures-and-local-combat) selects the independent units' action order and aggression for attacks on units. City capture chooses its own level. Nearby operation army members contribute to the zone's friendly strength and can therefore change its posture, but they do not inherit that posture. The operation supplies their movement target: positioning around it uses low aggression, while a nearby-enemy contact fight uses medium.
 
-| Caller | Occasion | Aggression |
-| --- | --- | --- |
-| `ExecuteAttackWithUnits` | Zone combat against a tactical target. | Zone posture for units; city capture is high with more than two melee attackers, otherwise medium. Barbarians use braveheart. |
-| `PositionUnitsAroundTarget` | Gather, reinforce, or defend around a plot without a committed attack. | Low |
-| `CheckForEnemiesNearArmy` | A persistent-operation army meets enemies near its path. | Medium |
-| `PerformRangedOpportunityAttack` | One ranged unit can fire and still move. | Low |
+```mermaid
+flowchart TD
+    A[Nearby operation army members] -. Count toward friendly strength .-> Z[Dominance-zone strength assessment]
+    Z --> P{Posture for independent-unit work}
+    P -->|None| N[No posture-specific zone action]
+    P -->|Withdraw| W[Retreat<br/>No moving in to pillage or reinforcement]
+    P -->|Hedgehog| HG[Attack units at low<br/>Reinforce early]
+    P -->|Attrition| AT[Attack units at low]
+    P -->|Exploit flanks| EF[1. Attack units at medium<br/>2. Try city capture]
+    P -->|Counterattack| CO[Attack units at medium]
+    P -->|Surgical city strike| SC[1. Try city capture<br/>2. Attack units at medium]
+    P -->|Steamroll| ST[1. Attack units at high<br/>2. Try city capture]
+
+    C[City-capture step<br/>Medium with up to two melee attackers<br/>High with more than two] -. Supplies the capture level .-> EF
+    C -. Supplies the capture level .-> SC
+    C -. Supplies the capture level .-> ST
+
+    HG --> S[Tactical simulation]
+    AT --> S
+    EF --> S
+    CO --> S
+    SC --> S
+    ST --> S
+    A -->|Position around operation target at low| S
+    A -->|Nearby-enemy contact at medium| S
+    O[Other positioning] -->|Low| S
+    R[Mobile ranged opportunity] -->|Low| S
+    W -. Ranged opportunity after retreat .-> R
+    B[Barbarian attack] -->|Braveheart| S
+
+    S --> T[Melee trade veto and provisional danger tolerance]
+    S --> F[Final safety checks<br/>Braveheart has exceptions]
+```
+
+The corresponding entry points are `ExecuteAttackWithUnits` for zone and barbarian combat, `PositionUnitsAroundTarget` for gathering, reinforcement, and defense, and `CheckForEnemiesNearArmy` for army contact. `PerformRangedOpportunityAttack` uses low-aggression simulation when movement or post-attack repositioning is possible; otherwise it chooses a direct ranged attack without simulation. An enemy-unit target records the last aggression used against it and is retried only when a later pass raises the level.
 
 Aggression controls the melee counter-damage trade veto and provisional danger tolerance. The veto applies only when a melee attack takes counter-damage and has a safe reachable alternative. It scales expected damage dealt by the friendly-to-enemy force balance, database damage weight, and level multiplier without changing normal attack scoring. It rejects a non-killing attack when the scaled trade is unfavorable and projected HP or danger crosses the level's threshold. Ranged attacks take zero simulated counter-damage, so they skip the veto, but completed plans still face final end-position safety checks.
 
