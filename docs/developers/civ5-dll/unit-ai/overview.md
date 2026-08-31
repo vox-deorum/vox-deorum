@@ -77,7 +77,7 @@ Relevant entry points are `CvLuaPlayer::lSetCustomFlavors`, `CvFlavorManager::Se
 
 ### Demand
 
-Military demand combines flavors, war plans, force counts, threats, supply, and formation gaps. `CvMilitaryAI::DoTurn` coordinates it and `SetRecommendedArmyNavySize` calculates force targets. Civilian systems retain demand for their own roles, including settlers, workers, explorers, traders, religious units, diplomats, and antiquity or culture units.
+[Military demand](military-production.md#military-demand) combines flavors, war plans, force counts, threats, supply, and formation gaps. `CvMilitaryAI::DoTurn` coordinates it and `SetRecommendedArmyNavySize` calculates force targets. [Civilian demand](civilian-production.md#civilian-demand) remains role-owned for settlers, workers, work boats, land explorers, trade units, messengers, and archaeologists. Religion AI keeps separate faith-purchase demand, which [Acquisition](acquisition.md#faith-priority-and-legality) explains.
 
 ### Production
 
@@ -108,8 +108,8 @@ Military demand combines flavors, war plans, force counts, threats, supply, and 
 ## Unit AI guides
 
 - [Production](production.md): shared city comparison and candidate gates.
-- [Military production](military-production.md): military demand and formation requests.
-- [Civilian production](civilian-production.md): civilian role demand and scoring.
+- [Military production](military-production.md#military-demand): military force targets and formation requests.
+- [Civilian production](civilian-production.md#civilian-demand): civilian role demand and scoring.
 - [Acquisition](acquisition.md): gold and faith purchases, including operation and emergency purchases.
 - [Upgrade](upgrade.md): upgrade ranking and replacement.
 - [Operation](operation.md): Tactical-to-Homeland handoff and per-turn control.
