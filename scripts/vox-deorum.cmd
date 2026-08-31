@@ -130,6 +130,11 @@ set "CIV_PID="
 set "FAILED_SERVICE_ID="
 set "FAILED_SERVICE_NAME="
 set "FAILED_SERVICE_LOG="
+set "FAILED_SERVICE_LOG_START_LINE=0"
+
+call :count_log_lines "%BRIDGE_LOG_FILE%" BRIDGE_LOG_START_LINE
+call :count_log_lines "%MCP_LOG_FILE%" MCP_LOG_START_LINE
+call :count_log_lines "%VOX_LOG_FILE%" VOX_LOG_START_LINE
 
 :: Refuse to start when a prior service is still listening on a required port.
 call :check_port_free 5000 "Bridge Service"
@@ -303,15 +308,15 @@ set "WAIT_NAME=%~2"
 set /a WAIT_LIMIT=%~3
 set /a WAIT_COUNT=0
 :wait_for_url_file_loop
-call :check_services_running
-if errorlevel 1 (
-    echo [ERROR] %FAILED_SERVICE_NAME% exited before %WAIT_NAME% published its shutdown URL.
-    exit /b 2
-)
 if exist "%WAIT_FILE%" (
     set "WAIT_VALUE="
     set /p WAIT_VALUE=<"%WAIT_FILE%"
     if defined WAIT_VALUE exit /b 0
+)
+call :check_services_running
+if errorlevel 1 (
+    echo [ERROR] %FAILED_SERVICE_NAME% exited before %WAIT_NAME% published its shutdown URL.
+    exit /b 2
 )
 if !WAIT_COUNT! GEQ !WAIT_LIMIT! (
     echo [ERROR] Timed out waiting for %WAIT_NAME% shutdown URL file: %WAIT_FILE%
@@ -330,6 +335,7 @@ if defined BRIDGE_PID (
         set "FAILED_SERVICE_ID=bridge"
         set "FAILED_SERVICE_NAME=Bridge Service"
         set "FAILED_SERVICE_LOG=%BRIDGE_LOG_FILE%"
+        set "FAILED_SERVICE_LOG_START_LINE=%BRIDGE_LOG_START_LINE%"
         exit /b 1
     )
 )
@@ -339,6 +345,7 @@ if defined MCP_PID (
         set "FAILED_SERVICE_ID=mcp"
         set "FAILED_SERVICE_NAME=MCP Server"
         set "FAILED_SERVICE_LOG=%MCP_LOG_FILE%"
+        set "FAILED_SERVICE_LOG_START_LINE=%MCP_LOG_START_LINE%"
         exit /b 1
     )
 )
@@ -348,16 +355,17 @@ if defined VOX_PID (
         set "FAILED_SERVICE_ID=vox"
         set "FAILED_SERVICE_NAME=Vox Agents"
         set "FAILED_SERVICE_LOG=%VOX_LOG_FILE%"
+        set "FAILED_SERVICE_LOG_START_LINE=%VOX_LOG_START_LINE%"
         exit /b 1
     )
 )
 exit /b 0
 
 :print_failed_log_tail
-:: Print the final 50 lines from the failed service's combined log.
+:: Print up to 50 combined log lines written by the failed launch.
 echo.
 echo ========================================
-echo Final 50 lines from %FAILED_SERVICE_NAME%
+echo Final log lines from this %FAILED_SERVICE_NAME% launch
 echo ========================================
 if not defined FAILED_SERVICE_LOG (
     echo [INFO] No log file is configured for this service.
@@ -377,7 +385,12 @@ if !TAIL_LAST_LINE! EQU 0 (
     echo [INFO] Combined log has no readable lines: %FAILED_SERVICE_LOG%
     exit /b 0
 )
+if !TAIL_LAST_LINE! LEQ !FAILED_SERVICE_LOG_START_LINE! (
+    echo [INFO] No new combined log output was written by this launch.
+    exit /b 0
+)
 set /a TAIL_SKIP_LINES=TAIL_LAST_LINE-50
+if !TAIL_SKIP_LINES! LSS !FAILED_SERVICE_LOG_START_LINE! set /a TAIL_SKIP_LINES=FAILED_SERVICE_LOG_START_LINE
 if !TAIL_SKIP_LINES! LSS 1 (
     type "%FAILED_SERVICE_LOG%" | findstr /r "^.*"
 ) else (
@@ -385,12 +398,21 @@ if !TAIL_SKIP_LINES! LSS 1 (
 )
 exit /b 0
 
+:count_log_lines
+:: Record the last readable line so later diagnostics exclude older launches.
+set "COUNT_FILE=%~1"
+set "COUNT_VARIABLE=%~2"
+set "COUNT_LAST_LINE=0"
+if exist "%COUNT_FILE%" for /f "tokens=1 delims=:" %%a in ('findstr /r /n "^.*" ^< "%COUNT_FILE%"') do set "COUNT_LAST_LINE=%%a"
+set "%COUNT_VARIABLE%=%COUNT_LAST_LINE%"
+exit /b 0
+
 :check_port_free
 set "CHECK_PORT=%~1"
 set "CHECK_NAME=%~2"
 set "CHECK_OWNER_PID="
 set "CHECK_OWNER_NAME=unknown"
-for /f "tokens=1" %%a in ('powershell -NoProfile -Command "Get-NetTCPConnection -State Listen -LocalPort %CHECK_PORT% -ErrorAction SilentlyContinue ^| Select-Object -First 1 -ExpandProperty OwningProcess"') do set "CHECK_OWNER_PID=%%a"
+for /f "tokens=5" %%a in ('netstat -ano -p tcp ^| findstr /r /c:":%CHECK_PORT% .*LISTENING"') do if not defined CHECK_OWNER_PID set "CHECK_OWNER_PID=%%a"
 if not defined CHECK_OWNER_PID exit /b 0
 for /f "tokens=1 delims=," %%a in ('tasklist /FI "PID eq %CHECK_OWNER_PID%" /FO CSV /NH 2^>nul') do set "CHECK_OWNER_NAME=%%~a"
 
