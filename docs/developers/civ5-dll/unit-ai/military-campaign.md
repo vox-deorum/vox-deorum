@@ -1,231 +1,117 @@
 # Unit AI: Military Campaign
 
-Military campaign decides when an AI player creates a persistent military operation, where its army gathers, and what lasting goal it pursues. Tactical AI moves the operation army and handles local fighting, while campaign logic keeps the operation, muster point, target, and completion or abort state across turns. See [military operation](military-operation.md) for the overall military unit-control model.
+**Military campaign** logic decides when an AI player creates a persistent military operation and maintains its strategic destination until success or abort. An **operation target** is that lasting destination. An **army goal** is the active movement waypoint, normally initialized and retargeted from the target. A **muster point** is the assembly plot selected for the army, often from a **muster city**, the city that supplies the assembly location. [Military organization](military-organization.md) owns recruitment and formation state; [military tactics](military-tactics.md) owns per-turn movement and combat.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvDiplomacyAI.cpp`, and `CvTacticalAnalysisMap.cpp`.
 
-## Creating a campaign
+## Campaign families and triggers
 
-`CvMilitaryAI::UpdateOperations` reviews wars, threatened cities, attack candidates, and available forces before unit movement. It does not rank every operation type in one shared score. Each family has a distinct trigger and then supplies its own target and muster logic.
+`CvMilitaryAI::UpdateOperations` reviews wars, threatened cities, attack candidates, and available forces before unit movement. Each **operation family** has its own trigger and initial target and muster logic.
 
 ```mermaid
 flowchart TD
-    subgraph STRATEGY[Strategic and world inputs]
-        WAR[/Diplomatic war intent<br/>and war state/]
-        PATH[/Scored enemy-city paths/]
-        RESERVES[/Available reserves/]
-        LAND[/Threatened land city<br/>and nearby enemy force/]
-        COAST[/Threatened coastal city<br/>with accessible water/]
-        NUKE[/Available nuclear unit<br/>and launch decision/]
-        CARRIER[/Idle, healthy carrier/]
-    end
-
-    subgraph TACTICAL[Tactical-zone input]
-        ZONE{{Zone territory<br/>and dominance}}
-    end
-
-    subgraph FAMILY[Operation families]
-        ATTACK[[City attack<br/>land, naval, or combined]]
-        PILLAGE[[Pillage enemy]]
-        RAPID[[Rapid response]]
-        DEFENSE[[City defense]]
-        NAVAL[[Naval superiority]]
-        NUCLEAR[[Nuclear attack]]
-        GROUP[[Carrier group]]
-    end
-
-    WAR --> ATTACK
-    PATH --> ATTACK
-    RESERVES --> ATTACK
-    WAR --> PILLAGE
-    RESERVES --> PILLAGE
-    LAND --> RAPID
-    LAND --> DEFENSE
-    COAST --> NAVAL
-    NUKE --> NUCLEAR
-    CARRIER --> GROUP
-    ZONE -. enemy-dominated city .-> DEFENSE
-    ZONE -. war-state input .-> WAR
-    ZONE -. threat ranking .-> LAND
-    ZONE -. threat ranking .-> COAST
-    ZONE -. border-zone filter .-> PILLAGE
-    ZONE -. target value .-> NUCLEAR
-    ZONE -. deployment area .-> GROUP
-
-    ATTACK --> INIT[Initialize operation]
-    PILLAGE --> INIT
-    RAPID --> INIT
-    DEFENSE --> INIT
-    NAVAL --> INIT
-    NUCLEAR --> INIT
-    GROUP --> INIT
-    INIT --> TARGET[(Persistent target and army goal)]
-    INIT --> MUSTER[(Persistent muster point)]
-
-    classDef strategic fill:#fff5e6,stroke:#b96a00,stroke-width:2px;
-    classDef tactical fill:#eef6ff,stroke:#3178c6,stroke-width:2px;
-    classDef family fill:#eef8ee,stroke:#397a3d,stroke-width:2px;
-    class WAR,PATH,RESERVES,LAND,COAST,NUKE,CARRIER strategic;
-    class ZONE tactical;
-    class ATTACK,PILLAGE,RAPID,DEFENSE,NAVAL,NUCLEAR,GROUP family;
+    I[War intent, paths, reserves,<br/>threatened cities, nuclear units, carriers] --> F[Operation family]
+    Z[Tactical-zone facts] --> F
+    F --> O[Initialize operation]
+    O --> T[Target and army goal]
+    O --> M[Muster point]
 ```
-
-The orange strategic inputs, blue tactical-zone input, and green operation families separate the sources of a campaign decision. The blue, dashed connections are deliberately narrow. A dominance zone normally chooses a local posture for Tactical AI, not a campaign. It crosses the boundary only where campaign selection needs local threat or deployment context. [Military tactics](military-tactics.md#dominance-zones) explains zones and postures; [military organization](military-organization.md) explains how an operation turns its selected formation into an army.
-
-### City attacks
-
-`UpdateAttackTargets` rebuilds enemy-city candidates from land and water paths every Military AI turn. For each path, it compares land, naval, and combined approaches. The selected approach must be the best of the three and have a score greater than 30. Candidate ranking then accounts for distance, city value, conquest and liberation value, and relevant city-state quests.
-
-Diplomacy AI can request a city attack while preparing a war, and Military AI can request one during an existing war when reserves and war state allow it. That war intent comes from `CvDiplomacyAI::DoUpdateWarTargets`, which turns approach scores and cooperative-war commitments into `CIV_APPROACH_WAR`. For an existing war, `CvDiplomacyAI::DoUpdateWarStates` grades each enemy into a `WarStateTypes` value from war score, endangered and besieged cities, important-city damage, and tactical dominance. `RequestCityAttack` maps the chosen approach to `CITY_ATTACK_LAND`, `CITY_ATTACK_NAVAL`, or `CITY_ATTACK_COMBINED`. Bullying reuses the land or naval city-attack operation that fits the shared land or water area.
-
-### Operation families
 
 | Family | Creation input | Initial target and muster |
 | --- | --- | --- |
-| City attack | A reachable, scored enemy city and the corresponding land, naval, or combined approach | Land attacks use the selected city and muster city. Naval and combined attacks use coastal-water plots beside the requested target and muster cities. |
-| Pillage enemy | A wartime offensive request with enough available units | The best enemy border-zone city by worked luxury and strategic resources supplies the target. The nearest compatible friendly city supplies muster. |
-| Rapid response | A threatened land city, or a nearby enemy land force during defense review | At war declaration it begins at the threatened city. Later it can start from the city owning the selected nearby enemy plot and seeks a blocking position. |
-| City defense | A threatened land city in an enemy-dominated tactical zone | The threatened city is both the persistent defensive target and the initial destination. |
-| Naval superiority | A threatened coastal city with a valid adjacent water plot | It musters at nearby friendly coastal water and initially targets water beside the threatened city. |
-| Nuclear attack | A nuclear unit is available and the active-war launch decision succeeds | The highest-value eligible enemy city in range is the target. The selected nuclear unit's plot is muster. |
-| Carrier group | An unassigned carrier that does not need healing | A suitable deployment zone nearest home is preferred. With no zone, the carrier stays at its current plot, or at adjacent coastal water when it begins in a city. |
+| City attack | Reachable scored enemy city with a land, naval, or combined approach | Land uses the selected city and muster city. Naval and combined use water plots beside the requested target and muster cities. |
+| Pillage enemy | Wartime offensive request with sufficient available units | The best enemy border-zone city by worked luxury and strategic resources is the target. The nearest compatible friendly city supplies muster. |
+| Rapid response | Threatened land city, or nearby enemy land force during defense review | At war declaration, the threatened city is the target. Later, the city owning the selected enemy plot supplies the target, and the army seeks a blocking position. |
+| City defense | Threatened land city in an enemy-dominated tactical zone | The threatened city is the persistent target and initial destination. |
+| Naval superiority | Threatened coastal city with a valid adjacent water plot | Nearby friendly coastal water is muster, and water beside the threatened city is the target. |
+| Nuclear attack | Available nuclear unit and successful active-war launch decision | The highest-value eligible enemy city in range is the target. The selected unit's plot is muster. |
+| Carrier group | Unassigned carrier that does not need healing | The nearest suitable deployment zone is preferred. Otherwise the carrier holds its current plot or adjacent coastal water when it begins in a city. |
 
-For nuclear attacks, target evaluation avoids cities about to fall or originally owned by the attacker, scores units and improvements in the blast radius, and reduces the score for a city in a friendly-dominated land or water zone. A carrier deployment zone is a movable water zone beside enemy territory that is not under friendly dominance, is itself not enemy-dominated, has a valid move plot for the player, and is not already targeted by another carrier operation. Initial carrier selection ranks those zones by city-distance from home. It does not test a carrier path.
+### City attacks
 
-## Flavors and tactical zones
+`UpdateAttackTargets` rebuilds enemy-city candidates from land and water paths each Military AI turn. Each path compares land, naval, and combined approaches. The selected approach must be best among the three and score above 30. Candidate ranking includes distance, city value, conquest value, liberation value, and relevant city-state quests.
 
-Flavors do not provide a general operation-selection or target-selection weight. `FLAVOR_USE_NUKE` directly changes the chance that an eligible nuclear operation is requested. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape recommended force allocation, so they can determine whether enough units are available for an attack. `FLAVOR_OFFENSE` also changes Tactical AI's tolerance for unit losses. That is a per-turn combat choice, not campaign selection.
+`CvDiplomacyAI::DoUpdateWarTargets` can request an attack while preparing war through `CIV_APPROACH_WAR`. In an existing war, `CvDiplomacyAI::DoUpdateWarStates` provides the per-enemy `WarStateTypes` value that gates attacks and defensive pullbacks. It evaluates war score, endangered and besieged cities, important-city damage, and tactical dominance. `RequestCityAttack` maps the selected approach to `CITY_ATTACK_LAND`, `CITY_ATTACK_NAVAL`, or `CITY_ATTACK_COMBINED`. Bullying uses the compatible land or naval city-attack operation.
 
-Tactical zones contribute more specific local facts:
+### Specialized family selection
 
-- Enemy dominance at a threatened city can request `CITY_DEFENSE` and can prompt another naval-superiority operation for a threatened coast.
-- Pillage selects only enemy cities whose land zone borders one of the attacker's zones.
-- Friendly dominance reduces a nuclear target's value. Carrier groups derive their deployment areas from neighboring enemy and water zones.
-- Threatened-city ranking considers local tactical conditions alongside focus areas and revealed foreign territory. It is separate from volatile plot danger and from diplomatic warmonger threat.
+Nuclear evaluation excludes cities likely to fall or originally owned by the attacker, scores units and improvements in the blast radius, and reduces value in a friendly-dominated land or water zone. A carrier deployment zone is movable water beside an enemy zone that has a valid player move plot. Its water zone cannot be enemy-dominated, the adjacent enemy land zone cannot be friendly-dominated, and another carrier operation cannot already target it. Initial carrier selection ranks those zones by city-distance from home without testing a carrier path.
 
-These inputs make campaigns responsive to a front without giving zone posture control of the whole campaign. Per-turn contact movement and combat decisions remain in [military tactics](military-tactics.md).
+## Tactical-zone inputs
 
-## Persistent campaign state
+A **dominance zone** is a per-turn tactical region with territory and local strength data. Its **posture** chooses local combat behavior. Campaign logic reads zone facts only where family selection needs local threat, borders, target value, or deployment context. [Military tactics](military-tactics.md#dominance-zones) defines both concepts and their calculations.
 
-Operation initialization creates the family operation, stores its target and muster plot, and sets the army goal. The goal normally begins as the target. While recruiting or gathering, the army moves toward muster. Once it is moving, it moves toward its goal. [Military organization](military-organization.md#organization-and-control) covers formations, slots, and army membership.
-
-```mermaid
-flowchart LR
-    R[Recruiting units] --> G[Gathering forces]
-    G --> M[Moving to target]
-    M -->|deployment range reached| S[[Successful finish]]
-    M -->|abort condition| X[[Aborted]]
-    R -->|abort condition| X
-    G -->|abort condition| X
-    M -->|carrier retargets| M
-```
-
-| State | Persistent work |
+| Zone fact | Campaign use |
 | --- | --- |
-| Recruiting units | The operation waits for its formation to become ready. |
-| Gathering forces | The army converges at muster. |
-| Moving to target | The army follows its operation goal until it reaches deployment range or is stopped. |
-| Successful or aborted | Cleanup removes the operation and releases its units for later control. |
+| Enemy dominance at a threatened city | Requests city defense and can request naval superiority for a threatened coast. |
+| Enemy-zone border | Limits pillage candidates to enemy cities whose land zone borders an attacker zone. |
+| Friendly dominance | Reduces nuclear target value. |
+| Neighboring enemy and water zones | Defines carrier deployment areas. |
+| Local conditions, focus areas, and revealed foreign territory | Contribute to threatened-city ranking. |
 
-Ordinary military operations do not remain in the generic at-target state, `AI_OPERATION_STATE_AT_TARGET`. Reaching deployment range marks them successful, then cleanup disbands the army. Carrier groups are different: they are never-ending operations and can keep moving as their deployment target changes. [Military organization](military-organization.md#organization-and-control) explains the operation-to-army relationship.
+`FLAVOR_USE_NUKE` directly changes the chance of an eligible nuclear request. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape recommended force allocation. `FLAVOR_OFFENSE` also changes Tactical AI loss tolerance during combat simulation. Family selection and city-target scoring remain family-specific.
 
-## Non-carrier target changes
+## Persistent target lifecycle
 
-Target validation runs during operation checks, including before and after army movement. A replacement changes the stored target and army goal, but not the muster point. Most dynamic families switch whenever they find a valid replacement. They do not require the new target to beat the old one by a score margin.
-
-```mermaid
-flowchart TD
-    CHECK[Validate non-carrier target]
-    FIXED[Fixed target ownership check]
-    DYNAMIC[Find a current local target]
-    KEEP[[Keep target and goal]]
-    SWITCH[[Replace target and army goal]]
-    ABORT[[Abort operation]]
-
-    CHECK --> FIXED
-    CHECK --> DYNAMIC
-    FIXED -->|city attack, city defense,<br/>or nuclear target remains valid| KEEP
-    FIXED -->|ownership invalid| ABORT
-    DYNAMIC -->|pillage or naval target found| SWITCH
-    DYNAMIC -->|rapid-response target is<br/>more than five plots away| SWITCH
-    DYNAMIC -->|rapid-response target within five plots| KEEP
-    DYNAMIC -->|no valid target| ABORT
-```
-
-City attacks keep their target while the plot is unowned or owned by the intended enemy. City defense keeps its city while it remains friendly, and a nuclear attack keeps its city while it remains enemy-owned. Pillage reevaluates the best valid border-city resource target. Naval superiority picks the shortest valid water path among the three highest-ranked threatened coastal cities.
-
-Rapid response finds the strongest visible enemy land cluster near the homeland. It replaces its target only when that cluster is more than five plots from the stored target. Tactical AI handles the local response within that radius.
-
-### Carrier target changes
-
-Carrier groups reconsider their target only after reaching the moving stage. They are never-ending operations, so reaching a deployment area does not complete the campaign.
+Initialization stores the target and muster point, then sets the army goal. Recruiting and gathering direct the army to the muster point. Moving directs it to its goal.
 
 ```mermaid
-flowchart TD
-    REVIEW[Carrier group moving]
-    DANGER{Carrier projected to die next turn?}
-    ZONE{Suitable zone on the same landmass?}
-    HOME{Friendly coastal-water fallback?}
-    SET[[Set target and army goal]]
-    ABORT[[Abort operation]]
-
-    REVIEW --> DANGER
-    DANGER -->|yes| ABORT
-    DANGER -->|no| ZONE
-    ZONE -->|yes| SET
-    ZONE -->|no| HOME
-    HOME -->|yes| SET
-    HOME -->|no| ABORT
+stateDiagram-v2
+    [*] --> Recruiting
+    Recruiting --> Gathering: enough formation strength
+    Gathering --> Moving: within muster tolerance
+    Moving --> SuccessfulFinish: deployment range reached
+    Recruiting --> Aborted
+    Gathering --> Aborted
+    Moving --> Aborted
+    Moving --> Moving: carrier retargets
+    state "Successful finish, later cleanup releases members and marks deployment" as SuccessfulFinish
+    state "Aborted, cleanup releases members" as Aborted
 ```
 
-It ranks suitable zones by plot distance from the carrier's current position, after limiting them to its landmass. If no zone remains, it targets friendly coastal water. This is distance ranking, not path reachability. A carrier projected to die next turn aborts the operation, and losing the carrier's required slot cancels it immediately.
+The diagram shows the standard lifecycle. An operation with no required open slots can begin moving immediately. Nuclear attacks complete from recruiting after firing, and carrier groups continue moving as their target changes.
+
+Ordinary military operations complete when their center of mass reaches deployment range and their furthest member is within twice that range. While at peace, discovery by more than two enemy-visible members also completes the operation. Cleanup releases their units. Carrier groups continue indefinitely and remain active when they reach a deployment area so their target can change.
+
+### Non-carrier retargeting
+
+Target validation runs during operation checks, including before and after army movement. A replacement updates the target and army goal while preserving the muster point.
+
+| Family | Validation and replacement |
+| --- | --- |
+| City attack | Keeps its city while unowned or owned by the intended enemy. Ownership loss aborts it. |
+| City defense | Keeps its city while friendly. Ownership loss aborts it. |
+| Nuclear attack | Keeps its city while enemy-owned. Ownership loss aborts it. |
+| Pillage | Replaces the target with the best valid border-city resource target, or aborts when none exists. |
+| Naval superiority | Uses the shortest valid water path among the three highest-ranked threatened coastal cities, or aborts when none exists. |
+| Rapid response | Finds the strongest visible enemy land cluster near the homeland. It replaces a target more than five plots away and keeps the current target within five plots. |
+
+Pillage and naval-superiority families accept a valid replacement immediately. Their retargeting has no score margin over the current target.
+
+### Carrier retargeting
+
+Carrier groups reconsider the target after reaching the moving stage. They rank suitable zones on the carrier's landmass by plot distance from its current position. When no zone is available there, they target friendly coastal water or abort when no fallback water exists. A carrier projected to die next turn aborts the operation, as does loss of the carrier's required slot.
 
 ## Abandonment and cleanup
 
-An operation can end through invalid targets, the army's losses, or a strategic cancellation. It also has a hard safety timeout: an operation that has run for more than 42 turns aborts, except for the never-ending carrier group.
+An operation aborts for invalid targets, specified strategic cancellations, army-strength loss, lost path, or timeout. The timeout is more than 42 turns, except for carrier groups, which continue indefinitely.
 
-```mermaid
-flowchart TD
-    subgraph INPUTS[Campaign events]
-        REVIEW[Scheduled operation review]
-        LOSS[Unit leaves formation]
-        UPDATE[Strategic operation update]
-    end
+| Event | Result |
+| --- | --- |
+| Member leaves during recruiting | Reopens its formation slot for recruitment or production. |
+| Member leaves during gathering, moving, or at target | Aborts when filled slots fall below half the formation's original required slots, using integer division. A formation with two required slots aborts as soon as fewer than two remain. |
+| Offensive maintenance | Removes badly hurt members and members whose newest checkpoint ETA fails to improve over the oldest value in a three-sample window. Resulting losses use the same strength check. |
+| No step path | `CvTacticalAI::PlotArmyMovesCombat` sets `AI_ABORT_LOST_PATH` when `ComputeTargetPlotForThisTurn` yields no step path. |
+| Blocked center of mass | `CvAIOperation::Move` writes a diagnostic warning when the center of mass fails to progress with sufficient variance. It does not itself abort the operation. |
+| Strategic review | `UpdateOperations` cancels for forced peace, an unattacked opponent, a disappearing threatened-city list for a domain, or a war-state defensive pullback. |
 
-    subgraph CHECKS[Campaign stopping checks]
-        REVIEW_RESULT[Timeout, missing army,<br/>or invalid target]
-        STAGE{Loss during recruitment?}
-        REFILL[Reopen formation slot]
-        STRENGTH[Formation below<br/>strength threshold]
-        CANCEL[Strategic cancellation]
-        STOP{Any stopping condition?}
-    end
-
-    CONTINUE[[Continue campaign]]
-    ABORT[[Abort and release army]]
-
-    REVIEW --> REVIEW_RESULT
-    LOSS --> STAGE
-    STAGE -->|yes| REFILL
-    STAGE -->|no| STRENGTH
-    UPDATE --> CANCEL
-    REVIEW_RESULT --> STOP
-    REFILL --> STOP
-    STRENGTH --> STOP
-    CANCEL --> STOP
-    STOP -->|yes| ABORT
-    STOP -->|no| CONTINUE
-```
-
-During recruitment, a removed unit reopens its formation slot. During gathering, movement, or the at-target state, the operation aborts when filled slots fall below half the formation's original required slots, using integer division. A two-required-slot formation has a stricter exception: it aborts as soon as fewer than two slots remain filled. Offensive operations also remove badly hurt units and units whose latest checkpoint ETA has not improved over the oldest value in a three-sample window, which can trigger the same strength check. A stalled army does not abort its operation by itself: blocked group movement only produces a diagnostic log line, and the operation ends only through those per-unit removals, the strength check, an invalid target, or the timeout.
-
-`UpdateOperations` can cancel operations in bulk when forced peace applies, when an opponent cannot be attacked, when a threatened-city list disappears for a domain, or when the war state requires a defensive pullback. A city-defense operation is not cancelled merely because its tactical zone is no longer enemy-dominated. It remains tied to its city until a target, loss, timeout, or strategic rule ends it.
+A city-defense operation remains attached to its city after that city's tactical zone ceases to be enemy-dominated. It ends through target loss, member loss, timeout, or an applicable strategic rule.
 
 ## Implementation trace
 
-1. `CvMilitaryAI::DoTurn` refreshes military counts, strategies, and war type, then runs `UpdateAttackTargets` and `UpdateOperations`, all before unit movement.
-2. `CvDiplomacyAI::DoUpdateWarTargets` and `DoUpdateWarStates` supply the war intent and per-enemy war state that gate offensive requests and defensive pullbacks.
-3. `CvPlayer::UpdateCityThreatCriteria` scores each city's threat from tactical dominance, borders, focus areas, and nearby enemies, producing the threatened-city ranking `UpdateOperations` consumes.
-4. Operation `Init` methods store the target and muster plots and set the army goal, and each family's `VerifyOrAdjustTarget` applies the retargeting rules above during operation checks.
+1. `CvMilitaryAI::DoTurn` refreshes military counts, strategies, and war type, then runs `UpdateAttackTargets` and `UpdateOperations` before unit movement.
+2. `CvDiplomacyAI::DoUpdateWarTargets` and `DoUpdateWarStates` provide war intent and per-enemy state.
+3. `CvPlayer::UpdateCityThreatCriteria` ranks city threats from tactical dominance, borders, focus areas, and nearby enemies.
+4. Family `Init` methods store target and muster data. Each family's `VerifyOrAdjustTarget` validates or replaces its target during operation checks.
 
-For formation recruitment and army membership, see [military organization](military-organization.md). For per-turn operation movement, Tactical ownership, and the Homeland handoff, see [military tactics](military-tactics.md).
+For formation recruitment and membership, see [military organization](military-organization.md). For movement, local combat, and the Homeland handoff, see [military tactics](military-tactics.md).

@@ -1,6 +1,6 @@
 # Unit AI: Military Organization
 
-Military operations give selected combat units a durable structure across turns. An operation holds the campaign state, an army records a formation, and each occupied formation slot identifies one unit. This page explains that organization and how it changes during recruiting, mustering, movement, and cleanup. For operation goals and the wider turn flow, see the [military operation overview](military-operation.md).
+**Military organization** gives a campaign's units durable structure across turns. An operation owns the campaign state, its army owns a formation, and formation slots identify the army's members. This page covers membership, recruitment, stage changes, and release. [Military campaign](military-campaign.md) owns the operation's target and stopping rules; [military tactics](military-tactics.md) owns each turn's missions.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvTacticalAI.cpp`, `CvMilitaryAI.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 
@@ -8,81 +8,71 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvAIOper
 
 ```mermaid
 flowchart LR
-    O[Operation<br/>owner, type, stage, muster, target]
-    A[Army<br/>formation, goal, army state]
-    S[Formation slot<br/>required flag and role]
-    U[Unit<br/>player owner and Army ID]
-    O --> A
-    A --> S
-    S --> U
+    O[Operation<br/>owner, type, stage, target, muster] -->|creates and owns| A[Army<br/>formation, state, goal]
+    A -->|defines| S[Formation slot<br/>roles and required flag]
+    S -->|assigns| U[Unit<br/>Army ID]
+    U -. membership record .-> A
 ```
 
-An operation persists its owner, enemy, type, stage, muster point, target, and army IDs. Its army persists the formation definition, army state, goal, and one entry for each formation slot. A slot has primary and secondary `UnitAI` roles and a required flag. Filling it records the unit ID and makes that unit an army member.
+The operation owns the army, and each occupied formation slot gives its unit the Army ID that records that membership.
 
-| State | Meaning |
+An **operation** records its owner, enemy, type, stage, target, **muster point**, and army IDs. The muster point is the assembly plot, selected from a **muster city** when that family uses a city source. An **army** records its formation, current state, and **army goal**, the waypoint it is currently moving toward. The army goal usually matches the campaign's operation target once the army moves, while recruiting and gathering use the muster point.
+
+A **formation** is the definition of an army's required and optional roles. Each **formation slot** holds primary and secondary `UnitAI` roles, a required flag, and an assigned unit ID when occupied. The unit's **Army ID** is the unit-side record of that membership and drives its Tactical operation move tag.
+
+| Record | Control effect |
 | --- | --- |
-| Player ownership | The player owns the operation, army, and unit. Assigning a unit does not change the unit's player owner. |
-| Army assignment | The unit receives the army's ID and operation Tactical move tag. Tactical AI routes it through army movement, and Homeland AI does not recruit it. |
-| Formation membership | The slot is the army's record of the assigned unit. The unit's Army ID is the unit-side record of that claim. |
+| Player ownership | The player retains ownership of the operation, army, and unit. Assignment does not transfer the unit to another player. |
+| Formation slot | The army uses the slot to find, move, remove, and replace its member. |
+| Army ID | Tactical AI sends the unit through army movement. Routine Homeland and independent-Tactical recruitment leave it with the army. |
 
-The structure stores a list of army IDs, but the implemented military movement, recruitment, and stage-transition paths use the first army. Built-in military operations create one army. Treat a unit's Army ID as a single current control assignment, not as a supported cross-army transfer mechanism. Normal recruitment rejects units that already belong to an army.
+Built-in military operations create one army and use the first stored army ID in their movement, recruitment, and stage transitions. Normal reserve recruitment accepts unassigned units. `CvArmyAI::AddUnit` can transfer an already assigned unit after removing it from its previous army, but that path does not make concurrent membership a supported state.
 
 ## Recruitment and stages
 
 ```mermaid
 flowchart LR
-    R[Recruiting<br/>waiting for reinforcements]
-    G[Gathering<br/>waiting to catch up]
-    M[Moving<br/>to army goal]
-    F[Finished or aborted<br/>release members]
-    R -->|enough formation strength| G
-    G -->|within muster tolerance| M
-    M --> F
-    R --> F
-    G --> F
+    R[Recruiting<br/>fill formation] -->|enough formation strength| G[Gathering<br/>converge at muster]
+    G -->|within muster tolerance| M[Moving<br/>follow army goal]
+    M -->|completion rule met| S[Successful finish<br/>cleanup releases members and marks deployment]
+    R -->|abort condition| X[Aborted<br/>cleanup releases members]
+    G -->|abort condition| X
+    M -->|abort condition| X
 ```
 
-The operation and army states change together, but have different jobs. The operation records the campaign stage. The army records whether it is waiting for reinforcements, waiting for its members to catch up, moving, or at its destination.
+The diagram shows the standard lifecycle. An operation with no required open slots can begin moving immediately. Nuclear attacks complete from recruiting after firing, and carrier groups continue moving as their target changes.
 
-| Stage | Membership and movement behavior |
+Success preserves the completed deployment record for temporary reserve exclusion, while abort returns surviving members without that deployment mark.
+
+| Stage | Army work |
 | --- | --- |
-| Recruiting | The army waits for reinforcements. A reserve scan can fill compatible open slots, then unfilled required slots become operation production needs. |
-| Gathering | The operation has enough formation strength. Assigned units converge around the muster point, within a tolerance that accounts for formation size, domain, and usable space. |
-| Moving | The army moves toward its goal, normally the operation target or a selected deployment plot. Local combat can interrupt that movement. |
-| Finished or aborted | The operation releases members and later cleanup deletes the completed army and operation. |
+| **Recruiting** | Fills compatible open slots from reserves and records remaining required slots as production needs. |
+| **Gathering** | Positions members around the muster point until the formation is within a tolerance for formation size, domain, and usable space. |
+| **Moving** | Moves members toward the army goal, with Tactical AI able to handle local combat and contact. |
+| **Finished or aborted** | Releases members, then later cleanup removes the army and operation. |
 
-### Reserves and production
+`CvAIOperation::SetUpArmy` performs the first reserve scan. `CvAIOperation::Move` repeats that scan only while the army is `ARMYAISTATE_WAITING_FOR_UNITS_TO_REINFORCE`. A scan ranks available units for all open slots and can fill several slots. It excludes units whose assignment, health, role, recent deployment, path, or domain makes them unsuitable.
 
-`CvAIOperation::SetUpArmy` performs an initial reserve scan. After that, `CvAIOperation::Move` runs a reserve scan only while the army is `ARMYAISTATE_WAITING_FOR_UNITS_TO_REINFORCE`. It does not scan reserves while the army is gathering, moving, or at its destination.
+Recruiting advances after at least one required slot is filled. Optional slots can supply enough formation strength while required slots remain empty. Each remaining required slot becomes an operation need. A city can commit to train one need, moving it to the committed list. Cancellation returns it to the need list, and completion clears the commitment before suitable produced units join the operation. With exactly one uncommitted required slot during recruiting, the operation can buy a primary-role match in a suitable nearby city. [Military production](military-production.md) details candidate selection and purchase rules.
 
-One scan considers all open slots, ranks suitable available units, and can fill multiple slots in that same scan. It excludes units already assigned or unsuitable because of health, role, recent deployment, path, or domain. A suitable unit is assigned to one compatible slot, then receives its Army ID and operation move tag.
+**Nuclear attack operations** use specialized recruitment: their slot-fill check accepts an unassigned nuclear unit already on the muster plot, and their stage transition skips normal formation-readiness and gathering checks.
 
-Recruiting ends only after at least one required slot is filled. Optional members can compensate for some missing required slots, so gathering does not imply that every required slot is occupied.
+## Membership changes and release
 
-After the scan, every still-open required slot is stored as an operation need. A city can commit to train one of those slots. The commitment moves the slot from the need list to the committed list, and cancellation returns it to the need list. When the city finishes its unit, player and city bookkeeping clear the commitment and recruit the produced unit into the operation when it is suitable. This is a production commitment, not an immediate unit purchase. With exactly one uncommitted required slot during recruiting, the operation can instead buy a primary-role match in a suitable nearby city. See [military production](military-production.md) for the production candidate and purchase rules.
+While a unit is an army member, Tactical AI positions it through the operation rather than the **independent unit** pool. An independent unit is a movable, unprocessed combat-capable unit with no Army ID that Tactical AI can assign to local zones and global priorities. A member can still receive army movement, safety moves, and nearby contact fights. [Military tactics](military-tactics.md#operation-army-movement) covers those moves.
 
-Nuclear attack operations override these recruitment and completion hooks. Their slot-fill check accepts only an unassigned nuclear unit already standing on the muster plot instead of searching and scoring reserves, and their stage transition skips the normal formation-readiness and gathering checks. The mechanics in this section therefore describe every built-in military operation except the nuclear attack.
+Formation positioning leaves a member in place when it has already acted or has no movement left.
 
-### Mustering and assignment
+`CvArmyAI::AddUnit` upgrades a unit before placing it in a free slot when an immediate upgrade is available. The Homeland upgrade pass also supports an army member: it temporarily removes the old unit without reporting a loss, upgrades it, then restores the replacement to the same slot when the upgrade succeeds. This is the exception to the routine Homeland rule that requires no Army ID.
 
-Recruiting and gathering both point army positioning at the muster point. They are not idle stages. Tactical AI positions current army members around that point, while the operation waits for the required formation to arrive and then for the furthest member to be inside the gather tolerance.
+Members leave an army when they are destroyed, explicitly removed, released, or removed by army maintenance:
 
-While assigned, a unit is not available to unrelated Tactical zones or to Homeland AI. It can participate in army-controlled movement, but not also receive an independent Tactical or Homeland assignment that turn. If it has no movement or has already acted, formation positioning leaves it alone. See [military tactics](military-tactics.md) for army contact and local-combat behavior.
+- Offensive operations release badly hurt members for Tactical recovery.
+- Each army records checkpoint arrival estimates. It removes a member when the newest estimate in a three-sample window is at least two turns and has not improved over the oldest estimate.
+- Removal clears the slot, Army ID, and operation move tag, then restores the unit's default `UnitAI` role. A surviving movable unit can rejoin the current Tactical pool.
 
-## Replacement, loss, and release
+During recruiting, removal reopens the slot as a production need. Later stages apply the formation-strength abort rules in [military campaign](military-campaign.md#abandonment-and-cleanup). On success or abort, the operation releases every member. Success marks members with the deployment turn, and reserve suitability excludes recently deployed units for the configured temporary-zone interval, five turns by default.
 
-`CvArmyAI::AddUnit` places a unit in a specified free slot. If the unit can upgrade immediately, it upgrades first and the replacement unit becomes the slot member. Homeland AI's upgrade pass also has explicit bookkeeping for an army member: it temporarily removes the old unit without reporting a loss, upgrades it, then restores the replacement to the same slot when the upgrade succeeds.
+**Carrier groups** place the carrier in the formation's first slot. Its carried aircraft remain outside the formation and rebase independently.
 
-An assigned unit can leave an army for several reasons:
-
-- An offensive operation removes a member that needs healing, so Tactical AI can handle recovery.
-- Each turn, the army records arrival estimates at its current checkpoint. It removes a unit when the latest ETA in a three-sample window has not improved over the oldest ETA.
-- A destroyed, explicitly removed, or released unit clears its slot, Army ID, and operation move tag. Its default `UnitAI` role is restored. A surviving movable unit returns to the current Tactical pool.
-
-Losses have different effects by stage. During recruiting, a removed member reopens that slot as a production need. During gathering, moving, or the at-target state, the operation instead checks whether the remaining formation is strong enough to continue. [Military campaign](military-campaign.md#abandonment-and-cleanup) gives the operation-level consequence and threshold.
-
-On either abort or success, the operation releases its army members. Successful operations additionally mark each released unit with its deployment turn. The reserve suitability check rejects recently deployed units for the configured temporary-zone interval, five turns by default, which prevents an immediately successful army from being recruited straight into another operation.
-
-Carrier groups are a useful boundary case. The carrier itself occupies the formation's first slot and moves with the army. Aircraft carried by it are not formation members: they rebase independently and remain outside the carrier operation's slot bookkeeping.
-
-For campaign targets and operation-level stopping conditions, see [military campaign](military-campaign.md). For the shared claim order and later Homeland handoff, see [unit operation](unit-operation.md#control-state).
+For the shared claim order and later Homeland handoff, see [operation control state](operation.md#control-state-and-claims).

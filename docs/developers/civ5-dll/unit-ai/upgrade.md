@@ -1,126 +1,103 @@
 # Unit AI: Upgrade
 
-Unit upgrade replaces an existing unit with a newer civilization-specific type. It does not add another unit or enter the city production comparison. Homeland AI owns the ranked, savings-aware pass, while Tactical AI and Army AI can use the same replacement action opportunistically.
+An **upgrade** replaces an existing unit with a newer civilization-specific unit. A **replacement** is the new unit that inherits the old unit's applicable state. The **upgrade target** is the civilization-specific type resolved from the unit's upgrade class, including a valid trait-provided special target.
 
-The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvHomelandAI.cpp`, `CvUnit.cpp`, `CvTacticalAI.cpp`, `CvArmyAI.cpp`, and `CvEconomicAI.cpp`. The [unit AI overview](overview.md#runtime-order-and-conflicts) places upgrades within the full AI turn.
+The main ranked pass is a **Homeland pass**, an ordered `CvHomelandAI` assignment pass for units available to Homeland control. Tactical AI and Army AI also use the shared upgrade action at tactical opportunities. The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp`, `CvUnit.cpp`, `CvTacticalAI.cpp`, `CvArmyAI.cpp`, and `CvEconomicAI.cpp`.
 
-## Homeland upgrade flow
+## Homeland upgrade pass
 
-`CvHomelandAI::PlotUpgradeMoves` scans every AI-controlled unit, including military and civilian units. It builds one ranked list, attempts as many upgrades as current state and gold permit, then requests savings for the leading unit left behind.
+`CvHomelandAI::PlotUpgradeMoves` scans all AI-controlled units, including those currently associated with armies. It ranks candidates, upgrades each candidate that remains legal and safe as gold is spent, then records the leading deferred candidate as a **savings request**, Economic AI state that reserves gold for a purchase category.
 
 ```mermaid
 flowchart TD
-    A[Scan all player units]
-    B[Apply Homeland candidate gates]
-    C[Resolve target and score survivors]
-    D[Sort by descending priority]
-    E[Inspect next candidate]
-    F{Legal now, safe,<br/>resourced, and supply allowed?}
-    G[Detach army slot if needed]
-    H[CvUnit::DoUpgrade]
-    I[Restore replacement and mark it processed]
-    J[Remember first deferred candidate]
-    K{More candidates?}
-    L{Deferred candidate exists?}
-    M[Replace the unit-upgrade savings request]
-    N[[End pass]]
-
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F -->|yes| G
-    G --> H
-    H --> I
-    I --> K
-    F -->|no| J
-    J --> K
-    K -->|yes| E
-    K -->|no| L
-    L -->|yes| M
-    L -->|no| N
-    M --> N
+    S[Scan all player units] --> G[Homeland candidate gates]
+    G --> R[Resolve target and score survivors]
+    R --> O[Sort by descending priority]
+    O --> A[Inspect next candidate]
+    A --> C{Ready, safe, resourced, and supplied?}
+    C -->|yes| H[Detach army slot when present]
+    H --> U[DoUpgrade]
+    U --> P[Restore replacement and process it]
+    C -->|deferred| F[Remember first deferred candidate]
+    P --> M{More candidates?}
+    F --> M
+    M -->|yes| A
+    M -->|no| Q{Deferred candidate exists?}
+    Q -->|yes| W[Replace unit-upgrade savings request]
+    Q -->|no| E[[End pass with no new request;<br/>an existing request can remain]]
+    W --> E
 ```
 
-The Homeland candidate gates are stricter than the shared upgrade action:
+Takeaway: Homeland continues after each upgrade or deferral. It replaces the savings request only for the first candidate that remains deferred, and an existing request can remain when no candidate is deferred.
 
-| Layer | Rules |
+| Layer | Applied rules |
 | --- | --- |
-| Homeland candidate | The unit is AI-controlled, has movement left, is not awaiting death or projected to die next turn, occupies the owner's territory, and is in its native domain rather than embarked. |
-| Upgrade target | `CvUnit::GetUpgradeUnitType` resolves an upgrade class to the owner's civilization-specific unit. Game events can veto a normal target, and a trait-provided special upgrade can replace it. Homeland also requires the target's prerequisite technology. |
-| Shared action | `CvUnit::CanUpgradeTo`, normally reached through the `CanUpgradeRightNow` readiness wrapper, requires the target's technology and project, a legal end-turn plot and upgrade territory, no embarkation, unit-class capacity, compatible cargo state, enough gold and strategic resources, and a city or carrier for an air unit. Game events can veto the action. |
-| Homeland policy | Danger must be lower than the unit's current hit points. The resource check is repeated for the replacement, and a no-supply unit cannot become supply-consuming when the player is already at or above the supply limit. |
+| Homeland candidate | The unit is AI-controlled, can move, is alive beyond this turn, stands in owner territory in its native domain, and is unembarked. |
+| Upgrade target | `CvUnit::GetUpgradeUnitType` resolves the civilization-specific target. The Homeland pass also requires its prerequisite technology. Game events can veto the normal target and traits can supply a special target. |
+| Shared action | `CvUnit::CanUpgradeRightNow` reaches `CanUpgradeTo`, which validates readiness, the target technology and project, a legal end-turn plot and upgrade territory, capacity, cargo compatibility, gold, strategic resources, and an air-unit city or carrier. Game events can veto the action. |
+| Homeland safety and supply | Danger stays below current hit points. `HasResourceForNewUnit` repeats the replacement resource check. An out-of-supply unit cannot become supply-consuming while the player is at or above its supply limit. |
 
-The shared territory rule can allow some vassal or city-state territory. The Homeland pass still considers only units standing on plots owned by the player. A blocked unit remains available for later turns.
+The shared territory rule accepts the applicable vassal or city-state territory. Homeland candidates start on owner plots, which makes its pass narrower than the shared action.
 
-## Priority and savings
+## Ranking and gold reservation
 
-Homeland assigns each candidate a numeric priority before checking whether it can upgrade immediately.
-
-| Signal | Priority effect |
+| Signal | Effect on Homeland priority |
 | --- | --- |
-| Current power | Lower-power unit types rank ahead of stronger ones. |
-| Immediate action | A unit that can upgrade now and is safe from lethal local danger receives a large boost. |
-| Owned territory | A candidate that cannot act immediately receives a smaller fallback boost while in owned territory. |
-| Domain | Air and sea units double their pre-experience score. |
-| Experience | More experienced units receive a final additive bonus. |
+| Current unit power | Lower-power unit types rank first. |
+| Immediate readiness and safe local danger | Adds the largest upgrade boost. |
+| Owner territory | Adds a smaller fallback boost for a unit that cannot upgrade immediately. |
+| Air or sea domain | Doubles the score before experience. |
+| Experience | Adds the final experience bonus. |
 
-The stable descending sort determines both action order and the first deferred candidate. Each successful upgrade spends gold before the next candidate is checked, so one pass can modernize several units and then stop when later candidates no longer qualify.
+The stable descending sort determines the upgrade order and the first candidate retained for savings. Each completed action spends gold before the next candidate is tested. When candidates remain, Homeland cancels the existing `PURCHASE_TYPE_UNIT_UPGRADE` request and starts a new one for the first deferred candidate's price, with a priority derived from the military-training flavor. When no candidates remain, the current source calls cancellation only when no unit-upgrade request is recorded, leaving an existing request in place.
 
-If any ranked candidate remains, Homeland replaces the `PURCHASE_TYPE_UNIT_UPGRADE` savings request with that unit's current upgrade price. Its priority starts with `AI_GOLD_PRIORITY_UPGRADE_BASE` and adds `FLAVOR_MILITARY_TRAINING` pressure. War multiplies that flavor contribution. Economic AI arbitrates this request with other planned purchases, so it mainly protects gold for a later turn rather than restoring gold already spent earlier in the current turn.
+## Replacement state
 
-## Replacement action
-
-All ordinary AI paths eventually call `CvUnit::DoUpgrade`, a thin wrapper that resolves the normal target with `GetUpgradeUnitType` and calls `DoUpgradeTo`. The action creates a new unit on the same plot and removes the old unit, so callers must continue with the returned replacement pointer and ID.
+`CvUnit::DoUpgrade` calls `DoUpgradeTo`, pays the upgrade price for a paid action, creates the replacement on the unit's plot, converts its state, and removes the old unit.
 
 ```mermaid
 flowchart LR
-    O[Old unit]
-    P[Pay upgrade price<br/>unless the action is free]
-    N[Create target unit<br/>on the same plot]
-    E[Fire the upgrade event]
-    C[Convert valid unit state]
-    M{Target can move<br/>after upgrade?}
-    F[Finish movement]
-    S[Restore prior attack<br/>and activity state]
-    K[Kill old unit]
-    R[[Replacement unit]]
-
-    O --> P
-    P --> N
-    N --> E
-    E --> C
-    C --> M
-    M -->|no| F
-    M -->|yes| S
-    F --> K
-    S --> K
-    K --> R
+    O[Old unit] --> P[Pay upgrade price<br/>for a paid action]
+    P --> N[Create target replacement<br/>on the same plot]
+    N --> E[Fire upgrade event]
+    E --> C[Convert applicable state<br/>and remove old unit]
+    C --> M{Target retains movement?}
+    M -->|no| F[Finish movement]
+    M -->|yes| A[Keep replacement movement]
+    F --> K[Final delayed-death cleanup call]
+    A --> K
+    K --> R[[Replacement unit]]
 ```
 
-`CvUnit::convert` carries forward or recalculates compatible promotions, experience, level, name, damage, origin, transport relationships, and ownership history. Promotions that no longer fit a changed combat class can become replacement experience. The target's upgrade rules decide whether movement ends. Squad membership is restored by `DoUpgradeTo`; army membership belongs to the caller, so Homeland removes the old unit from its slot and adds the replacement back to the same slot.
+Takeaway: an upgrade pays and creates the replacement first, then conversion removes the old identity. The replacement follows its movement rule before final cleanup runs.
 
-See [military organization](military-organization.md#replacement-loss-and-release) for the surrounding army-slot lifecycle.
-
-`CvUnit::upgradePrice` starts with a base cost and the positive production difference between the unit types. Era, handicap, AI, unit discount, player modifier, exponent, and display-rounding settings then revise it. Minor civilizations and barbarians pay no upgrade price.
-
-## Other upgrade paths
-
-| Path | Behavior |
+| State area | Replacement handling |
 | --- | --- |
-| Tactical AI | Garrison, defensive, safety, and processed-unit paths can upgrade an unharmed unit when shared legality and supply allow it. These checks use current gold and do not create the ranked Homeland savings request. A barbarian camp defender uses a separate free-upgrade path. |
-| Army assignment | `CvArmyAI::AddUnit` can upgrade a legal unit before writing it into a formation slot. It applies the supply safeguard, but not Homeland's danger ranking or Tactical AI's unharmed-unit rule. |
-| Automatic free upgrade | Technology acquisition and unit creation can immediately upgrade units covered by a free-upgrade unit or player trait, provided the target can be trained. This bypasses Homeland ranking and gold cost. |
-| Human or scripted action | The unit command and Lua wrappers expose the same eligibility and replacement primitives. They are action entry points, not AI prioritization systems. |
+| Identity and location | Receives the resolved target type, owner, plot, name, and applicable visual state. |
+| Combat progress | Carries promotions, experience, damage, movement state, and other unit conversion state. |
+| Commands and missions | Clears current activity and mission state for the replacement action. |
+| Army membership | Homeland removes the old unit from its army slot before upgrade, then restores the replacement to that slot when the army still exists. [Membership changes and release](military-organization.md#membership-changes-and-release) covers the slot mechanics. |
+| Turn ownership | Homeland processes the old unit ID and marks the replacement `TurnProcessed`, preventing another controller from claiming it that turn. |
 
-These paths share `GetUpgradeUnitType`, `CanUpgradeRightNow`, and `DoUpgrade`, but their caller-specific safety and supply rules differ. `CanUpgradeRightNow` alone does not express the complete AI policy.
+`CvUnit::convert` carries compatible promotions, experience, level, name, damage, origin, transport relationships, and ownership history. Promotions that no longer fit the target combat class can convert to replacement experience. The target unit's upgrade rule decides whether movement ends. `CvUnit::upgradePrice` combines base cost, positive production difference, era, handicap, AI, unit discount, player modifier, exponent, and display-rounding settings. Minor civilizations and barbarians receive a zero price.
 
-## Implementation trace
+## Caller-specific policies
 
-1. `CvHomelandAI::AssignHomelandMoves` reaches `PlotUpgradeMoves` late in the Homeland turn, after Tactical AI and earlier Homeland work have already constrained movement and gold.
-2. `PlotUpgradeMoves` collects and ranks candidates, then calls `CanUpgradeRightNow` and its own danger, resource, and supply checks in priority order.
-3. `CvUnit::DoUpgradeTo` pays the price, creates the target type, converts retained state, and removes the old unit.
-4. Homeland restores army membership, marks both identities processed where appropriate, and sends the first deferred candidate to Economic AI as an upgrade savings request.
+| Caller | Opportunity and policy |
+| --- | --- |
+| Homeland AI | Performs the all-unit ranked pass, owner-territory candidate gate, danger test, repeated resource test, supply policy, army-slot restoration, and savings request. |
+| Tactical AI | Attempts upgrades during several tactical moves when the unit is ready and unharmed. It applies the supply policy, then processes the replacement. |
+| Army AI | Can upgrade army units through its shared action path. The caller retains responsibility for the army context and follow-up processing. |
+| Automatic free upgrade | Technology acquisition and unit creation can apply a free target upgrade when the target can train. It uses the shared target and replacement primitives without Homeland ranking or gold cost. |
+| Human or scripted action | Unit commands and Lua wrappers expose the shared eligibility and replacement actions. |
 
-With AI logging enabled, successful Homeland upgrades record the old and new unit types plus the replacement location. A deferred request records the unit, available gold, required gold, and savings priority.
+The supply policy permits an upgrade when the player has supply capacity or the original unit already consumes supply. It avoids adding a supply burden from a no-supply unit while the player is over capacity.
+
+## Implementation and diagnostics
+
+1. `CvHomelandAI::AssignHomelandMoves` calls `PlotUpgradeMoves` late in the Homeland turn, after Tactical AI and most earlier Homeland passes.
+2. `PlotUpgradeMoves` ranks candidates, performs safe upgrades, restores army membership, and refreshes the unit-upgrade savings request.
+3. `CvUnit::CanUpgradeRightNow`, `CanUpgradeTo`, `DoUpgrade`, and `DoUpgradeTo` validate and create the replacement.
+4. Tactical and Army AI can invoke the same action during their own movement paths.
+
+With AI logging enabled, `PlayerHomelandAILog.csv` records candidate selection, upgrades, and savings requests. Inspect the unit's target, local danger, strategic-resource state, supply count, gold, and army slot when a ranked candidate remains deferred.

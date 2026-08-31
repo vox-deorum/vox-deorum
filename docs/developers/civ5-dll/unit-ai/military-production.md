@@ -1,63 +1,69 @@
 # Unit AI: Military Production
 
-Military production turns empire force demand and formation gaps into weighted unit candidates for one city. City production then compares those candidates with every other buildable and chooses the queue order. The production page covers the shared [candidate lifecycle, fallback, duration adjustment, and selection](production.md#candidate-lifecycle) and [candidate gates](production.md#candidate-types).
+**Force demand** is the empire's need for land, naval, and explorer strength. **Formation gaps** are unfilled required army or operation slots. **Military production** turns both into weighted unit candidates for one city. The [shared candidate lifecycle](production.md#candidate-lifecycle) then compares them with all other buildables, and the [shared candidate gates](production.md#shared-candidate-gates) apply before unit suitability.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvUnitProductionAI.cpp`, `CvCityStrategyAI.cpp`, `CvCity.cpp`, `CvPlayerAI.cpp`, `CvAIOperation.cpp`, and `CvArmyAI.cpp`.
 
-## Military inputs
+## Demand and candidate sources
 
-| Input | Military use |
-| --- | --- |
-| Effective city flavors | Base preference for each trainable unit. [Flavor mapping](overview.md#flavors) is shared with all production. |
-| Force state | Current and in-production land, naval, and explorer counts; supply; wars; threats; and role balance. |
-| Formation gaps | Open operation slots and free required army slots, each with primary and secondary `UnitAI` roles. |
-| City feasibility | Construction time, maintenance, resources, deployment space, naval access, city safety, and available upgrades. |
+`CvMilitaryAI::SetRecommendedArmyNavySize` calculates force demand. For major civilizations, it starts with the soft supply cap, reserves explorer capacity, and divides remaining capacity between land and naval targets. City and coastal-city counts, protected settlers, exposed cities, attack targets, domain overages, and offense, defense, and naval flavors shape that division. Minor civilizations use a simpler land and naval calculation.
 
-`MILITARYAISTRATEGY_*` names are Vox Populi boolean state flags. They provide military role gates and scoring signals. In Vox Deorum, custom flavors are still the main steering input. They do not replace every state check.
+Major-civilization explorer demand has a shortage weight and a hard supply-aware limit. The target begins at the lower of one quarter of the soft supply cap and Economic AI's explorer need, then lowers when supply cannot support it. The remaining capacity supports land and naval targets.
 
-## Candidate sources
-
-| Source | What it adds to the precheck list | Distinct pressure |
+| Candidate source | Definition | Weight inputs |
 | --- | --- | --- |
-| Ordinary unit | Each trainable unit with a positive flavor-derived weight | Its flavor-derived weight. |
-| Operation request | One recommended concrete unit for the next required operation slot at this city's muster point | A high request weight, offense flavor, the unit's ordinary weight, and the operation skip counter. |
-| Army request | One recommended concrete unit for a free required army slot | An army request weight and offense flavor. |
+| Ordinary unit | A trainable unit with a positive flavor-derived base weight. | Its flavor-derived weight. |
+| **Operation request** | A concrete unit recommended for the next required slot of an active operation. | Operation base value, offense flavor, operation skip counter, and ordinary unit weight. |
+| **Army request** | A concrete unit recommended for a free required slot in any army. | Army base value and offense flavor. |
 
-The ordinary source includes military and civilian units. `CheckUnitBuildSanity` applies the matching military or civilian logic. A concrete military unit can appear more than once when an operation or army also requests it.
+`CvUnitProductionAI::RecommendUnit` selects the best trainable match for one `UnitAI` role and includes construction time. `CvCity::GetUnitForOperation` and `CvMilitaryAI::GetUnitTypeForArmy` call it for a slot's primary role, then its secondary role when necessary. A concrete unit can appear as an ordinary candidate and as one or both request candidates.
 
-## Force demand and suitability
+## Hard gates
 
-For major civilizations, `CvMilitaryAI::SetRecommendedArmyNavySize` starts from the soft supply cap, reserves explorer capacity, then divides the rest between land and naval forces. City and coastal-city counts, protected settlers, exposed cities, attack targets, existing domain overages, and offense, defense, and naval flavors shape the split. Minor civilizations use a simpler land and naval target calculation.
+The shared [candidate gates](production.md#shared-candidate-gates) cover trainability, puppets, developing cities, siege, and the request muster-city gate. Military suitability adds these hard gates:
 
-For major civilizations, explorer demand receives a shortage weight. Supply-consuming explorers also have a hard cap at the recommended explorer count. The target first limits explorers to a quarter of the soft supply cap, then lowers the limit when the empire cannot supply that many. The remaining force capacity is reserved for land and naval targets.
-
-`CvUnitProductionAI::CheckUnitBuildSanity` revises a candidate's weight or rejects it. The shared [unit gates](production.md#candidate-types) apply before these military signals.
-
-| Signal | Effect on military candidates |
+| Gate | Result |
 | --- | --- |
-| Force size and supply | Rewards shortages and rejects supply-consuming land, naval, or explorer units once their recommended limit is reached. Units in production count. |
+| Recommended-force limit | Supply-consuming land, naval, and explorer units stop entering normal selection once their respective recommendation is met. Units training count toward the limit. |
+| Strategic resource | A unit requiring an unavailable resource is rejected. |
+| Deployment and access | A candidate needs valid deployment space and suitable naval access where required. |
+| City development and maintenance | Underdeveloped cities and maintenance risk can reject the candidate. |
+| Obsolescence | Obsolete choices can be rejected. |
+
+## Score effects
+
+`CvUnitProductionAI::CheckUnitBuildSanity` applies these effects after a candidate reaches suitability. `MILITARYAISTRATEGY_*` names are Vox Populi state flags that provide role gates and score signals. Vox Deorum custom flavors remain the main steering input and the state flags continue to supply their role-specific effects.
+
+| Effect | Military signal |
+| --- | --- |
+| Force shortage | Rewards shortages in land, naval, and explorer strength. |
 | Role balance | Adjusts weight for need and enough states such as siege, archers, mobile units, aircraft, and naval roles. |
-| Threat and mission | Uses war domain, nearby threats, garrison demand, air balance, barbarian pressure, and operation context. |
-| Local feasibility | Rejects or penalizes maintenance risk, unavailable strategic resources, no valid deployment space, unsuitable naval access, obsolete choices, and unsafe or underdeveloped cities. |
+| Threat and mission | Uses war domain, city threat, garrison demand, air balance, barbarian pressure, and operation context. City threat favors combat candidates and penalizes noncombat candidates during war. |
+| City feasibility | Adjusts for construction time, maintenance, resources, deployment space, naval access, and available upgrades. |
 
-## Formation requests
+Both request weights read offense flavor through `GetPersonalityAndGrandStrategy`. With Vox Deorum custom flavors active, that call omits the active grand-strategy modifier.
 
-Both request sources start with an open formation slot. `CvUnitProductionAI::RecommendUnit` chooses the best trainable match for the primary `UnitAI` role. It tries the secondary role only when no primary match is available, and includes construction time when ranking the concrete unit. Both request weights read offense flavor from `GetPersonalityAndGrandStrategy`; with custom flavors active, that call excludes the active grand-strategy modifier.
+## Formation requests and the muster-city gate
 
-| Request | How its slot is chosen | City gate and pressure |
-| --- | --- | --- |
-| Operation | `CvPlayerAI::PeekAtNextUnitToBuildForOperationSlot` exposes the next required slot. | The city must be the muster city and be able to reach its landmass or ocean. The player-level operation skip counter adds pressure. |
-| Army | `CvMilitaryAI::GetUnitTypeForArmy` scans free required slots in every army. | It prefers an army with the fewest open slots, so nearly complete armies take priority. It has no operation-specific skip pressure. |
+A **muster city** is the city named as the assembly point for an operation's next required slot. An operation request uses that slot, requires its muster city, and must be able to reach the operation muster plot's landmass or ocean. The operation skip counter adds pressure each time the candidate reaches precheck and resets when that candidate is selected.
 
-Normally ordinary, operation, and army candidates all receive `CheckUnitBuildSanity`. The request forms share the unusual muster-city gate: both are checked only while the next operation slot names this city as its muster city. That fits operation requests, but it can leave an army request only in the precheck list when no qualifying operation request exists. If every candidate fails the shared suitability pass, the [all-failed fallback](production.md#candidate-lifecycle) restores the precheck list, including that army request.
+An army request scans free required slots across armies and prefers the army with the fewest open slots. It has no operation-specific skip pressure.
 
-An operation production candidate is a preference, not a commitment. `CvCity::CheckForOperationUnits` is the separate route that can purchase a unit or explicitly commit the city to train one for an operation. `CvMilitaryAI::MakeEmergencyPurchases` considers final-unit purchases only when the player is not using the at-war strategy or is winning all wars. For a recruiting operation with exactly one uncommitted required slot, `CvAIOperation::BuyFinalUnit` can purchase a primary-role match and assign it to that slot.
+### Shared muster-city gate
 
-See [military organization](military-organization.md#reserves-and-production) for how reserve recruitment, production commitments, and direct purchases become formation membership.
+Both request candidates use the same muster-city gate: they reach `CheckUnitBuildSanity` only when the next operation slot names the current city as its muster city. The gate lets operation candidates follow their assembly point. It also affects army candidates, even though their slots may belong to a different army. When no qualifying operation request exists, an army request can remain in `PRE` without reaching suitability. If all candidates fail suitability, the [all-failed fallback](production.md#candidate-lifecycle) restores that army request with the precheck list.
+
+## Weighted request and commitment paths
+
+An operation-request candidate is a weighted entry in ordinary city production. It can lose to another candidate after shared selection.
+
+**Operation commitment** uses `CvCity::CheckForOperationUnits`. It can direct a city to train the unit or purchase it for an operation. **Final-slot purchase** is a separate military path: `CvMilitaryAI::MakeEmergencyPurchases` considers it when the player is not using the at-war strategy or is winning every war. For a recruiting operation with one uncommitted required slot, `CvAIOperation::BuyFinalUnit` can purchase a primary-role match and assign it to that slot.
+
+[Military organization](military-organization.md#recruitment-and-stages) explains how reserve recruitment, commitments, and direct purchases become formation membership.
 
 ## Implementation trace
 
-1. `CvMilitaryAI::SetRecommendedArmyNavySize` updates land and naval targets, plus the explorer target for major civilizations.
-2. `CvCityStrategyAI::ChooseProduction` creates ordinary military entries, then asks `CvCity::GetUnitForOperation` and `CvMilitaryAI::GetUnitTypeForArmy` for request entries.
-3. `CvUnitProductionAI::CheckUnitBuildSanity` scores or rejects the entries that pass the request gate.
-4. Shared city production applies the [duration adjustment and final selection](production.md#candidate-lifecycle) across units, buildings, projects, and processes.
+1. `CvMilitaryAI::SetRecommendedArmyNavySize` updates force and explorer recommendations.
+2. `CvCityStrategyAI::ChooseProduction` creates ordinary candidates and asks `CvCity::GetUnitForOperation` and `CvMilitaryAI::GetUnitTypeForArmy` for request candidates.
+3. `CvUnitProductionAI::CheckUnitBuildSanity` scores or rejects candidates that pass the shared gates.
+4. The shared lifecycle applies duration adjustment and selection across units, buildings, projects, and processes.

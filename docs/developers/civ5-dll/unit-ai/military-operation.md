@@ -1,64 +1,55 @@
-# Unit AI: Military operation
+# Unit AI: Military Operation
 
-Military operation connects three layers. Campaign logic creates a persistent operation, organization assigns units to its army, and Tactical AI turns that state into missions each turn. The operation preserves a target, muster point, formation, and stage across turns. It does not replace local combat AI.
+A **military operation** is the persistent control record for one AI campaign. It keeps the campaign's target, muster point, formation, and stage across turns while the Unit AI chooses missions for individual units. This page maps the three control layers. The detailed pages own their respective rules.
 
-The shared [unit operation](unit-operation.md#per-turn-lifecycle) page explains the Tactical-to-Homeland handoff for all units. This page traces that military branch through the three layers.
-
-The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvTacticalAI.cpp`, `CvTacticalAnalysisMap.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
-
-## Military control layers
-
-| Layer | Scope | Detailed guide |
+| Layer | Responsibility | Detailed guide |
 | --- | --- | --- |
-| Campaign | Operation families, strategic requests, targets, muster points, and end conditions | [Military campaign](military-campaign.md) |
-| Organization | Armies, formation slots, recruitment, mustering, and release | [Military organization](military-organization.md) |
-| Tactics | Army movement, local combat, priorities, and the Homeland handoff | [Military tactics](military-tactics.md) |
+| **Campaign** | Creates an operation, selects and validates its destination, and ends or aborts it. | [Military campaign](military-campaign.md) |
+| **Organization** | Creates the army, fills its formation, gathers members, and releases them. | [Military organization](military-organization.md) |
+| **Tactics** | Converts the current map and operation state into this turn's movement, combat, and Homeland work. | [Military tactics](military-tactics.md) |
 
 ```mermaid
 flowchart TD
-    W[War plans, threats, paths,<br/>reserves, and tactical-zone facts]
-    C[Campaign<br/>family, target, muster, end conditions]
-    O[(Persistent operation state)]
-    A[Organization<br/>army, slots, members, stage]
-    T[Tactics<br/>waypoints, local combat, priorities]
-    M[[Individual unit missions]]
-    H[Homeland AI<br/>eligible leftovers]
-
-    W --> C
-    C --> O
-    O --> A
+    S[Strategic and world inputs<br/>war plans, paths, reserves, threats] --> C[Campaign]
+    C -->|creates and updates| P[(Persistent operation state<br/>target, muster, stage, progress)]
+    P --> O[Organization]
+    O -->|creates and fills| A[Army and formation<br/>members and Army IDs]
+    O -->|recruitment, muster, and stage changes| P
+    P --> T[Tactics]
     A --> T
-    W --> T
-    T --> M
-    T -->|still eligible| H
-    H --> M
-    M -->|progress, loss, completion| O
+    W[Visible world and unit state] --> T
+    T -->|issues| M[Unit missions]
+    T -->|eligible leftovers| H[Homeland AI]
+    H -->|issues| HM[Homeland missions]
+    M -->|map changes| W
+    HM -->|map changes| W
+    M -->|progress, loss, or completion| P
 ```
 
-## Persistent operations
+Persistent operation state connects campaign decisions across turns to army structure and current-turn missions. Homeland AI handles eligible units outside an army.
 
-A military operation is not always an attack. City attack, pillage, and nuclear operations support offensive campaigns. Rapid response, city defense, and naval superiority answer threats, while carrier groups maintain a deployment instead of finishing at the first destination. Each operation type has its own initialization and target logic rather than sharing a single score.
+The shared [operation lifecycle](operation.md#per-turn-lifecycle) explains the Tactical-to-Homeland handoff for all units. The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvTacticalAI.cpp`, `CvTacticalAnalysisMap.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 
-Tactical-zone territory and dominance provide several campaign inputs, including defensive demand, pillage eligibility, carrier deployment areas, and nuclear target value. Zone posture remains a per-turn tactical decision and does not replace the persistent operation target.
+## Persistent control
 
-## Armies and mustering
+An **operation target** is the lasting campaign destination, usually a city plot or adjacent coastal water. An **army goal** is the army's active movement waypoint. Initialization and retargeting normally set the goal to the target, while campaign families can use a deployment plot instead. [Military campaign](military-campaign.md#persistent-target-lifecycle) defines family-specific target, goal, completion, and abort rules.
 
-Built-in military operations create one army, and each unit can have only one current Army ID. [Military organization](military-organization.md#organization-and-control) explains why the stored army-ID list still behaves as a single army.
+A **muster point** is the plot where an army assembles before moving toward its goal. A **muster city** is the city selected as the source of that plot. The target and muster point persist separately, so retargeting replaces the target and goal without relocating the muster point. [Military organization](military-organization.md#recruitment-and-stages) explains how the formation gathers there.
 
-An operation normally recruits a formation, gathers its assigned units around the current muster point, then moves toward its goal. It begins in the movement stage when no required slots are open, and gathering ends once the assigned units are within tolerance. Campaign progress can also relocate the muster point. During normal Tactical recruitment, army members are routed through operation movement instead of the independent pool, and Homeland AI skips them while their Army ID remains set. They can still receive army-controlled movement, safety moves, and nearby contact fights. [Military organization](military-organization.md#recruitment-and-stages) covers recruitment, stage changes, removal, and release.
+Built-in military operations create one army. A member's **Army ID** is its current army claim, which routes it through operation movement until release. Army members can receive army-controlled movement, safety moves, and nearby contact fights. Routine Tactical and Homeland recruitment leave the member with its operation. The army-member upgrade exception is described in [membership changes and release](military-organization.md#membership-changes-and-release).
 
-## Flavor boundary
+## Campaign inputs and tactical decisions
 
-Military operation has no general flavor-to-action or flavor-to-operation weight map. `FLAVOR_USE_NUKE` directly affects nuclear-operation requests. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape force allocation and can therefore affect whether enough units are available. `FLAVOR_OFFENSE` also changes local combat-simulation risk thresholds in Tactical AI. These flavors do not choose a city target or operation approach. [Military campaign](military-campaign.md#flavors-and-tactical-zones) places them beside the actual operation requests.
+Campaign logic uses war plans, paths, reserves, threatened cities, and selected tactical-zone facts to create operations. **Tactical zones** and their postures supply local threat, pillage, carrier-deployment, and nuclear-value inputs, then Tactical AI recomputes them every turn for local movement and combat. [Military campaign](military-campaign.md#tactical-zone-inputs) describes the narrow campaign inputs; [military tactics](military-tactics.md#dominance-zones) defines zones and postures.
 
-Per-turn action selection depends on current danger, reachable plots, tactical posture, army state, and role directives.
+`FLAVOR_USE_NUKE` directly affects nuclear-operation requests. `FLAVOR_NAVAL`, `FLAVOR_DEFENSE`, and `FLAVOR_OFFENSE` shape force allocation. `FLAVOR_OFFENSE` also adjusts Tactical AI combat-simulation risk thresholds. Family-specific campaign rules select the operation family, target, and approach.
 
 ## Implementation map
 
 | Focus | Main entry points | Guide |
 | --- | --- | --- |
-| Campaign creation and goals | `CvDiplomacyAI::DoUpdateWarTargets`, `CvMilitaryAI::UpdateAttackTargets`, `CvMilitaryAI::UpdateOperations`, operation `Init` methods | [Military campaign](military-campaign.md) |
-| Army membership and mustering | `CvAIOperation::SetUpArmy`, `GrabUnitsFromTheReserves`, `CvArmyAI::AddUnit`, `CvArmyAI::RemoveUnit` | [Military organization](military-organization.md) |
+| Campaign creation, targets, and completion | `CvDiplomacyAI::DoUpdateWarTargets`, `CvMilitaryAI::UpdateAttackTargets`, `CvMilitaryAI::UpdateOperations`, operation `Init` methods | [Military campaign](military-campaign.md) |
+| Army membership, recruitment, and mustering | `CvAIOperation::SetUpArmy`, `GrabUnitsFromTheReserves`, `CvArmyAI::AddUnit`, `CvArmyAI::RemoveUnit` | [Military organization](military-organization.md) |
 | Per-turn army and unit missions | `CvTacticalAI::Update`, `ProcessDominanceZones`, `PlotArmyMovesCombat`, `CvHomelandAI::AssignHomelandMoves` | [Military tactics](military-tactics.md) |
 
-For logs and claim diagnostics, see [reading operation logs](unit-operation.md#reading-operation-logs).
+For logs and claim diagnostics, see [operation diagnostics](operation.md#implementation-and-diagnostics).
