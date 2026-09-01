@@ -27,6 +27,46 @@ For a normal AI player, `CvPlayerAI::AI_unitUpdate` runs Tactical AI before Home
 
 `CvAIOperation::DoTurn` maintains reserve membership, target validity, movement progress, army and operation state, and abort reason. Cleanup releases Army IDs and removes obsolete armies or operations. See [military organization](military-organization.md) for formation stages and release, and [civilian operation](civilian-operation.md) for civilian-specific ownership.
 
+## Completion, abort, and cleanup
+
+An active operation normally ends by entering **Successful Finish** or **Aborted**. A third path exists when `DoTurn` cannot continue without setting either state. Initialization failure is earlier: an invalid operation is rejected and deleted before it becomes active, so it has no abort reason.
+
+```mermaid
+flowchart TD
+    I[Operation request] --> V{Initialization valid?}
+    V -->|No| X[Reject and delete<br/>no abort reason]
+    V -->|Yes| O[Active operation]
+    O -->|completion condition| F[Successful Finish]
+    O -->|abort condition| A[Aborted with reason]
+    O -->|DoTurn cannot continue| D[Direct cleanup]
+    F --> S[Mark surviving members<br/>as recently deployed]
+    S --> C[Release members and delete<br/>army and operation]
+    A --> C
+    D --> R[Use the existing reason or<br/>AI_ABORT_KILLED]
+    R --> C
+```
+
+`ShouldAbort` checks operations in the pre-unit terminal sweep and before and after army movement. A terminal state found during `Move` releases its members and is deleted in that Tactical operation-movement pass. An ordinary military operation instead sets Successful Finish after `Move`, so the next pre-unit terminal sweep deletes it. If `DoTurn` returns false without a terminal state, the same Tactical pass deletes it.
+
+After initialization, common abort triggers include:
+
+- The operation exceeds 42 turns. Never-ending carrier groups skip this timeout.
+- Target validation cannot keep or replace the current target.
+- Tactical movement cannot find a usable path or rejects an unsafe route.
+- Member loss removes a critical civilian or carrier, leaves no army, or violates the post-Recruiting formation-strength rule.
+- Military or Diplomacy AI cancels the operation because war state, target validity, threat, or diplomatic intent changed.
+
+Each family supplies its successful completion rule and additional abort checks:
+
+| Operation family | Finishes successfully when | Family-specific terminal behavior |
+| --- | --- | --- |
+| Standard military | The army reaches deployment range and its furthest member is within twice that range. During a planned peacetime attack, exposure of more than two members also counts as deployment. | Invalid targets are retargeted where supported, otherwise the operation aborts. See [military target lifecycle](military-campaign.md#target-lifecycle). |
+| Civilian | The civilian reaches its target and its settlement, delegation, purchase, or concert mission succeeds. | It retargets when the role supports another valid destination. It aborts when the civilian is lost or no safe, legal target or path remains. See [civilian operations](civilian-operation.md#escorted-civilian-operations). |
+| Nuclear | A recruited nuclear unit can move, can legally strike the target, and issues the nuclear mission. | It has no Gathering or Moving phase. If setup cannot fire, its next Tactical operation-movement pass has no air-army movement handler, so `DoTurn` returns false and cleanup records `AI_ABORT_KILLED`. |
+| Carrier group | Never through ordinary deployment. | It stays in Moving and retargets until the carrier is projected to die next turn, its carrier slot is lost, no deployment or fallback target remains, or another abort rule applies. It has no normal timeout. |
+
+`CvAIOperation::Kill` records `AI_ABORT_SUCCESS` for Successful Finish, preserves a specific abort reason, or uses `AI_ABORT_KILLED` when an active operation reaches cleanup without either one. Invalid operations discarded during initialization do not pass through `Kill`.
+
 ## Control state
 
 | Concept | Purpose |

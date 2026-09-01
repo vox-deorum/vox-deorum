@@ -32,7 +32,7 @@ flowchart LR
 
 `CvAIOperationCivilian::Init` selects the civilian and target, then starts with the civilian's plot as the muster point. For an escorted naval operation on a plot the player does not own, it looks for the closest friendly coastal city. An escorted land operation relocates only from non-friendly territory. It then creates the army, assigns the civilian to formation slot zero, and clears escort formation slot one when the civilian can reach the target this turn.
 
-The operation recruits and gathers the escort, then `CvTacticalAI::PlotArmyMovesEscort` moves the army. Its `PerformMission` verifies range, movement, and legality before founding a city, conducting a delegation, or beginning a concert tour. Losing the civilian ends the operation. The operation can retain a valid replacement target, but invalid state follows the normal abort path.
+The operation recruits and gathers the escort, then `CvTacticalAI::PlotArmyMovesEscort` moves the army. Its `PerformMission` verifies range, movement, and legality before founding a city, conducting a delegation, or beginning a concert tour. Losing the civilian ends the operation. The operation can retain a valid replacement target, but invalid state follows the normal abort path. [Operation completion, abort, and cleanup](operation.md#completion-abort-and-cleanup) summarizes the shared terminal checks.
 
 ```mermaid
 flowchart LR

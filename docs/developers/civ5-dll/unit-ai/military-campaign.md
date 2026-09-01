@@ -45,7 +45,7 @@ A nuclear attack pairs owned nuclear units with enemy cities in range. It avoids
 
 ## Target lifecycle
 
-Initialization stores the target and muster point, then sets the army goal. The army recruits and gathers at the muster point before moving toward its goal. [Military organization stages](military-organization.md#stages-and-recruitment) defines the common Recruiting, Gathering, and Moving stages, formation readiness, and member release.
+Initialization stores the target and muster point, then sets the army goal. The army recruits and gathers at the muster point before moving toward its goal. [Military organization](military-organization.md#lifecycle-overview) defines the Recruiting, Gathering, and Moving lifecycles; [operation completion and abort](operation.md#completion-abort-and-cleanup) defines shared terminal-state handling.
 
 Ordinary operations finish when their center of mass reaches deployment range and their furthest member is within twice that range. While at peace, discovery by more than two enemy-visible members also completes the operation. Carrier groups remain active at a deployment area so they can receive another target. Nuclear attacks complete when they fire.
 
@@ -67,7 +67,7 @@ Pillage and naval-superiority operations accept any valid replacement immediatel
 
 ## Abort and cleanup
 
-An operation can abort for an invalid target, strategic cancellation, army-strength loss, a lost path, or timeout. The normal timeout is more than 42 turns; carrier groups continue indefinitely.
+An operation can abort for an invalid target, strategic or diplomatic cancellation, army-strength loss, a lost path, or timeout. The normal timeout is more than 42 turns; carrier groups continue indefinitely. See [operation completion, abort, and cleanup](operation.md#completion-abort-and-cleanup) for shared terminal checks and cleanup timing.
 
 | Event | Result |
 | --- | --- |

@@ -92,6 +92,8 @@ flowchart LR
 
 Carrier groups have no successful Finished transition. They remain in Moving until an abort or carrier loss releases the formation. Carried aircraft are not formation members and rebase independently.
 
+[Operation completion, abort, and cleanup](operation.md#completion-abort-and-cleanup) defines the terminal checks shared by these lifecycles and summarizes each family's finish and abort conditions.
+
 ## Ownership
 
 ```mermaid
