@@ -39,7 +39,7 @@ This document defines the target behavior. The staged implementation plan is in 
 ## Constraints
 
 - Every stage leaves the repository releasable.
-- The real 5.4 branch and its build artifact exist before the outer repository gains generic multi-line records, caches, or release plumbing.
+- Stage 3 establishes the generic records, cache, and install behavior with the real 5.2 artifact only. Stage 2 depends on that work and adds the real 5.4 branch, artifact, pin, and second supported line.
 - Records remain flat `KEY=VALUE` files because the cmd scripts parse them directly.
 - No new credentials are introduced. Fork reads use public GitHub and Git access.
 - The top-level `.dll-cache\version.txt` and `release-tag.txt` remain current-runtime metadata for `mcp-server/src/utils/vp-version.ts`. They are refreshed from the selected per-line cache.

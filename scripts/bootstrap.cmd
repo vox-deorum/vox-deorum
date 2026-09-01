@@ -6,9 +6,22 @@ setlocal EnableDelayedExpansion
 
 title Vox Deorum Quick Start
 
-:: Parse command line arguments - use tag from release.txt
+:: Parse an optional release tag, then preserve the remaining install arguments.
 set "TAG="
-if not "%~1"=="" set "TAG=%~1"
+set "INSTALL_ARGS="
+if "%~1"=="" goto :collect_install_arguments
+set "FIRST_ARGUMENT=%~1"
+if "!FIRST_ARGUMENT:~0,2!"=="--" goto :collect_install_arguments
+set "TAG=%~1"
+shift
+
+:collect_install_arguments
+if "%~1"=="" goto :install_arguments_collected
+set "INSTALL_ARGS=!INSTALL_ARGS! "%~1""
+shift
+goto :collect_install_arguments
+
+:install_arguments_collected
 
 :: Configuration
 set "REPO_URL=https://github.com/CIVITAS-John/vox-deorum.git"
@@ -151,14 +164,14 @@ if exist "%INSTALL_DIR%" (
 
         :: Simple force update - user configs are not tracked by git
         echo   Fetching latest changes...
-        git fetch --depth 1 --force origin tag %TAG%
+        git fetch --depth 1 --force origin tag "%TAG%"
 
         echo   Updating to tag %TAG%...
-        git reset --hard %TAG%
+        git reset --hard "%TAG%"
         if %errorlevel% neq 0 (
             echo   [WARN] Shallow update failed. Trying full fetch...
             git fetch --unshallow 2>nul
-            git reset --hard %TAG%
+            git reset --hard "%TAG%"
             if %errorlevel% neq 0 (
                 echo   [WARN] Update failed. Continuing with existing version...
             )
@@ -262,11 +275,12 @@ echo    Starting Vox Deorum Installation...
 echo ============================================
 echo.
 
-:: Run the installation script, passing all arguments
-call "%INSTALL_SCRIPT%" %*
+:: Run the installation script with the supplied install arguments.
+call "%INSTALL_SCRIPT%" %INSTALL_ARGS%
+set "INSTALL_RESULT=!errorlevel!"
 
 :: Check if installation was successful
-if %errorlevel% equ 0 (
+if "!INSTALL_RESULT!"=="0" (
     echo.
     echo ============================================
     echo       Quick Start Completed Successfully!
@@ -300,3 +314,4 @@ echo   [OK] Desktop shortcut created
 
 echo.
 pause
+exit /b !INSTALL_RESULT!

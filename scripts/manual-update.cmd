@@ -1,3 +1,6 @@
+@echo off
+setlocal
+
 call cleanup-data
 
 call cleanup-logs
@@ -10,4 +13,5 @@ git submodule update
 
 cd scripts
 
-call install
+call install %*
+exit /b %errorlevel%

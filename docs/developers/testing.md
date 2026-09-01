@@ -8,7 +8,7 @@ The DLL and the mod, being C++ and in-game Lua, are verified by building and by 
 
 ## Nothing is enforced for you
 
-The repository has three GitHub Actions workflows: `.github/workflows/release.yml`, `generate-docs.yml`, and `update-prebuilt-binaries.yml`. **None of them run tests**, and there is no workflow that reacts to a pull request. Nothing blocks a merge if the suites fail.
+The repository has two GitHub Actions workflows: `.github/workflows/release.yml` and `generate-docs.yml`. **Neither runs tests**, and there is no workflow that reacts to a pull request. Nothing blocks a merge if the suites fail.
 
 That makes the pre-submit routine below a matter of discipline rather than automation. Run it by hand before you push.
 

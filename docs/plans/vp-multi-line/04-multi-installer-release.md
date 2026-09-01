@@ -1,6 +1,6 @@
 # Stage 4: Multi-installer release pipeline
 
-> Part of the multi-line VP plan. Shared design lives in [README.md](README.md); requirements live in [specs.md](specs.md). Requires Stage 3, including both real line pins and line-aware DLL materialization.
+> Part of the multi-line VP plan. Shared design lives in [README.md](README.md); requirements live in [specs.md](specs.md). Requires Stage 2, which adds the second real pin to Stage 3's line-aware DLL materialization.
 
 ## Objective
 
@@ -37,7 +37,7 @@ Per-line parameters reach Inno Setup through `/D` preprocessor defines. `AppId` 
 
 ## Reuse
 
-- Stage 3's cache materialization and top-level MCP provenance metadata.
+- Stage 3's cache materialization and top-level MCP provenance metadata, completed for both pins by Stage 2.
 - The existing release workflow's versioning and publication steps.
 - The existing `{#VoxPopuliVersion}` uses in `installer.iss`.
 

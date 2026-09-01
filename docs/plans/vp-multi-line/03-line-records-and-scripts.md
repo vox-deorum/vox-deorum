@@ -1,21 +1,21 @@
 # Stage 3: VP line records and install scripts
 
-> Part of the multi-line VP plan. This stage runs after the real 5.2 and 5.4 DLL releases exist. The shared design lives in [README.md](README.md), and the requirements live in [specs.md](specs.md).
+> Part of the multi-line VP plan. This stage runs after the real 5.2 DLL release from Stage 1 and before Stage 2 adds 5.4. The shared design lives in [README.md](README.md), and the requirements live in [specs.md](specs.md).
 
 ## Objective
 
-Record the supported lines in `scripts/vp-lines.txt`, pin each line to one real DLL release, and make the install scripts select and cache those releases. The committed per-line pin files are the sole release authority. The default submodule gitlink is kept manually equal to the default line's `COMMIT`.
+Record the initial supported line in `scripts/vp-lines.txt`, pin its real DLL release, and make the install scripts select and cache that release through the generic line-aware path. The committed per-line pin files are the sole release authority. The default submodule gitlink is kept manually equal to the default line's `COMMIT`. Stage 2 adds 5.4 to this completed mechanism.
 
 ## Records
 
-Add `scripts/vp-lines.txt` with the default and supported lines:
+Add `scripts/vp-lines.txt` with the default and only supported line:
 
 ```text
 DEFAULT_LINE=5.2
-LINES=5.2 5.4
+LINES=5.2
 ```
 
-Seed each `scripts/dll-release-info-<line>.txt` from the Stage 1 and Stage 2 releases. Each contains exactly:
+Add `scripts/dll-release-info-5.2.txt` from the Stage 1 release. It contains exactly:
 
 ```text
 RELEASE_TAG=build-<vp-version>-<timestamp>-<sha7>
@@ -37,20 +37,19 @@ The repository is `CIVITAS-John/vox-populi` and the fork branch is derived as `v
 
 ## Release integration
 
-This stage hands Stage 4 the committed pins and the cache materialization. Stage 4 owns how the release workflow consumes them.
+This stage hands Stage 2 the generic cache materialization and the initial 5.2 pin. Stage 2 adds the 5.4 pin and completed two-line behavior. Stage 4 owns how the release workflow consumes both pins.
 
 ## Verification
 
-Run these checks only after real 5.2 and 5.4 artifacts and both committed pins are available:
+Run these checks with the real 5.2 artifact and its committed pin:
 
-1. Run `scripts\download-dll.cmd --line 5.2`, then `--line 5.4`, then `--line 5.2` again.
-2. Confirm each selected DLL and optional PDB is isolated under its line and mode cache. Confirm the final shared output and top-level MCP metadata describe 5.2 after the last run.
-3. Confirm each cache hit rematerializes its selected DLL and removes a stale PDB when the selected real release has none.
-4. Confirm no-argument invocation selects `DEFAULT_LINE`, invalid formats and unlisted lines fail, and a missing pin fails before any download.
-5. Run `scripts\install.cmd --line 5.2` and `--line 5.4` against matching source checkouts, then against a mismatched checkout. Matching checkouts produce no warning; mismatches produce the derived repair command without changing the checkout.
-6. Run `bootstrap.cmd --line 5.4` from a clean source directory and confirm `--line` is not treated as a release tag.
-7. Confirm the committed `civ5-dll` gitlink equals the 5.2 pin's `COMMIT`.
+1. Run `scripts\download-dll.cmd --line 5.2` twice. Confirm the second run is a cache hit that rematerializes the selected DLL and optional PDB into the shared output, and refreshes the top-level MCP metadata.
+2. Confirm stale PDB cleanup: a selected release without a PDB removes any stale shared PDB during materialization.
+3. Confirm no-argument invocation selects `DEFAULT_LINE`, invalid formats and the unlisted `5.4` line fail, and a missing 5.2 pin fails before any download.
+4. Run `scripts\install.cmd --line 5.2` against a checkout that does not match the 5.2 pin. Confirm the warning names the derived repair command and does not change the checkout. Stage 2 verifies matching and cross-line checkouts.
+5. Run `bootstrap.cmd --line 5.2` from a clean source directory and confirm `--line` is not treated as a release tag. Confirm `manual-update.cmd` forwards the same arguments to `install.cmd`.
+6. Confirm the committed `civ5-dll` gitlink equals the 5.2 pin's `COMMIT`.
 
 ## Done when
 
-Both real VP lines can be selected explicitly or by default, their DLL and PDB artifacts remain isolated by line and mode, the shared output can switch back from 5.4 to 5.2, and MCP runtime metadata always follows the selected release.
+The generic line-aware path supports the real 5.2 release, its cache hit rematerializes the shared output and runtime metadata, invalid or unpinned selections fail before download, and the gitlink equals the 5.2 pin. Stage 2 can add the real 5.4 line without changing the generic script design.

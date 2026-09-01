@@ -1,6 +1,6 @@
 # Stage 6: Merge playbook and documentation
 
-> Part of the multi-line VP plan. Shared design lives in [README.md](README.md); requirements live in [specs.md](specs.md). Requires Stages 1 through 5 so the documentation describes the implemented process.
+> Part of the multi-line VP plan. Shared design lives in [README.md](README.md); requirements live in [specs.md](specs.md). Requires completed Stages 1, 3, 2, 4, and 5 so the documentation describes the implemented process.
 
 ## Objective
 
@@ -8,7 +8,7 @@ Developers can merge an upstream VP release, maintain parity, and adopt, change,
 
 ## Approach
 
-Add one canonical playbook beside the existing `civ5-dll` developer docs, then update the pages that describe the old single-line release. The playbook records the process proven in Stages 1 through 5 and keeps future lifecycle changes explicit.
+Add one canonical playbook beside the existing `civ5-dll` developer docs, then update the pages that describe the old single-line release. The playbook records the process proven in Stages 1, 3, 2, 4, and 5 and keeps future lifecycle changes explicit.
 
 ## Work items
 

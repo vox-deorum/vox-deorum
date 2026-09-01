@@ -12,11 +12,41 @@ set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "CIV5_APP_ID=8930"
 set "TEMP_DIR=%TEMP%\VoxDeorumInstall"
-
-:: Check for --debug argument
+set "VP_LINES_FILE=%SCRIPT_DIR%\vp-lines.txt"
+set "SELECTED_LINE="
 set "DEBUG_MODE=0"
-if "%~1"=="--debug" (
+
+:: Resolve the optional line and forward validation to download-dll.cmd.
+:parse_arguments
+if "%~1"=="" goto :arguments_parsed
+if /i "%~1"=="--debug" (
     set "DEBUG_MODE=1"
+    shift
+    goto :parse_arguments
+)
+if /i "%~1"=="--line" (
+    set "NEXT_ARGUMENT=%~2"
+    if not defined NEXT_ARGUMENT goto :line_value_required
+    if "!NEXT_ARGUMENT:~0,2!"=="--" goto :line_value_required
+    set "SELECTED_LINE=!NEXT_ARGUMENT!"
+    shift
+    shift
+    goto :parse_arguments
+)
+set "ARGUMENT_ERROR=%~1"
+echo Error: Unsupported argument: !ARGUMENT_ERROR!
+echo Usage: install.cmd [--line X.Y] [--debug]
+exit /b 1
+
+:line_value_required
+echo Error: --line requires a VP line in X.Y format.
+exit /b 1
+
+:arguments_parsed
+if not defined SELECTED_LINE if exist "%VP_LINES_FILE%" for /f "usebackq tokens=1,* delims==" %%A in ("%VP_LINES_FILE%") do if "%%A"=="DEFAULT_LINE" set "SELECTED_LINE=%%B"
+set "DLL_BRANCH=vox-deorum-!SELECTED_LINE!"
+
+if "%DEBUG_MODE%"=="1" (
     set "BUILD_DIR=%SCRIPT_DIR%\debug"
 ) else (
     set "BUILD_DIR=%SCRIPT_DIR%\release"
@@ -35,6 +65,7 @@ echo.
 echo =========================================
 echo      Vox Deorum Installation Script
 echo            Version %SCRIPT_VERSION%
+echo           VP Line !SELECTED_LINE!
 if "%DEBUG_MODE%"=="1" (
     echo           [DEBUG MODE ENABLED]
 )
@@ -46,7 +77,13 @@ if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
 
 :: Download pre-built DLL if needed
 echo [1/9] Downloading pre-built DLL...
-if "%DEBUG_MODE%"=="1" (
+if defined SELECTED_LINE (
+    if "%DEBUG_MODE%"=="1" (
+        call "%SCRIPT_DIR%\download-dll.cmd" --line "!SELECTED_LINE!" --debug
+    ) else (
+        call "%SCRIPT_DIR%\download-dll.cmd" --line "!SELECTED_LINE!"
+    )
+) else if "%DEBUG_MODE%"=="1" (
     call "%SCRIPT_DIR%\download-dll.cmd" --debug
 ) else (
     call "%SCRIPT_DIR%\download-dll.cmd"
@@ -57,6 +94,32 @@ if !errorlevel! neq 0 (
     echo Please check your internet connection or the release info file.
     pause
     exit /b 1
+)
+
+set "RELEASE_INFO=%SCRIPT_DIR%\dll-release-info-!SELECTED_LINE!.txt"
+set "COMMIT="
+for /f "usebackq tokens=1,* delims==" %%A in ("!RELEASE_INFO!") do if "%%A"=="COMMIT" set "COMMIT=%%B"
+
+:: Warn without changing a contributor's source checkout when it differs from the selected pin.
+set "DLL_SOURCE_DIR=%SCRIPT_DIR%\..\civ5-dll"
+set "DLL_HEAD="
+if exist "!DLL_SOURCE_DIR!\.git" (
+    for /f "usebackq delims=" %%a in (`git -C "!DLL_SOURCE_DIR!" rev-parse HEAD 2^>nul`) do set "DLL_HEAD=%%a"
+)
+if /i not "!DLL_HEAD!"=="!COMMIT!" (
+    echo.
+    echo Warning: civ5-dll does not match the selected VP !SELECTED_LINE! pin.
+    if defined DLL_HEAD (
+        echo   Current HEAD: !DLL_HEAD!
+    ) else (
+        echo   Current HEAD: unavailable
+    )
+    echo   Selected pin: !COMMIT!
+    echo.
+    echo To repair the source checkout, run:
+    echo   git -C "!DLL_SOURCE_DIR!" fetch origin !DLL_BRANCH!
+    echo   git -C "!DLL_SOURCE_DIR!" switch --detach !COMMIT!
+    echo.
 )
 
 :: Verify pre-built files exist
@@ -748,3 +811,4 @@ if exist "%TEMP_DIR%\node-v22.19.0-x64.msi" del "%TEMP_DIR%\node-v22.19.0-x64.ms
 if exist "%TEMP_DIR%\node-v22.19.0-win-x64.zip" del "%TEMP_DIR%\node-v22.19.0-win-x64.zip"
 
 echo.
+exit /b 0
