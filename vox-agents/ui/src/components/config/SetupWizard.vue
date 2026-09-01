@@ -410,7 +410,7 @@ onUnmounted(invalidatePendingWork);
           Start Ollama or LM Studio first, then enter the address it shows.
         </p>
         <p v-else-if="selectedProvider === 'claude-code'">
-          Vox Deorum uses the Claude Code app installed and signed in on this PC. Its static model choices cannot be checked here.
+          Vox Deorum uses a bundled Claude Code runtime with your local Claude Code sign-in. Its static model choices cannot be checked here.
           <a
             href="https://docs.anthropic.com/en/docs/claude-code/getting-started"
             target="_blank"

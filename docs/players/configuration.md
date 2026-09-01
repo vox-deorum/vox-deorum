@@ -20,7 +20,7 @@ Vox Deorum works with any of these providers, and you can mix several in one gam
 | --- | --- | --- |
 | OpenAI | GPT models | <https://platform.openai.com/api-keys> |
 | Anthropic | Claude models | <https://console.anthropic.com/settings/keys> |
-| Claude Code | Claude models through your installed Anthropic coding app; relevant only if you already use it | Your signed-in Claude Code app, no key needed in the dashboard |
+| Claude Code | Claude models through a bundled Anthropic coding runtime; relevant only if you already use Claude Code | Your local Claude Code sign-in, no key needed in the dashboard |
 | Google AI | Gemini models | <https://aistudio.google.com/apikey> |
 | AWS Bedrock | Claude and other models hosted on AWS; configured manually in Settings rather than through the Setup wizard | Your AWS credentials; see AWS's [Bedrock setup guide](https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started-api.html) |
 | OpenRouter | One account that resells many providers' models | <https://openrouter.ai/keys> |
@@ -33,9 +33,9 @@ If you're just starting out and want the widest selection from one account, Open
 
 ## Connecting a provider
 
-On a fresh install, Vox Deorum opens the Setup wizard automatically. It asks how you want to connect and collects the needed key or account sign-in. API-backed providers and local servers validate the connection by fetching their current model lists. Codex uses bundled choices and validates your ChatGPT account through its proxy. Claude Code also uses bundled choices, but listing them does not verify that the app is installed or signed in. Authentication, network, and provider errors are shown in the wizard so you can correct the problem before continuing. Keys stay on your own machine and go only to the provider you're using.
+On a fresh install, Vox Deorum opens the Setup wizard automatically. It asks how you want to connect and collects the needed key or account sign-in. API-backed providers and local servers validate the connection by fetching their current model lists. Codex uses bundled choices and validates your ChatGPT account through its proxy. Claude Code also uses bundled choices, but listing them does not verify the local sign-in. Authentication, network, and provider errors are shown in the wizard so you can correct the problem before continuing. Keys stay on your own machine and go only to the provider you're using.
 
-Codex completes ChatGPT device login inside the dashboard. Claude Code uses the app already installed and signed in on your computer. For a local OpenAI-compatible provider, the wizard checks the server address you supply. AWS Bedrock remains an advanced setup that you configure manually on the Settings page.
+Codex completes ChatGPT device login inside the dashboard. Vox Deorum's bundled Claude Code runtime uses the Claude Code sign-in stored on your computer. For a local OpenAI-compatible provider, the wizard checks the server address you supply. AWS Bedrock remains an advanced setup that you configure manually on the Settings page.
 
 The Settings page is also the advanced editor for credentials, providers, and model options. Its **Setup wizard** button lets you repeat the guided flow at any time. See [Getting Started](getting-started.md#first-launch) for where setup fits into the first launch.
 

@@ -136,7 +136,7 @@ onUnmounted(invalidate);
         Vox Deorum uses the ChatGPT account already configured on this PC.
       </p>
       <p v-else-if="selectedProvider === 'claude-code'" class="text-muted">
-        Vox Deorum uses the Claude Code app installed and signed in on this PC.
+        Vox Deorum uses a bundled Claude Code runtime with your local Claude Code sign-in.
       </p>
 
       <div class="setup-wizard-credentials">

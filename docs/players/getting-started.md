@@ -10,7 +10,7 @@ The path is short: install, then launch. Civ V must already be installed through
 | --- | --- |
 | Windows | Windows 10 or 11. |
 | [Civilization V](https://store.steampowered.com/app/8930/) | Already installed through Steam. Ideally with both expansions, *Gods & Kings* and *Brave New World*. Vox Deorum is built on the [Community Patch and Vox Populi](https://github.com/LoneGazebo/Community-Patch-DLL) overhaul and is only tested with the full game. |
-| A way to connect to an LLM | This can be an API key, a ChatGPT account for Codex, the installed and signed-in Claude Code app, or a local model server. Most hosted providers charge for usage. See [Configuration](configuration.md). |
+| A way to connect to an LLM | This can be an API key, a ChatGPT account for Codex, a local Claude Code sign-in, or a local model server. Most hosted providers charge for usage. See [Configuration](configuration.md). |
 
 ## Install
 
@@ -33,7 +33,7 @@ A console window opens and starts the background services, then brings up the da
 
 From the dashboard:
 
-1. On a fresh install, the dashboard redirects you to the four-step **Setup** wizard. Choose how you want to connect, enter an API key or complete an account sign-in, then choose a model and save. API-backed providers and local servers fetch their current model lists. Codex reads its current choices through the authenticated managed proxy. Claude Code uses bundled choices and does not verify its installation or sign-in when it lists them. Codex sign-in is handled in the dashboard, which shows the device link and user code. The one-time user code is never written to the logs. Local setup checks the server address you provide. AWS Bedrock is configured through the advanced Settings page instead.
+1. On a fresh install, the dashboard redirects you to the four-step **Setup** wizard. Choose how you want to connect, enter an API key or complete an account sign-in, then choose a model and save. API-backed providers and local servers fetch their current model lists. Codex reads its current choices through the authenticated managed proxy. Claude Code uses bundled choices and does not verify the local sign-in when it lists them. Codex sign-in is handled in the dashboard, which shows the device link and user code. The one-time user code is never written to the logs. Local setup checks the server address you provide. AWS Bedrock is configured through the advanced Settings page instead.
 2. After setup, continue to the **Play** page and set up your game: assign the AI to numbered player slots (the game picks each slot's civilization), choose whether you play alongside it or just watch, then start the game. Vox Deorum launches Civ V with the mods already enabled, so you don't need to touch the game's own mod menu.
 3. Civ V opens into your game. Play as you normally would: an LLM now drives the AI civilizations, and they steer their empires on their own each turn.
 
