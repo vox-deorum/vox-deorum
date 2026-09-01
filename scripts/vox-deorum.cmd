@@ -98,11 +98,11 @@ del "%BRIDGE_URL_FILE%" 2>nul
 del "%MCP_URL_FILE%" 2>nul
 del "%VOX_URL_FILE%" 2>nul
 
-echo.
-echo ========================================
-echo     Vox Deorum Services Manager
-echo ========================================
-echo.
+echo(
+echo(========================================
+echo(    Vox Deorum Services Manager
+echo(========================================
+echo(
 echo [INFO] Mode: %VOX_MODE%
 echo [INFO] Starting services in order...
 echo.
@@ -380,7 +380,7 @@ for %%A in ("%FAILED_SERVICE_LOG%") do if %%~zA EQU 0 (
     exit /b 0
 )
 set "TAIL_LAST_LINE=0"
-for /f "tokens=1 delims=:" %%a in ('findstr /r /n "^.*" ^< "%FAILED_SERVICE_LOG%"') do set "TAIL_LAST_LINE=%%a"
+for /f %%a in ('find /v /c "" ^< "%FAILED_SERVICE_LOG%"') do set "TAIL_LAST_LINE=%%a"
 if !TAIL_LAST_LINE! EQU 0 (
     echo [INFO] Combined log has no readable lines: %FAILED_SERVICE_LOG%
     exit /b 0
@@ -392,9 +392,9 @@ if !TAIL_LAST_LINE! LEQ !FAILED_SERVICE_LOG_START_LINE! (
 set /a TAIL_SKIP_LINES=TAIL_LAST_LINE-50
 if !TAIL_SKIP_LINES! LSS !FAILED_SERVICE_LOG_START_LINE! set /a TAIL_SKIP_LINES=FAILED_SERVICE_LOG_START_LINE
 if !TAIL_SKIP_LINES! LSS 1 (
-    type "%FAILED_SERVICE_LOG%" | findstr /r "^.*"
+    find /v "" < "%FAILED_SERVICE_LOG%"
 ) else (
-    more +!TAIL_SKIP_LINES! < "%FAILED_SERVICE_LOG%" | findstr /r "^.*"
+    more +!TAIL_SKIP_LINES! < "%FAILED_SERVICE_LOG%" | find /v ""
 )
 exit /b 0
 
@@ -403,7 +403,7 @@ exit /b 0
 set "COUNT_FILE=%~1"
 set "COUNT_VARIABLE=%~2"
 set "COUNT_LAST_LINE=0"
-if exist "%COUNT_FILE%" for /f "tokens=1 delims=:" %%a in ('findstr /r /n "^.*" ^< "%COUNT_FILE%"') do set "COUNT_LAST_LINE=%%a"
+if exist "%COUNT_FILE%" for /f %%a in ('find /v /c "" ^< "%COUNT_FILE%"') do set "COUNT_LAST_LINE=%%a"
 set "%COUNT_VARIABLE%=%COUNT_LAST_LINE%"
 exit /b 0
 
