@@ -253,7 +253,8 @@ export async function startWebServer(): Promise<number | null> {
   } catch (writeError) {
     webLogger.warn(`Failed to write shutdown URL placeholder: ${String(writeError)}`);
   }
-  throw new Error(`Web UI ports ${PORT} and ${fallback} are already in use.`);
+
+  return null;
 }
 
 // Export for integration with vox-agents process

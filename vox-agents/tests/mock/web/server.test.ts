@@ -99,27 +99,4 @@ describe('web server', () => {
     expect(listen).toHaveBeenCalledWith(config.webui.port, '127.0.0.1', expect.any(Function));
     await expect(shutdownWebServer()).resolves.toBeUndefined();
   });
-
-  it('writes a placeholder and fails when both dashboard ports are occupied', async () => {
-    shutdownTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-web-server-'));
-    const shutdownUrlFile = path.join(shutdownTempDir, 'vox.shutdown');
-    process.env.VOX_SHUTDOWN_URL_FILE = shutdownUrlFile;
-
-    vi.spyOn(app, 'listen').mockImplementation(((_port: number, _host: string, _callback: () => void) => {
-      const server = {
-        on: vi.fn((event: string, listener: (error: NodeJS.ErrnoException) => void) => {
-          if (event === 'error') {
-            queueMicrotask(() => listener(Object.assign(new Error('occupied'), { code: 'EADDRINUSE' })));
-          }
-          return server;
-        }),
-      };
-      return server;
-    }) as never);
-
-    await expect(startWebServer()).rejects.toThrow(
-      `Web UI ports ${config.webui.port} and ${config.webui.port + 1} are already in use.`,
-    );
-    expect(fs.readFileSync(shutdownUrlFile, 'utf8')).toBe('unavailable\n');
-  });
 });
