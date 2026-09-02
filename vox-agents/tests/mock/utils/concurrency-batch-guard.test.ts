@@ -59,7 +59,19 @@ describe('streamTextWithConcurrency batch guard', () => {
     );
 
     await expect(streamTextWithConcurrency(params, fakeContext)).rejects.toThrow(
-      /Batch mode cannot replay Codex model 'codex\/gpt-5\.4-mini'/
+      /Batch mode cannot replay local CLI model 'codex\/gpt-5\.4-mini'/
+    );
+    expect(mocks.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('rejects a Claude Code model before its forced prompt middleware is bypassed', async () => {
+    const params = withModelConfig(
+      { model: {} as any, messages: [] } as any,
+      { provider: 'claude-code', name: 'sonnet', options: { hostTools: ['Write'] } } as any
+    );
+
+    await expect(streamTextWithConcurrency(params, fakeContext)).rejects.toThrow(
+      /Batch mode cannot replay local CLI model 'claude-code\/sonnet'/
     );
     expect(mocks.enqueue).not.toHaveBeenCalled();
   });

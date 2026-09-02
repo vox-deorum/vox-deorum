@@ -90,6 +90,27 @@ describe('exponentialRetry', () => {
     expect(timerMocks.setTimeout).not.toHaveBeenCalled();
   });
 
+  it('should retry a 403 even when the provider marks it as non-retryable', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    timerMocks.setTimeout.mockResolvedValue(undefined);
+    const error = Object.assign(new Error('forbidden'), {
+      statusCode: 403,
+      isRetryable: false,
+    });
+    const operation = vi.fn()
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce('ok');
+
+    await expect(exponentialRetry(
+      operation,
+      logger(),
+      { source: 'forbidden', maxRetries: 1, initialDelay: 1000 },
+    )).resolves.toBe('ok');
+
+    expect(operation).toHaveBeenCalledTimes(2);
+    expect(timerMocks.setTimeout).toHaveBeenCalledWith(1000, undefined, { signal: undefined });
+  });
+
   it('should stop after the configured retry budget is exhausted', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     timerMocks.setTimeout.mockResolvedValue(undefined);

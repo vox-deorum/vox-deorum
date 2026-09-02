@@ -121,8 +121,19 @@ export async function exponentialRetry<T>(
       abortSignal?.throwIfAborted();
       lastError = error as Error;
 
-      // Check if error is explicitly marked as non-retryable
-      const isNonRetryable = error && typeof error === 'object' && 'isRetryable' in error && error.isRetryable === false;
+      // Compatible proxies can use 403 for temporary model access or routing failures, so let the
+      // shared retry policy try those again even though the AI SDK marks every 403 as terminal.
+      const isRetryableForbidden = error !== null
+        && typeof error === 'object'
+        && 'statusCode' in error
+        && error.statusCode === 403;
+
+      // Check if error is explicitly marked as non-retryable.
+      const isNonRetryable = !isRetryableForbidden
+        && error
+        && typeof error === 'object'
+        && 'isRetryable' in error
+        && error.isRetryable === false;
 
       // Context length exceeded — retrying won't help, fail immediately
       if (isContextLengthError(error)) {

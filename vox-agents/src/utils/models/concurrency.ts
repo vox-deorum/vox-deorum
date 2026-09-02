@@ -13,6 +13,7 @@ import pLimit from 'p-limit';
 import { streamText, TextStreamPart, ToolSet } from 'ai';
 import { executionTimeoutDefault, exponentialRetry } from '../retry.js';
 import { createLogger } from '../logger.js';
+import { isHostCapabilityProvider } from './providers/host-tools.js';
 import type { Model } from '../../types/index.js';
 import { VoxContext } from '../../infra/vox-context.js';
 import { AgentParameters } from '../../infra/vox-agent.js';
@@ -106,13 +107,15 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
   // This bypasses streaming, per-model concurrency limiting, and retry logic entirely —
   // the batch API handles all of that server-side.
   if (hasBatchManager() && modelConfig) {
-    // Codex authenticates through its local ChatGPT proxy, which has no batch API. Sending it
-    // through Oracle's live fallback would silently mix the experiment's execution modes.
-    if (modelConfig.provider === 'codex') {
+    // Local CLI providers (Codex through its ChatGPT proxy, Claude Code through its runtime)
+    // have no batch API, and their forced middleware and host capabilities never run on the
+    // batch path. Sending them through Oracle's live fallback would silently mix the
+    // experiment's execution modes.
+    if (isHostCapabilityProvider(modelConfig.provider)) {
       throw new Error(
-        `Batch mode cannot replay Codex model '${modelConfig.provider}/${modelConfig.name}': ` +
-        'the local ChatGPT proxy does not support Oracle batch requests. Run this experiment ' +
-        'without batch mode, or override to a batch-capable model.'
+        `Batch mode cannot replay local CLI model '${modelConfig.provider}/${modelConfig.name}': ` +
+        'its local runtime, middleware, and host capabilities are unavailable to Oracle batch ' +
+        'requests. Run this experiment without batch mode, or override to a batch-capable model.'
       );
     }
 

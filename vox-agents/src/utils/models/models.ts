@@ -22,7 +22,9 @@ import { toolRescueMiddleware } from './tool-rescue/middleware.js';
 import { buildClaudeCodeModel } from './providers/claude-code.js';
 import { claudeCodeSystemMiddleware } from './providers/claude-code-prompt.js';
 import { buildCodexModel, buildCodexProviderOptions } from './providers/codex.js';
+import { hostCapabilityMiddleware } from './providers/host-capability-prompt.js';
 import { requiredToolChoiceMiddleware } from './providers/required-tool-choice.js';
+import { isHostCapabilityProvider, resolveHostToolCapabilities } from './providers/host-tools.js';
 import type { ModelRuntimeIdentity } from './providers/host-tools.js';
 import type { ToolCallFraming } from './tool-rescue/types.js';
 import { Agent } from 'undici';
@@ -296,6 +298,16 @@ export function getModel(config: Model, options?: {
         model: result,
         middleware: toolRescueMiddleware()
       });
+  }
+  // Host-capability guidance is deliberately outermost. It runs before tool
+  // rescue, Claude system-message normalization, and required-tool handling so
+  // each inner middleware sees the reminder in the prompt it transforms.
+  const requestedHostTools = config.options?.hostTools;
+  if (isHostCapabilityProvider(config.provider) && requestedHostTools?.length) {
+    result = wrapLanguageModel({
+      model: result,
+      middleware: hostCapabilityMiddleware(config.provider, resolveHostToolCapabilities(requestedHostTools)),
+    });
   }
   return result;
 }

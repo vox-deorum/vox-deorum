@@ -182,6 +182,7 @@ describe('Codex provider options', () => {
       },
     });
     expect(fs.existsSync(path.join(testProxyRoot, 'g1-2'))).toBe(true);
+    expect(fs.existsSync(path.join(testProxyRoot, 'g1-2', 'AGENTS.md'))).toBe(true);
   });
 
   it('keeps Read on the read-only, search-disabled floor with an isolated cwd', () => {
@@ -196,6 +197,7 @@ describe('Codex provider options', () => {
         },
       },
     });
+    expect(fs.existsSync(path.join(testProxyRoot, 'default', 'AGENTS.md'))).toBe(true);
   });
 
   it('maps Write-only access to a workspace-write sandbox with an isolated cwd', () => {
@@ -210,6 +212,7 @@ describe('Codex provider options', () => {
         },
       },
     });
+    expect(fs.existsSync(path.join(testProxyRoot, 'default', 'AGENTS.md'))).toBe(true);
   });
 
   it('enables live search for Web without granting a sandbox or working directory', () => {
@@ -223,6 +226,7 @@ describe('Codex provider options', () => {
         },
       },
     });
+    expect(fs.existsSync(testProxyRoot)).toBe(false);
   });
 
   it('rejects names outside the meta-tool vocabulary', () => {

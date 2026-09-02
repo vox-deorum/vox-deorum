@@ -16,6 +16,7 @@ import type {
   LanguageModelV3Middleware,
 } from '@ai-sdk/provider';
 import { formatToolChoiceList } from '../../tools/tool-names.js';
+import { appendSystemInstruction } from './system-prompt.js';
 
 /** Installation options: the calling agent's completion tools, when it declares any. */
 export interface RequiredToolChoiceOptions {
@@ -66,24 +67,6 @@ export function requiredToolChoiceInstruction(
     ? ` Use other tools, including ${others}, to support your mission.`
     : '';
   return `${opening} Your goal is to issue terminal tools to end the turn, which include: ${completionList}.${support}`;
-}
-
-/** Append a provider-specific instruction to the existing system prompt, or create one when absent. */
-function appendSystemInstruction(
-  prompt: LanguageModelV3CallOptions['prompt'],
-  instruction: string,
-): LanguageModelV3CallOptions['prompt'] {
-  const systemIndex = prompt.findIndex((message) => message.role === 'system');
-  if (systemIndex < 0) return [{ role: 'system', content: instruction }, ...prompt];
-  const systemMessage = prompt[systemIndex];
-  // findIndex already established the role; this re-check only narrows the union type.
-  if (systemMessage.role !== 'system') return prompt;
-  const transformed = [...prompt];
-  transformed[systemIndex] = {
-    ...systemMessage,
-    content: `${systemMessage.content}\n\n${instruction}`,
-  };
-  return transformed;
 }
 
 /**

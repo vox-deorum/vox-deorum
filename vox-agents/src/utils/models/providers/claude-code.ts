@@ -9,7 +9,7 @@ import type { LanguageModelV3 } from '@ai-sdk/provider';
 import { createClaudeCode, type ClaudeCodeSettings } from 'ai-sdk-provider-claude-code';
 import type { Model } from '../../../types/index.js';
 import { claudeCodeResponseMiddleware, guardClaudeCodeQueryUsageLimits } from './claude-code-response.js';
-import { resolveHostToolAccess } from './host-tools.js';
+import { resolveHostToolAccess, seedHostWorkspaceGuide } from './host-tools.js';
 import type { HostToolAccess, ModelRuntimeIdentity } from './host-tools.js';
 
 /** Concrete Claude Code tools granted by each host meta-tool. */
@@ -63,6 +63,7 @@ export function buildClaudeCodeModel(
     workingDirectoryBase: path.join(os.tmpdir(), 'vox-claude-code'),
     workingDirId: runtimeIdentity?.workingDirId,
   });
+  seedHostWorkspaceGuide(hostToolAccess, 'claude-code');
   const hostTools = expandClaudeCodeTools(hostToolAccess);
 
   if (hostTools.length === 0) {

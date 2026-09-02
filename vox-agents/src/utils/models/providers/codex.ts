@@ -20,7 +20,7 @@ import type { CodexProxyConfig } from './codex-proxy.js';
 import { codexActivityMiddleware } from './codex-response.js';
 import { requiredToolChoiceMiddleware } from './required-tool-choice.js';
 import type { RequiredToolChoiceOptions } from './required-tool-choice.js';
-import { resolveHostToolAccess } from './host-tools.js';
+import { resolveHostToolAccess, seedHostWorkspaceGuide } from './host-tools.js';
 import type { ModelRuntimeIdentity } from './host-tools.js';
 
 /** Long-lived loopback dispatchers shared by Codex models with the same deadline. */
@@ -121,6 +121,7 @@ export function buildCodexProviderOptions(
     workingDirId: runtimeIdentity?.workingDirId,
     workingDirectoryTools: ['Read', 'Write'],
   });
+  seedHostWorkspaceGuide(access, 'codex');
   const extension: CodexRequestExtension = {
     sandbox: access.write ? 'workspace-write' : access.read ? 'read-only' : 'disabled',
     web_search: access.web ? 'live' : 'disabled',

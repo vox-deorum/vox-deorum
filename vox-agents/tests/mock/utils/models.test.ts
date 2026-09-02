@@ -62,6 +62,7 @@ vi.mock('ai-sdk-provider-claude-code', () => {
 
 import { getModel, getModelConfig, resolveToolFraming } from '../../../src/utils/models/models.js';
 import { toolRescueMiddleware } from '../../../src/utils/models/tool-rescue/middleware.js';
+import { hostCapabilityHeading, hostCapabilityInstruction } from '../../../src/utils/models/providers/host-capability-prompt.js';
 
 /** Build a ReadableStream that emits the given chunks then closes (for wrapStream tests). */
 function streamFrom(chunks: any[]): ReadableStream<any> {
@@ -1197,12 +1198,54 @@ describe('claude-code provider', () => {
         const calls = mocks.model.doGenerateCalls;
         const sys = calls[calls.length - 1].prompt.find((m: any) => m.role === 'system');
         expect(sys).toBeDefined();
+        expect(sys.content).toContain(hostCapabilityInstruction(
+          'claude-code',
+          { read: true, write: false, web: false },
+        ));
         expect(sys.content).toContain('## Action Calling');
         expect(sys.content).toContain('## Available Actions');
         // The reframed prompt must not mention the built-in CLI tools at all.
         expect(sys.content).not.toContain('Built-in');
       } finally {
         fs.rmSync(tempRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('adds one host reminder per call to a reused prompt, ahead of the rescue action list', async () => {
+      const model = getModel(
+        {
+          provider: 'claude-code',
+          name: 'sonnet',
+          options: { toolMiddleware: 'prompt', hostTools: ['Write', 'Web'] },
+        },
+        { workingDirId: 'g3-2' },
+      );
+      const prompt: any = [
+        { role: 'system', content: 'You are the strategist.' },
+        { role: 'user', content: [{ type: 'text', text: 'Choose an action.' }] },
+      ];
+      const generate = () => (model as any).doGenerate({
+        tools,
+        toolChoice: { type: 'required' },
+        prompt,
+        providerOptions: {},
+      });
+
+      await generate();
+      await generate();
+
+      expect(prompt[0].content).toBe('You are the strategist.');
+      const hostInstruction = hostCapabilityInstruction(
+        'claude-code',
+        { read: true, write: true, web: true },
+      )!;
+      for (const call of mocks.model.doGenerateCalls.slice(-2)) {
+        const systems = call.prompt.filter((message: any) => message.role === 'system');
+        expect(systems).toHaveLength(1);
+        const system = systems[0].content as string;
+        expect(system.split(hostInstruction)).toHaveLength(2);
+        expect(system).toContain('## Available Actions');
+        expect(system.indexOf(hostInstruction)).toBeLessThan(system.indexOf('## Available Actions'));
       }
     });
 
@@ -1222,6 +1265,7 @@ describe('claude-code provider', () => {
       // claude-code is always action-framed, regardless of built-in CLI tools.
       expect(sys.content).toContain('## Action Calling');
       expect(sys.content).not.toContain('## Tool Calling');
+      expect(sys.content).not.toContain(hostCapabilityHeading);
     });
 
     // Regression for the negotiator/diplomat prompt shape: a main system prompt + game context,

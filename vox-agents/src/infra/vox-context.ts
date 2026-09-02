@@ -35,6 +35,8 @@ import { spanProcessor } from '../instrumentation.js';
 import { VoxSpanExporter } from '../utils/telemetry/vox-exporter.js';
 import { countMessagesTokens } from "../utils/models/token-counter.js";
 import { emitProviderExecutedToolSpans } from "../utils/telemetry/provider-tool-spans.js";
+import { hostCapabilityTelemetryAttributes } from "../utils/telemetry/host-capabilities.js";
+import { isHostCapabilityProvider } from "../utils/models/providers/host-tools.js";
 import { cleanToolArtifacts } from "../utils/models/text-cleaning.js";
 import { appendReminder } from "../utils/prompts/reminders.js";
 import { isContextLengthError } from "../utils/retry.js";
@@ -778,8 +780,11 @@ export class VoxContext<TParameters extends AgentParameters> {
         stepSpan.setAttributes({
           'step.tools': JSON.stringify(stepActiveTools),
           'step.tools.choice': stepToolChoice,
-          'step.messages': JSON.stringify(messages)
+          'step.messages': JSON.stringify(messages),
         });
+        // Recorded separately: host-tool validation may throw, and the step
+        // configuration above should already be on the span when it does.
+        stepSpan.setAttributes(hostCapabilityTelemetryAttributes(stepModel));
 
         // Framing is recorded as an explicit fact, separate from prompt content:
         // step.tool_framing carries the resolved framing for the step. A callback rather
@@ -843,7 +848,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         }
 
         // Surface provider-executed host calls as retrospective per-tool spans.
-        if (stepModel.provider === 'claude-code' || stepModel.provider === 'codex') {
+        if (isHostCapabilityProvider(stepModel.provider)) {
           const builtinToolSpans = emitProviderExecutedToolSpans(stepModel.provider, stepResponse.content, this.tracer, {
             contextId: this.id,
             turn: parameters.turn,
