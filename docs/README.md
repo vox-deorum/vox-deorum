@@ -8,7 +8,7 @@ Start with **[Getting Started](players/getting-started.md)** for prerequisites, 
 
 - **[Playing](players/playing.md)** covers what the AI does, chatting with spokespersons, and what to expect in-game
 - **[Configuration](players/configuration.md)** covers API keys, choosing LLM providers and models, and local models
-- **[Replay](players/replay.md)** covers reviewing your sessions with the Vox Deorum Replayer
+- **[Replay](players/replay.md)** covers reviewing your finished games with the Vox Deorum Replayer
 - **[Troubleshooting](players/troubleshooting.md)** covers common problems and fixes
 
 ## I want to develop

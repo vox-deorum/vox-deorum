@@ -2,44 +2,31 @@
 
 Vox Deorum lets you play Civilization V (Civ V) against opponents run by large language models (LLMs) such as GPT, Claude, and Gemini. The AI civilizations make their own strategic decisions and can talk to you in character. This page walks you through installing Vox Deorum and starting your first game.
 
-The path is short: install, then launch. Civ V must already be installed through Steam; the installer handles the mods and other dependencies for you.
-
 ## What you need
 
 | Requirement | Details |
 | --- | --- |
 | Windows | Windows 10 or 11. |
-| [Civilization V](https://store.steampowered.com/app/8930/) | Already installed through Steam. Ideally with both expansions, *Gods & Kings* and *Brave New World*. Vox Deorum is built on the [Community Patch and Vox Populi](https://github.com/LoneGazebo/Community-Patch-DLL) overhaul and is only tested with the full game. |
-| A way to connect to an LLM | This can be an API key, a ChatGPT account for Codex, a local Claude Code sign-in, or a local model server. Most hosted providers charge for usage. See [Configuration](configuration.md). |
+| [Civilization V](https://store.steampowered.com/app/8930/) | Already installed through Steam. Ideally with both expansions, *Gods & Kings* and *Brave New World*. Vox Deorum is built on the [Community Patch and Vox Populi](https://github.com/LoneGazebo/Community-Patch-DLL) overhaul, and we build and test against the full game. |
+| A way to connect to an LLM | An API key, a ChatGPT account for Codex, a local Claude Code sign-in, or a local model server. Most hosted providers charge for usage. See [Configuration](configuration.md). |
 
 ## Install
 
-1. **Download the installer.** Grab the newest release from the [releases page](https://github.com/CIVITAS-John/vox-deorum/releases).
-2. **Run the installer.** It looks for your Steam and Civ V folders on its own, then installs everything Vox Deorum needs:
-   - The Vox Deorum game mods: the Community Patch, Vox Populi, the Vox Deorum mod itself, and the matching interface files.
-   - A bundled copy of Node.js for the AI services to run on, so you don't have to set it up yourself.
-
-   It asks you to confirm the Civ V folder, pre-filled if the search succeeded, and won't continue until you choose a valid one. The typical location is `Steam\steamapps\common\Sid Meier's Civilization V`.
-
-You'll connect a model at first launch (see below).
+1. **Download the installer** from the [releases page](https://github.com/CIVITAS-John/vox-deorum/releases).
+2. **Run the installer.** It finds your Steam and Civ V folders, then installs everything Vox Deorum needs: the game mods (Community Patch, Vox Populi, the Vox Deorum mod, and matching interface files) and a bundled Node.js runtime for the AI services.
+3. **Confirm the Civ V folder.** The installer asks you to confirm the folder, pre-fills it when the search finds it, and continues once you choose a valid one. The typical location is `Steam\steamapps\common\Sid Meier's Civilization V`. Can't find Civ V? See [Troubleshooting](troubleshooting.md).
 
 ## First launch
 
-Start Vox Deorum from the **Start Menu** entry named *Vox Deorum*, or by running `scripts\vox-deorum.cmd` in the install folder.
+Start Vox Deorum from the **Start Menu** entry named *Vox Deorum*, or run `scripts\vox-deorum.cmd` in the install folder. A **console window** starts the background services and opens the dashboard in your browser at `http://localhost:5555`. Keep the console window open while you play, and use its prompt to stop cleanly when you finish.
 
-A console window opens and starts the background services, then brings up the dashboard in your web browser (by default at `http://localhost:5555`).
+On a fresh install, the dashboard opens the four-step **Setup** wizard. Choose how you want to connect, enter an API key or complete a sign-in, then pick a model and save. The wizard checks the connection and lists the models you can use. Provider-specific details live on the [Configuration](configuration.md) page.
 
-**Leave the console window running.** Closing it shuts everything down. When you are done, follow the prompt in the console to stop cleanly.
+On the **Play** page, choose your role: play yourself, watch an AI self-play game, or direct a civilization. Choose how many civilizations the AI runs, pick a strategist, pacing, and model, then start. The wizard auto-assigns the AI to the rival seats, and the game picks each slot's civilization itself. Vox Deorum launches Civ V with the mods already enabled, and the LLM drives the AI civilizations.
 
-From the dashboard:
+You can revisit providers, models, and cost on the **Settings** page later ([Configuration](configuration.md)).
 
-1. On a fresh install, the dashboard redirects you to the four-step **Setup** wizard. Choose how you want to connect, enter an API key or complete an account sign-in, then choose a model and save. API-backed providers and local servers fetch their current model lists. Codex reads its current choices through the authenticated managed proxy. Claude Code lists the models your local Claude Code sign-in provides. Codex sign-in is handled in the dashboard, which shows the device link and user code. The one-time user code is never written to the logs. Local setup checks the server address you provide. AWS Bedrock is configured through the advanced Settings page instead.
-2. After setup, continue to the **Play** page and set up your game: assign the AI to numbered player slots (the game picks each slot's civilization), choose whether you play alongside it or just watch, then start the game. Vox Deorum launches Civ V with the mods already enabled, so you don't need to touch the game's own mod menu.
-3. Civ V opens into your game. Play as you normally would: an LLM now drives the AI civilizations, and they steer their empires on their own each turn.
-
-The wizard saves recommended settings for the selected model automatically. You can change the detailed configuration later on the **Settings** page, or use its **Setup wizard** button to run the guided flow again.
-
-That's it. You are playing. From here:
+From here:
 
 - **[Playing](playing.md)** explains what the AI does each turn and how to chat with the AI civilizations' spokespersons.
 - **[Configuration](configuration.md)** covers choosing providers and models, controlling cost, and running local models.
