@@ -8,6 +8,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import fs from 'fs';
+import os from 'node:os';
+import path from 'node:path';
 
 // Replace the singleton imported by web route modules with the shared MCP mock.
 vi.mock('../../../src/utils/models/mcp-client.js', async () => {
@@ -20,11 +22,24 @@ import config from '../../../src/utils/config.js';
 import { installMockMcpClient } from '../../helpers/mock-mcp-client.js';
 
 describe('web server', () => {
+  let shutdownTempDir: string | undefined;
+  const originalShutdownUrlFile = process.env.VOX_SHUTDOWN_URL_FILE;
+
   beforeEach(() => {
     installMockMcpClient();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await shutdownWebServer();
+    if (originalShutdownUrlFile === undefined) {
+      delete process.env.VOX_SHUTDOWN_URL_FILE;
+    } else {
+      process.env.VOX_SHUTDOWN_URL_FILE = originalShutdownUrlFile;
+    }
+    if (shutdownTempDir) {
+      fs.rmSync(shutdownTempDir, { recursive: true, force: true });
+      shutdownTempDir = undefined;
+    }
     vi.restoreAllMocks();
   });
 
@@ -83,5 +98,28 @@ describe('web server', () => {
     await expect(startWebServer()).resolves.toBe(7654);
     expect(listen).toHaveBeenCalledWith(config.webui.port, '127.0.0.1', expect.any(Function));
     await expect(shutdownWebServer()).resolves.toBeUndefined();
+  });
+
+  it('writes a placeholder and fails when both dashboard ports are occupied', async () => {
+    shutdownTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-web-server-'));
+    const shutdownUrlFile = path.join(shutdownTempDir, 'vox.shutdown');
+    process.env.VOX_SHUTDOWN_URL_FILE = shutdownUrlFile;
+
+    vi.spyOn(app, 'listen').mockImplementation(((_port: number, _host: string, _callback: () => void) => {
+      const server = {
+        on: vi.fn((event: string, listener: (error: NodeJS.ErrnoException) => void) => {
+          if (event === 'error') {
+            queueMicrotask(() => listener(Object.assign(new Error('occupied'), { code: 'EADDRINUSE' })));
+          }
+          return server;
+        }),
+      };
+      return server;
+    }) as never);
+
+    await expect(startWebServer()).rejects.toThrow(
+      `Web UI ports ${config.webui.port} and ${config.webui.port + 1} are already in use.`,
+    );
+    expect(fs.readFileSync(shutdownUrlFile, 'utf8')).toBe('unavailable\n');
   });
 });

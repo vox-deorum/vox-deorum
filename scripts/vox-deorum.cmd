@@ -2,10 +2,11 @@
 setlocal enabledelayedexpansion
 
 :: Vox Deorum Services Manager
-:: Usage: vox-deorum.cmd [vox-agents-mode] [additional-args...]
+:: Usage: vox-deorum.cmd [--keep-open] [vox-agents-mode] [additional-args...]
 :: Default mode: webui (launches web interface)
 :: Supports any mode matching an npm script in vox-agents (e.g. briefer, strategist)
-:: Example: vox-deorum.cmd --strategist --verbose --debug
+:: --keep-open keeps each service window open after its command exits
+:: Example: vox-deorum.cmd --keep-open --strategist --verbose --debug
 :: Graceful shutdown uses local POST /shutdown endpoints discovered from plain-text temp files.
 
 :: Configure Node.js (prefer bundled over system)
@@ -48,8 +49,24 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "VOX_MODE=%~1"
-if "%VOX_MODE%"=="" set "VOX_MODE=webui"
+:: Read the launcher-only option without forwarding it to Vox Agents.
+set "CHILD_CMD_SWITCH=/c"
+set "CHILD_COMMAND_SUFFIX="
+set "KEEP_OPEN="
+set "VOX_MODE="
+set "ADDITIONAL_ARGS="
+for %%a in (%*) do (
+    if /i "%%~a"=="--keep-open" (
+        set "KEEP_OPEN=1"
+        set "CHILD_CMD_SWITCH=/k"
+        set "CHILD_COMMAND_SUFFIX= & powershell -NoProfile -Command Set-Content -LiteralPath $env:VOX_SERVICE_EXIT_FILE -Value ([string]::Empty)"
+    ) else if not defined VOX_MODE (
+        set "VOX_MODE=%%~a"
+    ) else (
+        set "ADDITIONAL_ARGS=!ADDITIONAL_ARGS! %%a"
+    )
+)
+if not defined VOX_MODE set "VOX_MODE=webui"
 
 :: Remove -- prefix if present
 set "VOX_MODE=%VOX_MODE:--=-%"
@@ -69,16 +86,6 @@ if not exist "%~dp0..\vox-agents\src\index.ts" (
     if "%VOX_MODE%"=="webui" set "VOX_MODE=start"
 )
 
-:: Capture all arguments after the first one
-set "ADDITIONAL_ARGS="
-set "ARG_COUNT=0"
-for %%a in (%*) do (
-    set /a "ARG_COUNT+=1"
-    if !ARG_COUNT! GTR 1 (
-        set "ADDITIONAL_ARGS=!ADDITIONAL_ARGS! %%a"
-    )
-)
-
 set "RUN_ID=%RANDOM%%RANDOM%%RANDOM%"
 set "GRACEFUL_STOP_TIMEOUT=30"
 set "BRIDGE_PID_FILE=%TEMP%\vox-deorum-bridge-%RUN_ID%.pid"
@@ -87,6 +94,9 @@ set "VOX_PID_FILE=%TEMP%\vox-deorum-vox-%RUN_ID%.pid"
 set "BRIDGE_URL_FILE=%TEMP%\vox-deorum-bridge-%RUN_ID%.shutdown"
 set "MCP_URL_FILE=%TEMP%\vox-deorum-mcp-%RUN_ID%.shutdown"
 set "VOX_URL_FILE=%TEMP%\vox-deorum-vox-%RUN_ID%.shutdown"
+set "BRIDGE_EXIT_FILE=%TEMP%\vox-deorum-bridge-%RUN_ID%.exit"
+set "MCP_EXIT_FILE=%TEMP%\vox-deorum-mcp-%RUN_ID%.exit"
+set "VOX_EXIT_FILE=%TEMP%\vox-deorum-vox-%RUN_ID%.exit"
 set "BRIDGE_LOG_FILE=%~dp0..\bridge-service\logs\combined.log"
 set "MCP_LOG_FILE=%~dp0..\mcp-server\logs\combined.log"
 set "VOX_LOG_FILE=%~dp0..\vox-agents\logs\combined.log"
@@ -97,6 +107,9 @@ del "%VOX_PID_FILE%" 2>nul
 del "%BRIDGE_URL_FILE%" 2>nul
 del "%MCP_URL_FILE%" 2>nul
 del "%VOX_URL_FILE%" 2>nul
+del "%BRIDGE_EXIT_FILE%" 2>nul
+del "%MCP_EXIT_FILE%" 2>nul
+del "%VOX_EXIT_FILE%" 2>nul
 
 echo(
 echo(========================================
@@ -104,6 +117,7 @@ echo(    Vox Deorum Services Manager
 echo(========================================
 echo(
 echo [INFO] Mode: %VOX_MODE%
+if defined KEEP_OPEN echo [INFO] Service windows will remain open after their commands exit.
 echo [INFO] Starting services in order...
 echo.
 
@@ -144,14 +158,14 @@ if errorlevel 1 goto :startup_failed
 
 :: Start Bridge Service
 echo [1/3] Starting Bridge Service (%BRIDGE_COMMAND%)...
-powershell -Command "$env:BRIDGE_SHUTDOWN_URL_FILE='%BRIDGE_URL_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\bridge-service' -ArgumentList '/c','npm run %BRIDGE_COMMAND%' -PassThru; $p.Id" > "%BRIDGE_PID_FILE%"
+powershell -Command "$env:BRIDGE_SHUTDOWN_URL_FILE='%BRIDGE_URL_FILE%'; $env:VOX_SERVICE_EXIT_FILE='%BRIDGE_EXIT_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\bridge-service' -ArgumentList '%CHILD_CMD_SWITCH%','npm run %BRIDGE_COMMAND%!CHILD_COMMAND_SUFFIX!' -PassThru; $p.Id" > "%BRIDGE_PID_FILE%"
 if errorlevel 1 goto :startup_failed
 set /p BRIDGE_PID=<"%BRIDGE_PID_FILE%"
 echo        Started with PID: %BRIDGE_PID%
 
 :: Start MCP Server
 echo [2/3] Starting MCP Server (%MCP_COMMAND%)...
-powershell -Command "$env:MCP_SHUTDOWN_URL_FILE='%MCP_URL_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\mcp-server' -ArgumentList '/c','npm run %MCP_COMMAND%' -PassThru; $p.Id" > "%MCP_PID_FILE%"
+powershell -Command "$env:MCP_SHUTDOWN_URL_FILE='%MCP_URL_FILE%'; $env:VOX_SERVICE_EXIT_FILE='%MCP_EXIT_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\mcp-server' -ArgumentList '%CHILD_CMD_SWITCH%','npm run %MCP_COMMAND%!CHILD_COMMAND_SUFFIX!' -PassThru; $p.Id" > "%MCP_PID_FILE%"
 if errorlevel 1 goto :startup_failed
 set /p MCP_PID=<"%MCP_PID_FILE%"
 echo        Started with PID: %MCP_PID%
@@ -159,10 +173,10 @@ echo        Started with PID: %MCP_PID%
 :: Start Vox Agents
 echo [3/3] Starting Vox Agents (mode: %VOX_MODE%!ADDITIONAL_ARGS!)...
 if "!ADDITIONAL_ARGS!"=="" (
-    powershell -Command "$env:VOX_SHUTDOWN_URL_FILE='%VOX_URL_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\vox-agents' -ArgumentList '/c','npm run %VOX_MODE%' -PassThru; $p.Id" > "%VOX_PID_FILE%"
+    powershell -Command "$env:VOX_SHUTDOWN_URL_FILE='%VOX_URL_FILE%'; $env:VOX_SERVICE_EXIT_FILE='%VOX_EXIT_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\vox-agents' -ArgumentList '%CHILD_CMD_SWITCH%','npm run %VOX_MODE%!CHILD_COMMAND_SUFFIX!' -PassThru; $p.Id" > "%VOX_PID_FILE%"
 ) else (
     set "NPM_COMMAND=npm run %VOX_MODE% -- !ADDITIONAL_ARGS!"
-    powershell -Command "$env:VOX_SHUTDOWN_URL_FILE='%VOX_URL_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\vox-agents' -ArgumentList '/c','!NPM_COMMAND!' -PassThru; $p.Id" > "%VOX_PID_FILE%"
+    powershell -Command "$env:VOX_SHUTDOWN_URL_FILE='%VOX_URL_FILE%'; $env:VOX_SERVICE_EXIT_FILE='%VOX_EXIT_FILE%'; $p = Start-Process cmd -WorkingDirectory '%~dp0..\vox-agents' -ArgumentList '%CHILD_CMD_SWITCH%','!NPM_COMMAND!!CHILD_COMMAND_SUFFIX!' -PassThru; $p.Id" > "%VOX_PID_FILE%"
 )
 if errorlevel 1 goto :startup_failed
 set /p VOX_PID=<"%VOX_PID_FILE%"
@@ -295,11 +309,11 @@ exit /b 1
 :shutdown_services
 :: Stop every service through its existing graceful shutdown path.
 echo [1/3] Stopping Vox Agents (PID: %VOX_PID%)...
-call :stop_service "Vox Agents" "%VOX_PID%" "%VOX_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT%
+call :stop_service "Vox Agents" "%VOX_PID%" "%VOX_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT% "%VOX_EXIT_FILE%"
 echo [2/3] Stopping MCP Server (PID: %MCP_PID%)...
-call :stop_service "MCP Server" "%MCP_PID%" "%MCP_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT%
+call :stop_service "MCP Server" "%MCP_PID%" "%MCP_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT% "%MCP_EXIT_FILE%"
 echo [3/3] Stopping Bridge Service (PID: %BRIDGE_PID%)...
-call :stop_service "Bridge Service" "%BRIDGE_PID%" "%BRIDGE_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT%
+call :stop_service "Bridge Service" "%BRIDGE_PID%" "%BRIDGE_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT% "%BRIDGE_EXIT_FILE%"
 exit /b 0
 
 :wait_for_url_file
@@ -327,39 +341,33 @@ set /a WAIT_COUNT+=1
 goto :wait_for_url_file_loop
 
 :check_services_running
-:: Record the first service wrapper that exits unexpectedly.
+:: Record the first service command that exits unexpectedly.
 if defined FAILED_SERVICE_ID exit /b 1
 if defined BRIDGE_PID (
-    call :is_pid_running "%BRIDGE_PID%"
-    if errorlevel 1 (
-        set "FAILED_SERVICE_ID=bridge"
-        set "FAILED_SERVICE_NAME=Bridge Service"
-        set "FAILED_SERVICE_LOG=%BRIDGE_LOG_FILE%"
-        set "FAILED_SERVICE_LOG_START_LINE=%BRIDGE_LOG_START_LINE%"
-        exit /b 1
-    )
+    call :check_service_running "bridge" "Bridge Service" "%BRIDGE_PID%" "%BRIDGE_EXIT_FILE%" "%BRIDGE_LOG_FILE%" "%BRIDGE_LOG_START_LINE%"
+    if errorlevel 1 exit /b 1
 )
 if defined MCP_PID (
-    call :is_pid_running "%MCP_PID%"
-    if errorlevel 1 (
-        set "FAILED_SERVICE_ID=mcp"
-        set "FAILED_SERVICE_NAME=MCP Server"
-        set "FAILED_SERVICE_LOG=%MCP_LOG_FILE%"
-        set "FAILED_SERVICE_LOG_START_LINE=%MCP_LOG_START_LINE%"
-        exit /b 1
-    )
+    call :check_service_running "mcp" "MCP Server" "%MCP_PID%" "%MCP_EXIT_FILE%" "%MCP_LOG_FILE%" "%MCP_LOG_START_LINE%"
+    if errorlevel 1 exit /b 1
 )
 if defined VOX_PID (
-    call :is_pid_running "%VOX_PID%"
-    if errorlevel 1 (
-        set "FAILED_SERVICE_ID=vox"
-        set "FAILED_SERVICE_NAME=Vox Agents"
-        set "FAILED_SERVICE_LOG=%VOX_LOG_FILE%"
-        set "FAILED_SERVICE_LOG_START_LINE=%VOX_LOG_START_LINE%"
-        exit /b 1
-    )
+    call :check_service_running "vox" "Vox Agents" "%VOX_PID%" "%VOX_EXIT_FILE%" "%VOX_LOG_FILE%" "%VOX_LOG_START_LINE%"
+    if errorlevel 1 exit /b 1
 )
 exit /b 0
+
+:check_service_running
+:: Check the wrapper PID, plus the command-exit marker used by retained windows.
+if defined KEEP_OPEN if exist "%~4" goto :record_service_exit
+call :is_pid_running "%~3"
+if not errorlevel 1 exit /b 0
+:record_service_exit
+set "FAILED_SERVICE_ID=%~1"
+set "FAILED_SERVICE_NAME=%~2"
+set "FAILED_SERVICE_LOG=%~5"
+set "FAILED_SERVICE_LOG_START_LINE=%~6"
+exit /b 1
 
 :print_failed_log_tail
 :: Print up to 50 combined log lines written by the failed launch.
@@ -436,16 +444,27 @@ set "STOP_NAME=%~1"
 set "STOP_PID=%~2"
 set "STOP_URL=%~3"
 set /a STOP_TIMEOUT=%~4
+set "STOP_EXIT_FILE=%~5"
 
 if not defined STOP_PID exit /b 0
 
-:: Track the wrapper PID only. If it survives past the timeout, kill its process tree.
+if defined KEEP_OPEN if exist "%STOP_EXIT_FILE%" (
+    echo        %STOP_NAME% command has exited. Its window remains open for inspection.
+    exit /b 0
+)
+
+:: Normal windows exit with their wrapper. Retained windows report command exit through a marker.
 if defined STOP_URL (
     echo        Requesting graceful shutdown via %STOP_URL%
     curl -s -X POST "%STOP_URL%" >nul 2>&1
-    call :wait_for_exit "%STOP_PID%" !STOP_TIMEOUT!
+    if defined KEEP_OPEN (
+        call :wait_for_file "%STOP_EXIT_FILE%" !STOP_TIMEOUT!
+    ) else (
+        call :wait_for_exit "%STOP_PID%" !STOP_TIMEOUT!
+    )
     if not errorlevel 1 (
         echo        %STOP_NAME% stopped gracefully.
+        if defined KEEP_OPEN echo        Its command window remains open for inspection.
         exit /b 0
     )
     echo        %STOP_NAME% did not stop gracefully within !STOP_TIMEOUT!s.
@@ -457,6 +476,18 @@ echo        Force-killing %STOP_NAME% (PID: %STOP_PID%)...
 taskkill /PID %STOP_PID% /T /F >nul 2>&1
 call :wait_for_exit "%STOP_PID%" 5 >nul 2>&1
 exit /b 0
+
+:wait_for_file
+:: Wait for a retained service window to report that its npm command has exited.
+set "WAIT_FILE=%~1"
+set /a WAIT_LIMIT=%~2
+set /a WAIT_COUNT=0
+:wait_for_file_loop
+if exist "%WAIT_FILE%" exit /b 0
+if !WAIT_COUNT! GEQ !WAIT_LIMIT! exit /b 1
+timeout /t 1 /nobreak >nul
+set /a WAIT_COUNT+=1
+goto :wait_for_file_loop
 
 :wait_for_exit
 set "WAIT_PID=%~1"
@@ -483,6 +514,9 @@ del "%VOX_PID_FILE%" 2>nul
 del "%BRIDGE_URL_FILE%" 2>nul
 del "%MCP_URL_FILE%" 2>nul
 del "%VOX_URL_FILE%" 2>nul
+del "%BRIDGE_EXIT_FILE%" 2>nul
+del "%MCP_EXIT_FILE%" 2>nul
+del "%VOX_EXIT_FILE%" 2>nul
 exit /b 0
 
 :find_civ_pid
@@ -497,9 +531,15 @@ exit /b 0
 
 :startup_failed
 echo [ERROR] Failed to start all services cleanly. Cleaning up...
-if defined VOX_PID taskkill /PID %VOX_PID% /T /F >nul 2>&1
-if defined MCP_PID taskkill /PID %MCP_PID% /T /F >nul 2>&1
-if defined BRIDGE_PID taskkill /PID %BRIDGE_PID% /T /F >nul 2>&1
+if defined KEEP_OPEN (
+    if defined VOX_PID call :stop_service "Vox Agents" "%VOX_PID%" "%VOX_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT% "%VOX_EXIT_FILE%"
+    if defined MCP_PID call :stop_service "MCP Server" "%MCP_PID%" "%MCP_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT% "%MCP_EXIT_FILE%"
+    if defined BRIDGE_PID call :stop_service "Bridge Service" "%BRIDGE_PID%" "%BRIDGE_SHUTDOWN_URL%" %GRACEFUL_STOP_TIMEOUT% "%BRIDGE_EXIT_FILE%"
+) else (
+    if defined VOX_PID taskkill /PID %VOX_PID% /T /F >nul 2>&1
+    if defined MCP_PID taskkill /PID %MCP_PID% /T /F >nul 2>&1
+    if defined BRIDGE_PID taskkill /PID %BRIDGE_PID% /T /F >nul 2>&1
+)
 call :cleanup_temp_files
 endlocal
 exit /b 1

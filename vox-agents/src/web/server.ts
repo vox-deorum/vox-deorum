@@ -27,7 +27,7 @@ const __dirname = path.dirname(__filename);
 // Initialize Express app
 const app = express();
 const PORT = config.webui.port;
-const shutdownUrlFile = process.env.VOX_SHUTDOWN_URL_FILE;
+const shutdownUnavailablePlaceholder = 'unavailable';
 
 // Create loggers using the unified logger utility
 // These will automatically stream to SSE when available
@@ -62,12 +62,13 @@ function getShutdownHost(host: string): string {
   return host;
 }
 
-async function writeShutdownUrlFile(port: number, host = '127.0.0.1'): Promise<void> {
-  if (!shutdownUrlFile) return;
+/** Writes the shutdown discovery value expected by the service launcher. */
+async function writeShutdownDiscoveryFile(value: string): Promise<string | null> {
+  const shutdownUrlFile = process.env.VOX_SHUTDOWN_URL_FILE;
+  if (!shutdownUrlFile) return null;
 
-  const shutdownUrl = `http://${getShutdownHost(host)}:${port}/shutdown`;
-  await fsPromises.writeFile(shutdownUrlFile, `${shutdownUrl}\n`, 'utf8');
-  webLogger.info(`Wrote shutdown URL to ${shutdownUrlFile}`);
+  await fsPromises.writeFile(shutdownUrlFile, `${value}\n`, 'utf8');
+  return shutdownUrlFile;
 }
 
 export async function shutdownWebServer(): Promise<void> {
@@ -209,9 +210,14 @@ function tryListen(port: number): Promise<number | null> {
       // Start SSE heartbeat to keep connections alive
       heartbeatInterval = sseManager.startHeartbeat();
 
-      void writeShutdownUrlFile(actualPort, actualHost).catch((error) => {
-        webLogger.warn(`Failed to write shutdown URL file: ${String(error)}`);
-      });
+      const shutdownUrl = `http://${getShutdownHost(actualHost)}:${actualPort}/shutdown`;
+      void writeShutdownDiscoveryFile(shutdownUrl)
+        .then((shutdownFile) => {
+          if (shutdownFile) webLogger.info(`Wrote shutdown URL to ${shutdownFile}`);
+        })
+        .catch((error) => {
+          webLogger.warn(`Failed to write shutdown URL file: ${String(error)}`);
+        });
 
       resolve(actualPort);
     });
@@ -226,18 +232,28 @@ function tryListen(port: number): Promise<number | null> {
   });
 }
 
-// Start server function — tries configured port, then falls back to port + 1
+// Start server function. It tries the configured port, then falls back to port + 1.
 export async function startWebServer(): Promise<number | null> {
   const result = await tryListen(PORT);
   if (result !== null) return result;
 
   const fallback = PORT + 1;
-  webLogger.warn(`Port ${PORT} is already in use — trying ${fallback}`);
+  webLogger.warn(`Port ${PORT} is already in use. Trying ${fallback}.`);
   const fallbackResult = await tryListen(fallback);
   if (fallbackResult !== null) return fallbackResult;
 
-  webLogger.warn(`Port ${fallback} is also in use — skipping Web UI startup`);
-  return null;
+  if (!process.env.VOX_SHUTDOWN_URL_FILE) {
+    webLogger.warn(`Port ${fallback} is also in use. Skipping Web UI startup.`);
+    return null;
+  }
+
+  try {
+    const shutdownFile = await writeShutdownDiscoveryFile(shutdownUnavailablePlaceholder);
+    if (shutdownFile) webLogger.warn(`Wrote shutdown URL placeholder to ${shutdownFile}`);
+  } catch (writeError) {
+    webLogger.warn(`Failed to write shutdown URL placeholder: ${String(writeError)}`);
+  }
+  throw new Error(`Web UI ports ${PORT} and ${fallback} are already in use.`);
 }
 
 // Export for integration with vox-agents process

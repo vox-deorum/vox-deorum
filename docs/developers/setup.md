@@ -70,7 +70,10 @@ The launcher `scripts/vox-deorum.cmd` brings the services up in dependency order
 ```bat
 scripts\vox-deorum.cmd            REM default: web UI
 scripts\vox-deorum.cmd strategist REM or any mode matching a vox-agents npm script
+scripts\vox-deorum.cmd --keep-open REM keep service windows open after their commands exit
 ```
+
+`--keep-open` can appear anywhere in the argument list. The launcher continues to detect stopped services, but leaves each finished command prompt open for inspection. Close those command prompts manually when you no longer need them.
 
 The launcher prefers a bundled Node under `node/` and falls back to a system install. It automatically runs the compiled build (`dist/`) when source isn't present, or the source directly when it is.
 
