@@ -14,6 +14,7 @@
     "test:all": "npm run test -ws && npm --prefix vox-agents/ui run test",
     "lint:all": "npm run lint -ws",
     "update:codex-proxy": "node scripts/update-codex-proxy.mjs",
+    "vp-pr": "node scripts/vp-pr.mjs",
     "update:claude-agent-sdk": "npm update @anthropic-ai/claude-agent-sdk",
     "clean:all": "npm run clean -ws --if-present"
   },

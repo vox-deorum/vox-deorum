@@ -28,3 +28,4 @@ There is one deliberate exception. While the leaderhead scene is up the engine s
 - **The inherited gamecore**: `CvGameCoreDLL_Expansion2/GAMECORE_OVERVIEW.md` in the submodule, for the game, map, players, AI subsystems, database, and Lua interface.
 - **The unit AI and Vox Deorum's steering of it**: [unit-ai/overview.md](unit-ai/overview.md), for how the gamecore decides which units to make and use, and how Vox Deorum's custom flavors override those decisions.
 - **Building and deploying**: [building.md](building.md), which points at the submodule's build toolchain and debugging references rather than repeating them.
+- **Contributing back upstream**: [upstream-contributions.md](upstream-contributions.md), for the fork and line-branch model, the `vp-pr` workflow, and the rules for sending Vox Deorum gamecore changes to Vox Populi.
