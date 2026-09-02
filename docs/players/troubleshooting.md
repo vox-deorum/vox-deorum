@@ -35,7 +35,7 @@ The Setup wizard validates an API-backed provider by using the key to fetch its 
 - For a network or provider error, confirm you are online and check whether the provider is having an outage.
 - For a local OpenAI-compatible model, confirm the local server is running and that its address is correct.
 
-You can reopen the guided flow with the **Setup wizard** button on the Settings page. Codex uses ChatGPT login rather than an API key, and the bundled Claude Code runtime uses your local Claude Code sign-in. See [Configuration](configuration.md) for provider details.
+You can reopen the guided flow with the **Setup wizard** button on the Settings page. Codex uses ChatGPT login rather than an API key, and Claude Code's model list comes from your local Claude Code sign-in. If Claude Code is missing or not signed in, listing its models shows an error. See [Configuration](configuration.md) for provider details.
 
 ## Codex login doesn't start or finish
 

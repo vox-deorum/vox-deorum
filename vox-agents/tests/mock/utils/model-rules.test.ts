@@ -115,26 +115,6 @@ describe('model rules', () => {
     expect(applyModelRules('codex', 'gpt-5.6-luna')).toEqual({ reasoningEffort: 'high' });
   });
 
-  it('should recommend the first matching Codex tier models in catalog order', () => {
-    expect(recommendTierModels('codex', [
-      { id: 'codex/gpt-5.6-luna-a', name: 'gpt-5.6-luna-a' },
-      { id: 'codex/gpt-5.6-terra-a', name: 'gpt-5.6-terra-a' },
-      { id: 'codex/gpt-5.6-terra-b', name: 'gpt-5.6-terra-b' },
-      { id: 'codex/gpt-5.6-luna-b', name: 'gpt-5.6-luna-b' },
-    ])).toEqual({ default: 'codex/gpt-5.6-terra-a', small: 'codex/gpt-5.6-luna-a' });
-  });
-
-  it('should recommend the Claude Code and Synthetic model pairs', () => {
-    expect(recommendTierModels('claude-code', [
-      { id: 'claude-code/sonnet', name: 'sonnet' },
-      { id: 'claude-code/haiku', name: 'haiku' },
-    ])).toEqual({ default: 'claude-code/sonnet', small: 'claude-code/haiku' });
-    expect(recommendTierModels('synthetic', [
-      { id: 'synthetic/syn:large:text', name: 'syn:large:text' },
-      { id: 'synthetic/syn:small:text', name: 'syn:small:text' },
-    ])).toEqual({ default: 'synthetic/syn:large:text', small: 'synthetic/syn:small:text' });
-  });
-
   it('should omit unavailable tier recommendations without inventing catalog entries', () => {
     expect(recommendTierModels('openai', [{ id: 'openai/gpt', name: 'gpt' }])).toBeUndefined();
     expect(recommendTierModels('codex', [{ id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' }]))

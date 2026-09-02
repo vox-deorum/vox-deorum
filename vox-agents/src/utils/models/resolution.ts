@@ -8,7 +8,7 @@ import { config } from '../config.js';
 import type { Model, ModelSize } from '../../types/config.js';
 import { isSynthesizableModelId } from '../../types/constants.js';
 import { createLogger } from '../logger.js';
-import { DiscoveryError, discoverModels, isStaticCatalogProvider } from './discovery.js';
+import { DiscoveryError, discoverModels, allowsUnlistedModelReferences } from './discovery.js';
 import { parseModelReference } from './model-reference.js';
 import type { DiscoveredModel } from '../../types/api.js';
 
@@ -156,8 +156,8 @@ export async function ensureModelsResolved(
         continue;
       }
 
-      if (isStaticCatalogProvider(parsed.provider)) {
-        resolutionLogger.warn(`Model '${name}' is not in the bundled ${parsed.provider} model list; synthesizing its configuration.`);
+      if (allowsUnlistedModelReferences(parsed.provider)) {
+        resolutionLogger.warn(`Model '${name}' is not in the Claude Code model picker; synthesizing its configuration. Claude Code accepts manually configured aliases and full model IDs.`);
         continue;
       }
 

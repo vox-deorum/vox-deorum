@@ -6,6 +6,7 @@
 
 import type { DiscoveredModel, DiscoveryErrorKind } from '../../types/api.js';
 import { applyModelRules } from './rules.js';
+import { discoverClaudeCodeModelValues } from './providers/claude-code-discovery.js';
 import { ensureCodexProxy, getActiveCodexProxyPort, getCodexProxyApiBase } from './providers/codex-proxy.js';
 
 /** The credentials supplied by the configuration UI, keyed by environment variable name. */
@@ -24,14 +25,14 @@ export class DiscoveryError extends Error {
   }
 }
 
-/** Native-client providers whose model choices are fixed, not fetched. */
-const staticModelNames: Record<string, string[]> = {
-  'claude-code': ['sonnet', 'opus', 'haiku'],
-};
-
-/** Reports whether a provider serves a bundled list rather than a live catalog. */
-export function isStaticCatalogProvider(provider: string): boolean {
-  return provider in staticModelNames;
+/**
+ * Reports whether a provider accepts manually configured model references
+ * even when they are absent from the discovered catalog. Claude Code does:
+ * it permits configured aliases and full model IDs that the picker may not
+ * list, so resolution warns and synthesizes instead of rejecting them.
+ */
+export function allowsUnlistedModelReferences(provider: string): boolean {
+  return provider === 'claude-code';
 }
 
 /** Gets a credential from the request first, then falls back to the process environment. */
@@ -156,12 +157,25 @@ async function anthropicModels(key: string): Promise<string[]> {
   }
 }
 
-/** Discovers model records for one supported provider without caching results. */
+/**
+ * Discovers model records for one supported provider. Claude Code catalogs
+ * are cached by the discovery helper across the process lifetime; other
+ * providers are fetched fresh on each call.
+ */
 export async function discoverModels(provider: string, credentials: DiscoveryCredentials = {}): Promise<DiscoveredModel[]> {
-  const staticNames = staticModelNames[provider];
-  if (staticNames) return staticNames.map((name) => model(provider, name));
-
   switch (provider) {
+    case 'claude-code': {
+      try {
+        const values = await discoverClaudeCodeModelValues();
+        return values.map((value) => model(provider, value));
+      } catch (error) {
+        throw new DiscoveryError(
+          'provider',
+          502,
+          error instanceof Error ? error.message : 'Could not read the Claude Code model list from your local Claude Code sign-in.',
+        );
+      }
+    }
     case 'openai': {
       const key = requireCredential(credentials, 'OPENAI_API_KEY', 'OpenAI');
       const payload = await fetchJson('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${key}` } }, 'OpenAI');

@@ -136,7 +136,7 @@ onUnmounted(invalidate);
         Vox Deorum uses the ChatGPT account already configured on this PC.
       </p>
       <p v-else-if="selectedProvider === 'claude-code'" class="text-muted">
-        Vox Deorum uses a bundled Claude Code runtime with your local Claude Code sign-in.
+        Vox Deorum lists the models available to your local Claude Code sign-in. If the list is empty, check that Claude Code is installed and signed in.
       </p>
 
       <div class="setup-wizard-credentials">
@@ -180,6 +180,9 @@ onUnmounted(invalidate);
         <p>{{ discoveryStatusCopy }}</p>
         <p v-if="selectedProvider === 'codex'" class="text-muted">
           Run Setup wizard first to sign in with ChatGPT.
+        </p>
+        <p v-if="selectedProvider === 'claude-code'" class="text-muted">
+          Check that you are signed in to Claude Code, then try again.
         </p>
       </div>
     </section>

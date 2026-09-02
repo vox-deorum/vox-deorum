@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => {
     DiscoveryError: MockDiscoveryError,
     config: { llms: { default: { provider: 'openai', name: 'default' } } as Record<string, any> },
     discoverModels: vi.fn(),
-    isStaticCatalogProvider: vi.fn(() => false),
+    allowsUnlistedModelReferences: vi.fn(() => false),
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
   };
 });
@@ -18,7 +18,7 @@ vi.mock('../../../src/utils/logger.js', () => ({ createLogger: vi.fn(() => mocks
 vi.mock('../../../src/utils/models/discovery.js', () => ({
   DiscoveryError: mocks.DiscoveryError,
   discoverModels: mocks.discoverModels,
-  isStaticCatalogProvider: mocks.isStaticCatalogProvider,
+  allowsUnlistedModelReferences: mocks.allowsUnlistedModelReferences,
 }));
 
 import { ensureModelsResolved, getRuntimeModel, resetRuntimeModels, selectModelReference } from '../../../src/utils/models/resolution.js';
@@ -29,7 +29,7 @@ describe('ensureModelsResolved', () => {
     resetRuntimeModels();
     vi.clearAllMocks();
     mocks.config.llms = { default: { provider: 'openai', name: 'default' } };
-    mocks.isStaticCatalogProvider.mockReturnValue(false);
+    mocks.allowsUnlistedModelReferences.mockReturnValue(false);
   });
 
   it('should register catalog hits and cache discovery by provider', async () => {
@@ -83,7 +83,7 @@ describe('ensureModelsResolved', () => {
   });
 
   it('should warn rather than throw for static catalog misses', async () => {
-    mocks.isStaticCatalogProvider.mockReturnValue(true);
+    mocks.allowsUnlistedModelReferences.mockReturnValue(true);
     mocks.discoverModels.mockResolvedValue([]);
 
     await expect(ensureModelsResolved(['claude-code/custom'])).resolves.toBeUndefined();

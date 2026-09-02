@@ -11,11 +11,21 @@ vi.mock('../../../src/utils/models/providers/codex-proxy.js', () => ({
   getCodexProxyApiBase: (port: number) => `http://127.0.0.1:${port}/v1`,
 }));
 
-import { DiscoveryError, discoverModels, isStaticCatalogProvider } from '../../../src/utils/models/discovery.js';
+const sdkMocks = vi.hoisted(() => ({ query: vi.fn() }));
+
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({ query: sdkMocks.query }));
+
+import { allowsUnlistedModelReferences, DiscoveryError, discoverModels } from '../../../src/utils/models/discovery.js';
+import { resetClaudeCodeDiscovery } from '../../../src/utils/models/providers/claude-code-discovery.js';
 
 /** Builds a JSON response for the mocked provider fetch implementation. */
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), { status, headers: { 'content-type': 'application/json' } });
+}
+
+/** Builds a fake Claude Code runtime session with stubbed catalog and shutdown hooks. */
+function fakeClaudeCodeSession() {
+  return { supportedModels: vi.fn(), interrupt: vi.fn(), close: vi.fn() };
 }
 
 describe('discoverModels', () => {
@@ -23,6 +33,7 @@ describe('discoverModels', () => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    resetClaudeCodeDiscovery();
   });
 
   it('should prefer request credentials when discovering OpenAI models', async () => {
@@ -139,18 +150,84 @@ describe('discoverModels', () => {
     });
   });
 
-  it('should return the bundled Claude Code catalog without fetching', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+  it('should read the Claude Code model catalog from the live runtime', async () => {
+    const session = fakeClaudeCodeSession();
+    sdkMocks.query.mockReturnValue(session);
+    session.supportedModels.mockResolvedValue([
+      { value: 'default' },
+      { value: 'sonnet' },
+      { value: 'opus[1m]' },
+      { value: 'claude-fable-5-1[1m]' },
+      { value: 'haiku' },
+    ]);
+
+    await expect(discoverModels('claude-code', {})).resolves.toEqual([
+      { id: 'claude-code/default', provider: 'claude-code', name: 'default', recommendedOptions: { concurrencyLimit: 1 } },
+      { id: 'claude-code/sonnet', provider: 'claude-code', name: 'sonnet', recommendedOptions: { concurrencyLimit: 1 } },
+      { id: 'claude-code/opus[1m]', provider: 'claude-code', name: 'opus[1m]', recommendedOptions: { concurrencyLimit: 1 } },
+      { id: 'claude-code/claude-fable-5-1[1m]', provider: 'claude-code', name: 'claude-fable-5-1[1m]', recommendedOptions: { concurrencyLimit: 1 } },
+      { id: 'claude-code/haiku', provider: 'claude-code', name: 'haiku', recommendedOptions: { concurrencyLimit: 1 } },
+    ]);
+    expect(sdkMocks.query).toHaveBeenCalledTimes(1);
+    expect(sdkMocks.query).toHaveBeenCalledWith({ prompt: '', options: { settingSources: [] } });
+    expect(session.interrupt).toHaveBeenCalled();
+    expect(session.close).toHaveBeenCalled();
+  });
+
+  it('should share one lookup across concurrent discovery calls', async () => {
+    const session = fakeClaudeCodeSession();
+    sdkMocks.query.mockReturnValue(session);
+    let resolveSupported!: (value: { value: string }[]) => void;
+    session.supportedModels.mockReturnValue(new Promise((resolve) => {
+      resolveSupported = resolve;
+    }));
+
+    const first = discoverModels('claude-code', {});
+    const second = discoverModels('claude-code', {});
+
+    expect(sdkMocks.query).toHaveBeenCalledTimes(1);
+
+    resolveSupported([{ value: 'sonnet' }, { value: 'haiku' }]);
+    const expected = [
+      { id: 'claude-code/sonnet', provider: 'claude-code', name: 'sonnet', recommendedOptions: { concurrencyLimit: 1 } },
+      { id: 'claude-code/haiku', provider: 'claude-code', name: 'haiku', recommendedOptions: { concurrencyLimit: 1 } },
+    ];
+    await expect(Promise.all([first, second])).resolves.toEqual([expected, expected]);
+  });
+
+  it('should cache a successful catalog for the process lifetime', async () => {
+    const session = fakeClaudeCodeSession();
+    sdkMocks.query.mockReturnValue(session);
+    session.supportedModels.mockResolvedValue([{ value: 'sonnet' }]);
+
+    await discoverModels('claude-code', {});
+    await discoverModels('claude-code', {});
+
+    expect(sdkMocks.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('should retry a failed Claude Code discovery', async () => {
+    const session = fakeClaudeCodeSession();
+    sdkMocks.query.mockReturnValue(session);
+    session.supportedModels
+      .mockRejectedValueOnce(new Error('not signed in'))
+      .mockResolvedValueOnce([{ value: 'sonnet' }]);
+
+    await expect(discoverModels('claude-code', {})).rejects.toMatchObject<Partial<DiscoveryError>>({
+      kind: 'provider', status: 502, message: expect.stringContaining('Claude Code sign-in'),
+    });
+    expect(session.close).toHaveBeenCalledTimes(1);
 
     await expect(discoverModels('claude-code', {})).resolves.toEqual([
       { id: 'claude-code/sonnet', provider: 'claude-code', name: 'sonnet', recommendedOptions: { concurrencyLimit: 1 } },
-      { id: 'claude-code/opus', provider: 'claude-code', name: 'opus', recommendedOptions: { concurrencyLimit: 1 } },
-      { id: 'claude-code/haiku', provider: 'claude-code', name: 'haiku', recommendedOptions: { concurrencyLimit: 1 } },
     ]);
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(isStaticCatalogProvider('claude-code')).toBe(true);
-    expect(isStaticCatalogProvider('codex')).toBe(false);
+    expect(sdkMocks.query).toHaveBeenCalledTimes(2);
+  });
+
+  it('should report Claude Code as an unlisted-reference provider', () => {
+    expect(allowsUnlistedModelReferences('claude-code')).toBe(true);
+    expect(allowsUnlistedModelReferences('codex')).toBe(false);
+    expect(allowsUnlistedModelReferences('openai')).toBe(false);
   });
 
   it('should discover Codex models through the active managed proxy', async () => {

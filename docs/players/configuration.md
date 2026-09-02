@@ -33,7 +33,7 @@ If you're just starting out and want the widest selection from one account, Open
 
 ## Connecting a provider
 
-On a fresh install, Vox Deorum opens the Setup wizard automatically. It asks how you want to connect and collects the needed key or account sign-in. API-backed providers and local servers validate the connection by fetching their current model lists. Codex uses bundled choices and validates your ChatGPT account through its proxy. Claude Code also uses bundled choices, but listing them does not verify the local sign-in. Authentication, network, and provider errors are shown in the wizard so you can correct the problem before continuing. Keys stay on your own machine and go only to the provider you're using.
+On a fresh install, Vox Deorum opens the Setup wizard automatically. It asks how you want to connect and collects the needed key or account sign-in. API-backed providers and local servers validate the connection by fetching their current model lists. Codex uses bundled choices and validates your ChatGPT account through its proxy. Claude Code lists the models your local Claude Code sign-in provides. Authentication, network, and provider errors are shown in the wizard so you can correct the problem before continuing. Keys stay on your own machine and go only to the provider you're using.
 
 Codex completes ChatGPT device login inside the dashboard. Vox Deorum's bundled Claude Code runtime uses the Claude Code sign-in stored on your computer. For a local OpenAI-compatible provider, the wizard checks the server address you supply. AWS Bedrock remains an advanced setup that you configure manually on the Settings page.
 
@@ -41,7 +41,7 @@ The Settings page is also the advanced editor for credentials, providers, and mo
 
 ## Choosing a model
 
-After connecting, the Setup wizard lists models. API-backed providers and local servers report their current lists, Codex reads its current list through the authenticated managed proxy, and Claude Code uses bundled choices. The choice always comes down to the same three-way trade-off:
+After connecting, the Setup wizard lists models. API-backed providers and local servers report their current lists, Codex reads its current list through the authenticated managed proxy, and Claude Code lists what your local sign-in provides. The choice always comes down to the same three-way trade-off:
 
 | Model type | Strengths | Costs |
 | --- | --- | --- |

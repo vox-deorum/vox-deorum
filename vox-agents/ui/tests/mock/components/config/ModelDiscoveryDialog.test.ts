@@ -195,6 +195,25 @@ describe('ModelDiscoveryDialog', () => {
     expect(wrapper.emitted('update:apiKeys')).toBeUndefined();
   });
 
+  it('selects a bracketed Claude Code model id without emitting credentials', async () => {
+    api.discoverModels.mockResolvedValue({
+      provider: 'claude-code',
+      models: [{ id: 'claude-code/claude-fable-5-1[1m]', name: 'claude-fable-5-1[1m]' }],
+    });
+    const wrapper = mountDialog();
+
+    await discoverProvider(wrapper, 'claude-code');
+    await wrapper.find('input[value="claude-code/claude-fable-5-1[1m]"]').setValue(true);
+    await clickButton(wrapper, 'Add model');
+
+    const selectionEvents = wrapper.emitted('select') ?? [];
+    expect(selectionEvents[selectionEvents.length - 1]).toEqual([{
+      id: 'claude-code/claude-fable-5-1[1m]',
+      name: 'claude-fable-5-1[1m]',
+    }]);
+    expect(wrapper.emitted('update:apiKeys')).toBeUndefined();
+  });
+
   it('resets the selected provider and credential draft when reopened', async () => {
     const wrapper = mountDialog({ OPENROUTER_API_KEY: 'stored-key' });
 

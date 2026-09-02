@@ -400,19 +400,26 @@ describe('SetupWizard', () => {
   it('preserves non-empty API-key drafts when the selected service has no credential fields', async () => {
     api.discoverModels.mockResolvedValue({
       provider: 'claude-code',
-      models: [{ id: 'claude-code/sonnet', name: 'sonnet' }],
+      models: [{ id: 'claude-code/claude-fable-5-1[1m]', name: 'claude-fable-5-1[1m]' }],
     });
     const wrapper = mountWizard({ OPENAI_API_KEY: 'unrelated-key' });
     await choosePath(wrapper, 'subscription', 'claude-code');
     await clickButton(wrapper, 'Check and continue');
     await flushPromises();
-    await wrapper.find('input[value="claude-code/sonnet"]').setValue(true);
+    await wrapper.find('input[value="claude-code/claude-fable-5-1[1m]"]').setValue(true);
     await clickButton(wrapper, 'Next');
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 
     expect(api.updateCurrentConfig).toHaveBeenCalledWith({
-      config: expect.any(Object),
+      config: expect.objectContaining({
+        llms: expect.objectContaining({
+          'claude-code/claude-fable-5-1[1m]': {
+            provider: 'claude-code',
+            name: 'claude-fable-5-1[1m]',
+          },
+        }),
+      }),
       apiKeys: { OPENAI_API_KEY: 'unrelated-key' },
     });
   });
