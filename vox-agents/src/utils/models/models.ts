@@ -155,7 +155,7 @@ export function resolveToolFraming(config: Model): ToolCallFraming {
 export function getModel(config: Model, options?: {
   workingDirId?: string;
   onToolFraming?: (info: { framing: ToolCallFraming }) => void;
-  /** The calling agent's completion tools, named by the required-tool-choice instruction. */
+  /** The calling agent's completion tools, named by provider prompt guidance. */
   completionTools?: string[];
 }): LanguageModel {
   let result: LanguageModelV3;
@@ -306,7 +306,11 @@ export function getModel(config: Model, options?: {
   if (isHostCapabilityProvider(config.provider) && requestedHostTools?.length) {
     result = wrapLanguageModel({
       model: result,
-      middleware: hostCapabilityMiddleware(config.provider, resolveHostToolCapabilities(requestedHostTools)),
+      middleware: hostCapabilityMiddleware(
+        config.provider,
+        resolveHostToolCapabilities(requestedHostTools),
+        options?.completionTools,
+      ),
     });
   }
   return result;

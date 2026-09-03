@@ -1187,7 +1187,7 @@ describe('claude-code provider', () => {
             name: 'sonnet',
             options: { toolMiddleware: 'prompt', hostTools: ['Read'] },
           },
-          { workingDirId: 'g3-1' }
+          { workingDirId: 'g3-1', completionTools: ['send_message', 'inactive_action'] }
         );
         await (model as any).doGenerate({
           tools,
@@ -1201,7 +1201,9 @@ describe('claude-code provider', () => {
         expect(sys.content).toContain(hostCapabilityInstruction(
           'claude-code',
           { read: true, write: false, web: false },
+          ['send_message'],
         ));
+        expect(sys.content).not.toContain('inactive_action');
         expect(sys.content).toContain('## Action Calling');
         expect(sys.content).toContain('## Available Actions');
         // The reframed prompt must not mention the built-in CLI tools at all.

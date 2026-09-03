@@ -3,8 +3,10 @@
  */
 
 import type { LanguageModelV3Middleware } from '@ai-sdk/provider';
+import { formatToolChoiceList } from '../../tools/tool-names.js';
 import { hostWorkspaceGuideFiles } from './host-tools.js';
 import type { HostCapabilityProvider, HostToolCapabilities } from './host-tools.js';
+import { clientFunctionToolNames } from './required-tool-choice.js';
 import { appendSystemInstruction } from './system-prompt.js';
 
 /** Heading that opens every host-capability reminder. */
@@ -27,12 +29,13 @@ function formatCapabilities(access: HostToolCapabilities): string {
 export function hostCapabilityInstruction(
   provider: HostCapabilityProvider,
   access: HostToolCapabilities,
+  terminalNames: string[] = [],
 ): string | undefined {
   if (!access.read && !access.write && !access.web) return undefined;
 
   const guide = hostWorkspaceGuideFiles[provider];
   const sentences = [
-    `To support your core mission, optional capabilities are enabled for this call: ${formatCapabilities(access)}.`,
+    `To support your core mission, extra capabilities are enabled: ${formatCapabilities(access)}.`,
   ];
 
   if (access.read) {
@@ -45,21 +48,32 @@ export function hostCapabilityInstruction(
   }
 
   if (access.web) sentences.push('You can search the web and fetch current online information.');
+  const terminalList = formatToolChoiceList(terminalNames);
+  if (terminalList) {
+    const terminalNoun = provider === 'claude-code' ? 'actions' : 'tools';
+    sentences.push(`If you plan to use these capabilities, use them before any terminal ${terminalNoun}: ${terminalList}.`);
+  }
   return `${hostCapabilityHeading}\n${sentences.join(' ')}`;
 }
 
 /**
- * Add the host-capability reminder as an immutable outer middleware wrapper.
+ * Add the host-capability reminder as an immutable outer middleware wrapper,
+ * naming only completion tools available in the current request.
  */
 export function hostCapabilityMiddleware(
   provider: HostCapabilityProvider,
   access: HostToolCapabilities,
+  completionTools: string[] = [],
 ): LanguageModelV3Middleware {
-  const instruction = hostCapabilityInstruction(provider, access);
+  const completionNames = new Set(completionTools);
   return {
     specificationVersion: 'v3',
-    transformParams: async ({ params }) => instruction === undefined
-      ? params
-      : { ...params, prompt: appendSystemInstruction(params.prompt, instruction) },
+    transformParams: async ({ params }) => {
+      const terminalNames = clientFunctionToolNames(params).filter((name) => completionNames.has(name));
+      const instruction = hostCapabilityInstruction(provider, access, terminalNames);
+      return instruction === undefined
+        ? params
+        : { ...params, prompt: appendSystemInstruction(params.prompt, instruction) };
+    },
   };
 }

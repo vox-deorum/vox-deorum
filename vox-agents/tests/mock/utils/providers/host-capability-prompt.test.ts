@@ -78,6 +78,23 @@ describe('hostCapabilityInstruction', () => {
     const instruction = hostCapabilityInstruction('codex', { read: true, write: true, web: true })!;
     expect(instruction).toContain('Read, Write, and Web');
   });
+
+  it.each([
+    ['codex', 'terminal tools'],
+    ['claude-code', 'terminal actions'],
+  ] as const)('names the real %s %s after the ordering rule', (provider, terminalNoun) => {
+    const instruction = hostCapabilityInstruction(
+      provider,
+      { read: true, write: false, web: false },
+      ['found_city', 'send_message'],
+    )!;
+    expect(instruction).toContain(`before any ${terminalNoun}: \`found_city\` or \`send_message\``);
+  });
+
+  it('omits terminal guidance when no terminal tool is active', () => {
+    const instruction = hostCapabilityInstruction('codex', { read: true, write: false, web: false })!;
+    expect(instruction).not.toContain('terminal');
+  });
 });
 
 describe('hostCapabilityMiddleware', () => {
@@ -94,7 +111,7 @@ describe('hostCapabilityMiddleware', () => {
     const model = wrapLanguageModel({
       model: recorder,
       middleware: [
-        hostCapabilityMiddleware('codex', access),
+        hostCapabilityMiddleware('codex', access, ['found_city', 'inactive_tool']),
         requiredToolChoiceMiddleware({ completionTools: ['found_city'] }),
       ],
     });
@@ -110,10 +127,11 @@ describe('hostCapabilityMiddleware', () => {
     } as any);
 
     const system = (recorder as any).doGenerateCalls.at(-1).prompt[0].content as string;
-    const hostInstruction = hostCapabilityInstruction('codex', access)!;
+    const hostInstruction = hostCapabilityInstruction('codex', access, ['found_city'])!;
     const requiredInstruction = requiredToolChoiceInstruction(['found_city', 'get_briefing'], ['found_city'], false)!;
     expect(system).toContain(hostInstruction);
     expect(system).toContain(requiredInstruction);
+    expect(system).not.toContain('inactive_tool');
     expect(system.indexOf(hostInstruction)).toBeLessThan(system.indexOf(requiredInstruction));
   });
 });

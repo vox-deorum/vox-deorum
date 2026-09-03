@@ -801,9 +801,9 @@ export class VoxContext<TParameters extends AgentParameters> {
             model: getModel(stepModel, {
               ...runtimeIdentity,
               onToolFraming: ({ framing }) => { stepToolFraming = framing; },
-              // Providers that neutralize the tool force name these as what ends the turn. Passed
-              // unfiltered: the middleware intersects them with the tools actually declared on the
-              // wire, which already reflects this step's active tools.
+              // Provider guidance names these as what ends the turn. Passed unfiltered: each
+              // middleware intersects them with the tools actually declared on the wire, which
+              // already reflects this step's active tools.
               completionTools: agent.completionTools,
             }),
             providerOptions: stepProviderOptions,
