@@ -43,8 +43,8 @@ export function hostCapabilityInstruction(
       `Your working directory is a persistent per-civilization scratch workspace shared by all agents. Consult ${guide} for its working conventions.`,
     );
     sentences.push(access.write
-      ? `Use the workspace to maintain notes and improve ${guide} when that supports the core mission.`
-      : 'You can consult the workspace but cannot update it.');
+      ? `Use the workspace to create, modify, or read notes and improve ${guide} when that may support the core mission. The workspace starts empty.`
+      : 'You can read notes from the workspace but cannot update it.');
   }
 
   if (access.web) sentences.push('You can search the web and fetch current online information.');
