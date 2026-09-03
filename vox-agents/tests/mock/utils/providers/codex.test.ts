@@ -766,9 +766,10 @@ describe('Codex reasoning token diagnostics', () => {
         id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
         choices: [],
         usage: {
-          prompt_tokens: 11,
+          prompt_tokens: 100,
           completion_tokens: 7,
-          total_tokens: 18,
+          total_tokens: 107,
+          prompt_tokens_details: { cached_tokens: 80 },
           completion_tokens_details: { reasoning_tokens: 5 },
         },
       },
@@ -782,9 +783,12 @@ describe('Codex reasoning token diagnostics', () => {
 
     expect(finish).toMatchObject({
       usage: {
-        inputTokens: { total: 11 },
+        inputTokens: { total: 100, noCache: 20, cacheRead: 80 },
         outputTokens: { total: 7, text: 2, reasoning: 5 },
-        raw: { completion_tokens_details: { reasoning_tokens: 5 } },
+        raw: {
+          prompt_tokens_details: { cached_tokens: 80 },
+          completion_tokens_details: { reasoning_tokens: 5 },
+        },
       },
     });
     expect(loggerMocks.warn).not.toHaveBeenCalled();

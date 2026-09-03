@@ -67,7 +67,7 @@ The run's parameters come from the seat's base. `setBaseParameters()` installs t
 
 Cancellation has two scopes that mirror these layers. `run.abort()` cancels a single operation. `context.abort()` cancels every active root, and is the one used by player abort, game switching, and shutdown.
 
-Token usage accumulates into both the run's own sink and the seat-wide totals, so per-turn cost stays separable from the seat's running total.
+Token usage accumulates into both the run's own sink and the seat-wide totals, so per-turn cost stays separable from the seat's running total. Model-step and agent-execution spans record provider-reported cache reads as `tokens.input.cached` when available. `tokens.input` remains the total input count, including both cached and uncached tokens.
 
 ### Tools
 

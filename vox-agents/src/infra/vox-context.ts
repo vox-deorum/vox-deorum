@@ -37,6 +37,7 @@ import { countMessagesTokens } from "../utils/models/token-counter.js";
 import { emitProviderExecutedToolSpans } from "../utils/telemetry/provider-tool-spans.js";
 import { hostCapabilityTelemetryAttributes } from "../utils/telemetry/host-capabilities.js";
 import { codexResponseTelemetryAttributes } from "../utils/telemetry/codex-response.js";
+import { cachedInputTokensFromUsage } from "../utils/telemetry/model-usage.js";
 import { isHostCapabilityProvider } from "../utils/models/providers/host-tools.js";
 import { cleanToolArtifacts } from "../utils/models/text-cleaning.js";
 import { appendReminder } from "../utils/prompts/reminders.js";
@@ -619,6 +620,8 @@ export class VoxContext<TParameters extends AgentParameters> {
 
             // Count tokens
             let inputTokens = 0;
+            let cachedInputTokens = 0;
+            let hasCachedInputTokens = false;
             let reasoningTokens = 0;
             let outputTokens = 0;
 
@@ -646,6 +649,10 @@ export class VoxContext<TParameters extends AgentParameters> {
               shouldStop = stepResult.shouldStop;
               finalText = stepResult.finalText ?? "";
               inputTokens += stepResult.inputTokens;
+              if (stepResult.cachedInputTokens !== undefined) {
+                cachedInputTokens += stepResult.cachedInputTokens;
+                hasCachedInputTokens = true;
+              }
               reasoningTokens += stepResult.reasoningTokens;
               outputTokens += stepResult.outputTokens;
             }
@@ -665,6 +672,7 @@ export class VoxContext<TParameters extends AgentParameters> {
               'tokens.reasoning': reasoningTokens,
               'tokens.output': outputTokens,
             });
+            if (hasCachedInputTokens) span.setAttribute('tokens.input.cached', cachedInputTokens);
             span.setStatus({ code: SpanStatusCode.OK });
 
             // Populate optional token output for callers that need per-execution counts
@@ -727,7 +735,7 @@ export class VoxContext<TParameters extends AgentParameters> {
     messages: ModelMessage[],
     model: Model,
     callback?: StreamingEventCallback
-  ): Promise<{ messages: ModelMessage[], shouldStop: boolean, finalText?: string, inputTokens: number, reasoningTokens: number, outputTokens: number }> {
+  ): Promise<{ messages: ModelMessage[], shouldStop: boolean, finalText?: string, inputTokens: number, cachedInputTokens?: number, reasoningTokens: number, outputTokens: number }> {
     const stepSpan = this.tracer.startSpan(`agent.${agent.name}.step.${stepCount + 1}`, {
       attributes: {
         'vox.context.id': this.id,
@@ -861,6 +869,7 @@ export class VoxContext<TParameters extends AgentParameters> {
 
         // Update token usage
         const inputTokens = Math.max(countMessagesTokens(messages, false), stepResponse.usage.inputTokens ?? 0);
+        const cachedInputTokens = cachedInputTokensFromUsage(stepResponse.usage);
         let reasoningTokens = stepResponse.usage.reasoningTokens ?? 0;
         const outputTokens = countMessagesTokens(stepResponse.response.messages, false);
 
@@ -922,12 +931,13 @@ export class VoxContext<TParameters extends AgentParameters> {
           'tokens.output': outputTokens,
           'step.responses': JSON.stringify(stepResponse.response.messages)
         });
+        if (cachedInputTokens !== undefined) stepSpan.setAttribute('tokens.input.cached', cachedInputTokens);
         stepSpan.setAttributes(codexResponseTelemetryAttributes(stepResponse.providerMetadata));
 
         stepSpan.setAttribute('step.should_stop', shouldStop);
         stepSpan.setStatus({ code: SpanStatusCode.OK });
 
-        return { messages, shouldStop, finalText, inputTokens, reasoningTokens, outputTokens };
+        return { messages, shouldStop, finalText, inputTokens, cachedInputTokens, reasoningTokens, outputTokens };
       } catch (error) {
         stepSpan.recordException(error as Error);
         stepSpan.setStatus({
