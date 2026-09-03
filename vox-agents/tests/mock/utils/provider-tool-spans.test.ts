@@ -223,7 +223,7 @@ describe("emitProviderExecutedToolSpans", () => {
     expect(spans[0].status?.code).toBe(SpanStatusCode.ERROR);
   });
 
-  it.each(["failed", "error", "cancelled", "canceled", "interrupted"])(
+  it.each(["failed", "error", "declined", "cancelled", "canceled", "interrupted"])(
     "should mark structured Codex %s results as errors",
     (status) => {
       const content = [

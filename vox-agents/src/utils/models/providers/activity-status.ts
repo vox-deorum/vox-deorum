@@ -14,7 +14,7 @@ export function classifyProviderActivityStatus(value: unknown): ProviderActivity
     return 'preliminary';
   }
   if (status === 'completed') return 'completed';
-  if (status === 'failed' || status === 'error' || status === 'cancelled' || status === 'canceled' || status === 'interrupted') {
+  if (status === 'failed' || status === 'error' || status === 'declined' || status === 'cancelled' || status === 'canceled' || status === 'interrupted') {
     return 'failed';
   }
   return undefined;

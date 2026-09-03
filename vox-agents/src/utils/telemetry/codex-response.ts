@@ -19,5 +19,5 @@ function instructionSources(providerMetadata: unknown): string[] | undefined {
 /** Return model-step attributes for the Codex instruction sources, when present. */
 export function codexResponseTelemetryAttributes(providerMetadata: unknown): Attributes {
   const sources = instructionSources(providerMetadata);
-  return sources === undefined ? {} : { 'codex.instruction_sources': sources };
+  return sources === undefined ? {} : { 'host.instruction_sources': sources };
 }

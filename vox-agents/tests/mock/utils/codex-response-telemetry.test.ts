@@ -8,7 +8,7 @@ describe('codexResponseTelemetryAttributes', () => {
     const source = String.raw`F:\project\AGENTS.md`;
 
     expect(codexResponseTelemetryAttributes({ codex: { instructionSources: [source] } })).toEqual({
-      'codex.instruction_sources': [source],
+      'host.instruction_sources': [source],
     });
   });
 

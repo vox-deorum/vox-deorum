@@ -1074,7 +1074,7 @@ describe('Codex built-in activity normalization', () => {
     });
   });
 
-  it.each(['failed', 'error', 'cancelled', 'canceled', 'interrupted'])(
+  it.each(['failed', 'error', 'declined', 'cancelled', 'canceled', 'interrupted'])(
     'normalizes terminal %s activity as an error',
     async (status) => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion({
