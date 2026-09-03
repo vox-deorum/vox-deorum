@@ -36,6 +36,7 @@ import { VoxSpanExporter } from '../utils/telemetry/vox-exporter.js';
 import { countMessagesTokens } from "../utils/models/token-counter.js";
 import { emitProviderExecutedToolSpans } from "../utils/telemetry/provider-tool-spans.js";
 import { hostCapabilityTelemetryAttributes } from "../utils/telemetry/host-capabilities.js";
+import { codexResponseTelemetryAttributes } from "../utils/telemetry/codex-response.js";
 import { isHostCapabilityProvider } from "../utils/models/providers/host-tools.js";
 import { cleanToolArtifacts } from "../utils/models/text-cleaning.js";
 import { appendReminder } from "../utils/prompts/reminders.js";
@@ -921,6 +922,7 @@ export class VoxContext<TParameters extends AgentParameters> {
           'tokens.output': outputTokens,
           'step.responses': JSON.stringify(stepResponse.response.messages)
         });
+        stepSpan.setAttributes(codexResponseTelemetryAttributes(stepResponse.providerMetadata));
 
         stepSpan.setAttribute('step.should_stop', shouldStop);
         stepSpan.setStatus({ code: SpanStatusCode.OK });

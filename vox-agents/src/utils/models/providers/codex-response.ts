@@ -10,6 +10,7 @@ import type {
   LanguageModelV3Middleware,
   LanguageModelV3StreamPart,
   LanguageModelV3Usage,
+  SharedV3ProviderMetadata,
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import { preserveModelError } from '../preserved-model-error.js';
@@ -120,6 +121,30 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : undefined;
+}
+
+/** Read the proxy's verbatim instruction-source paths from one response envelope. */
+function extractInstructionSources(value: unknown): string[] | undefined {
+  const instructionSources = asRecord(asRecord(value)?.x_codex)?.instructionSources;
+  if (!Array.isArray(instructionSources) || !instructionSources.every((source) => typeof source === 'string')) {
+    return undefined;
+  }
+  return [...instructionSources];
+}
+
+/** Attach Codex instruction sources to the provider metadata carried by the AI SDK. */
+function withInstructionSources(
+  providerMetadata: SharedV3ProviderMetadata | undefined,
+  instructionSources: string[] | undefined,
+): SharedV3ProviderMetadata | undefined {
+  if (instructionSources === undefined) return providerMetadata;
+  return {
+    ...(providerMetadata ?? {}),
+    codex: {
+      ...(providerMetadata?.codex ?? {}),
+      instructionSources,
+    },
+  };
 }
 
 /** Warn when the compatible response omitted its optional reasoning-token statistic. */
@@ -587,6 +612,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       logMissingReasoningTokenStatistics(response.usage);
       const normalizer = new ActivityNormalizer(params);
       const payload = rawChoicePayload(response.response?.body);
+      const instructionSources = extractInstructionSources(response.response?.body);
       const activity = [
         ...normalizer.ingestCalls(payload?.tool_calls),
         ...normalizer.ingestResults(payload?.tool_results),
@@ -594,7 +620,11 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
         ...normalizer.finishNormally(),
       ];
       const content = response.content.filter((part) => normalizer.keepGeneratedContent(part));
-      return { ...response, content: [...content, ...activity as LanguageModelV3Content[]] };
+      return {
+        ...response,
+        content: [...content, ...activity as LanguageModelV3Content[]],
+        providerMetadata: withInstructionSources(response.providerMetadata, instructionSources),
+      };
     },
     wrapStream: async ({ doStream, params }) => {
       const response = await withProviderFailureClassification(doStream);
@@ -604,6 +634,8 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       let sawRawFinish = false;
       let inspectedUsage = false;
       let rawProxyFailure: Error | undefined;
+      let inspectedFirstRawChunk = false;
+      let instructionSources: string[] | undefined;
       return {
         ...response,
         stream: response.stream.pipeThrough(new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
@@ -611,6 +643,10 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
             if (part.type === 'raw') {
               if (requestedRawChunks) controller.enqueue(part);
               if (rawProxyFailure !== undefined) return;
+              if (!inspectedFirstRawChunk) {
+                inspectedFirstRawChunk = true;
+                instructionSources = extractInstructionSources(part.rawValue);
+              }
               rawProxyFailure = classifyRawProxyFailure(part.rawValue);
               if (rawProxyFailure !== undefined) return;
               const payload = rawChoicePayload(part.rawValue);
@@ -637,6 +673,11 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
               }
               for (const activity of normalizer.finishNormally()) controller.enqueue(activity);
               sawFinish = true;
+              const providerMetadata = withInstructionSources(part.providerMetadata, instructionSources);
+              controller.enqueue(providerMetadata === part.providerMetadata
+                ? part
+                : { ...part, providerMetadata });
+              return;
             }
             for (const normalizedPart of normalizer.handleAdapterPart(part)) controller.enqueue(normalizedPart);
           },

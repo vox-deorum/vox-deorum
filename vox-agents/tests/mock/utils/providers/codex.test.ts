@@ -56,7 +56,7 @@ import { streamTextWithConcurrency, withModelConfig } from '../../../../src/util
 const testProxyRoot = path.join(os.tmpdir(), 'vox-codex-provider-test');
 
 /** Creates a standard non-streaming Chat Completions response. */
-function completion(message: Record<string, unknown>, finishReason: string): Response {
+function completion(message: Record<string, unknown>, finishReason: string, instructionSources?: unknown): Response {
   return new Response(JSON.stringify({
     id: 'chatcmpl-test',
     object: 'chat.completion',
@@ -64,6 +64,7 @@ function completion(message: Record<string, unknown>, finishReason: string): Res
     model: 'gpt-5.4-mini',
     choices: [{ index: 0, message, finish_reason: finishReason }],
     usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14 },
+    ...(instructionSources === undefined ? {} : { x_codex: { instructionSources } }),
   }), { status: 200, headers: { 'content-type': 'application/json' } });
 }
 
@@ -634,6 +635,53 @@ describe('Codex compatible adapter requests', () => {
 });
 
 describe('Codex reasoning token diagnostics', () => {
+  it('preserves aggregate instruction sources in provider metadata', async () => {
+    const source = String.raw`F:\project\AGENTS.md`;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      [source],
+    )));
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(result.providerMetadata).toEqual({ codex: { instructionSources: [source] } });
+  });
+
+  it('takes streamed instruction sources from the first SSE chunk only', async () => {
+    const firstSource = String.raw`F:\project\AGENTS.md`;
+    const laterSource = String.raw`F:\project\later.md`;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamingCompletion(
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        x_codex: { instructionSources: [firstSource] },
+        choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+      },
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        x_codex: { instructionSources: [laterSource] },
+        choices: [{ index: 0, delta: { content: 'Ready.' }, finish_reason: null }],
+      },
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      },
+    )));
+
+    const parts = await streamParts(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }), {
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(parts.find((part) => part.type === 'finish')?.providerMetadata).toEqual({
+      codex: { instructionSources: [firstSource] },
+    });
+  });
+
   it('warns once when a non-stream response omits reasoning token statistics', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
       { role: 'assistant', content: 'Ready.' },
