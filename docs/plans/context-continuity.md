@@ -27,7 +27,7 @@ identifies transcript rows not yet attached, and a run-local draft makes all cha
 | Immutable carried messages | Stable provider prefixes and predictable cache reuse | Cleanup and annotations operate on copies |
 | Between-round compaction | Prompt shape changes only at a clear boundary | Scheduling is evaluated before ordinary continuation |
 | Agent-owned transcript cursor | Envoys attach only conversation rows the engine has not carried | Cursor changes commit only after success |
-| Complete step snapshots | Oracle receives the full source prompt | `step.messages` contains all engine-owned history and current input |
+| Complete step snapshots | Telemetry and replay read one record without continuity knowledge | `step.messages` contains all engine-owned history and current input |
 
 ### Ownership
 
@@ -151,8 +151,8 @@ committed. Delimiters and handoff notes remain.
 
 The round boundary is the first current-round message. On a fresh build it follows the leading system
 and state messages; on a continued build it follows carried history, changed state, and the delimiter.
-Mark it with internal metadata so provider middleware can add dynamic guidance after the stable
-carried prefix. The metadata is recorded for Oracle and removed from the provider copy.
+Mark it with internal metadata, removed from the provider copy, so the tool-rescue middleware can
+insert its generated protocol after the stable carried prefix.
 
 The loop maintains a `roundHistory` containing carried messages, current-round additions, and
 completed response and tool traffic. Before each model call it creates an immutable copy as
@@ -164,10 +164,11 @@ instructions, required-tool and host-capability guidance, tool-history conversio
 normalization, response formatting, and cache annotations. These transformations never enter
 `roundHistory` or `ContinuityState.messages` and never mutate `step.messages`.
 
-`step.messages` is the authoritative Oracle and telemetry input. Do not add a second carried-history
-payload. Oracle preserves the complete ordered array and submits it through the replay model's normal
-middleware, since different providers require different prompt transformations. The goal is to replay
-the complete source prompt, not to reproduce another provider's wire request.
+`step.messages` is the single authoritative record of the source prompt. Do not add a second
+carried-history payload. Replay consumes the record as committed: Oracle submits the complete
+ordered array through the replay model's normal middleware, so it never needs to know continuity
+exists. The goal is to replay the complete source prompt, not to reproduce another provider's wire
+request.
 
 ## Continuity state
 
@@ -291,10 +292,9 @@ the context starts closing.
 A continued round retries once from a fresh overflow build only if the context-length error precedes
 every completed step and no overflow fallback has run. The provider has therefore not returned a step
 or executed one of its requested tools. Rebuild messages, `allSteps`, output text, and counters, then
-rerun the same logical first step. Keep one logical step span open across the fallback, replace its
-`step.messages` with the fresh source prompt, and mark `continuity.overflow_retry = true`. The rejected
-physical request does not become another logical step. A later overflow is final and keeps the
-existing callback and `throwOnError` behavior.
+rerun the same logical first step. Keep one logical step span open across the fallback and replace its
+`step.messages` with the fresh source prompt. The rejected physical request does not become another
+logical step. A later overflow is final and keeps the existing callback and `throwOnError` behavior.
 
 ## Thresholds, reminders, and reasoning
 
@@ -396,35 +396,36 @@ to `src/utils/prompts/cache-breakpoints.ts`, with an Envoy re-export during migr
 On a continued round, the engine may add one Anthropic breakpoint to the last carried message within
 the four-breakpoint budget. It annotates only a provider copy.
 
-Keep model-specific transformations in provider middleware. Oracle should apply the replay model's
-transformations rather than inherit the source model's conventions. The continuity change is limited
-to where dynamically generated instructions are inserted: middleware reads the round-boundary marker
-and adds them after the stable carried prefix instead of changing the beginning of every request.
+Keep model-specific transformations in provider middleware. Oracle applies the replay model's
+transformations rather than inherit the source model's conventions. Mark a transformation for a
+continuity-specific placement only if it prepends generated content at the front of the prompt and
+that content can change from prompt to prompt; every other transformation keeps its current behavior
+for every call, continuity or not.
 
-Three current transformations can disturb prefix caching because their content depends on the
-effective model, tool choice, or active tools:
+One current transformation meets the test: prompt-mode tool rescue. Its generated tool protocol
+lands at the very front of the prompt, and prompt mode removes the wire tools, so the protocol is
+the only carrier of the tool list and changes whenever it changes. For continuity-enabled calls the
+rescue middleware reads the round-boundary marker and inserts the protocol as a user message there,
+after the stable carried prefix. Stateless calls keep the current placement.
 
-- required-tool middleware appends generated guidance to the first system message;
-- host-capability middleware appends generated guidance to the first system message;
-- prompt-mode tool rescue prepends or merges its generated tool protocol near the start.
-
-For continuity-enabled calls, these middlewares place their generated guidance in a user message at
-the round boundary. Stateless calls retain their current placement. Tool-history conversion, action
-framing, response-format selection, tool removal, response parsing, and provider-specific system
-normalization remain middleware transformations on the provider copy. Claude Code normalization and
-`systemPromptFirst` role normalization do not generate new content, so they need no continuity-specific
-behavior.
+Required-tool and host-capability guidance do not meet the test and stay untouched. Both append to
+the leading system message rather than prepend, and their text is a pure function of the request's
+declared tools, so it changes only when the tools list changes, which already invalidates the
+provider's tools-keyed prefix cache. Moving them would change middleware behavior for no cache gain.
+Tool-history conversion, action framing, response-format selection, tool removal, response parsing,
+and the system normalizations generate no varying leading content, and remain middleware
+transformations on the provider copy.
 
 | Transformation | Continuity placement |
 | --- | --- |
-| Required tool-choice guidance | User message at the round boundary |
-| Host-capability guidance | User message at the round boundary |
 | Tool-rescue protocol | User message at the round boundary |
+| Required tool-choice guidance | Unchanged |
+| Host-capability guidance | Unchanged |
 | Provider system normalization | Provider copy only |
 | Cache breakpoint | Last carried message on a provider copy |
 
-Tests assert that dynamic guidance follows the carried prefix, appears once on the provider copy, and
-never mutates `step.messages` or committed history.
+Tests assert that the rescue protocol follows the carried prefix, appears once on the provider copy,
+and never mutates `step.messages` or committed history.
 
 Anthropic also keys caches on the tools list, so `removeUsedTools` and the diplomat deal gate remain
 cache breakers.
@@ -536,29 +537,29 @@ Keep the existing logical step spans directly beneath the agent span. Each span'
 contains the complete, ordered, immutable source prompt: all carried messages, current input, and
 response or tool traffic from earlier completed steps in the same round. Provider-generated
 instructions and wire annotations remain model-specific transformations and are not copied into
-history. Keep `step.tools`,
-`step.tools.choice`, `step.tool_framing`, host capability facts, the resolved model, `step.outcome`,
-and `step.responses` alongside it.
+history.
 
-Add these diagnostics to every step span under the `continuity.*` namespace:
+Stateless calls record no continuity attributes; their spans stay exactly as they are today. A
+continuity-enabled round records three round-level attributes on the agent span, each merging several
+internal states into one value:
 
-- `continuity.enabled`, `continuity.state_id`, `continuity.key`, `continuity.round_index`, and
-  `continuity.build` (`fresh`, `continued`, or
-  `compacted`);
-- `continuity.reset_reason` when a fresh build replaces carried history;
-- `continuity.carried_tokens` and `continuity.carried_messages` before current-round additions;
-- `continuity.state_changed`, `continuity.compaction_scheduled`, and
-  `continuity.reasoning_stripped`;
-- `continuity.overflow_retry` as a boolean.
+- `continuity.build`: `fresh`, `continued`, or `compacted`. Absence means stateless, `fresh` covers
+  every reset except compaction, and `compacted` covers scheduled, threshold, and overflow rebuilds
+  alike;
+- `continuity.carried_tokens`: the committed-history estimate before current-round additions;
+- `continuity.overflow`: `not-attempted`, `succeeded`, or `failed`.
 
-The agent span records the round-level overflow outcome as `not-attempted`, `succeeded`, or `failed`.
-Generic transport retries reuse the same source prompt and need no extra step identity. A successful
-overflow fallback updates the first step's snapshot to the fresh prompt Oracle should replay.
+No state IDs, keys, or round counters are recorded; the goal is not to capture continuity's internal
+state. The UI already receives streamed agent spans, so it can show the user that a round was
+compacted from `continuity.build = 'compacted'`. Generic transport retries reuse the same source
+prompt and need no extra step identity, and a successful overflow fallback updates the first step's
+snapshot to the fresh prompt.
 
 Provider request input tokens remain separate from the committed-history estimate. Add
 `OracleConfig.targetStep?: number` and a matching CLI override. It is one-based and defaults to `1`.
 Retrieval validates the step, passes it to `extractPrompt()`, and reports available step numbers when
-no match exists. Oracle sends the recorded source prompt through the replay model's normal middleware.
+no match exists. Oracle needs no continuity awareness: it replays the recorded `step.messages`
+through the replay model's normal middleware, and no continuity attribute exists for it to read.
 Document the attributes in `docs/developers/vox-agents/observability.md`.
 
 `extractPrompt()` reads the selected step's complete `step.messages`, keeps its leading system prefix,
@@ -586,7 +587,7 @@ Verified AI SDK 6.0.174 and Anthropic-provider behavior:
 | Continuity core | `src/infra/vox-context.ts`, `src/infra/vox-run.ts`, new `src/infra/vox-continuity.ts` |
 | Agent contract and configuration | `src/infra/vox-agent.ts`, `src/types/config.ts`, `src/strategist/vox-player.ts` |
 | Prompt and token utilities | prompt reminders, new history and breakpoint helpers, `src/utils/models/token-counter.ts` |
-| Provider integration | model boundary metadata, provider system, tool-choice, host-capability, and tool-rescue modules |
+| Provider integration | model boundary metadata and the tool-rescue middleware |
 | Oracle replay | `src/oracle/types.ts`, CLI configuration, retriever, prompt extractor, and replay tests |
 | Envoys | `src/envoy/envoy.ts`, `src/envoy/live-envoy.ts`, `src/telepathist/telepathist.ts` |
 | Chat and transcript | chat types, web-chat types, chat turn, factory, store, transcript, and transcript utilities |
@@ -612,8 +613,8 @@ Verified AI SDK 6.0.174 and Anthropic-provider behavior:
 | Telepathist | Full replay parity and Initialize preparation remain intact |
 | Lifecycle | Collisions, reopen, live and database deletion, shutdown, and doomed release remove stale states |
 | Model options | Engine-only keys are absent from every provider branch |
-| Middleware placement | Dynamic guidance follows the carried prefix and never enters round or carried history |
-| Step telemetry | Every logical step records its complete ordered source prompt |
+| Middleware placement | The rescue protocol follows the carried prefix and never enters round or carried history; every other transformation keeps its current placement |
+| Telemetry | Every logical step records its complete ordered source prompt; continuity rounds record the three merged attributes and stateless calls record none |
 | Oracle replay | Target-step extraction preserves message order and uses the replay model's transformations |
 
 Use `tests/mock/context/vox-context-execute-runs.test.ts` for engine coverage, with focused suites
@@ -653,7 +654,7 @@ Manual verification covers:
 - id-less observer compaction; `{{{Greeting}}}` and `{{{Initialize}}}` with no ContinuityState;
 - live diplomacy, live observer, and database Telepathist deletion, including deletion during a run;
 - Anthropic and Codex continued-round cache reads;
-- required-tool, host-capability, and prompt-mode tool guidance after the cached carried prefix;
+- the prompt-mode tool protocol after the cached carried prefix;
 - a diplomacy refresh rejected by the existing thread lock while a turn is active.
 
 ## Risks and follow-ups
