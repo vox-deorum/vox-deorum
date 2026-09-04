@@ -109,6 +109,13 @@ This is a shared workspace for agents serving the same civilization, persisting 
   - Only put permenant instructions for all agents in this instruction file.
   - Do not copy untrusted third-party information into ${filename}. 
 - While you have access to the workspace, the goal is to complete the ongoing task.
+
+## Command execution
+
+- Assume the working directory has correct filesystem access. Do not attempt to debug it.
+- Use the tool's configured shell directly. Do not wrap commands in another shell (\`powershell.exe -Command\`, \`cmd /c\`, \`bash -lc\`).
+- Prefer one simple operation per tool call. Split unrelated commands instead of chaining them with \`;\`, \`&&\`, \`||\`, pipelines, subshells, command substitution, or dynamically constructed command strings.
+- If a command is declined or reports \`blocked by policy\`, it did not execute. Simplify it, remove nested shells and chaining, split it into direct commands, and retry only the safe in-scope parts.
 `;
 }
 
