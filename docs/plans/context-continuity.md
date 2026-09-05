@@ -10,9 +10,15 @@ A **round** is one `VoxContext.execute()` call. Today it builds and discards a m
 the system prompt and `getInitialMessages()`. With continuity, compatible rounds for one agent and
 conversation reuse sanitized history held by `VoxContext`.
 
-History stays immutable, state and cursor changes commit atomically, and compaction occurs only
-between rounds. A context-overflow fallback runs only before the first step completes. Live Envoys
-and Telepathists must survive refresh, compaction, special messages, deletion, and shutdown.
+History stays immutable, and state and cursor changes commit atomically. Scheduled and threshold
+compaction run between rounds. An overflow at any step compacts only carried history once, preserving
+the current round and completed steps; a subsequent overflow fails. Live Envoys and Telepathists must
+survive refresh, compaction, special messages, deletion, and shutdown.
+
+Strategist continuity is experimental and defaults to disabled because it increases token use.
+Disabled Strategists preserve their existing execution and replay behavior except for the shared
+tool-protocol placement change described below. Envoys default to enabled and may simplify their
+existing prompt, trace replay, and chat lifecycle behavior.
 
 ## High-level conceptual review
 
@@ -23,9 +29,9 @@ identifies transcript rows not yet attached, and a run-local draft makes all cha
 | Design choice | Benefit | Required invariant |
 | --- | --- | --- |
 | Engine-owned continuity state | One continuity mechanism for every agent | A stateless call invalidates stale history for the same key |
-| Draft then commit | A failed round leaves the previous ContinuityState usable | Hooks mutate only draft-backed continuity state |
+| Draft then commit | A failed round cannot partially commit history or cursors | Hooks mutate only draft-backed continuity state; failure invalidates the matching state |
 | Immutable carried messages | Stable provider prefixes and predictable cache reuse | Cleanup and annotations operate on copies |
-| Between-round compaction | Prompt shape changes only at a clear boundary | Scheduling is evaluated before ordinary continuation |
+| Compaction boundaries | Ordinary resets happen between rounds; overflow preserves current work | Overflow replaces only carried history and never replays completed steps |
 | Agent-owned transcript cursor | Envoys attach only conversation rows the engine has not carried | Cursor changes commit only after success |
 | Complete step snapshots | Telemetry and replay read one record without continuity knowledge | `step.messages` contains all engine-owned history and current input |
 
@@ -62,7 +68,8 @@ state for one key; its **carried history** is sanitized
 `ModelMessage[]` retained between rounds. A **fresh build** has no prior engine-carried history,
 though it may include transcript-derived messages. A **continued build** appends current input to
 carried history.
-**Compaction** replaces it with a smaller fresh prompt. A **ContinuityDraft** commits only after
+**Compaction** replaces prior-round history with a smaller prefix. Between rounds this starts a fresh
+build; during overflow it leaves current-round inputs and completed steps intact. A **ContinuityDraft** commits only after
 success; a **wire copy** is provider-facing and may have temporary annotations. **Transient**
 messages are sent but not stored, and a **continuity cursor** is the agent-owned transcript or list
 position.
@@ -72,7 +79,7 @@ position.
 Continuity is a boolean capability owned by each agent. Add `contextContinuity` to `VoxAgent`,
 defaulting to `false`. The Envoy base sets it to `true`; Strategists and every other non-Envoy agent
 default to `false`. An enabled agent receives the full
-continuity behavior: carried history, threshold reset, safe overflow retry, reminders, and the
+continuity behavior: carried history, threshold reset, overflow compaction, reminders, and the
 `compact-context` control tool. A special call can resolve continuity to `false` for that call.
 
 `PlayerConfig` exposes `strategistContinuity?: boolean` and `envoyContinuity?: boolean` rather than
@@ -107,26 +114,30 @@ runs stateless and dooms its owner so stale state cannot later commit over the s
 | --- | --- |
 | `contextContinuity` | Boolean agent default, `false` on `VoxAgent` and `true` on the Envoy base |
 | `continuityConfigKey` | Optional `ContinuitySeatConfig` field that overrides the agent default |
-| `resolveContextContinuity()` | Applies per-call behavior and the seat override |
 | `getContinuityKey()` | Identifies a `ContinuityState` within one `VoxContext`; defaults to the agent name |
-| `continuityOnFailure` | Chooses whether failure keeps or discards the previous ContinuityState |
 | `getStateMessages()` | Returns the current state block |
-| `getRoundDelimiter()` | Returns an optional delimiter for a continued round |
 | `getRoundMessages()` | Returns current input and per-round scaffolding |
 | `commitContinuityState()` | Applies run-local agent commit state through a synchronous, non-throwing hook |
 
-`RoundInfo.fresh` means no carried history; `compacted` means the fresh build follows scheduled,
-threshold, or overflow compaction. `ContinuityState` is the long-lived engine object. Do not use
+Resolve the per-call override, seat field, and agent default in one engine helper rather than adding
+a resolution method to every agent. Envoy special-call detection supplies the per-call override.
+Delimiters are ordinary round messages, not a separate hook. Every failed round invalidates its
+matching continuity state, so there is no per-agent failure policy.
+
+`RoundInfo.fresh` means no carried history; `compacted` means the initial fresh build follows scheduled
+or threshold compaction. Overflow changes the carried prefix without invoking prompt hooks again.
+`ContinuityState` is the long-lived engine object. Do not use
 `VoxSession` for it: `VoxSession` already names an unrelated existing abstraction.
 
-The disabled path continues to call `getInitialMessages()` unchanged. For enabled continuity,
+The disabled path continues to call `getInitialMessages()`. For enabled continuity,
 `getStateMessages()` defaults to an empty array and the base `getRoundMessages()` delegates to the
 agent's existing `getInitialMessages()` implementation. Existing Strategists can therefore use the
 base round adapter when `strategistContinuity` enables them. Envoys override the new hooks to separate
 stable state from newly attached transcript rows. Other agent families have no `PlayerConfig`
 override, but a subclass may opt in through `contextContinuity`; a future seat-family field can add
-per-player override control. Disabled-path parity excludes only retired `metadata.trace` replay,
-removed with its plumbing. Enabled continuity applies the role and transience rules below.
+per-player override control. Disabled Strategists keep their existing initial-message construction.
+Envoys remove `metadata.trace` replay and its plumbing. Shared tool-protocol placement applies to
+enabled and disabled calls alike; enabled continuity additionally applies the history rules below.
 
 ## Prompt composition
 
@@ -137,22 +148,25 @@ content every hook or middleware insertion uses the `user` role.
 | Build | Message order |
 | --- | --- |
 | Fresh | Agent system, leading state system messages, remaining state, handoff if scheduled, current round |
-| Continued | Carried history, changed state, delimiter, current round |
+| Continued | Carried history, changed state, current round (including any delimiter) |
 | Compacted | The fresh order with `round.compacted = true` |
 
 For continuity, a shared helper retains system roles only in the leading prefix and rewrites later
-ones to user. It applies to state, delimiters, round messages, Envoy hints, reminders, and middleware
-additions, fixing the trailing Envoy hint for continuity without changing disabled-call parity.
+ones to user. LiveEnvoy's final hint and Negotiator's final instruction become user messages in all
+calls, matching Telepathist's existing hint role. Existing Strategist prompts already keep their
+system messages in the leading prefix. Generated tool protocols use the user role in every call.
 
 State is recomputed and compared with `ContinuityState.lastState` by role and content, ignoring provider
 options. A continued round appends changed state as user content and skips unchanged state. Preambles,
 postscripts, hints, reminders, and deal tables call `markTransient()`, so they are sent but not
 committed. Delimiters and handoff notes remain.
 
-The round boundary is the first current-round message. On a fresh build it follows the leading system
-and state messages; on a continued build it follows carried history, changed state, and the delimiter.
+Every execution has a round boundary, including disabled continuity and Oracle replay. On a fresh or
+stateless build it follows the leading system and state prefix; on a continued build it follows
+carried history and changed state. It precedes the first round message, including any delimiter.
 Mark it with internal metadata, removed from the provider copy, so the tool-rescue middleware can
-insert its generated protocol after the stable carried prefix.
+insert its generated protocol there. With no round messages, use the end of the prefix. Disabled
+Strategists retain their complete leading system block before this boundary.
 
 The loop maintains a `roundHistory` containing carried messages, current-round additions, and
 completed response and tool traffic. Before each model call it creates an immutable copy as
@@ -178,25 +192,27 @@ Add `src/infra/vox-continuity.ts` for pure types and helpers.
 
 | Field | Meaning |
 | --- | --- |
-| `key`, `stateId` | ContinuityState identity |
 | `system` | Stable agent system prompt used for compatibility |
 | `modelFingerprint` | Provider, model, and prompt-affecting model options |
 | `messages` | Immutable carried history |
 | `lastState` | Last state hook output used for change detection |
 | `historyTokens` | Estimate of the sanitized committed history |
-| `roundCount` | Number of committed rounds |
 | `pendingHandoff` | Note that forces scheduled compaction |
 | `agentState` | Opaque cursor state owned by the agent |
 | `busy`, `doomed` | Ownership and deferred-deletion flags |
+
+The map key identifies the conversation and the stored object identity establishes ownership; no
+duplicate key field, generated state ID, or round counter is needed.
 
 The fingerprint serializes the resolved model, excluding engine-only options, to catch changes to
 provider, model, reasoning, tool middleware, thinking extraction, host tools, framing, or system handling.
 
 ### Run-local state
 
-`ExecutionFrame.continuity` points to a `ContinuityRunState` containing the `ContinuityState`, its draft,
-the current threshold, carried counts, scheduling and reminder flags, completed-step count,
-overflow-retry state, and ephemeral `agentCommitState`.
+`ExecutionFrame.continuity` points to a `ContinuityRunState` containing the acquired state and draft,
+the carried-prefix boundary, prepared compaction inputs, one reminder flag, one overflow-attempt flag,
+and ephemeral `agentCommitState`. Read the threshold from the resolved model, scheduling from
+`draft.pendingHandoff`, and completed steps from the existing `allSteps`; do not duplicate them.
 
 Only shared `busy` and `doomed` change during a round. Everything else changes on the draft.
 `context.continuityState` reads and writes persistent `draft.agentState`. A separate
@@ -214,8 +230,8 @@ flowchart TD
     Build[Build fresh or continued prompt]
     Loop[Run step loop]
     Error{Context-length error?}
-    Retry{Continued, no completed step, retry unused?}
-    Fresh[Create fresh overflow draft]
+    Retry{Overflow compaction unused?}
+    Fresh[Compact carried prefix and retry failed step]
     Output[Build and postprocess output]
     Commit[Sanitize, count, and commit]
     Discard[Discard draft]
@@ -245,21 +261,20 @@ Evaluate the matching `ContinuityState` in this order:
 6. `historyTokens` reached the current threshold: `threshold`;
 7. otherwise: continued.
 
-Scheduled handoff precedes empty-history evaluation, so a nonempty state still resets. A reset
-creates a cleared draft with a new ID; the shared state remains untouched until commit. A scheduled
-draft keeps the handoff through insertion after state, then clears it. Under `keep`, failure leaves
-the original state and handoff available for retry.
+Scheduled handoff precedes empty-history evaluation, so it is consumed even when history is empty.
+A reset creates a cleared draft; the shared state remains untouched until commit or failure
+invalidation. A scheduled draft keeps the handoff through insertion after state, then clears it.
 
 ### Step loop
 
 The one-step-at-a-time loop remains. Before each request it resolves the model and threshold, then
 records the complete source prompt in the existing step span. A successful step records input usage,
-appends only its response and tool traffic to `roundHistory`, and makes overflow fallback ineligible.
+appends only its response and tool traffic to `roundHistory`, including failed tool exchanges.
 The next step snapshots the updated history. Provider guidance is regenerated by middleware for each
 call and never accumulates in carried history. A compaction-only step is completed.
 
 The shared retry helper already terminates immediately for `isContextLengthError()`, allowing
-`VoxContext` to own the single fallback that changes a continued prompt into a fresh build. Leave the
+`VoxContext` to own the single fallback that compacts the carried prefix at any step. Leave the
 generic transport retry behavior unchanged; it is not part of context continuity.
 
 If `prepareStep()` substitutes a model, use its threshold and log it. Commit stores its compatibility
@@ -272,14 +287,15 @@ After `getOutput()` and `postprocessOutput()` succeed:
 1. apply any agent-specific history projection;
 2. sanitize `roundHistory` without mutating the assembled array;
 3. estimate tokens from the sanitized history, including the final response and retained results;
-4. update draft messages, state, cursor, counters, model fingerprint, and pending handoff;
+4. update draft messages, state, cursor, token estimate, model fingerprint, and pending handoff;
 5. verify that the state is still owned and not doomed;
 6. invoke the agent's synchronous, non-throwing continuity commit hook;
 7. assign the draft to the state;
 8. release the state.
 
-`keep` discards only the draft; `discard` clears the state because an Envoy may have created durable
-effects outside it. With continuity enabled, `Envoy.stopCheck()` stages copied response rows in
+Failure discards the draft and invalidates the acquired state for every agent, without removing a
+replacement owned by another run. This also handles Envoys that may have created durable effects
+outside it. With continuity enabled, `Envoy.stopCheck()` stages copied response rows in
 `agentCommitState`; the commit hook appends them to the thread only after fallible output and
 sanitization complete. Disabled calls retain direct insertion, with `ChatTurn.finish()` as the outer
 rollback safeguard.
@@ -287,14 +303,25 @@ rollback safeguard.
 Shutdown marks busy states doomed, clears idle states, and prevents a late draft commit after
 the context starts closing.
 
-### Safe overflow retry
+### Overflow compaction
 
-A continued round retries once from a fresh overflow build only if the context-length error precedes
-every completed step and no overflow fallback has run. The provider has therefore not returned a step
-or executed one of its requested tools. Rebuild messages, `allSteps`, output text, and counters, then
-rerun the same logical first step. Keep one logical step span open across the fallback and replace its
-`step.messages` with the fresh source prompt. The rejected physical request does not become another
-logical step. A later overflow is final and keeps the existing callback and `throwOnError` behavior.
+On the first context-length error at any step of an enabled round, compact only its carried history
+and retry the failed step. Keep current-round inputs, completed response and tool traffic, `allSteps`,
+accumulated output, usage, staged cursor changes, and any pending handoff. A second overflow in the
+same round is final, with the existing callback and `throwOnError` behavior. Disabled calls retain
+their existing overflow behavior.
+
+Keep carried history separate from the current-round suffix so compaction replaces only the prefix.
+Use the same compacted projection as a between-round reset, derived from inputs captured during
+initial preparation. For Strategists the replacement uses the stable system and prepared current
+state; the already-prepared round reports remain in the suffix. Envoys derive their prior-conversation
+text from the captured transcript, excluding rows already represented in the current-round suffix.
+No prompt hooks, briefing calls, preparation effects, or completed tools run again. If there is no
+carried history to reduce, the retry has no additional history to remove; another overflow fails.
+
+Keep the failed step's logical span open across the retry and replace only its `step.messages` with
+the compacted request. Earlier step snapshots stay unchanged. Reuse the failed step's prepared
+configuration and regenerate its provider copy. The rejected request is not another logical step.
 
 ## Thresholds, reminders, and reasoning
 
@@ -380,6 +407,9 @@ Envoy chat rows.
 
 Sanitization detects SDK errors, execution denial, and MCP JSON `isError: true`. It removes failed
 call/result pairs, transients, empty rows, and orphans while retaining untouched identity.
+This is a commit-time projection for the next round. Failed tool exchanges remain in the current
+round's messages and step records, including across overflow compaction. Never apply this cleanup
+to the current-round suffix during an overflow retry.
 
 Before generic sanitization, an Envoy with `speaksOnlyViaSendMessage` removes host-suppressed string
 assistant messages and text parts, but retains reasoning and successful paired traffic, including
@@ -396,36 +426,40 @@ to `src/utils/prompts/cache-breakpoints.ts`, with an Envoy re-export during migr
 On a continued round, the engine may add one Anthropic breakpoint to the last carried message within
 the four-breakpoint budget. It annotates only a provider copy.
 
-Keep model-specific transformations in provider middleware. Oracle applies the replay model's
-transformations rather than inherit the source model's conventions. Mark a transformation for a
-continuity-specific placement only if it prepends generated content at the front of the prompt and
-that content can change from prompt to prompt; every other transformation keeps its current behavior
-for every call, continuity or not.
+Keep model-specific transformations in provider middleware. Generated protocol text depends on the
+effective tool list, tool choice, framing, and structured-output conventions. Regenerating identical
+text does not disturb a stable prefix, but changing that text does. Strategists enable
+`removeUsedTools`, so their protocol can change between steps. Envoy tool lists are generally stable
+within a round but can differ across rounds, including the Diplomat deal gate.
 
-One current transformation meets the test: prompt-mode tool rescue. Its generated tool protocol
-lands at the very front of the prompt, and prompt mode removes the wire tools, so the protocol is
-the only carrier of the tool list and changes whenever it changes. For continuity-enabled calls the
-rescue middleware reads the round-boundary marker and inserts the protocol as a user message there,
-after the stable carried prefix. Stateless calls keep the current placement.
+Use one placement rule for prompt-mode tool rescue in every execution, including disabled
+Strategists and Oracle: insert the generated protocol as a user message at the round boundary.
+Remove the action-framing, system-first merging, and leading-system insertion branches from protocol
+placement. Framing and structured output still determine its content. This preserves the prefix
+before the boundary when the protocol changes; it does not promise cache reuse for the suffix or
+for providers whose native tool definitions also changed.
 
-Required-tool and host-capability guidance do not meet the test and stay untouched. Both append to
-the leading system message rather than prepend, and their text is a pure function of the request's
-declared tools, so it changes only when the tools list changes, which already invalidates the
-provider's tools-keyed prefix cache. Moving them would change middleware behavior for no cache gain.
-Tool-history conversion, action framing, response-format selection, tool removal, response parsing,
-and the system normalizations generate no varying leading content, and remain middleware
-transformations on the provider copy.
+The engine supplies the boundary on every execution. Middleware callers without a marker use the
+end of the leading system prefix. Oracle uses that same ordinary fallback or engine boundary and
+does not reconstruct the source run's continuity boundary.
 
-| Transformation | Continuity placement |
+Required-tool guidance, host-capability guidance, tool-history conversion, action wording,
+response-format selection, tool removal, response parsing, and provider system normalization retain
+their existing placement and behavior. They operate on provider copies. This change addresses the
+generated tool-rescue protocol; it is not a guarantee that all other prefix content stays stable.
+
+| Transformation | Placement |
 | --- | --- |
-| Tool-rescue protocol | User message at the round boundary |
+| Tool-rescue protocol | User message at the round boundary in every execution |
 | Required tool-choice guidance | Unchanged |
 | Host-capability guidance | Unchanged |
 | Provider system normalization | Provider copy only |
 | Cache breakpoint | Last carried message on a provider copy |
 
-Tests assert that the rescue protocol follows the carried prefix, appears once on the provider copy,
-and never mutates `step.messages` or committed history.
+Tests assert that the rescue protocol follows the leading prefix in stateless calls and the carried
+prefix in continued calls, appears once on the provider copy, and never mutates `step.messages` or
+committed history. Change the effective tool list between steps and verify that only the generated
+protocol changes, with preceding source content intact.
 
 Anthropic also keys caches on the tools list, so `removeUsedTools` and the diplomat deal gate remain
 cache breakers.
@@ -442,7 +476,7 @@ translation. Provider-branch tests prove neither reaches the wire.
 
 ## Envoy integration
 
-`Envoy` defaults to enabled continuity and `continuityOnFailure = discard`; its key is
+`Envoy` defaults to enabled continuity; its key is
 `agentName:threadId`. Greeting and Initialize special calls resolve to `false`.
 
 Envoys use a staged, discriminated cursor selected by thread type:
@@ -544,7 +578,7 @@ continuity-enabled round records three round-level attributes on the agent span,
 internal states into one value:
 
 - `continuity.build`: `fresh`, `continued`, or `compacted`. Absence means stateless, `fresh` covers
-  every reset except compaction, and `compacted` covers scheduled, threshold, and overflow rebuilds
+  every reset except compaction, and `compacted` covers scheduled, threshold, and overflow compaction
   alike;
 - `continuity.carried_tokens`: the committed-history estimate before current-round additions;
 - `continuity.overflow`: `not-attempted`, `succeeded`, or `failed`.
@@ -552,14 +586,14 @@ internal states into one value:
 No state IDs, keys, or round counters are recorded; the goal is not to capture continuity's internal
 state. The UI already receives streamed agent spans, so it can show the user that a round was
 compacted from `continuity.build = 'compacted'`. Generic transport retries reuse the same source
-prompt and need no extra step identity, and a successful overflow fallback updates the first step's
-snapshot to the fresh prompt.
+prompt and need no extra step identity. An overflow retry updates only the failed step's snapshot to
+the compacted prompt and retains all earlier step records.
 
 Provider request input tokens remain separate from the committed-history estimate. Add
 `OracleConfig.targetStep?: number` and a matching CLI override. It is one-based and defaults to `1`.
 Retrieval validates the step, passes it to `extractPrompt()`, and reports available step numbers when
 no match exists. Oracle needs no continuity awareness: it replays the recorded `step.messages`
-through the replay model's normal middleware, and no continuity attribute exists for it to read.
+through the replay model's normal middleware without consulting continuity attributes.
 Document the attributes in `docs/developers/vox-agents/observability.md`.
 
 `extractPrompt()` reads the selected step's complete `step.messages`, keeps its leading system prefix,
@@ -568,6 +602,27 @@ continues unchanged. Provider middleware then derives tool framing, protocol, ho
 call conventions from the replay model. No prompt-composition mode or new Oracle cache identity is
 needed. Existing experiment cache behavior remains unchanged; callers use a new experiment name or
 `forceReplay` when changing replay configuration.
+
+## Expected prompt and replay changes
+
+This table collects the intentional differences for review. Complete `step.messages` recording and
+applying the replay model's middleware are existing behavior, not new Oracle features. Oracle does
+not need to know whether a recorded prompt contains carried history.
+
+| Area | Expected change |
+| --- | --- |
+| Tool-rescue placement, all calls | Today action framing inserts a system protocol before the first user message, system-first mode merges it into the first system message, and other modes prepend a system message. All modes will insert a user protocol at the round boundary, including disabled Strategists and Oracle. |
+| LiveEnvoy and Negotiator hints | Their trailing system instructions become user messages in enabled and disabled calls. Telepathist already uses a user hint. |
+| Envoy replay | Remove memory-only trace capture and replay. Enabled rounds carry engine history; disabled rounds retain transcript replay without native trace restoration. |
+| Oracle system extraction | Keep only the leading system prefix in `system`; preserve later messages in order. Existing LiveEnvoy and Negotiator recordings with trailing systems will no longer have them hoisted. Normal Strategist prompts already have leading systems, so their extraction order stays unchanged. Provider middleware retains its own normalization. |
+| Oracle protocol position | Replay uses the common placement rule at its ordinary input boundary. It does not reproduce the source continuity boundary or continuity-specific cache breakpoint. |
+| Oracle step selection | Optional one-based `targetStep` selects a later recorded step; the default stays at step 1. |
+| Enabled continuity | Append current input to retained history, send transient scaffolding, and compact history under the rules above. Cache annotations are provider-copy hints, not recorded source content. |
+
+Disabled Strategists retain initial-message construction, active-tool selection, stop behavior,
+transport retries, outputs, and telemetry structure. The shared tool-protocol relocation is the
+intentional prompt exception. Envoy refresh locking and trace removal may change Envoy behavior
+regardless of whether continuity is enabled.
 
 ## Implementation facts
 
@@ -589,7 +644,7 @@ Verified AI SDK 6.0.174 and Anthropic-provider behavior:
 | Prompt and token utilities | prompt reminders, new history and breakpoint helpers, `src/utils/models/token-counter.ts` |
 | Provider integration | model boundary metadata and the tool-rescue middleware |
 | Oracle replay | `src/oracle/types.ts`, CLI configuration, retriever, prompt extractor, and replay tests |
-| Envoys | `src/envoy/envoy.ts`, `src/envoy/live-envoy.ts`, `src/telepathist/telepathist.ts` |
+| Envoys | `src/envoy/envoy.ts`, `src/envoy/live-envoy.ts`, `src/envoy/agents/negotiator.ts`, `src/telepathist/telepathist.ts` |
 | Chat and transcript | chat types, web-chat types, chat turn, factory, store, transcript, and transcript utilities |
 | Tests and docs | mock tests, Envoy guides, overview, observability, and `vox-agents/AGENTS.md` |
 
@@ -597,23 +652,23 @@ Verified AI SDK 6.0.174 and Anthropic-provider behavior:
 
 | Area | Required proof |
 | --- | --- |
-| Disabled parity | No ContinuityState; unchanged prompt except retired trace replay |
+| Disabled Strategist parity | No ContinuityState; preserve existing execution and replay except shared tool-protocol placement |
 | Agent ownership | Envoys default enabled, other agents default disabled, and each seat override wins |
 | Enabled continuation | Reuse untouched prefix objects; attach only current input |
 | State changes | Skip unchanged state; append changed state with valid roles |
 | Scheduled compaction | Nonempty handoff state starts the next round fresh |
 | Role ordering | No system message after conversation content |
 | Threshold accounting | Large final responses and tool results trigger next-round compaction |
-| Safe retry | Generic retry rejects context-length errors; the first logical step then rebuilds once from fresh history |
+| Overflow retry | First overflow at any step compacts only carried history; preserve preparation, completed steps, output, and current-round failures; second overflow errors |
 | Draft rollback | Step, output, staged rows, cursor, and deletion failures cannot partially commit |
 | Immutability | Cleanup, reasoning removal, and breakpoints do not mutate carried objects |
 | Tool scheduling | Duplicate error; compaction-only continues; shared completion stops |
-| Sanitization | Remove transient, failed, denied, hidden Envoy, and orphaned parts |
+| Sanitization | Retain failed exchanges throughout their round, including overflow; remove failed, denied, transient, hidden Envoy, and orphaned parts from next-round history |
 | Envoy cursors | Durable-ID and generation-bound index cursors survive append, locked refresh, replacement, and compaction |
 | Telepathist | Full replay parity and Initialize preparation remain intact |
 | Lifecycle | Collisions, reopen, live and database deletion, shutdown, and doomed release remove stale states |
 | Model options | Engine-only keys are absent from every provider branch |
-| Middleware placement | The rescue protocol follows the carried prefix and never enters round or carried history; every other transformation keeps its current placement |
+| Middleware placement | Shared user-protocol placement for enabled, disabled, and replay calls; changing tools leaves the preceding prefix intact; other transformations keep their placement |
 | Telemetry | Every logical step records its complete ordered source prompt; continuity rounds record the three merged attributes and stateless calls record none |
 | Oracle replay | Target-step extraction preserves message order and uses the replay model's transformations |
 
@@ -629,11 +684,12 @@ ownership and middleware placement.
 
 ## Implementation sequence
 
-1. Add config, option filtering, transient, history, token, cache, and boundary helpers with unit tests.
+1. Add config, option filtering, transient, history, token, cache, and universal boundary helpers with unit tests.
 2. Add agent hooks and capability, run slot, continuity types, fingerprint, and acquisition helpers.
 3. Implement lifecycle, overflow fallback, sanitization, commit, doom, and telemetry.
 4. Add `compact-context`, stop filtering, reminder, and enabled-continuity tool selection.
-5. Migrate LiveEnvoy and Telepathist to staged cursors and projections, then remove trace plumbing.
+5. Migrate LiveEnvoy and Telepathist to staged cursors and projections, remove trace plumbing, and
+   change LiveEnvoy and Negotiator trailing instructions to user messages.
 6. Add Oracle target-step replay, factory and store invalidation, dependency types, integration tests,
    and documentation.
 
@@ -654,7 +710,9 @@ Manual verification covers:
 - id-less observer compaction; `{{{Greeting}}}` and `{{{Initialize}}}` with no ContinuityState;
 - live diplomacy, live observer, and database Telepathist deletion, including deletion during a run;
 - Anthropic and Codex continued-round cache reads;
-- the prompt-mode tool protocol after the cached carried prefix;
+- the prompt-mode tool protocol after the prefix with continuity enabled and disabled, including
+  Strategist tool-list changes across steps;
+- an overflow after completed tool steps, then a second overflow that fails without repeating work;
 - a diplomacy refresh rejected by the existing thread lock while a turn is active.
 
 ## Risks and follow-ups
