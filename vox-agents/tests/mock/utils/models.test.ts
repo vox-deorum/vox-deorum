@@ -154,6 +154,11 @@ describe('claude-code provider', () => {
       expect(mocks.captured.tools).toEqual([]);
     });
 
+    it('should unset ANTHROPIC_API_KEY so the CLI uses the subscription login', () => {
+      getModel({ provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt' } });
+      expect(mocks.captured.env).toHaveProperty('ANTHROPIC_API_KEY', undefined);
+    });
+
     it('should map a non-minimal reasoningEffort to effort with summarized adaptive thinking', () => {
       getModel({
         provider: 'claude-code',
