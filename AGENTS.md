@@ -30,7 +30,7 @@ Each component has its own AGENTS.md with detailed patterns. Read it before work
 ## Workflow Rules
 
 - Delegate to sub-agents for complex or multi-step features, and include the tool-calling rules in the prompt.
-- Don't present action plans until requested, and don't change test scripts unless asked.
+- When asking questions, come with a clear example. Do not assume the owner knows every detail in your context.
 - Release notes: read `release.txt` for the last version tag, then run `git log <tag>..HEAD --oneline --no-merges` and `git diff --stat <tag>..HEAD`. Output short grouped bullets to the console and don't write files.
 
 ## Writing Style
