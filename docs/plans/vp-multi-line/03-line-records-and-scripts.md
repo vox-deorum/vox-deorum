@@ -28,7 +28,7 @@ The repository is `CIVITAS-John/vox-populi` and the fork branch is derived as `v
 
 ## Script changes
 
-1. **`scripts/download-dll.cmd`** parses `--line X.Y` and `--debug`, resolving an omitted line from `DEFAULT_LINE`. It validates the line format, membership in `LINES`, and the presence of its pin before constructing paths. It reads only `RELEASE_TAG` and `COMMIT`, derives the repository and branch, and downloads the selected DLL, optional PDB, and required `version.txt` asset.
+1. **`scripts/install/download-dll.cmd`** parses `--line X.Y` and `--debug`, resolving an omitted line from `DEFAULT_LINE`. It validates the line format, membership in `LINES`, and the presence of its pin before constructing paths. It reads only `RELEASE_TAG` and `COMMIT`, derives the repository and branch, and downloads the selected DLL, optional PDB, and required `version.txt` asset.
 2. The script caches complete artifacts under `.dll-cache\<line>\<mode>\`. A cache hit still materializes the selected line into `scripts\release` or `scripts\debug`, removes a stale PDB when the selected release has none, and refreshes the top-level `.dll-cache\version.txt` and `release-tag.txt` files used by the MCP runtime. A downloaded release must have a nonempty DLL and `version.txt` before replacing its cache entry. `VP_VERSION` always comes from that downloaded `version.txt`.
 3. **`scripts/install.cmd`** accepts the same flags, downloads the selected line, and warns when the source `civ5-dll` checkout does not match the selected pin. It does not change the developer's checkout. Its repair command uses the derived `vox-deorum-<line>` branch.
 4. **`scripts/bootstrap.cmd`** does not consume an argument beginning with `--` as the release tag and forwards the line flags to `install.cmd`.
@@ -43,7 +43,7 @@ This stage hands Stage 2 the generic cache materialization and the initial 5.2 p
 
 Run these checks with the real 5.2 artifact and its committed pin:
 
-1. Run `scripts\download-dll.cmd --line 5.2` twice. Confirm the second run is a cache hit that rematerializes the selected DLL and optional PDB into the shared output, and refreshes the top-level MCP metadata.
+1. Run `scripts\install\download-dll.cmd --line 5.2` twice. Confirm the second run is a cache hit that rematerializes the selected DLL and optional PDB into the shared output, and refreshes the top-level MCP metadata.
 2. Confirm stale PDB cleanup: a selected release without a PDB removes any stale shared PDB during materialization.
 3. Confirm no-argument invocation selects `DEFAULT_LINE`, invalid formats and the unlisted `5.4` line fail, and a missing 5.2 pin fails before any download.
 4. Run `scripts\install.cmd --line 5.2` against a checkout that does not match the 5.2 pin. Confirm the warning names the derived repair command and does not change the checkout. Stage 2 verifies matching and cross-line checkouts.

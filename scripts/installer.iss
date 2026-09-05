@@ -23,7 +23,7 @@ DisableProgramGroupPage=yes
 ; Output settings
 OutputDir=dist
 OutputBaseFilename=VoxDeorum-{#MyAppVersion}
-SetupIconFile=vox-deorum.ico
+SetupIconFile=install\vox-deorum.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -33,7 +33,7 @@ PrivilegesRequired=lowest
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-UninstallDisplayIcon={app}\scripts\vox-deorum.ico
+UninstallDisplayIcon={app}\scripts\install\vox-deorum.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -73,7 +73,7 @@ Source: "release\lua51_win32.dll"; DestDir: "{app}\scripts\release"; Flags: igno
 Source: "release\lua51_win32.pdb"; DestDir: "{app}\scripts\release"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; Scripts and configuration (excluding installer files)
-Source: "*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "installer.iss,build-installer.cmd,post-install.cmd,\dist\*,\release\*,\debug\*"
+Source: "*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "installer.iss,utilities\build-installer.cmd,post-install.cmd,\dist\*,\release\*,\debug\*"
 Source: "..\release.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -101,8 +101,8 @@ Name: "{app}\node"
 Type: filesandordirs; Name: "{app}\civ5-dll"
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\scripts\vox-deorum.cmd"; IconFilename: "{app}\scripts\vox-deorum.ico"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\scripts\vox-deorum.cmd"; IconFilename: "{app}\scripts\vox-deorum.ico"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\scripts\vox-deorum.cmd"; IconFilename: "{app}\scripts\install\vox-deorum.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\scripts\vox-deorum.cmd"; IconFilename: "{app}\scripts\install\vox-deorum.ico"; Tasks: desktopicon
 
 ; [Registry] section removed - no PATH modification needed since we use portable Node.js
 

@@ -2,7 +2,7 @@
 REM Generate TypeDoc documentation for all TypeScript modules
 
 echo Generating documentation for bridge-service...
-cd /d "%~dp0\..\bridge-service"
+cd /d "%~dp0\..\..\bridge-service"
 call npm run docs
 if %errorlevel% neq 0 (
     echo Failed to generate bridge-service docs
@@ -11,7 +11,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo Generating documentation for mcp-server...
-cd /d "%~dp0\..\mcp-server"
+cd /d "%~dp0\..\..\mcp-server"
 call npm run docs
 if %errorlevel% neq 0 (
     echo Failed to generate mcp-server docs
@@ -20,7 +20,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo Generating documentation for vox-agents...
-cd /d "%~dp0\..\vox-agents"
+cd /d "%~dp0\..\..\vox-agents"
 call npm run docs
 if %errorlevel% neq 0 (
     echo Failed to generate vox-agents docs
@@ -29,4 +29,4 @@ if %errorlevel% neq 0 (
 
 echo.
 echo Documentation generation complete!
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."

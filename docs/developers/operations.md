@@ -18,7 +18,7 @@ All paths are relative to the repository root.
 - **`scripts/cleanup-logs.cmd`** deletes every file directly under `bridge-service/logs`, `mcp-server/logs`, and `vox-agents/logs` with `del`, so these are always gone rather than recycled.
 - **`scripts/uninstall-mods.cmd`** removes the installed Community Patch, Vox Populi, and Vox Deorum mod folders, plus the VPUI and UI_bc1 DLC folders, from your Civilization V install. The packaged installer's own uninstaller runs this automatically; run it by hand to get back to an unmodded game without touching your repository checkout.
 
-Other scripts in `scripts/` are covered elsewhere: `vox-deorum.cmd` and building the three services in [Setup](setup.md), and `build-installer.cmd`, `download-dll.cmd`, and `generate-docs.cmd` in [Releasing](releasing.md).
+Other scripts in `scripts/` are covered elsewhere: `vox-deorum.cmd` and building the three services in [Setup](setup.md), and `utilities/build-installer.cmd`, `install/download-dll.cmd`, and `utilities/generate-docs.cmd` in [Releasing](releasing.md).
 
 ## Logs
 

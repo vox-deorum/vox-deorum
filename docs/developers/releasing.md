@@ -17,7 +17,7 @@ The job runs on `windows-latest` and checks out the repository with submodules a
 
 1. **Bumps the version** in `version.json`, then rewrites the same number into `release.txt`, the `MyAppVersion` define in `scripts/installer.iss`, the version line in `README.md`, and the default tag in `scripts/bootstrap.cmd`.
 2. **Commits those five files** locally as `Release v<version>`, without pushing yet.
-3. **Installs Inno Setup 6** and runs `scripts/build-installer.cmd`, then verifies that `scripts/dist/VoxDeorum-<version>.exe` exists. A missing installer fails the run before anything is published.
+3. **Installs Inno Setup 6** and runs `scripts/utilities/build-installer.cmd`, then verifies that `scripts/dist/VoxDeorum-<version>.exe` exists. A missing installer fails the run before anything is published.
 4. **Pushes the commit to `main`**, creates an annotated tag `v<version>`, and pushes it.
 5. **Publishes the GitHub release** with the installer attached.
 
@@ -33,7 +33,7 @@ Even so, **the GitHub release body is not the changelog**: it is one commit mess
 
 ### The pre-built DLL
 
-Players never compile the gamecore, so a release ships a binary DLL. `scripts/vp-lines.txt` lists the supported lines and their default. Each committed `scripts/dll-release-info-<line>.txt` pin identifies the release tag and source commit for one line. `scripts/download-dll.cmd` derives the `CIVITAS-John/vox-populi` repository and `vox-deorum-<line>` branch, then retrieves the selected release. There is no scheduled pin updater or branch-head reconciliation: update a line by committing its new pin, and manually move the default submodule gitlink when its default changes. Building the DLL from source is a developer task; see [setup.md](setup.md) and [civ5-dll/building.md](civ5-dll/building.md).
+Players never compile the gamecore, so a release ships a binary DLL. `scripts/vp-lines.txt` lists the supported lines and their default. Each committed `scripts/dll-release-info-<line>.txt` pin identifies the release tag and source commit for one line. `scripts/install/download-dll.cmd` derives the `CIVITAS-John/vox-populi` repository and `vox-deorum-<line>` branch, then retrieves the selected release. There is no scheduled pin updater or branch-head reconciliation: update a line by committing its new pin, and manually move the default submodule gitlink when its default changes. Building the DLL from source is a developer task; see [setup.md](setup.md) and [civ5-dll/building.md](civ5-dll/building.md).
 
 ## Versioning
 
@@ -68,12 +68,12 @@ Drafting and publishing are separate steps with different rules:
 
 ## Building the installer locally
 
-`scripts/build-installer.cmd` is the same script the workflow calls, and you can run it directly to test packaging without publishing anything. It needs **Inno Setup 6** installed. In order, it:
+`scripts/utilities/build-installer.cmd` is the same script the workflow calls, and you can run it directly to test packaging without publishing anything. It needs **Inno Setup 6** installed. In order, it:
 
 1. **Fetches a portable Node.js** (v22.12.0) into `node/` if it isn't already there, so the installer can ship a self-contained runtime and no player needs system Node.
 2. **Installs all dependencies** from the root via npm workspaces, including dev dependencies needed to compile, plus the `vox-agents/ui` dependencies separately.
 3. **Builds everything** with `npm run build:all`, then **prunes to production dependencies** so only what's needed to run is bundled.
-4. **Uses the pre-built game DLL** already staged under `scripts/release/`. When it is missing, `scripts/download-dll.cmd` downloads the current default line from `scripts/vp-lines.txt` and its committed pin. The build does not verify an existing staged DLL against that pin. Stage 4 makes installer packaging consume the selected pin every time.
+4. **Uses the pre-built game DLL** already staged under `scripts/release/`. When it is missing, `scripts/install/download-dll.cmd` downloads the current default line from `scripts/vp-lines.txt` and its committed pin. The build does not verify an existing staged DLL against that pin. Stage 4 makes installer packaging consume the selected pin every time.
 5. **Compiles the installer** from `scripts/installer.iss` with Inno Setup.
 
 The result is `scripts/dist/VoxDeorum-<version>.exe`, versioned from `release.txt`. That single file is what gets attached to a GitHub release. Inno Setup resolves its output directory relative to the `.iss` file, which is why an `OutputDir=dist` in `scripts/installer.iss` means `scripts/dist/` rather than a repo-root folder.
@@ -82,7 +82,7 @@ Running this by hand does not bump any version, so a local build reuses whatever
 
 ## Generated API docs
 
-Separate from release packaging, each TypeScript service publishes a generated TypeDoc API reference: `npm run docs` per service, or `scripts/generate-docs.cmd` for all three at once. `.github/workflows/generate-docs.yml` regenerates and commits them whenever service source changes land on `main`. They are reference material in the components' own `docs/api/` folders, not part of the prose documentation and not bundled into the installer.
+Separate from release packaging, each TypeScript service publishes a generated TypeDoc API reference: `npm run docs` per service, or `scripts/utilities/generate-docs.cmd` for all three at once. `.github/workflows/generate-docs.yml` regenerates and commits them whenever service source changes land on `main`. They are reference material in the components' own `docs/api/` folders, not part of the prose documentation and not bundled into the installer.
 
 ## Checklist for a release
 

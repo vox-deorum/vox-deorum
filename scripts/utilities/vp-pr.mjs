@@ -18,7 +18,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const submoduleDir = join(repositoryRoot, 'civ5-dll');
 const linesFilePath = join(repositoryRoot, 'scripts', 'vp-lines.txt');
 

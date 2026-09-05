@@ -6,8 +6,9 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "SCRIPT_NAME=%~nx0"
-set "LINES_FILE=%SCRIPT_DIR%\vp-lines.txt"
-set "CACHE_DIR=%SCRIPT_DIR%\.dll-cache"
+set "PROJECT_ROOT=%SCRIPT_DIR%\.."
+set "LINES_FILE=%PROJECT_ROOT%\vp-lines.txt"
+set "CACHE_DIR=%PROJECT_ROOT%\.dll-cache"
 set "TEMP_ROOT=%TEMP%\VoxDeorumDLL"
 set "BUILD_MODE=release"
 set "SELECTED_LINE="
@@ -81,7 +82,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "RELEASE_INFO=%SCRIPT_DIR%\dll-release-info-!SELECTED_LINE!.txt"
+set "RELEASE_INFO=%PROJECT_ROOT%\dll-release-info-!SELECTED_LINE!.txt"
 if not exist "!RELEASE_INFO!" (
     echo Error: Release pin not found at:
     echo   !RELEASE_INFO!
@@ -105,7 +106,7 @@ if not defined COMMIT (
 
 set "REPO=CIVITAS-John/vox-populi"
 set "BRANCH=vox-deorum-!SELECTED_LINE!"
-set "OUTPUT_DIR=%SCRIPT_DIR%\!BUILD_MODE!"
+set "OUTPUT_DIR=%PROJECT_ROOT%\!BUILD_MODE!"
 set "LINE_CACHE_DIR=%CACHE_DIR%\!SELECTED_LINE!"
 set "CACHE_MODE_DIR=!LINE_CACHE_DIR!\!BUILD_MODE!"
 set "CACHE_DLL=!CACHE_MODE_DIR!\CvGameCore_Expansion2.dll"

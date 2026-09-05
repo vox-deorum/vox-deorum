@@ -20,9 +20,9 @@ Per-line parameters reach Inno Setup through `/D` preprocessor defines. `AppId` 
    - Wrap `MyAppVersion`, and new `VpLine` and `VoxPopuliVersion` values, in `#ifndef` blocks.
    - Name outputs `VoxDeorum-{#MyAppVersion}-vp{#VpLine}` when `VpLine` is present. Keep today's name for local builds without defines.
    - Append `(VP {#VoxPopuliVersion})` to `AppVerName`.
-2. **`scripts/build-installer.cmd`**:
+2. **`scripts/utilities/build-installer.cmd`**:
    - Accept `--line X.Y` and `--skip-npm`. The latter skips node download, npm install, `build:all`, and prune after the first line.
-   - Run `download-dll.cmd --line %LINE%` so the selected cache is materialized into `scripts\release` and the top-level MCP metadata is refreshed.
+   - Run `scripts\install\download-dll.cmd --line %LINE%` so the selected cache is materialized into `scripts\release` and the top-level MCP metadata is refreshed.
    - Read `RELEASE_TAG` from `dll-release-info-%LINE%.txt`. Read `VoxPopuliVersion` from the selected `scripts\.dll-cache\version.txt` after materialization.
    - Require the release DLL, a matching `scripts\.dll-cache\release-tag.txt`, and a nonempty VP version before invoking `ISCC /DVpLine=%LINE% /DVoxPopuliVersion=%VP_VERSION% installer.iss`.
 3. **`.github/workflows/release.yml`**:

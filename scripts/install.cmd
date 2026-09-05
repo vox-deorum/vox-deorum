@@ -16,7 +16,7 @@ set "VP_LINES_FILE=%SCRIPT_DIR%\vp-lines.txt"
 set "SELECTED_LINE="
 set "DEBUG_MODE=0"
 
-:: Resolve the optional line and forward validation to download-dll.cmd.
+:: Resolve the optional line and forward validation to install\download-dll.cmd.
 :parse_arguments
 if "%~1"=="" goto :arguments_parsed
 if /i "%~1"=="--debug" (
@@ -79,14 +79,14 @@ if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
 echo [1/9] Downloading pre-built DLL...
 if defined SELECTED_LINE (
     if "%DEBUG_MODE%"=="1" (
-        call "%SCRIPT_DIR%\download-dll.cmd" --line "!SELECTED_LINE!" --debug
+        call "%SCRIPT_DIR%\install\download-dll.cmd" --line "!SELECTED_LINE!" --debug
     ) else (
-        call "%SCRIPT_DIR%\download-dll.cmd" --line "!SELECTED_LINE!"
+        call "%SCRIPT_DIR%\install\download-dll.cmd" --line "!SELECTED_LINE!"
     )
 ) else if "%DEBUG_MODE%"=="1" (
-    call "%SCRIPT_DIR%\download-dll.cmd" --debug
+    call "%SCRIPT_DIR%\install\download-dll.cmd" --debug
 ) else (
-    call "%SCRIPT_DIR%\download-dll.cmd"
+    call "%SCRIPT_DIR%\install\download-dll.cmd"
 )
 if !errorlevel! neq 0 (
     echo Error: Failed to download pre-built DLL
@@ -550,8 +550,8 @@ if !errorlevel! neq 0 (
                 )
                 
                 :: Refresh environment variables
-                if exist "%SCRIPT_DIR%\refreshenv.cmd" (
-                    call "%SCRIPT_DIR%\refreshenv.cmd" >nul 2>&1
+                if exist "%SCRIPT_DIR%\install\refreshenv.cmd" (
+                    call "%SCRIPT_DIR%\install\refreshenv.cmd" >nul 2>&1
                 ) else if exist "%ProgramData%\chocolatey\bin\refreshenv.cmd" (
                     call "%ProgramData%\chocolatey\bin\refreshenv.cmd" >nul 2>&1
                 ) else (

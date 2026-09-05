@@ -12,7 +12,7 @@ echo     Vox Deorum Installer Builder
 echo =========================================
 echo.
 
-set "PROJECT_ROOT=%~dp0.."
+set "PROJECT_ROOT=%~dp0..\.."
 
 :: Step 1: Download portable Node.js if not present
 echo [1/6] Checking for portable Node.js...
@@ -104,7 +104,7 @@ echo.
 echo [4/6] Checking pre-built DLLs...
 if not exist "%PROJECT_ROOT%\scripts\release\CvGameCore_Expansion2.dll" (
     echo   Downloading pre-built DLLs...
-    call "%PROJECT_ROOT%\scripts\download-dll.cmd"
+    call "%PROJECT_ROOT%\scripts\install\download-dll.cmd"
     if not exist "%PROJECT_ROOT%\scripts\release\CvGameCore_Expansion2.dll" (
         echo   [ERROR] Pre-built DLL is missing and could not be downloaded.
         echo   The installer requires scripts\release\CvGameCore_Expansion2.dll.

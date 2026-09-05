@@ -152,8 +152,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo Running build-installer.cmd script...
-          cd scripts
+          echo Running scripts\utilities\build-installer.cmd script...
+          cd scripts\utilities
           call build-installer.cmd
           echo Build script completed with exit code: %ERRORLEVEL%
           exit /b %ERRORLEVEL%

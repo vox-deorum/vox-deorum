@@ -30,7 +30,7 @@ Merge the latest 5.4.x tag available at execution time. A single marker-guided m
 
 8. In the outer repository, add `scripts/dll-release-info-5.4.txt` from the published 5.4 release and append `5.4` to `LINES` in `scripts/vp-lines.txt`. Keep `DEFAULT_LINE=5.2` and the `civ5-dll` gitlink equal to the 5.2 pin.
 
-9. Verify the completed two-line behavior: run `scripts\download-dll.cmd --line 5.2`, then `--line 5.4`, then `--line 5.2` again. Confirm isolated per-line, per-mode caches and that each materialization refreshes the shared output and top-level runtime metadata.
+9. Verify the completed two-line behavior: run `scripts\install\download-dll.cmd --line 5.2`, then `--line 5.4`, then `--line 5.2` again. Confirm isolated per-line, per-mode caches and that each materialization refreshes the shared output and top-level runtime metadata.
 
 10. Run `scripts\install.cmd --line 5.2` and `--line 5.4` against their matching source checkouts. Confirm matching checkouts produce no warning. Run each command against the other line's checkout and confirm the mismatch warning names the derived repair command without changing the checkout.
 
