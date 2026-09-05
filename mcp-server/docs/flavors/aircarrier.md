@@ -21,6 +21,7 @@ bool MilitaryAIHelpers::IsTestStrategy_NeedAirCarriers(CvPlayer* pPlayer)
 ```
 
 This function determines when the AI should trigger the "NEED_AIR_CARRIER" military strategy. The strategy activates when:
+
 - The player has an active air force (air units like fighters and bombers)
 - The player has no free carrier capacity remaining
 
@@ -66,6 +67,7 @@ FLAVOR_AIR_CARRIER is grouped with other air-related flavors when calculating th
 ```
 
 These values define how strongly each carrier unit type appeals to the AI based on its FLAVOR_AIR_CARRIER:
+
 - **UNIT_CARRIER**: Has a flavor value of 40
 - **UNIT_SUPERCARRIER**: Has a flavor value of 60 (stronger appeal)
 
@@ -86,6 +88,7 @@ The Computers technology has a FLAVOR_AIR_CARRIER value of 10, which means AIs w
 **File**: `(2) Vox Populi\Database Changes\AI\LeaderFlavorSweeps.sql`
 
 Default values for leaders (lines 45, 117, 191, 265):
+
 ```sql
 ('FLAVOR_AIR_CARRIER', 5),  -- Standard default
 ('FLAVOR_AIR_CARRIER', 5),  -- Repeated entries for different leader types
@@ -94,6 +97,7 @@ Default values for leaders (lines 45, 117, 191, 265):
 ```
 
 Specific leader adjustments (lines 350, 363, 380, 404, 426):
+
 ```sql
 -- Dido (strong navy)
 UPDATE Leader_Flavors SET Flavor = 7 WHERE FlavorType = 'FLAVOR_AIR_CARRIER' AND LeaderType = 'LEADER_DIDO';
@@ -152,6 +156,7 @@ These modifiers significantly increase FLAVOR_AIR_CARRIER during various war con
 ### Aircraft Carrier Production
 
 FLAVOR_AIR_CARRIER directly influences:
+
 - **Unit production priority**: Higher values make UNIT_CARRIER and UNIT_SUPERCARRIER more likely to be built
 - **Technology research**: Encourages research of Computers technology which unlocks carriers
 - **Strategic triggers**: Activates "NEED_AIR_CARRIER" strategy when the AI has aircraft but no carrier capacity
@@ -159,6 +164,7 @@ FLAVOR_AIR_CARRIER directly influences:
 ### Naval Aviation Strategy
 
 The flavor affects how the AI approaches naval aviation:
+
 - **Carrier battle groups**: High values encourage building carriers to support air units at sea
 - **Power projection**: Carriers enable the AI to project air power across oceans
 - **Fleet composition**: Influences the ratio of carriers in the naval fleet
@@ -168,6 +174,7 @@ The flavor affects how the AI approaches naval aviation:
 The effective FLAVOR_AIR_CARRIER value changes based on game conditions:
 
 **Positive modifiers (increase carrier production)**:
+
 - Empire defense is critical: +50 to +60
 - At war: +40
 - Winning wars: +40 to +50
@@ -175,12 +182,14 @@ The effective FLAVOR_AIR_CARRIER value changes based on game conditions:
 - Need air carrier strategy active: +20
 
 **Negative modifiers (decrease carrier production)**:
+
 - Too many units: -300
 - Losing money: -300
 
 ### Leader Personalities
 
 Certain leaders have naturally higher FLAVOR_AIR_CARRIER values:
+
 - **Dido**: 7 (strong naval tradition)
 - **Elizabeth**: 7 (domination focus with naval power)
 - **Enrico Dandolo**: 7 (Venice's naval heritage)
@@ -192,6 +201,7 @@ Most other leaders have values between 4-5, representing a moderate interest in 
 ### Relationship to Other Flavors
 
 FLAVOR_AIR_CARRIER works in conjunction with:
+
 - **FLAVOR_AIR**: Must have air units to make carriers useful
 - **FLAVOR_NAVAL**: General naval power complements carrier operations
 - **FLAVOR_NAVAL_RECON**: Carriers also provide scouting capabilities
@@ -200,6 +210,7 @@ FLAVOR_AIR_CARRIER works in conjunction with:
 ## Game Impact
 
 An AI with high FLAVOR_AIR_CARRIER (7+) will:
+
 1. Research Computers technology as a priority when available
 2. Build Carrier and Supercarrier units when it has an air force
 3. Trigger the NEED_AIR_CARRIER strategy when carriers are needed
@@ -207,6 +218,7 @@ An AI with high FLAVOR_AIR_CARRIER (7+) will:
 5. Value military policies that support conquest strategies
 
 An AI with low FLAVOR_AIR_CARRIER (0-3) will:
+
 1. Rarely build carriers even when air units are available
 2. Deprioritize Computers technology
 3. Not respond strongly to carrier needs

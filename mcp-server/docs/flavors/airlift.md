@@ -7,6 +7,7 @@
 Unlike general air power flavors (FLAVOR_AIR, FLAVOR_BOMBER) that focus on combat aircraft, `FLAVOR_AIRLIFT` specifically drives the AI's **investment in air mobility infrastructure and rapid deployment capabilities** for moving ground units across large distances instantaneously.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Expansionist leaders (far-flung empires): 7
@@ -16,6 +17,7 @@ Unlike general air power flavors (FLAVOR_AIR, FLAVOR_BOMBER) that focus on comba
   - Barbarians: 0
 
 ### Related Flavors
+
 - **FLAVOR_AIR:** General air power and aviation combat
 - **FLAVOR_ANTIAIR:** Anti-aircraft defense capabilities
 - **FLAVOR_AIR_CARRIER:** Naval aviation and carrier operations
@@ -66,6 +68,7 @@ bool CityStrategyAIHelpers::IsTestCityStrategy_GoodAirliftCity(CvCity *pCity)
 This strategy (AICITYSTRATEGY_GOOD_AIRLIFT_CITY) activates in these cities, making them prioritize airport construction. This creates a logical airlift network connecting the capital to remote territories.
 
 **Strategic Implications:**
+
 - Empire sprawl automatically triggers airport construction
 - Cross-continental empires get airlift hubs on each landmass
 - Creates defensive depth by enabling rapid reinforcement of distant borders
@@ -112,6 +115,7 @@ The Airport building is the primary infrastructure element for airlift operation
 ```
 
 **Interpretation:** The Airport receives a flavor value of 30 for FLAVOR_AIRLIFT, making it highly attractive to leaders who value air mobility. This equal weighting with FLAVOR_AIR and FLAVOR_ANTIAIR reflects the airport's triple role:
+
 1. **Airlift hub** for rapid unit deployment
 2. **Air base** for housing combat aircraft
 3. **Air defense node** providing interceptor capabilities
@@ -141,22 +145,27 @@ The Militarism policy likely provides bonuses to air unit production and/or airl
 Leader types receive different FLAVOR_AIRLIFT values based on their strategic personalities:
 
 **Conqueror Leaders** (lines 29-44)
+
 - Leaders: Ashurbanipal, Askia, Attila, Augustus, Darius, Genghis Khan, Gustavus Adolphus, Harald, Montezuma, Napoleon, Oda Nobunaga, Shaka
 - FLAVOR_AIRLIFT: **6**
 
 **Coalition Leaders** (lines 101-116)
+
 - Leaders: Casimir, Elizabeth, Selassie, Harun al-Rashid, Kamehameha, Nebuchadnezzar, Pacal, Ramesses, Washington
 - FLAVOR_AIRLIFT: **5**
 
 **Diplomat Leaders** (lines 175-190)
+
 - Leaders: Ahmad al-Mansur, Enrico Dandolo, Gandhi, Maria I, Maria Theresa, Pedro II, Sejong
 - FLAVOR_AIRLIFT: **4**
 
 **Expansionist Leaders** (lines 249-264)
+
 - Leaders: Alexander, Boudicca, Catherine, Dido, Gajah Mada, Hiawatha, Isabella, Pachacuti, Pocatello, Suleiman, Wu Zetian
 - FLAVOR_AIRLIFT: **7** (highest)
 
 **Barbarians** (`(1) Community Patch/Database Changes/AI/CoreLeaderFlavorChanges.sql` line 25)
+
 - FLAVOR_AIRLIFT: **0** (barbarians don't use advanced infrastructure)
 
 **Interpretation:**
@@ -174,24 +183,28 @@ The clear gradient (Expansionist > Conqueror > Coalition > Diplomat > Barbarian)
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Building priorities:** Leaders with high FLAVOR_AIRLIFT prioritize airport construction in capital, cross-continental cities, and distant frontier cities
 - **City identification:** Automatic detection of strategically valuable airlift hubs based on distance and continental separation
 - **Policy selection:** Militarism policy becomes more attractive to leaders valuing air mobility
 - **Network creation:** Forms logical airlift networks connecting core to periphery
 
 ### Military Operations
+
 - **Rapid reinforcement:** Enables instant deployment of units to threatened borders
 - **Force concentration:** Allows redeployment from quiet fronts to active war zones
 - **Operational flexibility:** Supports multi-front wars by enabling strategic mobility
 - **Defensive depth:** Creates ability to reinforce any point in empire within one turn
 
 ### Territorial Control
+
 - **Cross-continental empires:** Essential for maintaining control of separated landmasses
 - **Distant colonies:** Provides lifeline to remote settlements more than 20 tiles from capital
 - **Frontier defense:** Enables rapid response to border threats in sprawling empires
 - **Strategic depth:** Turns rear-area cities into potential reinforcement sources
 
 ### Infrastructure Development
+
 - **Airport network:** Creates prioritized construction in capital and remote cities
 - **Multi-purpose facilities:** Airports serve airlift, air combat, and air defense roles simultaneously
 - **Cultural benefits:** Modern airport infrastructure provides tourism bonuses
@@ -216,6 +229,7 @@ This creates distinct air mobility doctrines:
 ### Historical Context
 
 FLAVOR_AIRLIFT becomes relevant in the Atomic Era when the Airport building and airlift capabilities become available. Leaders with high FLAVOR_AIRLIFT will:
+
 - Prioritize airport construction in capital and remote cities immediately
 - Value policies that enhance air mobility (Militarism)
 - Maintain mobile reserves in the core for rapid deployment
@@ -223,6 +237,7 @@ FLAVOR_AIRLIFT becomes relevant in the Atomic Era when the Airport building and 
 - Enable multi-front offensive operations through force redeployment
 
 Leaders with low FLAVOR_AIRLIFT will:
+
 - Build airports only when specifically needed for air units
 - Maintain forward-deployed forces rather than centralized reserves
 - Rely on traditional ground/naval movement for reinforcement
@@ -231,12 +246,14 @@ Leaders with low FLAVOR_AIRLIFT will:
 ### Gameplay Implications
 
 **For Players:**
+
 - High-AIRLIFT AI opponents will rapidly reinforce threatened cities during wars
 - Expansionist AIs with high AIRLIFT will be harder to conquer piecemeal (they can concentrate defenses)
 - Attacking distant AI cities may trigger instant reinforcement from the core
 - AI empires on multiple continents will connect them via airlift network
 
 **For AI:**
+
 - Expansionist personalities automatically build logical airlift infrastructure
 - Cross-continental empires remain cohesive through air mobility
 - Distant colonies can receive instant reinforcement during crises
@@ -246,21 +263,18 @@ Leaders with low FLAVOR_AIRLIFT will:
 
 ### Complementary Flavors
 
-**FLAVOR_EXPANSION (9 for Expansionists):**
-Expansionist leaders have both high EXPANSION and high AIRLIFT, creating a strategic synergy. They spread across the map aggressively, then build airports to maintain control of their sprawling empires. AIRLIFT serves as the glue holding territorial acquisitions together.
+**FLAVOR_EXPANSION (9 for Expansionists):** Expansionist leaders have both high EXPANSION and high AIRLIFT, creating a strategic synergy. They spread across the map aggressively, then build airports to maintain control of their sprawling empires. AIRLIFT serves as the glue holding territorial acquisitions together.
 
-**FLAVOR_MOBILE (7 for Expansionists, 7 for Conquerors):**
-Leaders who value mobile ground units also value airlift capability. Both represent doctrines of maneuver warfare and rapid response. Together they create highly flexible military forces that can respond quickly at both tactical (MOBILE) and strategic (AIRLIFT) scales.
+**FLAVOR_MOBILE (7 for Expansionists, 7 for Conquerors):** Leaders who value mobile ground units also value airlift capability. Both represent doctrines of maneuver warfare and rapid response. Together they create highly flexible military forces that can respond quickly at both tactical (MOBILE) and strategic (AIRLIFT) scales.
 
-**FLAVOR_AIR (5-8 across personalities):**
-Airports serve dual purpose: combat air base and airlift hub. Leaders with high AIR + AIRLIFT will build extensive airport networks and fully utilize them for both combat aviation and strategic mobility. The flavors reinforce each other's infrastructure investments.
+**FLAVOR_AIR (5-8 across personalities):** Airports serve dual purpose: combat air base and airlift hub. Leaders with high AIR + AIRLIFT will build extensive airport networks and fully utilize them for both combat aviation and strategic mobility. The flavors reinforce each other's infrastructure investments.
 
-**FLAVOR_CITY_DEFENSE (varies by personality):**
-High AIRLIFT provides defensive depth by enabling rapid reinforcement of threatened cities. Leaders with high CITY_DEFENSE + AIRLIFT can maintain smaller forward garrisons, relying on rapid deployment of reserves when cities are attacked. This is especially valuable for Coalition leaders (CITY_DEFENSE: 9, AIRLIFT: 5).
+**FLAVOR_CITY_DEFENSE (varies by personality):** High AIRLIFT provides defensive depth by enabling rapid reinforcement of threatened cities. Leaders with high CITY_DEFENSE + AIRLIFT can maintain smaller forward garrisons, relying on rapid deployment of reserves when cities are attacked. This is especially valuable for Coalition leaders (CITY_DEFENSE: 9, AIRLIFT: 5).
 
 ### Strategic Doctrines by Leader Type
 
 **Expansionist Doctrine (EXPANSION: 9, AIRLIFT: 7):**
+
 - Spread across multiple landmasses early
 - Build airports in capital and each new continent
 - Maintain centralized military reserves in core cities
@@ -268,6 +282,7 @@ High AIRLIFT provides defensive depth by enabling rapid reinforcement of threate
 - Value territorial control over dense development
 
 **Conqueror Doctrine (OFFENSE: 8, AIRLIFT: 6):**
+
 - Use airlift for operational flexibility during wars
 - Redeploy armies from completed conquests to new fronts
 - Maintain strategic reserve for exploitation of breakthroughs
@@ -275,6 +290,7 @@ High AIRLIFT provides defensive depth by enabling rapid reinforcement of threate
 - Combine with mobile units for deep penetration strategies
 
 **Coalition Doctrine (CITY_DEFENSE: 9, AIRLIFT: 5):**
+
 - Build airports for defensive reinforcement capability
 - Maintain reserves in capital for crisis response
 - Use airlift primarily for defensive counterattacks
@@ -282,6 +298,7 @@ High AIRLIFT provides defensive depth by enabling rapid reinforcement of threate
 - Combine with defensive city improvements
 
 **Diplomatic Doctrine (DIPLOMACY: 8, AIRLIFT: 4):**
+
 - Build airports primarily for air combat, secondarily for mobility
 - Lower priority on strategic reserve concept
 - Prefer forward-deployed defensive forces
@@ -292,22 +309,17 @@ High AIRLIFT provides defensive depth by enabling rapid reinforcement of threate
 
 Airlift capability requires significant infrastructure investment:
 
-**FLAVOR_PRODUCTION:**
-Airports are expensive buildings (Atomic Era), requiring strong production. Leaders with high AIRLIFT but low PRODUCTION will struggle to build comprehensive airlift networks, creating strategic tension.
+**FLAVOR_PRODUCTION:** Airports are expensive buildings (Atomic Era), requiring strong production. Leaders with high AIRLIFT but low PRODUCTION will struggle to build comprehensive airlift networks, creating strategic tension.
 
-**FLAVOR_SCIENCE:**
-Airport technology (Rocketry) requires advanced scientific development. High-AIRLIFT leaders will prioritize the technology path leading to airports, potentially at the expense of other research branches.
+**FLAVOR_SCIENCE:** Airport technology (Rocketry) requires advanced scientific development. High-AIRLIFT leaders will prioritize the technology path leading to airports, potentially at the expense of other research branches.
 
-**FLAVOR_GOLD:**
-Airports have maintenance costs. Economic pressure can delay or prevent airport construction even for leaders who value airlift. This creates interesting trade-offs between military doctrine and economic reality.
+**FLAVOR_GOLD:** Airports have maintenance costs. Economic pressure can delay or prevent airport construction even for leaders who value airlift. This creates interesting trade-offs between military doctrine and economic reality.
 
 ### Competing Priorities
 
-**FLAVOR_DEFENSE vs FLAVOR_AIRLIFT:**
-Leaders can choose between static forward defenses (high DEFENSE) or mobile reserves with airlift (high AIRLIFT). Coalition leaders balance both (DEFENSE: 7, AIRLIFT: 5), while pure defensive leaders might prefer fortifications over mobility.
+**FLAVOR_DEFENSE vs FLAVOR_AIRLIFT:** Leaders can choose between static forward defenses (high DEFENSE) or mobile reserves with airlift (high AIRLIFT). Coalition leaders balance both (DEFENSE: 7, AIRLIFT: 5), while pure defensive leaders might prefer fortifications over mobility.
 
-**FLAVOR_NAVAL vs FLAVOR_AIRLIFT:**
-For cross-continental empires, naval transport and airlift serve similar strategic functions. Leaders must balance investment in naval logistics (ports, cargo ships) versus air logistics (airports). Naval-focused leaders may under-invest in airports even when beneficial.
+**FLAVOR_NAVAL vs FLAVOR_AIRLIFT:** For cross-continental empires, naval transport and airlift serve similar strategic functions. Leaders must balance investment in naval logistics (ports, cargo ships) versus air logistics (airports). Naval-focused leaders may under-invest in airports even when beneficial.
 
 ## Practical Examples
 
@@ -316,6 +328,7 @@ For cross-continental empires, naval transport and airlift serve similar strateg
 **Setup:** Catherine (Russia) has expanded to three continents with cities 30+ tiles from capital
 
 **AI Behavior:**
+
 1. Capital Moscow gets AICITYSTRATEGY_GOOD_AIRLIFT_CITY (always true for capitals)
 2. St. Petersburg on home continent (12 tiles away): No strategy, low priority
 3. Vladivostok on second continent (no shared area): GOOD_AIRLIFT_CITY, builds airport
@@ -330,6 +343,7 @@ For cross-continental empires, naval transport and airlift serve similar strateg
 **Setup:** Napoleon (France) is winning a war against Germany but gets declared on by Spain in the west
 
 **AI Behavior:**
+
 1. Paris has airport (capital + GOOD_AIRLIFT_CITY)
 2. French eastern army is besieging Berlin
 3. Spanish invasion threatens Marseille in the west
@@ -343,6 +357,7 @@ For cross-continental empires, naval transport and airlift serve similar strateg
 **Setup:** Washington (America) detects Shaka building up forces near border city of Boston
 
 **AI Behavior:**
+
 1. Washington has airports in capital and Boston (24 tiles away, GOOD_AIRLIFT_CITY)
 2. Standing garrison in Boston: 3 units
 3. Washington airlifts 2 additional units from capital reserve
@@ -355,6 +370,7 @@ For cross-continental empires, naval transport and airlift serve similar strateg
 **Setup:** Gandhi (India) has spread to nearby islands but capital Delhi is only 15 tiles from most cities
 
 **AI Behavior:**
+
 1. Only Delhi gets GOOD_AIRLIFT_CITY strategy (as capital)
 2. Island cities too close to trigger distance-based strategy
 3. Gandhi builds airport in Delhi for air combat, not primarily for airlift
@@ -392,6 +408,7 @@ When evaluating the Militarism policy, leaders calculate conquest value as:
 `iConquestValue += FLAVOR_AIRLIFT_value`
 
 For leaders considering conquest victory:
+
 - Expansionist adds 7 points to Militarism's conquest value
 - Conqueror adds 6 points
 - Coalition adds 5 points
@@ -402,13 +419,12 @@ Combined with Militarism's other flavor values (MILITARY_TRAINING: 30, AIR: 60),
 ### Interaction with Game Mechanics
 
 **Airlift Mechanics (Civ V):**
+
 - Requires source and destination cities to both have airports
 - Can transport land units instantly (range limited by modern era upgrades)
 - One unit per turn per city (base rate)
 - Costs movement points (unit cannot move after airlift)
 
-**Strategic Implications:**
-Leaders with high FLAVOR_AIRLIFT build the infrastructure to exploit these mechanics, while low-FLAVOR_AIRLIFT leaders leave gaps in their network that limit tactical options during crisis situations.
+**Strategic Implications:** Leaders with high FLAVOR_AIRLIFT build the infrastructure to exploit these mechanics, while low-FLAVOR_AIRLIFT leaders leave gaps in their network that limit tactical options during crisis situations.
 
-**Barbarian Exclusion:**
-Barbarians have FLAVOR_AIRLIFT: 0 because they lack the technology level and organized logistics to build or use airports. This prevents barbarian camps from developing advanced infrastructure that would be anachronistic.
+**Barbarian Exclusion:** Barbarians have FLAVOR_AIRLIFT: 0 because they lack the technology level and organized logistics to build or use airports. This prevents barbarian camps from developing advanced infrastructure that would be anachronistic.

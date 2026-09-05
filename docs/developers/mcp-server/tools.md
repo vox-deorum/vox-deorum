@@ -12,7 +12,7 @@ The registry in `mcp-server/src/tools/index.ts` holds 43 tools. The reference gr
 | --- | --- | --- | --- |
 | **General** | 4 | utilities that don't fit elsewhere | varies |
 | **Database-query** | 8 | "what does this game thing do?" | the game database ([database.md](database.md)) |
-| **Knowledge-query** | 13 | "what is happening in *this* game right now?" | the per-game knowledge store ([knowledge.md](knowledge.md)) |
+| **Knowledge-query** | 13 | "what is happening in _this_ game right now?" | the per-game knowledge store ([knowledge.md](knowledge.md)) |
 | **Action** | 15 | changes the game rather than reads it | the AI, the knowledge store, or the game itself |
 | **Game control** | 3 | paces the game | the bridge's pause controls ([bridge.md](bridge.md)) |
 
@@ -39,7 +39,7 @@ For the complete list and every tool's parameters, see `mcp-server/docs/tools.md
 
 Every tool extends the abstract class `ToolBase` (`mcp-server/src/tools/base.ts`), directly or through one of the specialized bases below. A tool declares four things (a name, a description, an input schema, and an output schema) plus an `execute()` method that does the work.
 
-The schemas are written with [Zod](https://zod.dev), so they serve double duty. They validate inputs and outputs at runtime, *and* they generate the TypeScript types and the MCP protocol documentation the agent reads. Every schema field carries a `.describe()` string for exactly this reason.
+The schemas are written with [Zod](https://zod.dev), so they serve double duty. They validate inputs and outputs at runtime, _and_ they generate the TypeScript types and the MCP protocol documentation the agent reads. Every schema field carries a `.describe()` string for exactly this reason.
 
 Extending `ToolBase` directly is the common case: 23 of the 43 tools do it, mostly the knowledge-query tools and the one-off actions whose work has no shared shape. The other 20 use one of four abstract bases in `mcp-server/src/tools/abstract/`, each capturing a recurring pattern:
 

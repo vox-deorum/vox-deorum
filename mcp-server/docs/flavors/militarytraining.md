@@ -7,6 +7,7 @@
 Unlike offensive or defensive flavors that focus on unit production or combat strategy, `FLAVOR_MILITARY_TRAINING` specifically emphasizes the **quality and readiness** of military forces through infrastructure investment and unit experience systems.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Aggressive Conquerors: 8-10 (heavy investment in military quality)
@@ -15,7 +16,9 @@ Unlike offensive or defensive flavors that focus on unit production or combat st
   - Barbarians: 4 (moderate training priority)
 
 ### Notable Leader Values
+
 Based on the database changes, certain leaders have distinctive FLAVOR_MILITARY_TRAINING values:
+
 - **Genghis Khan:** 10 (maximum military training priority)
 - **Shaka:** 10 (maximum due to Ikanda unique building)
 - **Oda Nobunaga:** 10 (maximum due to Dojo unique building)
@@ -111,11 +114,13 @@ if(m_pPlayer->IsAtWar())
 ```
 
 **Gold Priority Calculation:**
+
 ```cpp
 iGoldPriority = AI_GOLD_PRIORITY_UPGRADE_BASE + (iCurrentFlavorMilitaryTraining * AI_GOLD_PRIORITY_UPGRADE_PER_FLAVOR_POINT);
 ```
 
 **Interpretation:**
+
 - Base gold priority for upgrades: 500
 - Each point of FLAVOR_MILITARY_TRAINING adds 100 to the priority
 - **During wartime, FLAVOR_MILITARY_TRAINING is multiplied by 50**, making upgrades extremely high priority
@@ -174,6 +179,7 @@ if(bConquestFocus && (
 **Interpretation:** When pursuing conquest, technologies with FLAVOR_MILITARY_TRAINING receive bonus priority. This includes technologies that unlock military training buildings or unit experience mechanics.
 
 **Impact:** AI civilizations focused on conquest will prioritize researching technologies like:
+
 - Archery (unlocks Barracks)
 - Iron Working (military infrastructure)
 - Steel (advanced military capabilities)
@@ -188,11 +194,13 @@ This ensures conquest-focused civilizations maintain technological advancement i
 The following buildings have FLAVOR_MILITARY_TRAINING values, indicating the AI will prioritize constructing them based on this flavor:
 
 #### Standard Military Training Buildings
+
 - **BUILDING_BARRACKS** - 20: Basic military training facility providing experience to new units
 - **BUILDING_ARMORY** - 20: Advanced training facility for more experienced units
 - **BUILDING_MILITARY_ACADEMY** - 25: Elite military training institution
 
 #### Unique Building Replacements
+
 - **BUILDING_IKANDA** (Zulu) - 30: Enhanced barracks replacement with additional military benefits
 - **BUILDING_DOJO** (Japan) - 25: Enhanced armory replacement
 - **BUILDING_BARBICAN** (Ottoman) - 25: Enhanced armory replacement
@@ -200,29 +208,34 @@ The following buildings have FLAVOR_MILITARY_TRAINING values, indicating the AI 
 - **BUILDING_WEST_POINT** (America) - 80: Enhanced military academy providing significant production and science bonuses
 
 #### Support Buildings with Training Elements
+
 - **BUILDING_SIEGE_FOUNDRY** - 30: Siege weapon production and training
 - **BUILDING_STABLE** - 6: Cavalry training facility
 - **BUILDING_DUCAL_STABLE** (Poland) - 15: Enhanced stable replacement
 - **BUILDING_HOMESTEAD** (Shoshone) - 6: Provides modest military training benefits
 
 #### Civilization-Specific Buildings
+
 - **BUILDING_TELPOCHCALLI** (Aztec) - 15: Culture and military training facility
 - **BUILDING_RUNESTONE** (Denmark) - 20: Culture and military training
 - **BUILDING_PITZ_COURT** (Maya) - 5: Minor military training element
 - **BUILDING_TEOCALLI** (Aztec) - 15: Religious and military training
 
 #### National Wonders
+
 - **BUILDING_HEROIC_EPIC** - 35: National wonder requiring barracks, significantly boosts military production
 - **BUILDING_FORNIX** (Rome) - 35: Enhanced Heroic Epic replacement
 - **BUILDING_ROYAL_LIBRARY** (Assyria) - 20: Includes military training benefits
 
 #### Corporation Buildings
+
 - **BUILDING_HEXXON_REFINERY** - 50: Corporation building with military training
 - **BUILDING_HEXXON_REFINERY_HQ** - 100: Headquarters with maximum military training emphasis
 - **BUILDING_ULTICUR** - 20: Corporation building supporting military training
 - **BUILDING_RECYCLING_CENTER** - 20: Includes military benefits
 
 #### World Wonders
+
 - **BUILDING_STATUE_ZEUS** - 20: Ancient wonder enhancing military training
 - **BUILDING_KARLSTEJN** - 20: Medieval wonder with military benefits
 - **BUILDING_BRANDENBURG_GATE** - 50: Industrial wonder providing free promotions to all units
@@ -245,15 +258,18 @@ Technologies that emphasize military training infrastructure and capabilities:
 Social policies that support military training and unit experience:
 
 #### Honor Tree
+
 - **POLICY_HONOR** (Opener) - 7: Opening military-focused policy tree
 - **POLICY_MILITARY_TRADITION** - 5: Policy emphasizing military heritage
 - **POLICY_MILITARY_CASTE** - 5: Policy using military for civil purposes
 
 #### Exploration Tree
+
 - **POLICY_MARITIME_INFRASTRUCTURE** - 24: Naval and military infrastructure
 - **POLICY_EXPLORATION_FINISHER** - 50: Completion bonus emphasizing trained explorers and military
 
 #### Autocracy Tree
+
 - **POLICY_ELITE_FORCES** - 60: Emphasizes highly trained elite military units
 - **POLICY_MILITARISM** - 30: Promotes militaristic society with training emphasis
 
@@ -262,41 +278,48 @@ Social policies that support military training and unit experience:
 The AI's military strategies dynamically adjust FLAVOR_MILITARY_TRAINING during different war conditions:
 
 #### Military AI Strategies
+
 - **MILITARYAISTRATEGY_AT_WAR** - +15: Increases training priority during active warfare
 - **MILITARYAISTRATEGY_WINNING_WARS** - +20 (first war), +10 (additional wars): Winning encourages continued training investment
 - **MILITARYAISTRATEGY_LOSING_WARS** - -20 (first war), +5 (additional wars): Losing initially reduces training (emergency unit production), but recovering requires training
 
 #### City Strategies
+
 - **AICITYSTRATEGY_NEED_HAPPINESS_DEFENSE** - +30: Cities under happiness pressure prioritize defensive military training
 - **AICITYSTRATEGY_IS_PUPPET** - +10: Puppet cities receive modest military training bonus
 
 ## Summary of Effects
 
 ### Military Infrastructure Investment
+
 - **Direct building priority multiplier** for all military training facilities
 - Leaders with high FLAVOR_MILITARY_TRAINING will construct barracks, armories, and military academies earlier and in more cities
 - Creates a well-distributed network of training facilities across the empire
 - Ensures new units start with experience bonuses
 
 ### Unit Quality Management
+
 - **Aggressive unit upgrade behavior** through gold prioritization
 - During wartime, upgrade priority increases by 50x, making it the AI's top financial priority
 - Maintains technological parity or superiority in military forces
 - Prevents obsolete units from remaining in service
 
 ### Strategic Alignment
+
 - **Reinforces conquest grand strategy** through policy and building evaluation
 - Leaders with high military training values naturally gravitate toward domination victory
 - Creates coherent strategic decision-making across policies, buildings, and technologies
 - Supports offensive military campaigns with quality forces
 
 ### Technology Research Prioritization
+
 - **Accelerated research of military infrastructure technologies**
 - Ensures timely access to training buildings and unit upgrades
 - Balances technological advancement with military readiness
 - Particularly important for conquest-focused strategies
 
 ### Policy Preference Alignment
+
 - **Values military-focused policy trees** more highly
 - Honor and Autocracy become more attractive to high FLAVOR_MILITARY_TRAINING leaders
 - Elite Forces and Military Tradition policies receive significant value boosts
@@ -305,11 +328,13 @@ The AI's military strategies dynamically adjust FLAVOR_MILITARY_TRAINING during 
 ## Design Philosophy
 
 FLAVOR_MILITARY_TRAINING represents the distinction between:
+
 1. **Quantity:** Raw military unit production (controlled by FLAVOR_OFFENSE, FLAVOR_DEFENSE)
 2. **Quality:** Unit experience, training infrastructure, and technological modernity (controlled by FLAVOR_MILITARY_TRAINING)
 3. **Strategy:** Unit composition and tactical deployment (controlled by specialized flavors)
 
 This allows for differentiated military AI personalities:
+
 - **High TRAINING, High OFFENSE:** Elite aggressive military (Genghis Khan, Shaka)
 - **High TRAINING, Low OFFENSE:** Professional defensive military (Bismarck)
 - **Low TRAINING, High OFFENSE:** Quantity-over-quality approach (Barbarian hordes)

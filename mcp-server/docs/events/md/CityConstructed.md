@@ -17,7 +17,7 @@ All triggers occur within the `CvCity` class in the Community Patch DLL.
 The event passes five parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | Owner | PlayerTypes | The ID of the player who owns the city |
 | CityID | int | The unique identifier of the city |
 | BuildingType | BuildingTypes | The type of building that was constructed |
@@ -39,6 +39,7 @@ The event occurs immediately after the building is successfully created in the c
 **Source File**: `CvGameCoreDLL_Expansion2/CvCity.cpp`
 
 **Trigger Locations**:
+
 - Line 29627: Normal production completion in `CvCity::produce(BuildingTypes, bool)`
 - Line 30856: Gold purchase completion in `CvCity::PurchaseBuilding(BuildingTypes, YieldTypes)` when `ePurchaseYield == YIELD_GOLD`
 - Line 30907: Faith purchase completion in `CvCity::PurchaseBuilding(BuildingTypes, YieldTypes)` when `ePurchaseYield == YIELD_FAITH`

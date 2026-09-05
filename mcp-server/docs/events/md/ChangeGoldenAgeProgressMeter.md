@@ -17,7 +17,7 @@ Note: The event is only fired when the `MOD_ISKA_GOLDENAGEPOINTS_TO_PRESTIGE` mo
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `playerID` | integer | The ID of the player whose Golden Age progress meter is being changed |
 | `iChange` | integer | The amount by which the Golden Age progress meter is being modified (must be positive) |
 
@@ -26,6 +26,7 @@ Note: The event is only fired when the `MOD_ISKA_GOLDENAGEPOINTS_TO_PRESTIGE` mo
 The event is fired through the Lua script system whenever the internal `ChangeGoldenAgeProgressMeter` function is executed. The function internally calls `ChangeGoldenAgeProgressMeterTimes100`, which handles the precise calculation including fractional Golden Age points.
 
 **Key behaviors:**
+
 - The event is only triggered when the `GAMEOPTION_NO_HAPPINESS` game option is not enabled
 - The event is only triggered when the `MOD_ISKA_GOLDENAGEPOINTS_TO_PRESTIGE` mod flag is enabled
 - The event is only triggered for positive changes (iChange > 0)
@@ -33,6 +34,7 @@ The event is fired through the Lua script system whenever the internal `ChangeGo
 - The event provides visibility into Golden Age point accumulation across all game mechanics
 
 **Related game mechanics:**
+
 - Golden Age point generation from excess happiness
 - Faith-to-Golden Age point conversion during religion founding
 - Production-to-Golden Age point conversion in cities
@@ -48,6 +50,7 @@ The event is fired through the Lua script system whenever the internal `ChangeGo
 **Script System Integration**: Uses `LuaSupport::CallHook` to notify registered Lua event listeners
 
 **Preconditions**:
+
 - Game option `GAMEOPTION_NO_HAPPINESS` must not be enabled
 - Mod flag `MOD_ISKA_GOLDENAGEPOINTS_TO_PRESTIGE` must be enabled
 - Change value (`iChange`) must be positive (> 0)
@@ -55,6 +58,7 @@ The event is fired through the Lua script system whenever the internal `ChangeGo
 - Player must not be in a Golden Age if `MOD_BALANCE_NO_GAP_DURING_GA` is enabled
 
 **Event Flow**:
+
 1. Game logic calls `ChangeGoldenAgeProgressMeter` or `ChangeGoldenAgeProgressMeterTimes100`
 2. Function checks for `GAMEOPTION_NO_HAPPINESS` game option (returns early if enabled)
 3. Function checks for `MOD_BALANCE_NO_GAP_DURING_GA` flag and current Golden Age status (returns early if in Golden Age)

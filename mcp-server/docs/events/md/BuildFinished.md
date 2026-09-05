@@ -14,6 +14,7 @@ The event is triggered in the following scenario:
 - **Context**: After all build effects have been applied but before the function returns
 
 The event fires after the following build completion mechanics have been resolved:
+
 - Improvement construction and placement
 - Route construction
 - Feature removal and production yields
@@ -26,7 +27,7 @@ The event fires after the following build completion mechanics have been resolve
 The event is invoked with four parameters:
 
 | Parameter | Type | Source | Description |
-|-----------|------|--------|-------------|
+| --- | --- | --- | --- |
 | `ePlayer` | PlayerTypes (int) | Function parameter | The player ID who completed the build action |
 | `iPlotX` | int | `getX()` | The X coordinate of the plot where the build was completed |
 | `iPlotY` | int | `getY()` | The Y coordinate of the plot where the build was completed |
@@ -40,6 +41,7 @@ Parameter signature: `"iiii"` (four integers)
 **Lua Callback Signature**: `GameEvents.BuildFinished.Add(function(ePlayer, iPlotX, iPlotY, eImprovement) end)`
 
 This event provides modders and AI systems with notification that a build action has been completed, allowing them to:
+
 - Track construction progress and territorial development
 - Implement custom rewards or effects based on specific improvements
 - Monitor player productivity and infrastructure development
@@ -55,11 +57,13 @@ The event occurs after all standard build effects have been processed, ensuring 
 **Event Hook**: `LuaSupport::CallHook(pkScriptSystem, "BuildFinished", args.get(), bResult)`
 
 **Prerequisites**:
+
 - Valid build type with sufficient accumulated build progress
 - Valid player performing the build action
 - Build progress must reach or exceed the required build time
 
 **Event Timing**: The event is fired at the end of the build completion process, after:
+
 1. Improvement placement and configuration
 2. Route construction
 3. Feature removal and production yield calculation
@@ -69,6 +73,7 @@ The event occurs after all standard build effects have been processed, ensuring 
 7. Achievement progress updates
 
 **Build Types Covered**:
+
 - **Improvement Construction**: Farms, mines, trading posts, and all other tile improvements
 - **Route Construction**: Roads and railroads
 - **Feature Removal**: Clearing forests, jungles, marshes, and other terrain features
@@ -76,6 +81,7 @@ The event occurs after all standard build effects have been processed, ensuring 
 - **Route Removal**: Removing existing roads or railroads
 
 **Related Functions**:
+
 - `CvPlot::getBuildProgress()` - Retrieves current build progress
 - `CvPlot::getBuildTime()` - Calculates required build time
 - `CvPlot::setImprovementType()` - Places the completed improvement

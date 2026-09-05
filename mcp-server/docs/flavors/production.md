@@ -7,6 +7,7 @@
 Unlike `FLAVOR_GOLD` (which focuses on economic output) or `FLAVOR_GROWTH` (which focuses on population), `FLAVOR_PRODUCTION` specifically drives the AI's **commitment to building and manufacturing efficiency** through production-enhancing buildings (forges, workshops, factories), production-focused tile improvements (mines, lumber mills), and production-oriented city management.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Production-focused leaders (wonder/military builders): 8-10
@@ -39,6 +40,7 @@ else if(strFlavorName == "FLAVOR_PRODUCTION")
 ```
 
 **Interpretation:**
+
 - **Economic Advisor:** FLAVOR_PRODUCTION receives a priority weight of 16, making it the highest priority economic flavor (higher than gold at 14, infrastructure at 9, and growth at 15). The economic advisor will strongly recommend production-enhancing buildings, improvements, and strategies to civilizations with high production flavors.
 - **Military Advisor:** FLAVOR_PRODUCTION receives a priority weight of only 1 for military recommendations, indicating that military planning focuses on unit types and tactics rather than the production capacity to build them.
 
@@ -63,6 +65,7 @@ case YIELD_PRODUCTION:
 ```
 
 **Interpretation:** When workers evaluate which tiles to improve, FLAVOR_PRODUCTION multiplies the production yield improvement value by both the flavor value and a configurable multiplier (default 2). This means:
+
 - A leader with FLAVOR_PRODUCTION = 9 will value a +2 production improvement as: 2 × 9 × 2 = 36 points
 - A leader with FLAVOR_PRODUCTION = 3 will value it as: 2 × 3 × 2 = 12 points
 
@@ -83,6 +86,7 @@ if (iFlavorProduction < 0) iFlavorProduction = 0;
 ```
 
 **Interpretation:** The production flavor is multiplied by 10 and combined with the active grand strategy to create a city specialization weight. This means:
+
 - FLAVOR_PRODUCTION = 8 adds 80 weight toward production-focused specialization
 - Cities will prioritize buildings, specialists, and citizen assignments that maximize production
 - Production-specialized cities will work more hill tiles, mines, and lumber mills while avoiding food and gold tiles until production goals are met
@@ -105,6 +109,7 @@ int iProductionFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAndGran
 **Interpretation:** FLAVOR_PRODUCTION is divided by 2 and used in city-state bullying calculations. Leaders with high production flavor are more likely to bully city-states for units rather than gold, as they value military production capacity. A leader with FLAVOR_PRODUCTION = 8 adds 4 points toward unit bullying priority.
 
 **Strategic Impact:** Production-focused leaders will:
+
 - Bully city-states for units when possible
 - Value military city-states that provide production bonuses to unit construction
 - Invest in alliances with city-states that provide production-related benefits
@@ -175,6 +180,7 @@ if(iNumImprovement <= iFlavor)
 **Interpretation:** Great Engineers evaluate whether to build manufactories based on combined production and growth flavors, adjusted by current era and existing manufactories. A leader with FLAVOR_PRODUCTION = 8 and FLAVOR_GROWTH = 5 will build up to 13 manufactories (adjusted downward by era and previous engineer usage) before switching to production rushing.
 
 **Strategic Trade-off:**
+
 - **High FLAVOR_PRODUCTION:** Build many manufactories for long-term sustained production
 - **Low FLAVOR_PRODUCTION:** Rush wonders and buildings for immediate impact
 
@@ -211,10 +217,12 @@ case YIELD_PRODUCTION:
 ```
 
 **Interpretation:** When evaluating religious beliefs that grant production yields, the FLAVOR_PRODUCTION value is multiplied by 50. This creates significant differences in belief selection:
+
 - FLAVOR_PRODUCTION = 9: Production-granting beliefs score 450 points
 - FLAVOR_PRODUCTION = 3: Production-granting beliefs score 150 points
 
 **Affected Beliefs:**
+
 - Religious Idols (+1 production from mines on gold/silver)
 - Religious Center (+2 production in holy city)
 - Divine Inspiration (+4 faith from wonders, encourages wonder production)
@@ -245,6 +253,7 @@ else if(strFlavor == "FLAVOR_PRODUCTION" ||
 **Interpretation:** FLAVOR_PRODUCTION (along with FLAVOR_WONDER) directly increases the production yield multiplier used in city site evaluation. A leader with FLAVOR_PRODUCTION = 9 will weight production tiles (hills, forests, strategic resources) 9 times more heavily when selecting settlement locations.
 
 **Settlement Pattern Impact:**
+
 - **High FLAVOR_PRODUCTION:** Prefers settling near hills, forests, stone, and strategic resources
 - **Low FLAVOR_PRODUCTION:** Prefers settling near food, gold, or cultural resources
 
@@ -270,6 +279,7 @@ FLAVOR_PRODUCTION is **temporarily increased** when the AI enters wartime strate
 ```
 
 **Interpretation:**
+
 - **At War:** +10 FLAVOR_PRODUCTION (moderate increase for sustained military output)
 - **Winning Wars:** +15 FLAVOR_PRODUCTION (aggressive production to capitalize on advantage)
 - **Losing Wars:** +10 FLAVOR_PRODUCTION (defensive production to rebuild military)
@@ -278,6 +288,7 @@ FLAVOR_PRODUCTION is **temporarily increased** when the AI enters wartime strate
 - **Need Naval Bombardment:** +20 FLAVOR_PRODUCTION (build naval units rapidly)
 
 **Strategic Impact:** During warfare, the AI will:
+
 - Prioritize production buildings (forges, workshops) to sustain military output
 - Work more production tiles to build units faster
 - Build more mines and lumber mills
@@ -325,6 +336,7 @@ FLAVOR_PRODUCTION heavily influences the selection of the "World Fair" productio
 Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Higher values mean the AI prioritizes these buildings when production-focused.
 
 **Early Game (Ancient-Classical Era):**
+
 - Forge: 20
 - Well: 25
 - Stone Works: 20
@@ -332,6 +344,7 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 - Siege Foundry: 25
 
 **Unique Buildings (Early):**
+
 - Qullqa (Incan): 20
 - Herbalist: 20
 - Longhouse (Iroquois): 50 (exceptional production focus)
@@ -340,6 +353,7 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 - Mud Pyramid Mosque (Tabya): 40
 
 **Mid Game (Medieval-Renaissance Era):**
+
 - Watermill: 25
 - Nilometer (Egyptian): 30
 - Workshop: 40 (core production building)
@@ -351,6 +365,7 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 - Krepost (Russian): 20
 
 **Late Game (Industrial-Modern Era):**
+
 - Windmill: 30
 - Brewhouse (German): 30
 - Agribusiness: 10
@@ -363,6 +378,7 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 - Chaebol (Korean): 40
 
 **Information Era:**
+
 - Hydro Plant: 70
 - Nuclear Plant: 90 (highest late-game production building)
 - Solar Plant: 70
@@ -371,17 +387,20 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 - Spaceship Factory: 10
 
 **Wonders:**
+
 - Ironworks: 50 (national wonder providing massive production)
 - Arsenale di Venezia: 50 (Venice shipyard)
 - Great Cothon: 25 (Carthage harbor)
 - White Tower: 10
 
 **Religious Buildings:**
+
 - Synagogue: 10
 - Pagoda: 4
 - Mandir: 2
 
 **Corporations:**
+
 - Firaxite Materials (Office): 50
 - Firaxite Materials (HQ): 100
 - Hexxon Refinery (Office): 50
@@ -392,46 +411,56 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 ### Technologies with High FLAVOR_PRODUCTION
 
 **Ancient Era:**
+
 - Mining: 10 (Unlocks mines, stone quarries, Well building, Pyramids wonder)
 - Bronze Working: 10 (Unlocks Forge, reveals Iron, production from chopping)
 - Calendar: 5 (Plantations, jungle chopping)
 
 **Classical Era:**
+
 - Construction: 15 (Watermill, Arena, improved roads for movement)
 - Metal Casting: 15 (Baths, Circus Maximus, Lumber Mills, Manufactory +3 production)
 
 **Medieval Era:**
+
 - Machinery: 10 (Crossbowmen, Workshop building)
 - Civil Service: 10 (Farm improvements, bureaucracy)
 - Chivalry: 5 (Knights, mounted production)
 - Steel: 5 (Military production)
 
 **Renaissance Era:**
+
 - Economics: 20 (Windmills, banking systems for production financing)
 
 **Industrial Era:**
+
 - Railroad: 15 (Rapid unit movement, production logistics)
 - Steam Power: 15 (Factories, coal power)
 - Industrialization: 25 (Factory building, aluminum, production efficiency)
 - Fertilizer: 5 (Agricultural production support)
 
 **Modern Era:**
+
 - Corporations: 30 (Corporate franchises providing production bonuses)
 
 **Atomic Era:**
+
 - Lasers: 15 (Jet fighters, modern manufacturing)
 
 **Information Era:**
+
 - Ecology: 20 (Hydro/Solar/Nuclear/Wind/Tidal plants - all renewable production power)
 
 ### Policies with High FLAVOR_PRODUCTION
 
 **Ancient Era:**
+
 - Aristocracy (Tradition): 5 (Wonder production bonus)
 - Liberty: 7 (Early expansion and production)
 - Republic (Liberty): 5 (Production in cities)
 
 **Classical Era:**
+
 - Discipline (Honor): 5 (Military production efficiency)
 - Professional Army (Honor): 5 (Unit production bonuses)
 - Piety: 14 (Religious production benefits)
@@ -440,6 +469,7 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 - Free Religion (Piety): 12 (Religious production flexibility)
 
 **Medieval-Renaissance Era:**
+
 - Commerce: 23 (Trade-based production bonuses)
 - Trade Unions (Commerce): 24 (Worker efficiency, faster improvements)
 - Merchant Navy (Commerce): 24 (Naval production)
@@ -449,9 +479,11 @@ Buildings are evaluated by the AI based on their FLAVOR_PRODUCTION values. Highe
 **Ideology Policies (Industrial Era+):**
 
 **Order:**
+
 - Five Year Plan: 60 (Massive production bonus - core Order policy)
 
 **Autocracy:**
+
 - Total War: 60 (Military production focus)
 - Infiltration: 30 (Strategic production)
 
@@ -468,27 +500,32 @@ City events (random occurrences in cities) have choices influenced by FLAVOR_PRO
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Increases preference for diplomatic and conquest victories, which require substantial production capacity
 - **Grand strategy:** Creates feedback loops with production-focused buildings and policies
 - **City placement:** Prioritizes production-rich locations (hills, forests, strategic resources) over food or gold sites
 
 ### City Development
+
 - **Building priority:** Prioritizes forges, workshops, factories, and power plants over culture, gold, or science buildings
 - **Specialization:** Designates cities as production-focused, working hill tiles and mines over flat food tiles
 - **Tile improvements:** Workers prioritize mines, lumber mills, and quarries over farms and trading posts
 - **Citizen assignment:** Cities work production tiles even at the expense of growth and gold
 
 ### Economic Strategy
+
 - **Technology research:** Beelines production-enhancing technologies (Mining, Bronze Working, Machinery, Industrialization)
 - **Policy selection:** Favors production-boosting policies (Five Year Plan, Trade Unions, Total War)
 - **Religion:** Selects production-granting beliefs (Religious Idols, Divine Inspiration)
 - **City-states:** Values military and industrial city-states that provide production bonuses
 
 ### Great People
+
 - **Great Engineers:** Build many manufactories for long-term production before rushing wonders
 - **Placement priority:** Manufactories placed on high-production tiles near production-specialized cities
 
 ### Dynamic Adjustments
+
 - **Wartime:** FLAVOR_PRODUCTION temporarily increases by 10-20 during warfare, emphasizing military production
 - **Empire defense:** Mixed adjustments (-10 normal, +20 critical) depending on defense urgency
 - **Happiness crisis:** FLAVOR_PRODUCTION increases by 40 when defense is needed, forcing infrastructure construction
@@ -520,6 +557,7 @@ This creates a spectrum of AI economic development strategies:
 - **FLAVOR_EXPANSION:** Rapid expansion benefits from strong production to build settlers quickly
 
 **Typical Combinations:**
+
 - **High Production + High Wonder:** Classic wonder-builder strategy (Egypt, France)
 - **High Production + High Offense:** Military powerhouse focused on unit production (Germany, Zulu)
 - **High Production + High Expansion:** Rapid settler production and infrastructure building (Rome, Shoshone)
@@ -530,14 +568,18 @@ FLAVOR_PRODUCTION is dynamically adjusted by military strategies and city strate
 ## Interaction with Game Mechanics
 
 ### Wonder Construction
+
 FLAVOR_PRODUCTION heavily influences wonder construction decisions:
+
 - Leaders with FLAVOR_PRODUCTION ≥ 7 will aggressively pursue wonders
 - Production-specialized cities are designated as wonder-building cities
 - Great Engineers are more likely to rush wonders when FLAVOR_PRODUCTION is high
 - Technologies unlocking wonders receive bonus research priority
 
 ### Unit Production During War
+
 During warfare, FLAVOR_PRODUCTION increases significantly:
+
 - At War: Base +10
 - Winning Wars: +15 (aggressive expansion requires sustained unit production)
 - Losing Wars: +10 (defensive production to rebuild military)
@@ -546,13 +588,17 @@ During warfare, FLAVOR_PRODUCTION increases significantly:
 This creates realistic behavior where wartime production shifts toward military units while still maintaining production infrastructure to sustain the war effort.
 
 ### Corporate Strategy
+
 In late-game, FLAVOR_PRODUCTION influences corporate strategy:
+
 - Production-focused leaders prioritize Firaxite Materials and Hexxon Refinery corporations
 - Corporate offices and headquarters with high FLAVOR_PRODUCTION values are built in production-specialized cities
 - Corporate franchises are valued based on production bonuses they provide
 
 ### Power Plant Selection
+
 In the Information Era, FLAVOR_PRODUCTION determines power plant construction:
+
 - Nuclear Plant: 90 (highest production bonus, but requires uranium)
 - Hydro/Solar/Tidal/Wind Plants: 70 each (renewable alternatives)
 - Leaders with FLAVOR_PRODUCTION ≥ 8 will prioritize Nuclear Plants when uranium is available

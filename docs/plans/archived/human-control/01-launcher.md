@@ -3,6 +3,7 @@
 > Part of the human-control plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 
 > **Status: implemented.** All five work items landed. Type-check passes; `isHumanControl` unit tests added to `config-helpers.test.ts` (18 pass); the `human-strategist` registers correctly. What was built:
+>
 > - [`vox-agents/src/strategist/agents/human-strategist.ts`](../../../vox-agents/src/strategist/agents/human-strategist.ts) — `NullStrategist`-style stub. `getSystem` calls `keep-status-quo` with `parameters.mode` and a real rationale, then returns `""` (skips the LLM loop via `VoxContext`'s empty-system path).
 > - [`agent-registry.ts`](../../../vox-agents/src/infra/agent-registry.ts) — registered after `NullStrategist`.
 > - [`config.ts`](../../../vox-agents/src/types/config.ts) — `isHumanControl(config)` scans `llmPlayers` for `strategist === "human-strategist"`, using the same hardcoded-strategist-name convention already used for `"none-strategist"`.

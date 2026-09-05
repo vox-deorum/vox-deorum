@@ -44,6 +44,7 @@ The `CombatEnded` event provides a complete snapshot of combat aftermath, includ
 - **Combat Resolution**: Final state after all combat mechanics have been applied
 
 This event is particularly useful for:
+
 - Post-combat analysis and learning systems
 - Strategic AI decision-making based on combat outcomes
 - Logging and replay systems

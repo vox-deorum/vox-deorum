@@ -7,6 +7,7 @@
 Unlike `FLAVOR_PRODUCTION` (which focuses on manufacturing capacity) or `FLAVOR_GROWTH` (which focuses on population), `FLAVOR_GOLD` specifically drives the AI's **commitment to accumulating wealth** through gold-generating buildings (markets, banks, stock exchanges), trade routes, economic tile improvements, and economic policies.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Trade/economic-focused leaders: 8-10
@@ -54,6 +55,7 @@ case YIELD_GOLD:
 ```
 
 **Interpretation:** When workers evaluate which tiles to improve, FLAVOR_GOLD multiplies the gold yield improvement value by both the flavor value and a configurable multiplier (default 2). This means:
+
 - A leader with FLAVOR_GOLD = 9 will value a +2 gold improvement as: 2 × 9 × 2 = 36 points
 - A leader with FLAVOR_GOLD = 3 will value it as: 2 × 3 × 2 = 12 points
 
@@ -74,6 +76,7 @@ if (iFlavorGold < 0) iFlavorGold = 0;
 ```
 
 **Interpretation:** The gold flavor is multiplied by 10 and combined with the active grand strategy to create a city specialization weight. This means:
+
 - FLAVOR_GOLD = 7 adds 70 weight toward gold-focused specialization
 - Cities will prioritize buildings, specialists, and citizen assignments that maximize gold output
 - Gold-specialized cities will work more gold tiles (trading posts, luxury resources, coastal tiles) while avoiding food and production tiles until economic goals are met
@@ -98,6 +101,7 @@ int iTileImprovementFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAn
 ```
 
 **Interpretation:** FLAVOR_GOLD is one of three key flavors used in city-state interaction decisions. Leaders with high FLAVOR_GOLD will:
+
 - Invest more gold in city-state gifting to secure alliances and bonuses
 - Prioritize mercantile and trade city-states that provide gold bonuses
 - Value city-states with trade route bonuses and economic benefits
@@ -113,6 +117,7 @@ int iTileImprovementFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAn
 Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher values mean the AI prioritizes these buildings when gold-focused.
 
 **Early Game (Ancient-Classical Era):**
+
 - Market: 25 (core economic building)
 - Bazaar (Arabian unique): 25
 - Marae (Polynesian unique): 10
@@ -123,6 +128,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 - Runestone (Danish unique): 10
 
 **Mid Game (Medieval-Renaissance Era):**
+
 - Caravansary: 15 (trade route enhancement)
 - Gumey: 30
 - Satrap's Court (Persian unique): 60 (exceptionally high gold focus)
@@ -135,6 +141,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 - Krepost (Russian unique): 20
 
 **Late Game (Industrial-Modern Era):**
+
 - Brewhouse (German unique): 10
 - Agribusiness: 10
 - Andelsbevaegelse (Danish unique): 20
@@ -148,17 +155,20 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 - Tidal Plant: 10
 
 **Religious Buildings:**
+
 - Cathedral: 8
 - Mandir: 2
 - Order (religious building): 8
 
 **Corporations:**
+
 - Civilized Jewelers (Office): 40
 - Civilized Jewelers (HQ): 80
 - Trader Sid's (Office): 50
 - Trader Sid's (HQ): 100 (highest gold-focused corporation)
 
 **National Wonders:**
+
 - Palace: 5
 - Circus Maximus: 25
 - Ulticur (Celtic unique): 30
@@ -166,6 +176,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 - Great Cothon (Carthaginian unique): 75
 
 **World Wonders:**
+
 - Parthenon: 15
 - Huey Teocalli: 20
 - University of Coimbra: 15
@@ -192,35 +203,43 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 ### Technologies with High FLAVOR_GOLD
 
 **Ancient Era:**
+
 - Horseback Riding: 25 (Trade units, Market building, Petra wonder, +1 Trade Route)
 
 **Classical Era:**
+
 - Currency: 15 (Caravansary, Angkor Wat, Wealth process, Village improvement, +1 Trade Route, Merchant +1 gold)
 - Metal Casting: 15 (Economic infrastructure)
 
 **Medieval Era:**
+
 - Guilds: 15 (Customs House, Artists' Guild, East India Company, Karlstejn wonder, Camp & Village +1 gold)
 
 **Renaissance Era:**
+
 - Banking: 15 (Bank building, Constabulary, Town +3 gold, Pioneer units)
 - Economics: 5 (Windmill, Uffizi wonder, +1 Trade Route, Merchant & Plantation +1 gold)
 - Navigation: 5 (Trading ships, Servant +1 gold, Boats +1 food)
 
 **Industrial Era:**
+
 - Railroad: 10 (Trade infrastructure, movement efficiency)
 - Steam Power: 5 (Industrial economic infrastructure)
 - Fertilizer: 10 (Pasture +2 gold)
 
 **Modern Era:**
+
 - Electricity: 15 (Stock Exchange building, Empire State Building, +1 Trade Route)
 - Corporations: 30 (Corporate franchises providing gold bonuses - major economic technology)
 
 **Information Era:**
+
 - Internet: 15 (Tourism boost, Writers +2 culture, Merchants +3 gold, Servants +1 culture)
 
 ### Policies with High FLAVOR_GOLD
 
 **Early Policies (Ancient-Classical Era):**
+
 - Landed Elite (Tradition): 5
 - Liberty: 7
 - Republic (Liberty): 5
@@ -229,6 +248,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 - Piety: 13
 
 **Medieval-Renaissance Policies:**
+
 - Patronage: 13
 - Cultural Diplomacy (Patronage): 18
 - Merchant Confederacy (Patronage): 10
@@ -242,6 +262,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 - Protectionism (Commerce): 24
 
 **Advanced Policies:**
+
 - Secularism (Rationalism): 24
 - Imperialism (Exploration): 24
 - Free Market (Exploration): 24
@@ -250,34 +271,41 @@ Buildings are evaluated by the AI based on their FLAVOR_GOLD values. Higher valu
 **Ideology Policies (Industrial Era+):**
 
 **Freedom:**
+
 - Economic Union: 40
 - Capitalism: 40
 - New Deal: 50
 - Civil Society: 60 (highest gold-focused freedom policy)
 
 **Order:**
+
 - Academy of Sciences: 40
 - Double Agents: 30
 
 **Autocracy:**
+
 - Third Alternative: 40
 
 ### Units with FLAVOR_GOLD
 
 **Trade Units:**
+
 - Caravan: 10 (land trade routes)
 - Cargo Ship: 20 (sea trade routes - higher value reflects greater gold potential)
 
 **Great People:**
+
 - Merchant: 1 (Great Merchant for trade missions and customs houses)
 
 **Unique Units:**
+
 - Venetian Merchant: 100 (exceptional gold focus for Venice's unique playstyle)
 - Portuguese Nau: 10 (exploration and trade ship)
 
 ### Processes with FLAVOR_GOLD
 
 **City Production Processes:**
+
 - Wealth: 5 (convert production into gold)
 - Treasure Fleet: 25 (naval economic process)
 - Wargames: 25 (military training with economic benefits)
@@ -301,11 +329,13 @@ FLAVOR_GOLD temporarily **increases dramatically** during happiness crisis strat
 ```
 
 **Interpretation:**
+
 - **Need Happiness (Gold):** +60 FLAVOR_GOLD - Massive economic boost to generate gold for purchasing happiness buildings and luxuries
 - **Growth Synergy:** +30 FLAVOR_GROWTH - Grow cities to generate more gold from population
 - **Trade Route Synergy:** +30 to both land and sea trade route flavors - Establish trade routes to generate additional gold income
 
 **Strategic Response:** When cities face happiness crises requiring economic solutions, FLAVOR_GOLD increases by 60 points. This represents the AI's recognition that it must:
+
 - Build markets, banks, and stock exchanges to generate gold
 - Establish trade routes for additional income
 - Purchase happiness buildings (theaters, stadiums, zoos) with accumulated gold
@@ -317,28 +347,33 @@ FLAVOR_GOLD temporarily **increases dramatically** during happiness crisis strat
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Supports diplomatic victory (buying city-state alliances) and economic stability for all victory types
 - **Grand strategy:** Creates economic engine that funds military expansion, wonder purchases, and diplomatic influence
 - **City placement:** Values locations near luxury resources, coastal trade routes, and gold-producing tiles
 
 ### City Development
+
 - **Building priority:** Prioritizes markets, banks, stock exchanges, and trade-enhancing buildings over military or production structures
 - **Specialization:** Designates cities as economic centers, working gold tiles and luxury resources over food and production tiles
 - **Tile improvements:** Workers prioritize trading posts, luxury resource improvements, and coastal economic improvements
 - **Citizen assignment:** Cities work gold tiles, merchant specialist slots, and trading post improvements
 
 ### Economic Strategy
+
 - **Technology research:** Beelines gold-enhancing technologies (Currency, Banking, Electricity, Corporations)
 - **Policy selection:** Strongly favors Commerce policy tree and economic ideology policies (Economic Union, Capitalism, Civil Society)
 - **Trade routes:** Establishes maximum number of trade routes, prioritizing gold-generating routes over food/production routes
 - **City-states:** Invests heavily in mercantile city-states and uses gold to secure diplomatic alliances
 
 ### Great People
+
 - **Great Merchants:** Uses trade missions for gold injections or builds customs houses for long-term gold generation
 - **Customs House Placement:** Places customs houses on high-gold tiles near economic centers
 - **Great Engineer/Scientist Strategy:** More likely to rush purchases with great people due to available gold reserves
 
 ### Dynamic Adjustments
+
 - **Happiness crisis:** FLAVOR_GOLD temporarily increases by 60 during economic happiness emergencies
 - **Trade route strategies:** Adjusts trade route priorities based on gold flavor and current economic needs
 - **Grand strategy shifts:** Gold flavor interacts with active grand strategy (higher during Diplomatic Victory pursuit)
@@ -371,6 +406,7 @@ This creates a spectrum of AI economic development strategies:
 - **FLAVOR_TILE_IMPROVEMENT:** Infrastructure focus that includes trading posts and luxury improvements
 
 **Typical Combinations:**
+
 - **High Gold + High Diplomacy:** Classic diplomatic victory strategy (Venice, Netherlands, Arabia)
 - **High Gold + High Trade Routes:** Trade-focused empires that dominate economic networks (Portugal, Morocco)
 - **High Gold + Low Production:** Economic civilizations that purchase what they can't build (Venice, Arabia)
@@ -379,35 +415,45 @@ This creates a spectrum of AI economic development strategies:
 ## Interaction with Game Mechanics
 
 ### Trade Route Management
+
 FLAVOR_GOLD heavily influences trade route decisions:
+
 - Leaders with FLAVOR_GOLD ≥ 7 will maximize trade route capacity
 - Trade routes are redirected toward gold-generating destinations over food/production
 - Cargo ships are prioritized over caravans when coastal trade routes are available
 - Trade route protection becomes high military priority
 
 ### City-State Diplomacy
+
 Gold-focused leaders excel at city-state relationships:
+
 - Willing to spend 30-50% of gold reserves on city-state influence
 - Prioritize mercantile city-states for additional gold and luxuries
 - Complete economic quests from city-states more frequently
 - Establish protective pacts with economically valuable city-states
 
 ### Purchase Strategy
+
 High gold flavor enables aggressive purchase strategy:
+
 - Purchase units for immediate military needs during warfare
 - Purchase buildings in newly founded cities to accelerate development
 - Purchase great people improvements when opportunities arise
 - Maintain gold reserves for emergency defensive purchases
 
 ### Happiness Management
+
 FLAVOR_GOLD provides alternative happiness solutions:
+
 - Purchase happiness buildings (theaters, stadiums, zoos) rather than building them
 - Buy luxuries from other civilizations through trade agreements
 - Generate wealth to support larger military forces (unit maintenance costs)
 - Fund cultural buildings and wonders that provide happiness
 
 ### Corporate Strategy
+
 In late-game, FLAVOR_GOLD influences corporate strategy:
+
 - Gold-focused leaders prioritize Trader Sid's and Civilized Jewelers corporations
 - Corporate offices and headquarters with high FLAVOR_GOLD values are built in economic centers
 - Corporate franchises are valued based on gold bonuses they provide

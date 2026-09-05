@@ -4,14 +4,14 @@ The knowledge system is the MCP server's memory. An agent reasoning about a game
 
 The knowledge-query tools read from here. That is why they can answer "what did this civilization do over the last ten turns?" without ever touching the live game.
 
-The source lives in `mcp-server/src/knowledge/`. This page explains how the system is shaped; how events flow *into* it is the subject of [events.md](events.md).
+The source lives in `mcp-server/src/knowledge/`. This page explains how the system is shaped; how events flow _into_ it is the subject of [events.md](events.md).
 
 ## The two halves
 
 The system splits cleanly in two.
 
-- **The manager** (`knowledge/manager.ts`) is the orchestrator. It watches the bridge for events and DLL-status changes, detects when the active game changes, owns the current per-game store, runs the auto-save timer, and pushes notifications back to MCP clients. It knows *which* game is in play.
-- **The store** (`knowledge/store.ts`) is the persistence layer, one SQLite database per game at `data/{gameId}.db`. It validates incoming events, writes them, holds the snapshots of player and city state, and answers queries. It knows *what* is in the game.
+- **The manager** (`knowledge/manager.ts`) is the orchestrator. It watches the bridge for events and DLL-status changes, detects when the active game changes, owns the current per-game store, runs the auto-save timer, and pushes notifications back to MCP clients. It knows _which_ game is in play.
+- **The store** (`knowledge/store.ts`) is the persistence layer, one SQLite database per game at `data/{gameId}.db`. It validates incoming events, writes them, holds the snapshots of player and city state, and answers queries. It knows _what_ is in the game.
 
 When the game changes, the manager detects the new game identity, saves and closes the old store, opens a new one, and notifies clients with a `GameSwitched` notification. Each game thus gets its own isolated database. Because that data is ephemeral and rebuilt from the game, there are no schema migrations: tables are simply created if they don't exist.
 
@@ -58,7 +58,7 @@ The flags are set at the moment data is stored. For real game events they are co
 
 ## Getters: pulling state from the game
 
-Events tell the store *that* something happened, but the full state of a player or city has to be pulled from the game. That is the job of the **getters** in `knowledge/getters/`.
+Events tell the store _that_ something happened, but the full state of a player or city has to be pulled from the game. That is the job of the **getters** in `knowledge/getters/`.
 
 Each getter executes a Lua script through the bridge, post-processes the result (turning numeric IDs into readable names, filtering buildings, and so on), and stores it into the appropriate knowledge tier with the right visibility. Getters cover game identity, player information and summaries, opinions, strategies, personas, city information, military reports, victory progress, and more.
 

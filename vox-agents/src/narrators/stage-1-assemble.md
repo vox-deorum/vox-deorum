@@ -6,38 +6,41 @@
 
 ```typescript
 interface AssembleConfig extends NarratorStageConfig {
-  type: 'narrator-assemble';
+  type: "narrator-assemble";
   gameID: string;
-  recordingDir: string;              // path to <gameID>/ with segments.jsonl + videos
-  knowledgePath?: string;           // path to game's knowledge + telemetry SQLite DB - if empty, search for mcp-server/archive for the knowledge DB path. other paths are calculated as derivatives (see archivists).
+  recordingDir: string; // path to <gameID>/ with segments.jsonl + videos
+  knowledgePath?: string; // path to game's knowledge + telemetry SQLite DB - if empty, search for mcp-server/archive for the knowledge DB path. other paths are calculated as derivatives (see archivists).
 }
 ```
 
 ### Input
+
 - `segments.jsonl` from `recordingDir`
 - Knowledge DB at `knowledgeDbPath` (GameEvents, RenderEvents, PlayerInformations, GameMetadata)
 
 ### Output
 
 **`workspace/narrator-context.json`** — shared game context for all later stages:
+
 ```typescript
 interface NarratorContext {
   gameID: string;
-  knowledgePath: string;   // resolved absolute path
-  recordingDir: string;    // resolved absolute path
+  knowledgePath: string; // resolved absolute path
+  recordingDir: string; // resolved absolute path
 }
 ```
 
 **`workspace/episodes.json`** — episode manifest:
+
 ```typescript
-import type { Selectable } from 'kysely';
-import type { PlayerInformation } from 'mcp-server/dist/knowledge/schema/public.js';
+import type { Selectable } from "kysely";
+import type { PlayerInformation } from "mcp-server/dist/knowledge/schema/public.js";
 
 interface Episodes {
   gameID: string;
   totalTurns: number;
-  players: Selectable<PlayerInformation>[];  // reuse existing type
-  playerTypes: Record<number, string>;       // playerID -> friendly label (e.g., "Staffed LLM Strategist (deepseek-r1)")
+  players: Selectable<PlayerInformation>[]; // reuse existing type
+  playerTypes: Record<number, string>; // playerID -> friendly label (e.g., "Staffed LLM Strategist (deepseek-r1)")
   winner?: { playerID: number; victoryType: string };
   episodes: Episode[];
 }
@@ -45,12 +48,12 @@ interface Episodes {
 interface Episode {
   // Identity — (turn, playerID) uniquely identifies an episode
   turn: number;
-  playerID: number;                  // whose UI is visible; -1 for minor civ episodes
+  playerID: number; // whose UI is visible; -1 for minor civ episodes
 
   // Video reference (all times are source-file-relative milliseconds)
-  sourceFile: string;                // OBS output filename (from stop.file)
-  offset: number;                   // offset from start of source video file
-  duration: number;                 // length of this episode within the source file
+  sourceFile: string; // OBS output filename (from stop.file)
+  offset: number; // offset from start of source video file
+  duration: number; // length of this episode within the source file
 
   // Event counts for the CURRENT player in this turn only
   // Sparse map: only types with count > 0
@@ -77,7 +80,7 @@ After this stage, **no wall-clock timestamps exist** in the pipeline. All downst
 The archivist pipeline already has reusable DB access utilities. Extract/share these rather than reimplementing:
 
 | Utility | Current Location | What It Does |
-|---------|------------------|-------------|
+| --- | --- | --- |
 | `openReadonlyGameDb()` | `archivist/pipeline/scanner.ts` | Opens knowledge SQLite with Kysely + ParseJSONResultsPlugin |
 | `extractTurnContexts()` | `archivist/pipeline/extractor.ts` | Batch-queries PlayerSummaries, CityInformations, VictoryProgress, PlayerInformations per turn |
 | `PlayerInformation` query pattern | `archivist/pipeline/extractor.ts:48-58` | Queries `PlayerInformations` table, builds `Map<number, Selectable<PlayerInformation>>` |
@@ -144,6 +147,7 @@ After conversion, wall-clock timestamps are discarded. All downstream stages see
 ### Minor Civ Episodes
 
 When a minor civ's UI appears on screen (the game cycles through all players including city-states), it creates an episode with `playerID = -1`. These episodes:
+
 - Have empty `eventCounts` (no player-specific events to count)
 - May carry a `worldCongress` string if congress is active or had voting results that turn
 - Are typically short (a few seconds of city-state UI)
@@ -152,6 +156,7 @@ When a minor civ's UI appears on screen (the game cycles through all players inc
 ### Event Counting
 
 Events are counted per-type for the episode's player only. Produces a sparse map like:
+
 ```json
 { "DeclareWar": 1, "CityCaptureComplete": 2, "TeamTechResearched": 1 }
 ```

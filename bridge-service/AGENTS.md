@@ -5,9 +5,11 @@ This guide provides essential patterns and conventions for the Bridge Service th
 ## Architecture Patterns
 
 ### Singleton Services
+
 Core components are exported as singleton instances for consistent state management. Only `DLLConnector` extends `EventEmitter`, because callers subscribe to its DLL-driven events (`game_event`, `connected`, `disconnected`, and so on). The other singletons (`BridgeService`, `PauseManager`, `EventPipe`) are plain classes that expose their behaviour through direct method calls.
 
 ### Layered Architecture
+
 - `src/index.ts` - Express setup and middleware
 - `src/service.ts` - Main orchestration (BridgeService class)
 - `src/routes/` - HTTP endpoints
@@ -17,6 +19,7 @@ Core components are exported as singleton instances for consistent state managem
 ## Error Handling Patterns
 
 ### Standardized API Responses
+
 - Use helper functions for consistent response format: `respondSuccess()` and `respondError()`
 - Wrap all route handlers with `handleAPIError()` for proper error handling
 - Include appropriate error codes and detailed messages for debugging
@@ -24,40 +27,47 @@ Core components are exported as singleton instances for consistent state managem
 ## SSE Implementation
 
 ### Client Management Pattern
+
 - Use Map for client registry to manage SSE connections efficiently
 - Implement auto-cleanup on disconnect to prevent memory leaks
 - Clear intervals and timers when connections close
 
 ### Resilient Broadcasting
+
 - Check connection state before sending messages
 - Track disconnected clients during broadcast iteration
 - Clean up disconnected clients after iteration completes
 - Handle errors gracefully without affecting other connections
 
 ### Keep-Alive Pattern
+
 Always implement 5-second keep-alive pings for SSE connections to prevent timeout.
 
 ## IPC Communication
 
 ### Message Batching Protocol
+
 - Use delimiter `!@#$%^!` for message batching
 - Join messages with delimiter before sending
 - Split and parse messages using the same delimiter
 - Filter out empty messages during parsing
 
 ### Reconnection Strategy
+
 - Implement exponential backoff with maximum delay cap (5000ms)
 - The base is 200ms multiplied by 1.5 per attempt, but the attempt counter is incremented before the delay is computed, so the first retry actually waits 300ms
 - Always check shutdown state before reconnecting
 - Prevent reconnection during graceful shutdown
 
 ### Event Pipe Broadcasting
+
 - The welcome message on connect goes to the joining socket only (`ipc.server.emit(socket, ...)`), never a broadcast, so existing subscribers are undisturbed
 - The goodbye message on shutdown is a broadcast to everyone
 
 ## State Management
 
 ### Game Pause Manager Pattern
+
 - Track paused player IDs using a Set for efficient lookups
 - Manual pause is held through a named Windows mutex; the paused state is derived from `mutex !== null` rather than a separate boolean flag
 - The mutex comes from `windows-mutex-prebuilt`, an optional dependency imported in a try/catch. If it fails to load, log one warning at startup and make every pause/resume return false; never let it break the rest of the service
@@ -66,6 +76,7 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 - Clear the paused player set on DLL disconnect to avoid stuck pauses
 
 ### Function Registry Pattern
+
 - Use Map for dynamic function registration and management
 - Listen to connector events for function updates
 - Store function metadata alongside implementations
@@ -74,29 +85,34 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 ## Performance Optimizations
 
 ### Batch Operations
+
 - Always provide batch endpoints to reduce IPC overhead
 - Support both single and batch operations for flexibility
 - Prefer batch calls when performing multiple operations
 - Limit batch size to prevent timeout issues
 
 ### IPC Connection
+
 - Single named pipe connection to the DLL via node-ipc
 - Automatic reconnection with exponential backoff (200ms base, first delay 300ms, capped at 5s)
 - Request tracking with UUID-based message correlation and 300s timeout
 - The pipe id comes from `gamepipe.id`; the DLL reads its own `VOX_DEORUM_PIPE_NAME` and the two only match because they share a default. Change both together.
 
 ## Module System
+
 - **ESM imports**: When you see `import from '*.js'`, read the corresponding .ts file instead
 
 ## Testing Patterns
 
 ### Framework
+
 - Use **Vitest**, not Jest, for testing
 - Test files in `tests/` directory with `.test.ts` extension
 - Commands: `npm test`, `npm run test:watch`, `npm run test:coverage`
 - Test setup: `tests/setup.ts` for global configuration
 
 ### Mock DLL Server
+
 - `tests/test-utils/mock-dll-server.ts` implements the full IPC protocol, so nothing here needs a running game
 - `USE_MOCK` selects mock or live mode for both the test suite and `npm run start:mock`, which boots the real server against an in-process mock via `tests/test-utils/start-mock-bridge.ts`
 - Extend EventEmitter for event simulation
@@ -104,6 +120,7 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 - Enable game event simulation for integration tests
 
 ### Test Configuration
+
 - Configure mock servers with adjustable response delays
 - Use faster delays for tests (e.g., 50ms)
 - Control automatic events generation (manual vs auto)
@@ -120,6 +137,7 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 ## Development Workflow
 
 ### Adding New Endpoints
+
 1. Define route in appropriate domain file
 2. Wrap with `handleAPIError`
 3. Use standard response format, meaning `respondSuccess`/`respondError` rather than a hand-built object
@@ -127,6 +145,7 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 5. Create batch variant if applicable
 
 ### Adding New Services
+
 1. Export a singleton instance
 2. Implement a shutdown()/stop() method
 3. Register with BridgeService
@@ -134,6 +153,7 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 5. Only extend EventEmitter when callers need to subscribe to asynchronous events (as DLLConnector does)
 
 ### Debugging
+
 - Enable debug logs: `LOG_LEVEL=debug`
 - Monitor IPC traffic in console
 - Check SSE connections via `/events` endpoint
@@ -142,16 +162,19 @@ Always implement 5-second keep-alive pings for SSE connections to prevent timeou
 ## Integration Guidelines
 
 ### With DLL
+
 - All communication through DLLConnector singleton
 - Handle disconnections gracefully
 - Implement reconnection logic
 
 ### With MCP Server
+
 - MCP connects as SSE client
 - Bridge broadcasts all game events
 - No direct Bridge → MCP calls
 
 ### With External Services
+
 - Register functions via `/external/register`
 - Include timeout configuration
 - Handle network errors specifically

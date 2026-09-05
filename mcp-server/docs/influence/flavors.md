@@ -32,48 +32,49 @@ Flavors are the universal weighting system across nearly every AI subsystem. Whe
 Not all flavors steer the same AI subsystems. **Y** = primary influence, dot = secondary.
 
 | Flavor | City Build | City Spec | Site Eval | Worker | Tech | Policy | Wonder | Grand Strat | Military AI | Tactical | Diplomacy | Religion | Great Person | War Modifier |
-|--------|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Offense | . | . | | | . | . | | . | Y | Y | . | . | | Y |
-| Defense | . | . | | | . | . | | . | Y | | | . | | Y |
-| Ranged | | . | | | . | . | | . | . | Y | | | | |
-| Mobile | | . | | | . | . | | . | . | Y | | | | |
-| MilitaryTraining | | . | | | . | . | | . | Y | Y | | | | Y |
-| Nuke | | | | | . | . | | | . | . | | | | Y |
-| UseNuke | | | | | | . | | | | . | . | | | Y |
-| Naval | . | . | | | | . | | . | . | | | | | Y |
-| NavalGrowth | . | . | . | | . | . | | | | | | | | Y |
-| NavalRecon | | . | | | . | | | | . | | | | | Y |
-| NavalTileImprovement | | . | | Y | . | | | | | | | | | Y |
-| Air | | . | | | . | . | | . | . | Y | | | | Y |
-| AntiAir | | . | | | | . | | | . | Y | | | | Y |
-| AirCarrier | | . | | | . | | | | . | Y | | | | Y |
-| Airlift | | . | | | | . | | | | Y | | | | |
-| CityDefense | | . | | | . | . | | | | | | . | | Y |
-| Recon | | . | | | . | . | | | | | . | | | Y |
-| Growth | . | . | Y | Y | . | . | | . | | | | | | Y |
-| Expansion | . | . | . | | . | . | | . | | | . | | | Y |
-| Production | . | . | . | Y | . | . | | . | | | | | . | Y |
-| TileImprovement | | . | | Y | . | . | | | | | | | . | Y |
-| Infrastructure | | . | | | . | . | | | | | | | | Y |
-| Wonder | . | . | . | | . | . | Y | . | | | | | . | Y |
-| Gold | . | . | . | Y | . | . | | . | | | | | | Y |
-| Science | . | . | Y | Y | . | . | | . | | | | | . | |
-| Happiness | | . | . | | . | . | | . | | | | | | Y |
-| Diplomacy | . | | | | . | . | . | . | | | Y | | | |
-| Culture | . | . | | | . | . | . | . | | | . | | . | |
-| Espionage | | . | | | . | . | | | | | | | | |
-| Spaceship | . | . | | | Y | . | | Y | | | | | | |
-| WaterConnection | | | | | | . | | | | | . | | | |
-| Religion | . | . | . | | . | . | . | . | | | . | Y | . | Y |
-| GreatPeople | | . | | | . | . | . | . | | | | | Y | |
-| Archaeology | | | | | | . | | | | | | | | Y |
-| ILandTradeRoute | | | | | | . | | | | | | | | Y |
-| ISeaTradeRoute | | | | | | . | | | | | | | | Y |
-| ITradeOrigin | | | | | | . | | | | | | | | |
-| ITradeDestination | | | | | | . | | | | | | | | |
-| Mobilization | | . | | | | | | | | | | | | |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| Offense | . | . |  |  | . | . |  | . | Y | Y | . | . |  | Y |
+| Defense | . | . |  |  | . | . |  | . | Y |  |  | . |  | Y |
+| Ranged |  | . |  |  | . | . |  | . | . | Y |  |  |  |  |
+| Mobile |  | . |  |  | . | . |  | . | . | Y |  |  |  |  |
+| MilitaryTraining |  | . |  |  | . | . |  | . | Y | Y |  |  |  | Y |
+| Nuke |  |  |  |  | . | . |  |  | . | . |  |  |  | Y |
+| UseNuke |  |  |  |  |  | . |  |  |  | . | . |  |  | Y |
+| Naval | . | . |  |  |  | . |  | . | . |  |  |  |  | Y |
+| NavalGrowth | . | . | . |  | . | . |  |  |  |  |  |  |  | Y |
+| NavalRecon |  | . |  |  | . |  |  |  | . |  |  |  |  | Y |
+| NavalTileImprovement |  | . |  | Y | . |  |  |  |  |  |  |  |  | Y |
+| Air |  | . |  |  | . | . |  | . | . | Y |  |  |  | Y |
+| AntiAir |  | . |  |  |  | . |  |  | . | Y |  |  |  | Y |
+| AirCarrier |  | . |  |  | . |  |  |  | . | Y |  |  |  | Y |
+| Airlift |  | . |  |  |  | . |  |  |  | Y |  |  |  |  |
+| CityDefense |  | . |  |  | . | . |  |  |  |  |  | . |  | Y |
+| Recon |  | . |  |  | . | . |  |  |  |  | . |  |  | Y |
+| Growth | . | . | Y | Y | . | . |  | . |  |  |  |  |  | Y |
+| Expansion | . | . | . |  | . | . |  | . |  |  | . |  |  | Y |
+| Production | . | . | . | Y | . | . |  | . |  |  |  |  | . | Y |
+| TileImprovement |  | . |  | Y | . | . |  |  |  |  |  |  | . | Y |
+| Infrastructure |  | . |  |  | . | . |  |  |  |  |  |  |  | Y |
+| Wonder | . | . | . |  | . | . | Y | . |  |  |  |  | . | Y |
+| Gold | . | . | . | Y | . | . |  | . |  |  |  |  |  | Y |
+| Science | . | . | Y | Y | . | . |  | . |  |  |  |  | . |  |
+| Happiness |  | . | . |  | . | . |  | . |  |  |  |  |  | Y |
+| Diplomacy | . |  |  |  | . | . | . | . |  |  | Y |  |  |  |
+| Culture | . | . |  |  | . | . | . | . |  |  | . |  | . |  |
+| Espionage |  | . |  |  | . | . |  |  |  |  |  |  |  |  |
+| Spaceship | . | . |  |  | Y | . |  | Y |  |  |  |  |  |  |
+| WaterConnection |  |  |  |  |  | . |  |  |  |  | . |  |  |  |
+| Religion | . | . | . |  | . | . | . | . |  |  | . | Y | . | Y |
+| GreatPeople |  | . |  |  | . | . | . | . |  |  |  |  | Y |  |
+| Archaeology |  |  |  |  |  | . |  |  |  |  |  |  |  | Y |
+| ILandTradeRoute |  |  |  |  |  | . |  |  |  |  |  |  |  | Y |
+| ISeaTradeRoute |  |  |  |  |  | . |  |  |  |  |  |  |  | Y |
+| ITradeOrigin |  |  |  |  |  | . |  |  |  |  |  |  |  |  |
+| ITradeDestination |  |  |  |  |  | . |  |  |  |  |  |  |  |  |
+| Mobilization |  | . |  |  |  |  |  |  |  |  |  |  |  |  |
 
 **Column key:**
+
 - **City Build** -- `CvCityStrategyAI` building/unit production weight
 - **City Spec** -- `CvCitySpecializationAI` per-city yield targets
 - **Site Eval** -- `CvSiteEvaluationClasses` settler placement scoring
@@ -154,7 +155,7 @@ After setting custom flavors, `CvLuaPlayer::lSetCustomFlavors` auto-toggles spec
 ### Economic strategies
 
 | Flavor threshold | Strategy activated |
-|---|---|
+| --- | --- |
 | Happiness > 60 | `ECONOMICAISTRATEGY_NEED_HAPPINESS` |
 | Happiness > 80 | `ECONOMICAISTRATEGY_NEED_HAPPINESS_CRITICAL` |
 | Recon > 70 | `ECONOMICAISTRATEGY_NEED_RECON` |
@@ -172,14 +173,14 @@ Note: `ENOUGH_EXPANSION` uses inverted logic -- **low** expansion flavor (< 30) 
 
 ### Military strategies
 
-| Flavor threshold | Strategy activated |
-|---|---|
-| Defense > 60 | `MILITARYAISTRATEGY_EMPIRE_DEFENSE` |
-| Defense > 80 | `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL` |
-| Naval > 60 | `MILITARYAISTRATEGY_NEED_NAVAL_UNITS` |
-| Naval > 80 | `MILITARYAISTRATEGY_NEED_NAVAL_UNITS_CRITICAL` |
-| Naval < 25 | `MILITARYAISTRATEGY_ENOUGH_NAVAL_UNITS` |
-| Game-state (barbarians) | `MILITARYAISTRATEGY_ERADICATE_BARBARIANS` |
+| Flavor threshold        | Strategy activated                                 |
+| ----------------------- | -------------------------------------------------- |
+| Defense > 60            | `MILITARYAISTRATEGY_EMPIRE_DEFENSE`                |
+| Defense > 80            | `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL`       |
+| Naval > 60              | `MILITARYAISTRATEGY_NEED_NAVAL_UNITS`              |
+| Naval > 80              | `MILITARYAISTRATEGY_NEED_NAVAL_UNITS_CRITICAL`     |
+| Naval < 25              | `MILITARYAISTRATEGY_ENOUGH_NAVAL_UNITS`            |
+| Game-state (barbarians) | `MILITARYAISTRATEGY_ERADICATE_BARBARIANS`          |
 | Game-state (barbarians) | `MILITARYAISTRATEGY_ERADICATE_BARBARIANS_CRITICAL` |
 
 Each auto-activation fires its own flavor deltas via `SetUsingStrategy` -- **compound effect**. Setting Happiness=75 doesn't just bias building priorities; it also activates `NEED_HAPPINESS`, which fires additional flavor deltas, creating a cascade.
@@ -213,12 +214,12 @@ These `set-strategy` effects do NOT go through the flavor system:
 
 `SetGrandStrategy` updates `CvDiplomacyAI` victory pursuit:
 
-| Grand strategy | Victory pursuit |
-|---|---|
-| CONQUEST | VICTORY_PURSUIT_DOMINATION |
-| CULTURE | VICTORY_PURSUIT_CULTURE |
-| UNITED_NATIONS | VICTORY_PURSUIT_DIPLOMACY |
-| SPACESHIP | VICTORY_PURSUIT_SCIENCE |
+| Grand strategy | Victory pursuit            |
+| -------------- | -------------------------- |
+| CONQUEST       | VICTORY_PURSUIT_DOMINATION |
+| CULTURE        | VICTORY_PURSUIT_CULTURE    |
+| UNITED_NATIONS | VICTORY_PURSUIT_DIPLOMACY  |
+| SPACESHIP      | VICTORY_PURSUIT_SCIENCE    |
 
 These map to `IsGoingForWorldConquest` / `IsGoingForDiploVictory` / `IsGoingForCultureVictory` / `IsGoingForSpaceshipVictory`, which control 50+ diplomatic decision points: war declarations, approach selection, deal valuation, coop-war willingness, target selection.
 
@@ -226,19 +227,20 @@ These map to `IsGoingForWorldConquest` / `IsGoingForDiploVictory` / `IsGoingForC
 
 `ComputeSpecializationWeights` directly checks `IsUsingStrategy` for specific military strategies and applies hard-coded production weight adjustments (not flavor-mediated):
 
-| Strategy | Effect |
-|---|---|
-| WAR_MOBILIZATION | +250 military training weight |
-| EMPIRE_DEFENSE | +250 emergency unit weight |
-| EMPIRE_DEFENSE_CRITICAL | +1250 emergency unit weight |
-| ENOUGH_MILITARY_UNITS | Zeros military + emergency weights |
-| NEED_NAVAL_UNITS | +50 sea weight |
-| NEED_NAVAL_UNITS_CRITICAL | +250 sea weight |
-| ENOUGH_NAVAL_UNITS | Zeros sea weight |
+| Strategy                  | Effect                             |
+| ------------------------- | ---------------------------------- |
+| WAR_MOBILIZATION          | +250 military training weight      |
+| EMPIRE_DEFENSE            | +250 emergency unit weight         |
+| EMPIRE_DEFENSE_CRITICAL   | +1250 emergency unit weight        |
+| ENOUGH_MILITARY_UNITS     | Zeros military + emergency weights |
+| NEED_NAVAL_UNITS          | +50 sea weight                     |
+| NEED_NAVAL_UNITS_CRITICAL | +250 sea weight                    |
+| ENOUGH_NAVAL_UNITS        | Zeros sea weight                   |
 
 ### Grand strategy production channeling
 
 If the active grand strategy has a positive `GetSpecializationBoost(YIELD_PRODUCTION)`:
+
 - With positive `FLAVOR_OFFENSE` -> production boost channels into military training weight.
 - With positive `FLAVOR_SPACESHIP` -> production boost channels into spaceship weight.
 
@@ -249,7 +251,7 @@ If the active grand strategy has a positive `GetSpecializationBoost(YIELD_PRODUC
 Military/economic/city strategy SQL entries dynamically adjust flavors during war and crisis. These can **fight against or amplify** LLM-driven flavor changes:
 
 | Situation | Key flavor changes (selected) |
-|---|---|
+| --- | --- |
 | AT_WAR | Offense +40, Defense +40, Nuke +50, Air +40, Production +10, Growth -10, Wonder -20, Expansion -10, Religion -20, Diplomacy -20, Infrastructure -20, Archaeology -20 |
 | WINNING_WARS | Offense +60, Mobile +50, Ranged +40, Happiness +20, Gold +20, Production +15, Wonder -10, Growth -10 |
 | LOSING_WARS | Defense +100, CityDefense +40, Air +30, Expansion -100, Culture -50, Wonder -50, Diplomacy -40, Religion -40, Growth -30, MilitaryTraining -20 |

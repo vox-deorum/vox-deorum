@@ -34,6 +34,7 @@ The `ContractStarted` event provides comprehensive information about:
 - **Timing**: Exact moment when the contract becomes active
 
 This event is particularly useful for:
+
 - Economic tracking systems monitoring player expenditures
 - Diplomatic relationship systems tracking active agreements
 - Strategic AI planning that considers contract commitments
@@ -53,6 +54,7 @@ The event provides all necessary information for systems to understand the full 
 **Invocation Context**: The event occurs within the contract initiation process, specifically after the contract has been set as active, contract units have been initialized, and the contract has been added to the game's active contracts list.
 
 **Parameter Details**:
+
 - **Player ID**: Retrieved via `m_pPlayer->GetID()` representing the contract holder
 - **Contract Type**: Direct enum value identifying the specific contract
 - **Duration**: Integer value representing turn-based contract length

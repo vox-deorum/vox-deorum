@@ -5,6 +5,7 @@ The MinorAlliesChanged event is triggered when a city-state's ally relationship 
 # Event Triggers
 
 This event is fired from `CvMinorCivAI::DoFriendshipChangeEffects()` when:
+
 - A major civilization's friendship level with a city-state changes enough to cross the ally threshold
 - The ally status actually changes (gains or loses ally relationship)
 - The game option `MOD_EVENTS_MINORS` is enabled
@@ -17,7 +18,7 @@ The ally relationship is determined by friendship thresholds and is exclusive - 
 The event provides five parameters with mixed types (`"iibii"` signature):
 
 1. **Minor Civ Player ID** (`m_pPlayer->GetID()`): The city-state whose ally relationship changed
-2. **Major Civ Player ID** (`ePlayer`): The major civilization involved in the ally change  
+2. **Major Civ Player ID** (`ePlayer`): The major civilization involved in the ally change
 3. **Is Now Ally** (`bNowAllies`): Boolean indicating whether the major civ is now an ally
 4. **Old Friendship** (`iOldFriendship`): The previous friendship level (before change)
 5. **New Friendship** (`iNewFriendship`): The current friendship level (after change)
@@ -25,6 +26,7 @@ The event provides five parameters with mixed types (`"iibii"` signature):
 # Event Details
 
 The ally system works as follows:
+
 - Only major civilizations above the ally threshold can become allies
 - Ally status is exclusive - gaining a new ally removes the previous ally
 - The ally relationship provides significant bonuses compared to friendship
@@ -32,6 +34,7 @@ The ally system works as follows:
 - War status prevents ally relationships even with sufficient friendship
 
 The event captures both gaining and losing ally status, allowing AI systems to:
+
 - Monitor shifts in city-state allegiances
 - Track diplomatic advantages and disadvantages
 - Respond to changes in strategic city-state control
@@ -42,9 +45,10 @@ The event captures both gaining and losing ally status, allowing AI systems to:
 **Source Location**: `CvMinorCivAI.cpp` line 12814  
 **Event Definition**: `GAMEEVENT_MinorAlliesChanged` with signature `"iibii"`  
 **Triggering Function**: `DoFriendshipChangeEffects()`  
-**Prerequisites**: `MOD_EVENTS_MINORS` must be enabled  
+**Prerequisites**: `MOD_EVENTS_MINORS` must be enabled
 
 The ally determination logic considers:
+
 - Friendship threshold requirements (`IsFriendshipAboveAlliesThreshold()`)
 - War status exclusions
 - City-state alive status

@@ -7,6 +7,7 @@
 While `FLAVOR_SCIENCE` influences technology research and science infrastructure from the ancient era onward, `FLAVOR_SPACESHIP` activates primarily in the late game when Apollo Program and spaceship parts become available, driving the AI to prioritize spaceship factory construction, spaceship part production, and the final push toward launching a colony ship to Alpha Centauri.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Science victory specialists (Korea, Babylon): 9-10
@@ -40,6 +41,7 @@ VALUES
 ```
 
 **Interpretation:** When an AI adopts the Spaceship grand strategy, it gains:
+
 - **+20 FLAVOR_SPACESHIP** bonus, massively increasing spaceship-related priorities
 - **+400 YIELD_SCIENCE** weight for city specialization and evaluation
 - **+300 YIELD_FOOD** weight for population growth (larger cities = more production)
@@ -90,17 +92,20 @@ result.push_back(PRODUCTION_SPECIALIZATION_SPACESHIP, iSpaceshipWeight);
 ```
 
 **Interpretation:** The spaceship production specialization weight is calculated by:
+
 1. **Base Weight:** `FLAVOR_SPACESHIP × 10` (configurable via AI_CITY_SPECIALIZATION_PRODUCTION_WEIGHT_FLAVOR_SPACESHIP)
 2. **Grand Strategy Bonus:** If pursuing spaceship grand strategy, add production boost from grand strategy (+200)
 3. **Availability Gate:** Only applies if `CanBuildSpaceshipParts()` returns true (Apollo Program completed or spaceship parts unlocked)
 
 **Example Calculations:**
+
 - Leader with FLAVOR_SPACESHIP = 9: Base weight = 9 × 10 = 90
 - With spaceship grand strategy active: 90 + 200 = 290 weight
 - Leader with FLAVOR_SPACESHIP = 3: Base weight = 3 × 10 = 30
 - With spaceship grand strategy: 30 + 200 = 230 weight
 
 **Production Specialization Types:**
+
 1. PRODUCTION_SPECIALIZATION_MILITARY_TRAINING (long-term military buildup)
 2. PRODUCTION_SPECIALIZATION_EMERGENCY_UNITS (immediate military needs)
 3. PRODUCTION_SPECIALIZATION_MILITARY_NAVAL (naval forces)
@@ -108,6 +113,7 @@ result.push_back(PRODUCTION_SPECIALIZATION_SPACESHIP, iSpaceshipWeight);
 5. **PRODUCTION_SPECIALIZATION_SPACESHIP (spaceship parts)**
 
 **Strategic Impact:** Cities with spaceship specialization will:
+
 - Prioritize building spaceship factory if not already present
 - Queue spaceship parts (SS Cockpit, SS Booster, SS Engine, SS Stasis Chamber)
 - Assign specialists to engineer and scientist slots for production/science
@@ -132,6 +138,7 @@ else if (strGrandStrategyName == "AIGRANDSTRATEGY_SPACESHIP")
 ```
 
 #### Apollo Program Check (Lines 1414-1421)
+
 ```cpp
 // if I already built the Apollo Program I am very likely to follow through
 ProjectTypes eApolloProgram = (ProjectTypes) GC.getInfoTypeForString("PROJECT_APOLLO_PROGRAM", true);
@@ -147,6 +154,7 @@ if(eApolloProgram != NO_PROJECT)
 **Interpretation:** Building the Apollo Program adds +150 priority to spaceship grand strategy, creating strong commitment to completing the space race. This represents the massive investment made in space infrastructure that should not be abandoned.
 
 #### Policy Flavor Evaluation (Lines 1428-1457)
+
 ```cpp
 //Add priority value based on flavors of policies we've acquired.
 for(int iPolicyLoop = 0; iPolicyLoop < GC.getNumPolicyInfos(); iPolicyLoop++)
@@ -172,11 +180,13 @@ for(int iPolicyLoop = 0; iPolicyLoop < GC.getNumPolicyInfos(); iPolicyLoop++)
 **Interpretation:** The AI accumulates FLAVOR_SPACESHIP values from all adopted policies. Policies that support space race (like Space Procurements or Spaceflight Pioneers) increase the attractiveness of continuing toward science victory.
 
 **Example Policy Accumulation:**
+
 - Space Procurements (FLAVOR_SPACESHIP: 60)
 - Spaceflight Pioneers (FLAVOR_SPACESHIP: 60)
 - Total policy bonus: +120 priority toward spaceship grand strategy
 
 #### Building Flavor Evaluation (Lines 1458-1495)
+
 ```cpp
 //Look for Buildings and grab flavors.
 int iLoop = 0;
@@ -209,6 +219,7 @@ for (CvCity* pLoopCity = m_pPlayer->firstCity(&iLoop); pLoopCity != NULL; pLoopC
 **Interpretation:** Each spaceship-related building adds to the science victory priority. This creates a feedback loop where building space infrastructure makes science victory more attractive.
 
 **Example Building Accumulation (per city):**
+
 - Spaceship Factory (FLAVOR_SPACESHIP: 100) × 4 core cities = +400 priority
 - Hubble Space Telescope (FLAVOR_SPACESHIP: 200) = +200 priority
 - International Space Station (FLAVOR_SPACESHIP: 100) = +100 priority
@@ -236,6 +247,7 @@ if(bScienceFocus && (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_SCIENCE"
 **Interpretation:** When the active grand strategy has a science focus (typically AIGRANDSTRATEGY_SPACESHIP), technologies with FLAVOR_SPACESHIP or FLAVOR_SCIENCE flavors receive +1 bonus priority. This creates a technology beeline effect toward spaceship-enabling technologies.
 
 **Technologies with FLAVOR_SPACESHIP:**
+
 - Satellites (FLAVOR_SPACESHIP: 75) - Unlocks Apollo Program, Hubble Space Telescope
 - Robotics (FLAVOR_SPACESHIP: 50) - Unlocks Spaceship Factory
 - Nanotechnology (FLAVOR_SPACESHIP: 20) - Unlocks SS Stasis Chamber
@@ -244,6 +256,7 @@ if(bScienceFocus && (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_SCIENCE"
 - Nuclear Fusion (FLAVOR_SPACESHIP: 20) - Unlocks SS Booster
 
 **Technology Beeline Strategy:** Science-focused leaders will prioritize:
+
 1. **Satellites (75)** - Critical for Apollo Program and Hubble
 2. **Robotics (50)** - Essential for Spaceship Factory
 3. **Late-game techs (20 each)** - For individual spaceship parts
@@ -268,6 +281,7 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_SPACESHIP")
 **Interpretation:** Policies with FLAVOR_SPACESHIP are valued by science-focused AIs. The flavor value contributes to the science policy interest score that determines policy adoption priority.
 
 **Space Race Policies:**
+
 - **Space Procurements (Freedom Tier 2):** FLAVOR_SPACESHIP: 60
   - +100% production for Spaceship Factory building
   - Dramatic acceleration of spaceship part construction
@@ -277,8 +291,8 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_SPACESHIP")
   - Allows instant completion of spaceship components
   - Provides alternative to pure production approach
 
-**Policy Tree Implications:**
-Leaders with high FLAVOR_SPACESHIP will strongly favor the Freedom ideology for its space race bonuses. The combination of Space Procurements and Spaceflight Pioneers provides both:
+**Policy Tree Implications:** Leaders with high FLAVOR_SPACESHIP will strongly favor the Freedom ideology for its space race bonuses. The combination of Space Procurements and Spaceflight Pioneers provides both:
+
 1. **Production acceleration:** Double speed spaceship factories
 2. **Great Engineer synergy:** Convert great person production into instant spaceship parts
 
@@ -300,12 +314,14 @@ else if (strGrandStrategyName == "AIGRANDSTRATEGY_SPACESHIP")
 ```
 
 **Interpretation:** When the player's active grand strategy is AIGRANDSTRATEGY_SPACESHIP, the city's science interest increases by the grand strategy priority value. This influences city-level decisions about:
+
 - Which buildings to construct (science vs. military vs. gold)
 - How to allocate specialists (scientists vs. engineers vs. merchants)
 - Which tiles to work (science-generating vs. production-generating)
 - Whether to purchase buildings with gold or faith
 
 **City Strategy Impact:**
+
 - Cities in spaceship-pursuing civilizations prioritize science and production buildings
 - Specialist slots allocated to scientists and engineers
 - Citizens assigned to high-production tiles for spaceship part construction
@@ -324,6 +340,7 @@ int iNumCitiesToConsider = GD_INT_GET(AI_NUM_CORE_CITIES_FOR_SPACESHIP);
 ```
 
 **Define Configuration:**
+
 ```sql
 -- Number of cities the AI considers as core production cities for spaceship building
 ('AI_NUM_CORE_CITIES_FOR_SPACESHIP', 4),
@@ -332,6 +349,7 @@ int iNumCitiesToConsider = GD_INT_GET(AI_NUM_CORE_CITIES_FOR_SPACESHIP);
 **Interpretation:** The AI limits spaceship part production to the top 4 most productive cities (configurable). This creates focused production hubs rather than dispersing spaceship parts across all cities.
 
 **Core City Selection Criteria:**
+
 1. **Production capacity:** Cities with highest raw production
 2. **Spaceship factory presence:** Cities with spaceship factories prioritized
 3. **Growth potential:** Large cities with high food surplus
@@ -339,12 +357,14 @@ int iNumCitiesToConsider = GD_INT_GET(AI_NUM_CORE_CITIES_FOR_SPACESHIP);
 5. **Strategic location:** Capital and high-value core cities
 
 **Strategic Impact:** Concentrating spaceship production in 4 core cities:
+
 - **Maximizes efficiency:** Best production cities build parts faster
 - **Simplifies management:** Fewer cities need spaceship specialization
 - **Enables specialization:** Other cities can focus on science, military, or gold
 - **Reduces vulnerability:** Core cities typically well-defended and away from borders
 
 **Production Strategy:** The 4 core cities will alternate between building different spaceship parts to ensure balanced progress:
+
 - City 1: SS Cockpit → SS Stasis Chamber → SS Cockpit (repeat)
 - City 2: SS Booster → SS Engine → SS Booster (repeat)
 - City 3: SS Booster → SS Stasis Chamber → SS Booster (repeat)
@@ -370,6 +390,7 @@ else if(strFlavorName == "FLAVOR_SPACESHIP")
 **Interpretation:** FLAVOR_SPACESHIP has a priority weight of 17, the **highest of all flavors** in the advisor system. This reflects its critical importance during the space race endgame.
 
 **Advisor Priority Comparison:**
+
 - FLAVOR_SPACESHIP: 17 (highest - space race critical)
 - FLAVOR_SCIENCE: 13 (high - general science importance)
 - FLAVOR_WONDER: 12 (high - world wonder construction)
@@ -378,6 +399,7 @@ else if(strFlavorName == "FLAVOR_SPACESHIP")
 - FLAVOR_GROWTH: 5 (moderate - population growth)
 
 **Advisor Behavior:** When FLAVOR_SPACESHIP is active, the science advisor will:
+
 - Strongly recommend building Apollo Program
 - Prioritize Spaceship Factory construction in production cities
 - Suggest completing spaceship parts as top priority
@@ -405,22 +427,26 @@ else if(eStatement == DIPLO_STATEMENT_VICTORY_COMPETITION_ANNOUNCE_SPACESHIP)
 ```
 
 **Diplomatic Messages:**
+
 - `DIPLO_MESSAGE_VICTORY_COMPETITION_ANNOUNCE_SPACESHIP` - "I am working on my spaceship to Alpha Centauri"
 - `DIPLO_MESSAGE_VICTORY_BLOCK_ANNOUNCE_SPACESHIP` - "I will not let you win the space race"
 
 **Interpretation:** The AI tracks which civilizations are pursuing spaceship victory by monitoring:
+
 1. **Apollo Program completion:** Indicates commitment to space race
 2. **Spaceship part production:** Visible through diplomatic intelligence
 3. **Grand strategy:** AIGRANDSTRATEGY_SPACESHIP adoption signals intent
 4. **Technology progress:** Research of spaceship-enabling technologies
 
 **Diplomatic Responses:**
+
 - **Victory competition:** AIs competing for the same victory type become hostile
 - **Victory blocking:** AIs may declare war to prevent space race completion
 - **Cooperative victory:** Friendly AIs may assist with research agreements
 - **Intelligence gathering:** Spies sent to monitor spaceship production progress
 
 **Strategic Impact:** The diplomatic system creates dynamic competition for science victory. AIs that detect another civilization approaching space race completion may:
+
 - Increase military pressure on production cities
 - Propose defensive pacts with other threatened civilizations
 - Accelerate their own space race efforts
@@ -429,6 +455,7 @@ else if(eStatement == DIPLO_STATEMENT_VICTORY_COMPETITION_ANNOUNCE_SPACESHIP)
 ### 10. Spaceship Part Transport - Unit AI Priority (CvEnums.h & UnitAIChanges.sql)
 
 **Location:**
+
 - `CvGameCoreDLLUtil/include/CvEnums.h` (line 1860)
 - `(2) Vox Populi/Database Changes/Units/UnitAIChanges.sql` (lines 234-237)
 
@@ -450,6 +477,7 @@ UNITAI_SPACESHIP_PART,			// spaceship part that needs to be taken to capital
 **Interpretation:** All spaceship parts are assigned the UNITAI_SPACESHIP_PART unit AI type, which governs their behavior and handling:
 
 **Spaceship Part Behavior:**
+
 1. **Automatic transport:** Parts move toward capital city automatically
 2. **Protection priority:** Military units escort spaceship parts
 3. **Route safety:** AI selects safest paths to capital, avoiding enemy territory
@@ -457,6 +485,7 @@ UNITAI_SPACESHIP_PART,			// spaceship part that needs to be taken to capital
 5. **Naval transport:** Uses cargo ships/embarked units for overseas transport
 
 **Homeland AI Movement:**
+
 ```cpp
 AI_HOMELAND_MOVE_SPACESHIP_PART
 ```
@@ -464,6 +493,7 @@ AI_HOMELAND_MOVE_SPACESHIP_PART
 The homeland AI system has a dedicated movement type for spaceship parts, ensuring they receive appropriate priority and handling.
 
 **Strategic Impact:**
+
 - **Production cities:** Parts built in non-capital cities must be transported
 - **Capital centralization:** Space race launches only from capital
 - **Strategic vulnerability:** Parts in transit can be captured by enemy units
@@ -488,6 +518,7 @@ FLAVOR_SPACESHIP directly determines the priority of producing individual spaces
 **Interpretation:** All four spaceship part types have identical FLAVOR_SPACESHIP values of 150, the **highest unit flavor value in the game**. This ensures that when pursuing science victory, spaceship parts become the absolute top production priority.
 
 **Unit Priority Comparison:**
+
 - Spaceship Parts: 150 (highest priority - space race critical)
 - Giant Death Robot: ~50 (late-game super unit)
 - Nuclear Missile: ~30 (strategic weapon)
@@ -495,12 +526,14 @@ FLAVOR_SPACESHIP directly determines the priority of producing individual spaces
 - Regular military units: 5-20 (standard warfare)
 
 **Production Queue Priority:** When a city has spaceship production specialization, the production queue is evaluated with spaceship parts receiving:
+
 - Base priority: 150 (from FLAVOR_SPACESHIP)
 - Leader personality: × FLAVOR_SPACESHIP value (5-10)
 - Grand strategy modifier: +20 from AIGRANDSTRATEGY_SPACESHIP
 - **Total priority range:** 150 × 5 + 20 = 770 to 150 × 10 + 20 = 1520
 
 **Part Requirements:**
+
 - SS Cockpit: 1 required
 - SS Booster: 3 required
 - SS Engine: 1 required
@@ -516,6 +549,7 @@ FLAVOR_SPACESHIP directly determines the priority of producing individual spaces
 #### Space Race Buildings
 
 **Spaceship Infrastructure:**
+
 - **Spaceship Factory:** 100 (primary space production building)
   - +50% production for spaceship parts
   - Required in core production cities
@@ -527,6 +561,7 @@ FLAVOR_SPACESHIP directly determines the priority of producing individual spaces
   - Provides production bonuses
 
 **World Wonders:**
+
 - **Hubble Space Telescope:** 200 (highest spaceship wonder priority)
   - +25% production for spaceship parts globally
   - +2 free great scientists
@@ -542,6 +577,7 @@ FLAVOR_SPACESHIP directly determines the priority of producing individual spaces
 #### Science Support Buildings
 
 **Core Science Buildings with Spaceship Support:**
+
 - Public School: 80 (FLAVOR_SCIENCE + indirect spaceship support)
 - Research Lab: 75 (science infrastructure for space race)
 - University: 50 (mid-game science foundation)
@@ -549,10 +585,12 @@ FLAVOR_SPACESHIP directly determines the priority of producing individual spaces
 - Library: 40 (early science foundation)
 
 **Economic Buildings:**
+
 - Bank: 10 (economic science support)
 - Stock Exchange variants: 20-25 (late-game economic science)
 
 **Strategic Impact:** High FLAVOR_SPACESHIP leaders will prioritize:
+
 1. **Hubble Space Telescope (200)** - Builds immediately when available
 2. **Spaceship Factory (100)** - Built in all 4 core production cities
 3. **International Space Station (100)** - Constructed when approaching space victory
@@ -565,6 +603,7 @@ The building progression creates a clear path: Science infrastructure → Hubble
 #### Space Race Technologies
 
 **Critical Technologies:**
+
 - **Satellites:** 75 (highest spaceship technology priority)
   - Unlocks Apollo Program project
   - Unlocks Hubble Space Telescope wonder
@@ -577,6 +616,7 @@ The building progression creates a clear path: Science infrastructure → Hubble
   - Production technology synergy
 
 **Spaceship Part Technologies:**
+
 - **Nanotechnology:** 20
   - Unlocks SS Stasis Chamber
   - Advanced materials technology
@@ -596,22 +636,24 @@ The building progression creates a clear path: Science infrastructure → Hubble
 **Technology Beeline Strategy:**
 
 **Phase 1 - Foundation (Ancient to Renaissance):**
+
 - Writing → Philosophy → Education → Scientific Theory
 - Focus on science infrastructure and research speed
 
 **Phase 2 - Preparation (Industrial to Modern):**
+
 - Industrialization → Electricity → Radio → Computers
 - Build production capacity and economic foundation
 
 **Phase 3 - Space Race (Atomic Era):**
+
 1. **Satellites (75)** - Apollo Program + Hubble [CRITICAL]
 2. **Robotics (50)** - Spaceship Factory [CRITICAL]
 3. **Nanotechnology (20)** - SS Stasis Chamber
 4. **Particle Physics (20)** - SS Engine
 5. **Nuclear Fusion (20)** - SS Booster
 
-**Optimal Research Path:**
-Satellites → Robotics → (Parallel: Nanotechnology + Particle Physics + Nuclear Fusion)
+**Optimal Research Path:** Satellites → Robotics → (Parallel: Nanotechnology + Particle Physics + Nuclear Fusion)
 
 The three spaceship part technologies (Nanotechnology, Particle Physics, Nuclear Fusion) have equal priority (20) and can be researched in parallel or in any order. The AI typically researches them based on which spaceship parts are needed next.
 
@@ -636,6 +678,7 @@ The three spaceship part technologies (Nanotechnology, Particle Physics, Nuclear
 **Policy Adoption Strategy:**
 
 Leaders with high FLAVOR_SPACESHIP will:
+
 1. **Open Freedom ideology** when reaching late game (Modern/Atomic era)
 2. **Rush Space Procurements** as first or second Freedom policy
 3. **Rush Spaceflight Pioneers** as soon as Tier 3 unlocks
@@ -644,11 +687,13 @@ Leaders with high FLAVOR_SPACESHIP will:
 **Synergy Analysis:**
 
 Space Procurements + Spaceflight Pioneers creates a powerful combination:
+
 - **Fast factories:** 50% reduction in spaceship factory build time
 - **Great Engineer stockpile:** Save great engineers for instant spaceship parts
 - **Flexible completion:** Can rush critical parts to fill gaps in production
 
 **Example Space Race Timeline:**
+
 - Turn 280: Adopt Freedom ideology
 - Turn 282: Research Satellites, build Apollo Program
 - Turn 284: Adopt Space Procurements policy
@@ -664,6 +709,7 @@ Space Procurements + Spaceflight Pioneers creates a powerful combination:
 ### Processes with FLAVOR_SPACESHIP
 
 **Science Processes:**
+
 - Research (Convert production → science): 5
   - Base science production process
   - Used when no buildings or units needed
@@ -677,12 +723,14 @@ Space Procurements + Spaceflight Pioneers creates a powerful combination:
 ### Unit Flavors
 
 **Spaceship Part Units:**
+
 - UNIT_SS_BOOSTER: 150
 - UNIT_SS_COCKPIT: 150
 - UNIT_SS_ENGINE: 150
 - UNIT_SS_STASIS_CHAMBER: 150
 
 **Great Person:**
+
 - Great Scientist: 1 (baseline great person generation)
 - Great Engineer: 1 (used with Spaceflight Pioneers for instant spaceship parts)
 
@@ -718,6 +766,7 @@ Space Procurements + Spaceflight Pioneers creates a powerful combination:
    - May ignore diplomatic requests to avoid distractions
 
 **Strategic Impact:** The homestretch strategy represents the AI's laser focus on completing the space race. During the final push:
+
 - Research agreements become less important (already have required technologies)
 - Diplomatic requests are deprioritized (avoid production delays)
 - Military threats are managed defensively only (no offensive operations)
@@ -736,6 +785,7 @@ DELETE FROM AIGrandStrategy_FlavorMods WHERE FlavorType = 'FLAVOR_RELIGION' AND 
 **Interpretation:** The spaceship grand strategy explicitly removes any religion flavor modifiers, indicating that religious focus is incompatible with space race pursuit. This prevents the AI from wasting time and resources on religion when pursuing science victory.
 
 **Other Flavor Interactions:**
+
 - FLAVOR_SCIENCE: Strongly synergizes (+400 science yield weight)
 - FLAVOR_GROWTH: Synergizes (+300 food yield weight for larger cities)
 - FLAVOR_PRODUCTION: Synergizes (+200 production yield weight)
@@ -750,6 +800,7 @@ DELETE FROM AIGrandStrategy_FlavorMods WHERE FlavorType = 'FLAVOR_RELIGION' AND 
 Different leaders have varying FLAVOR_SPACESHIP values that shape their space race priorities:
 
 **Highest Spaceship Focus (9-10):**
+
 - **Sejong (Korea):** 10 (science victory specialist)
   - Primary victory focus: Science
   - Unique building: Seowon (enhanced university)
@@ -781,6 +832,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
   - Strategy: Avoid war, maximize science infrastructure
 
 **Balanced Spaceship Focus (6-8):**
+
 - **Wu Zetian (China):** 8 (science-culture balance)
 - **Suleiman (Ottoman):** 8 (science-diplomacy balance)
 - **Selassie (Ethiopia):** 8 (science secondary focus)
@@ -791,6 +843,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **William (Netherlands):** 6 (commerce-science balance)
 
 **Lower Spaceship Focus (3-5):**
+
 - **Bismarck (Germany):** 6 (military-science balance, reduced from 8)
 - **Pedro (Brazil):** 6 (culture-science balance, reduced from 8)
 - **Isabella (Spain):** 3 (domination focus, minimal space race interest)
@@ -798,6 +851,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 **Interpretation:** The flavor values create distinct space race archetypes:
 
 **Space Race Specialists (9-10):**
+
 - Will almost always pursue science victory when conditions allow
 - Build Apollo Program immediately upon unlocking Satellites
 - Construct Hubble Space Telescope as top priority
@@ -805,6 +859,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - Rarely deviate to other victory types
 
 **Science Generalists (7-8):**
+
 - Pursue science victory if ahead in technology
 - Consider alternative victories if facing strong competition
 - Build space infrastructure but may delay Apollo Program
@@ -812,6 +867,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - Flexible strategy based on game circumstances
 
 **Science Secondary (5-6):**
+
 - Pursue science victory only if significantly ahead
 - Prefer diplomatic or cultural victories
 - Build space infrastructure for research bonuses, not victory
@@ -819,6 +875,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - Often switch to other victory types mid-game
 
 **Minimal Space Race (3-4):**
+
 - Rarely pursue science victory
 - Build Apollo Program only if no competition
 - Focus on domination or other victory types
@@ -827,6 +884,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Primary driver of science victory pursuit through space race
 - **Grand strategy:** AIGRANDSTRATEGY_SPACESHIP grants +20 flavor bonus
 - **Late-game priority:** Activates strongly in Atomic Era when spaceship parts become available
@@ -834,6 +892,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **Technology beeline:** Satellites (75) → Robotics (50) → spaceship part techs (20 each)
 
 ### City Development
+
 - **Production specialization:** 4 core cities designated for spaceship part production
 - **Specialization weight:** FLAVOR_SPACESHIP × 10 + grand strategy bonus (+200)
 - **Building priority:** Spaceship Factory (100) in all production cities
@@ -842,6 +901,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **Tile focus:** Production-heavy tiles prioritized in spaceship cities
 
 ### Victory Pursuit
+
 - **Apollo Program bonus:** +150 priority after construction (massive commitment signal)
 - **Policy accumulation:** +120 priority from Space Procurements + Spaceflight Pioneers
 - **Building accumulation:** +900 priority from spaceship infrastructure (factories, wonders, etc.)
@@ -850,6 +910,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **Competition detection:** Tracks other civilizations' space race progress
 
 ### Economic Strategy
+
 - **Policy path:** Freedom ideology → Space Procurements → Spaceflight Pioneers
 - **Production acceleration:** +100% spaceship factory construction (Space Procurements)
 - **Great Engineer synergy:** Instant part completion (Spaceflight Pioneers)
@@ -858,6 +919,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **Gold allocation:** Purchases spaceship factories if behind schedule
 
 ### Unit Production
+
 - **Part priority:** 150 flavor value (highest in game)
 - **Transport handling:** Dedicated UNITAI_SPACESHIP_PART for safe capital delivery
 - **Production queue:** Spaceship parts override all non-emergency production
@@ -866,6 +928,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **Escort priority:** Military units protect parts during transport
 
 ### Advisor Recommendations
+
 - **Priority weight:** 17 (highest of all flavors in game)
 - **Recommendation focus:** Apollo Program → Hubble → Spaceship Factories → Parts
 - **Technology advice:** Prioritize spaceship-enabling technologies
@@ -873,6 +936,7 @@ Different leaders have varying FLAVOR_SPACESHIP values that shape their space ra
 - **Diplomatic advice:** Avoid wars during space race, protect production cities
 
 ### Dynamic Adjustments
+
 - **Apollo Program threshold:** Massive priority boost (+150) after construction
 - **Era scaling:** Minimal priority until Atomic Era, then dramatic increase
 - **Grand strategy synergy:** +20 flavor from AIGRANDSTRATEGY_SPACESHIP

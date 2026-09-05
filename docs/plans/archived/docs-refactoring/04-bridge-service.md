@@ -19,7 +19,7 @@ Create and write `docs/developers/bridge-service/`: the REST/SSE bridge between 
 ## Sources
 
 | Source | Action |
-|---|---|
+| --- | --- |
 | `bridge-service/README.md` | Fold into `overview.md`. |
 | `bridge-service/docs/DEVELOPMENT.md` | Fold into `overview.md`; lift Lua-registry/execution prose into `lua.md`; some setup detail also feeds Stage 7 `setup.md`. Delete original in Stage 9. |
 | `bridge-service/docs/CONFIGURATION.md` | Move prose into `configuration.md`. Delete original in Stage 9. |

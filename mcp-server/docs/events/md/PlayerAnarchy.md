@@ -16,7 +16,7 @@ Both triggers occur within the `CvPlayer` class during anarchy state transitions
 The event passes three parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | PlayerID | PlayerTypes | The ID of the player whose anarchy state changed |
 | IsEntering | bool | Whether the player is entering anarchy (true) or exiting (false) |
 | Duration | int | The duration of anarchy in turns (when entering), or 0 (when exiting) |
@@ -38,12 +38,14 @@ Anarchy periods are typically temporary but can significantly impact a civilizat
 **Source File**: `CvGameCoreDLL_Expansion2/CvPlayer.cpp`
 
 **Trigger Locations**:
+
 - Line 23600: Entering anarchy state (IsEntering = true, Duration = iValue)
 - Line 23602: Exiting anarchy state (IsEntering = false, Duration = 0)
 
 **Event System**: Uses the game event system via `GAMEEVENTINVOKE_HOOK(GAMEEVENT_PlayerAnarchy)`
 
 **Anarchy Context**: Anarchy in the game typically:
+
 - Occurs during government transitions or major political changes
 - Temporarily reduces or eliminates various civilization bonuses
 - May affect production, research, growth, or other key metrics

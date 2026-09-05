@@ -6,14 +6,15 @@
 
 ```typescript
 interface VideoConfig extends NarratorStageConfig {
-  type: 'narrator-video';
-  outputFormat?: 'mp4' | 'mkv';
+  type: "narrator-video";
+  outputFormat?: "mp4" | "mkv";
   includeSubtitles?: boolean;
-  includeGameAudio?: boolean;        // mix in original game audio (attenuated)
+  includeGameAudio?: boolean; // mix in original game audio (attenuated)
 }
 ```
 
 ### Input
+
 - `workspace/scripts.json` (ScriptsOutput from Stage 3, for presentation order + episode refs)
 - `workspace/audio/manifest.json` (AudioManifest from Stage 4)
 - `workspace/episodes.json` (Episodes from Stage 1, for video file refs + offsets)
@@ -59,6 +60,7 @@ For each episode in presentation order:
 Start with the **simple approach** (concat demuxer):
 
 1. Pre-process each episode into a standalone clip with audio overlay:
+
    ```
    ffmpeg -ss <offset/1000> -i <sourceVideo> -i <ttsAudio> \
      -t <duration> -map 0:v -map 1:a -c:v copy -c:a aac \
@@ -66,6 +68,7 @@ Start with the **simple approach** (concat demuxer):
    ```
 
 2. Write a concat list file (`workspace/output/concat.txt`):
+
    ```
    file 'segments/t42-p3.mp4'
    file 'segments/t50-p-1.mp4'
@@ -82,6 +85,7 @@ Start with the **simple approach** (concat demuxer):
 ### Game Audio Mixing
 
 When `includeGameAudio` is true, step 1 becomes:
+
 ```
 ffmpeg -ss <offset> -i <sourceVideo> -i <ttsAudio> \
   -t <duration> \
@@ -93,6 +97,7 @@ ffmpeg -ss <offset> -i <sourceVideo> -i <ttsAudio> \
 ### Subtitle Generation
 
 If enabled, generate an SRT file from the script text:
+
 - Estimate timing by distributing words evenly across the audio duration
 - Or use word-level timestamps if the TTS provider supplies them (provider-dependent)
 - Burn in with: `-vf "subtitles=subs.srt:force_style='FontSize=24'"`

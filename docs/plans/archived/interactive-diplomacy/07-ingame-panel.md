@@ -30,7 +30,7 @@ The panel is a **second client of the existing backend**: it reuses the Web chat
 Build order is **UI-first**: the two mod-UI stages run entirely on mock data in a live game, retiring the risky Civ-UI unknowns before any server code; transport follows; wiring connects them.
 
 | Stage | Plan | Objective |
-|---|---|---|
+| --- | --- | --- |
 | 7.01 | [01-ui-groundwork.md](07-ingame-panel/01-ui-groundwork.md) | Mock-driven Converse button, native notification channel, and chat panel, plus an observer retrofit of the shipped stage-01 Lua. Smoke test: Converse posts one notification; clicking it opens the panel. |
 | 7.02 | [02-deal-screen-ui.md](07-ingame-panel/02-deal-screen-ui.md) | Native VP EUI trade screen reused in place (included, not copied) driven by a mock `DealPayload` against real game state: local h2h legality via a scratch-deal proxy, native deal-value bar, promises category, DealPayload-v1 serialization ending at stub emits. |
 | 7.03 | [03-transport.md](07-ingame-panel/03-transport.md) | DLL buffer and pool fixes, event schemas and whitelist, generic `call-lua-function`, paginated transcript reads, and an end-to-end probe of the ingame-bridge skeleton. |

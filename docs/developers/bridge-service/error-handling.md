@@ -17,7 +17,7 @@ One thing to watch: a handled failure is still sent with HTTP 200. The only endp
 The codes a caller actually has to reason about:
 
 | Code | What happened | Does the bridge recover? |
-|---|---|---|
+| --- | --- | --- |
 | `DLL_DISCONNECTED` | The game pipe is down: the game is closed, restarting, or the mod is not loaded. Also returned when a pause or registration notification could not be delivered. | Yes, infinite reconnection with backoff. |
 | `CALL_TIMEOUT` | A call exceeded its timeout: 300 seconds for Lua, per-registration for outbound external calls. | The request is abandoned and cleaned up; the connection stays up. |
 | `LUA_EXECUTION_ERROR` | The Lua function or script ran but failed inside the game. | No, it is a caller or script problem. |
@@ -36,7 +36,7 @@ This is the failure the bridge is most careful about, because it is the most com
 - **No request hangs across a disconnect.** When the pipe drops, every in-flight request is immediately settled with `DLL_DISCONNECTED` rather than being left to time out. Sends attempted while disconnected fail fast with the same code.
 - **Reconnection is automatic and unbounded.** The bridge retries forever with exponential backoff, starting at 300 ms and levelling off at 5 seconds, so the game can come and go freely.
 - **Registrations survive; auto-pauses deliberately do not.** Outbound external-function registrations are replayed on reconnect and production mode is re-enabled, so callers do not have to re-establish them. The paused-player set is cleared when the connection drops, on purpose, so that a crash cannot leave a player frozen. An agent that still needs a player paused registers it again.
-- **Health reflects the truth, one level down.** `GET /health` always answers HTTP 200 with a successful envelope. The interesting flag is inside it: `result` carries `dll_connected`, `uptime`, `version`, and its own `success`, which is true only when the service is running *and* the DLL is connected. `GET /stats` exposes the pending-request count and the reconnection-attempt count for deeper inspection.
+- **Health reflects the truth, one level down.** `GET /health` always answers HTTP 200 with a successful envelope. The interesting flag is inside it: `result` carries `dll_connected`, `uptime`, `version`, and its own `success`, which is true only when the service is running _and_ the DLL is connected. `GET /stats` exposes the pending-request count and the reconnection-attempt count for deeper inspection.
 
 ## Timeouts
 

@@ -16,7 +16,7 @@ Both scenarios occur within the same `SetCurrency` function, ensuring that all c
 The event passes three parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | PlayerID | PlayerTypes | The ID of the player whose currency changed |
 | NewCurrency | int | The ID of the currency being adopted |
 | PreviousCurrency | int | The ID of the previous currency (-1 if no previous currency existed) |
@@ -38,12 +38,14 @@ The event captures the dynamic nature of currency systems where players may chan
 **Source File**: `CvGameCoreDLL_Expansion2/CvPlayer.cpp`
 
 **Trigger Locations**:
+
 - Line 29733: First currency adoption (previous currency set to -1, indicating no previous currency)
 - Line 29737: Currency change (includes both new currency and current currency as previous)
 
 **Event System**: Uses the game event system via `GAMEEVENTINVOKE_HOOK(GAMEEVENT_PlayerAdoptsCurrency)`
 
 **Currency Context**: Currency systems in the game typically:
+
 - Provide economic bonuses and trade advantages
 - Influence diplomatic relationships with other civilizations
 - Can be tied to specific technologies, policies, or trade agreements

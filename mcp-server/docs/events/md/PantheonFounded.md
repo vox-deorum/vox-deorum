@@ -16,13 +16,15 @@ This event is triggered in the following scenarios:
 The event passes the following parameters:
 
 **Modern Implementation (if MOD_EVENTS_FOUND_RELIGION enabled):**
+
 1. **Player ID** (`ePlayer`) - The unique identifier of the player founding the pantheon
 2. **Capital City ID** - The unique identifier of the player's capital city
 3. **Religion Type** (`RELIGION_PANTHEON`) - Fixed identifier indicating this is a pantheon
 4. **Belief Type** (`eBelief`) - The specific pantheon belief being adopted
 
 **Legacy Implementation:**
-1. **Player ID** (`ePlayer`) - The unique identifier of the player founding the pantheon  
+
+1. **Player ID** (`ePlayer`) - The unique identifier of the player founding the pantheon
 2. **City ID** - The ID of the capital city (or first city if no capital exists)
 3. **Religion Type** (`RELIGION_PANTHEON`) - Fixed identifier for pantheon
 4. **Belief Type** (`eBelief`) - The specific pantheon belief being adopted
@@ -37,6 +39,7 @@ Pantheons represent the early religious development of civilizations, providing 
 - **Competitive Element:** Limited pantheon beliefs create competition between civilizations
 
 Key aspects of pantheon founding:
+
 - Each pantheon belief can only be chosen once per game across all players
 - The Faith cost increases with each pantheon founded globally
 - Pantheons automatically spread to all of the player's existing cities
@@ -47,31 +50,36 @@ The event fires after the pantheon has been successfully established and the min
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvReligionClasses.cpp` (line 1070 for Lua hook, line 1046 for GAMEEVENT hook)
 
 **Triggering Functions:**
+
 - `CvGameReligions::FoundPantheon(PlayerTypes ePlayer, BeliefTypes eBelief)` - Main function handling pantheon founding
 
-**Event Implementation:**
-The event uses different mechanisms based on mod configuration:
+**Event Implementation:** The event uses different mechanisms based on mod configuration:
+
 - **Modern Path:** Uses `GAMEEVENT_PantheonFounded` hook if `MOD_EVENTS_FOUND_RELIGION` is enabled
 - **Legacy Path:** Uses Lua script hook `PantheonFounded` for backward compatibility
 
 **System Updates:**
+
 - Updates minimum Faith requirement for next pantheon via `SetMinimumFaithNextPantheon()`
 - Scales Faith cost based on game speed settings
 - Automatically spreads pantheon to all player cities
 
 **Event Hooks:**
+
 ```cpp
 // Modern implementation
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_PantheonFounded, ePlayer, GET_PLAYER(ePlayer).getCapitalCity()->GetID(), RELIGION_PANTHEON, eBelief);
 
-// Legacy implementation  
+// Legacy implementation
 LuaSupport::CallHook(pkScriptSystem, "PantheonFounded", args.get(), bResult);
 ```
 
 **Safety Measures:**
+
 - Validates player is not a minor civilization or barbarian
 - Handles cases where the player has no capital city by using the first available city
 - Only fires for valid player states to prevent erroneous events

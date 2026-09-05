@@ -14,9 +14,9 @@ The trigger occurs after visibility updates have been applied and before unit he
 
 The event passes one parameter to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| PlayerID | int | The ID of the player whose turn is ending (`GetID()`) |
+| Parameter | Type | Description                                           |
+| --------- | ---- | ----------------------------------------------------- |
+| PlayerID  | int  | The ID of the player whose turn is ending (`GetID()`) |
 
 # Event Details
 
@@ -39,6 +39,7 @@ The event is part of the turn management system and helps track when players com
 **Conditional Compilation**: The event is only triggered when `MOD_EVENTS_PLAYER_TURN` is enabled
 
 **Execution Context**: The event fires during the turn ending phase, specifically:
+
 - After delayed visibility updates have been processed
 - After `PlayerEndTurnInitiated` event (if RED_TURN mod is enabled)
 - Before end-turn blocking is cleared

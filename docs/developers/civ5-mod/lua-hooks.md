@@ -2,13 +2,13 @@
 
 This page covers the mod's observer path: how strategic decisions made outside the game become in-game events, and how a couple of render-time UI events travel back out. The interactive screens are separate and have their own pages ([diplomacy-panel.md](diplomacy-panel.md), [deal-screen.md](deal-screen.md)).
 
-The observer path centers on one small addin, `Lua/VoxDeorumTest.lua`, loaded as an `InGameUIAddin`. Despite the name, it is the reference seam between the game's Lua world and the external Vox Deorum stack: it reacts to decisions arriving *in* and forwards UI events back *out* to the Bridge Service.
+The observer path centers on one small addin, `Lua/VoxDeorumTest.lua`, loaded as an `InGameUIAddin`. Despite the name, it is the reference seam between the game's Lua world and the external Vox Deorum stack: it reacts to decisions arriving _in_ and forwards UI events back _out_ to the Bridge Service.
 
 The game's Lua runtime exposes `LuaEvents`, a publish/subscribe bus any addin can fire on or listen to. The mod uses it as the junction between in-game observers and the world outside the game process.
 
 ## Inbound: strategic decisions become in-game events
 
-When an agent decides something (a strategy shift, a research pick, a relationship change), that decision has to reach the game. It arrives not by the mod reaching out, but by the [MCP server](../mcp-server/) pushing it *in* through the DLL's channel.
+When an agent decides something (a strategy shift, a research pick, a relationship change), that decision has to reach the game. It arrives not by the mod reaching out, but by the [MCP server](../mcp-server/) pushing it _in_ through the DLL's channel.
 
 The MCP server keeps two preregistered Lua functions on the [Bridge Service](../bridge-service/), `registerAction` and `setPlayerInfo`. Calling them runs a small script inside the game that fires the corresponding `LuaEvent`:
 

@@ -34,20 +34,15 @@ The event includes location data to help systems identify which minor civilizati
 
 # Technical Details
 
-**Event Name:** `ElectionResultFailure`
-**Hook Type:** Game event invoke hook
-**Parameters Count:** 5
-**Parameter Types:**
+**Event Name:** `ElectionResultFailure` **Hook Type:** Game event invoke hook **Parameters Count:** 5 **Parameter Types:**
+
 - Player ID (integer)
-- Spy ID (integer) 
+- Spy ID (integer)
 - Diminish Amount (integer)
 - X Coordinate (integer)
 - Y Coordinate (integer)
 
-**Source File:** `CvGameCoreDLL_Expansion2/CvMinorCivAI.cpp`
-**Function:** `DoElection()`
-**Line Number:** 17336
-**Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_ElectionResultFailure, (int)ePlayer, iSpyID, iDiminishAmount, pCapital->getX(), pCapital->getY());`
+**Source File:** `CvGameCoreDLL_Expansion2/CvMinorCivAI.cpp` **Function:** `DoElection()` **Line Number:** 17336 **Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_ElectionResultFailure, (int)ePlayer, iSpyID, iDiminishAmount, pCapital->getX(), pCapital->getY());`
 
 **Conditional Compilation:** This event is only triggered when `MOD_EVENTS_ESPIONAGE` is enabled, ensuring it's included only in builds that support extended espionage event handling.
 

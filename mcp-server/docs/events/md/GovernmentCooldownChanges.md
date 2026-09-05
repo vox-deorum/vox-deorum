@@ -32,17 +32,21 @@ The cooldown value represents the number of turns remaining before the player ca
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvPlayer.cpp` (lines 29625, 29639)
 
 **Triggering Functions:**
+
 - `CvPlayer::ChangeGovernmentCooldown(int iValue)` - Modifies the current cooldown by the specified amount
 - `CvPlayer::SetGovernmentCooldown(int iValue, bool bNoEvent)` - Sets the cooldown to a specific value (event suppressed if bNoEvent is true)
 
 **Related Members:**
+
 - `m_iJFDGovernmentCooldown` - Internal member storing the current cooldown value
 - `GetGovernmentCooldown()` - Accessor method returning the current cooldown value
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_GovernmentCooldownChanges, GetID(), GetGovernmentCooldown());
 ```

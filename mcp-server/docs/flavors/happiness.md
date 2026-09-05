@@ -11,6 +11,7 @@ FLAVOR_HAPPINESS is an AI personality flavor that controls how much a civilizati
 The happiness flavor directly influences building construction priorities through the Building Production AI system. Each building has a FLAVOR_HAPPINESS value assigned in the database, and the AI calculates building priorities by multiplying these flavor values with the leader's happiness flavor rating.
 
 **Key Reference**: `CvBuildingProductionAI.cpp:98`
+
 ```cpp
 m_BuildingAIWeights.IncreaseWeight(iBuilding, entry->GetFlavorValue(eFlavor) * iWeight);
 ```
@@ -22,6 +23,7 @@ Buildings with high FLAVOR_HAPPINESS values become proportionally more attractiv
 When founding new cities, the happiness flavor affects how the AI evaluates potential settlement locations. The flavor value is doubled (since it's the only flavor related to happiness) and influences the site evaluation multiplier for happiness considerations.
 
 **Key Reference**: `CvSiteEvaluationClasses.cpp:232-239`
+
 ```cpp
 else if(strFlavor == "FLAVOR_HAPPINESS")
 {
@@ -41,6 +43,7 @@ This means leaders with higher happiness flavor values will prefer settling loca
 The happiness flavor is cached and used in Grand Strategy AI calculations, affecting long-term strategic priorities including Culture Victory pursuit.
 
 **Key Reference**: `CvGrandStrategyAI.cpp:401`
+
 ```cpp
 m_iFlavorHappiness = GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeForString("FLAVOR_HAPPINESS"));
 ```
@@ -48,6 +51,7 @@ m_iFlavorHappiness = GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeF
 The Grand Strategy AI uses this cached value when evaluating Culture Victory priorities. Buildings and policies with happiness flavor values contribute bonus priority points toward the Culture Victory strategy.
 
 **Key References**: `CvGrandStrategyAI.cpp:922-925` and `959-962`
+
 ```cpp
 else if (GC.getFlavorTypes((FlavorTypes)iFlavorLoop) == "FLAVOR_HAPPINESS")
 {
@@ -61,6 +65,7 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavorLoop) == "FLAVOR_HAPPINESS")
 The happiness flavor contributes to policy selection weight calculations, making happiness-providing policies more attractive to leaders who value this flavor.
 
 **Key Reference**: `CvPolicyAI.cpp:4948-4951`
+
 ```cpp
 else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_HAPPINESS")
 {
@@ -71,6 +76,7 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_HAPPINESS")
 Additionally, policy flavor values are dynamically adjusted based on the empire's current happiness state. If the empire is currently unhappy (happiness below current unhappiness level), the AI receives a +5 bonus to happiness flavor values when evaluating policies.
 
 **Key Reference**: `CvPolicyClasses.cpp:6192-6195`
+
 ```cpp
 else if (m_pPlayer->GetHappiness() < iCurrentUnhappiness && iFlavor == GC.getInfoTypeForString("FLAVOR_HAPPINESS"))
 {
@@ -87,16 +93,19 @@ The happiness flavor significantly influences two key aspects of religious decis
 When evaluating religious beliefs and pantheons, the happiness flavor factors into a "happiness multiplier" calculation that affects how beliefs providing happiness are valued.
 
 **Key References**: `CvReligionClasses.cpp:8158` and `8620`
+
 ```cpp
 int iFlavorHappiness = pFlavorManager->GetPersonalityIndividualFlavor((FlavorTypes)GC.getInfoTypeForString("FLAVOR_HAPPINESS"));
 ```
 
 The happiness multiplier is calculated using the formula:
+
 ```cpp
 iHappinessMultiplier = min(15, max(6, iFlavorOffense * 2 + iFlavorHappiness - iFlavorDefense));
 ```
 
 This formula means:
+
 - Base range: 6-15 (clamped)
 - Aggressive leaders (high offense, low defense) with high happiness flavor will maximize happiness needs
 - Defensive leaders will have reduced happiness priorities
@@ -107,6 +116,7 @@ This formula means:
 The happiness flavor is retrieved and used in diplomacy calculations, particularly when evaluating gift-giving and city-state interaction strategies.
 
 **Key Reference**: `CvDiplomacyAI.cpp:32228`
+
 ```cpp
 int iHappinessFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeForString("FLAVOR_HAPPINESS"));
 ```
@@ -118,6 +128,7 @@ While the specific usage in this context relates to bullying vs. gift-giving dec
 The happiness flavor has a specific weight assigned in the advisor recommendation system, allowing it to influence what recommendations are presented to the player.
 
 **Key Reference**: `CvAdvisorRecommender.cpp:326-329`
+
 ```cpp
 else if(strFlavorName == "FLAVOR_HAPPINESS")
 {
@@ -134,14 +145,17 @@ The happiness flavor is dynamically modified by active AI strategies, reflecting
 ### War Strategies
 
 **At War**: `-5` to FLAVOR_HAPPINESS
+
 - When at war, the AI reduces its happiness focus to prioritize military needs
 - **Reference**: `CoreStrategyChanges.sql:205`
 
 **Winning Wars**: `+20` to FLAVOR_HAPPINESS
+
 - Successful military campaigns increase happiness focus, possibly to manage war weariness
 - **Reference**: `CoreStrategyChanges.sql:231`
 
 **Losing Wars**: `-10` to FLAVOR_HAPPINESS
+
 - Desperate military situations further reduce happiness priorities in favor of survival
 - **Reference**: `CoreStrategyChanges.sql:257`
 
@@ -156,23 +170,28 @@ The following sections detail which game elements have FLAVOR_HAPPINESS values a
 Buildings are assigned happiness flavor values in `BuildingFlavorSweeps.sql`. Notable examples:
 
 #### Essential Buildings
+
 - **Courthouse**: 150 (extremely high priority for conquered cities)
 - **Satrap's Court**: 150 (Persia's unique courthouse replacement)
 
 #### Happiness-Specific Buildings
+
 - **Circus**: 25 (requires horses luxury resource)
 - **Ceilidh Hall**: 30 (Celtic unique building)
 - **Grocer**: 25 (provides happiness from spices/sugar)
 
 #### Advanced Buildings
+
 - **Police Station**: 50 (late-game happiness/security)
 - **Intelligence Agency**: 50 (national wonder)
 
 #### Corporations
+
 - **Two-Kay Foods**: 25 (franchise)
 - **Two-Kay Foods HQ**: 50 (headquarters)
 
 #### Wonders
+
 - **Chichen Itza**: 50 (strong happiness wonder)
 - **Prora Resort**: 50 (ideology wonder)
 - **Notre Dame**: 20
@@ -199,39 +218,48 @@ Technologies have happiness flavor assignments in `TechFlavorSweeps.sql`:
 Policies with happiness flavor values in `PolicyFlavorSweeps.sql`:
 
 #### Tradition Tree
+
 - **Legalism**: 5
 - **Representation**: 5
 
 #### Honor Tree
+
 - **Warrior Code**: 5
 
 #### Piety Tree
+
 - **Mandate of Heaven**: 12
 - **Theocracy**: 12
 - **Free Religion**: 12
 
 #### Patronage Tree
+
 - **Merchant Confederacy**: 15
 
 #### Aesthetics Tree
+
 - **Aesthetics** (opener): 11
 - **Fine Arts**: 12
 
 #### Rationalism Tree
+
 - **Rationalism** (opener): 20
 - **Sovereignty**: 24
 - **Humanism**: 24
 
 #### Ideology Policies (Freedom)
+
 - **Capitalism**: 60
 - **Universal Suffrage**: 60
 - **Universal Healthcare**: 60
 
 #### Ideology Policies (Order)
+
 - **Dictatorship of Proletariat**: 60
 - **Universal Healthcare**: 60
 
 #### Ideology Policies (Autocracy)
+
 - **Police State**: 60
 
 Note that ideology-tier policies have very high happiness flavor values (60), making them extremely attractive to happiness-focused leaders.
@@ -239,11 +267,13 @@ Note that ideology-tier policies have very high happiness flavor values (60), ma
 ### Projects
 
 From `ProjectFlavorChanges.sql`:
+
 - **Public Works**: 25 (project that provides happiness)
 
 ### Processes
 
 From `ProcessFlavorSweeps.sql`:
+
 - **World Games**: 50 (World Congress process)
 - **United Nations**: 50 (World Congress process)
 
@@ -254,6 +284,7 @@ These very high values indicate that happiness-focused leaders will strongly sup
 Player and city events with happiness flavor assignments guide event choice selection:
 
 #### Player Events (`EventFlavorChanges.sql`)
+
 - **Comet Choices 1 & 2**: 20
 - **Eclipse Choice 1**: 20
 - **War Weariness Choice 1**: 20
@@ -261,6 +292,7 @@ Player and city events with happiness flavor assignments guide event choice sele
 - **Baths Decision Choice 2**: 20
 
 #### City Events (`CityEventFlavorChanges.sql`)
+
 - **Temple Concerns Choice 3**: 20
 - **Hospital Overcrowding Choice 1**: 20
 - **Hospital Overcrowding Choice 3**: 15
@@ -279,6 +311,7 @@ From `LeaderFlavorSweeps.sql`, different leaders have varying base happiness fla
 - **Low Priority**: 5 (Isabella, adjusted for naval focus)
 
 Example adjustments documented in the SQL files:
+
 - Casimir: Updated from 5 to 7 (noted as "literally no one has this low")
 - Elizabeth: Updated from 5 to 7 (primary focus: domination)
 - Harun al-Rashid: Updated from 5 to 7 (primary focus: culture)
@@ -310,6 +343,7 @@ When these strategies activate, they influence building choices and other city-l
 ### For Understanding AI Behavior
 
 Leaders with high FLAVOR_HAPPINESS values will:
+
 1. Aggressively build courthouses in conquered cities
 2. Prioritize luxury resource connections
 3. Build Circuses and other happiness buildings earlier
@@ -321,6 +355,7 @@ Leaders with high FLAVOR_HAPPINESS values will:
 9. Respond more strongly to unhappiness emergencies
 
 Leaders with low FLAVOR_HAPPINESS values will:
+
 1. Tolerate lower happiness levels longer
 2. Skip optional happiness buildings
 3. Delay courthouse construction
@@ -331,6 +366,7 @@ Leaders with low FLAVOR_HAPPINESS values will:
 ### War Behavior Patterns
 
 The dynamic adjustments during war create interesting behavior:
+
 - Happiness-focused leaders will significantly increase happiness priorities when winning wars (+20 modifier)
 - This may reflect managing war weariness while maintaining expansion
 - During defensive wars, happiness priorities drop (-10 when losing), suggesting survival takes precedence
@@ -339,6 +375,7 @@ The dynamic adjustments during war create interesting behavior:
 ### Cultural Victory Synergy
 
 The Grand Strategy AI code explicitly includes happiness flavor values when calculating Culture Victory priorities. This creates a natural synergy where happiness-focused leaders:
+
 - Are more likely to pursue Culture Victory
 - Build culture + happiness buildings like Ceilidh Hall
 - Adopt Aesthetics policies that provide both culture and happiness

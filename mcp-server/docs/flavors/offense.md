@@ -7,6 +7,7 @@
 Unlike `FLAVOR_DEFENSE` (which focuses on protection and defensive units), `FLAVOR_OFFENSE` specifically drives the AI's **willingness to build offensive military power and use it aggressively** in both strategic planning and tactical execution.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Highly aggressive warmongers: 8-10
@@ -97,6 +98,7 @@ iTempWeight += iOffenseFlavor * /*250*/ GD_INT_GET(AI_CITYSTRATEGY_OPERATION_UNI
 ```
 
 **Interpretation:**
+
 - Base weight for operation units: 5000
 - Each point of FLAVOR_OFFENSE adds 250 weight (multiplier configurable)
 - Additional penalty is added each time the AI skips building operation units, forcing aggressive leaders to eventually fulfill operation requirements
@@ -120,6 +122,7 @@ iTempWeight += iOffenseFlavor * /*250*/ GD_INT_GET(AI_CITYSTRATEGY_OPERATION_UNI
 ```
 
 **Interpretation:**
+
 - Base weight for army units: 750
 - Each FLAVOR_OFFENSE point adds 250 weight
 - FLAVOR_OFFENSE = 9 would add 2250 weight, making army units over 3x more likely to be produced
@@ -220,6 +223,7 @@ iTotalOffenseWeight = iTotalOffenseWeight * iOffenseModifier;
 ```
 
 **Interpretation:**
+
 - Offense modifier = 100 + Boldness + FLAVOR_OFFENSE
 - Defense modifier = 100 + (FLAVOR_DEFENSE × 2)
 - A leader with FLAVOR_OFFENSE = 8 and Boldness = 7 has offense modifier of 115%, increasing offensive unit weights by 15%
@@ -243,6 +247,7 @@ gMinHpForTactsim = 50 - 2 * iOffenseFlavor;
 ```
 
 **Interpretation:**
+
 - **Unit Loss Threshold:** Leaders with FLAVOR_OFFENSE > 6 (and more than 6 units) will accept losing 1 unit per turn in tactical combat. Lower offense leaders refuse any unit losses unless forced.
 - **Minimum HP for Combat:** Starts at 50 HP, reduced by 2 per FLAVOR_OFFENSE point
   - FLAVOR_OFFENSE = 0: Units won't fight if below 50 HP
@@ -250,12 +255,14 @@ gMinHpForTactsim = 50 - 2 * iOffenseFlavor;
   - FLAVOR_OFFENSE = 10: Units fight down to 30 HP (50 - 20)
 
 **Tactical Impact:** This is a critical behavioral difference. Aggressive leaders (high FLAVOR_OFFENSE) will:
+
 - Press attacks even with wounded units
 - Accept tactical casualties to achieve objectives
 - Continue combat engagements when defensive leaders would withdraw
 - Create more dynamic and aggressive battlefield behavior
 
 Defensive leaders (low FLAVOR_OFFENSE) will:
+
 - Withdraw damaged units to heal
 - Refuse combat unless units are at near-full health
 - Preserve forces rather than trading units for objectives
@@ -264,21 +271,25 @@ Defensive leaders (low FLAVOR_OFFENSE) will:
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Directly increases preference for domination victory over diplomatic, cultural, or scientific paths
 - **Grand strategy:** Synergizes with Conquest grand strategy, creating feedback loops with military buildings and policies
 - **City specialization:** Drives cities to specialize in military production, creating dedicated military production centers
 
 ### Military Production
+
 - **Unit priority:** Dramatically increases production weight for offensive military units (up to +2250 weight for high-offense leaders)
 - **Operation readiness:** Ensures aggressive leaders consistently build units needed for military campaigns
 - **Force composition:** Shifts unit mix toward offensive units (melee, cavalry, siege) over defensive units (archers, anti-air)
 
 ### Tactical Behavior
+
 - **Combat aggression:** Lower HP thresholds for combat (30-50 HP minimum based on flavor)
 - **Risk tolerance:** Willing to accept unit casualties to achieve objectives (>6 offense accepts 1 loss/turn)
 - **Persistence:** Continues fighting with wounded units rather than withdrawing
 
 ### Diplomatic Impact
+
 - **City-state relations:** More willing to conquer or bully city-states for strategic advantage
 - **Threat assessment:** Combined with other flavors to determine overall military threat level
 - **Victory blocking:** More aggressive in using military force to block opponents' victory attempts
@@ -292,6 +303,7 @@ FLAVOR_OFFENSE represents the AI's fundamental approach to military power:
 3. **Tactical Doctrine:** How aggressively to use military forces in combat
 
 This creates a spectrum of AI personalities:
+
 - **High OFFENSE (8-10):** Aggressive warmongers who build large armies, seek conquest victory, and fight aggressively
 - **Moderate OFFENSE (5-7):** Balanced leaders who maintain military strength but don't always seek war
 - **Low OFFENSE (2-4):** Defensive leaders who build minimal offensive forces and avoid aggressive wars

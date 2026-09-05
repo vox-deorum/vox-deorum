@@ -29,12 +29,14 @@ Ideological switching represents a major political upheaval within a civilizatio
 - **Diplomatic Considerations:** Switching can improve relations with civilizations sharing the new ideology
 
 The switching process involves significant costs:
+
 - Loss of previously adopted ideology tenets (policies)
 - Temporary disruption during the transition period
 - Potential diplomatic consequences with former ideological allies
 - Need to rebuild the ideology tree with fewer available policies
 
 This event is crucial for AI systems because:
+
 - It indicates major strategic shifts and potential alliance changes
 - It signals civilizations under pressure that may need support or present opportunities
 - It affects the global ideological landscape and cultural pressure calculations
@@ -43,23 +45,28 @@ This event is crucial for AI systems because:
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvPolicyClasses.cpp` (line 5788)
 
 **Triggering Functions:**
+
 - `CvPlayerPolicies::DoSwitchIdeologies(PolicyBranchTypes eNewBranchType)` - Main function implementing ideology switches
 
 **Switch Mechanics:**
+
 - Clears all policies from the old ideology branch
 - Unlocks the new ideology branch
 - Calculates tenet retention based on game configuration (loses 2-5 tenets typically)
 - Updates diplomatic relationships and cultural pressure calculations
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_IdeologySwitched, GetPlayer()->GetID(), eOldBranchType, eNewBranchType);
 ```
 
 **Related Systems:**
+
 - `GetLateGamePolicyTree()` - Identifies the current ideology
 - `GetNumPoliciesOwnedInBranch()` - Counts existing tenets for retention calculation
 - `ClearPolicyBranch()` - Removes policies from the abandoned ideology
@@ -67,4 +74,5 @@ GAMEEVENTINVOKE_HOOK(GAMEEVENT_IdeologySwitched, GetPlayer()->GetID(), eOldBranc
 - Diplomatic relationship modifiers based on ideological alignment
 
 **Configuration:**
+
 - `SWITCH_POLICY_BRANCHES_TENETS_LOST` - Game parameter determining how many tenets are lost during the switch (2 in Community Patch, 5 in Vox Populi)

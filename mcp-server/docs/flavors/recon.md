@@ -18,6 +18,7 @@ The FLAVOR_RECON flavor primarily affects:
 ### Economic AI Strategy (CvEconomicAI.cpp)
 
 **Line 2319**: Core calculation for explorer needs
+
 ```cpp
 int iPlotsPerExplorer = /*20 in CP, 27 in VP*/ GD_INT_GET(MAX_PLOTS_PER_EXPLORER) -
     m_pPlayer->GetGrandStrategyAI()->GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeForString("FLAVOR_RECON"));
@@ -26,6 +27,7 @@ int iPlotsPerExplorer = /*20 in CP, 27 in VP*/ GD_INT_GET(MAX_PLOTS_PER_EXPLORER
 **Purpose**: Determines how many unexplored plots the AI tolerates per explorer unit. Higher FLAVOR_RECON values reduce this threshold, causing the AI to build more explorers.
 
 **Calculation**:
+
 - Base value: 27 plots per explorer (Vox Populi) or 20 (Community Patch)
 - Adjusted by: Subtracting the leader's FLAVOR_RECON value
 - Example: A leader with FLAVOR_RECON of 7 would target 20 plots per explorer (27 - 7 = 20)
@@ -36,11 +38,13 @@ int iPlotsPerExplorer = /*20 in CP, 27 in VP*/ GD_INT_GET(MAX_PLOTS_PER_EXPLORER
 **Lines 2261-2556**: DoReconState() function
 
 This function runs once per turn and determines the player's reconnaissance state, which can be:
+
 - `RECON_STATE_NEEDED` - Not enough explorers, build more
 - `RECON_STATE_NEUTRAL` - Acceptable explorer count
 - `RECON_STATE_ENOUGH` - Too many explorers, convert some to combat units
 
 **Key Logic**:
+
 - Counts unexplored border plots (plots adjacent to known territory)
 - Counts current exploring units with UNITAI_EXPLORE
 - Compares ratio to personality-adjusted threshold
@@ -48,6 +52,7 @@ This function runs once per turn and determines the player's reconnaissance stat
 - Can disband or reassign explorers when exploration is complete
 
 **Special Conditions**:
+
 - Exploration suspended during losing wars
 - Exploration demand increases if losing units or seeing many goody huts
 - City-states can be exempted from recon strategies via NoMinorCivs flag
@@ -57,6 +62,7 @@ This function runs once per turn and determines the player's reconnaissance stat
 **Lines 3464-3478**: IsTestStrategy_NeedRecon()
 
 Determines if the ECONOMICAISTRATEGY_NEED_RECON strategy should activate:
+
 - Blocked if player is a minor civ (when NoMinorCivs is set)
 - Blocked if at war (MILITARYAISTRATEGY_AT_WAR is active)
 - Returns true only if ReconState == RECON_STATE_NEEDED
@@ -64,6 +70,7 @@ Determines if the ECONOMICAISTRATEGY_NEED_RECON strategy should activate:
 **Lines 3481-3484**: IsTestStrategy_EnoughRecon()
 
 Determines if the ECONOMICAISTRATEGY_ENOUGH_RECON strategy should activate:
+
 - Returns true if ReconState == RECON_STATE_ENOUGH
 - Signals AI should stop producing scouts and repurpose existing ones
 
@@ -72,6 +79,7 @@ Determines if the ECONOMICAISTRATEGY_ENOUGH_RECON strategy should activate:
 **Lines 2455-2556**: Naval recon state management
 
 Parallel system for sea exploration using FLAVOR_NAVAL_RECON:
+
 - Only activates for civilizations with coastal cities
 - Uses same plot-per-explorer calculation methodology
 - Manages UNITAI_EXPLORE_SEA units
@@ -81,14 +89,17 @@ Parallel system for sea exploration using FLAVOR_NAVAL_RECON:
 ### Advisor System (CvAdvisorRecommender.cpp)
 
 **Military Advisor (Line 357-359)**:
+
 - FLAVOR_RECON importance weight: 3
 - Low priority compared to combat flavors (RANGED=13, OFFENSE=9)
 
 **Foreign Advisor (Line 435-437)**:
+
 - FLAVOR_RECON importance weight: 13
 - High priority - foreign advisor emphasizes exploration for diplomacy
 
 **Science Advisor (Line 477-479)**:
+
 - FLAVOR_RECON importance weight: 11
 - High priority - science advisor values map knowledge
 
@@ -97,6 +108,7 @@ This weighting system helps advisors recommend appropriate recon units based on 
 ### Deal AI (CvDealAI.cpp)
 
 **Lines 2548-2554**: Map trading value adjustment
+
 ```cpp
 EconomicAIStrategyTypes eNeedRecon = (EconomicAIStrategyTypes) GC.getInfoTypeForString("ECONOMICAISTRATEGY_NEED_RECON");
 EconomicAIStrategyTypes eNavalRecon = (EconomicAIStrategyTypes) GC.getInfoTypeForString("ECONOMICAISTRATEGY_NEED_RECON_SEA");
@@ -112,6 +124,7 @@ if (eNeedRecon != NO_ECONOMICAISTRATEGY && GetPlayer()->GetEconomicAI()->IsUsing
 ### Diplomacy AI (CvDiplomacyAI.cpp)
 
 **Lines 28468-28476**: WantsOpenBordersWithPlayer()
+
 ```cpp
 EconomicAIStrategyTypes eNeedRecon = (EconomicAIStrategyTypes) GC.getInfoTypeForString("ECONOMICAISTRATEGY_NEED_RECON");
 EconomicAIStrategyTypes eNeedNavalRecon = (EconomicAIStrategyTypes) GC.getInfoTypeForString("ECONOMICAISTRATEGY_NEED_RECON_SEA");
@@ -128,6 +141,7 @@ if (m_pPlayer->GetEconomicAI()->IsUsingStrategy(eNeedRecon))
 Units with high FLAVOR_RECON values from the database (UnitFlavorSweeps.sql):
 
 ### Land Reconnaissance Units
+
 - **UNIT_XCOM_SQUAD**: 20 (highest recon value)
 - **UNIT_BANDEIRANTE**: 18 (Brazil unique explorer)
 - **UNIT_MARINE**: 18
@@ -144,6 +158,7 @@ Units with high FLAVOR_RECON values from the database (UnitFlavorSweeps.sql):
 - **UNIT_WARRIOR**: 1 (minimal recon capability)
 
 ### Naval Reconnaissance Units
+
 All naval units also have FLAVOR_NAVAL_RECON values, which work with the parallel naval exploration system. See dedicated FLAVOR_NAVAL_RECON documentation for details.
 
 ## Leader Personality
@@ -151,16 +166,19 @@ All naval units also have FLAVOR_NAVAL_RECON values, which work with the paralle
 From LeaderFlavorSweeps.sql, different leader archetypes have varying FLAVOR_RECON values:
 
 ### Conquerors (FLAVOR_RECON: 7)
+
 Leaders: Ashurbanipal, Askia, Attila, Augustus, Darius, Genghis Khan, Gustavus Adolphus, Harald, Montezuma, Napoleon, Oda Nobunaga, Shaka
 
 **Impact**: Moderately aggressive exploration (27 - 7 = 20 plots per explorer). These leaders balance map knowledge with military conquest, needing good reconnaissance for military planning.
 
 ### Other Archetypes
+
 The database defines multiple leader personality types (Coalitionists, Diplomats, etc.) with varying FLAVOR_RECON values ranging from 3-7, affecting how aggressively each leader explores the map.
 
 ## Gameplay Effects
 
 ### High FLAVOR_RECON (7-10)
+
 - Builds scouts earlier and more frequently
 - Maintains more explorer units throughout the game
 - More willing to convert combat units to exploration role
@@ -169,6 +187,7 @@ The database defines multiple leader personality types (Coalitionists, Diplomats
 - Better strategic awareness of terrain and enemy positions
 
 ### Low FLAVOR_RECON (1-3)
+
 - Builds minimal scouts
 - Relies more on city sight radius and incidental exploration
 - Slower to discover map features
@@ -176,6 +195,7 @@ The database defines multiple leader personality types (Coalitionists, Diplomats
 - May miss strategic resources or expansion opportunities
 
 ### Neutral FLAVOR_RECON (4-6)
+
 - Balanced exploration approach
 - Maintains 1-2 explorers in early game
 - Scales exploration effort based on available territory
@@ -184,19 +204,23 @@ The database defines multiple leader personality types (Coalitionists, Diplomats
 ## Related Systems
 
 ### Exploration Plot Tracking
+
 The Economic AI maintains two lists:
+
 - `m_vPlotsToExploreLand`: Land plots on the frontier between known and unknown
 - `m_vPlotsToExploreSea`: Sea plots on the frontier
 
 These are updated from scratch each turn via `UpdateExplorePlotsFromScratch()` and scored using `ScoreExplorePlot()` to guide explorer movement.
 
 ### Unit AI Types
+
 - **UNITAI_EXPLORE**: Land-based exploration units
 - **UNITAI_EXPLORE_SEA**: Naval exploration units
 
 Units can be dynamically reassigned to/from these roles based on recon state.
 
 ### Economic AI Strategies
+
 - **ECONOMICAISTRATEGY_NEED_RECON**: Active when more land explorers needed
 - **ECONOMICAISTRATEGY_ENOUGH_RECON**: Active when too many land explorers
 - **ECONOMICAISTRATEGY_NEED_RECON_SEA**: Active when more naval explorers needed
@@ -204,7 +228,9 @@ Units can be dynamically reassigned to/from these roles based on recon state.
 - **ECONOMICAISTRATEGY_ENOUGH_RECON_SEA**: Active when too many naval explorers
 
 ### Grand Strategy Integration
+
 The flavor is accessed via:
+
 ```cpp
 GetGrandStrategyAI()->GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeForString("FLAVOR_RECON"))
 ```
@@ -214,6 +240,7 @@ This combines the leader's base personality flavor with modifiers from the activ
 ## Technical Notes
 
 ### Recon State Enum
+
 ```cpp
 enum ReconState
 {
@@ -225,9 +252,11 @@ enum ReconState
 ```
 
 ### Persistence
+
 Recon state is saved/loaded with game state via serialization (lines 353-354 in CvEconomicAI.cpp), ensuring exploration strategies persist across save/load cycles.
 
 ### Turn Order
+
 `DoReconState()` is called early in the Economic AI turn processing (line 515), before strategy evaluation, ensuring recon strategies are based on current exploration needs.
 
 ## Summary
@@ -235,6 +264,7 @@ Recon state is saved/loaded with game state via serialization (lines 353-354 in 
 FLAVOR_RECON is a personality-driven modifier that determines how important map exploration is to an AI civilization. It directly reduces the plots-per-explorer threshold, causing higher-flavor leaders to maintain more scouts and explore more aggressively. The flavor integrates with economic strategies, diplomatic considerations (open borders, map trading), and advisor recommendations to create comprehensive exploration behavior that fits each leader's personality and current strategic situation.
 
 Key equation:
+
 ```
 Plots Per Explorer = BASE_VALUE - FLAVOR_RECON
 More explorers needed when: (Unknown Border Plots / Plots Per Explorer) > Current Explorers

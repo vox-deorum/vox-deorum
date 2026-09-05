@@ -2,7 +2,7 @@
 
 The game database holds the rules of the game itself: every unit, building, technology, policy, belief, resource, and AI strategy that Civilization V (with the Vox Populi mod) defines. When an agent asks "what does the Composite Bowman do?" or "what does this economic strategy weight?", the answer comes from here.
 
-This is distinct from the knowledge store: the knowledge store remembers what is *happening* in a game, while the game database holds the static *rules*. This page covers how that rules data is reached. The implementation is `mcp-server/src/database/`.
+This is distinct from the knowledge store: the knowledge store remembers what is _happening_ in a game, while the game database holds the static _rules_. This page covers how that rules data is reached. The implementation is `mcp-server/src/database/`.
 
 ## Two read-only databases
 

@@ -7,6 +7,7 @@
 Unlike `FLAVOR_SPACESHIP` (which focuses specifically on the space race endgame), `FLAVOR_SCIENCE` broadly drives the AI's **commitment to science infrastructure and research throughout the entire game**, from libraries in the ancient era to research labs in the atomic era.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Science-focused leaders (science victory specialists): 8-10
@@ -37,6 +38,7 @@ else if(strFlavor == "FLAVOR_SCIENCE")
 ```
 
 **Interpretation:** FLAVOR_SCIENCE directly increases the science yield multiplier used in city site evaluation, and is **doubled** because it is the only flavor associated with science output. A leader with FLAVOR_SCIENCE = 9 will weight science tiles 18 times more heavily when selecting settlement locations. This creates a strong preference for:
+
 - Mountain ranges (for observatory placement)
 - Jungle tiles (which provide science when worked with universities)
 - Natural wonders that provide science yields
@@ -63,10 +65,12 @@ case YIELD_SCIENCE:
 ```
 
 **Interpretation:** When workers evaluate which tiles to improve, FLAVOR_SCIENCE multiplies the science yield improvement value by both the flavor value and a configurable multiplier (default 2). This means:
+
 - A leader with FLAVOR_SCIENCE = 9 will value a +2 science improvement as: 2 × 9 × 2 = 36 points
 - A leader with FLAVOR_SCIENCE = 4 will value it as: 2 × 4 × 2 = 16 points
 
 **Practical Effect:** High-science leaders will prioritize:
+
 - Clearing jungle tiles and replacing with trading posts (if beneficial)
 - Building academies (great scientist improvements) on optimal tiles
 - Improving tiles near mountains for observatory bonuses
@@ -87,6 +91,7 @@ if (iFlavorScience < 0) iFlavorScience = 0;
 ```
 
 **Interpretation:** The science flavor is multiplied by 10 and combined with the active grand strategy to create a city specialization weight. This means:
+
 - FLAVOR_SCIENCE = 8 adds 80 weight toward science-focused specialization
 - Cities will prioritize buildings that provide science bonuses (libraries, universities, research labs)
 - Science-specialized cities will assign specialists to scientist slots
@@ -113,6 +118,7 @@ VictoryScores[VICTORY_PURSUIT_SCIENCE] += pFlavorMgr->GetPersonalityFlavorForDip
 ```
 
 **Interpretation:** FLAVOR_SCIENCE contributes half its value to science victory pursuit scoring. Combined with loyalty (peacekeeping tendency) and warmonger hate (dislike of aggressive behavior), this creates a profile of science-victory pursuers:
+
 - FLAVOR_SCIENCE = 10 adds 5 points toward science victory
 - High loyalty adds additional points (peaceful leaders prefer science)
 - High warmonger hate adds points (science leaders avoid military conflicts)
@@ -128,6 +134,7 @@ VictoryScores[VICTORY_PURSUIT_SCIENCE] += pFlavorMgr->GetPersonalityFlavorForDip
 FLAVOR_SCIENCE is cached and used throughout the grand strategy system to influence overall strategic direction.
 
 #### Flavor Caching
+
 ```cpp
 m_iFlavorScience = GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeForString("FLAVOR_SCIENCE"));
 ```
@@ -135,6 +142,7 @@ m_iFlavorScience = GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeFor
 **Interpretation:** Science flavor is stored as a member variable for fast access throughout grand strategy calculations, indicating its importance across multiple strategic subsystems.
 
 #### Science Victory Priority Calculation
+
 ```cpp
 int iFlavorScience = m_pPlayer->GetFlavorManager()->GetPersonalityIndividualFlavor(
     (FlavorTypes)GC.getInfoTypeForString("FLAVOR_SCIENCE"));
@@ -144,6 +152,7 @@ iPriority += ((m_pPlayer->GetCurrentEra() * m_pPlayer->GetCurrentEra()) * max(1,
 ```
 
 **Interpretation:** Science victory priority increases **quadratically** with era advancement, scaled by FLAVOR_SCIENCE:
+
 - **Ancient Era (0):** 0 × 0 × max(1, 9) × 3 = 0 bonus
 - **Classical Era (1):** 1 × 1 × 9 × 3 = 27 bonus
 - **Medieval Era (2):** 2 × 2 × 9 × 3 = 108 bonus
@@ -155,6 +164,7 @@ iPriority += ((m_pPlayer->GetCurrentEra() * m_pPlayer->GetCurrentEra()) * max(1,
 **Strategic Impact:** Science victory becomes exponentially more attractive in later eras for high-science leaders, representing the momentum of technological advancement. A leader with FLAVOR_SCIENCE = 2 gets only 1/4 the bonus of a leader with FLAVOR_SCIENCE = 8, creating clear science specialists versus generalists.
 
 #### Building Priority for Science Victory
+
 ```cpp
 for(int iFlavorLoop = 0; iFlavorLoop < GC.getNumFlavorTypes(); iFlavorLoop++)
 {
@@ -188,6 +198,7 @@ if(bScienceFocus && (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_SCIENCE"
 **Interpretation:** When the AI's grand strategy is science-focused, technologies with FLAVOR_SCIENCE or FLAVOR_SPACESHIP flavors receive bonus research priority. This creates a beeline effect where science leaders rapidly advance through the technology tree toward key science-enhancing technologies.
 
 **Technology Beeline Examples:**
+
 - Ancient: Writing (libraries) → Philosophy
 - Medieval: Education (universities)
 - Renaissance: Astronomy → Scientific Theory
@@ -214,10 +225,12 @@ int iScore = iGoldScore + iScienceScore + iCultureScore + iReligionScore;
 ```
 
 **Interpretation:** Trade route value is calculated by weighing each yield type (gold, science, culture, religion) by the corresponding flavor. Science yields from trade routes are multiplied directly by FLAVOR_SCIENCE:
+
 - A trade route generating +3 science with FLAVOR_SCIENCE = 9 scores: 3 × 9 = 27 science points
 - The same route with FLAVOR_SCIENCE = 3 scores: 3 × 3 = 9 science points
 
 **Trade Route Priority:**
+
 - High FLAVOR_SCIENCE leaders prefer research agreements and internal trade routes to science-producing cities
 - External trade routes to more advanced civilizations become highly valued (they provide more science)
 - Maritime trade routes to city-states with science bonuses are prioritized
@@ -240,10 +253,12 @@ case YIELD_SCIENCE:
 ```
 
 **Interpretation:** When evaluating religious beliefs that grant science yields, FLAVOR_SCIENCE is multiplied by 80, creating the **highest multiplier of any yield type except faith (110)**. This massive weighting creates enormous differences:
+
 - FLAVOR_SCIENCE = 9: Science-granting beliefs score 720 points
 - FLAVOR_SCIENCE = 3: Science-granting beliefs score 240 points
 
 **Affected Beliefs:**
+
 - Jesuit Education (may purchase any type of building with Faith)
 - Religious Idols (+1 culture and science from every mine)
 - Religious Community (science from following cities)
@@ -274,6 +289,7 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_SPACESHIP")
 **Interpretation:** Policies with FLAVOR_SCIENCE values are prioritized by science-focused leaders. The flavor value from the policy is accumulated into a science value score that influences policy selection.
 
 **Science-Focused Policies:**
+
 - Rationalism Tree (FLAVOR_SCIENCE: 30) - Primary science policy tree
   - Secularism (FLAVOR_SCIENCE: 24) - Science from specialists
   - Sovereignty (FLAVOR_SCIENCE: 24) - Science from Golden Ages
@@ -313,6 +329,7 @@ int iScienceFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAndGrandSt
 ```
 
 **Interpretation:** This flavor value is retrieved when calculating city-state alliance priorities. Leaders with high FLAVOR_SCIENCE will value:
+
 - Science city-states (which provide direct science yields when allied)
 - City-states near mountains or jungles (useful for observatory/university bonuses)
 - City-states that request scientific quests (technology sharing, research agreements)
@@ -323,6 +340,7 @@ int iScienceFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAndGrandSt
 ### 11. Advisor Recommendation System (CvAdvisorRecommender.cpp & CvAdvisorCounsel.cpp)
 
 **Location:**
+
 - `CvGameCoreDLL_Expansion2/CvAdvisorRecommender.cpp` (lines 489-492)
 - `CvGameCoreDLL_Expansion2/CvAdvisorCounsel.cpp` (lines 195-204)
 
@@ -331,6 +349,7 @@ int iScienceFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAndGrandSt
 FLAVOR_SCIENCE determines the priority weight for science-related advisor recommendations.
 
 #### Advisor Recommendation Priority
+
 ```cpp
 else if(strFlavorName == "FLAVOR_SCIENCE")
 {
@@ -341,6 +360,7 @@ else if(strFlavorName == "FLAVOR_SCIENCE")
 **Interpretation:** FLAVOR_SCIENCE receives a priority weight of 13 in the science advisor's recommendation system. This is moderate priority, higher than military flavors (7-10) but lower than spaceship (17), reflecting that science is important throughout the game but becomes critical only when approaching space victory.
 
 **Advisor Behavior:** The science advisor will recommend:
+
 - Building libraries, universities, and research labs
 - Researching science-enhancing technologies
 - Establishing research agreements with other civilizations
@@ -348,6 +368,7 @@ else if(strFlavorName == "FLAVOR_SCIENCE")
 - Working scientist specialist slots
 
 #### Science Advisor Counsel Detection
+
 ```cpp
 // find flavor science
 FlavorTypes eFlavorScience = NO_FLAVOR;
@@ -372,12 +393,14 @@ Buildings are evaluated by the AI based on their FLAVOR_SCIENCE values. Higher v
 #### Core Science Buildings
 
 **Early Game (Ancient-Classical Era):**
+
 - Library: 40 (fundamental science building)
 - Telpochcalli (Aztec unique library): 50 (enhanced science focus)
 - Council: 35 (unique building)
 - Marae: 35 (Polynesian unique)
 
 **Mid Game (Medieval-Renaissance Era):**
+
 - University: 50 (critical science infrastructure)
 - Seowon (Korean unique university): 70 (extreme science focus)
 - Bimaristan (Arabian unique hospital): 70 (science + healing)
@@ -386,6 +409,7 @@ Buildings are evaluated by the AI based on their FLAVOR_SCIENCE values. Higher v
 - Salon: 20 (culture-science building)
 
 **Late Game (Industrial-Atomic Era):**
+
 - Public School: 80 (highest regular science building)
 - Research Lab: 75 (late-game science powerhouse)
 - Embrapa (Brazilian unique research lab): 75 (food-science combo)
@@ -393,23 +417,27 @@ Buildings are evaluated by the AI based on their FLAVOR_SCIENCE values. Higher v
 - Hospital: 15 (minor science contribution)
 
 **Economic Buildings with Science:**
+
 - Bazaar: 10 (market with science)
 - Hanse: 25 (bank with science)
 - Bank: 10 (economic science bonus)
 - Chaebol: 20 (Korean unique stock exchange)
 
 **Military Buildings with Science:**
+
 - Walls of Babylon: 40 (defensive science building)
 - Siege Foundry: 25 (military science research)
 - Dojo: 15 (Japanese military training)
 
 **Power Plants:**
+
 - Solar Plant: 50 (clean science-focused energy)
 - Hydro Plant: 30 (renewable science energy)
 - Wind Plant: 30 (sustainable energy)
 - Tidal Plant: 10 (coastal renewable)
 
 #### National Wonders
+
 - National College: 100 (highest science priority building in the game)
 - Royal Library: 150 (imperial college, extreme priority)
 - Oxford University: 50 (free technology wonder)
@@ -419,6 +447,7 @@ Buildings are evaluated by the AI based on their FLAVOR_SCIENCE values. Higher v
 - Nobel Committee: 50 (great person science focus)
 
 #### World Wonders
+
 - Great Library: 75 (ancient science wonder)
 - Porcelain Tower: 100 (medieval science powerhouse)
 - Etemenanki: 20 (Babylonian science wonder)
@@ -433,12 +462,14 @@ Buildings are evaluated by the AI based on their FLAVOR_SCIENCE values. Higher v
 - Apollo Program: 100 (space race prerequisite)
 
 #### Religious Buildings
+
 - Monastery: 15 (Buddhist science building)
 - Mosque: 10 (Islamic science building)
 - Synagogue: 4 (Jewish learning)
 - Mandir: 2 (Hindu temple)
 
 #### Corporations
+
 - Firaxite Materials: 50 (corporate science resource)
 - Firaxite Materials HQ: 100 (headquarters)
 - Centaurus Extractors: 30 (science resource extraction)
@@ -449,27 +480,33 @@ Buildings are evaluated by the AI based on their FLAVOR_SCIENCE values. Higher v
 Technologies with FLAVOR_SCIENCE values guide research priorities for science-focused leaders.
 
 **Ancient Era:**
+
 - The Wheel: 10 (roads and infrastructure)
 - Writing: 15 (libraries, embassies, Great Library)
 - Philosophy: 10 (philosophical research)
 
 **Medieval Era:**
+
 - Education: 25 (universities, research agreements - **highest ancient-medieval tech**)
 
 **Renaissance Era:**
+
 - Steel: 5 (industrial science)
 - Banking: 5 (economic science)
 - Astronomy: 5 (navigation and stars)
 
 **Industrial Era:**
+
 - Scientific Theory: 30 (public schools, tech trade - **second highest in game**)
 - Replaceable Parts: 10 (industrialization)
 
 **Modern Era:**
+
 - Corporations: 30 (corporate research - **tied second highest**)
 - Plastic: 20 (modern materials)
 
 **Atomic Era:**
+
 - Penicillin: 5 (medical science)
 - Satellites: 20 (Apollo Program, Hubble, map reveal)
 - Nuclear Fusion: 15 (future tech foundation)
@@ -479,6 +516,7 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 ### Processes
 
 **Science Processes:**
+
 - Research (Convert production to science): 4
 - International Space Station: 50 (space race mega-project)
 
@@ -487,24 +525,29 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 ### Units
 
 **Scientist Units:**
+
 - Great Scientist: 1 (baseline for great person generation)
 
 ### Policies (Detailed Breakdown)
 
 **Opening Trees:**
+
 - Legalism (Tradition): 5
 - Liberty: 7
 - Collective Rule (Liberty): 5
 
 **Aesthetics:**
+
 - Aesthetics Opener: 12
 - Cultural Centers: 12
 
 **Exploration:**
+
 - Mercantilism: 24
 - Naval Tradition: 24
 
 **Rationalism (Primary Science Tree):**
+
 - Rationalism Opener: 30
 - Secularism: 24
 - Sovereignty: 24
@@ -514,6 +557,7 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 - Rationalism Finisher: 50
 
 **Order Ideology:**
+
 - Young Pioneers: 60
 - Academy of Sciences: 60
 - Workers' Faculties: 60
@@ -521,11 +565,13 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 - Mobilization: 60
 
 **Freedom Ideology:**
+
 - Capitalism: 30
 
 ### Game Events
 
 **Player Events (with FLAVOR_SCIENCE = 20 modifier):**
+
 - Comet Observation Choice
 - Meteor Strike Choice
 - Eclipse Scientific Study Choice
@@ -534,6 +580,7 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 - Factory Partnership (Research Division)
 
 **City Events:**
+
 - Hospital Overcrowding (Medical Research): 20
 - Stadium Event (Research Facility): 20
 - Flooding (Science Prevention): -1 (negative, avoiding science)
@@ -546,6 +593,7 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 ### City Strategies
 
 **Happiness-Related Strategies:**
+
 - Need Happiness (Science): 60 (build science buildings for happiness)
 
 **Interpretation:** When cities need happiness, FLAVOR_SCIENCE increases by 60, encouraging construction of science buildings that provide happiness (universities, public schools, research labs with policies).
@@ -555,6 +603,7 @@ Technologies with FLAVOR_SCIENCE values guide research priorities for science-fo
 Different leaders have varying FLAVOR_SCIENCE values that shape their playstyle:
 
 **High Science Leaders (8-10):**
+
 - Gandhi: 9 (primary science focus)
 - Pachacuti: 9 (science + infrastructure)
 - Sejong: ~10 (implied from Seowon building, science specialist)
@@ -562,6 +611,7 @@ Different leaders have varying FLAVOR_SCIENCE values that shape their playstyle:
 - Suleiman: 8 (science-diplomacy)
 
 **Balanced Leaders (5-7):**
+
 - Generic Default: 5-8 (moderate science investment)
 - Casimir: 8 (generalist with science lean)
 - Gustavus Adolphus: 7 (science + military balance)
@@ -571,12 +621,14 @@ Different leaders have varying FLAVOR_SCIENCE values that shape their playstyle:
 - Kamehameha: 8 (naval-science)
 
 **Lower Science Leaders (3-5):**
+
 - Bismarck: 7 (gold-production focus, reduced from 8)
 - Elizabeth: 7 (naval-domination focus, reduced from 9)
 - Isabella: 5 (domination focus, reduced from 7)
 - Ramesses: 7 (wonder focus, reduced from 9)
 
 **Interpretation:** Most leaders have FLAVOR_SCIENCE values between 5-9, reflecting that science is important for all civilizations. The differences are subtle but impactful:
+
 - 9-10: Will sacrifice military and economy for science
 - 7-8: Balanced approach with science emphasis
 - 5-6: Adequate science for competitiveness
@@ -585,18 +637,21 @@ Different leaders have varying FLAVOR_SCIENCE values that shape their playstyle:
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Directly increases preference for science victory, with exponential scaling in later eras
 - **Grand strategy:** Creates positive feedback loops with science buildings and policies
 - **City placement:** Prioritizes mountain ranges for observatories and jungle regions for university bonuses
 - **Technology path:** Beelines science-enhancing technologies (Writing → Education → Scientific Theory → Corporations)
 
 ### City Development
+
 - **Building priority:** Libraries (40) → Universities (50) → Public Schools (80) → Research Labs (75)
 - **National wonders:** National College (100) and Royal Library (150) become top priorities
 - **Specialization:** Designates cities as science-focused, assigning citizens to scientist specialists
 - **Tile improvements:** Workers prioritize academies and science-generating improvements
 
 ### Economic Strategy
+
 - **Technology research:** Aggressive beelining of science technologies with exponential era scaling
 - **Trade routes:** Heavily weights science yields when evaluating trade route value
 - **Policy selection:** Strongly favors Rationalism tree (30-50 flavor values) and Order ideology (60 flavor policies)
@@ -604,11 +659,13 @@ Different leaders have varying FLAVOR_SCIENCE values that shape their playstyle:
 - **City-states:** Invests heavily in science city-state alliances
 
 ### Great People
+
 - **Great Scientists:** Primary great person focus, planted as academies or used for technology boosts
 - **Specialist assignment:** Cities prioritize scientist specialist slots in libraries, universities, and public schools
 - **Great person generation:** Science buildings typically provide great scientist points
 
 ### Dynamic Adjustments
+
 - **Grand strategy synergy:** Science flavor works with active grand strategy for compound effects
 - **Era scaling:** Science victory priority increases quadratically with era (0 in ancient → 972 in atomic for FLAVOR_SCIENCE = 9)
 - **Event responses:** +20 flavor bonus for science-related event choices
@@ -639,6 +696,7 @@ This creates a spectrum of AI technological strategies:
 - **FLAVOR_GOLD:** Economic science strategies using wealth to purchase science buildings and research agreements
 
 **Typical Combinations:**
+
 - **High Science + High Growth:** Classic science victory strategy (Korea, Babylon) - tall empire with massive cities generating huge science
 - **High Science + High Diplomacy:** Peaceful researcher who maintains alliances and research agreements
 - **High Science + High Culture:** Cultural-scientific hybrid pursuing either victory type based on circumstances

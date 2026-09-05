@@ -2,7 +2,7 @@
 
 Strategists are the agents that actually play the game. Once per AI turn, or as often as the pacing rules allow, a strategist reads the current situation and steers its civilization. It adjusts grand strategy, research, policies, diplomatic stances, and AI flavors through the [MCP server's action tools](../mcp-server/tools.md).
 
-Strategists do not micromanage units; the game's own tactical AI keeps doing that. This is why a strategist's choices are expressed as *influence* over the in-game AI (see [influence.md](../mcp-server/influence.md)) rather than direct orders.
+Strategists do not micromanage units; the game's own tactical AI keeps doing that. This is why a strategist's choices are expressed as _influence_ over the in-game AI (see [influence.md](../mcp-server/influence.md)) rather than direct orders.
 
 This page covers the whole turn-playing machinery: the session that owns a game, the per-player loop, the parameters that persist across turns, and the strategist roster.
 
@@ -70,7 +70,7 @@ All strategists extend the `Strategist` base class (`src/strategist/strategist.t
 | Strategist | Role |
 | --- | --- |
 | `none-strategist` | Does nothing. The baseline for measuring what the unmodified in-game AI achieves. |
-| `null-strategist` | Actively resets the in-game AI to a neutral baseline each decision (clears strategies or balances flavors, resets persona to midpoints), isolating the effect of *any* LLM steering from the steering itself. |
+| `null-strategist` | Actively resets the in-game AI to a neutral baseline each decision (clears strategies or balances flavors, resets persona to midpoints), isolating the effect of _any_ LLM steering from the steering itself. |
 | `simple-strategist` | The workhorse. See below. |
 | `simple-strategist-briefed` | Inserts a [briefing](support-agents.md) stage: a briefer condenses the raw reports into a strategic summary first, keeping the strategist's context small when event history is long. |
 | `simple-strategist-staffed` | Runs three specialized briefers (military, economy, diplomacy) in parallel and assembles their reports. The most thorough analysis, at the highest token cost. Falls back to the simple briefer when there is little to summarize. |
@@ -93,9 +93,9 @@ For the player's-eye view of what these agents do in a game, see the players' gu
 
 ## Human-control mode
 
-Human-control mode lets a person occupy a strategist seat and steer one civilization through the *same* influence-level action space the LLM strategists use. A human game therefore lands in the same telemetry, replay, and `game_outcomes` databases and is analyzed by the same tools.
+Human-control mode lets a person occupy a strategist seat and steer one civilization through the _same_ influence-level action space the LLM strategists use. A human game therefore lands in the same telemetry, replay, and `game_outcomes` databases and is analyzed by the same tools.
 
-It is a research condition for measuring LLM play against a human baseline, not a way to play the game directly. The human steers *influence* over the in-game AI, never units or cities. The full design and the staged implementation plan live in `docs/plans/human-control/`.
+It is a research condition for measuring LLM play against a human baseline, not a way to play the game directly. The human steers _influence_ over the in-game AI, never units or cities. The full design and the staged implementation plan live in `docs/plans/human-control/`.
 
 ### How a session enters the mode
 

@@ -11,7 +11,7 @@ Vox Agents  ──MCP──▶  MCP Server  ──HTTP──▶  Bridge Service 
 Each hop changes protocol, and each is documented from both ends. The two sides of a link share one format and are meant to be read together:
 
 | Link | Down side | Up side |
-|---|---|---|
+| --- | --- | --- |
 | Agents ↔ MCP | the agent's tool calls | MCP tools and notifications |
 | MCP ↔ Bridge | [mcp-server/bridge.md](mcp-server/bridge.md) | [bridge-service/lua.md](bridge-service/lua.md) |
 | Bridge ↔ DLL | [bridge-service/connection.md](bridge-service/connection.md) | [civ5-dll/connection.md](civ5-dll/connection.md) |

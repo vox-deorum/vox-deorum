@@ -1,7 +1,6 @@
 # Strategist Orchestrator
 
-> This plan adds a **strategist orchestrator** to Vox Deorum. A strategist workflow becomes editable data: a sandboxed script, per-subagent manifests, and templated prompt files, executed inside a per-run working folder. A non-blocking orchestrator then reviews recent runs in repeated cycles and iteratively improves those artifacts.
-> This document is the specification: what we want to achieve and the constraints that keep it coherent. The staged build order lives in [README.md](README.md); individual stage plans are the numbered files beside it.
+> This plan adds a **strategist orchestrator** to Vox Deorum. A strategist workflow becomes editable data: a sandboxed script, per-subagent manifests, and templated prompt files, executed inside a per-run working folder. A non-blocking orchestrator then reviews recent runs in repeated cycles and iteratively improves those artifacts. This document is the specification: what we want to achieve and the constraints that keep it coherent. The staged build order lives in [README.md](README.md); individual stage plans are the numbered files beside it.
 
 ## Summary
 
@@ -64,7 +63,7 @@ A run terminates in one of three ways:
 Each seat (game, player) gets a working folder, fully inspectable by the orchestrator; each run (one decision turn) gets a subfolder inside it:
 
 - **Game state as files**: per-component snapshots (`players.json`, `cities.json`, `military.json`, `options.json`, `victory.json`, `events.json`) drawn from the same reports the strategists consume today. They are read-only inputs, embeddable in prompts via the template.
-- **Shared cross-turn artifacts**: a `shared/` area beside the turn folders carries state between turns, the scripted counterpart of today's working memory (`focus-briefer` requests, pending `find-episodes` queries). Deliberately *not* called memory: memory is a separate expansion below.
+- **Shared cross-turn artifacts**: a `shared/` area beside the turn folders carries state between turns, the scripted counterpart of today's working memory (`focus-briefer` requests, pending `find-episodes` queries). Deliberately _not_ called memory: memory is a separate expansion below.
 - **Artifacts**: intermediate outputs of the run's sub-agents, auto-written or script-written.
 - **Run record**: the SQLite telemetry pipeline is unchanged and remains the source of truth. A **single renderer** produces both the `state/*.json` snapshots and the markdown records — a master record (which sub-agents fired, the call hierarchy, tokens and cost per component, the workflow version the run pinned) plus one markdown transcript per sub-agent conversation — from **either** source: the live knowledge reports while a run is in progress (online), or the telemetry spans replayed afterward (offline, when the orchestrator reconstructs a past run). One code path, two sources, so the online and offline outputs are identical. The record is rendered on every terminal path (completion, budget exhaustion, abandonment, script failure) from whatever spans were flushed; a partial record for a broken run is expected and is exactly what the orchestrator wants to read.
 - **Retention**: working folders are retained over a configurable window that covers the orchestrator's review horizon and pruned beyond it.
@@ -133,7 +132,7 @@ The `shared/` folder is plain files, good enough for the current roster's cross-
 
 ### Definition and objectives
 
-The orchestrator is itself a **type of agent**, in the same sense a strategist is: a registered agent with its own sub-agents and scoped file and git tools, not a bespoke pipeline. It runs as a **non-blocking revision loop** in the family of the existing offline tools (oracle, telepathist): each **cycle** is a one-shot review, propose, commit pass that runs to completion and exits, matching how those tools run. The *loop* is the sequence of cycles over a **persistent conversation**: the orchestrator keeps its conversation thread and resumes it on the next cycle, with stable prompt prefixes so provider prompt caching keeps resumption cheap. Compaction of a long conversation, in the manner of agentic coding tools, happens whenever necessary.
+The orchestrator is itself a **type of agent**, in the same sense a strategist is: a registered agent with its own sub-agents and scoped file and git tools, not a bespoke pipeline. It runs as a **non-blocking revision loop** in the family of the existing offline tools (oracle, telepathist): each **cycle** is a one-shot review, propose, commit pass that runs to completion and exits, matching how those tools run. The _loop_ is the sequence of cycles over a **persistent conversation**: the orchestrator keeps its conversation thread and resumes it on the next cycle, with stable prompt prefixes so provider prompt caching keeps resumption cheap. Compaction of a long conversation, in the manner of agentic coding tools, happens whenever necessary.
 
 One orchestrator instance owns **one workflow line on one seat**. It reviews one game at a time, because a single game already spans millions of tokens of runs and records. The line, however, outlives any single game: when the workflow moves on to its next game, the next orchestrator run inherits both the version line and the accumulated notes, so artifacts and lessons carry forward together even though each game is reviewed on its own.
 
@@ -143,15 +142,15 @@ Its job is to review the seat's recent runs and rewrite the workflow's scripts, 
 - **Online mode**: the strategist session fires a cycle when a trigger condition is met during play. Initial trigger set: a cost spike against the workflow's rolling average; every N completed runs; a budget exhaustion or script failure (the graceful-degradation paths fired); a victory-trend decline.
 - **Non-blocking, always**: it never pauses a running strategist. A run pins its workflow version at start; a committed edit applies from the next run onward, mid-game included. Committing immediately per seat is deliberate: the orchestrator debugs a live game, where an edit that fits the current phase only matters if it lands while that phase is still being played, and the next runs are the signal on how it landed.
 
-The orchestrator-managed workflow folder is a **git repository** the orchestrator has scoped access to. The runtime resolves a workflow through a configurable path, either the in-repo seeds by default or this repository, whose **per-seat branch/ref** names the seat's adopted version. **Commit** is the orchestrator's adoption step, and it is gated: 
+The orchestrator-managed workflow folder is a **git repository** the orchestrator has scoped access to. The runtime resolves a workflow through a configurable path, either the in-repo seeds by default or this repository, whose **per-seat branch/ref** names the seat's adopted version. **Commit** is the orchestrator's adoption step, and it is gated:
 
 - **Static checks** over the script, manifests, and prompt references
 
-- **Dry-run** of the workflow against a recent `state/` snapshot with stubbed models and stubbed actions.It proves control flow, template rendering, and budget wiring without spending tokens or touching a game; the same harness doubles as a testbed for developing workflows by hand. 
+- **Dry-run** of the workflow against a recent `state/` snapshot with stubbed models and stubbed actions.It proves control flow, template rendering, and budget wiring without spending tokens or touching a game; the same harness doubles as a testbed for developing workflows by hand.
 
 - The **real test** is the next live run, whose record feeds back into the next cycle.
 
-A commit that passes advances the seat ref atomically, and each run reads that ref once at start to pin its version. A git commit *is* the version snapshot, its message *is* the changelog, and `git log` *is* the history. 
+A commit that passes advances the seat ref atomically, and each run reads that ref once at start to pin its version. A git commit _is_ the version snapshot, its message _is_ the changelog, and `git log` _is_ the history.
 
 If a committed version still fails in a live run, the failure lands in the run record and the orchestrator debugs and iterates next cycle; a `git revert` stays available to it as a deliberate edit. The version history is itself input to later cycles, so the orchestrator learns from its own changes, and because run records carry the version (the commit) that produced them, evidence groups by version instead of a mixed set.
 

@@ -7,6 +7,7 @@
 Unlike `FLAVOR_WONDER` which focuses on constructing prestigious buildings, `FLAVOR_CULTURE` directly drives the AI's **desire for cultural output and influence** through policies, buildings, great works, and tourism. This flavor creates the classic "cultural civilizations" that pursue social policy trees, generate great artists/writers/musicians, and seek cultural or diplomatic victories through soft power.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Culture-focused builders: 7-10
@@ -101,12 +102,14 @@ else if(GC.getFlavorTypes((FlavorTypes) iFlavorLoop) == "FLAVOR_CULTURE")
 **Interpretation:** This creates strategic feedback loops that reinforce cultural playstyles:
 
 **Policy Example - Aesthetics Tree:**
+
 - Adopting Aesthetics opener (FLAVOR_CULTURE = 25) adds +25 to culture victory priority
 - Cultural Exchange policy adds its culture flavor value
 - Fine Arts policy adds its culture flavor value
 - Result: +50-75 total culture victory priority from the tree
 
 **Building Example:**
+
 - Amphitheater (FLAVOR_CULTURE = 8) × number of cities = +40 for 5 cities
 - Opera House (FLAVOR_CULTURE = 10) × number of cities = +50 for 5 cities
 - Museum (FLAVOR_CULTURE = 12) × number of cities = +60 for 5 cities
@@ -140,6 +143,7 @@ VictoryScores[VICTORY_PURSUIT_CULTURE] += pFlavorMgr->GetPersonalityFlavorForDip
 - **FLAVOR_WONDER:** Wonder-building preference (half value)
 
 **Example Calculation:**
+
 - Leader with FLAVOR_CULTURE = 10 → +5 to culture victory score
 - FLAVOR_WONDER = 8 → +4 to culture victory score
 - DoF Willingness = 7 → +7 to culture victory score
@@ -235,6 +239,7 @@ else if (iFlavorCulture > 7)
    - Example: Cultural leaders who strongly prefer Freedom for culture bonuses or Autocracy for specific policy synergies
 
 **Strategic Impact:**
+
 - Culture-focused leaders form strong ideological blocs
 - High FLAVOR_CULTURE + same ideology = significant diplomatic bonus
 - High FLAVOR_CULTURE + different ideology = significant diplomatic penalty
@@ -292,6 +297,7 @@ if (iFlavorCulture < 7)
 **Tourism Trait Override:** Leaders with tourism-focused traits (Brazil, France, etc.) are protective of archaeological sites even with moderate culture flavor (>4), reflecting their strategic need for great works and artifacts.
 
 **Promise Breaking Consequences:**
+
 - Breaking archaeological promises with high-FLAVOR_CULTURE leaders: -10 to -20 diplomatic penalty (doubled compared to low-culture leaders)
 - Cultural leaders remember broken promises longer
 - Creates diplomatic costs for aggressive archaeological expansion
@@ -319,16 +325,19 @@ if(bCultureFocus && (
 **Interpretation:** When the AI's grand strategy is culture-focused, technologies with FLAVOR_CULTURE values receive increased research priority. This ensures culture-builders research the technologies needed for cultural infrastructure:
 
 **Early Game (Ancient-Classical):**
+
 - Drama and Poetry (Amphitheaters, Writers' Guilds)
 - Philosophy (National College, allows educated Great People generation)
 - Calendar (Plantation improvements for luxury resources → happiness → culture)
 
 **Mid Game (Medieval-Renaissance):**
+
 - Acoustics (Opera Houses, Musicians' Guilds)
 - Printing Press (significant culture boost, Leaning Tower of Pisa)
 - Archaeology (Museums, archaeological digs for artifacts)
 
 **Late Game (Industrial-Information):**
+
 - Radio (Broadcast Towers, massive culture generation)
 - Computers (Internet wonder, CN Tower)
 - Globalization (cultural output bonuses)
@@ -344,11 +353,13 @@ This creates a **coherent research path** where culture-focused leaders don't ge
 FLAVOR_CULTURE influences which buildings, units, and technologies the Economic and Foreign advisors recommend.
 
 **Interpretation:** The Economic Advisor uses FLAVOR_CULTURE when evaluating:
+
 - **Cultural buildings:** Amphitheaters, Opera Houses, Museums, Broadcast Towers
 - **Wonder recommendations:** Cultural wonders like Sistine Chapel, Louvre, Broadway
 - **Infrastructure:** Buildings that provide culture as secondary benefits
 
 The Foreign Advisor uses FLAVOR_CULTURE when evaluating:
+
 - **Diplomatic buildings:** Hotels, Airports (tourism-related)
 - **City-state interactions:** Cultural city-state alliances
 - **Wonder recommendations:** Diplomatic wonders with cultural components
@@ -358,24 +369,28 @@ This ensures that when the player asks for advisor recommendations, culture-focu
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Significantly increases preference for culture victory over domination or conquest paths
 - **Grand strategy:** Creates strong feedback loops with culture-focused grand strategies
 - **Technology path:** Prioritizes research of culture-enabling technologies when pursuing culture strategies
 - **Ideology importance:** High culture flavor makes leaders deeply care about ideological alignment (>7) or indifferent (<5)
 
 ### Production and Development
+
 - **City specialization:** Drives cities to focus on culture generation (up to 100 weight for FLAVOR_CULTURE = 10)
 - **Building priority:** Determines how aggressively the AI builds cultural infrastructure (Amphitheaters, Museums, etc.)
 - **Great work management:** Influences desire to generate Great Artists, Writers, and Musicians for great works
 - **Wonder selection:** Works synergistically with FLAVOR_WONDER for culture-generating wonders
 
 ### Diplomatic Strategy
+
 - **City-state focus:** Highly values cultural city-states and their alliance bonuses
 - **Ideology alignment:** Creates strong preferences for ideological allies and opposition to ideological rivals
 - **Archaeological protection:** Makes leaders protective of archaeological sites (FLAVOR_CULTURE > 6) for tourism
 - **Cultural competition:** Increases sensitivity to other civilizations' cultural progress and tourism
 
 ### Adaptive Behavior
+
 - **Policy commitment:** Building cultural infrastructure reinforces culture-focused strategies through feedback loops
 - **Era scaling:** Culture priority increases with game era as cultural mechanics become more important
 - **Tourism trait synergy:** Leaders with tourism traits are more protective of cultural assets even at moderate flavor values
@@ -390,6 +405,7 @@ FLAVOR_CULTURE represents the AI's fundamental approach to soft power and cultur
 4. **Heritage Protection:** The value placed on archaeological sites, great works, and cultural landmarks
 
 This creates a spectrum of AI personalities:
+
 - **High CULTURE (8-10):** Classic culture-builders like France, Brazil, Polynesia - pursue culture victory, protect heritage, ideological zealots
 - **Moderate CULTURE (5-7):** Balanced leaders who value culture but don't obsess over it - build cultural infrastructure opportunistically
 - **Low CULTURE (2-4):** Pragmatic leaders who view culture as a means to an end - focus on happiness and policy unlocks rather than victory
@@ -422,7 +438,9 @@ FLAVOR_CULTURE typically correlates strongly with FLAVOR_WONDER, FLAVOR_GREAT_PE
 ## Interaction with Game Systems
 
 ### Culture Generation Mechanics
+
 The effectiveness of FLAVOR_CULTURE is amplified by:
+
 - **Civilization traits:** France (+2 culture from chateaux), Brazil (tourism from golden ages), Polynesia (+1 culture from moai)
 - **Policy bonuses:** Aesthetics tree, Tradition tree, Freedom ideology
 - **Religious beliefs:** Beliefs providing culture bonuses (Religious Art, Sacred Sites)
@@ -430,7 +448,9 @@ The effectiveness of FLAVOR_CULTURE is amplified by:
 - **Theming bonuses:** Museums and wonders with themed great works provide bonus culture and tourism
 
 ### Tourism and Cultural Influence
+
 FLAVOR_CULTURE directly influences tourism strategy:
+
 - **Great work creation:** Generating Great Artists, Writers, and Musicians for great works
 - **Archaeological focus:** Excavating artifacts for archaeological museums
 - **Wonder selection:** Building tourism-generating wonders (Eiffel Tower, Cristo Redentor, Broadway)
@@ -438,14 +458,18 @@ FLAVOR_CULTURE directly influences tourism strategy:
 - **Trade routes:** International trade routes increase tourism influence
 
 ### Ideology Mechanics
+
 High FLAVOR_CULTURE creates strong ideology dynamics:
+
 - **Ideological pressure:** Culture-focused leaders are more resistant to ideological pressure
 - **Public opinion:** Care deeply about ideology-related happiness penalties
 - **Diplomatic alignment:** Form strong ideological blocs with like-minded civilizations
 - **World Congress:** Support ideology-related proposals that benefit their chosen path
 
 ### Policy Tree Selection
+
 FLAVOR_CULTURE influences policy tree preferences:
+
 - **Tradition (FLAVOR_CULTURE = 8):** Strong preference for culture-focused leaders
 - **Aesthetics (FLAVOR_CULTURE = 25):** Extremely attractive to high-culture leaders
 - **Patronage (FLAVOR_CULTURE = 5):** Moderate attraction for cultural city-state bonuses
@@ -456,22 +480,27 @@ FLAVOR_CULTURE influences policy tree preferences:
 The culture flavor interacts with several key game constants:
 
 **Era-based scaling multiplier:**
+
 ```cpp
 iPriority += ((iEra * iFlavorCulture * 150) / 100);
 ```
+
 - The 150 multiplier determines how strongly culture flavor influences victory pursuit
 - Increasing to 175 or 200 would make culture-focused leaders more committed to culture victory
 - Decreasing to 125 or 100 would make them more flexible in victory approach
 
 **City specialization weight:**
+
 ```cpp
 int iFlavorCulture = 10 * m_pPlayer->GetGrandStrategyAI()->GetPersonalityAndGrandStrategy(...);
 ```
+
 - The 10× multiplier determines city specialization toward culture generation
 - Increasing this multiplier makes culture-focused cities more specialized
 - Decreasing makes specialization more subtle and gradual
 
 **Ideology thresholds:**
+
 - Low culture threshold: `< 5` (pragmatic about ideology)
 - High culture threshold: `> 7` (ideological zealot)
 - Adjusting these thresholds changes how many leaders care about ideology
@@ -479,7 +508,9 @@ int iFlavorCulture = 10 * m_pPlayer->GetGrandStrategyAI()->GetPersonalityAndGran
 ## Strategic Implications
 
 ### Early Game
+
 High FLAVOR_CULTURE leaders:
+
 - Build Monuments in all cities quickly
 - Research Philosophy and Drama and Poetry early
 - Adopt Tradition policy tree for culture bonuses
@@ -487,7 +518,9 @@ High FLAVOR_CULTURE leaders:
 - Build cultural wonders (Stonehenge, Temple of Artemis)
 
 ### Mid Game
+
 High FLAVOR_CULTURE leaders:
+
 - Construct Amphitheaters and Opera Houses in all cities
 - Generate Great Writers and Artists for great works
 - Build cultural wonders (Sistine Chapel, Uffizi, Globe Theatre)
@@ -495,7 +528,9 @@ High FLAVOR_CULTURE leaders:
 - Research Archaeology for museums
 
 ### Late Game
+
 High FLAVOR_CULTURE leaders:
+
 - Choose ideology based on culture/tourism bonuses (often Freedom)
 - Build Hotels and Airports for tourism multipliers
 - Construct late cultural wonders (Eiffel Tower, Cristo Redentor, Sydney Opera House, Broadway)
@@ -504,7 +539,9 @@ High FLAVOR_CULTURE leaders:
 - Push for culture victory through tourism dominance
 
 ### Victory Conditions
+
 FLAVOR_CULTURE is the primary driver for:
+
 - **Culture Victory:** Direct pursuit through tourism and cultural influence
 - **Diplomatic Victory:** Supporting factor (culture leaders tend to be diplomatic and befriend city-states)
 - **Science Victory:** Competing priority (high culture often means lower science focus)

@@ -28,6 +28,7 @@ Ideologies represent the major political and economic systems that civilizations
 - **Policy Benefits:** Access to powerful late-game policies with significant empire-wide effects
 
 This event is particularly important for AI systems to track because:
+
 - It signals a major shift in a civilization's strategic direction
 - It affects international relations and alliance possibilities
 - It enables prediction of future policy choices and victory pursuits
@@ -38,28 +39,34 @@ The event specifically fires only for the initial adoption, not for ideological 
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvPolicyClasses.cpp` (line 5547)
 
 **Triggering Functions:**
+
 - `CvPlayerPolicies::SetPolicyBranchUnlocked(PolicyBranchTypes eBranchType, bool bNewValue, bool bRevolution)` - Main function for unlocking policy branches including ideologies
 
 **Event Conditions:**
+
 - Only fires when `bRevolution` parameter is false, ensuring it doesn't trigger during ideology switches
 - Requires `bNewValue` to be true, indicating the branch is being newly unlocked
 - Associated with the policy branch unlocking system
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_IdeologyAdopted, m_pPlayer->GetID(), eBranchType);
 ```
 
 **Related Systems:**
+
 - `CvPlayerCulture::GetTurnIdeologyAdopted()` - Tracks when the player first adopted any ideology
 - Policy branch system for managing ideology policies
 - Cultural pressure and happiness systems affected by ideological differences
 - Diplomatic relationship modifiers based on ideological alignment
 
 **Ideology Types:**
+
 - Freedom (POLICY_BRANCH_FREEDOM) - Democratic ideology focusing on growth and specialists
 - Order (POLICY_BRANCH_ORDER) - Communist ideology emphasizing production and military
 - Autocracy (POLICY_BRANCH_AUTOCRACY) - Fascist ideology promoting conquest and domination

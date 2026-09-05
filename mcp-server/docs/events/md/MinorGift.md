@@ -5,8 +5,9 @@ The MinorGift event is triggered when a city-state gives a first contact gift to
 # Event Triggers
 
 This event is fired from `CvMinorCivAI::DoFirstContactWithMajor()` when:
+
 - A major civilization makes first contact with a city-state
-- The game options `MOD_GLOBAL_CS_GIFTS` and `MOD_EVENTS_MINORS_GIFTS` are both enabled  
+- The game options `MOD_GLOBAL_CS_GIFTS` and `MOD_EVENTS_MINORS_GIFTS` are both enabled
 - The city-state provides any form of gift during first contact
 - The gift calculation and distribution logic completes successfully
 
@@ -30,16 +31,19 @@ The event provides eight parameters with mixed types (`"iiiiibbs"` signature):
 The gift system varies by city-state type and personality:
 
 **Gift Types by City-State Trait:**
+
 - **Cultured**: Provides culture points and general gifts (iGift = gold + culture + faith)
 - **Maritime**: Provides food to cities and general gifts (iGift = general gifts + food)
 - **Militaristic**: Provides unit experience and gift value represents unit type
 
 **Personality Modifiers:**
+
 - **Friendly**: 1.5x multiplier on most gifts, 2x unit gifts
-- **Hostile**: 0.5x multiplier on most gifts, 0x unit gifts  
+- **Hostile**: 0.5x multiplier on most gifts, 0x unit gifts
 - **Neutral/Irrational**: Standard gift amounts
 
 **Special Mechanics:**
+
 - First major civilization to meet the city-state receives enhanced bonuses
 - Food gifts target the closest city to the city-state (or capital if pre-Medieval era)
 - Unit experience bonuses scale with player's current era
@@ -50,9 +54,10 @@ The gift system varies by city-state type and personality:
 **Source Location**: `CvMinorCivAI.cpp` line 5227  
 **Event Definition**: `GAMEEVENT_MinorGift` with signature `"iiiiibbs"`  
 **Triggering Function**: `DoFirstContactWithMajor()`  
-**Prerequisites**: Both `MOD_GLOBAL_CS_GIFTS` and `MOD_EVENTS_MINORS_GIFTS` must be enabled  
+**Prerequisites**: Both `MOD_GLOBAL_CS_GIFTS` and `MOD_EVENTS_MINORS_GIFTS` must be enabled
 
 **Gift Calculation Logic:**
+
 - Base gifts determined by city-state trait and game constants
 - Modified by city-state personality (friendly/hostile/neutral)
 - Enhanced for first major civilization contact

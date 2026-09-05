@@ -31,6 +31,7 @@ The `ContractEnded` event provides information about:
 - **Cleanup Timing**: Event fires before contract data is reset, allowing systems to capture final contract state
 
 This event is particularly useful for:
+
 - Diplomatic relationship tracking and updates
 - Economic impact analysis when contracts conclude
 - Strategic AI planning based on contract lifecycles
@@ -48,7 +49,8 @@ The event serves as a clean notification mechanism that contract obligations hav
 
 **Invocation Context**: The event occurs within the contract termination process, specifically after the contract has been ended for the player and removed from the active contracts list, but before the contract data structure is reset and returned to the inactive contracts pool.
 
-**Parameter Types**: 
+**Parameter Types**:
+
 - `eHolder`: Represents the player who owned the contract (PlayerTypes enum)
 - `eContract`: Represents the specific contract type (ContractTypes enum)
 

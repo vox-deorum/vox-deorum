@@ -8,4 +8,4 @@
 
 Build the reference signals: per-component cost surfacing (from Stage 1); the **decision-coverage** negative signal (`get-options` inventory against sanctioned actions actually taken); and a **generic victory-trend interface with a score-ratio provider** (smoothed, phase-gated). Each signal is individually enable-able. Verified against a recent game's records.
 
-The civ-bench connector is deferred behind the victory-trend interface; the LLM decision-quality judge is deferred as a future orchestrator sub-agent. Both leave a clean seam (see *What v1 defers* in [README.md](README.md)).
+The civ-bench connector is deferred behind the victory-trend interface; the LLM decision-quality judge is deferred as a future orchestrator sub-agent. Both leave a clean seam (see _What v1 defers_ in [README.md](README.md)).

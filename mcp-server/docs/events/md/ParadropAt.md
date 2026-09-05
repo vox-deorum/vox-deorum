@@ -19,7 +19,7 @@ The event passes the following parameters:
 1. **Player ID** (`int`): The ID of the player who owns the unit performing the paradrop
 2. **Unit ID** (`int`): The unique identifier of the unit that performed the paradrop
 3. **From X** (`int`): The X coordinate of the tile where the unit started the paradrop
-4. **From Y** (`int`): The Y coordinate of the tile where the unit started the paradrop  
+4. **From Y** (`int`): The Y coordinate of the tile where the unit started the paradrop
 5. **To X** (`int`): The X coordinate of the destination tile where the unit landed
 6. **To Y** (`int`): The Y coordinate of the destination tile where the unit landed
 
@@ -44,7 +44,7 @@ The event is triggered using the `LuaSupport::CallHook` mechanism when the `MOD_
 
 ```cpp
 args->Push(((int)getOwner()));      // Player ID
-args->Push(GetID());                // Unit ID  
+args->Push(GetID());                // Unit ID
 args->Push(fromPlot->getX());       // Origin X coordinate
 args->Push(fromPlot->getY());       // Origin Y coordinate
 args->Push(pPlot->getX());          // Destination X coordinate

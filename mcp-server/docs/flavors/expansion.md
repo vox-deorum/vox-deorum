@@ -4,9 +4,8 @@
 
 FLAVOR_EXPANSION is an AI personality flavor in Civilization V that controls how aggressively a civilization pursues territorial expansion through settling new cities. This flavor influences settler production priorities, acceptable city site quality thresholds, cross-continent colonization decisions, and diplomatic attitudes toward land disputes.
 
-**Typical Range:** 0-10 (with 20 being the absolute maximum cap)
-**Default Personality Value:** 7-8 for most leaders
-**Notable Leaders:**
+**Typical Range:** 0-10 (with 20 being the absolute maximum cap) **Default Personality Value:** 7-8 for most leaders **Notable Leaders:**
+
 - Pocatello (Shoshone): 10 - Peak expansionism
 - Elizabeth (England): 9 - Naval expansion focus
 - Washington (America): 9 - Manifest destiny
@@ -18,6 +17,7 @@ FLAVOR_EXPANSION is an AI personality flavor in Civilization V that controls how
 The expansion flavor is automatically adjusted at game initialization based on the tiles-per-player ratio. On maps with more space per player, the flavor increases to encourage wider empires, while on crowded maps it decreases in favor of growth within existing cities.
 
 **Code Reference:** `CvFlavorManager.cpp:373-385`
+
 ```
 Adjustment = (log10(TilesPerPlayer) - 2.1) * 8
 Standard reference: 2.1 log10 tiles per player
@@ -36,6 +36,7 @@ This dynamic scaling ensures AI behavior adapts appropriately to map conditions,
 FLAVOR_EXPANSION is the primary driver for settler unit production decisions. The system uses `GetPersonalityAndGrandStrategy()` which combines the leader's base personality flavor with active grand strategy modifiers.
 
 **Priority Calculation:**
+
 - Base priority starts with expansion flavor (0-10+)
 - Boosted by settle plot quality (adds plot score if positive)
 - +100 bonus during EARLY_EXPANSION strategy phase
@@ -44,6 +45,7 @@ FLAVOR_EXPANSION is the primary driver for settler unit production decisions. Th
 - Reduced if empire is unhappy
 
 **Strategy Modifiers:**
+
 - AICITYSTRATEGY_SMALL_CITY: +30
 - AICITYSTRATEGY_MEDIUM_CITY: +20
 - AICITYSTRATEGY_LARGE_CITY: +10
@@ -59,6 +61,7 @@ FLAVOR_EXPANSION is the primary driver for settler unit production decisions. Th
 FLAVOR_EXPANSION determines how picky the AI is about founding locations. Higher expansion flavor means the AI will settle in worse locations to claim territory quickly.
 
 **Formula:**
+
 ```
 MinAcceptableQuality = -3 * Expansion Flavor (clamped 0-12)
 Result range: -36 to 0
@@ -66,6 +69,7 @@ Plot quality scores range from -50 to +50
 ```
 
 **Examples:**
+
 - Expansion 2: Requires quality > -6 (very picky, only excellent sites)
 - Expansion 5: Requires quality > -15 (moderate sites acceptable)
 - Expansion 10: Requires quality > -30 (accepts poor sites)
@@ -80,12 +84,14 @@ This directly impacts the `HaveGoodSettlePlot()` check used throughout expansion
 Controls when the AI commits to expensive cross-continent colonization efforts.
 
 **Threshold Check:**
+
 ```
 if (NumCitiesFounded >= ExpansionFlavor * 2)
     return false; // Don't pursue overseas expansion
 ```
 
 **Examples:**
+
 - Expansion 5: Pursues overseas expansion up to 10 cities
 - Expansion 7: Pursues overseas expansion up to 14 cities
 - Expansion 10: Pursues overseas expansion up to 20 cities
@@ -101,6 +107,7 @@ Once this threshold is reached, the EXPAND_TO_OTHER_CONTINENTS strategy becomes 
 FLAVOR_EXPANSION directly increases the food yield multiplier used when evaluating potential city locations.
 
 **Mechanism:**
+
 ```
 FoodMultiplier += ExpansionFlavor + SpecializationFlavor
 ```
@@ -114,6 +121,7 @@ Combined with FLAVOR_GROWTH, this flavor makes the AI prioritize food-rich locat
 This critical strategy determines when the AI stops producing settlers entirely. Once active, expansion flavor is penalized by -100 at the city level.
 
 **Strategy Activates When:**
+
 - Player is barbarian, minor civ, or Venice (NoAnnexing trait)
 - One City Challenge game option is enabled
 - Empire is very unhappy
@@ -121,6 +129,7 @@ This critical strategy determines when the AI stops producing settlers entirely.
 - No good settle plots remain (checks against MinAcceptableSettleQuality)
 
 **Strategy Suppressed By:**
+
 - Having only 1 city
 - EXPAND_TO_OTHER_CONTINENTS strategy is active
 - EARLY_EXPANSION strategy is active
@@ -134,6 +143,7 @@ The `HaveGoodSettlePlot()` check is performed last as it can be computationally 
 Expansion flavor contributes to domination victory assessment, representing territorial control as a path to military victory.
 
 **Calculation:**
+
 ```
 DominationScore += ExpansionFlavor / 2
 Also includes: Boldness + Meanness + FLAVOR_OFFENSE/2
@@ -148,6 +158,7 @@ Leaders with high expansion flavors are more likely to pursue conquest-based vic
 FLAVOR_EXPANSION directly affects diplomatic reactions to other civilizations settling near the AI's territory.
 
 **Boldness Threshold (Line 12852):**
+
 ```
 Bold behavior if: GetPersonalityAndGrandStrategy(FLAVOR_EXPANSION) > 7
 Bold leaders: More aggressive about land disputes
@@ -160,11 +171,13 @@ Bold leaders are more likely to issue warnings and generate diplomatic penalties
 When evaluating another player's request not to settle near them, expansion flavor determines how likely the AI is to agree.
 
 **Formula:**
+
 ```
 Threshold = (8 - ExpansionFlavor) * 5
 ```
 
 **Examples:**
+
 - Expansion 2: (8-2)*5 = +30% likelihood to agree (not very expansionist)
 - Expansion 5: (8-5)*5 = +15% likelihood to agree (moderate)
 - Expansion 7: (8-7)*5 = +5% likelihood to agree (typical)
@@ -173,6 +186,7 @@ Threshold = (8 - ExpansionFlavor) * 5
 Higher expansion flavors make the AI less willing to restrict their settling options.
 
 **Additional Modifiers:**
+
 - Friendly approach: +30% more likely to agree
 - Military strength differential affects willingness
 - If ECONOMICAISTRATEGY_ENOUGH_EXPANSION is active: Always agrees
@@ -184,6 +198,7 @@ Higher expansion flavors make the AI less willing to restrict their settling opt
 FLAVOR_EXPANSION contributes to general policy weight calculations, favoring policies that support territorial growth.
 
 **Affected Policies (from PolicyFlavorSweeps.sql):**
+
 - POLICY_LIBERTY_FINISHER: +50
 - POLICY_PARTY_LEADERSHIP: +60
 - POLICY_INDUSTRIAL_ESPIONAGE: +60
@@ -201,12 +216,14 @@ Policies with strong expansion flavors receive higher weights for leaders with h
 Technologies with expansion flavor receive boosted research priority for leaders with the Expansionist trait.
 
 **Expansionist Trait Bonus:**
+
 ```
 if (IsExpansionist() && TechHasFlavor(FLAVOR_EXPANSION))
     TechPriority += 1
 ```
 
 **Technologies with Expansion Flavor (from TechFlavorSweeps.sql):**
+
 - TECH_POTTERY: +25 (granary enables growth)
 - TECH_SAILING: +5 (coastal expansion)
 - TECH_BANKING: +15 (economic support for expansion)
@@ -222,6 +239,7 @@ Expansionist leaders prioritize technologies that enable and support territorial
 The advisor system uses a baseline expansion flavor of 11 for recommendation calculations, treating expansion as a high-priority general gameplay element.
 
 **Hard-coded Priority Values:**
+
 - FLAVOR_GROWTH: 15 (highest)
 - FLAVOR_TILE_IMPROVEMENT: 13
 - FLAVOR_EXPANSION: 11
@@ -234,6 +252,7 @@ This ensures expansion-related recommendations (settlers, land acquisition) appe
 ### Units with FLAVOR_EXPANSION (from UnitFlavorSweeps.sql)
 
 Settlers and colonization units are strongly associated with expansion flavor:
+
 - UNIT_SETTLER: 25
 - UNIT_PIONEER: 25 (Shoshone unique)
 - UNIT_COLONIST: 25 (generic)
@@ -244,6 +263,7 @@ Settlers and colonization units are strongly associated with expansion flavor:
 ### Buildings with FLAVOR_EXPANSION (from BuildingFlavorSweeps.sql)
 
 Buildings that support population growth and city founding:
+
 - BUILDING_GRANARY: 5
 - BUILDING_QULLQA: 20 (Inca unique granary)
 - BUILDING_GER: 10 (Mongol unique stable)
@@ -259,10 +279,12 @@ FLAVOR_EXPANSION is heavily penalized during military emergencies, forcing the A
 ### Strategy Penalties (from CoreStrategyChanges.sql)
 
 **Eradication of Barbarians:**
+
 - MILITARYAISTRATEGY_ERADICATE_BARBARIANS: -5
 - MILITARYAISTRATEGY_ERADICATE_BARBARIANS_CRITICAL: -5
 
 **War States:**
+
 - MILITARYAISTRATEGY_AT_WAR: -10
 - MILITARYAISTRATEGY_WAR_MOBILIZATION: -15
 - MILITARYAISTRATEGY_LOSING_WARS: -100 (complete halt)

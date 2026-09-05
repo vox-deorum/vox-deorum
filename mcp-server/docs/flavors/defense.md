@@ -7,6 +7,7 @@
 The primary effect is through `CvMilitaryAI`, where Defense scales the weight of defensive unit production relative to offensive units, and through dynamic strategy modifiers that amplify Defense massively during wartime crises.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Defensive turtle leaders: 8-10
@@ -38,6 +39,7 @@ iTotalOffenseWeight = iTotalOffenseWeight * iOffenseModifier;
 ```
 
 **Interpretation:**
+
 - Defense modifier = `100 + (FLAVOR_DEFENSE * 2)` — each point adds 2% to defense weight
 - Offense modifier = `100 + Boldness + FLAVOR_OFFENSE`
 - A leader with FLAVOR_DEFENSE = 8 gets a 116% multiplier on defensive unit weights
@@ -159,37 +161,37 @@ FLAVOR_DEFENSE has the largest crisis amplification of any flavor. These SQL-def
 
 ### Player-Level Military Strategies
 
-| Strategy | FLAVOR_DEFENSE |
-|---|---|
-| `MILITARYAISTRATEGY_AT_WAR` | +40 |
-| `MILITARYAISTRATEGY_WINNING_WARS` | +30 |
-| `MILITARYAISTRATEGY_LOSING_WARS` | **+100** |
-| `MILITARYAISTRATEGY_WAR_MOBILIZATION` | +60 |
-| `MILITARYAISTRATEGY_EMPIRE_DEFENSE` | +75 |
-| `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL` | **+150** |
-| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_CRITICAL` | +80 |
-| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_ELEVATED` | +50 |
-| `MILITARYAISTRATEGY_MINOR_CIV_GENERAL_DEFENSE` | +30 |
+| Strategy                                       | FLAVOR_DEFENSE |
+| ---------------------------------------------- | -------------- |
+| `MILITARYAISTRATEGY_AT_WAR`                    | +40            |
+| `MILITARYAISTRATEGY_WINNING_WARS`              | +30            |
+| `MILITARYAISTRATEGY_LOSING_WARS`               | **+100**       |
+| `MILITARYAISTRATEGY_WAR_MOBILIZATION`          | +60            |
+| `MILITARYAISTRATEGY_EMPIRE_DEFENSE`            | +75            |
+| `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL`   | **+150**       |
+| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_CRITICAL` | +80            |
+| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_ELEVATED` | +50            |
+| `MILITARYAISTRATEGY_MINOR_CIV_GENERAL_DEFENSE` | +30            |
 
 ### City-Level Military Strategies
 
-| Strategy | FLAVOR_DEFENSE |
-|---|---|
-| `MILITARYAISTRATEGY_AT_WAR` | +40 |
-| `MILITARYAISTRATEGY_WINNING_WARS` | +30 |
-| `MILITARYAISTRATEGY_LOSING_WARS` | **+100** |
-| `MILITARYAISTRATEGY_EMPIRE_DEFENSE` | +80 |
-| `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL` | **+150** |
+| Strategy                                     | FLAVOR_DEFENSE |
+| -------------------------------------------- | -------------- |
+| `MILITARYAISTRATEGY_AT_WAR`                  | +40            |
+| `MILITARYAISTRATEGY_WINNING_WARS`            | +30            |
+| `MILITARYAISTRATEGY_LOSING_WARS`             | **+100**       |
+| `MILITARYAISTRATEGY_EMPIRE_DEFENSE`          | +80            |
+| `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL` | **+150**       |
 
 ### Economic / City Strategies
 
-| Strategy | FLAVOR_DEFENSE |
-|---|---|
-| `ECONOMICAISTRATEGY_TOO_MANY_UNITS` | -100 |
-| `ECONOMICAISTRATEGY_LOSING_MONEY` | -50 |
-| `AICITYSTRATEGY_POCKET_CITY` | +100 |
-| `AICITYSTRATEGY_NEW_CONTINENT_FEEDER` | +50 |
-| `AICITYSTRATEGY_ENOUGH_SETTLERS` | +30 |
+| Strategy                              | FLAVOR_DEFENSE |
+| ------------------------------------- | -------------- |
+| `ECONOMICAISTRATEGY_TOO_MANY_UNITS`   | -100           |
+| `ECONOMICAISTRATEGY_LOSING_MONEY`     | -50            |
+| `AICITYSTRATEGY_POCKET_CITY`          | +100           |
+| `AICITYSTRATEGY_NEW_CONTINENT_FEEDER` | +50            |
+| `AICITYSTRATEGY_ENOUGH_SETTLERS`      | +30            |
 
 **Practical impact:** During a critical defense situation (`EMPIRE_DEFENSE_CRITICAL`), the flavor surges by +150 at both player and city level. Combined with `LOSING_WARS` (+100), a leader under extreme pressure can see Defense flavor spike by +250 — dwarfing the base personality value. This massive amplification means that even leaders with low base Defense will turtle heavily when losing.
 
@@ -199,9 +201,9 @@ The LLM sets flavors via `set-flavors`, but these in-game strategy overlays stil
 
 When `set-flavors` is called, custom flavor thresholds auto-toggle military strategies:
 
-| Threshold | Strategy |
-|---|---|
-| Defense > 60 | `MILITARYAISTRATEGY_EMPIRE_DEFENSE` |
+| Threshold    | Strategy                                     |
+| ------------ | -------------------------------------------- |
+| Defense > 60 | `MILITARYAISTRATEGY_EMPIRE_DEFENSE`          |
 | Defense > 80 | `MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL` |
 
 These fire their own flavor deltas (the tables above), but ignored through VD's flavor override.
@@ -209,19 +211,23 @@ These fire their own flavor deltas (the tables above), but ignored through VD's 
 ## Summary of Effects
 
 ### Army Composition (Primary)
+
 - Scales defensive unit production weight by `100 + (flavor * 2)`%
 - Higher Defense means more garrison units, ranged defenders, anti-cavalry units
 - Combined with Offense modifier to determine army's defensive/offensive balance
 
 ### Unit Training
+
 - Biases promotion selection toward defensive promotions (fortification, terrain defense, damage reduction)
 - Clamped 1-20 as a multiplier in promotion value calculation
 
 ### Religion
+
 - Uniquely **reduces** happiness priority in belief evaluation
 - Defensive leaders value happiness-granting beliefs less, faith-granting and military beliefs more
 
 ### Strategy Amplification
+
 - Largest crisis modifier of any flavor (+150 for EMPIRE_DEFENSE_CRITICAL)
 - Wartime strategies automatically spike Defense, causing defensive production cascade
 - Even low-Defense leaders turtle when losing wars

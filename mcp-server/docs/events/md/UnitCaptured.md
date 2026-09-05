@@ -43,7 +43,8 @@ The boolean parameter distinguishes between units that were successfully capture
 
 # Technical Details
 
-**Source Files**: 
+**Source Files**:
+
 - `CvGameCoreDLL_Expansion2/CvUnit.cpp` (lines 2789, 20078)
 - `CvGameCoreDLL_Expansion2/CvBeliefClasses.cpp` (line 4683)
 - `CvGameCoreDLL_Expansion2/CvTraitClasses.cpp` (lines 7906, 7920, 7972)
@@ -53,7 +54,7 @@ The boolean parameter distinguishes between units that were successfully capture
 The event is triggered using the `GAMEEVENTINVOKE_HOOK` mechanism with the following parameter format:
 
 ```cpp
-GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitCaptured, 
+GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitCaptured,
     capturingPlayerID,    // Player who captured the unit
     capturingUnitID,      // Unit that did the capturing (or unit type)
     originalOwnerID,      // Original owner of captured unit

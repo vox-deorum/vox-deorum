@@ -9,7 +9,7 @@ For tool schemas and arguments, see [tools.md](tools.md). For the knowledge pers
 ## Impact matrix
 
 | Tool | AI subsystems steered | Propagation | Cross-civ cascade |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `set-flavors` / `unset-flavors` | `CvFlavorManager` broadcasts to all `CvFlavorRecipient`s — cities, tech, policy, wonder, grand strategy, economic, military AI | Immediate `FlavorUpdate` callback; queues rebuild next turn; auto-expire ~10 turns | `FLAVOR_USE_NUKE` only |
 | `set-strategy` | Flavor deltas via `SetUsingStrategy` + hard-coded: `CvCitySpecializationAI` (yield targets), `CvDiplomacyAI` (victory pursuit), `CvMilitaryAI` (production weights) | Immediate; city spec rebuilds next DoTurn; override-protected ~10 turns | None |
 | `keep-status-quo` | Re-applies current strategy or flavor values | Refreshes override timer only | Same as whichever mode |

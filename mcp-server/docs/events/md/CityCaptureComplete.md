@@ -7,16 +7,19 @@ The `CityCaptureComplete` event is triggered when a city has been successfully t
 This event is triggered at the completion of the `acquireCity()` function after all ownership transfer mechanics have been processed. The function handles various types of city acquisition:
 
 **Military conquest:**
+
 - **Unit capture**: Military units capturing enemy cities through combat
 - **City bombardment**: Cities destroyed and captured through siege warfare
 - **Naval conquest**: Coastal cities captured by naval forces
 
 **Diplomatic transfers:**
+
 - **Peace deal trades**: Cities traded as part of peace negotiations
 - **Diplomatic exchanges**: Cities given as part of broader diplomatic agreements
 - **City-state acquisitions**: Major civilizations acquiring city-state territories
 
 **Special transfers:**
+
 - **City gifting**: Cities given freely between players (AI to human, Austria/Venice abilities)
 - **Liberation**: Cities returned to their original owners
 - **Rebellion transfers**: Cities changing hands due to unhappiness or revolt mechanics
@@ -25,7 +28,7 @@ This event is triggered at the completion of the `acquireCity()` function after 
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `eOldOwner` | integer | The player ID of the city's previous owner |
 | `bCapital` | boolean | True if the captured city was a capital city |
 | `iCityX` | integer | The X coordinate of the captured city |
@@ -41,6 +44,7 @@ This event is triggered at the completion of the `acquireCity()` function after 
 The CityCaptureComplete event represents the culmination of complex city transfer mechanics, providing comprehensive information about both the political and cultural implications of the ownership change. This event is crucial for victory condition tracking, diplomatic relationship management, and cultural heritage preservation.
 
 **Transfer mechanics processed before event:**
+
 - **Population management**: Resistance periods, population reduction, and happiness impacts
 - **Building transfers**: Determining which buildings survive the transfer vs. destruction
 - **Great Work handling**: Transferring cultural artifacts to available slots in the new empire
@@ -49,6 +53,7 @@ The CityCaptureComplete event represents the culmination of complex city transfe
 - **Espionage impacts**: Handling spy displacement and intelligence network changes
 
 **Strategic implications:**
+
 - **Victory conditions**: Conquest victories depend on capturing original capitals (`bCapital` parameter)
 - **Cultural heritage**: Great Work transfers impact cultural victory progress and tourism
 - **Economic impact**: City population and buildings affect immediate economic benefits
@@ -56,6 +61,7 @@ The CityCaptureComplete event represents the culmination of complex city transfe
 - **Resistance management**: Conquered cities may enter resistance periods reducing effectiveness
 
 **Special acquisition types:**
+
 - **Conquest (`bConquest=true`)**: Military capture with full conquest penalties and mechanics
 - **Diplomatic transfer (`bConquest=false`)**: Peaceful transfers without resistance or penalties
 - **Liberation**: Special case where cities return to original owners with diplomatic bonuses
@@ -70,6 +76,7 @@ The CityCaptureComplete event represents the culmination of complex city transfe
 **Script System Integration**: Uses `LuaSupport::CallHook` to notify registered Lua event listeners
 
 **Preconditions**:
+
 - City transfer must be valid and all ownership mechanics completed
 - Great Work transfers must be processed and counted
 - Plot ownership updates must be completed
@@ -77,6 +84,7 @@ The CityCaptureComplete event represents the culmination of complex city transfe
 - Script system must be initialized and available
 
 **Event Flow**:
+
 1. `acquireCity()` called with source city and transfer parameters
 2. City validation and pre-transfer processing occurs
 3. Population, building, and resource calculations performed
@@ -89,6 +97,7 @@ The CityCaptureComplete event represents the culmination of complex city transfe
 10. Post-transfer processing (victory checks, trait bonuses, etc.) executed
 
 **Related mechanics:**
+
 - Victory condition evaluation (conquest victory progress)
 - Diplomatic relationship impacts (war weariness, conquest penalties)
 - Cultural and tourism recalculations
@@ -96,6 +105,7 @@ The CityCaptureComplete event represents the culmination of complex city transfe
 - Achievement tracking for conquest milestones
 
 **Parameter relationships:**
+
 - `bCapital` and conquest victory tracking
 - `totalGreatWorks` vs `iCaptureGreatWorks` indicating cultural preservation success
 - `iPopulation` reflecting city value and resistance potential

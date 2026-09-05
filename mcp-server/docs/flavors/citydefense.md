@@ -7,6 +7,7 @@
 Unlike `FLAVOR_DEFENSE` (which controls army composition balance through `CvMilitaryAI`), CityDefense has **no direct effect** on army composition, tactical combat, or diplomacy. Its primary code paths are unit promotions (`CvUnit.cpp`) and religion belief scoring (`CvReligionClasses.cpp`).
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Turtle/few-cities leaders (Enrico Dandolo): 9
@@ -32,7 +33,7 @@ int iFlavorCityDefense = range(pFlavorMgr->GetPersonalityIndividualFlavor(
 **Key promotion formulas using CityDefense:**
 
 | Promotion type | Formula | CityDefense weight |
-|---|---|---|
+| --- | --- | --- |
 | Friendly lands combat | `(iFlavorDefense + 2 * iFlavorCityDefense) * 0.3` | **2x** Defense |
 | Capital defense | `(3 * iFlavorCityDefense) * 0.2` | **3x exclusive** |
 | Friendly lands attack | `(iFlavorDefense + 2 * iFlavorCityDefense) * 0.15` | **2x** Defense |
@@ -55,6 +56,7 @@ int iFlavorCityDefense = range(pFlavorMgr->GetPersonalityIndividualFlavor(
 CityDefense directly drives the valuation of two specific belief types: city range strike modifiers and friendly healing.
 
 **City range strike beliefs (line 8652):**
+
 ```cpp
 iRtnValue += (pEntry->GetCityRangeStrikeModifier() / 3) *
     MAX(pEntry->GetCityRangeStrikeModifier() / 3, iFlavorCityDefense - iFlavorOffense);
@@ -63,6 +65,7 @@ iRtnValue += (pEntry->GetCityRangeStrikeModifier() / 3) *
 **Interpretation:** Beliefs that boost city bombardment are scored using `CityDefense - Offense`. Defensive leaders (high CityDefense, low Offense) value these beliefs much more than aggressive leaders.
 
 **Warmonger neighbor scoring (lines 10407-10413):**
+
 ```cpp
 if (pEntry->GetFriendlyHealChange() > 0)
 {
@@ -134,56 +137,60 @@ CityDefense **does** affect city production and specialization through the gener
 
 ### Player-Level Military Strategies
 
-| Strategy | FLAVOR_CITY_DEFENSE |
-|---|---|
-| `MILITARYAISTRATEGY_AT_WAR` | +20 |
-| `MILITARYAISTRATEGY_WINNING_WARS` | -20 |
-| `MILITARYAISTRATEGY_LOSING_WARS` | +40 |
-| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_CRITICAL` | +40 |
-| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_ELEVATED` | +25 |
-| `MILITARYAISTRATEGY_MINOR_CIV_GENERAL_DEFENSE` | +10 |
+| Strategy                                       | FLAVOR_CITY_DEFENSE |
+| ---------------------------------------------- | ------------------- |
+| `MILITARYAISTRATEGY_AT_WAR`                    | +20                 |
+| `MILITARYAISTRATEGY_WINNING_WARS`              | -20                 |
+| `MILITARYAISTRATEGY_LOSING_WARS`               | +40                 |
+| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_CRITICAL` | +40                 |
+| `MILITARYAISTRATEGY_MINOR_CIV_THREAT_ELEVATED` | +25                 |
+| `MILITARYAISTRATEGY_MINOR_CIV_GENERAL_DEFENSE` | +10                 |
 
 ### City-Level Military Strategies
 
-| Strategy | FLAVOR_CITY_DEFENSE |
-|---|---|
-| `MILITARYAISTRATEGY_AT_WAR` | +20 |
-| `MILITARYAISTRATEGY_WINNING_WARS` | -30 |
-| `MILITARYAISTRATEGY_LOSING_WARS` | +50 |
+| Strategy                          | FLAVOR_CITY_DEFENSE |
+| --------------------------------- | ------------------- |
+| `MILITARYAISTRATEGY_AT_WAR`       | +20                 |
+| `MILITARYAISTRATEGY_WINNING_WARS` | -30                 |
+| `MILITARYAISTRATEGY_LOSING_WARS`  | +50                 |
 
 ### City Strategies
 
-| Strategy | FLAVOR_CITY_DEFENSE |
-|---|---|
-| `AICITYSTRATEGY_NEED_HAPPINESS_PILLAGE` | +20 |
+| Strategy                                | FLAVOR_CITY_DEFENSE |
+| --------------------------------------- | ------------------- |
+| `AICITYSTRATEGY_NEED_HAPPINESS_PILLAGE` | +20                 |
 
 **Comparison with FLAVOR_DEFENSE:** CityDefense modifiers are roughly half the magnitude of Defense modifiers (CityDefense +40 vs Defense +100 for LOSING_WARS at player level). Defense has the more extreme crisis amplification.
 
 ## Summary of Effects
 
 ### Unit Training (Primary)
+
 - **2x weighting** for friendly-territory and garrison promotions
 - **3x exclusive** weighting for capital defense promotions
 - Combined with Offense and Defense for general combat promotions
 - Makes garrison units highly specialized for territory defense
 
 ### Religion
+
 - Drives valuation of city range strike beliefs (scored as `CityDefense - Offense`)
 - Drives healing belief scoring with warmonger neighbor multiplier
 - Tall civilizations get 2x multiplier on defensive beliefs
 
 ### Building Production (Indirect)
+
 - High-flavor buildings: Red Fort (75), Mughal Fort (40), Barbican/Walls of Babylon/Lamassu Gate (30), Military Base (30)
 - Flows through generic FlavorUpdate to prioritize defensive buildings
 
 ### Tech Research
+
 - Smaller civs get explicit tech priority boost for CityDefense techs
 - Key techs: Masonry (20), Chivalry (20), Navigation (20), Radar (20)
 
 ## Distinction from FLAVOR_DEFENSE
 
 | Aspect | FLAVOR_DEFENSE | FLAVOR_CITY_DEFENSE |
-|---|---|---|
+| --- | --- | --- |
 | Army composition | `100 + flavor*2` multiplier | No effect |
 | Promotion weighting | 1x base | 2-3x for garrison promotions |
 | Belief evaluation | Reduces happiness need | Scores city strike / healing |

@@ -97,12 +97,12 @@ Give `enact-agent-deal` the same machine-readable conflict boundary. A proposal 
 
 The Web mapper preserves its public status classes:
 
-| Error | HTTP |
-|---|---:|
-| invalid request or `IllegalDealError` | 400 |
-| busy, closed this turn, or proposal conflict | 409 |
-| live turn unavailable | 503 |
-| store, bridge, inspection, or enactment failure | 502 |
+| Error                                           | HTTP |
+| ----------------------------------------------- | ---: |
+| invalid request or `IllegalDealError`           |  400 |
+| busy, closed this turn, or proposal conflict    |  409 |
+| live turn unavailable                           |  503 |
+| store, bridge, inspection, or enactment failure |  502 |
 
 Delete accept's catch-time second call to `requireCurrentOpenProposal`. Typed results from the two backend transactions now distinguish proposal conflicts from infrastructure failures without a race-prone re-probe. Replace `mirrorDealRowsBestEffort` with a small direct hydrator for returned rows, and remove the full deal-transcript reread if it has no remaining caller.
 
@@ -440,5 +440,4 @@ Until the queue behaviour is resolved, every live check above remains unverified
 
 ## Done when
 
-The in-game panel and Web are two clients of the same conversation system. They share the diplomat, thread, transcript, proposal validation, deal actions, and enactment path. Streaming remains responsive, final UI state comes from durable rows, notifications carry successful outcomes across turns, and every supported seat can open the same presentation without bypassing native authority.
-                           ````````
+The in-game panel and Web are two clients of the same conversation system. They share the diplomat, thread, transcript, proposal validation, deal actions, and enactment path. Streaming remains responsive, final UI state comes from durable rows, notifications carry successful outcomes across turns, and every supported seat can open the same presentation without bypassing native authority. ````````

@@ -19,7 +19,7 @@ The bridge also paces the game on the AI's behalf, so an agent has time to think
 The REST API is an Express app defined in `bridge-service/src/index.ts`, with route handlers split across `bridge-service/src/routes/`. The endpoints group into four areas:
 
 | Area | Source | Endpoints |
-|---|---|---|
+| --- | --- | --- |
 | Service control | `index.ts` | `GET /` (discovery: version, running status, and a map of the other endpoints), `GET /health` (up and DLL-connected?), `GET /stats` (component statistics), `POST /shutdown` (graceful local shutdown) |
 | Lua operations | `routes/lua.ts` | `POST /lua/call`, `POST /lua/batch`, `POST /lua/execute`, `GET /lua/functions` |
 | External functions and game control | `routes/external.ts` | `/external/register`, `/external/functions`, `/external/pause`, `/external/resume`, `/external/pause-player/:id`, `/external/paused-players`, `/external/production-mode` |
@@ -34,7 +34,7 @@ A handled failure still comes back with HTTP 200, so callers should branch on `s
 Three separate mechanisms slow the game down, all owned by `bridge-service/src/services/pause-manager.ts`. They are independent: one can be on while the others are off.
 
 | Mechanism | Endpoints | Scope | How it works |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Manual pause | `POST /external/pause`, `POST /external/resume` | The whole game, immediately | The bridge holds a named Windows mutex (`TurnByTurn`) that the game watches. Paused means the mutex is held. |
 | Per-player auto-pause | `POST` and `DELETE /external/pause-player/:id`, `GET` and `DELETE /external/paused-players` | One player's turn, when it comes around | The bridge keeps a set of player ids and forwards every change to the DLL. The DLL does the actual pausing from its own copy of that set. |
 | Production mode | `POST /external/production-mode` | Every AI turn | A flag forwarded to the DLL, which applies a cooldown between AI turns. |

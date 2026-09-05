@@ -7,12 +7,14 @@ The `EventChoiceEnded` event is triggered when a player-level event choice expir
 This event is triggered when an event choice's duration timer reaches zero or the choice is manually cancelled.
 
 **Specific trigger conditions:**
+
 - **Duration expiration**: An event choice with a duration timer reaches 0 turns remaining
 - **Manual cancellation**: The choice is cancelled through `DoCancelEventChoice` function
 - **Espionage cancellation**: Spy missions or counterspy actions that cancel ongoing choices
 - **Mutually exclusive conflicts**: When another choice in the same exclusive group becomes active
 
 **Related mechanics that can trigger event choice endings:**
+
 - Turn-by-turn duration countdown reaching zero
 - Manual cancellation through Lua scripts or other systems
 - Spy/counterspy mission interactions
@@ -22,7 +24,7 @@ This event is triggered when an event choice's duration timer reaches zero or th
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `playerID` | integer | The ID of the player whose event choice expired or was cancelled (from `GetID()`) |
 | `eventChoiceID` | integer | The identifier of the specific event choice that expired or was cancelled (`eChosenEventChoice`) |
 
@@ -31,6 +33,7 @@ This event is triggered when an event choice's duration timer reaches zero or th
 Event choice endings represent the expiration and cleanup phase of the player event system. When an event choice ends through duration expiration or cancellation, no player decision is implemented - instead, the choice simply expires and any temporary effects are removed.
 
 **Event choice ending mechanics:**
+
 - **Duration expiration**: The choice's turn-based timer reaches zero
 - **State cleanup**: The event system removes the active choice and clears related flags
 - **Effect removal**: Any temporary bonuses or penalties from the choice duration are removed
@@ -38,6 +41,7 @@ Event choice endings represent the expiration and cleanup phase of the player ev
 - **Logging**: The expiration is recorded in the event logging system
 
 **Choice expiration outcomes:**
+
 - **No immediate effects**: Expired choices typically don't grant rewards or penalties
 - **State reset**: Related event flags and durations are reset to default values
 - **Choice availability**: The choice may become available again in the future (unless it's a one-shot)
@@ -45,6 +49,7 @@ Event choice endings represent the expiration and cleanup phase of the player ev
 - **System cleanup**: Event notifications and UI elements are removed
 
 **Event lifecycle conclusion:**
+
 - **EventActivated**: The initial event activation
 - **EventChoiceActivated**: When choices were presented to the player
 - **EventChoiceEnded**: Final stage where the choice expires without selection and is cleaned up
@@ -58,12 +63,14 @@ Event choice endings represent the expiration and cleanup phase of the player ev
 **Script System Integration**: Uses `GAMEEVENTINVOKE_HOOK` macro with `GAMEEVENT_EventChoiceEnded`
 
 **Preconditions**:
+
 - `eChosenEventChoice` parameter must be a valid event choice type
 - The event choice must have been previously activated with a duration
 - Player must have a valid ID
 - The choice duration has reached 0 or cancellation was triggered
 
 **Event Flow**:
+
 1. Event choice duration timer reaches 0 during turn processing, or manual cancellation occurs
 2. `DoCancelEventChoice` function is called with the event choice ID
 3. Choice validation occurs to ensure the choice exists and is valid for cancellation
@@ -74,6 +81,7 @@ Event choice endings represent the expiration and cleanup phase of the player ev
 8. Event history is updated to track the expiration/cancellation
 
 **Related Events**:
+
 - `EventActivated`: The initial event that led to this choice
 - `EventChoiceActivated`: When the choice options were presented
 - `CityEventChoiceEnded`: The city-specific version of event choice endings

@@ -5,6 +5,7 @@ The TeamMeet event is triggered when two teams meet for the first time through t
 # Event Triggers
 
 This event is fired from `CvTeam::meet()` when:
+
 - Two teams meet for the first time (`!isHasMet()` condition)
 - Both teams are alive (the initiating team must be alive)
 - The Lua script system is available and active
@@ -24,45 +25,46 @@ The event provides two integer parameters representing team IDs:
 The team meeting system manages first contact between teams:
 
 **Meeting Prerequisites:**
+
 - The initiating team must be alive
 - The teams must not have previously met each other
 - Meeting can be triggered through various game mechanics (exploration, diplomacy, etc.)
 
-**Bilateral Process:**
-The meeting process is mutual - when Team A meets Team B:
+**Bilateral Process:** The meeting process is mutual - when Team A meets Team B:
+
 1. Team A sets "has met" status for Team B
-2. Team B sets "has met" status for Team A  
+2. Team B sets "has met" status for Team A
 3. The Lua hook fires with both team identifiers
 
 **Diplomatic Implications:**
+
 - Establishes basic diplomatic contact between civilizations
 - Enables future diplomatic interactions, trade, and warfare
 - May trigger additional first contact mechanics for individual players within teams
 - Can affect AI diplomatic strategies and relationship calculations
 
-**Team vs Player Contact:**
-While individual players may have separate first contact events, this team-level event captures the broader diplomatic relationship establishment between entire teams (important in team-based multiplayer games).
+**Team vs Player Contact:** While individual players may have separate first contact events, this team-level event captures the broader diplomatic relationship establishment between entire teams (important in team-based multiplayer games).
 
 # Technical Details
 
 **Source Location**: `CvTeam.cpp` line 2528  
 **Hook Type**: Lua script hook (not GameEvent)  
 **Triggering Function**: `meet()`  
-**Prerequisites**: Lua script system must be available  
+**Prerequisites**: Lua script system must be available
 
 **Related Functions:**
+
 - `isHasMet()`: Checks if teams have previously met
 - `makeHasMet()`: Establishes the "has met" diplomatic status
 - Player-level first contact systems for individual civilizations
 
-**Script Integration:**
-This hook enables Lua scripts to implement custom first contact behaviors, such as:
+**Script Integration:** This hook enables Lua scripts to implement custom first contact behaviors, such as:
+
 - Custom diplomatic bonuses or penalties for first meetings
 - Historical tracking of exploration and discovery events
 - Integration with mod-specific diplomatic systems
 - Special mechanics for team-based scenarios or multiplayer games
 
-**Message Suppression:**
-The `bSuppressMessages` parameter in the calling function can control whether standard first contact notifications are displayed, allowing scripts to potentially override default behavior while still receiving the hook notification.
+**Message Suppression:** The `bSuppressMessages` parameter in the calling function can control whether standard first contact notifications are displayed, allowing scripts to potentially override default behavior while still receiving the hook notification.
 
 The event provides the foundation for scripted diplomatic systems that need to respond to the establishment of contact between different teams in the game world.

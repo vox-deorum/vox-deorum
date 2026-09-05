@@ -27,7 +27,7 @@ The hierarchy follows a few conventions worth knowing before writing queries. Th
 
 - Each player's session runs under a root `player.{gameID}.{playerID}` span. Each processed turn opens a `strategist.turn.{N}` span as the root of its own trace.
 - Within a turn, each agent run has an agent span with its step spans beneath it. Each tool call is a child span of its step: `mcp-tool.{name}` for MCP tools, `simple-tool.{name}` for internal ones.
-- A failed-and-retried turn leaves *multiple* root spans with the same turn number. Only the latest is the valid record, and its trace ID scopes the real children.
+- A failed-and-retried turn leaves _multiple_ root spans with the same turn number. Only the latest is the valid record, and its trace ID scopes the real children.
 - Fire-and-forget agents (the diplomatic analyst) deliberately detach: they share the turn number but start their own root trace, so they are found by turn and name rather than by trace.
 
 ## Logging

@@ -18,11 +18,11 @@ powershell -Command "& .\build-and-copy.bat"
 
 That script is the local build-and-deploy loop. It compiles with clang through `build_vp_clang_sdk.py`, then copies the resulting DLL and `.pdb` into your Civilization V mods directory, so a successful run leaves the game ready to launch.
 
-| Flag | Effect |
-| --- | --- |
-| *(none)* | Build Debug only. |
-| `--release` | Build Release only. |
-| `--both` | Build Debug, then Release, stopping at the first failure. |
+| Flag        | Effect                                                    |
+| ----------- | --------------------------------------------------------- |
+| _(none)_    | Build Debug only.                                         |
+| `--release` | Build Release only.                                       |
+| `--both`    | Build Debug, then Release, stopping at the first failure. |
 
 Where things land:
 

@@ -5,6 +5,7 @@ The PlayerProtected event is triggered when a major civilization pledges to prot
 # Event Triggers
 
 This event is triggered when:
+
 - A major civilization successfully pledges protection to a minor civilization
 - The major civilization can legally provide protection (passes `CanMajorProtect` validation)
 - The MOD_EVENTS_MINORS_INTERACTION mod setting is enabled
@@ -15,7 +16,7 @@ The event fires immediately after the protection pledge is recorded and timestam
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `eMajor` | PlayerID | The player ID of the major civilization pledging protection |
 | `GetPlayer()->GetID()` | PlayerID | The player ID of the minor civilization being protected |
 
@@ -24,6 +25,7 @@ The event fires immediately after the protection pledge is recorded and timestam
 The PlayerProtected event represents a significant diplomatic action in the relationship between major and minor civilizations. When a major civilization pledges protection to a city-state, it establishes a formal commitment to defend that city-state against aggression from other players.
 
 This protection pledge has several implications:
+
 - Creates a diplomatic obligation for the major civilization
 - May influence other players' decisions to attack the protected city-state
 - Affects the relationship dynamics between the major and minor civilizations
@@ -38,6 +40,7 @@ The event provides the essential information needed to track these protection re
 **Conditional Compilation**: This event is only available when `MOD_EVENTS_MINORS_INTERACTION` is defined and enabled.
 
 **Execution Context**: The event is invoked:
+
 - After protection eligibility validation (`CanMajorProtect` check)
 - After recording the pledge timestamp (`SetTurnLastPledgedProtectionByMajor`)
 - Within the protection status update logic

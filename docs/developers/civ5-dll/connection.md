@@ -25,7 +25,7 @@ A single pipe write can therefore carry a batch of messages, which is how the br
 
 ## Threads and pump points
 
-The gamecore is sensitive about *when* its state is touched. Mutating it from the wrong context risks "out of sync" errors in networked games and corrupts the brittle savegame serialization, and blocking pipe I/O on the main thread would stall the game.
+The gamecore is sensitive about _when_ its state is touched. Mutating it from the wrong context risks "out of sync" errors in networked games and corrupts the brittle savegame serialization, and blocking pipe I/O on the main thread would stall the game.
 
 The service splits the work across two threads:
 

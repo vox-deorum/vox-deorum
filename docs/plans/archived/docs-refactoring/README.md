@@ -13,7 +13,7 @@ This folder breaks the documentation revamp into independently implementable sta
 Implement in order. Each stage's "Feeds forward" / "Sources" sections name exactly what it consumes from earlier stages, so every component "feeds forward" into the next and into the synthesis stages.
 
 | Stage | Plan | Objective |
-|---|---|---|
+| --- | --- | --- |
 | 1 | [01-scaffold.md](01-scaffold.md) | Create the `docs/` index, player stubs, and top-level developer stubs. |
 | 2 | [02-civ5-dll.md](02-civ5-dll.md) | Write `docs/developers/civ5-dll/` (the game-layer DLL). |
 | 3 | [03-civ5-mod.md](03-civ5-mod.md) | Write `docs/developers/civ5-mod/` (Lua hooks and in-game UI). |
@@ -81,4 +81,4 @@ civ5-dll/docs/        DLL build toolchain, game database schema, debugging (sepa
 civ5-mod/docs/        Lua/C debugging, observer API
 ```
 
-The rule of thumb: `/docs/developers/` explains *what and why* in prose; component `docs/` folders hold *exact reference data* (event schemas, message formats, generated API listings) that developers consult while working inside that component.
+The rule of thumb: `/docs/developers/` explains _what and why_ in prose; component `docs/` folders hold _exact reference data_ (event schemas, message formats, generated API listings) that developers consult while working inside that component.

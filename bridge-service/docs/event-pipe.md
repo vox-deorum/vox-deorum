@@ -16,6 +16,7 @@ Add the following to your `config.json`:
 ```
 
 Or use environment variables:
+
 - `EVENTPIPE_ENABLED=true`
 - `EVENTPIPE_NAME=vox-deorum-events`
 
@@ -23,7 +24,6 @@ Or use environment variables:
 
 - Pipe path: `\\.\pipe\tmp-app.{name}` (e.g., `\\.\pipe\tmp-app.vox-deorum-events`)
 - Note: node-ipc automatically adds `tmp-app.` prefix to the configured pipe name
-
 
 ## Protocol
 
@@ -35,6 +35,7 @@ Or use environment variables:
 ## Batching
 
 Events are automatically batched for performance optimization:
+
 - **Timeout**: Events are flushed every 50ms
 - **Size limit**: Batches are sent immediately when reaching 100 events
 - **Critical events**: Some events (like dll_status) trigger immediate flush
@@ -47,18 +48,20 @@ Each event is a JSON object with the following structure:
 
 ```typescript
 interface GameEvent {
-  type: string;           // Event type (e.g., "PlayerDoTurn", "dll_status")
-  id?: string;            // Optional unique event ID
-  payload?: any;          // Event-specific data
-  extraPayload?: any;     // Additional event data
-  visibility?: number[];  // Optional player visibility restrictions
+  type: string; // Event type (e.g., "PlayerDoTurn", "dll_status")
+  id?: string; // Optional unique event ID
+  payload?: any; // Event-specific data
+  extraPayload?: any; // Additional event data
+  visibility?: number[]; // Optional player visibility restrictions
 }
 ```
 
 ## Special Events
 
 ### Connection Event
+
 Sent immediately when a client connects:
+
 ```json
 {
   "type": "connected",
@@ -68,7 +71,9 @@ Sent immediately when a client connects:
 ```
 
 ### Disconnection Event
+
 Sent before server shutdown:
+
 ```json
 {
   "type": "disconnecting",
@@ -78,6 +83,7 @@ Sent before server shutdown:
 ```
 
 ### DLL Status Events
+
 ```json
 {
   "type": "dll_status",
@@ -92,6 +98,7 @@ Sent before server shutdown:
 See [examples/event-pipe-client.js](../examples/event-pipe-client.js) for a complete working Node.js client implementation using node-ipc with raw buffer support.
 
 The example includes:
+
 - Proper connection handling with error recovery
 - Message buffering and delimiter splitting
 - Event statistics tracking
@@ -102,22 +109,22 @@ The example includes:
 **Using node-ipc (Recommended):**
 
 ```javascript
-const ipc = require('node-ipc');
+const ipc = require("node-ipc");
 
-ipc.config.rawBuffer = true;  // Important: match server configuration
-ipc.config.encoding = 'utf8';
+ipc.config.rawBuffer = true; // Important: match server configuration
+ipc.config.encoding = "utf8";
 
-let messageBuffer = '';
+let messageBuffer = "";
 
-ipc.connectTo('vox-deorum-events', () => {
-  ipc.of['vox-deorum-events'].on('data', (data) => {
+ipc.connectTo("vox-deorum-events", () => {
+  ipc.of["vox-deorum-events"].on("data", (data) => {
     // Buffer incoming data and split by delimiter
     messageBuffer += data.toString();
-    const messages = messageBuffer.split('!@#$%^!');
-    messageBuffer = messages.pop() || '';
+    const messages = messageBuffer.split("!@#$%^!");
+    messageBuffer = messages.pop() || "";
 
     // Process each complete message
-    messages.forEach(message => {
+    messages.forEach((message) => {
       if (message.trim()) {
         const event = JSON.parse(message.trim());
         // Handle event
@@ -130,6 +137,7 @@ ipc.connectTo('vox-deorum-events', () => {
 **Alternative:** Raw sockets (`net.createConnection`) work similarly with the same buffering logic.
 
 **Key Points:**
+
 - Always use `rawBuffer: true` for node-ipc
 - Buffer data and split by `!@#$%^!` delimiter
 - Parse each complete message as JSON
@@ -144,6 +152,7 @@ curl http://localhost:5000/stats
 ```
 
 Response includes:
+
 ```json
 {
   "eventPipe": {

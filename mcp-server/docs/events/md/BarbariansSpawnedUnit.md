@@ -9,12 +9,14 @@ This event is part of the Community Patch's barbarian system and fires only when
 The **BarbariansSpawnedUnit** event is triggered in the following scenarios:
 
 ## Primary Spawn Locations
+
 - **Barbarian Camp Spawning**: Units spawned from existing barbarian encampments during regular game progression
 - **New Camp Establishment**: Initial units created when new barbarian camps are founded
 - **City-Based Spawning**: Units spawned from captured cities or city-state captures
 - **Naval Spawning**: Barbarian boats and naval units spawned from coastal camps and cities
 
 ## Special Circumstances
+
 - **Uprisings and Revolts**: Rebel units spawned during civil unrest events in player cities
 - **Partisan Activity**: Units created as a result of partisan movements in occupied territories
 - **Trade Route Disruption**: Barbarian units spawned when trade routes are plundered
@@ -28,7 +30,7 @@ The event fires immediately after a barbarian unit is successfully created and p
 The **BarbariansSpawnedUnit** event passes three integer parameters:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | **X Coordinate** | `int` | The X coordinate of the plot where the barbarian unit was spawned |
 | **Y Coordinate** | `int` | The Y coordinate of the plot where the barbarian unit was spawned |
 | **Unit Type** | `int` | The internal unit type ID (`UnitTypes` enum) of the spawned barbarian unit |
@@ -53,12 +55,14 @@ The **BarbariansSpawnedUnit** event passes three integer parameters:
 The barbarian spawning system considers multiple factors when creating new units:
 
 ### Unit Selection Logic
+
 - **Terrain Appropriateness**: Units are selected based on the terrain type of the spawn location
 - **Strategic Role**: The system prefers ranged units for defensive positions (camps, cities) and melee units for general spawning
 - **Resource Availability**: Available strategic resources influence which unit types can be spawned
 - **Game Progression**: Later game turns allow for more advanced unit types, including naval units after turn 20-30
 
 ### Spawn Timing and Frequency
+
 - **Regular Camp Spawning**: Occurs based on game turn intervals and camp population limits
 - **Event-Driven Spawning**: Immediate spawning triggered by specific game events
 - **Rebellion Intervals**: Revolt-related spawning follows defined turn intervals (typically every 4 turns)
@@ -66,13 +70,16 @@ The barbarian spawning system considers multiple factors when creating new units
 ## Geographic and Strategic Considerations
 
 ### Location Priority
+
 The spawning system evaluates multiple potential spawn locations and selects based on:
+
 - **Proximity to Player Activity**: Areas with recent player presence are prioritized
 - **Strategic Value**: Locations that can threaten trade routes, cities, or important resources
 - **Accessibility**: Plots that allow the spawned unit to move and engage effectively
 - **Safety**: Locations that provide some protection for the newly spawned unit
 
 ### Notification System
+
 For certain spawn types (particularly uprisings), the game automatically notifies affected players through the notification system, alerting them to new rebel activity in their territory.
 
 # Technical Details
@@ -82,12 +89,14 @@ For certain spawn types (particularly uprisings), the game automatically notifie
 The event is implemented in the Community Patch DLL within the `CvBarbarians.cpp` file. The specific trigger points are:
 
 ### Primary Spawn Location (Line 1202)
+
 ```cpp
 if (MOD_EVENTS_BARBARIANS)
     GAMEEVENTINVOKE_HOOK(GAMEEVENT_BarbariansSpawnedUnit, pPlot->getX(), pPlot->getY(), eUnit);
 ```
 
 ### Secondary Spawn Location (Line 1330)
+
 ```cpp
 if (MOD_EVENTS_BARBARIANS)
     GAMEEVENTINVOKE_HOOK(GAMEEVENT_BarbariansSpawnedUnit, pSpawnPlot->getX(), pSpawnPlot->getY(), eUnit);
@@ -96,6 +105,7 @@ if (MOD_EVENTS_BARBARIANS)
 ## Event Definition
 
 The event is defined in `CustomMods.h` as:
+
 ```cpp
 #define GAMEEVENT_BarbariansSpawnedUnit "BarbariansSpawnedUnit", "iii"
 ```
@@ -105,11 +115,13 @@ The `"iii"` parameter string indicates three integer parameters are passed to ev
 ## Integration Requirements
 
 ### Prerequisites
+
 - `MOD_EVENTS_BARBARIANS` must be enabled in the game configuration
 - The barbarian player must be active in the game
 - Valid spawn plots must be available for unit placement
 
 ### Event Processing
+
 - Event fires synchronously during the barbarian spawning process
 - All three parameters are guaranteed to be valid when the event triggers
 - The spawned unit is fully initialized and placed on the map before the event fires
@@ -117,6 +129,7 @@ The `"iii"` parameter string indicates three integer parameters are passed to ev
 ## Performance Considerations
 
 The **BarbariansSpawnedUnit** event is designed for efficient processing:
+
 - Minimal computational overhead during spawning
 - Direct parameter passing without complex data structures
 - Immediate firing to ensure real-time responsiveness

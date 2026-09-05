@@ -7,7 +7,7 @@ The `GreatWorkCreated` event is triggered when a Great Person successfully creat
 This event is triggered in the following scenarios:
 
 - When a Great Artist creates a Great Work of Art
-- When a Great Writer creates a Great Work of Writing  
+- When a Great Writer creates a Great Work of Writing
 - When a Great Musician creates a Great Work of Music
 - After the Great Work has been successfully created and assigned to an available slot
 - Only when the MOD_BALANCE_CORE feature is enabled in the game configuration
@@ -33,6 +33,7 @@ Great Works are a key component of the cultural victory path and tourism generat
 The event fires after the Great Work has been successfully created and notifications have been sent to players. This ensures that the Great Work is fully integrated into the game systems before external systems respond to its creation.
 
 Great Works provide ongoing benefits including:
+
 - Culture output for the owning civilization
 - Tourism points that influence other civilizations
 - Theming bonuses when properly arranged in museums and other culture buildings
@@ -41,25 +42,29 @@ Great Works provide ongoing benefits including:
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvUnit.cpp` (line 9590)
 
 **Triggering Functions:**
+
 - `CvUnit::createGreatWork()` - Main function handling Great Work creation by Great Person units
 
 **Compilation Requirements:**
+
 - Only active when `MOD_BALANCE_CORE` is defined during compilation
 - Requires `CvGameCulture` system to be available
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_GreatWorkCreated, getOwner(), GetID(), iValue);
 ```
 
 **Related Systems:**
+
 - `CvGameCulture` - Manages Great Works database and storage
 - Great Work slot management in cities and buildings
 - Tourism and cultural influence systems
 - Great Person expending mechanics
 
-**Notification Integration:**
-The event triggers after appropriate notifications are sent to players, ensuring proper UI feedback before external systems process the Great Work creation.
+**Notification Integration:** The event triggers after appropriate notifications are sent to players, ensuring proper UI feedback before external systems process the Great Work creation.

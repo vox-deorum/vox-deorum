@@ -7,12 +7,14 @@ The `CityFlipped` event is triggered when a city revolts and changes ownership d
 This event is triggered when the `DoCityRevolt()` function is called on a player and successfully identifies a city that will flip to another player or become independent.
 
 **Specific trigger conditions:**
+
 - **Extreme unhappiness**: A city has reached critical levels of unhappiness that trigger revolt mechanisms
 - **Valid recipient**: The system has identified a valid recipient for the revolting city (original owner, free city, or another player)
 - **Revolt execution**: The actual city flip/revolt process is about to begin
 - **Unhappiest city**: The city selected is the most unhappy city belonging to the player
 
 **Related mechanics that can trigger city revolts:**
+
 - Prolonged periods of negative happiness leading to revolt countdowns
 - Loss of luxury resources causing widespread unhappiness in cities
 - Occupation unhappiness that exceeds manageable levels
@@ -24,7 +26,7 @@ This event is triggered when the `DoCityRevolt()` function is called on a player
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `cityID` | integer | The ID of the city that is flipping/revolting (converted from `pMostUnhappyCity` pointer) |
 | `recipientID` | integer | The player ID of the recipient who will receive the city (`eRecipient`) |
 | `originalOwnerID` | integer | The player ID of the current owner who is losing the city (`pMostUnhappyCity->getOwner()`) |
@@ -34,6 +36,7 @@ This event is triggered when the `DoCityRevolt()` function is called on a player
 City flipping represents one of the most severe consequences of poor city management and happiness control in Civilization V. When cities become extremely unhappy and remain so for extended periods, they can revolt and change ownership, representing a complete breakdown of governmental control and citizen loyalty.
 
 **City revolt mechanics:**
+
 - **Unhappiness threshold**: Cities must reach and maintain critical unhappiness levels to be eligible for revolt
 - **Recipient determination**: The system identifies the most appropriate new owner for the revolting city
 - **Original owner preference**: Former owners of cities are often preferred recipients for revolts
@@ -41,6 +44,7 @@ City flipping represents one of the most severe consequences of poor city manage
 - **Revolution mechanics**: Some revolts can trigger broader revolutionary movements
 
 **Recipient priority system:**
+
 - **Original owners**: Cities often prefer to revert to their original civilization
 - **Cultural influence**: Nearby civilizations with strong cultural pressure may receive revolting cities
 - **Religious affinity**: Cities may flip to civilizations sharing their dominant religion
@@ -48,6 +52,7 @@ City flipping represents one of the most severe consequences of poor city manage
 - **Dead civilizations**: Former civilizations may be resurrected through city revolts
 
 **Revolt consequences:**
+
 - **Immediate ownership transfer**: The city changes hands immediately upon revolt execution
 - **Population effects**: City population may be affected by the revolutionary period
 - **Building preservation**: Most buildings typically survive the ownership change
@@ -55,6 +60,7 @@ City flipping represents one of the most severe consequences of poor city manage
 - **Strategic implications**: Loss of key cities can significantly impact empire development
 
 **Prevention and mitigation:**
+
 - **Happiness management**: Maintaining positive happiness prevents revolt conditions
 - **Luxury resource access**: Ensuring adequate luxury resources reduces unhappiness
 - **Building infrastructure**: Happiness-providing buildings help stabilize cities
@@ -70,12 +76,14 @@ City flipping represents one of the most severe consequences of poor city manage
 **Script System Integration**: Uses `GAMEEVENTINVOKE_HOOK` macro with `GAMEEVENT_CityFlipped`
 
 **Preconditions**:
+
 - Player must have at least one city (to identify most unhappy city)
 - `pMostUnhappyCity` must be a valid city pointer (not NULL)
 - `eRecipient` must be a valid player type (not NO_PLAYER)
 - City must meet unhappiness thresholds for revolt eligibility
 
 **Event Flow**:
+
 1. `DoCityRevolt` is called as part of unhappiness processing
 2. System identifies the most unhappy city via `GetMostUnhappyCity()`
 3. System determines the most appropriate recipient via `GetMostUnhappyCityRecipient()`
@@ -88,12 +96,14 @@ City flipping represents one of the most severe consequences of poor city manage
 10. Logging occurs if enabled for debugging and analysis
 
 **Recipient handling logic:**
+
 - **Living recipients**: Direct city transfer to the recipient civilization
 - **Dead but former recipients**: May trigger civilization resurrection through revolution
 - **Never-existed recipients**: City becomes a free city under independent control
 - **Free city creation**: Special independent player is created to govern the city
 
 **Related Events**:
+
 - Various unhappiness and loyalty-related events that may precede city revolts
 - Diplomatic events that may be triggered by city ownership changes
 - Revolution-related events when dead civilizations are resurrected through revolt

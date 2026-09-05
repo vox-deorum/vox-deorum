@@ -43,7 +43,7 @@ This event captures all forms of unit creation, whether through city production,
 The event is triggered using the `GAMEEVENTINVOKE_HOOK` mechanism with the following parameters:
 
 ```cpp
-GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitCreated, 
+GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitCreated,
     getOwner(),     // Player ID of the unit owner
     GetID(),        // Unique unit ID
     getUnitType(),  // Unit type identifier

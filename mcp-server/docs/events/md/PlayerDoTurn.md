@@ -15,7 +15,7 @@ The trigger occurs after AI turn processing (`AI_doTurnPost()`) has completed an
 The event passes one parameter to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | PlayerID | int | The ID of the player whose turn is being processed (`GetID()`) |
 
 # Event Details
@@ -37,6 +37,7 @@ The event is part of the core turn processing system and allows scripts to hook 
 **Event System**: Uses the Lua scripting hook system via `LuaSupport::CallHook()`
 
 **Execution Context**: The event fires during post-diplomacy turn processing, specifically:
+
 - After AI systems (Economic, Military, Religion, Espionage, Trade, League, Minor Civ AI) have completed their turn processing
 - After temporary bonus turns have been decremented
 - After instant great person progress notifications have been displayed

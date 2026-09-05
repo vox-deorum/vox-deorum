@@ -14,11 +14,11 @@ The trigger occurs within the `CvCityReligions::RecomputeFollowers()` method in 
 
 The event passes three parameters to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| Owner | PlayerTypes | The ID of the player who owns the city |
-| X | int | The X coordinate of the city on the game map |
-| Y | int | The Y coordinate of the city on the game map |
+| Parameter | Type        | Description                                  |
+| --------- | ----------- | -------------------------------------------- |
+| Owner     | PlayerTypes | The ID of the player who owns the city       |
+| X         | int         | The X coordinate of the city on the game map |
+| Y         | int         | The Y coordinate of the city on the game map |
 
 # Event Details
 
@@ -35,7 +35,8 @@ The event occurs as part of the religious conversion process within `RecomputeFo
 **Source File**: `CvGameCoreDLL_Expansion2/CvReligionClasses.cpp`
 
 **Trigger Location**:
-- Line 5399-5401: Condition check in `CvCityReligions::RecomputeFollowers()` 
+
+- Line 5399-5401: Condition check in `CvCityReligions::RecomputeFollowers()`
 - Line 5748: Event firing in `CvCityReligions::CityConvertsPantheon()`
 
 **Event System**: Uses the Lua scripting hook system via `LuaSupport::CallHook()`

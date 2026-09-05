@@ -5,6 +5,7 @@ This folder is the in-game companion mod "(5) Vox Deorum" for Civilization V. It
 ## Deployment
 
 **Every time a task is complete, run `deploy.bat`** (from this folder). It:
+
 1. Runs `update_md5.py` to refresh the MD5 hashes in `VoxDeorum.modinfo` (aborts deployment if this fails)
 2. Copies the mod into `Documents\My Games\Sid Meier's Civilization 5\MODS\(1b) Vox Deorum`
 
@@ -24,10 +25,12 @@ Never hand-edit the `md5` attributes in the modinfo - `update_md5.py` owns them.
 ## Registering Files in VoxDeorum.modinfo
 
 Every shipped file must have a `<File>` entry in `<Files>`:
+
 - `import="1"` for files loaded into the VFS: all Lua (UI contexts, shared modules, mapscripts) and any XML consumed by the engine at runtime (e.g. `LeaderHeadRoot.xml`)
 - `import="0"` for database/text content applied via actions
 
 Then wire the file up:
+
 - SQL/XML/Text database files also need an `<UpdateDatabase>` line under `<OnModActivated>`
 - New UI screens need an `<EntryPoint type="InGameUIAddin">` pointing at the **XML** file (the XML pulls in its Lua); standalone Lua addins point at the `.lua` directly
 - Shared Lua modules (e.g. `VoxDeorumSeat.lua`, `VoxDeorumDealUtils.lua`) are `import="1"` with no entry point - they are included by other contexts

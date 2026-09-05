@@ -30,6 +30,7 @@ Religion reformation represents the pinnacle of religious development, adding po
 - **Unique Effects:** Often provide bonuses unavailable through other belief types
 
 Key aspects of religion reformation:
+
 - Requires prior founding and often enhancement of a religion
 - Typically gated behind policy trees (like Piety or Freedom)
 - Each Reformation belief can only be chosen once per game
@@ -37,18 +38,21 @@ Key aspects of religion reformation:
 - Often provides bonuses specifically relevant to victory conditions
 
 Strategic implications of religion reformation:
+
 - **Victory Path Optimization:** Many Reformation beliefs directly support specific victory types
 - **Late Game Power Spike:** Provides significant bonuses when they matter most
 - **Religious Dominance:** Reformed religions become significantly more competitive
 - **Policy Synergy:** Reformation often synergizes with the policies that enabled it
 
 Common Reformation belief effects include:
+
 - Enhanced religious pressure and spread capabilities
 - Bonuses to specific victory conditions (Science, Culture, Domination)
 - Powerful economic or military enhancements
 - Unique mechanics not available through other means
 
 This event is crucial for AI systems because:
+
 - It signals a major late-game power spike for the reforming civilization
 - It indicates significant policy investment in religious trees
 - It affects religious competition dynamics in the late game
@@ -58,42 +62,51 @@ This event is crucial for AI systems because:
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvReligionClasses.cpp` (line 1674)
 
 **Triggering Functions:**
+
 - `CvGameReligions::AddReformationBelief(PlayerTypes ePlayer, ReligionTypes eReligion, BeliefTypes eBelief1)` - Main function handling Reformation belief addition
 
 **Requirements:**
+
 - Player must have founded a religion
 - Player must not have already added a Reformation belief
 - Player must have policies granting Reformation beliefs OR have the `IsReformation()` flag
 
 **Event Conditions:**
+
 - Only fires when `MOD_EVENTS_FOUND_RELIGION` is defined and enabled
 - Part of the extended religious events system
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_ReligionReformed, ePlayer, eReligion, eBelief1);
 ```
 
 **System Updates:**
+
 - Marks the religion as reformed (`m_bReformed = true` in MOD_BALANCE_CORE)
 - Updates all cities following the religion with the new belief
 - Refreshes player religion data and potentially traits
 - Triggers comprehensive notifications to all players
 
 **Related Systems:**
-- `HasAddedReformationBelief()` - Tracking system for Reformation belief status  
+
+- `HasAddedReformationBelief()` - Tracking system for Reformation belief status
 - `GetAvailableReformationBeliefs()` - System for determining available Reformation options
 - `ChooseReformationBelief()` - AI system for selecting optimal Reformation beliefs
 - Policy systems that grant access to Reformation beliefs
 
 **Policy Integration:**
+
 - Typically requires completion of specific policy branches
 - `HasPolicyGrantingReformationBelief()` determines eligibility
 - Integrates with the broader policy and religious systems
 
 **Compilation Requirements:**
+
 - Only active when `MOD_EVENTS_FOUND_RELIGION` is defined
 - Part of the extended religious event framework

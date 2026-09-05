@@ -23,7 +23,7 @@ Create and write `docs/developers/mcp-server/`: the MCP tools and game-data acce
 ## Sources
 
 | Source | Action |
-|---|---|
+| --- | --- |
 | `mcp-server/README.md` | Fold into `overview.md`. |
 | `mcp-server/docs/DEVELOPMENT.md` | Fold into `overview.md`; setup detail also feeds Stage 7 `setup.md`. Delete original in Stage 9. |
 | `mcp-server/docs/tools.md` | Move "how tools are organized" prose into `tools.md`; exact per-tool listings **stay** in `mcp-server/docs/`. |

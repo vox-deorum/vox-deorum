@@ -7,6 +7,7 @@
 Unlike specialized naval flavors (`FLAVOR_NAVAL_RECON`, `FLAVOR_NAVAL_MELEE`, `FLAVOR_NAVAL_RANGED`, `FLAVOR_SUBMARINE`), `FLAVOR_NAVAL` represents the general strategic importance the AI places on controlling the seas and projecting naval power.
 
 ### Value Range
+
 - **Scale:** 0-20 (integer values, though personality values typically range 0-10)
 - **Typical Values:**
   - Maritime civilizations: 7-10 (strong naval focus)
@@ -14,6 +15,7 @@ Unlike specialized naval flavors (`FLAVOR_NAVAL_RECON`, `FLAVOR_NAVAL_MELEE`, `F
   - Landlocked/continental civilizations: 0-3 (minimal naval investment)
 
 ### Maritime Civilization Bonuses
+
 Civilizations with the `isCoastalCiv()` trait (England, Polynesia, Carthage, etc.) receive additional bonuses that interact with FLAVOR_NAVAL, making them naturally prioritize coastal expansion and naval power regardless of their base flavor value.
 
 ## Code References
@@ -35,11 +37,13 @@ int iNavalPercent = (iNumCoastalCities * iFlavorNaval * 7) / max(1, m_pPlayer->g
 ```
 
 **Calculation Breakdown:**
+
 - Naval percentage is based on the proportion of coastal cities multiplied by FLAVOR_NAVAL
 - Formula: `(Coastal Cities / Total Cities) × FLAVOR_NAVAL × 7`
 - This percentage is then applied to offensive unit production weights
 
 **Example Scenarios:**
+
 - **High Naval Flavor (10), 100% Coastal Cities:**
   - `iNavalPercent = (10 × 10 × 7) / 10 = 70%`
   - 70% of offensive forces will be naval units
@@ -112,6 +116,7 @@ if (pPlot->isCoastalLand(GD_INT_GET(MIN_WATER_SIZE_FOR_OCEAN)))
 ```
 
 **Thresholds:**
+
 - **FLAVOR_NAVAL ≤ 7:** Standard coastal bonus (typically +40% plot value)
 - **FLAVOR_NAVAL > 7:** Double coastal bonus (+80% plot value)
 - **Coastal Civilization Trait:** Automatic double bonus regardless of flavor
@@ -213,6 +218,7 @@ else if(strFlavorName == "FLAVOR_NAVAL_RECON")
 ```
 
 **Relative Weights:**
+
 - FLAVOR_NAVAL: 15 (high priority for military advisor)
 - FLAVOR_AIR: 17 (highest military priority)
 - FLAVOR_RANGED: 13
@@ -239,6 +245,7 @@ Separate flavors like FLAVOR_NAVAL_GROWTH and FLAVOR_NAVAL_TILE_IMPROVEMENT hand
 ## Summary of Effects
 
 ### Military Force Composition
+
 - **Direct multiplier** for the percentage of offensive forces allocated to naval units
 - Scales with the proportion of coastal cities in the empire
 - Creates balanced land-naval forces for maritime civilizations
@@ -246,6 +253,7 @@ Separate flavors like FLAVOR_NAVAL_GROWTH and FLAVOR_NAVAL_TILE_IMPROVEMENT hand
 - Affects both recommended unit counts and actual production priorities
 
 ### City Placement Strategy
+
 - **Settlement bias** toward coastal locations when FLAVOR_NAVAL > 7
 - Doubles the value bonus for coastal city sites (up to +80% plot value)
 - Works synergistically with maritime civilization traits
@@ -253,24 +261,28 @@ Separate flavors like FLAVOR_NAVAL_GROWTH and FLAVOR_NAVAL_TILE_IMPROVEMENT hand
 - Creates foundation for naval infrastructure (harbors, seaports)
 
 ### Naval Infrastructure Investment
+
 - Higher priority for buildings that support naval production (harbors, seaports)
 - Increased value for sea-based trade routes and maritime resources
 - More emphasis on fishing boats and offshore platform improvements
 - Greater investment in coastal defensive structures
 
 ### Technology Research Priorities
+
 - Technologies unlocking naval units receive higher priority
 - Maritime technologies (Sailing, Compass, Astronomy, Navigation) fast-tracked
 - Advanced naval warfare techs (Steam Power, Combustion, Electronics) valued more
 - Balanced against other military tech needs based on strategic situation
 
 ### Policy Adoption Preferences
+
 - Policies with naval bonuses contribute to **Conquest victory** preference
 - Maritime policy branches (Exploration, Commerce) receive higher weight
 - Naval-focused social policies valued more during military expansion phases
 - Reinforces aggressive naval strategy alignment
 
 ### Unit Promotion Selection
+
 - Naval units prioritize combat-effective promotions
 - Higher FLAVOR_NAVAL leads to more offensive promotion choices
 - Promotion values adjusted by clamped flavor range (1-20)
@@ -281,24 +293,28 @@ Separate flavors like FLAVOR_NAVAL_GROWTH and FLAVOR_NAVAL_TILE_IMPROVEMENT hand
 ### Complementary Flavors
 
 #### FLAVOR_NAVAL_RECON
+
 - Controls naval exploration and scouting priorities
 - Determines number of exploration ships to build
 - Works alongside FLAVOR_NAVAL to establish maritime presence
 - Typical relationship: Lower than FLAVOR_NAVAL (3-5 vs 5-8)
 
 #### FLAVOR_NAVAL_GROWTH
+
 - Influences economic development of coastal cities
 - Affects fishing boat construction and sea resource development
 - Creates economic foundation that supports naval military expansion
 - Enables larger fleets through improved coastal city production
 
 #### FLAVOR_NAVAL_TILE_IMPROVEMENT
+
 - Controls offshore platform and fishing boat prioritization
 - Improves naval infrastructure and resource access
 - Provides food and production to sustain large navies
 - Economic counterpart to FLAVOR_NAVAL's military focus
 
 #### Specialized Unit Flavors
+
 - **FLAVOR_NAVAL_MELEE:** Prioritizes melee naval units (Triremes, Galleys, Destroyers)
 - **FLAVOR_NAVAL_RANGED:** Emphasizes ranged naval units (Caravels, Frigates, Battleships)
 - **FLAVOR_SUBMARINE:** Controls submarine production and underwater warfare
@@ -309,24 +325,28 @@ These specialized flavors determine the **composition** of the navy, while FLAVO
 ### Strategic Synergies
 
 **High FLAVOR_NAVAL + High FLAVOR_OFFENSE:**
+
 - Aggressive naval expansion and coastal raiding
 - Prioritizes invasions via sea
 - Builds balanced fleets with offensive capabilities
 - Targets island and coastal civilizations early
 
 **High FLAVOR_NAVAL + High FLAVOR_EXPANSION:**
+
 - Maritime expansion strategy
 - Settles islands and coastal territories aggressively
 - Builds exploratory fleets early
 - Competes for control of strategic sea resources
 
 **High FLAVOR_NAVAL + High FLAVOR_DEFENSE:**
+
 - Defensive naval posture with coastal focus
 - Prioritizes protecting sea trade routes
 - Builds balanced defensive-offensive fleets
 - Focuses on denying enemy naval access to home waters
 
 **Low FLAVOR_NAVAL (Continental Strategy):**
+
 - Minimal naval investment regardless of coastal access
 - Diverts resources to land forces even with coastal cities
 - Only builds essential defensive naval units
@@ -344,6 +364,7 @@ This allows for differentiated maritime AI personalities:
 - **Low NAVAL, Low Specialized Flavors:** Minimal naval presence, vulnerable at sea
 
 The flavor also creates **emergent behavior** where:
+
 1. Coastal city placement → justifies naval investment
 2. Naval investment → enables more coastal expansion
 3. Maritime infrastructure → supports larger fleets
@@ -356,22 +377,27 @@ The flavor also creates **emergent behavior** where:
 While exact values vary by leader and civilization, typical FLAVOR_NAVAL distributions:
 
 ### High Naval Focus (8-10)
+
 - Leaders of maritime civilizations (England, Polynesia, Carthage)
 - Leaders with naval unique units or bonuses
 - Leaders pursuing coastal/island expansion strategies
 
 ### Moderate Naval Presence (4-7)
+
 - Balanced leaders with mixed strategies
 - Leaders on continents with significant coastline
 - Leaders adapting to map conditions with mixed land-sea terrain
 
 ### Low Naval Priority (0-3)
+
 - Continental leaders focused on land warfare (Mongolia, Germany)
 - Leaders on landlocked continents or small water bodies
 - Leaders with strong land-based unique units
 
 ### Dynamic Adjustment
+
 The flavor can be temporarily modified by:
+
 - Map type (Archipelago vs Pangaea)
 - Strategic circumstances (naval enemy, island resources)
 - Grand strategy selection (Conquest, Culture, Science)

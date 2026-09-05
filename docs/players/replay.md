@@ -24,12 +24,12 @@ The Replayer ships with a few example replays of AI games, so you can see it in 
 
 ## Watching a game
 
-| Control | Action |
-| --- | --- |
-| Space | Play and pause |
-| Left/right arrows | Step one turn; up/down step ten |
-| Number keys 1–5 | Change playback speed |
-| +/- zoom | Move between the whole-map view and a closer look |
+| Control           | Action                                            |
+| ----------------- | ------------------------------------------------- |
+| Space             | Play and pause                                    |
+| Left/right arrows | Step one turn; up/down step ten                   |
+| Number keys 1–5   | Change playback speed                             |
+| +/- zoom          | Move between the whole-map view and a closer look |
 
 ## Reviewing the AI's reasoning
 

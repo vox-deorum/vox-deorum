@@ -35,18 +35,14 @@ The event serves as a completion notification for espionage operations, allowing
 
 # Technical Details
 
-**Event Name:** `EspionageResult`
-**Hook Type:** Game event invoke hook
-**Parameters Count:** 5
-**Parameter Types:**
+**Event Name:** `EspionageResult` **Hook Type:** Game event invoke hook **Parameters Count:** 5 **Parameter Types:**
+
 - Spy Owner ID (integer)
 - Spy Index (integer)
 - Result Code (integer)
 - City X Coordinate (integer)
 - City Y Coordinate (integer)
 
-**Source File:** `CvGameCoreDLL_Expansion2/CvEspionageClasses.cpp`
-**Line Number:** 6959
-**Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_EspionageResult, (int) eSpyOwner, iSpyIndex, iResult, m_pCity->getX(), m_pCity->getY());`
+**Source File:** `CvGameCoreDLL_Expansion2/CvEspionageClasses.cpp` **Line Number:** 6959 **Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_EspionageResult, (int) eSpyOwner, iSpyIndex, iResult, m_pCity->getX(), m_pCity->getY());`
 
 The event is triggered within the `CvCityEspionage` class as part of the result storage mechanism (`m_aiResult[eSpyOwner] = iResult`), ensuring that external systems receive notification whenever espionage operation outcomes are recorded.

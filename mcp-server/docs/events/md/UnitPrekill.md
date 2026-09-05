@@ -51,7 +51,7 @@ args->Push(((int)eUnitOwner));  // Owner player ID
 args->Push(GetID());            // Unit ID
 args->Push(getUnitType());      // Unit type
 args->Push(getX());             // X coordinate
-args->Push(getY());             // Y coordinate  
+args->Push(getY());             // Y coordinate
 args->Push(bDelay);             // Delay kill flag
 args->Push(ePlayer);            // Attacking player ID
 

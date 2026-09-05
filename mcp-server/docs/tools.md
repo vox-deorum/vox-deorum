@@ -12,7 +12,7 @@ Concise reference for all 43 tools exposed by the MCP Server. Tools are organize
 ## General Tools (4)
 
 | Tool | Description | Key Input |
-|------|-------------|-----------|
+| --- | --- | --- |
 | `calculator` | Evaluates mathematical expressions using mathjs | `Expression`: string |
 | `lua-executor` | Executes raw Lua scripts in game context via Bridge Service | `Script`: string, `Description?`: string |
 | `call-lua-function` | Calls a Lua function registered by the game mod with structured arguments | `Name`: string, `Args`: array, `ExpectedGameID?` |
@@ -23,7 +23,7 @@ Concise reference for all 43 tools exposed by the MCP Server. Tools are organize
 All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `MaxResults?`: number (default: 20). Returns full details automatically when search narrows to a single result.
 
 | Tool | Description |
-|------|-------------|
+| --- | --- |
 | `get-technology` | Technology info with prerequisites, unlocks |
 | `get-policy` | Policy details and branch information |
 | `get-building` | Building specifications and requirements |
@@ -36,7 +36,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 ## Knowledge Query Tools (13)
 
 | Tool | Description | Key Input |
-|------|-------------|-----------|
+| --- | --- | --- |
 | `get-events` | Recent game events, consolidated by turn with smart grouping | `Turn?`, `Type?`, `After?`, `Before?`, `PlayerID?`, `Original?` |
 | `get-diplomatic-events` | Diplomatic events (wars, peace, deals, city-state, espionage, world congress) grouped by turn | `PlayerID`, `OtherPlayerID?`, `FromTurn?`, `ToTurn?`, `Formatted?` |
 | `read-transcript` | Read the durable, append-ID-ordered conversation between two endpoints, optionally filtered by message type or speaker role, with optional older-page cursors | `PlayerAID`, `PlayerBID`, `MessageType?`, `Role?`, `BeforeID?`, `Limit?` |
@@ -56,7 +56,7 @@ For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw
 ## Action Tools (15)
 
 | Tool | Description | Key Input |
-|------|-------------|-----------|
+| --- | --- | --- |
 | `set-strategy` | Set grand/economic/military strategies by name | `PlayerID`, `GrandStrategy?`, `EconomicStrategies?`, `MilitaryStrategies?`, `Rationale` |
 | `set-persona` | Set diplomatic personality values (1-10) across 26 personality fields | `PlayerID`, `[personality fields]`, `Rationale` |
 | `set-relationship` | Set additive diplomatic modifiers with another major civ; positive MCP values mean friendlier intent | `PlayerID`, `TargetID`, `Public?` (-100 to 100), `Private?` (-100 to 100), `Rationale` |
@@ -76,7 +76,7 @@ For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw
 ## Game Control Tools (3)
 
 | Tool | Description | Key Input |
-|------|-------------|-----------|
+| --- | --- | --- |
 | `pause-game` | Pause the game during a specific player's turn | `PlayerID` (0-21) |
 | `resume-game` | Resume the game during a specific player's turn | `PlayerID` (0-21) |
 | `set-production-mode` | Enable or disable the DLL's production mode (AI turn cooldown); returns whether the bridge update succeeded | `enabled`: boolean |
@@ -94,17 +94,20 @@ For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw
 ### Base Class Quick Guide
 
 **DatabaseQueryTool\<TSummary, TFull\>** -- For querying Civ5 databases
+
 - Implement `fetchSummaries()`: cached list of all items
 - Implement `fetchFullInfo(identifier)`: detailed single item
 - Automatic fuzzy matching via fast-fuzzy and caching
 - Returns full details when search resolves to a single result
 
 **LuaFunctionTool\<TResult\>** -- For executing Lua in game
+
 - Set `scriptFile` for file-based scripts (in `lua/` directory) or `script` for inline
 - Define `arguments` array matching Lua function parameters
 - Access results via the `call()` method
 
 **DynamicEventTool** -- For creating custom game events
+
 - Set `eventType` for the event type stored in GameEvents
 - Implement `buildPayload()` to construct enriched event data
 - Events stored with visibility analysis via `composeVisibility()`

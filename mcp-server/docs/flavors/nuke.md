@@ -7,6 +7,7 @@
 Unlike `FLAVOR_USE_NUKE` (which controls the willingness to actually deploy nuclear weapons), `FLAVOR_NUKE` specifically governs the **production priority and desired quantity** of nuclear weapons in the AI's military composition.
 
 ### Value Range
+
 - **Scale:** 0-20 (integer values, with personality typically ranging 1-10)
 - **Modified by:** Grand Strategy adjustments can push effective values beyond base personality ranges
 - **Typical Values:**
@@ -22,6 +23,7 @@ These two flavors work together to create differentiated nuclear doctrines:
 - **FLAVOR_USE_NUKE:** "How willing am I to use them?"
 
 This separation allows for personality archetypes like:
+
 - **Defensive Deterrence:** High NUKE, Low USE_NUKE (build large arsenal but rarely use)
 - **Aggressive Nuclear Power:** High NUKE, High USE_NUKE (build arsenal and willing to first strike)
 - **Opportunistic User:** Low NUKE, High USE_NUKE (won't prioritize building but will use available nukes)
@@ -49,14 +51,14 @@ return (iNumNukes < iFlavorNuke / 3);
 
 **Interpretation:** The AI desires a nuclear arsenal equal to `FLAVOR_NUKE / 3` nuclear units.
 
-| FLAVOR_NUKE | Target Arsenal Size | Effect on Production |
-|-------------|---------------------|----------------------|
-| 3 | 1 nuke | Minimal nuclear capability |
-| 6 | 2 nukes | Small deterrent force |
-| 9 | 3 nukes | Standard nuclear arsenal |
-| 12 | 4 nukes | Substantial nuclear capability (Gandhi) |
-| 15 | 5 nukes | Large nuclear arsenal |
-| 18 | 6 nukes | Major nuclear power |
+| FLAVOR_NUKE | Target Arsenal Size | Effect on Production                    |
+| ----------- | ------------------- | --------------------------------------- |
+| 3           | 1 nuke              | Minimal nuclear capability              |
+| 6           | 2 nukes             | Small deterrent force                   |
+| 9           | 3 nukes             | Standard nuclear arsenal                |
+| 12          | 4 nukes             | Substantial nuclear capability (Gandhi) |
+| 15          | 5 nukes             | Large nuclear arsenal                   |
+| 18          | 6 nukes             | Major nuclear power                     |
 
 #### Nuclear Gandhi Override
 
@@ -174,14 +176,17 @@ The formula calculates support/opposition to nuclear non-proliferation based on:
 #### Voting Examples
 
 **Leader with FLAVOR_NUKE = 4 (low nuclear interest) and 2 disliked neighbors:**
+
 - Score: `(8 - 4) × 2 × 20 = +160` (supports the ban)
 - Reasoning: Low nuclear interest + hostile neighbors = prefer disarmament
 
 **Leader with FLAVOR_NUKE = 12 (high nuclear interest) and 3 disliked neighbors:**
+
 - Score: `(8 - 12) × 3 × 20 = -240` (opposes the ban)
 - Reasoning: High nuclear interest + hostile neighbors = wants nuclear capability
 
 **Nuclear Gandhi (any neighbors):**
+
 - Score: `-1000` (automatically opposes)
 - Reasoning: Nuclear Gandhi always opposes nuclear restrictions
 
@@ -221,30 +226,36 @@ This code assigns importance weights to FLAVOR_NUKE when the advisor system reco
 #### Advisor Weighting by Type
 
 **Military Advisor (line 389):**
+
 ```cpp
 else if(strFlavorName == "FLAVOR_NUKE")
 {
     return 10;
 }
 ```
+
 Weight: **10** - Moderate-high importance for military recommendations
 
 **Foreign Advisor (line 459):**
+
 ```cpp
 else if(strFlavorName == "FLAVOR_NUKE")
 {
     return 5;
 }
 ```
+
 Weight: **5** - Moderate importance for diplomatic recommendations (nuclear capabilities affect diplomacy)
 
 **Science Advisor (line 497):**
+
 ```cpp
 else if(strFlavorName == "FLAVOR_NUKE")
 {
     return 3;
 }
 ```
+
 Weight: **3** - Low importance for science recommendations (though nuclear tech is science-based)
 
 **Interpretation:**
@@ -254,6 +265,7 @@ The advisor system recognizes that nuclear weapons are primarily a **military co
 ## Summary of Effects
 
 ### Nuclear Arsenal Management
+
 - **Defines target stockpile size:** AI maintains `FLAVOR_NUKE / 3` nuclear weapons
 - **Production trigger:** Strategy activates when arsenal falls below target
 - **Continuous production:** Nuclear Gandhi ignores limits and always produces
@@ -261,6 +273,7 @@ The advisor system recognizes that nuclear weapons are primarily a **military co
 - **Cruise missile deprioritization:** -50 penalty when nukes already exist
 
 ### World Congress Diplomacy
+
 - **Nuclear Non-Proliferation stance:** `(8 - FLAVOR_NUKE) × DislikedNeighbors × 20`
 - **High FLAVOR_NUKE:** Strongly opposes nuclear bans
 - **Low FLAVOR_NUKE:** Supports nuclear disarmament
@@ -268,11 +281,13 @@ The advisor system recognizes that nuclear weapons are primarily a **military co
 - **Gandhi exception:** -1000 score (absolute opposition to bans)
 
 ### Grand Strategy Integration
+
 - **Conquest victory alignment:** Nuclear-focused policies support domination strategy
 - **Policy tree preference:** Values military and aggressive policy branches
 - **Long-term planning:** Nuclear capability integrated into conquest grand strategy
 
 ### Advisor System
+
 - **Military recommendations:** High weight (10) for nuclear-related suggestions
 - **Diplomatic recommendations:** Moderate weight (5) for nuclear diplomacy factors
 - **Science recommendations:** Low weight (3) for nuclear technology
@@ -290,11 +305,13 @@ FLAVOR_NUKE implements a comprehensive nuclear deterrence and proliferation mode
 ## Dynamic Adjustments
 
 The effective FLAVOR_NUKE value is retrieved through:
+
 ```cpp
 GetGrandStrategyAI()->GetPersonalityAndGrandStrategy((FlavorTypes)GC.getInfoTypeForString("FLAVOR_NUKE"))
 ```
 
 This means the flavor can be modified by:
+
 - **Base personality value** (from leader XML definition)
 - **Grand Strategy modifiers** (conquest strategy increases, diplomacy decreases)
 - **Economic strategies** (financial constraints may reduce)
@@ -306,18 +323,22 @@ These modifiers allow the AI to adapt nuclear priorities based on game circumsta
 ## Interaction with Related Systems
 
 ### Manhattan Project
+
 - When another civilization builds the Manhattan Project, it triggers global nuclear capability
 - AI with high FLAVOR_NUKE will immediately begin nuclear weapon production
 - Espionage AI may sabotage enemy Manhattan Project construction based on diplomatic relations
 
 ### Nuclear Strategy Activation
+
 The `IsTestStrategy_NeedANuke()` function is called by the military AI strategy system each turn. When it returns true:
+
 1. Nuclear-capable units receive production priority
 2. Cities may switch production to nuclear weapons
 3. Purchase considerations favor nuclear units
 4. Tech research may prioritize nuclear technologies
 
 ### Diplomatic Implications
+
 - Other civilizations assess nuclear threat based on arsenal size and FLAVOR_USE_NUKE
 - Nuclear capability affects diplomatic approach calculations (AFRAID, GUARDED)
 - World Congress proposals regarding nuclear weapons are heavily influenced
@@ -334,7 +355,9 @@ The `IsTestStrategy_NeedANuke()` function is called by the military AI strategy 
 ## Notable Implementation Details
 
 ### Nuclear Gandhi
+
 The "Nuclear Gandhi" mechanic is a deliberate reference to the urban legend from earlier Civilization games. The implementation includes:
+
 - Hardcoded checks for `IsNuclearGandhi()`
 - Base FLAVOR_NUKE value of 12 (higher than typical leaders)
 - Unlimited nuclear production override
@@ -342,14 +365,18 @@ The "Nuclear Gandhi" mechanic is a deliberate reference to the urban legend from
 - Special diplomatic considerations for nuclear threat assessment
 
 ### Arsenal Size Scaling
+
 The `/3` divider in the target arsenal calculation creates reasonable stockpile sizes:
+
 - Prevents runaway nuclear production overwhelming other military needs
 - Maintains approximately 3-6 nukes for high-nuclear leaders
 - Scales with personality while remaining manageable
 - Allows meaningful distinctions between nuclear doctrines
 
 ### Integration with Combat AI
+
 While FLAVOR_NUKE controls **production**, the actual **deployment** is handled by:
+
 - `FLAVOR_USE_NUKE` for strike probability
 - `CvMilitaryAI::DoNuke()` for targeting and launch decisions
 - Diplomatic AI for threat assessment and deterrence calculations

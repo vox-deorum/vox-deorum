@@ -7,16 +7,19 @@ The `EventUnitCreated` event is triggered when a unit is created as a result of 
 This event is triggered when unit creation occurs as a consequence of event choice resolution in both city-level and player-level events.
 
 **Specific trigger conditions:**
+
 - **Event choice execution**: An event choice that includes unit creation as an effect is being processed
 - **Valid unit creation**: The event choice specifies a valid unit type that can be created
 - **Successful unit spawning**: The unit has been successfully created and added to the game
 - **Event system integration**: The unit creation is happening through the event choice system rather than normal production
 
 **Multiple trigger locations:**
+
 - **City events** (lines 7109, 7139 in `CvCity.cpp`): When city event choices create units
 - **Player events** (lines 8341, 8383 in `CvPlayer.cpp`): When player event choices create units
 
 **Related mechanics that can trigger event unit creation:**
+
 - City event choices that reward units for specific decisions
 - Player event choices that provide military reinforcements or special units
 - Event chain progression where unit rewards are granted
@@ -25,7 +28,7 @@ This event is triggered when unit creation occurs as a consequence of event choi
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `playerID` | integer | The ID of the player who will receive the created unit (from `getOwner()` or `GetID()`) |
 | `eventChoiceID` | integer | The identifier of the event choice that triggered the unit creation (`eEventChoice`) |
 | `unitPointer` | integer | Pointer to the created unit object cast as integer (`pUnit`) |
@@ -35,6 +38,7 @@ This event is triggered when unit creation occurs as a consequence of event choi
 Event unit creation represents a reward or consequence mechanism within the event system, providing players with military assets, civilian units, or unique units based on their event choices. These units are typically granted as immediate benefits for making specific decisions during events.
 
 **Event unit creation mechanics:**
+
 - **Unit type variety**: Events can create any type of unit defined in the game database
 - **Free units**: Event-created units typically don't cost production or resources
 - **Immediate availability**: Units are created instantly when the event choice is processed
@@ -42,6 +46,7 @@ Event unit creation represents a reward or consequence mechanism within the even
 - **Special units**: Some events may create unique or otherwise unavailable units
 
 **Common event unit rewards:**
+
 - **Military reinforcements**: Combat units to bolster defense or enable expansion
 - **Specialist civilians**: Workers, settlers, or other civilian units to aid development
 - **Unique units**: Special or promoted units not normally available through production
@@ -49,6 +54,7 @@ Event unit creation represents a reward or consequence mechanism within the even
 - **Exploration units**: Scouts or naval units to aid in discovery and expansion
 
 **Event unit creation contexts:**
+
 - **City events**: Local events may provide units specific to city needs or circumstances
 - **Player events**: Civilization-wide events may grant units for strategic purposes
 - **Crisis response**: Emergency events may provide military units for immediate threats
@@ -57,7 +63,8 @@ Event unit creation represents a reward or consequence mechanism within the even
 
 # Technical Details
 
-**Source Locations**: 
+**Source Locations**:
+
 - `CvGameCoreDLL_Expansion2/CvCity.cpp`, lines 7109, 7139
 - `CvGameCoreDLL_Expansion2/CvPlayer.cpp`, lines 8341, 8383
 
@@ -66,12 +73,14 @@ Event unit creation represents a reward or consequence mechanism within the even
 **Script System Integration**: Uses `GAMEEVENTINVOKE_HOOK` macro with `GAMEEVENT_EventUnitCreated`
 
 **Preconditions**:
+
 - `eEventChoice` parameter must be a valid event choice type that includes unit creation
 - Unit type specified in the event choice must be valid and available
 - Player must have sufficient space or valid location for unit placement
 - `pUnit` pointer must reference a successfully created unit object
 
 **Event Flow**:
+
 1. Event choice processing determines that unit creation is required
 2. Unit type and attributes are retrieved from event choice configuration
 3. Unit creation process is initiated through the game's unit spawning system
@@ -81,6 +90,7 @@ Event unit creation represents a reward or consequence mechanism within the even
 7. Event processing continues with any additional effects or consequences
 
 **Related Events**:
+
 - `EventChoiceActivated`: The choice selection that may lead to unit creation
 - `EventChoiceEnded`: The choice resolution that triggers unit creation
 - `UnitCreated`: The general unit creation event for non-event unit spawning

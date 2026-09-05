@@ -1,28 +1,16 @@
 # Deal Valuation & the `INT_MAX` Sentinel
 
-Reference for how the Civ 5 Community Patch DLL marks a trade item as `INT_MAX` (2,147,483,647).
-Understanding this is important for interpreting AI trade behavior and building tools that reason
-about deal feasibility.
+Reference for how the Civ 5 Community Patch DLL marks a trade item as `INT_MAX` (2,147,483,647). Understanding this is important for interpreting AI trade behavior and building tools that reason about deal feasibility.
 
 ## Two distinct mechanisms (don't conflate them)
 
 `INT_MAX` shows up for **two different reasons**, and only the first is a true impossibility:
 
-1. **Structural impossibility** — `CvDeal::IsPossibleToTradeItem()` returns `false` (you don't own the
-   item, peace must be mutual, vassalage prerequisites unmet, …). This is an always-on *rule*: the item
-   genuinely cannot be in a deal. It is reported separately by `GetReasonsItemUntradeable()` and drives
-   the deal board's red/disabled rows.
+1. **Structural impossibility** — `CvDeal::IsPossibleToTradeItem()` returns `false` (you don't own the item, peace must be mutual, vassalage prerequisites unmet, …). This is an always-on _rule_: the item genuinely cannot be in a deal. It is reported separately by `GetReasonsItemUntradeable()` and drives the deal board's red/disabled rows.
 
-2. **Advisory valuation refusal** — `CvDealAI::GetTradeItemValue()` returns `INT_MAX` because the stock
-   AI's **value estimate maxes out**: it would not make this trade at any price (last strategic resource,
-   last luxury while unhappy, a category/policy refusal, an uneconomic peace resource, …). This is a
-   strategic/political **preference**, not a structural bar. On the agent/inspection path this valuation
-   is **read-only and bypassed for acceptance** (specs §4) — agents may strike deals the stock AI never
-   would — so it surfaces as **"no usable estimate"** and **gates nothing**.
+2. **Advisory valuation refusal** — `CvDealAI::GetTradeItemValue()` returns `INT_MAX` because the stock AI's **value estimate maxes out**: it would not make this trade at any price (last strategic resource, last luxury while unhappy, a category/policy refusal, an uneconomic peace resource, …). This is a strategic/political **preference**, not a structural bar. On the agent/inspection path this valuation is **read-only and bypassed for acceptance** (specs §4) — agents may strike deals the stock AI never would — so it surfaces as **"no usable estimate"** and **gates nothing**.
 
-Both encode as `INT_MAX` in the stock value cascade (below), which is why the *stock* AI refuses such a
-deal outright. The triggers catalogued further down are mostly mechanism (2) — advisory preferences —
-even though the stock game treats them as hard refusals.
+Both encode as `INT_MAX` in the stock value cascade (below), which is why the _stock_ AI refuses such a deal outright. The triggers catalogued further down are mostly mechanism (2) — advisory preferences — even though the stock game treats them as hard refusals.
 
 ### The Cascade (stock acceptance path)
 
@@ -36,13 +24,12 @@ IsPossibleToTradeItem() returns false     (structural — CvDealClasses.cpp)
         → stock AI refuses outright / won't propose
 ```
 
-One `INT_MAX` item kills the entire deal **for the stock AI**. (On the agent path the valuation is never
-consulted for acceptance — see specs §4.)
+One `INT_MAX` item kills the entire deal **for the stock AI**. (On the agent path the valuation is never consulted for acceptance — see specs §4.)
 
 ### Structural-impossible vs advisory-refused vs unfavorable
 
-| | Structurally impossible | Advisory refusal (`INT_MAX` value) | Unfavorable |
-|---|---|---|---|
+|  | Structurally impossible | Advisory refusal (`INT_MAX` value) | Unfavorable |
+| --- | --- | --- | --- |
 | Source | `IsPossibleToTradeItem` | `CvDealAI::GetTradeItemValue` maxes out | Normal valuation |
 | Value | `INT_MAX` | `INT_MAX` | Normal integer |
 | Nature | Always-on rule | Strategic/political preference | Bad terms / diplomacy |
@@ -122,6 +109,7 @@ For two-sided items, if either side's valuation returns `INT_MAX`, the whole ite
 ### Possibility Gate — `IsPossibleToTradeItem()`
 
 Returns `false` (triggering `INT_MAX` upstream) when:
+
 - Same team, or VP mod not active
 - AI teammate of a human
 - Vassalage game option disabled
@@ -132,28 +120,32 @@ Returns `false` (triggering `INT_MAX` upstream) when:
 ### Valuation Gate — `GetVassalageValue()`
 
 Returns `INT_MAX` in 2 cases, both delegating to `IsVassalageAcceptable()`:
+
 - **Us becoming vassal**: diplomacy AI refuses (not desperate/friendly enough)
 - **Them becoming our vassal**: we don't want them (too much baggage)
 
 ### `IsVassalageAcceptable()` — Dual-Mode Function
 
 **As Master** (`bMasterEvaluation = true`):
+
 - **At war** → always accept (capitulation)
 - **At peace** → delegates to `IsVoluntaryVassalageRequestAcceptable()`, needs majority team approval
 
 **As Vassal** (`bMasterEvaluation = false`):
 
 Hard rejections:
+
 - Already their vassal
 - `canBecomeVassal()` fails
 - We have vassals of our own (and not at war)
-- Resurrected by a *different* team (loyal to liberator)
+- Resurrected by a _different_ team (loyal to liberator)
 
 Then delegates based on war state:
 
 #### `IsCapitulationAcceptable()` (during war)
 
 War-score-based with threshold:
+
 - War score must be ≤ -75 (auto-accept at ≤ -95)
 - Must be in defensive war state or worse
 - They must be militarily stronger (IMMENSE/POWERFUL bonus, else reject)
@@ -162,7 +154,8 @@ War-score-based with threshold:
 #### `IsVoluntaryVassalageAcceptable()` (during peace)
 
 Hard rejections first (any one kills it):
-- >50% of civs eliminated (late game)
+
+- > 50% of civs eliminated (late game)
 - They failed to protect us, stole from us, plotted against us
 - We have more team members than they do
 - Too far away (less than CLOSE proximity)
@@ -175,19 +168,19 @@ Hard rejections first (any one kills it):
 
 Then 50+ factor scoring:
 
-| Factor | Range |
-|---|---|
-| Opinion (ALLY → COMPETITOR) | +15 → -50 |
-| Approach (AFRAID → NEUTRAL) | +20 → -10 |
-| Military strength (IMMENSE → POWERFUL) | +40 → +20 |
-| Economic strength (IMMENSE → POWERFUL) | +40 → +20 |
-| Warmonger threat (NONE → CRITICAL) | +10 → -150 |
-| Tech ratio (far behind → ahead) | +40 → -50 |
-| Resurrected by them | +100 |
-| Liberated our capital / holy city | +50 / +30 |
-| Wars declared on us by them | -10 each |
-| Cities captured by them | -30 each |
-| Their existing vassals | -20 each |
+| Factor                                 | Range      |
+| -------------------------------------- | ---------- |
+| Opinion (ALLY → COMPETITOR)            | +15 → -50  |
+| Approach (AFRAID → NEUTRAL)            | +20 → -10  |
+| Military strength (IMMENSE → POWERFUL) | +40 → +20  |
+| Economic strength (IMMENSE → POWERFUL) | +40 → +20  |
+| Warmonger threat (NONE → CRITICAL)     | +10 → -150 |
+| Tech ratio (far behind → ahead)        | +40 → -50  |
+| Resurrected by them                    | +100       |
+| Liberated our capital / holy city      | +50 / +30  |
+| Wars declared on us by them            | -10 each   |
+| Cities captured by them                | -30 each   |
+| Their existing vassals                 | -20 each   |
 
 Final score multiplied by cultural dominance and proximity, must exceed `VASSALAGE_CAPITULATE_BASE_THRESHOLD`.
 
@@ -196,6 +189,7 @@ Final score multiplied by cultural dominance and proximity, must exceed `VASSALA
 ### Possibility Gate
 
 Returns `false` when:
+
 - Same team, VP mod not active, vassalage disabled
 - `canEndAllVassal()` fails (no vassals, or any vassal below minimum liberate turns)
 - Requester is our vassal (vassals can't demand this of their master)
@@ -206,7 +200,7 @@ Returns `false` when:
 **Us revoking our vassals** — 6 `INT_MAX` return points:
 
 | Condition | Why |
-|---|---|
+| --- | --- |
 | At war but war score ≥ -75 | Not losing badly enough |
 | Our approach is WAR | Hostile — won't free vassals for an enemy |
 | Close to **world conquest** | Vassals are part of domination strategy |
@@ -217,7 +211,7 @@ Returns `false` when:
 **Them revoking their vassals** — 1 `INT_MAX` return point:
 
 | Condition | Why |
-|---|---|
+| --- | --- |
 | None of the freed vassals are our friends/allies/resurrection candidates | No strategic benefit to demanding this |
 
 ## Liberation Mechanics
@@ -227,10 +221,12 @@ There is no `TRADE_ITEM_LIBERATION` or `TRADE_ITEM_CAPITULATION`. Capitulation i
 ### Four Paths to Ending Vassalage
 
 **1. Voluntary revocation** (vassal initiates, peaceful)
+
 - Only for voluntary vassals, no turn requirement beyond minimum
 - No war declared
 
 **2. Forced rebellion** (capitulated vassal breaks free)
+
 - `canEndVassal()` checks — must meet minimum turns AND one of:
   - Lost ≥75% of original cities (master failed to protect)
   - Grew to ≥300% original population (outgrew master)
@@ -239,10 +235,12 @@ There is no `TRADE_ITEM_LIBERATION` or `TRADE_ITEM_CAPITULATION`. Capitulation i
 - Declares war on master
 
 **3. Master voluntarily liberates** (peaceful)
+
 - `CanLiberateVassal()` — requires minimum liberate turns
 - No war
 
 **4. Deal-based liberation** (`TRADE_ITEM_VASSALAGE_REVOKE`)
+
 - Master forced to revoke all vassals as part of a deal
 - Always peaceful
 - Liberating capitulated vassals gives diplomatic bonus with freed vassals
@@ -250,6 +248,7 @@ There is no `TRADE_ITEM_LIBERATION` or `TRADE_ITEM_CAPITULATION`. Capitulation i
 ### `DoEndVassal()` Side Effects
 
 When vassalage ends:
+
 1. Reset taxes, remove diplomat spies
 2. Close embassies both directions, cancel open borders
 3. If forced: temporarily disable warmonger penalties, then declare war on master

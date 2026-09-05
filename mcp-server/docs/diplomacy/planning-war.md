@@ -24,6 +24,7 @@ From any non-war approach, when the conditions above are met. The approach scori
 ## Transitions Out of PlanningWar
 
 ### To Active War
+
 When the AI declares war, the approach stays `CIV_APPROACH_WAR` but `IsAtWar()` becomes true.
 
 ### Cancellation Without War
@@ -61,15 +62,15 @@ Modifiers influence war planning through **two parallel paths**:
 
 Individual modifiers (border disputes, religion conflicts, wonder competition, tech blocking, etc.) accumulate into an opinion weight. When the sum crosses thresholds, opinion shifts category:
 
-| Weight | Opinion |
-|--------|---------|
+| Weight | Opinion      |
+| ------ | ------------ |
 | >= 160 | UNFORGIVABLE |
-| >= 80  | ENEMY |
-| >= 30  | COMPETITOR |
-| > -30  | NEUTRAL |
-| > -80  | FAVORABLE |
-| > -160 | FRIEND |
-| else   | ALLY |
+| >= 80  | ENEMY        |
+| >= 30  | COMPETITOR   |
+| > -30  | NEUTRAL      |
+| > -80  | FAVORABLE    |
+| > -160 | FRIEND       |
+| else   | ALLY         |
 
 Opinion is checked selectively in approach scoring. ENEMY opinion + easy target triggers opportunity attack desire. COMPETITOR or worse adds WAR score in victory competition contexts.
 
@@ -77,14 +78,14 @@ Opinion is checked selectively in approach scoring. ENEMY opinion + easy target 
 
 Major provocations add WAR weight directly, bypassing opinion:
 
-| Event | WAR Score Impact |
-|-------|-----------------|
-| Denounced us | +2x bias |
-| Sanctioning us | +5x bias |
-| Backstabbed us | +5-10x bias |
+| Event                | WAR Score Impact                  |
+| -------------------- | --------------------------------- |
+| Denounced us         | +2x bias                          |
+| Sanctioning us       | +5x bias                          |
+| Backstabbed us       | +5-10x bias                       |
 | Captured our capital | +10x bias (+20000 if easy target) |
-| Captured holy city | Variable (religion flavor) |
-| Culture bombed | +0.5x bias |
+| Captured holy city   | Variable (religion flavor)        |
+| Culture bombed       | +0.5x bias                        |
 
 ### Can Positive Modifiers Cancel War?
 
@@ -93,6 +94,7 @@ Major provocations add WAR weight directly, bypassing opinion:
 Lua can inject modifiers via `GAMEEVENT_GetDiploModifier`, which feeds into `CalculateCivOpinionWeight()`.
 
 **Limitations:**
+
 - Coop wars and teammate wars **override everything** - `DoUpdateWarTargets()` forces WAR regardless of opinion
 - Existing sneak attack operations may persist until `DoUpdateWarTargets()` also agrees to drop the target
 - Extreme provocations (capital capture: +10x bias + 20000 flat) require enormous positive modifiers to overcome

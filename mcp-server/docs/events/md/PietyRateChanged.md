@@ -30,6 +30,7 @@ The Piety rate system governs how quickly civilizations accumulate religious res
 - **Long-term Development:** Consistent rate improvements compound over time
 
 Factors that typically influence Piety rate include:
+
 - Religious buildings and infrastructure
 - Government types and policy choices
 - Religious beliefs and pantheon bonuses
@@ -37,12 +38,14 @@ Factors that typically influence Piety rate include:
 - Special abilities from civilizations or leaders
 
 The rate system enables civilizations to optimize their religious development by:
+
 - Investing in rate-enhancing improvements
 - Making strategic choices that boost long-term Piety generation
 - Balancing immediate Piety expenditure with future generation capacity
 - Adapting religious strategies based on generation capabilities
 
 This event is valuable for AI systems to:
+
 - Evaluate long-term religious potential of civilizations
 - Plan optimal timing for Piety-dependent actions
 - Assess the effectiveness of religious development strategies
@@ -51,31 +54,38 @@ This event is valuable for AI systems to:
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvPlayer.cpp` (lines 29494, 29502)
 
 **Triggering Functions:**
+
 - `CvPlayer::SetPietyRate(int iValue)` - Sets Piety rate to a specific value per turn
 - `CvPlayer::ChangePietyRate(int iValue)` - Modifies Piety rate by a delta amount
 
 **Related Members:**
+
 - `m_iJFDPietyRate` - Internal member storing the current Piety generation rate
 - `GetPietyRate()` - Accessor method returning the current Piety rate per turn
 - `GetPiety()` - Related method for current Piety total
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_PietyRateChanged, GetID(), GetPietyRate(), iValue);
 ```
 
 **Compilation Requirements:**
+
 - Only available when `MOD_BALANCE_CORE` is defined
 - Part of the JFD (JFD's Rise to Power) mod integration within Community Patch
 
 **Integration:**
+
 - Works in conjunction with the Piety accumulation system
 - Affects the per-turn Piety gain calculations
 - Influences the timing and feasibility of religious strategic decisions
 
 **Note:** The event parameter `iValue` represents different things depending on the triggering function:
+
 - In `SetPietyRate()`: the new rate value being set
 - In `ChangePietyRate()`: the delta amount being applied to the current rate

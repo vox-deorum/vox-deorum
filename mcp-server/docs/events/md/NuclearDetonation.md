@@ -5,6 +5,7 @@ The `NuclearDetonation` event is triggered when a nuclear weapon is detonated in
 # Event Triggers
 
 This event is triggered in the following scenario:
+
 - When a nuclear weapon (atomic bomb or nuclear missile) successfully detonates on a target location
 - The event fires during combat resolution, specifically during the nuclear attack processing phase
 - Captures both successful strikes and the diplomatic implications of nuclear warfare
@@ -12,7 +13,7 @@ This event is triggered in the following scenario:
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `attackerId` | `int` | The player ID of the civilization that launched the nuclear weapon |
 | `x` | `int` | The X coordinate where the nuclear weapon detonated |
 | `y` | `int` | The Y coordinate where the nuclear weapon detonated |
@@ -24,19 +25,21 @@ This event is triggered in the following scenario:
 The `NuclearDetonation` event captures one of the most significant military actions in Civilization V. Nuclear weapons represent the pinnacle of military technology and their use has far-reaching consequences:
 
 **Military Impact:**
+
 - Massive damage to units and cities in the blast radius
 - Potential to eliminate multiple units simultaneously
 - Can damage or destroy city improvements and population
 - Creates fallout that affects tile productivity
 
 **Diplomatic Consequences:**
+
 - Severe diplomatic penalties with all civilizations
 - Potential to trigger widespread war declarations
 - Long-lasting reputation damage affecting future diplomacy
 - May affect World Congress votes and international relations
 
-**Strategic Context:**
-The event parameters provide crucial context:
+**Strategic Context:** The event parameters provide crucial context:
+
 - **War Status**: Distinguishes between nuclear strikes during active warfare vs. surprise attacks
 - **Bystander Impact**: Indicates whether neutral parties were affected, which has additional diplomatic penalties
 - **Location Data**: Essential for assessing strategic targets and collateral damage
@@ -52,6 +55,7 @@ The event parameters provide crucial context:
 **Combat Integration:** This event is part of the nuclear combat system and fires as part of the broader combat resolution mechanics.
 
 **Code Reference:**
+
 ```cpp
 args->Push(kAttacker.getOwner());
 args->Push(plot.getX());
@@ -62,6 +66,7 @@ LuaSupport::CallHook(pkScriptSystem, "NuclearDetonation", args.get(), bResult);
 ```
 
 **Diplomatic Context Variables:**
+
 - `bWar`: Determined by checking diplomatic state between attacker and target
 - `bBystander`: Calculated based on whether neutral civilizations are affected by the blast
 

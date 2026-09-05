@@ -6,31 +6,32 @@
 
 ```typescript
 interface SelectConfig extends NarratorStageConfig {
-  type: 'narrator-select';
-  selector: 'revised-selector';
-  targetDuration?: number;            // e.g., 60000 for TikTok, 600000 for documentary
-  prompts?: Record<string, string>;  // keyed by phase: 'select', 'script', etc.
-  batchSize?: number;                // episodes per batch, default 50
+  type: "narrator-select";
+  selector: "revised-selector";
+  targetDuration?: number; // e.g., 60000 for TikTok, 600000 for documentary
+  prompts?: Record<string, string>; // keyed by phase: 'select', 'script', etc.
+  batchSize?: number; // episodes per batch, default 50
 }
 ```
 
 ### Input
+
 - `workspace/episodes.json` (Episodes from Stage 1)
 
 ### Output: `workspace/selection.json`
 
 ```typescript
 interface SelectionOutput {
-  prompts: Record<string, string>;   // passed through from config for downstream stages
+  prompts: Record<string, string>; // passed through from config for downstream stages
   selectedDuration: number;
-  episodes: SelectedEpisode[];       // all selected episodes (chronological order)
+  episodes: SelectedEpisode[]; // all selected episodes (chronological order)
 }
 
 interface SelectedEpisode {
   turn: number;
   playerID: number;
-  rationale?: string;                 // why this episode was selected
-  trim?: { start: number; end: number };  // optional sub-trim
+  rationale?: string; // why this episode was selected
+  trim?: { start: number; end: number }; // optional sub-trim
 }
 ```
 
@@ -65,11 +66,13 @@ for each batch of episodes (grouped by turn ranges, default 50 per batch):
 **Extends:** `VoxAgent<NarratorParameters, BroadSelectionInput, BroadSelectionOutput>`
 
 **Properties:**
+
 - `programmatic: true` — structured input/output only
 - `maxSteps: 1` — single LLM call per batch
 - No tools — all data in context
 
 **Input (per batch):**
+
 ```typescript
 interface BroadSelectionInput {
   gameOverview: {
@@ -78,19 +81,20 @@ interface BroadSelectionInput {
     totalTurns: number;
     totalEpisodes: number;
   };
-  prompt?: string;                      // from config prompts['select']
-  targetDuration: number;              // final target — agent aims for ~2x this
-  previousDuration: number;            // from selected episodes
-  previousCandidates: SelectedEpisode[];  // from prior batches
-  batchBudget: number;                        // duration budget for this batch
-  batchEpisodes: Episode[];                      // this batch's episodes
+  prompt?: string; // from config prompts['select']
+  targetDuration: number; // final target — agent aims for ~2x this
+  previousDuration: number; // from selected episodes
+  previousCandidates: SelectedEpisode[]; // from prior batches
+  batchBudget: number; // duration budget for this batch
+  batchEpisodes: Episode[]; // this batch's episodes
 }
 ```
 
 **Output (per batch):**
+
 ```typescript
 interface BroadSelectionOutput {
-  candidates: SelectedEpisode[];       // generously selected
+  candidates: SelectedEpisode[]; // generously selected
 }
 ```
 
@@ -103,11 +107,13 @@ A single LLM call sees all candidates from Pass 1. With full visibility of the c
 **Extends:** `VoxAgent<NarratorParameters, PruningInput, PruningOutput>`
 
 **Properties:**
+
 - `programmatic: true` — structured input/output only
 - `maxSteps: 1` — single LLM call
 - No tools — all data in context
 
 **Input:**
+
 ```typescript
 interface PruningInput {
   gameOverview: {
@@ -115,18 +121,19 @@ interface PruningInput {
     winner?: { playerID: number; victoryType: string };
     totalTurns: number;
   };
-  prompt?: string;                      // from config prompts['select']
+  prompt?: string; // from config prompts['select']
   targetDuration: number;
-  currentDuration: number;             // current duration as a hint
-  candidates: SelectedEpisode[];       // all candidates from Pass 1
+  currentDuration: number; // current duration as a hint
+  candidates: SelectedEpisode[]; // all candidates from Pass 1
 }
 ```
 
 **Output:**
+
 ```typescript
 interface PruningOutput {
-  selected: SelectedEpisode[];         // final selection, within target duration
-  skipped?: SkippedEpisode[];          // candidates that were cut, with reasons
+  selected: SelectedEpisode[]; // final selection, within target duration
+  skipped?: SkippedEpisode[]; // candidates that were cut, with reasons
 }
 
 interface SkippedEpisode {

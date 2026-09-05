@@ -7,6 +7,7 @@
 Unlike offensive air flavors (FLAVOR_AIR, FLAVOR_BOMBER) which focus on projecting air power, `FLAVOR_ANTIAIR` specifically drives the AI's **investment in protecting cities and ground forces from enemy air attacks** through dedicated anti-aircraft units, fighter interceptors, and defensive air infrastructure.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Defensive specialists: 6-7
@@ -16,6 +17,7 @@ Unlike offensive air flavors (FLAVOR_AIR, FLAVOR_BOMBER) which focus on projecti
   - Ground-only focused leaders: 0-4
 
 ### Related Flavors
+
 - **FLAVOR_AIR:** General air power investment (both offensive and defensive)
 - **FLAVOR_DEFENSE:** General defensive military posture
 - **FLAVOR_CITY_DEFENSE:** City fortification and defensive structures
@@ -69,6 +71,7 @@ bool MilitaryAIHelpers::IsTestStrategy_NeedAntiAirUnits(CvPlayer* pPlayer, int i
 ```
 
 **Interpretation:** The "NEED_ANTIAIR" strategy activates when:
+
 1. **Any opponent has air forces** - No point building AA without air threats
 2. **Anti-air unit ratio falls below threshold** - Default: 1 AA unit per 2 melee units (ratio 1:2)
    - With 20 melee units: Need at least 10 AA units
@@ -115,6 +118,7 @@ bool MilitaryAIHelpers::IsTestStrategy_EnoughAntiAirUnits(CvPlayer* pPlayer, int
 ```
 
 **Interpretation:** The "ENOUGH_ANTIAIR" strategy returns true when:
+
 1. **No enemies have air forces** - Always returns true (don't need more AA)
 2. **Anti-air units exceed target ratio** - Default: More than 1 AA per 2 melee units
    - With 20 melee units and 11+ AA units: Enough AA units
@@ -168,10 +172,12 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_AIR" ||
 Dedicated anti-aircraft units have FLAVOR_ANTIAIR values that indicate their primary purpose:
 
 **Ground-Based Anti-Aircraft:**
+
 - Anti-Aircraft Gun (UNIT_ANTI_AIRCRAFT_GUN): 15
 - Mobile SAM (UNIT_MOBILE_SAM): 20
 
 **Fighter Aircraft (Dual Role - Air Superiority & Interception):**
+
 - Triplane (UNIT_TRIPLANE): 12 (also FLAVOR_AIR: 10)
 - SPAD (UNIT_SPAD, unique): 18 (also FLAVOR_AIR: 15)
 - Fighter (UNIT_FIGHTER): 16 (also FLAVOR_AIR: 14)
@@ -179,6 +185,7 @@ Dedicated anti-aircraft units have FLAVOR_ANTIAIR values that indicate their pri
 - Jet Fighter (UNIT_JET_FIGHTER): 20 (also FLAVOR_AIR: 18)
 
 **Interpretation:**
+
 - **Dedicated AA units** (SAM, AA Gun) have pure FLAVOR_ANTIAIR values, making them prioritized by defensive-minded leaders
 - **Fighter aircraft** have both FLAVOR_AIR and FLAVOR_ANTIAIR, appealing to leaders who value both offensive air operations and defensive interception
 - **Mobile SAM has the highest value (20)**, reflecting its effectiveness as the ultimate anti-aircraft weapon
@@ -201,6 +208,7 @@ Buildings that provide anti-aircraft defense have FLAVOR_ANTIAIR values:
 - **Military Base:** 30 (also FLAVOR_ANTIAIR: 30, FLAVOR_AIR: 30)
 
 **Interpretation:** Air infrastructure receives very high FLAVOR_ANTIAIR values (30), reflecting that these buildings:
+
 1. **Provide interception capabilities** - Units stationed in cities with these buildings can intercept enemy aircraft
 2. **Extend air defense range** - Increase the operational radius of fighter aircraft
 3. **Support fighter deployment** - Allow air units to be positioned for optimal interception coverage
@@ -212,13 +220,16 @@ Leaders with high FLAVOR_ANTIAIR will prioritize building airports and military 
 FLAVOR_ANTIAIR receives dynamic modifications based on the current military and economic situation:
 
 **Economic Pressures (Negative Modifiers):**
+
 - ECONOMICAISTRATEGY_TOO_MANY_UNITS: -300
 - ECONOMICAISTRATEGY_LOSING_MONEY: -300
 
 **Direct Anti-Air Needs:**
+
 - MILITARYAISTRATEGY_NEED_ANTIAIR: +50
 
 **Interpretation:**
+
 1. **Economic constraints severely penalize anti-air production** (-300), as AA units are specialized defensive assets that don't contribute to economic growth
 2. **The NEED_ANTIAIR strategy provides a massive +50 boost**, creating strong pressure to build AA units when enemy air forces threaten and current forces are insufficient
 3. **No war-specific bonuses** - Unlike offensive military flavors, FLAVOR_ANTIAIR doesn't get automatic boosts during wars unless the specific NEED_ANTIAIR threshold is crossed
@@ -228,6 +239,7 @@ FLAVOR_ANTIAIR receives dynamic modifications based on the current military and 
 Different leaders have varying FLAVOR_ANTIAIR values reflecting their defensive priorities:
 
 **Defensive Specialists (7):**
+
 - Enrico Dandolo
 - Maria
 - Maria I
@@ -237,14 +249,17 @@ Different leaders have varying FLAVOR_ANTIAIR values reflecting their defensive 
 - William
 
 **Balanced Leaders (5-6):**
+
 - Most standard civilization leaders
 - Default values for generic AI personalities
 
 **Reduced Priority (5):**
+
 - Alexander (conquest-focused, reduced from 7)
 - Elizabeth (naval/domination-focused, reduced from 7)
 
 **Interpretation:**
+
 - **Leaders with defensive or balanced doctrines** (7) prioritize maintaining anti-aircraft forces as part of comprehensive defensive strategy
 - **Aggressive conquest-focused leaders** (5) reduce anti-aircraft investment to allocate more resources to offensive capabilities
 - **The relatively narrow range (4-7)** suggests anti-aircraft defense is considered universally important in the modern era, with only moderate variation between leader personalities
@@ -252,24 +267,28 @@ Different leaders have varying FLAVOR_ANTIAIR values reflecting their defensive 
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Enemy assessment:** Continuously scans for enemy air force development
 - **Force composition:** Maintains target ratio of 1 AA unit per 2 melee units when air threats exist
 - **Technology research:** Prioritizes Ballistics and Advanced Ballistics when enemies develop air power
 - **Infrastructure planning:** Builds airports and military bases in vulnerable cities
 
 ### Military Production
+
 - **Unit production:** Activates when enemy air forces detected and AA ratio insufficient
 - **Dynamic priority:** Strong +50 boost during NEED_ANTIAIR strategy, -300 penalty during economic crisis
 - **Fighter vs dedicated AA:** Balance between multi-role fighters and specialized AA units based on both FLAVOR_AIR and FLAVOR_ANTIAIR
 - **Preemptive vs reactive:** Only builds AA units after detecting enemy air threats (not preemptively)
 
 ### Defensive Capabilities
+
 - **Interception network:** Positions fighters and AA units to provide overlapping coverage
 - **City defense:** Prioritizes AA protection for important cities and production centers
 - **Ground force protection:** Ensures field armies have AA support when operating in hostile airspace
 - **Damage mitigation:** Reduces effectiveness of enemy bombing campaigns and air superiority operations
 
 ### Situational Response
+
 - **No air threats:** Minimal investment (returns "Enough AA" immediately)
 - **Air threats detected:** Ramps up production until target ratio achieved
 - **Economic crisis:** Dramatically reduces AA priority despite threats
@@ -293,6 +312,7 @@ This creates distinct anti-aircraft defense doctrines:
 ### Reactive vs Proactive Defense
 
 Unlike offensive military flavors that maintain standing forces, FLAVOR_ANTIAIR operates reactively:
+
 - **No enemy air forces → No AA production** (even with high FLAVOR_ANTIAIR)
 - **Enemy air forces detected → Build to target ratio** (1 AA per 2 melee units)
 - **Target ratio achieved → Stop AA production** (redirect to other priorities)
@@ -304,12 +324,14 @@ This reflects the specialized nature of anti-aircraft units - they're only valua
 FLAVOR_ANTIAIR becomes relevant in the Industrial and Modern eras when aviation technologies become available (Flight, Ballistics, Radar, Advanced Ballistics). The flavor ensures that:
 
 **Leaders with high FLAVOR_ANTIAIR will:**
+
 - Quickly detect enemy air force development
 - Immediately begin AA unit production when threats emerge
 - Build airports and military bases for interception coverage
 - Maintain AA forces proportional to army size throughout conflicts
 
 **Leaders with low FLAVOR_ANTIAIR will:**
+
 - Delay AA production even when facing air threats
 - Build minimal AA forces (below target ratios)
 - Prioritize offensive capabilities over defensive air coverage
@@ -320,12 +342,14 @@ FLAVOR_ANTIAIR becomes relevant in the Industrial and Modern eras when aviation 
 The presence or absence of adequate anti-aircraft forces dramatically affects late-game warfare:
 
 **With Strong AA Coverage:**
+
 - Enemy bombers suffer high interception rates
 - Fighters struggle to establish air superiority
 - Ground forces operate safely under friendly air cover
 - Cities resist strategic bombing campaigns
 
 **Without AA Coverage:**
+
 - Enemy air forces operate freely
 - Ground forces suffer constant air attacks
 - Cities lose infrastructure to bombing
@@ -334,32 +358,39 @@ The presence or absence of adequate anti-aircraft forces dramatically affects la
 ## Related Flavors and Interactions
 
 ### Complementary Flavors
+
 - **FLAVOR_DEFENSE:** General defensive posture supports AA investment
 - **FLAVOR_CITY_DEFENSE:** City fortifications work synergistically with AA protection
 - **FLAVOR_AIR:** Multi-role fighters serve both offensive and defensive air missions
 - **FLAVOR_FIGHTER:** Specialization in fighter aircraft enhances interception capabilities
 
 ### Competing Flavors
+
 - **FLAVOR_OFFENSE:** Offensive unit production competes with AA for resources
 - **FLAVOR_AIR/BOMBER:** Offensive air doctrine (bombers) competes with defensive doctrine (interceptors)
 - **FLAVOR_MOBILE:** Fast attack units compete with defensive AA units for production priority
 - **FLAVOR_NAVAL:** Naval investment competes with land-based AA development
 
 ### Synergistic Interactions
+
 Leaders with **high FLAVOR_ANTIAIR + high FLAVOR_AIR** create balanced air doctrines:
+
 - Build both fighters (dual offensive/defensive role) and dedicated AA units
 - Prioritize airports and military bases for air operations
 - Maintain air superiority while protecting ground forces
 - Research aviation technologies aggressively
 
 Leaders with **high FLAVOR_ANTIAIR + low FLAVOR_AIR** create pure defensive air doctrines:
+
 - Focus on ground-based AA units (SAMs, AA guns) over fighters
 - Build minimal offensive air power
 - Protect ground and naval forces from enemy air attacks
 - Research AA technologies but delay offensive aviation
 
 ### Economic Factors
+
 Anti-aircraft defense competes with economic development:
+
 - **FLAVOR_GOLD:** Economic health determines if AA forces can be afforded
 - **FLAVOR_PRODUCTION:** Industrial capacity constrains how quickly AA networks can be built
 - **FLAVOR_SCIENCE:** Technology research speed determines when AA units become available
@@ -369,21 +400,27 @@ Leaders with high FLAVOR_ANTIAIR but weak economies face critical vulnerabilitie
 ## Unique Characteristics
 
 ### Conditional Activation
+
 Unlike most military flavors, FLAVOR_ANTIAIR is **conditionally dormant**:
+
 - Completely inactive when no enemies have air forces
 - Rapidly activates when air threats are detected
 - Creates sudden shifts in production priorities mid-game
 - Can deactivate if all enemy air forces are destroyed
 
 ### Proportional Scaling
+
 FLAVOR_ANTIAIR uses **relative ratios** rather than absolute numbers:
+
 - Small empires need fewer AA units
 - Large empires need proportionally more AA units
 - Ratio maintained as army size grows or shrinks
 - Prevents both over-investment and under-protection
 
 ### Binary Strategy States
+
 The flavor operates through binary strategy activation:
+
 - NEED_ANTIAIR: Build AA units urgently
 - ENOUGH_ANTIAIR: Stop building AA units
 - No middle ground or gradual scaling

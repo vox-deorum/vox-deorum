@@ -16,10 +16,12 @@ This event is triggered in the following scenarios:
 The event passes the following parameters:
 
 **Legacy Path (Lua Hook):**
+
 1. **Player ID** (`GetID()`) - The unique identifier of the player who owned the Great Person
 2. **Great Person Unit Type** (`eGreatPersonUnit`) - The specific type identifier of the Great Person unit that was expended
 
 **Modern Path (if MOD_EVENTS_GREAT_PEOPLE is enabled):**
+
 1. **Player ID** (`GetID()`) - The unique identifier of the player who owned the Great Person
 2. **Unit ID** (`pGreatPersonUnit->GetID()`) - The unique identifier of the specific Great Person unit
 3. **Great Person Unit Type** (`eGreatPersonUnit`) - The specific type identifier of the Great Person unit that was expended
@@ -36,6 +38,7 @@ Great People represent significant figures in a civilization who can provide pow
 - Monitoring the return on investment from Great Person generation
 
 The event fires after the Great Person has provided its benefits, including:
+
 - Instant yields based on the Great Person type
 - Diplomatic influence changes with City-States
 - Special abilities unique to each Great Person type
@@ -46,27 +49,32 @@ This timing ensures that external systems can analyze both the action taken and 
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvPlayer.cpp` (lines 27922, 27934)
 
 **Triggering Functions:**
+
 - `CvPlayer::DoGreatPersonExpended(UnitTypes eGreatPersonUnit, CvUnit* pGreatPersonUnit)` - Main function handling Great Person expenditure
 
-**Event Implementation:**
-The event uses different mechanisms depending on mod configuration:
+**Event Implementation:** The event uses different mechanisms depending on mod configuration:
+
 - **Modern Path:** Uses `GAMEEVENT_GreatPersonExpended` with extended parameters if `MOD_EVENTS_GREAT_PEOPLE` is enabled
 - **Legacy Path:** Uses Lua script hook `GreatPersonExpended` with basic parameters for compatibility
 
 **Modern Game Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_GreatPersonExpended, GetID(), pGreatPersonUnit->GetID(), eGreatPersonUnit, pGreatPersonUnit->getX(), pGreatPersonUnit->getY());
 ```
 
 **Legacy Lua Hook:**
+
 ```cpp
 LuaSupport::CallHook(pkScriptSystem, "GreatPersonExpended", args.get(), bResult);
 ```
 
 **Related Systems:**
+
 - `doInstantYield()` - Provides immediate benefits from Great Person expenditure
 - `GetGreatPersonFromUnitClass()` - Determines the Great Person type from the unit class
 - Minor Civilization influence system for diplomatic Great People

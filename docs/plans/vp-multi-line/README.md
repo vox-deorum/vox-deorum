@@ -24,7 +24,7 @@ Today the `civ5-dll` submodule uses the `vox-deorum` fork branch and one DLL rec
 Execute the stages in this dependency order: Stage 1, Stage 3, Stage 2, Stage 4, Stage 5, and Stage 6. The stage numbers remain stable so existing references remain valid.
 
 | # | Stage | Objective |
-|---|---|---|
+| --- | --- | --- |
 | 1 | [01-fork-line-branches.md](01-fork-line-branches.md) | Create `vox-deorum-5.2`, publish a `build-5.2.7-...` artifact, and freeze `vox-deorum`. |
 | 2 | [02-migrate-to-5.4.md](02-migrate-to-5.4.md) | Create and publish the real `vox-deorum-5.4` branch, then add its pin to the Stage 3 records and verify two-line selection. |
 | 3 | [03-line-records-and-scripts.md](03-line-records-and-scripts.md) | Add the 5.2 pin and generic line-aware scripts, remove the old single-line record and updater, and verify the real 5.2 cache. |

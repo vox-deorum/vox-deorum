@@ -15,7 +15,7 @@ The trigger occurs after all diplomatic relationship updates and quest completio
 The event passes three parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | LiberatingPlayer | int | The ID of the player performing the liberation (`GetID()`) |
 | LiberatedPlayer | int | The ID of the player being liberated (`ePlayer`) |
 | CityID | int | The ID of the newly liberated city (`pNewCity->GetID()`) |
@@ -42,6 +42,7 @@ The liberation process can either restore a completely defeated civilization bac
 **Conditional Compilation**: The event is only triggered when `MOD_EVENTS_LIBERATION` is enabled
 
 **Execution Context**: The event fires during the liberation process, specifically:
+
 - After the city has been transferred to the liberated player
 - After diplomatic relationships have been re-evaluated
 - After minor civilization quest checks have been completed

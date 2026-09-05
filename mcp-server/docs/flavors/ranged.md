@@ -17,6 +17,7 @@ FLAVOR_RANGED directly determines the desired ratio of ranged units to total mil
 - **"Enough Ranged" Strategy**: Triggered when ranged ratio reaches or exceeds `FLAVOR_RANGED * 10%`
 
 For example, a leader with FLAVOR_RANGED = 8 will:
+
 - Target 80% ranged units in their army composition
 - Need more ranged units if ratio drops below 40%
 - Stop prioritizing ranged units at 80%+
@@ -36,6 +37,7 @@ FLAVOR_RANGED significantly influences AI promotion choices for both ranged and 
 ### Military AI Strategy (CvMilitaryAI.cpp)
 
 **Lines 3900-3906: Enough Ranged Units Strategy**
+
 ```cpp
 bool MilitaryAIHelpers::IsTestStrategy_EnoughRangedUnits(CvPlayer* pPlayer, int iNumRanged, int iNumMelee)
 {
@@ -48,6 +50,7 @@ bool MilitaryAIHelpers::IsTestStrategy_EnoughRangedUnits(CvPlayer* pPlayer, int 
 Determines when the player has sufficient ranged units. The ratio calculation converts unit counts to a percentage (0-10 scale), compared against the FLAVOR_RANGED value.
 
 **Lines 3908-3922: Need Ranged Units Strategy**
+
 ```cpp
 bool MilitaryAIHelpers::IsTestStrategy_NeedRangedUnits(CvPlayer* pPlayer, int iNumRanged, int iNumMelee)
 {
@@ -68,6 +71,7 @@ bool MilitaryAIHelpers::IsTestStrategy_NeedRangedUnits(CvPlayer* pPlayer, int iN
 Triggers when ranged units fall below half the target ratio, or when building an army with underrepresented ranged unit types.
 
 **Lines 3924-3929: Need Ranged for Early Sneak Attack**
+
 ```cpp
 bool MilitaryAIHelpers::IsTestStrategy_NeedRangedDueToEarlySneakAttack(CvPlayer* pPlayer)
 {
@@ -81,6 +85,7 @@ Ensures ranged units are produced during war mobilization for sneak attacks.
 ### Unit Promotion AI (CvUnit.cpp)
 
 **Line 31664: Flavor Initialization**
+
 ```cpp
 int iFlavorRanged = range(pFlavorMgr->GetPersonalityIndividualFlavor((FlavorTypes)GC.getInfoTypeForString("FLAVOR_RANGED")), 1, 20);
 ```
@@ -92,6 +97,7 @@ The flavor is then used extensively in promotion scoring calculations (see lines
 ### Technology Research (CvTechClasses.cpp)
 
 **Lines 1250-1269: Conquest Focus Bonus**
+
 ```cpp
 if(bConquestFocus && (
     GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_OFFENSE" ||
@@ -110,6 +116,7 @@ When pursuing conquest grand strategy, technologies with FLAVOR_RANGED receive p
 ### Policy Selection (CvPolicyAI.cpp)
 
 **Line 4916: Conquest Victory Scoring**
+
 ```cpp
 if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_OFFENSE" || ... ||
     GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_RANGED" || ... )
@@ -123,6 +130,7 @@ Policies with FLAVOR_RANGED contribute to conquest victory scoring, influencing 
 ### Grand Strategy AI (CvGrandStrategyAI.cpp)
 
 **Lines 630-641: Policy Priority Bonuses**
+
 ```cpp
 else if (GC.getFlavorTypes((FlavorTypes)iFlavorLoop) == "FLAVOR_RANGED")
 {
@@ -135,6 +143,7 @@ Adds priority bonuses to policies that align with the player's ranged flavor pre
 ### Advisor Recommendations (CvAdvisorRecommender.cpp)
 
 **Lines 361-364: Unit Advisor Weighting**
+
 ```cpp
 else if(strFlavorName == "FLAVOR_RANGED")
 {
@@ -148,34 +157,28 @@ The advisor system assigns a weight of 13 to FLAVOR_RANGED when recommending uni
 
 ### Economic Strategies
 
-**Losing Money (-300 to cities, -50 to player)**
-When the economy is struggling, FLAVOR_RANGED receives massive penalties to reduce expensive ranged unit production.
+**Losing Money (-300 to cities, -50 to player)** When the economy is struggling, FLAVOR_RANGED receives massive penalties to reduce expensive ranged unit production.
 
-**Too Many Units (-100 to player, -300 to cities)**
-Reduces ranged unit production when the military is oversized relative to economy.
+**Too Many Units (-100 to player, -300 to cities)** Reduces ranged unit production when the military is oversized relative to economy.
 
 ### Military Strategies
 
-**Eradicate Barbarians Critical (+10)**
-Increases ranged preference when barbarians pose a serious threat, as ranged units are effective for defensive operations.
+**Eradicate Barbarians Critical (+10)** Increases ranged preference when barbarians pose a serious threat, as ranged units are effective for defensive operations.
 
-**War Mobilization (+60)**
-Major boost when preparing for war, ensuring adequate ranged support for offensive operations.
+**War Mobilization (+60)** Major boost when preparing for war, ensuring adequate ranged support for offensive operations.
 
-**At War (+30 player, +40 cities)**
-Sustained production of ranged units during active conflicts.
+**At War (+30 player, +40 cities)** Sustained production of ranged units during active conflicts.
 
-**Winning Wars (+40 player, +60 cities)**
-When winning, increases ranged production to press the advantage with superior firepower.
+**Winning Wars (+40 player, +60 cities)** When winning, increases ranged production to press the advantage with superior firepower.
 
-**Losing Wars (+20 player, +30 cities)**
-Moderate increase when losing, as ranged units provide defensive advantages.
+**Losing Wars (+20 player, +30 cities)** Moderate increase when losing, as ranged units provide defensive advantages.
 
 ## Unit Flavors
 
 FLAVOR_RANGED is assigned to units across multiple categories:
 
 ### Foot Archers (FLAVOR_RANGED: 5-15)
+
 - **Archer**: 5 (basic ranged unit)
 - **Babylonian Bowman**: 7 (unique archer)
 - **Composite Bowman**: 6
@@ -192,6 +195,7 @@ FLAVOR_RANGED is assigned to units across multiple categories:
 - **Bazooka**: 16
 
 ### Mounted Ranged Units (FLAVOR_RANGED: 2-13)
+
 - **Chariot Archer**: 2
 - **Egyptian War Chariot**: 5 (unique chariot archer)
 - **Mongolian Keshik**: 4 (unique horse archer)
@@ -202,6 +206,7 @@ FLAVOR_RANGED is assigned to units across multiple categories:
 - **Russian Cossack**: 13 (unique cavalry)
 
 ### Siege Units (FLAVOR_RANGED: 5-18)
+
 - **Assyrian Siege Tower**: 5 (unique civilian siege unit)
 - **Catapult**: 6
 - **Roman Ballista**: 9 (unique catapult)
@@ -217,6 +222,7 @@ FLAVOR_RANGED is assigned to units across multiple categories:
 - **Rocket Artillery**: 16
 
 ### Modern Ranged Units (FLAVOR_RANGED: 12-16)
+
 - **Anti-Tank Gun**: 12
 - **Helicopter Gunship**: 14
 
@@ -225,40 +231,49 @@ FLAVOR_RANGED is assigned to units across multiple categories:
 Technologies that unlock or enhance ranged units receive FLAVOR_RANGED:
 
 ### Ancient Era
+
 - **Animal Husbandry** (5): Unlocks Chariot Archer, the first mounted ranged unit
 - **Trapping** (10): Critical early ranged unit technology
 
 ### Classical Era
+
 - **Mathematics** (10): Unlocks Skirmisher units
 - **Construction** (10): Key ranged unit advancements
 - **Currency** (10): Economic support for ranged armies
 
 ### Medieval Era
+
 - **Physics** (20): Major boost - unlocks Trebuchet and Heavy Skirmisher
 - **Machinery** (10): Unlocks Crossbowman
 - **Gunpowder** (10): Introduces gunpowder ranged units
 
 ### Renaissance Era
+
 - **Metallurgy** (20): Critical advancement for ranged warfare
 
 ### Industrial Era
+
 - **Rifling** (10): Modern infantry with ranged capabilities
 - **Dynamite** (10): Unlocks Gatling Gun
 - **Military Science** (10): Cavalry and ranged tactics
 
 ### Modern Era
+
 - **Ballistics** (30): Highest FLAVOR_RANGED value - unlocks Artillery and Machine Gun
 
 ### Atomic Era
+
 - **Advanced Ballistics** (10): Late-game ranged improvements
 - **Mobile Tactics** (20): Combined arms with strong ranged component
 
 ## Building Flavors
 
 ### Production Buildings
+
 - **Siege Foundry** (20): Specialized building for siege unit production, strongly preferred by ranged-focused AIs
 
 ### Wonders
+
 - **Temple of Artemis** (20): Ancient era wonder that provides ranged unit benefits, highly valued by ranged-focused civilizations
 
 ## Leader Flavor Values
@@ -271,6 +286,7 @@ Representative leader FLAVOR_RANGED values from the database:
 ## AI Behavior Summary
 
 ### High FLAVOR_RANGED (12+)
+
 - Maintains 80%+ ranged units in armies
 - Aggressively pursues ranged unit technologies
 - Highly values Siege Foundry and Temple of Artemis
@@ -278,12 +294,14 @@ Representative leader FLAVOR_RANGED values from the database:
 - Focuses on artillery and siege units in later eras
 
 ### Medium FLAVOR_RANGED (6-11)
+
 - Balanced 40-70% ranged composition
 - Researches ranged technologies at normal priority
 - Considers ranged buildings based on situation
 - Balanced promotion selection
 
 ### Low FLAVOR_RANGED (1-5)
+
 - Minimal ranged units (10-30%)
 - Deprioritizes ranged technologies unless required
 - Rarely builds Siege Foundry

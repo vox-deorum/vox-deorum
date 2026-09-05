@@ -16,7 +16,7 @@ Civ 5  ↔  Community Patch DLL  ↔  Bridge Service  ↔  MCP Server  ↔  Vox 
 Every arrow is a different protocol, because every boundary solves a different problem. Reading from the game upward:
 
 | Boundary | Protocol | What it solves |
-|---|---|---|
+| --- | --- | --- |
 | Game ↔ DLL | in-process C++ | The DLL is C++ inside the game and can only touch game state at safe moments. |
 | DLL ↔ Bridge | named pipe | The DLL speaks a private Windows pipe; nothing above needs to know the pipe exists. |
 | Bridge ↔ MCP | REST / SSE | The bridge translates the pipe into ordinary HTTP and an event stream. |
@@ -33,7 +33,7 @@ The [civ5-dll](civ5-dll/overview.md) is a modified build of the **Community Patc
 
 Stock Community Patch is a closed system; nothing outside the process can see in. Vox Deorum adds one thing: a **connection service** (`CvConnectionService`) that opens a channel out of the game. The service exposes game state and a live event stream, accepts commands (run this Lua, call this function), and lets external decisions stand in for the built-in AI.
 
-The gamecore is strict about *when* its state may change, so the service does all its pipe I/O on a background thread and only acts on messages at safe points in the turn loop. See [civ5-dll/connection.md](civ5-dll/connection.md).
+The gamecore is strict about _when_ its state may change, so the service does all its pipe I/O on a background thread and only acts on messages at safe points in the turn loop. See [civ5-dll/connection.md](civ5-dll/connection.md).
 
 ### Civ 5 Mod: the switch that arms it
 
@@ -67,7 +67,7 @@ The tools draw on three sources:
 - **Game database:** Civ V's own rules data.
 - **Bridge integration:** a queue that batches Lua calls into the live game and consumes its events.
 
-A family of action tools also *steers* the built-in AI through flavors, strategies, personas, and diplomacy. An LLM's influence is therefore felt even by civilizations it does not directly control. See [mcp-server/tools.md](mcp-server/tools.md), [mcp-server/knowledge.md](mcp-server/knowledge.md), and [mcp-server/bridge.md](mcp-server/bridge.md).
+A family of action tools also _steers_ the built-in AI through flavors, strategies, personas, and diplomacy. An LLM's influence is therefore felt even by civilizations it does not directly control. See [mcp-server/tools.md](mcp-server/tools.md), [mcp-server/knowledge.md](mcp-server/knowledge.md), and [mcp-server/bridge.md](mcp-server/bridge.md).
 
 ### Vox Agents: where the LLMs live
 

@@ -5,6 +5,7 @@ The MinorGiftUnit event is triggered when a militaristic city-state spawns and g
 # Event Triggers
 
 This event is fired from `CvMinorCivAI::DoUnitSpawnTurn()` when:
+
 - A militaristic city-state's unit spawn counter reaches zero
 - Unit spawning is allowed for the target major civilization
 - A unit is successfully spawned through `DoSpawnUnit()`
@@ -18,7 +19,7 @@ This is a recurring event that can occur multiple times throughout the game base
 The event provides three integer parameters (`"iii"` signature):
 
 1. **Minor Civ Player ID** (`GetPlayer()->GetID()`): The militaristic city-state gifting the unit
-2. **Major Civ Player ID** (`eMajor`): The major civilization receiving the unit  
+2. **Major Civ Player ID** (`eMajor`): The major civilization receiving the unit
 3. **Unit Type** (`pSpawnUnit->getUnitType()`): The type identifier of the spawned unit
 
 # Event Details
@@ -26,18 +27,21 @@ The event provides three integer parameters (`"iii"` signature):
 The unit gifting system works as follows:
 
 **Prerequisites for Unit Spawning:**
+
 - City-state must be militaristic trait
 - Target major civilization must be alive and valid
 - Unit spawning must be allowed (`IsUnitSpawningAllowed()`)
 - Unit spawn counter must reach zero (countdown completed)
 
 **Unit Selection and Spawning:**
+
 - Units are selected based on era and military technology
 - Units spawn near the city-state's territory
 - If no valid spawn location exists, the unit is killed and no event fires
 - Successfully spawned units are immediately gifted to the major civilization
 
 **Timing and Frequency:**
+
 - Each major civilization has its own spawn counter
 - Counter decreases each turn when spawning is allowed
 - Base spawn timing varies by game settings and difficulty
@@ -50,9 +54,10 @@ The unit type parameter allows AI systems to track what military units are being
 **Source Location**: `CvMinorCivAI.cpp` line 15429  
 **Event Definition**: `GAMEEVENT_MinorGiftUnit` with signature `"iii"`  
 **Triggering Function**: `DoUnitSpawnTurn()`  
-**Prerequisites**: `MOD_EVENTS_MINORS_GIFTS` must be enabled  
+**Prerequisites**: `MOD_EVENTS_MINORS_GIFTS` must be enabled
 
 **Related Systems:**
+
 - `GetUnitSpawnCounter()`: Tracks turns until next unit spawn
 - `ChangeUnitSpawnCounter()`: Modifies spawn timing
 - `DoSpawnUnit()`: Handles actual unit creation and placement

@@ -25,7 +25,7 @@ segments.jsonl ──> [1: Assemble] ──> episodes.json
 ```
 
 | Stage | What | LLM? | Implementations | Detail |
-|-------|------|------|-----------------|--------|
+| --- | --- | --- | --- | --- |
 | 1 | Assemble episodes from recordings | No | Single | [stage-1-assemble.md](stage-1-assemble.md) |
 | 2 | Select which episodes to keep | Yes | Multiple possible | [stage-2-select.md](stage-2-select.md) |
 | 3 | Write narration scripts | Yes | Multiple possible | [stage-3-script.md](stage-3-script.md) |
@@ -37,6 +37,7 @@ segments.jsonl ──> [1: Assemble] ──> episodes.json
 ### Per-Stage VoxSession
 
 Each stage is its own `VoxSession` subclass with its own config type. This means:
+
 - The webui manages narrator stages uniformly alongside strategist sessions
 - Each stage can run independently via CLI
 - No shared in-memory state — stages communicate via workspace files
@@ -48,11 +49,11 @@ interface NarratorStageConfig extends SessionConfig {
 }
 
 type NarratorStageType =
-  | 'narrator-assemble'
-  | 'narrator-select'
-  | 'narrator-script'
-  | 'narrator-voice'
-  | 'narrator-video';
+  | "narrator-assemble"
+  | "narrator-select"
+  | "narrator-script"
+  | "narrator-voice"
+  | "narrator-video";
 ```
 
 `SessionConfig.type` extended to `SessionType` union in `types/config.ts`.
@@ -64,12 +65,13 @@ Game-level parameters (`gameID`, `knowledgePath`, `recordingDir`) live in `narra
 ```typescript
 interface NarratorContext {
   gameID: string;
-  knowledgePath: string;   // resolved absolute path
-  recordingDir: string;    // resolved absolute path
+  knowledgePath: string; // resolved absolute path
+  recordingDir: string; // resolved absolute path
 }
 ```
 
 The `NarratorWorkspace` class (in `workspace.ts`) manages context, DB access, and stage I/O:
+
 - `writeContext()` / `getContext()` — shared game context
 - `openGameDb()` — opens knowledge DB from stored context
 - `writeEpisodes()` / `readEpisodes()` — Stage 1 I/O

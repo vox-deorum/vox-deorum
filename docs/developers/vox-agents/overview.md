@@ -19,7 +19,7 @@ The [web UI](ui.md), [media pipeline](media.md), and [observability](observabili
 
 ## VoxAgent: the base class
 
-Every agent extends `VoxAgent` (`src/infra/vox-agent.ts`). An agent is not a long-running object. It is a bundle of *lifecycle hooks* that the execution context calls while driving an agentic loop.
+Every agent extends `VoxAgent` (`src/infra/vox-agent.ts`). An agent is not a long-running object. It is a bundle of _lifecycle hooks_ that the execution context calls while driving an agentic loop.
 
 The main hooks, in the order they matter:
 
@@ -56,7 +56,7 @@ The run-model types and helpers live in `src/infra/vox-run.ts`. There are three 
 | Call | Behavior |
 | --- | --- |
 | `withRun()` | Opens a root run wrapping the whole operation, including the setup and game-state refresh before the first agent call. Hands its callback a run handle that can cancel just that operation. |
-| `forkRun()` | Starts a *detached* root for fire-and-forget work that must outlive its caller, such as the analyst handoff above. |
+| `forkRun()` | Starts a _detached_ root for fire-and-forget work that must outlive its caller, such as the analyst handoff above. |
 | `callAgent(name, input)` | Runs a nested agent inside the active root. The nested call inherits the caller's cancellation and token accounting, replacing only the current agent input. |
 
 `execute(agentName, input)` also runs inside the active root. Neither it nor `callAgent()` takes a parameters argument, because the run already carries them; calling either outside a run is therefore a programming error. `execute()` assembles the prompt from the agent's hooks and drives the step loop (calling the model, executing tool calls, consulting `stopCheck()`) until the agent is done. It streams text and tool events to an optional callback along the way, which is what the web UI's chat rides on.

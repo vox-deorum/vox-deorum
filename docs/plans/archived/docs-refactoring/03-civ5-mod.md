@@ -17,7 +17,7 @@ Create and write `docs/developers/civ5-mod/`: the Lua hooks and in-game UI layer
 ## Sources
 
 | Source | Action |
-|---|---|
+| --- | --- |
 | Mod load logic / `src/` | Write `overview.md` and `lua-hooks.md` from the source. |
 | `civ5-mod/docs/*` (Lua/C debugging, observer API) | Keep in place. Summarize the observer/UI story into `ui.md`. |
 

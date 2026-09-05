@@ -17,6 +17,7 @@ The FLAVOR_NAVAL_GROWTH flavor affects multiple aspects of AI decision-making ac
 **Activation Conditions**: This city-level strategy activates when a city has a significant proportion of ocean tiles in its workable radius.
 
 **Implementation Details** (CvCityStrategyAI.cpp:2502-2548):
+
 - Analyzes all workable plots within the city's 3-tile radius
 - Counts ocean tiles (excludes lakes) owned by the city
 - Calculates the percentage of ocean tiles versus total workable plots
@@ -31,6 +32,7 @@ The FLAVOR_NAVAL_GROWTH flavor affects multiple aspects of AI decision-making ac
 ### Player Economic Strategy: Cities Need Naval Growth (ECONOMICAISTRATEGY_CITIES_NEED_NAVAL_GROWTH)
 
 **Activation Logic** (CvEconomicAI.cpp:3873-3913):
+
 - Counts how many cities are running AICITYSTRATEGY_NEED_NAVAL_GROWTH
 - Calculates empire-wide threshold based on total city count
 - Default threshold: 25 weight
@@ -39,6 +41,7 @@ The FLAVOR_NAVAL_GROWTH flavor affects multiple aspects of AI decision-making ac
   - Low NAVAL_GROWTH civs: Harder to activate (requires more coastal cities)
 
 **Weight Calculation**:
+
 ```
 Current Weight = (Total Cities - 1) * 10 / Threshold
 Strategy Activates when: Cities Needing Naval Growth > Current Weight
@@ -51,13 +54,16 @@ Strategy Activates when: Cities Needing Naval Growth > Current Weight
 Buildings with FLAVOR_NAVAL_GROWTH affinity receive increased priority in production queues:
 
 **Ancient Era**:
+
 - **Lighthouse** (FLAVOR_NAVAL_GROWTH: 20): Core maritime building providing food on ocean tiles
 - **Runestone** (FLAVOR_NAVAL_GROWTH: 20): Danish unique lighthouse replacement with additional bonuses
 
 **Medieval Era**:
+
 - **Harbor** (FLAVOR_NAVAL_GROWTH: 20): Advanced maritime infrastructure providing gold, culture, and enhanced sea trade routes
 
 **Information Era**:
+
 - **Tidal Power Plant** (FLAVOR_NAVAL_GROWTH: 10): Late-game coastal power generation
 
 ### Technology Research
@@ -65,18 +71,22 @@ Buildings with FLAVOR_NAVAL_GROWTH affinity receive increased priority in produc
 Technologies with FLAVOR_NAVAL_GROWTH affinity receive increased research priority:
 
 **Ancient Era**:
+
 - **Optics** (FLAVOR_NAVAL_GROWTH: 15): Unlocks Lighthouse, enables ocean navigation and sea trade routes
 
 **Medieval Era**:
+
 - **Compass** (FLAVOR_NAVAL_GROWTH: 10): Unlocks Harbor, increases sea trade route range, provides naval bonuses
 
 **Special Tech Prioritization** (CvTechClasses.cpp:1282-1288):
+
 - Civilizations with the "Smaller" trait (focusing on quality over quantity) receive bonus tech priority for NAVAL_GROWTH techs
 - This creates synergy between tall empire strategies and coastal development
 
 ### Advisor System Integration
 
 **Economic Advisor Priority** (CvAdvisorRecommender.cpp:290-293):
+
 - FLAVOR_NAVAL_GROWTH has priority level 7 in the Economic Advisor category
 - This influences which buildings and improvements the advisor recommends to the player
 - Similar priority to FLAVOR_NAVAL_TILE_IMPROVEMENT (7)
@@ -85,6 +95,7 @@ Technologies with FLAVOR_NAVAL_GROWTH affinity receive increased research priori
 ### Process Production Evaluation
 
 **Food Processes** (CvProcessProductionAI.cpp:206):
+
 - Cities running AICITYSTRATEGY_NEED_NAVAL_GROWTH influence process production calculations
 - Affects decisions about converting production to food via maritime processes
 - Integrates with overall yield management strategy
@@ -94,19 +105,23 @@ Technologies with FLAVOR_NAVAL_GROWTH affinity receive increased research priori
 FLAVOR_NAVAL_GROWTH is dynamically reduced during wartime conditions to prioritize military needs:
 
 **At War - Player Level** (CoreStrategyChanges.sql:212):
+
 - MILITARYAISTRATEGY_AT_WAR: -10 NAVAL_GROWTH modifier
 - Coastal development becomes less important during active warfare
 
 **At War - City Level** (CoreStrategyChanges.sql:320):
+
 - MILITARYAISTRATEGY_AT_WAR: -30 NAVAL_GROWTH modifier (cities)
 - Individual cities deprioritize harbors even more aggressively during war
 
 **Winning Wars** (CoreStrategyChanges.sql:238, 346):
+
 - MILITARYAISTRATEGY_WINNING_WARS: -10 NAVAL_GROWTH modifier (player)
 - MILITARYAISTRATEGY_WINNING_WARS: -10 NAVAL_GROWTH modifier (cities)
 - Focus remains on military expansion rather than coastal development
 
 **Losing Wars** (CoreStrategyChanges.sql:264, 372):
+
 - MILITARYAISTRATEGY_LOSING_WARS: -40 NAVAL_GROWTH modifier (player)
 - MILITARYAISTRATEGY_LOSING_WARS: -40 NAVAL_GROWTH modifier (cities)
 - Drastic reduction as empire focuses on survival
@@ -114,6 +129,7 @@ FLAVOR_NAVAL_GROWTH is dynamically reduced during wartime conditions to prioriti
 ### Happiness Emergency Strategy
 
 **Starvation Happiness Crisis** (StrategyChanges.sql:56):
+
 - AICITYSTRATEGY_NEED_HAPPINESS_STARVE: +60 NAVAL_GROWTH modifier
 - When cities need happiness from reduced food consumption, harbor buildings become highly prioritized
 - Harbors help by improving food yields from ocean tiles, addressing both growth and happiness needs
@@ -145,6 +161,7 @@ FLAVOR_NAVAL_GROWTH interacts with and balances against other economic and milit
 ### Economic Balance
 
 The AI's overall coastal development emerges from the combination of:
+
 - High NAVAL_GROWTH + High I_SEA_TRADE_ROUTE = Maritime trade empire
 - High NAVAL_GROWTH + High NAVAL = Complete naval dominance
 - High NAVAL_GROWTH + Low EXPANSION = Tall coastal civilization
@@ -155,15 +172,18 @@ The AI's overall coastal development emerges from the combination of:
 Different AI leaders have varying FLAVOR_NAVAL_GROWTH values based on their historical maritime traditions:
 
 **High Naval Growth Leaders** (LeaderFlavorSweeps.sql):
+
 - Leaders from historically maritime civilizations receive values of 8-9
 - Examples include civilizations known for seafaring, trade, or island settlements
 - These leaders aggressively develop coastal cities and prioritize harbor construction
 
 **Barbarian Naval Growth** (CoreLeaderFlavorChanges.sql:21):
+
 - LEADER_BARBARIAN: FLAVOR_NAVAL_GROWTH value of 4
 - Ensures barbarians develop basic maritime capabilities
 
 **Average Leaders**:
+
 - Most inland-focused leaders have lower NAVAL_GROWTH values (2-5)
 - Develop coastal infrastructure only when strategically necessary
 - Prioritize land-based development over maritime expansion
@@ -173,18 +193,21 @@ Different AI leaders have varying FLAVOR_NAVAL_GROWTH values based on their hist
 The impact of FLAVOR_NAVAL_GROWTH varies across different game phases:
 
 ### Early Game (Ancient-Classical Era)
+
 - **Optics Technology**: First major decision point for maritime civs
 - **Lighthouse Construction**: Foundational building for coastal cities
 - **Coastal City Placement**: Higher NAVAL_GROWTH influences settling near coasts
 - **Ocean Exploration**: Enables early sea trade routes and resource access
 
 ### Mid Game (Medieval-Renaissance Era)
+
 - **Harbor Construction**: Major infrastructure investment in productive coastal cities
 - **Sea Trade Network**: Enhanced maritime trade route capabilities
 - **Compass Technology**: Unlocks advanced naval infrastructure
 - **Coastal City Specialization**: Cities with 35%+ ocean tiles become maritime specialists
 
 ### Late Game (Industrial-Information Era)
+
 - **Tidal Power Plants**: Final coastal infrastructure improvement
 - **Established Maritime Economy**: Mature harbor networks generating significant yields
 - **Strategic Naval Bases**: Coastal cities support both economic and military naval operations
@@ -195,24 +218,28 @@ The impact of FLAVOR_NAVAL_GROWTH varies across different game phases:
 Understanding FLAVOR_NAVAL_GROWTH is valuable for:
 
 ### AI Prediction
+
 - Anticipating which leaders will invest heavily in coastal infrastructure
 - Predicting settlement patterns (preference for coastal locations)
 - Estimating maritime trade route development
 - Identifying civilizations that will compete for coastal resources
 
 ### Diplomatic Strategy
+
 - Maritime-focused AIs may be interested in open borders for sea trade
 - High NAVAL_GROWTH leaders more vulnerable to naval blockades
 - Coastal development creates opportunities for naval warfare or protection agreements
 - Sea trade routes create economic interdependencies
 
 ### Military Strategy
+
 - Coastal cities with harbors generate more gold (funding military)
 - Harbor cities are more valuable targets for conquest
 - Maritime infrastructure indicates likely naval military development
 - Blockading harbors can significantly damage maritime economies
 
 ### Trade Strategy
+
 - High NAVAL_GROWTH civs are ideal sea trade partners
 - Maritime routes to harbor cities provide maximum benefits
 - Coastal development creates natural trade networks
@@ -223,6 +250,7 @@ Understanding FLAVOR_NAVAL_GROWTH is valuable for:
 ### Threshold Calculation Formula
 
 For city-level strategy activation:
+
 ```
 Weight Threshold = Base Threshold (40) + Weight Modifier
 Weight Modifier = -1 * NAVAL_GROWTH Flavor Value
@@ -230,6 +258,7 @@ Activation = (Ocean Plots * 100) / Total Workable Plots >= Weight Threshold
 ```
 
 For player-level strategy activation:
+
 ```
 Weight Threshold = Base Threshold (25) + Weight Modifier
 Weight Modifier = +1 * NAVAL_GROWTH Flavor Value
@@ -240,6 +269,7 @@ Activation = Cities Needing Naval Growth > Current Weight
 ### Database Integration
 
 FLAVOR_NAVAL_GROWTH values are stored in the game database and associated with:
+
 - Leader personality definitions (Leader_Flavors table)
 - Building construction priorities (Building_Flavors table)
 - Technology research weights (Technology_Flavors table)
@@ -254,12 +284,15 @@ Note: The advisor counsel for AICITYSTRATEGY_NEED_NAVAL_GROWTH is disabled in th
 ## Synergies and Special Cases
 
 ### Tall Empire Synergy
+
 Civilizations with the "Smaller" trait receive bonus priority for NAVAL_GROWTH technologies, making maritime development particularly effective for tall, quality-focused empires.
 
 ### Happiness Crisis Override
+
 During severe happiness problems related to food (AICITYSTRATEGY_NEED_HAPPINESS_STARVE), NAVAL_GROWTH receives a massive +60 boost, making harbor construction the top priority for affected coastal cities.
 
 ### Ocean Percentage Edge Cases
+
 - **Pure Coastal Cities** (80%+ ocean): Strongly favor NAVAL_GROWTH strategies
 - **Moderate Coastal Cities** (35-50% ocean): Typical harbor candidates
 - **Marginal Coastal Cities** (25-35% ocean): Only high NAVAL_GROWTH civs develop these
@@ -292,6 +325,7 @@ For a complete understanding of AI maritime and coastal behavior, consider these
 ## Data Sources
 
 This documentation is based on:
+
 - C++ source code analysis from civ5-dll/CvGameCoreDLL_Expansion2/
   - CvCityStrategyAI.cpp (lines 2502-2548): City strategy activation logic
   - CvEconomicAI.cpp (lines 3873-3913): Player strategy activation logic

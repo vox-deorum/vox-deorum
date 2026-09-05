@@ -7,18 +7,21 @@ This guide provides essential patterns and conventions for the MCP Server that a
 ## MCP Protocol Implementation
 
 ### Singleton Server Architecture
+
 - One singleton MCPServer manages multiple McpServer instances
 - Each client connection gets its own McpServer instance
 - Tools and managers are shared across all connections
 - Centralized management of server lifecycle
 
 ### Transport Support
+
 - Server supports both stdio and HTTP transports
 - Transport type determined by configuration
 - **Always test with both transports** using `TEST_TRANSPORT` environment variable
 - Each transport has specific initialization and cleanup requirements
 
 ### Event Notifications
+
 - Broadcast with `MCPServer.sendNotification`, which uses the MCP notification protocol (method `vox-deorum/game-event`), not `elicitInput`
 - Include relevant game context (playerID, turn, latestID)
 - Only events on the `eventsForNotification` allow-list in `server.ts` are pushed; add yours there if clients must react to it
@@ -27,6 +30,7 @@ This guide provides essential patterns and conventions for the MCP Server that a
 ## Tool Development Patterns
 
 ### Tool Base Architecture
+
 - All tools inherit from `ToolBase` abstract class, directly or through one of the abstract bases below
 - Required properties: name, description, input/output schemas
 - Required method: execute() for tool logic
@@ -34,6 +38,7 @@ This guide provides essential patterns and conventions for the MCP Server that a
 - Use Zod schemas for validation and type safety
 
 ### Factory Pattern with Lazy Loading
+
 - Tools are defined as factory functions returning ToolBase instances
 - Factory map contains all available tool constructors
 - **Tools are instantiated lazily** on first server init
@@ -45,6 +50,7 @@ This guide provides essential patterns and conventions for the MCP Server that a
 There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` directly is also normal and is what most tools do.
 
 #### Database Query Tools
+
 - Extend `DatabaseQueryTool` for database-backed tools
 - Generic types: TSummary for list items, TFull for detailed info
 - **Pattern**: Cache summaries, fetch full details only when needed
@@ -52,23 +58,27 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 - Automatic cache management for performance
 
 #### Lua Function Tools
+
 - Extend `LuaFunctionTool` for tools that execute Lua scripts
 - Support both inline scripts and external script files
 - Script files should be placed in the `lua/` directory
 - Automatic script loading and execution handling
 
 #### Action Tools
+
 - Extend `ActionTool` (itself a `LuaFunctionTool`) for tools that mutate game state via Lua
 - Shared base for the whole steering family: set-strategy, set-persona, set-relationship, set-flavors, unset-flavors, set-research, set-policy, keep-status-quo
 - Adds the common action shape, including the recorded source turn
 - Downstream impact of each is analyzed in `docs/tactical-ai-influence.md`
 
 #### Dynamic Event Tools
+
 - Extend `DynamicEventTool` to write a synthetic event into the GameEvents table
 - Subclass names the event type and builds the payload
-- **Visibility is computed in TypeScript by `composeVisibility`**, from the tool's own `PlayerID`/`VisibleTo` arguments. This is *not* the in-game `event-visibility.lua` analysis that real events get, so the caller decides who sees the event
+- **Visibility is computed in TypeScript by `composeVisibility`**, from the tool's own `PlayerID`/`VisibleTo` arguments. This is _not_ the in-game `event-visibility.lua` analysis that real events get, so the caller decides who sees the event
 
 ### Zod Schema Validation
+
 - Define input/output schemas using Zod for type safety
 - **Always use `.describe()`** for MCP protocol documentation
 - Support optional fields with defaults
@@ -78,12 +88,14 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 ## Module System
 
 ### TypeScript & ESM
+
 - Project uses ESM modules ("type": "module" in package.json)
 - **Critical**: Always use `.js` extensions in imports, even for `.ts` files
 - Follow strict TypeScript configuration for type safety
 - TypeScript compiles to ES modules for Node.js compatibility
 
 ### Logging
+
 - **Always use the project's logger** instead of console.log/console.error
 - Import and create logger with component context
 - Available log levels: debug, info, warn, error
@@ -92,6 +104,7 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 - Log files are rotated automatically (10MB max size)
 
 ### Code Structure
+
 - Source code in `src/` directory
 - Utilities in `src/utils/` subdirectory
 - Tools in `src/tools/` subdirectory
@@ -101,6 +114,7 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 ## Testing
 
 ### Framework
+
 - **Use Vitest for all testing** (not Jest)
 - Test files in `tests/` directory with `.test.ts` extension
 - Commands:
@@ -110,18 +124,21 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 - Test setup file: `tests/setup.ts` for global configuration
 
 ### Real MCP Client Integration
+
 - Create MCP client instances for integration testing
 - Connect client to server using appropriate transport
 - Set adequate timeouts for connection establishment (15 seconds)
 - Clean up connections in afterAll hooks
 
 ### Transport-Agnostic Testing
+
 - Test both stdio and HTTP transports
 - Use `TEST_TRANSPORT` environment variable to switch
 - Default to HTTP transport if not specified
 - Ensure tests pass with both transport types
 
 ### Tool Testing Pattern
+
 - Use `calculator.ts` tool as template for new tools
 - Use `calculator.test.ts` as test template
 - **Always test through MCP client calls**, not direct method invocation
@@ -132,17 +149,20 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 ## Game State Management
 
 ### Multi-Level Caching
+
 1. **Tool-Level**: Database tools cache summaries
 2. **Manager-Level**: DatabaseManager caches connections and localization
 3. **Knowledge Store**: SQLite databases per game in `data/{gameId}.db`
 
 ### Game Context Switching
+
 - Check game identity on each significant operation
 - Compare current gameId with stored gameId
 - Switch context when game changes
 - **Each game gets its own SQLite database**. Tables are created if absent and there are no migrations, since the data is ephemeral and rebuilt from the game
 
 ### Knowledge Persistence
+
 - Four tiers, declared in `knowledge/schema/base.ts` and created in `knowledge/schema/setup.ts`: GameMetadata (key-value), PublicKnowledge, TimedKnowledge, MutableKnowledge
 - Extend **TimedKnowledge** for plain time-stamped rows with per-player visibility (GameEvents, PlayerOptions, TacticalZones, DiplomaticMessages, RelationshipChanges)
 - Extend **MutableKnowledge** for versioned data: adds Key, Version, IsLatest, and a Changes array of changed field names
@@ -152,17 +172,20 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 ## Database Development
 
 ### SQLite Queries
+
 - **Always use `is` and `is not`** for SQLite null checking (not `=` or `!=`)
 - Before implementing a database-related tool, always check the schema
 - When you need a database table that's commented, uncomment it
 
 ### Type Patterns with Kysely
+
 - Use `Generated<T>` for auto-managed database fields
 - Use `JSONColumnType<T>` for JSON data columns
 - Extend base interfaces for specialized knowledge types
 - Keep interfaces aligned with database schema
 
 ### Player Visibility
+
 - Track visibility for up to 22 players (Player0-Player21)
 - Use Generated<number> for visibility flags (0 or 1)
 - Check visibility before exposing sensitive game data
@@ -171,22 +194,27 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 ## Lua Script Development
 
 ### Script Organization
+
 - Standalone Lua scripts must be placed in the `lua/` directory
 - Follow existing patterns (e.g., `event-visibility.lua`, `game-identity.lua`)
 
 ### API Usage
+
 **IMPORTANT**: Always check `civ5-dll/CvGameCoreDLL_Expansion2/Lua/` for existing Civ5 Lua APIs:
+
 - Check wrapper classes: CvLuaGame, CvLuaPlayer, CvLuaUnit, CvLuaCity, etc.
 - Use existing patterns like `LuaFunction` for callbacks
 - **Never invent non-existent APIs**
 - Scripts executed in-game have access to all Civ5's exposed Lua APIs
 
 ### Execution Context
+
 Scripts are executed within the game context via BridgeManager
 
 ## Bridge Service Integration
 
 ### BridgeManager Usage
+
 - **Always use BridgeManager** for all Bridge Service communication
 - Located in `src/bridge/manager.ts`
 - **Do NOT use direct fetch/HTTP calls** to the Bridge Service
@@ -194,6 +222,7 @@ Scripts are executed within the game context via BridgeManager
 - Follow protocol.md specifications
 
 ### Queue-Based Request Management
+
 - Process batches of up to 50 Lua calls
 - Auto-pause game when queue reaches capacity
 - Track overflow state to manage resume
@@ -201,12 +230,14 @@ Scripts are executed within the game context via BridgeManager
 - Implement backpressure to prevent memory issues
 
 ### Connection Pools
+
 - Maintain separate pools for different operation types
 - Standard pool: 50 connections for regular operations
 - Fast pool: 5 connections for time-critical operations
 - **Use `fast: true`** for low-latency operations (pause/resume)
 
 ### SSE Event Processing
+
 - Parse incoming events as GameEvent type
 - Handle dll_status events to track connection state
 - Reset functions when DLL disconnects
@@ -216,6 +247,7 @@ Scripts are executed within the game context via BridgeManager
 ## Build & Development
 
 ### Commands
+
 - `npm run dev` - Development with hot reload using tsx
 - `npm run build` - TypeScript compilation to dist/
 - `npm run type-check` - TypeScript type checking without emit
@@ -224,23 +256,27 @@ Scripts are executed within the game context via BridgeManager
 ## Performance Considerations
 
 ### Lazy Loading
+
 - Tools loaded on first init
 - Database connections cached per session
 - Localization results cached in memory
 - Summary data cached at tool level
 
 ### Batch Processing
+
 - Lua calls: Up to 50 per batch
 - Knowledge storage: Batched writes
 - Event processing: Async with queue management
 
 ### Auto-Pause Management
+
 - Each cycle drains a batch of up to 50 calls; pause the game when 25 or more calls still remain queued after that
 - Resume game when the queue drains below that threshold
 - Track overflow state to prevent pause/resume thrashing
 - Coordinate with game mutex manager
 
 ### Memory Management
+
 - Auto-save every 30 seconds
 - HTTP connection pooling via undici
 - Proper SQLite cleanup on shutdown
@@ -248,6 +284,7 @@ Scripts are executed within the game context via BridgeManager
 ## Development Guidelines
 
 ### Creating New Tools
+
 1. **Pick the right base.** Use `DatabaseQueryTool`, `LuaFunctionTool`, `ActionTool`, or `DynamicEventTool` when your tool fits that pattern; otherwise extend `ToolBase` directly, which is what most tools do
 2. **Use factory functions** for proper caching
 3. **Add to toolFactories** in `tools/index.ts`
@@ -257,6 +294,7 @@ Scripts are executed within the game context via BridgeManager
 7. **Consider player visibility** for game data
 
 ### Adding New Fields to Knowledge Tables
+
 When adding a new field to an existing knowledge table (e.g., PlayerSummary):
 
 1. **Update TypeScript Schema** - Add field to interface with proper type and documentation
@@ -266,6 +304,7 @@ When adding a new field to an existing knowledge table (e.g., PlayerSummary):
 5. **Test the Changes** - Run type-check and verify in new game session
 
 ### Common Pitfalls
+
 1. **Forgetting `.js` extensions** in imports
 2. **Direct HTTP calls** instead of using BridgeManager
 3. **Not testing both transports**
@@ -274,6 +313,7 @@ When adding a new field to an existing knowledge table (e.g., PlayerSummary):
 6. **Using `=` or `!=`** for SQLite null checks (use `is`/`is not`)
 
 ### MCP Protocol Compliance
+
 - Always follow Model Context Protocol specifications
 - Use the official @modelcontextprotocol/sdk package
 - Register tools through `toolFactories` in `tools/index.ts`
@@ -283,16 +323,19 @@ When adding a new field to an existing knowledge table (e.g., PlayerSummary):
 ## Integration Points
 
 ### With Bridge Service
+
 - Subscribe to the event feed, preferring the named event pipe and falling back to SSE at `/events`
 - Use BridgeManager for all communication
 - Handle connection loss gracefully
 
 ### With Vox Agents
+
 - Agents connect via MCP protocol
 - Tools exposed automatically on connection
 - Event notifications via the `vox-deorum/game-event` MCP notification
 
 ### Event System
+
 - Each event has typed Zod schema for validation
 - Common event types: GameSave, PlayerTurn, CityFounded, etc.
 - Real game events undergo visibility analysis in `lua/event-visibility.lua` before storage, since only the game knows who witnessed what

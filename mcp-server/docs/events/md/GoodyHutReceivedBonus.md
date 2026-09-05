@@ -5,6 +5,7 @@ The `GoodyHutReceivedBonus` event is triggered when a player's unit receives a b
 # Event Triggers
 
 This event is triggered in the following scenario:
+
 - When a unit successfully explores a goody hut and receives a bonus reward
 - The event fires after the bonus has been applied to the player but before cleanup operations
 - Requires the MOD_EVENTS_GOODY_CHOICE configuration flag to be enabled
@@ -12,7 +13,7 @@ This event is triggered in the following scenario:
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `playerId` | `int` | The ID of the player who received the goody hut bonus |
 | `unitId` | `int` | The ID of the unit that explored the goody hut (-1 if no unit) |
 | `goodyType` | `int` | The type/ID of the bonus received from the goody hut |
@@ -24,7 +25,7 @@ This event is triggered in the following scenario:
 The `GoodyHutReceivedBonus` event provides comprehensive information about goody hut exploration outcomes. When a unit explores a goody hut, various types of bonuses can be received such as:
 
 - Gold rewards
-- Technology discoveries  
+- Technology discoveries
 - Unit spawns (scouts, warriors, etc.)
 - Population growth for nearby cities
 - Culture bonuses
@@ -44,6 +45,7 @@ The event captures both the spatial context (coordinates) and the specific rewar
 **Configuration Dependency:** This event only fires when `MOD_EVENTS_GOODY_CHOICE` is enabled in the game configuration.
 
 **Code Reference:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_GoodyHutReceivedBonus, GetID(), pUnit ? pUnit->GetID() : -1, eGoody, pPlot->getX(), pPlot->getY());
 ```

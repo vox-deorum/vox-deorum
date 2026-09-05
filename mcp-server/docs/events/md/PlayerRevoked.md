@@ -5,6 +5,7 @@ The PlayerRevoked event is triggered when a major civilization revokes their ple
 # Event Triggers
 
 This event is triggered when:
+
 - A major civilization revokes protection from a minor civilization
 - The protection status is being set to false (protection is being removed)
 - The MOD_EVENTS_MINORS_INTERACTION mod setting is enabled
@@ -15,7 +16,7 @@ The event fires after any friendship penalties are applied but before the protec
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `eMajor` | PlayerID | The player ID of the major civilization revoking protection |
 | `GetPlayer()->GetID()` | PlayerID | The player ID of the minor civilization losing protection |
 | `bPledgeNowBroken` | Boolean | Whether this action breaks an existing protection pledge |
@@ -25,6 +26,7 @@ The event fires after any friendship penalties are applied but before the protec
 The PlayerRevoked event represents the termination of a protection agreement between a major and minor civilization. This action can have significant diplomatic and strategic consequences depending on whether it breaks an existing pledge.
 
 When `bPledgeNowBroken` is true, it indicates that the major civilization is dishonoring a previous commitment, which typically results in:
+
 - Friendship penalties with the affected city-state
 - Potential diplomatic consequences with other civilizations
 - Reputation damage for breaking international agreements
@@ -40,6 +42,7 @@ The event provides complete context for tracking these diplomatic changes, inclu
 **Conditional Compilation**: This event is only available when `MOD_EVENTS_MINORS_INTERACTION` is defined and enabled.
 
 **Execution Context**: The event is invoked:
+
 - After potential friendship penalties are applied (when `bPledgeNowBroken` is true)
 - After recording pledge break timestamp (if applicable)
 - Before the final protection status update (`m_abPledgeToProtect[eMajor] = bProtect`)

@@ -1,7 +1,6 @@
 # Stage 3 — mcp-server + read-only DLL getter: `inspect-deal`
 
-> **✅ Done.** TypeScript side unit-tested (8 mocked-bridge tests green); the live legality/value path is validated manually in-game. Requires a DLL rebuild (read-only; no version bump per request).
-> Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
+> **✅ Done.** TypeScript side unit-tested (8 mocked-bridge tests green); the live legality/value path is validated manually in-game. Requires a DLL rebuild (read-only; no version bump per request). Part of the interactive-diplomacy plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 
 ## Objective
 
@@ -24,7 +23,7 @@ Legality and estimation are unified here — there is no separate estimate tool,
 
 ### mcp-server
 
-- **[deal-schema.ts](../../../mcp-server/src/utils/deal-schema.ts)** — the **pinned shared contract** for stages 4–6: `Payload.Deal` (`version: 1`, `items`, `promises`, optional `rationale`, optional `message`), the `Payload.Value1` / `Value2` per-item value-map shape, and the `TRADE_ITEM_TYPES` / `PROMISE_TYPES` vocabularies (see *Pinned deal payload* below).
+- **[deal-schema.ts](../../../mcp-server/src/utils/deal-schema.ts)** — the **pinned shared contract** for stages 4–6: `Payload.Deal` (`version: 1`, `items`, `promises`, optional `rationale`, optional `message`), the `Payload.Value1` / `Value2` per-item value-map shape, and the `TRADE_ITEM_TYPES` / `PROMISE_TYPES` vocabularies (see _Pinned deal payload_ below).
 - **[inspect-deal.lua](../../../mcp-server/lua/inspect-deal.lua)** — builds a transient `UI.GetScratchDeal()` (never activated), evaluates each proposed term directly (legality under `bTreatAsHumanToHuman=true`, reason, both-direction value), and enumerates the **full tradable range per side** (gold, GPT, resources, cities, techs, maps, open borders, embassy, defensive pact, research agreement, peace, DoF, third-party peace/war, vassalage + revoke, **and World Congress vote commitments**). Vote-commitment enumeration mirrors the in-game trade screen (`TradeLogic.lua`'s `UpdateLeagueVotes`/`RefreshPocketVotes`): each in-session enact/repeal proposal expands into its voter choices via `Game.GetActiveLeague()` (`GetEnactProposals`/`GetRepealProposals`/`GetChoicesForDecision`/`GetResolutionName`/`GetTextForChoice`), with the giver's committable vote count from the DLL's `GetPotentialVotesForMember(receiver, giver)`. The whole block is `pcall`-guarded, so no active league (or a DLL build without the League bindings) degrades to an empty list rather than erroring.
 - **[utils/lua/inspect-deal.ts](../../../mcp-server/src/utils/lua/inspect-deal.ts)** — a `LuaFunction` wrapper (structured-arg transport, modeled on `present-decision.ts`).
 - **[tools/knowledge/inspect-deal.ts](../../../mcp-server/src/tools/knowledge/inspect-deal.ts)** — the read tool `{ PlayerAID, PlayerBID, ProposedDeal? }` returning per-trade-item `{ legality, reasons, valueIfIGive, valueIfIReceive }`, per-promise `{ agreeabilityFactors }` (assembled from `get-opinions` / `get-players` / `get-diplomatic-events` — approach, opinion, trust/untrustworthiness, broken/ignored-promise history, victory competition — cached per promiser; **no DLL verdict**, keeping the DLL merge-compatible), and the tradable range per side. Registered in `tools/index.ts`.

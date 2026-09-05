@@ -2,14 +2,14 @@
 
 This page covers building Vox Deorum from source and running the whole stack end to end. It is for contributors who want to change the code.
 
-If you only want to *play*, the installer does all of this for you. See the players' [Getting Started](../players/getting-started.md) guide instead.
+If you only want to _play_, the installer does all of this for you. See the players' [Getting Started](../players/getting-started.md) guide instead.
 
 The stack is five components ([architecture.md](architecture.md)): a C++ game DLL, a Civ V mod, and three Node.js/TypeScript services managed as npm workspaces. Most day-to-day work is in the TypeScript and the mod's Lua/SQL. You only rebuild the DLL when you change its C++.
 
 ## Prerequisites
 
 | Requirement | Why |
-|---|---|
+| --- | --- |
 | **Windows 10 or 11** | The game, the named-pipe IPC, and the launch scripts are Windows-only. |
 | **Civilization V** with both expansions, plus **Community Patch + Vox Populi** | The modified gamecore the DLL replaces. |
 | **Node.js ≥ 20** and npm | Runs the three services. The installer bundles a portable Node; for development use a system install. |

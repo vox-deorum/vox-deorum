@@ -17,7 +17,7 @@ All triggers occur within minor civilization AI processing after the gift has be
 The event passes six parameters to event handlers, with different meanings depending on the gift type:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | GivingPlayer | int | The ID of the major civilization giving the gift |
 | ReceivingPlayer | int | The ID of the minor civilization receiving the gift |
 | GoldAmount | int | Amount of gold given (-1 for non-gold gifts) |
@@ -30,18 +30,21 @@ The event passes six parameters to event handlers, with different meanings depen
 The event provides comprehensive information about different gift types:
 
 **Unit Gifts:**
+
 - `GivingPlayer`: Major civ giving the unit
 - `ReceivingPlayer`: Minor civ receiving the unit
 - `UnitType`: The specific unit type being gifted
 - Other parameters: Set to -1
 
 **Gold Gifts:**
+
 - `GivingPlayer`: Major civ giving the gold
 - `ReceivingPlayer`: Minor civ receiving the gold
 - `GoldAmount`: The amount of gold being gifted
 - Other parameters: Set to -1
 
 **Tile Improvement Gifts:**
+
 - `GivingPlayer`: Major civ paying for the improvement
 - `ReceivingPlayer`: Minor civ receiving the improvement
 - `PlotX` and `PlotY`: Coordinates of the plot where the improvement is built
@@ -54,6 +57,7 @@ The event occurs after the gift has been processed and friendship changes have b
 **Source File**: `F:\Minor Solutions\vox-deorum\civ5-dll\CvGameCoreDLL_Expansion2\CvMinorCivAI.cpp`
 
 **Trigger Locations**:
+
 - Line 17405: Unit gifts in `CvMinorCivAI::DoUnitGiftFromMajor`
 - Line 17505: Gold gifts in `CvMinorCivAI::DoGoldGiftFromMajor`
 - Line 17824: Tile improvement gifts in `CvMinorCivAI::DoTileImprovementGiftFromMajor`
@@ -63,6 +67,7 @@ The event occurs after the gift has been processed and friendship changes have b
 **Conditional Compilation**: The event is only triggered when `MOD_EVENTS_MINORS_INTERACTION` is enabled
 
 **Execution Context**: The event fires after gift processing is complete, specifically:
+
 - After friendship/influence changes have been applied
 - After quest completion checks have been performed
 - After treasury changes have been made (for gold and tile improvement gifts)

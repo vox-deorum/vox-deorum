@@ -7,7 +7,7 @@ bridge-service is the best-covered package: connection lifecycle/reconnection, r
 ## Event pipe
 
 | New test file | Target | Cases | Mocking |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `tests/mock/services/event-pipe.test.ts` | [event-pipe.ts](../../../bridge-service/src/services/event-pipe.ts) | See cases below | Mock `node-ipc`; toggle `config.eventpipe.enabled` |
 
 ### Cases

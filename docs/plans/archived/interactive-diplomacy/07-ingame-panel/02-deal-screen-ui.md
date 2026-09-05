@@ -9,7 +9,7 @@ Reuse the VP EUI trade screen for authoring and editing every active deal. Incom
 The screen supports three modes and seven footer states:
 
 | Mode and draft state | Content | Actions |
-|---|---|---|
+| --- | --- | --- |
 | `author` | An empty native editor at peace, or an editor seeded with paired peace treaties at war | Propose, Cancel |
 | `incoming`, unchanged | The counterpart's mounted proposal | Accept, Reject, Cancel |
 | `incoming`, filtered and untouched | The legal remainder of the counterpart's proposal | Counter, Reject, Cancel |

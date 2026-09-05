@@ -23,10 +23,11 @@ The event passes the following parameters:
 The government cooldown rate system provides a mechanism to modify how quickly players can transition between different government types. While the base cooldown represents a fixed waiting period, the cooldown rate acts as a multiplier or modifier that can:
 
 - Accelerate government transitions through positive rate bonuses
-- Slow down government transitions through negative rate penalties  
+- Slow down government transitions through negative rate penalties
 - Reflect the influence of policies, technologies, or special circumstances on governmental stability
 
 This event is crucial for AI systems to understand:
+
 - When government flexibility will increase or decrease
 - The impact of certain game mechanics on political adaptability
 - Strategic timing for government-dependent actions
@@ -35,17 +36,21 @@ This event is crucial for AI systems to understand:
 # Technical Details
 
 **Source Files:**
+
 - `CvGameCoreDLL_Expansion2/CvPlayer.cpp` (lines 29645, 29654)
 
 **Triggering Functions:**
+
 - `CvPlayer::ChangeGovernmentCooldownRate(int iValue)` - Modifies the current cooldown rate by the specified amount
 - `CvPlayer::SetGovernmentCooldownRate(int iValue)` - Sets the cooldown rate to a specific value
 
 **Related Members:**
+
 - `m_iJFDGovernmentCooldownRate` - Internal member storing the current cooldown rate modifier
 - `GetGovernmentCooldownRate()` - Accessor method returning the current cooldown rate
 
 **Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_GovernmentCooldownRateChanges, GetID(), iValue);
 ```

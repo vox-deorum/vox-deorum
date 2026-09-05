@@ -16,10 +16,10 @@ The event is fired from within the `CvPlayer` class after policy adoption is fin
 
 The event passes two parameters to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| PlayerID | PlayerTypes | The ID of the player who adopted the policy |
-| PolicyType | PolicyTypes | The type of policy that was adopted |
+| Parameter  | Type        | Description                                 |
+| ---------- | ----------- | ------------------------------------------- |
+| PlayerID   | PlayerTypes | The ID of the player who adopted the policy |
+| PolicyType | PolicyTypes | The type of policy that was adopted         |
 
 # Event Details
 
@@ -41,8 +41,9 @@ The event occurs within the social policy system after the player has successful
 **Event System**: Uses the Lua scripting hook system via `LuaSupport::CallHook()`
 
 **Function Context**: Occurs within the policy adoption sequence after:
+
 - Policy validity checks
-- Culture cost calculations 
+- Culture cost calculations
 - Instant yield processing
 - Great person progress updates
 - City citizen updates

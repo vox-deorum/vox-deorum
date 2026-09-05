@@ -28,6 +28,7 @@ The `ContractsRefreshed` event provides notification about:
 - **Synchronization Point**: Marker for when contract-dependent systems should update their state
 
 This event is particularly useful for:
+
 - AI systems that need to evaluate newly available contracts
 - Economic planning systems that track contract opportunities
 - Diplomatic systems that respond to changing contract landscapes

@@ -6,7 +6,8 @@ The MakePeace event is triggered when two teams formally establish peace and end
 
 This event is fired in the `CvTeam.cpp` file when a team makes peace with another team through the diplomatic system. The event uses different mechanisms depending on mod configuration.
 
-**Trigger Locations:** 
+**Trigger Locations:**
+
 - `CvGameCoreDLL_Expansion2/CvTeam.cpp:2152` (Modern path)
 - `CvGameCoreDLL_Expansion2/CvTeam.cpp:2164` (Legacy path)
 
@@ -17,11 +18,13 @@ This event is fired in the `CvTeam.cpp` file when a team makes peace with anothe
 The MakePeace event passes different parameters depending on the implementation path:
 
 **Modern Path (if MOD_EVENTS_WAR_AND_PEACE is enabled):**
+
 1. **Originating Player ID** (`eOriginatingPlayer`) - The unique identifier of the player who initiated the peace
 2. **Target Team ID** (`eTeam`) - The unique identifier of the team that peace is being made with
 3. **Pacifier Flag** (`bPacifier`) - Boolean indicating if this is a "pacifier" peace (specific diplomatic context)
 
 **Legacy Path (Lua Hook):**
+
 1. **Initiating Team ID** (`GetID()`) - The unique identifier of the team that is making peace
 2. **Target Team ID** (`eTeam`) - The unique identifier of the team that peace is being made with
 
@@ -42,19 +45,22 @@ The event is fired before the actual peace state changes take effect, allowing s
 **Source File:** `CvGameCoreDLL_Expansion2/CvTeam.cpp`
 
 **Triggering Function:**
+
 - `CvTeam::makePeace(TeamTypes eTeam, bool bBumpUnits, bool bSuppressNotification, PlayerTypes eOriginatingPlayer)` - Main function handling peace between teams
 
-**Event Implementation:**
-The event uses different mechanisms depending on mod configuration:
+**Event Implementation:** The event uses different mechanisms depending on mod configuration:
+
 - **Modern Path:** Uses `GAMEEVENT_MakePeace` with extended parameters if `MOD_EVENTS_WAR_AND_PEACE` is enabled
 - **Legacy Path:** Uses Lua script hook `MakePeace` with basic parameters for compatibility
 
 **Modern Game Event Hook:**
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_MakePeace, eOriginatingPlayer, eTeam, bPacifier);
 ```
 
 **Legacy Lua Hook:**
+
 ```cpp
 LuaSupport::CallHook(pkScriptSystem, "MakePeace", args.get(), bResult);
 ```

@@ -7,6 +7,7 @@ The `PlayerBoughtOut` event is triggered when a major civilization successfully 
 This event is triggered when a major civilization completes the buyout process of a minor civilization through the city-state interaction system. The trigger occurs within the `CvMinorCivAI` class when the buyout transaction is finalized and the minor civilization transitions from independent status to being controlled by the purchasing major civilization.
 
 The buyout typically requires:
+
 1. **Diplomatic Prerequisites**: Specific relationship levels or conditions with the city-state
 2. **Economic Investment**: Substantial gold or resource expenditure
 3. **Strategic Opportunity**: Appropriate game state conditions for buyout availability
@@ -16,7 +17,7 @@ The buyout typically requires:
 The event passes two parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | BuyingPlayer | PlayerTypes | The ID of the major civilization that performed the buyout |
 | MinorPlayer | PlayerTypes | The ID of the minor civilization (city-state) that was bought out |
 
@@ -41,6 +42,7 @@ The buyout represents one of the most decisive actions a major civilization can 
 **Event System**: Uses the game event system via `GAMEEVENTINVOKE_HOOK(GAMEEVENT_PlayerBoughtOut)`
 
 **Minor Civilization Context**: City-state buyouts typically:
+
 - Require substantial economic investment from the major civilization
 - May have diplomatic prerequisites or relationship requirements
 - Permanently remove the city-state from independent status

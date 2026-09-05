@@ -26,7 +26,7 @@ Create and write `docs/developers/vox-agents/`: the LLM strategic-AI framework a
 ## Sources
 
 | Source | Action |
-|---|---|
+| --- | --- |
 | `vox-agents/README.md` | Fold framework overview into `overview.md`; split per-agent sections across `strategist.md`, `envoy.md`, `support-agents.md`, `telepathist.md`, `oracle.md`, `archivist.md`, `ui.md`. Delete original in Stage 9. |
 | `vox-agents/docs/obs.md` | OBS/narrators prose → `media.md`; tracing/logging prose → `observability.md`. Delete original in Stage 9. |
 | `vox-agents/docs/oracle.md` | Move prose into `oracle.md`. Delete original in Stage 9. |

@@ -50,4 +50,4 @@ The dashboard starts automatically with every console workflow (strategist, tele
 
 ## Related: the player-facing replayer
 
-Session review for *players*, meaning rewatching a finished game, is a separate tool: the Vox Deorum Replayer. It lives in its own repository (`vox-deorum-replay`) and is covered in the players' documentation. This dashboard is the developer-facing surface.
+Session review for _players_, meaning rewatching a finished game, is a separate tool: the Vox Deorum Replayer. It lives in its own repository (`vox-deorum-replay`) and is covered in the players' documentation. This dashboard is the developer-facing surface.

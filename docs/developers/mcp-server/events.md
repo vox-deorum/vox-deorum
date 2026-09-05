@@ -21,7 +21,7 @@ When an event arrives, the manager routes it down one of three paths.
 **Ordinary game events** are the bulk of the stream, and they go to the store's event handler. Each one passes through four steps:
 
 1. **Validation.** Each event type has a Zod schema (in `knowledge/schema/events/`), and the incoming payload is validated against it. The schema set is the server's contract for what a given event looks like.
-2. **Name remapping.** A few events are stored under a normalized name rather than their raw one, so that related signals land under consistent, self-explanatory names. For example, the game's confusingly-named `PlayerBuilt`, which fires on *completion*, is recorded as `UnitBuildCompleted`, and `PlayerBuilding`, which fires as work *starts*, as `UnitBuildStart`.
+2. **Name remapping.** A few events are stored under a normalized name rather than their raw one, so that related signals land under consistent, self-explanatory names. For example, the game's confusingly-named `PlayerBuilt`, which fires on _completion_, is recorded as `UnitBuildCompleted`, and `PlayerBuilding`, which fires as work _starts_, as `UnitBuildStart`.
 3. **Visibility analysis.** Every event is run through analysis that decides which players could have witnessed it, producing the per-player visibility flags the knowledge store keeps alongside it. This is what makes the recorded event respect fog of war when an agent later queries it; see [knowledge.md](knowledge.md). The analysis runs as a Lua function inside the game (`mcp-server/lua/event-visibility.lua`), registered when the DLL connects, because only the game knows who can see what.
 4. **Storage.** The validated, remapped, visibility-tagged event is written into the `GameEvents` table.
 

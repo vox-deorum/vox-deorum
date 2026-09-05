@@ -14,9 +14,9 @@ The trigger occurs at the absolute end of turn processing, after all game mechan
 
 The event passes one parameter to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| PlayerID | int | The ID of the player whose turn has completed (`GetID()`) |
+| Parameter | Type | Description                                               |
+| --------- | ---- | --------------------------------------------------------- |
+| PlayerID  | int  | The ID of the player whose turn has completed (`GetID()`) |
 
 # Event Details
 
@@ -39,6 +39,7 @@ This event is the final hook in the turn processing sequence, occurring after al
 **Conditional Compilation**: The event is only triggered when `MOD_EVENTS_RED_TURN` is enabled
 
 **Execution Context**: The event fires at the very end of turn processing, specifically:
+
 - After all turn mechanics have been completed
 - After `PlayerDoneTurn` event has been triggered
 - After unit healing and movement restoration

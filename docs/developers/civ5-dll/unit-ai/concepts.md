@@ -50,27 +50,27 @@ The **soft supply cap** (`CvEconomicAI::GetSoftSupplyCap`) is an affordability t
 
 A **war state** (`WarStateTypes`) is the per-enemy assessment produced each turn by `CvDiplomacyAI::DoUpdateWarStates`.
 
-| Severity, worst first | State |
-| --- | --- |
-| 1 | Nearly defeated |
-| 2 | Defensive |
-| 3 | Troubled |
-| 4 | Stalemate |
-| 5 | Calm |
-| 6 | Offensive |
-| 7 | Nearly won |
+| Severity, worst first | State           |
+| --------------------- | --------------- |
+| 1                     | Nearly defeated |
+| 2                     | Defensive       |
+| 3                     | Troubled        |
+| 4                     | Stalemate       |
+| 5                     | Calm            |
+| 6                     | Offensive       |
+| 7                     | Nearly won      |
 
 The update weighs danger to each side's cities, including siege, falling cities, capitals, wonders, and holy cities, then uses war score and danger thresholds. Calm is better than stalemate and requires no serious danger or recent city capture.
 
 `GetStateAllWars` combines major-civilization wars into winning, neutral, or losing.
 
-| Per-war state | Contribution |
-| --- | --- |
-| Nearly won | +4 |
-| Offensive | +2, or +4 when the enemy is in serious danger |
-| Calm or stalemate | 0 |
-| Troubled | -1, or -2 when the player is in serious danger |
-| Defensive | -2, or -4 when the player is in serious danger |
+| Per-war state     | Contribution                                   |
+| ----------------- | ---------------------------------------------- |
+| Nearly won        | +4                                             |
+| Offensive         | +2, or +4 when the enemy is in serious danger  |
+| Calm or stalemate | 0                                              |
+| Troubled          | -1, or -2 when the player is in serious danger |
+| Defensive         | -2, or -4 when the player is in serious danger |
 
 A total above +2 is winning; below -2 is losing. Being nearly defeated in any war, or defensive while the capital is lost or heavily damaged, also forces losing. This aggregate controls explorer demand, military disband and influence gifting, the soft-supply emergency allowance, and Tactical AI priorities.
 
@@ -88,13 +88,13 @@ A **dominance zone** is a Tactical AI region with territory, nearby military str
 
 Revealed plots near a city join that city's land or water zone. Connected cityless areas form wilderness zones; small islands and lakes can merge nearby areas. Unrevealed plots share one unknown zone.
 
-| Zone | Territory |
-| --- | --- |
-| City zone owned by the player's team | Friendly |
-| City zone whose team is at war with the player | Enemy |
-| Other city zone | Neutral |
-| Wilderness zone | Neutral |
-| Unknown zone | None |
+| Zone                                           | Territory |
+| ---------------------------------------------- | --------- |
+| City zone owned by the player's team           | Friendly  |
+| City zone whose team is at war with the player | Enemy     |
+| Other city zone                                | Neutral   |
+| Wilderness zone                                | Neutral   |
+| Unknown zone                                   | None      |
 
 Zones collect melee, ranged, naval, and naval-ranged strength.
 

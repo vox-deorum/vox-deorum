@@ -5,6 +5,7 @@ The UiDiploEvent is triggered when diplomatic events are initiated from the user
 # Event Triggers
 
 This event is fired from `CvGame::DoFromUIDiploEvent()` when:
+
 - UI diplomatic actions are processed by the game core
 - Players initiate diplomatic interactions through the interface
 - The Lua script system is available and active
@@ -26,13 +27,14 @@ The event provides four integer parameters:
 The diplomatic event system handles various UI-initiated diplomatic actions:
 
 **Event Processing Flow:**
+
 1. UI diplomatic action initiated by player
 2. Event data passed to game core via `DoFromUIDiploEvent()`
 3. Either GameEvent or Lua hook fires (depending on compilation options)
 4. Event data transmitted to network layer for multiplayer synchronization
 
-**Diplomatic Event Types:**
-The `FromUIDiploEventTypes` enumeration likely includes events such as:
+**Diplomatic Event Types:** The `FromUIDiploEventTypes` enumeration likely includes events such as:
+
 - Diplomatic proposal initiations
 - Trade offer submissions
 - Declaration of war requests
@@ -40,41 +42,38 @@ The `FromUIDiploEventTypes` enumeration likely includes events such as:
 - Alliance and pact formations
 - City-state interactions
 
-**Parameter Usage:**
-The `iArg1` and `iArg2` parameters provide event-specific data:
+**Parameter Usage:** The `iArg1` and `iArg2` parameters provide event-specific data:
+
 - Could represent resource amounts in trade deals
 - Might specify city IDs or unit IDs involved
 - May contain diplomatic modifier values
 - Could include turn-based timing information
 
-**Dual Event System:**
-When `MOD_EVENTS_DIPLO_EVENTS` is enabled, a GameEvent (`GAMEEVENT_UiDiploEvent`) fires instead of this Lua hook, providing the same functionality through the standard event system rather than Lua scripting.
+**Dual Event System:** When `MOD_EVENTS_DIPLO_EVENTS` is enabled, a GameEvent (`GAMEEVENT_UiDiploEvent`) fires instead of this Lua hook, providing the same functionality through the standard event system rather than Lua scripting.
 
 # Technical Details
 
 **Source Location**: `CvGame.cpp` line 5493  
 **Hook Type**: Lua script hook (or GameEvent when `MOD_EVENTS_DIPLO_EVENTS` enabled)  
 **Triggering Function**: `DoFromUIDiploEvent()`  
-**Prerequisites**: Lua script system must be available, `MOD_EVENTS_DIPLO_EVENTS` disabled  
+**Prerequisites**: Lua script system must be available, `MOD_EVENTS_DIPLO_EVENTS` disabled
 
-**Alternative Event System:**
-When `MOD_EVENTS_DIPLO_EVENTS` is enabled, `GAMEEVENT_UiDiploEvent` fires instead with the same parameters.
+**Alternative Event System:** When `MOD_EVENTS_DIPLO_EVENTS` is enabled, `GAMEEVENT_UiDiploEvent` fires instead with the same parameters.
 
-**Network Integration:**
-After event processing, the diplomatic action is transmitted via:
+**Network Integration:** After event processing, the diplomatic action is transmitted via:
+
 - `gDLL->sendFromUIDiploEvent()`: Sends the diplomatic event to network layer
 - This ensures multiplayer synchronization of diplomatic actions
 - Maintains game state consistency across all players
 
-**Script Integration:**
-This hook/event enables Lua scripts to implement custom diplomatic behaviors, such as:
+**Script Integration:** This hook/event enables Lua scripts to implement custom diplomatic behaviors, such as:
+
 - Validation of diplomatic actions before processing
 - Custom diplomatic options and interactions
 - Integration with mod-specific diplomatic systems
 - Logging and tracking of diplomatic activities
 - Implementation of alternative diplomatic mechanics
 
-**UI-Gameplay Bridge:**
-This event represents the critical interface between player UI actions and core gameplay systems, ensuring that diplomatic interactions initiated through the interface are properly processed, validated, and synchronized in multiplayer environments.
+**UI-Gameplay Bridge:** This event represents the critical interface between player UI actions and core gameplay systems, ensuring that diplomatic interactions initiated through the interface are properly processed, validated, and synchronized in multiplayer environments.
 
 The event provides comprehensive information for scripts that need to monitor, modify, or extend the diplomatic interaction system in Civilization V.

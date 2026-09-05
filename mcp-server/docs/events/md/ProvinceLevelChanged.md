@@ -5,6 +5,7 @@ The ProvinceLevelChanged event is triggered when a city's province level changes
 # Event Triggers
 
 This event is fired from `CvCity::SetProvinceLevel()` when:
+
 - The province level of a city is explicitly changed through the `SetProvinceLevel()` method
 - The new province level value differs from the current province level
 - Called from Lua scripts or other game systems that modify city province levels
@@ -25,14 +26,16 @@ The event provides four integer parameters (`"iiii"` signature):
 The province level system works as follows:
 
 **Province Level Management:**
+
 - Province levels are integer values starting from 0
 - Higher levels typically represent more developed or important cities
 - Province level changes can be triggered by various game events and mechanics
 - Changes may affect city yields, building availability, or administrative costs
 
 **Gameplay Implications:**
+
 - Different province levels may unlock different capabilities
-- Province levels could affect maintenance costs or administrative efficiency  
+- Province levels could affect maintenance costs or administrative efficiency
 - May influence available buildings, units, or other city options
 - Can impact diplomatic or strategic value of cities
 
@@ -43,9 +46,10 @@ The province level system is part of the Community Balance Patch's enhanced city
 **Source Location**: `CvCity.cpp` line 34680  
 **Event Definition**: `GAMEEVENT_ProvinceLevelChanged` with signature `"iiii"`  
 **Storage Field**: `m_iProvinceLevel` (integer member variable)  
-**Access Methods**: 
+**Access Methods**:
+
 - `GetProvinceLevel()`: Returns current province level
-- `SetProvinceLevel(int)`: Sets province level and triggers event if changed  
+- `SetProvinceLevel(int)`: Sets province level and triggers event if changed
 - `HasProvinceLevel(int)`: Checks if city has specific province level
 
 **Compilation Requirements**: Enabled under `MOD_BALANCE_CORE` compilation flag

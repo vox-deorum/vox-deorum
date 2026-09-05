@@ -6,19 +6,20 @@
 
 ```typescript
 interface VoiceConfig extends NarratorStageConfig {
-  type: 'narrator-voice';
+  type: "narrator-voice";
   tts: TTSConfig;
 }
 
 interface TTSConfig {
-  provider: string;                  // e.g., 'elevenlabs', 'openai', 'local'
-  voice: string;                     // provider-specific voice ID
-  speed?: number;                    // speaking rate multiplier
-  [key: string]: unknown;            // provider-specific options
+  provider: string; // e.g., 'elevenlabs', 'openai', 'local'
+  voice: string; // provider-specific voice ID
+  speed?: number; // speaking rate multiplier
+  [key: string]: unknown; // provider-specific options
 }
 ```
 
 ### Input
+
 - `workspace/scripts.json` (ScriptsOutput from Stage 3)
 
 ### Output: `workspace/audio/` directory
@@ -33,10 +34,10 @@ interface AudioOutput {
 interface AudioEntry {
   turn: number;
   playerID: number;
-  file: string;                      // filename in audio/ dir
-  duration: number;                  // actual spoken duration from TTS output
+  file: string; // filename in audio/ dir
+  duration: number; // actual spoken duration from TTS output
   wordCount: number;
-  estimatedDuration: number;         // from script estimate
+  estimatedDuration: number; // from script estimate
 }
 ```
 
@@ -55,7 +56,7 @@ interface TTSProvider {
   /** Generate speech audio from text. Returns raw audio buffer. */
   generate(text: string, config: TTSConfig): Promise<Buffer>;
   /** Output audio format */
-  format: 'mp3' | 'wav' | 'opus';
+  format: "mp3" | "wav" | "opus";
 }
 ```
 

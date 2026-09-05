@@ -17,7 +17,7 @@ All triggers occur within the `CvMinorCivAI` class during diplomatic interaction
 The event passes seven parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | BullyingPlayer | PlayerTypes | The ID of the major civilization performing the bullying |
 | MinorPlayer | PlayerTypes | The ID of the minor civilization (city-state) being bullied |
 | Amount | int | Amount of tribute extracted (gold amount for both gold and science tribute, or -1 for unit tribute) |
@@ -44,13 +44,15 @@ The multiple parameter pattern allows the event to handle different tribute type
 **Source File**: `CvGameCoreDLL_Expansion2/CvMinorCivAI.cpp`
 
 **Trigger Locations**:
+
 - Line 16595: Gold tribute extraction (YIELD_GOLD)
-- Line 16925: Science tribute extraction (YIELD_SCIENCE) 
+- Line 16925: Science tribute extraction (YIELD_SCIENCE)
 - Line 16957: Unit tribute extraction (military units)
 
 **Event System**: Uses the game event system via `GAMEEVENTINVOKE_HOOK(GAMEEVENT_PlayerBullied)`
 
 **Bullying Context**: Bullying mechanics typically:
+
 - Require military or diplomatic superiority over the target city-state
 - Provide immediate benefits but damage long-term relationships
 - May have cooldown periods or increasing difficulty with repeated attempts
@@ -58,6 +60,7 @@ The multiple parameter pattern allows the event to handle different tribute type
 - Often involve risk/reward calculations based on military strength and diplomatic consequences
 
 **Parameter Patterns**:
+
 - **Gold Tribute**: Uses gold amount in Amount field, YIELD_GOLD in YieldType, -1 in unit-related parameters
 - **Heavy Tribute (Science Context)**: Uses gold amount in Amount field, YIELD_SCIENCE in YieldType to indicate science city-state context, -1 in unit-related parameters
 - **Unit Tribute**: Uses -1 for Amount, unit type/coordinates for unit information, -1 for YieldType

@@ -24,11 +24,11 @@ Other scripts in `scripts/` are covered elsewhere: `vox-deorum.cmd` and building
 
 All three services log through the same Winston setup (each service's own `src/utils/logger.ts`), writing to a `logs/` folder under the service directory:
 
-| Service | Log directory |
-| --- | --- |
+| Service        | Log directory          |
+| -------------- | ---------------------- |
 | Bridge Service | `bridge-service/logs/` |
-| MCP Server | `mcp-server/logs/` |
-| Vox Agents | `vox-agents/logs/` |
+| MCP Server     | `mcp-server/logs/`     |
+| Vox Agents     | `vox-agents/logs/`     |
 
 Each writes two rotating files alongside its console output: `error.log` (errors only) and `combined.log` (everything down to `debug`). Both cap at 10 MB per file; `error.log` keeps up to 5 rotated files, `combined.log` keeps up to 10. Set the `LOG_LEVEL` environment variable (for example `debug` or `warn`) to change what reaches the console and `combined.log` for a given service; it defaults to `info` if unset.
 

@@ -7,6 +7,7 @@
 Unlike land-based military flavors (FLAVOR_OFFENSE, FLAVOR_MOBILE) or naval flavors (FLAVOR_NAVAL), `FLAVOR_AIR` specifically drives the AI's **investment in and utilization of air superiority, air support, and strategic bombing** as part of their overall military doctrine.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Air power specialists: 7-8
@@ -15,6 +16,7 @@ Unlike land-based military flavors (FLAVOR_OFFENSE, FLAVOR_MOBILE) or naval flav
   - Ground/naval focused leaders: 0-3
 
 ### Related Flavors
+
 - **FLAVOR_AIR_CARRIER:** Naval aviation and carrier operations
 - **FLAVOR_AIRLIFT:** Air mobility and rapid deployment
 - **FLAVOR_BOMBER:** Strategic bombing preference
@@ -77,6 +79,7 @@ bool MilitaryAIHelpers::IsTestStrategy_EnoughAirUnits(CvPlayer* pPlayer, int iNu
 ```
 
 **Interpretation:** The target air unit ratio is directly equal to FLAVOR_AIR as a percentage:
+
 - **FLAVOR_AIR = 5:** Target 5% of military forces as air units (5 air units per 95 ground units)
 - **FLAVOR_AIR = 7:** Target 7% air units
 - **FLAVOR_AIR = 10:** Target 10% air units (1 air unit per 9 ground units)
@@ -101,6 +104,7 @@ bool MilitaryAIHelpers::IsTestStrategy_NeedAirUnits(CvPlayer* pPlayer, int iNumA
 ```
 
 **Interpretation:** The "NEED_AIR" strategy triggers when air units fall below half the target ratio:
+
 - **FLAVOR_AIR = 8, Target = 8%:** Triggers when air units drop below 4% of total forces
 - **FLAVOR_AIR = 6, Target = 6%:** Triggers when air units drop below 3%
 
@@ -119,6 +123,7 @@ int iFlavorAir = range(pFlavorMgr->GetPersonalityIndividualFlavor((FlavorTypes)G
 ```
 
 **Interpretation:** The flavor value is clamped between 1-20 for promotion calculations. Higher FLAVOR_AIR makes the AI value air-specific promotions more highly:
+
 - Air Repair promotions (faster healing)
 - Range extensions (larger operational radius)
 - Evasion bonuses (survival against anti-air)
@@ -197,12 +202,14 @@ if(bConquestFocus && (
 Air units have varying FLAVOR_AIR values that indicate how strongly they appeal to air-power-focused leaders:
 
 **Bombers (Strategic Bombing Role):**
+
 - WWI Bomber: 14
 - Heavy Bomber: 18
 - American B17 (unique): 25
 - Stealth Bomber: 24
 
 **Fighters (Air Superiority Role):**
+
 - Triplane: 10
 - SPAD (unique): 15
 - Fighter: 14
@@ -250,22 +257,27 @@ Social policies that enhance air power operations:
 FLAVOR_AIR receives dynamic modifications based on the current military situation:
 
 **Economic Pressures (Negative Modifiers):**
+
 - ECONOMICAISTRATEGY_TOO_MANY_UNITS: -300
 - ECONOMICAISTRATEGY_LOSING_MONEY: -300
 
 **Defensive Situations (Positive Modifiers):**
+
 - MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL: +60 (AI Strategy)
 - MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL: +50 (Player Strategy)
 
 **Offensive Situations (Positive Modifiers):**
+
 - MILITARYAISTRATEGY_AT_WAR: +40 (AI Strategy), +40 (Player Strategy)
 - MILITARYAISTRATEGY_WINNING_WARS: +40 (AI Strategy), +50 (Player Strategy)
 - MILITARYAISTRATEGY_LOSING_WARS: +30 (AI Strategy), +30 (Player Strategy)
 
 **Direct Air Needs:**
+
 - MILITARYAISTRATEGY_NEED_AIR: +50
 
 **Interpretation:**
+
 1. **Economic constraints severely penalize air power** (-300), as air units are expensive to build and maintain
 2. **Critical defense situations strongly boost air power** (+50-60), recognizing air superiority as vital for homeland defense
 3. **All war situations increase air power priority** (+30-50), with winning wars getting slightly higher boosts as the AI leverages air superiority for offensive operations
@@ -274,21 +286,25 @@ FLAVOR_AIR receives dynamic modifications based on the current military situatio
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Technology research:** Prioritizes Flight, Radar, Rocketry, and Stealth technologies when focused on conquest
 - **Grand strategy:** Air-focused policies and buildings reinforce commitment to air-power-based military strategies
 - **Force composition:** Maintains a target percentage of air units relative to ground forces (directly tied to FLAVOR_AIR value)
 
 ### Military Production
+
 - **Unit production:** Higher priority for building fighters, bombers, and helicopters
 - **Infrastructure:** Prioritizes airports and military bases to support air operations
 - **Balance:** Creates dynamic adjustments based on economic situation and military needs
 
 ### Tactical Capabilities
+
 - **Air superiority:** Enables tactical bombing, city bombardment, and anti-armor operations
 - **Unit development:** Selects promotions that enhance air unit effectiveness and survivability
 - **Combined arms:** Integrates air power with ground and naval forces for coordinated operations
 
 ### Situational Response
+
 - **Economic crisis:** Dramatically reduces air unit priority due to high costs
 - **Defensive crisis:** Massively increases air power investment for homeland defense
 - **Offensive operations:** Moderate boost to air power for supporting ground campaigns
@@ -312,12 +328,14 @@ This creates distinct air power doctrines:
 ### Historical Context
 
 FLAVOR_AIR becomes increasingly important in the Industrial and Modern eras when aviation technologies become available. Leaders with high FLAVOR_AIR will:
+
 - Rush to research Flight and Radar
 - Build airports in major cities
 - Maintain standing air forces even during peacetime
 - Use air power as a primary tool of warfare
 
 Leaders with low FLAVOR_AIR will:
+
 - Delay aviation technologies
 - Build minimal air infrastructure
 - Produce air units only when critically needed
@@ -326,18 +344,22 @@ Leaders with low FLAVOR_AIR will:
 ## Related Flavors and Interactions
 
 ### Complementary Flavors
+
 - **FLAVOR_OFFENSE:** Air power supports offensive operations through bombing and close air support
 - **FLAVOR_AIR_CARRIER:** Naval aviation extends air power projection across oceans
 - **FLAVOR_BOMBER:** Specialization in strategic bombing and city bombardment
 - **FLAVOR_FIGHTER:** Specialization in air superiority and interceptor roles
 
 ### Competing Flavors
+
 - **FLAVOR_DEFENSE:** Ground-based defensive forces compete with air power for production priority
 - **FLAVOR_NAVAL:** Naval investment competes with air force development for resources
 - **FLAVOR_ANTIAIR:** Defensive air doctrine (interceptors) vs offensive doctrine (bombers)
 
 ### Economic Factors
+
 Air power is expensive in both production and maintenance. FLAVOR_AIR must compete with:
+
 - **FLAVOR_GOLD:** Economic health limits air force size
 - **FLAVOR_PRODUCTION:** Industrial capacity constrains how quickly air forces can be built
 - **FLAVOR_SCIENCE:** Technology research speed determines when aviation becomes available

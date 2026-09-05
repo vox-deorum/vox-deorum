@@ -16,7 +16,7 @@ Both triggers occur within the `CvCity` class in the Community Patch DLL during 
 The event passes five parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | Owner | PlayerTypes | The ID of the player who owns the city |
 | CityID | int | The unique identifier of the city |
 | ProjectType | ProjectTypes | The type of project that was created |
@@ -39,6 +39,7 @@ The event occurs immediately after the project is successfully created in the ci
 **Source File**: `CvGameCoreDLL_Expansion2/CvCity.cpp`
 
 **Trigger Locations**:
+
 - Line 29706: Normal production creation in `CvCity::produce(ProjectTypes, bool)`
 - Line 30994: Gold purchase creation in `CvCity::PurchaseProject(ProjectTypes, YieldTypes)`
 

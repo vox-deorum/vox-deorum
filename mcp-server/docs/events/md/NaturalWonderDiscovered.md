@@ -5,6 +5,7 @@ The `NaturalWonderDiscovered` event is triggered when a team discovers a natural
 # Event Triggers
 
 This event is triggered in the following scenarios:
+
 - When a team's unit or vision reveals a natural wonder tile for the first time
 - The event fires during the plot revelation process when a natural wonder feature is detected
 - Only triggers for the first team to discover each specific natural wonder
@@ -12,7 +13,7 @@ This event is triggered in the following scenarios:
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `teamId` | `int` | The ID of the team that discovered the natural wonder |
 | `featureType` | `int` | The type/ID of the natural wonder feature discovered |
 | `x` | `int` | The X coordinate of the natural wonder location |
@@ -32,6 +33,7 @@ The `NaturalWonderDiscovered` event provides comprehensive information about nat
 The event captures both the spatial location and the discovering team, with special attention to whether this is the first major civilization to find the wonder. This distinction is important because first discovery often comes with additional bonuses or recognition.
 
 Key aspects tracked:
+
 - **Discovery timing**: When in the game the wonder was found
 - **Spatial context**: Exact location for strategic analysis
 - **Team attribution**: Which civilization gets credit for the discovery
@@ -48,6 +50,7 @@ Key aspects tracked:
 **Discovery Logic:** The event includes logic to determine if this is the first major civilization to discover the wonder using `getNumMajorCivsRevealed() == 0`.
 
 **Code Reference:**
+
 ```cpp
 args->Push(eTeam);
 args->Push(getFeatureType());

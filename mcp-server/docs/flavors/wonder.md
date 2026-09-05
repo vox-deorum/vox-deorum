@@ -7,6 +7,7 @@
 Unlike production or culture flavors which have broader applications, `FLAVOR_WONDER` specifically drives the AI's **desire to construct prestigious buildings** that provide unique strategic advantages and prestige. This flavor creates the classic "wonder-building civilizations" that race for architectural achievements versus militaristic or expansionist neighbors.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Wonder-focused builders: 7-10
@@ -86,6 +87,7 @@ if (bCriticalDefenseOn)
 ### 3. Wonder Production Weight Configuration (CvGlobals.cpp/h)
 
 **Location:**
+
 - `CvGameCoreDLL_Expansion2/CvGlobals.cpp` (line 219)
 - `CvGameCoreDLL_Expansion2/CvGlobals.h` (line 784)
 - `(1) Community Patch/Database Changes/Defines/CoreDefineChanges.sql` (line 227)
@@ -97,6 +99,7 @@ GD_INT_INIT(AI_CITY_SPECIALIZATION_PRODUCTION_WEIGHT_FLAVOR_WONDER, 250),
 ```
 
 **Interpretation:** The multiplier constant (250) is defined as a global game parameter, allowing for:
+
 - Mod customization without code changes
 - Difficulty-level adjustments
 - Balancing patches to AI behavior
@@ -119,6 +122,7 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_WONDER")
 ```
 
 **Interpretation:** When evaluating social policies, any policy with FLAVOR_WONDER characteristics adds to the culture value calculation. This creates synergy where:
+
 - Wonder-focused leaders prefer policies that support wonder construction (production bonuses, great engineer generation)
 - Policies like Tradition (which has FLAVOR_WONDER = 10) become more attractive
 - Culture victory strategies align with wonder-building strategies naturally
@@ -144,6 +148,7 @@ if(bCultureFocus && (
 ```
 
 **Interpretation:** When the AI pursues a culture-focused grand strategy, technologies with FLAVOR_WONDER values receive increased research priority alongside culture and great people techs. This ensures wonder-builders research the technologies needed to unlock key wonders:
+
 - Ancient Era: Stonehenge, Pyramids (unlocked by early techs with FLAVOR_WONDER)
 - Medieval Era: Notre Dame, Machu Picchu (mid-game wonder techs)
 - Modern/Future: Eiffel Tower, Cristo Redentor, Sydney Opera House (late wonders)
@@ -201,6 +206,7 @@ if (pEntry->GetWonderProductionModifier() > 0)
    - If many eras remain, value is multiplied by the number of remaining eras divided by 5
 
 **Example:** Egypt (wonder production trait) with FLAVOR_WONDER = 9, playing tall, evaluating a belief with +20% wonder production that expires in 4 eras:
+
 - Base: 9 × 20 × 2 (tall) = 360
 - With trait: 360 × (100 + trait bonuses) / 100 = ~450-500
 - With era scaling: 450 × 4 / 5 = 360 final score
@@ -227,6 +233,7 @@ VictoryScores[VICTORY_PURSUIT_CULTURE] += static_cast<int>(GC.getGame().urandRan
 ```
 
 **Interpretation:** FLAVOR_WONDER contributes half its value to culture victory pursuit score. This combines with:
+
 - **Wonder Competitiveness:** A separate trait measuring how competitive the AI is about wonder races
 - **DoF Willingness:** Desire for Declaration of Friendship (culture victories benefit from peaceful diplomacy)
 - **FLAVOR_CULTURE:** Direct culture generation preference
@@ -234,6 +241,7 @@ VictoryScores[VICTORY_PURSUIT_CULTURE] += static_cast<int>(GC.getGame().urandRan
 A leader with FLAVOR_WONDER = 10 adds 5 points toward preferring culture victory, making them more likely to pursue policies, technologies, and production that support cultural dominance. Combined with FLAVOR_CULTURE and wonder competitiveness, this creates the "culture victory builder" archetype.
 
 **Strategic Implications:** Wonder-focused leaders often pursue culture victories because:
+
 - Many wonders provide culture output
 - Wonders generate Great Artist/Writer/Musician slots (culture victory requirement)
 - Wonder construction aligns with peaceful, infrastructure-focused gameplay
@@ -257,6 +265,7 @@ else if(GC.getFlavorTypes((FlavorTypes) iFlavorLoop) == "FLAVOR_WONDER")
 **Interpretation:** Policies that support wonder construction add their FLAVOR_WONDER values to grand strategy priority. This creates strategic feedback loops:
 
 **Example - Tradition Policy Tree:**
+
 - Tradition opener has FLAVOR_WONDER = 10
 - Adopting Tradition adds +10 to culture-focused grand strategy priority
 - This makes the AI more likely to pursue Culture Victory grand strategy
@@ -287,6 +296,7 @@ else if(GC.getFlavorTypes((FlavorTypes) iFlavorLoop) == "FLAVOR_WONDER")
 - **Late-game Wonders** (some spaceship-related or unique wonders) have FLAVOR_WONDER = 25 each
 
 **Cumulative Effect Example:**
+
 - Leader builds Stonehenge (20) + Temple of Artemis (20) + Hanging Gardens (20) = +60 culture strategy priority
 - Adds National Epic (10) + National College (10) = +80 total
 - With base personality FLAVOR_WONDER = 7 and wonder production specialization = 2000 points
@@ -334,6 +344,7 @@ FLAVOR_WONDER receives significant penalties when the AI is at war, ensuring won
    - Player-controlled version completely eliminates wonder consideration
 
 **Strategic Impact Example:**
+
 - Peaceful leader: FLAVOR_WONDER = 9 (base) → At War: 9 - 20 = -11 (capped at 0, effectively 0)
 - Warmonger: FLAVOR_WONDER = 3 (base) → At War: 3 - 20 = -17 (already low, now eliminated)
 - Losing Wars: Even FLAVOR_WONDER = 10 becomes 10 - 50 = -40 (heavily negative)
@@ -374,12 +385,14 @@ Wonders themselves are tagged with FLAVOR_WONDER values:
 ```
 
 **Interpretation:** The flavor value scaling reflects:
+
 - **National Wonders (10):** Important but more accessible (one per civilization)
 - **World Wonders (20):** Primary prestige buildings, highly competitive
 - **Late-game Wonders (25):** Harder to build, greater impact, higher prestige
 - **Special Cases (40):** Neuschwanstein has exceptionally high FLAVOR_WONDER (combined with happiness and culture) due to its tourism and culture bonuses
 
 This scaling allows the AI to differentiate between:
+
 - "Nice to have" national wonders
 - "Highly desirable" world wonders
 - "Game-changing" late wonders
@@ -395,6 +408,7 @@ This scaling allows the AI to differentiate between:
 ```
 
 **Interpretation:** The Tradition policy tree has FLAVOR_WONDER = 10, making it attractive to wonder-focused leaders. This makes strategic sense because:
+
 - Tradition provides +15% growth in capital (faster wonder production through population)
 - Tradition provides +3 culture in capital (culture synergy with wonder benefits)
 - Tradition's finisher provides free Aqueduct in first 4 cities (infrastructure support)
@@ -405,23 +419,27 @@ This flavor assignment ensures wonder-focused civilizations naturally prefer pol
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Significantly increases preference for culture victory over domination or science paths
 - **Grand strategy:** Creates strong feedback loops with culture-focused grand strategies
 - **Technology path:** Prioritizes research of wonder-unlocking technologies when pursuing culture strategies
 - **Policy selection:** Favors policies that support wonder construction (Tradition, Patronage culture policies)
 
 ### Production Allocation
+
 - **City specialization:** Drives cities to specialize in wonder production (up to 2500 weight for FLAVOR_WONDER = 10)
 - **Wonder priority:** Determines how aggressively the AI competes for available wonders
 - **Availability-limited:** Wonder specialization is capped by actually available wonders, preventing waste
 - **Emergency override:** Wonder production is halved or eliminated during defensive crises
 
 ### Religious Strategy
+
 - **Belief selection:** Highly values religious beliefs providing wonder production bonuses
 - **Trait synergy:** Wonder production beliefs are valued even more highly by civilizations with wonder-building traits
 - **Era awareness:** Considers belief obsolescence when evaluating wonder-related religious bonuses
 
 ### Adaptive Behavior
+
 - **War penalties:** FLAVOR_WONDER is reduced by 20-30 points when at war, by 10 when winning, and by 50-100 when losing
 - **Strategic coherence:** Building wonders reinforces culture-focused strategies through feedback loops
 - **Opportunity-driven:** Wonder construction adapts to availability rather than forcing impossible goals
@@ -436,6 +454,7 @@ FLAVOR_WONDER represents the AI's fundamental approach to prestige and architect
 4. **Competitive Drive:** The desire to claim wonders before rival civilizations, creating "wonder races"
 
 This creates a spectrum of AI personalities:
+
 - **High WONDER (8-10):** Classic wonder-builders like Egypt, France, Brazil - race for every available wonder, pursue culture victory
 - **Moderate WONDER (5-7):** Balanced leaders who build key wonders opportunistically but don't obsess over them
 - **Low WONDER (2-4):** Pragmatic leaders who only build wonders with immediate strategic value (e.g., military wonders during conquest)
@@ -466,7 +485,9 @@ FLAVOR_WONDER typically correlates strongly with FLAVOR_CULTURE and FLAVOR_GREAT
 ## Interaction with Game Systems
 
 ### Wonder Production Mechanics
+
 The effectiveness of FLAVOR_WONDER is modified by:
+
 - **Civilization traits:** Egypt (+20% wonder production), France (tourism from wonders)
 - **Policy bonuses:** Tradition, Patronage finisher, Liberty policies
 - **Religious beliefs:** Beliefs providing wonder production modifiers
@@ -474,13 +495,17 @@ The effectiveness of FLAVOR_WONDER is modified by:
 - **Great Engineers:** Can be used to rush wonder completion
 
 ### Wonder Competition
+
 FLAVOR_WONDER creates competitive dynamics:
+
 - **Wonder races:** Multiple high-FLAVOR_WONDER AIs competing for limited wonders
 - **Strategic timing:** When to start wonders based on competition and tech advantages
 - **Fallback production:** What to build when a wonder is sniped by a rival
 
 ### Production Opportunity Costs
+
 High FLAVOR_WONDER creates trade-offs:
+
 - **Military vulnerability:** Production spent on wonders isn't building military units
 - **Expansion delay:** Wonder construction delays settler production
 - **Infrastructure gaps:** May prioritize wonders over essential buildings (granaries, libraries)
@@ -496,11 +521,13 @@ AI_CITY_SPECIALIZATION_PRODUCTION_WEIGHT_FLAVOR_WONDER = 250
 ```
 
 **Increasing this value:**
+
 - Makes wonder-focused leaders more aggressive about wonder construction
 - Increases city specialization for wonder production
 - Amplifies the difference between high and low FLAVOR_WONDER leaders
 
 **Decreasing this value:**
+
 - Makes all leaders more pragmatic about wonder construction
 - Reduces city specialization for wonders
 - Makes FLAVOR_WONDER differences more subtle

@@ -2,8 +2,7 @@
 
 ## Overview
 
-The archivist builds a DuckDB database of historical game episodes from archived games.
-Each row is one **player-turn**: a snapshot of a single player's state at a single turn in a completed game.
+The archivist builds a DuckDB database of historical game episodes from archived games. Each row is one **player-turn**: a snapshot of a single player's state at a single turn in a completed game.
 
 ## Source Databases
 
@@ -290,8 +289,7 @@ CREATE TABLE episodes (
 
 ## Game Outcomes Table
 
-Stores per-game metadata for outcome capping and victory type reporting in retrieval.
-Populated during Phase A from `GameMetadata` keys.
+Stores per-game metadata for outcome capping and victory type reporting in retrieval. Populated during Phase A from `GameMetadata` keys.
 
 ```sql
 CREATE TABLE game_outcomes (
@@ -325,20 +323,22 @@ archive/{experiment}/
 
 ## Querying Versioned Data (MutableKnowledge)
 
-MutableKnowledge tables (PlayerSummaries, StrategyChanges, CityInformations) store
-multiple versions per turn. Each row has:
+MutableKnowledge tables (PlayerSummaries, StrategyChanges, CityInformations) store multiple versions per turn. Each row has:
+
 - `Key` — entity ID (PlayerID or CityID)
 - `Turn` — game turn number
 - `Version` — incrementing version within a turn
 - `IsLatest` — 1 if this is the most recent version for this Key+Turn
 
 To get the canonical snapshot for a player at a turn:
+
 ```sql
 SELECT * FROM PlayerSummaries
 WHERE Key = :playerId AND Turn = :turn AND IsLatest = 1
 ```
 
 To get all alive major players at a turn (for computing shares):
+
 ```sql
 SELECT ps.* FROM PlayerSummaries ps
 JOIN PlayerInformations pi ON pi.Key = ps.Key
@@ -374,25 +374,23 @@ null / unknown         → [0, 0, 0, 0]
 
 ## Neighbor Stance Priority
 
-When a player's Relationships entry for a neighbor contains multiple status strings,
-use the highest-priority match:
+When a player's Relationships entry for a neighbor contains multiple status strings, use the highest-priority match:
 
-| Priority | Match string                    | Stance value | Normalized (/4) |
-|----------|---------------------------------|--------------|------------------|
-| 1 (high) | `"War"`                         | 4            | 1.0              |
-| 2        | `"Denounced"`                   | 3            | 0.75             |
-| 3        | `"Our Master"` (is their vassal)| 3            | 0.75             |
-| 4 (low)  | (default / neutral / guarded)   | 2            | 0.5              |
-| 5        | `"Declaration of Friendship"`   | 1            | 0.25             |
-| 6        | `"Our Vassal"`                  | 1            | 0.25             |
-| 7        | `"Defensive Pact"`              | 0            | 0.0              |
+| Priority | Match string                     | Stance value | Normalized (/4) |
+| -------- | -------------------------------- | ------------ | --------------- |
+| 1 (high) | `"War"`                          | 4            | 1.0             |
+| 2        | `"Denounced"`                    | 3            | 0.75            |
+| 3        | `"Our Master"` (is their vassal) | 3            | 0.75            |
+| 4 (low)  | (default / neutral / guarded)    | 2            | 0.5             |
+| 5        | `"Declaration of Friendship"`    | 1            | 0.25            |
+| 6        | `"Our Vassal"`                   | 1            | 0.25            |
+| 7        | `"Defensive Pact"`               | 0            | 0.0             |
 
 Neutral fill value for empty neighbor slots: **0.5** (stance=2/4).
 
 ## Computing Religion Percentage
 
-`religion_percentage` measures how many world cities follow this player's founded religion.
-Requires city-level data from `CityInformations`:
+`religion_percentage` measures how many world cities follow this player's founded religion. Requires city-level data from `CityInformations`:
 
 1. Look up this player's `FoundedReligion` from `PlayerSummaries` (null if none founded → 0)
 2. Query all `CityInformations` at this turn (`IsLatest=1`) for all alive players (major + minor)
@@ -403,8 +401,7 @@ If the player has not founded a religion, `religion_percentage = 0`.
 
 ## Computing Ideology Share
 
-`ideology_share` measures the proportion of major civs sharing this player's ideology.
-Ideology is determined from the `PolicyBranches` JSON in `PlayerSummaries`:
+`ideology_share` measures the proportion of major civs sharing this player's ideology. Ideology is determined from the `PolicyBranches` JSON in `PlayerSummaries`:
 
 1. Parse `PolicyBranches` (Record<branchName, string[]>) for this player
 2. Identify if any branch key is `"Freedom"`, `"Order"`, or `"Autocracy"` → that is the player's ideology
@@ -415,59 +412,49 @@ Ideology is determined from the `PolicyBranches` JSON in `PlayerSummaries`:
 
 ## Computing Minor Ally Counts
 
-`minor_allies` counts the number of city-states allied to this player.
-Requires cross-referencing player summaries:
+`minor_allies` counts the number of city-states allied to this player. Requires cross-referencing player summaries:
 
 1. Identify all minor civs: `PlayerInformations` where `IsMajor = 0`
 2. For each minor civ, get their `PlayerSummaries` at this turn (`IsLatest=1`)
 3. Check if `MajorAlly` matches this player's civilization short description
 4. `minor_allies` = count of matching minor civs
 
-**Cache optimization**: Build a lookup map of `{ civName → player_id }` for all major players,
-and a list of `{ minor_id, MajorAlly }` per turn. Reuse across all players in the same turn
-to avoid redundant queries.
+**Cache optimization**: Build a lookup map of `{ civName → player_id }` for all major players, and a list of `{ minor_id, MajorAlly }` per turn. Reuse across all players in the same turn to avoid redundant queries.
 
 ## Computing Victory Progress
 
-`domination_progress`, `science_progress`, `culture_progress`, and `diplomatic_progress`
-measure how close this player is to each victory condition. Extracted from the `VictoryProgress`
-table (Key=0, global knowledge visible to all players):
+`domination_progress`, `science_progress`, `culture_progress`, and `diplomatic_progress` measure how close this player is to each victory condition. Extracted from the `VictoryProgress` table (Key=0, global knowledge visible to all players):
 
 1. Query `VictoryProgress WHERE Key = 0 AND Turn = :turn AND IsLatest = 1`
 2. For each victory type column (`DominationVictory`, `ScienceVictory`, `CulturalVictory`, `DiplomaticVictory`):
-   - Parse JSON. If the value is a string (e.g. `"Not available"`, `"Unlocked in..."`),
-     set progress to `null` and contender to `0` for all players
+   - Parse JSON. If the value is a string (e.g. `"Not available"`, `"Unlocked in..."`), set progress to `null` and contender to `0` for all players
    - If parsed as an object, look up this player's civilization name as a key
 3. Extract per-player progress:
    - **Domination**: `{CivName}.CapitalsPercentage` (0-100)
    - **Science**: `{CivName}.PartsPercentage` (0-100)
    - **Culture**: `{CivName}.InfluentialCivs / CivsNeeded * 100` (0-100)
    - **Diplomatic**: `{CivName}.VictoryPercentage` (0-100)
-4. Extract leader progress: look up the `Contender` field value as a civ name key
-   in the same parsed object, then extract the same percentage field as above.
-   If `Contender` is null or the contender's civ name is not in the object, set to `null`.
+4. Extract leader progress: look up the `Contender` field value as a civ name key in the same parsed object, then extract the same percentage field as above. If `Contender` is null or the contender's civ name is not in the object, set to `null`.
 
-If a player's civ name is not present as a key in the parsed object (e.g. dead or not
-participating), set their progress to `null`.
+If a player's civ name is not present as a key in the parsed object (e.g. dead or not participating), set their progress to `null`.
 
-**Cache optimization**: Parse the VictoryProgress row once per turn, then look up each
-player's civ name. Reuse across all players in the same turn.
+**Cache optimization**: Parse the VictoryProgress row once per turn, then look up each player's civ name. Reuse across all players in the same turn.
 
 ## Pipeline Modules
 
-| Module              | Responsibility                                                    |
-|---------------------|-------------------------------------------------------------------|
-| `index.ts`          | CLI entry point, orchestrates pipeline                            |
-| `scanner.ts`        | Discovers archive entries (game DBs + telemetry DBs)              |
-| `telepathist-prep.ts` | Ensures telepathist DBs exist, calls preparation if needed      |
-| `extractor.ts`      | Reads game DB + telepathist DB, produces raw episode records      |
-| `transformer.ts`    | Computes adjusted values, shares, gaps, vectors                   |
-| `embeddings.ts`     | Generates situation abstract embeddings via AI SDK                |
-| `writer.ts`         | Kysely/DuckDB output (episodes + game_outcomes tables)            |
-| `similarity.ts`     | Composite similarity: TypeScript (batch) + SQL builder (retrieval)|
-| `selector.ts`       | Diversity-first landmark pre-selection (uses TS similarity)       |
-| `reader.ts`         | Read-only DuckDB retrieval pipeline (uses SQL similarity)         |
-| `query-types.ts`    | Retrieval query, result & outcome interfaces                      |
+| Module | Responsibility |
+| --- | --- |
+| `index.ts` | CLI entry point, orchestrates pipeline |
+| `scanner.ts` | Discovers archive entries (game DBs + telemetry DBs) |
+| `telepathist-prep.ts` | Ensures telepathist DBs exist, calls preparation if needed |
+| `extractor.ts` | Reads game DB + telepathist DB, produces raw episode records |
+| `transformer.ts` | Computes adjusted values, shares, gaps, vectors |
+| `embeddings.ts` | Generates situation abstract embeddings via AI SDK |
+| `writer.ts` | Kysely/DuckDB output (episodes + game_outcomes tables) |
+| `similarity.ts` | Composite similarity: TypeScript (batch) + SQL builder (retrieval) |
+| `selector.ts` | Diversity-first landmark pre-selection (uses TS similarity) |
+| `reader.ts` | Read-only DuckDB retrieval pipeline (uses SQL similarity) |
+| `query-types.ts` | Retrieval query, result & outcome interfaces |
 
 ## Similarity Computation
 
@@ -476,21 +463,21 @@ Two pathways for computing composite similarity, sharing the same formula and we
 **Formula**: `w_gs * cos(game_state_vector) + w_nb * cos(neighbor_vector) + w_em * cos(situation_abstract_embedding)`
 
 ### Pathway 1: In-House TypeScript
+
 Used by `selector.ts` during batch landmark selection. Vectors are already in memory — no DB round-trips needed.
 
 ### Pathway 2: DuckDB SQL
+
 Used by `reader.ts` during runtime retrieval. Scoring happens inside SQL queries using `list_cosine_similarity()`.
 
 ### Weight Presets
 
-| Preset                       | game_state | neighbor | embedding | Usage                     |
-|------------------------------|------------|----------|-----------|---------------------------|
-| `retrievalWeights`           | 0.4        | 0.3      | 0.3       | Runtime with situation abstract |
-| `retrievalNoEmbeddingWeights`| 0.6        | 0.4      | 0         | Runtime without abstract       |
+| Preset | game_state | neighbor | embedding | Usage |
+| --- | --- | --- | --- | --- |
+| `retrievalWeights` | 0.4 | 0.3 | 0.3 | Runtime with situation abstract |
+| `retrievalNoEmbeddingWeights` | 0.6 | 0.4 | 0 | Runtime without abstract |
 
-`compositeSimilarity()` auto-selects weights based on embedding availability.
-The selector uses `compositeSimilarity()` with default weights (no embeddings present),
-which resolves to `retrievalNoEmbeddingWeights` (0.6/0.4/0) for landmark selection.
+`compositeSimilarity()` auto-selects weights based on embedding availability. The selector uses `compositeSimilarity()` with default weights (no embeddings present), which resolves to `retrievalNoEmbeddingWeights` (0.6/0.4/0) for landmark selection.
 
 ## Retrieval Pipeline
 
@@ -502,38 +489,31 @@ Stage 1: Score (SQL) → Stage 2: Fetch Outcomes (SQL) → Stage 3: Diversity Se
 
 ### Stage 1: Two-Pass Composite Score
 
-**Pass 1 — Fuzzy Pre-Filter** (cheap scalar comparisons, no vectors):
-Scores landmarks using attribute bonuses only, takes top 200 into a CTE.
-All proximity-scored attributes use the same decay formula: `bonus * max(0, 1 - 0.5 * |stored - query|)` (exact=full, ±1=half, ±2+=zero).
+**Pass 1 — Fuzzy Pre-Filter** (cheap scalar comparisons, no vectors): Scores landmarks using attribute bonuses only, takes top 200 into a CTE. All proximity-scored attributes use the same decay formula: `bonus * max(0, 1 - 0.5 * |stored - query|)` (exact=full, ±1=half, ±2+=zero).
 
-| Attribute | Weight | Type |
-|-----------|--------|------|
-| Era | 8 | Proximity (ordinal distance) |
-| Civilization | 5 | Exact match |
-| Grand strategy | 3 | Exact match |
-| Active wars | 3 | Proximity |
-| Friends | 2 | Proximity |
-| Defensive pacts | 2 | Proximity |
-| Truces | 2 | Proximity |
-| Denouncements | 2 | Proximity |
-| **Max sum** | **27** | |
+| Attribute       | Weight | Type                         |
+| --------------- | ------ | ---------------------------- |
+| Era             | 8      | Proximity (ordinal distance) |
+| Civilization    | 5      | Exact match                  |
+| Grand strategy  | 3      | Exact match                  |
+| Active wars     | 3      | Proximity                    |
+| Friends         | 2      | Proximity                    |
+| Defensive pacts | 2      | Proximity                    |
+| Truces          | 2      | Proximity                    |
+| Denouncements   | 2      | Proximity                    |
+| **Max sum**     | **27** |                              |
 
-**Pass 2 — Vector Similarity** (on candidates only):
-Ranks candidates by vector similarity alone (game_state_vector, neighbor_vector, optional embedding). Fuzzy score is not carried forward — it serves only as the pre-filter. Orders by similarity score, limits to `candidateLimit`.
+**Pass 2 — Vector Similarity** (on candidates only): Ranks candidates by vector similarity alone (game_state_vector, neighbor_vector, optional embedding). Fuzzy score is not carried forward — it serves only as the pre-filter. Orders by similarity score, limits to `candidateLimit`.
 
 Note: `fetchCandidates` also joins `game_outcomes` via `LEFT JOIN` to include `victory_type` in the result set.
 
 ### Stage 2: Fetch Outcomes
-Self-joins episodes at future horizons for the same `(game_id, player_id)`.
-Horizon turns are capped at the game's max turn via `LEAST(e.turn + horizon, g.max_turn)` using `game_outcomes`.
-A `WHERE f.turn > e.turn` guard prevents self-joining when a landmark is at the final turn.
-When multiple horizons resolve to the same capped turn, deduplication via `ROW_NUMBER()` keeps only the smallest horizon.
-Computes share deltas as formatted strings (`+3%`, `-1%`). Horizon=20 omits decisions.
-Not stored — computed dynamically at query time.
+
+Self-joins episodes at future horizons for the same `(game_id, player_id)`. Horizon turns are capped at the game's max turn via `LEAST(e.turn + horizon, g.max_turn)` using `game_outcomes`. A `WHERE f.turn > e.turn` guard prevents self-joining when a landmark is at the final turn. When multiple horizons resolve to the same capped turn, deduplication via `ROW_NUMBER()` keeps only the smallest horizon. Computes share deltas as formatted strings (`+3%`, `-1%`). Horizon=20 omits decisions. Not stored — computed dynamically at query time.
 
 ### Stage 3: Diversity Select
-Greedy MMR in TypeScript (`lambda=0.7`) to select the final diverse result set.
-Pairwise similarity computed entirely in TypeScript using `compositeSimilarity()`.
+
+Greedy MMR in TypeScript (`lambda=0.7`) to select the final diverse result set. Pairwise similarity computed entirely in TypeScript using `compositeSimilarity()`.
 
 1. Pick top-scored candidate
 2. For each remaining: `mmr = 0.7 * normalizedScore - 0.3 * max_sim_to_selected`

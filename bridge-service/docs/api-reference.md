@@ -19,6 +19,7 @@ Currently no authentication is required. CORS is enabled for all origins in deve
 All endpoints follow a standardized response format defined in [src/types/api.ts](../src/types/api.ts).
 
 ### Success Response
+
 ```typescript
 {
   "success": true,
@@ -27,6 +28,7 @@ All endpoints follow a standardized response format defined in [src/types/api.ts
 ```
 
 ### Error Response
+
 ```typescript
 {
   "success": false,
@@ -47,6 +49,7 @@ All endpoints follow a standardized response format defined in [src/types/api.ts
 Execute a registered Lua function and return its result.
 
 **Request Body:**
+
 ```typescript
 {
   "function": string,  // Function name (must be registered)
@@ -55,6 +58,7 @@ Execute a registered Lua function and return its result.
 ```
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -63,6 +67,7 @@ Execute a registered Lua function and return its result.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/lua/call \
   -H "Content-Type: application/json" \
@@ -78,14 +83,16 @@ curl -X POST http://127.0.0.1:5000/lua/call \
 Execute multiple Lua functions in sequence. Optimized for performance - up to 10x faster than individual calls.
 
 **Request Body:**
+
 ```typescript
 Array<{
-  "function": string,
-  "args": any
-}>
+  function: string;
+  args: any;
+}>;
 ```
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -96,6 +103,7 @@ Array<{
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/lua/batch \
   -H "Content-Type: application/json" \
@@ -106,6 +114,7 @@ curl -X POST http://127.0.0.1:5000/lua/batch \
 ```
 
 **Notes:**
+
 - If any function fails, the entire batch fails
 - Results maintain request order
 - Recommended batch size: < 50 functions to avoid timeout
@@ -117,6 +126,7 @@ curl -X POST http://127.0.0.1:5000/lua/batch \
 Execute arbitrary Lua code and return the result.
 
 **Request Body:**
+
 ```typescript
 {
   "script": string  // Lua code to execute
@@ -124,6 +134,7 @@ Execute arbitrary Lua code and return the result.
 ```
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -132,6 +143,7 @@ Execute arbitrary Lua code and return the result.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/lua/execute \
   -H "Content-Type: application/json" \
@@ -147,6 +159,7 @@ curl -X POST http://127.0.0.1:5000/lua/execute \
 Get all currently registered Lua functions.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -160,6 +173,7 @@ Get all currently registered Lua functions.
 ```
 
 **Example:**
+
 ```bash
 curl http://127.0.0.1:5000/lua/functions
 ```
@@ -173,6 +187,7 @@ curl http://127.0.0.1:5000/lua/functions
 Register an HTTP endpoint as a Lua-callable function.
 
 **Request Body:**
+
 ```typescript
 {
   "name": string,          // Function name (used in Lua)
@@ -184,6 +199,7 @@ Register an HTTP endpoint as a Lua-callable function.
 ```
 
 **Success Response:**
+
 ```typescript
 {
   "success": true
@@ -191,6 +207,7 @@ Register an HTTP endpoint as a Lua-callable function.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/external/register \
   -H "Content-Type: application/json" \
@@ -204,6 +221,7 @@ curl -X POST http://127.0.0.1:5000/external/register \
 ```
 
 **Notes:**
+
 - Registered functions persist until explicitly unregistered or DLL disconnects
 - Functions are automatically re-registered after DLL reconnection
 - URL must be a valid HTTP/HTTPS endpoint
@@ -215,9 +233,11 @@ curl -X POST http://127.0.0.1:5000/external/register \
 Remove a registered external function.
 
 **Path Parameters:**
+
 - `name` (string): The function name to unregister
 
 **Success Response:**
+
 ```typescript
 {
   "success": true
@@ -225,6 +245,7 @@ Remove a registered external function.
 ```
 
 **Example:**
+
 ```bash
 curl -X DELETE http://127.0.0.1:5000/external/register/AnalyzeThreat
 ```
@@ -236,6 +257,7 @@ curl -X DELETE http://127.0.0.1:5000/external/register/AnalyzeThreat
 Get all currently registered external functions.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -260,6 +282,7 @@ Manually pause the game. Prevents auto-resume until manually resumed.
 **Request Body:** `{}` (empty object)
 
 **Success Response:**
+
 ```typescript
 {
   "success": true  // No result payload
@@ -267,6 +290,7 @@ Manually pause the game. Prevents auto-resume until manually resumed.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/external/pause \
   -H "Content-Type: application/json" \
@@ -274,6 +298,7 @@ curl -X POST http://127.0.0.1:5000/external/pause \
 ```
 
 **Notes:**
+
 - Returns `INTERNAL_ERROR` when the pause mutex is unavailable (for example, the `windows-mutex-prebuilt` package is not installed)
 
 ### Resume Game (Manual)
@@ -285,6 +310,7 @@ Resume a manually paused game.
 **Request Body:** `{}` (empty object)
 
 **Success Response:**
+
 ```typescript
 {
   "success": true  // No result payload
@@ -298,9 +324,11 @@ Resume a manually paused game.
 Automatically pause the game when a specific player's turn begins.
 
 **Path Parameters:**
+
 - `id` (number): Player ID (0-based index, valid range: 0-63)
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -311,6 +339,7 @@ Automatically pause the game when a specific player's turn begins.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/external/pause-player/0 \
   -H "Content-Type: application/json" \
@@ -318,6 +347,7 @@ curl -X POST http://127.0.0.1:5000/external/pause-player/0 \
 ```
 
 **Notes:**
+
 - Game auto-pauses when registered player's turn starts (PlayerDoTurn event)
 - Game auto-resumes when registered player's turn ends
 - Multiple players can be registered simultaneously
@@ -331,9 +361,11 @@ curl -X POST http://127.0.0.1:5000/external/pause-player/0 \
 Remove a player from auto-pause list.
 
 **Path Parameters:**
+
 - `id` (number): Player ID to unregister (valid range: 0-63)
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -344,6 +376,7 @@ Remove a player from auto-pause list.
 ```
 
 **Notes:**
+
 - An out-of-range `id` returns `INVALID_ARGUMENTS`; a failed DLL sync returns `DLL_DISCONNECTED`
 
 ### Get Paused Players
@@ -353,6 +386,7 @@ Remove a player from auto-pause list.
 Get the list of players registered for auto-pause and current game pause state.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -370,6 +404,7 @@ Get the list of players registered for auto-pause and current game pause state.
 Remove all players from auto-pause list.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -386,6 +421,7 @@ Remove all players from auto-pause list.
 Enable or disable production mode, which turns on the DLL's AI turn cooldown.
 
 **Request Body:**
+
 ```typescript
 {
   "enabled": boolean  // Truthy values enable production mode
@@ -393,6 +429,7 @@ Enable or disable production mode, which turns on the DLL's AI turn cooldown.
 ```
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -403,6 +440,7 @@ Enable or disable production mode, which turns on the DLL's AI turn cooldown.
 ```
 
 **Notes:**
+
 - Production mode is re-synced with the DLL on reconnection
 
 ## Event Streaming
@@ -414,9 +452,11 @@ Enable or disable production mode, which turns on the DLL's AI turn cooldown.
 Establish a Server-Sent Events connection to receive real-time game events.
 
 **Headers Required:**
+
 - `Accept: text/event-stream`
 
 **Response Format:**
+
 ```
 event: <event-type>
 data: <json-payload>
@@ -424,6 +464,7 @@ data: <json-payload>
 ```
 
 **Event Data Structure:**
+
 ```typescript
 {
   "id": number,      // Event ID: (turn * 1000000) + sequence
@@ -433,8 +474,9 @@ data: <json-payload>
 ```
 
 **Example (JavaScript):**
+
 ```javascript
-const events = new EventSource('http://127.0.0.1:5000/events');
+const events = new EventSource("http://127.0.0.1:5000/events");
 
 events.onmessage = (e) => {
   const event = JSON.parse(e.data);
@@ -442,11 +484,12 @@ events.onmessage = (e) => {
 };
 
 events.onerror = () => {
-  console.error('SSE connection error');
+  console.error("SSE connection error");
 };
 ```
 
 **Notes:**
+
 - Keep-alive messages sent every 5 seconds
 - Connection automatically reconnects on network issues
 - Events are batched (50ms timeout or 100 events max) before delivery
@@ -461,6 +504,7 @@ events.onerror = () => {
 Check if the service is running and connected to the DLL.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -471,6 +515,7 @@ Check if the service is running and connected to the DLL.
 ```
 
 **Example:**
+
 ```bash
 curl http://127.0.0.1:5000/health
 ```
@@ -482,6 +527,7 @@ curl http://127.0.0.1:5000/health
 Request a graceful local shutdown. Intended for localhost-only orchestration.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -490,6 +536,7 @@ Request a graceful local shutdown. Intended for localhost-only orchestration.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://127.0.0.1:5000/shutdown
 ```
@@ -501,6 +548,7 @@ curl -X POST http://127.0.0.1:5000/shutdown
 Get detailed service statistics including connection info, function counts, event pipe, and memory usage.
 
 **Success Response:**
+
 ```typescript
 {
   "success": true,
@@ -540,6 +588,7 @@ Get detailed service statistics including connection info, function counts, even
 ```
 
 **Example:**
+
 ```bash
 curl http://127.0.0.1:5000/stats
 ```
@@ -549,6 +598,7 @@ curl http://127.0.0.1:5000/stats
 All errors include a `code` field from the `ErrorCode` enum. See [error-handling.md](../../docs/developers/bridge-service/error-handling.md) for complete error documentation.
 
 Common error codes:
+
 - `DLL_DISCONNECTED` - Bridge lost connection to game DLL
 - `CALL_TIMEOUT` - Function execution exceeded timeout
 - `INVALID_FUNCTION` - Function not registered

@@ -24,7 +24,7 @@ For an agent that cannot see the game directly, the server is a faithful mirror 
 | **Game database** | Civilization V's own rules data (every unit, building, technology, policy, and strategy) read from the game's SQLite files and localized into readable text. | [database.md](database.md) |
 | **Bridge integration** | How everything reaches the live game: a queue that batches Lua calls, paces the game when the queue backs up, and consumes the event stream. | [bridge.md](bridge.md) |
 
-Beyond reading state, some action tools *steer* the game's own AI by adjusting flavors, strategies, personas, and diplomatic relationships. This lets a language model influence even civilizations it does not directly control. How those tools reach into the tactical AI is the subject of [influence.md](influence.md). A separate family of action and knowledge tools handles agent-to-agent negotiation and in-game deals, which is covered in [diplomacy.md](../diplomacy.md).
+Beyond reading state, some action tools _steer_ the game's own AI by adjusting flavors, strategies, personas, and diplomatic relationships. This lets a language model influence even civilizations it does not directly control. How those tools reach into the tactical AI is the subject of [influence.md](influence.md). A separate family of action and knowledge tools handles agent-to-agent negotiation and in-game deals, which is covered in [diplomacy.md](../diplomacy.md).
 
 ## How the server is built
 
@@ -59,7 +59,7 @@ These notifications originate in the knowledge manager's handling of the event s
 
 ## Where the details live
 
-This folder explains *what and why* in prose. The exact reference data stays inside the component, under `mcp-server/docs/`:
+This folder explains _what and why_ in prose. The exact reference data stays inside the component, under `mcp-server/docs/`:
 
 - `docs/tools.md`: every tool, with its category and input parameters.
 - `docs/events/`: per-event schemas and descriptions (`md/` and `json/`).

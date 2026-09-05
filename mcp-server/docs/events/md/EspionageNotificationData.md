@@ -37,10 +37,8 @@ The event includes both geographical and operational data, allowing systems to u
 
 # Technical Details
 
-**Event Name:** `EspionageNotificationData`
-**Hook Type:** Game event invoke hook
-**Parameters Count:** 7
-**Parameter Types:**
+**Event Name:** `EspionageNotificationData` **Hook Type:** Game event invoke hook **Parameters Count:** 7 **Parameter Types:**
+
 - City X Coordinate (integer)
 - City Y Coordinate (integer)
 - Attacking Player ID (integer)
@@ -49,8 +47,6 @@ The event includes both geographical and operational data, allowing systems to u
 - Stolen Technology (integer/enum)
 - Amount Stolen (integer)
 
-**Source File:** `CvGameCoreDLL_Expansion2/CvEspionageClasses.cpp`
-**Line Number:** 4529
-**Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_EspionageNotificationData, iCityX, iCityY, eAttackingPlayer, m_pPlayer->GetID(), iSpyResult, eStolenTech, iAmountStolen);`
+**Source File:** `CvGameCoreDLL_Expansion2/CvEspionageClasses.cpp` **Line Number:** 4529 **Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_EspionageNotificationData, iCityX, iCityY, eAttackingPlayer, m_pPlayer->GetID(), iSpyResult, eStolenTech, iAmountStolen);`
 
 The event is conditionally compiled based on the `MOD_EVENTS_ESPIONAGE` preprocessor directive and is triggered as part of the spy notification message system, providing detailed feedback about espionage operations to external monitoring systems.

@@ -15,11 +15,13 @@ The flavor influences building construction priorities through the Building Prod
 **Key buildings valued by this flavor:**
 
 #### Ancient Era
+
 - **Forge** (2) - Provides Great Engineer specialist slots
 - **Market** (2) - Provides Great Merchant specialist slots
 - **Walls of Babylon** (2) - Unique Babylonian building with science and GPP benefits
 
 #### Classical Era
+
 - **Amphitheater** (2) - Provides Great Writer specialist slots
 - **Gymnasion** (2) - Greek unique with Great Writer slots
 - **Iziko** (2) - Zulu unique amphitheater
@@ -28,6 +30,7 @@ The flavor influences building construction priorities through the Building Prod
 - **Satraps Court** (10) - Persian unique courthouse with significant GPP boost
 
 #### Medieval Era
+
 - **Examination Hall** (30) - Chinese unique building with major GPP focus
 - **Ceilidh Hall** (4) - Celts unique circus
 - **Customs House/Mint** (2) - Provides Great Merchant specialist slots
@@ -42,6 +45,7 @@ The flavor influences building construction priorities through the Building Prod
 - **Elephant Camp** (2) - Indian unique workshop
 
 #### Renaissance Era
+
 - **Bank** (2) - Provides Great Merchant specialist slots
 - **Doelen** (5) - Dutch unique constabulary
 - **Gallery** (2) - Provides Great Artist specialist slots
@@ -53,20 +57,24 @@ The flavor influences building construction priorities through the Building Prod
 - **Brewhouse** (2) - German unique windmill
 
 #### Industrial Era
+
 - **Factory** (2) - Provides Great Engineer specialist slots
 - **Steam Mill** (10) - English unique factory with major GPP boost
 - **Museum** (10) - Provides Great Artist specialist slots
 
 #### Modern Era
+
 - **Research Lab** (2) - Provides Great Scientist specialist slots
 - **Embrapa** (2) - Brazilian unique research lab
 - **Stock Exchange** (2) - Provides Great Merchant specialist slots
 - **Chaebol** (2) - Korean unique stock exchange
 
 #### Information Era
+
 - **Nuclear Plant** (50) - Provides major GPP generation boost
 
 #### Corporations
+
 - **Civilized Jewelers** (40) / **HQ** (80) - Corporation buildings focused on Great People
 
 ### 2. National Wonders
@@ -106,14 +114,17 @@ In the Policy AI system (line 4940), FLAVOR_GREAT_PEOPLE contributes to the "Cul
 **Key policies valued by this flavor:**
 
 #### Tradition Tree
+
 - **Tradition Opener** (7) - Emphasizes capital growth and Great People
 - **Monarchy** (5) - Provides specialist food benefits and GPP in capital
 
 #### Aesthetics Tree
+
 - **Aesthetics Opener** (12) - Major focus on culture and Great People
 - **Artistic Genius** (12) - Provides free Great Person and GPP benefits
 
 #### Commerce Tree
+
 - **Entrepreneurship** (24) - Provides Great Merchant benefits
 
 ### 5. Technology Research (CvTechClasses.cpp)
@@ -125,6 +136,7 @@ The flavor affects technology prioritization in multiple ways:
 **Religious Trait Synergy** (line 1290): AI leaders with the Religious trait (defined by `IsReligious()`) give extra priority to technologies with FLAVOR_GREAT_PEOPLE, recognizing the synergy between religious play and Great Person generation.
 
 **Key technologies valued by this flavor:**
+
 - **Drama and Poetry** (10) - Unlocks Writers' Guild and Parthenon
 - **Theology** (10) - Unlocks Garden and Grand Temple
 - **Biology** (25) - Major GPP technology unlocking Hospital and Statue of Liberty
@@ -132,6 +144,7 @@ The flavor affects technology prioritization in multiple ways:
 ### 6. Grand Strategy AI (CvGrandStrategyAI.cpp)
 
 In the Grand Strategy system (lines 910-913, 951-954), FLAVOR_GREAT_PEOPLE contributes to priority calculations for Culture Victory pursuit. The AI aggregates FLAVOR_GREAT_PEOPLE values from:
+
 - Adopted policies (each policy's FLAVOR_GREAT_PEOPLE flavor value is added)
 - Constructed buildings across all cities (each building's FLAVOR_GREAT_PEOPLE flavor value is summed)
 
@@ -140,6 +153,7 @@ This creates a feedback loop where adopting Great People-focused policies and co
 ### 7. Religion AI (CvReligionClasses.cpp)
 
 **Founder Belief Evaluation** (line 8191): The flavor is used when evaluating beliefs that provide Great People benefits. The base value is `FLAVOR_GREAT_PEOPLE / 4`, but this is multiplied by 1.5x if:
+
 - The player has the Tourism trait (`IsTourism()`)
 - The player has unlocked the Tradition policy tree
 
@@ -156,6 +170,7 @@ Cities can be assigned specializations that focus their development:
 ### 9. City Focus (CvCityCitizens.cpp)
 
 **CITY_AI_FOCUS_TYPE_GREAT_PEOPLE** (line 3610): When a city is set to Great People focus, the citizen management AI evaluates specialist slots and tile assignments to maximize Great Person Point generation. The focus is automatically activated when:
+
 - A player manually sets it (line 333)
 - The AI determines it's optimal for the city's role (line 1034)
 
@@ -168,21 +183,25 @@ The flavor is mapped to category 5 (line 443-445) in the advisor recommendation 
 Different AI leader personality archetypes have varying FLAVOR_GREAT_PEOPLE values:
 
 ### Conquerors (4)
+
 Military-focused leaders (Attila, Genghis Khan, Montezuma, Napoleon, etc.) have low Great People priority, focusing on conquest over infrastructure.
 
 **Leaders:** Ashurbanipal, Askia, Attila, Augustus, Darius, Genghis Khan, Gustavus Adolphus, Harald, Montezuma, Napoleon, Oda Nobunaga, Shaka
 
 ### Expansionists (5)
+
 Growth and territory-focused leaders (Alexander, Catherine, Hiawatha, etc.) have moderate Great People priority, balancing expansion with development.
 
 **Leaders:** Alexander, Boudicca, Catherine, Dido, Gajah Mada, Hiawatha, Isabella, Pachacuti, Pocatello, Suleiman, Wu Zetian
 
 ### Diplomats (7)
+
 Diplomatic and scientific leaders (Gandhi, Sejong, Maria Theresa, etc.) have higher Great People priority, valuing cultural and scientific development.
 
 **Leaders:** Ahmad al-Mansur, Bismarck, Enrico Dandolo, Gandhi, Maria I, Maria Theresa, Pedro II, Ramkhamhaeng, Sejong, Theodora, William
 
 ### Coalitionists (8)
+
 Balanced leaders focused on defensive play and development (Elizabeth, Washington, Ramesses, etc.) have the highest Great People priority among standard archetypes.
 
 **Leaders:** Casimir III, Elizabeth, Haile Selassie, Harun al-Rashid, Kamehameha, Nebuchadnezzar II, Pacal, Ramesses II, Washington
@@ -190,7 +209,9 @@ Balanced leaders focused on defensive play and development (Elizabeth, Washingto
 ## Strategic Impact
 
 ### High FLAVOR_GREAT_PEOPLE Value (7-8+)
+
 AI leaders with high values will:
+
 - Prioritize constructing Gardens, National Epic, and other GPP-boosting buildings
 - Build specialist buildings (guilds, universities, workshops) even when other priorities exist
 - Adopt Tradition and Aesthetics policy trees more readily
@@ -201,7 +222,9 @@ AI leaders with high values will:
 - Compete aggressively for Great People-focused wonders like Leaning Tower and National Epic
 
 ### Low FLAVOR_GREAT_PEOPLE Value (4-5)
+
 AI leaders with low values will:
+
 - Only build specialist buildings when they provide other significant benefits
 - Delay or skip Gardens and National Epic construction
 - Focus specialists on immediate yield benefits rather than long-term GPP accumulation
@@ -211,6 +234,7 @@ AI leaders with low values will:
 ### Synergies
 
 The flavor creates powerful synergies with:
+
 - **FLAVOR_CULTURE**: Great People are essential for Culture Victory
 - **FLAVOR_WONDER**: Many wonders provide GPP benefits
 - **FLAVOR_SCIENCE**: Great Scientists are crucial for scientific development
@@ -225,11 +249,13 @@ The flavor creates powerful synergies with:
 ### Code Integration Points
 
 1. **Building Weight Calculation** (`CvBuildingProductionAI.cpp:98`)
+
    ```cpp
    m_BuildingAIWeights.IncreaseWeight(iBuilding, entry->GetFlavorValue(eFlavor) * iWeight);
    ```
 
 2. **Policy Priority Calculation** (`CvPolicyAI.cpp:4940-4942`)
+
    ```cpp
    else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_GREAT_PEOPLE")
    {
@@ -238,6 +264,7 @@ The flavor creates powerful synergies with:
    ```
 
 3. **Tech Priority for Culture Victory** (`CvTechClasses.cpp:1271-1276`)
+
    ```cpp
    if(bCultureFocus && (
        GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_CULTURE" ||
@@ -249,6 +276,7 @@ The flavor creates powerful synergies with:
    ```
 
 4. **Grand Strategy Culture Priority** (`CvGrandStrategyAI.cpp:910-913`)
+
    ```cpp
    if(GC.getFlavorTypes((FlavorTypes) iFlavorLoop) == "FLAVOR_GREAT_PEOPLE")
    {

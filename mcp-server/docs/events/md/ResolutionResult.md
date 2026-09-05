@@ -5,8 +5,9 @@ The ResolutionResult event is triggered when a World Congress or League resoluti
 # Event Triggers
 
 This event is fired from `CvLeague::NotifyProposalResult()` when:
+
 - World Congress/League voting session concludes
-- Resolution results are being processed and notifications sent  
+- Resolution results are being processed and notifications sent
 - The game option `MOD_EVENTS_RESOLUTIONS` is enabled
 - Called for both enact proposals and repeal proposals separately
 
@@ -27,7 +28,8 @@ The event provides five parameters with mixed types (`"iiibb"` signature):
 The resolution system handles various types of World Congress legislation:
 
 **Resolution Types Include:**
-- Diplomatic Victory (World Leader election)  
+
+- Diplomatic Victory (World Leader election)
 - Trade route embargoes and sanctions
 - City-state protection and liberation
 - World projects and competitions
@@ -36,12 +38,14 @@ The resolution system handles various types of World Congress legislation:
 - Cultural and scientific cooperation agreements
 
 **Voting Process:**
+
 - Each resolution requires specific vote thresholds to pass
 - Different resolutions may have different voting mechanics
 - Some resolutions target specific players or city-states (captured in Decision parameter)
 - Results affect global diplomacy and gameplay mechanics
 
 **Dual Event System:**
+
 - Enact proposals create new active resolutions when passed
 - Repeal proposals remove existing active resolutions when passed
 - Each type fires the event separately with appropriate parameters
@@ -50,16 +54,18 @@ The event provides comprehensive data for AI systems to understand global politi
 
 # Technical Details
 
-**Source Locations**: 
+**Source Locations**:
+
 - `CvVotingClasses.cpp` line 8701 (enact proposals)
 - `CvVotingClasses.cpp` line 8742 (repeal proposals)  
-**Event Definition**: `GAMEEVENT_ResolutionResult` with signature `"iiibb"`  
-**Triggering Functions**: `NotifyProposalResult()` (overloaded for enact/repeal)  
-**Prerequisites**: `MOD_EVENTS_RESOLUTIONS` must be enabled  
+  **Event Definition**: `GAMEEVENT_ResolutionResult` with signature `"iiibb"`  
+  **Triggering Functions**: `NotifyProposalResult()` (overloaded for enact/repeal)  
+  **Prerequisites**: `MOD_EVENTS_RESOLUTIONS` must be enabled
 
 **Related Systems:**
+
 - `NotifySessionDone()`: Orchestrates result processing
-- Vote counting and threshold validation systems  
+- Vote counting and threshold validation systems
 - Player notification and UI update systems
 - Global effects application and diplomatic consequence systems
 

@@ -9,7 +9,7 @@ Releases are made by a GitHub Actions workflow, not by hand. This page explains 
 `.github/workflows/release.yml` (named **Release Version**) is the canonical path. It only runs on manual dispatch, and it takes two inputs:
 
 | Input | Meaning |
-|---|---|
+| --- | --- |
 | `version_type` | `patch`, `minor`, `major`, or `none`. Chooses how `version.json` is bumped. |
 | `dry_run` | When true, the job builds and verifies the installer but makes no commit, tag, or release. |
 
@@ -42,7 +42,7 @@ The version of record is `version.json` at the repo root: three integer fields (
 The same number appears in three more places, all of which the release workflow rewrites for you:
 
 | File | Form it takes |
-|---|---|
+| --- | --- |
 | `scripts/installer.iss` | `#define MyAppVersion "MAJOR.MINOR.REVISION"`, which names the installer and its wizard |
 | `README.md` | the `**Version MAJOR.MINOR.REVISION - Beta**` line near the top |
 | `scripts/bootstrap.cmd` | the tag it falls back to when none is given |

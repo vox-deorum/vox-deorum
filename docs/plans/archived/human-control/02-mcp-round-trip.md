@@ -3,6 +3,7 @@
 > Part of the human-control plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 
 > **Status: implemented.** All work items landed; `tsc --noEmit` passes. What was built:
+>
 > - [`knowledge/schema/events/HumanDecision.ts`](../../../mcp-server/src/knowledge/schema/events/HumanDecision.ts) — permissive zod schema (required `PlayerID` + `Rationale`; everything else optional). [`events/index.ts`](../../../mcp-server/src/knowledge/schema/events/index.ts) regenerated.
 > - [`server.ts`](../../../mcp-server/src/server.ts) — `"HumanDecision"` added to `eventsForNotification`; notifications now keep routing metadata at top level and put forwarded event payloads inside a top-level `data` object; an always-on keepalive `setInterval` (`HEARTBEAT_INTERVAL_MS = 90_000`, comfortably under the 600 s body timeout) started in `initialize()`, `unref()`'d, and cleared on shutdown.
 > - [`utils/lua/present-decision.ts`](../../../mcp-server/src/utils/lua/present-decision.ts) — `presentHumanDecision` `LuaFunction` firing `LuaEvents.VoxDeorumHumanDecision(playerID, turn, optionsJson)`, with `optionsJson` passed through `sanitize()`.

@@ -43,9 +43,9 @@ The boolean parameter distinguishes between conversions that are part of unit up
 The event is triggered using the `GAMEEVENTINVOKE_HOOK` mechanism with the following parameters:
 
 ```cpp
-GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitConverted, 
+GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitConverted,
     pUnit->getOwner(),  // Original owner ID
-    getOwner(),         // New owner ID  
+    getOwner(),         // New owner ID
     pUnit->GetID(),     // Original unit ID
     GetID(),            // Converting unit ID
     bIsUpgrade          // Whether this is an upgrade conversion

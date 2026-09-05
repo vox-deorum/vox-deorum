@@ -7,6 +7,7 @@ The `PlayerBuilding` event is triggered when a unit begins or continues work on 
 This event is triggered when a unit is actively engaged in building or improving terrain through the build system. The trigger occurs within the `CvUnit` class during build action processing, capturing both the initiation of new construction projects and the continuation of ongoing work.
 
 The event fires during build operations when:
+
 1. **New Construction**: A unit begins work on a new terrain improvement or project
 2. **Continued Work**: A unit continues construction on a partially completed project
 3. **Build Validation**: The game processes and validates the unit's building action
@@ -16,7 +17,7 @@ The event fires during build operations when:
 The event passes six parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | OwnerID | PlayerTypes | The ID of the player who owns the building unit |
 | UnitID | int | The unique identifier of the unit performing the construction |
 | X | int | The X coordinate of the tile being improved |
@@ -46,12 +47,14 @@ This event is particularly useful for monitoring worker unit activities and unde
 **Event System**: Uses the game event system via `GAMEEVENTINVOKE_HOOK(GAMEEVENT_PlayerBuilding)`
 
 **Build Context**: The building system typically involves:
+
 - Worker units or other construction-capable units
 - Terrain improvements like farms, mines, roads, and special facilities
 - Multi-turn construction projects that may require several actions to complete
 - Tile-specific improvements that enhance resource production or provide strategic benefits
 
 **Progress Tracking**: The `iStartedYet == 0` condition for the IsFirstTime parameter allows event handlers to distinguish between:
+
 - Initial construction starts (potentially for UI updates, sound effects, or strategic analysis)
 - Ongoing construction progress (for tracking work continuation and efficiency)
 

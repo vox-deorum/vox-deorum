@@ -43,7 +43,7 @@ The event provides both the unit information (who founded it and what type of un
 The event is triggered using the `GAMEEVENTINVOKE_HOOK` mechanism with the following parameters:
 
 ```cpp
-GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitCityFounded, 
+GAMEEVENTINVOKE_HOOK(GAMEEVENT_UnitCityFounded,
     getOwner(),      // Player ID who owns the founding unit
     GetID(),         // Unit ID of the founding unit
     getUnitType(),   // Type of the founding unit

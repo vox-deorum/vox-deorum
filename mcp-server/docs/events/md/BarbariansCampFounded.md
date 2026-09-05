@@ -18,7 +18,7 @@ The event is part of the barbarian camp lifecycle management system and compleme
 The event passes the following parameters:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `iPlotX` | `int` | The X coordinate of the plot where the barbarian camp was founded |
 | `iPlotY` | `int` | The Y coordinate of the plot where the barbarian camp was founded |
 
@@ -27,11 +27,13 @@ The event passes the following parameters:
 # Event Details
 
 ## Event Signature
+
 - **Event Name**: `BarbariansCampFounded`
 - **Parameter Format**: `"ii"` (two integer parameters)
 - **Lua Callback Format**: `GameEvents.BarbariansCampFounded.Add(function(iPlotX, iPlotY) end)`
 
 ## Timing and Context
+
 The event fires immediately when a barbarian camp improvement is set on a plot, specifically:
 
 1. **After** the plot's `PlayerThatClearedBarbCampHere` is reset to `NO_PLAYER`
@@ -40,6 +42,7 @@ The event fires immediately when a barbarian camp improvement is set on a plot, 
 4. **Before** visibility updates are processed for teams
 
 ## Related Systems
+
 This event integrates with several game systems:
 
 - **Barbarian Spawning**: The `CvBarbarians::ActivateBarbSpawner()` call ensures the new camp becomes active for unit spawning
@@ -49,26 +52,30 @@ This event integrates with several game systems:
 # Technical Details
 
 ## Implementation Location
+
 - **File**: `F:\Minor Solutions\vox-deorum\civ5-dll\CvGameCoreDLL_Expansion2\CvPlot.cpp`
 - **Line**: 8286
 - **Function**: `CvPlot::setImprovementType(ImprovementTypes eNewValue, PlayerTypes eBuilder)`
 
 ## Event Definition
+
 - **Header File**: `F:\Minor Solutions\vox-deorum\civ5-dll\CvGameCoreDLL_Expansion2\CustomMods.h`
 - **Definition Line**: 981
 - **Macro**: `#define GAMEEVENT_BarbariansCampFounded "BarbariansCampFounded", "ii"`
 
 ## Configuration Requirements
+
 - **Mod Option**: `MOD_EVENTS_BARBARIANS` must be enabled
 - **Event Category**: Barbarian events (introduced in version 68 of the Community Patch)
 
 ## Code Context
+
 ```cpp
 // Reset who cleared a Barb camp here last (if we're putting a new one down)
 if (eNewValue == GD_INT_GET(BARBARIAN_CAMP_IMPROVEMENT))
 {
     SetPlayerThatClearedBarbCampHere(NO_PLAYER);
-    
+
     // Alert the barbarian spawning code to this new camp
     CvBarbarians::ActivateBarbSpawner(this);
 
@@ -78,6 +85,7 @@ if (eNewValue == GD_INT_GET(BARBARIAN_CAMP_IMPROVEMENT))
 ```
 
 ## Usage Considerations
+
 - The event only provides location information; additional plot data must be queried separately if needed
 - This event occurs for all barbarian camp foundations, regardless of the cause (natural spawning, scenario setup, etc.)
 - Mods can use this event to implement custom reactions to barbarian camp establishment, such as diplomatic notifications, AI strategy adjustments, or special mechanics

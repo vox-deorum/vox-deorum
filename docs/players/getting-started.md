@@ -7,7 +7,7 @@ Vox Deorum lets you play Civilization V (Civ V) against opponents run by large l
 | Requirement | Details |
 | --- | --- |
 | Windows | Windows 10 or 11. |
-| [Civilization V](https://store.steampowered.com/app/8930/) | Already installed through Steam. Ideally with both expansions, *Gods & Kings* and *Brave New World*. Vox Deorum is built on the [Community Patch and Vox Populi](https://github.com/LoneGazebo/Community-Patch-DLL) overhaul, and we build and test against the full game. |
+| [Civilization V](https://store.steampowered.com/app/8930/) | Already installed through Steam. Ideally with both expansions, _Gods & Kings_ and _Brave New World_. Vox Deorum is built on the [Community Patch and Vox Populi](https://github.com/LoneGazebo/Community-Patch-DLL) overhaul, and we build and test against the full game. |
 | A way to connect to an LLM | An API key, a ChatGPT account for Codex, a local Claude Code sign-in, or a local model server. Most hosted providers charge for usage. See [Configuration](configuration.md). |
 
 ## Install
@@ -18,7 +18,7 @@ Vox Deorum lets you play Civilization V (Civ V) against opponents run by large l
 
 ## First launch
 
-Start Vox Deorum from the **Start Menu** entry named *Vox Deorum*, or run `scripts\vox-deorum.cmd` in the install folder. A **console window** starts the background services and opens the dashboard in your browser at `http://localhost:5555`. Keep the console window open while you play, and use its prompt to stop cleanly when you finish.
+Start Vox Deorum from the **Start Menu** entry named _Vox Deorum_, or run `scripts\vox-deorum.cmd` in the install folder. A **console window** starts the background services and opens the dashboard in your browser at `http://localhost:5555`. Keep the console window open while you play, and use its prompt to stop cleanly when you finish.
 
 On a fresh install, the dashboard opens the four-step **Setup** wizard. Choose how you want to connect, enter an API key or complete a sign-in, then pick a model and save. The wizard checks the connection and lists the models you can use. Provider-specific details live on the [Configuration](configuration.md) page.
 

@@ -20,7 +20,7 @@ A `config.json` looks like this:
 ## Settings
 
 | Setting | Default | Environment variable | Meaning |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `rest.port` | `5000` | `PORT` | HTTP server port. Set it to `0` to let the operating system pick a free one. |
 | `rest.host` | `127.0.0.1` | `HOST` | Bind address. `0.0.0.0` accepts connections from other machines, which the service is not hardened for; see the security note in [overview.md](overview.md). |
 | `gamepipe.id` | `vox-deorum-bridge` | `gamepipe_ID` | Identifier for the DLL named pipe. Must match what the DLL was told to use. |
@@ -36,7 +36,7 @@ The one failure the loader reports is a `config.json` that does not parse as JSO
 
 ## Pipe names, and how the two sides find each other
 
-Both `gamepipe.id` and `eventpipe.name` are *identifiers*, not full pipe paths. The bridge uses `node-ipc`, which prepends a `tmp-app.` prefix, so the configured id `vox-deorum-bridge` becomes the actual pipe `\\.\pipe\tmp-app.vox-deorum-bridge`.
+Both `gamepipe.id` and `eventpipe.name` are _identifiers_, not full pipe paths. The bridge uses `node-ipc`, which prepends a `tmp-app.` prefix, so the configured id `vox-deorum-bridge` becomes the actual pipe `\\.\pipe\tmp-app.vox-deorum-bridge`.
 
 The game DLL builds its pipe name with the same prefix rule, but it reads its own setting to do it: the `VOX_DEORUM_PIPE_NAME` environment variable, described in [civ5-dll/connection.md](../civ5-dll/connection.md). Nothing links the two. They agree out of the box only because both default to `vox-deorum-bridge`.
 
@@ -53,7 +53,7 @@ The practical consequence is that `gamepipe.id` and `VOX_DEORUM_PIPE_NAME` must 
 A handful of values are fixed in the source. They are listed here so they are not mistaken for missing config knobs; change them only by editing the source.
 
 | Value | Setting | Where |
-|---|---|---|
+| --- | --- | --- |
 | 300 seconds | Timeout for a Lua call to the DLL | `bridge-service/src/services/dll-connector.ts` |
 | 300 ms first delay, growing by 1.5x per attempt, capped at 5 seconds | Reconnection backoff to the DLL, retried indefinitely | `bridge-service/src/services/dll-connector.ts` |
 | 2 seconds | How long a graceful shutdown waits for the DLL to acknowledge the disconnect before giving up | `bridge-service/src/services/dll-connector.ts` |

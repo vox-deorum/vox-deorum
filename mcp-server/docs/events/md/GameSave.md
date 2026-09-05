@@ -7,12 +7,14 @@ The `GameSave` event is triggered when the game is being saved to disk in Civili
 This event is triggered during the game save process, specifically within the game's serialization system.
 
 **Specific trigger conditions:**
+
 - **Game save initiated**: The player has initiated a save operation or an autosave is occurring
 - **Save validation**: The game has validated that saving is appropriate and allowed
 - **Not first save**: The event is skipped on the initial save to prevent game hangs
 - **Pre-serialization**: Called before the main game database is serialized to the save file
 
 **Related mechanics that can trigger game saves:**
+
 - Manual save operations initiated by the player through the game menu
 - Autosave functionality that triggers at regular intervals or game milestones
 - Quick save operations using keyboard shortcuts
@@ -23,7 +25,7 @@ This event is triggered during the game save process, specifically within the ga
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | None | - | This event takes no parameters and provides a general hook for save processing |
 
 # Event Details
@@ -31,6 +33,7 @@ This event is triggered during the game save process, specifically within the ga
 The GameSave event serves as a synchronization point for custom systems that need to prepare data for persistence or execute operations during the save process. This event is particularly important for mods that maintain custom data structures or states that need to be preserved across game sessions.
 
 **Save process mechanics:**
+
 - **Pre-serialization hook**: Executes before main game data is written to the save file
 - **Data preparation**: Allows scripts to prepare or organize data for persistence
 - **State validation**: Can verify that custom game states are valid before saving
@@ -38,6 +41,7 @@ The GameSave event serves as a synchronization point for custom systems that nee
 - **Custom serialization**: Mods can implement their own data persistence mechanisms
 
 **Common use cases:**
+
 - **Custom data persistence**: Saving mod-specific variables, settings, or game states
 - **Data validation**: Ensuring custom data structures are in a consistent state before saving
 - **Temporary cleanup**: Removing temporary or cache data that shouldn't be persisted
@@ -46,6 +50,7 @@ The GameSave event serves as a synchronization point for custom systems that nee
 - **Backup operations**: Creating additional backup copies of critical custom data
 
 **Save integration:**
+
 - **Conditional execution**: Skips the first save to prevent initialization issues
 - **Script coordination**: Multiple mods can hook this event to coordinate save operations
 - **Error prevention**: Helps prevent save corruption by allowing data validation
@@ -63,12 +68,14 @@ The GameSave event serves as a synchronization point for custom systems that nee
 **Conditional Compilation**: Protected by `EA_EVENT_GAME_SAVE` preprocessor directive
 
 **Preconditions**:
+
 - `EA_EVENT_GAME_SAVE` must be defined and enabled
 - Game must not be on its first save (`m_bSavedOnce` must be true)
 - Save operation must be in progress
 - Game serialization system must be active
 
 **Event Flow**:
+
 1. Game save operation is initiated by player or system
 2. Save validation and preparation occurs
 3. `CvGame::Write()` function is called for serialization
@@ -79,12 +86,14 @@ The GameSave event serves as a synchronization point for custom systems that nee
 8. Save file is written to disk with all game data
 
 **Special Considerations**:
+
 - **First save skip**: The event is intentionally skipped on the first save to prevent game hangs caused by script system initialization issues
 - **Compilation flag**: The event is only available when `EA_EVENT_GAME_SAVE` is defined during compilation
 - **Performance impact**: Should execute quickly to avoid delaying the save process
 - **Error handling**: Scripts should handle errors gracefully to prevent save corruption
 
 **Related Events**:
+
 - Game load events (when implementing complementary load-time logic)
 - Turn completion events that might trigger autosaves
 - Exit game events that trigger final saves

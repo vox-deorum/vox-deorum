@@ -7,12 +7,14 @@ The `GameCoreUpdateBegin` event is triggered at the start of each game update cy
 This event is triggered at the beginning of each game update cycle, as part of the core game loop.
 
 **Specific trigger conditions:**
+
 - **Game update cycle start**: The game is beginning its core update processing loop
 - **Script system availability**: The Lua script system is available and active
 - **Pre-processing hook**: Called before standard game update logic executes
 - **Regular cycle**: Triggered consistently as part of the normal game update sequence
 
 **Related mechanics that can trigger game updates:**
+
 - Frame-by-frame game processing in the main game loop
 - Turn-based processing cycles that require pre-update initialization
 - Real-time game state updates that need custom script processing
@@ -21,7 +23,7 @@ This event is triggered at the beginning of each game update cycle, as part of t
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | None | - | This event takes no parameters and provides a general hook for update initialization |
 
 # Event Details
@@ -29,6 +31,7 @@ This event is triggered at the beginning of each game update cycle, as part of t
 The GameCoreUpdateBegin event serves as an entry point for custom logic that needs to execute before standard game processing occurs each update cycle. This event is particularly useful for mods and scripts that need to perform setup, validation, or initialization tasks.
 
 **Update cycle mechanics:**
+
 - **Initialization point**: Perfect for setting up data structures or states needed during the update
 - **Pre-processing validation**: Can verify game state consistency before main processing
 - **Custom system updates**: Allows mods to run their own update logic in sync with the game
@@ -36,6 +39,7 @@ The GameCoreUpdateBegin event serves as an entry point for custom logic that nee
 - **State management**: Ideal for managing custom variables or flags per update cycle
 
 **Common use cases:**
+
 - **Mod system initialization**: Setting up custom mod data at the start of each update
 - **State validation**: Checking for invalid game states before processing begins
 - **Custom AI processing**: Running AI logic that needs to execute before standard AI updates
@@ -43,6 +47,7 @@ The GameCoreUpdateBegin event serves as an entry point for custom logic that nee
 - **Debug systems**: Enabling debug output or validation during development
 
 **Update cycle integration:**
+
 - **First in sequence**: Executes before any standard game update processing
 - **Script coordination**: Multiple scripts can hook this event for coordinated initialization
 - **Error handling**: Can set up error handling or recovery systems for the update cycle
@@ -58,11 +63,13 @@ The GameCoreUpdateBegin event serves as an entry point for custom logic that nee
 **Script System Integration**: Uses `LuaSupport::CallHook` with the script system to call "GameCoreUpdateBegin"
 
 **Preconditions**:
+
 - Script system (`pkScriptSystem`) must be available and not null
 - Game is in a state where updates are being processed
 - Update cycle has been initiated
 
 **Event Flow**:
+
 1. Game update cycle begins
 2. Script system availability is verified
 3. Lua args handle is created for the script call
@@ -73,11 +80,13 @@ The GameCoreUpdateBegin event serves as an entry point for custom logic that nee
 8. Eventually culminates in `GameCoreUpdateEnd` event
 
 **Related Events**:
+
 - `GameCoreUpdateEnd`: Called at the conclusion of the update cycle
 - `TurnComplete`: May be related to turn-based update cycles
 - `PlayerDoTurn`: Individual player processing that occurs during updates
 
 **Performance Considerations**:
+
 - This event is called frequently during active gameplay
 - Scripts should be optimized for repeated execution
 - Heavy computations should be minimized to maintain game performance

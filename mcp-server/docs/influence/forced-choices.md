@@ -24,6 +24,7 @@ This is a **one-shot** mechanism -- each forced pick requires its own tool call.
 ### When it takes effect
 
 On the next call to `ChooseNextTech`, which occurs:
+
 - At the start of the player's turn if no research is queued.
 - When the current tech completes mid-turn.
 

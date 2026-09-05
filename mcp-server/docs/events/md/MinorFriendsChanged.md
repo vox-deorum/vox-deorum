@@ -5,8 +5,9 @@ The MinorFriendsChanged event is triggered when a city-state's friendship relati
 # Event Triggers
 
 This event is fired from `CvMinorCivAI::DoFriendshipChangeEffects()` when:
+
 - A major civilization's friendship level with a city-state changes enough to cross the friends threshold
-- The friendship status actually changes (gains or loses friend relationship)  
+- The friendship status actually changes (gains or loses friend relationship)
 - The game option `MOD_EVENTS_MINORS` is enabled
 - Only when there's an actual change in friend status (prevents duplicate notifications)
 
@@ -25,6 +26,7 @@ The event provides five parameters with mixed types (`"iibii"` signature):
 # Event Details
 
 The friendship system works as follows:
+
 - Friends status requires crossing a minimum friendship threshold
 - Multiple major civilizations can be friends with the same city-state
 - Friends status provides moderate bonuses compared to neutral relations
@@ -32,11 +34,13 @@ The friendship system works as follows:
 - The city-state must be alive for friendship relationships to be active
 
 When friendship is gained, the city-state:
+
 - Marks that the civilization has been friends at least once (`SetEverFriends()`)
 - Applies friendship bonuses through `DoSetBonus()`
 - May trigger UI notifications unless ally changes are also occurring
 
 When friendship is lost, the city-state:
+
 - Removes friendship bonuses
 - Wakes up all units belonging to that player in city-state territory
 - Updates diplomatic status displays
@@ -46,9 +50,10 @@ When friendship is lost, the city-state:
 **Source Location**: `CvMinorCivAI.cpp` line 12812  
 **Event Definition**: `GAMEEVENT_MinorFriendsChanged` with signature `"iibii"`  
 **Triggering Function**: `DoFriendshipChangeEffects()`  
-**Prerequisites**: `MOD_EVENTS_MINORS` must be enabled  
+**Prerequisites**: `MOD_EVENTS_MINORS` must be enabled
 
 The friendship determination logic uses:
+
 - `IsFriendshipAboveFriendsThreshold()`: Checks if friendship meets minimum threshold
 - `IsFriends()`: Current friendship status tracking
 - City-state alive status verification

@@ -5,15 +5,16 @@ The `GoodyHutTechResearched` event is triggered when a player discovers a techno
 # Event Triggers
 
 This event is triggered in the following scenario:
+
 - When a unit explores a goody hut and receives a technology as a reward
 - The event fires through the Lua scripting system before the technology is officially granted
 - The technology discovery is processed as part of the goody hut reward mechanism
 
 # Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `playerId` | `int` | The ID of the player who received the technology |
+| Parameter  | Type  | Description                                       |
+| ---------- | ----- | ------------------------------------------------- |
+| `playerId` | `int` | The ID of the player who received the technology  |
 | `techType` | `int` | The type/ID of the technology that was discovered |
 
 # Event Details
@@ -21,11 +22,13 @@ This event is triggered in the following scenario:
 The `GoodyHutTechResearched` event is specifically focused on technology discoveries from goody huts. This represents one of the most valuable types of goody hut rewards in the game, as free technologies can significantly accelerate a civilization's development.
 
 The event captures:
+
 - Which player benefited from the technology discovery
 - The specific technology that was unlocked
 - Timing information for strategic analysis
 
 This event is particularly important for:
+
 - Tracking technological advantages gained through exploration
 - Understanding the impact of early game exploration on civilizations
 - AI systems that need to assess the relative technological positions of players
@@ -43,6 +46,7 @@ This event is particularly important for:
 **Conditional Behavior:** If `MOD_EVENTS_GOODY_TECH` is enabled, the system uses `GAMEEVENTINVOKE_HOOK` instead of the Lua script system.
 
 **Code Reference:**
+
 ```cpp
 CvLuaArgsHandle args;
 args->Push(GetID());

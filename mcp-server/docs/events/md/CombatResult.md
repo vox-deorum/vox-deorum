@@ -45,6 +45,7 @@ The `CombatResult` event provides predictive combat information, including:
 - **Location Context**: Map coordinates where combat is planned to occur
 
 This event is particularly useful for:
+
 - Pre-combat decision-making systems
 - Combat prediction and analysis
 - AI tactical evaluation before commitment

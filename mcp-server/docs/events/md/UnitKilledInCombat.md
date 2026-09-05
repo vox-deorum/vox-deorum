@@ -44,7 +44,7 @@ The event is triggered using the `LuaSupport::CallHook` mechanism with the follo
 ```cpp
 CvLuaArgsHandle args;
 args->Push(GetID());                                    // Killer player ID
-args->Push(eKilledPlayer);                             // Killed player ID  
+args->Push(eKilledPlayer);                             // Killed player ID
 args->Push(eUnitType);                                 // Killed unit type
 args->Push(pKillingUnit ? pKillingUnit->GetID() : -1); // Killing unit ID
 

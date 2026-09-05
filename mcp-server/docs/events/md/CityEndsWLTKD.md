@@ -14,12 +14,12 @@ The trigger occurs within the city's turn processing during the resource demand 
 
 The event passes four parameters to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| Owner | PlayerTypes | The ID of the player who owns the city |
-| X | int | The X coordinate of the city on the game map |
-| Y | int | The Y coordinate of the city on the game map |
-| Unused | int | An unused parameter, always set to 0 |
+| Parameter | Type        | Description                                  |
+| --------- | ----------- | -------------------------------------------- |
+| Owner     | PlayerTypes | The ID of the player who owns the city       |
+| X         | int         | The X coordinate of the city on the game map |
+| Y         | int         | The Y coordinate of the city on the game map |
+| Unused    | int         | An unused parameter, always set to 0         |
 
 # Event Details
 
@@ -37,6 +37,7 @@ The event occurs during the city's turn processing, specifically after the WLTKD
 **Source File**: `CvGameCoreDLL_Expansion2/CvCity.cpp`
 
 **Trigger Location**:
+
 - Line 10348: WLTKD conclusion in the resource demand testing system
 
 **Event System**: Uses the GAMEEVENTINVOKE_HOOK macro system

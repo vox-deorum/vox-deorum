@@ -13,18 +13,21 @@ For tool schemas and arguments, see [tools.md](../tools.md).
 `set-persona` forwards a Lua table to `CvLuaPlayer::lSetPersona`, which mutates 26 fields directly on the caller's `CvDiplomacyAI`. These runtime values replace the leader's current personality values on that AI object until overwritten.
 
 **Core competitiveness:**
+
 - `VictoryCompetitiveness` -- reaction intensity to others pursuing victories
 - `WonderCompetitiveness` -- reaction intensity to wonder competition
 - `MinorCivCompetitiveness` -- reaction intensity to city-state influence competition
 - `Boldness` -- military risk-taking and territorial claims
 
 **War and peace tendencies:**
+
 - `WarBias` -- likelihood to plan or declare offensive war
 - `HostileBias` -- tendency toward hostile postures without direct war
 - `WarmongerHate` -- negative reaction to warlike behaviors
 - `NeutralBias`, `FriendlyBias`, `GuardedBias`, `AfraidBias` -- approach biases
 
 **Diplomacy and cooperation:**
+
 - `DiplomaticBalance` -- increased relationship with non-competitive civs and peaceful resolution
 - `Friendliness` -- desire for friendship declarations, increases maximum DoFs
 - `WorkWithWillingness` -- tendency to collaborate with allies
@@ -32,9 +35,11 @@ For tool schemas and arguments, see [tools.md](../tools.md).
 - `Loyalty` -- loyalty to allies; lower values enable backstabbing
 
 **Minor civ relations:**
+
 - `MinorCivFriendlyBias`, `MinorCivNeutralBias`, `MinorCivHostileBias`, `MinorCivWarBias`
 
 **Personality traits:**
+
 - `DenounceWillingness` -- readiness to denounce
 - `Forgiveness` -- how quickly past transgressions are forgiven
 - `Meanness` -- general aggressiveness, demanding/bullying
@@ -119,7 +124,7 @@ These modifiers therefore do not only change how A "feels about" B. Once opinion
 ### What can change
 
 | Subsystem | Representative symbols | Mechanism | What shifts |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Core diplomacy | `CvDiplomacyAI::CalculateApproachTowardsPlayer`, `GetCoopWarDesireScore`, `RespondToCoopWarRequest`, `IsCoopWarRequestUnacceptable`, friendship / denouncement / warning / war logic | `GetCivOpinion`, some `GetCachedOpinionWeight`, plus direct cached `ScenarioModifier1/2` in coop-war desire | Approach selection, coop-war desire, coop-war request reactions, warn-target behavior, and "friend vs enemy" branching |
 | Peace willingness | `CvDiplomacyAI` peace scoring around `iPeaceScore` | **Direct `GetScenarioModifier1/2` read** | Immediate willingness to continue war or accept peace, without waiting for cached opinion recomputation |
 | Deals and treaty behavior | `CvDealAI` demand, gift, peace, vassalage, and treaty valuation paths | Mostly `GetCivOpinion` | Demand compliance, gift willingness, peace valuation, vassalage acceptability, and general deal scoring |
@@ -161,7 +166,7 @@ In network multiplayer, `CalculateCivOpinionWeight` skips the `GetDiploModifiers
 ### Three-audience visibility
 
 | Audience | Immediate raw numeric | Immediate string visibility | Composite opinion impact |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Non-LLM VPAI (C++) | No foreign raw-array read | No | Yes, via `GetCachedOpinionWeight` / `GetCivOpinion` after opinion refresh, when the diplo-modifier path is active |
 | Other LLM (via `get-opinions`) | Indirect rather than raw-array access | Public-string paths are visible; private-string paths are hidden in normal VD mode except self/debug-style views | Yes, through the refreshed opinion table and composite opinion |
 | Human UI / raw Lua | Yes, through `GetScenarioModifier1/2` on the owner | Public modifier strings are visible; private modifier strings are hidden in normal VD mode, but self/debug strings exist (`TXT_KEY_SPECIFIC_DIPLO_STRING_1_SELF`, `TXT_KEY_SPECIFIC_DIPLO_STRING_2_SELF`) | Yes, once opinion refresh has recomputed the cached totals |

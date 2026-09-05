@@ -7,6 +7,7 @@
 Unlike military-focused flavors that drive combat behavior, `FLAVOR_TILE_IMPROVEMENT` focuses on **infrastructure development and territorial optimization** - ensuring that every tile within the empire is improved for maximum economic output. This flavor represents a leader's commitment to building farms, mines, plantations, and other improvements that transform raw terrain into productive economic assets.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Leaders with unique improvements: 8-10 (Kamehameha, Pocatello, Isabella)
@@ -150,6 +151,7 @@ void CvDiplomacyAI::DoContactMinorCivs()
 2. **Random Roll Path:** Otherwise, perform a random roll (0-9) against the tile improvement flavor as threshold
 
 **Behavioral Examples:**
+
 - FLAVOR_TILE_IMPROVEMENT = 9: 90% chance to bully for workers each turn (rolls 0-8 succeed)
 - FLAVOR_TILE_IMPROVEMENT = 5: 50% chance to bully for workers each turn (rolls 0-4 succeed)
 - FLAVOR_TILE_IMPROVEMENT = 2: 20% chance to bully for workers each turn (rolls 0-1 succeed)
@@ -270,6 +272,7 @@ for (CvCity* pLoopCity = m_pPlayer->firstCity(&iLoop); pLoopCity != NULL; pLoopC
 **Interpretation:** Buildings with FLAVOR_TILE_IMPROVEMENT values (such as Murano Glassworks with value 30, or Terracotta Army with value 50) contribute their flavor points to grand strategy priority calculations. Unlike the **double multiplier** given to military buildings in FLAVOR_OFFENSE calculations, tile improvement buildings contribute their **base value** to infrastructure-focused grand strategies.
 
 This creates a feedback loop where constructing buildings that enhance tile improvements makes the AI more committed to economic development strategies. For example:
+
 - Murano Glassworks (FLAVOR_TILE_IMPROVEMENT = 30) adds 30 points toward economic grand strategies
 - Terracotta Army (FLAVOR_TILE_IMPROVEMENT = 50) adds 50 points, significantly boosting infrastructure commitment
 
@@ -295,6 +298,7 @@ This creates a feedback loop where constructing buildings that enhance tile impr
 ```
 
 **Interpretation:**
+
 - **Murano Glassworks** (FLAVOR_TILE_IMPROVEMENT = 30): Venice's unique building that enhances tile improvements, making it highly desirable for infrastructure-focused leaders
 - **Terracotta Army** (FLAVOR_TILE_IMPROVEMENT = 50): The wonder with the highest tile improvement flavor value, reflecting its massive boost to tile development through free Great Generals and promotion bonuses
 
@@ -305,6 +309,7 @@ This creates a feedback loop where constructing buildings that enhance tile impr
 Technologies with FLAVOR_TILE_IMPROVEMENT represent unlocking new improvements or yield bonuses:
 
 **Ancient Era:**
+
 ```sql
 ('TECH_TRAPPING', 'FLAVOR_TILE_IMPROVEMENT', 15)          -- Unlocks camps
 ('TECH_THE_WHEEL', 'FLAVOR_TILE_IMPROVEMENT', 5)          -- Unlocks roads
@@ -316,12 +321,14 @@ Technologies with FLAVOR_TILE_IMPROVEMENT represent unlocking new improvements o
 ```
 
 **Classical Era:**
+
 ```sql
 ('TECH_CURRENCY', 'FLAVOR_TILE_IMPROVEMENT', 15)          -- Trade route improvements
 ('TECH_METAL_CASTING', 'FLAVOR_TILE_IMPROVEMENT', 15)     -- Workshop improvements
 ```
 
 **Medieval Era:**
+
 ```sql
 ('TECH_CIVIL_SERVICE', 'FLAVOR_TILE_IMPROVEMENT', 10)     -- Farm +1 Food, Pasture +2 Food
 ('TECH_GUILDS', 'FLAVOR_TILE_IMPROVEMENT', 10)            -- Economic improvements
@@ -329,6 +336,7 @@ Technologies with FLAVOR_TILE_IMPROVEMENT represent unlocking new improvements o
 ```
 
 **Renaissance Era:**
+
 ```sql
 ('TECH_GUNPOWDER', 'FLAVOR_TILE_IMPROVEMENT', 5)          -- Minor improvements
 ('TECH_CHEMISTRY', 'FLAVOR_TILE_IMPROVEMENT', 10)         -- Advanced improvements
@@ -337,6 +345,7 @@ Technologies with FLAVOR_TILE_IMPROVEMENT represent unlocking new improvements o
 ```
 
 **Industrial Era:**
+
 ```sql
 ('TECH_RAILROAD', 'FLAVOR_TILE_IMPROVEMENT', 5)           -- Railroad construction
 ('TECH_STEAM_POWER', 'FLAVOR_TILE_IMPROVEMENT', 20)       -- Mine +2 Production, Quarry +1 Production
@@ -348,12 +357,14 @@ Technologies with FLAVOR_TILE_IMPROVEMENT represent unlocking new improvements o
 ```
 
 **Modern Era:**
+
 ```sql
 ('TECH_COMBUSTION', 'FLAVOR_TILE_IMPROVEMENT', 20)        -- Oil well improvements
 ('TECH_PLASTIC', 'FLAVOR_TILE_IMPROVEMENT', 10)           -- Oil Well +2 Production
 ```
 
 **Atomic Era:**
+
 ```sql
 ('TECH_REFRIGERATION', 'FLAVOR_TILE_IMPROVEMENT', 5)      -- Farm improvements
 ('TECH_ATOMIC_THEORY', 'FLAVOR_TILE_IMPROVEMENT', 10)     -- Uranium mining
@@ -361,12 +372,14 @@ Technologies with FLAVOR_TILE_IMPROVEMENT represent unlocking new improvements o
 ```
 
 **Information Era:**
+
 ```sql
 ('TECH_ECOLOGY', 'FLAVOR_TILE_IMPROVEMENT', 20)           -- Major eco improvements
 ('TECH_ROBOTICS', 'FLAVOR_TILE_IMPROVEMENT', 10)          -- Automated improvements
 ```
 
 **Interpretation:** Technologies are weighted based on how significantly they improve tile yields:
+
 - **High value (15-20):** Technologies that unlock entirely new improvement types or provide major yield bonuses (Animal Husbandry, Mining, Calendar, Steam Power, Combustion, Ecology)
 - **Medium value (10):** Technologies that enhance existing improvements or unlock moderate bonuses (Civil Service, Chemistry, Fertilizer, Robotics)
 - **Low value (5):** Technologies with minor improvement benefits or secondary effects (The Wheel, Machinery, Economics)
@@ -383,6 +396,7 @@ The highest values in late eras (Steam Power = 20, Combustion = 20, Ecology = 20
 ```
 
 **Interpretation:**
+
 - **Liberty Policy Tree** (FLAVOR_TILE_IMPROVEMENT = 7): The policy tree focused on expansion and territorial development, providing worker speed bonuses and free improvements
 - **Citizenship Policy** (FLAVOR_TILE_IMPROVEMENT = 5): Specific policy within Liberty that enhances worker effectiveness
 
@@ -459,32 +473,38 @@ UPDATE Leader_Flavors SET Flavor = 9 WHERE FlavorType = 'FLAVOR_TILE_IMPROVEMENT
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **City founding:** Prefers locations with high gold potential and improvable tiles (luxury resources, rivers, plains)
 - **Grand strategy:** Adopts infrastructure-focused policies and buildings create feedback loops toward economic development
 - **Victory pursuit:** Strong economic foundation gradually shifts priority toward spaceship victory as resources accumulate
 
 ### Economic Development
+
 - **Worker production:** Dramatically increases worker production priority (unit flavor = 30)
 - **Worker acquisition:** Higher likelihood of bullying city-states for workers (up to 90% chance per turn for flavor = 9)
 - **Technology research:** Prioritizes technologies that unlock new improvements or enhance existing ones
 - **Policy selection:** Strongly favors Liberty tree and other infrastructure-focused policies
 
 ### Territorial Optimization
+
 - **Improvement prioritization:** AI focuses on building improvements rather than leaving tiles unimproved
 - **Resource development:** Ensures luxury and strategic resources are quickly improved and connected
 - **Yield maximization:** Actively works to maximize food, production, and gold output from every tile
 
 ### Happiness Management
+
 - **Crisis response:** During happiness crises, heavily weights infrastructure solutions (road connections, farm construction, luxury resource development)
 - **Defensive priorities:** Protects tile improvements from pillaging during conflicts
 - **Population control:** Uses food-generating improvements to manage population pressure
 
 ### Diplomatic Behavior
+
 - **City-state relations:** More willing to damage relationships with city-states by bullying for workers when infrastructure needs arise
 - **Trade priorities:** Values trade routes and connections that enhance economic infrastructure
 - **Conflict avoidance:** Less likely to pursue aggressive barbarian eradication, preferring to focus on peaceful development
 
 ### Military Balance
+
 - **Strategic tension:** High tile improvement flavor creates negative weight for barbarian eradication strategies, delaying military campaigns
 - **Resource allocation:** Infrastructure-focused leaders may have delayed military responses as they prioritize worker and building production
 - **Defensive posture:** More likely to protect existing improvements rather than pursuing offensive operations
@@ -499,6 +519,7 @@ FLAVOR_TILE_IMPROVEMENT represents the AI's fundamental approach to territorial 
 4. **Long-term Planning:** Willingness to invest in improvements that pay dividends over many turns
 
 This creates a spectrum of AI personalities:
+
 - **High TILE_IMPROVEMENT (9-10):** Infrastructure specialists who maximize every tile's potential, rapidly develop territory, and maintain large worker forces (Kamehameha, Pocatello, Isabella)
 - **Moderate TILE_IMPROVEMENT (6-8):** Balanced leaders who develop infrastructure alongside other priorities (Catherine, Pedro, most default leaders)
 - **Low TILE_IMPROVEMENT (4-5):** Expansion or military-focused leaders who may leave tiles unimproved in favor of rapid expansion or military buildup (Genghis Khan)
@@ -516,16 +537,19 @@ This creates a spectrum of AI personalities:
 ## Typical Synergies
 
 **Infrastructure Specialist (High TILE_IMPROVEMENT + High GOLD + High PRODUCTION):**
+
 - Maximizes economic output through comprehensive tile development
 - Strong focus on gold-generating luxuries and production-enhancing mines
 - Example: Catherine, Kamehameha
 
 **Balanced Developer (Moderate TILE_IMPROVEMENT + Moderate GROWTH + Moderate EXPANSION):**
+
 - Balances territorial expansion with infrastructure development
 - Improves tiles as cities expand naturally
 - Example: Most default leaders
 
 **Rapid Expansionist (Low TILE_IMPROVEMENT + High EXPANSION + High OFFENSE):**
+
 - Prioritizes claiming territory over improving it
 - May leave many tiles unimproved while pursuing new settlements or conquests
 - Example: Genghis Khan

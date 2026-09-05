@@ -22,8 +22,7 @@ All documentation lives under **[docs/](docs/README.md)**. Pick the player door 
 
 ## License
 
-Author: John Chen (with assistance from Claude Code).
-Assistant Professor, University of Arizona, College of Information Science
+Author: John Chen (with assistance from Claude Code). Assistant Professor, University of Arizona, College of Information Science
 
 Different licenses are used for submodules:
 

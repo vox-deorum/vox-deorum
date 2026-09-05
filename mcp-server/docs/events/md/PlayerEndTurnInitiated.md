@@ -14,9 +14,9 @@ The trigger occurs after delayed visibility processing but before the `PlayerDon
 
 The event passes one parameter to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| PlayerID | int | The ID of the player whose turn is ending (`GetID()`) |
+| Parameter | Type | Description                                           |
+| --------- | ---- | ----------------------------------------------------- |
+| PlayerID  | int  | The ID of the player whose turn is ending (`GetID()`) |
 
 # Event Details
 
@@ -39,6 +39,7 @@ This event is one of the first notifications that a player's turn is ending, pre
 **Conditional Compilation**: The event is only triggered when `MOD_EVENTS_RED_TURN` is enabled
 
 **Execution Context**: The event fires early in the turn ending phase, specifically:
+
 - After delayed visibility updates (`flipVisibility`) have been processed
 - Before the `PlayerDoneTurn` event
 - Before end-turn blocking is cleared

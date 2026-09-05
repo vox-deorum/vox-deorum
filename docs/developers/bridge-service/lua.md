@@ -3,9 +3,9 @@
 Lua is how the bridge actually reaches into the game. Traffic flows in two directions, and the bridge has a manager for each:
 
 | Direction | Manager | Source | What it does |
-|---|---|---|---|
-| External services call *into* the game's Lua | [Lua manager](#calling-into-the-game) | `lua-manager.ts` | Runs Lua functions and scripts inside the game, and mirrors the game's function registry. |
-| The game's Lua calls *out* to external services | [external manager](#calling-out-of-the-game) | `external-manager.ts` | Registers outbound HTTP endpoints and dispatches calls to them. |
+| --- | --- | --- | --- |
+| External services call _into_ the game's Lua | [Lua manager](#calling-into-the-game) | `lua-manager.ts` | Runs Lua functions and scripts inside the game, and mirrors the game's function registry. |
+| The game's Lua calls _out_ to external services | [external manager](#calling-out-of-the-game) | `external-manager.ts` | Registers outbound HTTP endpoints and dispatches calls to them. |
 
 Both ride the same DLL connection described in [connection.md](connection.md); this page covers what each manager does with it. Exact request and response shapes are in [api-reference.md](../../../bridge-service/docs/api-reference.md).
 

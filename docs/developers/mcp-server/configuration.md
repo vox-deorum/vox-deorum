@@ -28,7 +28,7 @@ A `config.json` looks like this:
 ## Settings
 
 | Setting | Default | Environment variable | Meaning |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `transport.type` | `http` | `MCP_TRANSPORT` | `http` or `stdio`. See [overview.md](overview.md) for the difference. |
 | `transport.port` | `4000` | `MCP_PORT` | Port for the HTTP transport. Set it to `0` to let the operating system pick a free one. Ignored under stdio. |
 | `transport.host` | `127.0.0.1` | `MCP_HOST` | Bind address. Use `0.0.0.0` to accept connections from other machines. |
@@ -75,7 +75,7 @@ Two environment variables are one-way, because of how `config.ts` combines them:
 Several values a reader might go looking for are fixed in the source. They are listed here so they are not mistaken for missing knobs; change them only by editing the code.
 
 | Value | What it controls | Where |
-|---|---|---|
+| --- | --- | --- |
 | 50 calls | Maximum Lua calls per queued batch | `mcp-server/src/bridge/manager.ts` |
 | 25 calls | Backlog at which the server auto-pauses the game | `mcp-server/src/bridge/manager.ts` |
 | 1 second | Delay before retrying a dropped event stream | `mcp-server/src/bridge/manager.ts` |

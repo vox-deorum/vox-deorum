@@ -37,12 +37,14 @@ The boolean parameter allows handlers to distinguish between upgrades earned thr
 # Technical Details
 
 **Source Files**:
+
 - `CvGameCoreDLL_Expansion2/CvUnit.cpp` (line 14314) - Standard upgrades
 - `CvGameCoreDLL_Expansion2/CvPlayer.cpp` (line 12760) - Goody hut upgrades
 
 The event is triggered using the `LuaSupport::CallHook` mechanism with the following parameters:
 
 **Standard Upgrade**:
+
 ```cpp
 args->Push(((int)getOwner()));  // Player ID
 args->Push(GetID());            // Old unit ID
@@ -51,8 +53,9 @@ args->Push(false);              // bGoodyHut = false
 ```
 
 **Goody Hut Upgrade**:
+
 ```cpp
-args->Push(GetID());            // Player ID  
+args->Push(GetID());            // Player ID
 args->Push(pUnit->GetID());     // Old unit ID
 args->Push(pNewUnit->GetID());  // New unit ID
 args->Push(true);               // bGoodyHut = true

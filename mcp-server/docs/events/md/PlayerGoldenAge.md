@@ -16,7 +16,7 @@ Both triggers occur when the Golden Age status actually changes (when `bOldGolde
 The event passes three parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | PlayerID | int | The ID of the player whose Golden Age status changed (`GetID()`) |
 | IsStarting | bool | Whether the Golden Age is starting (true) or ending (false) |
 | TurnChange | int | The number of turns being added/subtracted (0 when ending) |
@@ -26,13 +26,15 @@ The event passes three parameters to event handlers:
 The event provides comprehensive information about Golden Age transitions:
 
 **Golden Age Starting:**
+
 - `PlayerID`: The player entering the Golden Age
 - `IsStarting`: Set to `true`
 - `TurnChange`: The number of turns being added (`iChange` parameter)
 
 **Golden Age Ending:**
+
 - `PlayerID`: The player exiting the Golden Age
-- `IsStarting`: Set to `false` 
+- `IsStarting`: Set to `false`
 - `TurnChange`: Always `0` when ending
 
 The event occurs immediately after the Golden Age status change is detected but before city yield updates and notifications are processed.
@@ -42,6 +44,7 @@ The event occurs immediately after the Golden Age status change is detected but 
 **Source File**: `F:\Minor Solutions\vox-deorum\civ5-dll\CvGameCoreDLL_Expansion2\CvPlayer.cpp`
 
 **Trigger Locations**:
+
 - Line 24265: Golden Age ending in `CvPlayer::changeGoldenAgeTurns`
 - Line 24376: Golden Age starting in `CvPlayer::changeGoldenAgeTurns`
 
@@ -50,6 +53,7 @@ The event occurs immediately after the Golden Age status change is detected but 
 **Conditional Compilation**: The event is only triggered when `MOD_EVENTS_GOLDEN_AGE` is enabled
 
 **Execution Context**: The event fires during Golden Age status transitions, specifically:
+
 - After the golden age turn count has been modified
 - After the status change has been detected (`bOldGoldenAge != isGoldenAge()`)
 - After map yield updates have been triggered

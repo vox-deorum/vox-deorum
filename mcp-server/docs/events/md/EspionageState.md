@@ -35,18 +35,14 @@ The event enables external systems to maintain synchronized understanding of spy
 
 # Technical Details
 
-**Event Name:** `EspionageState`
-**Hook Type:** Game event invoke hook
-**Parameters Count:** 5
-**Parameter Types:**
+**Event Name:** `EspionageState` **Hook Type:** Game event invoke hook **Parameters Count:** 5 **Parameter Types:**
+
 - Spy Owner ID (integer)
 - Spy Index (integer)
 - Spy State (integer/enum)
 - City X Coordinate (integer)
 - City Y Coordinate (integer)
 
-**Source File:** `CvGameCoreDLL_Expansion2/CvEspionageClasses.cpp`
-**Line Number:** 286
-**Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_EspionageState, (int) eSpyOwner, iSpyIndex, (int) eSpyState, m_iCityX, m_iCityY);`
+**Source File:** `CvGameCoreDLL_Expansion2/CvEspionageClasses.cpp` **Line Number:** 286 **Implementation:** `GAMEEVENTINVOKE_HOOK(GAMEEVENT_EspionageState, (int) eSpyOwner, iSpyIndex, (int) eSpyState, m_iCityX, m_iCityY);`
 
 The event is triggered within the `CvEspionageSpy::SetSpyState` method, ensuring that every spy state transition is communicated to external monitoring systems. The spy state is stored internally (`m_eSpyState = eSpyState`) before the event notification is sent.

@@ -14,11 +14,11 @@ The trigger occurs after the city has been fully set up with initial buildings, 
 
 The event passes three parameters to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| PlayerID | int | The ID of the player who founded the city (`GetID()`) |
-| X | int | The X coordinate of the city's location (`pCity->getX()`) |
-| Y | int | The Y coordinate of the city's location (`pCity->getY()`) |
+| Parameter | Type | Description                                               |
+| --------- | ---- | --------------------------------------------------------- |
+| PlayerID  | int  | The ID of the player who founded the city (`GetID()`)     |
+| X         | int  | The X coordinate of the city's location (`pCity->getX()`) |
+| Y         | int  | The Y coordinate of the city's location (`pCity->getY()`) |
 
 # Event Details
 
@@ -39,6 +39,7 @@ The event occurs regardless of whether the player is human or AI, and after appr
 **Event System**: Uses the Lua scripting hook system via `LuaSupport::CallHook()`
 
 **Execution Context**: The event fires at the very end of the city initialization process, after:
+
 - Initial buildings have been granted
 - AI strategies have been set for the city
 - Human players have been prompted for production and tech choices

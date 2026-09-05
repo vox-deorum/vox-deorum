@@ -16,7 +16,7 @@ The trigger occurs within the religious follower change processing system in the
 The event passes four parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | Owner | PlayerTypes | The ID of the player who owns the city |
 | Religion | ReligionTypes | The type of religion that has become the new majority |
 | X | int | The X coordinate of the city on the game map |
@@ -38,6 +38,7 @@ The event occurs after the city's religious state has been fully updated to refl
 **Source File**: `CvGameCoreDLL_Expansion2/CvReligionClasses.cpp`
 
 **Trigger Location**:
+
 - Line 5716: Religious conversion in the religious follower change processing system
 
 **Event System**: Uses the Lua scripting hook system via `LuaSupport::CallHook()`

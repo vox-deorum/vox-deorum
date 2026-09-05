@@ -19,7 +19,7 @@ The event is only fired when the `MOD_EVENTS_CITY_CAPITAL` custom mod option is 
 The event passes three integer parameters to registered event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `iPlayer` | int | The player ID whose capital is changing |
 | `iNewCapital` | int | The city ID of the new capital city |
 | `iOldCapital` | int | The city ID of the previous capital city, or -1 if no previous capital existed |
@@ -62,37 +62,46 @@ When this event fires, the following changes have already occurred:
 The event is triggered from multiple locations in the Community Patch DLL:
 
 ### CvCity.cpp (Line 883)
+
 ```cpp
 if (iI == iCapitalBuilding && MOD_EVENTS_CITY_CAPITAL)
 {
     GAMEEVENTINVOKE_HOOK(GAMEEVENT_CapitalChanged, getOwner(), GetID(), -1);
 }
 ```
+
 Triggered when a civilization's first city is founded and receives free civilization buildings. This occurs specifically when the Palace (capital building) is added to the first city, establishing it as the capital.
 
 ### CvPlayer.cpp (Line 4153)
+
 ```cpp
 if (MOD_EVENTS_CITY_CAPITAL)
     GAMEEVENTINVOKE_HOOK(GAMEEVENT_CapitalChanged, GetID(), pNewCity->GetID(), (pCurrentCapital ? pCurrentCapital->GetID() : -1));
 ```
+
 Triggered during city acquisition when establishing a new capital.
 
 ### CvPlayer.cpp (Lines 4517, 4533)
+
 ```cpp
 if (MOD_EVENTS_CITY_CAPITAL)
     GAMEEVENTINVOKE_HOOK(GAMEEVENT_CapitalChanged, GetID(), pNewCity->GetID(), -1);
 ```
+
 Triggered during city acquisition processes where no old capital reference is available.
 
 ### CvPlayer.cpp (Line 11400)
+
 ```cpp
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_CapitalChanged, GetID(), pBestCity->GetID(), (pOldCapital ? pOldCapital->GetID() : -1));
 ```
+
 Triggered during automatic capital relocation (via `findNewCapital()` function).
 
 ## Event Definition
 
 The event is defined in the Community Patch DLL as:
+
 ```cpp
 #define GAMEEVENT_CapitalChanged "CapitalChanged", "iii"
 ```

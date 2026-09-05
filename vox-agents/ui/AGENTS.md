@@ -5,21 +5,24 @@ Vue 3 + TypeScript UI. Follow existing patterns, don't reinvent.
 ## Core Principles
 
 ### Look Before You Leap
+
 - **Check existing components** in `components/` before creating new ones
 - **Review existing styles** in `styles/` (global, panel, states, data-table, civ5-theme)
 - **Use existing stores** in `stores/` for state management patterns
 - **Import types** from `@/utils/types` which re-exports backend types
 
 ### Type Safety
+
 ```typescript
 // All types come from one place
-import type { VoxContext, ToolCall, AIMessage } from '@/utils/types';
+import type { VoxContext, ToolCall, AIMessage } from "@/utils/types";
 
 // Never use any or unknown
 // Always use defineProps<T>() and defineEmits<T>()
 ```
 
 ### PrimeVue First
+
 - Use PrimeVue components and PrimeFlex utilities
 - Check [PrimeVue docs](https://primevue.org) before custom solutions
 - Prefer component props over custom CSS
@@ -28,6 +31,7 @@ import type { VoxContext, ToolCall, AIMessage } from '@/utils/types';
 - **Spacing**: Avoid excessive padding/margins - prefer compact layouts using existing stylesheet spacing
 
 ### State Patterns
+
 - **Stores**: Reactive refs exported directly (see `stores/health.ts`)
 - **SSE**: Auto-reconnect with exponential backoff (see `stores/logs.ts`)
 - **API**: Centralized client with typed responses (see `api/client.ts`)
@@ -37,12 +41,14 @@ import type { VoxContext, ToolCall, AIMessage } from '@/utils/types';
 **IMPORTANT**: Always reuse existing styles from `src/styles/` rather than creating duplicates.
 
 ### Available Stylesheets
+
 - `global.css` — `.section-container` (card sections with gap)
 - `data-table.css` — `.data-table`, `.table-header`, `.table-body`, `.table-row`, `.table-empty`, `.col-fixed-{60-250}`, `.col-expand`, `.text-truncate`, `.text-wrap`, `.text-muted`, `.text-small`
 - `chat.css` — Chat message and interface styles
 - `states.css` — `.loading-container`, `.error-container`, `.empty-state`
 
 ### Rules
+
 1. Check all shared stylesheets before creating any new styles
 2. Use `.table-empty` for all empty states
 3. Use `.section-container` for views with multiple card sections
@@ -53,18 +59,21 @@ import type { VoxContext, ToolCall, AIMessage } from '@/utils/types';
 **IMPORTANT**: Always use PrimeVue 4's actual CSS variables, not guessed names.
 
 ### Core Variables
-| Variable | Purpose |
-|----------|---------|
-| `--p-text-color` | Primary text |
-| `--p-text-muted-color` | Secondary/muted text |
-| `--p-text-hover-color` | Text hover state |
-| `--p-primary-color` | Theme primary (amber) |
-| `--p-primary-contrast-color` | Text on primary background |
-| `--p-highlight-background` | Highlighted element background |
-| `--p-highlight-color` | Highlighted element text |
+
+| Variable                     | Purpose                        |
+| ---------------------------- | ------------------------------ |
+| `--p-text-color`             | Primary text                   |
+| `--p-text-muted-color`       | Secondary/muted text           |
+| `--p-text-hover-color`       | Text hover state               |
+| `--p-primary-color`          | Theme primary (amber)          |
+| `--p-primary-contrast-color` | Text on primary background     |
+| `--p-highlight-background`   | Highlighted element background |
+| `--p-highlight-color`        | Highlighted element text       |
 
 ### Content Backgrounds
+
 **Use `--p-content-*` for content areas** — they adapt to dark mode:
+
 - `--p-content-background` — Main content area
 - `--p-content-hover-background` — Hovered content
 - `--p-content-border-color` — Content borders
@@ -73,15 +82,19 @@ import type { VoxContext, ToolCall, AIMessage } from '@/utils/types';
 **DO NOT use `--p-surface-0` for content backgrounds** — it stays white in dark mode!
 
 ### Surface System
+
 `--p-surface-{0-950}` scale for UI layers (not content):
+
 - `0` pure white, `50` lightest gray, `100`/`200` light grays, `900` dark gray
 
 ### Color Palette
-All colors available as `--p-{color}-{50-950}`:
-amber, blue, red, green, yellow, orange, slate, gray, zinc, neutral, stone, cyan, teal, emerald, lime, purple, violet, indigo, sky, pink, rose, fuchsia
+
+All colors available as `--p-{color}-{50-950}`: amber, blue, red, green, yellow, orange, slate, gray, zinc, neutral, stone, cyan, teal, emerald, lime, purple, violet, indigo, sky, pink, rose, fuchsia
 
 ### Dark Mode
+
 Use `:root[data-theme="dark"]` selector for dark mode overrides:
+
 ```css
 :root[data-theme="dark"] .message {
   background: var(--p-surface-900);
@@ -89,6 +102,7 @@ Use `:root[data-theme="dark"]` selector for dark mode overrides:
 ```
 
 ### Usage Examples
+
 ```css
 /* Correct */
 .log-header {
@@ -113,7 +127,9 @@ Use `:root[data-theme="dark"]` selector for dark mode overrides:
 ```
 
 ### Chat Styles
+
 Message type colors:
+
 - User: `--p-primary-50` bg, `--p-primary-500` border
 - Assistant: default surface colors
 - System: muted colors, italic text, `--p-gray-500` border
@@ -124,6 +140,7 @@ Dark mode shadows: use `rgba(0, 0, 0, 0.4)` instead of theme shadow variables.
 ## Component Patterns
 
 ### Loading/Error/Empty States
+
 ```vue
 <!-- Use existing CSS classes from styles/states.css -->
 <div v-if="loading" class="loading-container">
@@ -143,6 +160,7 @@ Dark mode shadows: use `rgba(0, 0, 0, 0.4)` instead of theme shadow variables.
 ```
 
 ### Polling & Real-Time Data
+
 ```vue
 <script setup>
 // Poll data while dialog is visible
@@ -166,6 +184,7 @@ onUnmounted(() => {
 ```
 
 ### Real Examples to Follow
+
 - **LogViewer.vue** - SSE streaming, filtering, virtual scroll
 - **DashboardView.vue** - Cards, health monitoring, state patterns
 - **TelemetryView.vue** - DataTable with pagination, trace navigation
@@ -173,6 +192,7 @@ onUnmounted(() => {
 - **AIMessagesViewer.vue** - Message rendering, tool calls display
 
 ## File Structure
+
 ```
 src/
 ├── api/          # API client, SSE utils
@@ -184,12 +204,14 @@ src/
 ```
 
 ## Performance Guidelines
+
 - Virtual scroll for lists > 100 items
 - Debounce search inputs (300ms)
 - Buffer limits: 1000 logs, 100 telemetry spans
 - Lazy load routes with `() => import()`
 
 ## Integration
+
 - Backend types via `@/utils/types`
 - Winston logs via SSE (`stores/logs.ts`)
 - Config from `config.json` via API
@@ -198,11 +220,13 @@ src/
 ## Data Display Patterns
 
 ### Backend/Frontend Separation
+
 - **Backend**: Send complete data structures without pre-formatting
 - **Frontend**: Handle formatting, filtering, sorting for display
 - Example: Backend returns full `PlayersReport`, frontend filters to major players and formats values
 
 ## Commands
+
 ```bash
 cd vox-agents/ui
 npm run dev           # Dev server with HMR
@@ -213,13 +237,10 @@ cd vox-agents
 npm run webui:dev     # Backend + frontend together
 ```
 
-**Type-checking gate**: always verify with `npm run type-check` before considering UI changes
-done. It runs `vue-tsc --build`, which follows the project references and checks `tests/` too.
-Do **not** rely on a bare `vue-tsc --noEmit` — it can pass while the build fails, because it
-skips the test files (test-only errors like `Array.at` or implicit `any` in callbacks only
-surface in the `--build` check).
+**Type-checking gate**: always verify with `npm run type-check` before considering UI changes done. It runs `vue-tsc --build`, which follows the project references and checks `tests/` too. Do **not** rely on a bare `vue-tsc --noEmit` — it can pass while the build fails, because it skips the test files (test-only errors like `Array.at` or implicit `any` in callbacks only surface in the `--build` check).
 
 ## Don'ts
+
 - Don't use `any` or `unknown` types
 - Don't create styles when PrimeFlex has it
 - Don't poll when SSE is available
@@ -232,6 +253,7 @@ surface in the `--build` check).
 - Don't hardcode colors like `rgba(0,0,0,0.15)` — use PrimeVue theme variables
 
 ## When Adding Features
+
 1. Check PrimeVue catalog first
 2. Look at existing components for patterns (especially similar ones)
 3. Use types from `@/utils/types`

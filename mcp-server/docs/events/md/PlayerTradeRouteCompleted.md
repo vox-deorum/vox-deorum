@@ -5,6 +5,7 @@ The PlayerTradeRouteCompleted event is triggered when a trade route successfully
 # Event Triggers
 
 This event is triggered when:
+
 - A trade route successfully reaches its destination city
 - Both origin and destination cities are valid and accessible
 - The trade connection is about to be cleared from the system
@@ -15,7 +16,7 @@ The event fires just before the trade route is wiped from the active connections
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `pOriginCity->getOwner()` | PlayerID | The player ID who owns the origin city of the completed trade route |
 | `pOriginCity->GetID()` | CityID | The unique identifier of the origin city where the trade route started |
 | `pDestCity->getOwner()` | PlayerID | The player ID who owns the destination city of the completed trade route |
@@ -28,6 +29,7 @@ The event fires just before the trade route is wiped from the active connections
 The PlayerTradeRouteCompleted event marks the successful completion of a trade route cycle in Civilization V. When a trade unit reaches its destination, this event captures all the essential information about the completed route before the game system cleans up the connection and prepares for the next cycle.
 
 Key information provided by this event:
+
 - **Route Participants**: Both origin and destination cities with their respective owners
 - **Route Characteristics**: The domain (land/sea) and connection type of the completed route
 - **Economic Context**: Information about which players benefited from the trade relationship
@@ -41,6 +43,7 @@ The event occurs at a critical transition point - after the route has delivered 
 **Source File**: `CvGameCoreDLL_Expansion2/CvTradeClasses.cpp` (Line 2587)
 
 **Execution Context**: The event is invoked:
+
 - After successful destination validation (both cities exist and are accessible)
 - Before the trade route is cleared (`pTrade->ClearTradeRoute(ui)`)
 - Before a new trade unit is created to replace the completed route

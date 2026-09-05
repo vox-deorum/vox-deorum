@@ -17,8 +17,9 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 ## Testing
 
 ### Commands
+
 | Command | What it runs |
-|---------|-------------|
+| --- | --- |
 | `npm test` | Default in-process mock tier |
 | `npm run test:mock` | Default in-process mock tier |
 | `npm run test:watch` | Watch mode for the mock tier |
@@ -29,12 +30,14 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 | `npm run test:ui` | Vitest browser UI |
 
 ### Test Pathways
+
 - **Mock** (`tests/mock/**`): Default in-process mock tier. Telepathist coverage lives in `tests/mock/telepathist` and can skip when recorded telemetry is unavailable.
 - **Real** (`tests/real/**`): Reserved for a future out-of-process real MCP Server and mock Bridge bottom. `npm run test:real` currently passes with no tests.
 - **Game** (`tests/live/game/**`): Live Civilization V tier. Launches CivilizationV.exe with long timeouts and sequential execution through `singleFork: true`.
 - **OBS** (`tests/live/obs/**`): Live OBS tier. Requires OBS Studio with its WebSocket server and skips gracefully when OBS is unreachable.
 
 ### Test Rules
+
 - **Don't touch OBS tests** unless changing OBS-related code (`obs-manager.ts`, `ProductionMode`)
 - **Don't touch game tests** unless changing `VoxCivilization` or `ProcessManager`
 - Use Vitest (not Jest). Test files: `tests/**/*.test.ts`, setup: `tests/setup.ts`
@@ -91,6 +94,7 @@ VoxAgent (Base)
 ```
 
 ### Creating New Agents
+
 1. Choose base class (Briefer, Strategist, Analyst, Librarian, or Envoy)
 2. Define parameter types (input, output, store)
 3. Implement lifecycle hooks: `getModel()`, `getSystem()`, `getActiveTools()`, `getExtraTools()`, `getInitialMessages()`, `prepareStep()`, `stopCheck()`, `getOutput()`, `postprocessOutput()`
@@ -98,8 +102,7 @@ VoxAgent (Base)
 
 ### Diplomacy & Envoy Layout
 
-`src/envoy/` is everything about envoy *agents*; `src/utils/diplomacy/` is the chat-route and
-conversation plumbing. Keep new files on the correct side of that line.
+`src/envoy/` is everything about envoy _agents_; `src/utils/diplomacy/` is the chat-route and conversation plumbing. Keep new files on the correct side of that line.
 
 ```
 src/envoy/          envoy.ts, live-envoy.ts (base classes)
@@ -115,8 +118,7 @@ src/utils/diplomacy/  constants.ts (cross-cutting constants)
   ingame/           ingame-bridge, notify, civ5-markup
 ```
 
-Dependency direction is `envoy/` → `utils/diplomacy/`; never the reverse. `tests/mock/{diplomacy,envoy,web}/`
-mirror these subfolders. No `index.ts` barrels: import the specific module.
+Dependency direction is `envoy/` → `utils/diplomacy/`; never the reverse. `tests/mock/{diplomacy,envoy,web}/` mirror these subfolders. No `index.ts` barrels: import the specific module.
 
 ## Dual Mode
 
@@ -126,23 +128,29 @@ mirror these subfolders. No `index.ts` barrels: import the specific module.
 ## Infrastructure
 
 ### ProcessManager (`src/infra/process-manager.ts`)
+
 Singleton signal handler (SIGINT, SIGTERM, SIGBREAK, SIGHUP). `processManager.register(name, hook)`: hooks execute in insertion order during shutdown. All console entry points register here.
 
 ### ObsManager (`src/infra/obs-manager.ts`)
+
 Controls OBS Studio for recording/livestreaming via `obs-websocket-js` (WebSocket v5).
+
 - Lifecycle: `initialize()` → `setGameID()` → `startProduction()` → `pauseProduction()`/`resumeProduction()` → `stopProduction()` → `destroy()`
 - Creates game capture scenes, organizes recordings under `{baseRecordDir}/{gameID}/`
 - Health monitoring with bounded recovery (max 3 attempts). Self-registers with ProcessManager
 - See [media.md](../docs/developers/vox-agents/media.md) for OBS capture and the narrators pipeline
 
 ### ProductionController (`src/infra/production-controller.ts`)
+
 Wraps ObsManager to add segment-based recording driven by game render events.
+
 - Recording: segments start on `PlayerPanelSwitch`, stop 10s after first `AnimationStarted` (estimated end)
 - Livestream: pass-through to ObsManager
 - Writes `segments.jsonl` with faithful wall-clock timestamps per segment
 - Strategist session always calls through this, so no mode branching is needed
 
 ### ProductionMode
+
 - `'none'` | `'test'` | `'livestream'` | `'recording'`
 - `isVisualMode(mode?)`: true for test/livestream/recording (play animations)
 - `isObsMode(mode?)`: true for livestream/recording (use OBS)
@@ -170,6 +178,7 @@ Wraps ObsManager to add segment-based recording driven by game render events.
 ## Documentation Maintenance
 
 After each successful implementation, update relevant docs:
+
 - **AGENTS.md** if new patterns or conventions were introduced
 - **README.md** if the public-facing interface changed
 - Keep docs concise. Describe what exists, not implementation details that get outdated

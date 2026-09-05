@@ -5,6 +5,7 @@ This document describes the communication protocol flows between the Community P
 ## Overview
 
 The Bridge Service acts as a communication hub using three primary channels:
+
 - **Named Pipe**: IPC connection to the Community Patch DLL (using node-ipc)
 - **HTTP REST API**: Endpoints for external services to call Lua functions and manage registrations
 - **Server-Sent Events (SSE)**: Real-time event streaming to external clients
@@ -42,6 +43,7 @@ External Service                Bridge Service                  Community Patch 
 ```
 
 **Message Details:**
+
 - Request format: See [api-reference.md](api-reference.md#execute-single-function)
 - IPC messages: See [message-types.md](message-types.md#lua-operations)
 - Error codes: See [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
@@ -69,6 +71,7 @@ External Service                Bridge Service                  Community Patch 
 ```
 
 **Performance:**
+
 - Batch API reduces IPC overhead by up to 10x
 - Recommended for bulk operations
 - Results maintain request order
@@ -114,6 +117,7 @@ External Service                Bridge Service                  Community Patch 
 ```
 
 **Post-Registration:**
+
 - DLL creates Lua bindings for `Game.CallExternal(name, args)`
 - Function persists until explicitly unregistered or DLL disconnects
 - Automatically re-registered on Bridge→DLL reconnection
@@ -141,10 +145,12 @@ Game Lua Code                   Community Patch DLL              Bridge Service 
 ```
 
 **Execution Modes:**
+
 - **Sync** (`async: false`): Lua code blocks until response received
 - **Async** (`async: true`): Lua code continues, callback invoked on response
 
 **Timeout Handling:**
+
 - Default: 5 seconds (configurable per function)
 - On timeout: Returns error to Lua, function remains registered
 - See [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
@@ -167,18 +173,19 @@ Game Event Handler              Community Patch DLL              Bridge Service 
 ```
 
 **Event Batching:**
+
 - Events buffered for 50ms or until 100 events accumulated
 - Critical events (e.g., dll_status) flush immediately
 - Improves throughput for high-frequency events
 
 **Event ID Format:**
+
 - Structure: `(turn * 1000000) + eventSequence`
 - Example: Turn 1, Event 1 = `1000001`
 - Example: Turn 123, Event 4567 = `123004567`
 - Sequence resets each turn, persists across saves
 
-**Blacklisted Events:**
-High-frequency or low-value events are filtered. See [message-types.md](message-types.md#game-event) for complete list.
+**Blacklisted Events:** High-frequency or low-value events are filtered. See [message-types.md](message-types.md#game-event) for complete list.
 
 ### 4. Game Pause Control
 
@@ -204,17 +211,20 @@ External Service                Bridge Service                  Community Patch 
 ```
 
 **Auto-Pause Behavior:**
+
 - Bridge tracks which players should trigger pause
 - DLL blocks message processing when paused player is active
 - `PlayerDoTurn` event triggers pause check
 - `PlayerDoneTurn` event can trigger resume (if next player not paused)
 
 **Manual Pause:**
+
 - `POST /external/pause`: Manual pause (prevents auto-resume)
 - `POST /external/resume`: Manual resume
 - Manual pause takes precedence over auto-pause
 
 **Pause Syncing:**
+
 - Bridge syncs pause state with DLL via IPC messages
 - DLL auto-clears paused players on disconnect (prevents stuck game)
 - Bridge clears paused players on DLL disconnect
@@ -256,6 +266,7 @@ When the DLL receives pause/unpause messages, it maintains an internal set of pa
 All API endpoints use standardized response format. See [api-reference.md](api-reference.md#response-format) for details.
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -264,6 +275,7 @@ All API endpoints use standardized response format. See [api-reference.md](api-r
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -282,6 +294,7 @@ All API endpoints use standardized response format. See [api-reference.md](api-r
 Complete error code documentation: [error-handling.md](../../docs/developers/bridge-service/error-handling.md)
 
 Quick reference:
+
 - **DLL_DISCONNECTED**: Bridge lost connection to game DLL
 - **LUA_EXECUTION_ERROR**: Lua script or function execution failed
 - **CALL_TIMEOUT**: Function call exceeded timeout limit

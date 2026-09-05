@@ -36,7 +36,7 @@ These map directly onto the bridge's pause manager; the game-side semantics live
 
 ## Consuming the event stream
 
-The same manager is how events come *in*. It subscribes to the bridge's event feed, **preferring the local named event pipe** and **falling back to Server-Sent Events**. It tries the pipe first and switches to SSE on any pipe error, but never downgrades a pipe that is working. Whether the pipe is attempted at all is a configuration choice; see [configuration.md](configuration.md).
+The same manager is how events come _in_. It subscribes to the bridge's event feed, **preferring the local named event pipe** and **falling back to Server-Sent Events**. It tries the pipe first and switches to SSE on any pipe error, but never downgrades a pipe that is working. Whether the pipe is attempted at all is a configuration choice; see [configuration.md](configuration.md).
 
 Messages on the pipe are framed by a delimiter and reassembled from a buffer, since a single read may contain several events or half of one. Each complete message is parsed and re-emitted as a `gameEvent`. What happens to those events next (validation, visibility analysis, storage) is [events.md](events.md).
 

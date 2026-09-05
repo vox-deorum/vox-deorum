@@ -10,8 +10,8 @@ All IPC messages extend the base `IPCMessage` interface:
 
 ```typescript
 interface IPCMessage {
-  type: string;      // Message type identifier
-  id?: string;       // Optional request ID for tracking request/response pairs
+  type: string; // Message type identifier
+  id?: string; // Optional request ID for tracking request/response pairs
 }
 ```
 
@@ -33,6 +33,7 @@ interface IPCMessage {
 ```
 
 **Example:**
+
 ```json
 {
   "type": "lua_call",
@@ -55,6 +56,7 @@ interface IPCMessage {
 ```
 
 **Example:**
+
 ```json
 {
   "type": "lua_execute",
@@ -82,6 +84,7 @@ interface IPCMessage {
 ```
 
 **Success Example:**
+
 ```json
 {
   "type": "lua_response",
@@ -92,6 +95,7 @@ interface IPCMessage {
 ```
 
 **Error Example:**
+
 ```json
 {
   "type": "lua_response",
@@ -122,6 +126,7 @@ Sent when a Lua function is registered and becomes callable.
 ```
 
 **Example:**
+
 ```json
 {
   "type": "lua_register",
@@ -172,6 +177,7 @@ Notifies the DLL that an external HTTP endpoint is now available as a Lua functi
 ```
 
 **Example:**
+
 ```json
 {
   "type": "external_register",
@@ -210,12 +216,13 @@ Lua code calls an external function, DLL forwards the request to Bridge.
 ```
 
 **Example:**
+
 ```json
 {
   "type": "external_call",
   "id": "ext-call-001",
   "function": "AnalyzeThreat",
-  "args": {"unitId": 5, "playerId": 1},
+  "args": { "unitId": 5, "playerId": 1 },
   "async": true
 }
 ```
@@ -239,16 +246,18 @@ Bridge returns the external HTTP endpoint result to the DLL.
 ```
 
 **Success Example:**
+
 ```json
 {
   "type": "external_response",
   "id": "ext-call-001",
   "success": true,
-  "result": {"threatLevel": "high", "recommendation": "retreat"}
+  "result": { "threatLevel": "high", "recommendation": "retreat" }
 }
 ```
 
 **Error Example:**
+
 ```json
 {
   "type": "external_response",
@@ -276,6 +285,7 @@ Register a player for auto-pause (game pauses when this player's turn starts).
 ```
 
 **Example:**
+
 ```json
 {
   "type": "pause_player",
@@ -328,6 +338,7 @@ Broadcast game events to all connected clients via SSE and event pipe.
 ```
 
 **Example:**
+
 ```json
 {
   "type": "game_event",
@@ -342,6 +353,7 @@ Broadcast game events to all connected clients via SSE and event pipe.
 ```
 
 **Event ID Format:**
+
 - Formula: `(turn * 1000000) + eventSequence`
 - Turn 1, Event 1: `1000001`
 - Turn 123, Event 4567: `123004567`
@@ -349,6 +361,7 @@ Broadcast game events to all connected clients via SSE and event pipe.
 - Event sequence persists between saves/loads
 
 **Payload Structure:**
+
 - Properties are defined by event schema in C++
 - Arrays are sent as: count property + array items
 - Boolean properties marked with `!` prefix in schema are converted from int
@@ -430,11 +443,13 @@ Multiple messages can be sent in a single IPC write:
 **Format:** `message1!@#$%^!message2!@#$%^!message3`
 
 **Example:**
+
 ```
 {"type":"lua_call","function":"GetUnit","args":[1],"id":"uuid1"}!@#$%^!{"type":"lua_call","function":"GetCity","args":[2],"id":"uuid2"}
 ```
 
 **Benefits:**
+
 - Reduces IPC overhead by up to 10x
 - Critical for performance with high-frequency operations
 - Automatic batching in Bridge Service for batch API endpoints

@@ -17,7 +17,7 @@ The event fires during government adoption processes, which may include:
 The event passes two parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | PlayerID | PlayerTypes | The ID of the player who adopted the government |
 | GovernmentType | int | The ID/type of the government that was adopted |
 
@@ -42,6 +42,7 @@ Government systems typically influence various aspects of civilization managemen
 **Event System**: Uses the game event system via `GAMEEVENTINVOKE_HOOK(GAMEEVENT_PlayerAdoptsGovernment)`
 
 **Government Context**: Government systems in the game typically:
+
 - Provide significant bonuses to various aspects of civilization management
 - May have prerequisites in terms of technology, culture, or other advancement
 - Can affect policy costs, unit maintenance, city growth, or economic efficiency

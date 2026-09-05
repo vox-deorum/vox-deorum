@@ -1,6 +1,6 @@
 # civ5-mod: Overview
 
-`civ5-mod` is the Civilization V mod layer that sits directly on top of the [civ5-dll](../civ5-dll/). The DLL is the C++ gamecore that *can* talk to the outside world; the mod is the Lua, SQL, and XML package that *switches that capability on* and provides the in-game surfaces a player interacts with.
+`civ5-mod` is the Civilization V mod layer that sits directly on top of the [civ5-dll](../civ5-dll/). The DLL is the C++ gamecore that _can_ talk to the outside world; the mod is the Lua, SQL, and XML package that _switches that capability on_ and provides the in-game surfaces a player interacts with.
 
 The mod contains no C++ of its own. It is an ordinary Civ V mod that the game's mod system loads: database edits, a map script, and a set of in-game UI contexts.
 

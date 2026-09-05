@@ -79,15 +79,15 @@ Each family supplies its successful completion rule and additional abort checks:
 
 Move tags record work this turn. Persistent operations, Army IDs, directives, and saved targets hold durable intent. **Activity state** is also durable: missions set a stance such as sleep, heal, sentry, intercept, or an unfinished mission. `CvUnit::doTurn` applies the matching wake checks so a controller can claim the unit again when appropriate.
 
-| Activity | Wake behavior |
-| --- | --- |
-| Awake | Available for orders. |
-| Hold | Wakes on the next turn. |
-| Sleep | Wakes only when projected to die next turn. |
-| Heal | Wakes after damage last turn or at full health. |
-| Sentry | Wakes for a visible enemy, or sufficient danger or damage. |
+| Activity  | Wake behavior                                                  |
+| --------- | -------------------------------------------------------------- |
+| Awake     | Available for orders.                                          |
+| Hold      | Wakes on the next turn.                                        |
+| Sleep     | Wakes only when projected to die next turn.                    |
+| Heal      | Wakes after damage last turn or at full health.                |
+| Sentry    | Wakes for a visible enemy, or sufficient danger or damage.     |
 | Intercept | AI units wake every turn so interception duty is reconsidered. |
-| Mission | Wakes when its unfinished queue completes, fails, or clears. |
+| Mission   | Wakes when its unfinished queue completes, fails, or clears.   |
 
 **Automation** is the human-side entry to Homeland work. `CvHomelandAI::FindAutomatedUnits` gathers automated human units instead of the AI recruitment list, and role passes accept a matching [UnitAI role](concepts.md#unitai-roles) or automate type. Automation ends when the unit enters combat, receives a manual order, or finds no work.
 

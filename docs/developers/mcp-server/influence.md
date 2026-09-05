@@ -1,6 +1,6 @@
 # mcp-server: Tactical AI Influence
 
-Most of the MCP server's tools observe the game. A handful change it, and the most interesting of those don't move units directly. They *steer the game's own AI*.
+Most of the MCP server's tools observe the game. A handful change it, and the most interesting of those don't move units directly. They _steer the game's own AI_.
 
 This page answers two questions a developer keeps coming back to: when an agent calls one of these tools, which in-game AI decisions actually shift, and can a civilization the agent doesn't control feel the effect? The deep analysis (the per-tool impact tables, the auto-activation thresholds, the formulas) is kept as reference under `mcp-server/docs/influence/` and `mcp-server/docs/flavors/`. This page is the map to it.
 
@@ -38,7 +38,7 @@ Two more tools are easy to misplace on this map. `relay-message` is the one tool
 
 ## Cross-civilization reach
 
-The subtle question is leakage: when an agent steers the civilization it speaks for, how much do *other* civilizations notice? The general answer is "less than you'd fear, by design."
+The subtle question is leakage: when an agent steers the civilization it speaks for, how much do _other_ civilizations notice? The general answer is "less than you'd fear, by design."
 
 A foreign AI reads another leader's persona mostly through estimate helpers rather than the real values, and reads cross-civ opinion only through cached accessors rather than the raw modifier arrays. This deliberately localizes most steering to the targeted civ, while still allowing the genuine cascades (the opinion system, the single nuke-related flavor) to propagate where the game intends them to. Which tool leaks where is exactly what the impact tables enumerate.
 

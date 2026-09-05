@@ -16,7 +16,7 @@ The spec is deliberately ambitious. This plan scopes a **maintainable v1**: it k
 
 These decisions shape the stages and are reflected in [specs.md](specs.md):
 
-- **The orchestrator is a *type of agent*, like a strategist** — a registered agent with its own sub-agents and scoped file and git tools, driven offline by a console in the oracle/telepathist family. It is not a bespoke pipeline.
+- **The orchestrator is a _type of agent_, like a strategist** — a registered agent with its own sub-agents and scoped file and git tools, driven offline by a console in the oracle/telepathist family. It is not a bespoke pipeline.
 - **The decision-quality judge is one pre-defined sub-agent the orchestrator can call** — deferred from v1, but a cheap add once the orchestrator-as-agent machinery exists. No separate judging subsystem is ever built.
 - **SES sandbox from the start.** The script substrate is Endo `ses` (lockdown plus capability Compartments that mirror the manifest allowlist model) inside a worker thread for the kill switch and memory cap. It runs at native V8 speed with ordinary `async`/`await`, so awaited and parallel sub-agent calls need no host-promise bridging, and it needs no native build step, which matters on Windows.
 - **Git-backed versioning.** The orchestrator-managed workflow folder is a git repository the orchestrator has scoped access to. A commit is a version snapshot, the message is the changelog, `git log` is the history, and a per-seat branch or ref is the `current` pointer the runtime reads once at run start. Adoption runs the gate, then advances the seat ref atomically. There is no automatic rollback: `git revert` is a deliberate edit, matching the spec's stance.
@@ -28,7 +28,7 @@ These decisions shape the stages and are reflected in [specs.md](specs.md):
 Infra first, then the executable workflow, then signals, versioning, and the orchestrator.
 
 | # | Stage | Objective (expectation at completion) |
-|---|---|---|
+| --- | --- | --- |
 | 1 | [01-cost-telemetry.md](01-cost-telemetry.md) | **Cost currency and cache-aware telemetry.** Capture token usage including cached tokens — provider-reported where available, estimated from adjacent same-turn calls otherwise — so telemetry carries cache data. Define cost-weighted tokens as the single unit with a per-tier and per-operation (cache-read, read, write) coefficient config, and surface cost per call. Verified against existing telemetry databases. |
 | 2 | [02-working-folder.md](02-working-folder.md) | **Working-folder model and run-record renderer, online and offline.** The per-seat and per-run folder layout, and a single renderer that produces `state/*.json` snapshots and the markdown run record plus per-sub-agent transcripts from **either** the live knowledge reports (online, during a run) **or** the telemetry spans (offline, rebuilt for the orchestrator) — one code path, two sources. Includes the `shared/` and `artifacts/` areas and retention. Verified by rendering both state and record from a past game's spans and matching a live run. |
 | 3 | [03-ses-sandbox.md](03-ses-sandbox.md) | **SES sandbox and script API.** The model-agnostic script interface — sequencing, conditionals, awaited and parallel sub-agent calls, a seeded deterministic RNG, and plain compute — run under `ses` in a worker with a wall-clock kill switch and a memory cap. Compartments expose only injected host primitives, the manifest allowlists are enforced at the boundary, and no external packages are allowed. Unit-tested against a fake host, with no game. |
@@ -44,7 +44,7 @@ Infra first, then the executable workflow, then signals, versioning, and the orc
 ## What v1 defers (and the seam it leaves)
 
 | Deferred | Why it is safe to defer | Seam left for it |
-|---|---|---|
+| --- | --- | --- |
 | Decision-quality LLM judge | The orchestrator judges from records, cost, coverage, and victory trend | The orchestrator is an agent (Stage 9); the judge is one more pre-defined sub-agent |
 | civ-bench connector | The score ratio is a self-contained victory trend | The generic victory-trend interface (Stage 7); add a provider |
 | `learned` strategist and episode retrieval | Baseline, briefed, and staffed already prove the substrate | The manifest allowlist design (Stage 5) reserves a memory/RAG tool grant |

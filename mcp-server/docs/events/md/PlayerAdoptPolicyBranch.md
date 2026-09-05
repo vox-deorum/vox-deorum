@@ -17,7 +17,7 @@ All triggers occur within the Community Patch DLL's policy management classes af
 The event passes two parameters to event handlers:
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | PlayerID | PlayerTypes | The ID of the player who adopted the policy branch |
 | BranchType | PolicyBranchTypes | The type of policy branch that was adopted |
 
@@ -35,11 +35,13 @@ Policy branches typically include major ideological paths like Order, Autocracy,
 
 # Technical Details
 
-**Source Files**: 
+**Source Files**:
+
 - `CvGameCoreDLL_Expansion2/CvPolicyAI.cpp`
 - `CvGameCoreDLL_Expansion2/CvPolicyClasses.cpp`
 
 **Trigger Locations**:
+
 - Line 743: AI policy branch selection in `CvPolicyAI` class
 - Line 5363: Policy branch unlocking in `CvPlayerPolicies` class
 - Line 5809: Policy branch switching in `CvPlayerPolicies` class
@@ -47,6 +49,7 @@ Policy branches typically include major ideological paths like Order, Autocracy,
 **Event System**: Uses the Lua scripting hook system via `LuaSupport::CallHook()`
 
 **Branch Context**: Policy branches are major ideological frameworks that:
+
 - Provide significant civilization-wide bonuses
 - Unlock unique policy trees with specialized benefits
 - Can create diplomatic relationships and conflicts based on shared or opposing ideologies

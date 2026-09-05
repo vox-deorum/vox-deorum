@@ -17,7 +17,7 @@ Create and write `docs/developers/civ5-dll/`: the modified Community Patch DLL â
 ## Sources
 
 | Source | Action |
-|---|---|
+| --- | --- |
 | `civ5-dll/README.md`, `civ5-dll/CvGameCoreDLL_Expansion2/GAMECORE_OVERVIEW.md` | Summarize into `overview.md`. Originals **stay** â€” separate submodule repo with upstream history. |
 | `src/` connection service / named-pipe IPC | Write `connection.md` from the source modules. |
 | `civ5-dll/docs/*` (build toolchain, db schema, minidumps) | Keep in place. `building.md` points to them. |

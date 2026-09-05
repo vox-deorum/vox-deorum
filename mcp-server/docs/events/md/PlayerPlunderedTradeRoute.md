@@ -5,6 +5,7 @@ The PlayerPlunderedTradeRoute event is triggered when a unit successfully plunde
 # Event Triggers
 
 This event is triggered when:
+
 - A military unit successfully pillages/plunders an active trade route
 - The plundering results in gold gain for the attacking player
 - The MOD_EVENTS_TRADE_ROUTE_PLUNDERED mod setting is enabled
@@ -14,7 +15,7 @@ The event fires immediately after the plunder calculation and achievement proces
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `pUnit->getOwner()` | PlayerID | The player ID of the unit that performed the plundering |
 | `pUnit->GetID()` | UnitID | The unique identifier of the unit that plundered the trade route |
 | `iPlunderGoldValue` | Integer | The amount of gold gained from plundering the trade route |
@@ -40,6 +41,7 @@ The `eConnectionType` and `eDomain` parameters provide additional context about 
 **Conditional Compilation**: This event is only available when `MOD_EVENTS_TRADE_ROUTE_PLUNDERED` is defined and enabled.
 
 **Execution Context**: The event is invoked after:
+
 - Gold plunder value calculation
 - Achievement processing (for land domain plundering)
 - Notification system updates

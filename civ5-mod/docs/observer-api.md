@@ -13,7 +13,7 @@ LuaEvents.VoxDeorumPlayerInfo(playerID, aiLabel)
 ```
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `playerID` | number | The player ID (0-21) |
 | `aiLabel` | string | Combined label, e.g. `"deepseek-r1 / simple-strategist"` |
 
@@ -25,26 +25,26 @@ Fired per strategic action. Includes the turn number for implicit turn tracking.
 LuaEvents.VoxDeorumAction(playerID, turn, actionType, summary, rationale)
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `playerID` | number | The player ID (0-21) |
-| `turn` | number | Current game turn |
-| `actionType` | string | One of the action types below |
-| `summary` | string | Clean summary of what changed |
-| `rationale` | string | Why the action was taken (may be empty) |
+| Parameter    | Type   | Description                             |
+| ------------ | ------ | --------------------------------------- |
+| `playerID`   | number | The player ID (0-21)                    |
+| `turn`       | number | Current game turn                       |
+| `actionType` | string | One of the action types below           |
+| `summary`    | string | Clean summary of what changed           |
+| `rationale`  | string | Why the action was taken (may be empty) |
 
 ## Action Types
 
-| Type | Description |
-|------|-------------|
-| `strategy` | Grand/economic/military strategy changes |
-| `research` | Next research technology selection |
-| `policy` | Next policy or policy branch selection |
-| `relationship` | Diplomatic modifier changes |
-| `persona` | AI personality value adjustments |
-| `flavors` | AI flavor preference changes |
+| Type            | Description                                 |
+| --------------- | ------------------------------------------- |
+| `strategy`      | Grand/economic/military strategy changes    |
+| `research`      | Next research technology selection          |
+| `policy`        | Next policy or policy branch selection      |
+| `relationship`  | Diplomatic modifier changes                 |
+| `persona`       | AI personality value adjustments            |
+| `flavors`       | AI flavor preference changes                |
 | `unset-flavors` | Custom flavors cleared (revert to defaults) |
-| `status-quo` | Decision to maintain current direction |
+| `status-quo`    | Decision to maintain current direction      |
 
 ## Turn Tracking
 

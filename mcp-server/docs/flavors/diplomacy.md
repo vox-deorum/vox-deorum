@@ -7,6 +7,7 @@ FLAVOR_DIPLOMACY is an AI personality flavor in Civilization V that controls how
 Unlike FLAVOR_OFFENSE (which focuses on military aggression) or FLAVOR_CULTURE (which focuses on cultural influence), FLAVOR_DIPLOMACY specifically drives the AI's commitment to building and maintaining international relationships, securing votes for diplomatic victory, and resolving conflicts through negotiation rather than warfare.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Diplomatic/peaceful leaders: 8-10
@@ -15,6 +16,7 @@ Unlike FLAVOR_OFFENSE (which focuses on military aggression) or FLAVOR_CULTURE (
   - During warfare: Temporarily reduced by 20-60
 
 ### Notable Leaders (from LeaderFlavorSweeps.sql)
+
 - **Enrico Dandolo (Venice):** 10 - Peak diplomatic focus
 - **William (Netherlands):** 9 - Only diplomatic victory pursuit
 - **Bismarck (Germany):** 10 - Domination leader with diplomatic tendencies
@@ -28,6 +30,7 @@ Unlike FLAVOR_OFFENSE (which focuses on military aggression) or FLAVOR_CULTURE (
 ### Core Philosophy
 
 FLAVOR_DIPLOMACY represents a leader's fundamental preference for international cooperation over confrontation. High-diplomacy leaders:
+
 - Prioritize production of diplomatic units (Emissaries, Envoys, Diplomats, Ambassadors)
 - Place embassies to gain voting power in the World Congress
 - Invest heavily in city-state alliances and influence
@@ -54,6 +57,7 @@ VictoryScores[VICTORY_PURSUIT_DIPLOMACY] += pFlavorMgr->GetPersonalityFlavorForD
 ```
 
 **Interpretation:** FLAVOR_DIPLOMACY contributes directly to determining whether an AI pursues diplomatic victory. The score is calculated by combining:
+
 - Minor Civ Competitiveness (how aggressively the leader competes for city-states)
 - Work With Willingness (tendency to form alliances and cooperate)
 - Diplo Balance (overall diplomatic posture)
@@ -79,6 +83,7 @@ int iTileImprovementFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAn
 ```
 
 **Interpretation:** The diplomacy flavor (combined with grand strategy modifiers) drives city-state interaction decisions, including:
+
 - Gold gifting to city-states for influence
 - Prioritization of city-state quests
 - Diplomatic unit deployment to city-state territories
@@ -101,6 +106,7 @@ m_iFlavorDiplomacy = GetPersonalityAndGrandStrategy(
 ```
 
 **Interpretation:** The Grand Strategy AI maintains a cached diplomacy flavor value that combines:
+
 - Base personality flavor (leader's inherent diplomatic tendency)
 - Active grand strategy modifiers (AIGRANDSTRATEGY_UNITED_NATIONS adds +20)
 - Current economic/military strategy modifiers
@@ -126,6 +132,7 @@ if (GC.getGame().GetGameLeagues()->GetNumActiveLeagues() == 0)
 ```
 
 **Interpretation:** Before the World Congress activates, FLAVOR_DIPLOMACY drives early diplomatic preparations:
+
 - **Formula:** `Priority += (10 - CurrentEra) * FlavorDiplomacy * 1.25`
 - **Early Game Boost:** In Ancient Era (0), the multiplier is 10×, making early diplomatic investment high
 - **Decreasing Weight:** As eras progress, the multiplier decreases (Medieval Era 4: 6×, Industrial Era 6: 4×)
@@ -157,6 +164,7 @@ int iThreshold = iNumCities * /*125*/ GD_INT_GET(NEED_DIPLOMAT_THRESHOLD_MODIFIE
 **Interpretation:** The NEED_DIPLOMATS strategy calculation uses FLAVOR_DIPLOMACY to determine:
 
 **Baseline Desire Calculation:**
+
 - Formula: `((FlavorDiplo + 2) * NumCities) / 10`
 - Examples:
   - FLAVOR_DIPLOMACY 3, 5 cities: (3+2) × 5 / 10 = 2.5 baseline desire
@@ -164,6 +172,7 @@ int iThreshold = iNumCities * /*125*/ GD_INT_GET(NEED_DIPLOMAT_THRESHOLD_MODIFIE
   - FLAVOR_DIPLOMACY 9, 8 cities: (9+2) × 8 / 10 = 8.8 baseline desire
 
 **Distaste Calculation:**
+
 - Formula: `6 - FlavorDiplo` (if negative, treated as zero)
 - Examples:
   - FLAVOR_DIPLOMACY 3: Distaste = 3 (higher resistance to building diplomats)
@@ -195,6 +204,7 @@ if ((iEmbassies < iDesiredEmb) || GetDiplomacyAI()->IsGoingForDiploVictory())
 ```
 
 **Interpretation:** Great Diplomats place embassies based on FLAVOR_DIPLOMACY:
+
 - **Formula:** `DesiredEmbassies = clamp(FlavorDiplo × 2 - 3, 1, NumMinorCivs)`
 - **Examples:**
   - FLAVOR_DIPLOMACY 3: 3×2-3 = 3 desired embassies
@@ -234,6 +244,7 @@ if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_DIPLOMACY")
 ```
 
 **Interpretation:** When evaluating policies with FLAVOR_DIPLOMACY weights:
+
 - Policies with diplomacy flavor receive higher weights for diplomatic leaders
 - **Anti-Warmonger Check:** If the AI is hostile toward ANY city-state, the diplomacy flavor value is subtracted from the policy weight
 - This prevents warmongers from accidentally selecting diplomatic policies that conflict with their conquest strategy
@@ -255,6 +266,7 @@ else if(strFlavorName == "FLAVOR_DIPLOMACY")
 ```
 
 **Interpretation:** The advisor system uses FLAVOR_DIPLOMACY to recommend:
+
 - Diplomatic unit production
 - Embassy construction
 - City-state interaction opportunities
@@ -288,6 +300,7 @@ iTR = pEntry->GetYieldPerActiveTR(iI) * pFlavorManager->GetPersonalityIndividual
 ```
 
 **Interpretation:** FLAVOR_DIPLOMACY influences religious belief selection, particularly beliefs that provide bonuses per active trade route. Diplomatic leaders value trade route bonuses more highly because:
+
 - Trade routes connect to city-states for influence
 - Trade routes generate gold for diplomatic gifts
 - Trade routes create international relationships
@@ -307,11 +320,13 @@ When the AI activates the AIGRANDSTRATEGY_UNITED_NATIONS grand strategy:
 **Effect:** +20 FLAVOR_DIPLOMACY bonus while pursuing diplomatic victory
 
 **Combined Impact:**
+
 - Base FLAVOR_DIPLOMACY: 7-10 for diplomatic leaders
 - Grand Strategy Bonus: +20
 - **Total Active Diplomacy Flavor: 27-30**
 
 This massive boost when pursuing diplomatic victory causes:
+
 - Extremely high diplomatic unit production priority
 - Maximum city-state investment
 - Strong preference for diplomatic policies
@@ -326,6 +341,7 @@ FLAVOR_DIPLOMACY is heavily penalized during military conflicts, representing th
 ### Player-Level Military Strategy Penalties (StrategyFlavorSweeps.sql)
 
 **At War Penalties:**
+
 ```sql
 ('MILITARYAISTRATEGY_AT_WAR', 'FLAVOR_DIPLOMACY', -25)
 ('MILITARYAISTRATEGY_WINNING_WARS', 'FLAVOR_DIPLOMACY', -10)
@@ -333,6 +349,7 @@ FLAVOR_DIPLOMACY is heavily penalized during military conflicts, representing th
 ```
 
 **Defense Penalties:**
+
 ```sql
 ('MILITARYAISTRATEGY_EMPIRE_DEFENSE', 'FLAVOR_DIPLOMACY', -15)
 ('MILITARYAISTRATEGY_EMPIRE_DEFENSE_CRITICAL', 'FLAVOR_DIPLOMACY', -35)
@@ -343,6 +360,7 @@ FLAVOR_DIPLOMACY is heavily penalized during military conflicts, representing th
 ### City-Level Military Strategy Penalties
 
 **More Severe City-Level Penalties:**
+
 ```sql
 ('MILITARYAISTRATEGY_AT_WAR', 'FLAVOR_DIPLOMACY', -40)
 ('MILITARYAISTRATEGY_WINNING_WARS', 'FLAVOR_DIPLOMACY', -30)
@@ -354,6 +372,7 @@ FLAVOR_DIPLOMACY is heavily penalized during military conflicts, representing th
 ```
 
 **Interpretation:** During warfare, diplomatic priorities are severely reduced:
+
 - **At War:** -25 to -40 penalty discourages diplomatic unit production during active combat
 - **Losing Wars:** -20 to -30 penalty forces focus on military survival
 - **Critical Defense:** -35 to -50 penalty completely halts diplomatic efforts during existential threats
@@ -388,6 +407,7 @@ These values represent earlier balancing iterations and may be overridden by Vox
 ```
 
 **Interpretation:** During happiness crises, FLAVOR_DIPLOMACY receives small boosts because:
+
 - City-state alliances provide luxury resources
 - Diplomatic relationships enable luxury trading
 - Peaceful diplomatic approach avoids wartime unhappiness
@@ -400,10 +420,12 @@ These values represent earlier balancing iterations and may be overridden by Vox
 ```
 
 **Interpretation:** When the NEED_DIPLOMATS strategy activates:
+
 - **Standard Need:** +20 FLAVOR_DIPLOMACY boost
 - **Critical Need:** +60 FLAVOR_DIPLOMACY boost (massive priority increase)
 
 These bonuses dramatically increase diplomatic unit production when:
+
 - Not enough diplomatic units exist to maintain city-state influence
 - Competing civilizations are dominating city-state relationships
 - Pursuing diplomatic victory without sufficient diplomatic presence
@@ -411,6 +433,7 @@ These bonuses dramatically increase diplomatic unit production when:
 ### Grand Strategy Economic Modifiers
 
 **Player-Level Modifiers:**
+
 ```sql
 ('ECONOMICAISTRATEGY_GS_DIPLOMACY', 'FLAVOR_DIPLOMACY', 26)
 ('ECONOMICAISTRATEGY_GS_CULTURE', 'FLAVOR_DIPLOMACY', 22)
@@ -420,6 +443,7 @@ These bonuses dramatically increase diplomatic unit production when:
 ```
 
 **City-Level Modifiers:**
+
 ```sql
 ('ECONOMICAISTRATEGY_GS_DIPLOMACY', 'FLAVOR_DIPLOMACY', 30)
 ('ECONOMICAISTRATEGY_GS_CULTURE', 'FLAVOR_DIPLOMACY', 22)
@@ -429,6 +453,7 @@ These bonuses dramatically increase diplomatic unit production when:
 ```
 
 **Interpretation:**
+
 - **Diplomatic Victory:** +26 to +30 bonus when pursuing diplomatic victory
 - **Cultural Victory:** +22 bonus (diplomatic relationships support cultural influence)
 - **Conquest Victory:** +11 bonus (some diplomatic work still valuable)
@@ -443,6 +468,7 @@ These bonuses dramatically increase diplomatic unit production when:
 ```
 
 **Interpretation:**
+
 - **Island Start:** -10 penalty reflects difficulty of diplomatic engagement from isolated position
 - **Too Many Units:** -10 to -15 penalty reflects economic strain limiting diplomatic investment
 
@@ -451,16 +477,19 @@ These bonuses dramatically increase diplomatic unit production when:
 ### City-Level Diplomacy Strategies (StrategyFlavorSweeps.sql)
 
 **Threat and Expansion Penalties:**
+
 ```sql
 ('AICITYSTRATEGY_CAPITAL_UNDER_THREAT', 'FLAVOR_DIPLOMACY', -40)
 ('AICITYSTRATEGY_CAPITAL_NEED_SETTLER', 'FLAVOR_DIPLOMACY', -30)
 ```
 
 **Interpretation:** Cities deprioritize diplomatic units when:
+
 - Capital is under direct military threat (-40 penalty)
 - Capital needs to produce settlers for expansion (-30 penalty)
 
 **Diplomat Production Bonuses:**
+
 ```sql
 ('AICITYSTRATEGY_NEED_DIPLOMATS', 'FLAVOR_DIPLOMACY', 20)
 ('AICITYSTRATEGY_NEED_DIPLOMATS_CRITICAL', 'FLAVOR_DIPLOMACY', 40)
@@ -469,6 +498,7 @@ These bonuses dramatically increase diplomatic unit production when:
 **Interpretation:** Cities dramatically increase diplomatic unit production when strategic need is identified.
 
 **City Size Modifiers:**
+
 ```sql
 ('AICITYSTRATEGY_LARGE_CITY', 'FLAVOR_DIPLOMACY', 11)
 ('AICITYSTRATEGY_MEDIUM_CITY', 'FLAVOR_DIPLOMACY', 6)
@@ -477,6 +507,7 @@ These bonuses dramatically increase diplomatic unit production when:
 ```
 
 **Interpretation:** Only large, developed cities should produce diplomatic units:
+
 - **Large Cities (10+ population):** +11 bonus (capable of producing diplomats)
 - **Medium Cities (6-9 population):** +6 bonus (can produce diplomats)
 - **Small Cities (4-5 population):** -30 penalty (should focus on growth)
@@ -489,6 +520,7 @@ This ensures that only economically developed cities with sufficient infrastruct
 ### Diplomatic Units (UnitFlavorSweeps.sql)
 
 **Progressive Diplomatic Unit Hierarchy:**
+
 ```sql
 ('UNIT_EMISSARY', 'FLAVOR_DIPLOMACY', 30)
 ('UNIT_ENVOY', 'FLAVOR_DIPLOMACY', 40)
@@ -497,6 +529,7 @@ This ensures that only economically developed cities with sufficient infrastruct
 ```
 
 **Interpretation:** Diplomatic units have escalating flavor values reflecting their increasing power:
+
 - **Emissary (Ancient):** 30 flavor - Basic city-state influence, low maintenance
 - **Envoy (Classical):** 40 flavor - Improved influence, minor voting power
 - **Diplomat (Medieval):** 60 flavor - Strong influence, significant voting power
@@ -512,6 +545,7 @@ Leaders with high FLAVOR_DIPLOMACY will continuously upgrade their diplomatic co
 ```
 
 **Interpretation:**
+
 - **Great Diplomat:** Flavor value of 1 (Great People use different evaluation systems)
 - **Tadodaho (Iroquois unique):** 60 flavor (exceptional diplomatic unit)
 
@@ -537,6 +571,7 @@ Great Diplomats can either construct embassies (boosting voting power) or conduc
 ```
 
 **Interpretation:**
+
 - **Chancery (Generic):** 35 flavor - Core diplomatic building
 - **Examination Hall (Chinese unique):** 35 flavor - Diplomatic/great people building
 - **Hanse (German unique):** 20 flavor - Economic/diplomatic hybrid
@@ -553,6 +588,7 @@ Great Diplomats can either construct embassies (boosting voting power) or conduc
 ### High-Value Diplomatic Buildings
 
 These buildings receive substantial priority from diplomatic leaders:
+
 - Chancery: Primary diplomatic infrastructure
 - Examination Hall: Combines diplomacy with Great People generation
 - Buildings with 20+ flavor values become high construction priorities
@@ -562,56 +598,71 @@ These buildings receive substantial priority from diplomatic leaders:
 ### Key Diplomatic Technologies (TechFlavorSweeps.sql)
 
 **Ancient Era:**
+
 ```sql
 ('TECH_WRITING', 'FLAVOR_DIPLOMACY', 15)
 ```
+
 - **Writing:** Enables embassies, diplomatic correspondence, early diplomatic infrastructure
 
 **Classical Era:**
+
 ```sql
 ('TECH_CIVIL_SERVICE', 'FLAVOR_DIPLOMACY', 15)
 ```
+
 - **Civil Service:** Governmental organization, diplomatic bureaucracy
 
 **Medieval Era:**
+
 ```sql
 ('TECH_EDUCATION', 'FLAVOR_DIPLOMACY', 10)
 ```
+
 - **Education:** Trained diplomats, international scholarship
 
 **Renaissance Era:**
+
 ```sql
 ('TECH_PRINTING_PRESS', 'FLAVOR_DIPLOMACY', 25)
 ```
+
 - **Printing Press:** Highest diplomatic technology flavor, enables mass communication, diplomatic correspondence, and advanced diplomatic units
 
 **Industrial Era:**
+
 ```sql
 ('TECH_INDUSTRIALIZATION', 'FLAVOR_DIPLOMACY', 15)
 ('TECH_REPLACEABLE_PARTS', 'FLAVOR_DIPLOMACY', 10)
 ('TECH_RADIO', 'FLAVOR_DIPLOMACY', 10)
 ('TECH_REFRIGERATION', 'FLAVOR_DIPLOMACY', 10)
 ```
+
 - **Industrialization:** Infrastructure supporting diplomatic networks
 - **Replaceable Parts:** Economic infrastructure for diplomacy
 - **Radio:** Mass communication
 - **Refrigeration:** Trade infrastructure
 
 **Modern Era:**
+
 ```sql
 ('TECH_ATOMIC_THEORY', 'FLAVOR_DIPLOMACY', 15)
 ```
+
 - **Atomic Theory:** Nuclear diplomacy, international cooperation
 
 **Information Era:**
+
 ```sql
 ('TECH_GLOBALIZATION', 'FLAVOR_DIPLOMACY', 20)
 ```
+
 - **Globalization:** Peak diplomatic technology, United Nations, Delegates bonus, final diplomatic infrastructure
 
 ### Technology Research Strategy
 
 Diplomatic leaders prioritize:
+
 1. **Printing Press (25):** Highest priority diplomatic tech
 2. **Globalization (20):** Endgame diplomatic tech enabling victory
 3. **Writing, Civil Service, Industrialization, Atomic Theory (15 each):** Core diplomatic progression
@@ -624,6 +675,7 @@ This creates a clear technology path for diplomatic victory: Writing → Civil S
 ### Patronage Policy Tree (PolicyFlavorSweeps.sql)
 
 **Core Patronage Policies:**
+
 ```sql
 ('POLICY_PATRONAGE', 'FLAVOR_DIPLOMACY', 15)
 ('POLICY_PHILANTHROPY', 'FLAVOR_DIPLOMACY', 13)
@@ -633,6 +685,7 @@ This creates a clear technology path for diplomatic victory: Writing → Civil S
 ```
 
 **Interpretation:**
+
 - **Patronage Opener:** 15 flavor - Foundation of diplomatic policy tree
 - **Philanthropy:** 13 flavor - Enhanced city-state gifting
 - **Consulates:** 15 flavor - Improved city-state relationships
@@ -658,6 +711,7 @@ The Patronage tree is essential for diplomatic victory, and diplomatic leaders w
 ```
 
 **Interpretation:**
+
 - **Urbanization:** 40 flavor - City development supporting diplomacy
 - **Arsenal of Democracy:** 60 flavor - Democratic military cooperation
 - **Treaty Organization:** 60 flavor - International alliances and treaties
@@ -683,12 +737,14 @@ Freedom ideology strongly supports diplomatic victory, with multiple high-value 
 ### Highest Value Diplomatic Policies
 
 **Top Diplomatic Policies (60 flavor):**
+
 - Arsenal of Democracy (Freedom)
 - Treaty Organization (Freedom)
 - United Front (Order)
 - Gunboat Diplomacy (Autocracy)
 
 **Major Diplomatic Policies (40-50 flavor):**
+
 - Patronage Finisher (50)
 - Urbanization (40)
 
@@ -706,6 +762,7 @@ These policies become extremely high priority for leaders with FLAVOR_DIPLOMACY 
 ```
 
 **Interpretation:**
+
 - **World's Fair:** 30 flavor - Cultural cooperation project
 - **World Games:** 30 flavor - Athletic cooperation project
 - **United Nations:** 100 flavor - Absolute highest priority for diplomatic leaders
@@ -725,6 +782,7 @@ Leaders with FLAVOR_DIPLOMACY ≥ 8 will commit multiple cities to these project
 ```
 
 **Interpretation:** Cities specialized for commerce receive diplomatic flavor bonuses because:
+
 - Economic wealth funds diplomatic initiatives
 - Trade routes create diplomatic relationships
 - Gold enables city-state influence through gifting
@@ -761,12 +819,14 @@ Leaders with FLAVOR_DIPLOMACY ≥ 8 will commit multiple cities to these project
 For leaders with FLAVOR_DIPLOMACY ≥ 8:
 
 **Early Game (Ancient-Classical):**
+
 - Research Writing technology (15 flavor) for embassies
 - Open Patronage policy tree (15 flavor)
 - Produce Emissaries (30 flavor) and Envoys (40 flavor)
 - Begin city-state gold gifting and quest completion
 
 **Mid Game (Medieval-Renaissance):**
+
 - Research Printing Press (25 flavor) - highest diplomatic tech priority
 - Complete Patronage tree, especially Cultural Diplomacy (18) and Patronage Finisher (50)
 - Construct Chanceries (35 flavor) in major cities
@@ -774,6 +834,7 @@ For leaders with FLAVOR_DIPLOMACY ≥ 8:
 - Place embassies with Great Diplomats based on formula: (FlavorDiplo × 2 - 3)
 
 **Late Game (Industrial-Modern):**
+
 - Research Globalization (20 flavor) for United Nations
 - Select diplomatic ideology policies (60 flavor each)
 - Upgrade to Ambassadors (80 flavor) for maximum influence
@@ -781,6 +842,7 @@ For leaders with FLAVOR_DIPLOMACY ≥ 8:
 - Maximize voting power through embassies, city-state alliances, and World Congress participation
 
 **Victory Conditions:**
+
 - Achieve majority vote in United Nations
 - Maintain city-state alliances for delegate bonuses
 - Win critical World Congress votes
@@ -789,32 +851,38 @@ For leaders with FLAVOR_DIPLOMACY ≥ 8:
 ### Spectrum of AI Diplomatic Behavior
 
 **Ultra-Diplomatic Leaders (FLAVOR_DIPLOMACY 9-10):**
+
 - Enrico Dandolo (Venice): 10
 - William (Netherlands): 9
 - **Behavior:** Single-minded pursuit of diplomatic victory, maximum city-state investment, extensive embassy network, avoids warfare at all costs, completes entire Patronage tree early
 
 **High Diplomacy Leaders (FLAVOR_DIPLOMACY 7-8):**
+
 - Alexander (Greece): 8
 - Dido (Carthage): 8
 - Hiawatha (Iroquois): 8
 - **Behavior:** Strong diplomatic focus with flexibility for other victory types, maintains robust city-state relationships, builds substantial diplomatic infrastructure
 
 **Moderate Diplomacy Leaders (FLAVOR_DIPLOMACY 5-6):**
+
 - Most balanced leaders
 - **Behavior:** Opportunistic diplomacy, invests in city-states when strategic, maintains some diplomatic presence, may pursue diplomatic victory if circumstances favor it
 
 **Low Diplomacy Leaders (FLAVOR_DIPLOMACY 2-4):**
+
 - Military-focused leaders like Attila, Alexander the Great (Conquest), Genghis Khan
 - **Behavior:** Minimal diplomatic investment, may conquer city-states instead of befriending them, ignores diplomatic victory entirely, uses diplomacy only for tactical alliances
 
 ### Dynamic Adjustment Patterns
 
 **Positive Adjustments:**
+
 - **Pursuing Diplomatic Victory:** +20 from grand strategy, +26-30 from economic strategy (total: +46-50)
 - **Need Diplomats Critical:** +60 temporary boost when falling behind in city-state competition
 - **Revolutionary Events:** +40 temporary boost from specific event choices
 
 **Negative Adjustments:**
+
 - **At War:** -25 to -40 penalty during active combat
 - **Losing Wars:** -20 to -30 penalty during military defeats
 - **Empire Defense Critical:** -35 to -50 penalty during existential threats
@@ -824,12 +892,14 @@ For leaders with FLAVOR_DIPLOMACY ≥ 8:
 ### Interaction with Other Flavors
 
 **Synergistic Flavors:**
+
 - **FLAVOR_GOLD:** Provides wealth for city-state gifting and diplomatic investments
 - **FLAVOR_CULTURE:** Cultural influence supports diplomatic relationships
 - **FLAVOR_SCIENCE:** Peaceful science victory pairs well with diplomatic approach
 - **FLAVOR_I_TRADE_ROUTE:** Trade routes connect civilizations and city-states
 
 **Conflicting Flavors:**
+
 - **FLAVOR_OFFENSE:** Military aggression damages diplomatic relationships
 - **FLAVOR_CONQUEST:** Conquering city-states destroys potential alliances
 - **FLAVOR_NUKE:** Nuclear warfare devastates diplomatic standing

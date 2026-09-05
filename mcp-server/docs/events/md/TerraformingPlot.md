@@ -7,7 +7,7 @@ The `TerraformingPlot` event is triggered when individual plot properties are mo
 This event is triggered in multiple scenarios covering different aspects of plot modification:
 
 - **Area Changes**: When a plot's area assignment is modified
-- **Landmass Changes**: When a plot's landmass assignment is updated  
+- **Landmass Changes**: When a plot's landmass assignment is updated
 - **River Changes**: When river segments are added or removed from plot edges
 - **Plot Type Changes**: When a plot's basic type (land, water, mountain) is altered
 - **Terrain Changes**: When a plot's terrain type is modified
@@ -18,7 +18,7 @@ This event is triggered in multiple scenarios covering different aspects of plot
 # Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `eventType` | `int` | The specific type of terraforming operation being performed |
 | `x` | `int` | The X coordinate of the plot being modified |
 | `y` | `int` | The Y coordinate of the plot being modified |
@@ -55,8 +55,9 @@ Each event type provides different contextual information through the parameter 
 **Source Location:** `CvGameCoreDLL_Expansion2/CvPlot.cpp` (Multiple locations: lines 5660, 5689, 6221, 6269, 6317, 7107, 7357, 7449, 7952, 7995, 14264)
 
 **Trigger Context:** The event is invoked within the `CvPlot` class across multiple methods that handle different aspects of plot modification:
+
 - Area/landmass assignment methods
-- River modification methods  
+- River modification methods
 - Plot type, terrain, and feature setters
 - City ownership management methods
 - Continent assignment methods
@@ -64,8 +65,9 @@ Each event type provides different contextual information through the parameter 
 **Event Hook:** Uses the `GAMEEVENTINVOKE_HOOK` macro with event type `GAMEEVENT_TerraformingPlot`
 
 **Event Type Constants:** Different terraforming operations use specific event type constants:
+
 - `TERRAFORMINGEVENT_AREA` - Area changes
-- `TERRAFORMINGEVENT_LANDMASS` - Landmass changes  
+- `TERRAFORMINGEVENT_LANDMASS` - Landmass changes
 - `TERRAFORMINGEVENT_RIVER` - River modifications
 - `TERRAFORMINGEVENT_PLOT` - Plot type changes
 - `TERRAFORMINGEVENT_TERRAIN` - Terrain changes
@@ -74,11 +76,12 @@ Each event type provides different contextual information through the parameter 
 - `TERRAFORMINGEVENT_CONTINENT` - Continent changes
 
 **Code Examples:**
+
 ```cpp
 // Area change
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_TerraformingPlot, TERRAFORMINGEVENT_AREA, m_iX, m_iY, 0, iNewValue, m_iArea, -1, -1);
 
-// River change  
+// River change
 GAMEEVENTINVOKE_HOOK(GAMEEVENT_TerraformingPlot, TERRAFORMINGEVENT_RIVER, m_iX, m_iY, DIRECTION_NORTHEAST, bNewValue, isNEOfRiver(), eRiverDir, getRiverSWFlowDirection());
 
 // Feature change

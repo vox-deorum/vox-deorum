@@ -7,6 +7,7 @@
 Unlike `FLAVOR_EXPANSION` (which focuses on creating new cities), `FLAVOR_GROWTH` specifically drives the AI's **commitment to increasing population within existing cities** through food production, growth-enhancing buildings, and growth-oriented improvements.
 
 ### Value Range
+
 - **Scale:** 0-10 (integer values)
 - **Typical Values:**
   - Growth-focused leaders (tall empire builders): 8-10
@@ -59,6 +60,7 @@ case YIELD_FOOD:
 ```
 
 **Interpretation:** When workers evaluate which tiles to improve, FLAVOR_GROWTH multiplies the food yield improvement value by both the flavor value and a configurable multiplier (default 3). This means:
+
 - A leader with FLAVOR_GROWTH = 8 will value a +2 food improvement as: 2 × 8 × 3 = 48 points
 - A leader with FLAVOR_GROWTH = 2 will value it as: 2 × 2 × 3 = 12 points
 
@@ -79,6 +81,7 @@ if (iFlavorGrowth < 0) iFlavorGrowth = 0;
 ```
 
 **Interpretation:** The growth flavor is multiplied by 10 and combined with the active grand strategy to create a city specialization weight. This means:
+
 - FLAVOR_GROWTH = 7 adds 70 weight toward growth-focused specialization
 - Cities will prioritize buildings, specialists, and citizen assignments that maximize food and population
 - Growth-specialized cities will work more food tiles and avoid working production/gold tiles until population caps are reached
@@ -117,6 +120,7 @@ int iGrowthFlavor = GetPlayer()->GetGrandStrategyAI()->GetPersonalityAndGrandStr
 ```
 
 **Interpretation:** This flavor value is retrieved when calculating city-state alliance priorities. Leaders with high FLAVOR_GROWTH will value:
+
 - Maritime city-states (which provide food bonuses to coastal cities)
 - City-states with food-boosting quests and benefits
 - Alliance bonuses that increase food yields or growth rates
@@ -143,6 +147,7 @@ for(int iFlavorLoop = 0; iFlavorLoop < GC.getNumFlavorTypes(); iFlavorLoop++)
 **Interpretation:** When the AI evaluates whether to pursue science victory, it sums the FLAVOR_GROWTH values of all buildings it has constructed. Growth-enhancing buildings like granaries, aqueducts, hospitals, and medical labs increase the appeal of science victory, creating a feedback loop where building for growth makes science victory more attractive.
 
 **Buildings Contributing to Growth Priority:**
+
 - Granary (FLAVOR_GROWTH: 35)
 - Aqueduct (FLAVOR_GROWTH: 25)
 - Grocer (FLAVOR_GROWTH: 25)
@@ -203,10 +208,12 @@ case YIELD_FOOD:
 ```
 
 **Interpretation:** When evaluating religious beliefs that grant food yields, the FLAVOR_GROWTH value is multiplied by 50. This creates enormous differences in belief selection:
+
 - FLAVOR_GROWTH = 9: Food-granting beliefs score 450 points
 - FLAVOR_GROWTH = 3: Food-granting beliefs score 150 points
 
 **Affected Beliefs:**
+
 - Fertility Rites (+10% growth in cities)
 - Feed the World (Granary provides +2 food)
 - Religious Community (+1% growth per city following religion)
@@ -232,6 +239,7 @@ else if (GC.getFlavorTypes((FlavorTypes)iFlavor) == "FLAVOR_GROWTH")
 **Interpretation:** Policies with FLAVOR_GROWTH values are prioritized by growth-focused leaders. The flavor value from the policy is added directly to the policy's selection weight.
 
 **Growth-Focused Policies:**
+
 - Tradition (FLAVOR_GROWTH: 7) - Overall growth-focused tree
 - Monarchy (FLAVOR_GROWTH: 5) - +1 gold/happiness per 2 population
 - Collective Rule (FLAVOR_GROWTH: 5) - Free settler and +50% settler production
@@ -263,6 +271,7 @@ if (m_pPlayer->GetPlayerTraits()->IsSmaller() &&
 **Interpretation:** "Smaller" civilizations (designed for tall empire play) get bonus research priority for technologies with growth flavors. This ensures they pursue food-enhancing techs earlier and more consistently.
 
 **Growth-Focused Technologies:**
+
 - Agriculture (FLAVOR_GROWTH: 10) - Farms and wheat
 - Pottery (FLAVOR_GROWTH: 20) - Granaries and settlers
 - Trapping (FLAVOR_GROWTH: 10) - Camps and deer
@@ -295,12 +304,14 @@ FLAVOR_GROWTH is **temporarily reduced** when the AI enters wartime strategies, 
 ```
 
 **Interpretation:**
+
 - **At War:** -10 FLAVOR_GROWTH (moderate reduction)
 - **Winning Wars:** -10 FLAVOR_GROWTH (conquest takes priority)
 - **Losing Wars:** -30 FLAVOR_GROWTH (desperate military focus)
 - **War Mobilization:** -10 FLAVOR_GROWTH (preparing for conflict)
 
 **Strategic Impact:** During warfare, the AI will:
+
 - Deprioritize granaries, aqueducts, and hospitals
 - Work fewer food tiles in favor of production tiles
 - Build fewer farms and more mines
@@ -324,6 +335,7 @@ FLAVOR_GROWTH temporarily **increases** during certain happiness crisis strategi
 ```
 
 **Interpretation:**
+
 - **Need Happiness (Defense):** +40 FLAVOR_GROWTH - Build growth infrastructure to overcome unhappiness
 - **Need Happiness (Gold):** +30 FLAVOR_GROWTH - Grow to generate more gold for happiness buildings
 - **Need Happiness (Starve):** +60 FLAVOR_GROWTH - Massive growth bonus to prevent starvation
@@ -368,6 +380,7 @@ else if(strFlavorName == "FLAVOR_GROWTH")
 Buildings are evaluated by the AI based on their FLAVOR_GROWTH values. Higher values mean the AI prioritizes these buildings when growth-focused.
 
 **Early Game (Ancient-Classical Era):**
+
 - Granary: 35
 - Qullqa (Incan unique): 50
 - Longhouse (Iroquois unique): 30
@@ -378,6 +391,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GROWTH values. Higher va
 - Lighthouse: 10
 
 **Mid Game (Medieval-Renaissance Era):**
+
 - Aqueduct: 25
 - Harappan Reservoir (Indian unique): 40
 - Watermill: 25
@@ -386,6 +400,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GROWTH values. Higher va
 - Runestone: 15
 
 **Late Game (Industrial-Modern Era):**
+
 - Grocer: 25
 - Windmill: 10
 - Brewhouse: 10
@@ -396,6 +411,7 @@ Buildings are evaluated by the AI based on their FLAVOR_GROWTH values. Higher va
 - Medical Lab: 40
 
 **Wonders:**
+
 - Temple of Artemis: 30
 - Hanging Gardens: 30
 - Huey Teocalli: 30
@@ -405,66 +421,79 @@ Buildings are evaluated by the AI based on their FLAVOR_GROWTH values. Higher va
 - International Finance Center: 60
 
 **Religious Buildings:**
+
 - Monastery: 15
 - Mandir: 6
 - Gurdwara: 10
 
 **Corporations:**
+
 - Two-Kay Foods (Office): 50
 - Two-Kay Foods (HQ): 100
 
 ### Technologies with High FLAVOR_GROWTH
 
 **Ancient Era:**
+
 - Agriculture: 10 (Farms, wheat)
 - Pottery: 20 (Granary, settlers, fishing boats)
 - Trapping: 10 (Camps, food resources)
 
 **Classical Era:**
+
 - Calendar: 5 (Plantations)
 - Construction: 5 (Building improvements)
 
 **Medieval Era:**
+
 - Engineering: 15 (Aqueducts)
 - Civil Service: 10 (Farm bonuses on rivers)
 
 **Renaissance Era:**
+
 - Chemistry: 15 (Grocers)
 - Economics: 5 (Windmills)
 
 **Industrial Era:**
+
 - Fertilizer: 5 (Farm improvements)
 - Biology: 15 (Medical advances)
 
 **Modern Era:**
+
 - Corporations: 30 (Food corporations)
 - Penicillin: 25 (Medical labs)
 
 ## Summary of Effects
 
 ### Strategic Planning
+
 - **Victory focus:** Increases preference for science victory, recognizing that population drives science output
 - **Grand strategy:** Creates feedback loops with science-focused buildings and policies
 - **City placement:** Prioritizes food-rich locations (rivers, coasts, wheat, fish, cattle) over strategic or production-rich sites
 
 ### City Development
+
 - **Building priority:** Prioritizes granaries, aqueducts, hospitals, and medical labs over production or gold buildings
 - **Specialization:** Designates cities as growth-focused, working food tiles over production/gold tiles
 - **Tile improvements:** Workers prioritize farms, fishing boats, and pastures over mines and trading posts
 - **Citizen assignment:** Cities work food tiles even at the expense of production and gold
 
 ### Economic Strategy
+
 - **Technology research:** Beelines food-enhancing technologies (Pottery, Civil Service, Chemistry, Biology)
 - **Policy selection:** Favors Tradition tree, Rationalism, and growth-boosting policies
 - **Religion:** Selects food-granting beliefs (Fertility Rites, Feed the World, Religious Community)
 - **City-states:** Invests in maritime city-states for food bonuses
 
 ### Great People
+
 - **Great Engineers:** Build manufactories for long-term food/production over rushing wonders
 - **Great Merchants:** Build customs houses for long-term yield over one-time gold injections
 - **Great Scientists:** Plant academies for long-term science over immediate tech boosts
 
 ### Dynamic Adjustments
+
 - **Wartime:** FLAVOR_GROWTH temporarily decreases by 10-30 during warfare, suspending growth projects
 - **Happiness crisis:** FLAVOR_GROWTH increases by 30-60 during unhappiness emergencies, forcing infrastructure construction
 - **Grand strategy shifts:** Growth flavor interacts with active grand strategy to modify building and research priorities
@@ -494,6 +523,7 @@ This creates a spectrum of AI city development strategies:
 - **FLAVOR_INFRASTRUCTURE:** Roads, railroads, and connectivity (complements growth by connecting food-producing cities)
 
 **Typical Combinations:**
+
 - **High Growth + High Science:** Classic tall empire/science victory strategy (Korea, Babylon)
 - **High Growth + Low Expansion:** Few large cities focused on maximizing population
 - **High Growth + High Expansion:** Rapid settlement followed by aggressive growth (requires strong happiness management)

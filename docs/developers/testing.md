@@ -18,10 +18,10 @@ From the repo root, `npm run test:all` runs every workspace's suite and then the
 
 Each service also has its own scripts, and the common ones are the same everywhere:
 
-| Command | What it does |
-|---|---|
-| `npm test` | Run the suite once. |
-| `npm run test:watch` | Re-run on change. |
+| Command                 | What it does                |
+| ----------------------- | --------------------------- |
+| `npm test`              | Run the suite once.         |
+| `npm run test:watch`    | Re-run on change.           |
 | `npm run test:coverage` | Run with a coverage report. |
 
 The interesting differences are in what each suite's default run includes, because some tests need real external resources.
@@ -48,7 +48,7 @@ The default `npm test` and `npm run test:mock` run the in-process mock tier. Too
 `vox-agents/vitest.config.ts` picks a tier from `TEST_TIER` (or from `USE_MOCK=false`) and includes only `tests/<tier>/**`:
 
 | Tier | Command | Notes |
-|---|---|---|
+| --- | --- | --- |
 | **Mock** | `npm test` or `npm run test:mock` | The default in-process tier in `tests/mock/**`, with the MCP client replaced at the client seam. Telepathist coverage lives under `tests/mock/telepathist` and skips when recorded telemetry is unavailable. |
 | **Real** | `npm run test:real` | **Not wired yet.** `tests/real/` does not exist, and the script runs with `--passWithNoTests`, so it is a clean no-op. The tier is reserved for a future out-of-process run against a real MCP server over a mock-DLL bridge. |
 | **Game** | `npm run test:game` | The live Civilization V tier in `tests/live/game/**`. It needs Windows and Civ V, runs sequentially with long timeouts, and is excluded from the default suite. |

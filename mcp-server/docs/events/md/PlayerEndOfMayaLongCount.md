@@ -14,11 +14,11 @@ The trigger occurs after the Maya calendar date has been computed and a baktun t
 
 The event passes three parameters to event handlers:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| PlayerID | int | The ID of the Maya player (`m_pPlayer->GetID()`) |
-| CurrentBaktun | int | The current baktun number (`m_iBaktun`) |
-| PreviousBaktun | int | The previous baktun number (`m_iBaktunPreviousTurn`) |
+| Parameter      | Type | Description                                          |
+| -------------- | ---- | ---------------------------------------------------- |
+| PlayerID       | int  | The ID of the Maya player (`m_pPlayer->GetID()`)     |
+| CurrentBaktun  | int  | The current baktun number (`m_iBaktun`)              |
+| PreviousBaktun | int  | The previous baktun number (`m_iBaktunPreviousTurn`) |
 
 # Event Details
 
@@ -44,6 +44,7 @@ The event is only triggered for civilizations with the Maya calendar trait and o
 **Trait Dependency**: This event only occurs for players with Maya calendar bonuses trait (`IsMayaCalendarBonuses()`)
 
 **Execution Context**: The event fires during Maya Long Count processing, specifically:
+
 - After Maya calendar date computation (`ComputeMayaDate()`)
 - When a baktun transition is detected (previous + 1 equals current)
 - After instant yield processing for the baktun end
