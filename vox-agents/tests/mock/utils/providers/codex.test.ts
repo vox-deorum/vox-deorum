@@ -513,21 +513,27 @@ describe('Codex compatible adapter requests', () => {
   });
 
   it.each([
-    'continuation_policy_mismatch',
-    'expired_tool_continuation',
+    'duplicate_tool_call_id',
     'thread_not_resumable',
     'tool_results_required',
+    'tool_results_without_pending_call',
   ])('marks deterministic proxy error %s as non-retryable', async (code) => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxyErrorResponse(
-      code,
-      code === 'expired_tool_continuation' ? 410 : 409,
-    )));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxyErrorResponse(code)));
     const model = buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' });
 
     await expect(model.doGenerate({
       prompt: [{ role: 'user', content: [{ type: 'text', text: 'Continue.' }] }],
       providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
     })).rejects.toMatchObject({ isRetryable: false });
+  });
+
+  it('keeps the transient thread_busy proxy error retryable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxyErrorResponse('thread_busy')));
+
+    await expect(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Continue.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    })).rejects.not.toMatchObject({ isRetryable: false });
   });
 
   it('uses the proxy reset before Retry-After for a usage limit', async () => {

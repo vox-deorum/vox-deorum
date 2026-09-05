@@ -95,15 +95,17 @@ type RawToolResult = {
 /** Keeps each transformed stream request's caller raw-chunk preference private. */
 const rawChunkPreferences = new WeakMap<LanguageModelV3CallOptions, boolean>();
 
-/** Deterministic continuation failures that cannot succeed on an outer model retry. */
+/**
+ * Deterministic typed continuation errors that cannot succeed on an outer model
+ * retry. Unavailable continuations are absent because the proxy admits them
+ * synchronously and executes the supplied transcript on a fresh thread instead
+ * of rejecting the request.
+ */
 const terminalContinuationCodes = new Set([
-  'ambiguous_tool_call_id',
   'duplicate_tool_call_id',
-  'expired_tool_continuation',
   'thread_not_resumable',
   'tool_results_required',
   'tool_results_without_pending_call',
-  'unknown_tool_call_id',
 ]);
 
 /** Quota states that cannot become available through waiting and retrying. */
@@ -255,11 +257,7 @@ function markTerminalQuotaError(error: unknown): void {
 
 /** Mark deterministic proxy continuation failures as terminal for Vox Deorum's retry layer. */
 function classifyContinuationFailure(error: unknown, code: string | undefined): never {
-  if (
-    code !== undefined
-    && (terminalContinuationCodes.has(code) || /^continuation_.+_mismatch$/.test(code))
-    && asRecord(error) !== undefined
-  ) {
+  if (code !== undefined && terminalContinuationCodes.has(code) && asRecord(error) !== undefined) {
     (error as { isRetryable?: boolean }).isRetryable = false;
   }
   throw error;
