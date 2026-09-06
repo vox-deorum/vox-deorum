@@ -320,9 +320,11 @@ export function getModel(config: Model, options?: {
  * Build provider options from model configuration
  *
  * Converts OpenAI-style reasoningEffort to OpenRouter's reasoning.effort format
- * when using the openrouter provider.
+ * when using the openrouter provider. For Codex, the optional previous response
+ * id is passed through as the proxy's native continuation selector.
  *
  * @param model - The model configuration
+ * @param previousResponseId - Prior Codex response id forwarded for native thread continuation
  * @returns Provider options object keyed by provider name
  *
  * @example
@@ -343,7 +345,7 @@ export function getModel(config: Model, options?: {
  * })
  * // Returns: { openrouter: { reasoning: { effort: 'medium' } } }
  */
-export function buildProviderOptions(model: Model, runtimeIdentity?: ModelRuntimeIdentity): ProviderMetadata {
+export function buildProviderOptions(model: Model, runtimeIdentity?: ModelRuntimeIdentity, previousResponseId?: string): ProviderMetadata {
   // Model-name defaults are assigned by rules.ts; request-time reasoning and provider
   // translation intentionally remain here where the adapters serialize them.
   let result: ProviderMetadata;
@@ -358,7 +360,7 @@ export function buildProviderOptions(model: Model, runtimeIdentity?: ModelRuntim
 
   // Codex permits only its compatible adapter fields and proxy extension.
   else if (model.provider === 'codex') {
-    result = buildCodexProviderOptions(model, runtimeIdentity);
+    result = buildCodexProviderOptions(model, runtimeIdentity, previousResponseId);
   }
 
   else if (!model.options) {

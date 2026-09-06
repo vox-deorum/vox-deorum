@@ -24,6 +24,7 @@ import { VoxContext } from '../../../src/infra/vox-context.js';
 import { VoxAgent } from '../../../src/infra/vox-agent.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
+import { buildProviderOptions } from '../../../src/utils/models/models.js';
 import { spanProcessor } from '../../../src/instrumentation.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
@@ -33,6 +34,7 @@ import { buildCompletionToolsNudge } from '../../../src/utils/tools/tool-names.j
 import { buildRescuePrompt } from '../../../src/utils/models/text-cleaning.js';
 
 const stc = vi.mocked(streamTextWithConcurrency);
+const bpo = vi.mocked(buildProviderOptions);
 
 /** A fake one-step model result with fixed usage, in the shape executeAgentStep consumes. */
 function fakeResult(text = 'done') {
@@ -74,6 +76,38 @@ class CodexStepAgent extends VoxAgent<StrategistParameters> {
   override getActiveTools(): string[] { return ['test-tool']; }
   /** Stops after the mocked model step. */
   override stopCheck(): boolean { return true; }
+}
+
+/** Two-step Codex agent verifying the loop threads the proxy's response id into the next step. */
+class CodexThreadAgent extends VoxAgent<StrategistParameters> {
+  readonly description = 'two-step Codex continuation test agent';
+  constructor(public readonly name: string) { super(); }
+  /** Selects a Codex model without contacting the real provider. */
+  override getModel(): Model { return { provider: 'codex', name: 'test' } as Model; }
+  /** Supplies the minimal system prompt required by the execution loop. */
+  async getSystem(): Promise<string> { return 'system'; }
+  /** Runs without tools so the mocked steps need no tool results. */
+  override getActiveTools(): string[] { return []; }
+  /** Stops once both mocked steps have run. */
+  override stopCheck(_parameters: StrategistParameters, _input: unknown, _lastStep: any, allSteps: any[]): boolean {
+    return allSteps.length >= 2;
+  }
+}
+
+/** Two-step generic agent verifying non-Codex providers never receive a continuation selector. */
+class TwoStepAgent extends VoxAgent<StrategistParameters> {
+  readonly description = 'two-step test agent';
+  constructor(public readonly name: string) { super(); }
+  /** Selects a mocked non-Codex model. */
+  override getModel(): Model { return { provider: 'test', name: 'test' } as Model; }
+  /** Supplies the minimal system prompt required by the execution loop. */
+  async getSystem(): Promise<string> { return 'system'; }
+  /** Runs without tools so the mocked steps need no tool results. */
+  override getActiveTools(): string[] { return []; }
+  /** Stops once both mocked steps have run. */
+  override stopCheck(_parameters: StrategistParameters, _input: unknown, _lastStep: any, allSteps: any[]): boolean {
+    return allSteps.length >= 2;
+  }
 }
 
 /** Two-step agent whose second prepareStep call narrows the available completion tools. */
@@ -172,6 +206,8 @@ beforeAll(() => {
   agentRegistry.register(new StepAgent('test-step-b') as any);
   agentRegistry.register(new StepAgent('test-step-child') as any);
   agentRegistry.register(new CodexStepAgent('test-step-codex') as any);
+  agentRegistry.register(new CodexThreadAgent('test-codex-thread') as any);
+  agentRegistry.register(new TwoStepAgent('test-two-step') as any);
   agentRegistry.register(new DynamicNudgeAgent() as any);
   agentRegistry.register(new RepeatNudgeAgent() as any);
   agentRegistry.register(new NestingAgent('test-nesting', 'test-step-child') as any);
@@ -181,6 +217,8 @@ beforeAll(() => {
 beforeEach(() => {
   stc.mockReset();
   stc.mockImplementation(async () => fakeResult());
+  bpo.mockReset();
+  bpo.mockImplementation(() => ({}));
 });
 
 describe('VoxContext.execute token accounting', () => {
@@ -294,6 +332,52 @@ describe('VoxContext continuation nudges', () => {
     const nudge = buildCompletionToolsNudge(['finish-a']);
     const third = stc.mock.calls[2]![0] as any;
     expect(third.messages.filter((m: any) => m.content === nudge)).toHaveLength(1);
+  });
+});
+
+describe('VoxContext Codex thread continuation', () => {
+  it('threads the previous Codex response id into the next step provider options', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-codex-thread');
+    const base = makeStrategistParameters();
+
+    // Each mocked step reports a distinct proxy response id on its response.
+    let call = 0;
+    stc.mockImplementation(async () => {
+      call++;
+      const result = fakeResult(`codex step ${call}`);
+      result.steps[0].response.id = call === 1 ? 'chatcmpl_codex_step1' : 'chatcmpl_codex_step2';
+      return result;
+    });
+
+    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
+      await ctx.execute('test-codex-thread', {});
+    });
+
+    expect(stc).toHaveBeenCalledTimes(2);
+    expect(bpo).toHaveBeenCalledTimes(2);
+    expect(bpo.mock.calls[0]![2]).toBeUndefined();
+    expect(bpo.mock.calls[1]![2]).toBe('chatcmpl_codex_step1');
+  });
+
+  it('never threads a selector for a non-Codex provider, even when the response carries an id', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-thread-non-codex');
+    const base = makeStrategistParameters();
+
+    // The mocked response carries an id, but a 'test' provider must never consume it.
+    stc.mockImplementation(async () => {
+      const result = fakeResult('plain step');
+      result.steps[0].response.id = 'chatcmpl_ignored';
+      return result;
+    });
+
+    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async () => {
+      await ctx.execute('test-two-step', {});
+    });
+
+    expect(stc).toHaveBeenCalledTimes(2);
+    expect(bpo).toHaveBeenCalledTimes(2);
+    expect(bpo.mock.calls[0]![2]).toBeUndefined();
+    expect(bpo.mock.calls[1]![2]).toBeUndefined();
   });
 });
 

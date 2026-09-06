@@ -56,7 +56,16 @@ import { streamTextWithConcurrency, withModelConfig } from '../../../../src/util
 const testProxyRoot = path.join(os.tmpdir(), 'vox-codex-provider-test');
 
 /** Creates a standard non-streaming Chat Completions response. */
-function completion(message: Record<string, unknown>, finishReason: string, instructionSources?: unknown): Response {
+function completion(
+  message: Record<string, unknown>,
+  finishReason: string,
+  instructionSources?: unknown,
+  threadReused?: unknown,
+): Response {
+  const xCodex = {
+    ...(instructionSources === undefined ? {} : { instructionSources }),
+    ...(threadReused === undefined ? {} : { threadReused }),
+  };
   return new Response(JSON.stringify({
     id: 'chatcmpl-test',
     object: 'chat.completion',
@@ -64,7 +73,7 @@ function completion(message: Record<string, unknown>, finishReason: string, inst
     model: 'gpt-5.4-mini',
     choices: [{ index: 0, message, finish_reason: finishReason }],
     usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14 },
-    ...(instructionSources === undefined ? {} : { x_codex: { instructionSources } }),
+    ...(Object.keys(xCodex).length === 0 ? {} : { x_codex: xCodex }),
   }), { status: 200, headers: { 'content-type': 'application/json' } });
 }
 
@@ -234,6 +243,26 @@ describe('Codex provider options', () => {
     expect(() => buildCodexProviderOptions({
       provider: 'codex', name: 'gpt-5.4-mini', options: { hostTools: ['Bash'] },
     })).toThrow('Unsupported hostTools entries');
+  });
+
+  it('adds previous_response_id only when a continuation selector is supplied', () => {
+    expect(buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x'))
+      .toEqual({ codex: { x_codex: { sandbox: 'disabled', web_search: 'disabled' }, previous_response_id: 'chatcmpl_codex_x' } });
+    expect(buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }))
+      .not.toHaveProperty('codex.previous_response_id');
+  });
+
+  it('serializes the continuation selector as a top-level previous_response_id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion({ role: 'assistant', content: 'Ready.' }, 'stop'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Continue.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x'),
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body.previous_response_id).toBe('chatcmpl_codex_x');
   });
 });
 
@@ -801,6 +830,200 @@ describe('Codex reasoning token diagnostics', () => {
   });
 });
 
+describe('Codex thread reuse telemetry', () => {
+  it('marks an admitted thread continuation as reused', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      undefined,
+      true,
+    )));
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(result.providerMetadata).toEqual({ codex: { threadReuse: 'reused' } });
+  });
+
+  it('marks a fresh thread without a selector as fresh', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      undefined,
+      false,
+    )));
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(result.providerMetadata).toEqual({ codex: { threadReuse: 'fresh' } });
+  });
+
+  it('marks an admission fallback with a selector as tried_failed', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      undefined,
+      false,
+    )));
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x'),
+    });
+
+    expect(result.providerMetadata).toEqual({ codex: { threadReuse: 'tried_failed' } });
+  });
+
+  it('drops the continuation selector when the transcript ends with an assistant message', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      undefined,
+      false,
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [
+        { role: 'user', content: [{ type: 'text', text: 'Hello.' }] },
+        { role: 'assistant', content: [{ type: 'text', text: 'Hi.' }] },
+      ],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x'),
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body).not.toHaveProperty('previous_response_id');
+    expect(result.providerMetadata).toEqual({ codex: { threadReuse: 'fresh' } });
+  });
+
+  it('keeps the continuation selector when the transcript ends with tool results', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion({ role: 'assistant', content: 'Ready.' }, 'stop'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [
+        { role: 'user', content: [{ type: 'text', text: 'Found Rome.' }] },
+        { role: 'assistant', content: [{ type: 'tool-call', toolCallId: 'call-city', toolName: 'found_city', input: '{"name":"Rome"}' }] },
+        { role: 'tool', content: [{ type: 'tool-result', toolCallId: 'call-city', toolName: 'found_city', output: { type: 'text', value: 'Founded.' } }] },
+      ],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x'),
+      tools: [foundCityTool()],
+      toolChoice: { type: 'auto' },
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body.previous_response_id).toBe('chatcmpl_codex_x');
+  });
+
+  it('drops an empty continuation selector instead of sending it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      undefined,
+      false,
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, ''),
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body).not.toHaveProperty('previous_response_id');
+    expect(result.providerMetadata).toEqual({ codex: { threadReuse: 'fresh' } });
+  });
+
+  it('carries thread reuse next to aggregate instruction sources', async () => {
+    const source = String.raw`F:\project\AGENTS.md`;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+      [source],
+      true,
+    )));
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(result.providerMetadata).toEqual({ codex: { instructionSources: [source], threadReuse: 'reused' } });
+  });
+
+  it('attaches nothing when the response carries no x_codex extension', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+    )));
+
+    const result = await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(result.providerMetadata?.codex).toEqual({});
+    expect(JSON.stringify(result.providerMetadata)).not.toContain('threadReuse');
+  });
+
+  it('marks a streamed first-chunk admission fallback with a selector as tried_failed', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamingCompletion(
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        x_codex: { threadReused: false },
+        choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+      },
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      },
+    )));
+
+    const parts = await streamParts(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }), {
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x'),
+    });
+
+    expect(parts.find((part) => part.type === 'finish')?.providerMetadata).toEqual({
+      codex: { threadReuse: 'tried_failed' },
+    });
+  });
+
+  it('takes streamed thread reuse from a later chunk when the first omits it', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamingCompletion(
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+      },
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        x_codex: { threadReused: true },
+        choices: [{ index: 0, delta: { content: 'Ready.' }, finish_reason: null }],
+      },
+      {
+        id: 'chatcmpl-test', object: 'chat.completion.chunk', created: 1, model: 'gpt-5.4-mini',
+        choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      },
+    )));
+
+    const parts = await streamParts(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }), {
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(parts.find((part) => part.type === 'finish')?.providerMetadata).toEqual({
+      codex: { threadReuse: 'reused' },
+    });
+  });
+});
+
 describe('Codex built-in activity normalization', () => {
   it('normalizes raw non-stream activity into provider-executed dynamic tool parts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(completion({
@@ -1274,6 +1497,42 @@ describe('Codex built-in activity normalization', () => {
     });
 
     expect(parts).toEqual([{ type: 'start' }]);
+    expect(providerOptions).toMatchObject({
+      error: { name: 'CodexUsageLimitError', retryAt: now + 75_000 },
+    });
+    nowSpy.mockRestore();
+  });
+
+  it('preserves a raw usage-limit SSE error on the caller options even when the selector is dropped', async () => {
+    const now = Date.UTC(2026, 7, 6, 12, 0, 0);
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    const fetchMock = vi.fn().mockResolvedValue(streamingCompletion({
+      error: {
+        message: 'ChatGPT usage limit reached.', type: 'rate_limit_error', code: 'usage_limit_exceeded',
+        x_codex: { reset_at: now / 1000 + 60 },
+      },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const providerOptions = buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }, undefined, 'chatcmpl_codex_x');
+    const result = streamText({
+      model: buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }),
+      messages: [
+        { role: 'user', content: 'Inspect Rome.' },
+        { role: 'assistant', content: 'Inspecting.' },
+      ],
+      providerOptions,
+    });
+
+    const parts: any[] = [];
+    await expect((async () => {
+      for await (const part of result.fullStream) parts.push(part);
+    })()).rejects.toMatchObject({
+      name: 'CodexUsageLimitError',
+      retryAt: now + 75_000,
+    });
+
+    const [body] = capturedBodies(fetchMock);
+    expect(body).not.toHaveProperty('previous_response_id');
     expect(providerOptions).toMatchObject({
       error: { name: 'CodexUsageLimitError', retryAt: now + 75_000 },
     });

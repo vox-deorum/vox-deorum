@@ -11,9 +11,11 @@ import type {
   LanguageModelV3StreamPart,
   LanguageModelV3Usage,
   SharedV3ProviderMetadata,
+  SharedV3ProviderOptions,
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import { preserveModelError } from '../preserved-model-error.js';
+import type { PreservedModelErrorCarrier } from '../preserved-model-error.js';
 import { classifyProviderActivityStatus } from './activity-status.js';
 import { clientFunctionToolNames } from './required-tool-choice.js';
 
@@ -92,8 +94,19 @@ type RawToolResult = {
   result?: unknown;
 };
 
-/** Keeps each transformed stream request's caller raw-chunk preference private. */
-const rawChunkPreferences = new WeakMap<LanguageModelV3CallOptions, boolean>();
+/** The per-step Codex thread reuse outcome reported to telemetry. */
+export type CodexThreadReuse = 'reused' | 'tried_failed' | 'fresh';
+
+/** Per-request facts the response wrappers read back from the transformed params. */
+type TransformRequestState = {
+  forwardRawChunks: boolean;
+  continuationRequested: boolean;
+  /** The caller's original params, whose provider options carry the retry layer's preserved-error channel. */
+  errorChannel: PreservedModelErrorCarrier;
+};
+
+/** Keeps each transformed request's raw-chunk preference and continuation request private. */
+const transformRequestStates = new WeakMap<LanguageModelV3CallOptions, TransformRequestState>();
 
 /**
  * Deterministic typed continuation errors that cannot succeed on an outer model
@@ -134,17 +147,38 @@ function extractInstructionSources(value: unknown): string[] | undefined {
   return [...instructionSources];
 }
 
-/** Attach Codex instruction sources to the provider metadata carried by the AI SDK. */
-function withInstructionSources(
+/** Read the proxy's thread-reuse admission from one response envelope. */
+function extractThreadReused(value: unknown): boolean | undefined {
+  const threadReused = asRecord(asRecord(value)?.x_codex)?.threadReused;
+  return typeof threadReused === 'boolean' ? threadReused : undefined;
+}
+
+/** Combine the request's selector presence with the proxy's admission into one outcome. */
+function threadReuseOutcome(selectorRequested: boolean, threadReused: boolean | undefined): CodexThreadReuse | undefined {
+  if (threadReused === undefined) return undefined;
+  if (threadReused) return 'reused';
+  return selectorRequested ? 'tried_failed' : 'fresh';
+}
+
+/** Return whether the final prompt message is a shape the proxy accepts after a selector. */
+function endsWithContinuableMessage(prompt: LanguageModelV3CallOptions['prompt']): boolean {
+  const lastRole = prompt.at(-1)?.role;
+  return lastRole === 'user' || lastRole === 'tool';
+}
+
+/** Attach the proxy's response extensions to the provider metadata carried by the AI SDK. */
+function withProxyResponseMetadata(
   providerMetadata: SharedV3ProviderMetadata | undefined,
   instructionSources: string[] | undefined,
+  threadReuse: CodexThreadReuse | undefined,
 ): SharedV3ProviderMetadata | undefined {
-  if (instructionSources === undefined) return providerMetadata;
+  if (instructionSources === undefined && threadReuse === undefined) return providerMetadata;
   return {
     ...(providerMetadata ?? {}),
     codex: {
       ...(providerMetadata?.codex ?? {}),
-      instructionSources,
+      ...(instructionSources === undefined ? {} : { instructionSources }),
+      ...(threadReuse === undefined ? {} : { threadReuse }),
     },
   };
 }
@@ -597,12 +631,35 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
   return {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
+      const stripped = stripProviderActivityHistory(params);
+      const codexOptions = asRecord(asRecord(params.providerOptions)?.codex);
+      const selector = codexOptions?.previous_response_id;
+      const usableSelector = typeof selector === 'string' && selector.length > 0;
+      // The proxy rejects a continuation whose transcript ends with an assistant or
+      // system message, and any selector value it cannot resolve, so drop unusable
+      // selectors instead of sending an invalid shape.
+      const dropSelector = codexOptions?.previous_response_id !== undefined
+        && (!usableSelector || !endsWithContinuableMessage(stripped.prompt));
       const transformed = {
-        ...stripProviderActivityHistory(params),
+        ...stripped,
         // Raw chunks are consumed internally and conditionally forwarded below.
         includeRawChunks: true,
+        ...(dropSelector && codexOptions !== undefined
+          ? {
+              providerOptions: {
+                ...params.providerOptions,
+                codex: Object.fromEntries(Object.entries(codexOptions).filter(([key]) => key !== 'previous_response_id')),
+              } as SharedV3ProviderOptions,
+            }
+          : {}),
       };
-      rawChunkPreferences.set(transformed, params.includeRawChunks === true);
+      transformRequestStates.set(transformed, {
+        forwardRawChunks: params.includeRawChunks === true,
+        continuationRequested: usableSelector && !dropSelector,
+        // Preserved stream errors must reach the retry layer through the caller's
+        // original provider options, not the clone a dropped selector produced.
+        errorChannel: params,
+      });
       return transformed;
     },
     wrapGenerate: async ({ doGenerate, params }) => {
@@ -611,6 +668,10 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       const normalizer = new ActivityNormalizer(params);
       const payload = rawChoicePayload(response.response?.body);
       const instructionSources = extractInstructionSources(response.response?.body);
+      const threadReuse = threadReuseOutcome(
+        transformRequestStates.get(params)?.continuationRequested ?? false,
+        extractThreadReused(response.response?.body),
+      );
       const activity = [
         ...normalizer.ingestCalls(payload?.tool_calls),
         ...normalizer.ingestResults(payload?.tool_results),
@@ -621,25 +682,29 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       return {
         ...response,
         content: [...content, ...activity as LanguageModelV3Content[]],
-        providerMetadata: withInstructionSources(response.providerMetadata, instructionSources),
+        providerMetadata: withProxyResponseMetadata(response.providerMetadata, instructionSources, threadReuse),
       };
     },
     wrapStream: async ({ doStream, params }) => {
       const response = await withProviderFailureClassification(doStream);
       const normalizer = new ActivityNormalizer(params);
-      const requestedRawChunks = rawChunkPreferences.get(params) ?? false;
+      const requestState = transformRequestStates.get(params);
+      const requestedRawChunks = requestState?.forwardRawChunks ?? false;
+      const continuationRequested = requestState?.continuationRequested ?? false;
       let sawFinish = false;
       let sawRawFinish = false;
       let inspectedUsage = false;
       let rawProxyFailure: Error | undefined;
       let inspectedFirstRawChunk = false;
       let instructionSources: string[] | undefined;
+      let threadReused: boolean | undefined;
       return {
         ...response,
         stream: response.stream.pipeThrough(new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
           transform(part, controller) {
             if (part.type === 'raw') {
               if (requestedRawChunks) controller.enqueue(part);
+              if (threadReused === undefined) threadReused = extractThreadReused(part.rawValue);
               if (rawProxyFailure !== undefined) return;
               if (!inspectedFirstRawChunk) {
                 inspectedFirstRawChunk = true;
@@ -657,7 +722,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
             }
             if (rawProxyFailure !== undefined) {
               if (part.type === 'error') {
-                preserveModelError(params, rawProxyFailure);
+                preserveModelError(requestState?.errorChannel ?? params, rawProxyFailure);
                 controller.error(rawProxyFailure);
               }
               return;
@@ -671,7 +736,11 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
               }
               for (const activity of normalizer.finishNormally()) controller.enqueue(activity);
               sawFinish = true;
-              const providerMetadata = withInstructionSources(part.providerMetadata, instructionSources);
+              const providerMetadata = withProxyResponseMetadata(
+                part.providerMetadata,
+                instructionSources,
+                threadReuseOutcome(continuationRequested, threadReused),
+              );
               controller.enqueue(providerMetadata === part.providerMetadata
                 ? part
                 : { ...part, providerMetadata });
@@ -681,7 +750,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
           },
           flush(controller) {
             if (rawProxyFailure !== undefined) {
-              preserveModelError(params, rawProxyFailure);
+              preserveModelError(requestState?.errorChannel ?? params, rawProxyFailure);
               controller.error(rawProxyFailure);
               return;
             }

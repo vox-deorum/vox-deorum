@@ -111,10 +111,13 @@ export type CodexRequestExtension = {
  * under the proxy root (which Codex itself enforces, network stays off), and
  * Web enables live search. File access is disabled unless Read or Write is
  * explicitly granted, and Web alone never creates a working directory.
+ * An optional previous response id is forwarded as the proxy's
+ * previous_response_id continuation preference, so it resumes the same thread.
  */
 export function buildCodexProviderOptions(
   model: Model,
   runtimeIdentity?: ModelRuntimeIdentity,
+  previousResponseId?: string,
 ): ProviderMetadata {
   const access = resolveHostToolAccess(model.options?.hostTools, {
     workingDirectoryBase: getCodexProxyConfig().root,
@@ -130,7 +133,10 @@ export function buildCodexProviderOptions(
   // directory is created under that root, so containment holds by construction.
   if (access.workingDirectory) extension.cwd = access.workingDirectory;
 
-  const options: { x_codex: CodexRequestExtension; reasoningEffort?: string } = { x_codex: extension };
+  const options: { x_codex: CodexRequestExtension; reasoningEffort?: string; previous_response_id?: string } = { x_codex: extension };
   if (model.options?.reasoningEffort !== undefined) options.reasoningEffort = model.options.reasoningEffort;
+  // The adapter spreads unknown keys of this object top-level, so the selector
+  // reaches the request body as the proxy's native continuation preference.
+  if (previousResponseId !== undefined) options.previous_response_id = previousResponseId;
   return { codex: options };
 }

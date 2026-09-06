@@ -17,4 +17,29 @@ describe('codexResponseTelemetryAttributes', () => {
     expect(codexResponseTelemetryAttributes({ codex: { instructionSources: ['ok', 3] } })).toEqual({});
     expect(codexResponseTelemetryAttributes({ openai: { instructionSources: ['ok'] } })).toEqual({});
   });
+
+  it('records the thread reuse outcome as a host attribute', () => {
+    expect(codexResponseTelemetryAttributes({ codex: { threadReuse: 'reused' } })).toEqual({
+      'host.thread_reuse': 'reused',
+    });
+  });
+
+  it('passes each thread reuse outcome through', () => {
+    for (const value of ['reused', 'tried_failed', 'fresh'] as const) {
+      expect(codexResponseTelemetryAttributes({ codex: { threadReuse: value } })).toEqual({
+        'host.thread_reuse': value,
+      });
+    }
+  });
+
+  it('ignores an unrecognized thread reuse value', () => {
+    expect(codexResponseTelemetryAttributes({ codex: { threadReuse: 'bogus' } })).toEqual({});
+  });
+
+  it('records instruction sources and thread reuse together', () => {
+    expect(codexResponseTelemetryAttributes({ codex: { instructionSources: ['a'], threadReuse: 'fresh' } })).toEqual({
+      'host.instruction_sources': ['a'],
+      'host.thread_reuse': 'fresh',
+    });
+  });
 });

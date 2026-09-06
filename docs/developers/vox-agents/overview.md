@@ -117,7 +117,7 @@ Middleware sits between agents and providers:
 
 - Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking.
 - Claude Code subscription limits wait until the provider's reset time, with a slow fallback when no valid reset is supplied.
-- Codex response middleware converts observational `tool_calls` and `tool_results` into provider-executed AI SDK lifecycles, removes them from replay history, and leaves client game tools executable.
+- Codex response middleware converts observational `tool_calls` and `tool_results` into provider-executed AI SDK lifecycles, removes them from replay history, and leaves client game tools executable. It also threads the previous step's response id as `previous_response_id` between the steps of one agent run, so the proxy prefers native Codex thread continuation, and records the admitted outcome as `host.thread_reuse` telemetry.
 - The tool-rescue middleware (`src/utils/models/tool-rescue/`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
 
 Provider-executed Claude Code and Codex calls are shown in the dashboard and recorded as retrospective built-in tool spans. Preliminary progress is not a successful outcome: a failed or missing terminal result records an error.

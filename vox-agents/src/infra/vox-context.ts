@@ -624,6 +624,8 @@ export class VoxContext<TParameters extends AgentParameters> {
             let hasCachedInputTokens = false;
             let reasoningTokens = 0;
             let outputTokens = 0;
+            // Threads the previous Codex step's response id so the next step prefers native thread continuation.
+            let codexResponseId: string | undefined;
 
             // Execute steps in a loop, one at a time
             for (let stepCount = 0; !shouldStop; stepCount++) {
@@ -641,6 +643,7 @@ export class VoxContext<TParameters extends AgentParameters> {
                 stepCount,
                 messages,
                 modelConfig,
+                codexResponseId,
                 callback
               );
 
@@ -655,6 +658,7 @@ export class VoxContext<TParameters extends AgentParameters> {
               }
               reasoningTokens += stepResult.reasoningTokens;
               outputTokens += stepResult.outputTokens;
+              codexResponseId = stepResult.responseId;
             }
 
             this.logger.info(`Agent execution completed: ${agentName} with ${allSteps.length} steps`);
@@ -723,8 +727,9 @@ export class VoxContext<TParameters extends AgentParameters> {
    * @param allSteps - All steps executed so far
    * @param messages - The current message history
    * @param model - The model identifier
+   * @param previousResponseId - The prior Codex step's response id, forwarded so the proxy continues the same thread
    * @param stepCount - The current step number
-   * @returns Updated messages, stop condition, and optional final text
+   * @returns Updated messages, stop condition, optional final text, and the response id that continues the thread
    */
   private async executeAgentStep(
     agent: VoxAgent<TParameters>,
@@ -734,8 +739,9 @@ export class VoxContext<TParameters extends AgentParameters> {
     stepCount: number,
     messages: ModelMessage[],
     model: Model,
+    previousResponseId?: string,
     callback?: StreamingEventCallback
-  ): Promise<{ messages: ModelMessage[], shouldStop: boolean, finalText?: string, inputTokens: number, cachedInputTokens?: number, reasoningTokens: number, outputTokens: number }> {
+  ): Promise<{ messages: ModelMessage[], shouldStop: boolean, finalText?: string, inputTokens: number, cachedInputTokens?: number, reasoningTokens: number, outputTokens: number, responseId?: string }> {
     const stepSpan = this.tracer.startSpan(`agent.${agent.name}.step.${stepCount + 1}`, {
       attributes: {
         'vox.context.id': this.id,
@@ -757,7 +763,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         // Use one identity for construction and request options so any provider
         // working-directory policy remains stable across a single step.
         const runtimeIdentity = { workingDirId: `${parameters.gameID}-${parameters.playerID}` };
-        const stepProviderOptions = buildProviderOptions(stepModel, runtimeIdentity);
+        const stepProviderOptions = buildProviderOptions(stepModel, runtimeIdentity, previousResponseId);
         const stepActiveTools = stepConfig.activeTools || agent.getActiveTools(parameters);
         const stepToolChoice = stepActiveTools && stepActiveTools.length > 0 ? agent.toolChoice : "auto";
         const stepOutputSchema = stepConfig.outputSchema;
@@ -848,6 +854,11 @@ export class VoxContext<TParameters extends AgentParameters> {
         const stepResults = result.steps;
         const stepResponse = stepResults[stepResults.length - 1];
 
+        // The proxy's response id doubles as the next step's Codex continuation selector.
+        const responseId = stepModel.provider === 'codex' && typeof stepResponse.response?.id === 'string'
+          ? stepResponse.response.id
+          : undefined;
+
         // Record framing (an explicit fact) next to step.messages/step.tools. Set only when
         // the tool-rescue middleware actually ran for this step — i.e. a prompt-mode model
         // with tools whose call reached this point. Native/no-tool steps, batch replays
@@ -937,7 +948,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         stepSpan.setAttribute('step.should_stop', shouldStop);
         stepSpan.setStatus({ code: SpanStatusCode.OK });
 
-        return { messages, shouldStop, finalText, inputTokens, cachedInputTokens, reasoningTokens, outputTokens };
+        return { messages, shouldStop, finalText, inputTokens, cachedInputTokens, reasoningTokens, outputTokens, responseId };
       } catch (error) {
         stepSpan.recordException(error as Error);
         stepSpan.setStatus({
