@@ -55,6 +55,20 @@ describe('wrapMCPTool execute', () => {
     expect(mcp.calls('get-cities')[0].args).toEqual({ Filter: 'capital', PlayerID: 7 });
   });
 
+  it('does not mutate the caller input object when injecting autoComplete fields', async () => {
+    mcp.respondWith('get-cities', structuredResult({ Name: 'Rome' }));
+
+    // The conversation stores this exact object as the assistant tool-call
+    // input, so the enrichment must land on a copy: replayed tool-call
+    // arguments have to stay byte-identical to the model's call, which the
+    // Codex proxy verifies against its stored pending continuation.
+    const input = { Filter: 'capital' };
+    await exec(mcpTool({ autoComplete: ['PlayerID', 'Turn'] }), input, { playerID: 7, turn: 4 });
+
+    expect(input).toEqual({ Filter: 'capital' });
+    expect(mcp.calls('get-cities')[0].args).toEqual({ Filter: 'capital', PlayerID: 7, Turn: 4 });
+  });
+
   it('never clobbers an explicitly-passed arg with undefined', async () => {
     mcp.respondWith('get-cities', structuredResult({ ok: true }));
 

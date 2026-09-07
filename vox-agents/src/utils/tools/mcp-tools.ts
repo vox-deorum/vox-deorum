@@ -124,7 +124,12 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
       });
 
       try {
-        // Autocomplete support - add the fields back for execution
+        // Autocomplete support - add the fields back for execution. The
+        // enrichment lands on a copy: `args` is the same object the conversation
+        // stores as the assistant tool-call input, and replayed tool-call
+        // arguments must stay byte-identical to what the model actually sent,
+        // because the Codex proxy compares them against its stored pending call.
+        const callArgs = (tool._meta as any)?.autoComplete ? { ...args } : args;
         if ((tool._meta as any)?.autoComplete) {
           ((tool._meta as any)?.autoComplete as string[]).forEach(
             key => {
@@ -133,19 +138,19 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
               // Only auto-fill when the context actually has a value; never clobber
               // an explicitly-passed arg (e.g. get-events `Original: true`) with undefined.
               const value = (options.experimental_context as any)[camelKey];
-              if (value !== undefined) args[key] = value;
+              if (value !== undefined) callArgs[key] = value;
             }
           )
         }
 
         // Log inputs
         span.setAttributes({
-          'tool.input': JSON.stringify(args)
+          'tool.input': JSON.stringify(callArgs)
         });
-        logger.info(`Calling tool ${tool.name}...`, args);
+        logger.info(`Calling tool ${tool.name}...`, callArgs);
 
         // Call the tool
-        const rawResult = await mcpClient.callTool(tool.name, args);
+        const rawResult = await mcpClient.callTool(tool.name, callArgs);
         const result = normalizeMCPToolResult(rawResult);
         logger.debug(`Tool call completed: ${tool.name}`);
 
