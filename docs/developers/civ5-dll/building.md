@@ -8,6 +8,8 @@ You only need to build the DLL when you change the C++ gamecore, which for Vox D
 
 The gamecore is a 32-bit (Win32/x86) C++ DLL built against the legacy **v90 platform toolset**, the Visual C++ 2008 compiler. A build produces `CvGameCore_Expansion2.dll` and a matching `.pdb`.
 
+The shared RL header `VoxRlTypes.h` sets `_SECURE_SCL=0` and `_HAS_ITERATOR_DEBUGGING=0` when compiling for the game DLL. RL sources built without the game precompiled header include it before system or STL headers so their STL object layouts match the game. The maintained source is in `vox-deorum-rl/simulator/schema/shared/`. Rebuild all objects after changing these settings; mixed layouts can crash mod loading even when RL capture is disabled.
+
 ## The normal loop: build-and-copy.bat
 
 From the `civ5-dll` folder:

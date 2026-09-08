@@ -294,11 +294,19 @@ describe('VoxCivilization (mock tier)', () => {
     });
   });
 
-  describe('crash-recovery / launch-failure handling', () => {
-    it('restores seeds when the launch script fails for a brand-new StartGame', async () => {
-      // No existing process -> proceeds to spawn the launch script.
-      mFindProcess.mockResolvedValue(null);
-      mReadConfigSeeds.mockReturnValue({ sync: 'origSync', map: 'origMap' });
+  describe('launch environment forwarding', () => {
+    afterEach(() => {
+      delete process.env.VOX_RL_CAPTURE;
+      delete process.env.VOX_TEST_SECRET;
+    });
+
+    it('carries VOX_RL_CAPTURE into the launch script child and drops the rest of our env', async () => {
+      process.env.VOX_RL_CAPTURE = '1';
+      // Stand-in for the secrets our environment can carry (API keys and friends).
+      process.env.VOX_TEST_SECRET = 'do-not-leak';
+      // First lookup finds no running game. The first launch poll finds the
+      // direct child without requiring the launcher script to exit.
+      mFindProcess.mockResolvedValueOnce(null).mockResolvedValue(1212);
 
       const child = new FakeChild();
       mSpawn.mockReturnValue(child as never);
@@ -306,12 +314,37 @@ describe('VoxCivilization (mock tier)', () => {
       const civ = new VoxCivilization();
       const promise = civ.startGame('StartGame.lua');
 
-      // Let applyRandomSeeds + the spawn-promise setup flush so the child's
-      // 'exit' listener is registered before we emit.
-      await vi.waitFor(() => expect(mSpawn).toHaveBeenCalled());
+      const started = await promise;
 
-      // Make the launch script fail.
-      child.emit('exit', 1);
+      expect(started).toBe(true);
+      const options = mSpawn.mock.calls[0][2];
+      // The capture opt-in rides along with the Windows system baseline...
+      expect(options?.env?.VOX_RL_CAPTURE).toBe('1');
+      expect(options?.env?.SystemRoot).toBe(process.env.SystemRoot);
+      // ...and nothing else from our environment does.
+      expect(options?.env?.VOX_TEST_SECRET).toBeUndefined();
+      const allowed = ['COMSPEC', 'PATHEXT', 'PATH', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'windir', 'VOX_RL_CAPTURE'];
+      expect(Object.keys(options?.env ?? {}).every((key) => allowed.includes(key))).toBe(true);
+
+      civ.destroy();
+    });
+  });
+
+  describe('crash-recovery / launch-failure handling', () => {
+    it('restores seeds when the launch script fails for a brand-new StartGame', async () => {
+      // No existing process -> proceeds to spawn the launch script.
+      mFindProcess.mockResolvedValueOnce(null);
+      mReadConfigSeeds.mockReturnValue({ sync: 'origSync', map: 'origMap' });
+
+      const child = new FakeChild();
+      mSpawn.mockReturnValue(child as never);
+      mFindProcess.mockImplementationOnce(async () => {
+        child.emit('exit', 1);
+        return null;
+      });
+
+      const civ = new VoxCivilization();
+      const promise = civ.startGame('StartGame.lua');
 
       const started = await promise;
 
@@ -324,6 +357,58 @@ describe('VoxCivilization (mock tier)', () => {
         map: 'origMap',
       });
 
+      civ.destroy();
+    });
+
+    it('waits through a delayed direct launch and binds when Civilization V appears', async () => {
+      mFindProcess
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(4321);
+      const child = new FakeChild();
+      mSpawn.mockReturnValue(child as never);
+
+      const civ = new VoxCivilization();
+
+      await expect(civ.startGame('LoadMods.lua')).resolves.toBe(true);
+      expect(mFindProcess).toHaveBeenCalledTimes(3);
+      expect(civ.getProcessId()).toBe(4321);
+      civ.destroy();
+    });
+
+    it('restores seeds when the launcher reports an error before Civilization V appears', async () => {
+      mFindProcess.mockResolvedValueOnce(null);
+      mReadConfigSeeds.mockReturnValue({ sync: 'origSync', map: 'origMap' });
+      const child = new FakeChild();
+      mSpawn.mockReturnValue(child as never);
+      mFindProcess.mockImplementationOnce(async () => {
+        child.emit('error', new Error('launcher failed'));
+        return null;
+      });
+
+      const civ = new VoxCivilization();
+      await expect(civ.startGame('StartGame.lua')).resolves.toBe(false);
+      expect(mUpdateConfigSeeds).toHaveBeenLastCalledWith('[CONFIG]\n', {
+        sync: 'origSync',
+        map: 'origMap',
+      });
+      civ.destroy();
+    });
+
+    it('fails and restores seeds when Civilization V never appears', async () => {
+      mFindProcess.mockResolvedValue(null);
+      mReadConfigSeeds.mockReturnValue({ sync: 'origSync', map: 'origMap' });
+      const child = new FakeChild();
+      mSpawn.mockReturnValue(child as never);
+
+      const civ = new VoxCivilization();
+
+      await expect(civ.startGame('StartGame.lua')).resolves.toBe(false);
+      expect(mFindProcess).toHaveBeenCalledTimes(31);
+      expect(mUpdateConfigSeeds).toHaveBeenLastCalledWith('[CONFIG]\n', {
+        sync: 'origSync',
+        map: 'origMap',
+      });
       civ.destroy();
     });
 

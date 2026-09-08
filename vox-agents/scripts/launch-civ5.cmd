@@ -51,6 +51,13 @@ if not exist "!CIV5_PATH!\CivilizationV.exe" (
 
 echo Found Civ 5 at: !CIV5_PATH!
 
+:: Ensure steam_appid.txt exists so CivilizationV.exe launches directly instead of
+:: being re-parented through Steam, which drops our environment (notably
+:: VOX_RL_CAPTURE) from the game process. Creation failures are ignored.
+if not exist "!CIV5_PATH!\steam_appid.txt" (
+    (echo 8940)> "!CIV5_PATH!\steam_appid.txt" 2>nul
+)
+
 :: Create Automation directory if it doesn't exist
 if not exist "!CIV5_PATH!\Assets\Automation" (
     echo Creating Automation directory...

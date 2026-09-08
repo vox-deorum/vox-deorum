@@ -7,7 +7,7 @@
  * crash recovery scenarios.
  */
 
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import { join } from 'path';
 import { setTimeout } from 'node:timers/promises'
 import { readFile, writeFile } from 'fs/promises';
@@ -26,6 +26,12 @@ import {
 } from '../utils/game/windows-process.js';
 
 const logger = createLogger('VoxCivilization');
+const launchPollIntervalMs = 1000;
+const launchTimeoutMs = 30000;
+
+// Windows system variables the launch chain still needs on the minimal
+// environment startGame builds: machine plumbing only, nothing user-specific.
+const systemEnvNames = ['COMSPEC', 'PATHEXT', 'PATH', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'windir'];
 type ExitCallback = (code: number | null) => void;
 
 interface SeedRestoreState {
@@ -71,13 +77,47 @@ export class VoxCivilization {
   private async bindToExistingProcess(): Promise<boolean> {
     const pid = await findProcessByImageName('CivilizationV.exe');
     if (pid) {
-      logger.info(`Found existing CivilizationV.exe process (PID: ${pid})`);
-      this.externalProcessPid = pid;
-      this.monitoring = true;
-      this.startProcessMonitoring();
+      this.bindProcess(pid);
       return true;
     } else {
       return false;
+    }
+  }
+
+  /** Records a discovered Civilization V process and begins monitoring it. */
+  private bindProcess(pid: number): void {
+    logger.info(`Found existing CivilizationV.exe process (PID: ${pid})`);
+    this.externalProcessPid = pid;
+    this.monitoring = true;
+    this.startProcessMonitoring();
+  }
+
+  /** Waits for a launched Civilization V process while the launcher remains active. */
+  private async waitForLaunchedProcess(cmdProcess: ChildProcess): Promise<boolean> {
+    let launchError: Error | undefined;
+    const onExit = (code: number | null) => {
+      launchError = new Error(`Launch script exited before Civilization V was found (code ${code ?? 'unknown'})`);
+    };
+    const onError = (error: Error) => { launchError = error; };
+    cmdProcess.once('exit', onExit);
+    cmdProcess.once('error', onError);
+
+    try {
+      for (let elapsed = 0; elapsed < launchTimeoutMs; elapsed += launchPollIntervalMs) {
+        if (launchError) throw launchError;
+        const pid = await findProcessByImageName('CivilizationV.exe');
+        if (launchError) throw launchError;
+        if (pid) {
+          this.bindProcess(pid);
+          return true;
+        }
+        await setTimeout(launchPollIntervalMs);
+      }
+      if (launchError) throw launchError;
+      throw new Error(`Civilization V did not start within ${launchTimeoutMs / 1000} seconds`);
+    } finally {
+      cmdProcess.removeListener('exit', onExit);
+      cmdProcess.removeListener('error', onError);
     }
   }
 
@@ -327,7 +367,7 @@ export class VoxCivilization {
    *
    * @param luaName - Name of the Lua script to run (default: 'LoadMods.lua')
    * @param playerCount - Optional number of players for StartGame.lua (generates from template)
-   * @returns True if game started successfully, false if already running
+   * @returns True when a Civilization V process is bound, false when launch fails
    */
   async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, visualMode?: boolean, randomSeeds?: RandomSeedsConfig): Promise<boolean> {
     // Check if game is already running
@@ -366,38 +406,37 @@ export class VoxCivilization {
 
       logger.info(`Launching Civilization V with script: ${actualLuaName}${visualMode ? " in visual production mode" : ""}`);
 
-      // Launch the cmd script and wait for it to complete
+      // Launch the script, then bind as soon as its direct Civilization V
+      // child appears. Direct launches keep the script alive for the game's
+      // lifetime, so waiting for its exit would block the session startup.
       const args = ['/c', scriptPath, actualLuaName];
       if (visualMode) args.push('production');
 
-      await new Promise<void>((resolve, reject) => {
-        const cmdProcess = spawn('cmd', args, {
-          detached: false,
-          stdio: 'inherit',
-          shell: false
-        });
+      // Run the launch chain on a minimal environment rather than a copy of
+      // ours, so secrets like API keys never reach the game process. The
+      // carried set is the Windows system baseline (systemEnvNames) plus the
+      // VOX_RL_CAPTURE opt-in the game DLL reads at load, when it is set. The
+      // steam_appid.txt written by the launch script keeps CivilizationV.exe
+      // from re-parenting through Steam, which would drop this environment.
+      const launchEnv: NodeJS.ProcessEnv = {};
+      for (const name of systemEnvNames) {
+        const value = process.env[name];
+        if (value !== undefined) {
+          launchEnv[name] = value;
+        }
+      }
+      if (process.env.VOX_RL_CAPTURE !== undefined) {
+        launchEnv.VOX_RL_CAPTURE = process.env.VOX_RL_CAPTURE;
+      }
 
-        cmdProcess.on('exit', (code) => {
-          if (code === 0) {
-            logger.info('Launch script completed successfully');
-            resolve();
-          } else {
-            reject(new Error(`Launch script exited with code ${code}`));
-          }
-        });
-
-        cmdProcess.on('error', (err) => {
-          reject(err);
-        });
+      const cmdProcess = spawn('cmd', args, {
+        detached: false,
+        stdio: 'inherit',
+        shell: false,
+        env: launchEnv
       });
 
-      // Wait an additional 5s after the cmd finishes
-      // Note that Civ5 would start a process, end it, and then start another one
-      logger.info('Waiting 5 seconds for game to fully initialize...');
-      await setTimeout(5000);
-
-      // Find and bind to the actual CivilizationV.exe process
-      return await this.bindToExistingProcess();
+      return await this.waitForLaunchedProcess(cmdProcess);
     } catch (error) {
       logger.error('Failed to launch game:', error);
       await this.restoreRandomSeeds();

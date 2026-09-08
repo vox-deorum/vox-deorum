@@ -10,6 +10,8 @@ This page covers the whole turn-playing machinery: the session that owns a game,
 
 `StrategistSession` (`src/strategist/strategist-session.ts`) owns a single game's lifecycle. It starts from the console entry point (`npm run strategist`, `src/strategist/console.ts`) or from the web UI's session controls. On start it launches Civilization V through `VoxCivilization`, connects the MCP client, and creates one `VoxPlayer` per LLM-controlled player.
 
+The launcher starts Civilization V directly. `VoxCivilization` waits up to 30 seconds for the game process to appear, then binds to it so the session can connect and enable autoplay while the game continues running. Launcher errors or a missing game process fail startup.
+
 It then reacts to MCP notifications until the game ends:
 
 - `PlayerDoneTurn` drives the players' turn loops.
