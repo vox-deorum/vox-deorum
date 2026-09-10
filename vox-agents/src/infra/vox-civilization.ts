@@ -428,6 +428,9 @@ export class VoxCivilization {
       if (process.env.VOX_RL_CAPTURE !== undefined) {
         launchEnv.VOX_RL_CAPTURE = process.env.VOX_RL_CAPTURE;
       }
+      if (process.env.VOX_RL_CAPTURE_TIMINGS !== undefined) {
+        launchEnv.VOX_RL_CAPTURE_TIMINGS = process.env.VOX_RL_CAPTURE_TIMINGS;
+      }
 
       const cmdProcess = spawn('cmd', args, {
         detached: false,
