@@ -57,6 +57,8 @@ export function buildClaudeCodeModel(
 
   const settings: ClaudeCodeSettings = {
     settingSources: [],
+    strictMcpConfig: true,
+    mcpServers: {},
     onQueryCreated: guardClaudeCodeQueryUsageLimits,
     // The provider forwards every ANTHROPIC_* variable to the Claude Code CLI,
     // which then bills the API key instead of the subscription login. Unset the
