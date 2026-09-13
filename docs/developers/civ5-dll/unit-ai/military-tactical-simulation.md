@@ -106,6 +106,30 @@ Equivalent sibling states are discarded, so action order does not create duplica
 
 The danger cache in `CvTacticalAI.h` matches the defender, plot, previous damage, and a hash of the unit damage ledger. `SUnitIDValueContainer::GetHash` counts each entry once, including after promotion to vector storage. Damage is grouped into five-point bins, and cache matching remains approximate because it compares hashes rather than exact entries.
 
+### Scoring
+
+The simulation uses a **heuristic score** to favor useful damage, valuable actions, and good positioning. Higher scores rank better, but a plan must also pass the [acceptance checks](#acceptance-and-replay). The score does not estimate victory probability.
+
+Each `STacticalAssignment` stores a plot score, contextual bonus, damage delta, and the previous plot score for that unit. `SetScore` combines them as:
+
+`assignment score = new plot score - old plot score + 10 * (damage delta + bonus)`
+
+| Term | How it earns points |
+| --- | --- |
+| Damage delta | `ScoreAttackDamage` credits city and unit damage, then subtracts damage received. Unit damage is capped at remaining HP; city damage permits limited overkill. The forecast includes approximations for flanking, support, splash, and repeat attacks. Healing from actions such as pillaging can also contribute positively. |
+| Bonus | A direct unit kill adds 15 and city capture adds 100, before the 10× weight. Other terms reward focus fire, kill effects, civilian captures, pillaging, and clearing barbarian camps. Ranged attacks also favor the requested target and movement left to disengage. |
+| Plot score | `ScorePlotForCombatUnitMove` combines `10 * plot desirability + danger adjustment + small location and movement preferences`. Only the change from the unit's previous plot score enters its assignment score. |
+
+For example, an attack that deals 30 damage, receives 10, earns a 15-point kill bonus, and improves its plot score by 20 contributes `20 + 10 * (30 - 10 + 15) = 370`. This simplified example excludes other contextual bonuses.
+
+With enemies present, the land desirability table peaks at 12: first-line units prefer adjacency or a killing advance onto the enemy plot, second-line units prefer distance 2, and third-line units prefer distance 3. Naval units have a separate table. Without enemies, desirability uses distance to the tactical target. City proximity and remaining movement provide small preferences. Attack candidates include the score of the unit's resulting location.
+
+Intermediate movement applies provisional danger penalties. `ScoreCombatUnitTurnEnd` evaluates final positions using danger relative to remaining HP, an experience adjustment, and a larger penalty for isolation. Nearby friendlies, terrain, air cover, and citadels can improve the result. Unsafe plots can be rejected outright.
+
+`CvBasePosition::UpdateScore` caches a position total as `10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores`. **The cached total lags plot updates:** it sums the stored entries before replacing the acting unit's entry. Completion also appends finish assignments and adds unused-unit plot bonuses without refreshing the total. The final ranking therefore does not fully reflect the final plot evaluations.
+
+The queue explores shallower generations first, then deeper ones later. Within a generation it prefers the last-round heuristic: unscaled bonus and damage delta, plus new plot score, minus the old assignment plot score and any prior stored plot score. This separate accumulator can subtract the prior plot value twice. Accepted completed positions are ranked by cached total, then fewer assignments, then lower position ID.
+
 ### Acceptance and replay
 
 A position completes when all starting enemies are dead or all units have exhausted their options. The final safety check permits limited casualties, with one allowance per enemy killed and a bias toward protecting experienced units. If there is no kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. Ties consider movement toward the target, attacks in place, and healing.
