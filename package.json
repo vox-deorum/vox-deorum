@@ -16,6 +16,7 @@
     "format:docs": "prettier --write --prose-wrap never \"**/*.md\"",
     "update:codex-proxy": "node scripts/utilities/update-codex-proxy.mjs",
     "vp-pr": "node scripts/utilities/vp-pr.mjs",
+    "vp-diff": "node scripts/utilities/vp-diff.mjs",
     "update:claude-agent-sdk": "npm update @anthropic-ai/claude-agent-sdk",
     "clean:all": "npm run clean -ws --if-present"
   },
