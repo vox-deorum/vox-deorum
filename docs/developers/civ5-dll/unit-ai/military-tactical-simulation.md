@@ -104,6 +104,8 @@ At most 13 units enter the search. If more are available, it keeps the units wit
 
 Equivalent sibling states are discarded, so action order does not create duplicate plans. A simulated move that reveals a new enemy records a restart, ending that branch and requiring a fresh run with current information.
 
+The danger cache in `CvTacticalAI.h` matches the defender, plot, previous damage, and a hash of the unit damage ledger. `SUnitIDValueContainer::GetHash` counts each entry once, including after promotion to vector storage. Damage is grouped into five-point bins, and cache matching remains approximate because it compares hashes rather than exact entries.
+
 ### Acceptance and replay
 
 A position completes when all starting enemies are dead or all units have exhausted their options. The final safety check permits limited casualties, with one allowance per enemy killed and a bias toward protecting experienced units. If there is no kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. Ties consider movement toward the target, attacks in place, and healing.
@@ -119,6 +121,8 @@ Great Generals, Great Admirals, and siege towers stay outside the main combat se
 ## Pathfinding policy
 
 The pathfinder in `CvAStar.cpp` receives each caller's path type, turn and movement limits, optional zone-of-control exceptions, and move flags from `CvUnit.h`. Those inputs turn route finding into policy: they state what the unit may risk, ignore, or refuse.
+
+The open list orders nodes by total cost, then heuristic cost. `PrNodeIsBetter` in `CvAStarNode.h` resolves remaining ties by ascending Y, ascending X, then normal nodes before stop nodes at the same plot. This makes equal-cost choices reproducible across heap implementations.
 
 | Policy | Effect |
 | --- | --- |
