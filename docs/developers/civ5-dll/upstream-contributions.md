@@ -1,72 +1,80 @@
 # civ5-dll: Upstream contributions
 
-Fix and validate the behavior in a Vox Deorum line first. Then export the working delta, select the hunks that belong in Vox Populi, and prepare one focused upstream pull request.
+The default handoff is a local `pr/<slug>` branch in `civ5-dll`, based on `upstream/master`, with selected edits left unstaged and uncommitted for manual review. The branch pushes to the Vox Deorum fork, `CIVITAS-John/vox-populi`; the eventual pull request targets `LoneGazebo/Community-Patch-DLL`. Do not commit the outer repository’s temporary `civ5-dll` gitlink change.
 
-```mermaid
-flowchart LR
-  F[Fix and test in VD] --> E[Export file patches]
-  E --> R[Review and group hunks]
-  R --> P[Prepare focused upstream PR]
-  P --> V[Restore VD checkout]
+## 1. Scope
+
+Inspect the outer repository and submodule status, current branch, remotes, and any existing `vp-pr` state. Preserve human edits, commits, and staging. Resume a matching existing PR branch instead of creating another one.
+
+For an existing Vox Deorum fix, reuse its candidate inventory or export and select only the requested hunks. Check the refreshed upstream tree and open pull request patches for an equivalent fix before porting it. For a new fix, author the behavior directly in the upstream-based branch.
+
+If the submodule is dirty, inspect the index before moving anything. `vp-pr new` requires a clean worktree by default. With authorization to move or stash edits, use `--carry` when all current edits belong in the PR. For mixed selected and unrelated edits, export them first, then use `--stash` and port the selected hunks from the saved export. Inspect the index afterward and preserve human staging.
+
+When no suitable inventory exists, export from the source checkout before changing branches. Run from the repository root, using `npm.cmd` in Windows PowerShell:
+
+```powershell
+git -C civ5-dll fetch upstream --tags --prune
+npm.cmd run vp-diff -- --output temp/upstream-review/<slug>
 ```
 
-The gamecore is the `civ5-dll` Git submodule. Its `origin` is the Vox Deorum fork (`CIVITAS-John/vox-populi`) and its `upstream` is `LoneGazebo/Community-Patch-DLL`. Maintained branches are listed in `scripts/vp-lines.txt`, currently with `vox-deorum-5.2` as the default line. Do not commit a temporary PR checkout as the outer repository's `civ5-dll` gitlink.
+`vp-diff` compares the shared upstream ancestor with the current tree, including committed, staged, unstaged, and non-ignored untracked changes. It does not modify the checkout. Read its `index.md` and patches to select the hunks.
 
-## The workflow
+## 2. Create the branch
 
-1. Make the fix on the relevant `vox-deorum-<line>` branch and test it. Build the DLL with the [civ5-dll build guide](building.md). The local batch file runs the clang SDK build; CI also checks the MSVC build.
-2. Refresh the local `upstream/master` ref if needed, then export the complete delta for review:
+Run these commands from the repository root. In Windows PowerShell, use `npm.cmd` to avoid the `npm.ps1` execution-policy issue:
 
-   ```powershell
-   npm run vp-diff -- --output temp/upstream-review/my-review
-   ```
-
-   `vp-diff` uses the **merge base**, the latest shared ancestor of `HEAD` and the local `upstream/master` ref. It includes committed, staged, and unstaged tracked changes, plus non-ignored untracked files. It does not fetch, check out, stage, or filter out Vox Deorum infrastructure. The output is a new directory with `index.md`, `manifest.json`, `status.txt`, one patch per file, and a combined `changes.patch`. Use `--base <ancestor>` when the automatic ancestor is not the intended comparison, and `--repo <path>` for another DLL checkout. Without `--output`, each run creates a fresh directory under the ignored `temp/upstream-review/`. Existing output directories are refused. Renames appear as deletion and addition; binary patches are included.
-
-3. Read `index.md` and the file patches. Group only related hunks into a focused PR. Exclude connection and other Vox Deorum-only infrastructure.
-4. For a committed fix, start with a clean DLL checkout, create a `pr/<slug>` branch, and port the selected change. Run these commands from the repository root:
-
-   ```powershell
-   npm run vp-pr -- new <slug>
-   npm run vp-pr -- pick <commit>... --from vox-deorum-<line>
-   ```
-
-   Author the change directly on the PR branch when that is clearer. Use `new <slug> --carry` only when the current uncommitted edits are the fix; use `--stash` when unrelated edits must return with `restore`. The normal base is `upstream/master`; `new --base <ref>` is available for an explicit base.
-
-5. Clean, build, and test the extracted change, then commit any edits. Run `npm run vp-pr -- status` and resolve the marker census before finishing:
-
-   ```powershell
-   npm run vp-pr -- finish <slug> --title "Short upstream title"
-   ```
-
-   `--body-file <path>` is optional. `--allow-markers` is an exceptional escape hatch, not the normal completion path. `finish` requires the named slug and title, checks the marker census, squashes the branch to one commit, and prints the push command and compare URL. The script never pushes or opens a pull request.
-
-6. For a shared fix, backport the squashed commit only to maintained lines that do not already contain the fix. `backport` uses `git cherry-pick -x`; add `// Vox Deorum: upstreamed <PR URL>` markers to the backported hunks by hand, then push when ready. Restore the original checkout afterward:
-
-   ```powershell
-   npm run vp-pr -- backport <squashed-sha> --line <X.Y>
-   npm run vp-pr -- restore
-   ```
-
-   An extraction of existing Vox Deorum behavior stays in the line branches until upstream accepts it. Removing that copy is a later change.
-
-```mermaid
-flowchart LR
-  A[Shared ancestor] --> U[Current upstream/master]
-  A --> V[VD HEAD and working tree]
-  U -. upstream-only commits .-> X[Not exported]
-  V --> D[vp-diff: ancestor to VD delta]
-  D --> P[Select hunks for focused PR]
+```powershell
+npm.cmd run vp-pr -- new <slug>
+$tracking = git -C civ5-dll for-each-ref --format='%(upstream:short)' refs/heads/pr/<slug>
+if ($tracking -eq 'upstream/master') {
+  git -C civ5-dll branch --unset-upstream pr/<slug>
+}
+git -C civ5-dll config branch.pr/<slug>.pushRemote origin
 ```
 
-The export compares the ancestor with the current VD tree, so commits added only on the newer upstream tip are excluded. A selected PR is then recreated from the upstream base and contains only the chosen change.
+`new` fetches both remotes and creates `pr/<slug>` from fetched `upstream/master`. The conditional removes automatic upstream tracking, while `pushRemote` always points publication at `origin`. Leave the branch checked out.
 
-## Rules for an upstream PR
+## 3. Port and validate
 
-- Remove `// Vox Deorum:` and Lua `-- Vox Deorum:` markers.
-- Do not include `CvConnectionService.cpp`, `CvConnectionService.h`, `CvConnectionSchema.cpp`, `CvConnectionSchema.h`, `ThirdPartyLibs/ArduinoJson.hpp`, `ThirdPartyLibs/msinttypes`, or IPC glue.
-- Remove `MOD_IPC_CHANNEL`. Keep a purely additive, cost-free change unconditional. If behavior or unused hot-path cost requires a switch, use a generalized VP-style CustomMods option defaulting off.
-- Add no save-relevant enum values or save fields. Extend shared signatures only with defaulted parameters that preserve existing callers. Add Lua bindings without changing existing binding behavior.
-- Keep the PR branch at one squashed commit based on upstream. The `pull-request-1` branch is the shape precedent.
+Edit the selected files directly in upstream context, using the source branch or saved export as a reference. For example, a tooltip argument fix needs only that line replacement, even if the exported file patch also contains observer UI changes. Do not apply the whole-file patch or use `pick`, which creates commits, in this default workflow.
 
-For the detailed procedure and conflict handling, see the repository's [upstream-pr skill](../../../.agents/skills/upstream-pr/SKILL.md). The `vp-pr` source is `scripts/utilities/vp-pr.mjs`.
+- Remove `// Vox Deorum:` and Lua `-- Vox Deorum:` markers, `MOD_IPC_CHANNEL`, IPC dependencies, and VD-only connection or third-party infrastructure.
+- Add no save-relevant enum values or fields. Preserve existing callers with defaulted parameters and existing Lua binding behavior.
+- Keep additive, cost-free APIs unconditional. For optional features needing a switch, use a VP-style CustomMods option defaulting off. Ordinary bug fixes need no new switch.
+
+Review the working delta and untracked files with:
+
+```powershell
+git -C civ5-dll diff upstream/master --
+git -C civ5-dll status --short
+git -C civ5-dll diff --check upstream/master
+```
+
+Scan changed files directly for VD residue. The marker census from `npm.cmd run vp-pr -- status` examines committed `HEAD` only, so a zero count does not validate uncommitted edits.
+
+For C++ changes, build the upstream checkout from `civ5-dll` with the process-local PATH setup:
+
+```powershell
+$env:Path = "$(Get-Location);$env:Path"
+python build_vp_clang_sdk.py --config debug
+```
+
+The VD-only `build-and-copy.bat` is absent in this checkout. Test the affected behavior where possible. Report missing MSVC v90 tooling, `MSB8020`, warnings that cannot be attributed, and unperformed in-game checks separately in the handoff. Do not install tools or claim runtime validation that was not run.
+
+## 4. Handoff
+
+Write `temp/upstream-review/<slug>-pr.md` with a title and concise body. Explain the player-visible behavior and reason first, then summarize the relevant files or functions. Keep validation notes, VD internals, and routine compatibility boilerplate out of the draft. Report the branch, base SHA, changed files or diffstat, draft path, validation results, limitations, and any preserved staging separately.
+
+Leave `pr/<slug>` checked out with the selected edits unstaged and uncommitted. Preserve human commits and staging added during review. Do not run `finish`, push, open a pull request, or restore the checkout as routine cleanup.
+
+## Later actions, when requested
+
+After the user authorizes completion and the branch is clean and committed, run `finish` to obtain one reviewed commit:
+
+```powershell
+npm.cmd run vp-pr -- finish <slug> --title "Short upstream title"
+```
+
+Publish only when explicitly requested, using `git -C civ5-dll push -u origin pr/<slug>`. The script prints an optional compare URL; it never pushes or opens a pull request. Backport only requested fixes to maintained lines missing the change, using `scripts/vp-lines.txt`. Existing VD extractions need no backport. After preserved work and review are safely complete, use `npm.cmd run vp-pr -- restore`.
+
+See the [upstream-pr skill](../../../.agents/skills/upstream-pr/SKILL.md) for the detailed workflow and the [vp-pr.mjs](../../../scripts/utilities/vp-pr.mjs) and [vp-diff.mjs](../../../scripts/utilities/vp-diff.mjs) implementations.

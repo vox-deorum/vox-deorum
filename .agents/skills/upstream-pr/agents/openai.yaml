@@ -1,4 +1,4 @@
 interface:
   display_name: "Upstream PR"
   short_description: "Prepare a Vox Populi upstream PR from Vox Deorum changes"
-  default_prompt: "Use $upstream-pr to prepare a clean upstream PR for Vox Populi from the named Vox Deorum changes: classify the scenario, scope the slice, port and clean the code, verify, squash, and hand the push command and compare URL to the user without pushing or opening the PR yourself."
+  default_prompt: "Use $upstream-pr to prepare the selected changes on a local PR branch for the Vox Populi fork, verify them, draft a message explaining the player experience before the technical changes, and leave the edits unstaged and uncommitted for manual review."
