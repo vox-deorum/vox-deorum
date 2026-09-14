@@ -103,7 +103,7 @@ async function pathExists(target: string): Promise<boolean> {
   }
 }
 
-/** Publish one finalized DLL recording through the shared raw-package writer. */
+/** Publish one finalized DLL recording through the recording archive script. */
 async function archiveRawCaptureRecording(
   gameId: string,
   sourceRoot: string,
@@ -236,7 +236,7 @@ export async function archiveGameData(
       logger.warn('No replay file found to archive');
     }
 
-    // Publish the finalized DLL recording through the shared package writer.
+    // Publish the finalized DLL recording through the recording archive script.
     try {
       const documentsPath = await getDocumentsPath();
       const sourceRoot = path.join(documentsPath, 'My Games', 'Sid Meier\'s Civilization 5', 'VoxDeorumRL', gameId);

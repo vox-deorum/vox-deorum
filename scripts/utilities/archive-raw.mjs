@@ -43,13 +43,15 @@ async function writeArchive(sourceRoot, partialPath, gameId) {
   if (files.length === 0) throw new Error('Recording source contains no package files');
   const zipfile = new yazl.ZipFile();
   const output = createWriteStream(partialPath, { flags: 'wx' });
+  /** Close the destination stream when yazl reports an archive error. */
   const zipError = (error) => zipfile.outputStream.destroy(error);
   zipfile.once('error', zipError);
   const completed = pipeline(zipfile.outputStream, output);
   for (const file of files) {
     const metadataPath = `${gameId}/${file.logical}`;
+    const isStream = file.logical.split('/').at(-1) === 'stream.bin';
     zipfile.addFile(file.absolute, metadataPath, {
-      compress: !file.logical.endsWith('/stream.bin'),
+      compress: !isStream,
       forceZip64Format: true,
     });
   }

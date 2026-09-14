@@ -102,7 +102,7 @@ describe('archiveGameData capture wiring', () => {
     process.chdir(originalCwd);
   });
 
-  it('publishes the recording through the shared raw archive wrapper', async () => {
+  it('publishes the recording through the recording archive script', async () => {
     const gameId = mockEnv.gameId;
     await writeRecording(gameId);
 
