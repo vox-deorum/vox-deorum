@@ -131,8 +131,7 @@ describe('archiveGameData capture wiring', () => {
 
   it('keeps archiving the save when capture collection fails', async () => {
     const gameId = mockEnv.gameId;
-    mockEnv.failRename = true;
-    mockEnv.failCp = true;
+    mockEnv.failRawArchive = true;
     await writeRecording(gameId);
 
     const result = await archiveGameData('exp-test');

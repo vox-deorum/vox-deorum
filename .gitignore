@@ -5,6 +5,7 @@ dist
 /node
 /temp
 /logs
+/.cache/
 .tmp/
 .env
 nul
