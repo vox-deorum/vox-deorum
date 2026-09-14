@@ -4,11 +4,15 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { getDocumentsPath } from '../config.js';
 import { createLogger } from '../logger.js';
 import { knowledgeManager } from '../../server.js';
 
 const logger = createLogger('Archive');
+const execFileAsync = promisify(execFile);
 
 /**
  * Information about a save file
@@ -88,18 +92,6 @@ export async function findLatestSaveFile(): Promise<SaveFileInfo | null> {
 }
 
 /**
- * Outcome of collecting the DLL's RL capture recording into the archive.
- */
-export interface CaptureCollectionResult {
-  /** True when the recording directory was moved; false when it was copied (rename unavailable). */
-  moved: boolean;
-  /** 'ok' — recording archived; 'absent' — no recording exists for this game; 'failed' — an error occurred. */
-  status: 'ok' | 'absent' | 'failed';
-  /** Error message when status is 'failed'. */
-  detail?: string;
-}
-
-/**
  * Whether a path exists, with errors swallowed into a plain boolean.
  */
 async function pathExists(target: string): Promise<boolean> {
@@ -111,52 +103,31 @@ async function pathExists(target: string): Promise<boolean> {
   }
 }
 
-/**
- * Collect the DLL's RL capture recording for a game into the archive.
- *
- * With VOX_RL_CAPTURE=1 the game DLL writes a recording tree under
- * `<Documents>/My Games/Sid Meier's Civilization 5/VoxDeorumRL/<game-id>/`.
- * The DLL finalizes the recording (final commit, handles released) when the
- * victory event fires, long before this runs, so the whole tree is moved
- * into `<capturesPath>/<game-id>/`. When the rename is not possible (a
- * cross-volume archive, or the DLL still holding the files open), the tree
- * is copied instead and the source is left in place.
- *
- * Never throws and never logs a summary itself: a missing recording reports
- * 'absent' (capture disabled or identity never established — not an error)
- * and errors report 'failed' with a detail message, so the caller decides
- * how to log the outcome.
- */
-export async function collectCaptureRecording(gameId: string, capturesPath: string): Promise<CaptureCollectionResult> {
+/** Publish one finalized DLL recording through the shared raw-package writer. */
+async function archiveRawCaptureRecording(
+  gameId: string,
+  sourceRoot: string,
+  rawRoot: string,
+): Promise<{ status: 'ok' | 'absent' | 'failed'; detail?: string }> {
+  const resolvedSourceRoot = path.resolve(sourceRoot);
+  const resolvedRawRoot = path.resolve(rawRoot);
+  if (!await pathExists(resolvedSourceRoot)) {
+    logger.debug(`No capture recording for raw package ${gameId}`);
+    return { status: 'absent' };
+  }
+
   try {
-    const documentsPath = await getDocumentsPath();
-    const captureRoot = path.join(documentsPath, 'My Games', 'Sid Meier\'s Civilization 5', 'VoxDeorumRL', gameId);
-
-    // A missing recording means capture was disabled or the game identity was
-    // never established — a normal state, so only a debug note.
-    if (!await pathExists(captureRoot)) {
-      logger.debug(`No capture recording for game ${gameId} (capture disabled or identity not established)`);
-      return { moved: false, status: 'absent' };
-    }
-
-    const destinationRoot = path.join(capturesPath, gameId);
-    await fs.mkdir(capturesPath, { recursive: true });
-    // A stale destination from an earlier attempt must not block the move.
-    await fs.rm(destinationRoot, { recursive: true, force: true });
-    try {
-      await fs.rename(captureRoot, destinationRoot);
-      return { moved: true, status: 'ok' };
-    } catch (renameError) {
-      try {
-        await fs.cp(captureRoot, destinationRoot, { recursive: true });
-        logger.debug(`Capture recording for game ${gameId} copied instead of moved: ${String(renameError)}`);
-        return { moved: false, status: 'ok' };
-      } catch (copyError) {
-        return { moved: false, status: 'failed', detail: String(copyError) };
-      }
-    }
+    await fs.mkdir(resolvedRawRoot, { recursive: true });
+    const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
+    const scriptPath = path.join(repositoryRoot, 'scripts', 'utilities', 'archive-raw.mjs');
+    await execFileAsync(process.execPath, [scriptPath, resolvedSourceRoot, resolvedRawRoot], {
+      cwd: repositoryRoot,
+      windowsHide: true,
+      maxBuffer: 1024 * 1024,
+    });
+    return { status: 'ok' };
   } catch (error) {
-    return { moved: false, status: 'failed', detail: String(error) };
+    return { status: 'failed', detail: String(error) };
   }
 }
 
@@ -265,20 +236,16 @@ export async function archiveGameData(
       logger.warn('No replay file found to archive');
     }
 
-    // Collect the DLL's RL capture recording into the archive. The DLL
-    // finalizes the recording when the victory event fires, so the whole
-    // tree can be moved. The outcome is only logged here, and a capture
-    // problem never fails the save/database/telemetry/replay artifacts
-    // collected above.
+    // Publish the finalized DLL recording through the shared package writer.
     try {
-      const captures = await collectCaptureRecording(gameId, path.join(archivePath, 'captures'));
-      if (captures.status === 'ok') {
-        logger.info(`Capture recording archived (${captures.moved ? 'moved' : 'copied'}) for game ${gameId}`);
-      } else if (captures.status === 'failed') {
-        logger.warn(`Failed to archive capture recording for game ${gameId}: ${captures.detail ?? 'unknown error'}`);
+      const documentsPath = await getDocumentsPath();
+      const sourceRoot = path.join(documentsPath, 'My Games', 'Sid Meier\'s Civilization 5', 'VoxDeorumRL', gameId);
+      const rawPackage = await archiveRawCaptureRecording(gameId, sourceRoot, archivePath);
+      if (rawPackage.status === 'ok') {
+        logger.info(`Raw capture package archived for game ${gameId}`);
+      } else if (rawPackage.status === 'failed') {
+        logger.warn(`Failed to archive raw capture package for game ${gameId}: ${rawPackage.detail ?? 'unknown error'}`);
       }
-      // 'absent' is a normal state (capture disabled); the helper already
-      // logged it at debug level, so nothing more to report.
     } catch (error) {
       logger.warn('Capture recording archival failed unexpectedly:', error);
     }

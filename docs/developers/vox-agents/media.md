@@ -47,6 +47,8 @@ In livestream mode the controller passes straight through to ObsManager.
 
 Alongside the video files, the controller writes `segments.jsonl` in the recording directory: one line per start, switch, or stop event, with the turn, player, wall-clock timestamp, and (on stop) the output filename. That log is the contract with the narrators pipeline.
 
+When the MCP server archives a completed game, it publishes the finalized DLL recording through the shared package writer as `archive/<experiment>/<game-id>.zip`; the source stays in place after publication and if publication fails. The writer runs from the sibling `vox-deorum-rl` checkout, or the directory named by `VOX_RL_ROOT`. The snapshot hash is stored in the package manifest. To package a recording manually, run `npm run archive:raw -- SOURCE_ROOT OUTPUT_DIRECTORY` from the repository root.
+
 ## The narrators pipeline
 
 The narrators system (`src/narrators/`) is a five-stage batch pipeline that turns a recorded game (the segments plus the game's knowledge database) into narrated video, from short clips to full-game documentaries. Unlike the [telepathist](telepathist.md), which speaks from one player's perspective, the narrator is omniscient: it sees all players and all events.
