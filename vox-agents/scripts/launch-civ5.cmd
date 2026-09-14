@@ -55,7 +55,7 @@ echo Found Civ 5 at: !CIV5_PATH!
 :: being re-parented through Steam, which drops our environment (notably
 :: VOX_RL_CAPTURE) from the game process. Creation failures are ignored.
 if not exist "!CIV5_PATH!\steam_appid.txt" (
-    (echo 8940)> "!CIV5_PATH!\steam_appid.txt" 2>nul
+    (echo 8930)> "!CIV5_PATH!\steam_appid.txt" 2>nul
 )
 
 :: Create Automation directory if it doesn't exist
