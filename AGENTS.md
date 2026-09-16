@@ -1,6 +1,6 @@
 # AGENTS.md
 
-NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets externally staged, it is from the human reviewer.
+NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets externally staged, it is from the human reviewer. DO NOT ASK asynchronous questions; ask directly in response.
 
 ## Use Subagents When Appropriate
 
