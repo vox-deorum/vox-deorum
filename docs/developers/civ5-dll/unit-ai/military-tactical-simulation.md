@@ -6,6 +6,8 @@ This page has two related jobs. Read [coordinated combat search](#coordinated-co
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTacticalAI.cpp`, `CvTacticalAI.h`, `CvAStar.cpp`, and `CvUnit.h`.
 
+The maintained VD 5.2 branch includes the tactical AI fixes through VP 5.4.6, including support coordination, score overflow protection, and tactical crash fixes. Naval garrison scoring uses the 5.2 combined city/canal attack option.
+
 ## Coordinated combat search
 
 A **position** is a hypothetical battle state: simulated unit locations and moves, expected damage, killed enemies, freed plots, and the actions taken so far. `CvTacticalPosition` stores it. An **assignment** is one recorded move, attack, special action, or end-state for one unit. The search extends positions one action at a time and reuses unchanged state, allowing a preallocated pool of 6,000 positions to cover a run.
@@ -114,6 +116,8 @@ Each `STacticalAssignment` stores a plot score, contextual bonus, damage delta, 
 
 `assignment score = new plot score - old plot score + 10 * (damage delta + bonus)`
 
+Score components and the combined assignment score are clamped to the signed 16-bit range when updated, preventing large penalties from wrapping into rewards. s
+
 | Term | How it earns points |
 | --- | --- |
 | Damage delta | `ScoreAttackDamage` credits city and unit damage, then subtracts damage received. Unit damage is capped at remaining HP; city damage permits limited overkill. The forecast includes approximations for flanking, support, splash, and repeat attacks. Healing from actions such as pillaging can also contribute positively. |
@@ -140,7 +144,11 @@ Provisional danger screening becomes more permissive at higher aggression, but f
 
 ### Support placement
 
-Great Generals, Great Admirals, and siege towers stay outside the main combat search. Once a combat plan wins, `AddSupportMoves` runs a smaller search over its assignment sequence and can insert support moves before attacks. A move must add new relevant coverage: generals aid land attackers, admirals aid naval attackers, and siege towers improve city attacks. Support units must still end safely.
+Great Generals, Great Admirals, and siege towers stay outside the main combat search. Attack recruitment admits civilian support that can reach within two plots of the target, and army contact searches retain civilian support even when it has no attack target of its own. Once a combat plan wins, `AddSupportMoves` searches support positions along the selected combat tree and inserts support moves before attacks.
+
+An intermediate move must add new relevant coverage: generals aid land attackers, admirals aid naval attackers, and siege towers improve city attacks. Waiting is allowed without adding coverage. Support search and replay use the available support-unit count to group waits before advancing to the next attack. Duplicate pruning also compares combat states. A friendly defender's projected damage incurs a support danger penalty only above two-thirds of its maximum HP; support units still face final safety checks.
+
+Checkpoints currently depend on whether the last assignment in a combat-tree position is an attack. Finish rows, bundled assignments, or restart markers can hide that attack. The proposed correction is tracked in [support checkpoint work](../../../todo/tactical-support-move.md).
 
 ## Pathfinding policy
 
