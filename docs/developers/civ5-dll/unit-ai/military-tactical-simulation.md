@@ -148,7 +148,7 @@ Great Generals, Great Admirals, and siege towers stay outside the main combat se
 
 An intermediate move must add new relevant coverage: generals aid land attackers, admirals aid naval attackers, and siege towers improve city attacks. Waiting is allowed without adding coverage. Support search and replay use the available support-unit count to group waits before advancing to the next attack. Duplicate pruning also compares combat states. A friendly defender's projected damage incurs a support danger penalty only above two-thirds of its maximum HP; support units still face final safety checks.
 
-Checkpoints currently depend on whether the last assignment in a combat-tree position is an attack. Finish rows, bundled assignments, or restart markers can hide that attack. The proposed correction is tracked in [support checkpoint work](../../../todo/tactical-support-move.md).
+Each checkpoint retains the last attack added by its combat position, including its plots and attacker domain. Finish rows, bundled stay-put rows, and restart markers cannot hide that attack from aura scoring. A final attack bundled with another unit's stay-put action can still score differently from the same actions in separate positions, because final-position safety and placement rules apply at different points.
 
 ## Pathfinding policy
 
