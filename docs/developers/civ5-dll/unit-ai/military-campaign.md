@@ -9,7 +9,7 @@
 | **Muster point** | The plot where the army assembles before moving to its goal. |
 | **Muster city** | The associated city that supplies the muster point when the family uses a city source. |
 
-The target and muster point are separate persistent values. Retargeting replaces the target and usually the army goal; it does not relocate the muster point. [Military organization](military-organization.md) owns formation slots, recruitment, stages, and release. [Military tactics](military-tactics.md) owns per-turn movement and combat.
+The target and muster point are separate persistent values. Retargeting replaces the target and usually the army goal; it does not relocate the muster point. [Military organization](military-organization.md) owns formation slots, recruitment, stages, and release. [Operation lifecycle](operation.md#completion-abort-and-cleanup) defines each family's finishing condition. [Military tactics](military-tactics.md) owns per-turn movement and combat.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvDiplomacyAI.cpp`, and `CvTacticalAnalysisMap.cpp`.
 
@@ -47,8 +47,6 @@ A nuclear attack pairs owned nuclear units with enemy cities in range. It avoids
 
 Initialization stores the target and muster point, then sets the army goal. The army recruits and gathers at the muster point before moving toward its goal. [Military organization](military-organization.md#lifecycle-overview) defines the Recruiting, Gathering, and Moving lifecycles; [operation completion and abort](operation.md#completion-abort-and-cleanup) defines shared terminal-state handling.
 
-Ordinary operations finish when their center of mass reaches deployment range and their furthest member is within twice that range. While at peace, discovery by more than two enemy-visible members also completes the operation. Carrier groups remain active at a deployment area so they can receive another target. Nuclear attacks complete when they fire.
-
 ### Retargeting
 
 Target validation runs during operation checks, including before and after army movement. A valid replacement updates the target and army goal while preserving the muster point.
@@ -76,7 +74,7 @@ An operation can abort for an invalid target, strategic or diplomatic cancellati
 | No step path | Combat army movement records `AI_ABORT_LOST_PATH`. |
 | Strategic review | Cancels for forced peace, an unattacked opponent, a vanished threatened-city list for a domain, or a defensive war-state pullback. |
 
-Cleanup releases members. A successful deployment also marks them for temporary reserve exclusion. A city-defense operation remains attached to its city after the tactical zone is no longer enemy-dominated; target loss, member loss, timeout, or a strategic rule ends it.
+An improving tactical zone alone does not cancel a city-defense operation. It still uses the shared deployment completion rule. Released members and their temporary reserve exclusion are covered by [membership and release](military-organization.md#membership-and-release).
 
 ## Diagnostics
 

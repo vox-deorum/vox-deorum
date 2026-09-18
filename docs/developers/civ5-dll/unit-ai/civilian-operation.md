@@ -32,7 +32,7 @@ flowchart LR
 
 `CvAIOperationCivilian::Init` selects the civilian and target, then starts with the civilian's plot as the muster point. For an escorted naval operation on a plot the player does not own, it looks for the closest friendly coastal city. An escorted land operation relocates only from non-friendly territory. It then creates the army, assigns the civilian to formation slot zero, and clears escort formation slot one when the civilian can reach the target this turn.
 
-The operation recruits and gathers the escort, then `CvTacticalAI::PlotArmyMovesEscort` checks for mission completion before moving the army. Merchant and diplomat delegations and musician concert tours can complete on any plot owned by the target city's owner, subject to movement and mission legality. Settlers must reach their settlement plot. Losing the civilian ends the operation. The operation can retain a valid replacement target, but invalid state follows the normal abort path. [Operation completion, abort, and cleanup](operation.md#completion-abort-and-cleanup) summarizes the shared terminal checks.
+The operation recruits and gathers the escort, then `CvTacticalAI::PlotArmyMovesEscort` checks for mission completion before moving the army. Losing the civilian ends the operation. The operation can retain a valid replacement target, but invalid state follows the normal abort path. The exact completion and mission rules for each civilian family are in [operation completion, abort, and cleanup](operation.md#completion-abort-and-cleanup).
 
 ```mermaid
 flowchart LR

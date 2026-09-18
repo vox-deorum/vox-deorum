@@ -56,14 +56,21 @@ After initialization, common abort triggers include:
 - Member loss removes a critical civilian or carrier, leaves no army, or violates the post-Recruiting formation-strength rule.
 - Military or Diplomacy AI cancels the operation because war state, target validity, threat, or diplomatic intent changed.
 
+Ordinary military operations finish when the army center is within 3 plots of its goal and the furthest member is strictly less than 6 plots away. While the owner is at peace with the designated enemy, more than two army members being visible to that enemy also counts as deployment. Completion requires deployment, not city capture or elimination of the threat. The operation's target and retarget rules are documented in [military target lifecycle](military-campaign.md#target-lifecycle).
+
 Each family supplies its successful completion rule and additional abort checks:
 
 | Operation family | Finishes successfully when | Family-specific terminal behavior |
 | --- | --- | --- |
-| Standard military | The army reaches deployment range and its furthest member is within twice that range. During a planned peacetime attack, exposure of more than two members also counts as deployment. | Invalid targets are retargeted where supported, otherwise the operation aborts. See [military target lifecycle](military-campaign.md#target-lifecycle). |
-| Civilian | The civilian reaches its target and its settlement, delegation, purchase, or concert mission succeeds. | It retargets when the role supports another valid destination. It aborts when the civilian is lost or no safe, legal target or path remains. See [civilian operations](civilian-operation.md#escorted-civilian-operations). |
+| City attack (land, naval, combined), pillage, naval superiority, city defense, rapid response | The ordinary military deployment condition above is met. | Target ownership, threat, and retarget behavior differ by family. See [military target lifecycle](military-campaign.md#target-lifecycle). |
+| Found city | The settler is on the target plot, can found there, can move, and issues the founding mission. | Invalid founding legality or path retargets the settler; no valid replacement target aborts. |
+| Merchant delegation | The merchant reaches any plot owned by the target city-state owner and issues a legal city-state purchase or trade mission. | It can move to an adjacent trade-valid plot and retry; no valid mission plot aborts. |
+| Diplomat delegation | The diplomat reaches any plot owned by the target city-state owner and issues a legal trade mission. | It can move to an adjacent trade-valid plot and retry; no valid mission plot aborts. |
+| Concert tour | The musician reaches any plot owned by the target owner and issues a legal one-shot tourism mission. | It can move to an adjacent tourism-valid plot and retry; no valid mission plot aborts. |
 | Nuclear | A recruited nuclear unit can move, can legally strike the target, and issues the nuclear mission. | It has no Gathering or Moving phase. If setup cannot fire, its next Tactical operation-movement pass has no air-army movement handler, so `DoTurn` returns false and cleanup records `AI_ABORT_KILLED`. |
 | Carrier group | Never through ordinary deployment. | It stays in Moving and retargets until the carrier is projected to die next turn, its carrier slot is lost, no deployment or fallback target remains, or another abort rule applies. It has no normal timeout. |
+
+Civilian missions require remaining movement. Arrival alone leaves the operation at At Target until it can perform its mission or an abort check ends it.
 
 `CvAIOperation::Kill` records `AI_ABORT_SUCCESS` for Successful Finish, preserves a specific abort reason, or uses `AI_ABORT_KILLED` when an active operation reaches cleanup without either one. Invalid operations discarded during initialization do not pass through `Kill`.
 

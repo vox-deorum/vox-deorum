@@ -87,11 +87,72 @@ Zone value prioritizes city importance and urgency: focus-area cities, damaged v
 
 ## Air operations
 
-`CvTacticalAI::ShouldRebase` decides ownership of air units. Tactical AI recruits combat-ready aircraft when the answer is no; Homeland AI handles aircraft that need rebasing. A base is unsuitable when its city is in danger of falling, its carrier is likely to die, or the unit needs to heal while the base is threatened. Aircraft also rebase when they have no suitable target, including all aircraft at peace.
+Air control is split by job. [Military campaign](military-campaign.md) creates persistent operation goals; Tactical AI executes operation movement, including carrier movement. Aircraft aboard a carrier are assigned independently to Tactical or Homeland AI. This section covers conventional fighters, bombers, and missiles. ICBMs follow the [operational nuclear path](military-campaign.md#nuclear-campaigns).
 
-Tactical air units join zone combat. Air sweeps clear interceptors and air strikes fire before ground attacks; an air kill ends the ground attack. Missiles value defender damage and kills but never strike an ungarrisoned city. Bombers and fighters value damage, distance, expected defensive damage, and interception risk. Fighters without another Tactical task patrol home bases.
+`CvTacticalAI::Update` calls `RecruitUnits` once per turn, after refreshing targets and before operation or zone processing. Neither campaigns nor zones call it. Later target collectors select from the resulting shared pool.
 
-Homeland AI scores cities and carriers as air bases, excluding unsafe or unsuitable cities. Healing aircraft choose the quietest usable base; combat-ready aircraft choose a strong base with a balanced fighter and bomber mix. A distant base is reached one rebase leg per turn.
+```mermaid
+flowchart TD
+    U[CvTacticalAI::Update] --> F[Refresh tactical targets]
+    F --> R[RecruitUnits once<br/>build shared turn pool]
+    R --> P[ProcessDominanceZones<br/>operations then zones]
+    R -. aircraft ownership .-> Q{ShouldRebase?}
+    Q -- no --> T[Tactical AI<br/>shared current-turn pool]
+    Q -- yes --> H[Homeland AI<br/>choose a base and rebase]
+    C[Military AI<br/>operation goal] --> P
+    P --> Z[Zone target selection]
+    T -. available aircraft .-> Z
+    N[ICBM] --> NC[Nuclear operation]
+```
+
+For aircraft, `RecruitUnits` requires `canUseForTacticalAI`, then applies `ShouldRebase`. That check returns true when a city may fall, a carrier is projected to die, or a healing aircraft is at a dangerous base. In wartime, a fighter remains Tactical when an enemy aircraft is nearby or `GetBestAirSweepTarget` finds a target. A bomber or conventional missile remains Tactical only when an `ENEMY_COMBAT_UNIT` target is within range. A city alone does not qualify. At peace, conventional aircraft go to Homeland. This assigns ownership; it does not promise a rebase or patrol mission.
+
+### Zone attacks and target selection
+
+A **zone attack** is an attack on a posture-selected target during `ProcessDominanceZones`. Aircraft are not attached to persistent zones, so its target collector can use one for any reachable assignment, including one in a different zone. An air strike can select an enemy combat unit or city within three plots of the requested target.
+
+```mermaid
+flowchart TD
+    A[Posture-selected<br/>zone attack] --> C[FindUnitsWithinStrikingDistance<br/>collect attackers and sweep fighters]
+    C --> S[ExecuteSpotterMove]
+    S -- failure --> X[Abort attack]
+    S -- success --> SW[ExecuteAirSweep]
+    SW --> SA[ExecuteAirAttack]
+    SA --> K{Original non-city target<br/>has no defender?}
+    K -- yes --> D[Finish attack]
+    K -- no --> U[FindAndExecuteBestUnitAssignments]
+    O[Operation army<br/>enemy contact] --> B[CheckForEnemiesNearArmy]
+    B --> U
+```
+
+The operation-contact branch bypasses `ExecuteAttackWithUnits`: it sends eligible land and naval participants directly to the simulator and launches no sweep or strike missions. Thus campaign goals can bring a carrier into an operation, but immediate army contact does not enlist its aircraft through this path.
+
+[Operation completion and cleanup](operation.md#completion-abort-and-cleanup) release deployed army members for independent zone work. Before release, a later zone attack can still use independent aircraft against the same enemies. Available bombers or missiles can trigger that attack even without independent ground units, subject to target, damage, and visibility checks. Aircraft alone cannot capture a city. With no eligible strike aircraft or other attackers, this path launches no air missions; fighters alone do not qualify.
+
+When the collector adds an attacking aircraft, `FindAirUnitsToAirSweep` chooses the player's available sweep-capable fighters. It chooses up to the number of visible, eligible enemy interceptors, with a minimum of one fighter for possible reconnaissance. `ExecuteAirSweep` skips the sweep when that interceptor count is zero. A completed sweep consumes an enemy interception allowance, but later strikes can still encounter ready interceptors.
+
+`FindAirTargetNearTarget` scores expected damage, distance, defensive retaliation, and visible interception risk. Defense fighters are omitted from ordinary strike collection because they are reserved for interception and sweeps. Missiles value defender damage and kills but skip an ungarrisoned city. In the zone-attack path, the land and naval simulator therefore sees the real damage and survivors left by earlier air missions, plus the current air-cover flag. It does not search air actions itself.
+
+The dominance map has a separate, coarser use for aircraft. `CvTacticalAnalysisMap` adds their ranged strength to land or naval strength according to whether the aircraft's base plot is land or water. This contribution can change a zone's posture, but it is not an evaluation of air superiority.
+
+### Interception and air superiority
+
+There is no single air superiority number. Tactical behavior combines nearby aircraft counts, per target interceptor readiness, strike penalties, and the fighter and bomber mix at each base.
+
+| Signal | What the code measures |
+| --- | --- |
+| Nearby enemy aircraft | `GetNumEnemyAirUnitsInRange` counts enemy aircraft without requiring visibility. Proximity is the enemy aircraft range capped at 12 plus half the querying aircraft's range. Fighters and bombers can be counted separately. |
+| Eligible interceptor | `CvPlot::GetBestInterceptor` filters by range, war status, airspace, capability, and current readiness. It ranks attack strength with interception modifiers and probability, applies aircraft health, then breaks ties by distance. Combat can select an interceptor that is not visible. |
+| Air cover | `CvPlot::HasAirCover` is a snapshot of at least one own interceptor in range with remaining allowance. The tactical simulator uses this snapshot and adds a small three point positioning preference for covered plots. It does not plan aircraft movements. |
+| Base defense | After zone combat, `PlotAirPatrolMoves` sets a patrol quota per base: `floor(bombers / 2) + floor(fighters / 4)`. A lone bomber counts as two. Both counts refer to nearby enemy aircraft. |
+
+Patrol selection takes still-available, patrol-capable aircraft from the Tactical pool in iteration order until each base's quota is filled. It does not rank their strength or promotions. `ExecuteAirPatrolMoves` issues `MISSION_AIRPATROL` and marks the selected fighters processed. A fighter whose sweep exhausted its actions cannot join this pass. AI aircraft wake from intercept duty each turn so their assignment is reconsidered. Homeland also attempts patrol as a fallback when a combat-ready aircraft considered for rebasing gets no rebase destination.
+
+An interceptor must be capable, not embarked, and have an unused interception allowance. Aircraft must also be on intercept duty, which patrol missions establish; land and naval anti-air units do not use patrol missions. During actual air combat, `GenerateAirCombatInfo` checks evasion and interception chance. If interception deals damage, the bombing run ends before target damage. The attempt consumes an allowance even when evasion or chance prevents a hit, and a sweep also consumes an allowance. A simulation can therefore begin with air cover even though no interceptor remains ready for a later strike.
+
+### Homeland rebasing
+
+`CvHomelandAI::ExecuteAircraftMoves` scores owned cities and carrier bases with `ScoreAirBase`, excluding unsafe or unsuitable cities. Healing aircraft seek a lower scoring city. Combat-ready aircraft prefer a higher scoring base when `IsGoodUnitMix` permits the fighter and offensive balance. If the destination is out of range, Homeland executes the first rebase leg found by the air pathfinder, so reaching a distant base can take several turns. Tactical AI moves the carrier for its campaign operation while aircraft follow these Tactical and Homeland decisions.
 
 ## Barbarian priorities
 

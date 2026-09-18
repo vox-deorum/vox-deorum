@@ -1,6 +1,6 @@
 # Unit AI: Military Organization
 
-**Military organization** gives a persistent military operation its durable unit structure. The operation owns campaign state, the army owns a formation, and **formation slots** identify its members. This page defines formations, formation slots, Army IDs, stages, recruitment, and release. [Military campaign](military-campaign.md) defines targets and stopping rules; [military tactics](military-tactics.md) defines current-turn missions.
+**Military organization** gives a persistent military operation its durable unit structure. The operation owns campaign state, the army owns a formation, and **formation slots** identify its members. This page defines formations, formation slots, Army IDs, stages, recruitment, and release. [Military campaign](military-campaign.md) defines targets; [operation lifecycle](operation.md#completion-abort-and-cleanup) defines finishing conditions; [military tactics](military-tactics.md) defines current-turn missions.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvTacticalAI.cpp`, `CvMilitaryAI.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 
