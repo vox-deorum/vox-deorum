@@ -575,6 +575,30 @@ describe('Codex compatible adapter requests', () => {
     expect(proxyMocks.invalidateConnection).not.toHaveBeenCalled();
   });
 
+  it.each([500, 502, 503])('invalidates proxy readiness for HTTP %s responses', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxyErrorResponse('upstream_failure', status)));
+
+    await expect(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Retry this.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    })).rejects.toBeDefined();
+
+    expect(proxyMocks.invalidateConnection).toHaveBeenCalledWith(`HTTP ${status}`);
+    expect(proxyMocks.recordConnectionSuccess).not.toHaveBeenCalled();
+  });
+
+  it.each([400, 429])('resets proxy readiness for HTTP %s responses', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxyErrorResponse('client_failure', status)));
+
+    await expect(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Handle this.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    })).rejects.toBeDefined();
+
+    expect(proxyMocks.recordConnectionSuccess).toHaveBeenCalledTimes(1);
+    expect(proxyMocks.invalidateConnection).not.toHaveBeenCalled();
+  });
+
   it.each([
     'duplicate_tool_call_id',
     'thread_not_resumable',

@@ -208,7 +208,7 @@ export class CodexProxyManager {
   private child: CodexProxyChild | undefined;
   private starting: Promise<void> | undefined;
   private generation = 0;
-  private consecutiveConnectionFailures = 0;
+  private consecutiveRequestFailures = 0;
   private stopped = false;
   private childFailure: CodexProxyError | undefined;
   private lifecycleRegistered = false;
@@ -273,17 +273,17 @@ export class CodexProxyManager {
     this.dependencies.registerExit(() => this.shutdownSynchronously());
   }
 
-  /** Clears the failure streak when a request receives an HTTP response from the proxy. */
+  /** Clears the failure streak when the proxy responds without a server error. */
   recordConnectionSuccess(): void {
-    this.consecutiveConnectionFailures = 0;
+    this.consecutiveRequestFailures = 0;
   }
 
-  /** Restarts an unreachable proxy after five consecutive connection failures. */
-  invalidateConnection(): void {
+  /** Restarts the proxy after five consecutive connection failures or HTTP server errors. */
+  invalidateConnection(lastFailure = 'loopback connection failure'): void {
     if (this.stateValue === 'ready' && this.child?.pid) {
-      this.consecutiveConnectionFailures += 1;
-      if (this.consecutiveConnectionFailures < 5) return;
-      this.dependencies.logger.warn('Restarting the owned Codex proxy after 5 consecutive loopback connection failures.');
+      this.consecutiveRequestFailures += 1;
+      if (this.consecutiveRequestFailures < 5) return;
+      this.dependencies.logger.warn(`Restarting the owned Codex proxy after 5 consecutive request failures (last failure: ${lastFailure}).`);
       const child = this.child;
       void this.start(child);
     }
@@ -313,7 +313,7 @@ export class CodexProxyManager {
     const config = this.getConfig();
     const generation = ++this.generation;
     this.stateValue = 'starting';
-    this.consecutiveConnectionFailures = 0;
+    this.consecutiveRequestFailures = 0;
     this.childFailure = undefined;
     if (childToTerminate) this.child = undefined;
     const startup = (async () => {

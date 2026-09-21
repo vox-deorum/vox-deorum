@@ -284,6 +284,7 @@ describe('CodexProxyManager startup', () => {
     const first = createChild(101);
     const second = createChild(102);
     const spawn = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const terminate = vi.fn(async () => {
       first.exitCode = 0;
       first.emit('exit', 0);
@@ -293,16 +294,22 @@ describe('CodexProxyManager startup', () => {
       .mockResolvedValueOnce(response(200, { status: 'ready' }))
       .mockRejectedValueOnce(new TypeError('connection refused'))
       .mockResolvedValueOnce(response(200, { status: 'ready' }));
-    const manager = createManager(fetch, spawn, { terminateTree: terminate });
+    const manager = createManager(fetch, spawn, { terminateTree: terminate, logger });
 
     await manager.ensureCodexProxy();
-    for (let attempt = 0; attempt < 4; attempt += 1) manager.invalidateConnection();
+    manager.invalidateConnection('loopback connection failure');
+    manager.invalidateConnection('HTTP 500');
+    manager.invalidateConnection('HTTP 502');
+    manager.invalidateConnection('HTTP 503');
     expect(spawn).toHaveBeenCalledTimes(1);
-    manager.invalidateConnection();
+    manager.invalidateConnection('HTTP 504');
     await manager.ensureCodexProxy();
 
     expect(spawn).toHaveBeenCalledTimes(2);
     expect(manager.state).toBe('ready');
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Restarting the owned Codex proxy after 5 consecutive request failures (last failure: HTTP 504).',
+    );
   });
 
   it('should reset the failure streak after a successful connection', async () => {

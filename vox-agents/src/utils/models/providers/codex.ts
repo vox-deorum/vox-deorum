@@ -80,7 +80,8 @@ export function buildCodexModel(config: Model, options?: RequiredToolChoiceOptio
       await ensureCodexProxy(options?.signal ?? undefined);
       try {
         const response = await fetch(resolveActiveProxyUrl(url, proxyConfig.port), { ...options, dispatcher } as RequestInit);
-        codexProxyManager.recordConnectionSuccess();
+        if (response.status >= 500) codexProxyManager.invalidateConnection(`HTTP ${response.status}`);
+        else codexProxyManager.recordConnectionSuccess();
         return response;
       } catch (error) {
         if (error instanceof TypeError) codexProxyManager.invalidateConnection();
