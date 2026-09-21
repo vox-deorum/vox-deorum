@@ -4,7 +4,9 @@ NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets exte
 
 ## Use Subagents When Appropriate
 
-Delegate less critical/lower-level BATCH work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku, or from GPT Astra/Sol to Luna (exploring/batch editing for diagnosting). DO NOT use weak models for complex diagnosis. Only use latest model series (e.g., no GPT-5.5). Report which model you used to spawn that agent in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches. WAIT for your subagents to return and do not poll them.
+Delegate less critical/lower-level BATCH work to subagents with less capabilities, e.g., from Claude Fable to Sonnet/Haiku, or from GPT Astra/Sol to Luna (exploring/batch editing for diagnosting). DO NOT use weak models for complex diagnosis. Only use latest model series (e.g., no GPT-5.5). Report which model you used to spawn that agent in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches
+
+For Codex: WAIT for your subagents and long-running tasks to return and do not poll them. DISCARD the 60 second polling rule.
 
 ## Project Overview
 
