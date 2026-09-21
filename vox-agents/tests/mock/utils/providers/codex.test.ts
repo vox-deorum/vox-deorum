@@ -11,6 +11,7 @@ const proxyMocks = vi.hoisted(() => ({
   ensureCodexProxy: vi.fn<() => Promise<void>>(),
   getActiveCodexProxyPort: vi.fn<() => number>(),
   invalidateConnection: vi.fn(),
+  recordConnectionSuccess: vi.fn(),
 }));
 
 const loggerMocks = vi.hoisted(() => ({
@@ -40,7 +41,10 @@ vi.mock('../../../../src/utils/models/providers/codex-proxy.js', async () => {
       requestTimeoutMs: 300_000,
       shutdownGracePeriodMs: 15_000,
     }),
-    codexProxyManager: { invalidateConnection: proxyMocks.invalidateConnection },
+    codexProxyManager: {
+      invalidateConnection: proxyMocks.invalidateConnection,
+      recordConnectionSuccess: proxyMocks.recordConnectionSuccess,
+    },
   };
 });
 
@@ -148,6 +152,7 @@ beforeEach(() => {
   proxyMocks.ensureCodexProxy.mockReset().mockResolvedValue(undefined);
   proxyMocks.getActiveCodexProxyPort.mockReset().mockReturnValue(8787);
   proxyMocks.invalidateConnection.mockReset();
+  proxyMocks.recordConnectionSuccess.mockReset();
   loggerMocks.warn.mockReset();
   retryTimerMocks.setTimeout.mockReset().mockResolvedValue(undefined);
 });
@@ -539,6 +544,35 @@ describe('Codex compatible adapter requests', () => {
       providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
     })).rejects.toBeDefined();
     expect(proxyMocks.invalidateConnection).toHaveBeenCalledTimes(1);
+    expect(proxyMocks.recordConnectionSuccess).not.toHaveBeenCalled();
+  });
+
+  it('records a connection success after a completed response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(
+      { role: 'assistant', content: 'Ready.' },
+      'stop',
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Hello.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    });
+
+    expect(proxyMocks.recordConnectionSuccess).toHaveBeenCalledTimes(1);
+    expect(proxyMocks.invalidateConnection).not.toHaveBeenCalled();
+  });
+
+  it('records a connection success for an HTTP error response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxyErrorResponse('thread_busy')));
+
+    await expect(buildCodexModel({ provider: 'codex', name: 'gpt-5.4-mini' }).doGenerate({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'Continue.' }] }],
+      providerOptions: buildCodexProviderOptions({ provider: 'codex', name: 'gpt-5.4-mini' }),
+    })).rejects.toBeDefined();
+
+    expect(proxyMocks.recordConnectionSuccess).toHaveBeenCalledTimes(1);
+    expect(proxyMocks.invalidateConnection).not.toHaveBeenCalled();
   });
 
   it.each([

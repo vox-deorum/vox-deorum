@@ -78,7 +78,9 @@ export function buildCodexModel(config: Model, options?: RequiredToolChoiceOptio
     fetch: async (url, options) => {
       await ensureCodexProxy(options?.signal ?? undefined);
       try {
-        return await fetch(resolveActiveProxyUrl(url, proxyConfig.port), { ...options, dispatcher } as RequestInit);
+        const response = await fetch(resolveActiveProxyUrl(url, proxyConfig.port), { ...options, dispatcher } as RequestInit);
+        codexProxyManager.recordConnectionSuccess();
+        return response;
       } catch (error) {
         if (error instanceof TypeError) codexProxyManager.invalidateConnection();
         throw error;

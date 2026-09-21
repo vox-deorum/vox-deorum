@@ -208,6 +208,7 @@ export class CodexProxyManager {
   private child: CodexProxyChild | undefined;
   private starting: Promise<void> | undefined;
   private generation = 0;
+  private consecutiveConnectionFailures = 0;
   private stopped = false;
   private childFailure: CodexProxyError | undefined;
   private lifecycleRegistered = false;
@@ -272,10 +273,17 @@ export class CodexProxyManager {
     this.dependencies.registerExit(() => this.shutdownSynchronously());
   }
 
-  /** Invalidates a failed loopback connection so the outer retry can reacquire the proxy. */
+  /** Clears the failure streak when a request receives an HTTP response from the proxy. */
+  recordConnectionSuccess(): void {
+    this.consecutiveConnectionFailures = 0;
+  }
+
+  /** Gives the outer retry two chances to recover before restarting an unreachable proxy. */
   invalidateConnection(): void {
     if (this.stateValue === 'ready' && this.child?.pid) {
-      this.dependencies.logger.warn('Restarting the owned Codex proxy after a loopback connection failure.');
+      this.consecutiveConnectionFailures += 1;
+      if (this.consecutiveConnectionFailures < 5) return;
+      this.dependencies.logger.warn('Restarting the owned Codex proxy after 5 consecutive loopback connection failures.');
       const child = this.child;
       void this.start(child);
     }
@@ -305,6 +313,7 @@ export class CodexProxyManager {
     const config = this.getConfig();
     const generation = ++this.generation;
     this.stateValue = 'starting';
+    this.consecutiveConnectionFailures = 0;
     this.childFailure = undefined;
     if (childToTerminate) this.child = undefined;
     const startup = (async () => {

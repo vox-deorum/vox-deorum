@@ -113,6 +113,8 @@ The workspace normally survives turns and process restarts until its temporary r
 
 The managed Codex proxy is pinned and starts lazily. It never adopts a listener already occupying its port, because `/health` and `/ready` do not expose enough identity to verify the required activity contract. Startup scans upward from the configured port for a free one, and fails only once every candidate is occupied. `CODEX_PROXY_COMMAND` remains a trusted launch override. See [Updating the Codex proxy](codex.md) for the version upgrade procedure.
 
+Failed connections to the running proxy use the normal request retry policy. The manager restarts its proxy after three consecutive connection failures across its model requests. Any HTTP response, including an error response, resets the count because the proxy is reachable. Starting a new proxy also resets the count.
+
 Middleware sits between agents and providers:
 
 - Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking.
