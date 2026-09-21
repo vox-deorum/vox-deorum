@@ -120,8 +120,7 @@ describe('oracle schema-tools', () => {
         const tool = ctx.tools[name] as any;
         expect(tool.type).toBe('dynamic');
         const result = await tool.execute({}, {} as any);
-        expect(result).toMatchObject({ _oracle: true });
-        expect(result.message).toContain(name);
+        expect(result.message).toContain('Successfully executed');
       }
     });
 

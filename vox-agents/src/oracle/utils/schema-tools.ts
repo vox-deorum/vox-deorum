@@ -69,7 +69,7 @@ export function schemaOnlyTool(
   return dynamicTool({
     description,
     inputSchema: jsonSchema(schema as any),
-    execute: async () => ({ _oracle: true, message: `Tool ${name} not executed in replay mode.` }),
+    execute: async () => ({ message: `Successfully executed.` }),
   });
 }
 
@@ -93,7 +93,7 @@ export function replaceToolsWithSchemaOnly(
     schemaTools[name] = dynamicTool({
       description: finalSchema.description,
       inputSchema: jsonSchema(finalSchema.inputSchema as any),
-      execute: async () => ({ _oracle: true, message: `Tool ${name} not executed in replay mode.` }),
+      execute: async () => ({ message: `Successfully executed.` }),
     });
   }
 
