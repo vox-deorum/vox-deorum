@@ -272,12 +272,99 @@ describe('CodexProxyManager startup', () => {
 
     await manager.ensureCodexProxy();
     (manager as any).childFailure = new CodexProxyError('stale failure', true);
-    manager.invalidateConnection();
+    for (let attempt = 0; attempt < 5; attempt += 1) manager.invalidateConnection();
     expect((manager as any).childFailure).toBeUndefined();
     await manager.ensureCodexProxy();
 
     expect(spawn).toHaveBeenCalledTimes(2);
     expect(manager.state).toBe('ready');
+  });
+
+  it('should preserve the ready proxy for four failures and restart on the fifth', async () => {
+    const first = createChild(101);
+    const second = createChild(102);
+    const spawn = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const terminate = vi.fn(async () => {
+      first.exitCode = 0;
+      first.emit('exit', 0);
+    });
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }))
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }));
+    const manager = createManager(fetch, spawn, { terminateTree: terminate });
+
+    await manager.ensureCodexProxy();
+    for (let attempt = 0; attempt < 4; attempt += 1) manager.invalidateConnection();
+    expect(spawn).toHaveBeenCalledTimes(1);
+    manager.invalidateConnection();
+    await manager.ensureCodexProxy();
+
+    expect(spawn).toHaveBeenCalledTimes(2);
+    expect(manager.state).toBe('ready');
+  });
+
+  it('should reset the failure streak after a successful connection', async () => {
+    const first = createChild(103);
+    const second = createChild(104);
+    const spawn = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const terminate = vi.fn(async () => {
+      first.exitCode = 0;
+      first.emit('exit', 0);
+    });
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }))
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }));
+    const manager = createManager(fetch, spawn, { terminateTree: terminate });
+
+    await manager.ensureCodexProxy();
+    for (let attempt = 0; attempt < 4; attempt += 1) manager.invalidateConnection();
+    manager.recordConnectionSuccess();
+    for (let attempt = 0; attempt < 4; attempt += 1) manager.invalidateConnection();
+    expect(spawn).toHaveBeenCalledTimes(1);
+    manager.invalidateConnection();
+    await manager.ensureCodexProxy();
+
+    expect(spawn).toHaveBeenCalledTimes(2);
+  });
+
+  it('should reset the failure streak when a restart starts a new generation', async () => {
+    const first = createChild(105);
+    const second = createChild(106);
+    const third = createChild(107);
+    const children = [first, second, third];
+    const spawn = vi.fn()
+      .mockReturnValueOnce(first)
+      .mockReturnValueOnce(second)
+      .mockReturnValueOnce(third);
+    const terminate = vi.fn(async (pid: number) => {
+      const child = children.find((candidate) => candidate.pid === pid);
+      if (child) {
+        child.exitCode = 0;
+        child.emit('exit', 0);
+      }
+    });
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }))
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }))
+      .mockRejectedValueOnce(new TypeError('connection refused'))
+      .mockResolvedValueOnce(response(200, { status: 'ready' }));
+    const manager = createManager(fetch, spawn, { terminateTree: terminate });
+
+    await manager.ensureCodexProxy();
+    for (let attempt = 0; attempt < 5; attempt += 1) manager.invalidateConnection();
+    await manager.ensureCodexProxy();
+    for (let attempt = 0; attempt < 4; attempt += 1) manager.invalidateConnection();
+    expect(spawn).toHaveBeenCalledTimes(2);
+    manager.invalidateConnection();
+    await manager.ensureCodexProxy();
+
+    expect(spawn).toHaveBeenCalledTimes(3);
   });
 
   it('should recover from a retryable owned proxy crash', async () => {
@@ -625,7 +712,7 @@ describe('CodexProxyManager shutdown', () => {
     );
 
     await manager.ensureCodexProxy();
-    manager.invalidateConnection();
+    for (let attempt = 0; attempt < 5; attempt += 1) manager.invalidateConnection();
     await manager.shutdown();
     await Promise.resolve();
 

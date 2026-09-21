@@ -278,7 +278,7 @@ export class CodexProxyManager {
     this.consecutiveConnectionFailures = 0;
   }
 
-  /** Gives the outer retry two chances to recover before restarting an unreachable proxy. */
+  /** Restarts an unreachable proxy after five consecutive connection failures. */
   invalidateConnection(): void {
     if (this.stateValue === 'ready' && this.child?.pid) {
       this.consecutiveConnectionFailures += 1;

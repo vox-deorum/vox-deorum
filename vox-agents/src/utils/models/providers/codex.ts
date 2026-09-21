@@ -23,7 +23,7 @@ import type { RequiredToolChoiceOptions } from './required-tool-choice.js';
 import { resolveHostToolAccess, seedHostWorkspaceGuide } from './host-tools.js';
 import type { ModelRuntimeIdentity } from './host-tools.js';
 
-/** Long-lived loopback dispatchers shared by Codex models with the same deadline. */
+/** Dispatchers share timeout settings across models, but never reuse connections. */
 const codexDispatchers = new Map<number, Agent>();
 
 /** The request target accepted by the fetch implementation the provider installs. */
@@ -38,7 +38,8 @@ function getCodexDispatcher(config: CodexProxyConfig): Agent {
       headersTimeout: timeout,
       bodyTimeout: timeout,
       connectTimeout: 30_000,
-      keepAliveTimeout: 600_000,
+      // Local requests use a fresh connection to avoid idle socket reuse races.
+      pipelining: 0,
     });
     codexDispatchers.set(timeout, dispatcher);
   }
