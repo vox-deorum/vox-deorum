@@ -5,7 +5,7 @@
 
 import type { Ref } from 'vue';
 import type { EnvoyThread, ChatMessageRequest, MessageWithMetadata, DealPayload, DealTranscriptMessage } from '@/utils/types';
-import type { LanguageModelV3TextPart, LanguageModelV3ReasoningPart } from '@ai-sdk/provider';
+import type { LanguageModelV4TextPart, LanguageModelV4ReasoningPart } from '@ai-sdk/provider';
 import { api, type SendCommitState } from '@/api/client';
 import type { ModelMessage } from 'ai';
 // Pure transcript helper (shared with the backend via @vox) — hydrate the server's committed deal row
@@ -72,8 +72,8 @@ interface StreamedToolCall {
 
 /** Content parts stored in the live assistant placeholder. */
 type StreamedAssistantPart =
-  | LanguageModelV3TextPart
-  | LanguageModelV3ReasoningPart
+  | LanguageModelV4TextPart
+  | LanguageModelV4ReasoningPart
   | StreamedToolCall
   | StreamedToolOutcome;
 

@@ -5,7 +5,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { wrapLanguageModel } from 'ai';
-import type { LanguageModelV3 } from '@ai-sdk/provider';
+import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { createClaudeCode, type ClaudeCodeSettings } from 'ai-sdk-provider-claude-code';
 import type { Model } from '../../../types/index.js';
 import { claudeCodeResponseMiddleware, guardClaudeCodeQueryUsageLimits } from './claude-code-response.js';
@@ -34,7 +34,7 @@ export function expandClaudeCodeTools(access: HostToolAccess): string[] {
 
 /** The constructed Claude Code model and its prompt-mode rebound configuration. */
 export interface ClaudeCodeModelBuildResult {
-  model: LanguageModelV3;
+  model: LanguageModelV4;
   config: Model;
 }
 

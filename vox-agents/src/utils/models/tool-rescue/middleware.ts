@@ -40,7 +40,7 @@ const logger = createLogger("tool-rescue");
  */
 export function toolRescueMiddleware(options?: ToolRescueOptions): LanguageModelMiddleware {
   return {
-    specificationVersion: 'v3' as const,
+    specificationVersion: 'v4' as const,
 
     transformParams: async ({ params }) => transformRescueParams(params, options),
 

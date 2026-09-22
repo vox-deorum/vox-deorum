@@ -5,13 +5,13 @@
 
 import type {
   JSONValue,
-  LanguageModelV3CallOptions,
-  LanguageModelV3Content,
-  LanguageModelV3Middleware,
-  LanguageModelV3StreamPart,
-  LanguageModelV3Usage,
-  SharedV3ProviderMetadata,
-  SharedV3ProviderOptions,
+  LanguageModelV4CallOptions,
+  LanguageModelV4Content,
+  LanguageModelV4Middleware,
+  LanguageModelV4StreamPart,
+  LanguageModelV4Usage,
+  SharedV4ProviderMetadata,
+  SharedV4ProviderOptions,
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import { preserveModelError } from '../preserved-model-error.js';
@@ -77,7 +77,7 @@ type PendingCandidate = {
   id: string;
   toolName: string;
   input: string;
-  bufferedParts: LanguageModelV3StreamPart[];
+  bufferedParts: LanguageModelV4StreamPart[];
 };
 
 /** Loose representation of the proxy's raw function call shape. */
@@ -106,7 +106,7 @@ type TransformRequestState = {
 };
 
 /** Keeps each transformed request's raw-chunk preference and continuation request private. */
-const transformRequestStates = new WeakMap<LanguageModelV3CallOptions, TransformRequestState>();
+const transformRequestStates = new WeakMap<LanguageModelV4CallOptions, TransformRequestState>();
 
 /**
  * Deterministic typed continuation errors that cannot succeed on an outer model
@@ -161,17 +161,17 @@ function threadReuseOutcome(selectorRequested: boolean, threadReused: boolean | 
 }
 
 /** Return whether the final prompt message is a shape the proxy accepts after a selector. */
-function endsWithContinuableMessage(prompt: LanguageModelV3CallOptions['prompt']): boolean {
+function endsWithContinuableMessage(prompt: LanguageModelV4CallOptions['prompt']): boolean {
   const lastRole = prompt.at(-1)?.role;
   return lastRole === 'user' || lastRole === 'tool';
 }
 
 /** Attach the proxy's response extensions to the provider metadata carried by the AI SDK. */
 function withProxyResponseMetadata(
-  providerMetadata: SharedV3ProviderMetadata | undefined,
+  providerMetadata: SharedV4ProviderMetadata | undefined,
   instructionSources: string[] | undefined,
   threadReuse: CodexThreadReuse | undefined,
-): SharedV3ProviderMetadata | undefined {
+): SharedV4ProviderMetadata | undefined {
   if (instructionSources === undefined && threadReuse === undefined) return providerMetadata;
   return {
     ...(providerMetadata ?? {}),
@@ -184,7 +184,7 @@ function withProxyResponseMetadata(
 }
 
 /** Warn when the compatible response omitted its optional reasoning-token statistic. */
-function logMissingReasoningTokenStatistics(usage: LanguageModelV3Usage): void {
+function logMissingReasoningTokenStatistics(usage: LanguageModelV4Usage): void {
   const rawUsage = asRecord(usage.raw);
   const completionDetails = asRecord(rawUsage?.completion_tokens_details);
   if (typeof completionDetails?.reasoning_tokens !== 'number') {
@@ -363,12 +363,12 @@ function hasObjectInput(value: string): boolean {
 }
 
 /** Return the declared client function names for collision classification. */
-function declaredFunctionNames(params: LanguageModelV3CallOptions): Set<string> {
+function declaredFunctionNames(params: LanguageModelV4CallOptions): Set<string> {
   return new Set(clientFunctionToolNames(params));
 }
 
 /** Remove provider-executed activity from prompt replay while retaining mixed client history. */
-function stripProviderActivityHistory(params: LanguageModelV3CallOptions): LanguageModelV3CallOptions {
+function stripProviderActivityHistory(params: LanguageModelV4CallOptions): LanguageModelV4CallOptions {
   const providerIds = new Set<string>();
   for (const message of params.prompt) {
     if (message.role !== 'assistant') continue;
@@ -378,7 +378,7 @@ function stripProviderActivityHistory(params: LanguageModelV3CallOptions): Langu
   }
   if (providerIds.size === 0) return params;
 
-  const prompt = params.prompt.reduce<LanguageModelV3CallOptions['prompt']>((filtered, message) => {
+  const prompt = params.prompt.reduce<LanguageModelV4CallOptions['prompt']>((filtered, message) => {
     if (message.role !== 'assistant' && message.role !== 'tool') {
       filtered.push(message);
       return filtered;
@@ -420,15 +420,15 @@ class ActivityNormalizer {
   private readonly pendingCandidateIdsByIndex = new Map<number, string>();
 
   /** Create a response-local normalizer with the request's declared client functions. */
-  constructor(params: LanguageModelV3CallOptions) {
+  constructor(params: LanguageModelV4CallOptions) {
     this.declaredNames = declaredFunctionNames(params);
   }
 
   /** Classify raw tool calls and emit only confirmed provider-executed activity calls. */
-  ingestCalls(rawCalls: unknown): LanguageModelV3StreamPart[] {
+  ingestCalls(rawCalls: unknown): LanguageModelV4StreamPart[] {
     if (rawCalls === undefined) return [];
     if (!Array.isArray(rawCalls)) throw protocolError('tool_calls is not an array');
-    const parts: LanguageModelV3StreamPart[] = [];
+    const parts: LanguageModelV4StreamPart[] = [];
     for (const candidate of rawCalls) {
       const call = asRecord(candidate) as RawToolCall | undefined;
       const functionValue = asRecord(call?.function);
@@ -491,10 +491,10 @@ class ActivityNormalizer {
   }
 
   /** Normalize raw activity results after verifying their unique call correlation. */
-  ingestResults(rawResults: unknown): LanguageModelV3StreamPart[] {
+  ingestResults(rawResults: unknown): LanguageModelV4StreamPart[] {
     if (rawResults === undefined) return [];
     if (!Array.isArray(rawResults)) throw protocolError('tool_results is not an array');
-    const parts: LanguageModelV3StreamPart[] = [];
+    const parts: LanguageModelV4StreamPart[] = [];
     for (const rawCandidate of rawResults) {
       const raw = asRecord(rawCandidate) as RawToolResult | undefined;
       const id = raw?.id;
@@ -547,7 +547,7 @@ class ActivityNormalizer {
   }
 
   /** Return the call ID represented by one adapter tool lifecycle part. */
-  private adapterCallId(part: LanguageModelV3Content | LanguageModelV3StreamPart): string | undefined {
+  private adapterCallId(part: LanguageModelV4Content | LanguageModelV4StreamPart): string | undefined {
     if (part.type === 'tool-call') return part.toolCallId;
     if (part.type === 'tool-result') return part.toolCallId;
     if (part.type === 'tool-input-start' || part.type === 'tool-input-delta' || part.type === 'tool-input-end') return part.id;
@@ -555,7 +555,7 @@ class ActivityNormalizer {
   }
 
   /** Buffer declared-name adapter lifecycle until raw activity or the terminal client finish classifies it. */
-  handleAdapterPart(part: LanguageModelV3StreamPart): LanguageModelV3StreamPart[] {
+  handleAdapterPart(part: LanguageModelV4StreamPart): LanguageModelV4StreamPart[] {
     const id = this.adapterCallId(part);
     if (!id) return [part];
     const candidate = this.pendingCandidates.get(id);
@@ -567,14 +567,14 @@ class ActivityNormalizer {
   }
 
   /** Filter non-stream adapter content after raw classification has completed. */
-  keepGeneratedContent(part: LanguageModelV3Content): boolean {
+  keepGeneratedContent(part: LanguageModelV4Content): boolean {
     const id = this.adapterCallId(part);
     return id === undefined || !this.calls.has(id);
   }
 
   /** Release all pending declared-name candidates as genuine client tool lifecycle parts. */
-  releaseClientCandidates(): LanguageModelV3StreamPart[] {
-    const parts: LanguageModelV3StreamPart[] = [];
+  releaseClientCandidates(): LanguageModelV4StreamPart[] {
+    const parts: LanguageModelV4StreamPart[] = [];
     for (const [id, candidate] of this.pendingCandidates) {
       this.pendingCandidates.delete(id);
       this.clientCallIds.add(id);
@@ -590,7 +590,7 @@ class ActivityNormalizer {
   }
 
   /** Classify held declared-name calls at an authoritative raw terminal finish. */
-  finishRaw(finishReason: string | undefined): LanguageModelV3StreamPart[] {
+  finishRaw(finishReason: string | undefined): LanguageModelV4StreamPart[] {
     if (finishReason === undefined) return [];
     if (this.pendingCandidates.size === 0) return [];
     if (finishReason !== 'tool_calls') throw protocolError('declared tool call ended without a matching result or tool_calls finish');
@@ -598,8 +598,8 @@ class ActivityNormalizer {
   }
 
   /** Finalize a normally completed response, failing only confirmed unfinished preliminary activity. */
-  finishNormally(): LanguageModelV3StreamPart[] {
-    const parts: LanguageModelV3StreamPart[] = [];
+  finishNormally(): LanguageModelV4StreamPart[] {
+    const parts: LanguageModelV4StreamPart[] = [];
     if (this.pendingCandidates.size > 0) throw protocolError('stream ended before declared tool calls could be classified');
     for (const activity of this.calls.values()) {
       if (activity.finished) continue;
@@ -627,9 +627,9 @@ class ActivityNormalizer {
 }
 
 /** Normalize Codex raw activity while preserving compatible adapter text and reasoning parsing. */
-export function codexActivityMiddleware(): LanguageModelV3Middleware {
+export function codexActivityMiddleware(): LanguageModelV4Middleware {
   return {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     transformParams: async ({ params }) => {
       const stripped = stripProviderActivityHistory(params);
       const codexOptions = asRecord(asRecord(params.providerOptions)?.codex);
@@ -649,7 +649,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
               providerOptions: {
                 ...params.providerOptions,
                 codex: Object.fromEntries(Object.entries(codexOptions).filter(([key]) => key !== 'previous_response_id')),
-              } as SharedV3ProviderOptions,
+              } as SharedV4ProviderOptions,
             }
           : {}),
       };
@@ -681,7 +681,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       const content = response.content.filter((part) => normalizer.keepGeneratedContent(part));
       return {
         ...response,
-        content: [...content, ...activity as LanguageModelV3Content[]],
+        content: [...content, ...activity as LanguageModelV4Content[]],
         providerMetadata: withProxyResponseMetadata(response.providerMetadata, instructionSources, threadReuse),
       };
     },
@@ -700,7 +700,7 @@ export function codexActivityMiddleware(): LanguageModelV3Middleware {
       let threadReused: boolean | undefined;
       return {
         ...response,
-        stream: response.stream.pipeThrough(new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
+        stream: response.stream.pipeThrough(new TransformStream<LanguageModelV4StreamPart, LanguageModelV4StreamPart>({
           transform(part, controller) {
             if (part.type === 'raw') {
               if (requestedRawChunks) controller.enqueue(part);

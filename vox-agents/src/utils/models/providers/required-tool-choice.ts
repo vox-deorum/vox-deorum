@@ -12,8 +12,8 @@
  */
 
 import type {
-  LanguageModelV3CallOptions,
-  LanguageModelV3Middleware,
+  LanguageModelV4CallOptions,
+  LanguageModelV4Middleware,
 } from '@ai-sdk/provider';
 import { formatToolChoiceList } from '../../tools/tool-names.js';
 import { appendSystemInstruction } from './system-prompt.js';
@@ -24,14 +24,14 @@ export interface RequiredToolChoiceOptions {
 }
 
 /** Return the declared client function tool names, deduplicated in declaration order. */
-export function clientFunctionToolNames(params: LanguageModelV3CallOptions): string[] {
+export function clientFunctionToolNames(params: LanguageModelV4CallOptions): string[] {
   return [...new Set((params.tools ?? [])
     .filter((tool) => tool.type === 'function')
     .map((tool) => tool.name))];
 }
 
 /** Whether the request also declares host tools the provider executes itself (Codex built-ins). */
-export function hasProviderTools(params: LanguageModelV3CallOptions): boolean {
+export function hasProviderTools(params: LanguageModelV4CallOptions): boolean {
   return (params.tools ?? []).some((tool) => tool.type === 'provider');
 }
 
@@ -78,10 +78,10 @@ export function requiredToolChoiceInstruction(
  * empty name list cannot occur in production; it degrades to plain auto with no
  * instruction.
  */
-export function requiredToolChoiceMiddleware(options?: RequiredToolChoiceOptions): LanguageModelV3Middleware {
+export function requiredToolChoiceMiddleware(options?: RequiredToolChoiceOptions): LanguageModelV4Middleware {
   const completionTools = new Set(options?.completionTools ?? []);
   return {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     transformParams: async ({ params }) => {
       if (params.toolChoice?.type !== 'required') return params;
       const transformed = { ...params, toolChoice: { type: 'auto' as const } };

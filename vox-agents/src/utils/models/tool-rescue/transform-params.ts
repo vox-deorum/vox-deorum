@@ -8,7 +8,7 @@
  * key names in it, and (for a constrained-decoding provider) the grammar its decoder is pinned to.
  */
 
-import type { LanguageModelV3CallOptions, LanguageModelV3Prompt } from '@ai-sdk/provider';
+import type { LanguageModelV4CallOptions, LanguageModelV4Prompt } from '@ai-sdk/provider';
 import type { ToolRescueOptions } from './types.js';
 import {
   createToolPrompts,
@@ -19,9 +19,9 @@ import {
 
 /** Rewrite one call's params into prompt-mode form. Returns them untouched when it does not apply. */
 export function transformRescueParams(
-  params: LanguageModelV3CallOptions,
+  params: LanguageModelV4CallOptions,
   options?: ToolRescueOptions
-): LanguageModelV3CallOptions {
+): LanguageModelV4CallOptions {
   // Skip if prompt mode not enabled or no tools
   if (!options?.prompt || !params?.tools || params.tools.length === 0) {
     return params;
@@ -87,7 +87,7 @@ export function transformRescueParams(
   //  - systemPromptFirst models (only accept a single system message at position 0, e.g.
   //    Qwen): merge the tool prompt into the first existing system message.
   //  - otherwise: prepend a new leading system message.
-  let modifiedPrompt: LanguageModelV3Prompt;
+  let modifiedPrompt: LanguageModelV4Prompt;
   if (!toolPrompt) {
     modifiedPrompt = convertedPrompt;
   } else if (framing === 'action') {

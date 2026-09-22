@@ -12,7 +12,7 @@ The stack is five components ([architecture.md](architecture.md)): a C++ game DL
 | --- | --- |
 | **Windows 10 or 11** | The game, the named-pipe IPC, and the launch scripts are Windows-only. |
 | **Civilization V** with both expansions, plus **Community Patch + Vox Populi** | The modified gamecore the DLL replaces. |
-| **Node.js ≥ 20** and npm | Runs the three services. The installer bundles a portable Node; for development use a system install. |
+| **Node.js ≥ 22** and npm | Runs the three services. The installer bundles a portable Node; for development use a system install. |
 | **Git with LFS** | Cloning the repository and its submodules. |
 | **Python 3.x** | Used by the DLL build scripts and a few mod tooling scripts. |
 | **A Visual C++ toolchain (v90 / VS2008 toolset)** | Only if you build the DLL. See [Building the DLL](#building-the-dll). |

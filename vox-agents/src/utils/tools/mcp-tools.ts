@@ -137,7 +137,7 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
               if (camelKey.endsWith("Id")) camelKey = camelKey.substring(0, camelKey.length - 2) + "ID";
               // Only auto-fill when the context actually has a value; never clobber
               // an explicitly-passed arg (e.g. get-events `Original: true`) with undefined.
-              const value = (options.experimental_context as any)[camelKey];
+              const value = (options.context as any)?.[camelKey];
               if (value !== undefined) callArgs[key] = value;
             }
           )

@@ -2,7 +2,7 @@
  * Prompt guidance for providers with optional local or web capabilities.
  */
 
-import type { LanguageModelV3Middleware } from '@ai-sdk/provider';
+import type { LanguageModelV4Middleware } from '@ai-sdk/provider';
 import { formatToolChoiceList } from '../../tools/tool-names.js';
 import { hostWorkspaceGuideFiles } from './host-tools.js';
 import type { HostCapabilityProvider, HostToolCapabilities } from './host-tools.js';
@@ -64,10 +64,10 @@ export function hostCapabilityMiddleware(
   provider: HostCapabilityProvider,
   access: HostToolCapabilities,
   completionTools: string[] = [],
-): LanguageModelV3Middleware {
+): LanguageModelV4Middleware {
   const completionNames = new Set(completionTools);
   return {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     transformParams: async ({ params }) => {
       const terminalNames = clientFunctionToolNames(params).filter((name) => completionNames.has(name));
       const instruction = hostCapabilityInstruction(provider, access, terminalNames);

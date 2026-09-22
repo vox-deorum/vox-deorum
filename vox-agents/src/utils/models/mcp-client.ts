@@ -173,7 +173,7 @@ export class MCPClient extends EventEmitter {
           init = init ?? {};
           const method = (init.method ?? 'GET').toUpperCase();
           const dispatcher = method === 'POST' ? this.connectionPool : this.dispatcher;
-          return fetch(url, { ...init, dispatcher });
+          return fetch(url, { ...init, dispatcher } as Parameters<typeof fetch>[1]);
         },
         // SDK default maxRetries is 2, which is far too aggressive given Civ V
         // sessions routinely run for hours. We let the transport reconnect

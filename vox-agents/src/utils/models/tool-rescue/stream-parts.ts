@@ -6,12 +6,12 @@
  * half has to mint parts the AI SDK will accept in their place.
  */
 
-import type { LanguageModelV3StreamPart, LanguageModelV3ToolCall } from '@ai-sdk/provider';
+import type { LanguageModelV4StreamPart, LanguageModelV4ToolCall } from '@ai-sdk/provider';
 
 /** Emit rescued tool calls as `tool-call` chunks. */
 export function emitToolCallChunks(
-  toolCalls: LanguageModelV3ToolCall[],
-  controller: TransformStreamDefaultController<LanguageModelV3StreamPart>
+  toolCalls: LanguageModelV4ToolCall[],
+  controller: TransformStreamDefaultController<LanguageModelV4StreamPart>
 ): void {
   toolCalls.forEach((toolCall) => {
     controller.enqueue({
@@ -26,7 +26,7 @@ export function emitToolCallChunks(
 /** Emit leftover prose as a `text-delta` on a text part that is still open. */
 export function emitRemainingText(
   text: string | undefined,
-  controller: TransformStreamDefaultController<LanguageModelV3StreamPart>,
+  controller: TransformStreamDefaultController<LanguageModelV4StreamPart>,
   id: string
 ): void {
   if (text) {
@@ -46,7 +46,7 @@ export function emitRemainingText(
  */
 export function emitTextBlock(
   text: string | undefined,
-  controller: TransformStreamDefaultController<LanguageModelV3StreamPart>,
+  controller: TransformStreamDefaultController<LanguageModelV4StreamPart>,
   id: string
 ): void {
   if (!text) return;

@@ -172,7 +172,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       // Modify onChunk to call the update function for retry timeout reset
       // Also discard late returns if a previous aborted attempt gets resurrected
       const originalOnChunk = params.onChunk;
-      const originalOnStepFinish = params.onStepFinish;
+      const originalOnStepEnd = params.onStepEnd;
       const callId = streamCallCounter++;
       const modifiedParams = {
         ...params,
@@ -187,8 +187,8 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
             originalOnChunk?.(args);
           }
         },
-        onStepFinish: (results: any) => {
-          if (maxIteration === iteration) originalOnStepFinish?.(results);
+        onStepEnd: (results: any) => {
+          if (maxIteration === iteration) originalOnStepEnd?.(results);
         },
         experimental_transform: () => {
           return new TransformStream<TextStreamPart<ToolSet>, TextStreamPart<ToolSet>>({
@@ -205,7 +205,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
 
       // Consume the raw stream
       const result = streamText(modifiedParams);
-      const reader = result.fullStream.getReader();
+      const reader = result.stream.getReader();
       try {
         for (;;) {
           const { done } = await reader.read();

@@ -126,7 +126,7 @@ export function guardClaudeCodeQueryUsageLimits(
 /** Reject text notices and preserve usage-limit error chunks for the retry layer. */
 export function claudeCodeResponseMiddleware(): LanguageModelMiddleware {
   return {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     wrapStream: async ({ doStream, params }) => {
       let rawUsageLimitError: ClaudeCodeUsageLimitError | undefined;
       const { stream, ...rest } = await rawUsageLimitErrorStorage.run(

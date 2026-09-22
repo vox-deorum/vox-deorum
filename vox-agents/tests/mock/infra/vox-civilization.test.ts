@@ -323,7 +323,7 @@ describe('VoxCivilization (mock tier)', () => {
       expect(options?.env?.SystemRoot).toBe(process.env.SystemRoot);
       // ...and nothing else from our environment does.
       expect(options?.env?.VOX_TEST_SECRET).toBeUndefined();
-      const allowed = ['COMSPEC', 'PATHEXT', 'PATH', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'windir', 'VOX_RL_CAPTURE'];
+      const allowed = ['COMSPEC', 'PATHEXT', 'PATH', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'windir', 'VOX_RL_CAPTURE', 'VOX_RL_CAPTURE_TIMINGS'];
       expect(Object.keys(options?.env ?? {}).every((key) => allowed.includes(key))).toBe(true);
 
       civ.destroy();

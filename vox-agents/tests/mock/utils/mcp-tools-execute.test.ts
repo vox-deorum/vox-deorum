@@ -39,9 +39,9 @@ function mcpTool(meta?: Record<string, unknown>): Tool {
 }
 
 /** Invoke the wrapped tool's execute with the AI SDK call options shape. */
-function exec(tool: Tool, args: Record<string, unknown>, experimentalContext: Record<string, unknown> = {}) {
+function exec(tool: Tool, args: Record<string, unknown>, toolContext: Record<string, unknown> = {}) {
   const wrapped = wrapMCPTool(tool, context) as any;
-  return wrapped.execute(args, { toolCallId: 't', messages: [], experimental_context: experimentalContext });
+  return wrapped.execute(args, { toolCallId: 't', messages: [], context: toolContext });
 }
 
 describe('wrapMCPTool execute', () => {
@@ -51,7 +51,7 @@ describe('wrapMCPTool execute', () => {
     const result = await exec(mcpTool({ autoComplete: ['PlayerID'] }), { Filter: 'capital' }, { playerID: 7 });
 
     expect(result).toEqual({ Name: 'Rome' });
-    // PlayerID was filled in from experimental_context.playerID at call time.
+    // PlayerID was filled in from context.playerID at call time.
     expect(mcp.calls('get-cities')[0].args).toEqual({ Filter: 'capital', PlayerID: 7 });
   });
 

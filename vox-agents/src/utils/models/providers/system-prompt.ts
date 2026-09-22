@@ -2,7 +2,7 @@
  * Immutable helpers for adding provider middleware instructions to a prompt.
  */
 
-import type { LanguageModelV3CallOptions } from '@ai-sdk/provider';
+import type { LanguageModelV4CallOptions } from '@ai-sdk/provider';
 
 /**
  * Append an instruction to the leading system message, or create one when the
@@ -10,9 +10,9 @@ import type { LanguageModelV3CallOptions } from '@ai-sdk/provider';
  * mutated, so reusing it for another request cannot accumulate instructions.
  */
 export function appendSystemInstruction(
-  prompt: LanguageModelV3CallOptions['prompt'],
+  prompt: LanguageModelV4CallOptions['prompt'],
   instruction: string,
-): LanguageModelV3CallOptions['prompt'] {
+): LanguageModelV4CallOptions['prompt'] {
   const systemIndex = prompt.findIndex((message) => message.role === 'system');
   if (systemIndex < 0) return [{ role: 'system', content: instruction }, ...prompt];
 

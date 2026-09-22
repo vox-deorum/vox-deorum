@@ -40,7 +40,13 @@ const bpo = vi.mocked(buildProviderOptions);
 function fakeResult(text = 'done') {
   const step = {
     text,
-    usage: { inputTokens: 100, reasoningTokens: 10, outputTokens: 20 },
+    usage: {
+      inputTokens: 100,
+      inputTokenDetails: { noCacheTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      outputTokens: 20,
+      outputTokenDetails: { textTokens: 10, reasoningTokens: 10 },
+      totalTokens: 120,
+    },
     response: { messages: [{ role: 'assistant', content: text }] },
     toolCalls: [],
     toolResults: [],
@@ -314,7 +320,13 @@ describe('VoxContext continuation nudges', () => {
     stc.mockImplementation(async () => ({
       steps: [{
         text: '',
-        usage: { inputTokens: 100, reasoningTokens: 10, outputTokens: 20 },
+        usage: {
+          inputTokens: 100,
+          inputTokenDetails: { noCacheTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 },
+          outputTokens: 20,
+          outputTokenDetails: { textTokens: 10, reasoningTokens: 10 },
+          totalTokens: 120,
+        },
         response: { messages: [] },
         toolCalls: [{ toolName: 'finish-a' }],
         toolResults: [],
@@ -417,7 +429,7 @@ describe('VoxContext.execute cancellation isolation', () => {
     const gate: Record<number, ReturnType<typeof deferred>> = { 100: deferred(), 200: deferred() };
 
     stc.mockImplementation(async (params: any) => {
-      const turn = params.experimental_context.turn as number;
+      const turn = (params.runtimeContext as { turn: number }).turn;
       arrived[turn].resolve();
       await gate[turn].promise;
       return fakeResult();

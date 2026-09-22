@@ -7,7 +7,7 @@
  * the rescued tool calls plus any leftover text that wasn't consumed.
  */
 
-import type { LanguageModelV3ToolCall } from '@ai-sdk/provider';
+import type { LanguageModelV4ToolCall } from '@ai-sdk/provider';
 // @ts-expect-error - jaison doesn't have type definitions
 import jaison from 'jaison';
 import { createLogger } from '../../logger.js';
@@ -348,11 +348,11 @@ export function rescueToolCallsFromText(
   availableTools: Set<string>,
   useJaison: boolean = true,
   toolSchemas?: Map<string, JsonSchemaNode>
-): { remainingText?: string, toolCalls: LanguageModelV3ToolCall[] } {
+): { remainingText?: string, toolCalls: LanguageModelV4ToolCall[] } {
   // Check for delimiter-based tool call format: <|tool_call_begin|> functions.name:N <|tool_call_argument_begin|> {...} <|tool_call_end|>
   const delimiterRegex = /<\|tool_call_begin\|>\s*(?:functions\.)?(.+?)(?::(\d+))?\s*<\|tool_call_argument_begin\|>\s*([\s\S]*?)\s*<\|tool_call_end\|>/g;
   let delimiterMatch;
-  const delimiterToolCalls: LanguageModelV3ToolCall[] = [];
+  const delimiterToolCalls: LanguageModelV4ToolCall[] = [];
   let remainingAfterDelimiters = text;
 
   while ((delimiterMatch = delimiterRegex.exec(text)) !== null) {
@@ -504,7 +504,7 @@ export function rescueToolCallsFromText(
 
   // Check if it's an array of tool calls
   const toolCalls = Array.isArray(candidate) ? candidate : [candidate];
-  const rescuedToolCalls: LanguageModelV3ToolCall[] = [];
+  const rescuedToolCalls: LanguageModelV4ToolCall[] = [];
   // Set once any item looked like a real (but unrescuable) tool call — a wrong-shaped object or a
   // call naming an unavailable tool. That makes the block a genuine failed rescue worth surfacing,
   // NOT the empty wrapper husk, so it must never be silently stripped as one.

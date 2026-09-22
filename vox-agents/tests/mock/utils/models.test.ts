@@ -3,11 +3,11 @@
  *
  * This is the first per-provider unit test for `models.ts`. We mock the
  * `ai-sdk-provider-claude-code` package (both exports) so the factory returns a
- * MockLanguageModelV3 the middleware tail can wrap, and capture the settings the
+ * MockLanguageModelV4 the middleware tail can wrap, and capture the settings the
  * factory receives to assert how the claude-code case translates model config.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MockLanguageModelV3 } from 'ai/test';
+import { MockLanguageModelV4 } from 'ai/test';
 import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('ai-sdk-provider-claude-code', () => {
   const factory = vi.fn((_id: string, settings: any) => {
     mocks.captured = settings;
-    mocks.model = new MockLanguageModelV3({
+    mocks.model = new MockLanguageModelV4({
       doGenerate: async (options: any) => {
         // Simulate the provider's structured-output path, where it consumes raw SDK
         // messages before deciding whether a JSON response was produced.

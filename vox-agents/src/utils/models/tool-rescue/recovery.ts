@@ -10,7 +10,7 @@
  * lives here, so the two transports cannot drift.
  */
 
-import type { LanguageModelV3ToolCall } from '@ai-sdk/provider';
+import type { LanguageModelV4ToolCall } from '@ai-sdk/provider';
 import { rescueToolCallsFromText, isStructuredOutputToolName } from './extract.js';
 import { normalizeKeysToSchema, type JsonSchemaNode } from '../../tools/normalize-keys.js';
 
@@ -44,7 +44,7 @@ export function createToolCallRecoveryState(): ToolCallRecoveryState {
  * calls (see the last-attempt-wins handling in wrapStream/wrapGenerate).
  */
 export function recordTextToolCalls(
-  toolCalls: readonly LanguageModelV3ToolCall[],
+  toolCalls: readonly LanguageModelV4ToolCall[],
   state: ToolCallRecoveryState
 ): void {
   for (const call of toolCalls) {

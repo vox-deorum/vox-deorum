@@ -63,14 +63,18 @@ describe('convertToStepResult', () => {
       expect(steps[0].usage).toEqual({
         inputTokens: 10,
         outputTokens: 5,
-        reasoningTokens: 3,
+        outputTokenDetails: { reasoningTokens: 3 },
       });
     });
 
     it('should default usage to zero when absent', () => {
       const response = makeResponse({ usage: undefined });
       const { steps } = convertToStepResult(response);
-      expect(steps[0].usage).toEqual({ inputTokens: 0, outputTokens: 0, reasoningTokens: 0 });
+      expect(steps[0].usage).toEqual({
+        inputTokens: 0,
+        outputTokens: 0,
+        outputTokenDetails: { reasoningTokens: 0 },
+      });
     });
   });
 
@@ -162,7 +166,11 @@ describe('convertToStepResult', () => {
       expect(steps[0].text).toBe('');
       expect(steps[0].toolCalls).toEqual([]);
       expect(steps[0].finishReason).toBe('unknown');
-      expect(steps[0].usage).toEqual({ inputTokens: 10, outputTokens: 5, reasoningTokens: 0 });
+      expect(steps[0].usage).toEqual({
+        inputTokens: 10,
+        outputTokens: 5,
+        outputTokenDetails: { reasoningTokens: 0 },
+      });
       expect(steps[0].response.messages).toEqual([]);
     });
   });

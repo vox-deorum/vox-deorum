@@ -460,7 +460,7 @@ export class VoxContext<TParameters extends AgentParameters> {
    *
    * @param name - The name of the tool to call
    * @param args - The arguments to pass to the tool
-   * @param parameters - Agent parameters to pass as experimental_context
+   * @param parameters - Agent parameters to pass to the tool context
    * @returns The result of the tool execution, or undefined if tool not found or execution fails
    */
   public async callTool<T = unknown>(
@@ -477,7 +477,7 @@ export class VoxContext<TParameters extends AgentParameters> {
       const result = await tool.execute?.(args, {
         toolCallId: "manual",
         messages: [],
-        experimental_context: parameters
+        context: parameters
       });
       return result;
     } catch (error) {
@@ -836,7 +836,10 @@ export class VoxContext<TParameters extends AgentParameters> {
             // in provider middleware installed by getModel, preserving the requirement in the prompt
             // and naming the agent's completionTools as the calls that end the turn.
             toolChoice: stepToolChoice as any,
-            experimental_context: parameters,
+            runtimeContext: parameters as any,
+            toolsContext: Object.fromEntries(
+              Object.keys(this.tools).map(toolName => [toolName, parameters]),
+            ) as any,
             // Output schema for tool as agent
             output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,
             // Stop after one step
@@ -881,7 +884,7 @@ export class VoxContext<TParameters extends AgentParameters> {
         // Update token usage
         const inputTokens = Math.max(countMessagesTokens(messages, false), stepResponse.usage.inputTokens ?? 0);
         const cachedInputTokens = cachedInputTokensFromUsage(stepResponse.usage);
-        let reasoningTokens = stepResponse.usage.reasoningTokens ?? 0;
+        let reasoningTokens = stepResponse.usage.outputTokenDetails?.reasoningTokens ?? 0;
         const outputTokens = countMessagesTokens(stepResponse.response.messages, false);
 
         // Alternatively: estimate reasoning tokens

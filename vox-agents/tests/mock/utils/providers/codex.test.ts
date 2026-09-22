@@ -345,8 +345,16 @@ describe('Codex compatible adapter requests', () => {
 
   it('names only the client tools active for the current high-level step', async () => {
     const fetchMock = vi.fn().mockResolvedValue(completion(
-      { role: 'assistant', content: 'Ready.' },
-      'stop',
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [{
+          id: 'call-research',
+          type: 'function',
+          function: { name: 'choose_research', arguments: '{"technology":"writing"}' },
+        }],
+      },
+      'tool_calls',
     ));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -435,7 +443,7 @@ describe('Codex compatible adapter requests', () => {
     const [body] = capturedBodies(fetchMock);
     expect(body.messages).toEqual([
       { role: 'user', content: 'Choose a city.' },
-      { role: 'assistant', content: null, reasoning_content: 'Rome has the strongest opening.' },
+      { role: 'assistant', content: '', reasoning_content: 'Rome has the strongest opening.' },
       { role: 'user', content: 'Commit to that opening.' },
     ]);
   });
@@ -1299,7 +1307,7 @@ describe('Codex built-in activity normalization', () => {
       },
     });
     const parts: any[] = [];
-    for await (const part of result.fullStream) parts.push(part);
+    for await (const part of result.stream) parts.push(part);
 
     expect(localHandler).not.toHaveBeenCalled();
     expect(parts).toContainEqual(expect.objectContaining({
@@ -1548,7 +1556,7 @@ describe('Codex built-in activity normalization', () => {
 
     const parts: any[] = [];
     await expect((async () => {
-      for await (const part of result.fullStream) parts.push(part);
+      for await (const part of result.stream) parts.push(part);
     })()).rejects.toMatchObject({
       name: 'CodexUsageLimitError',
       retryAt: now + 75_000,
@@ -1583,7 +1591,7 @@ describe('Codex built-in activity normalization', () => {
 
     const parts: any[] = [];
     await expect((async () => {
-      for await (const part of result.fullStream) parts.push(part);
+      for await (const part of result.stream) parts.push(part);
     })()).rejects.toMatchObject({
       name: 'CodexUsageLimitError',
       retryAt: now + 75_000,

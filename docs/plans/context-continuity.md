@@ -419,7 +419,7 @@ Disabled Strategists retain initial-message construction, active-tool selection,
 
 ## Implementation facts
 
-Verified AI SDK 6.0.174 and Anthropic-provider behavior:
+Verified AI SDK 7.0.108 and Anthropic-provider behavior:
 
 - `usage.inputTokens` includes prompt and cache reads or writes, not the later response;
 - thrown and invalid tools appear as call/result error parts even when `StepResult.toolResults` omits them;

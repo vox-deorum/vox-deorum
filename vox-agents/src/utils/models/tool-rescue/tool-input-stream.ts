@@ -21,7 +21,7 @@
  * that id and, on a miss, re-speaks the entire message as a second bubble.
  */
 
-import type { LanguageModelV3StreamPart, LanguageModelV3ToolCall } from '@ai-sdk/provider';
+import type { LanguageModelV4StreamPart, LanguageModelV4ToolCall } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import { findStreamableToolCallStart } from './extract.js';
 import { sendMessageToolName } from '../../diplomacy/constants.js';
@@ -63,7 +63,7 @@ interface StreamedToolInput {
   ended: boolean;
 }
 
-type Controller = TransformStreamDefaultController<LanguageModelV3StreamPart>;
+type Controller = TransformStreamDefaultController<LanguageModelV4StreamPart>;
 
 /** Per-response streaming of whitelisted tool arguments, one independent stream per text block. */
 export interface ToolInputStreamer {
@@ -75,7 +75,7 @@ export interface ToolInputStreamer {
    * emission site, which is what a mid-stream rescue needs: committing some OTHER tool's call says
    * nothing about the one still being streamed.
    */
-  finalize(blockId: string, toolCalls: LanguageModelV3ToolCall[], controller: Controller, keepIfUnbound?: boolean): boolean;
+  finalize(blockId: string, toolCalls: LanguageModelV4ToolCall[], controller: Controller, keepIfUnbound?: boolean): boolean;
   /**
    * Keep an opened stream bindable after its block's buffer was rewritten, without streaming any
    * more of it. Forgetting it instead would let the next delta re-scan the rewritten buffer, open a

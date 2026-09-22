@@ -3,7 +3,7 @@
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import type { LanguageModelV3 } from '@ai-sdk/provider';
+import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { wrapLanguageModel } from 'ai';
 import { Agent } from 'undici';
 import type { ProviderMetadata } from 'ai';
@@ -63,7 +63,7 @@ function resolveActiveProxyUrl(url: ProxyRequestUrl, configuredPort: number): Pr
  * Builds a native-tool Codex model backed by the local compatible proxy. The
  * proxy starts lazily from fetch, so constructing unrelated models has no effect.
  */
-export function buildCodexModel(config: Model, options?: RequiredToolChoiceOptions): LanguageModelV3 {
+export function buildCodexModel(config: Model, options?: RequiredToolChoiceOptions): LanguageModelV4 {
   const middleware = config.options?.toolMiddleware;
   if (middleware === 'prompt' || middleware === 'gemma') {
     throw new Error(`Codex requires native function tools. toolMiddleware '${middleware}' is not supported; use 'rescue' or omit it.`);
@@ -79,7 +79,7 @@ export function buildCodexModel(config: Model, options?: RequiredToolChoiceOptio
     fetch: async (url, options) => {
       await ensureCodexProxy(options?.signal ?? undefined);
       try {
-        const response = await fetch(resolveActiveProxyUrl(url, proxyConfig.port), { ...options, dispatcher } as RequestInit);
+        const response = await fetch(resolveActiveProxyUrl(url, proxyConfig.port), { ...options, dispatcher } as unknown as RequestInit);
         if (response.status >= 500) codexProxyManager.invalidateConnection(`HTTP ${response.status}`);
         else codexProxyManager.recordConnectionSuccess();
         return response;

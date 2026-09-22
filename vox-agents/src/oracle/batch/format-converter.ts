@@ -85,7 +85,9 @@ export function convertToStepResult(response: ChatCompletion): {
     usage: {
       inputTokens: response.usage?.prompt_tokens ?? 0,
       outputTokens: response.usage?.completion_tokens ?? 0,
-      reasoningTokens: response.usage?.completion_tokens_details?.reasoning_tokens ?? 0,
+      outputTokenDetails: {
+        reasoningTokens: response.usage?.completion_tokens_details?.reasoning_tokens ?? 0,
+      },
     },
     warnings: undefined,
     request: {},
@@ -122,7 +124,7 @@ function createEmptyStep(response: ChatCompletion): any {
     usage: {
       inputTokens: response.usage?.prompt_tokens ?? 0,
       outputTokens: response.usage?.completion_tokens ?? 0,
-      reasoningTokens: 0,
+      outputTokenDetails: { reasoningTokens: 0 },
     },
     warnings: undefined,
     request: {},

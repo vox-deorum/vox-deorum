@@ -13,7 +13,7 @@
  * same buffer, so a spoken reply is not withheld until its JSON closes.
  */
 
-import type { LanguageModelV3CallOptions, LanguageModelV3StreamPart } from '@ai-sdk/provider';
+import type { LanguageModelV4CallOptions, LanguageModelV4StreamPart } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import type { ToolRescueOptions } from './types.js';
 import { rescueToolCallsFromText } from './extract.js';
@@ -35,9 +35,9 @@ const logger = createLogger("tool-rescue");
 
 /** Build the transform that rescues tool calls out of one model response stream. */
 export function createRescueTransform(
-  params: LanguageModelV3CallOptions,
+  params: LanguageModelV4CallOptions,
   options?: ToolRescueOptions
-): TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart> {
+): TransformStream<LanguageModelV4StreamPart, LanguageModelV4StreamPart> {
   // Whether transformParams installed our StructuredOutput responseFormat for this call;
   // gates carrier suppression so a genuine `output` schema survives (see the generate half).
   const structuredActive = (params as any).structuredToolCallsActive;
@@ -74,7 +74,7 @@ export function createRescueTransform(
   // attempt the CLI rejects and retries); see createToolInputStreamer for why each matters.
   const toolInput = createToolInputStreamer(!!options?.prompt && !structuredActive, toolNames);
 
-  return new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
+  return new TransformStream<LanguageModelV4StreamPart, LanguageModelV4StreamPart>({
     transform(chunk, controller) {
       switch (chunk.type) {
         case "text-delta": {

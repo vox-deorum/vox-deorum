@@ -6,13 +6,14 @@
  */
 
 import { type EmbeddingModel, LanguageModel, ProviderMetadata, extractReasoningMiddleware, wrapLanguageModel } from 'ai';
+import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { config } from '../config.js';
 import type { Model, ReasoningEffort } from '../../types/index.js';
-import { createOpenRouter, LanguageModelV3 } from '@openrouter/ai-sdk-provider';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { hermesToolMiddleware } from '@ai-sdk-tool/parser';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGoogle } from '@ai-sdk/google';
 import { createVertex } from '@ai-sdk/google-vertex';
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
 import dotenv from 'dotenv';
@@ -158,7 +159,7 @@ export function getModel(config: Model, options?: {
   /** The calling agent's completion tools, named by provider prompt guidance. */
   completionTools?: string[];
 }): LanguageModel {
-  let result: LanguageModelV3;
+  let result: LanguageModelV4;
   // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming):
   // 'action' for claude-code, 'tool' for everything else.
   const toolFraming: ToolCallFraming = resolveToolFraming(config);
@@ -188,7 +189,7 @@ export function getModel(config: Model, options?: {
               connectTimeout: 600_000,
               keepAliveTimeout: 600_000,
             }),
-          })
+          } as unknown as RequestInit)
         },
       }).chatModel(config.name);
       break;
@@ -213,7 +214,7 @@ export function getModel(config: Model, options?: {
         const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
         result = useVertex
           ? createVertex({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY, headers: flexHeaders })(config.name)
-          : createGoogleGenerativeAI({ headers: flexHeaders })(config.name);
+          : createGoogle({ headers: flexHeaders })(config.name);
       }
       break;
     }
@@ -256,7 +257,7 @@ export function getModel(config: Model, options?: {
               connectTimeout: 180_000,
               keepAliveTimeout: 600_000,
             }),
-          })
+          } as unknown as RequestInit)
         },
       }).chatModel((process.env.OPENAI_COMPATIBLE_URL.indexOf("cloudflare.com") !== -1 ? "dynamic/" : "") + config.name);
       break;
@@ -463,7 +464,7 @@ export function getEmbeddingModel(config: Model): EmbeddingModel {
     case "google":
       return (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true'
         ? createVertex({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
-        : createGoogleGenerativeAI()
+        : createGoogle()
       ).textEmbeddingModel(config.name);
     case "openai-compatible": {
       if (!process.env.OPENAI_COMPATIBLE_URL)

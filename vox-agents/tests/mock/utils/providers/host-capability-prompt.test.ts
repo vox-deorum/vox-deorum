@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { wrapLanguageModel } from 'ai';
-import { MockLanguageModelV3 } from 'ai/test';
+import { MockLanguageModelV4 } from 'ai/test';
 import {
   hostCapabilityHeading,
   hostCapabilityInstruction,
@@ -29,7 +29,7 @@ function functionTool(name: string): any {
 
 /** A recording model whose doGenerate succeeds with a plain text response. */
 function recordingModel() {
-  return new MockLanguageModelV3({
+  return new MockLanguageModelV4({
     doGenerate: async () => ({
       content: [{ type: 'text', text: 'ok' }],
       finishReason: { unified: 'stop', raw: 'stop' },

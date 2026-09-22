@@ -8,7 +8,7 @@
  * wording itself, so the injected prose can be edited without rewriting these tests.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { MockLanguageModelV3 } from 'ai/test';
+import { MockLanguageModelV4 } from 'ai/test';
 import {
   requiredToolChoiceMiddleware,
   requiredToolChoiceInstruction,
@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
 
 /** A recording model whose doGenerate succeeds with a plain text response. */
 function recordingModel() {
-  return new MockLanguageModelV3({
+  return new MockLanguageModelV4({
     doGenerate: async () => ({
       content: [{ type: 'text', text: 'ok' }],
       finishReason: { unified: 'stop', raw: 'stop' },

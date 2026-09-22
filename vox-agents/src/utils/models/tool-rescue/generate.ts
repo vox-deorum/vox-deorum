@@ -8,7 +8,7 @@
  * `./stream.ts` reaches the same answers incrementally; the rules both obey live in `./recovery.ts`.
  */
 
-import type { LanguageModelV3CallOptions, LanguageModelV3ToolCall } from '@ai-sdk/provider';
+import type { LanguageModelV4CallOptions, LanguageModelV4ToolCall } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
 import { rescueToolCallsFromText } from './extract.js';
 import {
@@ -26,7 +26,7 @@ import {
 const logger = createLogger("tool-rescue");
 
 /** Rescue tool calls out of one completed generation, in place. */
-export function rescueGenerateResult(result: any, params: LanguageModelV3CallOptions): any {
+export function rescueGenerateResult(result: any, params: LanguageModelV4CallOptions): any {
   params.tools = params.tools ?? (params as any).originalTools;
 
   // Whether transformParams installed our StructuredOutput responseFormat for this call.
@@ -62,9 +62,9 @@ export function rescueGenerateResult(result: any, params: LanguageModelV3CallOpt
   );
   if (!hasGameToolCall && params.tools && params.tools.length > 0) {
     const newContents: typeof result.content = [];
-    const rescuedCalls: LanguageModelV3ToolCall[] = [];
+    const rescuedCalls: LanguageModelV4ToolCall[] = [];
     const recoveryState = createToolCallRecoveryState();
-    const carrierParts: LanguageModelV3ToolCall[] = [];
+    const carrierParts: LanguageModelV4ToolCall[] = [];
 
     // Structured mode: pre-rescue every text part and mark the last call-yielding one as the
     // winner, so the loop commits only its calls. undefined entries are non-text content.

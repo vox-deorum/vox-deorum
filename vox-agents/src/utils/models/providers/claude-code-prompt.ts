@@ -21,8 +21,8 @@
 
 import { type LanguageModelMiddleware } from 'ai';
 import type {
-  LanguageModelV3Message,
-  LanguageModelV3Prompt,
+  LanguageModelV4Message,
+  LanguageModelV4Prompt,
 } from '@ai-sdk/provider';
 
 /**
@@ -34,7 +34,7 @@ import type {
  * system message regardless of position) and is returned as-is, same reference. Otherwise a new
  * array is returned and the input is never mutated. Order-preserving for every non-system message.
  */
-export function normalizeClaudeCodeSystemMessages(prompt: LanguageModelV3Prompt): LanguageModelV3Prompt {
+export function normalizeClaudeCodeSystemMessages(prompt: LanguageModelV4Prompt): LanguageModelV4Prompt {
   // Only prompts with two or more system messages need merging or demotion; a lone system message
   // survives the provider's flattening wherever it sits.
   let systemCount = 0;
@@ -44,7 +44,7 @@ export function normalizeClaudeCodeSystemMessages(prompt: LanguageModelV3Prompt)
   if (systemCount <= 1) return prompt;
 
   const leading: string[] = [];
-  const body: LanguageModelV3Message[] = [];
+  const body: LanguageModelV4Message[] = [];
   let leadingRunEnded = false;
 
   for (const message of prompt) {
@@ -64,7 +64,7 @@ export function normalizeClaudeCodeSystemMessages(prompt: LanguageModelV3Prompt)
     body.push(message);
   }
 
-  const result: LanguageModelV3Prompt = [];
+  const result: LanguageModelV4Prompt = [];
   // Two or more system messages do not guarantee a leading run (they may all trail the first user
   // message), so only emit the merged system message when the prefix is non-empty.
   if (leading.length > 0) {
@@ -82,7 +82,7 @@ export function normalizeClaudeCodeSystemMessages(prompt: LanguageModelV3Prompt)
  */
 export function claudeCodeSystemMiddleware(): LanguageModelMiddleware {
   return {
-    specificationVersion: 'v3' as const,
+    specificationVersion: 'v4' as const,
     transformParams: async ({ params }) => {
       const prompt = params.prompt;
       if (!prompt || prompt.length === 0) return params;

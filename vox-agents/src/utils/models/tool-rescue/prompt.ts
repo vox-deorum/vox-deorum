@@ -9,11 +9,11 @@
 
 import {
   JSONSchema7,
-  LanguageModelV3FunctionTool,
-  LanguageModelV3Message,
-  LanguageModelV3Prompt,
-  LanguageModelV3ProviderTool,
-  LanguageModelV3ToolChoice,
+  LanguageModelV4FunctionTool,
+  LanguageModelV4Message,
+  LanguageModelV4Prompt,
+  LanguageModelV4ProviderTool,
+  LanguageModelV4ToolChoice,
 } from '@ai-sdk/provider';
 import { formatToolCallText, formatWrappedToolCallText, formatToolResultOutput } from '../text-cleaning.js';
 import type { ToolCallFraming } from './types.js';
@@ -37,9 +37,9 @@ const FRAMING_PRESETS = {
  * prompt and {@link buildToolCallArraySchema} from ever disagreeing about which tools are in play.
  */
 function functionTools(
-  tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[]
-): LanguageModelV3FunctionTool[] {
-  return tools.filter((tool): tool is LanguageModelV3FunctionTool => tool.type !== 'provider');
+  tools: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)[]
+): LanguageModelV4FunctionTool[] {
+  return tools.filter((tool): tool is LanguageModelV4FunctionTool => tool.type !== 'provider');
 }
 
 /**
@@ -65,7 +65,7 @@ export function reframeToolWording(text: string): string {
   });
 }
 
-export function createToolPrompt(tool: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)) {
+export function createToolPrompt(tool: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)) {
   // We don't support provider tools this way
   if (tool.type === "provider") return;
   let toolInfo = `### ${tool.name}`;
@@ -83,8 +83,8 @@ export function createToolPrompt(tool: (LanguageModelV3FunctionTool | LanguageMo
  * @param tools Array of tool definitions with names and schemas
  * @returns System prompt text instructing the model to use JSON format for tool calls
  */
-export function createToolPrompts(tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[],
-  choice: LanguageModelV3ToolChoice,
+export function createToolPrompts(tools: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)[],
+  choice: LanguageModelV4ToolChoice,
   framing: ToolCallFraming = 'tool',
   wrapped: boolean = false): string | undefined {
   // Format tools with their schemas (provider tools are excluded via functionTools)
@@ -163,7 +163,7 @@ ${descriptions}`;
  * is never worse than prompt-only mode.
  */
 export function buildToolCallArraySchema(
-  tools: (LanguageModelV3FunctionTool | LanguageModelV3ProviderTool)[],
+  tools: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)[],
   framing: ToolCallFraming = 'tool'
 ): JSONSchema7 {
   const { noun, listKey } = FRAMING_PRESETS[framing];
@@ -195,8 +195,8 @@ export function buildToolCallArraySchema(
  * Used in prompt mode so the model sees a consistent text-based conversation history
  * instead of native tool-call/tool-result parts it never produced.
  */
-export function convertPromptToolMessagesToText(prompt: LanguageModelV3Prompt, framing: ToolCallFraming = 'tool', wrapped: boolean = false): LanguageModelV3Prompt {
-  const converted: LanguageModelV3Message[] = [];
+export function convertPromptToolMessagesToText(prompt: LanguageModelV4Prompt, framing: ToolCallFraming = 'tool', wrapped: boolean = false): LanguageModelV4Prompt {
+  const converted: LanguageModelV4Message[] = [];
   // The pluralized wrapper key (`actions`/`tools`) the wrapped echo groups calls under, kept in
   // lockstep with the injected instruction and responseFormat schema via the shared preset.
   const { listKey } = FRAMING_PRESETS[framing];
