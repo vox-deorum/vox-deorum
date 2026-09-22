@@ -8,6 +8,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **Winston logger only**: never `console.log/error/warn` in production code (OK in tests)
 - **MCP tools**: Always read `mcp-server/src/tools/index.ts` to know which tools actually exist
 - **Embedding models**: Set `options.embeddingSize` on model config. Use `embedder` alias in `config.llms`. Call `getEmbeddingModel()` from `utils/models/models.ts`
+- **Agent triage**: Use `createTriage()` from `infra/triage.ts` with an instruction string (small inputs only) or a state builder returning bounded state or a `TriageShortcut`. Enable `options.triage` on the agent's own model assignment and configure `evaluator` or `<agent>.evaluator`; read the execution decision through `context.currentTriage` (read-only). Share durable state loaded by triage with later hooks through `context.memoizeForExecution`.
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
 - **Provider modules**: Provider-specific implementations live in `src/utils/models/providers/` and may import shared types or sibling helpers, but never `models.ts`
 - **Config defaults**: `config.json` is gitignored. Effective values come from `src/utils/config/defaults.ts` merged by `src/utils/config/diff.ts`, loaded through `src/utils/config.ts`

@@ -10,7 +10,7 @@ import { Tool, StepResult, ModelMessage } from "ai";
 import { createLogger } from "../utils/logger.js";
 import { z, ZodObject } from "zod";
 import { Model, ReasoningEffort } from "../types/index.js";
-import { VoxContext } from "./vox-context.js";
+import type { VoxContext } from "./vox-context.js";
 import { getModelConfig, type ModelSize, resolveToolFraming, selectModelReference } from "../utils/models/models.js";
 import { getValidCalls, hasOnlyTerminalCalls, isTerminalTool } from "../utils/tools/terminal-tools.js";
 import { buildCompletionToolsNudge } from "../utils/tools/tool-names.js";
@@ -32,6 +32,16 @@ export interface AgentParameters {
   turn: number;
   /** Optional cleanup method for releasing resources (database connections, etc.) */
   close?: () => Promise<void>;
+}
+
+/** The model-tier decision made before one agent execution begins. */
+export interface TriageDecision {
+  /** Model-size tier selected for this execution. */
+  tier: ModelSize;
+  /** Optional evaluator answers retained for hooks and diagnostics. */
+  answers?: Record<string, unknown>;
+  /** Optional human-readable reason for the decision. */
+  note?: string;
 }
 
 /**
@@ -225,9 +235,21 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * @param parameters - The execution parameters
    * @returns The language model to use, or undefined for default
    */
-  public getModel(_parameters: TParameters, _input: TInput, overrides: Record<string, Model | string>): Model {
-    return getModelConfig(selectModelReference(this.name, this.modelSize, overrides), this.reasoningTier, overrides);
+  public getModel(
+    _parameters: TParameters,
+    _input: TInput,
+    overrides: Record<string, Model | string>,
+    tier: ModelSize = this.modelSize
+  ): Model {
+    return getModelConfig(selectModelReference(this.name, tier, overrides), this.reasoningTier, overrides);
   }
+
+  /** Optionally choose a model tier before model selection and prompt construction. */
+  public triage?(
+    parameters: TParameters,
+    input: TInput,
+    context: VoxContext<TParameters>
+  ): Promise<TriageDecision | undefined>;
   
   /**
    * Gets the system prompt for this agent.
@@ -468,12 +490,17 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
       );
       // Match the rescue wording to the model's framing so a claude-code model is
       // asked for an "action", not pointed at its host "tools".
-      const rescueFraming = resolveToolFraming(this.getModel(parameters, input, context.modelOverrides));
+      const rescueFraming = resolveToolFraming(this.getModel(
+        parameters,
+        input,
+        context.modelOverrides,
+        context.currentTriage?.tier
+      ));
       const rescue = buildRescuePrompt(toolChoice, rescueFraming);
       config.messages = appendReminder(cleaned, rescue);
     }
 
-    config.model = this.getModel(parameters, input, context.modelOverrides);
+    config.model = this.getModel(parameters, input, context.modelOverrides, context.currentTriage?.tier);
 
     return config;
   }

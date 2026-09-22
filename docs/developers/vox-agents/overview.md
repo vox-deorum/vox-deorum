@@ -25,7 +25,8 @@ The main hooks, in the order they matter:
 
 | Hook | Responsibility |
 | --- | --- |
-| `getModel()` | Chooses the LLM for this run, and can vary it per input. Falls back to the per-agent and default model mappings in `config.json`. |
+| `triage()` | Optionally chooses a model tier before model selection. Its decision is available to later hooks through `context.currentTriage`. |
+| `getModel()` | Chooses the LLM for this run, using the triage tier when supplied or the agent's `modelSize` otherwise. Resolves per-agent and tier mappings in `config.json`. |
 | `getSystem()` | Returns the system prompt. |
 | `getInitialMessages()` | Builds the opening context. For strategists, that is the formatted game state. |
 | `getActiveTools()` | Names the tools the model may call this step. |
@@ -106,6 +107,10 @@ The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS B
 The root `package.json` overrides the Claude Agent SDK dependency so model discovery and `ai-sdk-provider-claude-code` use the same SDK version and bundled runtime. Run `npm run update:claude-agent-sdk` from the repo root to update it, then restart Vox Agents.
 
 Evaluation models use the `evaluator` or `<agent>.evaluator` aliases. TypeSafe's Jev is evaluation-only; chat models can also serve as evaluators through `src/utils/models/evaluation.ts`. Settings has separate Embedder and Evaluator dropdowns. The Evaluator dropdown offers chat and evaluation-only models, with More opening model discovery for either kind. Clearing it removes the shared evaluator assignment. Chat selectors exclude evaluation-only models and their aliases.
+
+Agents can adopt evaluation-based triage by assigning a hook from `createTriage` in `src/infra/triage.ts`. A string is an instruction paired with the agent's whole input, so it suits agents with small inputs. A state builder receives parameters, input, and context and returns bounded structured state for the evaluator, or a `TriageShortcut` that decides a deterministic case without an evaluator call. Builders that need the same durable state as later hooks can share one load through `context.memoizeForExecution`. The helper supplies a tier question and routing by default, and accepts custom questions and routing when needed. It runs only when the agent's own model assignment has `options.triage: true` and an evaluator alias exists. The agent-specific evaluator takes precedence over the shared evaluator.
+
+The three model tiers are `small`, `default`, and `large`. For `small` and `large`, lookup tries `<agent>.<tier>`, then `<tier>`, then `<agent>`, then `default`, checking seat overrides before global configuration at each key. The default tier uses the agent assignment before the default alias. Triage runs once per execution, and its tier remains in effect across model steps. Callers can supply `ExecuteOptions.triage` to bypass the hook. Decisions live on execution frames, so nested and concurrent agents each see their own `currentTriage`. When the hook fails, execution logs a warning and keeps the agent's own `modelSize`, noting `triage failed` on the decision; cancellation still stops the run. Agent spans record `triage.tier` and an optional `triage.note`, with evaluation usage counted in the run and seat totals.
 
 Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`.
 

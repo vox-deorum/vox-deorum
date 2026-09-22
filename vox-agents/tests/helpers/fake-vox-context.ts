@@ -43,6 +43,7 @@ import { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
 import type { VoxContext } from '../../src/infra/vox-context.js';
 import type { GameState, StrategistParameters } from '../../src/strategist/strategy-parameters.js';
 import type { Model } from '../../src/types/index.js';
+import type { TriageDecision } from '../../src/infra/vox-agent.js';
 
 /** A registered per-tool handler: receives the call args + parameters, returns (or throws) a result. */
 export type FakeToolHandler = (
@@ -87,8 +88,8 @@ export class FakeVoxContext {
   /** The input of the currently-executing agent (e.g. the active EnvoyThread). */
   public currentInput?: unknown;
 
-  /** The active frame's recorded triage decision (mirrors `VoxContext.currentTriage` once the hook lands). */
-  public currentTriage?: unknown;
+  /** The active execution's triage decision (read-only on VoxContext; set directly in tests). */
+  public currentTriage?: TriageDecision;
 
   /** The context-owned base parameters (set via {@link setBaseParameters}). */
   private _baseParameters?: unknown;
@@ -139,6 +140,11 @@ export class FakeVoxContext {
   }
   set streamProgress(callback: ((message: string) => void) | undefined) {
     this._streamProgress = callback;
+  }
+
+  /** Load the value directly; the fake keeps no per-execution cache. */
+  memoizeForExecution<T>(_key: string, load: () => Promise<T>): Promise<T> {
+    return load();
   }
 
   /** The context-owned base parameters. */

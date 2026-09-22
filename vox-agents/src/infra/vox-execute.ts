@@ -14,7 +14,7 @@
 
 import { Output, StepResult, ToolSet, ModelMessage } from "ai";
 import { trace, SpanStatusCode, context } from '@opentelemetry/api';
-import type { AgentParameters, VoxAgent } from "./vox-agent.js";
+import type { AgentParameters, TriageDecision, VoxAgent } from "./vox-agent.js";
 import type { VoxContext } from "./vox-context.js";
 import type { Model, StreamingEventCallback } from "../types/index.js";
 import { streamTextWithConcurrency, withModelConfig } from "../utils/models/concurrency.js";
@@ -91,14 +91,21 @@ export async function executeAgent<TParameters extends AgentParameters>(
   // running on this same VoxContext) sees its own input. The parent input is restored
   // automatically when the frame scope exits, so tools that read currentInput later in the
   // parent's tool loop (e.g. close-conversation) still see the parent's EnvoyThread.
-  return host.runInChildFrame(input, async () => {
+  return host.runInChildFrame(input, async (frame) => {
     const span = openAgentSpan(host, agentName, params.turn, input);
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       try {
+        const decision = await resolveTriage(host, agent, params, input, options);
+        frame.triage = decision;
+        if (decision) {
+          span.setAttribute('triage.tier', decision.tier);
+          if (decision.note !== undefined) span.setAttribute('triage.note', decision.note);
+        }
+
         // Execute the agent using generateText
         // Get model config - agent's model or default, with overrides applied
-        const modelConfig = agent.getModel(params, input, host.modelOverrides);
+        const modelConfig = agent.getModel(params, input, host.modelOverrides, decision?.tier);
         const system = await agent.getSystem(params, input, host);
 
         // Auto-send model name via set-metadata when the strategist's model changes
@@ -197,6 +204,34 @@ export async function executeAgent<TParameters extends AgentParameters>(
       }
     });
   });
+}
+
+/**
+ * Resolve one execution's supplied or agent-provided triage decision. A failed hook keeps the
+ * agent's own tier and notes the failure on the decision, so the span tells an outage apart from
+ * an evaluator's choice. Cancellation rethrows.
+ */
+async function resolveTriage<TParameters extends AgentParameters>(
+  host: VoxContext<TParameters>,
+  agent: VoxAgent<TParameters>,
+  parameters: TParameters,
+  input: unknown,
+  options: ExecuteOptions
+): Promise<TriageDecision | undefined> {
+  if (options.triage) return options.triage;
+  if (!agent.triage) return undefined;
+
+  const signal = host.currentSignal();
+  signal.throwIfAborted();
+  try {
+    const decision = await agent.triage(parameters, input, host);
+    signal.throwIfAborted();
+    return decision;
+  } catch (error) {
+    if (signal.aborted) throw error;
+    host.logger.warn(`Triage failed for agent ${agent.name}; keeping its ${agent.modelSize} tier.`, error);
+    return { tier: agent.modelSize, note: 'triage failed' };
+  }
 }
 
 /**

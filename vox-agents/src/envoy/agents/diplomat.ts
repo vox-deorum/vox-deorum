@@ -18,6 +18,8 @@ import { buildDiplomacyBackgroundMessage } from "../context/diplomacy-context.js
 import { readActiveProposal } from "../../utils/diplomacy/deal/deal.js";
 import { counterpartOpenProposal } from "../../utils/diplomacy/deal/deal-reduce.js";
 import { terminalActionTools, type DealRowRenderer } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { createTriage, TriageShortcut } from "../../infra/triage.js";
+import { buildDiplomatTriageState, diplomatTriageQuestions, routeDiplomatTriage } from "./diplomat-triage.js";
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.
@@ -27,6 +29,17 @@ import { terminalActionTools, type DealRowRenderer } from "../../utils/diplomacy
  * @class
  */
 export class Diplomat extends LiveEnvoy {
+  /**
+   * Select a model tier from the current bounded diplomatic exchange when triage is enabled. Special
+   * messages such as greetings run without tools or history, so they take the small tier directly.
+   */
+  public override triage = createTriage<StrategistParameters, EnvoyThread, typeof diplomatTriageQuestions>(
+    async (parameters, input, context) => this.isSpecialMode(input)
+      ? new TriageShortcut({ tier: "small", note: "special message" })
+      : buildDiplomatTriageState(parameters, input, await this.readDealReduction(input, context)),
+    { questions: diplomatTriageQuestions, route: routeDiplomatTriage },
+  );
+
   /** The analyst runs after diplomatic reports are submitted. */
   public override modelDependencies = ["specialized-briefer", "diplomatic-analyst"];
 
@@ -105,16 +118,26 @@ export class Diplomat extends LiveEnvoy {
   ) {
     const config = await super.prepareStep(parameters, input, lastStep, allSteps, messages, context);
     if (lastStep === null && !this.isSpecialMode(input)) {
-      // Diplomacy turn, first step: read the authoritative deal state once. The counterpart cannot act
-      // mid-turn (the per-thread lock), so the gate state is fixed for the whole turn; and when the gate
+      // Diplomacy turn, first step: gate on the execution's shared deal reduction. The counterpart cannot
+      // act mid-turn (the per-thread lock), so the gate state is fixed for the whole turn; and when the gate
       // IS active it restricts to call-negotiator + send-message, both of which end the turn — so there
-      // is never a later step to re-restrict. Reading every step would just repeat the same MCP round-trip.
-      const reduction = await readActiveProposal(input.player1ID, input.player2ID);
+      // is never a later step to re-restrict.
+      const reduction = await this.readDealReduction(input, context);
       if (counterpartOpenProposal(reduction, input.agent)) {
         config.activeTools = ["call-negotiator", "send-message"];
       }
     }
     return config;
+  }
+
+  /**
+   * Read the authoritative durable deal reduction (`readActiveProposal`, the same source the negotiator
+   * and the accept/reject routes use) once per diplomat execution. Triage, the grounding context, and
+   * the first-step gate all run before any tool call, so they share one MCP round trip.
+   */
+  private readDealReduction(input: EnvoyThread, context: VoxContext<StrategistParameters>) {
+    return context.memoizeForExecution("diplomat.deal-reduction", () =>
+      readActiveProposal(input.player1ID, input.player2ID));
   }
 
   /**
@@ -136,8 +159,8 @@ export class Diplomat extends LiveEnvoy {
    * inline at their proposal turn via the `dealRenderer` (see {@link renderDealRowInline}). See
    * {@link LiveEnvoyContext} for how the base layers these sections around the chat record.
    *
-   * The deal transcript is reduced ONCE here from the authoritative durable source (`readActiveProposal`,
-   * the same source `prepareStep`'s gate and the accept/reject routes use). The optional on-the-table
+   * The deal transcript comes from the execution's shared authoritative reduction ({@link readDealReduction},
+   * the same one triage and `prepareStep`'s gate use). The optional on-the-table
    * block and the renderer's open-proposal pointer both derive from that single reduction, and the pointer
    * keys off the block actually being emitted, so they can never disagree about which proposal is open.
    * (Reducing the in-memory `input.messages` instead risked pointing at a block that was never emitted.)
@@ -153,7 +176,7 @@ export class Diplomat extends LiveEnvoy {
     // reduction for the open-deal terms.
     const [background, reduction] = await Promise.all([
       buildDiplomacyBackgroundMessage(context, parameters, input),
-      readActiveProposal(input.player1ID, input.player2ID),
+      this.readDealReduction(input, context),
     ]);
     const preamble: ModelMessage[] = background.text
       ? [{ role: "user", content: background.text }]

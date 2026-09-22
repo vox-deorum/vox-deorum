@@ -23,6 +23,7 @@ import { Tool } from "ai";
 import type { Experimental_EvaluationQuestion, Experimental_EvaluationResult } from "ai";
 import { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
 import { AgentParameters, VoxAgent } from "./vox-agent.js";
+import type { TriageDecision } from "./vox-agent.js";
 import { createLogger } from "../utils/logger.js";
 import { mcpClient } from "../utils/models/mcp-client.js";
 import { Model, StreamingEventCallback } from "../types/index.js";
@@ -153,6 +154,34 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    */
   public get currentInput(): unknown {
     return this.als.getStore()?.input;
+  }
+
+  /**
+   * The triage decision for the active execution frame, or undefined outside an execution. The
+   * execution loop records it before model selection; hooks only read it.
+   */
+  public get currentTriage(): TriageDecision | undefined {
+    return this.als.getStore()?.triage;
+  }
+
+  /**
+   * Load a value once for the active execution and share it with the execution's other hooks, such
+   * as triage, context building, and prepareStep reading the same durable state. Nested executions
+   * get their own cache. A rejected load is dropped so a later hook can retry it. Outside a run the
+   * value is loaded directly.
+   *
+   * @param key - Name of the cached value within the execution
+   * @param load - Loads the value on first use
+   */
+  public memoizeForExecution<T>(key: string, load: () => Promise<T>): Promise<T> {
+    const memo = this.als.getStore()?.memo;
+    if (!memo) return load();
+    const cached = memo.get(key);
+    if (cached) return cached as Promise<T>;
+    const loaded = load();
+    memo.set(key, loaded);
+    loaded.catch(() => memo.delete(key));
+    return loaded;
   }
 
   /**
@@ -441,13 +470,17 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    * belonging to some other root. The parent input is restored when the scope exits.
    *
    * @param input - The child frame's agent input
-   * @param callback - The work to run inside the child frame
+   * @param callback - The work to run inside the child frame, handed the frame it owns
    * @throws Error when there is no active run
    */
-  public runInChildFrame<TResult>(input: unknown, callback: () => Promise<TResult>): Promise<TResult> {
-    const frame = this.als.getStore();
-    if (!frame) throw new Error('VoxContext: no active run.');
-    return this.als.run(createExecutionFrame(frame.root, input), callback);
+  public runInChildFrame<TResult>(
+    input: unknown,
+    callback: (frame: ExecutionFrame<TParameters>) => Promise<TResult>
+  ): Promise<TResult> {
+    const parent = this.als.getStore();
+    if (!parent) throw new Error('VoxContext: no active run.');
+    const frame = createExecutionFrame(parent.root, input);
+    return this.als.run(frame, () => callback(frame));
   }
 
   /**

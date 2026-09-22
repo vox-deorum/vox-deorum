@@ -7,7 +7,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import type { AgentParameters } from "./vox-agent.js";
+import type { AgentParameters, TriageDecision } from "./vox-agent.js";
 
 /** Mutable object populated by execute() with per-execution token counts. */
 export interface ExecuteTokenOutput {
@@ -20,6 +20,8 @@ export interface ExecuteTokenOutput {
 export interface ExecuteOptions {
   /** Re-throw non-context-length agent errors after recording telemetry. */
   throwOnError?: boolean;
+  /** Precomputed triage decision, which takes precedence over the agent's hook. */
+  triage?: TriageDecision;
 }
 
 /** Options for opening a root run via VoxContext.withRun. */
@@ -77,6 +79,10 @@ export interface RootRun<TParameters extends AgentParameters> {
 export interface ExecutionFrame<TParameters extends AgentParameters> {
   readonly root: RootRun<TParameters>;
   readonly input: unknown;
+  /** Triage decision for this execution, isolated from parent and sibling frames. */
+  triage?: TriageDecision;
+  /** Values loaded once for this execution and shared by its hooks (see VoxContext.memoizeForExecution). */
+  readonly memo: Map<string, Promise<unknown>>;
   /** Per-execution timeout-refresh callback, rebound per model call by the concurrency wrapper. */
   timeoutRefresh: () => void;
 }
@@ -167,7 +173,7 @@ export function createExecutionFrame<TParameters extends AgentParameters>(
   root: RootRun<TParameters>,
   input: unknown
 ): ExecutionFrame<TParameters> {
-  return { root, input, timeoutRefresh: () => {} };
+  return { root, input, memo: new Map(), timeoutRefresh: () => {} };
 }
 
 /** Abort one root run (idempotent). */
