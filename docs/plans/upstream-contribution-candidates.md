@@ -2,7 +2,9 @@
 
 This is a draft selection plan for extracting focused Vox Populi PRs from the current Vox Deorum DLL. Start with the small fixes, then choose the APIs and larger features worth maintaining upstream. Each entry describes selected hunks, not an entire file patch.
 
-The inventory comes from the 107-file export at `temp/upstream-review/review-WHrsFj/`: DLL commit `aaf1e6229fba34d2259e46b629dd8941680b5688`, compared with merged upstream commit `76a576152f00a8780ced6c6721d3cd46c51d151b` (5.2.7). Candidate checks also used the newer **local** `upstream/master`, `3bf725e4f804698aa5da085cbe1a3537fca8e4a7`. Remote PR status and changes beyond that cached ref have not been checked.
+The inventory comes from the 107-file export at `temp/upstream-review/review-WHrsFj/`: DLL commit `aaf1e6229fba34d2259e46b629dd8941680b5688`, compared with merged upstream commit `76a576152f00a8780ced6c6721d3cd46c51d151b` (5.2.7). Candidate checks also used the newer **local** `upstream/master`, `3bf725e4f804698aa5da085cbe1a3537fca8e4a7`. Changes beyond that cached ref have not been checked.
+
+Headings carry a **submitted** marker when the candidate already has an upstream PR from `CIVITAS-John` (checked against the upstream PR list on 2026-09-22).
 
 All file paths below are relative to `civ5-dll/`. For compactness, **core files** means `CvGameCoreDLL_Expansion2/`, and **Lua files** means `CvGameCoreDLL_Expansion2/Lua/`. Patch numbers refer to that export's `patches/` directory.
 
@@ -14,7 +16,7 @@ Fix the premature semicolon in `AttackKey::operator==` so previous attacker, def
 
 **Related files:** core `CvTacticalAI.h`. **Patch:** `0058`.
 
-### 2. Show war duration for the hovered civilization
+### 2. Show war duration for the hovered civilization (submitted: [#13360], open)
 
 Use `playerID` in the notification panel's war-weariness tooltip. The current upstream call uses the undefined `g_iAIPlayer`, so it queries the wrong opponent. Extract this small correction from the observer-interface changes.
 
@@ -38,7 +40,7 @@ Skip combat-animation flag hiding for observers in both `RunCombatSim` and `EndC
 
 **Related files:** `(3a) VP - EUI Compatibility Files/LUA/UnitFlagManager.lua`. **Patch:** `0009`.
 
-### 6. Suppress defeated-leader interruptions during autoplay
+### 6. Suppress defeated-leader interruptions during autoplay (submitted: [#13360], open)
 
 Skip `DoKilledByPlayer` in `CheckForMurder` while AI autoplay is active. This keeps automated games moving when a civilization is eliminated. Reproduce the interruption and confirm normal human games still show the defeated leader.
 
@@ -48,7 +50,7 @@ Skip `DoKilledByPlayer` in `CheckForMurder` while AI autoplay is active. This ke
 
 These candidates need an upstream use case and an API review, but can be separated from external control and save-format changes.
 
-### 7. Expose map identity and original random seeds to in-game Lua
+### 7. Expose map identity and original random seeds to in-game Lua (submitted: [#11995], closed unmerged)
 
 Add `Game.GetMapScriptName` and `Game.GetRandomSeeds` for reproducibility reports and debugging. Return the original pregame seed inputs, without advancing or exposing mutable RNG state. Document both methods in LuaCATS.
 
@@ -66,7 +68,7 @@ Let trade interfaces inspect each participant's item valuation and validate a co
 
 **Related files:** Lua `CvLuaDeal.cpp`, `CvLuaDeal.h`; core `CvDealAI.cpp`, `CvDealAI.h`, `CvDealClasses.cpp`, `CvDealClasses.h` for the native contracts. **Patches:** `0069`, `0070`.
 
-### 10. Expose tactical-zone information to Lua
+### 10. Expose tactical-zone information to Lua (submitted: [#11995], closed unmerged)
 
 Provide a player's tactical-zone count and zone details, plus the zone containing a unit from an optional player's perspective. Useful for AI diagnostics and overlays. Specify cache freshness and validate player and zone inputs without importing RL snapshot accessors.
 
@@ -96,7 +98,7 @@ Show the partners alongside the countdown for a preparing cooperative war. Keep 
 
 **Related files:** Lua `CvLuaPlayer.cpp`; `(1) Community Patch/Database Changes/Text/en_US/UI/CoreNewUIText.xml`. **Patches:** `0003`, `0073`.
 
-### 15. Expose economic and military strategy prerequisites
+### 15. Expose economic and military strategy prerequisites (submitted: [#11995], closed unmerged)
 
 Share prerequisite checks between native strategy selection and Lua inspection: civilization restrictions, required and obsolete technologies, and first eligible turn. Return all eligible strategies. Exclude the VD blacklist and ten-turn delay for externally disabled strategies, and keep prerequisite eligibility distinct from the AI deciding to activate a strategy.
 
@@ -116,19 +118,19 @@ Synchronize fog when the observer override changes; use the followed team's reso
 
 **Related files:** core `CvGame.cpp`, `CvPlot.cpp`, `CvTeam.cpp`; `(1) Community Patch/Core Files/Overrides/Includes/InfoTooltipInclude.lua`; `(2) Vox Populi/LUA/DiploList.lua`; `(3a) VP - EUI Compatibility Files/LUA/DiploCorner.lua`, `EUI_tooltip_library.lua`, `NotificationPanel.lua`. **Patches:** `0001`, `0004`–`0007`, `0037`, `0050`, `0061`.
 
-### 18. Preview research options after an assumed technology
+### 18. Preview research options after an assumed technology (submitted: [#11995], closed unmerged)
 
 Expose candidate research choices and support checking prerequisites as if one technology were already known. Separate candidate collection from recommendation logging and cached-vector mutation. The current `GetPossibleTechs` calls the recommendation path; exclude forced research state and its serialization.
 
 **Related files:** core `CvTechAI.cpp`, `CvTechAI.h`, `CvTechClasses.cpp`, `CvTechClasses.h`; Lua `CvLuaPlayer.cpp`, `CvLuaPlayer.h`. **Patches:** `0062`–`0065`, `0073`, `0074`.
 
-### 19. Preview policy choices without selecting a policy
+### 19. Preview policy choices without selecting a policy (submitted: [#11995], closed unmerged)
 
 Expose adoptable policies and branches, optionally ignoring affordability, through a dedicated query. The current wrapper calls `ChooseNextPolicy`, which can consume a forced choice and performs selection work. Separate that path before offering a query API, preserve branch restrictions, and exclude forced-policy serialization.
 
 **Related files:** core `CvPolicyAI.cpp`, `CvPolicyAI.h`, `CvPolicyClasses.cpp`, `CvPolicyClasses.h`; Lua `CvLuaPlayer.cpp`, `CvLuaPlayer.h`. **Patches:** `0051`–`0054`, `0073`, `0074`.
 
-### 20. Preserve XML flavor differences in production scoring
+### 20. Preserve XML flavor differences in production scoring (submitted: [#12800], closed unmerged)
 
 Apply square-root scaling to each incoming flavor weight before multiplying it by XML flavor values, replacing the later scaling of the combined score. This changes building, unit, project, and process priorities, so treat it as an AI balance proposal. Review zero-weight handling and candidate 21 together; exclude custom settler-flavor overrides.
 
@@ -170,3 +172,7 @@ Consider a generalized option for scenarios to construct and finalize deals usin
 4. For each selected candidate, refresh upstream, check for equivalent code and open PRs, extract only the named behavior, and follow the [upstream contribution workflow](../developers/civ5-dll/upstream-contributions.md). Preserve existing defaults and save layout.
 
 Verification should match the candidate: cache-key comparisons for 1, UI and event reproductions for 2–6 and 12–14, Lua smoke checks and unchanged game state for query APIs, observer perspective checks for 17, and representative AI games for 20–21. Build the extracted DLL and check both compiler paths before publishing. This draft records candidates; it does not claim that the exported implementations are ready to submit.
+
+[#13360]: https://github.com/LoneGazebo/Community-Patch-DLL/pull/13360
+[#12800]: https://github.com/LoneGazebo/Community-Patch-DLL/pull/12800
+[#11995]: https://github.com/LoneGazebo/Community-Patch-DLL/pull/11995
