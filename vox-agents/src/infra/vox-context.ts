@@ -20,6 +20,7 @@
  */
 
 import { Tool } from "ai";
+import type { Experimental_EvaluationQuestion, Experimental_EvaluationResult } from "ai";
 import { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
 import { AgentParameters, VoxAgent } from "./vox-agent.js";
 import { createLogger } from "../utils/logger.js";
@@ -576,15 +577,22 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
   /**
    * Run one evaluation call against a model. Thin delegator to {@link evaluateOn} in
    * infra/vox-evaluate.js, the single-call evaluation path that runs under this context's
-   * telemetry alongside {@link execute}. The call is not implemented yet and throws; see
-   * docs/plans/evaluation-models.md for the intended design.
+   * telemetry alongside {@link execute}. Requires an active root run (rejecting otherwise).
+   * Answers, confidence (from provider metadata when present), and usage land on an `evaluate`
+   * span, and usage accrues to the active root's sink, the seat-wide totals, and the optional
+   * per-call token output on the options.
    *
-   * @param model - The model reference to evaluate with
-   * @param state - The state under evaluation
-   * @param options - Evaluation options (question set and scoring controls)
-   * @throws Error always; the evaluation call is unimplemented
+   * @param model - The model configuration to evaluate with
+   * @param state - The state under evaluation (coerced to JSON for the provider contract)
+   * @param options - Evaluation options (question set and optional per-call token output)
+   * @returns The provider's full evaluation result (typed answers, usage, and metadata)
+   * @throws Error if called outside a run, or if the evaluation call fails
    */
-  public async evaluate(model: Model, state: unknown, options?: EvaluateOptions): Promise<never> {
+  public async evaluate<TQuestions extends Record<string, Experimental_EvaluationQuestion>>(
+    model: Model,
+    state: unknown,
+    options: EvaluateOptions<TQuestions>
+  ): Promise<Experimental_EvaluationResult<TQuestions>> {
     return evaluateOn(this, model, state, options);
   }
 

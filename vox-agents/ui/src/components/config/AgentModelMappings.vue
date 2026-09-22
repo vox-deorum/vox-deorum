@@ -27,6 +27,15 @@ const modelOptions = computed(() => [
   { label: 'More...', value: MORE_MODELS }
 ]);
 
+/** Keep an evaluator's current assignment visible without offering it to chat agents. */
+function modelOptionsForMapping(mapping: AgentMapping): SelectOption[] {
+  const isEvaluator = mapping.agent === 'evaluator' || mapping.agent.endsWith('.evaluator');
+  if (isEvaluator && mapping.model && !modelOptions.value.some(option => option.value === mapping.model)) {
+    return [{ label: mapping.model, value: mapping.model }, ...modelOptions.value];
+  }
+  return modelOptions.value;
+}
+
 /** Add the model discovery action after every configured embedding model. */
 const embedderOptions = computed(() => [
   ...props.embeddingModels,
@@ -77,7 +86,7 @@ function deleteMapping(index: number): void {
         <div v-for="(mapping, index) in mappings" :key="index" class="field-row">
           <Dropdown :modelValue="mapping.agent" :options="agentTypes" optionLabel="label" optionValue="value"
             placeholder="Select agent type" class="agent-input" @update:modelValue="updateMapping(index, { agent: $event })" />
-          <Dropdown :modelValue="mapping.model" :options="modelOptions" optionLabel="label" optionValue="value"
+          <Dropdown :modelValue="mapping.model" :options="modelOptionsForMapping(mapping)" optionLabel="label" optionValue="value"
             placeholder="Select model" class="model-dropdown"
             @update:modelValue="updateMapping(index, { model: $event })" />
           <Button icon="pi pi-trash" text severity="danger" class="delete-btn" @click="deleteMapping(index)" />

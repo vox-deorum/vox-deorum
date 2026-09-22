@@ -20,9 +20,20 @@ export interface ApiKeyField {
 }
 
 /**
+ * One selectable LLM provider entry for UI forms.
+ * `evaluationOnly` marks providers that answer evaluation questions and can
+ * never back a chat agent, so chat-facing pickers hide them.
+ */
+export interface LlmProviderOption {
+  label: string;
+  value: string;
+  evaluationOnly?: boolean;
+}
+
+/**
  * Supported LLM providers for UI selection
  */
-export const llmProviders = [
+export const llmProviders: LlmProviderOption[] = [
   { label: 'OpenRouter', value: 'openrouter' },
   { label: 'Anthropic', value: 'anthropic' },
   { label: 'Claude Code', value: 'claude-code' },
@@ -32,7 +43,8 @@ export const llmProviders = [
   { label: 'AWS Bedrock', value: 'aws' },
   { label: 'OpenAI Compatible', value: 'openai-compatible' },
   { label: 'Chutes.ai', value: 'chutes' },
-  { label: 'Synthetic.new', value: 'synthetic' }
+  { label: 'Synthetic.new', value: 'synthetic' },
+  { label: 'TypeSafe', value: 'typesafe', evaluationOnly: true }
 ];
 
 /**
@@ -142,6 +154,13 @@ export const apiKeyFields: ApiKeyField[] = [
     label: 'OpenAI Compatible API Key',
     type: 'password',
     helpTooltip: 'Enter the API key if your OpenAI-compatible endpoint requires authentication'
+  },
+  {
+    key: 'TYPESAFE_AI_API_KEY',
+    label: 'TypeSafe AI API Key',
+    type: 'password',
+    helpLink: 'https://typesafe.ai/',
+    helpTooltip: 'TypeSafe AI key for the Jev evaluation model'
   }
 ];
 
@@ -167,4 +186,10 @@ export const providerCredentials: Record<string, { required: readonly string[]; 
   'claude-code': { required: [] },
   codex: { required: [] },
   aws: { required: [] },
+  typesafe: { required: ['TYPESAFE_AI_API_KEY'] },
 };
+
+/** Reports whether a provider serves evaluation models only and can never back a chat agent. */
+export function isEvaluationOnlyProvider(provider: string): boolean {
+  return llmProviders.some((candidate) => candidate.value === provider && candidate.evaluationOnly === true);
+}

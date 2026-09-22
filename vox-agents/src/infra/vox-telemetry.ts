@@ -13,16 +13,19 @@
 
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
+import type winston from 'winston';
 import type { AgentParameters } from "./vox-agent.js";
 import type { Model } from "../types/index.js";
 import type { ExecuteTokenOutput, RootRun } from "./vox-run.js";
 
 /**
- * Everything the telemetry helpers read or write on the context: the tracer and context id that
- * stamp every span, the seat-wide token totals, and the label state plus tool-call path the model
- * label update needs. VoxContext implements it, and it is deliberately no wider than that. The
- * agent loop in vox-execute.ts works against the full VoxContext instead, because the agent
- * lifecycle hooks it calls are declared to receive one.
+ * Everything the telemetry helpers and the evaluation path read or write on the context: the
+ * tracer and context id that stamp every span, the seat-wide token totals, the label state plus
+ * tool-call path the model label update needs, and the run accessors the single-call evaluate path
+ * needs (the active root, its abort signal, and the logger/timeout-refresh pair that doubles as
+ * the model factory's concurrency context). VoxContext implements it, and it is deliberately no
+ * wider than that. The agent loop in vox-execute.ts works against the full VoxContext instead,
+ * because the agent lifecycle hooks it calls are declared to receive one.
  *
  * @template TParameters - The type of parameters the context's agents receive
  */
@@ -32,6 +35,18 @@ export interface ExecutionHost<TParameters extends AgentParameters> {
 
   /** The 'vox-agents' tracer the execution modules open their spans on. */
   tracer: Tracer;
+
+  /** Winston logger for execution diagnostics (also the model factory's concurrency-context logger). */
+  logger: winston.Logger;
+
+  /** The active root run, or undefined outside a run. The evaluate path needs its turn and token sink. */
+  readonly activeRoot: RootRun<TParameters> | undefined;
+
+  /** The active root's abort signal. Throws outside a run (a programming error). */
+  currentSignal(): AbortSignal;
+
+  /** Per-execution timeout-refresh slot, rebound per model call by the concurrency wrapper. */
+  timeoutRefresh: (() => void) | undefined;
 
   /** Total input tokens (seat-wide, across all runs). Written by token accrual. */
   inputTokens: number;

@@ -47,26 +47,69 @@ function getCatalog(provider: string): Promise<DiscoveredModel[]> {
 
 /**
  * Selects an agent's model reference before normal alias and model-ID resolution.
- * Explicit agent assignments take precedence over size aliases across both seat
- * and global scopes; `getModelConfig` handles the final default fallback.
+ * For the `default` tier, explicit agent assignments take precedence over size
+ * aliases across both seat and global scopes. For the `small` and `large` tiers
+ * the tier wins: `<name>.<tier>` (overrides then config), then `<tier>`
+ * (overrides then config), then the agent's own `<name>` (overrides then
+ * config), then `default`. `getModelConfig` handles the final default fallback.
  *
  * An agent name is not itself a model reference, so preflight must verify the
  * selected assignment rather than treating the bare agent name as a model.
  * Runtime selection (`VoxAgent.getModel`, via the `models.ts` re-export) and
  * preflight share this single implementation so they cannot disagree on the
- * selected reference. Callers pass the agent's `modelSize` — the agent registry
- * is not imported here, to avoid the cycle documented in `resolve-negotiator.ts`.
+ * selected reference. Callers pass the agent's `modelSize` (the agent registry
+ * is not imported here, to avoid the cycle documented in `resolve-negotiator.ts`).
  */
 export function selectModelReference(
   name: string,
   size: ModelSize = 'default',
   overrides?: Record<string, Model | string>,
 ): string {
+  if (size !== 'default') {
+    const tierKey = `${name}.${size}`;
+    if (overrides?.[tierKey] !== undefined) return tierKey;
+    if (config.llms[tierKey] !== undefined) return tierKey;
+    if (overrides?.[size] !== undefined) return size;
+    if (config.llms[size] !== undefined) return size;
+  }
   if (overrides?.[name] !== undefined) return name;
   if (config.llms[name] !== undefined) return name;
   if (overrides?.[size] !== undefined) return size;
   if (config.llms[size] !== undefined) return size;
   return 'default';
+}
+
+/**
+ * Selects an agent's evaluation-model reference for triage: `<name>.evaluator`
+ * (overrides then config), then the shared `evaluator` alias (overrides then
+ * config), or undefined when neither is registered. It never falls back to
+ * `default`, because that would add an evaluator call to every seat that only
+ * configured a chat model.
+ */
+export function selectEvaluatorReference(
+  name: string,
+  overrides?: Record<string, Model | string>,
+): string | undefined {
+  const agentKey = `${name}.evaluator`;
+  if (overrides?.[agentKey] !== undefined) return agentKey;
+  if (config.llms[agentKey] !== undefined) return agentKey;
+  if (overrides?.evaluator !== undefined) return 'evaluator';
+  if (config.llms.evaluator !== undefined) return 'evaluator';
+  return undefined;
+}
+
+/**
+ * Reports whether a non-strategist agent opted into triage: its own assignment
+ * (`overrides[name]` then `config.llms[name]`, only when it is an object model
+ * configuration) carries `options.triage === true`. Shared by session preflight
+ * and the later execute-time hook so both gate on one implementation.
+ */
+export function triageEnabled(
+  name: string,
+  overrides?: Record<string, Model | string>,
+): boolean {
+  const assignment = overrides?.[name] ?? config.llms[name];
+  return typeof assignment === 'object' && assignment.options?.triage === true;
 }
 
 /** Follows configured aliases until reaching a model or missing key, and rejects cycles. */
@@ -117,10 +160,10 @@ export async function ensureModelsResolved(
   const effectiveKeys = new Set([...Object.keys(config.llms), ...Object.keys(overrides ?? {})]);
   for (const key of effectiveKeys) resolveAlias(key, overrides);
 
-  // Agents resolve size aliases lazily (`selectModelReference`), so a session may rely on a
-  // size alias that no requested id names: verify each defined one at both scopes. This list
-  // must grow with `ModelSize`.
-  const references = [...ids, config.llms.small, overrides?.small];
+  // Agents resolve tier aliases lazily (`selectModelReference`), so a session may rely on a
+  // tier alias that no requested id names: verify each defined one at both scopes. This list
+  // must grow with `ModelSize` (every tier except `default`, which each chain already ends at).
+  const references = [...ids, config.llms.small, overrides?.small, config.llms.large, overrides?.large];
 
   for (const id of references) {
     if (typeof id !== 'string') continue;

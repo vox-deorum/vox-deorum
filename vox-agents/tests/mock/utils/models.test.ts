@@ -1347,3 +1347,13 @@ describe('resolveToolFraming', () => {
     )).toBe('tool');
   });
 });
+
+describe('typesafe provider', () => {
+  it('should reject a chat model request for the evaluation-only provider', () => {
+    // Explicit rejection, not the openai-compatible default: a typesafe chat
+    // agent would silently hit OPENAI_COMPATIBLE_URL with a bogus model name.
+    expect(() => getModel({ provider: 'typesafe', name: 'jev-latest' }))
+      .toThrow('Provider \'typesafe\' serves evaluation models only and cannot back a chat agent');
+  });
+});
+

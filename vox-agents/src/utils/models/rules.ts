@@ -44,14 +44,15 @@ export const modelRules: ModelRule[] = [
   { match: /embedder/i, options: { embeddingSize: 4096 } },
 ];
 
-/** A provider-specific pair of catalog-name rules for main and routine models. */
+/** A provider-specific set of catalog-name rules for main, routine, and escalation models. */
 interface TierRule {
   provider: string;
   default: RegExp;
   small: RegExp;
+  large?: RegExp;
 }
 
-/** Preferred main and routine models, matched in provider catalog order. */
+/** Preferred main and routine models (and an escalation model where one is obvious), matched in provider catalog order. */
 export const tierRules: TierRule[] = [
   { provider: 'codex', default: /terra/i, small: /luna/i },
   { provider: 'claude-code', default: /^sonnet$/i, small: /^haiku$/i },
@@ -59,20 +60,23 @@ export const tierRules: TierRule[] = [
   { provider: 'synthetic', default: /^syn:large:text$/, small: /^syn:small:text$/ },
 ];
 
-/** Returns a provider's available main and routine model recommendations. */
+/** Returns a provider's available main, routine, and escalation model recommendations. */
 export function recommendTierModels(
   provider: string,
   models: DiscoveredModel[],
-): { default?: string; small?: string } | undefined {
+): { default?: string; small?: string; large?: string } | undefined {
   const rule = tierRules.find((candidate) => candidate.provider === provider);
   if (!rule) return undefined;
 
   const defaultModel = models.find((model) => rule.default.test(model.name));
   const smallModel = models.find((model) => rule.small.test(model.name));
-  if (!defaultModel && !smallModel) return undefined;
+  const largeRule = rule.large;
+  const largeModel = largeRule === undefined ? undefined : models.find((model) => largeRule.test(model.name));
+  if (!defaultModel && !smallModel && !largeModel) return undefined;
   return {
     ...(defaultModel === undefined ? {} : { default: defaultModel.id }),
     ...(smallModel === undefined ? {} : { small: smallModel.id }),
+    ...(largeModel === undefined ? {} : { large: largeModel.id }),
   };
 }
 

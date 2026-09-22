@@ -241,6 +241,10 @@ export function getModel(config: Model, options?: {
     case "aws":
       result = createAmazonBedrock()(config.name);
       break;
+    case "typesafe":
+      // Evaluation-only provider: it answers typed questions, never a chat loop.
+      // Must stay before the openai-compatible default so it never synthesizes a bogus chat model.
+      throw new Error(`Provider 'typesafe' serves evaluation models only and cannot back a chat agent. Configure it under the 'evaluator' alias instead.`);
     default:
       if (!process.env.OPENAI_COMPATIBLE_URL)
         throw new Error("Didn't find the OPENAI_COMPATIBLE_URL in environment variables! Please check your settings.");

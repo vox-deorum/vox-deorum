@@ -226,6 +226,10 @@ export async function discoverModels(provider: string, credentials: DiscoveryCre
       const apiBase = getCodexProxyApiBase(getActiveCodexProxyPort());
       return openAiCompatibleModels(provider, apiBase, {}, 'Codex');
     }
+    case 'typesafe':
+      // TypeSafe publishes a single fixed evaluation alias (jev-latest), so the
+      // catalog is static and discovery needs no network call.
+      return [model('typesafe', 'jev-latest')];
     case 'aws':
       throw new DiscoveryError('unsupported', 400, 'AWS Bedrock model discovery is not supported.');
     default:

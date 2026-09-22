@@ -21,7 +21,7 @@ vi.mock('../../../src/utils/models/discovery.js', () => ({
   allowsUnlistedModelReferences: mocks.allowsUnlistedModelReferences,
 }));
 
-import { ensureModelsResolved, getRuntimeModel, resetRuntimeModels, selectModelReference } from '../../../src/utils/models/resolution.js';
+import { ensureModelsResolved, getRuntimeModel, resetRuntimeModels, selectEvaluatorReference, selectModelReference, triageEnabled } from '../../../src/utils/models/resolution.js';
 import { getModelConfig } from '../../../src/utils/models/models.js';
 
 describe('ensureModelsResolved', () => {
@@ -190,7 +190,48 @@ describe('ensureModelsResolved', () => {
       .toBe('overridden-agent');
   });
 
-  it('should select explicit assignments before size aliases at either scope', () => {
+  it('should order tier lookups tier-first: agent.tier, tier, agent, default across both scopes', () => {
+    const agent = 'tier-agent';
+    for (const tier of ['small', 'large'] as const) {
+      mocks.config.llms = {
+        default: { provider: 'openai', name: 'global-default' },
+        [tier]: { provider: 'openai', name: 'global-tier' },
+        [`${agent}.${tier}`]: { provider: 'openai', name: 'global-agent-tier' },
+        [agent]: { provider: 'openai', name: 'global-agent' },
+      };
+      const overrides: Record<string, any> = {
+        default: { provider: 'openai', name: 'seat-default' },
+        [tier]: { provider: 'openai', name: 'seat-tier' },
+        [`${agent}.${tier}`]: { provider: 'openai', name: 'seat-agent-tier' },
+        [agent]: { provider: 'openai', name: 'seat-agent' },
+      };
+      const resolvedName = (): string => getModelConfig(
+        selectModelReference(agent, tier, overrides),
+        undefined,
+        overrides,
+      ).name;
+
+      expect(selectModelReference(agent, tier, overrides)).toBe(`${agent}.${tier}`);
+      expect(resolvedName()).toBe('seat-agent-tier');
+      delete overrides[`${agent}.${tier}`];
+      expect(resolvedName()).toBe('global-agent-tier');
+      delete mocks.config.llms[`${agent}.${tier}`];
+      expect(selectModelReference(agent, tier, overrides)).toBe(tier);
+      expect(resolvedName()).toBe('seat-tier');
+      delete overrides[tier];
+      expect(resolvedName()).toBe('global-tier');
+      delete mocks.config.llms[tier];
+      expect(selectModelReference(agent, tier, overrides)).toBe(agent);
+      expect(resolvedName()).toBe('seat-agent');
+      delete overrides[agent];
+      expect(resolvedName()).toBe('global-agent');
+      delete mocks.config.llms[agent];
+      expect(selectModelReference(agent, tier, overrides)).toBe('default');
+      expect(resolvedName()).toBe('seat-default');
+    }
+  });
+
+  it('should keep the agent-first order for the default tier at either scope', () => {
     mocks.config.llms = {
       default: { provider: 'openai', name: 'global-default' },
       small: { provider: 'openai', name: 'global-small' },
@@ -208,17 +249,16 @@ describe('ensureModelsResolved', () => {
       overrides,
     ).name;
 
-    expect(resolvedName('small-agent', 'small')).toBe('seat-agent');
-    delete overrides['small-agent'];
-    expect(resolvedName('small-agent', 'small')).toBe('global-agent');
-    delete mocks.config.llms['small-agent'];
+    // Default tier: the explicit agent assignment wins over the seat default alias.
+    expect(selectModelReference('small-agent', 'default', overrides)).toBe('small-agent');
+    expect(resolvedName('small-agent', 'default')).toBe('seat-agent');
+    // A non-default tier still lets the tier win over the agent assignment.
+    expect(selectModelReference('small-agent', 'small', overrides)).toBe('small');
     expect(resolvedName('small-agent', 'small')).toBe('seat-small');
-    delete overrides.small;
-    expect(resolvedName('small-agent', 'small')).toBe('global-small');
     expect(resolvedName('default-agent', 'default')).toBe('seat-default');
   });
 
-  it('should preserve global agent assignments over seat aliases for both model sizes', () => {
+  it('should preserve global agent assignments for the default tier under the tier-first rule', () => {
     mocks.config.llms = {
       default: { provider: 'openai', name: 'global-default' },
       'default-agent': { provider: 'openai', name: 'global-default-agent' },
@@ -232,9 +272,12 @@ describe('ensureModelsResolved', () => {
     expect(selectModelReference('default-agent', 'default', overrides)).toBe('default-agent');
     expect(getModelConfig(selectModelReference('default-agent', 'default', overrides), undefined, overrides).name)
       .toBe('global-default-agent');
-    expect(selectModelReference('small-agent', 'small', overrides)).toBe('small-agent');
-    expect(getModelConfig(selectModelReference('small-agent', 'small', overrides), undefined, overrides).name)
-      .toBe('global-small-agent');
+    // The seat tier alias now wins over the agent's own global assignment...
+    expect(selectModelReference('small-agent', 'small', overrides)).toBe('small');
+    expect(getModelConfig('small', undefined, overrides).name).toBe('seat-small');
+    // ...but without any tier alias configured, the global agent assignment still applies.
+    expect(selectModelReference('small-agent', 'small', {})).toBe('small-agent');
+    expect(getModelConfig(selectModelReference('small-agent', 'small', {})).name).toBe('global-small-agent');
   });
 
   it('should fall back from an unconfigured small alias to the existing default chain', () => {
@@ -262,6 +305,73 @@ describe('ensureModelsResolved', () => {
 
     expect(getRuntimeModel('openai/global-small')).toEqual({ provider: 'openai', name: 'global-small' });
     expect(getRuntimeModel('openai/seat-small')).toEqual({ provider: 'openai', name: 'seat-small' });
+  });
+
+  it('should verify both global and seat large aliases before a session starts', async () => {
+    mocks.config.llms = {
+      default: { provider: 'openai', name: 'default' },
+      large: 'openai/global-large',
+    };
+    mocks.discoverModels.mockResolvedValue([
+      { id: 'openai/global-large', name: 'global-large' },
+      { id: 'openai/seat-large', name: 'seat-large' },
+    ]);
+
+    await ensureModelsResolved([], { large: 'openai/seat-large' });
+
+    expect(getRuntimeModel('openai/global-large')).toEqual({ provider: 'openai', name: 'global-large' });
+    expect(getRuntimeModel('openai/seat-large')).toEqual({ provider: 'openai', name: 'seat-large' });
+  });
+
+  it('should register a typesafe evaluation reference resolved through the mocked catalog', async () => {
+    mocks.discoverModels.mockResolvedValue([{ id: 'typesafe/jev-latest', name: 'jev-latest' }]);
+
+    await ensureModelsResolved(['typesafe/jev-latest']);
+
+    expect(mocks.discoverModels).toHaveBeenCalledWith('typesafe', {});
+    expect(getRuntimeModel('typesafe/jev-latest')).toEqual({ provider: 'typesafe', name: 'jev-latest' });
+    expect(getModelConfig('typesafe/jev-latest')).toEqual({ provider: 'typesafe', name: 'jev-latest' });
+  });
+
+  describe('selectEvaluatorReference', () => {
+    it('should prefer the agent evaluator then the shared alias at both scopes', () => {
+      mocks.config.llms = {
+        default: { provider: 'openai', name: 'default' },
+        evaluator: 'typesafe/jev-latest',
+        'eval-agent.evaluator': 'openai-compatible/gpt-oss-120b',
+      };
+
+      expect(selectEvaluatorReference('eval-agent', { 'eval-agent.evaluator': 'openai/x' })).toBe('eval-agent.evaluator');
+      expect(selectEvaluatorReference('eval-agent', {})).toBe('eval-agent.evaluator');
+      expect(selectEvaluatorReference('other-agent', { evaluator: 'openai/x' })).toBe('evaluator');
+      expect(selectEvaluatorReference('other-agent')).toBe('evaluator');
+    });
+
+    it('should return undefined rather than falling back to the default model', () => {
+      expect(selectEvaluatorReference('plain-agent')).toBeUndefined();
+      expect(selectEvaluatorReference('plain-agent', { plain: 'openai/x' })).toBeUndefined();
+    });
+  });
+
+  describe('triageEnabled', () => {
+    it('should enable triage only for object assignments carrying options.triage', () => {
+      const triaged = { provider: 'openai', name: 'x', options: { triage: true } };
+      expect(triageEnabled('seat-agent', { 'seat-agent': triaged })).toBe(true);
+      expect(triageEnabled('off-agent', { 'off-agent': { ...triaged, options: { triage: false } } })).toBe(false);
+      // A string alias assignment never opts in, even when the global target carries the option.
+      expect(triageEnabled('alias-agent', { 'alias-agent': 'openai/x' })).toBe(false);
+
+      mocks.config.llms = {
+        default: { provider: 'openai', name: 'default' },
+        'global-triaged': triaged,
+        'global-plain': { provider: 'openai', name: 'y' },
+        'global-alias': 'openai/z',
+      };
+      expect(triageEnabled('global-triaged')).toBe(true);
+      expect(triageEnabled('global-plain')).toBe(false);
+      expect(triageEnabled('global-alias')).toBe(false);
+      expect(triageEnabled('unassigned')).toBe(false);
+    });
   });
 
   it('should reject a dangling small alias during preflight', async () => {

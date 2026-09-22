@@ -16,7 +16,7 @@ vi.mock('../../../src/utils/config.js', () => ({ config: mocks.config }));
 vi.mock('../../../src/utils/logger.js', () => ({ createLogger: vi.fn(() => mocks.logger) }));
 
 import { getModelConfig } from '../../../src/utils/models/models.js';
-import { applyModelRules, modelRules, recommendTierModels, synthesizeModelConfig } from '../../../src/utils/models/rules.js';
+import { applyModelRules, modelRules, recommendTierModels, synthesizeModelConfig, tierRules } from '../../../src/utils/models/rules.js';
 import { isSynthesizableModelId } from '../../../src/types/constants.js';
 
 describe('model rules', () => {
@@ -120,6 +120,33 @@ describe('model rules', () => {
     expect(recommendTierModels('codex', [{ id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' }]))
       .toEqual({ default: 'codex/gpt-5.6-terra' });
     expect(recommendTierModels('synthetic', [])).toBeUndefined();
+  });
+
+  it('should recommend a large model only when the provider rule declares one', () => {
+    tierRules.push({
+      provider: 'temporary-tier',
+      default: /main/i,
+      small: /mini/i,
+      large: /maximus/i,
+    });
+    try {
+      expect(recommendTierModels('temporary-tier', [
+        { id: 'temporary/mini', name: 'mini' },
+        { id: 'temporary/maximus', name: 'maximus' },
+        { id: 'temporary/main', name: 'main' },
+      ])).toEqual({ default: 'temporary/main', small: 'temporary/mini', large: 'temporary/maximus' });
+      // No rule hit for the escalation tier: the key is simply absent.
+      expect(recommendTierModels('temporary-tier', [{ id: 'temporary/main', name: 'main' }]))
+        .toEqual({ default: 'temporary/main' });
+      // Built-in provider rules stay unchanged (no large declared anywhere yet).
+      expect(recommendTierModels('codex', [
+        { id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' },
+        { id: 'codex/gpt-5.6-luna', name: 'gpt-5.6-luna' },
+        { id: 'codex/gpt-5.6-sol', name: 'gpt-5.6-sol' },
+      ])).toEqual({ default: 'codex/gpt-5.6-terra', small: 'codex/gpt-5.6-luna' });
+    } finally {
+      tierRules.pop();
+    }
   });
 
   it('should fall back from an unknown ID and warn only once', () => {

@@ -7,7 +7,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import { useConfirm } from 'primevue/useconfirm';
 import { api } from '../api/client';
 import type { AgentMapping, LLMConfig, VoxAgentsConfig, AgentInfo, DiscoveredModel } from '../utils/types';
-import { apiKeyFields } from '../utils/types';
+import { apiKeyFields, isEvaluationOnlyProvider } from '../utils/types';
 import AgentModelMappings from '../components/config/AgentModelMappings.vue';
 import ApiKeysSection from '../components/config/ApiKeysSection.vue';
 import ModelDiscoveryDialog from '../components/config/ModelDiscoveryDialog.vue';
@@ -77,10 +77,10 @@ function buildCurrentConfig(): VoxAgentsConfig | null {
 /** Provide the setup wizard with the current editable configuration, including unsaved LLM changes. */
 const wizardConfig = computed(() => buildCurrentConfig());
 
-// Computed available chat models for agent dropdowns (excludes embedding models)
+// Computed available chat models for agent dropdowns (excludes embedding and evaluation-only models)
 const availableModels = computed(() => {
   const options = modelDefinitions.value
-    .filter(m => !m.options?.embeddingSize && m.id)
+    .filter(m => m.id)
     .map(m => ({ label: m.id!, value: m.id! }));
   const known = new Set(options.map(option => option.value));
   for (const modelId of agentMappings.value.map(mapping => mapping.model)) {
@@ -89,7 +89,24 @@ const availableModels = computed(() => {
       known.add(modelId);
     }
   }
-  return options;
+  const llms = buildLLMConfig(agentMappings.value, modelDefinitions.value, embedderModel.value);
+  // Classify the resolved model so aliases cannot reintroduce evaluation or embedding models.
+  return options.filter(({ value }) => {
+    let reference = value;
+    const visited = new Set<string>();
+    while (!visited.has(reference)) {
+      visited.add(reference);
+      const definition = llms[reference];
+      if (typeof definition === 'string') {
+        reference = definition;
+      } else if (definition) {
+        return !definition.options?.embeddingSize && !isEvaluationOnlyProvider(definition.provider);
+      } else {
+        return !isEvaluationOnlyProvider(reference.split('/')[0]!);
+      }
+    }
+    return false;
+  });
 });
 
 // Computed available embedding models for the embedder dropdown

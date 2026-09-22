@@ -3,9 +3,10 @@
  *
  * A spyable stand-in for {@link VoxContext}, the runtime an agent's lifecycle hooks
  * (`getSystem`/`getInitialMessages`/`getOutput`/`prepareStep`) receive. Agents reach the
- * outside world through a small surface on the context — `callTool` (MCP tools),
- * `callAgent`/`execute` (nested agents), and a few fields (`modelOverrides`, `mcpToolMap`,
- * `logger`, `streamProgress`, `currentInput`). This fixture reproduces that surface with
+ * outside world through a small surface on the context: `callTool` (MCP tools),
+ * `callAgent`/`execute` (nested agents), `evaluate` (single-call evaluations), and a few fields
+ * (`modelOverrides`, `mcpToolMap`, `logger`, `streamProgress`, `currentInput`, `currentTriage`).
+ * This fixture reproduces that surface with
  * programmable handlers and call recording so prompt builders and pipeline helpers can be
  * unit-tested without a live game, MCP server, or model.
  *
@@ -56,6 +57,13 @@ export interface RecordedToolCall {
   parameters: unknown;
 }
 
+/** One recorded `evaluate` invocation. */
+export interface RecordedEvaluation {
+  model: Model;
+  state: unknown;
+  options: unknown;
+}
+
 /**
  * Hand-written stand-in for {@link VoxContext}. Mirrors the surface that agent lifecycle
  * hooks and pipeline helpers touch, plus a programmable tool registry and call log for
@@ -78,6 +86,9 @@ export class FakeVoxContext {
 
   /** The input of the currently-executing agent (e.g. the active EnvoyThread). */
   public currentInput?: unknown;
+
+  /** The active frame's recorded triage decision (mirrors `VoxContext.currentTriage` once the hook lands). */
+  public currentTriage?: unknown;
 
   /** The context-owned base parameters (set via {@link setBaseParameters}). */
   private _baseParameters?: unknown;
@@ -224,6 +235,18 @@ export class FakeVoxContext {
   /** Direct agent-execution spy (used by the agent-tool wrapper). */
   execute = vi.fn(async (..._args: unknown[]): Promise<unknown> => undefined);
 
+  /** Every `evaluate` invocation, in order. */
+  public evaluationLog: RecordedEvaluation[] = [];
+
+  /**
+   * Single-call evaluation spy: records the call and resolves `undefined`. Stage 4+ triage code
+   * under test can program it with `mockResolvedValue` to script answers the way `execute` is scripted.
+   */
+  evaluate = vi.fn(async (model: Model, state: unknown, options: unknown): Promise<unknown> => {
+    this.evaluationLog.push({ model, state, options });
+    return undefined;
+  });
+
   /**
    * Detached-run spy (used by the agent-tool wrapper for fire-and-forget). Invokes the callback
    * with a minimal run handle and swallows rejections, mirroring `VoxContext.forkRun` so the
@@ -266,6 +289,11 @@ export class FakeVoxContext {
     return name ? this.callLog.filter((c) => c.name === name) : this.callLog;
   }
 
+  /** Recorded `evaluate` invocations, in order. */
+  evaluations(): RecordedEvaluation[] {
+    return this.evaluationLog;
+  }
+
   /** Set the raw MCP tool metadata map (for `_meta`/markdown lookups). */
   setMcpTools(tools: MCPTool[]): this {
     this.mcpToolMap = new Map(tools.map((t) => [t.name, t]));
@@ -276,9 +304,11 @@ export class FakeVoxContext {
   reset(): void {
     this.handlers.clear();
     this.callLog = [];
+    this.evaluationLog = [];
     this.callTool.mockClear();
     this.callAgent.mockClear();
     this.execute.mockClear();
+    this.evaluate.mockClear();
     this.forkRun.mockClear();
     this.withRun.mockClear();
     this.logger.info.mockClear();

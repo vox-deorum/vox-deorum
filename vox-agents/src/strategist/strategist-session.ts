@@ -24,7 +24,7 @@ import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { ObservedSeating, SeatingClaim } from "../utils/game/seating/types.js";
 import { getMetadata, setMetadata } from "../utils/game/metadata.js";
 import { agentRegistry } from '../infra/agent-registry.js';
-import { ensureModelsResolved, selectModelReference } from '../utils/models/resolution.js';
+import { ensureModelsResolved, selectEvaluatorReference, selectModelReference, triageEnabled } from '../utils/models/resolution.js';
 import { DEFAULT_NEGOTIATOR } from '../envoy/agents/resolve-negotiator.js';
 import {
   autoPlayTurnLimit,
@@ -660,7 +660,11 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
 
   /**
    * Resolve the model references for the configured seat agents and their declared child agents.
-   * Arbitrary override-map entries are deliberately excluded because they cannot run in this session.
+   * Agents with triage on also preflight their tier and evaluator references, so a missing or
+   * misspelled tier/evaluator assignment surfaces at session start rather than on the first
+   * triaged call. The seat's strategist gates on `pacing.triage`; other agents gate on the
+   * shared `triageEnabled` check (`options.triage` on their own assignment). Arbitrary
+   * override-map entries are deliberately excluded because they cannot run in this session.
    */
   private modelReferencesForPlayer(playerConfig: PlayerConfig): string[] {
     const agentNames = new Set<string>();
@@ -680,10 +684,21 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       visit(configuredNegotiator && agentRegistry.has(configuredNegotiator) ? configuredNegotiator : DEFAULT_NEGOTIATOR);
     }
 
-    return [...new Set([...agentNames].map((name) => {
+    const references = new Set<string>();
+    for (const name of agentNames) {
       const agent = agentRegistry.get(name);
-      return selectModelReference(name, agent?.modelSize, playerConfig.llms);
-    }))];
+      references.add(selectModelReference(name, agent?.modelSize, playerConfig.llms));
+      const triaged = name === playerConfig.strategist
+        ? playerConfig.pacing?.triage === true
+        : triageEnabled(name, playerConfig.llms);
+      if (triaged) {
+        references.add(selectModelReference(name, 'small', playerConfig.llms));
+        references.add(selectModelReference(name, 'large', playerConfig.llms));
+        const evaluator = selectEvaluatorReference(name, playerConfig.llms);
+        if (evaluator !== undefined) references.add(evaluator);
+      }
+    }
+    return [...references];
   }
 
   /**

@@ -375,6 +375,44 @@ describe('config routes', () => {
       expect(res.body.failures).toEqual(['openai: offline']);
       expect(res.body.models).not.toContainEqual(expect.objectContaining({ name: 'embedder' }));
     });
+
+    it('keeps evaluation-only providers out of the catalog-backed listing', async () => {
+      config.llms = {
+        default: 'openai/gpt-main',
+        'openai/gpt-main': { provider: 'openai', name: 'gpt-main' },
+        'typesafe/jev-latest': { provider: 'typesafe', name: 'jev-latest' },
+        evaluator: 'typesafe/jev-latest',
+      };
+      vi.stubEnv('TYPESAFE_AI_API_KEY', 'configured-key');
+      routeMocks.discoverModels.mockResolvedValue([
+        { id: 'openai/gpt-main', provider: 'openai', name: 'gpt-main' },
+      ]);
+
+      const res = await request(app).get('/api/config/models');
+
+      expect(res.status).toBe(200);
+      expect(routeMocks.discoverModels).toHaveBeenCalledWith('openai', {});
+      expect(routeMocks.discoverModels).not.toHaveBeenCalledWith('typesafe', expect.anything());
+      expect(res.body.models).toEqual([{ id: 'openai/gpt-main', provider: 'openai', name: 'gpt-main' }]);
+      expect(JSON.stringify(res.body)).not.toContain('typesafe');
+    });
+
+    it('keeps evaluation-only providers out of the fallback definitions', async () => {
+      config.llms = {
+        default: 'openai/gpt-main',
+        'openai/gpt-main': { provider: 'openai', name: 'gpt-main' },
+        'typesafe/jev-latest': { provider: 'typesafe', name: 'jev-latest' },
+      };
+      vi.stubEnv('TYPESAFE_AI_API_KEY', 'configured-key');
+      routeMocks.discoverModels.mockRejectedValue(new Error('offline'));
+
+      const res = await request(app).get('/api/config/models');
+
+      expect(res.status).toBe(200);
+      expect(routeMocks.discoverModels).not.toHaveBeenCalledWith('typesafe', expect.anything());
+      expect(res.body.models).toEqual([{ id: 'openai/gpt-main', provider: 'openai', name: 'gpt-main' }]);
+      expect(res.body.failures).toEqual(['openai: offline']);
+    });
   });
 
   describe('Codex setup routes', () => {

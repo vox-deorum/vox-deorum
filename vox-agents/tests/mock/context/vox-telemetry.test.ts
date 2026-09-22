@@ -19,6 +19,7 @@ import type { ExecutionHost } from '../../../src/infra/vox-telemetry.js';
 import type { AgentParameters } from '../../../src/infra/vox-agent.js';
 import type { RootRun } from '../../../src/infra/vox-run.js';
 import type { Model } from '../../../src/types/index.js';
+import { createLogger } from '../../../src/utils/logger.js';
 import { makeRecordingTracer } from '../../helpers/recording-tracer.js';
 
 /** The seat token totals carried by an ExecutionHost fake. */
@@ -29,13 +30,18 @@ interface FakeHostTotals {
 }
 
 /**
- * A minimal ExecutionHost fake carrying only the state the telemetry helpers touch. That it fits
- * in a handful of lines is the point: ExecutionHost is meant to stay this narrow.
+ * A minimal ExecutionHost fake carrying only the state the telemetry helpers and the evaluate
+ * path touch. That it fits in a handful of lines is the point: ExecutionHost is meant to stay
+ * this narrow. The run accessors are inert here (no helper reads them beyond type shape).
  */
 function makeHost(tracer: Tracer = makeRecordingTracer().tracer): ExecutionHost<AgentParameters> & FakeHostTotals {
   return {
     id: 'telemetry-test',
     tracer,
+    logger: createLogger('telemetry-test'),
+    activeRoot: undefined,
+    currentSignal: () => new AbortController().signal,
+    timeoutRefresh: undefined,
     inputTokens: 0,
     reasoningTokens: 0,
     outputTokens: 0,

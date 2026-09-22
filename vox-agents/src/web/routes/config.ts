@@ -18,7 +18,7 @@ import { discoverModels, DiscoveryError } from '../../utils/models/discovery.js'
 import { getModelConfig } from '../../utils/models/models.js';
 import { recommendTierModels } from '../../utils/models/rules.js';
 import { codexProxyManager, ensureCodexProxy } from '../../utils/models/providers/codex-proxy.js';
-import { providerCredentials } from '../../types/constants.js';
+import { isEvaluationOnlyProvider, providerCredentials } from '../../types/constants.js';
 import { isAllowedDashboardRequest } from '../origin.js';
 import type {
   CodexLoginResponse,
@@ -56,10 +56,11 @@ function isUnchangedDefaultLlm(name: string, definition: Model | string): boolea
   return defaultDefinition !== undefined && isDeepStrictEqual(definition, defaultDefinition);
 }
 
-/** Returns providers with complete credentials or a user-configured model definition. */
+/** Returns providers with complete credentials or a user-configured model definition, excluding evaluation-only providers. */
 function configuredProviders(): string[] {
   const credentialProviders = Object.entries(providerCredentials)
-    .filter(([, credentials]) => credentials.required.length > 0
+    .filter(([provider, credentials]) => !isEvaluationOnlyProvider(provider)
+      && credentials.required.length > 0
       && credentials.required.every((key) => Boolean(process.env[key]?.trim())))
     .map(([provider]) => provider);
   const configuredModelProviders = Object.entries(config.llms)
@@ -68,7 +69,8 @@ function configuredProviders(): string[] {
       if (typeof definition !== 'string') return [definition.provider];
       const separator = definition.indexOf('/');
       return separator > 0 ? [definition.slice(0, separator)] : [];
-    });
+    })
+    .filter((provider) => !isEvaluationOnlyProvider(provider));
   return [...new Set([...credentialProviders, ...configuredModelProviders])];
 }
 
@@ -81,10 +83,12 @@ function configuredModel(definition: Model): NonNullable<ConfiguredModelsRespons
   };
 }
 
-/** Returns literal, non-embedding global model definitions when every catalog lookup fails. */
+/** Returns literal, non-embedding, non-evaluation-only global model definitions when every catalog lookup fails. */
 function fallbackModels(): ConfiguredModelsResponse['models'] {
   return Object.values(config.llms).flatMap((definition) => {
-    if (typeof definition === 'string' || definition.options?.embeddingSize !== undefined) return [];
+    if (typeof definition === 'string'
+      || definition.options?.embeddingSize !== undefined
+      || isEvaluationOnlyProvider(definition.provider)) return [];
     return [configuredModel(definition)];
   });
 }

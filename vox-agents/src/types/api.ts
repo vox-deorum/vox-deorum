@@ -123,7 +123,7 @@ export interface DiscoverModelsRequest {
 export interface DiscoverModelsResponse {
   provider: string;
   models: DiscoveredModel[];
-  recommendedTiers?: { default?: string; small?: string };
+  recommendedTiers?: { default?: string; small?: string; large?: string };
 }
 
 /** Model catalog assembled from every provider configured for this installation. */

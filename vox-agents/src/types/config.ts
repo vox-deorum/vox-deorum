@@ -122,8 +122,8 @@ export interface VoxAgentsConfig {
  */
 export type Model = LLMConfig;
 
-/** Selectable model sizes for agents without an explicit model assignment. */
-export type ModelSize = 'default' | 'small';
+/** Selectable model tiers for agents without an explicit model assignment. */
+export type ModelSize = 'small' | 'default' | 'large';
 
 /**
  * Agent-to-model mapping
@@ -197,6 +197,11 @@ export interface PacingConfig {
   everyTurns?: number;
   /** Event strategy that can force an off-cadence decision. Defaults to "none". */
   interruption?: PacingInterruption;
+  /**
+   * When true, the seat's strategist triages each turn with the evaluator and runs on the
+   * tier it picks. Cadence and event interruption raise the floor to a default-tier decision.
+   */
+  triage?: boolean;
 }
 
 /**

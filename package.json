@@ -113,6 +113,7 @@
     "vitest": "^3.2.4"
   },
   "overrides": {
+    "@anthropic-ai/claude-agent-sdk": "$@anthropic-ai/claude-agent-sdk",
     "kysely-codegen": {
       "better-sqlite3": "^12.5.0"
     }
