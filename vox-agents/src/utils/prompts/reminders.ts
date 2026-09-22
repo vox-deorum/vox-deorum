@@ -3,7 +3,7 @@
  *
  * The single place that owns how a mid-run reminder is attached to a conversation. Two sites inject
  * one: the empty-response rescue (`VoxAgent.prepareStep`, which rewrites the message list) and the
- * continuation nudge (`VoxContext.executeAgentStep`, which runs after the step's active tools are
+ * continuation nudge (`executeAgentStep` in infra/vox-execute.ts, which runs after the step's active tools are
  * resolved). Both must follow the same "never repeat the reminder that is already last" policy, so
  * it lives here rather than being restated at each site.
  */

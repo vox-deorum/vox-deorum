@@ -15,8 +15,6 @@ import { executionTimeoutDefault, exponentialRetry } from '../retry.js';
 import { createLogger } from '../logger.js';
 import { isHostCapabilityProvider } from './providers/host-tools.js';
 import type { Model } from '../../types/index.js';
-import { VoxContext } from '../../infra/vox-context.js';
-import { AgentParameters } from '../../infra/vox-agent.js';
 import { hasBatchManager, getBatchManager } from '../../oracle/batch/batch-manager.js';
 import { convertToStepResult } from '../../oracle/batch/format-converter.js';
 import { takePreservedModelError } from './preserved-model-error.js';
@@ -26,6 +24,21 @@ const logger = createLogger('concurrency');
 
 /** Map of model IDs to their p-limit instances */
 const modelLimiters = new Map<string, ReturnType<typeof pLimit>>();
+
+/**
+ * The narrow execution-context surface the concurrency wrapper actually touches: the logger the
+ * retry wrapper reports attempt diagnostics to, and the per-execution timeout-refresh slot it
+ * rebinds on every attempt. The slot is a required member (its value may be undefined outside a
+ * run) because MCP tools call it to keep a long tool call from tripping the execution timeout: a
+ * context that simply lacked the slot would leave that refresh silently dead. VoxContext, whose
+ * accessor pair backs the slot with the active execution frame, satisfies this structurally.
+ */
+export interface ConcurrencyContext {
+  /** Logger passed to the retry wrapper for attempt diagnostics. */
+  logger: ReturnType<typeof createLogger>;
+  /** Per-execution timeout-refresh slot, rebound by the wrapper on every attempt. */
+  timeoutRefresh: (() => void) | undefined;
+}
 
 /** Monotonic counter to ensure unique chunk IDs across streamText calls */
 let streamCallCounter = 0;
@@ -78,7 +91,7 @@ function getModelLimiter(model: Model): ReturnType<typeof pLimit> {
  * during streaming by awaiting the steps Promise within the retry mechanism.
  *
  * @param params - Same parameters as streamText, but model must be a Model object from getModel()
- * @param context - VoxContext
+ * @param context - The narrow execution-context surface (logger + timeout-refresh slot); in production a VoxContext
  * @param awaitSteps - Whether to await the steps Promise within the retry (default: true)
  * @returns Promise that resolves to either StreamTextResult or the resolved steps array
  *
@@ -94,7 +107,7 @@ function getModelLimiter(model: Model): ReturnType<typeof pLimit> {
  */
 export async function streamTextWithConcurrency<T extends Parameters<typeof streamText>[0]>(
   params: T & { model: any }, // model is from getModel() which returns LanguageModel
-  context: VoxContext<AgentParameters>
+  context: ConcurrencyContext
 ) {
   context.timeoutRefresh = () => {};
   // Extract the model config from params

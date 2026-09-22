@@ -43,7 +43,9 @@ Two flags change the execution shape entirely:
 
 ## VoxContext: the execution engine
 
-`VoxContext` (`src/infra/vox-context.ts`) runs agents. It owns one seat's long-lived resources: the MCP client connection, the tool registry, and the on-disk cache of tool definitions. The actual work happens inside **root runs**.
+`VoxContext` (`src/infra/vox-context.ts`) runs agents. It owns one seat's long-lived resources: the MCP client connection, the tool registry, and the on-disk cache of tool definitions. The work itself happens inside **root runs**.
+
+The context does not hold the agentic loop. `src/infra/vox-execute.ts` drives an agent's steps, `src/infra/vox-telemetry.ts` holds the span, token-accrual, and model-label helpers it shares with the single-call evaluation path in `src/infra/vox-evaluate.ts`, and `execute()` and `evaluate()` on the context are thin delegators that hand themselves to those modules.
 
 ### Root runs
 
@@ -59,7 +61,7 @@ The run-model types and helpers live in `src/infra/vox-run.ts`. There are three 
 | `forkRun()` | Starts a _detached_ root for fire-and-forget work that must outlive its caller, such as the analyst handoff above. |
 | `callAgent(name, input)` | Runs a nested agent inside the active root. The nested call inherits the caller's cancellation and token accounting, replacing only the current agent input. |
 
-`execute(agentName, input)` also runs inside the active root. Neither it nor `callAgent()` takes a parameters argument, because the run already carries them; calling either outside a run is therefore a programming error. `execute()` assembles the prompt from the agent's hooks and drives the step loop (calling the model, executing tool calls, consulting `stopCheck()`) until the agent is done. It streams text and tool events to an optional callback along the way, which is what the web UI's chat rides on.
+`execute(agentName, input)` also runs inside the active root. Neither it nor `callAgent()` takes a parameters argument, because the run already carries them; calling either outside a run is therefore a programming error. The step loop assembles the prompt from the agent's hooks and runs steps (calling the model, executing tool calls, consulting `stopCheck()`) until the agent is done. It streams text and tool events to an optional callback along the way, which is what the web UI's chat rides on.
 
 ### Parameters and cancellation
 

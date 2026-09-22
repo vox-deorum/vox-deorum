@@ -3,7 +3,9 @@
  *
  * Runtime context for executing Vox Agents.
  * Manages agent registration, tool availability, and agent execution with observability.
- * Implements the agentic loop with tool calling, step preparation, and stop conditions.
+ * The agentic loop itself lives in vox-execute.ts, its shared telemetry primitives in
+ * vox-telemetry.ts, and the single-call evaluation path in vox-evaluate.ts; execute() and
+ * evaluate() here are thin delegators that pass the context itself as the host.
  *
  * ## Concurrent root runs
  *
@@ -17,36 +19,28 @@
  * same root while temporarily replacing only the active input.
  */
 
-import { Output, Tool, StepResult, ToolSet, ModelMessage } from "ai";
+import { Tool } from "ai";
 import { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
 import { AgentParameters, VoxAgent } from "./vox-agent.js";
 import { createLogger } from "../utils/logger.js";
 import { mcpClient } from "../utils/models/mcp-client.js";
-import { getModel, buildProviderOptions } from "../utils/models/models.js";
 import { Model, StreamingEventCallback } from "../types/index.js";
-import { streamTextWithConcurrency, withModelConfig } from "../utils/models/concurrency.js";
 import { v4 as uuidv4 } from 'uuid';
-import { formatModelReference } from '../utils/models/model-reference.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import path from 'node:path';
-import { trace, SpanStatusCode, context } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
 import { spanProcessor } from '../instrumentation.js';
 import { VoxSpanExporter } from '../utils/telemetry/vox-exporter.js';
-import { countMessagesTokens } from "../utils/models/token-counter.js";
-import { emitProviderExecutedToolSpans } from "../utils/telemetry/provider-tool-spans.js";
-import { hostCapabilityTelemetryAttributes } from "../utils/telemetry/host-capabilities.js";
-import { codexResponseTelemetryAttributes } from "../utils/telemetry/codex-response.js";
-import { cachedInputTokensFromUsage } from "../utils/telemetry/model-usage.js";
-import { isHostCapabilityProvider } from "../utils/models/providers/host-tools.js";
-import { cleanToolArtifacts } from "../utils/models/text-cleaning.js";
-import { appendReminder } from "../utils/prompts/reminders.js";
-import { isContextLengthError } from "../utils/retry.js";
 import { agentRegistry } from "./agent-registry.js";
 import { contextRegistry } from "./context-registry.js";
 import type { VoxSession } from "./vox-session.js";
 import { createAgentTool } from "../utils/tools/agent-tools.js";
 import { wrapMCPTools } from "../utils/tools/mcp-tools.js";
+import { executeAgent } from "./vox-execute.js";
+import { evaluateOn } from "./vox-evaluate.js";
+import type { EvaluateOptions } from "./vox-evaluate.js";
+import type { ExecutionHost } from "./vox-telemetry.js";
 import {
   forkSnapshotParameters,
   createRootRun,
@@ -70,9 +64,10 @@ import winston from "winston";
  *
  * @template TParameters - The type of parameters that agents will receive
  */
-export class VoxContext<TParameters extends AgentParameters> {
+export class VoxContext<TParameters extends AgentParameters> implements ExecutionHost<TParameters> {
   public logger: winston.Logger;
-  private tracer = trace.getTracer('vox-agents');
+  /** Tracer for agent and step spans, opened by the execution modules. */
+  public tracer = trace.getTracer('vox-agents');
 
   /**
    * Unique identifier for this context instance
@@ -128,9 +123,10 @@ export class VoxContext<TParameters extends AgentParameters> {
   public outputTokens: number = 0;
 
   /**
-   * Tracks the last model short name sent via set-metadata, to avoid duplicate updates
+   * Tracks the last model short name sent via set-metadata, to avoid duplicate updates.
+   * Read and written by the model label update in vox-telemetry.ts.
    */
-  private lastModelName?: string;
+  public lastModelName?: string;
 
   /**
    * The session that owns this context, when it was created within one (e.g. a VoxPlayer's
@@ -428,8 +424,36 @@ export class VoxContext<TParameters extends AgentParameters> {
       });
   }
 
-  /** The active root's abort signal. Throws when called outside a run (a programming error). */
-  private currentSignal(): AbortSignal {
+  /**
+   * The active root run, or undefined outside a run. Read by the execution loop, which needs the
+   * run's composed parameters and its token sink. Code that only wants the parameters should read
+   * {@link currentParameters} instead.
+   */
+  public get activeRoot(): RootRun<TParameters> | undefined {
+    return this.als.getStore()?.root;
+  }
+
+  /**
+   * Run a callback in a child execution frame over the active root, so a nested agent sees its own
+   * input while inheriting the root's cancellation, parameters, and token sink. The frame is built
+   * here from the active root rather than accepted from the caller, so no caller can push a frame
+   * belonging to some other root. The parent input is restored when the scope exits.
+   *
+   * @param input - The child frame's agent input
+   * @param callback - The work to run inside the child frame
+   * @throws Error when there is no active run
+   */
+  public runInChildFrame<TResult>(input: unknown, callback: () => Promise<TResult>): Promise<TResult> {
+    const frame = this.als.getStore();
+    if (!frame) throw new Error('VoxContext: no active run.');
+    return this.als.run(createExecutionFrame(frame.root, input), callback);
+  }
+
+  /**
+   * The active root's abort signal. Throws when called outside a run (a programming error).
+   * Read by the execution loop when it hands a signal to a model call.
+   */
+  public currentSignal(): AbortSignal {
     const frame = this.als.getStore();
     if (!frame) throw new Error('VoxContext: no active run.');
     return frame.root.abortController.signal;
@@ -523,8 +547,9 @@ export class VoxContext<TParameters extends AgentParameters> {
 
   /**
    * Execute an agent with the given parameters.
-   * Runs the agent's system prompt, tools, and lifecycle hooks in an iterative loop
-   * until the stop condition is met. Tracks token usage and provides observability.
+   * Thin delegator to {@link executeAgent} in infra/vox-execute.js, which holds the agentic loop:
+   * frame push, model resolution, prompt assembly, step execution, stop checks, and output
+   * conversion.
    *
    * Requires an active root run (rejecting otherwise); the active root's composed parameters are
    * the single source of execution parameters. A synchronous nested agent invocation stays in the
@@ -545,424 +570,22 @@ export class VoxContext<TParameters extends AgentParameters> {
     onContextLengthError?: () => void,
     options: ExecuteOptions = {}
   ): Promise<unknown> {
-    const frame = this.als.getStore();
-    if (!frame) {
-      throw new Error('VoxContext.execute requires an active run; call withRun() or forkRun().');
-    }
-
-    const agent = agentRegistry.get<TParameters>(agentName);
-    if (!agent) {
-      this.logger.error(`Agent not found: ${agentName}`);
-      throw new Error(`Agent '${agentName}' not found in registry`);
-    }
-
-    // A diplomacy-only agent (e.g. the diplomat) has no counterpart outside a civ↔civ diplomacy
-    // conversation, so it must never run as an ordinary observer/telepathist chat. This is the single
-    // execution boundary every entry point — the web chat routes, the telepathist CLI, and agent-tool
-    // handoffs — funnels through, so enforcing the invariant here makes it unbypassable rather than
-    // relying on each caller to re-check it. The EnvoyThread `diplomacy` flag is set only by the
-    // diplomacy route; non-envoy inputs (strategists, narrators) are never diplomacyOnly and skip this.
-    if (agent.diplomacyOnly && !(input as { diplomacy?: boolean } | null | undefined)?.diplomacy) {
-      throw new Error(`Agent '${agentName}' only runs in diplomacy mode; it cannot run as an ordinary observer/telepathist chat.`);
-    }
-
-    const root = frame.root;
-    // The active root's composed parameters are the single source of execution parameters.
-    const params = root.parameters;
-    // Push a nested frame so a sub-agent (e.g. an agent-tool such as call-diplomatic-analyst,
-    // running on this same VoxContext) sees its own input. The parent input is restored
-    // automatically when this als.run scope exits, so tools that read currentInput later in the
-    // parent's tool loop (e.g. close-conversation) still see the parent's EnvoyThread.
-    const childFrame = createExecutionFrame(root, input);
-
-    return this.als.run(childFrame, async () => {
-      const span = this.tracer.startSpan(`agent.${agentName}`, {
-        attributes: {
-          'vox.context.id': this.id,
-          'game.turn': String(params.turn),
-          'agent.name': agentName,
-          'agent.input': input ? JSON.stringify(input) : undefined
-        }
-      });
-
-      return await context.with(trace.setSpan(context.active(), span), async () => {
-        try {
-          // Execute the agent using generateText
-          // Get model config - agent's model or default, with overrides applied
-          const modelConfig = agent.getModel(params, input, this.modelOverrides);
-          const system = await agent.getSystem(params, input, this);
-
-          // Auto-send model name via set-metadata when the strategist's model changes
-          if (agent.name.includes("-strategist")) {
-            // "VPAI" when no system prompt (in-game AI only), otherwise the LLM short name
-            const shortName = system !== ""
-              ? (modelConfig.name.split("/").pop() || modelConfig.name)
-              : "VPAI";
-            if (shortName !== this.lastModelName) {
-              this.lastModelName = shortName;
-              await this.callTool("set-metadata", {
-                Key: `model-${params.playerID}`, Value: shortName
-              }, params);
-            }
-          }
-
-          if (system != "") {
-            let shouldStop = false;
-            let messages: ModelMessage[] = [{
-              role: "system",
-              content: system
-            }];
-
-            const initialMessages = await agent.getInitialMessages(params, input, this);
-            messages.push(...initialMessages);
-            const allSteps: StepResult<ToolSet>[] = [];
-            let finalText = "";
-
-            // Count tokens
-            let inputTokens = 0;
-            let cachedInputTokens = 0;
-            let hasCachedInputTokens = false;
-            let reasoningTokens = 0;
-            let outputTokens = 0;
-            // Threads the previous Codex step's response id so the next step prefers native thread continuation.
-            let codexResponseId: string | undefined;
-
-            // Execute steps in a loop, one at a time
-            for (let stepCount = 0; !shouldStop; stepCount++) {
-              this.logger.info(`Executing ${agentName}'s step ${stepCount + 1}`, {
-                GameID: params.gameID,
-                PlayerID: params.playerID
-              });
-
-              // Execute the step with proper tracing
-              const stepResult = await this.executeAgentStep(
-                agent,
-                params,
-                input,
-                allSteps,
-                stepCount,
-                messages,
-                modelConfig,
-                codexResponseId,
-                callback
-              );
-
-              // Update state from step results
-              messages = stepResult.messages;
-              shouldStop = stepResult.shouldStop;
-              finalText = stepResult.finalText ?? "";
-              inputTokens += stepResult.inputTokens;
-              if (stepResult.cachedInputTokens !== undefined) {
-                cachedInputTokens += stepResult.cachedInputTokens;
-                hasCachedInputTokens = true;
-              }
-              reasoningTokens += stepResult.reasoningTokens;
-              outputTokens += stepResult.outputTokens;
-              codexResponseId = stepResult.responseId;
-            }
-
-            this.logger.info(`Agent execution completed: ${agentName} with ${allSteps.length} steps`);
-
-            // Accrue tokens to the active root's sink and the seat-wide totals.
-            root.tokens.inputTokens += inputTokens;
-            root.tokens.reasoningTokens += reasoningTokens;
-            root.tokens.outputTokens += outputTokens;
-            this.inputTokens += inputTokens;
-            this.reasoningTokens += reasoningTokens;
-            this.outputTokens += outputTokens;
-            span.setAttributes({
-              'model': formatModelReference(modelConfig),
-              'tokens.input': inputTokens,
-              'tokens.reasoning': reasoningTokens,
-              'tokens.output': outputTokens,
-            });
-            if (hasCachedInputTokens) span.setAttribute('tokens.input.cached', cachedInputTokens);
-            span.setStatus({ code: SpanStatusCode.OK });
-
-            // Populate optional token output for callers that need per-execution counts
-            if (tokenOutput) {
-              tokenOutput.inputTokens = inputTokens;
-              tokenOutput.reasoningTokens = reasoningTokens;
-              tokenOutput.outputTokens = outputTokens;
-            }
-
-            // Convert into the output (now async)
-            const output = await agent.getOutput(params, input, finalText, this);
-            if (!output) return;
-            return agent.postprocessOutput(params, input, output);
-          } else {
-            span.setStatus({ code: SpanStatusCode.OK, message: 'No system prompt' });
-            return undefined;
-          }
-        } catch (error) {
-          this.logger.error(`Error executing agent ${agentName}!`, error);
-          span.recordException(error as Error);
-          span.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: error instanceof Error ? error.message : String(error)
-          });
-          const contextLengthError = isContextLengthError(error);
-          if (onContextLengthError && contextLengthError) {
-            onContextLengthError();
-          }
-          if (options.throwOnError && !contextLengthError) {
-            throw error;
-          }
-          return undefined;
-        } finally {
-          span.end();
-        }
-      });
-    });
+    return executeAgent(this, agentName, input, callback, tokenOutput, onContextLengthError, options);
   }
 
   /**
-   * Execute a single agent step with proper tracing and error handling.
-   * This method encapsulates the logic for preparing, executing, and processing
-   * a single step in an agent's execution flow.
+   * Run one evaluation call against a model. Thin delegator to {@link evaluateOn} in
+   * infra/vox-evaluate.js, the single-call evaluation path that runs under this context's
+   * telemetry alongside {@link execute}. The call is not implemented yet and throws; see
+   * docs/plans/evaluation-models.md for the intended design.
    *
-   * @private
-   * @param agent - The agent being executed
-   * @param parameters - The parameters for the agent
-   * @param allSteps - All steps executed so far
-   * @param messages - The current message history
-   * @param model - The model identifier
-   * @param previousResponseId - The prior Codex step's response id, forwarded so the proxy continues the same thread
-   * @param stepCount - The current step number
-   * @returns Updated messages, stop condition, optional final text, and the response id that continues the thread
+   * @param model - The model reference to evaluate with
+   * @param state - The state under evaluation
+   * @param options - Evaluation options (question set and scoring controls)
+   * @throws Error always; the evaluation call is unimplemented
    */
-  private async executeAgentStep(
-    agent: VoxAgent<TParameters>,
-    parameters: TParameters,
-    input: unknown,
-    allSteps: StepResult<ToolSet>[],
-    stepCount: number,
-    messages: ModelMessage[],
-    model: Model,
-    previousResponseId?: string,
-    callback?: StreamingEventCallback
-  ): Promise<{ messages: ModelMessage[], shouldStop: boolean, finalText?: string, inputTokens: number, cachedInputTokens?: number, reasoningTokens: number, outputTokens: number, responseId?: string }> {
-    const stepSpan = this.tracer.startSpan(`agent.${agent.name}.step.${stepCount + 1}`, {
-      attributes: {
-        'vox.context.id': this.id,
-        'game.turn': String(parameters.turn),
-        'agent.name': agent.name,
-        'step.number': stepCount + 1
-      }
-    });
-
-    return await context.with(trace.setSpan(context.active(), stepSpan), async () => {
-      try {
-        // Prepare configuration for this step
-        const stepConfig = await agent.prepareStep(parameters, input,
-          allSteps.length === 0 ? null : allSteps[allSteps.length - 1], allSteps, messages, this);
-
-        // Apply prepared configuration
-        messages = stepConfig.messages || messages;
-        const stepModel = stepConfig.model || model;
-        // Use one identity for construction and request options so any provider
-        // working-directory policy remains stable across a single step.
-        const runtimeIdentity = { workingDirId: `${parameters.gameID}-${parameters.playerID}` };
-        const stepProviderOptions = buildProviderOptions(stepModel, runtimeIdentity, previousResponseId);
-        const stepActiveTools = stepConfig.activeTools || agent.getActiveTools(parameters);
-        const stepToolChoice = stepActiveTools && stepActiveTools.length > 0 ? agent.toolChoice : "auto";
-        const stepOutputSchema = stepConfig.outputSchema;
-
-        // Nudge the model to finalize once the loop continues past the first step. Runs here, after
-        // prepareStep has finalized this step's active tools (undefined means "all registered tools",
-        // the AI SDK's activeTools contract), so the nudge can only name tools this step offers. Any
-        // rescue prompt prepareStep appended is already in `messages` and stays ahead of the nudge:
-        // the model reads "your last response was empty, retry" and then "finalize with these tools".
-        if (allSteps.length > 0) {
-          messages = appendReminder(
-            messages,
-            agent.continuationNudge(parameters, stepActiveTools ?? Object.keys(this.tools)),
-          );
-        }
-
-        // Prepare tool-result messages by converting nested objects to markdown
-        messages.forEach((message) => {
-          if (!Array.isArray(message.content)) return;
-          // Process each tool result
-          message.content.forEach(toolResult => {
-            if (toolResult.type === 'tool-result' && 'value' in toolResult.output && typeof(toolResult.output.value) === "object") {
-              delete (toolResult.output.value as any)._markdownConfig;
-            }
-          });
-        });
-
-        // Record step configuration in span
-        stepSpan.setAttributes({
-          'step.tools': JSON.stringify(stepActiveTools),
-          'step.tools.choice': stepToolChoice,
-          'step.messages': JSON.stringify(messages),
-        });
-        // Recorded separately: host-tool validation may throw, and the step
-        // configuration above should already be on the span when it does.
-        stepSpan.setAttributes(hostCapabilityTelemetryAttributes(stepModel));
-
-        // Framing is recorded as an explicit fact, separate from prompt content:
-        // step.tool_framing carries the resolved framing for the step. A callback rather
-        // than trace.getActiveSpan() because the model call runs through pLimit and can
-        // resume in a sibling step's async context; this closure and the stepSpan
-        // reference below are immune to that.
-        let stepToolFraming: string | undefined;
-
-        // Execute a single step with concurrency limiting and retry
-        // The steps are already awaited within the retry mechanism to properly catch streaming errors
-        const result = await streamTextWithConcurrency(
-          withModelConfig({
-            // Model settings
-            model: getModel(stepModel, {
-              ...runtimeIdentity,
-              onToolFraming: ({ framing }) => { stepToolFraming = framing; },
-              // Provider guidance names these as what ends the turn. Passed unfiltered: each
-              // middleware intersects them with the tools actually declared on the wire, which
-              // already reflects this step's active tools.
-              completionTools: agent.completionTools,
-            }),
-            providerOptions: stepProviderOptions,
-            // Disable Vercel AI SDK's internal retry to let our wrapper handle it
-            maxRetries: 0,
-            // Abort signal for cancellation — the active root's signal, so aborting one root
-            // never stops a sibling root's step.
-            abortSignal: this.currentSignal(),
-            // Current messages
-            messages: messages,
-            // Tools
-            tools: this.tools,
-            activeTools: stepActiveTools,
-            // Providers that reject a wire-level required tool choice (Anthropic, Codex) map it to auto
-            // in provider middleware installed by getModel, preserving the requirement in the prompt
-            // and naming the agent's completionTools as the calls that end the turn.
-            toolChoice: stepToolChoice as any,
-            runtimeContext: parameters as any,
-            toolsContext: Object.fromEntries(
-              Object.keys(this.tools).map(toolName => [toolName, parameters]),
-            ) as any,
-            // Output schema for tool as agent
-            output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,
-            // Stop after one step
-            stopWhen: () => true,
-            // Events
-            onChunk: (args: any) => {
-              callback?.OnChunk(args);
-            }
-          }, stepModel),
-          this
-        );
-
-        if (!result || this.currentSignal().aborted) throw new Error("Operation aborted.");
-        // Steps are already resolved by streamTextWithConcurrency
-        const stepResults = result.steps;
-        const stepResponse = stepResults[stepResults.length - 1];
-
-        // The proxy's response id doubles as the next step's Codex continuation selector.
-        const responseId = stepModel.provider === 'codex' && typeof stepResponse.response?.id === 'string'
-          ? stepResponse.response.id
-          : undefined;
-
-        // Record framing (an explicit fact) next to step.messages/step.tools. Set only when
-        // the tool-rescue middleware actually ran for this step — i.e. a prompt-mode model
-        // with tools whose call reached this point. Native/no-tool steps, batch replays
-        // (which bypass the middleware), and pre-completion failures leave it unset.
-        if (stepToolFraming !== undefined) {
-          stepSpan.setAttribute('step.tool_framing', stepToolFraming);
-        }
-
-        // Surface provider-executed host calls as retrospective per-tool spans.
-        if (isHostCapabilityProvider(stepModel.provider)) {
-          const builtinToolSpans = emitProviderExecutedToolSpans(stepModel.provider, stepResponse.content, this.tracer, {
-            contextId: this.id,
-            turn: parameters.turn,
-          });
-          if (builtinToolSpans > 0) {
-            this.logger.debug(`Emitted ${builtinToolSpans} ${stepModel.provider} built-in tool span(s) for ${agent.name} step ${stepCount + 1}`);
-          }
-        }
-
-        // Update token usage
-        const inputTokens = Math.max(countMessagesTokens(messages, false), stepResponse.usage.inputTokens ?? 0);
-        const cachedInputTokens = cachedInputTokensFromUsage(stepResponse.usage);
-        let reasoningTokens = stepResponse.usage.outputTokenDetails?.reasoningTokens ?? 0;
-        const outputTokens = countMessagesTokens(stepResponse.response.messages, false);
-
-        // Alternatively: estimate reasoning tokens
-        if (reasoningTokens === 0) {
-          reasoningTokens = countMessagesTokens(stepResponse.response.messages, true);
-          if (reasoningTokens > 0) {
-            reasoningTokens = Math.max(reasoningTokens, (stepResponse.usage.outputTokens ?? 0) - outputTokens);
-          }
-        }
-
-        // Record step results in span
-        const responses = stepResponse.response.messages;
-        responses.forEach((response: any) => delete response.providerOptions);
-
-        // Add the step to our collection
-        let shouldStop = false;
-        let finalText: string | undefined;
-
-        if (stepResults.length > 0) {
-          allSteps.push(...stepResults);
-          finalText = stepResponse.text;
-
-          // Clean tool rescue artifacts from response messages
-          for (const msg of stepResponse.response.messages) {
-            if (Array.isArray(msg.content)) {
-              msg.content = msg.content.filter((part: any) => {
-                if (part.type === 'text') {
-                  part.text = cleanToolArtifacts(part.text);
-                  return part.text.length > 0;
-                }
-                return true;
-              });
-            } else if (typeof msg.content === 'string') {
-              msg.content = cleanToolArtifacts(msg.content);
-            }
-          }
-
-          // Update messages with the response
-          messages = messages.concat(stepResponse.response.messages);
-
-          // Check stop condition
-          shouldStop = this.currentSignal().aborted ||
-            agent.stopCheck(parameters, input, stepResponse, allSteps, this);
-
-          this.logger.debug(`Stop check for ${agent.name}: ${shouldStop}`, {
-            stepNumber: stepCount + 1,
-            totalSteps: allSteps.length
-          });
-        } else {
-          this.logger.warn(`Agent execution produced no steps: ${agent.name} at step ${stepCount + 1}.`);
-          shouldStop = this.currentSignal().aborted;
-        }
-
-        stepSpan.setAttributes({
-          'model': formatModelReference(stepModel),
-          'tokens.input': inputTokens,
-          'tokens.reasoning': reasoningTokens,
-          'tokens.output': outputTokens,
-          'step.responses': JSON.stringify(stepResponse.response.messages)
-        });
-        if (cachedInputTokens !== undefined) stepSpan.setAttribute('tokens.input.cached', cachedInputTokens);
-        stepSpan.setAttributes(codexResponseTelemetryAttributes(stepResponse.providerMetadata));
-
-        stepSpan.setAttribute('step.should_stop', shouldStop);
-        stepSpan.setStatus({ code: SpanStatusCode.OK });
-
-        return { messages, shouldStop, finalText, inputTokens, cachedInputTokens, reasoningTokens, outputTokens, responseId };
-      } catch (error) {
-        stepSpan.recordException(error as Error);
-        stepSpan.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error)
-        });
-        throw error; // Re-throw to be handled by outer try-catch
-      } finally {
-        stepSpan.end();
-      }
-    });
+  public async evaluate(model: Model, state: unknown, options?: EvaluateOptions): Promise<never> {
+    return evaluateOn(this, model, state, options);
   }
 
   /**

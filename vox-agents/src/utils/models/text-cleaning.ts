@@ -4,6 +4,7 @@
  * Text cleaning and formatting utilities for tool call/result text representations.
  */
 
+import type { ModelMessage } from 'ai';
 import { jsonToMarkdown } from '../tools/json-to-markdown.js';
 import type { ToolCallFraming } from './tool-rescue/types.js';
 
@@ -168,4 +169,46 @@ export function buildRescuePrompt(toolChoice: string, framing: ToolCallFraming =
     return `Your previous response was empty and did not include any ${noun} calls. You MUST call one or more of the available ${noun}s in the given format. Please try again.`;
   }
   return `Your previous response was empty. Please provide either a text response or PROPERLY call one or more of the available ${noun}s in the given format.`;
+}
+
+/**
+ * Drops the `_markdownConfig` rendering hint from every tool result in a message list, in place.
+ * The MCP tool wrapper attaches it so results can be rendered as markdown for humans; the model
+ * has no use for it, so it is stripped before the messages go on the wire.
+ *
+ * @param messages - The conversation to scrub (mutated)
+ */
+export function stripMarkdownConfig(messages: ModelMessage[]): void {
+  for (const message of messages) {
+    if (!Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      if (part.type === 'tool-result' && 'value' in part.output && typeof(part.output.value) === "object") {
+        delete (part.output.value as any)._markdownConfig;
+      }
+    }
+  }
+}
+
+/**
+ * Cleans tool-rescue artifacts out of a model's response messages, in place: every text part runs
+ * through {@link cleanToolArtifacts} and is dropped when nothing survives, and a plain string body
+ * is cleaned as-is. Applied to a step's response before it joins the conversation, so the leftover
+ * fences and empty arrays never become part of the next prompt.
+ *
+ * @param messages - The response messages to scrub (mutated)
+ */
+export function stripToolArtifacts(messages: { content: any }[]): void {
+  for (const message of messages) {
+    if (Array.isArray(message.content)) {
+      message.content = message.content.filter((part: any) => {
+        if (part.type === 'text') {
+          part.text = cleanToolArtifacts(part.text);
+          return part.text.length > 0;
+        }
+        return true;
+      });
+    } else if (typeof message.content === 'string') {
+      message.content = cleanToolArtifacts(message.content);
+    }
+  }
 }

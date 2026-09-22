@@ -161,8 +161,14 @@ export class VoxPlayer {
           this.running = true;
 
           // Pause gate. Stall the game by getting the strategist infinitely delaying.
+          // The consumed turn is put back on the queue so resumption picks it right up
+          // (no PlayerDoneTurn can re-arm it while the seat is held, and pause-game is
+          // an idempotent set insert, so re-holding on each pass is cheap).
           if (this.context.session?.isPaused()) {
+            this.pendingTurn = turn;
+            this.running = false;
             await this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters);
+            await setTimeout(200);
             continue;
           }
 

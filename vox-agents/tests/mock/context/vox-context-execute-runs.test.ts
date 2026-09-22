@@ -3,9 +3,10 @@
  *
  * These drive the real execute() step loop with the model layer (streamTextWithConcurrency) and
  * model factory (getModel/buildProviderOptions) mocked, so no network or provider is touched.
- * Covers: per-execution token accrual routed to the active root sink + seat totals + the optional
- * ExecuteTokenOutput; nested executions sharing the parent root's sink; aborting one root
- * mid-step while a concurrent root's step completes unaffected; and shutdown's teardown race.
+ * Covers: nested executions sharing the parent root's sink; concurrent roots keeping their token
+ * sinks independent; aborting one root mid-step while a concurrent root's step completes
+ * unaffected; and shutdown's teardown race. A single execution's routing to the three token sinks
+ * and its span contract are pinned in vox-execute.test.ts.
  */
 
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
@@ -239,24 +240,9 @@ describe('VoxContext.execute token accounting', () => {
     expect(stc).toHaveBeenCalledWith(expect.objectContaining({ toolChoice: 'required' }), ctx);
   });
 
-  it('routes one execution to the active root sink, the seat totals, and the ExecuteTokenOutput', async () => {
-    const ctx = new VoxContext<StrategistParameters>({}, 'exec-tokens-1');
-    const base = makeStrategistParameters();
-    const tokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
-
-    await ctx.withRun({ parameters: base, overrides: { turn: 1 } }, async run => {
-      const result = await ctx.execute('test-step-a', {}, undefined, tokenOutput);
-      expect(result).toBe('done');
-      expect(run.tokens.inputTokens).toBe(100);
-      expect(run.tokens.reasoningTokens).toBe(10);
-    });
-
-    expect(tokenOutput.inputTokens).toBe(100);
-    expect(tokenOutput.reasoningTokens).toBe(10);
-    expect(ctx.inputTokens).toBe(100); // seat total
-    expect(ctx.reasoningTokens).toBe(10);
-  });
-
+  // A single execution's routing to the root sink, seat totals, and ExecuteTokenOutput is
+  // pinned (with the span contract) in vox-execute.test.ts; the two cases here cover what
+  // that cannot: nesting sharing one root and concurrent roots staying independent.
   it('accrues nested executions into the same root sink (and the seat total)', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'exec-tokens-nested');
     const base = makeStrategistParameters();
