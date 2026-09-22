@@ -92,10 +92,33 @@
   min-width: 200px;
 }
 
+/* Mapping rows use one fixed grid so the agent, model, and delete columns start at the same offset in every row */
+.config-card .mappings-list .field-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(200px, 1.5fr) 2.5rem;
+  align-items: center;
+}
+
+/* Padding and min-width on any cell must never shift the shared column starts */
+.config-card .mappings-list .field-row > * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
 /* Labels */
 :is(.config-card, .config-section, .model-options-content) .player-label {
   min-width: 80px;
   font-weight: 500;
+}
+
+/* Static label for the fixed embedder and evaluator rows, sized like the dropdowns it sits beside */
+.config-card .mapping-label {
+  align-items: center;
+  color: var(--p-text-muted-color);
+  display: flex;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
 }
 
 /* Buttons */
@@ -133,6 +156,15 @@
   :is(.config-card, .config-section, .model-options-content) .provider-dropdown {
     max-width: 100%;
     width: 100%;
+  }
+
+  .config-card .mappings-list .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* The invisible placeholder keeps the delete column aligned only in the desktop grid */
+  .config-card .mappings-list .delete-btn[aria-hidden="true"] {
+    display: none;
   }
 }
 

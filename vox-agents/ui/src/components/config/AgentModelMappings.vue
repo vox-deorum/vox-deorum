@@ -13,12 +13,16 @@ const props = defineProps<{
   availableModels: SelectOption[];
   embeddingModels: SelectOption[];
   embedderModel: string | null;
+  evaluationModels: SelectOption[];
+  evaluatorModel: string | null;
 }>();
 const emit = defineEmits<{
   'update:mappings': [value: AgentMapping[]];
   'update:embedderModel': [value: string | null];
+  'update:evaluatorModel': [value: string | null];
   'discover-model': [index: number];
   'discover-embedder': [];
+  'discover-evaluator': [];
 }>();
 
 /** Add the model discovery action after every configured chat model. */
@@ -27,20 +31,22 @@ const modelOptions = computed(() => [
   { label: 'More...', value: MORE_MODELS }
 ]);
 
-/** Keep an evaluator's current assignment visible without offering it to chat agents. */
-function modelOptionsForMapping(mapping: AgentMapping): SelectOption[] {
-  const isEvaluator = mapping.agent === 'evaluator' || mapping.agent.endsWith('.evaluator');
-  if (isEvaluator && mapping.model && !modelOptions.value.some(option => option.value === mapping.model)) {
-    return [{ label: mapping.model, value: mapping.model }, ...modelOptions.value];
-  }
-  return modelOptions.value;
-}
-
 /** Add the model discovery action after every configured embedding model. */
 const embedderOptions = computed(() => [
   ...props.embeddingModels,
   { label: 'More...', value: MORE_MODELS }
 ]);
+
+/** Add the model discovery action after every evaluator-capable model. */
+const evaluatorOptions = computed(() => [
+  ...props.evaluationModels,
+  { label: 'More...', value: MORE_MODELS }
+]);
+
+/** Offer evaluation-capable choices to agent-specific evaluator rows and chat choices to the rest. */
+function modelOptionsForMapping(mapping: AgentMapping): SelectOption[] {
+  return mapping.agent.endsWith('.evaluator') ? evaluatorOptions.value : modelOptions.value;
+}
 
 /** Add a mapping using the first available agent and model choices. */
 function addMapping(): void {
@@ -68,6 +74,15 @@ function updateEmbedder(value: string | null): void {
   emit('update:embedderModel', value);
 }
 
+/** Update the selected evaluator or open model discovery for the More option. */
+function updateEvaluator(value: string | null): void {
+  if (value === MORE_MODELS) {
+    emit('discover-evaluator');
+    return;
+  }
+  emit('update:evaluatorModel', value);
+}
+
 /** Remove one mapping by its visible index. */
 function deleteMapping(index: number): void {
   emit('update:mappings', props.mappings.filter((_, current) => current !== index));
@@ -92,16 +107,18 @@ function deleteMapping(index: number): void {
           <Button icon="pi pi-trash" text severity="danger" class="delete-btn" @click="deleteMapping(index)" />
         </div>
         <div class="field-row">
-          <span class="agent-input embedder-label">Embedder</span>
+          <span class="mapping-label">Embedder</span>
           <Dropdown :modelValue="embedderModel" :options="embedderOptions" optionLabel="label" optionValue="value"
             placeholder="No embedding model" showClear class="model-dropdown" @update:modelValue="updateEmbedder" />
+          <Button icon="pi pi-trash" text severity="danger" class="delete-btn" style="visibility: hidden" aria-hidden="true" tabindex="-1" />
+        </div>
+        <div class="field-row">
+          <span class="mapping-label">Evaluator</span>
+          <Dropdown :modelValue="evaluatorModel" :options="evaluatorOptions" optionLabel="label" optionValue="value"
+            placeholder="No evaluator model" showClear class="model-dropdown" @update:modelValue="updateEvaluator" />
           <Button icon="pi pi-trash" text severity="danger" class="delete-btn" style="visibility: hidden" aria-hidden="true" tabindex="-1" />
         </div>
       </div>
     </template>
   </Card>
 </template>
-
-<style scoped>
-.embedder-label { align-items: center; color: var(--p-text-muted-color); display: flex; font-size: 0.875rem; font-weight: 500; padding: 0.5rem 0.75rem; }
-</style>

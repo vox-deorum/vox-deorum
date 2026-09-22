@@ -105,7 +105,7 @@ The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS B
 
 The root `package.json` overrides the Claude Agent SDK dependency so model discovery and `ai-sdk-provider-claude-code` use the same SDK version and bundled runtime. Run `npm run update:claude-agent-sdk` from the repo root to update it, then restart Vox Agents.
 
-Evaluation models use the `evaluator` or `<agent>.evaluator` aliases. TypeSafe's Jev is evaluation-only; chat models can also serve as evaluators through `src/utils/models/evaluation.ts`. Settings excludes evaluation-only models and their aliases from chat selectors while retaining existing evaluator assignments when displayed and saved.
+Evaluation models use the `evaluator` or `<agent>.evaluator` aliases. TypeSafe's Jev is evaluation-only; chat models can also serve as evaluators through `src/utils/models/evaluation.ts`. Settings has separate Embedder and Evaluator dropdowns. The Evaluator dropdown offers chat and evaluation-only models, with More opening model discovery for either kind. Clearing it removes the shared evaluator assignment. Chat selectors exclude evaluation-only models and their aliases.
 
 Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`.
 

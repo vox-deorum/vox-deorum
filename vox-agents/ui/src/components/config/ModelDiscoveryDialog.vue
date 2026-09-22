@@ -15,6 +15,7 @@ type DiscoveryPhase = 'connect' | 'pick';
 interface Props {
   visible: boolean;
   apiKeys: Record<string, string>;
+  evaluation?: boolean;
 }
 
 interface Emits {
@@ -44,8 +45,9 @@ const {
 } = useModelDiscovery({ isActive: () => props.visible });
 const phase = ref<DiscoveryPhase>('connect');
 
-/** AWS is excluded because server discovery is unsupported; evaluation-only providers have no chat models to discover. */
-const providerOptions = computed(() => llmProviders.filter(provider => provider.value !== 'aws' && !provider.evaluationOnly));
+/** Include evaluation-only services for evaluators; AWS does not support discovery. */
+const providerOptions = computed(() => llmProviders.filter(provider =>
+  provider.value !== 'aws' && (props.evaluation || !provider.evaluationOnly)));
 
 /** Invalidate stale checks and clear feedback when the user chooses a different service. */
 function selectProvider(): void {

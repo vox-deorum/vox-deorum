@@ -37,6 +37,24 @@ const agentMappings = ref<AgentMapping[]>([]);
 const modelDefinitions = ref<LLMConfig[]>([]);
 const embedderModel = ref<string | null>(null);
 
+/** Keep the shared evaluator in configuration while giving it a dedicated control. */
+const evaluatorModel = computed({
+  get: () => agentMappings.value.find(mapping => mapping.agent === 'evaluator')?.model ?? null,
+  set: (model: string | null) => {
+    agentMappings.value = agentMappings.value.filter(mapping => mapping.agent !== 'evaluator');
+    if (model) agentMappings.value.push({ agent: 'evaluator', model });
+  }
+});
+
+/** Show ordinary mappings separately without dropping the shared evaluator on edits. */
+const visibleMappings = computed({
+  get: () => agentMappings.value.filter(mapping => mapping.agent !== 'evaluator'),
+  set: (mappings: AgentMapping[]) => {
+    const evaluator = agentMappings.value.filter(mapping => mapping.agent === 'evaluator');
+    agentMappings.value = [...mappings, ...evaluator];
+  }
+});
+
 // Agent registry state
 const agents = ref<AgentInfo[]>([]);
 
@@ -47,7 +65,13 @@ const confirm = useConfirm();
 const modelOptionsVisible = ref(false);
 const editingModel = ref<LLMConfig | null>(null);
 const modelDiscoveryVisible = ref(false);
-const discoveryTarget = ref<{ kind: 'mapping'; index: number } | { kind: 'embedder' } | null>(null);
+type DiscoveryTarget = { kind: 'mapping'; index: number } | { kind: 'embedder' } | { kind: 'evaluator' };
+const discoveryTarget = ref<DiscoveryTarget | null>(null);
+
+/** Allow evaluation-only services when discovering a shared or agent-specific evaluator. */
+const discoveringEvaluator = computed(() => discoveryTarget.value?.kind === 'evaluator'
+  || (discoveryTarget.value?.kind === 'mapping'
+    && !!visibleMappings.value[discoveryTarget.value.index]?.agent.endsWith('.evaluator')));
 
 /** Rebuild the editable LLM form state from one complete LLM configuration. */
 function rehydrateLlmForm(llms: VoxAgentsConfig['llms']): void {
@@ -77,8 +101,8 @@ function buildCurrentConfig(): VoxAgentsConfig | null {
 /** Provide the setup wizard with the current editable configuration, including unsaved LLM changes. */
 const wizardConfig = computed(() => buildCurrentConfig());
 
-// Computed available chat models for agent dropdowns (excludes embedding and evaluation-only models)
-const availableModels = computed(() => {
+/** Resolve configured choices once so chat and evaluator selectors use the same aliases. */
+const modelChoices = computed(() => {
   const options = modelDefinitions.value
     .filter(m => m.id)
     .map(m => ({ label: m.id!, value: m.id! }));
@@ -91,7 +115,8 @@ const availableModels = computed(() => {
   }
   const llms = buildLLMConfig(agentMappings.value, modelDefinitions.value, embedderModel.value);
   // Classify the resolved model so aliases cannot reintroduce evaluation or embedding models.
-  return options.filter(({ value }) => {
+  return options.flatMap(option => {
+    const { value } = option;
     let reference = value;
     const visited = new Set<string>();
     while (!visited.has(reference)) {
@@ -100,14 +125,24 @@ const availableModels = computed(() => {
       if (typeof definition === 'string') {
         reference = definition;
       } else if (definition) {
-        return !definition.options?.embeddingSize && !isEvaluationOnlyProvider(definition.provider);
+        return definition.options?.embeddingSize ? [] : [{
+          ...option, evaluationOnly: isEvaluationOnlyProvider(definition.provider)
+        }];
       } else {
-        return !isEvaluationOnlyProvider(reference.split('/')[0]!);
+        return [{ ...option, evaluationOnly: isEvaluationOnlyProvider(reference.split('/')[0]!) }];
       }
     }
-    return false;
+    return [];
   });
 });
+
+/** Chat agents cannot use evaluation-only models. */
+const availableModels = computed(() => modelChoices.value
+  .filter(option => !option.evaluationOnly)
+  .map(({ label, value }) => ({ label, value })));
+
+/** Evaluators can use either chat models or dedicated evaluation models. */
+const evaluationModels = computed(() => modelChoices.value.map(({ label, value }) => ({ label, value })));
 
 // Computed available embedding models for the embedder dropdown
 const embeddingModels = computed(() => {
@@ -236,8 +271,8 @@ function applyModelOptions(options: LLMConfig['options']): void {
   editingModel.value = updated;
 }
 
-/** Open model discovery for the mapping or embedder that requested a new model. */
-function openModelDiscovery(target: { kind: 'mapping'; index: number } | { kind: 'embedder' }): void {
+/** Open model discovery for the assignment that requested a new model. */
+function openModelDiscovery(target: DiscoveryTarget): void {
   discoveryTarget.value = target;
   modelDiscoveryVisible.value = true;
 }
@@ -255,11 +290,13 @@ function applyDiscoveredModel(model: DiscoveredModel): void {
 
   const target = discoveryTarget.value;
   if (target?.kind === 'mapping') {
-    agentMappings.value = agentMappings.value.map((mapping, index) =>
+    visibleMappings.value = visibleMappings.value.map((mapping, index) =>
       index === target.index ? { ...mapping, model: model.id } : mapping
     );
   } else if (target?.kind === 'embedder') {
     embedderModel.value = model.id;
+  } else if (target?.kind === 'evaluator') {
+    evaluatorModel.value = model.id;
   }
   discoveryTarget.value = null;
 }
@@ -369,13 +406,16 @@ function updateWizardConfig(updatedConfig: VoxAgentsConfig): void {
     <PathSettingsSection v-if="config" :config="config" @update:config="updatePathSettings" />
 
     <AgentModelMappings
-      v-model:mappings="agentMappings"
+      v-model:mappings="visibleMappings"
       v-model:embedderModel="embedderModel"
+      v-model:evaluatorModel="evaluatorModel"
       :agentTypes="agentTypes"
       :availableModels="availableModels"
       :embeddingModels="embeddingModels"
+      :evaluationModels="evaluationModels"
       @discover-model="openModelDiscovery({ kind: 'mapping', index: $event })"
       @discover-embedder="openModelDiscovery({ kind: 'embedder' })"
+      @discover-evaluator="openModelDiscovery({ kind: 'evaluator' })"
     />
 
     <ModelDefinitions
@@ -393,6 +433,7 @@ function updateWizardConfig(updatedConfig: VoxAgentsConfig): void {
     <ModelDiscoveryDialog
       v-model:visible="modelDiscoveryVisible"
       :apiKeys="apiKeys"
+      :evaluation="discoveringEvaluator"
       @select="applyDiscoveredModel"
       @update:apiKeys="apiKeys = $event"
     />

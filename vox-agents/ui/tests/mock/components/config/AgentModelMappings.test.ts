@@ -29,7 +29,9 @@ function mountMappings(modelOptions = availableModels): VueWrapper {
       agentTypes,
       availableModels: modelOptions,
       embeddingModels,
-      embedderModel: 'openai/embedder'
+      embedderModel: 'openai/embedder',
+      evaluationModels: [],
+      evaluatorModel: null
     },
     global: {
       stubs: {
