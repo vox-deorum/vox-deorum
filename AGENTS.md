@@ -6,9 +6,13 @@ When asking questions, come with a clear, plain description with an example. Do 
 
 ## Use Subagents When Appropriate
 
-Delegate less critical/lower-level BATCH work to subagents with less capabilities for exploring/batch editing, e.g., from Claude Fable to Opus, or from GPT Astra/Sol to Luna. Always designate a model for subagents and report which model (or tool) you used in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches. Use OpenCode delegation if such a skill exists, with clear, bounded instructions. If OpenCode does not work, switch back to native subagents.
+Delegate less critical/lower-level BATCH work to subagents with less capabilities for exploring/batch editing. Always designate a model for subagents and report which model (or tool) you used in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches.
 
-DO NOT use weak models for complex diagnosis. Only use latest model series (e.g., no GPT-5.5, no Sonnet-5). For Claude Code, always delegate to OpenCode for exploration work.
+Use OpenCode delegation if such a skill exists, with clear, bounded instructions. If OpenCode does not work, switch back to native subagents.
+
+DO NOT use weak models for complex diagnosis. For independent review, use OpenCode. For exploration and simple implementation task:
+- Claude Code: always delegate to OpenCode. Never use Sonnet or Haiku.
+- Codex: always delegate to OpenCode or GPT-6-Luna. Never use Sol.
 
 ## Project Overview
 
