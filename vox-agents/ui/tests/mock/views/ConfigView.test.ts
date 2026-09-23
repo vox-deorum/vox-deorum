@@ -63,9 +63,7 @@ describe('ConfigView model deletion', () => {
   it('passes unsaved LLM form edits into the setup wizard', async () => {
     const wrapper = mount(ConfigView, { shallow: true });
     await flushPromises();
-    wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', [
-      { agent: 'default', model: 'openrouter/unsaved-chat' },
-    ] satisfies AgentMapping[]);
+    wrapper.findComponent(AgentModelMappings).vm.$emit('update:tierModel', 'default', 'openrouter/unsaved-chat');
     wrapper.findComponent(AgentModelMappings).vm.$emit('update:embedderModel', 'openai/unsaved-embedder');
     wrapper.findComponent(ModelDefinitions).vm.$emit('update:models', [
       { id: 'openrouter/unsaved-chat', provider: 'openrouter', name: 'unsaved-chat', options: {} },
@@ -109,9 +107,12 @@ describe('ConfigView model deletion', () => {
     wrapper.findComponent(SetupWizard).vm.$emit('update:config', wizardSavedConfig);
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([
-      { agent: 'default', model: 'openrouter/new-chat' },
-    ]);
+    expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([]);
+    expect(wrapper.findComponent(AgentModelMappings).props('tierModels')).toEqual({
+      default: 'openrouter/new-chat',
+      small: null,
+      large: null,
+    });
     expect(wrapper.findComponent(AgentModelMappings).props('embedderModel')).toBe('openai/new-embedder');
     expect(wrapper.findComponent(ModelDefinitions).props('models')).toEqual([
       { id: 'openrouter/new-chat', provider: 'openrouter', name: 'new-chat', options: {} },
@@ -135,14 +136,14 @@ describe('ConfigView model deletion', () => {
     }));
   });
 
-  it('keeps synthesized mapping and embedder targets selectable', async () => {
+  it('keeps synthesized tier and embedder targets selectable', async () => {
     const wrapper = mount(ConfigView, { shallow: true });
     await flushPromises();
-    wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', [
-      { agent: 'default', model: 'openrouter/new-chat-model' },
-    ] satisfies AgentMapping[]);
+    wrapper.findComponent(AgentModelMappings).vm.$emit('update:tierModel', 'default', 'openrouter/new-chat-model');
     wrapper.findComponent(AgentModelMappings).vm.$emit('update:embedderModel', 'openai/new-embedder');
     await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([]);
 
     expect(wrapper.findComponent(AgentModelMappings).props('availableModels')).toContainEqual({
       label: 'openrouter/new-chat-model',
@@ -165,7 +166,7 @@ describe('ConfigView model deletion', () => {
     };
 
     wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', [
-      { agent: 'default', model: 'old-model' }
+      { agent: 'Strategist', model: 'old-model' }
     ] satisfies AgentMapping[]);
     wrapper.findComponent(AgentModelMappings).vm.$emit('discover-model', 0);
     await wrapper.vm.$nextTick();
@@ -180,7 +181,7 @@ describe('ConfigView model deletion', () => {
       options: { reasoningEffort: 'high' }
     }]);
     expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([
-      { agent: 'default', model: 'openrouter/discovered-chat' }
+      { agent: 'Strategist', model: 'openrouter/discovered-chat' }
     ]);
     expect(api.updateCurrentConfig).not.toHaveBeenCalled();
 
@@ -191,7 +192,7 @@ describe('ConfigView model deletion', () => {
     expect(api.updateCurrentConfig).toHaveBeenCalledWith(expect.objectContaining({
       config: expect.objectContaining({
         llms: expect.objectContaining({
-          default: 'openrouter/discovered-chat',
+          Strategist: 'openrouter/discovered-chat',
           'openrouter/discovered-chat': expect.objectContaining({
             provider: 'openrouter',
             name: 'discovered-chat',
@@ -213,7 +214,7 @@ describe('ConfigView model deletion', () => {
     };
     wrapper.findComponent(ModelDefinitions).vm.$emit('update:models', [existing]);
     wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', [
-      { agent: 'default', model: 'old-model' }
+      { agent: 'Strategist', model: 'old-model' }
     ] satisfies AgentMapping[]);
     wrapper.findComponent(AgentModelMappings).vm.$emit('discover-model', 0);
     await wrapper.vm.$nextTick();
@@ -227,7 +228,7 @@ describe('ConfigView model deletion', () => {
 
     expect(wrapper.findComponent(ModelDefinitions).props('models')).toEqual([existing]);
     expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([
-      { agent: 'default', model: 'openrouter/existing' }
+      { agent: 'Strategist', model: 'openrouter/existing' }
     ]);
   });
 
@@ -249,6 +250,82 @@ describe('ConfigView model deletion', () => {
     expect(wrapper.findComponent(AgentModelMappings).props('embedderModel')).toBe('openai/discovered-embedder');
   });
 
+  it('keeps tier aliases out of free-form mappings and in the saved llms', async () => {
+    vi.mocked(api.getCurrentConfig).mockResolvedValue({
+      apiKeys: {},
+      config: {
+        llms: {
+          'openrouter/quick': { provider: 'openrouter', name: 'quick' },
+          small: 'openrouter/quick',
+        },
+      } as Partial<VoxAgentsConfig> as VoxAgentsConfig,
+    });
+    const wrapper = mount(ConfigView, { shallow: true });
+    await flushPromises();
+
+    expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([]);
+    expect(wrapper.findComponent(AgentModelMappings).props('tierModels')).toEqual({
+      default: null, small: 'openrouter/quick', large: null,
+    });
+
+    wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', [
+      { agent: 'Strategist', model: 'openrouter/quick' },
+    ] satisfies AgentMapping[]);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(AgentModelMappings).props('mappings')).toEqual([
+      { agent: 'Strategist', model: 'openrouter/quick' },
+    ]);
+    expect(wrapper.findComponent(AgentModelMappings).props('tierModels')).toEqual({
+      default: null, small: 'openrouter/quick', large: null,
+    });
+
+    const saveButton = wrapper.findAll('button-stub')
+      .find(button => button.attributes('label') === 'Save All');
+    await saveButton?.trigger('click');
+    await flushPromises();
+    expect(api.updateCurrentConfig).toHaveBeenCalledWith(expect.objectContaining({
+      config: expect.objectContaining({
+        llms: expect.objectContaining({
+          small: 'openrouter/quick',
+          Strategist: 'openrouter/quick',
+        }),
+      }),
+    }));
+  });
+
+  it('assigns a discovered model to a tier and lets it be cleared again', async () => {
+    const wrapper = mount(ConfigView, { shallow: true });
+    await flushPromises();
+    wrapper.findComponent(AgentModelMappings).vm.$emit('discover-tier', 'large');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.findComponent(ModelDiscoveryDialog).props('visible')).toBe(true);
+
+    wrapper.findComponent(ModelDiscoveryDialog).vm.$emit('select', {
+      id: 'openrouter/deep',
+      provider: 'openrouter',
+      name: 'deep-chat',
+      recommendedOptions: { reasoningEffort: 'high' }
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findComponent(ModelDefinitions).props('models')).toEqual([{
+      id: 'openrouter/deep',
+      provider: 'openrouter',
+      name: 'deep-chat',
+      options: { reasoningEffort: 'high' }
+    }]);
+    expect(wrapper.findComponent(AgentModelMappings).props('tierModels')).toEqual({
+      default: null, small: null, large: 'openrouter/deep',
+    });
+
+    wrapper.findComponent(AgentModelMappings).vm.$emit('update:tierModel', 'large', null);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.findComponent(AgentModelMappings).props('tierModels')).toEqual({
+      default: null, small: null, large: null,
+    });
+  });
+
   it('removes only the selected duplicate model row', async () => {
     const wrapper = mount(ConfigView, { shallow: true });
     await flushPromises();
@@ -256,7 +333,7 @@ describe('ConfigView model deletion', () => {
       { id: 'openrouter/shared', provider: 'openrouter', name: 'first', options: {} },
       { id: 'openrouter/shared', provider: 'openrouter', name: 'second', options: {} },
     ];
-    const mappings: AgentMapping[] = [{ agent: 'default', model: 'openrouter/shared' }];
+    const mappings: AgentMapping[] = [{ agent: 'Strategist', model: 'openrouter/shared' }];
     wrapper.findComponent(ModelDefinitions).vm.$emit('update:models', duplicateModels);
     wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', mappings);
     await wrapper.vm.$nextTick();
@@ -275,7 +352,7 @@ describe('ConfigView model deletion', () => {
       { id: 'openrouter/shared', provider: 'openrouter', name: 'first', options: {} },
       { id: 'openrouter/shared', provider: 'openrouter', name: 'second', options: {} },
     ];
-    const mappings: AgentMapping[] = [{ agent: 'default', model: 'openrouter/shared' }];
+    const mappings: AgentMapping[] = [{ agent: 'Strategist', model: 'openrouter/shared' }];
     wrapper.findComponent(ModelDefinitions).vm.$emit('update:models', models);
     wrapper.findComponent(AgentModelMappings).vm.$emit('update:mappings', mappings);
     await wrapper.vm.$nextTick();

@@ -5,9 +5,13 @@ import type { DiscoveredModel } from '@/utils/types';
 
 interface Props {
   models: DiscoveredModel[];
+  /** Radio group name, unique per picker when several render at once. */
+  name?: string;
+  /** Model marked as the service's recommendation. */
+  recommendedId?: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { name: 'setup-model', recommendedId: '' });
 const selected = defineModel<string>({ required: true });
 const filter = ref('');
 
@@ -31,12 +35,13 @@ watch(
 
 <template>
   <div class="setup-wizard-field">
-    <InputText id="setup-model-filter" v-model="filter" placeholder="Search by AI model name" />
+    <InputText :id="`${name}-filter`" v-model="filter" placeholder="Search by AI model name" />
   </div>
   <div class="setup-wizard-model-list" role="radiogroup" aria-label="Available AIs">
     <label v-for="model in filteredModels" :key="model.id" class="setup-wizard-model">
-      <input v-model="selected" type="radio" name="setup-model" :value="model.id" />
+      <input v-model="selected" type="radio" :name="name" :value="model.id" />
       <span><strong>{{ model.id }}</strong><small>{{ model.name }}</small></span>
+      <span v-if="model.id === recommendedId" class="setup-wizard-badge">Recommended</span>
     </label>
     <div v-if="filteredModels.length === 0" class="setup-wizard-empty" aria-live="polite">
       {{ filter.trim() ? 'No AIs match that filter.' : 'No AIs were found for this service.' }}

@@ -8,11 +8,30 @@ import Password from 'primevue/password';
 import ProgressSpinner from 'primevue/progressspinner';
 import { api } from '@/api/client';
 import ModelPickerList from '@/components/config/ModelPickerList.vue';
+import TierChoiceCard, { type TierOption } from '@/components/config/TierChoiceCard.vue';
 import { useModelDiscovery } from '@/composables/useModelDiscovery';
 import type { DiscoveredModel, LLMConfig, VoxAgentsConfig } from '@/utils/types';
 
-type SetupStep = 'path' | 'credentials' | 'models' | 'confirm';
+type SetupStep = 'path' | 'credentials' | 'models' | 'helpers' | 'judge' | 'confirm';
 type SetupDoor = 'subscription' | 'api' | 'local';
+
+/** A tier card answer: a preset value, or 'custom' with a model picked from the full list. */
+interface TierChoice {
+  choice: string;
+  customId: string;
+}
+
+/** Judge value that leaves an already configured evaluator in place. */
+const keepJudge = 'keep';
+
+const stepLabels: Record<SetupStep, string> = {
+  path: 'Connection',
+  credentials: 'Account',
+  models: 'Main AI',
+  helpers: 'Helpers',
+  judge: 'Judge',
+  confirm: 'Confirm'
+};
 
 interface Props {
   visible: boolean;
@@ -39,8 +58,11 @@ const {
   selectedProviderLabel,
   credentialFields,
   selectedModel,
+  recommendedDefaultModel,
   recommendedSmallModel,
+  recommendedLargeModel,
   discoveryStatusCopy,
+  findModel,
   updateCredential,
   clearDiscoveryError,
   nonEmptySelectedCredentials,
@@ -101,6 +123,103 @@ const visibleServiceOptions = computed(() => {
 });
 
 const canContinueFromPath = computed(() => selectedDoor.value !== null && selectedProvider.value.length > 0);
+
+const quickChoice = ref<TierChoice>({ choice: '', customId: '' });
+const deepChoice = ref<TierChoice>({ choice: '', customId: '' });
+const judgeChoice = ref<TierChoice>({ choice: '', customId: '' });
+
+/** Turn a card answer into a model ID, or '' when the card saves no model. */
+function resolveChoice({ choice, customId }: TierChoice): string {
+  return choice === 'custom' ? customId : choice;
+}
+
+/** A card is complete unless the player opened the full list without picking a model. */
+function choiceComplete({ choice, customId }: TierChoice): boolean {
+  return choice !== 'custom' || customId !== '';
+}
+
+const quickModelId = computed(() => resolveChoice(quickChoice.value));
+const deepModelId = computed(() => resolveChoice(deepChoice.value));
+const judgeModelId = computed(() => resolveChoice(judgeChoice.value));
+
+/** Helpers are only reached through a judge routing work between tiers, so they follow one. */
+const hasJudge = computed(() => judgeChoice.value.choice !== '' && choiceComplete(judgeChoice.value));
+
+/** The evaluator already saved on this PC, if any. */
+const existingJudge = computed(() => props.config?.llms.evaluator);
+
+/** Visible steps in order; the helpers step only appears once a judge is chosen. */
+const steps = computed<SetupStep[]>(() => [
+  'path', 'credentials', 'models', 'judge', ...(hasJudge.value ? ['helpers' as const] : []), 'confirm'
+]);
+
+/** Heading prefix such as "Setup Step 3 of 6". */
+function stepPrefix(step: SetupStep): string {
+  return `Setup Step ${steps.value.indexOf(step) + 1} of ${steps.value.length}`;
+}
+
+/** Show a model by its display name, falling back to its ID. */
+function modelName(id: string): string {
+  return findModel(id)?.name ?? id;
+}
+
+/** Describe the configured evaluator for the keep option and the summary. */
+const existingJudgeLabel = computed(() => {
+  const judge = existingJudge.value;
+  if (judge === undefined) return '';
+  return typeof judge === 'string' ? judge : `${judge.provider}/${judge.name}`;
+});
+
+/** Quick AI presets: the service's routine pick (when known), then the Main AI. */
+const quickOptions = computed<TierOption[]>(() => [
+  ...(recommendedSmallModel.value
+    ? [{ value: recommendedSmallModel.value.id, label: recommendedSmallModel.value.name, detail: recommendedSmallModel.value.id, badge: 'Recommended' }]
+    : []),
+  { value: '', label: 'Same as Main AI', detail: selectedModel.value?.name }
+]);
+
+/** Deep AI presets: the service's high-stakes pick (when known), then the Main AI. */
+const deepOptions = computed<TierOption[]>(() => [
+  ...(recommendedLargeModel.value
+    ? [{ value: recommendedLargeModel.value.id, label: recommendedLargeModel.value.name, detail: recommendedLargeModel.value.id, badge: 'Recommended' }]
+    : []),
+  { value: '', label: 'Same as Main AI', detail: selectedModel.value?.name }
+]);
+
+/** Judge presets: none by default, then keeping a configured judge or using the Main AI. Nothing is recommended. */
+const judgeOptions = computed<TierOption[]>(() => [
+  { value: '', label: 'No judge', detail: 'The Main AI handles everything.' },
+  ...(existingJudge.value !== undefined
+    ? [{ value: keepJudge, label: 'Keep current judge', detail: existingJudgeLabel.value }]
+    : []),
+  ...(selectedModel.value
+    ? [{ value: selectedModel.value.id, label: 'Main AI', detail: selectedModel.value.name }]
+    : [])
+]);
+
+/** Name what the judge card saved, for the summary. */
+const judgeSummary = computed(() => {
+  if (judgeChoice.value.choice === keepJudge) return existingJudgeLabel.value;
+  return judgeModelId.value ? modelName(judgeModelId.value) : 'None';
+});
+
+/** Name what a tier card saved, for the summary. */
+function tierSummary(modelId: string): string {
+  return modelId ? modelName(modelId) : 'Same as Main AI';
+}
+
+/** Summary rows for the confirm step; helper rows only appear alongside a judge. */
+const summaryRows = computed(() => [
+  { icon: 'pi pi-star', label: 'Main AI', value: selectedModel.value?.name ?? '', role: 'most decisions' },
+  { icon: 'pi pi-sitemap', label: 'Judge AI', value: judgeSummary.value, role: 'picks the AI for each moment' },
+  ...(hasJudge.value
+    ? [
+        { icon: 'pi pi-bolt', label: 'Quick AI', value: tierSummary(quickModelId.value), role: 'small jobs' },
+        { icon: 'pi pi-lightbulb', label: 'Deep AI', value: tierSummary(deepModelId.value), role: 'big moments' }
+      ]
+    : []),
+  { icon: 'pi pi-user', label: 'Account', value: selectedProviderLabel.value, role: '' }
+]);
 
 /** Reset the wizard to a clean first step while preserving configuration passed by the host. */
 function resetWizard(): void {
@@ -232,16 +351,46 @@ function goBack(): void {
     currentStep.value = 'credentials';
     selectedModelId.value = '';
     if (selectedProvider.value === 'codex') void beginCodexLogin();
-  } else if (currentStep.value === 'confirm') {
+  } else if (currentStep.value === 'judge') {
     currentStep.value = 'models';
+  } else if (currentStep.value === 'helpers') {
+    currentStep.value = 'judge';
+  } else if (currentStep.value === 'confirm') {
+    currentStep.value = hasJudge.value ? 'helpers' : 'judge';
   }
   clearDiscoveryError();
 }
 
-/** Advance from model selection to the save summary. */
+/** Advance from the Main AI to the optional judge, which starts at none. */
 function continueFromModels(): void {
   if (!selectedModel.value) return;
+  judgeChoice.value = { choice: '', customId: '' };
+  currentStep.value = 'judge';
+}
+
+/** Advance from the judge to the helpers when one is set, starting from the service's picks. */
+function continueFromJudge(): void {
+  if (!choiceComplete(judgeChoice.value)) return;
   saveError.value = '';
+  if (!hasJudge.value) {
+    currentStep.value = 'confirm';
+    return;
+  }
+  quickChoice.value = { choice: recommendedSmallModel.value?.id ?? '', customId: '' };
+  deepChoice.value = { choice: recommendedLargeModel.value?.id ?? '', customId: '' };
+  currentStep.value = 'helpers';
+}
+
+/** Advance from the helpers to the save summary. */
+function continueFromHelpers(): void {
+  if (!choiceComplete(quickChoice.value) || !choiceComplete(deepChoice.value)) return;
+  currentStep.value = 'confirm';
+}
+
+/** Skip the helpers so the Main AI does everything the judge would hand off. */
+function skipHelpers(): void {
+  quickChoice.value = { choice: '', customId: '' };
+  deepChoice.value = { choice: '', customId: '' };
   currentStep.value = 'confirm';
 }
 
@@ -266,24 +415,48 @@ function selectedModelDefinition(model: DiscoveredModel): LLMConfig | string {
   };
 }
 
-/** Save the selected model while retaining all existing configuration and model entries. */
+/** Build the saved model entries: the Main AI, the judge, and the tier aliases a judge routes to. */
+function buildSetupLlms(config: VoxAgentsConfig, mainId: string): VoxAgentsConfig['llms'] {
+  const llms = { ...config.llms };
+  /** Add a discovered model's definition; configured aliases are already present. */
+  const addModel = (id: string): void => {
+    const model = findModel(id);
+    if (model) llms[id] = selectedModelDefinition(model);
+  };
+  /** Point a tier alias at its model, or drop it so the tier uses the Main AI. */
+  const setAlias = (alias: 'small' | 'large', id: string): void => {
+    if (!id) {
+      delete llms[alias];
+      return;
+    }
+    addModel(id);
+    llms[alias] = id;
+  };
+
+  addModel(mainId);
+  llms.default = mainId;
+  if (judgeChoice.value.choice !== keepJudge) {
+    if (judgeModelId.value) {
+      addModel(judgeModelId.value);
+      llms.evaluator = judgeModelId.value;
+    } else {
+      delete llms.evaluator;
+    }
+  }
+  setAlias('small', hasJudge.value ? quickModelId.value : '');
+  setAlias('large', hasJudge.value ? deepModelId.value : '');
+  return llms;
+}
+
+/** Save the selected models while retaining all existing configuration and model entries. */
 async function saveSetup(): Promise<void> {
   const model = selectedModel.value;
   if (!props.config || !model || saving.value) return;
   saving.value = true;
   saveError.value = '';
-  const modelDefinition = selectedModelDefinition(model);
-  const smallModel = recommendedSmallModel.value;
   const updatedConfig: VoxAgentsConfig = {
     ...props.config,
-    llms: {
-      ...props.config.llms,
-      [model.id]: modelDefinition,
-      default: model.id,
-      ...(smallModel
-        ? { [smallModel.id]: selectedModelDefinition(smallModel), small: smallModel.id }
-        : {})
-    }
+    llms: buildSetupLlms(props.config, model.id)
   };
   const savedKeys = Object.fromEntries(
     Object.entries({ ...props.apiKeys, ...nonEmptySelectedCredentials() })
@@ -342,16 +515,17 @@ onUnmounted(invalidatePendingWork);
   >
     <template #header>
       <div class="setup-wizard-progress" aria-label="Setup progress">
-        <span :aria-current="currentStep === 'path' ? 'step' : undefined">1. Connection</span>
-        <span :aria-current="currentStep === 'credentials' ? 'step' : undefined">2. Account</span>
-        <span :aria-current="currentStep === 'models' ? 'step' : undefined">3. AI</span>
-        <span :aria-current="currentStep === 'confirm' ? 'step' : undefined">4. Confirm</span>
+        <span
+          v-for="(step, index) in steps"
+          :key="step"
+          :aria-current="currentStep === step ? 'step' : undefined"
+        >{{ index + 1 }}. {{ stepLabels[step] }}<small v-if="step === 'judge'">optional</small></span>
       </div>
     </template>
 
     <section v-if="currentStep === 'path'" class="setup-wizard-step">
       <div class="setup-wizard-heading">
-        <h3>Setup Step 1 of 4 · How will you power your AI opponents?</h3>
+        <h3>{{ stepPrefix('path') }} · How will you power your AI opponents?</h3>
         <p>Pick the option that matches what you already have. Nothing is selected for you.</p>
       </div>
 
@@ -405,7 +579,7 @@ onUnmounted(invalidatePendingWork);
 
     <section v-else-if="currentStep === 'credentials'" class="setup-wizard-step">
       <div class="setup-wizard-heading">
-        <h3>Setup Step 2 of 4 · {{ credentialsHeading }}</h3>
+        <h3>{{ stepPrefix('credentials') }} · {{ credentialsHeading }}</h3>
         <p v-if="selectedProvider === 'openai-compatible'">
           Start Ollama or LM Studio first, then enter the address it shows.
         </p>
@@ -489,23 +663,85 @@ onUnmounted(invalidatePendingWork);
 
     <section v-else-if="currentStep === 'models'" class="setup-wizard-step">
       <div class="setup-wizard-heading">
-        <h3>Setup Step 3 of 4 · Pick the model your AI opponents will use</h3>
-        <p>Your account works. Choose the AI Vox Deorum should use by default.</p>
+        <h3>{{ stepPrefix('models') }} · Pick your Main AI</h3>
+        <p>It makes most of your rivals' decisions, so choose the best one you're happy to run.</p>
       </div>
-      <ModelPickerList v-model="selectedModelId" :models="discoveredModels" />
+      <ModelPickerList
+        v-model="selectedModelId"
+        :models="discoveredModels"
+        :recommendedId="recommendedDefaultModel?.id"
+      />
+    </section>
+
+    <section v-else-if="currentStep === 'judge'" class="setup-wizard-step">
+      <div class="setup-wizard-heading">
+        <h3>{{ stepPrefix('judge') }} · Add a Judge AI? (optional, experimental)</h3>
+        <p>A judge sizes up each moment and hands it to a quicker or deeper AI. We are still testing how well this works.</p>
+      </div>
+      <TierChoiceCard
+        v-model:choice="judgeChoice.choice"
+        v-model:customId="judgeChoice.customId"
+        name="setup-judge"
+        icon="pi pi-sitemap"
+        title="Judge AI"
+        purpose="Decides which AI handles each moment"
+        traits="experimental"
+        :options="judgeOptions"
+        :models="discoveredModels"
+      />
+    </section>
+
+    <section v-else-if="currentStep === 'helpers'" class="setup-wizard-step">
+      <div class="setup-wizard-heading">
+        <h3>{{ stepPrefix('helpers') }} · Pick the AIs your judge hands work to</h3>
+        <p>Your judge sends small jobs to the Quick AI and big moments to the Deep AI.</p>
+      </div>
+      <div class="setup-tier-ladder" aria-hidden="true">
+        <span><i class="pi pi-bolt" /> Quick AI<small>small jobs</small></span>
+        <i class="pi pi-arrow-left" />
+        <span class="setup-tier-ladder-main"><i class="pi pi-star" /> Main AI<small>{{ selectedModel?.name }}</small></span>
+        <i class="pi pi-arrow-right" />
+        <span><i class="pi pi-lightbulb" /> Deep AI<small>big moments</small></span>
+      </div>
+      <div class="setup-tier-cards">
+        <TierChoiceCard
+          v-model:choice="quickChoice.choice"
+          v-model:customId="quickChoice.customId"
+          name="setup-quick"
+          icon="pi pi-bolt"
+          title="Quick AI"
+          purpose="Reports, summaries, and small talk"
+          traits="cheaper · faster"
+          :options="quickOptions"
+          :models="discoveredModels"
+        />
+        <TierChoiceCard
+          v-model:choice="deepChoice.choice"
+          v-model:customId="deepChoice.customId"
+          name="setup-deep"
+          icon="pi pi-lightbulb"
+          title="Deep AI"
+          purpose="War, peace, and major deals"
+          traits="smarter · slower · pricier"
+          :options="deepOptions"
+          :models="discoveredModels"
+        />
+      </div>
     </section>
 
     <section v-else class="setup-wizard-step">
       <div class="setup-wizard-heading">
-        <h3>Setup Step 4 of 4 · Ready to play</h3>
+        <h3>{{ stepPrefix('confirm') }} · Ready to play</h3>
         <p>Review these choices before Vox Deorum writes them to this PC.</p>
       </div>
       <div class="setup-wizard-summary">
-        <p><strong>Main AI:</strong> {{ selectedModel?.name }} ({{ selectedModel?.id }})</p>
-        <p v-if="recommendedSmallModel">
-          <strong>Routine AI:</strong> {{ recommendedSmallModel.name }} ({{ recommendedSmallModel.id }}) (summaries and reports)
-        </p>
-        <p><strong>Account:</strong> {{ selectedProviderLabel }}</p>
+        <dl class="setup-wizard-tiers">
+          <div v-for="row in summaryRows" :key="row.label" class="setup-wizard-tier-row">
+            <dt><i :class="row.icon" /> {{ row.label }}</dt>
+            <dd>{{ row.value }}</dd>
+            <dd class="setup-wizard-tier-role">{{ row.role }}</dd>
+          </div>
+        </dl>
         <p>You can change these choices anytime in Settings.</p>
       </div>
       <div v-if="saveError" class="setup-wizard-error-panel" aria-live="polite">
@@ -550,6 +786,20 @@ onUnmounted(invalidatePendingWork);
             label="Next"
             :disabled="!selectedModel"
             @click="continueFromModels"
+          />
+          <template v-else-if="currentStep === 'helpers'">
+            <Button label="Skip: use Main AI for both" severity="secondary" @click="skipHelpers" />
+            <Button
+              label="Next"
+              :disabled="!choiceComplete(quickChoice) || !choiceComplete(deepChoice)"
+              @click="continueFromHelpers"
+            />
+          </template>
+          <Button
+            v-else-if="currentStep === 'judge'"
+            label="Next"
+            :disabled="!choiceComplete(judgeChoice)"
+            @click="continueFromJudge"
           />
           <Button
             v-else-if="currentStep === 'confirm'"

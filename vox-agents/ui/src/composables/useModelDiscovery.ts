@@ -12,7 +12,7 @@ export function useModelDiscovery({ isActive }: UseModelDiscoveryOptions) {
   const selectedProvider = ref('');
   const enteredCredentials = ref<Record<string, string>>({});
   const discoveredModels = ref<DiscoveredModel[]>([]);
-  const recommendedTiers = ref<{ default?: string; small?: string }>({});
+  const recommendedTiers = ref<{ default?: string; small?: string; large?: string }>({});
   const selectedModelId = ref('');
   const discoveryPending = ref(false);
   const discoveryErrorKind = ref<ModelDiscoveryErrorKind | null>(null);
@@ -42,11 +42,19 @@ export function useModelDiscovery({ isActive }: UseModelDiscoveryOptions) {
     discoveredModels.value.find(model => model.id === selectedModelId.value) ?? null
   );
 
-  /** Find the model recommended for routine work, when the provider supplies one. */
-  const recommendedSmallModel = computed(() => {
-    const id = recommendedTiers.value.small;
+  /** Find a discovered model by ID, or null when the ID is missing or unlisted. */
+  function findModel(id: string | undefined): DiscoveredModel | null {
     return id ? discoveredModels.value.find(model => model.id === id) ?? null : null;
-  });
+  }
+
+  /** Find the model recommended for most decisions, when the provider supplies one. */
+  const recommendedDefaultModel = computed(() => findModel(recommendedTiers.value.default));
+
+  /** Find the model recommended for routine work, when the provider supplies one. */
+  const recommendedSmallModel = computed(() => findModel(recommendedTiers.value.small));
+
+  /** Find the model recommended for high-stakes work, when the provider supplies one. */
+  const recommendedLargeModel = computed(() => findModel(recommendedTiers.value.large));
 
   /** Explain the current discovery error in terms of the selected provider. */
   const discoveryStatusCopy = computed(() => {
@@ -151,8 +159,11 @@ export function useModelDiscovery({ isActive }: UseModelDiscoveryOptions) {
     selectedProviderLabel,
     credentialFields,
     selectedModel,
+    recommendedDefaultModel,
     recommendedSmallModel,
+    recommendedLargeModel,
     discoveryStatusCopy,
+    findModel,
     updateCredential,
     clearDiscoveryError,
     nonEmptySelectedCredentials,

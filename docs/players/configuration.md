@@ -2,7 +2,7 @@
 
 The AI civilizations in Vox Deorum are powered by a large language model, and you decide which one. This page covers providers, credentials, models, cost, and running a model locally for free.
 
-**The short version:** follow the four-step **Setup** wizard in the dashboard (`http://localhost:5555`, opened automatically when you launch Vox Deorum): choose how to connect, provide a key or sign in, validate the connection, and choose a model. Most hosted providers need an API key, and Codex uses your ChatGPT login.
+**The short version:** follow the **Setup** wizard in the dashboard (`http://localhost:5555`, opened automatically when you launch Vox Deorum): choose how to connect, provide a key or sign in, and pick your Main AI. Most hosted providers need an API key, and Codex uses your ChatGPT login.
 
 ## Provider, model, and credential
 
@@ -41,7 +41,9 @@ The wizard lists the models available through whatever you connected:
 | Smaller / faster models | Cheaper, quicker | Lower quality of play |
 | Local models | Free to run, private | Limited by your own hardware |
 
-Save, and the wizard applies the recommended settings for that model. Settings lets you assign different models to different jobs; in a model assignment, **More** opens discovery and additions stay unsaved until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand; see the [developer overview](../developers/vox-agents/overview.md#models-and-configuration). A mid-tier model from your chosen provider is a sensible starting point; move up or down once you've seen it play.
+Your **Main AI** makes most of the AI civilizations' decisions, and the service's usual pick is marked **Recommended** and preselected when known. The next step offers an optional **Judge AI**, which sizes up each moment and hands it to a quicker or deeper AI. The judge is experimental but if you do pick a judge, the wizard then asks which AIs it hands work to: a **Quick AI** for small jobs like reports, summaries, and small talk (cheaper and faster), and a **Deep AI** for big moments like war, peace, and major deals (smarter, slower, pricier). Either can stay on the Main AI.
+
+You can change all of these in Settings, where **Agent-Model Assignments** starts with the Main, Quick, and Deep AI rows and ends with the Judge AI. Settings also lets you assign different models to individual jobs; in a model assignment, **More** opens discovery and additions stay unsaved until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand; see the [developer overview](../developers/vox-agents/overview.md#models-and-configuration). A mid-tier model from your chosen provider is a sensible starting point; move up or down once you've seen it play.
 
 ## Controlling cost
 

@@ -90,6 +90,17 @@ async function choosePath(wrapper: VueWrapper, door: 'subscription' | 'api' | 'l
   await clickButton(wrapper, 'Next');
 }
 
+/** Click Next the given number of times, for example from the Main AI step through helpers and judge. */
+async function clickNext(wrapper: VueWrapper, times: number): Promise<void> {
+  for (let index = 0; index < times; index += 1) await clickButton(wrapper, 'Next');
+}
+
+/** Pick one judge option and continue past the judge step. */
+async function chooseJudge(wrapper: VueWrapper, value: string): Promise<void> {
+  await wrapper.find(`input[name="setup-judge"][value="${value}"]`).setValue(true);
+  await clickButton(wrapper, 'Next');
+}
+
 /** Reach the model list through a successful OpenRouter discovery. */
 async function discoverOpenRouter(wrapper: VueWrapper): Promise<void> {
   await choosePath(wrapper, 'api', 'openrouter');
@@ -113,7 +124,11 @@ describe('SetupWizard', () => {
   it('renders setup progress in the dialog header', () => {
     const wrapper = mountWizard();
 
-    expect(wrapper.get('.dialog-header .setup-wizard-progress').text()).toContain('1. Connection');
+    const progress = wrapper.get('.dialog-header .setup-wizard-progress').text();
+    expect(progress).toContain('1. Connection');
+    expect(progress).toContain('4. Judge');
+    expect(progress).toContain('5. Confirm');
+    expect(progress).not.toContain('Helpers');
     expect(wrapper.find('.dialog-content .setup-wizard-progress').exists()).toBe(false);
   });
 
@@ -145,7 +160,7 @@ describe('SetupWizard', () => {
     await flushPromises();
 
     expect(api.discoverModels).toHaveBeenCalledWith('openrouter', { OPENROUTER_API_KEY: 'new-key' });
-    expect(wrapper.text()).toContain('Pick the model your AI opponents will use');
+    expect(wrapper.text()).toContain('Pick your Main AI');
   });
 
   it('picks up stored credentials that finish loading while first-run setup is open', async () => {
@@ -206,7 +221,7 @@ describe('SetupWizard', () => {
     const wrapper = mountWizard({ OPENAI_API_KEY: 'unrelated-key' });
     await discoverOpenRouter(wrapper);
     await wrapper.find('input[value="openrouter/new-model"]').setValue(true);
-    await clickButton(wrapper, 'Next');
+    await clickNext(wrapper, 2);
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 
@@ -230,7 +245,37 @@ describe('SetupWizard', () => {
     expect(visibilityEvents[visibilityEvents.length - 1]).toEqual([false]);
   });
 
-  it('preselects recommended tiers, saves both aliases, and names them on confirmation', async () => {
+  it('defaults to no judge, recommends none, and saves only the Main AI', async () => {
+    api.getCodexLoginStatus.mockResolvedValue({ state: 'ready', login: null, error: null });
+    api.discoverModels.mockResolvedValue({
+      provider: 'codex',
+      models: [
+        { id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' },
+        { id: 'codex/gpt-5.6-luna', name: 'gpt-5.6-luna' },
+      ],
+      recommendedTiers: { default: 'codex/gpt-5.6-terra', small: 'codex/gpt-5.6-luna' },
+    });
+    const wrapper = mountWizard();
+
+    await choosePath(wrapper, 'subscription', 'codex');
+    await flushPromises();
+    expect((wrapper.find('input[value="codex/gpt-5.6-terra"]').element as HTMLInputElement).checked).toBe(true);
+    await clickButton(wrapper, 'Next');
+    expect(wrapper.text()).toContain('Setup Step 4 of 5 · Add a Judge AI?');
+    expect((wrapper.find('input[name="setup-judge"][value=""]').element as HTMLInputElement).checked).toBe(true);
+    expect(wrapper.find('.setup-tier-card .setup-wizard-badge').exists()).toBe(false);
+    await clickButton(wrapper, 'Next');
+
+    expect(wrapper.text()).toContain('Setup Step 5 of 5 · Ready to play');
+    await clickButton(wrapper, 'Save & start playing');
+    await flushPromises();
+    const savedLlms = api.updateCurrentConfig.mock.calls[0]![0].config.llms;
+    expect(savedLlms.default).toBe('codex/gpt-5.6-terra');
+    expect(savedLlms).not.toHaveProperty('small');
+    expect(savedLlms).not.toHaveProperty('evaluator');
+  });
+
+  it('shows helpers once a judge is set, preselecting the recommended Quick AI', async () => {
     api.getCodexLoginStatus.mockResolvedValue({ state: 'ready', login: null, error: null });
     api.discoverModels.mockResolvedValue({
       provider: 'codex',
@@ -252,11 +297,21 @@ describe('SetupWizard', () => {
 
     await choosePath(wrapper, 'subscription', 'codex');
     await flushPromises();
-    expect((wrapper.find('input[value="codex/gpt-5.6-terra"]').element as HTMLInputElement).checked).toBe(true);
+    await clickButton(wrapper, 'Next');
+    await chooseJudge(wrapper, 'codex/gpt-5.6-terra');
+    expect(wrapper.text()).toContain('Setup Step 5 of 6 · Pick the AIs your judge hands work to');
+    expect((wrapper.find('input[name="setup-quick"][value="codex/gpt-5.6-luna"]').element as HTMLInputElement).checked).toBe(true);
+    expect((wrapper.find('input[name="setup-deep"][value=""]').element as HTMLInputElement).checked).toBe(true);
     await clickButton(wrapper, 'Next');
 
-    expect(wrapper.text()).toContain('Main AI: gpt-5.6-terra (codex/gpt-5.6-terra)');
-    expect(wrapper.text()).toContain('Routine AI: gpt-5.6-luna (codex/gpt-5.6-luna) (summaries and reports)');
+    const summary = wrapper.findAll('.setup-wizard-tier-row').map(row => row.findAll('dt, dd').map(cell => cell.text()));
+    expect(summary).toEqual([
+      ['Main AI', 'gpt-5.6-terra', 'most decisions'],
+      ['Judge AI', 'gpt-5.6-terra', 'picks the AI for each moment'],
+      ['Quick AI', 'gpt-5.6-luna', 'small jobs'],
+      ['Deep AI', 'Same as Main AI', 'big moments'],
+      ['Account', 'Codex (ChatGPT)', ''],
+    ]);
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 
@@ -276,6 +331,7 @@ describe('SetupWizard', () => {
           },
           default: 'codex/gpt-5.6-terra',
           small: 'codex/gpt-5.6-luna',
+          evaluator: 'codex/gpt-5.6-terra',
         },
       }),
     });
@@ -291,13 +347,16 @@ describe('SetupWizard', () => {
     await discoverOpenRouter(wrapper);
     expect((wrapper.find('input[value="openrouter/model-a"]').element as HTMLInputElement).checked).toBe(false);
     await wrapper.find('input[value="openrouter/model-a"]').setValue(true);
-    await clickButton(wrapper, 'Next');
+    await clickNext(wrapper, 2);
+    expect(wrapper.text()).toContain('Setup Step 5 of 5 · Ready to play');
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 
     const savedLlms = api.updateCurrentConfig.mock.calls[0]![0].config.llms;
     expect(savedLlms.default).toBe('openrouter/model-a');
     expect(savedLlms).not.toHaveProperty('small');
+    expect(savedLlms).not.toHaveProperty('large');
+    expect(savedLlms).not.toHaveProperty('evaluator');
   });
 
   it('retains explicit Codex definitions while adding recommended model tiers', async () => {
@@ -339,6 +398,8 @@ describe('SetupWizard', () => {
 
     await choosePath(wrapper, 'subscription', 'codex');
     await flushPromises();
+    await clickButton(wrapper, 'Next');
+    await chooseJudge(wrapper, 'codex/gpt-5.6-terra');
     await clickButton(wrapper, 'Next');
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
@@ -387,6 +448,8 @@ describe('SetupWizard', () => {
     await choosePath(wrapper, 'subscription', 'codex');
     await flushPromises();
     await clickButton(wrapper, 'Next');
+    await chooseJudge(wrapper, 'codex/gpt-5.6-terra');
+    await clickButton(wrapper, 'Next');
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 
@@ -394,7 +457,103 @@ describe('SetupWizard', () => {
       ...retainedConfig.llms,
       default: 'codex/gpt-5.6-terra',
       small: 'codex/gpt-5.6-luna',
+      evaluator: 'codex/gpt-5.6-terra',
     });
+  });
+
+  it('drops an old judge and tier aliases when the player keeps no judge', async () => {
+    api.getCodexLoginStatus.mockResolvedValue({ state: 'ready', login: null, error: null });
+    api.discoverModels.mockResolvedValue({
+      provider: 'codex',
+      models: [
+        { id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' },
+        { id: 'codex/gpt-5.6-luna', name: 'gpt-5.6-luna' },
+      ],
+      recommendedTiers: { default: 'codex/gpt-5.6-terra', small: 'codex/gpt-5.6-luna' },
+    });
+    const tieredConfig = {
+      ...config,
+      llms: { ...config.llms, small: 'existing', large: 'existing', evaluator: 'existing' },
+    } as VoxAgentsConfig;
+    const wrapper = mountWizard({}, tieredConfig);
+
+    await choosePath(wrapper, 'subscription', 'codex');
+    await flushPromises();
+    await clickButton(wrapper, 'Next');
+    expect((wrapper.find('input[name="setup-judge"][value=""]').element as HTMLInputElement).checked).toBe(true);
+    await clickButton(wrapper, 'Next');
+    await clickButton(wrapper, 'Save & start playing');
+    await flushPromises();
+
+    const savedLlms = api.updateCurrentConfig.mock.calls[0]![0].config.llms;
+    expect(savedLlms.default).toBe('codex/gpt-5.6-terra');
+    expect(savedLlms).not.toHaveProperty('small');
+    expect(savedLlms).not.toHaveProperty('large');
+    expect(savedLlms).not.toHaveProperty('evaluator');
+  });
+
+  it('keeps a current judge and lets the player skip the helpers', async () => {
+    api.getCodexLoginStatus.mockResolvedValue({ state: 'ready', login: null, error: null });
+    api.discoverModels.mockResolvedValue({
+      provider: 'codex',
+      models: [
+        { id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' },
+        { id: 'codex/gpt-5.6-luna', name: 'gpt-5.6-luna' },
+      ],
+      recommendedTiers: { default: 'codex/gpt-5.6-terra', small: 'codex/gpt-5.6-luna' },
+    });
+    const tieredConfig = {
+      ...config,
+      llms: { ...config.llms, small: 'existing', large: 'existing', evaluator: 'existing' },
+    } as VoxAgentsConfig;
+    const wrapper = mountWizard({}, tieredConfig);
+
+    await choosePath(wrapper, 'subscription', 'codex');
+    await flushPromises();
+    await clickButton(wrapper, 'Next');
+    await chooseJudge(wrapper, 'keep');
+    await clickButton(wrapper, 'Skip: use Main AI for both');
+    expect(wrapper.text()).toContain('Setup Step 6 of 6 · Ready to play');
+    await clickButton(wrapper, 'Save & start playing');
+    await flushPromises();
+
+    const savedLlms = api.updateCurrentConfig.mock.calls[0]![0].config.llms;
+    expect(savedLlms.evaluator).toBe('existing');
+    expect(savedLlms).not.toHaveProperty('small');
+    expect(savedLlms).not.toHaveProperty('large');
+  });
+
+  it('saves a hand-picked judge and Deep AI from the full model list', async () => {
+    api.discoverModels.mockResolvedValue({
+      provider: 'openrouter',
+      models: [
+        { id: 'openrouter/model-a', name: 'Model A' },
+        { id: 'openrouter/model-b', name: 'Model B' },
+      ],
+    });
+    const wrapper = mountWizard();
+    await discoverOpenRouter(wrapper);
+    await wrapper.find('input[value="openrouter/model-a"]').setValue(true);
+    await clickButton(wrapper, 'Next');
+
+    await wrapper.find('input[name="setup-judge"][value="custom"]').setValue(true);
+    const next = wrapper.findAll('.p-btn').find(candidate => candidate.text() === 'Next');
+    expect(next?.attributes('disabled')).toBeDefined();
+    await wrapper.find('input[name="setup-judge-model"][value="openrouter/model-b"]').setValue(true);
+    await clickButton(wrapper, 'Next');
+
+    expect(wrapper.get('.setup-wizard-progress').text()).toContain('5. Helpers');
+    await wrapper.find('input[name="setup-deep"][value="custom"]').setValue(true);
+    await wrapper.find('input[name="setup-deep-model"][value="openrouter/model-b"]').setValue(true);
+    await clickButton(wrapper, 'Next');
+    await clickButton(wrapper, 'Save & start playing');
+    await flushPromises();
+
+    const savedLlms = api.updateCurrentConfig.mock.calls[0]![0].config.llms;
+    expect(savedLlms.evaluator).toBe('openrouter/model-b');
+    expect(savedLlms.large).toBe('openrouter/model-b');
+    expect(savedLlms['openrouter/model-b']).toEqual({ provider: 'openrouter', name: 'Model B' });
+    expect(savedLlms).not.toHaveProperty('small');
   });
 
   it('preserves non-empty API-key drafts when the selected service has no credential fields', async () => {
@@ -407,7 +566,7 @@ describe('SetupWizard', () => {
     await clickButton(wrapper, 'Check and continue');
     await flushPromises();
     await wrapper.find('input[value="claude-code/claude-fable-5-1[1m]"]').setValue(true);
-    await clickButton(wrapper, 'Next');
+    await clickNext(wrapper, 2);
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 
@@ -433,7 +592,7 @@ describe('SetupWizard', () => {
     const wrapper = mountWizard();
     await discoverOpenRouter(wrapper);
     await wrapper.find('input[value="openrouter/model"]').setValue(true);
-    await clickButton(wrapper, 'Next');
+    await clickNext(wrapper, 2);
     await clickButton(wrapper, 'Save & start playing');
     await flushPromises();
 

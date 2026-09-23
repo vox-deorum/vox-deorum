@@ -6,7 +6,7 @@ import Message from 'primevue/message';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useConfirm } from 'primevue/useconfirm';
 import { api } from '../api/client';
-import type { AgentMapping, LLMConfig, VoxAgentsConfig, AgentInfo, DiscoveredModel } from '../utils/types';
+import type { AgentMapping, LLMConfig, VoxAgentsConfig, AgentInfo, DiscoveredModel, ModelSize } from '../utils/types';
 import { apiKeyFields, isEvaluationOnlyProvider } from '../utils/types';
 import AgentModelMappings from '../components/config/AgentModelMappings.vue';
 import ApiKeysSection from '../components/config/ApiKeysSection.vue';
@@ -37,6 +37,14 @@ const agentMappings = ref<AgentMapping[]>([]);
 const modelDefinitions = ref<LLMConfig[]>([]);
 const embedderModel = ref<string | null>(null);
 
+// config.llms aliases that own a dedicated row instead of a free-form mapping row.
+const tierAliases: ModelSize[] = ['default', 'small', 'large'];
+
+/** Tier aliases and the shared evaluator are edited through their own controls. */
+function isDedicatedAgent(agent: string): boolean {
+  return agent === 'evaluator' || (tierAliases as string[]).includes(agent);
+}
+
 /** Keep the shared evaluator in configuration while giving it a dedicated control. */
 const evaluatorModel = computed({
   get: () => agentMappings.value.find(mapping => mapping.agent === 'evaluator')?.model ?? null,
@@ -46,12 +54,23 @@ const evaluatorModel = computed({
   }
 });
 
-/** Show ordinary mappings separately without dropping the shared evaluator on edits. */
+/** Read the three tier rows from the mapping list so they stay a single source of truth. */
+const tierModels = computed(() => Object.fromEntries(tierAliases.map(tier =>
+  [tier, agentMappings.value.find(mapping => mapping.agent === tier)?.model ?? null]
+)) as Record<ModelSize, string | null>);
+
+/** Replace or clear the model assigned to one tier alias. */
+function setTierModel(tier: ModelSize, model: string | null): void {
+  agentMappings.value = agentMappings.value.filter(mapping => mapping.agent !== tier);
+  if (model) agentMappings.value.push({ agent: tier, model });
+}
+
+/** Show ordinary mappings separately without dropping the dedicated evaluator and tier rows on edits. */
 const visibleMappings = computed({
-  get: () => agentMappings.value.filter(mapping => mapping.agent !== 'evaluator'),
+  get: () => agentMappings.value.filter(mapping => !isDedicatedAgent(mapping.agent)),
   set: (mappings: AgentMapping[]) => {
-    const evaluator = agentMappings.value.filter(mapping => mapping.agent === 'evaluator');
-    agentMappings.value = [...mappings, ...evaluator];
+    const dedicated = agentMappings.value.filter(mapping => isDedicatedAgent(mapping.agent));
+    agentMappings.value = [...mappings, ...dedicated];
   }
 });
 
@@ -65,7 +84,8 @@ const confirm = useConfirm();
 const modelOptionsVisible = ref(false);
 const editingModel = ref<LLMConfig | null>(null);
 const modelDiscoveryVisible = ref(false);
-type DiscoveryTarget = { kind: 'mapping'; index: number } | { kind: 'embedder' } | { kind: 'evaluator' };
+type DiscoveryTarget = { kind: 'mapping'; index: number } | { kind: 'embedder' } | { kind: 'evaluator' }
+  | { kind: 'tier'; tier: ModelSize };
 const discoveryTarget = ref<DiscoveryTarget | null>(null);
 
 /** Allow evaluation-only services when discovering a shared or agent-specific evaluator. */
@@ -155,23 +175,11 @@ const embeddingModels = computed(() => {
   return options;
 });
 
-// Computed agent types from dynamic registry
-const agentTypes = computed(() => {
-  // Add "default" as the first option (it's not a registered agent, but a config key)
-  const types = [
-    { label: 'Default', value: 'default' }
-  ];
-
-  // Add all registered agents
-  agents.value.forEach(agent => {
-    types.push({
-      label: agent.name,
-      value: agent.name
-    });
-  });
-
-  return types;
-});
+/** Registered agents only: the tier aliases have dedicated rows and are not free-form choices. */
+const agentTypes = computed(() => agents.value.map(agent => ({
+  label: agent.name,
+  value: agent.name
+})));
 
 // Load configuration and agents on mount
 onMounted(async () => {
@@ -297,6 +305,8 @@ function applyDiscoveredModel(model: DiscoveredModel): void {
     embedderModel.value = model.id;
   } else if (target?.kind === 'evaluator') {
     evaluatorModel.value = model.id;
+  } else if (target?.kind === 'tier') {
+    setTierModel(target.tier, model.id);
   }
   discoveryTarget.value = null;
 }
@@ -413,9 +423,12 @@ function updateWizardConfig(updatedConfig: VoxAgentsConfig): void {
       :availableModels="availableModels"
       :embeddingModels="embeddingModels"
       :evaluationModels="evaluationModels"
+      :tierModels="tierModels"
+      @update:tierModel="setTierModel"
       @discover-model="openModelDiscovery({ kind: 'mapping', index: $event })"
       @discover-embedder="openModelDiscovery({ kind: 'embedder' })"
       @discover-evaluator="openModelDiscovery({ kind: 'evaluator' })"
+      @discover-tier="openModelDiscovery({ kind: 'tier', tier: $event })"
     />
 
     <ModelDefinitions

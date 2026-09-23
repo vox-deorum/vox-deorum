@@ -20,7 +20,7 @@ Vox Deorum lets you play Civilization V (Civ V) against opponents run by large l
 
 Start Vox Deorum from the **Start Menu** entry named _Vox Deorum_, or run `scripts\vox-deorum.cmd` in the install folder. A **console window** starts the background services and opens the dashboard in your browser at `http://localhost:5555`. Keep the console window open while you play, and use its prompt to stop cleanly when you finish.
 
-On a fresh install, the dashboard opens the four-step **Setup** wizard. Choose how you want to connect, enter an API key or complete a sign-in, then pick a model and save. The wizard checks the connection and lists the models you can use. Provider-specific details live on the [Configuration](configuration.md) page.
+On a fresh install, the dashboard opens the **Setup** wizard. Choose how you want to connect, enter an API key or complete a sign-in, and pick your **Main AI**: the model that makes most of the AI civilizations' decisions. An optional, experimental **Judge AI** step follows; leave it at **No judge** unless you want to try routing work to quicker or deeper AIs. The wizard checks the connection and lists the models you can use. Provider-specific details live on the [Configuration](configuration.md) page.
 
 On the **Play** page, choose your role: play yourself, watch an AI self-play game, or direct a civilization. Choose how many civilizations the AI runs, pick a strategist, pacing, and model, then start. The wizard auto-assigns the AI to the rival seats, and the game picks each slot's civilization itself. Vox Deorum launches Civ V with the mods already enabled, and the LLM drives the AI civilizations.
 
