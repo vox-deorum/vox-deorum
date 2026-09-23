@@ -43,7 +43,7 @@ Then **verify** as the plan and repo expect — build, tests, linters (delegate 
 
 ## Phase 4 — Review
 
-Spawn fresh-context subagent(s) with no prior conversation — that blindness to your reasoning is exactly why they catch what you've stopped seeing. Give each the diff, the plan, and the goal, with an adversarial brief on two axes:
+Spawn fresh-context subagent(s) with no prior conversation — that blindness to your reasoning is exactly why they catch what you've stopped seeing. If OpenCode is available, delegate to it. Give each the diff, the plan, and the goal, with an adversarial brief on two axes:
 
 - **Fidelity** — do the changes actually implement the plan? Which steps are missing, partial, or done differently — and is each deviation justified or a mistake?
 - **Correctness & maintainability** — the same risks `review-staged-changes` hunts: lost validation, unsafe partial commits, async races, state duplicated away from its source of truth, contracts that no longer agree — plus genuine simplifications. Fold in any Phase 3 verification failures.
