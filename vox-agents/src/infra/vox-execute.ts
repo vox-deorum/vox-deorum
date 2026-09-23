@@ -96,110 +96,109 @@ export async function executeAgent<TParameters extends AgentParameters>(
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       try {
+        // An empty system prompt means the agent has nothing to do this time.
         const system = await agent.getSystem(params, input, host);
+        if (system === "") {
+          span.setStatus({ code: SpanStatusCode.OK, message: 'No system prompt' });
+          return undefined;
+        }
+
         const prepared: PreparedAgentState = {
           system,
-          messages: system !== "" ? await agent.getInitialMessages(params, input, host) : [],
+          messages: await agent.getInitialMessages(params, input, host),
         };
-        const decision = system !== ""
-          ? await resolveTriage(host, agent, params, input, options, prepared)
-          : undefined;
+        const decision = await resolveTriage(host, agent, params, input, options, prepared);
         frame.triage = decision;
         if (decision) {
           span.setAttribute('triage.tier', decision.tier);
           if (decision.note !== undefined) span.setAttribute('triage.note', decision.note);
         }
 
-        if (system !== "") {
-          // Get model config after triage so every execution path uses the selected tier.
-          const modelConfig = agent.getModel(params, input, host.modelOverrides, decision?.tier);
-          await updateModelLabel(host, agent.name, modelConfig, system, params);
+        // Get model config after triage so every execution path uses the selected tier.
+        const modelConfig = agent.getModel(params, input, host.modelOverrides, decision?.tier);
+        await updateModelLabel(host, agent.name, modelConfig, system, params);
 
-          if (agent.executeEvaluation) {
-            host.currentSignal().throwIfAborted();
-            const evaluationOutput = await agent.executeEvaluation(params, input, host, prepared, modelConfig, tokenOutput);
-            host.currentSignal().throwIfAborted();
-            span.setAttribute('model', formatModelReference(modelConfig));
-            span.setStatus({ code: SpanStatusCode.OK });
-            if (evaluationOutput === undefined) return;
-            return agent.postprocessOutput(params, input, evaluationOutput);
-          }
-
-          let shouldStop = false;
-          let messages: ModelMessage[] = [{
-            role: "system",
-            content: system
-          }];
-
-          messages.push(...prepared.messages);
-          const allSteps: StepResult<ToolSet>[] = [];
-          let finalText = "";
-
-          // Count tokens
-          let inputTokens = 0;
-          let cachedInputTokens = 0;
-          let hasCachedInputTokens = false;
-          let reasoningTokens = 0;
-          let outputTokens = 0;
-          // Threads the previous Codex step's response id so the next step prefers native thread continuation.
-          let codexResponseId: string | undefined;
-
-          // Execute steps in a loop, one at a time
-          for (let stepCount = 0; !shouldStop; stepCount++) {
-            host.logger.info(`Executing ${agentName}'s step ${stepCount + 1}`, {
-              GameID: params.gameID,
-              PlayerID: params.playerID
-            });
-
-            // Execute the step with proper tracing
-            const stepResult = await executeAgentStep(
-              host,
-              agent,
-              params,
-              input,
-              allSteps,
-              stepCount,
-              messages,
-              modelConfig,
-              codexResponseId,
-              callback
-            );
-
-            // Update state from step results
-            messages = stepResult.messages;
-            shouldStop = stepResult.shouldStop;
-            finalText = stepResult.finalText ?? "";
-            inputTokens += stepResult.inputTokens;
-            if (stepResult.cachedInputTokens !== undefined) {
-              cachedInputTokens += stepResult.cachedInputTokens;
-              hasCachedInputTokens = true;
-            }
-            reasoningTokens += stepResult.reasoningTokens;
-            outputTokens += stepResult.outputTokens;
-            codexResponseId = stepResult.responseId;
-          }
-
-          host.logger.info(`Agent execution completed: ${agentName} with ${allSteps.length} steps`);
-
-          // Accrue tokens to the active root's sink and the seat-wide totals.
-          accrueTokens(host, root, { inputTokens, reasoningTokens, outputTokens }, tokenOutput);
-          span.setAttributes({
-            'model': formatModelReference(modelConfig),
-            'tokens.input': inputTokens,
-            'tokens.reasoning': reasoningTokens,
-            'tokens.output': outputTokens,
-          });
-          if (hasCachedInputTokens) span.setAttribute('tokens.input.cached', cachedInputTokens);
+        if (agent.executeEvaluation) {
+          host.currentSignal().throwIfAborted();
+          const evaluationOutput = await agent.executeEvaluation(params, input, host, prepared, modelConfig, tokenOutput);
+          host.currentSignal().throwIfAborted();
+          span.setAttribute('model', formatModelReference(modelConfig));
           span.setStatus({ code: SpanStatusCode.OK });
-
-          // Convert into the output (now async)
-          const output = await agent.getOutput(params, input, finalText, host);
-          if (!output) return;
-          return agent.postprocessOutput(params, input, output);
-        } else {
-          span.setStatus({ code: SpanStatusCode.OK, message: 'No system prompt' });
-          return undefined;
+          if (evaluationOutput === undefined) return;
+          return agent.postprocessOutput(params, input, evaluationOutput);
         }
+
+        let shouldStop = false;
+        let messages: ModelMessage[] = [{
+          role: "system",
+          content: system
+        }];
+
+        messages.push(...prepared.messages);
+        const allSteps: StepResult<ToolSet>[] = [];
+        let finalText = "";
+
+        // Count tokens
+        let inputTokens = 0;
+        let cachedInputTokens = 0;
+        let hasCachedInputTokens = false;
+        let reasoningTokens = 0;
+        let outputTokens = 0;
+        // Threads the previous Codex step's response id so the next step prefers native thread continuation.
+        let codexResponseId: string | undefined;
+
+        // Execute steps in a loop, one at a time
+        for (let stepCount = 0; !shouldStop; stepCount++) {
+          host.logger.info(`Executing ${agentName}'s step ${stepCount + 1}`, {
+            GameID: params.gameID,
+            PlayerID: params.playerID
+          });
+
+          // Execute the step with proper tracing
+          const stepResult = await executeAgentStep(
+            host,
+            agent,
+            params,
+            input,
+            allSteps,
+            stepCount,
+            messages,
+            modelConfig,
+            codexResponseId,
+            callback
+          );
+
+          // Update state from step results
+          messages = stepResult.messages;
+          shouldStop = stepResult.shouldStop;
+          finalText = stepResult.finalText ?? "";
+          inputTokens += stepResult.inputTokens;
+          if (stepResult.cachedInputTokens !== undefined) {
+            cachedInputTokens += stepResult.cachedInputTokens;
+            hasCachedInputTokens = true;
+          }
+          reasoningTokens += stepResult.reasoningTokens;
+          outputTokens += stepResult.outputTokens;
+          codexResponseId = stepResult.responseId;
+        }
+
+        host.logger.info(`Agent execution completed: ${agentName} with ${allSteps.length} steps`);
+
+        // Accrue tokens to the active root's sink and the seat-wide totals.
+        accrueTokens(host, root, { inputTokens, reasoningTokens, outputTokens }, tokenOutput);
+        span.setAttributes({
+          'model': formatModelReference(modelConfig),
+          'tokens.input': inputTokens,
+          'tokens.reasoning': reasoningTokens,
+          'tokens.output': outputTokens,
+        });
+        if (hasCachedInputTokens) span.setAttribute('tokens.input.cached', cachedInputTokens);
+        span.setStatus({ code: SpanStatusCode.OK });
+
+        // Convert into the output (now async)
+        const output = await agent.getOutput(params, input, finalText, host);
+        if (!output) return;
+        return agent.postprocessOutput(params, input, output);
       } catch (error) {
         host.logger.error(`Error executing agent ${agentName}!`, error);
         recordSpanError(span, error);

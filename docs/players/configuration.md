@@ -41,11 +41,11 @@ The wizard lists the models available through whatever you connected:
 | Smaller / faster models | Cheaper, quicker | Lower quality of play |
 | Local models | Free to run, private | Limited by your own hardware |
 
-Your **Main AI** makes most of the AI civilizations' decisions, and the service's usual pick is marked **Recommended** and preselected when known. The next step offers an optional **Judge AI**, which sizes up each moment and hands it to a quicker or deeper AI. The judge is experimental but if you do pick a judge, the wizard then asks which AIs it hands work to: a **Quick AI** for small jobs like reports, summaries, and small talk (cheaper and faster), and a **Deep AI** for big moments like war, peace, and major deals (smarter, slower, pricier). Either can stay on the Main AI.
+Your **Main AI** makes most of the AI civilizations' decisions. The service's usual pick is marked **Recommended**.
 
-You can change all of these in Settings, where **Agent-Model Assignments** starts with the Main, Quick, and Deep AI rows and ends with the Judge AI. Settings also lets you assign different models to individual jobs; in a model assignment, **More** opens discovery and additions stay unsaved until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand; see the [developer overview](../developers/vox-agents/overview.md#models-and-configuration). A mid-tier model from your chosen provider is a sensible starting point; move up or down once you've seen it play.
+The optional **Judge AI** is experimental. It sizes up each moment and passes it to a **Quick AI** for small jobs (reports, small talk) or a **Deep AI** for big moments (war, peace, major deals). Either can stay on the Main AI. Once Quick and Deep are set, agents can also pick one themselves when handing off a job; for example, a diplomat asks for the Deep AI before passing a major deal to the negotiator.
 
-Agents can also choose Quick, Main, or Deep when delegating a job, without consulting the Judge AI. For example, a diplomat chooses the level of reasoning a deal needs before handing it to the negotiator. Diplomatic reports receive one assessment using the diplomatic analyst's model assignment, which can be configured separately from the Judge AI.
+You can change all of these in Settings under **Agent-Model Assignments**, including models for individual jobs. **More** finds additional models, and nothing is kept until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand (see the [developer overview](../developers/vox-agents/overview.md#models-and-configuration)). A mid-tier model is a sensible start; move up or down once you've seen it play.
 
 ## Controlling cost
 

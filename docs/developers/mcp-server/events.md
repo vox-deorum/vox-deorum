@@ -47,7 +47,7 @@ The store handles this by entering a resyncing state on disconnect and dropping 
 
 ## Injecting events
 
-Events don't only flow inward. Tools built on `DynamicEventTool` (see [tools.md](tools.md)) can write a synthetic event straight into the store. `relay-message`, which records a diplomatic or intelligence message as a game event, is currently the only one.
+Events don't only flow inward. Tools built on `DynamicEventTool` (see [tools.md](tools.md)) can write a synthetic event straight into the store. `relay-message`, which records an analyst's relayed report (a diplomatic message, intelligence, or a rumor) as a game event, is currently the only one.
 
 **Injected events do not get the visibility analysis that real events get.** This is the difference to keep in mind. A real event's flags are computed by `event-visibility.lua` running inside the game, which can actually reason about who witnessed what. An injected event's flags come from `composeVisibility` in `mcp-server/src/utils/knowledge/visibility.ts`, a pure TypeScript function with no view of the game at all: it grants full visibility to the player IDs named in the tool's `VisibleTo` argument, or to its `PlayerID` if `VisibleTo` was omitted, and zero to everyone else.
 

@@ -25,11 +25,19 @@ Two details make briefings composable:
 
 Analysts (`src/analyst/`) process information in the background. The base class sets `fireAndForget`, so when another agent files something for analysis, the call returns immediately and the analyst runs detached, in its own telemetry trace, while the caller carries on.
 
-The one concrete analyst today is **`diplomatic-analyst`**, the gatekeeper between field [diplomats](envoy.md) and the leader. A report carries content, situation context, and the diplomat's memo. Optional `FromPlayer` and `AboutPlayers` fields name the source and subjects by civilization or leader. The source defaults to the conversation counterpart. When subjects are omitted, the analyst extracts names mentioned in the content and memo; an explicit empty list means no subjects. It resolves names to player IDs before the background handoff and rejects unknown or ambiguous explicit names.
+The one concrete analyst today is **`diplomatic-analyst`** (`src/analyst/diplomatic-analyst.ts`), the gatekeeper between field [diplomats](envoy.md) and the leader. It works in three steps.
 
-The analyst fetches diplomatic history for the source and subjects over the previous 15 turns, viewed from the receiving civilization. It combines that evidence with the report and game context, then makes one evaluation: whether to relay, the message type (Diplomatic, Intelligence, or Rumor), relevant categories, and confidence and importance scores from 0 to 9. Missing history is marked as unavailable evidence.
+1. **Handoff.** The diplomat files the report's content, the situation context, and its own memo. It may also name the source (`FromPlayer`) and the civilizations discussed (`AboutPlayers`) by civilization or leader. Before the analyst detaches, the handoff resolves these names to player IDs:
+   - The source defaults to the conversation counterpart.
+   - Without `AboutPlayers`, the subjects are the civilizations named in the content and memo. An empty list means no subjects.
+   - The receiving civilization is never a subject, because every report is already addressed to it.
+   - Unknown or ambiguous explicit names are rejected, so the diplomat can correct them.
+2. **Evidence.** The analyst reads the last 15 turns of diplomatic history with the source and each subject, as the receiving civilization saw them. An event involving several of them is listed once. History that cannot be read is marked unavailable.
+3. **One evaluation.** A single structured call decides whether to relay, the message type (Diplomatic, Intelligence, or Rumor), which categories apply (Diplomacy, Military, Economy, Others, in any combination), and confidence and importance from 0 to 9. There is no free-text step.
 
-When the relay probability is at least 0.5, code submits up to 4,000 characters of content and 500 characters of memo through `relay-message`, with source and subject IDs in separate fields. Each category (Diplomacy, Military, Economy, and Others) is included when its probability reaches 0.5, so reports can belong to several categories. Specialized briefers filter reports by these categories. Scores retain fractional values; importance of 7 or more keeps the existing urgent-report behavior. There is no extra text-generation step. The analyst uses its normal model assignment or the caller's tier, supporting either a native evaluator or the chat-model adapter. Evaluation failure produces no relay.
+When the relay probability is at least 0.5, code calls `relay-message` with the source and subject IDs, up to 4,000 characters of content, and up to 500 characters of memo. Each category is included when its probability is at least 0.5. Scores keep their fractions, and importance of 7 or more still counts as an urgent report for pacing. Specialized briefers pick up reports tagged Diplomacy, Military, or Economy; a report tagged only Others reaches the strategist but no briefer. If the evaluation fails, nothing is relayed.
+
+The analyst runs on its own model assignment, or on the tier the diplomat picks for the call. A native evaluator and a chat model (through the evaluation adapter) both work.
 
 ## Librarians: researching the rules
 

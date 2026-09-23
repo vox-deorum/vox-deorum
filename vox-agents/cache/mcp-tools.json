@@ -420,7 +420,7 @@
   },
   {
     "name": "get-diplomatic-events",
-    "description": "Retrieves diplomatic events (wars, peace, deals, city-state relations, espionage, world congress) grouped by turn",
+    "description": "Retrieves diplomatic events (wars, peace, deals, city-state relations, espionage, world congress, relayed reports) grouped by turn",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1380,7 +1380,7 @@
   },
   {
     "name": "relay-message",
-    "description": "Relay a message from a diplomat to the leader, stored as a game event. Supports diplomatic messages and intelligence reports.",
+    "description": "Relay a message from a diplomat to the leader, stored as a game event. Supports diplomatic messages, intelligence reports, and rumors.",
     "inputSchema": {
       "type": "object",
       "properties": {

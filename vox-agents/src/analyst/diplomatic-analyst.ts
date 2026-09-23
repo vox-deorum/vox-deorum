@@ -7,27 +7,19 @@
 import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
 import type { Model, EnvoyThread } from "../types/index.js";
 import { audienceID, identityOf } from "../utils/diplomacy/transcript/transcript-utils.js";
+import { reportCategories, type ReportCategory } from "../utils/prompts/event-filters.js";
+import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
 import type { PreparedAgentState } from "../infra/vox-agent.js";
-import { Analyst, AnalystInput } from "./analyst.js";
+import type { ExecuteTokenOutput } from "../infra/vox-run.js";
+import { Analyst, AnalystInput, AnalystReport } from "./analyst.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { getGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 
-const reportCategories = ["Diplomacy", "Military", "Economy", "Others"] as const;
+/** How many past turns of diplomatic history the analyst reads for each involved player. */
+const historyTurns = 30;
 
-const evaluationQuestions = {
-  relay: {
-    type: "boolean",
-    instructions: "Should this report be relayed to the leader because it is actionable, significant, or changes diplomatic posture?",
-  },
-  type: {
-    type: "choice",
-    instructions: "Classify the report.",
-    criteria: { 
-      Diplomatic: "Official communication, proposal, declaration, threat, or agreement", 
-      Intelligence: "Gathered information or observation",
-      Rumor: "Gathered rumor, potentially useful information, or insight"
-    },
-  },
+/** One independent yes/no question per report category. */
+const categoryQuestions = {
   Diplomacy: {
     type: "boolean",
     instructions: "Does this report concern diplomacy, relationships, agreements, or foreign policy? Assess independently of the other categories.",
@@ -44,6 +36,23 @@ const evaluationQuestions = {
     type: "boolean",
     instructions: "Does this report contain strategically relevant information outside diplomacy, military, and economy? It may also belong to those categories.",
   },
+} satisfies Record<ReportCategory, EvaluationQuestion>;
+
+const evaluationQuestions = {
+  relay: {
+    type: "boolean",
+    instructions: "Should this report be relayed to the leader because it is actionable, significant, or changes diplomatic posture?",
+  },
+  type: {
+    type: "choice",
+    instructions: "Classify the report.",
+    criteria: {
+      Diplomatic: "Official communication, proposal, declaration, threat, or agreement",
+      Intelligence: "Gathered information or observation",
+      Rumor: "Gathered rumor, potentially useful information, or insight"
+    },
+  },
+  ...categoryQuestions,
   confidence: {
     type: "score",
     instructions: "Score the report's reliability from 0 to 9, preserving fractional scores.",
@@ -61,8 +70,12 @@ function normalizeName(text: string): string {
   return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
-/** Resolve source and subject IDs from the visible player snapshot and calling conversation. */
-function resolvePlayers(input: AnalystInput, parameters: StrategistParameters, callerInput?: unknown): NonNullable<AnalystInput["_playerIDs"]> {
+/**
+ * Resolve the report's source and subject names to player IDs, using the visible player snapshot
+ * and the calling conversation. The receiving civilization is never a subject: every report is
+ * addressed to it already.
+ */
+function resolveReport(report: AnalystReport, parameters: StrategistParameters, callerInput: unknown): AnalystInput {
   const players = new Map<number, string[]>();
   for (const [id, player] of Object.entries(getGameState(parameters, parameters.turn)?.players ?? {})) {
     if (typeof player !== "string" && player.IsMajor) {
@@ -82,15 +95,21 @@ function resolvePlayers(input: AnalystInput, parameters: StrategistParameters, c
     if (matches.length !== 1) throw new Error(`Report player "${name}" is unknown or ambiguous.`);
     return matches[0][0];
   };
-  const fromPlayerID = input.FromPlayer?.trim()
-    ? resolveName(input.FromPlayer)
+  const fromPlayerID = report.FromPlayer?.trim()
+    ? resolveName(report.FromPlayer)
     : thread?.diplomacy ? audienceID(thread) : undefined;
   if (fromPlayerID === undefined) throw new Error("FromPlayer is required outside a civilization diplomacy conversation.");
-  const text = ` ${normalizeName(input.Content)} ${normalizeName(input.Memo)} `;
-  const aboutPlayerIDs = input.AboutPlayers === undefined
+  const text = ` ${normalizeName(report.Content)} ${normalizeName(report.Memo)} `;
+  const aboutPlayerIDs = report.AboutPlayers === undefined
     ? [...players].filter(([, names]) => names.some(name => name && text.includes(` ${name} `))).map(([id]) => id)
-    : input.AboutPlayers.map(resolveName);
-  return { FromPlayerID: fromPlayerID, AboutPlayerIDs: [...new Set(aboutPlayerIDs)] };
+    : report.AboutPlayers.map(resolveName);
+  return {
+    Content: report.Content,
+    Context: report.Context,
+    Memo: report.Memo,
+    FromPlayerID: fromPlayerID,
+    AboutPlayerIDs: [...new Set(aboutPlayerIDs)].filter(id => id !== parameters.playerID),
+  };
 }
 
 /** Diplomatic analyst that evaluates a report in one structured model call. */
@@ -101,8 +120,7 @@ export class DiplomaticAnalyst extends Analyst {
 
   /** Resolve report identities while the caller's conversation is still available. */
   public override resolveHandoffInput(callerArgs: unknown, context: VoxContext<StrategistParameters>): AnalystInput {
-    const args = callerArgs as AnalystInput;
-    return { ...args, _playerIDs: resolvePlayers(args, context.currentParameters!, context.currentInput) };
+    return resolveReport(callerArgs as AnalystReport, context.currentParameters!, context.currentInput);
   }
 
   /** Build the analyst identity prompt. */
@@ -118,27 +136,29 @@ export class DiplomaticAnalyst extends Analyst {
     input: AnalystInput,
     context: VoxContext<StrategistParameters>,
   ): Promise<PreparedAgentState["messages"]> {
-    input._playerIDs ??= resolvePlayers(input, parameters, context.currentInput);
-    const { FromPlayerID, AboutPlayerIDs } = input._playerIDs;
-    const history = await Promise.all([...new Set([FromPlayerID, ...AboutPlayerIDs])].map(async playerID => {
-      const events = await context.callTool("get-diplomatic-events", {
-        PlayerID: parameters.playerID,
-        OtherPlayerID: playerID,
-        FromTurn: Math.max(0, parameters.turn - 15),
-        ToTurn: parameters.turn,
-        Formatted: true,
-      }, parameters);
-      return events == null || (typeof events === "object" && "isError" in events && events.isError === true)
+    const playerIDs = [...new Set([input.FromPlayerID, ...input.AboutPlayerIDs])];
+    const results = await Promise.all(playerIDs.map(playerID => context.callTool("get-diplomatic-events", {
+      PlayerID: parameters.playerID,
+      OtherPlayerID: playerID,
+      FromTurn: Math.max(0, parameters.turn - historyTurns),
+      ToTurn: parameters.turn,
+      Formatted: true,
+    }, parameters)));
+    const seen = new Set<string>();
+    const history = playerIDs.map((playerID, index) => {
+      const events = results[index];
+      return isFailedToolResult(events) || typeof events !== "object"
         ? { PlayerID: playerID, status: "unavailable" }
-        : { PlayerID: playerID, status: "available", events };
-    }));
+        : { PlayerID: playerID, status: "available", events: events, seen) };
+    });
     const reportMessage = {
       role: "user" as const,
       content: JSON.stringify({
         context: input.Context,
         content: input.Content,
         memo: input.Memo,
-        ...input._playerIDs,
+        FromPlayerID: input.FromPlayerID,
+        AboutPlayerIDs: input.AboutPlayerIDs,
         diplomaticHistory: history,
       }),
     };
@@ -152,15 +172,15 @@ export class DiplomaticAnalyst extends Analyst {
     context: VoxContext<StrategistParameters>,
     prepared: PreparedAgentState,
     model: Model,
-    tokenOutput?: import("../infra/vox-run.js").ExecuteTokenOutput,
+    tokenOutput?: ExecuteTokenOutput,
   ): Promise<string | undefined> {
-    const result = await context.evaluate(model, prepared, { questions: evaluationQuestions, tokenOutput });
-    const answers = result.answers;
+    const { answers } = await context.evaluate(model, prepared, { questions: evaluationQuestions, tokenOutput });
     if (answers.relay.probability < 0.5) return undefined;
     context.currentSignal().throwIfAborted();
     const relay = await context.callTool("relay-message", {
       PlayerID: parameters.playerID,
-      ...(input._playerIDs ?? resolvePlayers(input, parameters)),
+      FromPlayerID: input.FromPlayerID,
+      AboutPlayerIDs: input.AboutPlayerIDs,
       Message: answers.type.choice,
       Content: input.Content.slice(0, 4000),
       Confidence: answers.confidence.score,
@@ -168,12 +188,7 @@ export class DiplomaticAnalyst extends Analyst {
       Categories: reportCategories.filter(category => answers[category].probability >= 0.5),
       Memo: input.Memo.slice(0, 500),
     }, parameters);
-    if (relay == null || (typeof relay === "object" && (
-      ("isError" in relay && relay.isError === true) ||
-      ("Success" in relay && relay.Success === false)
-    ))) {
-      throw new Error("Diplomatic analyst relay-message tool failed.");
-    }
+    if (isFailedToolResult(relay)) throw new Error("Diplomatic analyst relay-message tool failed.");
     return "Report relayed to the leader.";
   }
 }

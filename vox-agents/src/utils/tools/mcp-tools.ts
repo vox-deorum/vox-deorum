@@ -26,6 +26,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Return whether a normalized tool result from `VoxContext.callTool` failed: no result,
+ * an isError envelope passed through as data, or an explicit `Success: false`.
+ */
+export function isFailedToolResult(result: unknown): boolean {
+  return result == null || (isRecord(result) && (result.isError === true || result.Success === false));
+}
+
+/**
  * Convert MCP CallToolResult wrappers back into the primitive or structured
  * value callers expect. The MCP server wraps primitive booleans/strings as a
  * single text content item, while object and array results ride in

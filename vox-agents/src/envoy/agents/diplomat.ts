@@ -22,6 +22,12 @@ import { terminalActionTools, type DealRowRenderer } from "../../utils/diplomacy
 import { createTriage, TriageShortcut } from "../../infra/triage.js";
 import type { TriageDecision } from "../../infra/vox-agent.js";
 
+/**
+ * How many prepared messages diplomat triage reads. The prepared prompt ends with the ongoing exchange,
+ * then the deal context, then the turn hint, so this tail covers the latest turns and any open proposal.
+ */
+const triageMessageCount = 8;
+
 /** The diplomat's typed intent and stakes questions. */
 export const diplomatTriageQuestions = {
   intent: {
@@ -61,12 +67,17 @@ export function routeDiplomatTriage(answers: DiplomatTriageAnswers): TriageDecis
  */
 export class Diplomat extends LiveEnvoy {
   /**
-   * Select a model tier from the current bounded diplomatic exchange when triage is enabled. Special
-   * messages such as greetings run without tools or history, so they take the small tier directly.
+   * Select a model tier from the recent exchange when triage is enabled. The evaluator reads only the
+   * tail of the prepared messages (see {@link triageMessageCount}), not the system prompt or settled
+   * history. Special messages such as greetings run without tools or history, so they take the small
+   * tier directly.
    */
   public override triage = createTriage<StrategistParameters, EnvoyThread, typeof diplomatTriageQuestions>({
     questions: diplomatTriageQuestions,
     route: routeDiplomatTriage,
+    projectState: (prepared) => prepared.messages
+      .slice(-triageMessageCount)
+      .map(({ role, content }) => ({ role, content })),
     shortcut: (_parameters, input) => this.isSpecialMode(input)
       ? new TriageShortcut({ tier: "small", note: "special message" })
       : undefined,
@@ -164,8 +175,8 @@ export class Diplomat extends LiveEnvoy {
 
   /**
    * Read the authoritative durable deal reduction (`readActiveProposal`, the same source the negotiator
-   * and the accept/reject routes use) once per diplomat execution. Triage, the grounding context, and
-   * the first-step gate all run before any tool call, so they share one MCP round trip.
+   * and the accept/reject routes use) once per diplomat execution. The grounding context and the
+   * first-step gate both run before any tool call, so they share one MCP round trip.
    */
   private readDealReduction(input: EnvoyThread, context: VoxContext<StrategistParameters>) {
     return context.memoizeForExecution("diplomat.deal-reduction", () =>
@@ -192,7 +203,7 @@ export class Diplomat extends LiveEnvoy {
    * {@link LiveEnvoyContext} for how the base layers these sections around the chat record.
    *
    * The deal transcript comes from the execution's shared authoritative reduction ({@link readDealReduction},
-   * the same one triage and `prepareStep`'s gate use). The optional on-the-table
+   * the same one `prepareStep`'s gate uses). The optional on-the-table
    * block and the renderer's open-proposal pointer both derive from that single reduction, and the pointer
    * keys off the block actually being emitted, so they can never disagree about which proposal is open.
    * (Reducing the in-memory `input.messages` instead risked pointing at a block that was never emitted.)

@@ -80,6 +80,21 @@ describe('Diplomat.triage', () => {
     const ctx = triageContext(enabledAssignment, answers(intent, stakes));
 
     await expect(diplomat.triage?.({}, thread('context'), ctx, prepared)).resolves.toMatchObject({ tier });
-    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), prepared, { questions: expect.any(Object) });
+    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), [], { questions: expect.any(Object) });
+  });
+
+  it('should evaluate a bounded tail of the prepared messages without the system prompt', async () => {
+    const ctx = triageContext(enabledAssignment);
+    const messages = Array.from({ length: 20 }, (_, index) => ({
+      role: 'user', content: `message ${index}`, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } },
+    }));
+
+    await diplomat.triage?.({}, thread('context'), ctx, { system: 'prepared prompt', messages } as any);
+    const state = ctx.evaluate.mock.calls[0][1] as Array<{ role: string; content: string }>;
+    expect(state.length).toBeGreaterThan(0);
+    expect(state.length).toBeLessThan(messages.length);
+    expect(state.at(-1)).toEqual({ role: 'user', content: 'message 19' });
+    expect(JSON.stringify(state)).not.toContain('prepared prompt');
+    expect(JSON.stringify(state)).not.toContain('providerOptions');
   });
 });

@@ -4,7 +4,7 @@
  * which also sidesteps circular-import hazards). Protected/base members are reached
  * through a loosely-typed handle.
  *
- * Covers the fire-and-forget flag, toolChoice, the shared input schema, and that
+ * Covers the shared report handoff schema, the absence of chat tools, and that
  * getContextMessages delegates to the shared buildGameContextMessages
  * builder. Span/context detachment is intentionally NOT tested here.
  */
@@ -22,9 +22,9 @@ function paramsWithState() {
   });
 }
 
-describe('Analyst input schema', () => {
-  it('accepts the three AnalystInput fields', () => {
-    const parsed = analyst.inputSchema.parse({
+describe('Analyst handoff schema', () => {
+  it('accepts a report without optional civilization names', () => {
+    const parsed = analyst.handoffSchema.parse({
       Content: 'report body',
       Context: 'situation',
       Memo: 'assessment',
@@ -37,7 +37,7 @@ describe('Analyst input schema', () => {
   });
 
   it('rejects input missing required fields', () => {
-    expect(() => analyst.inputSchema.parse({ Content: 'only content' })).toThrow();
+    expect(() => analyst.handoffSchema.parse({ Content: 'only content' })).toThrow();
   });
 });
 

@@ -3,9 +3,13 @@ import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { createFakeVoxContext, makeStrategistParameters, makeGameState } from '../../helpers/fake-vox-context.js';
 
 const analyst = agentRegistry.get('diplomatic-analyst') as any;
-const input = {
+const report = {
   Content: 'Germany proposes peace.', Context: 'A border war is active.',
   Memo: 'The diplomat is wary.', FromPlayer: 'Germany', AboutPlayers: ['Greece'],
+};
+/** The report after handoff resolution: Germany (1) about Greece (2). */
+const input = {
+  Content: report.Content, Context: report.Context, Memo: report.Memo, FromPlayerID: 1, AboutPlayerIDs: [2],
 };
 
 /** Build evaluation answers with independent category probabilities. */
@@ -25,7 +29,7 @@ function evaluation(relayProbability = 0.9) {
 /** Prepare a context with deterministic history, evaluation, and relay results. */
 function setup() {
   const fake = createFakeVoxContext();
-  const parameters = makeStrategistParameters({ gameStates: { 5: makeGameState(5, { players: {
+  const parameters = makeStrategistParameters({ playerID: 0, gameStates: { 5: makeGameState(5, { players: {
     '0': { Civilization: 'Rome', Leader: 'Caesar', IsMajor: true },
     '1': { Civilization: 'Germany', Leader: 'Frederick', IsMajor: true },
     '2': { Civilization: 'Greece', Leader: 'Alexander', IsMajor: true },
@@ -42,8 +46,8 @@ function setup() {
 describe('DiplomaticAnalyst handoff', () => {
   it('should resolve and deduplicate explicit civilization and leader names', () => {
     const { context } = setup();
-    const result = analyst.resolveHandoffInput({ ...input, FromPlayer: 'FREDERICK', AboutPlayers: ['greece', 'Alexander'] }, context);
-    expect(result._playerIDs).toEqual({ FromPlayerID: 1, AboutPlayerIDs: [2] });
+    const result = analyst.resolveHandoffInput({ ...report, FromPlayer: 'FREDERICK', AboutPlayers: ['greece', 'Alexander'] }, context);
+    expect(result).toEqual(input);
   });
 
   it('should resolve the counterpart and extract subjects when the snapshot omits the conversation players', () => {
@@ -54,45 +58,56 @@ describe('DiplomaticAnalyst handoff', () => {
       player1Identity: { name: 'Rome', leader: 'Caesar' },
       player2Identity: { name: 'Germany', leader: 'Frederick' },
     } });
-    const result = analyst.resolveHandoffInput({ ...input, FromPlayer: undefined, AboutPlayers: undefined }, context);
-    expect(result._playerIDs).toEqual({ FromPlayerID: 1, AboutPlayerIDs: [1] });
+    const result = analyst.resolveHandoffInput({ ...report, FromPlayer: undefined, AboutPlayers: undefined }, context);
+    expect(result).toMatchObject({ FromPlayerID: 1, AboutPlayerIDs: [1] });
   });
 
   it('should extract subjects from both content and memo using whole civilization and leader names', () => {
     const { context } = setup();
     const result = analyst.resolveHandoffInput({
-      ...input, AboutPlayers: undefined, Content: 'GREECE, Germany and Greece are trading.',
-      Memo: "Caesar's response mentions a micrometer.",
+      ...report, AboutPlayers: undefined, Content: 'GREECE and Greece are trading.',
+      Memo: "Frederick's response mentions a micrometer.",
     }, context);
-    expect(result._playerIDs.AboutPlayerIDs).toEqual([0, 1, 2]);
+    expect(result.AboutPlayerIDs).toEqual([1, 2]);
     expect(analyst.resolveHandoffInput({
-      ...input, AboutPlayers: undefined, Content: 'A micrometer.', Memo: 'No subjects.',
-    }, context)._playerIDs.AboutPlayerIDs).toEqual([]);
+      ...report, AboutPlayers: undefined, Content: 'A micrometer.', Memo: 'No subjects.',
+    }, context).AboutPlayerIDs).toEqual([]);
+  });
+
+  it('should never list the receiving civilization as a subject', () => {
+    const { context } = setup();
+    expect(analyst.resolveHandoffInput({
+      ...report, AboutPlayers: undefined, Content: 'Germany threatens Rome and Greece.',
+    }, context).AboutPlayerIDs).toEqual([1, 2]);
+    expect(analyst.resolveHandoffInput({ ...report, AboutPlayers: ['Caesar', 'Greece'] }, context).AboutPlayerIDs).toEqual([2]);
   });
 
   it('should honor explicit subjects, including an empty list, instead of extracting mentions', () => {
     const { context } = setup();
-    expect(analyst.resolveHandoffInput(input, context)._playerIDs.AboutPlayerIDs).toEqual([2]);
-    expect(analyst.resolveHandoffInput({ ...input, AboutPlayers: [] }, context)._playerIDs.AboutPlayerIDs).toEqual([]);
+    expect(analyst.resolveHandoffInput(report, context).AboutPlayerIDs).toEqual([2]);
+    expect(analyst.resolveHandoffInput({ ...report, AboutPlayers: [] }, context).AboutPlayerIDs).toEqual([]);
   });
 
   it('should reject unknown and ambiguous explicit names', () => {
     const { context, parameters } = setup();
-    expect(() => analyst.resolveHandoffInput({ ...input, AboutPlayers: ['Atlantis'] }, context)).toThrow();
+    expect(() => analyst.resolveHandoffInput({ ...report, AboutPlayers: ['Atlantis'] }, context)).toThrow();
     parameters.gameStates[5].players!['3'] = { Civilization: 'Germany', IsMajor: true } as any;
-    expect(() => analyst.resolveHandoffInput(input, context)).toThrow();
+    expect(() => analyst.resolveHandoffInput(report, context)).toThrow();
   });
 
   it('should require a source outside a diplomacy conversation', () => {
     const { context } = setup();
-    expect(() => analyst.resolveHandoffInput({ ...input, FromPlayer: undefined }, context)).toThrow();
+    expect(() => analyst.resolveHandoffInput({ ...report, FromPlayer: undefined }, context)).toThrow();
   });
 });
 
 describe('DiplomaticAnalyst evaluation', () => {
   it('should prepare history once and relay structured subjects with all categories at or above 0.5', async () => {
     const { context, parameters, callTool, evaluate } = setup();
-    const messages = await analyst.getInitialMessages(parameters, { ...input }, context);
+    callTool.mockImplementation(async (name: string, args?: any) => name === 'get-diplomatic-events'
+      ? { '4': [`event with ${args.OtherPlayerID}`] }
+      : { Success: true });
+    const messages = await analyst.getInitialMessages(parameters, input, context);
     const prepared = { system: 'system', messages };
     await analyst.executeEvaluation(parameters, input, context, prepared, {});
 
@@ -101,8 +116,8 @@ describe('DiplomaticAnalyst evaluation', () => {
       PlayerID: parameters.playerID, OtherPlayerID: 1, FromTurn: 0, ToTurn: parameters.turn, Formatted: true,
     }, parameters);
     expect(JSON.parse(messages.at(-1).content).diplomaticHistory).toEqual([
-      { PlayerID: 1, status: 'available', events: { '4': ['recent event'] } },
-      { PlayerID: 2, status: 'available', events: { '4': ['recent event'] } },
+      { PlayerID: 1, status: 'available', events: { '4': ['event with 1'] } },
+      { PlayerID: 2, status: 'available', events: { '4': ['event with 2'] } },
     ]);
     expect(evaluate).toHaveBeenCalledExactlyOnceWith({}, prepared, expect.anything());
     expect(callTool).toHaveBeenCalledWith('relay-message', {
@@ -112,12 +127,13 @@ describe('DiplomaticAnalyst evaluation', () => {
     }, parameters);
   });
 
-  it.each([[undefined, [1]], [[], []]])('should relay extracted or explicitly empty subject IDs: %j', async (subjects, expected) => {
-    const { context, parameters, callTool } = setup();
-    await analyst.executeEvaluation(parameters, { ...input, AboutPlayers: subjects }, context, { messages: [] }, {});
-    expect(callTool).toHaveBeenCalledWith('relay-message', expect.objectContaining({
-      AboutPlayerIDs: expected, Memo: input.Memo,
-    }), parameters);
+  it('should list an event shared by the source and a subject only once', async () => {
+    const { context, parameters } = setup();
+    const messages = await analyst.getInitialMessages(parameters, input, context);
+    expect(JSON.parse(messages.at(-1).content).diplomaticHistory).toEqual([
+      { PlayerID: 1, status: 'available', events: { '4': ['recent event'] } },
+      { PlayerID: 2, status: 'available', events: {} },
+    ]);
   });
 
   it('should preserve 4000 content characters and the full memo allowance without subject prefixes', async () => {
@@ -131,7 +147,7 @@ describe('DiplomaticAnalyst evaluation', () => {
   it('should mark missing history as unavailable', async () => {
     const { context, parameters, callTool } = setup();
     callTool.mockResolvedValueOnce(undefined as any);
-    const messages = await analyst.getInitialMessages(parameters, { ...input }, context);
+    const messages = await analyst.getInitialMessages(parameters, input, context);
     expect(JSON.parse(messages.at(-1).content).diplomaticHistory[0]).toEqual({ PlayerID: 1, status: 'unavailable' });
   });
 

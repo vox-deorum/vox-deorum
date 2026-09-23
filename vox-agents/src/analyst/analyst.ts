@@ -12,8 +12,8 @@ import { ModelMessage } from "ai";
 import { VoxAgent } from "../infra/vox-agent.js";
 import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 
-/** Base input type for all analysts, provided by the calling agent. */
-export interface AnalystInput {
+/** Report fields the calling agent writes when handing a report to an analyst. */
+export interface AnalystReport {
   /** The main content/report to analyze */
   Content: string;
   /** Context about the situation or source */
@@ -24,8 +24,14 @@ export interface AnalystInput {
   FromPlayer?: string;
   /** Civilizations discussed by the report. Extracted from content and memo when omitted. */
   AboutPlayers?: string[];
-  /** Player IDs resolved by the analyst before detached execution. */
-  _playerIDs?: { FromPlayerID: number; AboutPlayerIDs: number[] };
+}
+
+/** Analyst input: the report with its civilization names resolved to player IDs at handoff. */
+export interface AnalystInput extends Omit<AnalystReport, "FromPlayer" | "AboutPlayers"> {
+  /** Player who sourced the report. */
+  FromPlayerID: number;
+  /** Players the report discusses, excluding the receiving civilization. */
+  AboutPlayerIDs: number[];
 }
 
 /**
@@ -46,9 +52,9 @@ export abstract class Analyst extends VoxAgent<StrategistParameters, AnalystInpu
   public override fireAndForget: boolean = true;
 
   /**
-   * Base input schema for reports and optional civilization names.
+   * Caller-facing report schema. Subclasses map it into {@link AnalystInput} in resolveHandoffInput.
    */
-  public override inputSchema = z.object({
+  public override handoffSchema = z.object({
     Content: z.string().min(1).describe("The main content/report to analyze"),
     Context: z.string().describe("Brief context about the situation or source"),
     Memo: z.string().min(1).describe("The diplomat's assessment and planned response"),

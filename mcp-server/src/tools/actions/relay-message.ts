@@ -1,7 +1,7 @@
 /**
  * Tool for relaying messages from a diplomat to the leader.
  * Creates a RelayedMessage event in the GameEvents table.
- * Supports both diplomatic communications and intelligence reports.
+ * Supports diplomatic communications, intelligence reports, and rumors.
  */
 
 import { DynamicEventTool, resolvePlayerName } from '../abstract/dynamic-event.js';
@@ -38,7 +38,7 @@ const RelayMessageInputSchema = z.object({
  */
 class MessageRelayTool extends DynamicEventTool {
   readonly name = 'relay-message';
-  readonly description = 'Relay a message from a diplomat to the leader, stored as a game event. Supports diplomatic messages and intelligence reports.';
+  readonly description = 'Relay a message from a diplomat to the leader, stored as a game event. Supports diplomatic messages, intelligence reports, and rumors.';
   readonly eventType = 'RelayedMessage';
   readonly inputSchema = RelayMessageInputSchema;
 

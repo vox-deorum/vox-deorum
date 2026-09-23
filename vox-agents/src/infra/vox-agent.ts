@@ -11,6 +11,7 @@ import { createLogger } from "../utils/logger.js";
 import { z, ZodObject } from "zod";
 import { Model, ReasoningEffort } from "../types/index.js";
 import type { VoxContext } from "./vox-context.js";
+import type { ExecuteTokenOutput } from "./vox-run.js";
 import { getModelConfig, type ModelSize, resolveToolFraming, selectModelReference } from "../utils/models/models.js";
 import { getValidCalls, hasOnlyTerminalCalls, isTerminalTool } from "../utils/tools/terminal-tools.js";
 import { buildCompletionToolsNudge } from "../utils/tools/tool-names.js";
@@ -267,7 +268,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
     context: VoxContext<TParameters>,
     prepared: PreparedAgentState,
     model: Model,
-    tokenOutput?: import('./vox-run.js').ExecuteTokenOutput
+    tokenOutput?: ExecuteTokenOutput
   ): Promise<TOutput | undefined>;
   
   /**

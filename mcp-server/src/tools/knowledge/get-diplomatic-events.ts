@@ -50,6 +50,8 @@ function getCityName(payload: Record<string, any>, ctx: FormatContext): string {
 interface DiploEventConfig {
   /** Payload fields containing player IDs for relevance filtering */
   playerIdFields: string[];
+  /** Payload fields containing lists of player IDs (such as report subjects) for relevance filtering */
+  playerIdListFields?: string[];
   /** Payload fields containing team IDs for relevance filtering */
   teamIdFields?: string[];
   /** Convert event payload to a formatted summary (string for most events, object for structured ones), or null to skip */
@@ -249,6 +251,7 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
 
   RelayedMessage: {
     playerIdFields: ["ToPlayerID", "FromPlayerID"],
+    playerIdListFields: ["AboutPlayerIDs"],
     toMarkdown: (e, ctx) => ({
       Title: `${ctx.player(e.FromPlayerID)} → ${ctx.player(e.ToPlayerID)}`,
       Type: e.Message === "Diplomatic" ? "Diplomatic message" : e.Message,
@@ -297,7 +300,7 @@ class GetDiplomaticEventsTool extends ToolBase {
   readonly name = "get-diplomatic-events";
 
   /** Human-readable description of the tool */
-  readonly description = "Retrieves diplomatic events (wars, peace, deals, city-state relations, espionage, world congress) grouped by turn";
+  readonly description = "Retrieves diplomatic events (wars, peace, deals, city-state relations, espionage, world congress, relayed reports) grouped by turn";
 
   /** Input schema for the tool */
   readonly inputSchema = GetDiplomaticEventsInputSchema;
@@ -387,11 +390,11 @@ class GetDiplomaticEventsTool extends ToolBase {
         const teamMatch = config.teamIdFields?.some(
           field => otherTeamId !== undefined && payload[field] === otherTeamId
         ) ?? false;
-        const subjectMatch = event.Type === "RelayedMessage"
-          && Array.isArray(payload.AboutPlayerIDs)
-          && payload.AboutPlayerIDs.includes(args.OtherPlayerID);
+        const listMatch = config.playerIdListFields?.some(
+          field => Array.isArray(payload[field]) && payload[field].includes(args.OtherPlayerID)
+        ) ?? false;
 
-        if (!playerMatch && !teamMatch && !subjectMatch) continue;
+        if (!playerMatch && !listMatch && !teamMatch) continue;
       }
 
       if (args.Formatted) {

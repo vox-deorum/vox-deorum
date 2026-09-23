@@ -14,9 +14,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
+ * Categories an analyst can assign to a relayed report. The MCP relay-message tool accepts the
+ * same list, and specialized briefers read reports by these names.
+ */
+export const reportCategories = ['Diplomacy', 'Military', 'Economy', 'Others'] as const;
+
+/** One relayed-report category. */
+export type ReportCategory = typeof reportCategories[number];
+
+/**
  * Event category types
  */
-export type EventCategory = 'Military' | 'Economy' | 'Diplomacy' | 'Others' | 'System';
+export type EventCategory = ReportCategory | 'System';
 
 /**
  * Cached event category mappings loaded from event-categories.json

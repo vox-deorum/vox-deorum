@@ -91,6 +91,10 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         // Resolve which concrete agent to run: defaults to this agent, but may dispatch to a
         // context-resolved variant (e.g. a per-seat custom negotiator) sharing the same input.
         const targetName = agent.resolveHandoffTarget(context);
+        // A caller-selected tier replaces the target's own triage for this execution.
+        const run = () => Tier
+          ? context.execute(targetName, agentInput, undefined, undefined, undefined, { triage: { tier: Tier } })
+          : context.execute(targetName, agentInput);
 
         // Fire-and-forget: detach from current trace and return immediately. Run on a forked
         // root, NOT a nested execute() on the caller's root: a nested execute() pushes a child
@@ -100,9 +104,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         // context-wide abort. It snapshots the parent's parameters and logs failures internally.
         if (agent.fireAndForget) {
           otelContext.with(ROOT_CONTEXT, () => {
-            context.forkRun(() => Tier
-              ? context.execute(targetName, agentInput, undefined, undefined, undefined, { triage: { tier: Tier } })
-              : context.execute(targetName, agentInput));
+            context.forkRun(run);
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
@@ -110,9 +112,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         }
 
         // Execute the agent through the context
-        const result = await (Tier
-          ? context.execute(targetName, agentInput, undefined, undefined, undefined, { triage: { tier: Tier } })
-          : context.execute(targetName, agentInput));
+        const result = await run();
         logger.debug(`Agent-tool execution completed: ${agent.name}`);
 
         span.setAttributes({

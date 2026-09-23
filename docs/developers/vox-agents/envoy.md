@@ -48,11 +48,16 @@ That call is fire-and-forget. The handoff forks a detached root run that keeps t
 
 The distinction to keep in mind (and in any UI copy): **talk to a spokesperson to learn about a civilization; talk to a diplomat and the civilization may learn about you.**
 
-The diplomat defines its optional triage questions and routing in `src/envoy/agents/diplomat.ts`. Enable `options.triage: true` on its model assignment and configure `diplomat.evaluator` or the shared `evaluator` alias. Special messages such as greetings use the `small` tier without an evaluation call. Other exchanges evaluate the already prepared conversation prompt for intent and stakes: small talk uses `small`, high-stakes deals and threats use `large`, and other exchanges use `default`. Prompt preparation and the deal gate share one durable proposal read. With triage disabled or no evaluator configured, model selection follows the usual assignment. See [Models and configuration](overview.md#models-and-configuration) for tier lookup and the shared adoption helper.
+The diplomat can also pick its own model tier each turn (triage). To turn this on, set `options.triage: true` on the diplomat's model assignment and configure `diplomat.evaluator` or the shared `evaluator` alias; otherwise the usual assignment applies.
+
+- Greetings and other special messages go straight to `small`, with no evaluation.
+- Other turns send the evaluator only the tail of the prepared messages (the latest exchange, the open deal, and the turn hint) and ask for intent and stakes. Small talk uses `small`, high-stakes deals and threats use `large`, and everything else uses `default`.
+
+The questions and routing live in `src/envoy/agents/diplomat.ts`. See [Models and configuration](overview.md#models-and-configuration) for tier lookup and the shared `createTriage` helper.
 
 ### Deals and negotiation
 
-Diplomats see the deal items the game currently allows each side to offer, but that is conversational awareness only. Deal terms and every accept, counter, or reject decision belong to the negotiator (`src/envoy/agents/negotiator.ts`), which works against the ledger in `src/envoy/ledger/`. The diplomat chooses a `Tier` when calling the negotiator according to the deal's complexity and stakes. This selects the configured negotiator's model directly, without another triage evaluation. The full round trip, from an in-game panel through the MCP deal tools and back, is described in [diplomacy.md](../diplomacy.md).
+Diplomats see the deal items the game currently allows each side to offer, but that is conversational awareness only. Deal terms and every accept, counter, or reject decision belong to the negotiator (`src/envoy/agents/negotiator.ts`), which works against the ledger in `src/envoy/ledger/`. When the diplomat hands a deal over, it picks a `Tier` to match the deal's complexity and stakes. The negotiator then runs on that tier's model (`negotiator.large` if configured, otherwise the shared `large` alias) without a triage evaluation of its own. The full round trip, from an in-game panel through the MCP deal tools and back, is described in [diplomacy.md](../diplomacy.md).
 
 ## How a chat reaches an envoy
 
