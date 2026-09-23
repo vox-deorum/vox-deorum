@@ -4,19 +4,15 @@
  * which also sidesteps circular-import hazards). Protected/base members are reached
  * through a loosely-typed handle.
  *
- * Covers the fire-and-forget flag, toolChoice, the shared input schema, the get-briefing
- * extra tool, and that getContextMessages delegates to the shared buildGameContextMessages
+ * Covers the fire-and-forget flag, toolChoice, the shared input schema, and that
+ * getContextMessages delegates to the shared buildGameContextMessages
  * builder. Span/context detachment is intentionally NOT tested here.
  */
 
 import { describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { buildGameContextMessages } from '../../../src/strategist/strategy-parameters.js';
-import {
-  createFakeVoxContext,
-  makeStrategistParameters,
-  makeGameState,
-} from '../../helpers/fake-vox-context.js';
+import { createFakeVoxContext, makeStrategistParameters, makeGameState } from '../../helpers/fake-vox-context.js';
 
 const analyst = agentRegistry.get('diplomatic-analyst') as any;
 
@@ -45,12 +41,11 @@ describe('Analyst input schema', () => {
   });
 });
 
-describe('Analyst extra tools', () => {
-  it('getExtraTools exposes the get-briefing internal tool', () => {
-    const ctx = createFakeVoxContext();
-    const extra = analyst.getExtraTools(ctx.asContext());
-    expect(Object.keys(extra)).toContain('get-briefing');
-    expect(extra['get-briefing']).toBeDefined();
+describe('Analyst chat tools', () => {
+  it('does not expose tools for chat generation', () => {
+    const context = createFakeVoxContext();
+    expect(analyst.getExtraTools(context.asContext())).toEqual({});
+    expect(analyst.getActiveTools(paramsWithState())).toEqual([]);
   });
 });
 

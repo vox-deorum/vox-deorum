@@ -16,9 +16,11 @@ import { applyVisibility, composeVisibility } from '../../../src/utils/knowledge
 import * as cityInfo from '../../../src/knowledge/getters/city-information.js';
 import createGetDiplomaticEventsTool from '../../../src/tools/knowledge/get-diplomatic-events.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createGetDiplomaticEventsTool();
 let store: KnowledgeStore;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
@@ -30,9 +32,11 @@ beforeEach(async () => {
   // The city coordinate lookup would otherwise hit the game DB; none of our events
   // reference cities, so an empty list is sufficient.
   vi.spyOn(cityInfo, 'getCityInformations').mockResolvedValue([] as any);
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
+  await client.close();
   vi.restoreAllMocks();
   await store.close();
 });
@@ -74,30 +78,29 @@ describe('get-diplomatic-events: player-pair relevance filtering', () => {
   });
 
   it('with no OtherPlayerID, returns every visible diplomatic event', async () => {
-    const result = await tool.execute({ PlayerID: 0 } as any);
+    const result = await client.call({ PlayerID: 0 });
     const types = Object.values(result).flat().map((e: any) => e.Type);
     expect(types).toContain('DeclareWar');
     expect(types).toContain('PlayerGifted');
   });
 
   it('OtherPlayerID matches on a playerIdField (PlayerGifted -> player 2)', async () => {
-    const result = await tool.execute({ PlayerID: 0, OtherPlayerID: 2 } as any);
+    const result = await client.call({ PlayerID: 0, OtherPlayerID: 2 });
     const types = Object.values(result).flat().map((e: any) => e.Type);
     // The gift to player 2 is kept; the war (no player-2 field) is filtered out.
     expect(types).toEqual(['PlayerGifted']);
   });
 
   it('OtherPlayerID matches on a teamIdField (DeclareWar -> team 1)', async () => {
-    const result = await tool.execute({ PlayerID: 0, OtherPlayerID: 1 } as any);
+    const result = await client.call({ PlayerID: 0, OtherPlayerID: 1 });
     const types = Object.values(result).flat().map((e: any) => e.Type);
     // The war targets team 1; the gift to player 2 is not relevant to player 1.
     expect(types).toEqual(['DeclareWar']);
   });
 
   it('OtherPlayerID with no matching events yields an empty result', async () => {
-    // Player 1 has no playerIdField match and no team match in the gift event,
-    // and player 0 itself is the originator (not the "other" side we ask about).
-    const result = await tool.execute({ PlayerID: 0, OtherPlayerID: 99 } as any);
+    // Player 3 has no player or team match in either event.
+    const result = await client.call({ PlayerID: 0, OtherPlayerID: 3 });
     expect(result).toEqual({});
   });
 });
@@ -112,7 +115,7 @@ describe('get-diplomatic-events: ordering', () => {
     await seedEvent('PlayerGifted', 5,
       { GivingPlayerID: 0, ReceivingPlayerID: 1, GoldAmount: 30 }, [0]); // ID 3
 
-    const result = await tool.execute({ PlayerID: 0 } as any);
+    const result = await client.call({ PlayerID: 0 });
 
     // Turn buckets present
     expect(Object.keys(result).sort()).toEqual(['5', '7']);
@@ -135,8 +138,8 @@ describe('get-diplomatic-events: visibility', () => {
   });
 
   it('returns only events flagged visible to the requesting player', async () => {
-    const forZero = await tool.execute({ PlayerID: 0 } as any);
-    const forOne = await tool.execute({ PlayerID: 1 } as any);
+    const forZero = await client.call({ PlayerID: 0 });
+    const forOne = await client.call({ PlayerID: 1 });
 
     const typesZero = Object.values(forZero).flat().map((e: any) => e.Type);
     const typesOne = Object.values(forOne).flat().map((e: any) => e.Type);
@@ -146,7 +149,7 @@ describe('get-diplomatic-events: visibility', () => {
   });
 
   it('returns nothing for a player with no visible events', async () => {
-    const forTwo = await tool.execute({ PlayerID: 2 } as any);
+    const forTwo = await client.call({ PlayerID: 2 });
     expect(forTwo).toEqual({});
   });
 });
@@ -158,7 +161,7 @@ describe('get-diplomatic-events: DealMade formatting', () => {
   it('formats both sides when each is a normal string array', async () => {
     await seedEvent('DealMade', 5,
       { FromPlayerID: 0, ToPlayerID: 1, FromGives: ['Gold: 100'], ToGives: ['Open Borders'] }, [0, 1]);
-    const result = await tool.execute({ PlayerID: 0, Formatted: true } as any);
+    const result = await client.call({ PlayerID: 0, Formatted: true });
     expect(onlyLine(result)).toBe('Deal: **Rome** gives [Gold: 100] ↔ **Egypt** gives [Open Borders]');
   });
 
@@ -168,14 +171,44 @@ describe('get-diplomatic-events: DealMade formatting', () => {
   it('renders a side that arrives as an empty object ({}) as "nothing" without throwing', async () => {
     await seedEvent('DealMade', 5,
       { FromPlayerID: 0, ToPlayerID: 1, FromGives: ['Gold: 100'], ToGives: {} }, [0, 1]);
-    const result = await tool.execute({ PlayerID: 0, Formatted: true } as any);
+    const result = await client.call({ PlayerID: 0, Formatted: true });
     expect(onlyLine(result)).toBe('Deal: **Rome** gives [Gold: 100] ↔ **Egypt** gives [nothing]');
   });
 
   it('renders missing give fields as "nothing"', async () => {
     await seedEvent('DealMade', 5,
       { FromPlayerID: 0, ToPlayerID: 1 }, [0, 1]);
-    const result = await tool.execute({ PlayerID: 0, Formatted: true } as any);
+    const result = await client.call({ PlayerID: 0, Formatted: true });
     expect(onlyLine(result)).toBe('Deal: **Rome** gives [nothing] ↔ **Egypt** gives [nothing]');
+  });
+});
+
+describe('get-diplomatic-events: relayed report subjects', () => {
+  beforeEach(async () => {
+    await seedEvent('RelayedMessage', 8, {
+      FromPlayerID: 1, ToPlayerID: 0, AboutPlayerIDs: [2],
+      Message: 'Rumor', Content: 'A third party may attack.', Memo: 'Our analyst: Watch closely.',
+      Categories: ['Military', 'Diplomacy'], Confidence: '3/9', Importance: 6
+    }, [0]);
+  });
+
+  it('includes reports about the requested player even when they are not source or recipient', async () => {
+    const raw = await client.call({ PlayerID: 0, OtherPlayerID: 2 });
+    expect(raw['8']).toHaveLength(1);
+    expect(raw['8'][0]).toMatchObject({ Type: 'RelayedMessage', AboutPlayerIDs: [2] });
+    expect(await client.call({ PlayerID: 0, OtherPlayerID: 3 })).toEqual({});
+  });
+
+  it('preserves source and recipient relevance, and enforces report visibility', async () => {
+    expect((await client.call({ PlayerID: 0, OtherPlayerID: 1 }))['8']).toHaveLength(1);
+    expect((await client.call({ PlayerID: 0, OtherPlayerID: 0 }))['8']).toHaveLength(1);
+    expect(await client.call({ PlayerID: 2, OtherPlayerID: 2 })).toEqual({});
+  });
+
+  it('formats subject names and rumor type without hiding categories', async () => {
+    const result = await client.call({ PlayerID: 0, OtherPlayerID: 2, Formatted: true });
+    expect(result['8'][0]).toMatchObject({
+      Type: 'Rumor', AboutPlayers: ['Greece'], Categories: 'Military, Diplomacy'
+    });
   });
 });

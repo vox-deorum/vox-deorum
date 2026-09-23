@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { z } from 'zod';
+import { asSchema } from 'ai';
 import { createAgentTool } from '../../../src/utils/tools/agent-tools.js';
 import { createFakeVoxContext, FakeVoxContext } from '../../helpers/fake-vox-context.js';
 
@@ -29,13 +30,13 @@ beforeEach(() => {
   ctx = createFakeVoxContext();
 });
 
+/** Validate a tool input through the AI SDK schema adapter. */
+async function validateToolInput(tool: ReturnType<typeof createAgentTool>, input: unknown) {
+  return asSchema(tool.inputSchema).validate!(input);
+}
+
 describe('createAgentTool', () => {
   describe('description and schema defaults', () => {
-    it('uses a default description when the agent has no toolDescription', () => {
-      const tool = createAgentTool(fakeAgent({ name: 'strategist' }), ctx.asContext());
-      expect(tool.description).toBe('Execute the strategist agent to handle specialized tasks');
-    });
-
     it('uses the agent toolDescription when provided', () => {
       const tool = createAgentTool(
         fakeAgent({ toolDescription: 'Custom tool description' }),
@@ -44,24 +45,78 @@ describe('createAgentTool', () => {
       expect(tool.description).toBe('Custom tool description');
     });
 
-    it('uses a default { Prompt: string } schema when the agent has no inputSchema', () => {
+    it('exposes a default Prompt field when the agent has no inputSchema', async () => {
       const tool = createAgentTool(fakeAgent(), ctx.asContext());
-      // The default schema accepts a Prompt string and rejects other shapes.
-      expect(() => (tool.inputSchema as z.ZodTypeAny).parse({ Prompt: 'hello' })).not.toThrow();
-      expect(() => (tool.inputSchema as z.ZodTypeAny).parse({ Prompt: 123 })).toThrow();
+      await expect(validateToolInput(tool, { Prompt: 'hello' })).resolves.toMatchObject({ success: true });
+      await expect(validateToolInput(tool, { Prompt: 123 })).resolves.toMatchObject({ success: false });
     });
 
-    it('uses the agent inputSchema when provided', () => {
-      const inputSchema = z.object({ Foo: z.number() });
+    it('uses the agent inputSchema and validates the optional tier', async () => {
+      const inputSchema = z.object({ Foo: z.number().describe('Caller field') });
       const tool = createAgentTool(fakeAgent({ inputSchema }), ctx.asContext());
-      expect(tool.inputSchema).toBe(inputSchema);
+      await expect(validateToolInput(tool, { Foo: 1, Tier: 'large' }))
+        .resolves.toEqual({ success: true, value: { Foo: 1, Tier: 'large' } });
+      await expect(validateToolInput(tool, { Foo: 1, Tier: 'huge' }))
+        .resolves.toMatchObject({ success: false });
+      const schema = await asSchema(tool.inputSchema).jsonSchema;
+      expect(schema.properties?.Foo).toMatchObject({ description: 'Caller field' });
     });
 
-    it('prefers the caller-facing handoffSchema over inputSchema', () => {
+    it('prefers the caller-facing handoffSchema over inputSchema', async () => {
       const handoffSchema = z.object({ Briefing: z.string() });
       const inputSchema = z.object({ Foo: z.number() });
       const tool = createAgentTool(fakeAgent({ handoffSchema, inputSchema }), ctx.asContext());
-      expect(tool.inputSchema).toBe(handoffSchema);
+      await expect(validateToolInput(tool, { Briefing: 'ok', Tier: 'small' }))
+        .resolves.toEqual({ success: true, value: { Briefing: 'ok', Tier: 'small' } });
+      await expect(validateToolInput(tool, { Foo: 1 })).resolves.toMatchObject({ success: false });
+    });
+
+    it('preserves refinements from the caller schema while accepting tier metadata', async () => {
+      const handoffSchema = z.object({ Start: z.number(), End: z.number() })
+        .refine(({ Start, End }) => End > Start, 'End must follow Start');
+      const tool = createAgentTool(fakeAgent({ handoffSchema }), ctx.asContext());
+
+      await expect(validateToolInput(tool, { Start: 1, End: 2, Tier: 'default' }))
+        .resolves.toEqual({ success: true, value: { Start: 1, End: 2, Tier: 'default' } });
+      await expect(validateToolInput(tool, { Start: 2, End: 1, Tier: 'default' }))
+        .resolves.toMatchObject({ success: false });
+    });
+
+    it('strips tier before original schema refinements and mapping', async () => {
+      const refinedValues: unknown[] = [];
+      const handoffSchema = z.object({ Prompt: z.string() }).strict()
+        .superRefine((input, issueContext) => {
+          refinedValues.push(input);
+          if ('Tier' in input) issueContext.addIssue({ code: 'custom', message: 'Tier leaked into caller schema' });
+        });
+      const resolveHandoffInput = vi.fn((input: unknown) => input);
+      const tool = createAgentTool(fakeAgent({ handoffSchema, resolveHandoffInput }), ctx.asContext());
+      ctx.execute.mockResolvedValue('ok');
+
+      const validation = await validateToolInput(tool, { Prompt: 'p', Tier: 'large' });
+      expect(validation.success).toBe(true);
+      if (!validation.success) throw validation.error;
+      expect(refinedValues).toEqual([{ Prompt: 'p' }]);
+
+      await tool.execute!(validation.value, { toolCallId: 'x', messages: [] });
+
+      expect(resolveHandoffInput).toHaveBeenCalledWith({ Prompt: 'p' }, ctx.asContext());
+      expect(refinedValues).toEqual([{ Prompt: 'p' }]);
+    });
+
+    it('applies caller schema transforms once before sending input to the target agent', async () => {
+      const transform = vi.fn(Number);
+      const handoffSchema = z.object({ Count: z.string().transform(transform) });
+      const tool = createAgentTool(fakeAgent({ handoffSchema }), ctx.asContext());
+      ctx.execute.mockResolvedValue('ok');
+
+      const validation = await validateToolInput(tool, { Count: '3' });
+      expect(validation.success).toBe(true);
+      if (!validation.success) throw validation.error;
+      await tool.execute!(validation.value, { toolCallId: 'x', messages: [] });
+
+      expect(transform).toHaveBeenCalledTimes(1);
+      expect(ctx.execute).toHaveBeenCalledWith('test-agent', { Count: 3 });
     });
   });
 
@@ -73,11 +128,11 @@ describe('createAgentTool', () => {
       const resolveHandoffInput = vi.fn((args: any) => ({ ...args, enriched: true }));
 
       const tool = createAgentTool(fakeAgent({ name: 'worker', resolveHandoffInput }), context);
-      await tool.execute!({ Briefing: 'hi' }, { toolCallId: 'x', messages: [] });
+      await tool.execute!({ Prompt: 'hi' }, { toolCallId: 'x', messages: [] });
 
-      expect(resolveHandoffInput).toHaveBeenCalledWith({ Briefing: 'hi' }, context);
+      expect(resolveHandoffInput).toHaveBeenCalledWith({ Prompt: 'hi' }, context);
       // execute() takes no parameter argument — the nested run resolves the active root's params.
-      expect(ctx.execute).toHaveBeenCalledWith('worker', { Briefing: 'hi', enriched: true });
+      expect(ctx.execute).toHaveBeenCalledWith('worker', { Prompt: 'hi', enriched: true });
     });
 
     it('executes the agent named by resolveHandoffTarget (per-seat dispatch)', async () => {
@@ -90,6 +145,18 @@ describe('createAgentTool', () => {
 
       expect(resolveHandoffTarget).toHaveBeenCalledTimes(1);
       expect(ctx.execute).toHaveBeenCalledWith('seat-variant', { Prompt: 'p' });
+    });
+
+    it('removes tier metadata before mapping and passes it to the resolved target execution', async () => {
+      ctx.execute.mockResolvedValue('ok');
+      const resolveHandoffInput = vi.fn((args: any) => args);
+      const tool = createAgentTool(fakeAgent({
+        name: 'base', resolveHandoffInput, resolveHandoffTarget: () => 'seat-variant'
+      }), ctx.asContext());
+      await tool.execute!({ Prompt: 'hi', Tier: 'large' }, { toolCallId: 'x', messages: [] });
+
+      expect(resolveHandoffInput).toHaveBeenCalledWith({ Prompt: 'hi' }, ctx.asContext());
+      expect(ctx.execute).toHaveBeenCalledWith('seat-variant', { Prompt: 'hi' }, undefined, undefined, undefined, { triage: { tier: 'large' } });
     });
   });
 
@@ -138,7 +205,7 @@ describe('createAgentTool', () => {
       );
       const out = await tool.execute!(input, { toolCallId: 'x', messages: [] });
 
-      expect(out).toEqual({ result: 'Submitted for asynchronous processing.' });
+      expect(out).toMatchObject({ result: expect.any(String) });
       await vi.waitFor(() =>
         expect(ctx.execute).toHaveBeenCalledWith('async-agent', input)
       );
@@ -163,6 +230,16 @@ describe('createAgentTool', () => {
       );
     });
 
+    it('passes an explicit tier to detached work', async () => {
+      ctx.execute.mockResolvedValue('async-result');
+      const tool = createAgentTool(fakeAgent({ fireAndForget: true }), ctx.asContext());
+      await tool.execute!({ Prompt: 'p', Tier: 'small' }, { toolCallId: 'x', messages: [] });
+
+      await vi.waitFor(() => expect(ctx.execute).toHaveBeenCalledWith(
+        'test-agent', { Prompt: 'p' }, undefined, undefined, undefined, { triage: { tier: 'small' } }
+      ));
+    });
+
     it('does not reject even when the detached execution fails', async () => {
       ctx.execute.mockRejectedValue(new Error('background boom'));
 
@@ -172,7 +249,7 @@ describe('createAgentTool', () => {
       );
       const out = await tool.execute!({ Prompt: 'p' }, { toolCallId: 'x', messages: [] });
 
-      expect(out).toEqual({ result: 'Submitted for asynchronous processing.' });
+      expect(out).toMatchObject({ result: expect.any(String) });
       await vi.waitFor(() => expect(ctx.execute).toHaveBeenCalled());
     });
   });

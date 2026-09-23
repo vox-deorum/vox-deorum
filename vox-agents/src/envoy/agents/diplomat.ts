@@ -7,6 +7,7 @@
  */
 
 import { ModelMessage, StepResult, Tool } from "ai";
+import type { Experimental_EvaluationQuestion as EvaluationQuestion, Experimental_EvaluationResult as EvaluationResult } from 'ai';
 import { LiveEnvoy, type LiveEnvoyContext } from "../live-envoy.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { StrategistParameters, getRecentGameState } from "../../strategist/strategy-parameters.js";
@@ -19,7 +20,37 @@ import { readActiveProposal } from "../../utils/diplomacy/deal/deal.js";
 import { counterpartOpenProposal } from "../../utils/diplomacy/deal/deal-reduce.js";
 import { terminalActionTools, type DealRowRenderer } from "../../utils/diplomacy/transcript/transcript-utils.js";
 import { createTriage, TriageShortcut } from "../../infra/triage.js";
-import { buildDiplomatTriageState, diplomatTriageQuestions, routeDiplomatTriage } from "./diplomat-triage.js";
+import type { TriageDecision } from "../../infra/vox-agent.js";
+
+/** The diplomat's typed intent and stakes questions. */
+export const diplomatTriageQuestions = {
+  intent: {
+    type: 'choice',
+    instructions: 'Classify the main intent of the current diplomatic exchange.',
+    criteria: {
+      deal: 'A trade, treaty, concession, or other negotiated agreement',
+      threat: 'A warning, ultimatum, coercive demand, or hostile signal',
+      request: 'A request for information, support, action, or a diplomatic response',
+      'small talk': 'A greeting, pleasantry, or low consequence conversation',
+    },
+  },
+  stakes: {
+    type: 'score',
+    instructions: 'Estimate how consequential this exchange is for the civilization.',
+    criteria: ['trivial', 'limited', 'significant', 'critical'],
+  },
+} satisfies Record<string, EvaluationQuestion>;
+
+export type DiplomatTriageAnswers = EvaluationResult<typeof diplomatTriageQuestions>['answers'];
+
+/** Route diplomatic intent and stakes to the model tier for the current turn. */
+export function routeDiplomatTriage(answers: DiplomatTriageAnswers): TriageDecision {
+  if (answers.intent.choice === 'small talk') return { tier: 'small' };
+  if ((answers.intent.choice === 'deal' || answers.intent.choice === 'threat') && answers.stakes.score >= 2) {
+    return { tier: 'large' };
+  }
+  return { tier: 'default' };
+}
 
 /**
  * Diplomat agent that engages in diplomatic dialogue and gathers intelligence.
@@ -33,12 +64,13 @@ export class Diplomat extends LiveEnvoy {
    * Select a model tier from the current bounded diplomatic exchange when triage is enabled. Special
    * messages such as greetings run without tools or history, so they take the small tier directly.
    */
-  public override triage = createTriage<StrategistParameters, EnvoyThread, typeof diplomatTriageQuestions>(
-    async (parameters, input, context) => this.isSpecialMode(input)
+  public override triage = createTriage<StrategistParameters, EnvoyThread, typeof diplomatTriageQuestions>({
+    questions: diplomatTriageQuestions,
+    route: routeDiplomatTriage,
+    shortcut: (_parameters, input) => this.isSpecialMode(input)
       ? new TriageShortcut({ tier: "small", note: "special message" })
-      : buildDiplomatTriageState(parameters, input, await this.readDealReduction(input, context)),
-    { questions: diplomatTriageQuestions, route: routeDiplomatTriage },
-  );
+      : undefined,
+  });
 
   /** The analyst runs after diplomatic reports are submitted. */
   public override modelDependencies = ["specialized-briefer", "diplomatic-analyst"];
@@ -236,6 +268,7 @@ You represent your government's interests and gather intelligence through diplom
   - Do NOT report trivial pleasantries or small talk, only report essential, valuable information.
 - Use the \`call-negotiator\` tool to propose or react to diplomatic deals.
   - You never write trade items or promises yourself, instead, the negotiator will handle it.
+  - Set its optional \`Tier\` to \`large\` for complex and high-stakes proposals.
   - If your proposal is currently on the table, await the counterpart's reply rather than calling the negotiator again.
   - When a deal authored by the counterpart is on the table, either hand it to the negotiator with \`call-negotiator\` or reply with \`send-message\`: do not leave it unanswered.`);
     }

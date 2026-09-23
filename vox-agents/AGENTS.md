@@ -8,7 +8,8 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **Winston logger only**: never `console.log/error/warn` in production code (OK in tests)
 - **MCP tools**: Always read `mcp-server/src/tools/index.ts` to know which tools actually exist
 - **Embedding models**: Set `options.embeddingSize` on model config. Use `embedder` alias in `config.llms`. Call `getEmbeddingModel()` from `utils/models/models.ts`
-- **Agent triage**: Use `createTriage()` from `infra/triage.ts` with an instruction string (small inputs only) or a state builder returning bounded state or a `TriageShortcut`. Enable `options.triage` on the agent's own model assignment and configure `evaluator` or `<agent>.evaluator`; read the execution decision through `context.currentTriage` (read-only). Share durable state loaded by triage with later hooks through `context.memoizeForExecution`.
+- **Agent triage**: Use `createTriage()` from `infra/triage.ts` with typed questions and an answer router. It reuses the prepared system prompt and initial messages; an optional projector can trim that state without mutating it, and a shortcut can handle deterministic cases. Enable `options.triage` on the agent's own model assignment and configure `evaluator` or `<agent>.evaluator`. Every `call-*` tool also accepts an optional `Tier` that overrides triage without requiring opt-in. Read the decision through `context.currentTriage`; share durable reads through `context.memoizeForExecution`.
+- **Evaluation agents**: Implement `executeEvaluation()` to evaluate prepared state and process its answers without a chat loop. Use the selected agent model with `context.evaluate()` and forward the token sink; evaluation already accrues usage. Native evaluators and chat adapters share this path.
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
 - **Provider modules**: Provider-specific implementations live in `src/utils/models/providers/` and may import shared types or sibling helpers, but never `models.ts`
 - **Config defaults**: `config.json` is gitignored. Effective values come from `src/utils/config/defaults.ts` merged by `src/utils/config/diff.ts`, loaded through `src/utils/config.ts`
@@ -39,6 +40,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 ### Test Rules
 
+- Test decisions, data flow, and observable effects. Do not lock tests to hard-coded prompt, documentation, or message wording.
 - **Don't touch OBS tests** unless changing OBS-related code (`obs-manager.ts`, `ProductionMode`)
 - **Don't touch game tests** unless changing `VoxCivilization` or `ProcessManager`
 - Use Vitest (not Jest). Test files: `tests/**/*.test.ts`, setup: `tests/setup.ts`

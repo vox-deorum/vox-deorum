@@ -8,13 +8,11 @@
  */
 
 import { z } from "zod";
-import { ModelMessage, Tool } from "ai";
+import { ModelMessage } from "ai";
 import { VoxAgent } from "../infra/vox-agent.js";
-import { VoxContext } from "../infra/vox-context.js";
 import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
-import { createBriefingTool } from "../briefer/briefing-utils.js";
 
-/** Base input type for all analysts — fields provided by the calling agent */
+/** Base input type for all analysts, provided by the calling agent. */
 export interface AnalystInput {
   /** The main content/report to analyze */
   Content: string;
@@ -22,54 +20,41 @@ export interface AnalystInput {
   Context: string;
   /** The diplomat's assessment and planned response */
   Memo: string;
+  /** Civilization that sourced the report. Defaults to the conversation counterpart. */
+  FromPlayer?: string;
+  /** Civilizations discussed by the report. Extracted from content and memo when omitted. */
+  AboutPlayers?: string[];
+  /** Player IDs resolved by the analyst before detached execution. */
+  _playerIDs?: { FromPlayerID: number; AboutPlayerIDs: number[] };
 }
 
 /**
  * Base analyst agent that processes information asynchronously.
  * Runs as a fire-and-forget agent-tool with a detached trace context.
- * Provides all analysts with relay-message, get-briefing, and get-diplomatic-events tools,
- * plus game context (identity, players, strategies) via getContextMessages().
+ * Provides analysts with shared game context via getContextMessages().
  *
  * @abstract
  * @class
  */
-export abstract class Analyst<TInput extends AnalystInput = AnalystInput> extends VoxAgent<StrategistParameters, TInput, string> {
-  /** Analysts triage reports using the routine model. */
+export abstract class Analyst extends VoxAgent<StrategistParameters, AnalystInput, string> {
+  /** Analysts evaluate reports using the routine model. */
   public modelSize = 'small' as const;
 
   /**
-   * Allow the LLM to decide when to call tools
-   */
-  public override toolChoice: string = "auto";
-
-  /**
-   * Run asynchronously — the calling agent does not wait for completion
+   * Run asynchronously so the calling agent does not wait for completion.
    */
   public override fireAndForget: boolean = true;
 
   /**
-   * Base input schema for all analysts: Content, Context, and Memo.
-   * PlayerID and Turn are read from parameters (auto-completed).
+   * Base input schema for reports and optional civilization names.
    */
   public override inputSchema = z.object({
-    Content: z.string().describe("The main content/report to analyze"),
+    Content: z.string().min(1).describe("The main content/report to analyze"),
     Context: z.string().describe("Brief context about the situation or source"),
-    Memo: z.string().describe("The diplomat's assessment and planned response")
-  }) as unknown as z.ZodSchema<TInput>;
-
-  /**
-   * Base active tools for all analysts: relay-message for output, get-briefing and get-diplomatic-events for context
-   */
-  public getActiveTools(_parameters: StrategistParameters): string[] | undefined {
-    return ["relay-message", "get-briefing", "get-diplomatic-events"];
-  }
-
-  /**
-   * Provides the get-briefing internal tool for on-demand briefing retrieval
-   */
-  public override getExtraTools(context: VoxContext<StrategistParameters>): Record<string, Tool> {
-    return { "get-briefing": createBriefingTool(context) };
-  }
+    Memo: z.string().min(1).describe("The diplomat's assessment and planned response"),
+    FromPlayer: z.string().optional().describe("Source civilization or leader; defaults to the conversation counterpart"),
+    AboutPlayers: z.array(z.string()).optional().describe("Civilizations or leaders discussed; extracted from Content and Memo when omitted, or use an empty array for no subjects")
+  });
 
   /**
    * Returns game context messages: civilization identity, players, and strategies.

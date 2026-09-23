@@ -123,7 +123,10 @@ export interface VoxAgentsConfig {
 export type Model = LLMConfig;
 
 /** Selectable model tiers for agents without an explicit model assignment. */
-export type ModelSize = 'small' | 'default' | 'large';
+export const modelTiers = ['small', 'default', 'large'] as const;
+
+/** One selectable model tier. */
+export type ModelSize = typeof modelTiers[number];
 
 /**
  * Agent-to-model mapping

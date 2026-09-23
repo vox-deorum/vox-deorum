@@ -1394,20 +1394,30 @@
           "type": "number",
           "minimum": 0,
           "maximum": 21,
-          "description": "The player ID of the civilization the message concerns"
+          "description": "The source player ID"
+        },
+        "AboutPlayerIDs": {
+          "description": "Player IDs discussed in the report; omitted or empty means no subjects",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 21
+          }
         },
         "Message": {
           "type": "string",
           "enum": [
             "Diplomatic",
-            "Intelligence"
+            "Intelligence",
+            "Rumor"
           ],
-          "description": "Message type: \"diplomatic\" for official communications, \"intelligence\" for gathered information"
+          "description": "Message type: Diplomatic for official communications, Intelligence for gathered information, Rumor for unverified claims"
         },
         "Content": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 2000,
+          "maxLength": 4000,
           "description": "The message content"
         },
         "Confidence": {
@@ -1423,12 +1433,17 @@
           "description": "Strategic urgency (0 = background information, 9 = leader must reconsider strategy immediately; 7+ is considered important)"
         },
         "Categories": {
-          "minItems": 1,
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "Diplomacy",
+              "Military",
+              "Economy",
+              "Others"
+            ]
           },
-          "description": "Searchable categories (e.g., \"Military\", \"Economic\", \"Diplomacy\")"
+          "description": "All report categories with estimated relevance probability at least 0.5; multiple categories or an empty array are allowed"
         },
         "Memo": {
           "type": "string",

@@ -44,6 +44,14 @@ export interface TriageDecision {
   note?: string;
 }
 
+/** Prompt material assembled once before triage and reused by the selected execution path. */
+export interface PreparedAgentState {
+  /** System prompt for the agent. */
+  system: string;
+  /** Initial conversation messages, excluding the system prompt. */
+  messages: ModelMessage[];
+}
+
 /**
  * Abstract base class for all Vox Agents.
  * Provides a framework for implementing AI agents that can be executed within the Vox context.
@@ -110,7 +118,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   /**
    * Optional input schema for when this agent is exposed as a tool
    */
-  public inputSchema?: z.ZodSchema<TInput>;
+  public inputSchema?: z.ZodObject<any>;
 
   /**
    * Optional caller-facing schema for this agent's `call-<name>` handoff tool. When set, the
@@ -118,7 +126,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * validated arguments are mapped into TInput by {@link resolveHandoffInput}. Use this when
    * the agent's real input carries ambient context the caller should not have to author.
    */
-  public handoffSchema?: z.ZodTypeAny;
+  public handoffSchema?: z.ZodObject<any>;
 
   /**
    * Optional output schema for when this agent is exposed as a tool
@@ -248,8 +256,19 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   public triage?(
     parameters: TParameters,
     input: TInput,
-    context: VoxContext<TParameters>
+    context: VoxContext<TParameters>,
+    prepared: PreparedAgentState
   ): Promise<TriageDecision | undefined>;
+
+  /** Run a structured evaluation instead of the chat loop when an agent has a deterministic result path. */
+  public executeEvaluation?(
+    parameters: TParameters,
+    input: TInput,
+    context: VoxContext<TParameters>,
+    prepared: PreparedAgentState,
+    model: Model,
+    tokenOutput?: import('./vox-run.js').ExecuteTokenOutput
+  ): Promise<TOutput | undefined>;
   
   /**
    * Gets the system prompt for this agent.

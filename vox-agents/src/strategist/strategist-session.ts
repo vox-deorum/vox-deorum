@@ -15,7 +15,7 @@ import { voxCivilization } from "../infra/vox-civilization.js";
 import { setTimeout } from 'node:timers/promises';
 import { VoxSession } from "../infra/vox-session.js";
 import { sessionRegistry } from "../infra/session-registry.js";
-import { StrategistSessionConfig, type PlayerConfig, isVisualMode, isObsMode, isHumanControl } from "../types/config.js";
+import { StrategistSessionConfig, type PlayerConfig, isVisualMode, isObsMode, isHumanControl, modelTiers } from "../types/config.js";
 import { obsManager } from "../infra/obs-manager.js";
 import { ProductionController } from "../infra/production-controller.js";
 import { config } from "../utils/config.js";
@@ -686,14 +686,15 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
 
     const references = new Set<string>();
     for (const name of agentNames) {
-      const agent = agentRegistry.get(name);
-      references.add(selectModelReference(name, agent?.modelSize, playerConfig.llms));
+      // Caller-selected tiers can bypass triage, so every reachable agent must have all
+      // three configured aliases resolvable before the game starts.
+      for (const tier of modelTiers) {
+        references.add(selectModelReference(name, tier, playerConfig.llms));
+      }
       const triaged = name === playerConfig.strategist
         ? playerConfig.pacing?.triage === true
         : triageEnabled(name, playerConfig.llms);
       if (triaged) {
-        references.add(selectModelReference(name, 'small', playerConfig.llms));
-        references.add(selectModelReference(name, 'large', playerConfig.llms));
         const evaluator = selectEvaluatorReference(name, playerConfig.llms);
         if (evaluator !== undefined) references.add(evaluator);
       }

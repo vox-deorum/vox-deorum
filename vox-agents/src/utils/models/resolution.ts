@@ -5,7 +5,7 @@
  */
 
 import { config } from '../config.js';
-import type { Model, ModelSize } from '../../types/config.js';
+import { modelTiers, type Model, type ModelSize } from '../../types/config.js';
 import { isSynthesizableModelId } from '../../types/constants.js';
 import { createLogger } from '../logger.js';
 import { DiscoveryError, discoverModels, allowsUnlistedModelReferences } from './discovery.js';
@@ -161,9 +161,11 @@ export async function ensureModelsResolved(
   for (const key of effectiveKeys) resolveAlias(key, overrides);
 
   // Agents resolve tier aliases lazily (`selectModelReference`), so a session may rely on a
-  // tier alias that no requested id names: verify each defined one at both scopes. This list
-  // must grow with `ModelSize` (every tier except `default`, which each chain already ends at).
-  const references = [...ids, config.llms.small, overrides?.small, config.llms.large, overrides?.large];
+  // tier alias that no requested id names: verify each defined tier alias at both scopes.
+  const tierAliases = modelTiers
+    .filter((tier) => tier !== 'default')
+    .flatMap((tier) => [config.llms[tier], overrides?.[tier]]);
+  const references = [...ids, ...tierAliases];
 
   for (const id of references) {
     if (typeof id !== 'string') continue;

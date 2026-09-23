@@ -9,11 +9,15 @@
 import { z } from "zod";
 import { AgentParameters, VoxAgent } from "../../infra/vox-agent.js";
 import { VoxContext } from "../../infra/vox-context.js";
+import type { ModelSize } from "../models/models.js";
+import { modelTiers } from '../../types/config.js';
 import { createLogger } from "../logger.js";
-import { Tool as VercelTool, dynamicTool } from 'ai';
+import { Tool as VercelTool, dynamicTool, jsonSchema, zodSchema } from 'ai';
 import { trace, SpanStatusCode, ROOT_CONTEXT, context as otelContext } from '@opentelemetry/api';
 
 const tracer = trace.getTracer('vox-tools');
+
+const toolTierSchema = z.enum(modelTiers);
 
 /**
  * Creates a dynamic tool wrapper for an agent using Vercel AI SDK's dynamicTool.
@@ -40,8 +44,25 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
   const description = agent.toolDescription || `Execute the ${agent.name} agent to handle specialized tasks`;
   // Prefer the caller-facing handoff schema (mapped into the agent's input by
   // resolveHandoffInput); fall back to the agent's own input schema, then a generic prompt.
-  const inputSchema = agent.handoffSchema || agent.inputSchema || z.object({
+  const baseInputSchema = agent.handoffSchema || agent.inputSchema || z.object({
     Prompt: z.string().describe("The prompt or task to give to the agent")
+  });
+  const tierShape = {
+    Tier: toolTierSchema.optional().describe('Model tier for this call: small for simple work, default for typical work, large for complex work.')
+  };
+  const tierEnvelope = z.object(tierShape).passthrough();
+  // Expose all caller fields, but validate the original schema once with Tier removed.
+  const inputSchema = jsonSchema(zodSchema(baseInputSchema.safeExtend(tierShape)).jsonSchema, {
+    /** Validate wrapper metadata separately from the agent's refinements and transforms. */
+    validate: async (value) => {
+      const envelope = tierEnvelope.safeParse(value);
+      if (!envelope.success) return { success: false, error: envelope.error };
+      const { Tier, ...callerInput } = envelope.data;
+      const parsed = await baseInputSchema.safeParseAsync(callerInput);
+      return parsed.success
+        ? { success: true, value: { ...parsed.data, ...(Tier === undefined ? {} : { Tier }) } }
+        : { success: false, error: parsed.error };
+    },
   });
 
   return dynamicTool({
@@ -63,22 +84,25 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         });
 
         // Map the caller's arguments into the agent's input, enriching with ambient context
-        // (e.g. the caller's currentInput) — still the caller's input at this point, since the
+        // (e.g. the caller's currentInput), still the caller's input at this point, since the
         // agent-tool runs inside the caller's step before context.execute swaps it.
-        const agentInput = agent.resolveHandoffInput(input, context);
-        // Resolve which concrete agent to run — defaults to this agent, but may dispatch to a
+        const { Tier, ...callerInput } = input as Record<string, unknown> & { Tier?: ModelSize };
+        const agentInput = agent.resolveHandoffInput(callerInput, context);
+        // Resolve which concrete agent to run: defaults to this agent, but may dispatch to a
         // context-resolved variant (e.g. a per-seat custom negotiator) sharing the same input.
         const targetName = agent.resolveHandoffTarget(context);
 
         // Fire-and-forget: detach from current trace and return immediately. Run on a forked
         // root, NOT a nested execute() on the caller's root: a nested execute() pushes a child
         // frame onto the parent root, so when the caller's run settles and is removed from
-        // activeRuns, this still-running work would be orphaned — unreachable by abort()/shutdown().
+        // activeRuns, this still-running work would be orphaned and unreachable by abort()/shutdown().
         // forkRun() registers its own detached root that outlives the parent and is reachable by
         // context-wide abort. It snapshots the parent's parameters and logs failures internally.
         if (agent.fireAndForget) {
           otelContext.with(ROOT_CONTEXT, () => {
-            context.forkRun(() => context.execute(targetName, agentInput));
+            context.forkRun(() => Tier
+              ? context.execute(targetName, agentInput, undefined, undefined, undefined, { triage: { tier: Tier } })
+              : context.execute(targetName, agentInput));
           });
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
@@ -86,7 +110,9 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         }
 
         // Execute the agent through the context
-        const result = await context.execute(targetName, agentInput);
+        const result = await (Tier
+          ? context.execute(targetName, agentInput, undefined, undefined, undefined, { triage: { tier: Tier } })
+          : context.execute(targetName, agentInput));
         logger.debug(`Agent-tool execution completed: ${agent.name}`);
 
         span.setAttributes({

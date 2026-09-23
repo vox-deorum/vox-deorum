@@ -39,14 +39,19 @@ class TriageAgent extends VoxAgent<AgentParameters> {
   readonly description = 'triage execution test agent';
   public readonly tiers: Array<ModelSize | undefined> = [];
   public readonly seen: Array<TriageDecision | undefined> = [];
-  public triageImpl?: (input: unknown) => Promise<TriageDecision | undefined>;
+  public readonly stepDecisions: Array<TriageDecision | undefined> = [];
+  public preparedStates: unknown[] = [];
+  public initialMessageCalls = 0;
+  public triageImpl?: (input: unknown, prepared: unknown) => Promise<TriageDecision | undefined>;
   public systemImpl?: (context: VoxContext<AgentParameters>, input: unknown) => Promise<void>;
+  public stepImpl?: (context: VoxContext<AgentParameters>, input: unknown) => Promise<void>;
 
-  constructor(public readonly name: string, private readonly emptySystem = true) { super(); }
+  constructor(public readonly name: string, private readonly emptySystem = false) { super(); }
 
   /** Run the test-controlled triage implementation. */
-  override async triage(_parameters: AgentParameters, input: unknown): Promise<TriageDecision | undefined> {
-    return this.triageImpl?.(input);
+  override async triage(_parameters: AgentParameters, input: unknown, _context: VoxContext<AgentParameters>, prepared: unknown): Promise<TriageDecision | undefined> {
+    this.preparedStates.push(prepared);
+    return this.triageImpl?.(input, prepared);
   }
 
   /** Record each tier used for both initial and prepared-step model selection. */
@@ -71,27 +76,48 @@ class TriageAgent extends VoxAgent<AgentParameters> {
     return this.emptySystem ? '' : 'system';
   }
 
+  /** Count initial prompt assembly so execute tests can verify single preparation. */
+  override async getInitialMessages(): Promise<any[]> {
+    this.initialMessageCalls++;
+    return [{ role: 'user', content: 'initial' }];
+  }
+
+  /** Record frame state at the point the selected tier is applied to a model step. */
+  override async prepareStep(parameters: AgentParameters, input: unknown, lastStep: any, allSteps: any[], messages: any[], context: VoxContext<AgentParameters>) {
+    this.stepDecisions.push(context.currentTriage);
+    await this.stepImpl?.(context, input);
+    return super.prepareStep(parameters, input, lastStep, allSteps, messages, context);
+  }
+
   /** Keep model-loop tests to one step. */
   override stopCheck(): boolean { return true; }
 }
 
-const triaged = new TriageAgent('test-triaged');
-const noHook = new TriageAgent('test-no-triage');
+const triaged = new TriageAgent('test-triaged', false);
+const noHook = new TriageAgent('test-no-triage', false);
 noHook.triage = undefined;
 const stepped = new TriageAgent('test-triage-step', false);
+const emptySystem = new TriageAgent('test-triage-empty-system', true);
+const evaluationAgent = new TriageAgent('test-evaluation-agent', false);
 
 beforeAll(() => {
   agentRegistry.register(triaged);
   agentRegistry.register(noHook);
   agentRegistry.register(stepped);
+  agentRegistry.register(emptySystem);
+  agentRegistry.register(evaluationAgent);
 });
 
 beforeEach(() => {
-  for (const agent of [triaged, noHook, stepped]) {
+  for (const agent of [triaged, noHook, stepped, emptySystem, evaluationAgent]) {
     agent.tiers.length = 0;
     agent.seen.length = 0;
+    agent.stepDecisions.length = 0;
+    agent.preparedStates.length = 0;
+    agent.initialMessageCalls = 0;
     agent.triageImpl = undefined;
     agent.systemImpl = undefined;
+    agent.stepImpl = undefined;
   }
   stream.mockReset();
   stream.mockResolvedValue(completedStep());
@@ -107,8 +133,12 @@ describe('VoxContext.execute triage', () => {
     await context.withRun({ parameters }, () => context.execute(triaged.name, {}));
 
     expect(hook).toHaveBeenCalledOnce();
-    expect(triaged.tiers).toEqual(['small']);
-    expect(triaged.seen).toEqual([{ tier: 'small', note: 'routine' }]);
+    expect(triaged.tiers).toEqual(['small', 'small']);
+    expect(triaged.seen).toEqual([undefined]);
+    expect(triaged.stepDecisions).toEqual([{ tier: 'small', note: 'routine' }]);
+    expect(triaged.initialMessageCalls).toBe(1);
+    expect(triaged.preparedStates).toHaveLength(1);
+    expect(triaged.preparedStates[0]).toMatchObject({ system: 'system', messages: [{ role: 'user' }] });
     expect(spans.find(span => span.name === `agent.${triaged.name}`)?.attributes).toMatchObject({
       'triage.tier': 'small',
       'triage.note': 'routine',
@@ -118,7 +148,7 @@ describe('VoxContext.execute triage', () => {
   it('should leave agents without a hook unchanged', async () => {
     const context = new VoxContext<AgentParameters>({}, 'triage-none');
     await context.withRun({ parameters }, () => context.execute(noHook.name, {}));
-    expect(noHook.tiers).toEqual([undefined]);
+    expect(noHook.tiers).toEqual([undefined, undefined]);
     expect(noHook.seen).toEqual([undefined]);
   });
 
@@ -127,8 +157,9 @@ describe('VoxContext.execute triage', () => {
     const context = new VoxContext<AgentParameters>({}, 'triage-fallback');
     const spans = recordSpans(context);
     await context.withRun({ parameters }, () => context.execute(triaged.name, {}));
-    expect(triaged.tiers).toEqual(['default']);
-    expect(triaged.seen).toEqual([{ tier: 'default', note: 'triage failed' }]);
+    expect(triaged.tiers).toEqual(['default', 'default']);
+    expect(triaged.seen).toEqual([undefined]);
+    expect(triaged.stepDecisions).toEqual([{ tier: 'default', note: 'triage failed' }]);
     expect(spans.find(span => span.name === `agent.${triaged.name}`)?.attributes).toMatchObject({
       'triage.tier': 'default',
       'triage.note': 'triage failed',
@@ -142,7 +173,7 @@ describe('VoxContext.execute triage', () => {
     agentRegistry.register(small);
     const context = new VoxContext<AgentParameters>({}, 'triage-small-fallback');
     await context.withRun({ parameters }, () => context.execute(small.name, {}));
-    expect(small.tiers).toEqual(['small']);
+    expect(small.tiers).toEqual(['small', 'small']);
   });
 
   it('should use a supplied decision without invoking the hook', async () => {
@@ -154,8 +185,9 @@ describe('VoxContext.execute triage', () => {
       triaged.name, {}, undefined, undefined, undefined, { triage: supplied }
     ));
     expect(hook).not.toHaveBeenCalled();
-    expect(triaged.tiers).toEqual(['large']);
-    expect(triaged.seen).toEqual([supplied]);
+    expect(triaged.tiers).toEqual(['large', 'large']);
+    expect(triaged.seen).toEqual([undefined]);
+    expect(triaged.stepDecisions).toEqual([supplied]);
   });
 
   it('should keep the selected tier when prepareStep selects the actual step model', async () => {
@@ -170,7 +202,7 @@ describe('VoxContext.execute triage', () => {
     noHook.systemImpl = async context => {
       expect(context.currentTriage).toBeUndefined();
     };
-    triaged.systemImpl = async context => {
+    triaged.stepImpl = async context => {
       await context.execute(noHook.name, {}, undefined, undefined, undefined, { throwOnError: true });
       expect(context.currentTriage).toEqual({ tier: 'large', note: 'parent' });
     };
@@ -187,8 +219,8 @@ describe('VoxContext.execute triage', () => {
     const firstPaused = new Promise<void>(resolve => { releaseFirst = resolve; });
     let firstReady!: () => void;
     const ready = new Promise<void>(resolve => { firstReady = resolve; });
-    triaged.triageImpl = async input => ({ tier: (input as { tier: ModelSize }).tier });
-    triaged.systemImpl = async (context, input) => {
+    triaged.triageImpl = async (input) => ({ tier: (input as { tier: ModelSize }).tier });
+    triaged.stepImpl = async (context, input) => {
       const key = (input as { key: string }).key;
       if (key === 'first') {
         firstReady();
@@ -208,7 +240,7 @@ describe('VoxContext.execute triage', () => {
     expect(observed.get('second')).toEqual({ tier: 'large' });
   });
 
-  it('should not start default-tier work after triage cancels its root', async () => {
+  it('should not start model work after triage cancels its root', async () => {
     const context = new VoxContext<AgentParameters>({}, 'triage-cancel');
     triaged.triageImpl = async () => {
       context.abort();
@@ -216,7 +248,40 @@ describe('VoxContext.execute triage', () => {
     };
     await context.withRun({ parameters }, () => context.execute(triaged.name, {}));
     expect(triaged.tiers).toEqual([]);
-    expect(triaged.seen).toEqual([]);
+    expect(triaged.seen).toEqual([undefined]);
+  });
+
+  it('should preserve empty-system agents without constructing messages or selecting a model', async () => {
+    const context = new VoxContext<AgentParameters>({}, 'triage-empty-system');
+    emptySystem.triageImpl = vi.fn(async () => ({ tier: 'large' }));
+
+    await context.withRun({ parameters }, () => context.execute(emptySystem.name, {}));
+
+    expect(emptySystem.initialMessageCalls).toBe(0);
+    expect(emptySystem.tiers).toEqual([]);
+    expect(emptySystem.preparedStates).toEqual([]);
+  });
+
+  it('should execute an evaluation agent with the prepared prompt and skip the chat loop', async () => {
+    const tokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
+    const evaluation = vi.fn(async (_parameters, _input, _context, prepared, _model, sink) => {
+      expect(prepared).toMatchObject({ system: 'system', messages: [{ role: 'user' }] });
+      expect(sink).toBe(tokenOutput);
+      return { result: 'evaluated' };
+    });
+    const postprocess = vi.fn((_parameters, _input, output) => ({ ...output, processed: true }));
+    evaluationAgent.executeEvaluation = evaluation;
+    evaluationAgent.postprocessOutput = postprocess;
+    const context = new VoxContext<AgentParameters>({}, 'evaluation-agent');
+
+    await expect(context.withRun({ parameters }, () => context.execute(
+      evaluationAgent.name, {}, undefined, tokenOutput,
+    ))).resolves.toEqual({ result: 'evaluated', processed: true });
+
+    expect(evaluationAgent.initialMessageCalls).toBe(1);
+    expect(evaluation).toHaveBeenCalledOnce();
+    expect(postprocess).toHaveBeenCalledOnce();
+    expect(stream).not.toHaveBeenCalled();
   });
 });
 

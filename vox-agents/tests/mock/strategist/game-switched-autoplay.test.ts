@@ -187,8 +187,13 @@ describe('model preflight', () => {
 
     expect(modelMocks.selectModelReference).toHaveBeenCalledWith('selected-strategist', 'small', overrides);
     expect(modelMocks.selectModelReference).toHaveBeenCalledWith('specialized-briefer', 'small', overrides);
+    for (const name of ['selected-strategist', 'simple-briefer', 'diplomat', 'specialized-briefer', 'diplomatic-analyst', 'negotiator']) {
+      for (const tier of ['small', 'default', 'large']) {
+        expect(modelMocks.selectModelReference).toHaveBeenCalledWith(name, tier, overrides);
+      }
+    }
     expect(modelMocks.selectModelReference).not.toHaveBeenCalledWith('unused-agent', expect.anything(), overrides);
-    // Triage off everywhere: no evaluator lookup and no extra tier references.
+    // Triage off everywhere: no evaluator lookup is needed.
     expect(modelMocks.triageEnabled).toHaveBeenCalledWith('diplomat', overrides);
     expect(modelMocks.selectEvaluatorReference).not.toHaveBeenCalled();
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
@@ -223,11 +228,13 @@ describe('model preflight', () => {
     // The seat strategist gates on pacing.triage, never on the options.triage helper.
     expect(modelMocks.triageEnabled).not.toHaveBeenCalledWith('selected-strategist', llms);
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
-      'openai/strategist',
       'selected-strategist.small',
+      'openai/strategist',
       'selected-strategist.large',
       'evaluator',
+      'diplomat.small',
       'diplomat',
+      'diplomat.large',
     ], llms);
   });
 
@@ -259,9 +266,11 @@ describe('model preflight', () => {
     expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledWith('diplomat', llms);
     expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledTimes(1);
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
+      'null-strategist.small',
       'null-strategist-ref',
-      'diplomat-ref',
+      'null-strategist.large',
       'diplomat.small',
+      'diplomat-ref',
       'diplomat.large',
       'diplomat.evaluator',
     ], llms);
@@ -287,9 +296,11 @@ describe('model preflight', () => {
     await expect(s.start()).rejects.toThrow('Failed to start Civilization V');
 
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
+      'null-strategist.small',
       'null-strategist-ref',
-      'diplomat-ref',
+      'null-strategist.large',
       'diplomat.small',
+      'diplomat-ref',
       'diplomat.large',
     ], llms);
   });

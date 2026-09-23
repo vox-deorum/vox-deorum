@@ -15,17 +15,19 @@ const RelayMessageInputSchema = z.object({
   PlayerID: z.number().min(0).max(MaxMajorCivs - 1)
     .describe('The receiving player ID (the leader being informed)'),
   FromPlayerID: z.number().min(0).max(MaxMajorCivs - 1)
-    .describe('The player ID of the civilization the message concerns'),
-  Message: z.enum(['Diplomatic', 'Intelligence'])
-    .describe('Message type: "diplomatic" for official communications, "intelligence" for gathered information'),
-  Content: z.string().min(1).max(2000)
+    .describe('The source player ID'),
+  AboutPlayerIDs: z.array(z.number().int().min(0).max(MaxMajorCivs - 1)).optional()
+    .describe('Player IDs discussed in the report; omitted or empty means no subjects'),
+  Message: z.enum(['Diplomatic', 'Intelligence', 'Rumor'])
+    .describe('Message type: Diplomatic for official communications, Intelligence for gathered information, Rumor for unverified claims'),
+  Content: z.string().min(1).max(4000)
     .describe('The message content'),
   Confidence: z.number().min(0).max(9)
     .describe('Reliability assessment (0 = unreliable rumor, 9 = authoritative leader statement)'),
   Importance: z.number().min(0).max(9)
     .describe('Strategic urgency (0 = background information, 9 = leader must reconsider strategy immediately; 7+ is considered important)'),
-  Categories: z.array(z.string()).min(1)
-    .describe('Searchable categories (e.g., "Military", "Economic", "Diplomacy")'),
+  Categories: z.array(z.enum(['Diplomacy', 'Military', 'Economy', 'Others']))
+    .describe('All report categories with estimated relevance probability at least 0.5; multiple categories or an empty array are allowed'),
   Memo: z.string().min(1).max(500)
     .describe("The analyst's memo: assessment, reaction, and contextual notes")
 });
@@ -51,11 +53,14 @@ class MessageRelayTool extends DynamicEventTool {
     args: z.infer<typeof RelayMessageInputSchema>,
     playerMap: Map<number, Selectable<PlayerInformation>>
   ): Promise<Record<string, unknown>> {
+    const aboutPlayerIDs = [...new Set(args.AboutPlayerIDs ?? [])];
+
     return {
       ToPlayerID: args.PlayerID,
       FromPlayerID: args.FromPlayerID,
       ToPlayer: resolvePlayerName(playerMap, args.PlayerID),
       FromPlayer: resolvePlayerName(playerMap, args.FromPlayerID),
+      AboutPlayerIDs: aboutPlayerIDs,
       Message: args.Message,
       Content: args.Content,
       Confidence: `${args.Confidence}/9`,

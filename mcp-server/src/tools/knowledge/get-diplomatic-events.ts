@@ -251,7 +251,8 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
     playerIdFields: ["ToPlayerID", "FromPlayerID"],
     toMarkdown: (e, ctx) => ({
       Title: `${ctx.player(e.FromPlayerID)} → ${ctx.player(e.ToPlayerID)}`,
-      Type: e.Message === "Intelligence" ? "Intelligence" : "Diplomatic message",
+      Type: e.Message === "Diplomatic" ? "Diplomatic message" : e.Message,
+      AboutPlayers: (e.AboutPlayerIDs ?? []).map((id: number) => ctx.player(id)),
       Confidence: e.Confidence,
       Importance: e.Importance,
       Categories: Array.isArray(e.Categories) ? e.Categories.join(", ") : "",
@@ -386,8 +387,11 @@ class GetDiplomaticEventsTool extends ToolBase {
         const teamMatch = config.teamIdFields?.some(
           field => otherTeamId !== undefined && payload[field] === otherTeamId
         ) ?? false;
+        const subjectMatch = event.Type === "RelayedMessage"
+          && Array.isArray(payload.AboutPlayerIDs)
+          && payload.AboutPlayerIDs.includes(args.OtherPlayerID);
 
-        if (!playerMatch && !teamMatch) continue;
+        if (!playerMatch && !teamMatch && !subjectMatch) continue;
       }
 
       if (args.Formatted) {

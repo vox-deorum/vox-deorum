@@ -1,4 +1,4 @@
-/** Tests for the reusable evaluator-backed agent triage hook. */
+/** Tests for reusable prepared-state evaluation and triage routing. */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -26,56 +26,59 @@ describe('createTriage', () => {
     mocks.evaluator.mockReset().mockReturnValue({ provider: 'typesafe', name: 'jev-latest' });
   });
 
-  it('should combine a static instruction with the current input and use the default tier question', async () => {
-    const hook = createTriage('Assess this task.');
-    const ctx = context();
-    const decision = await hook.call({ name: 'agent' } as any, { turn: 7 } as any, { task: 'respond' }, ctx);
-
-    expect(decision?.tier).toBe('large');
-    expect(ctx.evaluate.mock.calls[0][1]).toEqual({
-      instructions: 'Assess this task.',
-      input: { task: 'respond' },
-    });
-  });
-
-  it('should await a state builder and route custom typed answers', async () => {
-    const adapter = vi.fn(async () => ({ summary: 'bounded state' }));
-    const questions = {
-      urgency: { type: 'boolean', instructions: 'Is this urgent?' },
-    } as const;
+  it('should evaluate the prepared state and route typed answers', async () => {
+    const prepared = { system: 'system', messages: [{ role: 'user', content: 'context' }] };
+    const questions = { urgency: { type: 'boolean', instructions: 'question', criteria: undefined } } as const;
+    const route = vi.fn((answers: any) => ({ tier: answers.urgency.probability >= 0.5 ? 'large' as const : 'small' as const }));
     const ctx = context();
     ctx.evaluate.mockResolvedValue({ answers: { urgency: { type: 'boolean', probability: 1 } } });
-    const hook = createTriage(adapter, {
-      questions,
-      route: answers => ({ tier: answers.urgency.probability >= 0.5 ? 'large' : 'small' }),
-    });
+    const hook = createTriage({ questions, route });
 
-    await expect(hook.call({ name: 'agent' } as any, { turn: 7 } as any, {}, ctx)).resolves.toMatchObject({ tier: 'large' });
-    expect(adapter).toHaveBeenCalledOnce();
-    expect(ctx.evaluate.mock.calls[0][1]).toEqual({ summary: 'bounded state' });
+    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, prepared)).resolves.toMatchObject({
+      tier: 'large',
+      answers: { urgency: { probability: 1 } },
+    });
+    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), prepared, { questions });
+    expect(route).toHaveBeenCalledOnce();
   });
 
-  it('should return a shortcut decision without an evaluator call', async () => {
-    const hook = createTriage(async () => new TriageShortcut({ tier: 'small', note: 'routine' }));
+  it('should project the prepared state only when the caller supplies a projector', async () => {
+    const prepared = { system: 'system', messages: [] };
+    const projectState = vi.fn(() => ({ facts: ['selected'] }));
     const ctx = context();
+    const hook = createTriage({ projectState });
 
-    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx)).resolves.toEqual({ tier: 'small', note: 'routine' });
+    await hook.call({ name: 'agent' } as any, {} as any, {}, ctx, prepared);
+
+    expect(projectState).toHaveBeenCalledWith(prepared, {}, {}, ctx);
+    expect(ctx.evaluate.mock.calls[0][1]).toEqual({ facts: ['selected'] });
+  });
+
+  it('should return a deterministic shortcut without evaluating questions', async () => {
+    const shortcut = new TriageShortcut({ tier: 'small', note: 'routine' });
+    const ctx = context();
+    const hook = createTriage({ shortcut: () => shortcut });
+
+    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
+      .resolves.toEqual(shortcut.decision);
     expect(ctx.evaluate).not.toHaveBeenCalled();
   });
 
-  it('should run both gates before invoking the prompt adapter', async () => {
-    const adapter = vi.fn(async () => 'state');
-    const hook = createTriage(adapter);
+  it('should skip state projection and evaluation when either opt-in gate is closed', async () => {
+    const projectState = vi.fn(() => 'state');
+    const hook = createTriage({ projectState });
     const ctx = context();
 
     mocks.enabled.mockReturnValue(false);
-    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx)).resolves.toBeUndefined();
+    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
+      .resolves.toBeUndefined();
     expect(mocks.evaluator).not.toHaveBeenCalled();
-    expect(adapter).not.toHaveBeenCalled();
 
     mocks.enabled.mockReturnValue(true);
     mocks.evaluator.mockReturnValue(undefined);
-    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx)).resolves.toBeUndefined();
-    expect(adapter).not.toHaveBeenCalled();
+    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
+      .resolves.toBeUndefined();
+    expect(projectState).not.toHaveBeenCalled();
+    expect(ctx.evaluate).not.toHaveBeenCalled();
   });
 });

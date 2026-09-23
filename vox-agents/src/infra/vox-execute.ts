@@ -14,7 +14,7 @@
 
 import { Output, StepResult, ToolSet, ModelMessage } from "ai";
 import { trace, SpanStatusCode, context } from '@opentelemetry/api';
-import type { AgentParameters, TriageDecision, VoxAgent } from "./vox-agent.js";
+import type { AgentParameters, PreparedAgentState, TriageDecision, VoxAgent } from "./vox-agent.js";
 import type { VoxContext } from "./vox-context.js";
 import type { Model, StreamingEventCallback } from "../types/index.js";
 import { streamTextWithConcurrency, withModelConfig } from "../utils/models/concurrency.js";
@@ -96,30 +96,42 @@ export async function executeAgent<TParameters extends AgentParameters>(
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       try {
-        const decision = await resolveTriage(host, agent, params, input, options);
+        const system = await agent.getSystem(params, input, host);
+        const prepared: PreparedAgentState = {
+          system,
+          messages: system !== "" ? await agent.getInitialMessages(params, input, host) : [],
+        };
+        const decision = system !== ""
+          ? await resolveTriage(host, agent, params, input, options, prepared)
+          : undefined;
         frame.triage = decision;
         if (decision) {
           span.setAttribute('triage.tier', decision.tier);
           if (decision.note !== undefined) span.setAttribute('triage.note', decision.note);
         }
 
-        // Execute the agent using generateText
-        // Get model config - agent's model or default, with overrides applied
-        const modelConfig = agent.getModel(params, input, host.modelOverrides, decision?.tier);
-        const system = await agent.getSystem(params, input, host);
+        if (system !== "") {
+          // Get model config after triage so every execution path uses the selected tier.
+          const modelConfig = agent.getModel(params, input, host.modelOverrides, decision?.tier);
+          await updateModelLabel(host, agent.name, modelConfig, system, params);
 
-        // Auto-send model name via set-metadata when the strategist's model changes
-        await updateModelLabel(host, agent.name, modelConfig, system, params);
+          if (agent.executeEvaluation) {
+            host.currentSignal().throwIfAborted();
+            const evaluationOutput = await agent.executeEvaluation(params, input, host, prepared, modelConfig, tokenOutput);
+            host.currentSignal().throwIfAborted();
+            span.setAttribute('model', formatModelReference(modelConfig));
+            span.setStatus({ code: SpanStatusCode.OK });
+            if (evaluationOutput === undefined) return;
+            return agent.postprocessOutput(params, input, evaluationOutput);
+          }
 
-        if (system != "") {
           let shouldStop = false;
           let messages: ModelMessage[] = [{
             role: "system",
             content: system
           }];
 
-          const initialMessages = await agent.getInitialMessages(params, input, host);
-          messages.push(...initialMessages);
+          messages.push(...prepared.messages);
           const allSteps: StepResult<ToolSet>[] = [];
           let finalText = "";
 
@@ -216,7 +228,8 @@ async function resolveTriage<TParameters extends AgentParameters>(
   agent: VoxAgent<TParameters>,
   parameters: TParameters,
   input: unknown,
-  options: ExecuteOptions
+  options: ExecuteOptions,
+  prepared: PreparedAgentState,
 ): Promise<TriageDecision | undefined> {
   if (options.triage) return options.triage;
   if (!agent.triage) return undefined;
@@ -224,7 +237,7 @@ async function resolveTriage<TParameters extends AgentParameters>(
   const signal = host.currentSignal();
   signal.throwIfAborted();
   try {
-    const decision = await agent.triage(parameters, input, host);
+    const decision = await agent.triage(parameters, input, host, prepared);
     signal.throwIfAborted();
     return decision;
   } catch (error) {

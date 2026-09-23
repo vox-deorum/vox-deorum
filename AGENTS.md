@@ -47,6 +47,7 @@ When editing documentation, plans, prioritize coherent rewriting over surgical e
 - ESM everywhere: all TS modules use `"type": "module"` with `.js` import extensions.
 - npm workspaces: always run `npm install <pkg>` from the repo root, never from a workspace, and keep sub-package `package.json` files minimal. Use `npm install`, `npm run build:all`, and `npm run test:all` from root.
 - Vitest for all TypeScript testing.
+- Test behavior and contracts, not hard-coded prose. Avoid assertions tied to exact prompt, documentation, or message wording; use controlled inputs to check decisions, data flow, and observable effects.
 - Winston logger only: never use `console.log/error/warn` in production code (it is fine in tests).
 - camelCase for exported constants (for example, `export const apiKeyFields`).
 - Comment everywhere: every function, at least, needs a comment.

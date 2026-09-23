@@ -16,7 +16,7 @@ const __dirname = dirname(__filename);
 /**
  * Event category types
  */
-export type EventCategory = 'Military' | 'Economy' | 'Diplomacy' | 'System';
+export type EventCategory = 'Military' | 'Economy' | 'Diplomacy' | 'Others' | 'System';
 
 /**
  * Cached event category mappings loaded from event-categories.json
@@ -51,8 +51,8 @@ function loadEventCategories(): Record<string, EventCategory[]> {
  * to the specified category. Events can belong to multiple categories, so an event
  * is included if the category is present in its category list.
  *
- * Note: This function filters the parent event by Type. Nested Events arrays are
- * preserved as-is since they don't have their own Type field.
+ * Relayed reports use their assessed Categories. Other events use the type mapping.
+ * Nested Events arrays are preserved since they don't have their own Type field.
  *
  * @param eventsByTurn - Consolidated events report (turn-keyed object)
  * @param category - The event category to filter by
@@ -72,6 +72,9 @@ export function filterEventsByCategory(
     }
 
     const turnFiltered = events.filter(event => {
+      if (event.Type === 'RelayedMessage') {
+        return Array.isArray(event.Categories) && event.Categories.includes(category);
+      }
       const eventCategories = categories[event.Type];
       return eventCategories && eventCategories.includes(category);
     });

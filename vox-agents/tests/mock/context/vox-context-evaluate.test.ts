@@ -7,7 +7,7 @@
  * error recording with a re-throw. Same tracer idiom as vox-execute.test.ts.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 
 // Mock only the evaluation-model factory; keep the real SDK call, coercion, and telemetry.
 vi.mock('../../../src/utils/models/evaluation.js', async (orig) => {
@@ -22,6 +22,8 @@ import type {
   Experimental_EvaluationModelV4Question as EvaluationModelV4Question,
 } from '@ai-sdk/provider';
 import { VoxContext } from '../../../src/infra/vox-context.js';
+import { VoxAgent, type AgentParameters } from '../../../src/infra/vox-agent.js';
+import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { getEvaluationModel } from '../../../src/utils/models/evaluation.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
@@ -39,6 +41,71 @@ const questions = {
 } satisfies Record<string, EvaluationModelV4Question>;
 
 const testModel = { provider: 'typesafe', name: 'jev-latest' } as Model;
+const selectedAgentModel = { provider: 'typesafe', name: 'selected-native-evaluator' } as Model;
+
+/** Exercise evaluation through the ordinary agent execution boundary. */
+class EvaluationExecutionAgent extends VoxAgent<StrategistParameters, unknown, unknown> {
+  readonly name = 'test-evaluation-execution';
+  readonly description = 'Evaluation execution test agent';
+  readonly preparedSystems: string[] = [];
+  readonly preparedMessages: unknown[][] = [];
+  readonly selectedModels: Model[] = [];
+  systemBuilds = 0;
+  initialMessageBuilds = 0;
+  outputBuilds = 0;
+  postprocessCalls = 0;
+
+  /** Select a known evaluator model so the native evaluator factory call can be checked. */
+  override getModel(): Model {
+    return selectedAgentModel;
+  }
+
+  /** Return the system part of the prepared evaluation state. */
+  override async getSystem(): Promise<string> {
+    this.systemBuilds++;
+    return 'prepared-system';
+  }
+
+  /** Return the initial-message part of the prepared evaluation state. */
+  override async getInitialMessages() {
+    this.initialMessageBuilds++;
+    return [{ role: 'user' as const, content: 'prepared-context' }];
+  }
+
+  /** Evaluate prepared state directly and pass the execution token sink through. */
+  override async executeEvaluation(
+    _parameters: StrategistParameters,
+    _input: unknown,
+    context: VoxContext<StrategistParameters>,
+    prepared: { system: string; messages: any[] },
+    model: Model,
+    tokenOutput?: { inputTokens: number; reasoningTokens: number; outputTokens: number },
+  ) {
+    this.preparedSystems.push(prepared.system);
+    this.preparedMessages.push(prepared.messages);
+    this.selectedModels.push(model);
+    const result = await context.evaluate(model, prepared, { questions, tokenOutput });
+    return result.answers;
+  }
+
+  /** Count chat output conversion calls, which evaluation execution must bypass. */
+  override async getOutput(): Promise<undefined> {
+    this.outputBuilds++;
+    return undefined;
+  }
+
+  /** Count the shared final processing step. */
+  override postprocessOutput(_parameters: StrategistParameters, _input: unknown, output: unknown) {
+    this.postprocessCalls++;
+    return output;
+  }
+}
+
+const evaluationAgent = new EvaluationExecutionAgent();
+
+beforeAll(() => {
+  agentRegistry.register(evaluationAgent);
+});
 
 /** Scripted provider metadata: confidence keyed by question id, as the typesafe provider reports it. */
 const confidence = { urgent: 0.9 };
@@ -150,6 +217,46 @@ describe('VoxContext.evaluate success path', () => {
     });
     expect(span.status).toEqual({ code: SpanStatusCode.OK });
     expect(span.ended).toBe(true);
+  });
+
+  it('should execute an evaluation agent once and accrue its native evaluator usage once', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'eval-agent');
+    const tokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
+    let runTokens: { inputTokens: number; reasoningTokens: number; outputTokens: number } | undefined;
+
+    const result = await ctx.withRun(
+      { parameters: makeStrategistParameters(), overrides: { turn: 7 } },
+      async (run) => {
+        const output = await ctx.execute(
+          evaluationAgent.name,
+          {},
+          undefined,
+          tokenOutput,
+          undefined,
+          { triage: { tier: 'large' } },
+        );
+        runTokens = run.tokens;
+        return output;
+      },
+    );
+
+    expect(result).toEqual({ urgent: { type: 'boolean', probability: 0.7 } });
+    expect(evaluationAgent.systemBuilds).toBe(1);
+    expect(evaluationAgent.initialMessageBuilds).toBe(1);
+    expect(evaluationAgent.preparedSystems).toEqual(['prepared-system']);
+    expect(evaluationAgent.preparedMessages).toEqual([[{ role: 'user', content: 'prepared-context' }]]);
+    expect(evaluationAgent.selectedModels).toEqual([selectedAgentModel]);
+    expect(evaluationAgent.outputBuilds).toBe(0);
+    expect(evaluationAgent.postprocessCalls).toBe(1);
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(factory.mock.calls[0]![0]).toBe(selectedAgentModel);
+    expect(factory.mock.calls[0]![1]).toBe(ctx);
+    expect(runTokens).toEqual({ inputTokens: 30, reasoningTokens: 0, outputTokens: 4 });
+    expect(tokenOutput).toEqual({ inputTokens: 30, reasoningTokens: 0, outputTokens: 4 });
+    expect(ctx.inputTokens).toBe(30);
+    expect(ctx.reasoningTokens).toBe(0);
+    expect(ctx.outputTokens).toBe(4);
   });
 });
 
