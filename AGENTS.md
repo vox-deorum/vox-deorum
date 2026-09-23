@@ -1,6 +1,8 @@
 # AGENTS.md
 
-NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets externally staged, it is from the human reviewer. DO NOT ASK asynchronous questions.
+NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets externally staged, it is from the human reviewer. 
+
+When asking questions, come with a clear, plain description with an example. Do not assume the owner knows every detail in your context. DO NOT ASK asynchronous questions.
 
 ## Use Subagents When Appropriate
 
@@ -37,9 +39,7 @@ Read a component's `AGENTS.md` when working in that directory. Load other docume
 
 ## Writing Style
 
-Use plain, natural language in documentation, comments, commit messages, release notes, and responses. Use lists, tables, or diagrams as long as they improve clarity. Do not use em-dashes. These rules also apply to delegates.
-
-Rewrite documentation and plans for a coherent final result. Include revision history only when requested, and comparisons only when they help the reader make a decision.
+Use plain, natural language in documentation, comments, commit messages, release notes, and responses. Use lists, tables, or diagrams as long as they improve clarity. Do not use em-dashes. These rules also apply to delegates. Rewrite documentation and plans for a coherent final result. Include revision history only when requested, and comparisons only when they help the reader make a decision.
 
 ## Code Rules
 
