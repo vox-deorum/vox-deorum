@@ -149,7 +149,7 @@ export class DiplomaticAnalyst extends Analyst {
       const events = results[index];
       return isFailedToolResult(events) || typeof events !== "object"
         ? { PlayerID: playerID, status: "unavailable" }
-        : { PlayerID: playerID, status: "available", events: events, seen) };
+        : { PlayerID: playerID, status: "available", events: events, seen };
     });
     const reportMessage = {
       role: "user" as const,
