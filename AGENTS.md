@@ -4,7 +4,7 @@ NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets exte
 
 ## Use Subagents When Appropriate
 
-Delegate less critical/lower-level BATCH work to subagents with less capabilities for exploring/batch editing, e.g., from Claude Fable to Opus, or from GPT Astra/Sol to Luna. Always designate a model for subagents and report which model (or tool) you used in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches. Use OpenCode delegation if such a skill exists, for READONLY work. If OpenCode does not work, switch back to native subagents.
+Delegate less critical/lower-level BATCH work to subagents with less capabilities for exploring/batch editing, e.g., from Claude Fable to Opus, or from GPT Astra/Sol to Luna. Always designate a model for subagents and report which model (or tool) you used in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches. Use OpenCode delegation if such a skill exists, with clear, bounded instructions. If OpenCode does not work, switch back to native subagents.
 
 DO NOT use weak models for complex diagnosis. Only use latest model series (e.g., no GPT-5.5, no Sonnet-5). For Claude Code, always delegate to OpenCode for exploration work.
 
@@ -21,43 +21,43 @@ The system is made up of five components:
 
 | Component | Directory | What it does |
 | --- | --- | --- |
-| Community Patch DLL | `civ5-dll/` | C++ DLL with named pipe IPC. Build and deploy with `powershell -Command "& .\build-and-copy.bat"` from `civ5-dll/`. |
+| Community Patch DLL | `civ5-dll/` | C++ DLL with named pipe IPC. |
 | Bridge Service | `bridge-service/` | REST/SSE bridge between Civ V and the AI. |
 | MCP Server | `mcp-server/` | MCP tools plus SQLite game data access (Kysely). |
 | Vox Agents | `vox-agents/` | LLM-powered strategic AI framework. |
 | Civ 5 Mod | `civ5-mod/` | Lua hooks and UI for game integration. |
 
-Each component has its own AGENTS.md with detailed patterns. Read it before working in that directory.
+Read a component's `AGENTS.md` when working in that directory. Load other documentation as needed for the task.
 
-## Workflow Rules
+## Build and Release Commands
 
-- Delegate to sub-agents for complex or multi-step features, and include the tool-calling rules in the prompt.
-- When asking questions, come with a clear example. Do not assume the owner knows every detail in your context.
+- npm workspaces: run `npm install` and `npm install <pkg>` from the repository root. Root commands for full validation are `npm run build:all` and `npm run test:all`.
+- DLL build and deployment: run `powershell -Command "& .\build-and-copy.bat"` from `civ5-dll/` when the task calls for building and deploying the DLL.
 - Release notes: read `release.txt` for the last version tag, then run `git log <tag>..HEAD --oneline --no-merges` and `git diff --stat <tag>..HEAD`. Output short grouped bullets to the console and don't write files.
 
 ## Writing Style
 
-Write everything in natural language: docs, code comments, commit messages, release notes, console output, and the AGENTS.md files themselves. Keep the prose plain and easy to follow. Bullets, subbullets, mermaid diagrams, and tables are encouraged wherever they make the content easier to understand. Do not use em-dashes anywhere. Reach for a colon, a comma, parentheses, or two separate sentences instead. Every agent working in this repo must follow this rule.
+Use plain, natural language in documentation, comments, commit messages, release notes, and responses. Use lists, tables, or diagrams as long as they improve clarity. Do not use em-dashes. These rules also apply to delegates.
 
-When editing documentation, plans, prioritize coherent rewriting over surgical edits. Readability is a paramount concern. Do not produce layered writings (e.g., instead of X we chose to do Y) that document revision histories, unless explicitly instructed to do so. Use comparisons only (e.g., it is not Y, it is X) when the reader needs the distinction to make a decision.
+Rewrite documentation and plans for a coherent final result. Include revision history only when requested, and comparisons only when they help the reader make a decision.
 
 ## Code Rules
 
-- Prioritize simplification and streamlining more than complicating things or adding unnecessary guardrails.
+- Prefer simple implementations with only the abstractions and guardrails the task needs.
 - ESM everywhere: all TS modules use `"type": "module"` with `.js` import extensions.
-- npm workspaces: always run `npm install <pkg>` from the repo root, never from a workspace, and keep sub-package `package.json` files minimal. Use `npm install`, `npm run build:all`, and `npm run test:all` from root.
+- Keep workspace `package.json` files minimal.
 - Vitest for all TypeScript testing.
 - Test behavior and contracts, not hard-coded prose. Avoid assertions tied to exact prompt, documentation, or message wording; use controlled inputs to check decisions, data flow, and observable effects.
 - Winston logger only: never use `console.log/error/warn` in production code (it is fine in tests).
 - camelCase for exported constants (for example, `export const apiKeyFields`).
-- Comment everywhere: every function, at least, needs a comment.
+- Give every function a comment describing its purpose.
 - Use the `// Vox Deorum:` prefix for Vox Populi/Community Patch modifications outside CvConnectionService.
 
 ## Documentation Rules
 
 Documentation is centralized in `/docs/` and serves two audiences: players (how to play) and developers (what the repo does and how its pieces fit).
 
-- Update docs in the same change that alters behavior, configuration, or setup, and never create docs proactively.
+- Update relevant docs alongside changes to behavior, configuration, or setup. Create documentation only when the task requires it.
 - Keep the detail light. Avoid raw code in docs; describe the behavior and name the source file instead.
 - No line-number anchors. They drift, so refer to files, functions, or concepts by name.
 - Component `docs/` folders are only for component-specific reference material (for example, `mcp-server/docs/events/`). Don't add new root-level markdown inside components.
