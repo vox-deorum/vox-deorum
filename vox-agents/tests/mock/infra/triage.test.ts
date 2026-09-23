@@ -36,9 +36,10 @@ describe('createTriage', () => {
 
     await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, prepared)).resolves.toMatchObject({
       tier: 'large',
+      source: 'evaluator',
       answers: { urgency: { probability: 1 } },
     });
-    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), prepared, { questions });
+    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), prepared, { questions, purpose: 'triage' });
     expect(route).toHaveBeenCalledOnce();
   });
 
@@ -60,7 +61,7 @@ describe('createTriage', () => {
     const hook = createTriage({ shortcut: () => shortcut });
 
     await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
-      .resolves.toEqual(shortcut.decision);
+      .resolves.toEqual({ ...shortcut.decision, source: 'shortcut' });
     expect(ctx.evaluate).not.toHaveBeenCalled();
   });
 

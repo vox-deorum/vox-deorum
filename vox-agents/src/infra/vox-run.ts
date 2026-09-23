@@ -79,6 +79,8 @@ export interface RootRun<TParameters extends AgentParameters> {
 export interface ExecutionFrame<TParameters extends AgentParameters> {
   readonly root: RootRun<TParameters>;
   readonly input: unknown;
+  /** Name of the agent owning this frame, when inside an agent execution. */
+  readonly agentName?: string;
   /** Triage decision for this execution, isolated from parent and sibling frames. */
   triage?: TriageDecision;
   /** Values loaded once for this execution and shared by its hooks (see VoxContext.memoizeForExecution). */
@@ -171,9 +173,10 @@ export function createRootRun<TParameters extends AgentParameters>(
 /** Build an execution frame for a root + input, with a fresh per-execution timeout-refresh slot. */
 export function createExecutionFrame<TParameters extends AgentParameters>(
   root: RootRun<TParameters>,
-  input: unknown
+  input: unknown,
+  agentName?: string,
 ): ExecutionFrame<TParameters> {
-  return { root, input, memo: new Map(), timeoutRefresh: () => {} };
+  return { root, input, agentName, memo: new Map(), timeoutRefresh: () => {} };
 }
 
 /** Abort one root run (idempotent). */

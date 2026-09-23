@@ -63,6 +63,7 @@ describe('Diplomat.triage', () => {
 
     await expect(diplomat.triage?.({}, thread('{{{Greeting}}}'), ctx, prepared)).resolves.toEqual({
       tier: 'small',
+      source: 'shortcut',
       note: 'special message',
     });
     expect(ctx.evaluate).not.toHaveBeenCalled();
@@ -79,8 +80,8 @@ describe('Diplomat.triage', () => {
   ] as const)('should route evaluator answers for %s at stakes %s to %s', async (intent, stakes, tier) => {
     const ctx = triageContext(enabledAssignment, answers(intent, stakes));
 
-    await expect(diplomat.triage?.({}, thread('context'), ctx, prepared)).resolves.toMatchObject({ tier });
-    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), [], { questions: expect.any(Object) });
+    await expect(diplomat.triage?.({}, thread('context'), ctx, prepared)).resolves.toMatchObject({ tier, source: 'evaluator' });
+    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), [], { questions: expect.any(Object), purpose: 'triage' });
   });
 
   it('should evaluate a bounded tail of the prepared messages without the system prompt', async () => {

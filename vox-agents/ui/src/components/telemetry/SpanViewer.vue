@@ -85,6 +85,18 @@
               />
               <span v-else style="display: inline-block; width: 24px;"></span>
               {{ span.name }}
+              <Tag
+                v-if="typeof span.attributes?.['triage.tier'] === 'string'"
+                :value="`Tier ${span.attributes['triage.tier']}`"
+                severity="secondary"
+                class="ml-2"
+              />
+              <Tag
+                v-if="typeof span.attributes?.['triage.source'] === 'string'"
+                :value="`Triage ${span.attributes['triage.source']}`"
+                severity="contrast"
+                class="ml-1"
+              />
             </div>
             <div class="col-fixed-80">
               <Tag

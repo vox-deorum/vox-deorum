@@ -17,7 +17,9 @@ Each row stores the span's identifiers and hierarchy (trace, span, parent), name
 
 What the spans contain is the valuable part:
 
-- **Agent executions** record the system prompt, the messages, the active tools, and the model per step.
+- **Agent executions** record their starting tier, including when triage does not run or the system prompt is empty. They also record the system prompt, the messages, the active tools, and the model per step when execution reaches those stages.
+- **Agent triage** records the chosen tier when a decision exists, and whether the choice came from an evaluator, a shortcut, a caller, or a failed hook. An optional note gives human-readable context.
+- **Evaluations** record their purpose (`triage` or `execution`), the requesting agent, the state, questions, answers, and token usage. A triage evaluation is nested under its agent span, so its cost and latency can be analyzed alongside the resulting tier.
 - **Tool calls** record their inputs and outputs.
 - **Turn-level spans** record pacing decisions, completion status, and token usage (input, reasoning, and output, counted per step and accumulated per context).
 

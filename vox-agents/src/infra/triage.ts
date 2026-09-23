@@ -87,17 +87,17 @@ export function createTriage<
     if (!evaluator) return undefined;
 
     const shortcut = configuration?.shortcut?.(parameters, input, context);
-    if (shortcut) return shortcut.decision;
+    if (shortcut) return { ...shortcut.decision, source: 'shortcut' };
 
     const state = configuration?.projectState
       ? configuration.projectState(prepared, parameters, input, context)
       : prepared;
     const questions = configuration?.questions ?? defaultTriageQuestions;
-    const result = await context.evaluate(evaluator, state, { questions });
+    const result = await context.evaluate(evaluator, state, { questions, purpose: 'triage' });
     const answers = result.answers;
     const decision = configuration?.questions && configuration.route
       ? configuration.route(answers as EvaluationResult<TQuestions>['answers'])
       : routeDefaultTriage(answers as EvaluationResult<typeof defaultTriageQuestions>['answers']);
-    return { ...decision, answers: decision.answers ?? answers };
+    return { ...decision, answers: decision.answers ?? answers, source: 'evaluator' };
   };
 }

@@ -93,6 +93,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
   // parent's tool loop (e.g. close-conversation) still see the parent's EnvoyThread.
   return host.runInChildFrame(input, async (frame) => {
     const span = openAgentSpan(host, agentName, params.turn, input);
+    span.setAttribute('triage.baseline', agent.modelSize);
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       try {
@@ -111,6 +112,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
         frame.triage = decision;
         if (decision) {
           span.setAttribute('triage.tier', decision.tier);
+          if (decision.source) span.setAttribute('triage.source', decision.source);
           if (decision.note !== undefined) span.setAttribute('triage.note', decision.note);
         }
 
@@ -214,7 +216,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
         span.end();
       }
     });
-  });
+  }, agentName);
 }
 
 /**
@@ -230,7 +232,7 @@ async function resolveTriage<TParameters extends AgentParameters>(
   options: ExecuteOptions,
   prepared: PreparedAgentState,
 ): Promise<TriageDecision | undefined> {
-  if (options.triage) return options.triage;
+  if (options.triage) return { ...options.triage, source: 'caller' };
   if (!agent.triage) return undefined;
 
   const signal = host.currentSignal();
@@ -242,7 +244,7 @@ async function resolveTriage<TParameters extends AgentParameters>(
   } catch (error) {
     if (signal.aborted) throw error;
     host.logger.warn(`Triage failed for agent ${agent.name}; keeping its ${agent.modelSize} tier.`, error);
-    return { tier: agent.modelSize, note: 'triage failed' };
+    return { tier: agent.modelSize, source: 'failed', note: 'triage failed' };
   }
 }
 

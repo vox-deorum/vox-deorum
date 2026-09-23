@@ -156,6 +156,11 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
     return this.als.getStore()?.input;
   }
 
+  /** Name of the agent currently executing, if this run is inside an agent frame. */
+  public get currentAgentName(): string | undefined {
+    return this.als.getStore()?.agentName;
+  }
+
   /**
    * The triage decision for the active execution frame, or undefined outside an execution. The
    * execution loop records it before model selection; hooks only read it.
@@ -471,15 +476,17 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    *
    * @param input - The child frame's agent input
    * @param callback - The work to run inside the child frame, handed the frame it owns
+   * @param agentName - The name of the agent owning this frame
    * @throws Error when there is no active run
    */
   public runInChildFrame<TResult>(
     input: unknown,
-    callback: (frame: ExecutionFrame<TParameters>) => Promise<TResult>
+    callback: (frame: ExecutionFrame<TParameters>) => Promise<TResult>,
+    agentName: string,
   ): Promise<TResult> {
     const parent = this.als.getStore();
     if (!parent) throw new Error('VoxContext: no active run.');
-    const frame = createExecutionFrame(parent.root, input);
+    const frame = createExecutionFrame(parent.root, input, agentName);
     return this.als.run(frame, () => callback(frame));
   }
 

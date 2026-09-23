@@ -34,6 +34,8 @@ import { formatModelReference } from "../utils/models/model-reference.js";
 export interface EvaluateOptions<TQuestions extends Record<string, EvaluationQuestion>> {
   /** Questions to ask the evaluating model about the state. */
   questions: TQuestions;
+  /** Why this evaluation is running. Calls outside triage are execution evaluations. */
+  purpose?: 'triage' | 'execution';
   /** Optional mutable object populated with this evaluation's token counts. */
   tokenOutput?: ExecuteTokenOutput;
 }
@@ -67,6 +69,8 @@ export async function evaluateOn<TParameters extends AgentParameters, TQuestions
       'vox.context.id': host.id,
       'game.turn': String(root.parameters.turn),
       'model': formatModelReference(model),
+      ...(host.currentAgentName ? { 'agent.name': host.currentAgentName } : {}),
+      'evaluate.purpose': options.purpose ?? 'execution',
       'evaluate.state': JSON.stringify(input),
       'evaluate.questions': JSON.stringify(options.questions),
     }

@@ -141,15 +141,18 @@ describe('VoxContext.execute triage', () => {
     expect(triaged.preparedStates[0]).toMatchObject({ system: 'system', messages: [{ role: 'user' }] });
     expect(spans.find(span => span.name === `agent.${triaged.name}`)?.attributes).toMatchObject({
       'triage.tier': 'small',
+      'triage.baseline': 'default',
       'triage.note': 'routine',
     });
   });
 
   it('should leave agents without a hook unchanged', async () => {
     const context = new VoxContext<AgentParameters>({}, 'triage-none');
+    const spans = recordSpans(context);
     await context.withRun({ parameters }, () => context.execute(noHook.name, {}));
     expect(noHook.tiers).toEqual([undefined, undefined]);
     expect(noHook.seen).toEqual([undefined]);
+    expect(spans.find(span => span.name === `agent.${noHook.name}`)?.attributes).toMatchObject({ 'triage.baseline': 'default' });
   });
 
   it('should keep the agent tier and note the failure when triage throws', async () => {
@@ -159,9 +162,11 @@ describe('VoxContext.execute triage', () => {
     await context.withRun({ parameters }, () => context.execute(triaged.name, {}));
     expect(triaged.tiers).toEqual(['default', 'default']);
     expect(triaged.seen).toEqual([undefined]);
-    expect(triaged.stepDecisions).toEqual([{ tier: 'default', note: 'triage failed' }]);
+    expect(triaged.stepDecisions).toEqual([{ tier: 'default', source: 'failed', note: 'triage failed' }]);
     expect(spans.find(span => span.name === `agent.${triaged.name}`)?.attributes).toMatchObject({
       'triage.tier': 'default',
+      'triage.source': 'failed',
+      'triage.baseline': 'default',
       'triage.note': 'triage failed',
     });
   });
@@ -180,6 +185,7 @@ describe('VoxContext.execute triage', () => {
     const hook = vi.fn(async () => ({ tier: 'small' } as const));
     triaged.triageImpl = hook;
     const context = new VoxContext<AgentParameters>({}, 'triage-supplied');
+    const spans = recordSpans(context);
     const supplied = { tier: 'large', answers: { stakes: 1 } } as const;
     await context.withRun({ parameters }, () => context.execute(
       triaged.name, {}, undefined, undefined, undefined, { triage: supplied }
@@ -187,7 +193,12 @@ describe('VoxContext.execute triage', () => {
     expect(hook).not.toHaveBeenCalled();
     expect(triaged.tiers).toEqual(['large', 'large']);
     expect(triaged.seen).toEqual([undefined]);
-    expect(triaged.stepDecisions).toEqual([supplied]);
+    expect(triaged.stepDecisions).toEqual([{ ...supplied, source: 'caller' }]);
+    expect(spans.find(span => span.name === `agent.${triaged.name}`)?.attributes).toMatchObject({
+      'triage.tier': 'large',
+      'triage.source': 'caller',
+      'triage.baseline': 'default',
+    });
   });
 
   it('should keep the selected tier when prepareStep selects the actual step model', async () => {

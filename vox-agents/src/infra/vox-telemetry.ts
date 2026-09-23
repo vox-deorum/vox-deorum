@@ -33,6 +33,9 @@ export interface ExecutionHost<TParameters extends AgentParameters> {
   /** Unique identifier for this context, stamped onto every span. */
   readonly id: string;
 
+  /** Name of the agent owning the active execution frame, if any. */
+  readonly currentAgentName: string | undefined;
+
   /** The 'vox-agents' tracer the execution modules open their spans on. */
   tracer: Tracer;
 

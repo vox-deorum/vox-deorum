@@ -207,6 +207,7 @@ describe('VoxContext.evaluate success path', () => {
       'vox.context.id': 'eval-span',
       'game.turn': '7',
       'model': 'typesafe/jev-latest',
+      'evaluate.purpose': 'execution',
       'evaluate.state': '{"a":1}',
       'evaluate.questions': JSON.stringify(questions),
       'evaluate.answers': JSON.stringify({ urgent: { type: 'boolean', probability: 0.7 } }),
@@ -221,6 +222,7 @@ describe('VoxContext.evaluate success path', () => {
 
   it('should execute an evaluation agent once and accrue its native evaluator usage once', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'eval-agent');
+    const spans = recordSpans(ctx);
     const tokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
     let runTokens: { inputTokens: number; reasoningTokens: number; outputTokens: number } | undefined;
 
@@ -257,6 +259,10 @@ describe('VoxContext.evaluate success path', () => {
     expect(ctx.inputTokens).toBe(30);
     expect(ctx.reasoningTokens).toBe(0);
     expect(ctx.outputTokens).toBe(4);
+    expect(spans.find(span => span.name === 'evaluate')?.attributes).toMatchObject({
+      'agent.name': evaluationAgent.name,
+      'evaluate.purpose': 'execution',
+    });
   });
 });
 

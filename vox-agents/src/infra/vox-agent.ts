@@ -39,6 +39,8 @@ export interface AgentParameters {
 export interface TriageDecision {
   /** Model-size tier selected for this execution. */
   tier: ModelSize;
+  /** How the execution tier was selected. */
+  source?: 'evaluator' | 'shortcut' | 'caller' | 'failed';
   /** Optional evaluator answers retained for hooks and diagnostics. */
   answers?: Record<string, unknown>;
   /** Optional human-readable reason for the decision. */

@@ -87,6 +87,21 @@ beforeEach(() => {
 });
 
 describe('VoxContext.execute agent span telemetry', () => {
+  it('records the baseline even when an empty system prompt ends execution', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'tel-empty-system');
+    const spans = recordSpans(ctx);
+    const system = vi.spyOn(telAgent, 'getSystem').mockResolvedValueOnce('');
+    try {
+      await ctx.withRun({ parameters: makeStrategistParameters() }, () => ctx.execute('tel-step-agent', {}));
+      expect(spans.find(s => s.name === 'agent.tel-step-agent')?.attributes).toMatchObject({
+        'triage.baseline': 'default',
+      });
+      expect(stc).not.toHaveBeenCalled();
+    } finally {
+      system.mockRestore();
+    }
+  });
+
   it('opens the agent span with the exact standard attributes and closes it OK with final usage', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'tel-agent-span');
     const spans = recordSpans(ctx);
@@ -105,6 +120,7 @@ describe('VoxContext.execute agent span telemetry', () => {
         'game.turn': '1',
         'agent.name': 'tel-step-agent',
         'agent.input': '{"hello":"world"}',
+        'triage.baseline': 'default',
         'model': 'test/test',
         'tokens.input': 100,
         'tokens.reasoning': 10,
