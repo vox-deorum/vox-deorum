@@ -69,7 +69,7 @@ const playerIdentities = ref<Record<number, ParticipantIdentity>>({});
 // Diplomacy form state
 const assignments = ref<Record<number, PlayerAssignment>>({});
 const diplomacyInitiator = ref<PlayerOption | null>(null);
-const voiceOverride = ref<AgentInfo | null>(null);
+const voiceOverride = ref<string | null>(null);
 const initiatorRole = ref('the diplomat');
 let agentsLoadPromise: Promise<void> | null = null;
 let playersLoadPromise: { contextId: string; promise: Promise<void> } | null = null;
@@ -257,7 +257,7 @@ function applyTargetVoiceDefault() {
   if (target === null) return;
   const diplomatName = assignments.value[target]?.diplomat;
   voiceOverride.value = diplomatName
-    ? (agents.value.find(a => a.name === diplomatName) ?? null)
+    ? (agents.value.find(a => a.name === diplomatName)?.name ?? null)
     : null;
 }
 
@@ -275,7 +275,7 @@ async function confirmDiplomacy() {
     callerIdentity: playerIdentities.value[initiatorID],
     callerRole: initiatorRole.value.trim() || undefined,
   };
-  if (voiceOverride.value) request.agentName = voiceOverride.value.name;
+  if (voiceOverride.value) request.agentName = voiceOverride.value;
   if (resolvedTurn.value !== undefined) request.turn = resolvedTurn.value;
   await launchChat(request, 'Failed to open conversation');
 }
@@ -309,7 +309,7 @@ async function selectAgent(agent: AgentInfo) {
     clearLaunchError();
     conversationMode.value = 'diplomacy';
     if (civPlayerOptions.value.length === 0) await loadPlayerOptions();
-    voiceOverride.value = agent;
+    voiceOverride.value = agent.name;
     return;
   }
   selectedAgent.value = agent;

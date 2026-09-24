@@ -9,7 +9,7 @@ defineProps<{
   initiatorOptions: PlayerOption[];
   role: string;
   suggestions: string[];
-  voice: AgentInfo | null;
+  voice: string | null;
   voiceOptions: AgentInfo[];
   playersLoading: boolean;
 }>();
@@ -17,7 +17,7 @@ defineProps<{
 defineEmits<{
   'update:initiator': [value: PlayerOption | null];
   'update:role': [value: string];
-  'update:voice': [value: AgentInfo | null];
+  'update:voice': [value: string | null];
   'search-roles': [event: { query: string }];
 }>();
 </script>
@@ -34,7 +34,7 @@ defineEmits<{
         placeholder="e.g., the leader, a diplomat..." :dropdown="true"
         @update:modelValue="$emit('update:role', $event)" @complete="$emit('search-roles', $event)" />
       <label for="dipl-voice">Voice (defaults to the target seat's diplomat)</label>
-      <Select id="dipl-voice" :modelValue="voice" :options="voiceOptions" optionLabel="name"
+      <Select id="dipl-voice" :modelValue="voice" :options="voiceOptions" optionLabel="name" optionValue="name"
         placeholder="Use the configured diplomat" showClear @update:modelValue="$emit('update:voice', $event)" />
     </div>
   </div>

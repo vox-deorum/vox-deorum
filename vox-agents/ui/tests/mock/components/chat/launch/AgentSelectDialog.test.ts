@@ -32,15 +32,16 @@ const AutoComplete = {
   template: `<input class="p-autocomplete" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" />`,
 }
 const Select = defineComponent({
-  props: ['modelValue', 'options', 'optionLabel'],
+  props: ['modelValue', 'options', 'optionLabel', 'optionValue'],
   emits: ['update:modelValue', 'change'],
   methods: {
     label(o: any) {
       return (this as any).optionLabel ? o[(this as any).optionLabel] : o
     },
     pick(o: any) {
-      this.$emit('update:modelValue', o)
-      this.$emit('change', { value: o })
+      const value = (this as any).optionValue ? o[(this as any).optionValue] : o
+      this.$emit('update:modelValue', value)
+      this.$emit('change', { value })
     },
   },
   template: `<div class="p-select"><button v-for="(o, i) in options" :key="i" class="opt" @click="pick(o)">{{ label(o) }}</button></div>`,
@@ -163,6 +164,67 @@ describe('AgentSelectDialog', () => {
     )
     expect(push).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'chat-detail', params: { sessionId: 'sess-1' } })
+    )
+  })
+
+  it('sends a diplomat name string when launching from the agent list', async () => {
+    vi.mocked(api.getAgents).mockResolvedValue({
+      agents: [
+        {
+          name: 'diplomat',
+          description: 'voices a civ',
+          tags: ['active-game', 'diplomatic'],
+          modelSize: 'default',
+          diplomacyOnly: true,
+        },
+      ],
+    })
+    const wrapper = await openDialog()
+
+    const diplomatRow = wrapper.findAll('.table-row').find(row => row.text().includes('diplomat'))!
+    await diplomatRow.trigger('click')
+    await flushPromises()
+    await clickButton(wrapper, 'Start Conversation')
+    await flushPromises()
+
+    expect(api.createAgentChat).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'diplomacy', agentName: 'diplomat' })
+    )
+  })
+
+  it('sends a string name when overriding the diplomacy voice', async () => {
+    vi.mocked(api.getAgents).mockResolvedValue({
+      agents: [
+        {
+          name: 'diplomat',
+          description: 'voices a civ',
+          tags: ['active-game', 'diplomatic'],
+          modelSize: 'default',
+          diplomacyOnly: true,
+        },
+        {
+          name: 'spokesperson',
+          description: 'speaks for the civ',
+          tags: ['active-game', 'diplomatic'],
+          modelSize: 'default',
+          diplomacyOnly: true,
+        },
+      ],
+    })
+    const wrapper = await openDialog()
+
+    const diplomatRow = wrapper.findAll('.table-row').find(row => row.text().includes('diplomat'))!
+    await diplomatRow.trigger('click')
+    await flushPromises()
+
+    const voiceSelect = wrapper.findAll('.p-select')[1]!
+    const spokespersonOption = voiceSelect.findAll('.opt').find(option => option.text() === 'spokesperson')!
+    await spokespersonOption.trigger('click')
+    await clickButton(wrapper, 'Start Conversation')
+    await flushPromises()
+
+    expect(api.createAgentChat).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'diplomacy', agentName: 'spokesperson' })
     )
   })
 
