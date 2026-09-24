@@ -15,9 +15,25 @@ import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
 import { ensureGameState, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
-import { PlayerConfig } from "../types/config.js";
-import { HumanDecisionBus } from "./human-decision-bus.js";
+import type { PlayerConfig, TriageSetting } from "../types/config.js";
+import type { HumanDecisionBus } from "./human-decision-bus.js";
+import { resolveSeatTriage } from "./seat-config.js";
 import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
+
+/** Construction inputs for one seat's {@link VoxPlayer}. */
+export interface VoxPlayerOptions {
+  /** The actual in-game player index this seat controls. */
+  playerID: number;
+  playerConfig: PlayerConfig;
+  gameID: string;
+  initialTurn: number;
+  humanDecisionBus: HumanDecisionBus;
+  syncSeed?: number;
+  /** The owning session, reachable from the seat context. */
+  session?: VoxSession;
+  /** The session config's top-level triage setting, which the seat's own setting overrides. */
+  triage?: TriageSetting;
+}
 
 /**
  * Manages a single player's strategist execution within a game session.
@@ -44,15 +60,12 @@ export class VoxPlayer {
    */
   private eventCursor: number;
 
-  constructor(
-    public readonly playerID: number,
-    private readonly playerConfig: PlayerConfig,
-    gameID: string,
-    initialTurn: number,
-    humanDecisionBus: HumanDecisionBus,
-    syncSeed?: number,
-    session?: VoxSession
-  ) {
+  public readonly playerID: number;
+  private readonly playerConfig: PlayerConfig;
+
+  constructor({ playerID, playerConfig, gameID, initialTurn, humanDecisionBus, syncSeed, session, triage }: VoxPlayerOptions) {
+    this.playerID = playerID;
+    this.playerConfig = playerConfig;
     this.logger = createLogger(`VoxPlayer-${playerID}`);
     // Throws on an unknown interruption name so misconfiguration fails fast.
     this.pacing = normalizePacing(playerConfig.pacing);
@@ -65,6 +78,8 @@ export class VoxPlayer {
     this.context = new VoxContext(playerConfig.llms || {}, id);
     // Let the context reach its owning session for authoritative state (e.g. the live turn).
     this.context.session = session;
+    // Set before the constructor returns: chats can reach the context by id as soon as it exists.
+    this.context.triage = resolveSeatTriage(playerConfig, triage);
 
     this.parameters = {
       playerID,

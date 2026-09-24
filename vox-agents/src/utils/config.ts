@@ -122,6 +122,7 @@ function loadConfig(): VoxAgentsConfig {
     configsDir: process.env.CONFIGS_DIR || fileConfig.configsDir,
     episodeDbPath: process.env.EPISODE_DB_PATH || fileConfig.episodeDbPath,
     telemetryDir: process.env.TELEMETRY_DIR || fileConfig.telemetryDir,
+    triage: fileConfig.triage,
     obs: {
       ...fileConfig.obs,
       ...(process.env.OBS_EXECUTABLE_PATH && { executablePath: process.env.OBS_EXECUTABLE_PATH }),

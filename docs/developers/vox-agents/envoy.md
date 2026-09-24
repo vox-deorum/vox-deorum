@@ -48,7 +48,7 @@ That call is fire-and-forget. The handoff forks a detached root run that keeps t
 
 The distinction to keep in mind (and in any UI copy): **talk to a spokesperson to learn about a civilization; talk to a diplomat and the civilization may learn about you.**
 
-The diplomat can also pick its own model tier each turn (triage). To turn this on, set `options.triage: true` on the diplomat's model assignment and configure `diplomat.evaluator` or the shared `evaluator` alias; otherwise the usual assignment applies.
+The diplomat can also pick its own model tier each turn (triage). To turn this on, set `"triage": ["diplomat"]` (or `true`) on a seat, in the session config, or in `vox-agents/config.json`, and configure `diplomat.evaluator` or the shared `evaluator` alias; otherwise the usual assignment applies.
 
 - Greetings and other special messages go straight to `small`, with no evaluation.
 - Other turns send the evaluator only the tail of the prepared messages (the latest exchange, the open deal, and the turn hint) and ask for intent and stakes. Small talk uses `small`, high-stakes deals and threats use `large`, and everything else uses `default`.

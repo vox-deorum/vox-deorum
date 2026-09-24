@@ -1,7 +1,7 @@
 /** Tests for diplomat intent routing and prepared-state triage. */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { EnvoyThread } from '../../../../src/types/index.js';
+import type { EnvoyThread, TriageSetting } from '../../../../src/types/index.js';
 import { agentRegistry } from '../../../../src/infra/agent-registry.js';
 
 const diplomat = agentRegistry.get('diplomat')!;
@@ -26,24 +26,26 @@ function thread(content: string): EnvoyThread {
 describe('Diplomat.triage', () => {
   const prepared = { system: 'prepared prompt', messages: [] };
 
-  /** Build the evaluator context used by the shared prepared-state hook. */
-  function triageContext(modelOverrides: Record<string, any>, scripted = answers('request', 1)) {
+  /** Build the evaluator context used by the shared prepared-state hook; the default triages the diplomat. */
+  function triageContext(
+    modelOverrides: Record<string, any>,
+    scripted = answers('request', 1),
+    triage: TriageSetting = ['diplomat'],
+  ) {
     return {
+      triage,
       modelOverrides,
       evaluate: vi.fn(async () => ({ answers: scripted })),
     } as any;
   }
 
   const enabledAssignment = {
-    diplomat: { provider: 'openai', name: 'main', options: { triage: true } },
+    diplomat: { provider: 'openai', name: 'main' },
     evaluator: { provider: 'typesafe', name: 'jev-latest' },
   };
 
   it('should skip evaluation when triage is disabled', async () => {
-    const ctx = triageContext({
-      diplomat: { provider: 'openai', name: 'main' },
-      evaluator: enabledAssignment.evaluator,
-    });
+    const ctx = triageContext(enabledAssignment, undefined, false);
 
     await expect(diplomat.triage?.({}, thread('context'), ctx, prepared)).resolves.toBeUndefined();
     expect(ctx.evaluate).not.toHaveBeenCalled();

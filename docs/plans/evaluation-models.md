@@ -23,7 +23,7 @@ When this plan is complete:
 | Where strategist triage lives | In pacing, as a step separate from the event interruption. Both remain configurable per seat. |
 | How cadence and triage combine | Triage runs every turn and may say skip, small, default, or large. `everyTurns` and event interruptions only raise the floor to a default-tier decision. |
 | Skipped turns | Carry a named reason: `[turn-skipped]` for the cadence, `[evaluator-skipped]` when triage decided nothing changed. |
-| How other agents opt into triage | The `evaluator` alias (or `<agent>.evaluator`) supplies the model, and the agent's own model assignment carries `options.triage: true`. |
+| How other agents opt into triage | The `evaluator` alias (or `<agent>.evaluator`) supplies the model, and the `triage` setting opts agents in: `true`, or a list of agent names or the roles `strategist` and `diplomat`, set on a seat, the session config, or the root config, highest level winning. |
 | Evaluator strategist backends | Native evaluation providers only. The chat-model adapter serves triage and other evaluation calls. |
 | Evaluator input for strategists | Current strategies and rationale, victory progress, events since the last decision, and a compact players summary, as JSON. Cities and military stay out. |
 
@@ -83,18 +83,20 @@ Configuration keys, all in the `llms` map (global `config.json` or per seat `Pla
 | `<agent>.small`, `<agent>.large` | Tier models for one agent. |
 | `evaluator` | Evaluation model for triage. Native or chat model. |
 | `<agent>.evaluator` | Evaluation model for one agent's triage. |
-| `<agent>` with `options.triage: true` | Turns the `triage` hook on for a non-strategist agent. Strategists use `pacing.triage` instead. |
 | `evaluator-strategist` | The native evaluation model that plays a seat assigned that strategist. |
+
+Triage opt-in lives outside the `llms` map, in the `triage` setting: `true`, a list of agent names or the roles `strategist` and `diplomat`, or `false` (the default), set on a seat, the session config, or the root `config.json`, with the highest level that sets a value replacing the lower ones.
 
 Example seat:
 
 ```json
 {
   "strategist": "simple-strategist",
-  "pacing": { "everyTurns": 5, "interruption": "importantEvents", "triage": true },
+  "pacing": { "everyTurns": 5, "interruption": "importantEvents" },
+  "triage": ["strategist", "diplomat"],
   "llms": {
     "simple-strategist": "codex/gpt-6-astra",
-    "diplomat": { "provider": "codex", "name": "gpt-6-astra", "options": { "triage": true } },
+    "diplomat": { "provider": "codex", "name": "gpt-6-astra" },
     "small": "codex/gpt-5.6-luna",
     "large": "codex/gpt-6-astra@high",
     "evaluator": "typesafe/jev-latest"
@@ -118,13 +120,13 @@ Both modules reach the context through a narrow `ExecutionHost` interface (`trac
 
 `VoxAgent` in `src/infra/vox-agent.ts` gains an optional async `triage(parameters, input, context)` hook returning a `TriageDecision` (`tier`, optional `answers`, optional `note`), and `getModel` gains an optional `tier` parameter defaulting to `this.modelSize`. `vox-execute` runs the hook once before model selection, stores the decision on the execution frame (exposed as `context.currentTriage`, matching `currentInput`), passes the tier to `getModel` throughout the step loop, and records `triage.tier` and `triage.note` on the agent span. A caller can also hand a decision in through the execute options, which is how pacing supplies the strategist's tier; a supplied decision preempts the hook. A triage failure logs a warning and continues at the agent's own tier with a `triage failed` note, so an evaluator outage never blocks a turn and stays visible in traces. Cancellation still stops the run.
 
-Non-strategist agents adopt the hook through `createTriage` in `src/infra/triage.ts`, supplying an instruction string or a state builder over parameters, input, and context. The helper provides a default tier question and routing, with custom questions and routing available for specialized agents. It checks `options.triage` on the agent's own model assignment and requires an evaluator reference before building state or evaluating. A state builder returns bounded structured state, or a `TriageShortcut` for deterministic cases such as greetings.
+Non-strategist agents adopt the hook through `createTriage` in `src/infra/triage.ts`, supplying an instruction string or a state builder over parameters, input, and context. The helper provides a default tier question and routing, with custom questions and routing available for specialized agents. It checks `triageEnabled` in `src/infra/triage.ts` against `context.triage` and requires an evaluator reference before building state or evaluating; `resolveSeatTriage` in `src/strategist/seat-config.ts` resolves the seat, session, and root levels and expands the roles. A state builder returns bounded structured state, or a `TriageShortcut` for deterministic cases such as greetings.
 
 The diplomat adopts it first. `src/envoy/agents/diplomat-triage.ts` declares an `intent` choice (deal, threat, request, small talk) and a `stakes` score over four levels, builds the state from the last few thread messages and the open proposal, and routes small talk to `small`, high-stakes deals and threats to `large`, and everything else to `default`. Special-message mode, such as a greeting, is always `small`. The proposal read is shared with the diplomat's grounding context and deal gate through `context.memoizeForExecution`.
 
 ### Pacing with triage
 
-`PacingConfig` gains `triage?: boolean`. Interruption stays a separate, cheap, deterministic trigger. The per-turn gate in `src/strategist/pacing.ts` becomes a pure `resolvePacingVerdict({ scheduled, interrupted, triage })` returning a **verdict**: either a skip with its reason (`turn` or `evaluator`) or a decision at a tier with the reasons that produced it. The rules:
+The strategist opts in through the `strategist` role in the `triage` setting; `VoxPlayer` reads `triageEnabled(strategistName, context.triage)`. Interruption stays a separate, cheap, deterministic trigger. The per-turn gate in `src/strategist/pacing.ts` becomes a pure `resolvePacingVerdict({ scheduled, interrupted, triage })` returning a **verdict**: either a skip with its reason (`turn` or `evaluator`) or a decision at a tier with the reasons that produced it. The rules:
 
 - Triage off: scheduled or interrupted decides at `default`; otherwise skip with `[turn-skipped]`. This is today's behavior.
 - Triage on: the evaluator's answer maps to skip, `small`, `default`, or `large`. A scheduled or interrupted turn raises the floor to `default`, so triage can still escalate to `large` but can no longer skip or demote. An unscheduled, uninterrupted turn takes the evaluator's answer as is, and a skip carries `[evaluator-skipped]`.
@@ -161,7 +163,7 @@ Verify: `tests/mock/utils/evaluation-questions.test.ts` (schema per question typ
 
 ### Stage 3: tiers, references, and the evaluate primitive
 
-Widen `ModelSize`, update `selectModelReference` and `ensureModelsResolved`, add `selectEvaluatorReference` and `getEvaluatorConfig`, fill in `vox-evaluate.ts`, and extend `modelReferencesForPlayer` in `src/strategist/strategist-session.ts` to preflight tier and evaluator references for agents that have triage on (strategists through `pacing.triage`, others through `options.triage`). Add a recorded `evaluate` stub and `currentTriage` to `tests/helpers/fake-vox-context.ts`.
+Widen `ModelSize`, update `selectModelReference` and `ensureModelsResolved`, add `selectEvaluatorReference` and `getEvaluatorConfig`, fill in `vox-evaluate.ts`, and extend `modelReferencesForPlayer` in `src/strategist/strategist-session.ts` to preflight tier and evaluator references for agents that the `triage` setting enables, with `resolveSeatTriage` in `src/strategist/seat-config.ts` expanding roles and applying the seat, session, and root levels. Add a recorded `evaluate` stub and `currentTriage` to `tests/helpers/fake-vox-context.ts`.
 
 Verify: `tests/mock/utils/model-resolution.test.ts` covers the tier order for `small` and `large`, evaluator lookup at both scopes and its undefined result, and preflight of a `typesafe/jev-latest` reference through mocked discovery. `tests/mock/context/vox-context-evaluate.test.ts` covers the active-run requirement, usage accrual to the run handle and seat totals, and the span contents.
 
@@ -173,7 +175,7 @@ Verify: a stub agent whose `triage` returns `small` makes `getModel` receive `sm
 
 ### Stage 5: pacing with triage
 
-Add `pacing.triage`, `resolvePacingVerdict`, `pacing/triage.ts`, the `VoxPlayer` changes, the named skip reasons on both sides of MCP, and the pacing checkbox in `ui/src/components/session/config/PlayerConfigEditor.vue` with its summary line.
+Add `resolvePacingVerdict`, `pacing/triage.ts`, the `VoxPlayer` changes, the named skip reasons on both sides of MCP, and the pacing checkbox in `ui/src/components/session/config/PlayerConfigEditor.vue` with its summary line. Extend the stage 3 preflight to count the strategist as triaged once it has runtime triage, since preflight currently only counts agents that implement a triage hook.
 
 Verify: `tests/mock/strategist/pacing.test.ts` covers every verdict combination (triage off and on, scheduled, interrupted, each evaluator answer); `tests/mock/strategist/vox-player-runs.test.ts` covers a triaged skip calling `keep-status-quo` with `[evaluator-skipped]`, a cadence skip with `[turn-skipped]`, and a triaged decision passing its tier into `execute`; an MCP test covers both skip reasons refreshing without a recorded decision.
 
@@ -194,7 +196,7 @@ Verify: `tests/mock/strategist/evaluator-questions.test.ts` (question sets and a
 ## Verification
 
 - `npm run type-check` and `npm test` from `vox-agents/`, the MCP server's mock tests, then `npm run test:all` from the root.
-- Manual check with a local chat model as the evaluator: set `"evaluator": "openai-compatible/gpt-oss-120b"`, enable `pacing.triage` on a seat, run `npm run strategist` for a few turns, and confirm in the dashboard's telemetry that each turn span carries an `evaluate` span, a `pacing.verdict`, and, on decided turns, an agent span reporting the tier.
+- Manual check with a local chat model as the evaluator: set `"evaluator": "openai-compatible/gpt-oss-120b"`, add `strategist` to the seat's `triage`, run `npm run strategist` for a few turns, and confirm in the dashboard's telemetry that each turn span carries an `evaluate` span, a `pacing.verdict`, and, on decided turns, an agent span reporting the tier.
 - Manual check with a TypeSafe key: repeat with `"evaluator": "typesafe/jev-latest"`, open a diplomacy chat to see the diplomat's tier change between small talk and a deal, then switch the seat's strategist to `evaluator-strategist` and confirm action tool calls land in the replay log with their rationales.
 
 ## Follow-ups deliberately left out

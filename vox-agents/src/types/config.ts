@@ -115,6 +115,8 @@ export interface VoxAgentsConfig {
   telemetryDir: string;
   /** OBS Studio configuration for production modes */
   obs?: ObsConfig;
+  /** Default triage for every seat when neither the seat nor the session sets one. */
+  triage?: TriageSetting;
 }
 
 /**
@@ -200,12 +202,15 @@ export interface PacingConfig {
   everyTurns?: number;
   /** Event strategy that can force an off-cadence decision. Defaults to "none". */
   interruption?: PacingInterruption;
-  /**
-   * When true, the seat's strategist triages each turn with the evaluator and runs on the
-   * tier it picks. Cadence and event interruption raise the floor to a default-tier decision.
-   */
-  triage?: boolean;
 }
+
+/**
+ * Which agents select their own model tier through an evaluator (triage). `true` covers every
+ * agent with a triage hook; a list names agents directly or through the seat roles
+ * `strategist` and `diplomat`; `false` turns triage off. Set per seat, per session, or in the
+ * root config; the most specific level that sets a value wins outright.
+ */
+export type TriageSetting = boolean | string[];
 
 /**
  * Player-specific configuration for LLM control
@@ -230,6 +235,8 @@ export interface PlayerConfig {
   pacing?: PacingConfig;
   /** Optional LLM model overrides per voxcontext (e.g., per agent name) */
   llms?: Record<string, Model | string>;
+  /** Triage for this seat's agents; replaces the session and root settings when present. */
+  triage?: TriageSetting;
 }
 
 /**
@@ -306,6 +313,9 @@ export interface StrategistSessionConfig extends SessionConfig {
 
   /** Map of player IDs to their LLM configurations */
   llmPlayers: Record<number, PlayerConfig>;
+
+  /** Triage for every seat that doesn't set its own; replaces the root setting when present. */
+  triage?: TriageSetting;
 
   /**
    * Controls randomization of the mapping between config slots and actual game

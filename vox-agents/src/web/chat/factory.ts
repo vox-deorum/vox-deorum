@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { agentRegistry } from '../../infra/agent-registry.js';
 import { contextRegistry } from '../../infra/context-registry.js';
 import { VoxContext } from '../../infra/vox-context.js';
+import { defaultDiplomat } from '../../strategist/seat-config.js';
 import type { StrategistParameters } from '../../strategist/strategy-parameters.js';
 import {
   createTelepathistParameters,
@@ -132,7 +133,7 @@ export function createChatThreadFactory(
       throw new ChatOpenError(400, `Target seat context not active: ${targetContextId}`);
     }
 
-    const voice = agentOverride ?? assignments?.[targetPlayerID]?.diplomat ?? 'diplomat';
+    const voice = agentOverride ?? assignments?.[targetPlayerID]?.diplomat ?? defaultDiplomat;
     const voiceAgent = dependencies.getAgent(voice);
     if (!voiceAgent) {
       throw new ChatOpenError(404, `Agent ${voice} not found`);

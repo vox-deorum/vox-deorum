@@ -24,7 +24,9 @@ import { SeatingStateManager } from "../utils/game/seating/state.js";
 import type { ObservedSeating, SeatingClaim } from "../utils/game/seating/types.js";
 import { getMetadata, setMetadata } from "../utils/game/metadata.js";
 import { agentRegistry } from '../infra/agent-registry.js';
-import { ensureModelsResolved, selectEvaluatorReference, selectModelReference, triageEnabled } from '../utils/models/resolution.js';
+import { ensureModelsResolved, selectEvaluatorReference, selectModelReference } from '../utils/models/resolution.js';
+import { triageEnabled } from '../infra/triage.js';
+import { resolveSeatTriage, seatAgents } from './seat-config.js';
 import { DEFAULT_NEGOTIATOR } from '../envoy/agents/resolve-negotiator.js';
 import {
   autoPlayTurnLimit,
@@ -119,8 +121,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       sessionRegistry.register(this);
 
       // Verify every model reference reachable through each configured seat before launching Civ V.
-      for (const playerConfig of Object.values(this.config.llmPlayers)) {
-        await ensureModelsResolved(this.modelReferencesForPlayer(playerConfig), playerConfig.llms);
+      for (const [slot, playerConfig] of Object.entries(this.config.llmPlayers)) {
+        await ensureModelsResolved(this.modelReferencesForPlayer(slot, playerConfig), playerConfig.llms);
       }
 
       const luaScript = this.config.gameMode === 'start' ? 'StartGame.lua' :
@@ -573,7 +575,16 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     // Create new players using the seating map
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
       const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
-      const player = new VoxPlayer(actualPlayerID, playerConfig, params.gameID, params.turn, this.humanDecisionBus, this.seatingClaim?.seeds?.sync, this);
+      const player = new VoxPlayer({
+        playerID: actualPlayerID,
+        playerConfig,
+        gameID: params.gameID,
+        initialTurn: params.turn,
+        humanDecisionBus: this.humanDecisionBus,
+        syncSeed: this.seatingClaim?.seeds?.sync,
+        session: this,
+        triage: this.config.triage,
+      });
       await player.context.registerTools();
       this.activePlayers.set(actualPlayerID, player);
       player.execute();
@@ -660,13 +671,17 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
 
   /**
    * Resolve the model references for the configured seat agents and their declared child agents.
-   * Agents with triage on also preflight their tier and evaluator references, so a missing or
-   * misspelled tier/evaluator assignment surfaces at session start rather than on the first
-   * triaged call. The seat's strategist gates on `pacing.triage`; other agents gate on the
-   * shared `triageEnabled` check (`options.triage` on their own assignment). Arbitrary
-   * override-map entries are deliberately excluded because they cannot run in this session.
+   * Agents that triage on this seat also preflight their evaluator reference, so a misspelled
+   * evaluator assignment surfaces at session start rather than on the first triaged call. Only
+   * agents with a triage hook count; a triaged agent without any evaluator logs a warning
+   * because its hook would otherwise skip silently. Arbitrary override-map entries are
+   * deliberately excluded because they cannot run in this session.
+   *
+   * @throws if a seat role is not an agent name (see {@link seatAgents})
    */
-  private modelReferencesForPlayer(playerConfig: PlayerConfig): string[] {
+  private modelReferencesForPlayer(slot: string, playerConfig: PlayerConfig): string[] {
+    const seat = seatAgents(playerConfig, slot);
+    const triage = resolveSeatTriage(playerConfig, this.config.triage, slot);
     const agentNames = new Set<string>();
     /** Add one agent and recursively include its fixed model dependencies. */
     const visit = (name: string): void => {
@@ -676,12 +691,10 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       for (const dependency of agent?.modelDependencies ?? []) visit(dependency);
     };
 
-    visit(playerConfig.strategist);
-    const diplomatName = playerConfig.diplomat ?? "diplomat";
-    visit(diplomatName);
-    if (agentRegistry.get(diplomatName)?.usesSeatNegotiator) {
-      const configuredNegotiator = playerConfig.negotiator;
-      visit(configuredNegotiator && agentRegistry.has(configuredNegotiator) ? configuredNegotiator : DEFAULT_NEGOTIATOR);
+    visit(seat.strategist);
+    visit(seat.diplomat);
+    if (agentRegistry.get(seat.diplomat)?.usesSeatNegotiator) {
+      visit(seat.negotiator && agentRegistry.has(seat.negotiator) ? seat.negotiator : DEFAULT_NEGOTIATOR);
     }
 
     const references = new Set<string>();
@@ -691,13 +704,10 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       for (const tier of modelTiers) {
         references.add(selectModelReference(name, tier, playerConfig.llms));
       }
-      const triaged = name === playerConfig.strategist
-        ? playerConfig.pacing?.triage === true
-        : triageEnabled(name, playerConfig.llms);
-      if (triaged) {
-        const evaluator = selectEvaluatorReference(name, playerConfig.llms);
-        if (evaluator !== undefined) references.add(evaluator);
-      }
+      if (!triageEnabled(name, triage) || !agentRegistry.get(name)?.triage) continue;
+      const evaluator = selectEvaluatorReference(name, playerConfig.llms);
+      if (evaluator !== undefined) references.add(evaluator);
+      else logger.warn(`Triage is on for ${name} on seat ${slot}, but neither \`${name}.evaluator\` nor \`evaluator\` is configured; it will run without triage.`);
     }
     return [...references];
   }
@@ -946,17 +956,15 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
     for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
       const configSlot = parseInt(configSlotStr);
       const actualPlayerID = this.seatingClaim?.seatingMap[configSlotStr] ?? configSlot;
-      // The diplomat defaults to the built-in `diplomat` agent when a seat doesn't name one,
-      // so the conversation route always has a voice to resolve. The negotiator stays optional
-      // (unused until stage 5).
-      const diplomat = playerConfig.diplomat ?? "diplomat";
+      // The diplomat is always defaulted so the conversation route has a voice to resolve.
+      const { strategist, diplomat, negotiator } = seatAgents(playerConfig, configSlotStr);
       result[actualPlayerID] = {
-        strategist: playerConfig.strategist,
-        model: modelOf(playerConfig, playerConfig.strategist),
+        strategist,
+        model: modelOf(playerConfig, strategist),
         diplomat,
         diplomatModel: modelOf(playerConfig, diplomat),
-        negotiator: playerConfig.negotiator,
-        negotiatorModel: modelOf(playerConfig, playerConfig.negotiator),
+        negotiator,
+        negotiatorModel: modelOf(playerConfig, negotiator),
         configSlot
       };
     }

@@ -34,7 +34,13 @@ beforeEach(() => {
 
 describe('VoxPlayer per-turn root runs', () => {
   it('opens one root per turn with run-local turn/before/after, advances the event cursor, and never mutates the base turn', async () => {
-    const player = new VoxPlayer(1, playerConfig, 'game-runs', /* initialTurn */ 0, new HumanDecisionBus());
+    const player = new VoxPlayer({
+      playerID: 1,
+      playerConfig,
+      gameID: 'game-runs',
+      initialTurn: 0,
+      humanDecisionBus: new HumanDecisionBus(),
+    });
 
     // All MCP tool calls (pause/resume/set-metadata/keep-status-quo + the six report fetches)
     // resolve to a non-error stand-in so the real ensureGameState/refreshGameState path succeeds.

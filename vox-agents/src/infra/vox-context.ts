@@ -26,7 +26,7 @@ import { AgentParameters, VoxAgent } from "./vox-agent.js";
 import type { TriageDecision } from "./vox-agent.js";
 import { createLogger } from "../utils/logger.js";
 import { mcpClient } from "../utils/models/mcp-client.js";
-import { Model, StreamingEventCallback } from "../types/index.js";
+import { Model, StreamingEventCallback, TriageSetting } from "../types/index.js";
 import { v4 as uuidv4 } from 'uuid';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
@@ -90,6 +90,12 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    * Model configuration overrides (replaces config.json definitions)
    */
   public modelOverrides: Record<string, Model | string>;
+
+  /**
+   * Which agents triage in this context. Only strategist seat contexts set it (see
+   * `resolveSeatTriage`); every other context leaves triage off.
+   */
+  public triage: TriageSetting = false;
 
   /**
    * Current execution frame for concurrent root runs. The store points at a {@link RootRun}

@@ -1,28 +1,27 @@
 /** Tests for reusable prepared-state evaluation and triage routing. */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TriageSetting } from '../../../src/types/config.js';
 
 const mocks = vi.hoisted(() => ({
-  enabled: vi.fn(),
   evaluator: vi.fn(),
 }));
 
-vi.mock('../../../src/utils/models/resolution.js', () => ({ triageEnabled: mocks.enabled }));
 vi.mock('../../../src/utils/models/evaluation.js', () => ({ getEvaluatorConfig: mocks.evaluator }));
 
-import { createTriage, TriageShortcut } from '../../../src/infra/triage.js';
+import { createTriage, TriageShortcut, triageEnabled } from '../../../src/infra/triage.js';
 
-/** Minimal context surface used by createTriage. */
-function context() {
+/** Minimal context surface used by createTriage; the default triages the `agent` name. */
+function context(triage: TriageSetting = ['agent']) {
   return {
-    modelOverrides: { agent: { provider: 'openai', name: 'main', options: { triage: true } } },
+    triage,
+    modelOverrides: { agent: { provider: 'openai', name: 'main' } },
     evaluate: vi.fn(async () => ({ answers: { tier: { type: 'choice', choice: 'large' } } })),
   } as any;
 }
 
 describe('createTriage', () => {
   beforeEach(() => {
-    mocks.enabled.mockReset().mockReturnValue(true);
     mocks.evaluator.mockReset().mockReturnValue({ provider: 'typesafe', name: 'jev-latest' });
   });
 
@@ -68,18 +67,36 @@ describe('createTriage', () => {
   it('should skip state projection and evaluation when either opt-in gate is closed', async () => {
     const projectState = vi.fn(() => 'state');
     const hook = createTriage({ projectState });
-    const ctx = context();
 
-    mocks.enabled.mockReturnValue(false);
-    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
+    // The context's triage setting closes the gate before the evaluator is consulted.
+    await expect(hook.call({ name: 'agent' } as any, {} as any, {}, context(false), { system: '', messages: [] }))
       .resolves.toBeUndefined();
     expect(mocks.evaluator).not.toHaveBeenCalled();
 
-    mocks.enabled.mockReturnValue(true);
+    // An agent without an evaluator assignment closes the second gate.
     mocks.evaluator.mockReturnValue(undefined);
+    const ctx = context();
     await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
       .resolves.toBeUndefined();
     expect(projectState).not.toHaveBeenCalled();
     expect(ctx.evaluate).not.toHaveBeenCalled();
+  });
+});
+
+describe('triageEnabled', () => {
+  it('should cover any name when the setting is true', () => {
+    expect(triageEnabled('agent', true)).toBe(true);
+    expect(triageEnabled('some-other-agent', true)).toBe(true);
+  });
+
+  it('should cover only the listed names when the setting is a list', () => {
+    expect(triageEnabled('agent', ['agent', 'other'])).toBe(true);
+    expect(triageEnabled('unlisted', ['agent', 'other'])).toBe(false);
+    expect(triageEnabled('agent', [])).toBe(false);
+  });
+
+  it('should cover nothing when the setting is false or unset', () => {
+    expect(triageEnabled('agent', false)).toBe(false);
+    expect(triageEnabled('agent', undefined)).toBe(false);
   });
 });

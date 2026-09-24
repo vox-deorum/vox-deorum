@@ -21,7 +21,7 @@ vi.mock('../../../src/utils/models/discovery.js', () => ({
   allowsUnlistedModelReferences: mocks.allowsUnlistedModelReferences,
 }));
 
-import { ensureModelsResolved, getRuntimeModel, resetRuntimeModels, selectEvaluatorReference, selectModelReference, triageEnabled } from '../../../src/utils/models/resolution.js';
+import { ensureModelsResolved, getRuntimeModel, resetRuntimeModels, selectEvaluatorReference, selectModelReference } from '../../../src/utils/models/resolution.js';
 import { getModelConfig } from '../../../src/utils/models/models.js';
 
 describe('ensureModelsResolved', () => {
@@ -350,27 +350,6 @@ describe('ensureModelsResolved', () => {
     it('should return undefined rather than falling back to the default model', () => {
       expect(selectEvaluatorReference('plain-agent')).toBeUndefined();
       expect(selectEvaluatorReference('plain-agent', { plain: 'openai/x' })).toBeUndefined();
-    });
-  });
-
-  describe('triageEnabled', () => {
-    it('should enable triage only for object assignments carrying options.triage', () => {
-      const triaged = { provider: 'openai', name: 'x', options: { triage: true } };
-      expect(triageEnabled('seat-agent', { 'seat-agent': triaged })).toBe(true);
-      expect(triageEnabled('off-agent', { 'off-agent': { ...triaged, options: { triage: false } } })).toBe(false);
-      // A string alias assignment never opts in, even when the global target carries the option.
-      expect(triageEnabled('alias-agent', { 'alias-agent': 'openai/x' })).toBe(false);
-
-      mocks.config.llms = {
-        default: { provider: 'openai', name: 'default' },
-        'global-triaged': triaged,
-        'global-plain': { provider: 'openai', name: 'y' },
-        'global-alias': 'openai/z',
-      };
-      expect(triageEnabled('global-triaged')).toBe(true);
-      expect(triageEnabled('global-plain')).toBe(false);
-      expect(triageEnabled('global-alias')).toBe(false);
-      expect(triageEnabled('unassigned')).toBe(false);
     });
   });
 

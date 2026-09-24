@@ -98,20 +98,6 @@ export function selectEvaluatorReference(
   return undefined;
 }
 
-/**
- * Reports whether a non-strategist agent opted into triage: its own assignment
- * (`overrides[name]` then `config.llms[name]`, only when it is an object model
- * configuration) carries `options.triage === true`. Shared by session preflight
- * and the later execute-time hook so both gate on one implementation.
- */
-export function triageEnabled(
-  name: string,
-  overrides?: Record<string, Model | string>,
-): boolean {
-  const assignment = overrides?.[name] ?? config.llms[name];
-  return typeof assignment === 'object' && assignment.options?.triage === true;
-}
-
 /** Follows configured aliases until reaching a model or missing key, and rejects cycles. */
 function resolveAlias(name: string, overrides?: Record<string, Model | string>): string | undefined {
   const visited = new Set<string>();

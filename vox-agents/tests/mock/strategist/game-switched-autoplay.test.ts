@@ -18,7 +18,6 @@ const modelMocks = vi.hoisted(() => ({
   ensureModelsResolved: vi.fn(async () => undefined),
   selectModelReference: vi.fn(),
   selectEvaluatorReference: vi.fn(),
-  triageEnabled: vi.fn(() => false),
 }));
 
 vi.mock('../../../src/utils/models/mcp-client.js', async () => {
@@ -41,7 +40,6 @@ vi.mock('../../../src/utils/models/resolution.js', () => ({
   ensureModelsResolved: modelMocks.ensureModelsResolved,
   selectModelReference: modelMocks.selectModelReference,
   selectEvaluatorReference: modelMocks.selectEvaluatorReference,
-  triageEnabled: modelMocks.triageEnabled,
 }));
 
 // Make the session's settle waits instant (post-player-creation and strategic-view delays).
@@ -61,8 +59,6 @@ beforeEach(() => {
   modelMocks.ensureModelsResolved.mockClear();
   modelMocks.selectModelReference.mockReset();
   modelMocks.selectEvaluatorReference.mockReset();
-  modelMocks.triageEnabled.mockReset();
-  modelMocks.triageEnabled.mockReturnValue(false);
   mcp.respondWith('set-metadata', textResult(true));
   mcp.respondWith('pause-game', textResult(true));
   mcp.respondWith('lua-executor', structuredResult({ Success: true }));
@@ -194,7 +190,6 @@ describe('model preflight', () => {
     }
     expect(modelMocks.selectModelReference).not.toHaveBeenCalledWith('unused-agent', expect.anything(), overrides);
     // Triage off everywhere: no evaluator lookup is needed.
-    expect(modelMocks.triageEnabled).toHaveBeenCalledWith('diplomat', overrides);
     expect(modelMocks.selectEvaluatorReference).not.toHaveBeenCalled();
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
       'openai/strategist',
@@ -206,7 +201,7 @@ describe('model preflight', () => {
     ], overrides);
   });
 
-  it('preflights tier and evaluator references for a strategist whose pacing turns triage on', async () => {
+  it('skips evaluator preflight for agents without a triage hook even when triage covers everything', async () => {
     const llms = { 'selected-strategist': 'openai/strategist' };
     modelMocks.selectModelReference.mockImplementation((name: string, size?: string) =>
       (size === 'small' || size === 'large') ? `${name}.${size}` : llms[name as keyof typeof llms] ?? name);
@@ -216,38 +211,35 @@ describe('model preflight', () => {
     vi.mocked(voxCivilization.startGame).mockResolvedValue(false);
 
     const s = new StrategistSession({
-      name: 'strategist-triage-preflight',
+      name: 'hookless-triage-preflight',
       type: 'strategist',
       autoPlay: false,
       gameMode: 'start',
-      llmPlayers: { 0: { strategist: 'selected-strategist', pacing: { triage: true }, llms } },
+      triage: true,
+      llmPlayers: { 0: { strategist: 'selected-strategist', llms } },
     }, {} as never, null);
 
     await expect(s.start()).rejects.toThrow('Failed to start Civilization V');
 
-    // The seat strategist gates on pacing.triage, never on the options.triage helper.
-    expect(modelMocks.triageEnabled).not.toHaveBeenCalledWith('selected-strategist', llms);
+    expect(modelMocks.selectEvaluatorReference).not.toHaveBeenCalled();
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
       'selected-strategist.small',
       'openai/strategist',
       'selected-strategist.large',
-      'evaluator',
       'diplomat.small',
       'diplomat',
       'diplomat.large',
     ], llms);
   });
 
-  it('preflights tier and evaluator references for a non-strategist agent whose assignment opts into triage', async () => {
-    const llms = {
-      diplomat: { provider: 'openai', name: 'diplomat', options: { triage: true } },
-    };
+  it('preflights the evaluator reference for a hooked agent the seat triage lists', async () => {
+    const llms = { diplomat: 'openai/diplomat' };
     modelMocks.selectModelReference.mockImplementation((name: string, size?: string) =>
       (size === 'small' || size === 'large') ? `${name}.${size}` : `${name}-ref`);
     modelMocks.selectEvaluatorReference.mockImplementation((name: string) =>
       name === 'diplomat' ? 'diplomat.evaluator' : undefined);
-    modelMocks.triageEnabled.mockImplementation((name: string) => name === 'diplomat');
-    vi.spyOn(agentRegistry, 'get').mockImplementation(() => undefined as never);
+    vi.spyOn(agentRegistry, 'get').mockImplementation((name) => (
+      name === 'diplomat' ? { modelSize: 'default', triage: vi.fn() } : undefined) as never);
     vi.mocked(voxCivilization.startGame).mockResolvedValue(false);
 
     const s = new StrategistSession({
@@ -255,16 +247,15 @@ describe('model preflight', () => {
       type: 'strategist',
       autoPlay: false,
       gameMode: 'start',
-      llmPlayers: { 0: { strategist: 'null-strategist', llms } },
+      // The seat setting wins over the session's, so only this seat's diplomat triages.
+      triage: false,
+      llmPlayers: { 0: { strategist: 'null-strategist', triage: ['diplomat'], llms } },
     }, {} as never, null);
 
     await expect(s.start()).rejects.toThrow('Failed to start Civilization V');
 
-    // The triaged diplomat grows small/large/evaluator references; the plain strategist does not.
-    expect(modelMocks.triageEnabled).toHaveBeenCalledWith('diplomat', llms);
-    expect(modelMocks.triageEnabled).not.toHaveBeenCalledWith('null-strategist', llms);
-    expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledWith('diplomat', llms);
     expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledTimes(1);
+    expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledWith('diplomat', llms);
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
       'null-strategist.small',
       'null-strategist-ref',
@@ -277,12 +268,12 @@ describe('model preflight', () => {
   });
 
   it('omits the evaluator reference when the triaged agent has no evaluator registered', async () => {
-    const llms = { diplomat: { provider: 'openai', name: 'diplomat', options: { triage: true } } };
+    const llms = {};
     modelMocks.selectModelReference.mockImplementation((name: string, size?: string) =>
       (size === 'small' || size === 'large') ? `${name}.${size}` : `${name}-ref`);
     modelMocks.selectEvaluatorReference.mockReturnValue(undefined);
-    modelMocks.triageEnabled.mockImplementation((name: string) => name === 'diplomat');
-    vi.spyOn(agentRegistry, 'get').mockImplementation(() => undefined as never);
+    vi.spyOn(agentRegistry, 'get').mockImplementation((name) => (
+      name === 'diplomat' ? { modelSize: 'default', triage: vi.fn() } : undefined) as never);
     vi.mocked(voxCivilization.startGame).mockResolvedValue(false);
 
     const s = new StrategistSession({
@@ -290,11 +281,13 @@ describe('model preflight', () => {
       type: 'strategist',
       autoPlay: false,
       gameMode: 'start',
+      triage: ['diplomat'],
       llmPlayers: { 0: { strategist: 'null-strategist', llms } },
     }, {} as never, null);
 
     await expect(s.start()).rejects.toThrow('Failed to start Civilization V');
 
+    expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledWith('diplomat', llms);
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
       'null-strategist.small',
       'null-strategist-ref',
@@ -303,6 +296,38 @@ describe('model preflight', () => {
       'diplomat-ref',
       'diplomat.large',
     ], llms);
+  });
+
+  it('rejects a seat role that is not an agent name before launching the game', async () => {
+    modelMocks.selectModelReference.mockImplementation((name: string) => name);
+    vi.spyOn(agentRegistry, 'get').mockImplementation(() => undefined as never);
+    vi.mocked(voxCivilization.startGame).mockClear();
+
+    const s = new StrategistSession({
+      name: 'object-diplomat',
+      type: 'strategist',
+      autoPlay: false,
+      gameMode: 'start',
+      llmPlayers: { 0: { strategist: 'null-strategist', diplomat: { options: { triage: true } } as never } },
+    }, {} as never, null);
+
+    await expect(s.start()).rejects.toThrow('llmPlayers.0.diplomat');
+    expect(voxCivilization.startGame).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed triage setting before launching the game', async () => {
+    vi.mocked(voxCivilization.startGame).mockClear();
+
+    const s = new StrategistSession({
+      name: 'invalid-triage',
+      type: 'strategist',
+      autoPlay: false,
+      gameMode: 'start',
+      llmPlayers: { 0: { strategist: 'null-strategist', triage: 'diplomat' as never } },
+    }, {} as never, null);
+
+    await expect(s.start()).rejects.toThrow('llmPlayers.0.triage');
+    expect(voxCivilization.startGame).not.toHaveBeenCalled();
   });
 });
 

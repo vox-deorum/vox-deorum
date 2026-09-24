@@ -88,6 +88,23 @@ describe('computeConfigDiff', () => {
     const diff = computeConfigDiff(full, defaults);
     expect(diff.llms).toEqual({ fancy: { provider: 'openai', name: 'gpt-5' } });
   });
+
+  it('should include a triage setting that differs from the defaults', () => {
+    const defaults = makeDefaults();
+    const full = cloneConfig(defaults);
+    full.triage = ['diplomat'];
+    const diff = computeConfigDiff(full, defaults);
+    expect(diff).toEqual({ triage: ['diplomat'] });
+  });
+
+  it('should omit triage when both sides leave it unset', () => {
+    const defaults = makeDefaults();
+    const full = cloneConfig(defaults);
+    // A different top-level difference keeps the diff non-empty so this checks triage specifically.
+    full.webui.port = 4321;
+    const diff = computeConfigDiff(full, defaults);
+    expect(diff).not.toHaveProperty('triage');
+  });
 });
 
 describe('mergeConfigWithDefaults', () => {
@@ -119,6 +136,12 @@ describe('mergeConfigWithDefaults', () => {
     expect(defaults.llms.fancy).toEqual({ provider: 'openai', name: 'gpt-4' });
   });
 
+  it('should carry a triage setting from the file', () => {
+    const defaults = makeDefaults();
+    expect(mergeConfigWithDefaults({ triage: true }, defaults).triage).toBe(true);
+    expect(mergeConfigWithDefaults({ triage: ['strategist'] }, defaults).triage).toEqual(['strategist']);
+  });
+
   it('should ignore a stale deletion tombstone for an unknown default model', () => {
     const defaults = makeDefaults();
 
@@ -133,6 +156,7 @@ describe('mergeConfigWithDefaults', () => {
     const full = cloneConfig(defaults);
     full.webui.port = 9999;
     full.logging.level = 'debug';
+    full.triage = ['diplomat'];
     full.llms.default = 'openrouter/other';
     delete full.llms.fancy;
     full.llms.extra = { provider: 'openai', name: 'o3' };

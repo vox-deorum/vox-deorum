@@ -9,6 +9,9 @@
 
 import type { VoxAgentsConfig, LLMConfig } from '../../types/index.js';
 
+/** Top-level fields stored whole in config.json; llms is diffed per entry and versionInfo is runtime only. */
+const topLevelKeys: (keyof VoxAgentsConfig)[] = ['agent', 'webui', 'mcpServer', 'logging', 'configsDir', 'episodeDbPath', 'telemetryDir', 'obs', 'triage'];
+
 /**
  * Recursive deep equality check for plain JSON values
  */
@@ -52,8 +55,7 @@ export function computeConfigDiff(
 ): Record<string, unknown> {
   const diff: Record<string, unknown> = {};
 
-  // Compare simple top-level fields (skip versionInfo - runtime only)
-  const topLevelKeys: (keyof VoxAgentsConfig)[] = ['agent', 'webui', 'mcpServer', 'logging', 'configsDir', 'episodeDbPath', 'telemetryDir', 'obs'];
+  // Compare simple top-level fields
   for (const key of topLevelKeys) {
     if (!deepEqual(fullConfig[key], defaults[key])) {
       diff[key] = fullConfig[key];
@@ -103,8 +105,7 @@ export function mergeConfigWithDefaults(
     llms: { ...defaults.llms }
   };
 
-  // Override top-level fields from file (skip llms, handled separately)
-  const topLevelKeys: (keyof VoxAgentsConfig)[] = ['agent', 'webui', 'mcpServer', 'logging', 'configsDir', 'episodeDbPath', 'telemetryDir', 'obs'];
+  // Override top-level fields from file (llms is merged separately below)
   for (const key of topLevelKeys) {
     if (key in fileConfig) {
       (result as any)[key] = fileConfig[key];

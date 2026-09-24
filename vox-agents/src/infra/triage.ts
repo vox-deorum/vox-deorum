@@ -4,11 +4,16 @@ import type {
   Experimental_EvaluationQuestion as EvaluationQuestion,
   Experimental_EvaluationResult as EvaluationResult,
 } from 'ai';
+import type { TriageSetting } from '../types/config.js';
 import type { ModelSize } from '../utils/models/models.js';
 import { getEvaluatorConfig } from '../utils/models/evaluation.js';
-import { triageEnabled } from '../utils/models/resolution.js';
 import type { AgentParameters, PreparedAgentState, TriageDecision, VoxAgent } from './vox-agent.js';
 import type { VoxContext } from './vox-context.js';
+
+/** Report whether a triage setting covers an agent: `true` covers all, a list covers the names it holds. */
+export function triageEnabled(name: string, setting: TriageSetting | undefined): boolean {
+  return setting === true || (Array.isArray(setting) && setting.includes(name));
+}
 
 /** Return a deterministic decision before asking evaluator questions. */
 export class TriageShortcut {
@@ -66,7 +71,7 @@ const routeDefaultTriage = (answers: EvaluationResult<typeof defaultTriageQuesti
 
 /**
  * Build a triage hook that reuses the prepared prompt and optionally projects it into a smaller state.
- * The agent's own opt-in and evaluator assignment are checked before any question or projection work.
+ * The context's triage setting and the agent's evaluator assignment are checked before any question or projection work.
  */
 export function createTriage<
   TParameters extends AgentParameters,
@@ -82,7 +87,7 @@ export function createTriage<
     context: VoxContext<TParameters>,
     prepared: PreparedAgentState,
   ): Promise<TriageDecision | undefined> {
-    if (!triageEnabled(this.name, context.modelOverrides)) return undefined;
+    if (!triageEnabled(this.name, context.triage)) return undefined;
     const evaluator = getEvaluatorConfig(this.name, context.modelOverrides);
     if (!evaluator) return undefined;
 
