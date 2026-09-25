@@ -89,6 +89,34 @@ export function getStatusText(statusCode: number): string {
   }
 }
 
+/** Who picked an agent's model tier, keyed by the span's `triage.source` attribute. */
+const triageSourceLabels: Record<string, string> = {
+  evaluator: 'triage',
+  caller: 'caller',
+  shortcut: 'rule',
+  failed: 'failure',
+};
+
+/**
+ * One tag for an agent span's model tier and who picked it (e.g. "Tier small by triage"), with the
+ * baseline tier and any triage note as its tooltip. Undefined when the span carries no tier.
+ */
+export function getTriageTag(span: Span): { label: string; severity: 'secondary' | 'warn'; tooltip?: string } | undefined {
+  const { 'triage.tier': tier, 'triage.source': source, 'triage.baseline': baseline, 'triage.note': note } =
+    (span.attributes ?? {}) as Record<string, unknown>;
+  if (typeof tier !== 'string') return undefined;
+  const by = typeof source === 'string' ? triageSourceLabels[source] ?? source : undefined;
+  const tooltip = [
+    typeof baseline === 'string' ? `Baseline tier: ${baseline}` : undefined,
+    typeof note === 'string' ? `Note: ${note}` : undefined,
+  ].filter(Boolean).join('\n');
+  return {
+    label: by ? `Tier ${tier} by ${by}` : `Tier ${tier}`,
+    severity: source === 'failed' ? 'warn' : 'secondary',
+    tooltip: tooltip || undefined,
+  };
+}
+
 /**
  * Format file size in bytes for display
  */

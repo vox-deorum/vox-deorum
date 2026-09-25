@@ -7,7 +7,7 @@
  * an active run, coerces the state into the provider contract's JSON input, runs the AI SDK's
  * `experimental_evaluate` against the factory's evaluation model with the run's abort signal,
  * and records answers, confidence (from provider metadata when present), and tokens on an
- * `evaluate` span nested under the run's active span.
+ * `agent.<name>.evaluate` span (plain `evaluate` outside an agent) nested under the run's active span.
  */
 
 import { experimental_evaluate } from 'ai';
@@ -64,12 +64,13 @@ export async function evaluateOn<TParameters extends AgentParameters, TQuestions
   }
 
   const input = coerceEvaluationInput(state);
-  const span = host.tracer.startSpan('evaluate', {
+  const agentName = host.currentAgentName;
+  const span = host.tracer.startSpan(agentName ? `agent.${agentName}.evaluate` : 'evaluate', {
     attributes: {
       'vox.context.id': host.id,
       'game.turn': String(root.parameters.turn),
       'model': formatModelReference(model),
-      ...(host.currentAgentName ? { 'agent.name': host.currentAgentName } : {}),
+      ...(agentName ? { 'agent.name': agentName } : {}),
       'evaluate.purpose': options.purpose ?? 'execution',
       'evaluate.state': JSON.stringify(input),
       'evaluate.questions': JSON.stringify(options.questions),

@@ -54,6 +54,15 @@ describe('createTriage', () => {
     expect(ctx.evaluate.mock.calls[0][1]).toEqual({ facts: ['selected'] });
   });
 
+  it('should evaluate the resolved state of an async projector', async () => {
+    const ctx = context();
+    const hook = createTriage({ projectState: async () => ({ facts: ['loaded'] }) });
+
+    await hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: 'system', messages: [] });
+
+    expect(ctx.evaluate.mock.calls[0][1]).toEqual({ facts: ['loaded'] });
+  });
+
   it('should return a deterministic shortcut without evaluating questions', async () => {
     const shortcut = new TriageShortcut({ tier: 'small', note: 'routine' });
     const ctx = context();

@@ -14,7 +14,7 @@ import { StrategistParameters, getRecentGameState } from "../../strategist/strat
 import { EnvoyThread } from "../../types/index.js";
 import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "../context/envoy-prompts.js";
 import { createCloseConversationTool } from "../tools/close-conversation-tool.js";
-import { buildDealContextMessage, renderDealRowInline } from "../context/diplomat-utils.js";
+import { buildDealContextMessage, renderDealRowInline, type DiplomatDealContext } from "../context/diplomat-utils.js";
 import { buildDiplomacyBackgroundMessage } from "../context/diplomacy-context.js";
 import { readActiveProposal } from "../../utils/diplomacy/deal/deal.js";
 import { counterpartOpenProposal } from "../../utils/diplomacy/deal/deal-reduce.js";
@@ -22,10 +22,7 @@ import { terminalActionTools, type DealRowRenderer } from "../../utils/diplomacy
 import { createTriage, TriageShortcut } from "../../infra/triage.js";
 import type { TriageDecision } from "../../infra/vox-agent.js";
 
-/**
- * How many prepared messages diplomat triage reads. The prepared prompt ends with the ongoing exchange,
- * then the deal context, then the turn hint, so this tail covers the latest turns and any open proposal.
- */
+/** How many recent spoken rows of the conversation diplomat triage reads. */
 const triageMessageCount = 8;
 
 /** The diplomat's typed intent and stakes questions. */
@@ -67,17 +64,21 @@ export function routeDiplomatTriage(answers: DiplomatTriageAnswers): TriageDecis
  */
 export class Diplomat extends LiveEnvoy {
   /**
-   * Select a model tier from the recent exchange when triage is enabled. The evaluator reads only the
-   * tail of the prepared messages (see {@link triageMessageCount}), not the system prompt or settled
-   * history. Special messages such as greetings run without tools or history, so they take the small
-   * tier directly.
+   * Select a model tier from the recent exchange when triage is enabled. The evaluator reads the last
+   * few spoken rows (see {@link triageMessageCount}) and, only while a deal is open, the full deal
+   * context, including possible items. Special messages such as greetings run without tools or
+   * history, so they take the small tier directly.
    */
   public override triage = createTriage<StrategistParameters, EnvoyThread, typeof diplomatTriageQuestions>({
     questions: diplomatTriageQuestions,
     route: routeDiplomatTriage,
-    projectState: (prepared) => prepared.messages
-      .slice(-triageMessageCount)
-      .map(({ role, content }) => ({ role, content })),
+    projectState: async (_prepared, parameters, input, context) => {
+      const { deal, dealRenderer } = await this.readTurnContext(parameters, input, context);
+      return {
+        conversation: this.formatRecentConversation(input, triageMessageCount, dealRenderer),
+        ...(deal.openProposalID !== undefined && { dealContext: deal.text }),
+      };
+    },
     shortcut: (_parameters, input) => this.isSpecialMode(input)
       ? new TriageShortcut({ tier: "small", note: "special message" })
       : undefined,
@@ -214,29 +215,44 @@ export class Diplomat extends LiveEnvoy {
     input: EnvoyThread,
     context: VoxContext<StrategistParameters>
   ): Promise<LiveEnvoyContext> {
-    // The cities/standing background and the durable deal reduction are independent fetches — run them
-    // together. buildDealContextMessage below needs both: background.players for third-party context,
-    // reduction for the open-deal terms.
-    const [background, reduction] = await Promise.all([
-      buildDiplomacyBackgroundMessage(context, parameters, input),
-      this.readDealReduction(input, context),
-    ]);
-    const preamble: ModelMessage[] = background.text
-      ? [{ role: "user", content: background.text }]
-      : [];
+    const { background, deal, dealRenderer } = await this.readTurnContext(parameters, input, context);
+    return {
+      preamble: background ? [{ role: "user", content: background }] : [],
+      postscript: [{ role: "user", content: deal.text }],
+      dealRenderer,
+    };
+  }
 
-    // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
-    const relationships = getRecentGameState(parameters)?.options?.Relationships;
-    const dealContext = await buildDealContextMessage(input, reduction, background.players, relationships);
-    const postscript: ModelMessage[] = [{ role: "user", content: dealContext.text }];
+  /**
+   * Load the turn's grounding once per execution, shared by the prompt ({@link getExtraContext}) and
+   * triage: the cities/standing background text, the live deal context, and the deal row renderer.
+   */
+  private readTurnContext(
+    parameters: StrategistParameters,
+    input: EnvoyThread,
+    context: VoxContext<StrategistParameters>
+  ): Promise<{ background?: string; deal: DiplomatDealContext; dealRenderer: DealRowRenderer }> {
+    return context.memoizeForExecution("diplomat.turn-context", async () => {
+      // The cities/standing background and the durable deal reduction are independent fetches — run them
+      // together. buildDealContextMessage below needs both: background.players for third-party context,
+      // reduction for the open-deal terms.
+      const [background, reduction] = await Promise.all([
+        buildDiplomacyBackgroundMessage(context, parameters, input),
+        this.readDealReduction(input, context),
+      ]);
 
-    // The still-open proposal is shown in full in the on-the-table block, so the renderer points its
-    // transcript row at that block instead of repeating the terms; every other proposal renders its
-    // terms inline (see {@link renderDealRowInline}). The composer returns the ID only when it actually
-    // emitted that proposal's on-the-table block, independently of the possible-items section.
-    const dealRenderer: DealRowRenderer = (row) => renderDealRowInline(row, input, dealContext.openProposalID);
+      // Our leader's own set-relationship directives ride along the cached game state (no extra fetch).
+      const relationships = getRecentGameState(parameters)?.options?.Relationships;
+      const deal = await buildDealContextMessage(input, reduction, background.players, relationships);
 
-    return { preamble, postscript, dealRenderer };
+      // The still-open proposal is shown in full in the on-the-table block, so the renderer points its
+      // transcript row at that block instead of repeating the terms; every other proposal renders its
+      // terms inline (see {@link renderDealRowInline}). The composer returns the ID only when it actually
+      // emitted that proposal's on-the-table block, independently of the possible-items section.
+      const dealRenderer: DealRowRenderer = (row) => renderDealRowInline(row, input, deal.openProposalID);
+
+      return { background: background.text, deal, dealRenderer };
+    });
   }
 
   /**

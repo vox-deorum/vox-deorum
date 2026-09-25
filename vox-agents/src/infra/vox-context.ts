@@ -624,9 +624,10 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    * Run one evaluation call against a model. Thin delegator to {@link evaluateOn} in
    * infra/vox-evaluate.js, the single-call evaluation path that runs under this context's
    * telemetry alongside {@link execute}. Requires an active root run (rejecting otherwise).
-   * Answers, confidence (from provider metadata when present), and usage land on an `evaluate`
-   * span, and usage accrues to the active root's sink, the seat-wide totals, and the optional
-   * per-call token output on the options.
+   * Answers, confidence (from provider metadata when present), and usage land on an
+   * `agent.<name>.evaluate` span inside an agent frame (`evaluate` outside one), and usage accrues
+   * to the active root's sink, the seat-wide totals, and the optional per-call token output on the
+   * options.
    *
    * @param model - The model configuration to evaluate with
    * @param state - The state under evaluation (coerced to JSON for the provider contract)

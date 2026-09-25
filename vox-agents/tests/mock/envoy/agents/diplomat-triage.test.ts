@@ -1,6 +1,6 @@
-/** Tests for diplomat intent routing and prepared-state triage. */
+/** Tests for diplomat intent routing and its compact triage state. */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnvoyThread, TriageSetting } from '../../../../src/types/index.js';
 import { agentRegistry } from '../../../../src/infra/agent-registry.js';
 
@@ -14,17 +14,28 @@ function answers(intent: 'deal' | 'threat' | 'request' | 'small talk', stakes: n
   } as any;
 }
 
-/** Build a diplomacy thread for the diplomat's mode checks. */
-function thread(content: string): EnvoyThread {
+/** Build a diplomacy thread for the diplomat's mode checks, one counterpart row per content. */
+function thread(...contents: string[]): EnvoyThread {
   return {
     id: 'dipl:g:1:3', agent: 3, gameID: 'g', player1ID: 1, player2ID: 3,
     contextType: 'live', contextId: 'g-player-3', diplomacy: true,
-    messages: [{ message: { role: 'user', content }, metadata: { datetime: new Date(0), turn: 0 } }],
+    messages: contents.map(content => ({ message: { role: 'user', content }, metadata: { datetime: new Date(0), turn: 0 } })),
   };
 }
 
 describe('Diplomat.triage', () => {
-  const prepared = { system: 'prepared prompt', messages: [] };
+  const prepared = { system: 'prepared prompt', messages: [{ role: 'system', content: 'turn hint' }] };
+
+  /** Stub the memoized turn context so triage reads a scripted deal without MCP calls. */
+  function stubTurnContext(openProposalID?: number) {
+    vi.spyOn(diplomat as any, 'readTurnContext').mockResolvedValue({
+      deal: { text: 'deal context with possible items', openProposalID },
+      dealRenderer: () => undefined,
+    });
+  }
+
+  beforeEach(() => stubTurnContext());
+  afterEach(() => vi.restoreAllMocks());
 
   /** Build the evaluator context used by the shared prepared-state hook; the default triages the diplomat. */
   function triageContext(
@@ -83,21 +94,30 @@ describe('Diplomat.triage', () => {
     const ctx = triageContext(enabledAssignment, answers(intent, stakes));
 
     await expect(diplomat.triage?.({}, thread('context'), ctx, prepared)).resolves.toMatchObject({ tier, source: 'evaluator' });
-    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), [], { questions: expect.any(Object), purpose: 'triage' });
+    expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), expect.any(Object), { questions: expect.any(Object), purpose: 'triage' });
   });
 
-  it('should evaluate a bounded tail of the prepared messages without the system prompt', async () => {
+  it('should evaluate only the recent conversation when no deal is open', async () => {
     const ctx = triageContext(enabledAssignment);
-    const messages = Array.from({ length: 20 }, (_, index) => ({
-      role: 'user', content: `message ${index}`, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } },
-    }));
+    const rows = Array.from({ length: 20 }, (_, index) => `message ${index}`);
 
-    await diplomat.triage?.({}, thread('context'), ctx, { system: 'prepared prompt', messages } as any);
-    const state = ctx.evaluate.mock.calls[0][1] as Array<{ role: string; content: string }>;
-    expect(state.length).toBeGreaterThan(0);
-    expect(state.length).toBeLessThan(messages.length);
-    expect(state.at(-1)).toEqual({ role: 'user', content: 'message 19' });
+    await diplomat.triage?.({}, thread(...rows), ctx, prepared);
+    const state = ctx.evaluate.mock.calls[0][1] as { conversation: string; dealContext?: string };
+    expect(state.conversation).toContain('message 19');
+    expect(state.conversation).toContain('message 12');
+    expect(state.conversation).not.toContain('message 11');
+    expect(state).not.toHaveProperty('dealContext');
     expect(JSON.stringify(state)).not.toContain('prepared prompt');
-    expect(JSON.stringify(state)).not.toContain('providerOptions');
+    expect(JSON.stringify(state)).not.toContain('turn hint');
+  });
+
+  it('should include the whole deal context while a deal is open', async () => {
+    stubTurnContext(7);
+    const ctx = triageContext(enabledAssignment);
+
+    await diplomat.triage?.({}, thread('let us trade'), ctx, prepared);
+    const state = ctx.evaluate.mock.calls[0][1] as { conversation: string; dealContext?: string };
+    expect(state.conversation).toContain('let us trade');
+    expect(state.dealContext).toBe('deal context with possible items');
   });
 });

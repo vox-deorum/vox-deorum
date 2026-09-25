@@ -51,7 +51,7 @@ The distinction to keep in mind (and in any UI copy): **talk to a spokesperson t
 The diplomat can also pick its own model tier each turn (triage). To turn this on, set `"triage": ["diplomat"]` (or `true`) on a seat, in the session config, or in `vox-agents/config.json`, and configure `diplomat.evaluator` or the shared `evaluator` alias; otherwise the usual assignment applies.
 
 - Greetings and other special messages go straight to `small`, with no evaluation.
-- Other turns send the evaluator only the tail of the prepared messages (the latest exchange, the open deal, and the turn hint) and ask for intent and stakes. Small talk uses `small`, high-stakes deals and threats use `large`, and everything else uses `default`.
+- Other turns ask the evaluator to rate intent and stakes using the last eight spoken rows. If a proposal is open, it also receives the full deal context, including possible items. It does not receive the system prompt or turn hint. Small talk uses `small`, high-stakes deals and threats use `large`, and everything else uses `default`.
 
 The questions and routing live in `src/envoy/agents/diplomat.ts`. See [Models and configuration](overview.md#models-and-configuration) for tier lookup and the shared `createTriage` helper.
 

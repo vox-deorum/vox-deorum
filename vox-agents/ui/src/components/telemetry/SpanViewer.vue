@@ -86,16 +86,11 @@
               <span v-else style="display: inline-block; width: 24px;"></span>
               {{ span.name }}
               <Tag
-                v-if="typeof span.attributes?.['triage.tier'] === 'string'"
-                :value="`Tier ${span.attributes['triage.tier']}`"
-                severity="secondary"
+                v-if="getTriageTag(span)"
+                v-tooltip.bottom="getTriageTag(span)?.tooltip"
+                :value="getTriageTag(span)?.label"
+                :severity="getTriageTag(span)?.severity"
                 class="ml-2"
-              />
-              <Tag
-                v-if="typeof span.attributes?.['triage.source'] === 'string'"
-                :value="`Triage ${span.attributes['triage.source']}`"
-                severity="contrast"
-                class="ml-1"
               />
             </div>
             <div class="col-fixed-80">
@@ -161,6 +156,7 @@ import {
   formatTokenCount,
   getStatusSeverity,
   getStatusText,
+  getTriageTag,
   parseSpanAttributes,
   buildSpanTree,
   flattenSpanTree,

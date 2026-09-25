@@ -259,7 +259,7 @@ describe('VoxContext.evaluate success path', () => {
     expect(ctx.inputTokens).toBe(30);
     expect(ctx.reasoningTokens).toBe(0);
     expect(ctx.outputTokens).toBe(4);
-    expect(spans.find(span => span.name === 'evaluate')?.attributes).toMatchObject({
+    expect(spans.find(span => span.name === `agent.${evaluationAgent.name}.evaluate`)?.attributes).toMatchObject({
       'agent.name': evaluationAgent.name,
       'evaluate.purpose': 'execution',
     });

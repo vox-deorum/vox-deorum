@@ -301,6 +301,21 @@ export abstract class Envoy<TParameters extends AgentParameters = AgentParameter
   }
 
   /**
+   * Renders the last `count` spoken rows of the whole thread (past and ongoing) as the same
+   * speaker-labeled text block as {@link formatPastConversations}. Suited to compact states such as
+   * triage, which should not read the agent's reasoning traces or tool traffic.
+   */
+  protected formatRecentConversation(
+    input: EnvoyThread,
+    count: number,
+    renderDeal?: DealRowRenderer
+  ): string | undefined {
+    const spoken = this.filterSpecialMessages(input.messages)
+      .filter(item => item.message.role === "assistant" || item.message.role === "user");
+    return this.formatPastConversations(spoken.slice(-count), input, renderDeal);
+  }
+
+  /**
    * Converts an array of MessageWithMetadata to a ModelMessage array for LLM context. Tool-result
    * messages and non-text assistant parts are summarized or dropped to reduce token usage, EXCEPT a
    * collapsed reply row carrying `metadata.trace`: its captured native trajectory (reasoning plus

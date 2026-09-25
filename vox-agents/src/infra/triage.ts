@@ -26,13 +26,16 @@ interface TriageStateOptions<
   TParameters extends AgentParameters,
   TInput,
 > {
-  /** Optionally trim or reshape the already prepared prompt for evaluation. */
+  /**
+   * Optionally build the evaluated state from the prepared prompt or from the agent's own inputs.
+   * Triage usually runs on a smaller model, so a compact purpose-built state often reads better.
+   */
   projectState?: (
     prepared: PreparedAgentState,
     parameters: TParameters,
     input: TInput,
     context: VoxContext<TParameters>,
-  ) => unknown;
+  ) => unknown | Promise<unknown>;
   /** Resolve deterministic cases such as greetings without an evaluator call. */
   shortcut?: (
     parameters: TParameters,
@@ -95,7 +98,7 @@ export function createTriage<
     if (shortcut) return { ...shortcut.decision, source: 'shortcut' };
 
     const state = configuration?.projectState
-      ? configuration.projectState(prepared, parameters, input, context)
+      ? await configuration.projectState(prepared, parameters, input, context)
       : prepared;
     const questions = configuration?.questions ?? defaultTriageQuestions;
     const result = await context.evaluate(evaluator, state, { questions, purpose: 'triage' });
