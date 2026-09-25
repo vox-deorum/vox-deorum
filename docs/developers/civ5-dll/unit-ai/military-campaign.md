@@ -27,11 +27,35 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilita
 | Nuclear attack | Available nuclear unit and a successful launch decision. | Best eligible enemy city in range; the selected unit's plot is muster. |
 | Carrier group | Unassigned carrier that does not need healing. | Suitable deployment zone, or its current plot or adjacent coastal water when it begins in a city. |
 
+### Attack targets
+
+Several systems ask the same questions: which enemy cities an army could actually reach, which own city is the best place to launch from, and which own cities an enemy army could reach. Pathing armies across the map is expensive, so Military AI answers these questions once per turn and caches the answers as two lists of `CvAttackTarget` records. Each record is one candidate army path between a pair of cities:
+
+| Field | Meaning |
+| --- | --- |
+| Muster, staging, and target plots | The launching city, the path plot a few steps short of the target, and the target city. |
+| Army type | Land, naval, or combined, whichever approach scored best. |
+| Path length and approach score | How far the army travels, and how many usable plots surround the target within reach of the staging plot. |
+| Preferred | Whether the target scored above a third of this turn's best target. |
+
+`CvMilitaryAI::UpdateAttackTargets` rebuilds both lists at the start of every Military AI turn, including for human players, because AI code reads their lists too. For each own city, `GetArmyPathsFromCity` finds land and water paths to nearby foreign cities. `SetBestTargetApproach` then compares land, naval, and combined approaches, and the best one must score above 30.
+
+- **Attack targets.** Paths that pass a safety check are ranked by `ScoreAttackTarget`, which weighs distance, city and conquest value, liberation value, and relevant city-state quests. Only the best path per target city and army type is kept, and the strongest candidates are marked preferred.
+- **Exposed cities.** Each path is also reversed and scored from the other player's side, with a more lenient safety check and a simple approach-over-distance score. Own cities that score above a third of the best become exposed cities, listed once per potential attacker.
+
+The lists feed these decisions:
+
+| Query | Used by |
+| --- | --- |
+| `RequestCityAttack` | Creating [city attack operations](#city-attacks-and-muster). |
+| `HavePreferredAttackTarget`, `IsPreferredAttackTarget` | Diplomacy AI war, peace, and war-bribe decisions; the offensive weight in [army sizing](military-production.md#land-force-demand); [zone value](military-tactics.md#independent-units-and-priorities) in tactics; and whether units pillage an enemy city's tiles. |
+| `IsExposedToEnemy` | Diplomacy AI war and peace decisions, Homeland AI patrol targets, and the defensive weight in army sizing. |
+
 ### City attacks and muster
 
-`CvMilitaryAI::UpdateAttackTargets` rebuilds land and water paths to enemy cities each Military AI turn. It compares land, naval, and combined approaches. The best approach must score above 30. Its ranking includes distance, city and conquest value, liberation value, and relevant city-state quests. Diplomacy can request an attack while preparing for war, while war state gates attacks and defensive pullbacks during a war.
+Diplomacy can request a city attack while preparing for war, while war state gates attacks and defensive pullbacks during a war. `RequestCityAttack` walks the [attack target](#attack-targets) list for the intended enemy. Careful requests skip targets that are not preferred and wait until an earlier army against the same city has left own territory. The record's army type selects the land, naval, or combined city attack operation, and the operation receives the target and muster cities.
 
-City attacks choose the muster city with the target. `GetArmyPathsFromCity` tests every own city as a path origin and `ScoreAttackTarget` chooses the best viable path. The muster city is therefore the best launching point for that target, not necessarily the nearest city.
+City attacks therefore choose the muster city with the target. Every own city is tested as a path origin, so the muster city is the best launching point for that target, not necessarily the nearest city.
 
 Other families use the closest compatible friendly coastal city for naval work, the closest own city within target range for land work without a precomputed path, the target plot for rapid response, or the selected nuclear unit's plot. A naval city attack against a non-coastal target substitutes a compatible own-and-enemy coastal city pair. During recruitment and gathering, the muster point can move to the army's center of mass so late members head toward the assembled army. Only the city that owns the muster plot can accept the operation's production request. See [formation requests and commitments](military-production.md#formation-requests-and-commitments).
 

@@ -83,7 +83,7 @@ Routine Tactical recruitment accepts movable, unprocessed combat, ranged, air, a
 | Global low | Guard improvements, escort embarked units, and move exposed remaining units. |
 | Review | Final safety move, then pass eligible units to Homeland AI. |
 
-Zone value prioritizes city importance and urgency: focus-area cities, damaged visible cities, operation or preferred targets, land zones, and dominance that threatens friendly or enemy territory raise the value. War state can further prioritize friendly territory while losing or enemy territory while winning. A city-state enemy resets city-based factors. Barbarians skip zone processing and use their own ladder.
+Zone value prioritizes city importance and urgency: focus-area cities, damaged visible cities, operation or [preferred attack targets](military-campaign.md#attack-targets), land zones, and dominance that threatens friendly or enemy territory raise the value. War state can further prioritize friendly territory while losing or enemy territory while winning. A city-state enemy resets city-based factors. Barbarians skip zone processing and use their own ladder.
 
 ## Air operations
 
