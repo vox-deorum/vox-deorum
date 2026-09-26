@@ -1,4 +1,0 @@
-interface:
-  display_name: "Improve Docs"
-  short_description: "Fact-check, tighten, and polish documentation pages in staged loops"
-  default_prompt: "Use $improve-docs to improve the named documentation pages: fact-check them against the implementation and align divergences with the user, fan out single-lens readability reviewers and per-section revisers, re-verify the facts after the rewrite, then run a final flow edit and the strict docs build."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Simplify Repo"
-  short_description: "Remove purposeless complexity from a specified range"
-  default_prompt: "Use $simplify-repo to simplify the specified range: scan for excessive edge-case handling, meaningless tests, duplicated guardrails, dead code, over-abstraction, redundant logging, and error-handling sprawl; verify each finding, propose staged changes for approval (test cleanup first), apply stage by stage with test runs, then review with fresh-context subagents and revise until clean."
