@@ -109,7 +109,8 @@ function formatJson(data: any): string {
   border-left: 3px solid var(--p-gray-500);
 }
 
-.message--user {
+.message--user,
+.message--state {
   border-left: 3px solid var(--p-blue-500);
 }
 

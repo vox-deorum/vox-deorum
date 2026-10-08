@@ -191,7 +191,11 @@ const spanDetailEntries = computed<DetailEntry[]>(() => {
   if (span.attributes && typeof span.attributes === 'object') {
     let first = true;
     for (const [key, value] of Object.entries(span.attributes)) {
-      entries.push({ label: key, value, dividerBefore: first });
+      // Show an evaluation's state in the prompt view, under a STATE header like a message role.
+      const shown = key === 'evaluate.state'
+        ? [{ role: 'state', content: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }]
+        : value;
+      entries.push({ label: key, value: shown, dividerBefore: first });
       first = false;
     }
   }
