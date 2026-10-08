@@ -11,9 +11,16 @@ import type { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
 import { countTokens } from "../../utils/models/token-counter.js";
 import { trimEventsToFit } from "../../utils/prompts/event-importance.js";
 import { getDecisionTurnContext, type GameState, type StrategistParameters } from "../strategy-parameters.js";
+import type { StrategistDecision } from "../../types/evaluation.js";
 
 /** Share of the model's input limit the state may use, leaving room for the token estimate's error. */
 const stateBudgetShare = 0.95;
+
+/**
+ * Flavor and relationship moves of this many points or fewer are sampling noise, so they keep the
+ * in-game value. Persona values are whole numbers on a 1 to 10 scale and compare exactly.
+ */
+export const scoreDeadband = 2;
 
 /** Tool arguments the caller fills in rather than the evaluator. */
 const fixedArguments = new Set(["PlayerID", "Rationale", "Turn"]);
@@ -58,6 +65,17 @@ export interface StrategistAnswer {
   probabilities?: Record<string, number>;
 }
 
+/** The in-game values a decision starts from, read from the `get-options` report. */
+export interface StrategistCurrentValues {
+  grandStrategy?: string;
+  flavors: Record<string, number>;
+  persona: Record<string, number>;
+  /** The technology being researched next, or "None". */
+  technology?: string;
+  /** The next policy as `get-options` names it, such as "Sovereignty (Policy)" or "Tradition (New Branch)". */
+  policy?: string;
+}
+
 /** The questions for one decision, plus the game names behind each generated question id. */
 export interface StrategistQuestionSet {
   questions: Record<string, EvaluationQuestion>;
@@ -69,12 +87,21 @@ export interface StrategistQuestionSet {
   persona: Array<[id: string, axis: string]>;
   /** Target player IDs and their current modifiers, if any. */
   relationships: Array<[targetID: number, current: { Public: number; Private: number } | undefined]>;
+  /** The in-game values the answers are compared against. */
+  current: StrategistCurrentValues;
 }
 
 /** One action tool call chosen from the answers. */
 export interface StrategistAction {
   name: string;
   args: Record<string, unknown>;
+}
+
+/** The calls a decision makes, with the outcome of each question and the calls it dropped. */
+export interface StrategistPlan {
+  actions: StrategistAction[];
+  /** The decision record, listing only the dropped calls; the caller adds the actions as it runs them. */
+  decision: StrategistDecision;
 }
 
 /** Read the evaluator-facing arguments of an MCP tool, as argument name to schema description. */
@@ -114,6 +141,20 @@ function choiceQuestion(instructions: string, names: string[]): EvaluationQuesti
 /** The question id for one side of a relationship. */
 function relationshipId(side: "Public" | "Private", targetID: number): string {
   return `relationship_${side.toLowerCase()}_${targetID}`;
+}
+
+/** Read the in-game values a decision starts from out of the `get-options` report. */
+function currentValues(state: GameState): StrategistCurrentValues {
+  const report = state.options;
+  const persona = Object.entries(report?.Persona ?? {})
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number");
+  return {
+    grandStrategy: report?.Strategy?.GrandStrategy,
+    flavors: { ...report?.Strategy?.Flavors },
+    persona: Object.fromEntries(persona),
+    technology: report?.Technology?.Next,
+    policy: report?.Policy?.Next,
+  };
 }
 
 /** Major civilizations other than the player that the player has met, by player ID. */
@@ -187,7 +228,9 @@ export function buildStrategistQuestions(
 ): StrategistQuestionSet {
   const options = state.options?.Options;
   const scale = flavorScale(toolArguments(tools, "set-flavors").Flavors);
-  const set: StrategistQuestionSet = { questions: {}, flavors: [], flavorScale: scale, persona: [], relationships: [] };
+  const set: StrategistQuestionSet = {
+    questions: {}, flavors: [], flavorScale: scale, persona: [], relationships: [], current: currentValues(state),
+  };
 
   const grand = choiceQuestion("Which grand strategy should the civilization pursue now?", optionNames(options?.GrandStrategies));
   if (grand) set.questions.grand_strategy = grand;
@@ -241,88 +284,110 @@ function weightedValue(answer: StrategistAnswer | undefined, levels: ScaleLevel[
   return Math.round(levels.reduce((sum, level, index) => sum + (probabilities[String(index)] ?? 0) * level.value, 0));
 }
 
-/** Format a probability as a percentage, keeping one decimal place when it has one. */
-function percent(probability: number): string {
-  return `${Math.round(probability * 1000) / 10}%`;
+/** Whether a score moved past the deadband from its in-game value; a missing value always counts. */
+function movedPastDeadband(proposed: number, current: number | undefined): boolean {
+  return current === undefined || Math.abs(proposed - current) > scoreDeadband;
 }
 
 /**
- * Turn the evaluator's answers into action tool calls: always the flavors (with the grand strategy
- * when one was chosen) and the persona, a relationship call for each civilization whose stance
- * changed, and research and policy whenever they were answered. Score answers become the
- * probability-weighted average of the level values.
+ * The policy name without its trailing kind, so `get-options` and option names compare: the
+ * current "Sovereignty (Policy)" and the option "Sovereignty (Continuing Tradition Branch)" share a base.
+ */
+function policyBase(name: string | undefined): string | undefined {
+  return name?.replace(/\s*\([^)]*\)$/, "");
+}
+
+/**
+ * Turn the evaluator's answers into the action tool calls that change something, in order:
+ *
+ * 1. `set-flavors` with the flavors that moved past the deadband, plus the grand strategy when it
+ *    changed. When neither changed, `keep-status-quo` instead, which re-applies the current flavors.
+ * 2. `set-persona` with the axes that changed.
+ * 3. `set-relationship` for each civilization with a side past the deadband, holding the other side.
+ * 4. `set-research` and `set-policy` when the choice differs from the game's.
+ *
+ * Score answers become the probability-weighted average of the level values. The decision records,
+ * for each question, the current and proposed values and whether the proposed value was sent, and
+ * lists the dropped calls.
  *
  * @param answers - The evaluator's answers, keyed by question id
  * @param set - The question set the answers belong to
  * @param parameters - The strategist parameters (for the player ID)
- * @returns The tool calls to make, in order
+ * @returns The tool calls to make and the decision record so far
  */
 export function strategistActionsFromAnswers(
   answers: Record<string, StrategistAnswer | undefined>,
   set: StrategistQuestionSet,
   parameters: StrategistParameters,
-): StrategistAction[] {
+): StrategistPlan {
   const PlayerID = parameters.playerID;
-  const grand = answers.grand_strategy?.choice;
   const Rationale = evaluatorRationale;
-  const Flavors = Object.fromEntries(set.flavors.map(([id, name]) => [name, weightedValue(answers[id], set.flavorScale)]));
-  const actions: StrategistAction[] = [{
-    name: "set-flavors",
-    args: { PlayerID, ...(grand ? { GrandStrategy: grand } : {}), Flavors, Rationale },
-  }];
+  const { current } = set;
+  const actions: StrategistAction[] = [];
+  const decision: StrategistDecision = { questions: {}, calls: [] };
+  /** Record one question's outcome, leaving out values that are not known. */
+  const record = (id: string, proposed: number | string | undefined, now: number | string | undefined, sent: boolean) => {
+    decision.questions[id] = { ...(now === undefined ? {} : { current: now }), ...(proposed === undefined ? {} : { proposed }), sent };
+  };
+  /** Plan a call, or record it as dropped when there is nothing to send. */
+  const plan = (name: string, args: Record<string, unknown> | undefined, target?: number) => {
+    if (args) actions.push({ name, args: { PlayerID, ...args, Rationale } });
+    else decision.calls.push({ tool: name, status: "dropped", ...(target === undefined ? {} : { target }) });
+  };
 
-  const persona = Object.fromEntries(set.persona.map(([id, axis]) => [axis, weightedValue(answers[id], personaScale)]));
-  actions.push({ name: "set-persona", args: { PlayerID, ...persona, Rationale } });
+  const grand = answers.grand_strategy?.choice;
+  const grandChanged = grand !== undefined && grand !== current.grandStrategy;
+  if ("grand_strategy" in set.questions) record("grand_strategy", grand, current.grandStrategy, grandChanged);
+  const Flavors: Record<string, number> = {};
+  for (const [id, name] of set.flavors) {
+    const value = weightedValue(answers[id], set.flavorScale);
+    const sent = movedPastDeadband(value, current.flavors[name]);
+    if (sent) Flavors[name] = value;
+    record(id, value, current.flavors[name], sent);
+  }
+  if (grandChanged || Object.keys(Flavors).length > 0) {
+    actions.push({ name: "set-flavors", args: { PlayerID, ...(grandChanged ? { GrandStrategy: grand } : {}), Flavors, Rationale } });
+  } else {
+    actions.push({ name: "keep-status-quo", args: { PlayerID, Mode: "Flavor", Rationale } });
+  }
 
-  for (const [TargetID, current] of set.relationships) {
-    const Public = weightedValue(answers[relationshipId("Public", TargetID)], relationshipScales.Public);
-    const Private = weightedValue(answers[relationshipId("Private", TargetID)], relationshipScales.Private);
-    if (Public === (current?.Public ?? 0) && Private === (current?.Private ?? 0)) continue;
-    actions.push({ name: "set-relationship", args: { PlayerID, TargetID, Public, Private, Rationale } });
+  const persona: Record<string, number> = {};
+  for (const [id, axis] of set.persona) {
+    const value = weightedValue(answers[id], personaScale);
+    const sent = value !== current.persona[axis];
+    if (sent) persona[axis] = value;
+    record(id, value, current.persona[axis], sent);
+  }
+  plan("set-persona", Object.keys(persona).length > 0 ? persona : undefined);
+
+  for (const [TargetID, modifiers] of set.relationships) {
+    // A side inside the deadband keeps its current modifier, since the call sets both.
+    const args: Record<string, number> = { TargetID };
+    let changed = false;
+    for (const side of ["Public", "Private"] as const) {
+      const id = relationshipId(side, TargetID);
+      const value = weightedValue(answers[id], relationshipScales[side]);
+      const now = modifiers?.[side] ?? 0;
+      const sent = movedPastDeadband(value, now);
+      record(id, value, now, sent);
+      args[side] = sent ? value : now;
+      changed ||= sent;
+    }
+    plan("set-relationship", changed ? args : undefined, TargetID);
   }
 
   const technology = answers.research?.choice;
-  if (technology) actions.push({ name: "set-research", args: { PlayerID, Technology: technology, Rationale } });
+  if ("research" in set.questions) {
+    const sent = technology !== undefined && technology !== current.technology;
+    record("research", technology, current.technology, sent);
+    if (technology !== undefined) plan("set-research", sent ? { Technology: technology } : undefined);
+  }
   const policy = answers.policy?.choice;
-  if (policy) actions.push({ name: "set-policy", args: { PlayerID, Policy: policy, Rationale } });
+  if ("policy" in set.questions) {
+    const sent = policy !== undefined && policyBase(policy) !== policyBase(current.policy);
+    record("policy", policy, current.policy, sent);
+    if (policy !== undefined) plan("set-policy", sent ? { Policy: policy } : undefined);
+  }
 
-  return actions;
-}
-
-/**
- * Describe the raw answers as the evaluator's response text: one line per question with its full
- * distribution, led by the value a score maps to or the option a choice picked. Score levels are
- * named by their question criteria; choice options are listed by descending probability, without
- * zero-probability options.
- *
- * @param answers - The evaluator's answers, keyed by question id
- * @param set - The question set the answers belong to
- * @returns The response text, one line per question
- */
-export function describeAnswers(
-  answers: Record<string, StrategistAnswer | undefined>,
-  set: StrategistQuestionSet,
-): string {
-  const scales = new Map<string, ScaleLevel[]>([
-    ...set.flavors.map(([id]) => [id, set.flavorScale] as [string, ScaleLevel[]]),
-    ...set.persona.map(([id]) => [id, personaScale] as [string, ScaleLevel[]]),
-    ...set.relationships.flatMap(([targetID]) => (["Public", "Private"] as const)
-      .map(side => [relationshipId(side, targetID), relationshipScales[side]] as [string, ScaleLevel[]])),
-  ]);
-
-  return Object.entries(set.questions).map(([id, question]) => {
-    const answer = answers[id];
-    const probabilities = answer?.probabilities;
-    if (!probabilities) return `${id}: unanswered`;
-    const levels = scales.get(id);
-    if (question.type === "score" && levels) {
-      const distribution = question.criteria.map((criterion, index) => `${String(criterion)} ${percent(probabilities[String(index)] ?? 0)}`);
-      return `${id} -> ${weightedValue(answer, levels)}: ${distribution.join(", ")}`;
-    }
-    const distribution = Object.entries(probabilities)
-      .filter(([, probability]) => probability > 0)
-      .sort(([, a], [, b]) => b - a)
-      .map(([option, probability]) => `${option} ${percent(probability)}`);
-    return `${id} -> ${answer?.choice ?? "none"}: ${distribution.join(", ")}`;
-  }).join("\n");
+  return { actions, decision };
 }

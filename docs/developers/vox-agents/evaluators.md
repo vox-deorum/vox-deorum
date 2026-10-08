@@ -73,7 +73,7 @@ The [diplomatic analyst](support-agents.md) judges each report from a diplomat i
 `evaluator-strategist` (`src/strategist/agents/evaluator-strategist.ts`) plays a seat with one evaluation per decision and issues the action tools straight from the answers. A seat uses it by setting its `strategist` and assigning a model to `evaluator-strategist` in its `llms`. It is not offered in setup.
 
 - It supports Flavor mode only, and refuses Strategy mode with an error.
-- It decides on every turn the player loop runs it. There is no keep-status-quo option.
+- It decides on every turn the player loop runs it, but only sends the parts of the decision that change something.
 
 ### What it reads
 
@@ -99,16 +99,20 @@ A question with nothing to choose from is left out. The strategist fails with a 
 
 ### What it does
 
-`strategistActionsFromAnswers` turns the answers into tool calls, in this order:
+`strategistActionsFromAnswers` turns the answers into tool calls, comparing each answer with the current values in the `get-options` report. Each score becomes the probability-weighted average of its level values, so a relationship side answered neutral 51%, warm 38%, warmest 8%, cold 1% and coldest 2% becomes +25.
 
-1. `set-flavors` with every flavor, plus the grand strategy when one was chosen.
-2. `set-persona` with every axis.
-3. `set-relationship` for each civilization, with both the public and the private value. It is skipped when both already match the current modifiers.
-4. `set-research` and `set-policy` with the chosen options.
+Sampling noise moves scores by a point or two from turn to turn, so flavors and relationships use a **deadband** (`scoreDeadband`, 2 points): a value counts as changed only when it moves more than 2 points from the in-game value, or has none yet. Persona values are whole numbers and compare exactly. The calls, in order:
 
-Each score becomes the probability-weighted average of its level values, so a relationship side answered neutral 51%, warm 38%, warmest 8%, cold 1% and coldest 2% becomes +25. Every action carries the same fixed rationale, with no probabilities, because `get-options` feeds rationales back into later decisions. The strategist returns the full distributions as its response text, one line per question, which the execution span records as `agent.output` (evaluation agents have no step spans).
+1. `set-flavors` with only the changed flavors, plus the grand strategy when it changed. When neither changed, `keep-status-quo` instead, which re-applies the current flavors so the in-game AI does not take over.
+2. `set-persona` with only the changed axes. It is dropped when none changed.
+3. `set-relationship` for each civilization with a side that changed. Both sides are sent, and a side inside the deadband keeps its current value.
+4. `set-research` and `set-policy` when the choice differs from the game's. Policies compare by name, ignoring the kind in parentheses, so `Sovereignty (Policy)` matches `Sovereignty (Continuing Tradition Branch)`.
 
-Each call goes through `context.callTool`. A failed call is logged and skipped, so one rejected action does not void the rest of the decision.
+Every action carries the same fixed rationale, with no probabilities, because `get-options` feeds rationales back into later decisions. Each call goes through `context.callTool`. A failed call is logged and skipped, so one rejected action does not void the rest of the decision.
+
+### Telemetry
+
+The evaluate span holds the raw questions, answers, and confidence. The strategist adds a `strategist.decision` attribute to its agent span: a JSON record with each question's current value, proposed value, and whether it was sent, and the list of calls with their status (applied, failed, or dropped). The shapes live in `src/types/evaluation.ts`, and `labelEvaluation` in `src/utils/models/evaluation-record.ts` labels the raw answers for display.
 
 ## Tests
 
@@ -116,3 +120,4 @@ Each call goes through `context.callTool`. A failed call is logged and skipped, 
 - `tests/mock/context/vox-context-evaluate.test.ts` covers the evaluate call.
 - `tests/mock/strategist/evaluator-questions.test.ts` and `tests/mock/strategist/evaluator-strategist.test.ts` cover the evaluator strategist.
 - `tests/mock/utils/event-importance.test.ts` covers event trimming.
+- `tests/mock/utils/evaluation-record.test.ts` covers answer labeling.

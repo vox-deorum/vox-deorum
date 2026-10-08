@@ -14,6 +14,9 @@ export * from './api.js';
 // Telemetry types
 export * from './telemetry.js';
 
+// Evaluation telemetry types
+export type * from './evaluation.js';
+
 // Agent system types
 export * from './chat.js';
 

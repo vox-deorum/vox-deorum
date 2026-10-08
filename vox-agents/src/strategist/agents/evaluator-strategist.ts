@@ -3,21 +3,22 @@
  *
  * A strategist that plays its seat with one evaluation call per decision: it asks the assigned
  * evaluator (a native evaluation model or a chat model through the adapter) about the whole
- * Flavor-mode action space and issues the action tools directly from the answers, with no prompt loop.
+ * Flavor-mode action space and issues the action tools that change something directly from the
+ * answers, with no prompt loop.
  */
 
+import { trace } from "@opentelemetry/api";
 import { Strategist } from "../strategist.js";
 import type { VoxContext } from "../../infra/vox-context.js";
 import type { PreparedAgentState } from "../../infra/vox-agent.js";
 import type { ExecuteTokenOutput } from "../../infra/vox-run.js";
-import type { Model } from "../../types/index.js";
+import type { Model, StrategistCall } from "../../types/index.js";
 import { inputTokenLimit } from "../../utils/models/models.js";
 import { isFailedToolResult } from "../../utils/tools/mcp-tools.js";
 import { ensureGameState, type StrategistParameters } from "../strategy-parameters.js";
 import {
   buildStrategistEvaluationState,
   buildStrategistQuestions,
-  describeAnswers,
   strategistActionsFromAnswers,
   type StrategistAnswer,
 } from "./evaluator-questions.js";
@@ -36,8 +37,10 @@ export class EvaluatorStrategist extends Strategist {
   }
 
   /**
-   * Ask the evaluator about the whole action space, then issue the chosen action tools.
-   * A failed action is logged and skipped, so one rejected choice does not void the decision.
+   * Ask the evaluator about the whole action space, then issue the action tools that change
+   * something. A failed action is logged and skipped, so one rejected choice does not void the
+   * decision. The decision record goes on the agent span as `strategist.decision`, since the
+   * evaluate span already holds the raw answers.
    */
   public override async executeEvaluation(
     parameters: StrategistParameters,
@@ -46,7 +49,7 @@ export class EvaluatorStrategist extends Strategist {
     _prepared: PreparedAgentState,
     model: Model,
     tokenOutput?: ExecuteTokenOutput,
-  ): Promise<string | undefined> {
+  ): Promise<undefined> {
     if (parameters.mode !== "Flavor") {
       throw new Error(`${this.name} supports only the Flavor decision mode, but the seat uses ${parameters.mode}.`);
     }
@@ -55,19 +58,21 @@ export class EvaluatorStrategist extends Strategist {
     const evaluationState = buildStrategistEvaluationState(parameters, state, inputTokenLimit(model));
     const set = buildStrategistQuestions(state, parameters.playerID, context.mcpToolMap);
     const { answers } = await context.evaluate(model, evaluationState, { questions: set.questions, tokenOutput });
-    const actions = strategistActionsFromAnswers(answers as Record<string, StrategistAnswer>, set, parameters);
+    const { actions, decision } = strategistActionsFromAnswers(answers as Record<string, StrategistAnswer>, set, parameters);
 
-    let applied = 0;
+    const calls: StrategistCall[] = [];
     for (const action of actions) {
       context.currentSignal().throwIfAborted();
       const result = await context.callTool(action.name, action.args, parameters);
-      if (isFailedToolResult(result)) {
+      const failed = isFailedToolResult(result);
+      if (failed) {
         context.logger.warn(`${this.name} action ${action.name} failed; skipping it.`, { PlayerID: parameters.playerID, Turn: parameters.turn });
-        continue;
       }
-      applied++;
+      const target = action.args.TargetID;
+      calls.push({ tool: action.name, status: failed ? "failed" : "applied", ...(typeof target === "number" ? { target } : {}) });
     }
-    const summary = `Applied ${applied} of ${actions.length} actions: ${actions.map(action => action.name).join(", ")}.`;
-    return `${summary}\n${describeAnswers(answers as Record<string, StrategistAnswer>, set)}`;
+    decision.calls = [...calls, ...decision.calls];
+    trace.getActiveSpan()?.setAttribute("strategist.decision", JSON.stringify(decision));
+    return undefined;
   }
 }
