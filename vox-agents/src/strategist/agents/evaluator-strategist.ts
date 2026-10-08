@@ -17,6 +17,7 @@ import { ensureGameState, type StrategistParameters } from "../strategy-paramete
 import {
   buildStrategistEvaluationState,
   buildStrategistQuestions,
+  describeAnswers,
   strategistActionsFromAnswers,
   type StrategistAnswer,
 } from "./evaluator-questions.js";
@@ -66,6 +67,7 @@ export class EvaluatorStrategist extends Strategist {
       }
       applied++;
     }
-    return `Applied ${applied} of ${actions.length} actions: ${actions.map(action => action.name).join(", ")}.`;
+    const summary = `Applied ${applied} of ${actions.length} actions: ${actions.map(action => action.name).join(", ")}.`;
+    return `${summary}\n${describeAnswers(answers as Record<string, StrategistAnswer>, set)}`;
   }
 }

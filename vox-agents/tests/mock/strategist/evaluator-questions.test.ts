@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildStrategistEvaluationState,
   buildStrategistQuestions,
+  describeAnswers,
+  evaluatorRationale,
   strategistActionsFromAnswers,
   type StrategistAnswer,
 } from '../../../src/strategist/agents/evaluator-questions.js';
@@ -110,10 +112,10 @@ describe('strategistActionsFromAnswers', () => {
   it('should set flavors and persona from the scores and the grand strategy from the choice', () => {
     const actions = actionsFor({
       grand_strategy: { choice: 'Space', probabilities: { Space: 0.8 } },
-      flavor_Science: { score: 0 },
-      flavor_Culture: { score: 2.5 },
-      persona_Boldness: { score: 1.5 },
-      persona_WarBias: { score: 9 },
+      flavor_Science: { probabilities: { '0': 1 } },
+      flavor_Culture: { probabilities: { '2': 0.5, '3': 0.5 } },
+      persona_Boldness: { probabilities: { '1': 0.5, '2': 0.5 } },
+      persona_WarBias: { probabilities: { '4': 1 } },
     });
 
     expect(argsOf(actions, 'set-flavors')).toMatchObject({ PlayerID: playerID, GrandStrategy: 'Space', Flavors: { Science: 0, Culture: 60 } });
@@ -133,7 +135,7 @@ describe('strategistActionsFromAnswers', () => {
   });
 
   it('should set both relationship modifiers when either one changes', () => {
-    const actions = actionsFor({ relationship_public_2: { score: 2 }, relationship_private_2: { score: 0 } });
+    const actions = actionsFor({ relationship_public_2: { probabilities: { '2': 1 } }, relationship_private_2: { probabilities: { '0': 1 } } });
 
     expect(argsOf(actions, 'set-relationship')).toMatchObject({ PlayerID: playerID, TargetID: 2, Public: 0, Private: -100 });
   });
@@ -141,9 +143,67 @@ describe('strategistActionsFromAnswers', () => {
   it('should skip a relationship whose modifiers both already match', () => {
     const state = makeState(makeOptions({ Relationships: { Greece: { Public: 50, Private: -100, Rationale: 'Wary', UpdatedTurn: 4 } } }));
 
-    const actions = actionsFor({ relationship_public_2: { score: 3 }, relationship_private_2: { score: 0 } }, state);
+    const actions = actionsFor({ relationship_public_2: { probabilities: { '3': 1 } }, relationship_private_2: { probabilities: { '0': 1 } } }, state);
 
     expect(argsOf(actions, 'set-relationship')).toBeUndefined();
+  });
+
+  it('should average the level values by probability, not the level positions', () => {
+    const actions = actionsFor({ flavor_Culture: { probabilities: { '1': 0.5, '4': 0.5 } } });
+
+    expect(argsOf(actions, 'set-flavors')).toMatchObject({ Flavors: { Culture: 65 } });
+  });
+
+  it('should map a real-run relationship distribution onto the weighted values', () => {
+    const actions = actionsFor({
+      relationship_public_2: { probabilities: { '0': 0.02, '1': 0.01, '2': 0.51, '3': 0.38, '4': 0.08 } },
+      relationship_private_2: { probabilities: { '3': 1 } },
+    });
+
+    expect(argsOf(actions, 'set-relationship')).toMatchObject({ PlayerID: playerID, TargetID: 2, Public: 25, Private: 50 });
+  });
+
+  it('should take the middle level value when an answer has no probabilities', () => {
+    const actions = actionsFor({});
+
+    expect(argsOf(actions, 'set-flavors')).toMatchObject({ Flavors: { Science: 50, Culture: 50 } });
+    expect(argsOf(actions, 'set-persona')).toMatchObject({ Boldness: 5 });
+    expect(argsOf(actions, 'set-relationship')).toBeUndefined();
+  });
+
+  it('should give every action the fixed evaluator rationale', () => {
+    const actions = actionsFor({
+      flavor_Science: { probabilities: { '0': 1 } },
+      relationship_public_2: { probabilities: { '4': 1 } },
+      research: { choice: 'TheWheel' },
+      policy: { choice: 'Honor (New Branch)' },
+    });
+
+    expect(actions.map(action => action.name)).toEqual(['set-flavors', 'set-persona', 'set-relationship', 'set-research', 'set-policy']);
+    for (const action of actions) expect(action.args.Rationale).toBe(evaluatorRationale);
+  });
+
+  it('should describe each question with its applied value or choice and its probabilities', () => {
+    const set = buildStrategistQuestions(makeState(), playerID, tools);
+    const text = describeAnswers({
+      relationship_public_2: { probabilities: { '0': 0.02, '1': 0.01, '2': 0.51, '3': 0.38, '4': 0.08 } },
+      relationship_private_2: { probabilities: { '3': 1 } },
+      research: { choice: 'TheWheel', probabilities: { TheWheel: 0.7, Pottery: 0.3 } },
+    }, set);
+    // The description line for one question id, or an empty string when there is none.
+    const lineOf = (id: string) => text.split('\n').find(line => line.startsWith(id)) ?? '';
+
+    const publicLine = lineOf('relationship_public_2');
+    expect(publicLine).toContain('25');
+    for (const share of ['51%', '38%', '8%', '2%', '1%']) expect(publicLine).toContain(share);
+
+    const researchLine = lineOf('research');
+    expect(researchLine).toContain('TheWheel');
+    expect(researchLine).toContain('70%');
+    expect(researchLine).toContain('30%');
+    expect(researchLine.indexOf('TheWheel')).toBeLessThan(researchLine.indexOf('Pottery'));
+
+    expect(lineOf('policy')).not.toContain('%');
   });
 });
 

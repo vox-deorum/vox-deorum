@@ -22,10 +22,10 @@ const actionTools = ["set-flavors", "set-persona", "set-relationship", "set-rese
 /** Answers that change every part of the decision. */
 const answers = {
   grand_strategy: { choice: "Space" },
-  flavor_Science: { score: 4 },
-  persona_Boldness: { score: 8 },
-  relationship_public_2: { score: 2 },
-  relationship_private_2: { score: 4 },
+  flavor_Science: { probabilities: { "4": 1 } },
+  persona_Boldness: { probabilities: { "4": 1 } },
+  relationship_public_2: { probabilities: { "2": 1 } },
+  relationship_private_2: { probabilities: { "4": 1 } },
   research: { choice: "Pottery" },
   policy: { choice: "Tradition" },
 };

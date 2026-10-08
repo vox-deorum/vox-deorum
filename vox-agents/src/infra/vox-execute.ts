@@ -130,6 +130,10 @@ export async function executeAgent<TParameters extends AgentParameters>(
           const evaluationOutput = await agent.executeEvaluation(params, input, host, prepared, modelConfig, tokenOutput);
           host.currentSignal().throwIfAborted();
           span.setAttribute('model', formatModelReference(modelConfig));
+          // Evaluation agents have no step spans, so their returned text is the span's response.
+          if (evaluationOutput !== undefined) {
+            span.setAttribute('agent.output', typeof evaluationOutput === 'string' ? evaluationOutput : JSON.stringify(evaluationOutput));
+          }
           span.setStatus({ code: SpanStatusCode.OK });
           if (evaluationOutput === undefined) return;
           return agent.postprocessOutput(params, input, evaluationOutput);

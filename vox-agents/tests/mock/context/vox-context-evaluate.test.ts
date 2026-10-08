@@ -267,6 +267,8 @@ describe('VoxContext.evaluate success path', () => {
       'agent.name': evaluationAgent.name,
       'evaluate.purpose': 'execution',
     });
+    expect(JSON.parse(String(spans.find(span => span.name === `agent.${evaluationAgent.name}`)?.attributes['agent.output'])))
+      .toEqual(result);
   });
 });
 

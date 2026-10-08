@@ -225,37 +225,32 @@ export function buildStrategistQuestions(
   return set;
 }
 
-/** Clamp a score (the weighted mean of level indices) to the scale, defaulting to its middle. */
-function levelPosition(score: number | undefined, levels: ScaleLevel[]): number {
-  return Math.min(Math.max(score ?? (levels.length - 1) / 2, 0), levels.length - 1);
-}
+/**
+ * The rationale for every evaluator action. It carries no probabilities: `get-options` feeds
+ * rationales back into later decisions, and a likely level printed next to a weighted value misleads.
+ */
+export const evaluatorRationale = "Set by the evaluator.";
 
-/** Map a score onto level values by linear interpolation. */
-function interpolate(score: number | undefined, levels: ScaleLevel[]): number {
-  const position = levelPosition(score, levels);
-  const lower = Math.floor(position);
-  const upper = Math.min(lower + 1, levels.length - 1);
-  return Math.round(levels[lower].value + (levels[upper].value - levels[lower].value) * (position - lower));
-}
-
-/** Name the most likely level of a score answer, with its probability when the answer has one. */
-function likelyLevel(answer: StrategistAnswer | undefined, levels: ScaleLevel[]): string {
+/**
+ * Map a score answer onto the scale as the probability-weighted average of the level values.
+ * An answer without probabilities takes the middle level's value.
+ */
+function weightedValue(answer: StrategistAnswer | undefined, levels: ScaleLevel[]): number {
   const probabilities = answer?.probabilities;
-  if (!probabilities) return levels[Math.round(levelPosition(answer?.score, levels))].label;
-  const weights = levels.map((_, index) => probabilities[String(index)] ?? 0);
-  const best = weights.indexOf(Math.max(...weights));
-  return `${levels[best].label} (${percent(weights[best])})`;
+  if (!probabilities) return levels[Math.floor((levels.length - 1) / 2)].value;
+  return Math.round(levels.reduce((sum, level, index) => sum + (probabilities[String(index)] ?? 0) * level.value, 0));
 }
 
-/** Format a probability for a rationale. */
-function percent(probability: number | undefined): string {
-  return `${Math.round((probability ?? 0) * 100)}%`;
+/** Format a probability as a percentage, keeping one decimal place when it has one. */
+function percent(probability: number): string {
+  return `${Math.round(probability * 1000) / 10}%`;
 }
 
 /**
  * Turn the evaluator's answers into action tool calls: always the flavors (with the grand strategy
  * when one was chosen) and the persona, a relationship call for each civilization whose stance
- * changed, and research and policy whenever they were answered.
+ * changed, and research and policy whenever they were answered. Score answers become the
+ * probability-weighted average of the level values.
  *
  * @param answers - The evaluator's answers, keyed by question id
  * @param set - The question set the answers belong to
@@ -269,40 +264,65 @@ export function strategistActionsFromAnswers(
 ): StrategistAction[] {
   const PlayerID = parameters.playerID;
   const grand = answers.grand_strategy?.choice;
-  const Flavors = Object.fromEntries(set.flavors.map(([id, name]) => [name, interpolate(answers[id]?.score, set.flavorScale)]));
+  const Rationale = evaluatorRationale;
+  const Flavors = Object.fromEntries(set.flavors.map(([id, name]) => [name, weightedValue(answers[id], set.flavorScale)]));
   const actions: StrategistAction[] = [{
     name: "set-flavors",
-    args: {
-      PlayerID,
-      ...(grand ? { GrandStrategy: grand } : {}),
-      Flavors,
-      Rationale: grand
-        ? `Evaluator grand strategy choice (${percent(answers.grand_strategy?.probabilities?.[grand])}).`
-        : "Evaluator flavor scores.",
-    },
+    args: { PlayerID, ...(grand ? { GrandStrategy: grand } : {}), Flavors, Rationale },
   }];
 
-  const persona = Object.fromEntries(set.persona.map(([id, axis]) => [axis, interpolate(answers[id]?.score, personaScale)]));
-  actions.push({ name: "set-persona", args: { PlayerID, ...persona, Rationale: "Evaluator persona scores." } });
+  const persona = Object.fromEntries(set.persona.map(([id, axis]) => [axis, weightedValue(answers[id], personaScale)]));
+  actions.push({ name: "set-persona", args: { PlayerID, ...persona, Rationale } });
 
   for (const [TargetID, current] of set.relationships) {
-    const publicAnswer = answers[relationshipId("Public", TargetID)];
-    const privateAnswer = answers[relationshipId("Private", TargetID)];
-    const Public = interpolate(publicAnswer?.score, relationshipScales.Public);
-    const Private = interpolate(privateAnswer?.score, relationshipScales.Private);
+    const Public = weightedValue(answers[relationshipId("Public", TargetID)], relationshipScales.Public);
+    const Private = weightedValue(answers[relationshipId("Private", TargetID)], relationshipScales.Private);
     if (Public === (current?.Public ?? 0) && Private === (current?.Private ?? 0)) continue;
-    const Rationale = `Evaluator leans ${likelyLevel(publicAnswer, relationshipScales.Public)} in public and ${likelyLevel(privateAnswer, relationshipScales.Private)} in private.`;
     actions.push({ name: "set-relationship", args: { PlayerID, TargetID, Public, Private, Rationale } });
   }
 
   const technology = answers.research?.choice;
-  if (technology) {
-    actions.push({ name: "set-research", args: { PlayerID, Technology: technology, Rationale: `Evaluator choice (${percent(answers.research?.probabilities?.[technology])}).` } });
-  }
+  if (technology) actions.push({ name: "set-research", args: { PlayerID, Technology: technology, Rationale } });
   const policy = answers.policy?.choice;
-  if (policy) {
-    actions.push({ name: "set-policy", args: { PlayerID, Policy: policy, Rationale: `Evaluator choice (${percent(answers.policy?.probabilities?.[policy])}).` } });
-  }
+  if (policy) actions.push({ name: "set-policy", args: { PlayerID, Policy: policy, Rationale } });
 
   return actions;
+}
+
+/**
+ * Describe the raw answers as the evaluator's response text: one line per question with its full
+ * distribution, led by the value a score maps to or the option a choice picked. Score levels are
+ * named by their question criteria; choice options are listed by descending probability, without
+ * zero-probability options.
+ *
+ * @param answers - The evaluator's answers, keyed by question id
+ * @param set - The question set the answers belong to
+ * @returns The response text, one line per question
+ */
+export function describeAnswers(
+  answers: Record<string, StrategistAnswer | undefined>,
+  set: StrategistQuestionSet,
+): string {
+  const scales = new Map<string, ScaleLevel[]>([
+    ...set.flavors.map(([id]) => [id, set.flavorScale] as [string, ScaleLevel[]]),
+    ...set.persona.map(([id]) => [id, personaScale] as [string, ScaleLevel[]]),
+    ...set.relationships.flatMap(([targetID]) => (["Public", "Private"] as const)
+      .map(side => [relationshipId(side, targetID), relationshipScales[side]] as [string, ScaleLevel[]])),
+  ]);
+
+  return Object.entries(set.questions).map(([id, question]) => {
+    const answer = answers[id];
+    const probabilities = answer?.probabilities;
+    if (!probabilities) return `${id}: unanswered`;
+    const levels = scales.get(id);
+    if (question.type === "score" && levels) {
+      const distribution = question.criteria.map((criterion, index) => `${String(criterion)} ${percent(probabilities[String(index)] ?? 0)}`);
+      return `${id} -> ${weightedValue(answer, levels)}: ${distribution.join(", ")}`;
+    }
+    const distribution = Object.entries(probabilities)
+      .filter(([, probability]) => probability > 0)
+      .sort(([, a], [, b]) => b - a)
+      .map(([option, probability]) => `${option} ${percent(probability)}`);
+    return `${id} -> ${answer?.choice ?? "none"}: ${distribution.join(", ")}`;
+  }).join("\n");
 }

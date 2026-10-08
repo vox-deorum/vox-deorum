@@ -106,7 +106,7 @@ A question with nothing to choose from is left out. The strategist fails with a 
 3. `set-relationship` for each civilization, with both the public and the private value. It is skipped when both already match the current modifiers.
 4. `set-research` and `set-policy` with the chosen options.
 
-Scores map onto values between the levels, so a persona score halfway between `low` and `typical` becomes 4. Evaluators return no text, so each rationale states only what the answers add beyond the values: the probability of a choice, or the most likely level of each relationship side and its probability.
+Each score becomes the probability-weighted average of its level values, so a relationship side answered neutral 51%, warm 38%, warmest 8%, cold 1% and coldest 2% becomes +25. Every action carries the same fixed rationale, with no probabilities, because `get-options` feeds rationales back into later decisions. The strategist returns the full distributions as its response text, one line per question, which the execution span records as `agent.output` (evaluation agents have no step spans).
 
 Each call goes through `context.callTool`. A failed call is logged and skipped, so one rejected action does not void the rest of the decision.
 
