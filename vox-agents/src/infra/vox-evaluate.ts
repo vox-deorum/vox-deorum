@@ -77,6 +77,8 @@ export async function evaluateOn<TParameters extends AgentParameters, TQuestions
   }
 
   const input = coerceEvaluationInput(state);
+  // Keep string states (markdown) verbatim so the telemetry viewer shows them as readable text.
+  const stateText = typeof input === 'string' ? input : JSON.stringify(input);
   const agentName = host.currentAgentName;
   const span = host.tracer.startSpan(agentName ? `agent.${agentName}.evaluate` : 'evaluate', {
     attributes: {
@@ -85,7 +87,7 @@ export async function evaluateOn<TParameters extends AgentParameters, TQuestions
       'model': formatModelReference(model),
       ...(agentName ? { 'agent.name': agentName } : {}),
       'evaluate.purpose': options.purpose ?? 'execution',
-      'evaluate.state': JSON.stringify(input),
+      'evaluate.state': stateText,
       'evaluate.questions': JSON.stringify(options.questions),
     }
   });
@@ -97,7 +99,7 @@ export async function evaluateOn<TParameters extends AgentParameters, TQuestions
       // Refuse an oversized state before the provider call, so callers can trim and retry.
       const limit = inputTokenLimit(model);
       if (limit !== undefined) {
-        const tokens = countTokens(typeof input === 'string' ? input : JSON.stringify(input));
+        const tokens = countTokens(stateText);
         span.setAttribute('evaluate.state_tokens', tokens);
         if (tokens > limit) throw oversizeStateError(model, tokens, limit);
       }

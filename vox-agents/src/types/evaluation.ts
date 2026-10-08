@@ -52,6 +52,8 @@ export interface StrategistCall {
 
 /** The evaluator strategist's decision, recorded as the `strategist.decision` span attribute. */
 export interface StrategistDecision {
+  /** The score deadband the strategist used, in scale points. */
+  deadband?: number;
   /** Outcomes keyed by question id. */
   questions: Record<string, StrategistQuestionOutcome>;
   /** The calls made, in order, followed by the dropped calls. */

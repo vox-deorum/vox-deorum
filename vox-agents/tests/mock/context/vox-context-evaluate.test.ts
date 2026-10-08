@@ -224,6 +224,18 @@ describe('VoxContext.evaluate success path', () => {
     expect(span.ended).toBe(true);
   });
 
+  it('should record a string state verbatim rather than JSON-quoted', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'eval-text');
+    const spans = recordSpans(ctx);
+    const state = '# Situation\n\n- line one\n- line two';
+
+    await ctx.withRun({ parameters: makeStrategistParameters() }, async () => {
+      await ctx.evaluate(testModel, state, { questions });
+    });
+
+    expect(spans[0]!.attributes['evaluate.state']).toBe(state);
+  });
+
   it('should execute an evaluation agent once and accrue its native evaluator usage once', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'eval-agent');
     const spans = recordSpans(ctx);
