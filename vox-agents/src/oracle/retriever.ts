@@ -134,13 +134,17 @@ async function retrieveRow(
     }
 
     try {
-      // Validate turn via rationale fuzzy matching, with fallback to previous turn
+      // Validate turn via rationale fuzzy matching, with fallback to previous turn.
+      // A turn discarded by a reload is an error, never a reason to fall back.
       let effectiveTurn = turn;
       if (row.rationale) {
         const found = await findTurnByRationale(db, turn, row.rationale);
-        if (!found) {
+        if (found === 'discarded') {
+          return { ...base, error: `Turn ${turn} was discarded by a later reload in ${dbPath}` };
+        }
+        if (found === 'mismatch') {
           const prevFound = await findTurnByRationale(db, turn - 1, row.rationale);
-          if (prevFound) {
+          if (prevFound === 'match') {
             logger.warn(`Rationale not found in turn ${turn}, using turn ${turn - 1} for game=${gameId}, player=${playerId}`);
             effectiveTurn = turn - 1;
           } else {

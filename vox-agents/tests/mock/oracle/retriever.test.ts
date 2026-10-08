@@ -169,7 +169,7 @@ describe('oracle runRetrieve', () => {
       const db = makeFakeDb();
       mocks.discoverDbPath.mockReturnValue('/fake/db.db');
       mocks.openReadonlyDb.mockReturnValue(db);
-      mocks.findTurnByRationale.mockResolvedValueOnce(true);
+      mocks.findTurnByRationale.mockResolvedValueOnce('match');
       mocks.extractPrompt.mockResolvedValue(extracted());
 
       await runRetrieve(baseConfig(csv, dir));
@@ -187,8 +187,8 @@ describe('oracle runRetrieve', () => {
       mocks.discoverDbPath.mockReturnValue('/fake/db.db');
       mocks.openReadonlyDb.mockReturnValue(db);
       mocks.findTurnByRationale
-        .mockResolvedValueOnce(false) // turn 30 miss
-        .mockResolvedValueOnce(true); // turn 29 hit
+        .mockResolvedValueOnce('mismatch') // turn 30 miss
+        .mockResolvedValueOnce('match'); // turn 29 hit
       mocks.extractPrompt.mockResolvedValue(extracted());
 
       await runRetrieve(baseConfig(csv, dir));
@@ -205,13 +205,30 @@ describe('oracle runRetrieve', () => {
       const db = makeFakeDb();
       mocks.discoverDbPath.mockReturnValue('/fake/db.db');
       mocks.openReadonlyDb.mockReturnValue(db);
-      mocks.findTurnByRationale.mockResolvedValue(false);
+      mocks.findTurnByRationale.mockResolvedValue('mismatch');
       mocks.extractPrompt.mockResolvedValue(extracted());
 
       await runRetrieve(baseConfig(csv, dir));
 
       expect(mocks.findTurnByRationale).toHaveBeenCalledTimes(2);
       expect(mocks.extractPrompt).toHaveBeenCalledWith(db, 30, undefined);
+    });
+
+    it('returns an error row without falling back when the turn was discarded by a reload', async () => {
+      const dir = makeTempDir();
+      const csv = writeCsvFile(dir, `${CSV_HEADER}\ng1,1,30,Test,my rationale`);
+      const db = makeFakeDb();
+      mocks.discoverDbPath.mockReturnValue('/fake/db.db');
+      mocks.openReadonlyDb.mockReturnValue(db);
+      mocks.findTurnByRationale.mockResolvedValueOnce('discarded').mockResolvedValue('match');
+      mocks.extractPrompt.mockResolvedValue(extracted());
+
+      const rows = await runRetrieve(baseConfig(csv, dir));
+
+      expect(rows[0].error).toBeDefined();
+      expect(mocks.findTurnByRationale).toHaveBeenCalledTimes(1);
+      expect(mocks.extractPrompt).not.toHaveBeenCalled();
+      expect(db.destroy).toHaveBeenCalledTimes(1);
     });
 
     it('skips rationale matching entirely when the row has no rationale', async () => {

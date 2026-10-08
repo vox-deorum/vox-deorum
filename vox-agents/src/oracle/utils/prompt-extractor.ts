@@ -16,6 +16,49 @@ import type { ExtractedPrompt } from '../types.js';
 
 const logger = createLogger('OraclePromptExtractor');
 
+const turnRootPattern = /^strategist\.turn\.\d+$/;
+
+/** Outcome of matching a CSV rationale against one turn; `discarded` means a reload dropped that turn. */
+export type RationaleMatch = 'match' | 'mismatch' | 'discarded';
+
+/**
+ * Find the root span of the last attempt at a turn.
+ * Earlier attempts at the same turn are botched retries. A later root at an earlier turn means the
+ * game was reloaded, so turns past the reload point that were never replayed are `discarded`.
+ *
+ * @param db - Kysely instance for the telemetry database (read-only)
+ * @param turn - The turn number to look up
+ * @returns The surviving strategist.turn.N root span, `discarded`, or null when the turn has no root
+ */
+async function findSurvivingTurnRoot(
+  db: Kysely<TelemetryDatabase>,
+  turn: number
+): Promise<Span | 'discarded' | null> {
+  const rootSpans = await db
+    .selectFrom('spans')
+    .selectAll()
+    .where('turn', '=', turn)
+    .where('parentSpanId', 'is', null)
+    .orderBy('startTime', 'asc')
+    .execute();
+  const lastRoot = rootSpans.filter(s => turnRootPattern.test(s.name)).at(-1);
+  if (!lastRoot) return null;
+
+  // Any later turn root at an earlier turn means a reload discarded this attempt
+  const laterRoots = await db
+    .selectFrom('spans')
+    .select('name')
+    .where('parentSpanId', 'is', null)
+    .where('turn', '<', turn)
+    .where('startTime', '>', lastRoot.startTime)
+    .execute();
+  if (laterRoots.some(s => turnRootPattern.test(s.name))) {
+    logger.warn(`Turn ${turn} was discarded by a later reload; its attempts are not replayed`);
+    return 'discarded';
+  }
+  return lastRoot;
+}
+
 /**
  * Extract the original prompt data for a specific turn from a telemetry database.
  * Traverses: root span (strategist.turn.{N}) → agent span (agent.{name}) → step span
@@ -30,27 +73,9 @@ export async function extractPrompt(
   turn: number,
   targetAgent?: string
 ): Promise<ExtractedPrompt | null> {
-  // Find root spans for this turn
-  const rootSpans = await db
-    .selectFrom('spans')
-    .selectAll()
-    .where('turn', '=', turn)
-    .where('parentSpanId', 'is', null)
-    .orderBy('startTime', 'asc')
-    .execute();
-
-  if (rootSpans.length === 0) {
-    logger.warn(`No root spans found for turn ${turn}`);
-    return null;
-  }
-
-  // Use the last valid root span (earlier ones are botched retries)
-  const turnRootPattern = /^strategist\.turn\.\d+$/;
-  const turnRoots = rootSpans.filter(s => turnRootPattern.test(s.name));
-  const validRoot = turnRoots.length > 0 ? turnRoots[turnRoots.length - 1] : null;
-
-  if (!validRoot) {
-    logger.warn(`No strategist.turn root span found for turn ${turn}`);
+  const validRoot = await findSurvivingTurnRoot(db, turn);
+  if (!validRoot || validRoot === 'discarded') {
+    logger.warn(`No surviving strategist.turn root span found for turn ${turn}`);
     return null;
   }
 
@@ -189,27 +214,17 @@ export async function extractPrompt(
  *
  * Traverses: root span → agent spans → step spans → step.responses → tool calls.
  *
- * @returns true if any tool call's Rationale arg matches above the threshold
+ * @returns `match` if any tool call's Rationale arg matches above the threshold, `discarded` if a reload dropped the turn, otherwise `mismatch`
  */
 export async function findTurnByRationale(
   db: Kysely<TelemetryDatabase>,
   turn: number,
   csvRationale: string,
   threshold = 0.75
-): Promise<boolean> {
-  // Find root spans for this turn (same pattern as extractPrompt)
-  const rootSpans = await db
-    .selectFrom('spans')
-    .selectAll()
-    .where('turn', '=', turn)
-    .where('parentSpanId', 'is', null)
-    .orderBy('startTime', 'asc')
-    .execute();
-
-  const turnRootPattern = /^strategist\.turn\.\d+$/;
-  const turnRoots = rootSpans.filter(s => turnRootPattern.test(s.name));
-  const validRoot = turnRoots.length > 0 ? turnRoots[turnRoots.length - 1] : null;
-  if (!validRoot) return false;
+): Promise<RationaleMatch> {
+  const validRoot = await findSurvivingTurnRoot(db, turn);
+  if (!validRoot) return 'mismatch';
+  if (validRoot === 'discarded') return 'discarded';
 
   // Get all child spans in this trace
   const traceSpans = await db
@@ -225,14 +240,14 @@ export async function findTurnByRationale(
     .filter(s => agentPattern.test(s.name))
     .map(s => s.spanId);
 
-  if (agentSpanIds.length === 0) return false;
+  if (agentSpanIds.length === 0) return 'mismatch';
 
   // Get all step spans (children of agent spans)
   const stepSpans = traceSpans.filter(s => s.parentSpanId && agentSpanIds.includes(s.parentSpanId));
 
   // Query tool call spans (children of step spans) for Rationale in tool.input
   const stepSpanIds = stepSpans.map(s => s.spanId);
-  if (stepSpanIds.length === 0) return false;
+  if (stepSpanIds.length === 0) return 'mismatch';
 
   const toolCallSpans = await db
     .selectFrom('spans')
@@ -250,14 +265,14 @@ export async function findTurnByRationale(
 
     foundAnyRationale = true;
     const score = fuzzy(csvRationale, input.Rationale as string);
-    if (score >= threshold) return true;
+    if (score >= threshold) return 'match';
   }
 
   if (!foundAnyRationale) {
     logger.warn(`No tool calls with Rationale found in turn ${turn}`);
   }
 
-  return false;
+  return 'mismatch';
 }
 
 /** Safely parse JSON, returning the value as-is if already parsed */

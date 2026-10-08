@@ -30,6 +30,8 @@ The split is what makes iteration cheap. Extract once, confirm the right turns w
 
 Turn numbers alone are unreliable, because botched and re-run turns reuse them. The Oracle validates its target with **rationale matching**: each CSV row carries a fragment of the original decision rationale, and the extractor fuzzy-matches it against the recorded tool calls. When a turn's record doesn't match, it falls back to the previous turn and emits a warning.
 
+Only the last attempt at each turn is replayed. Earlier attempts at the same turn are botched retries. A reload also discards attempts: if a seat played to turn 60 and the player then loaded a turn-50 save, every turn root recorded before that reload for turns 50 and later is superseded. Turns 56-60 are never replayed if the new timeline stopped at 55, and their rows come back as errors, without the previous-turn fallback. The rule reads one telemetry database, which is per strategist, so a reload played under a different strategist is not visible to it. Retrieved JSON and replay trails made before this rule existed can still hold discarded turns; run retrieval again and replay with `--forceReplay` to rebuild them.
+
 ## Experiments
 
 An experiment is an ES module exporting an `OracleConfig`. See `src/oracle/types.ts` for the exact shape and `vox-agents/experiments/` for examples. Beyond the required CSV path and experiment name, the main controls are:

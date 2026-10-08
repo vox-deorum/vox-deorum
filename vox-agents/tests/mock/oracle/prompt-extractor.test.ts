@@ -2,7 +2,8 @@
  * Mock-tier unit tests for src/oracle/utils/prompt-extractor.ts.
  *
  * Exercises telemetry span traversal against a seeded in-memory Kysely/SQLite
- * telemetry database: latest-valid strategist.turn.N root selection, target-agent
+ * telemetry database: latest-valid strategist.turn.N root selection (skipping turns
+ * discarded by a reload), target-agent
  * selection + fallback, system/message/tool/model extraction, malformed-JSON
  * tolerance, and rationale fuzzy matching. System/message payloads are opaque
  * placeholders; assertions cover structural facts only.
@@ -186,6 +187,35 @@ describe('oracle prompt-extractor', () => {
       expect(result!.system).toEqual(['LATE_SYS']);
       expect(result!.activeTools).toEqual(['new-tool']);
       expect(result!.modelString).toBe('new/model@high');
+    });
+
+    it('skips turns discarded by a reload and uses the reloaded timeline', async () => {
+      // Timeline A plays turns 49-51; a reload to turn 50 then replays turn 50 only.
+      const seedAt = (turn: number, traceId: string, startTime: number) => seedTurn({
+        turn,
+        traceId,
+        startTime,
+        stepAttrs: {
+          'step.messages': JSON.stringify([{ role: 'system', content: traceId }, { role: 'user', content: 'u' }]),
+          'step.tools': JSON.stringify(['t']),
+        },
+      });
+      await seedAt(49, 'a49', 100);
+      await seedAt(50, 'a50', 200);
+      await seedAt(51, 'a51', 300);
+      await seedAt(50, 'b50', 400);
+
+      expect((await extractPrompt(db, 49))!.system).toEqual(['a49']);
+      expect((await extractPrompt(db, 50))!.system).toEqual(['b50']);
+      expect(await extractPrompt(db, 51)).toBeNull();
+    });
+
+    it('does not treat a later non-turn root at an earlier turn as a reload', async () => {
+      await seedTurn({ turn: 9, traceId: 'turn9', startTime: 100 });
+      await insertSpan({ turn: 8, traceId: 'chat', spanId: 'c1', parentSpanId: null, name: 'strategist.summary', startTime: 200 });
+
+      const result = await extractPrompt(db, 9);
+      expect(result).not.toBeNull();
     });
 
     it('ignores non-turn root spans that share the turn number', async () => {
@@ -570,18 +600,27 @@ describe('oracle prompt-extractor', () => {
         30,
         'Pursue an aggressive conquest strategy against neighbors'
       );
-      expect(found).toBe(true);
+      expect(found).toBe('match');
     });
 
     it('returns false when the Rationale is too dissimilar', async () => {
       await seedToolCall(31, 'nomatch', 'Build wonders and focus on a peaceful cultural victory');
       const found = await findTurnByRationale(db, 31, 'Declare immediate war on every civilization nearby', 0.75);
-      expect(found).toBe(false);
+      expect(found).toBe('mismatch');
+    });
+
+    it('returns false for a turn discarded by a reload', async () => {
+      const rationale = 'Pursue an aggressive conquest strategy against neighbors';
+      await seedToolCall(33, 'discarded', rationale);
+      await insertSpan({ turn: 32, traceId: 'reload', spanId: 'reload-root', parentSpanId: null, name: 'strategist.turn.32' });
+
+      const found = await findTurnByRationale(db, 33, rationale);
+      expect(found).toBe('discarded');
     });
 
     it('returns false when there is no valid root span for the turn', async () => {
       const found = await findTurnByRationale(db, 999, 'anything');
-      expect(found).toBe(false);
+      expect(found).toBe('mismatch');
     });
 
     it('returns false when tool calls carry no Rationale arg', async () => {
@@ -608,7 +647,7 @@ describe('oracle prompt-extractor', () => {
       });
 
       const found = await findTurnByRationale(db, 32, 'some rationale');
-      expect(found).toBe(false);
+      expect(found).toBe('mismatch');
     });
   });
 });
