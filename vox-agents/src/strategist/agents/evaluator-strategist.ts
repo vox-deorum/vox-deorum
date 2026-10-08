@@ -9,6 +9,8 @@
 
 import { trace } from "@opentelemetry/api";
 import { Strategist } from "../strategist.js";
+import { SimpleStrategistBase } from "./simple-strategist-base.js";
+import { SimpleBriefer } from "../../briefer/simple-briefer.js";
 import type { VoxContext } from "../../infra/vox-context.js";
 import type { PreparedAgentState } from "../../infra/vox-agent.js";
 import type { ExecuteTokenOutput } from "../../infra/vox-run.js";
@@ -31,9 +33,32 @@ export class EvaluatorStrategist extends Strategist {
 
   readonly description = "Decides flavors, persona, relationships, research, and policy with one evaluation call per decision";
 
-  /** A non-empty prompt, so the evaluation path runs and the in-game label names the model. */
+  /**
+   * The game explanation from the simple strategist's prompt, without its tool-calling
+   * instructions, since the evaluator answers questions instead. Being non-empty also lets the
+   * evaluation path run and the in-game label name the model.
+   */
   public async getSystem(): Promise<string> {
-    return "Evaluate the strategic situation and choose the civilization's direction.";
+    return `
+${SimpleStrategistBase.expertPlayerPrompt}
+
+# Task
+Your answers to the questions below set the in-game AI's high-level decisions:
+- A grand (long-term) strategy and short-term flavors. Flavors change the weight of the in-game AI's NEXT decision and only take effect AFTER existing queues. Too many priorities weaken the impact of each.
+- The in-game AI's diplomatic decision-making weights (persona).
+- Its public and private stance toward each other MAJOR civilization (not city-states). Stances are added to the in-game AI's own evaluation and last until changed; higher values increase peace acceptance.
+- The NEXT technology to research and the NEXT policy to adopt.
+Only options listed in # Options take effect. Carefully reason about long-term goals, the short-term situation, and what each option changes. Analyze both your situation and your opponents, and avoid wishful thinking.
+
+# Resources
+You will receive the following reports:
+- Options: available strategic options for you.
+${SimpleStrategistBase.strategiesDescriptionPrompt}
+${SimpleStrategistBase.victoryConditionsPrompt}
+${SimpleStrategistBase.playersInfoPrompt}
+${SimpleBriefer.citiesPrompt}
+${SimpleBriefer.militaryPrompt}
+${SimpleBriefer.eventsPrompt}`.trim();
   }
 
   /**
@@ -46,7 +71,7 @@ export class EvaluatorStrategist extends Strategist {
     parameters: StrategistParameters,
     _input: unknown,
     context: VoxContext<StrategistParameters>,
-    _prepared: PreparedAgentState,
+    prepared: PreparedAgentState,
     model: Model,
     tokenOutput?: ExecuteTokenOutput,
   ): Promise<undefined> {
@@ -55,7 +80,7 @@ export class EvaluatorStrategist extends Strategist {
     }
 
     const state = await ensureGameState(context, parameters);
-    const evaluationState = buildStrategistEvaluationState(parameters, state, inputTokenLimit(model));
+    const evaluationState = buildStrategistEvaluationState(prepared.system, parameters, state, inputTokenLimit(model));
     const set = buildStrategistQuestions(state, parameters.playerID, context.mcpToolMap);
     const { answers } = await context.evaluate(model, evaluationState, { questions: set.questions, tokenOutput });
     const { actions, decision } = strategistActionsFromAnswers(answers as Record<string, StrategistAnswer>, set, parameters);

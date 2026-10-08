@@ -9,8 +9,7 @@
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
-import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
+import { getRecentGameState, renderStrategistReports, StrategistParameters } from "../strategy-parameters.js";
 import { SimpleBriefer } from "../../briefer/simple-briefer.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
 
@@ -63,64 +62,10 @@ ${SimpleBriefer.eventsPrompt}`.trim()
    * Gets the initial messages for the conversation
    */
   public async getInitialMessages(parameters: StrategistParameters, _input: unknown, _context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
-    const state = getRecentGameState(parameters)!;
-    const { YouAre, ...SituationData } = parameters.metadata || {};
-    const { Options, ...Strategy } = state.options || {};
-    // Return the messages
-    return [{
-      role: "system",
-      content: `
-You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
-
-# Situation
-${jsonToMarkdown(SituationData)}
-
-# Your Civilization
-${jsonToMarkdown(YouAre)}
-
-# Options
-Options: available strategic options for you.
-
-${jsonToMarkdown(Options, {
-  configs: [{}]
-})}
-`.trim(),
-      providerOptions: { ...cacheBreakpoint }
-    }, {
-      role: "user",
-      content: `
-# Strategies
-Strategies: existing strategic decisions from you.
-
-${jsonToMarkdown(Strategy)}
-
-# Victory Progress
-Victory Progress: current progress towards each type of victory.
-
-${jsonToMarkdown(state.victory)}
-
-# Players
-Players: summary reports about visible players in the world.
-
-${jsonToMarkdown(state.players)}
-
-# Cities
-Cities: summary reports about discovered cities in the world.
-
-${jsonToMarkdown(state.cities)}
-
-# Military
-Military: summary reports about tactical zones and visible units.
-
-${jsonToMarkdown(state.military)}
-
-# Events
-Events: events since you last made a decision.
-
-${jsonToMarkdown(state.mergedEvents ?? state.events)}
-
-${getDecisionTurnContext(parameters)}
-`.trim()
-    }];
+    const [overview, reports] = renderStrategistReports(parameters, getRecentGameState(parameters)!);
+    return [
+      { role: "system", content: overview, providerOptions: { ...cacheBreakpoint } },
+      { role: "user", content: reports },
+    ];
   }
 }

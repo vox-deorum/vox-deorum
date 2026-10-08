@@ -352,6 +352,70 @@ ${jsonToMarkdown(Strategy)}`.trim()
 }
 
 /**
+ * Render the game reports as markdown: the overview (identity, situation, civilization, options)
+ * and the reports (strategies, victory progress, players, cities, military, events, turn context).
+ * The simple strategist and the evaluator strategist read this text.
+ *
+ * @param events - The events report to render, by default the decision window's
+ */
+export function renderStrategistReports(
+  parameters: StrategistParameters,
+  state: GameState,
+  events: unknown = state.mergedEvents ?? state.events,
+): [overview: string, reports: string] {
+  const { YouAre, ...SituationData } = parameters.metadata || {};
+  const { Options, ...Strategy } = state.options || {};
+  return [`
+You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
+
+# Situation
+${jsonToMarkdown(SituationData)}
+
+# Your Civilization
+${jsonToMarkdown(YouAre)}
+
+# Options
+Options: available strategic options for you.
+
+${jsonToMarkdown(Options, {
+configs: [{}]
+})}
+`.trim(), `
+# Strategies
+Strategies: existing strategic decisions from you.
+
+${jsonToMarkdown(Strategy)}
+
+# Victory Progress
+Victory Progress: current progress towards each type of victory.
+
+${jsonToMarkdown(state.victory)}
+
+# Players
+Players: summary reports about visible players in the world.
+
+${jsonToMarkdown(state.players)}
+
+# Cities
+Cities: summary reports about discovered cities in the world.
+
+${jsonToMarkdown(state.cities)}
+
+# Military
+Military: summary reports about tactical zones and visible units.
+
+${jsonToMarkdown(state.military)}
+
+# Events
+Events: events since you last made a decision.
+
+${jsonToMarkdown(events)}
+
+${getDecisionTurnContext(parameters)}
+`.trim()];
+}
+
+/**
  * Gets the most recent cached game state at or before a turn bound.
  *
  * The bound defaults to the active run's `parameters.turn` so a lagging strategist (or a briefer/

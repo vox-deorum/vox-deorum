@@ -10,7 +10,7 @@ import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
 import type { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
 import { countTokens } from "../../utils/models/token-counter.js";
 import { trimEventsToFit } from "../../utils/prompts/event-importance.js";
-import { getDecisionTurnContext, type GameState, type StrategistParameters } from "../strategy-parameters.js";
+import { renderStrategistReports, type GameState, type StrategistParameters } from "../strategy-parameters.js";
 import type { StrategistDecision } from "../../types/evaluation.js";
 
 /** Share of the model's input limit the state may use, leaving room for the token estimate's error. */
@@ -165,51 +165,35 @@ function metMajors(state: GameState, playerID: number | undefined): Array<[numbe
 }
 
 /**
- * Build the evaluation state from the same reports the simple strategist reads: situation, the
- * player's civilization, options, current strategies, victory progress, players, cities,
- * military, events since the last decision, and the turn context. With `maxTokens`, the least
- * important events are dropped until they fit the budget the other sections leave, and
- * `EventsTrimmed` tells the model the history is partial.
+ * Build the evaluation state as markdown: the system prompt, then the reports the simple
+ * strategist reads, rendered the same way (situation, the player's civilization, options, current
+ * strategies, victory progress, players, cities, military, events since the last decision, and the
+ * turn context). With `maxTokens`, the least important events are dropped until the whole text
+ * fits, and a closing note tells the model the history is partial.
  *
+ * @param system - The system prompt, since evaluation calls have no separate slot for one
  * @param parameters - The strategist parameters for this decision
  * @param state - The game state for this turn
  * @param maxTokens - The model's input limit, if it has one
- * @returns A plain object for `context.evaluate`
+ * @returns The state text for `context.evaluate`
  */
 export function buildStrategistEvaluationState(
+  system: string,
   parameters: StrategistParameters,
   state: GameState,
   maxTokens?: number,
-): Record<string, unknown> {
-  const { YouAre, ...Situation } = parameters.metadata || {};
-  const { Options, ...Strategies } = state.options || {};
-  const sections = {
-    Situation,
-    YouAre,
-    Options,
-    Strategies,
-    VictoryProgress: state.victory,
-    Players: state.players,
-    Cities: state.cities,
-    Military: state.military,
-  };
-  const Context = getDecisionTurnContext(parameters);
+): string {
+  /** Render the full state with one version of the events report. */
+  const render = (events: unknown) => [system, ...renderStrategistReports(parameters, state, events)].join("\n\n");
 
-  const report = (state.mergedEvents ?? state.events) as Record<string, unknown> | undefined;
-  if (!report) return { ...sections, Context };
-  const { _markdownConfig: _markdown, ...events } = report;
-  if (maxTokens === undefined) return { ...sections, Events: events, Context };
+  const events = state.mergedEvents ?? state.events;
+  if (!events || maxTokens === undefined) return render(events);
 
-  const budget = Math.floor(maxTokens * stateBudgetShare) - countTokens(JSON.stringify({ ...sections, Context }));
-  const trimmed = trimEventsToFit(events, candidate => countTokens(JSON.stringify(candidate)) <= budget);
-  return {
-    ...sections,
-    Events: trimmed.events,
-    ...(trimmed.droppedEvents > 0
-      ? { EventsTrimmed: { DroppedTiers: trimmed.droppedTiers, DroppedEvents: trimmed.droppedEvents, Note: "Less important events were left out to fit the input limit." } }
-      : {}),
-    Context,
-  };
+  const budget = Math.floor(maxTokens * stateBudgetShare);
+  const trimmed = trimEventsToFit(events, candidate => countTokens(render(candidate)) <= budget);
+  const text = render(trimmed.events);
+  if (trimmed.droppedEvents === 0) return text;
+  return `${text}\n\nNote: ${trimmed.droppedEvents} less important events were left out of # Events to fit the input limit.`;
 }
 
 /**

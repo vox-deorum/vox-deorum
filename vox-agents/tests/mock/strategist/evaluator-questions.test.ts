@@ -1,18 +1,20 @@
 /**
  * Tests for the evaluator strategist's pure helpers (src/strategist/agents/evaluator-questions.ts):
- * the question set built from an options report and the MCP tool schemas, the action tool calls
- * derived from the answers, and the evaluation state with its event trimming.
+ * the question set built from an options report and the MCP tool schemas, the plan of action tool
+ * calls and decision record derived from the answers (calls that do not change something versus the
+ * game are dropped), and the evaluation state with its event trimming.
  */
 import { describe, expect, it } from 'vitest';
 import {
   buildStrategistEvaluationState,
   buildStrategistQuestions,
-  describeAnswers,
   evaluatorRationale,
   strategistActionsFromAnswers,
   type StrategistAnswer,
+  type StrategistPlan,
 } from '../../../src/strategist/agents/evaluator-questions.js';
 import type { GameState } from '../../../src/strategist/strategy-parameters.js';
+import { countTokens } from '../../../src/utils/models/token-counter.js';
 import { makeGameState, makeStrategistParameters, makeStrategistToolSchemas } from '../../helpers/fake-vox-context.js';
 
 /** The deciding player; Greece (player 2) is its only met rival. */
@@ -52,14 +54,24 @@ function makeState(options = makeOptions(), overrides: Partial<GameState> = {}):
   });
 }
 
-/** Build the actions for a set of answers over the standard state. */
-function actionsFor(answers: Record<string, StrategistAnswer>, state = makeState()) {
+/** A state whose game already holds these flavor values (the standard state has no Culture value). */
+function stateWithFlavors(flavors: Record<string, number>): GameState {
+  return makeState(makeOptions({ Strategy: { GrandStrategy: 'Balanced', Flavors: flavors } }));
+}
+
+/** Build the plan (action calls and decision record) for answers over the given state. */
+function actionsFor(answers: Record<string, StrategistAnswer>, state = makeState()): StrategistPlan {
   return strategistActionsFromAnswers(answers, buildStrategistQuestions(state, playerID, tools), makeStrategistParameters({ playerID }));
 }
 
-/** Look up the arguments of the action with the given name. */
-function argsOf(actions: Array<{ name: string; args: Record<string, unknown> }>, name: string) {
-  return actions.find(action => action.name === name)?.args;
+/** Look up the arguments of the planned action with the given name. */
+function argsOf(plan: StrategistPlan, name: string) {
+  return plan.actions.find(action => action.name === name)?.args;
+}
+
+/** The flavor map the planned `set-flavors` call sends. */
+function sentFlavors(plan: StrategistPlan): Record<string, number> {
+  return (argsOf(plan, 'set-flavors') as { Flavors: Record<string, number> }).Flavors;
 }
 
 describe('buildStrategistQuestions', () => {
@@ -91,6 +103,23 @@ describe('buildStrategistQuestions', () => {
       .toEqual([['persona_Boldness', 'Boldness'], ['persona_WarBias', 'WarBias']]);
   });
 
+  it('should record the current values the answers are compared against', () => {
+    const set = buildStrategistQuestions(
+      makeState(makeOptions({ Persona: { Boldness: 5, WarBias: 10 } })),
+      playerID,
+      tools,
+    );
+
+    expect(set.current).toEqual({
+      grandStrategy: 'Balanced',
+      flavors: { Science: 50 },
+      persona: { Boldness: 5, WarBias: 10 },
+      technology: 'Pottery',
+      policy: 'Tradition (Policy)',
+    });
+    expect(set.relationships).toEqual([[2, { Public: 0, Private: 0 }]]);
+  });
+
   it('should leave out questions with no options', () => {
     const options = makeOptions();
     options.Options = { Flavors: {} };
@@ -110,7 +139,7 @@ describe('buildStrategistQuestions', () => {
 
 describe('strategistActionsFromAnswers', () => {
   it('should set flavors and persona from the scores and the grand strategy from the choice', () => {
-    const actions = actionsFor({
+    const plan = actionsFor({
       grand_strategy: { choice: 'Space', probabilities: { Space: 0.8 } },
       flavor_Science: { probabilities: { '0': 1 } },
       flavor_Culture: { probabilities: { '2': 0.5, '3': 0.5 } },
@@ -118,116 +147,214 @@ describe('strategistActionsFromAnswers', () => {
       persona_WarBias: { probabilities: { '4': 1 } },
     });
 
-    expect(argsOf(actions, 'set-flavors')).toMatchObject({ PlayerID: playerID, GrandStrategy: 'Space', Flavors: { Science: 0, Culture: 60 } });
-    expect(argsOf(actions, 'set-persona')).toMatchObject({ PlayerID: playerID, Boldness: 4, WarBias: 10 });
+    expect(argsOf(plan, 'set-flavors')).toMatchObject({ PlayerID: playerID, GrandStrategy: 'Space', Flavors: { Science: 0, Culture: 60 } });
+    expect(argsOf(plan, 'set-persona')).toMatchObject({ PlayerID: playerID, Boldness: 4, WarBias: 10 });
   });
 
   it('should omit the grand strategy when none was chosen', () => {
     expect(argsOf(actionsFor({}), 'set-flavors')).not.toHaveProperty('GrandStrategy');
   });
 
-  it('should set research and policy whenever they were answered', () => {
-    const actions = actionsFor({ research: { choice: 'TheWheel' }, policy: { choice: 'Honor (New Branch)' } });
+  it('should set research and policy whose choices differ from the game', () => {
+    const plan = actionsFor({ research: { choice: 'TheWheel' }, policy: { choice: 'Honor (New Branch)' } });
 
-    expect(actions.map(action => action.name)).toEqual(['set-flavors', 'set-persona', 'set-research', 'set-policy']);
-    expect(argsOf(actions, 'set-research')).toMatchObject({ Technology: 'TheWheel' });
-    expect(argsOf(actions, 'set-policy')).toMatchObject({ Policy: 'Honor (New Branch)' });
+    expect(plan.actions.map(action => action.name)).toEqual(['set-flavors', 'set-persona', 'set-research', 'set-policy']);
+    expect(argsOf(plan, 'set-research')).toMatchObject({ Technology: 'TheWheel' });
+    expect(argsOf(plan, 'set-policy')).toMatchObject({ Policy: 'Honor (New Branch)' });
   });
 
   it('should set both relationship modifiers when either one changes', () => {
-    const actions = actionsFor({ relationship_public_2: { probabilities: { '2': 1 } }, relationship_private_2: { probabilities: { '0': 1 } } });
+    const plan = actionsFor({ relationship_public_2: { probabilities: { '2': 1 } }, relationship_private_2: { probabilities: { '0': 1 } } });
 
-    expect(argsOf(actions, 'set-relationship')).toMatchObject({ PlayerID: playerID, TargetID: 2, Public: 0, Private: -100 });
+    expect(argsOf(plan, 'set-relationship')).toMatchObject({ PlayerID: playerID, TargetID: 2, Public: 0, Private: -100 });
   });
 
   it('should skip a relationship whose modifiers both already match', () => {
     const state = makeState(makeOptions({ Relationships: { Greece: { Public: 50, Private: -100, Rationale: 'Wary', UpdatedTurn: 4 } } }));
 
-    const actions = actionsFor({ relationship_public_2: { probabilities: { '3': 1 } }, relationship_private_2: { probabilities: { '0': 1 } } }, state);
+    const plan = actionsFor({ relationship_public_2: { probabilities: { '3': 1 } }, relationship_private_2: { probabilities: { '0': 1 } } }, state);
 
-    expect(argsOf(actions, 'set-relationship')).toBeUndefined();
+    expect(argsOf(plan, 'set-relationship')).toBeUndefined();
   });
 
   it('should average the level values by probability, not the level positions', () => {
-    const actions = actionsFor({ flavor_Culture: { probabilities: { '1': 0.5, '4': 0.5 } } });
+    const plan = actionsFor({ flavor_Culture: { probabilities: { '1': 0.5, '4': 0.5 } } });
 
-    expect(argsOf(actions, 'set-flavors')).toMatchObject({ Flavors: { Culture: 65 } });
+    expect(sentFlavors(plan)).toEqual({ Culture: 65 });
   });
 
   it('should map a real-run relationship distribution onto the weighted values', () => {
-    const actions = actionsFor({
+    const plan = actionsFor({
       relationship_public_2: { probabilities: { '0': 0.02, '1': 0.01, '2': 0.51, '3': 0.38, '4': 0.08 } },
       relationship_private_2: { probabilities: { '3': 1 } },
     });
 
-    expect(argsOf(actions, 'set-relationship')).toMatchObject({ PlayerID: playerID, TargetID: 2, Public: 25, Private: 50 });
+    expect(argsOf(plan, 'set-relationship')).toMatchObject({ PlayerID: playerID, TargetID: 2, Public: 25, Private: 50 });
   });
 
   it('should take the middle level value when an answer has no probabilities', () => {
-    const actions = actionsFor({});
+    const plan = actionsFor({});
 
-    expect(argsOf(actions, 'set-flavors')).toMatchObject({ Flavors: { Science: 50, Culture: 50 } });
-    expect(argsOf(actions, 'set-persona')).toMatchObject({ Boldness: 5 });
-    expect(argsOf(actions, 'set-relationship')).toBeUndefined();
+    // Science already holds the middle value (50), so only the value-less Culture moves.
+    expect(sentFlavors(plan)).toEqual({ Culture: 50 });
+    expect(argsOf(plan, 'set-persona')).toMatchObject({ Boldness: 5 });
+    expect(argsOf(plan, 'set-relationship')).toBeUndefined();
   });
 
   it('should give every action the fixed evaluator rationale', () => {
-    const actions = actionsFor({
+    const plan = actionsFor({
       flavor_Science: { probabilities: { '0': 1 } },
       relationship_public_2: { probabilities: { '4': 1 } },
       research: { choice: 'TheWheel' },
       policy: { choice: 'Honor (New Branch)' },
     });
 
-    expect(actions.map(action => action.name)).toEqual(['set-flavors', 'set-persona', 'set-relationship', 'set-research', 'set-policy']);
-    for (const action of actions) expect(action.args.Rationale).toBe(evaluatorRationale);
+    expect(plan.actions.map(action => action.name)).toEqual(['set-flavors', 'set-persona', 'set-relationship', 'set-research', 'set-policy']);
+    for (const action of plan.actions) expect(action.args.Rationale).toBe(evaluatorRationale);
   });
 
-  it('should describe each question with its applied value or choice and its probabilities', () => {
-    const set = buildStrategistQuestions(makeState(), playerID, tools);
-    const text = describeAnswers({
-      relationship_public_2: { probabilities: { '0': 0.02, '1': 0.01, '2': 0.51, '3': 0.38, '4': 0.08 } },
-      relationship_private_2: { probabilities: { '3': 1 } },
-      research: { choice: 'TheWheel', probabilities: { TheWheel: 0.7, Pottery: 0.3 } },
-    }, set);
-    // The description line for one question id, or an empty string when there is none.
-    const lineOf = (id: string) => text.split('\n').find(line => line.startsWith(id)) ?? '';
+  it('should keep the status quo when every flavor sits within the deadband and the grand strategy matches', () => {
+    const plan = actionsFor({ grand_strategy: { choice: 'Balanced' } }, stateWithFlavors({ Science: 48, Culture: 52 }));
 
-    const publicLine = lineOf('relationship_public_2');
-    expect(publicLine).toContain('25');
-    for (const share of ['51%', '38%', '8%', '2%', '1%']) expect(publicLine).toContain(share);
+    // Both unanswered flavors land on 50, two points from the game value, which is noise.
+    expect(plan.actions[0]).toEqual({ name: 'keep-status-quo', args: { PlayerID: playerID, Mode: 'Flavor', Rationale: evaluatorRationale } });
+    expect(argsOf(plan, 'set-flavors')).toBeUndefined();
+  });
 
-    const researchLine = lineOf('research');
-    expect(researchLine).toContain('TheWheel');
-    expect(researchLine).toContain('70%');
-    expect(researchLine).toContain('30%');
-    expect(researchLine.indexOf('TheWheel')).toBeLessThan(researchLine.indexOf('Pottery'));
+  it('should send only the flavors that moved past the deadband', () => {
+    const plan = actionsFor({ flavor_Science: { probabilities: { '4': 1 } } }, stateWithFlavors({ Science: 50, Culture: 50 }));
 
-    expect(lineOf('policy')).not.toContain('%');
+    expect(sentFlavors(plan)).toEqual({ Science: 100 });
+  });
+
+  it('should send set-flavors with only the grand strategy when no flavor moved', () => {
+    const plan = actionsFor({ grand_strategy: { choice: 'Space' } }, stateWithFlavors({ Science: 50, Culture: 50 }));
+
+    expect(argsOf(plan, 'set-flavors')).toMatchObject({ GrandStrategy: 'Space' });
+    expect(sentFlavors(plan)).toEqual({});
+  });
+
+  it('should send a flavor the game has no current value for', () => {
+    // The standard state holds a value only for Science; both answers land on 50.
+    const plan = actionsFor({ flavor_Science: { probabilities: { '2': 1 } }, flavor_Culture: { probabilities: { '2': 1 } } });
+
+    expect(sentFlavors(plan)).toEqual({ Culture: 50 });
+  });
+
+  it('should send only the persona axes that differ from the game', () => {
+    const plan = actionsFor(
+      { persona_Boldness: { probabilities: { '2': 1 } }, persona_WarBias: { probabilities: { '1': 1 } } },
+      makeState(makeOptions({ Persona: { Boldness: 5, WarBias: 10 } })),
+    );
+
+    // Boldness stays at the game's 5; WarBias moves 10 to 3.
+    expect(argsOf(plan, 'set-persona')).toMatchObject({ WarBias: 3 });
+    expect(argsOf(plan, 'set-persona')).not.toHaveProperty('Boldness');
+  });
+
+  it('should drop set-persona when every axis already matches the game', () => {
+    const plan = actionsFor({}, makeState(makeOptions({ Persona: { Boldness: 5, WarBias: 5 } })));
+
+    expect(argsOf(plan, 'set-persona')).toBeUndefined();
+    expect(plan.decision.calls).toContainEqual({ tool: 'set-persona', status: 'dropped' });
+  });
+
+  it('should hold a relationship side within the deadband at its current value', () => {
+    const plan = actionsFor(
+      { relationship_public_2: { probabilities: { '3': 1 } }, relationship_private_2: { probabilities: { '4': 1 } } },
+      makeState(makeOptions({ Relationships: { Greece: { Public: 48, Private: 0, Rationale: 'Wary', UpdatedTurn: 4 } } })),
+    );
+
+    // The public proposal of 50 is two points from the game's 48, so the call carries 48.
+    expect(argsOf(plan, 'set-relationship')).toMatchObject({ TargetID: 2, Public: 48, Private: 100 });
+  });
+
+  it('should drop a relationship whose sides all sit within the deadband', () => {
+    const plan = actionsFor({}, makeState(makeOptions({ Relationships: { Greece: { Public: 1, Private: -1, Rationale: 'Wary', UpdatedTurn: 4 } } })));
+
+    // Both unanswered sides land on 0, one point from the game values.
+    expect(argsOf(plan, 'set-relationship')).toBeUndefined();
+    expect(plan.decision.calls).toContainEqual({ tool: 'set-relationship', status: 'dropped', target: 2 });
+  });
+
+  it('should drop set-research when the choice matches the technology in progress', () => {
+    const plan = actionsFor({ research: { choice: 'Pottery' } });
+
+    expect(argsOf(plan, 'set-research')).toBeUndefined();
+    expect(plan.decision.calls).toContainEqual({ tool: 'set-research', status: 'dropped' });
+  });
+
+  it('should drop set-policy when only the trailing kind differs from the current policy', () => {
+    const plan = actionsFor(
+      { policy: { choice: 'Honor (New Branch)' } },
+      makeState(makeOptions({ Policy: { Next: 'Honor (Policy)' } })),
+    );
+
+    expect(argsOf(plan, 'set-policy')).toBeUndefined();
+    expect(plan.decision.calls).toContainEqual({ tool: 'set-policy', status: 'dropped' });
+  });
+
+  it('should send set-policy when the base name differs', () => {
+    const plan = actionsFor({ policy: { choice: 'Honor (New Branch)' } });
+
+    expect(argsOf(plan, 'set-policy')).toMatchObject({ Policy: 'Honor (New Branch)' });
+  });
+
+  it('should record the current, proposed, and sent values of each question', () => {
+    const plan = actionsFor({
+      grand_strategy: { choice: 'Space' },
+      flavor_Science: { probabilities: { '4': 1 } },
+      research: { choice: 'Pottery' },
+    });
+
+    expect(plan.decision.questions.grand_strategy).toEqual({ current: 'Balanced', proposed: 'Space', sent: true });
+    expect(plan.decision.questions.flavor_Science).toEqual({ current: 50, proposed: 100, sent: true });
+    expect(plan.decision.questions.research).toEqual({ current: 'Pottery', proposed: 'Pottery', sent: false });
+    // Unanswered questions still record the middle level; a game value of 0 is recorded, and a
+    // missing persona or flavor value leaves `current` out.
+    expect(plan.decision.questions.flavor_Culture).toEqual({ proposed: 50, sent: true });
+    expect(plan.decision.questions.persona_Boldness).toEqual({ proposed: 5, sent: true });
+    expect(plan.decision.questions.relationship_public_2).toEqual({ current: 0, proposed: 0, sent: false });
   });
 });
 
 describe('buildStrategistEvaluationState', () => {
+  /** A stand-in system prompt the state must lead with. */
+  const system = 'SYSTEM-MARKER';
+
   /** A state carrying every report the simple strategist reads. */
   function fullState(overrides: Partial<GameState> = {}): GameState {
     return makeState(makeOptions(), {
       victory: { Domination: { Percent: 10 } } as never,
-      cities: { '1': { Name: 'Rome' } } as never,
-      military: { Units: [] } as never,
+      cities: { '1': { Name: 'Antium' } } as never,
+      military: { Units: ['Legion'] } as never,
       ...overrides,
     });
   }
 
-  it('should carry the same reports as the simple strategist', () => {
-    const state = fullState({ events: { '5': [{ Type: 'DeclareWar' }], _markdownConfig: { configs: [] } } as never });
+  it('should lead with the system prompt and carry the same reports as the simple strategist', () => {
+    const state = fullState({ events: { '5': [{ Type: 'DeclareWar' }] } as never });
 
-    const evaluation = buildStrategistEvaluationState(makeStrategistParameters({ playerID }), state);
+    const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
 
-    expect(Object.keys(evaluation)).toEqual([
-      'Situation', 'YouAre', 'Options', 'Strategies', 'VictoryProgress', 'Players', 'Cities', 'Military', 'Events', 'Context',
-    ]);
-    expect(evaluation.Strategies).not.toHaveProperty('Options');
-    expect(evaluation.Events).toEqual({ '5': [{ Type: 'DeclareWar' }] });
+    expect(evaluation.startsWith(system)).toBe(true);
+    for (const value of ['Caesar', 'TheWheel', 'Tradition (Policy)', 'Domination', 'Greece', 'Antium', 'Legion', 'DeclareWar']) {
+      expect(evaluation).toContain(value);
+    }
+  });
+
+  it('should render markdown without the rendering hints', () => {
+    const hint = { _markdownConfig: { configs: ['{key}'] } };
+    const state = fullState({
+      options: { ...makeOptions(), ...hint } as never,
+      players: { '2': { Civilization: 'Greece', IsMajor: true }, ...hint } as never,
+      events: { '5': [{ Type: 'DeclareWar' }], ...hint } as never,
+    });
+
+    const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
+
+    expect(evaluation).not.toContain('_markdownConfig');
+    expect(evaluation).not.toContain('{"');
   });
 
   it('should prefer the merged decision window over the per-turn slice', () => {
@@ -236,27 +363,34 @@ describe('buildStrategistEvaluationState', () => {
       mergedEvents: { '4': [{ Type: 'DeclareWar' }] } as never,
     });
 
-    expect(buildStrategistEvaluationState(makeStrategistParameters({ playerID }), state).Events)
-      .toEqual({ '4': [{ Type: 'DeclareWar' }] });
+    const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
+
+    expect(evaluation).toContain('DeclareWar');
+    expect(evaluation).not.toContain('GameSave');
   });
 
-  it('should trim the least important events to the budget the other sections leave', () => {
+  it('should trim the least important events until the whole state fits', () => {
     const noise = Array.from({ length: 60 }, (_, index) => ({ Type: 'TileRevealed', Detail: `plot ${index} `.repeat(30) }));
     const war = { Type: 'DeclareWar', OriginatingPlayer: 2 };
     const state = fullState({ events: { '5': [...noise, war] } as never });
+    const limit = 1_000;
 
-    const evaluation = buildStrategistEvaluationState(makeStrategistParameters({ playerID }), state, 1_000);
+    const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, limit);
 
-    expect(evaluation.Events).toEqual({ '5': [war] });
-    expect(evaluation.EventsTrimmed).toMatchObject({ DroppedEvents: noise.length });
+    expect(evaluation).toContain('DeclareWar');
+    expect(evaluation).not.toContain('TileRevealed');
+    expect(evaluation).toContain(String(noise.length));
+    expect(countTokens(evaluation)).toBeLessThanOrEqual(limit);
   });
 
   it('should keep every event when there is no input limit', () => {
-    const state = fullState({ events: { '5': [{ Type: 'TileRevealed' }] } as never });
+    const noise = { Type: 'TileRevealed', Detail: 'plot 0' };
+    const state = fullState({ events: { '5': [noise] } as never });
 
-    const evaluation = buildStrategistEvaluationState(makeStrategistParameters({ playerID }), state);
+    const withoutLimit = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
+    const withRoom = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, 100_000);
 
-    expect(evaluation.Events).toEqual({ '5': [{ Type: 'TileRevealed' }] });
-    expect(evaluation).not.toHaveProperty('EventsTrimmed');
+    expect(withoutLimit).toContain('TileRevealed');
+    expect(withRoom).toBe(withoutLimit);
   });
 });
