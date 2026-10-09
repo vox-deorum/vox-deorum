@@ -15,7 +15,7 @@ This implementation plan gives Vox Deorum agents durable game reports and editab
 
 A **workspace store** keeps versioned files in one SQLite database per game and player, independent of the chosen strategist. Bash reads and writes it through a small subclass of just-bash's `InMemoryFs` that loads files lazily and records what each command changed. Shared folders and scratch space stay plain folders on disk. The game reference is a plain read-only folder written once per game. A materialize command exports a stored version for reading outside the game.
 
-Recording an already-recorded turn detects a reload and rewinds the seat's records and notes together before recording that turn again. Shared folders and the reference never rewind. Discarded timelines remain in the store's history for analysis. The oracle replays only the last attempt at each turn, so turns lost to a reload are never replayed (see `docs/developers/vox-agents/oracle.md`).
+Each seat starts a timeline when its player is created and again when the strategist begins a turn at or below its last processed turn, which means the game was reloaded. Starting a timeline cancels the seat's running chats, resets its cached state and pacing, and rewinds its records and notes together to before that turn. Shared folders and the reference never rewind. Discarded timelines remain in the store's history for analysis. The oracle replays only the last attempt at each turn, so turns lost to a reload are never replayed (see `docs/developers/vox-agents/oracle.md`).
 
 Each agent run records its files setting and prompt folder, then captures the seat store's head commit immediately before its first model step, after preparation. Oracle uses recorded system text and that pinned commit, with disposable writes isolated per replay execution. Reference setup failures stop the session; record and briefing write failures propagate to the affected turn or requesting run.
 
@@ -45,7 +45,7 @@ Run the existing caching, step-budget, envoy, analyst, negotiator, pacing, and o
 Manual checks:
 
 1. Run several turns with a file-enabled simple strategist. Check the core prompt, bash reads, records, reference, catalog, and note commits.
-2. Kill the game process mid-run and let crash recovery reload an earlier autosave. Once the reloaded turn is processed, the discarded records and notes disappear from the seat's view and remain in history. The oracle skips the discarded turns.
+2. Kill the game process mid-run and let crash recovery reload an earlier autosave. Once the strategist begins the reloaded turn, it decides on fresh state, open chats are cancelled, and the discarded records and notes disappear from the seat's view and remain in history. The oracle skips the discarded turns.
 3. Replay a recorded decision and confirm its pinned files and mounts.
 4. Materialize a seat store and check the notes.
 5. Start a seat with a custom strategist prompt and confirm the recorded system text and `context.prompts`.
@@ -68,7 +68,7 @@ Finally, confirm the documentation describes the final behavior:
 The simple strategist's strategic players summary will be designed after the first revision lands. Until then, its file-mode prompt keeps full players inline while cities, military, and events move to records.
 
 - **Growth:** history grows without pruning.
-- **Reload timing:** a reload takes effect when the loaded turn is first processed, so chats before that still use the abandoned timeline.
+- **Reload timing:** a same-game reload takes effect when the strategist begins the loaded turn. Chats before then still use the abandoned timeline, and any still running at that point are cancelled.
 - **Forward loads:** only loads to an earlier turn are detected. Loading an earlier save and then a later save from the original timeline does not rewind. Notes from the branch in between carry over, and the catalog shows a gap in turns.
 - **Shared folders:** they never rewind, so they can keep knowledge from a discarded timeline. Replay sees their current contents.
 - **Snapshot gap:** a live run's first bash call can see commits made after its first-step snapshot, such as host writes during its first model call. Replay shows the snapshot, so such files can differ.
