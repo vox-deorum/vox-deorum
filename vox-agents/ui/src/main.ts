@@ -16,6 +16,7 @@ import './styles/chat.css'
 import './styles/deal.css'
 import './styles/chat-launch.css'
 import './styles/config.css'
+import './styles/strategist-turn.css'
 
 /** Configure and mount the application. */
 function initializeApp() {

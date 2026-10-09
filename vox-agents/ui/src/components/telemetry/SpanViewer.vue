@@ -115,12 +115,13 @@
               {{ formatTokenCount(span.attributes?.['tokens.output']) }}
             </div>
             <div class="col-fixed-80">
+              <TurnViewButton v-if="isStrategistTurnSpan(span)" @click.stop="showDetails(span)" />
               <Button
                 icon="pi pi-info-circle"
                 text
                 rounded
                 size="small"
-                @click.stop="showDetails(span)"
+                @click.stop="showRawDetails(span)"
               />
             </div>
           </div>
@@ -133,7 +134,15 @@
   <DetailDialog
     v-model:visible="showSpanDetails"
     :header="selectedSpan?.name ?? ''"
-    :entries="spanDetailEntries"
+    :entries="selectedEntries"
+  />
+
+  <!-- Strategist turn view -->
+  <StrategistTurnDialog
+    v-if="selectedTurn"
+    v-model:visible="showTurnDetails"
+    :root="selectedTurn"
+    :spans="turnSpans"
   />
 </template>
 
@@ -149,6 +158,9 @@ import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Toolbar from 'primevue/toolbar';
 import DetailDialog, { type DetailEntry } from '../shared/DetailDialog.vue';
+import StrategistTurnDialog from './strategist/StrategistTurnDialog.vue';
+import TurnViewButton from './strategist/TurnViewButton.vue';
+import { isStrategistTurnSpan } from '@/api/strategist-turn';
 import type { Span } from '@/utils/types';
 import {
   formatDuration,
@@ -158,6 +170,7 @@ import {
   getStatusText,
   getTriageTag,
   parseSpanAttributes,
+  spanDetailEntries,
   buildSpanTree,
   flattenSpanTree,
   type SpanNode
@@ -173,34 +186,12 @@ const props = defineProps<{
 // State
 const selectedSpan = ref<Span | null>(null);
 const showSpanDetails = ref(false);
+const selectedTurn = ref<Span | null>(null);
+const showTurnDetails = ref(false);
 const expandedSpans = ref<Set<string>>(new Set());
 
 // Build detail entries for the selected span
-const spanDetailEntries = computed<DetailEntry[]>(() => {
-  if (!selectedSpan.value) return [];
-  const span = selectedSpan.value;
-  const entries: DetailEntry[] = [
-    { label: 'Span ID', value: `${span.spanId}  [${getStatusText(span.statusCode)}]` },
-    { label: 'Time', value: `${formatTimestamp(span.startTime)} ~ ${formatTimestamp(span.endTime)}` },
-    { label: 'Duration', value: formatDuration(span.durationMs) },
-  ];
-  if (span.statusMessage) {
-    entries.push({ label: 'Status Message', value: span.statusMessage });
-  }
-  // Attributes section with divider on first entry
-  if (span.attributes && typeof span.attributes === 'object') {
-    let first = true;
-    for (const [key, value] of Object.entries(span.attributes)) {
-      // Show an evaluation's state in the prompt view, under a STATE header like a message role.
-      const shown = key === 'evaluate.state'
-        ? [{ role: 'state', content: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }]
-        : value;
-      entries.push({ label: key, value: shown, dividerBefore: first });
-      first = false;
-    }
-  }
-  return entries;
-});
+const selectedEntries = computed<DetailEntry[]>(() => selectedSpan.value ? spanDetailEntries(selectedSpan.value) : []);
 const virtualScroller = ref<any>();
 const scrollerHeight = ref('600px');
 const autoscroll = ref(true); // Local autoscroll state, default to true
@@ -209,6 +200,9 @@ const autoscroll = ref(true); // Local autoscroll state, default to true
 const parsedSpans = computed(() => {
   return props.spans.map(parseSpanAttributes);
 });
+
+// Spans of the selected strategist turn's trace
+const turnSpans = computed(() => parsedSpans.value.filter(s => s.traceId === selectedTurn.value?.traceId));
 
 // Build span tree using utility
 const spanTree = computed(() => buildSpanTree(parsedSpans.value));
@@ -269,24 +263,22 @@ function toggleSpan(span: SpanNode) {
 }
 
 /**
- * Show span details dialog
+ * Show a span's details: the strategist turn view for turn roots, the raw attributes otherwise
  */
 function showDetails(span: Span) {
-  // Pre-process all string attributes to parse JSON where possible
-  if (span.attributes && typeof span.attributes === 'object') {
-    const processed: Record<string, any> = {};
-    for (const [key, value] of Object.entries(span.attributes)) {
-      if (typeof value === 'string') {
-        const parsed = tryParseJSON(value);
-        processed[key] = parsed !== null ? parsed : value;
-      } else {
-        processed[key] = value;
-      }
-    }
-    selectedSpan.value = { ...span, attributes: processed };
+  if (isStrategistTurnSpan(span)) {
+    selectedTurn.value = span;
+    showTurnDetails.value = true;
   } else {
-    selectedSpan.value = span;
+    showRawDetails(span);
   }
+}
+
+/**
+ * Show the raw attributes dialog for a span
+ */
+function showRawDetails(span: Span) {
+  selectedSpan.value = span;
   showSpanDetails.value = true;
 }
 
@@ -307,23 +299,6 @@ function toggleAllSpans(expand: boolean) {
     addAllParents(spanTree.value);
   } else {
     expandedSpans.value.clear();
-  }
-}
-
-/**
- * Try to parse a string as JSON
- * Returns the parsed object if successful, null otherwise
- */
-function tryParseJSON(str: string): any {
-  try {
-    const parsed = JSON.parse(str);
-    // Only return parsed if it's an object or array (not primitive)
-    if (typeof parsed === 'object' && parsed !== null) {
-      return parsed;
-    }
-    return null;
-  } catch {
-    return null;
   }
 }
 

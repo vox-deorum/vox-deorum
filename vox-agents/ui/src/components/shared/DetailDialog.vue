@@ -3,38 +3,43 @@
     v-model:visible="dialogVisible"
     :header="header"
     modal
-    :style="{ width: '80rem' }"
+    :style="{ width: '80rem', height }"
     :breakpoints="{ '1400px': '90vw', '960px': '95vw', '640px': '100vw' }"
     :closeOnEscape="true"
   >
-    <div v-if="entries.length > 0" class="detail-dialog-content">
-      <template v-for="(entry, index) in entries" :key="index">
-        <hr v-if="entry.dividerBefore" class="details-divider" />
-        <div class="detail-row">
-          <strong>{{ entry.label }}:</strong>
-          <!-- Primitive values -->
-          <span v-if="isPrimitive(entry.value)">{{ entry.value }}</span>
-          <!-- AI Messages -->
-          <div v-else-if="isAIMessageData(entry.value)" class="ai-messages-container">
-            <AIMessagesViewer :messages="(entry.value as any)" />
+    <template v-if="$slots.header" #header>
+      <slot name="header" />
+    </template>
+    <slot>
+      <div v-if="entries.length > 0" class="detail-dialog-content">
+        <template v-for="(entry, index) in entries" :key="index">
+          <hr v-if="entry.dividerBefore" class="details-divider" />
+          <div class="detail-row">
+            <strong>{{ entry.label }}:</strong>
+            <!-- Primitive values -->
+            <span v-if="isPrimitive(entry.value)">{{ entry.value }}</span>
+            <!-- AI Messages -->
+            <div v-else-if="isAIMessageData(entry.value)" class="ai-messages-container">
+              <AIMessagesViewer :messages="(entry.value as any)" />
+            </div>
+            <!-- Complex JSON -->
+            <div v-else class="json-container">
+              <VueJsonPretty
+                :data="(entry.value as any)"
+                :show-icon="true"
+                :show-line-number="false"
+                :deep="3"
+                :collapsed-on-click-brackets="true"
+                :show-double-quotes="true"
+                :virtual="false"
+                :highlight-selected-node="false"
+                class="json-pretty"
+              />
+            </div>
           </div>
-          <!-- Complex JSON -->
-          <div v-else class="json-container">
-            <VueJsonPretty
-              :data="(entry.value as any)"
-              :show-icon="true"
-              :show-line-number="false"
-              :deep="3"
-              :collapsed-on-click-brackets="true"
-              :show-double-quotes="true"
-              :virtual="false"
-              :highlight-selected-node="false"
-              class="json-pretty"
-            />
-          </div>
-        </div>
-      </template>
-    </div>
+        </template>
+      </div>
+    </slot>
   </Dialog>
 </template>
 
@@ -42,6 +47,7 @@
 /**
  * DetailDialog - Reusable dialog for displaying structured key-value data.
  * Used by both the chat tool call detail view and the telemetry span detail view.
+ * The header and default slots let other views reuse the same frame.
  */
 
 import { computed } from 'vue';
@@ -62,6 +68,8 @@ interface Props {
   visible: boolean;
   header: string;
   entries: DetailEntry[];
+  /** Fixed dialog height, so views that share this frame keep one size. */
+  height?: string;
 }
 
 interface Emits {

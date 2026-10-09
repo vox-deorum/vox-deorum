@@ -3,6 +3,7 @@
  */
 
 import type { Span } from '../utils/types';
+import type { DetailEntry } from '../components/shared/DetailDialog.vue';
 
 /**
  * Clone a span with an attributes bag that is safe for UI consumers to read.
@@ -207,4 +208,45 @@ export function flattenSpanTree(roots: SpanNode[], expandedSpans: Set<string>): 
 export function formatTokenCount(count: number | undefined): string {
   if (count === undefined) return '-';
   return count.toLocaleString('en-US');
+}
+
+/**
+ * Parse a string as a JSON object or array, or return null for anything else
+ */
+function tryParseJSON(str: string): object | null {
+  try {
+    const parsed = JSON.parse(str);
+    return typeof parsed === 'object' && parsed !== null ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build the raw detail entries of a span: ids, timing, status, then every attribute with
+ * JSON strings parsed so they render as trees
+ */
+export function spanDetailEntries(span: Span): DetailEntry[] {
+  const entries: DetailEntry[] = [
+    { label: 'Span ID', value: `${span.spanId}  [${getStatusText(span.statusCode)}]` },
+    { label: 'Time', value: `${formatTimestamp(span.startTime)} ~ ${formatTimestamp(span.endTime)}` },
+    { label: 'Duration', value: formatDuration(span.durationMs) },
+  ];
+  if (span.statusMessage) {
+    entries.push({ label: 'Status Message', value: span.statusMessage });
+  }
+  // Attributes section with divider on first entry
+  if (span.attributes && typeof span.attributes === 'object') {
+    let first = true;
+    for (const [key, raw] of Object.entries(span.attributes)) {
+      const value = typeof raw === 'string' ? tryParseJSON(raw) ?? raw : raw;
+      // Show an evaluation's state in the prompt view, under a STATE header like a message role.
+      const shown = key === 'evaluate.state'
+        ? [{ role: 'state', content: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }]
+        : value;
+      entries.push({ label: key, value: shown, dividerBefore: first });
+      first = false;
+    }
+  }
+  return entries;
 }

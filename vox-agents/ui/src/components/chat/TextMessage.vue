@@ -4,19 +4,13 @@
       <span class="font-semibold text-secondary">{{ displayRole }}</span>
       <span v-if="turn" class="text-muted text-xs ml-2">Turn {{ turn }}</span>
     </div>
-    <div class="message-content" v-html="renderedContent"></div>
+    <MarkdownText :content="cleanedContent" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-});
+import MarkdownText from '../shared/MarkdownText.vue';
 
 interface Props {
   role: 'user' | 'assistant' | 'system' | 'tool';
@@ -38,14 +32,8 @@ const displayRole = computed(() => ({
   tool: 'Tool'
 }[props.role]));
 
-const renderedContent = computed(() => {
-  // Strip LLM-echoed [Turn N] prefix and trailing horizontal rule
-  const text = props.content
-    .replace(/^\[Turn \d+\]\s*/, '')
-    .replace(/\n\s*(?:---|<hr\s*\/?>)\s*$/, '');
-
-  // Parse markdown and sanitize the HTML
-  const html = marked(text);
-  return DOMPurify.sanitize(html as string);
-});
+// Strip LLM-echoed [Turn N] prefix and trailing horizontal rule
+const cleanedContent = computed(() => props.content
+  .replace(/^\[Turn \d+\]\s*/, '')
+  .replace(/\n\s*(?:---|<hr\s*\/?>)\s*$/, ''));
 </script>

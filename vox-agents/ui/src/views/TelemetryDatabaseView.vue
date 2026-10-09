@@ -6,6 +6,7 @@
 
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
@@ -13,6 +14,9 @@ import Paginator from 'primevue/paginator';
 import ProgressSpinner from 'primevue/progressspinner';
 import Toolbar from 'primevue/toolbar';
 import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue';
+import StrategistTurnDialog from '@/components/telemetry/strategist/StrategistTurnDialog.vue';
+import TurnViewButton from '@/components/telemetry/strategist/TurnViewButton.vue';
+import { isStrategistTurnSpan } from '@/api/strategist-turn';
 import { api } from '@/api/client';
 import type { Span } from '../utils/types';
 import {
@@ -26,6 +30,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
+const toast = useToast();
 
 // State
 const loading = ref(false);
@@ -38,6 +43,13 @@ const rows = ref(20); // Number of rows per page
 // Dialog state
 const showAgentDialog = ref(false);
 const selectedTrace = ref<Span | null>(null);
+
+// Strategist turn view state
+const turnRoot = ref<Span | null>(null);
+const turnSpans = ref<Span[]>([]);
+const showTurnDialog = ref(false);
+const loadingTurnId = ref<string | null>(null);
+let turnRequestGeneration = 0;
 
 // Extract filename from route params
 const filename = computed(() => {
@@ -119,6 +131,26 @@ async function loadTraces() {
 function openAgentDialog(trace: Span) {
   selectedTrace.value = trace;
   showAgentDialog.value = true;
+}
+
+/**
+ * Load a strategist turn trace's spans and open its turn view
+ */
+async function openTurnView(trace: Span) {
+  const requestGeneration = ++turnRequestGeneration;
+  loadingTurnId.value = trace.traceId;
+  try {
+    const response = await api.getTraceSpans(filename.value, trace.traceId);
+    if (requestGeneration !== turnRequestGeneration) return;
+    turnSpans.value = response.spans.map(parseSpanAttributes);
+    turnRoot.value = turnSpans.value.find(s => s.spanId === trace.spanId) ?? trace;
+    showTurnDialog.value = true;
+  } catch (err) {
+    if (requestGeneration !== turnRequestGeneration) return;
+    toast.add({ severity: 'error', summary: 'Could not load turn', detail: err instanceof Error ? err.message : String(err), life: 5000 });
+  } finally {
+    if (requestGeneration === turnRequestGeneration) loadingTurnId.value = null;
+  }
 }
 
 // Reset pagination when search changes
@@ -207,7 +239,7 @@ onMounted(() => {
             <div class="col-fixed-80">Input</div>
             <div class="col-fixed-80">Reasoning</div>
             <div class="col-fixed-80">Output</div>
-            <div class="col-fixed-80">Actions</div>
+            <div class="col-fixed-100">Actions</div>
           </div>
 
           <!-- Table Body -->
@@ -245,7 +277,12 @@ onMounted(() => {
               <div class="col-fixed-80">
                 {{ formatTokenCount(trace.attributes['tokens.output']) }}
               </div>
-              <div class="col-fixed-80">
+              <div class="col-fixed-100">
+                <TurnViewButton
+                  v-if="isStrategistTurnSpan(trace)"
+                  :loading="loadingTurnId === trace.traceId"
+                  @click.stop="openTurnView(trace)"
+                />
                 <Button
                   icon="pi pi-chart-line"
                   text
@@ -278,6 +315,14 @@ onMounted(() => {
         />
       </div>
     </div>
+
+    <!-- Strategist turn view -->
+    <StrategistTurnDialog
+      v-if="turnRoot"
+      v-model:visible="showTurnDialog"
+      :root="turnRoot"
+      :spans="turnSpans"
+    />
 
     <!-- Agent Selection Dialog -->
     <AgentSelectDialog
