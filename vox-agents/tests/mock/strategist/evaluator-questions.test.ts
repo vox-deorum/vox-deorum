@@ -14,6 +14,7 @@ import {
   type StrategistAnswer,
   type StrategistPlan,
 } from '../../../src/strategist/agents/evaluator-questions.js';
+import { evaluatorTrimConfig } from '../../../src/strategist/agents/evaluator-trim-config.js';
 import type { GameState } from '../../../src/strategist/strategy-parameters.js';
 import { countTokens } from '../../../src/utils/models/token-counter.js';
 import { makeGameState, makeStrategistParameters, makeStrategistToolSchemas } from '../../helpers/fake-vox-context.js';
@@ -406,9 +407,15 @@ describe('buildStrategistEvaluationState', () => {
 
     const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, limit);
 
-    // Dropping events and city identifiers cannot save enough: the walk goes on to the next
-    // steps with something to cut, skipping the ones in between that match nothing.
-    expect(evaluation.trim!.steps).toEqual(['events-noise', 'city-ids', 'city-coordinates', 'city-buildings']);
+    // Dropping events cannot save enough: the walk goes on until the buildings step, applying
+    // steps in ladder order and skipping the ones that match nothing.
+    const ladderIds = evaluatorTrimConfig.ladder.map(step => step.id);
+    const buildingsStep = evaluatorTrimConfig.ladder.find(
+      step => 'cityFields' in step && step.cityFields.includes('ImportantBuildings'),
+    )!;
+    const steps = evaluation.trim!.steps;
+    expect(steps.at(-1)).toBe(buildingsStep.id);
+    expect(steps.map(id => ladderIds.indexOf(id))).toEqual(steps.map(id => ladderIds.indexOf(id)).sort((a, b) => a - b));
     expect(evaluation.trim!.fits).toBe(true);
     expect(evaluation.text).toContain('DeclareWar');
     expect(evaluation.text).not.toContain('Shrine of 7');

@@ -34,12 +34,13 @@ export const eventImportanceTiers = [
     "PlayerPlunderedTradeRoute", "StealPlot", "PlayerAdoptsGovernment", "PlayerSecularizes", "StateReligionAdopted",
     "StateReligionChanged", "UnitCityFounded", "LoyaltyStateChanged",
   ] },
-  // Progress: policies, technologies, buildings and wonders, eras, great people, religion, espionage.
+  // Progress: policies, technologies, buildings and wonders, eras, great people, religion, espionage,
+  // and city-state gifts.
   { name: "progress", types: [
     "PlayerAdoptPolicy", "TeamTechResearched", "CityConstructed", "GreatPersonExpended", "GreatWorkCreated",
     "PantheonFounded", "ReligionEnhanced", "ReligionReformed", "CityConvertsReligion", "CityConvertsPantheon",
     "PlayerAdoptsCurrency", "ProvinceLevelChanged", "ContractStarted", "ContractEnded", "MinorFriendsChanged",
-    "EspionageState", "EspionageResult", "MinorGift", "MinorGiftUnit", "NaturalWonderDiscovered",
+    "EspionageState", "EspionageResult", "MinorGift", "MinorGiftUnit", "PlayerGifted", "NaturalWonderDiscovered",
     "PlayerTradeRouteCompleted", "PlayerEndOfMayaLongCount", "GoodyHutTechResearched",
     "TeamSetEra", "PlayerGoldenAge", "CircumnavigatedGlobe",
   ] },
@@ -47,28 +48,27 @@ export const eventImportanceTiers = [
   { name: "force-changes", types: [
     "UnitUpgraded", "UnitConverted", "UnitKilledInCombat", "UnitCaptured",
   ] },
-  // Combat detail: individual battles, promotions, and barbarian camps.
-  { name: "combat", types: [
-    "CombatResult", "UnitPromoted", "BarbariansCampCleared", "BarbariansCampFounded",
-  ] },
-  // Routine units: training, creation, and production investment.
+  // Routine units: training, creation, production investment, and project creation. What a
+  // civilization builds shows its intent (an army, settlers, missionaries).
   { name: "units", types: [
-    "CityTrained", "UnitCreated", "EventUnitCreated", "CityInvestedUnit",
+    "CityTrained", "UnitCreated", "EventUnitCreated", "CityInvestedUnit", "CityCreated",
   ] },
-  // Economy detail: city growth, purchases, worker construction, and city events.
+  // Combat detail: individual battles and barbarian camps. Their outcomes already show in force
+  // changes and the military report.
+  { name: "combat", types: [
+    "CombatResult", "BarbariansCampCleared", "BarbariansCampFounded",
+  ] },
+  // Economy detail: city growth, building purchases and sales, and city and player events.
   { name: "economy", types: [
-    "SetPopulation", "CityCreated", "CityBoughtPlot", "CityInvestedBuilding", "CitySoldBuilding", "BuildFinished",
+    "SetPopulation", "CityInvestedBuilding", "CitySoldBuilding",
     "CityBeginsWLTKD", "CityEndsWLTKD", "CityExtendsWeLoveKingDay", "CityEventActivated", "CityEventChoiceActivated",
     "CityEventChoiceEnded", "EventActivated", "EventChoiceActivated", "EventChoiceEnded",
-    "ChangeGoldenAgeProgressMeter", "PietyChanged", "PietyRateChanged", "GoodyHutReceivedBonus", "PlaceResource",
-    "UnitBuildStart", "UnitBuildCompleted", "TileOwnershipChanged", "PlayerGifted",
   ] },
-  // Noise: tiles, unit movement, cooldown and contract refreshes, and all unlisted types.
+  // Noise: tiles, worker builds, border growth, unit movement and promotions, and all unlisted types.
   { name: "noise", types: [
-    "TileFeatureChanged", "TileImprovementChanged", "TileRouteChanged", "TileRevealed", "TerraformingMap",
-    "UnitMoved", "RebaseTo", "PushingMissionTo", "ParadropAt", "PlayerDoTurn", "PlayerDoneTurn", "TurnComplete",
-    "ContractsRefreshed", "GovernmentCooldownChanges", "GovernmentCooldownRateChanges", "ReformCooldownChanges",
-    "ReformCooldownRateChanges",
+    "TileFeatureChanged", "TileImprovementChanged", "TileRouteChanged", "TileRevealed", "TileOwnershipChanged",
+    "TerraformingMap", "CityBoughtPlot", "BuildFinished", "UnitBuildStart", "UnitBuildCompleted",
+    "UnitMoved", "RebaseTo", "PushingMissionTo", "ParadropAt", "UnitPromoted",
   ] },
 ] as const satisfies readonly EventTier[];
 

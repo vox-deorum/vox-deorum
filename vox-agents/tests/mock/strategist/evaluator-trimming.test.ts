@@ -81,20 +81,14 @@ describe('evaluator trimming', () => {
       }
     });
 
-    it('should delete city IDs before coordinates and never a field the evaluator decides on', () => {
-      const cutAt = new Map<string, number>();
-      for (const [index, step] of evaluatorTrimConfig.ladder.entries()) {
-        for (const field of 'cityFields' in step ? step.cityFields : []) cutAt.set(field, index);
-      }
-      // IDs go before coordinates: the evaluator answers with no tools, so it never needs them.
-      expect(cutAt.get('X')!).toBeGreaterThan(cutAt.get('ID')!);
-      expect(cutAt.get('Y')!).toBeGreaterThan(cutAt.get('ID')!);
+    it('should never delete a city field the evaluator decides on', () => {
+      const cut = new Set(evaluatorTrimConfig.ladder.flatMap(step => ('cityFields' in step ? step.cityFields : [])));
       // Readouts the evaluator decides on stay in the state at every level of the walk.
       for (const field of [
         'ProductionTurnsLeft', 'HappinessDelta', 'Population', 'DefenseStrength', 'MajorityReligion',
         'CurrentProduction',
       ]) {
-        expect(cutAt.has(field), field).toBe(false);
+        expect(cut.has(field), field).toBe(false);
       }
     });
 

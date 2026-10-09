@@ -5,6 +5,7 @@ import {
   shouldInterruptDecision,
 } from "../../../src/strategist/pacing.js";
 import { pacingInterruptionRegistry } from "../../../src/strategist/pacing/registry.js";
+import { eventImportanceTiers } from "../../../src/utils/prompts/event-importance.js";
 import {
   getDecisionTurnContext,
   mergeCachedEvents,
@@ -390,6 +391,11 @@ describe("withEventWindowFallback", () => {
     expect(state.events).toEqual({ "3": [{ Type: "T3" }] });
   });
 
+  /** The fallback trim level at which an event type is dropped. */
+  function levelDropping(type: string): number {
+    return eventImportanceTiers.length - eventImportanceTiers.findIndex(tier => (tier.types as readonly string[]).includes(type));
+  }
+
   /** A single-turn window (turn 3) with one event in each importance group the trims reach. */
   function makeTieredParams(): { parameters: StrategistParameters; state: GameState } {
     const markdownConfig = { configs: [{ format: "Turn {key}" }] };
@@ -418,7 +424,7 @@ describe("withEventWindowFallback", () => {
     expect(seen.map(entry => entry.window)).toEqual([
       { fromTurn: 3, toTurn: 3 },
       { fromTurn: 3, toTurn: 3, droppedTiers: 1 },
-      { fromTurn: 3, toTurn: 3, droppedTiers: 4 },
+      { fromTurn: 3, toTurn: 3, droppedTiers: levelDropping("CombatResult") },
     ]);
     expect(Object.keys(seen[0]!.merged)).toEqual(["3", "_markdownConfig"]);
     expect(seen[1]!.merged).toEqual({

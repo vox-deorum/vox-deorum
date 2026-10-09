@@ -10,9 +10,9 @@ Late in a game, the state can stay over the limit even with every event dropped.
 
 ## The budget
 
-The state may use 90 percent of the model's input limit (`evaluatorTrimConfig.budgetShare` in `src/strategist/agents/evaluator-trim-config.ts`, checked against `inputTokenLimit` in `src/utils/models/models.ts`). With TypeSafe's default 30,000-token limit, that is a budget of 27,000 estimated tokens. A model with no input limit set gets the state untrimmed.
+The state may use a share of the model's input limit, set by `evaluatorTrimConfig.budgetShare` in `src/strategist/agents/evaluator-trim-config.ts` and checked against `inputTokenLimit` in `src/utils/models/models.ts`. A model with no input limit set gets the state untrimmed.
 
-The headroom is needed because the token count is a local estimate (`countTokens` in `src/utils/models/token-counter.ts`), and the estimate counts about 14 percent fewer tokens than Jev does: Jev once accepted a state estimated near 28.2k tokens and once rejected another estimated near 28.0k against the same 32k cap.
+The share leaves headroom below the limit because the token count is a local estimate (`countTokens` in `src/utils/models/token-counter.ts`) that counts fewer tokens than Jev does. The config comment records the measured gap.
 
 ## How the ladder walks
 
@@ -36,49 +36,36 @@ flowchart TD
 
 ## The ladder
 
-The steps are ordered by how much each cut matters to the evaluator's decisions, least first. City IDs go early because the evaluator answers with no tools. Routine unit production goes before technology and policy progress, while turning points stay protected. The steps, in the order configured in `evaluator-trim-config.ts`:
+The steps live in `evaluatorTrimConfig.ladder` in `src/strategist/agents/evaluator-trim-config.ts`, which is the source of truth for their order and contents; comments there explain why each group sits where it does. The general rule is to order steps by how much each cut matters to the evaluator's macro decisions (flavors, grand strategy, research, persona, and relationships), least first:
 
-| # | Id | Removes or compresses |
-| --- | --- | --- |
-| 1 | `events-noise` | Drops the `noise` event tier (tile changes, unit movement, system events, and every unlisted type) from # Events |
-| 2 | `city-ids` | Deletes each city's `ID` |
-| 3 | `events-economy` | Drops the `economy` tier (city growth, purchases, worker construction, gifts, and city events) |
-| 4 | `events-units` | Drops routine unit training, creation, and investment events |
-| 5 | `opinions-top-3` | Compresses major civilizations' weighted opinion lists to their 3 largest factors plus one merged line |
-| 6 | `military-unit-stats` | Deletes the military report's `Unit Stats` section |
-| 7 | `events-combat` | Drops individual battles, promotions, and barbarian camp events |
-| 8 | `military-zone-geometry` | Deletes each tactical zone's `Plots`, `AreaID`, `CenterX`, and `CenterY` |
-| 9 | `city-coordinates` | Deletes each city's `X` and `Y` |
-| 10 | `city-buildings` | Deletes each city's `ImportantBuildings`, `BuildingCount`, and `GreatWorkCount` |
-| 11 | `events-force-changes` | Drops unit upgrades, conversions, losses, and captures |
-| 12 | `city-yields` | Deletes stored food and production and per-turn food, production, gold, science, culture, faith, and tourism |
-| 13 | `city-state-relationships` | Deletes city-states' relationship entries for other civilizations, keeping our own |
-| 14 | `events-progress` | Drops technology, policy, building, era, great person, religion, and city-state progress events |
+- **Early:** detail that is useless without tools (such as IDs and coordinates) or purely tactical.
+- **Then:** detail the reports already sum up elsewhere, such as per-city yields that add up to civilization totals.
+- **Last:** the inputs closest to war, diplomacy, and victory decisions.
 
 The event tiers are defined by `eventImportanceTiers` in `src/utils/prompts/event-importance.ts`, shared with the player loop's event window fallback. The ladder drops them in the same order as that fallback does, from the least important up, so both paths agree on what matters.
 
 ## Never trimmed
 
-Anything the ladder does not name stays in the state in full:
+Anything the ladder does not name stays in the state in full. Beyond that, the actions themselves set some limits no config can cross:
 
 | Report or section | What always stays |
 | --- | --- |
-| System prompt, Situation, Your Civilization, Options, Strategies, Victory Progress, turn context | These are not on the ladder at all, so they are always sent whole. |
-| Players | Every civilization entry stays, with each city-state's `Quests` and `MajorAlly` and our own city-state relationship. Opinion lists are compressed but never removed. |
-| Cities | Every city keeps its name, owner, `Population`, `DefenseStrength`, `Health`, status flags, razing and resistance turns, `MajorityReligion`, `CurrentProduction`, `ProductionTurnsLeft`, `HappinessDelta`, and Wonders. |
-| Military | Every tactical zone stays, with its value, dominance, posture, strength comparison, city, units, and neighbors. Only the `Unit Stats` section and the zones' size and position can go. |
-| Events | This ladder preserves `turning-points` and `diplomacy`. The outer overflow fallback may drop diplomacy last, but always preserves turning points across the pending window. |
+| System prompt, Situation, Your Civilization, Options, Strategies, Victory Progress, turn context | These are not trimmable reports, so they are always sent whole. |
+| Players | Every civilization entry stays, and so does our own city-state relationship. Opinion lists can be compressed but never removed. |
+| Cities | Every city stays; steps only delete listed fields from each one. |
+| Military | Every tactical zone stays; steps only delete listed sections or zone fields. |
+| Events | The ladder stops before `diplomacy` and `turning-points`. The outer overflow fallback may drop diplomacy last, but always preserves turning points across the pending window. |
 
 ## Opinion compression
 
-The `opinions-top-3` step shortens both opinion lists of every major civilization with one rule (`compressOpinions` in `src/strategist/agents/evaluator-trimming.ts`):
+An `opinions` step shortens both opinion lists of every major civilization with one rule (`compressOpinions` in `src/strategist/agents/evaluator-trimming.ts`):
 
-- Factor lines end with a weight, such as `(-30)` or `(+12)`. The 3 lines with the largest weight by absolute value stay, in their original order, and the rest merge into one line carrying their summed weight.
+- Factor lines end with a weight, such as `(-30)` or `(+12)`. The `keep` lines with the largest weight by absolute value stay, in their original order, and the rest merge into one line carrying their summed weight.
 - Lines without a weight are summaries, such as the leader's real approach, and always stay.
 - A list with no weights at all is left alone, since it cannot be ranked. Whether weights show depends on game settings, not on which list it is.
 - A list that is already short enough is left alone, and if no player has anything left to compress the whole step is skipped.
 
-For example, a weighted list of one unweighted summary line plus factors at `(-51)`, `(-30)`, `(-12)`, `(-8)`, `(-6)`, and `(-4)` comes out as:
+For example, with `keep` at 3, a weighted list of one unweighted summary line plus factors at `(-51)`, `(-30)`, `(-12)`, `(-8)`, `(-6)`, and `(-4)` comes out as:
 
 - The summary line, kept.
 - The three largest factors (`-51`, `-30`, `-12`), kept in their original order.
@@ -90,7 +77,7 @@ For example, a weighted list of one unweighted summary line plus factors at `(-5
 
 | Action | Effect |
 | --- | --- |
-| `events` | Drops one event tier by name. Valid names in removal order are `noise`, `economy`, `units`, `combat`, `force-changes`, `progress`, `diplomacy`, and `turning-points`. Unlisted and malformed event types count as `noise`. |
+| `events` | Drops one event tier by name. Valid names in removal order are `noise`, `economy`, `combat`, `units`, `force-changes`, `progress`, `diplomacy`, and `turning-points`. Unlisted and malformed event types count as `noise`. |
 | `cityFields` | Deletes the listed fields from every city in # Cities. |
 | `militaryKeys` | Deletes the listed top-level sections from # Military. |
 | `militaryZoneFields` | Deletes the listed fields from every tactical zone in # Military. |
@@ -103,11 +90,11 @@ When editing:
 - Step notes are joined into the closing note, so write them as short lowercase phrases that read well after "this state was shortened".
 - Adding steps is cheap: a step that matches nothing in the current state is skipped and not reported.
 - Keep event steps in the shared tier order, least important first; a test checks this.
-- The ladder stops at `progress`, so `turning-points` and `diplomacy` survive every evaluator trim.
+- Do not add steps for the `diplomacy` or `turning-points` tiers, so both survive every evaluator trim.
 
 ## The closing note
 
-When at least one step ran, the state ends with a note so the model knows it is reading a partial picture. The note says the state was shortened to fit the input limit, gives the number of dropped events when there were any, and lists the applied steps' notes. For example: "Note: To fit the input limit, this state was shortened (41 events left out): minor tile and movement events left out; city economy events left out; opinions summarized to their 3 largest factors." `buildStrategistEvaluationState` appends the note after the walk ends; the walk itself is what satisfies the budget.
+When at least one step ran, the state ends with a note so the model knows it is reading a partial picture. The note says the state was shortened to fit the input limit, gives the number of dropped events when there were any, and lists the applied steps' notes. For example: "Note: To fit the input limit, this state was shortened (41 events left out): minor tile and movement events left out; city economy events left out." `buildStrategistEvaluationState` appends the note after the walk ends; the walk itself is what satisfies the budget.
 
 ## Telemetry
 

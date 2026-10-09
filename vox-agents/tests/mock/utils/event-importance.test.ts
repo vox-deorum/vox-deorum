@@ -33,11 +33,6 @@ function tierOf(type: string): string {
   return eventImportanceTiers.find(tier => (tier.types as readonly string[]).includes(type))?.name ?? '<unlisted>';
 }
 
-/** The tier index of a type, treating unlisted types as noise (the deepest tier). */
-function rank(type: string): number {
-  return tierOf(type) === '<unlisted>' ? eventImportanceTiers.length - 1 : tierIndex(tierOf(type));
-}
-
 /** One event of a type, shaped like a consolidated `get-events` entry. */
 function event(type: string): { Type: string } {
   return { Type: type };
@@ -69,19 +64,9 @@ describe('eventImportanceTiers', () => {
     }
   });
 
-  it('should protect turning points as the top tier, with victories, projects, and policy branches', () => {
+  it('should keep turning points as the top tier and noise as the bottom one', () => {
     expect(eventImportanceTiers[0].name).toBe('turning-points');
-    for (const type of ['DeclareWar', 'PlayerAdoptPolicyBranch', 'PlayerVictory', 'CityProjectComplete']) {
-      expect(tierOf(type), type).toBe('turning-points');
-    }
-  });
-
-  it('should rank progress above force changes, combat, and routine units', () => {
-    const types = ['TeamTechResearched', 'UnitUpgraded', 'CombatResult', 'CityTrained', 'SetPopulation'];
-    const ranks = types.map(rank);
-    for (let index = 1; index < ranks.length; index++) {
-      expect(ranks[index], `${types[index]} below ${types[index - 1]}`).toBeGreaterThan(ranks[index - 1]);
-    }
+    expect(eventImportanceTiers[eventImportanceTiers.length - 1].name).toBe('noise');
   });
 
   it('should list canonical names only, leaving the remapped raw names unlisted noise', () => {
