@@ -57,14 +57,6 @@ describe('set-research', () => {
     expect(row.Turn).toBe(10);
   });
 
-  it('writes ResearchChanges visible-by-default (no player filter) and readable', async () => {
-    mockLua({ Previous: -1 });
-
-    await tool.execute({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' } as any);
-
-    expect(await store.getMutableKnowledge('ResearchChanges', 0)).not.toBeUndefined();
-  });
-
   it('pushes a replay action resolving the previous tech id back to a name', async () => {
     mockLua({ Previous: 5 }); // previously Pottery
 

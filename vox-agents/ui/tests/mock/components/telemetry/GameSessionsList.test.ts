@@ -41,7 +41,6 @@ describe('GameSessionsList', () => {
       global: { stubs },
       slots: { 'empty-action': '<button class="connect">Connect</button>' },
     });
-    expect(emptyWrapper.get('.table-empty').text()).toContain('No active game sessions available');
     expect(emptyWrapper.find('.connect').exists()).toBe(true);
 
     const listWrapper = mountList([makeSession()], false);

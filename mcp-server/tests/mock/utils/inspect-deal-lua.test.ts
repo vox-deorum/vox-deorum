@@ -50,7 +50,6 @@ describe('inspectDeal Lua utility', () => {
     await inspectDeal(1, 3, [], promises);
 
     expect(spy).toHaveBeenCalledWith(1, 3, [], null, promises);
-    expect(JSON.stringify(spy.mock.calls[0])).toContain('null');
   });
 
   it('defaults the promises argument to an empty list', async () => {

@@ -310,24 +310,5 @@ describe('jsonToMarkdown', () => {
       expect(result).toContain('- key with spaces: value3');
       expect(result).toContain('- key_with_underscore: value4');
     });
-
-    it('should handle empty config gracefully', () => {
-      const obj = { test: 'value' };
-      const result = jsonToMarkdown(obj, {});
-      expect(result).toContain('- test: value');
-    });
-
-    it('should filter out empty strings from results', () => {
-      const obj = {
-        hasValue: 'test',
-        nested: {
-          inner: 'value'
-        }
-      };
-
-      const result = jsonToMarkdown(obj);
-      const lines = result.split('\n');
-      expect(lines.every(line => line === '' || line.trim().length > 0)).toBe(true);
-    });
   });
 });

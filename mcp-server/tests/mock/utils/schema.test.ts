@@ -19,7 +19,6 @@ describe('sortBySchema', () => {
     expect(sorted).toEqual(data);
     // Values carry through by identity, including nested and falsy ones.
     expect(sorted.Dyn).toBe(data.Dyn);
-    expect(sorted.Score).toBe(0);
   });
 
   it('should append dynamic keys alphabetically after schema keys', () => {

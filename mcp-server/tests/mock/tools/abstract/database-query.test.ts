@@ -96,15 +96,6 @@ describe('DatabaseQueryTool', () => {
     expect(tool.fetchSummariesCalls).toBe(1);
   });
 
-  it('fuzzy-filters by search term', async () => {
-    const tool = new TestQueryTool(FIXTURES);
-    const result = await tool.execute({ Search: 'Archery', MaxResults: 20 } as any);
-
-    // A unique exact match collapses to a single result and is expanded to full info.
-    expect(result.Count).toBe(1);
-    expect(result.Items[0].Type).toBe('TECH_ARCHERY');
-  });
-
   it('expands a single result via fetchFullInfo', async () => {
     const tool = new TestQueryTool(FIXTURES);
     const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);

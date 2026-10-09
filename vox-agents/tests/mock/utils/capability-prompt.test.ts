@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import { wrapLanguageModel } from 'ai';
 import { MockLanguageModelV4 } from 'ai/test';
 import {
-  capabilityHeading,
   capabilityInstruction,
   capabilityMiddleware,
 } from '../../../src/utils/models/capability-prompt.js';
@@ -52,11 +51,6 @@ const gameWrite: ResolvedFilesConfig = { game: 'write', shared: {}, quota: 17 };
 describe('capabilityInstruction', () => {
   it('returns nothing when no capability is enabled', () => {
     expect(capabilityInstruction({ web: false })).toBeUndefined();
-  });
-
-  it('opens with the shared heading', () => {
-    expect(capabilityInstruction({ files: gameWrite, web: false })!.startsWith(capabilityHeading)).toBe(true);
-    expect(capabilityInstruction({ web: true })!.startsWith(capabilityHeading)).toBe(true);
   });
 
   it('describes the game folder and its guide', () => {

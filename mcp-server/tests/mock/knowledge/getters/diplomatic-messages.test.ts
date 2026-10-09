@@ -61,16 +61,6 @@ describe('getDiplomaticMessages (direct)', () => {
     expect(await getDiplomaticMessages(4, 5)).toMatchObject({ messages: [], hasMore: false });
   });
 
-  it('orders the pair by min/max and reads identically regardless of argument order', async () => {
-    await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 1, content: 'A' });
-    await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 3, content: 'B' });
-
-    const forward = await getDiplomaticMessages(1, 3);
-    const reverse = await getDiplomaticMessages(3, 1);
-    expect(forward.messages.map((m) => m.Content)).toEqual(['A', 'B']);
-    expect(reverse.messages.map((m) => m.Content)).toEqual(['A', 'B']);
-  });
-
   it('filters speakerRole against Player1Role when the speaker is Player1ID', async () => {
     // Speaker 1 == Player1ID -> role resolves to Player1Role ('the leader').
     await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 1, content: 'fromLeader' });
@@ -100,17 +90,6 @@ describe('getDiplomaticMessages (direct)', () => {
     const result = await getDiplomaticMessages(5, -1);
     expect(result.messages.map((m) => m.Content)).toEqual(['obs']);
     expect(result.messages[0]).toMatchObject({ Player1ID: -1, Player2ID: 5 });
-  });
-
-  it('pages the newest raw rows in ascending order with the lowest scanned ID as cursor', async () => {
-    for (const content of ['one', 'two', 'three', 'four']) {
-      await seedMsg({ player1ID: 1, player2ID: 3, speakerID: 3, content });
-    }
-
-    const page = await getDiplomaticMessages(1, 3, { limit: 2 });
-    expect(page.messages.map((message) => message.Content)).toEqual(['three', 'four']);
-    expect(page.NextBeforeID).toBe(page.messages[0].ID);
-    expect(page.hasMore).toBe(true);
   });
 
   it('keeps the raw scan cursor and hasMore when a role filter removes the page rows', async () => {

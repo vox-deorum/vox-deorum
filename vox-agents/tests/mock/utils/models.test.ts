@@ -298,7 +298,6 @@ describe('claude-code provider', () => {
       await (mw.transformParams as any)({
         params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
       });
-      expect(info?.framing).toBe('action');
       // Only the resolved framing fact is reported; the injected prompt itself is never stored.
       expect(info).toEqual({ framing: 'action' });
     });
@@ -320,7 +319,6 @@ describe('claude-code provider', () => {
       await (mw.transformParams as any)({
         params: { tools, toolChoice: { type: 'auto' }, prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] },
       });
-      expect(info?.framing).toBe('tool');
       expect(info).toEqual({ framing: 'tool' });
     });
 
@@ -341,8 +339,6 @@ describe('claude-code provider', () => {
       expect(out.prompt.map((m: any) => m.role)).toEqual(['system', 'system', 'user']);
       expect(out.prompt[0].content).toContain('You are a diplomat.');
       expect(out.prompt[1].content).toContain('## Action Calling');
-      const firstUserIdx = out.prompt.findIndex((m: any) => m.role === 'user');
-      expect(out.prompt[firstUserIdx - 1].content).toContain('## Action Calling');
     });
 
     it('pins responseFormat to the tool-call array contour for structuredToolCalls + required', async () => {

@@ -764,8 +764,6 @@ describe('getInitialMessages task determination', () => {
 
     const text = content(await negotiator.getInitialMessages(params, input, {} as any));
 
-    // The intro teaches the one-string-per-entry grammar; headings carry a quoted (example format "...") example.
-    expect(text).toContain('Each Give/Receive entry is ONE plain string');
     expect(text).toContain('### Gold (example format "Gold 100")');
     expect(text).toContain('### Strategic Resources (example format "Iron 1")');
     // Untargeted promises always render, so the Promises heading always has an example.

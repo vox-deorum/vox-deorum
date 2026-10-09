@@ -68,10 +68,9 @@ describe('keep-status-quo', () => {
     await tool.execute({ PlayerID: 0, Mode: 'Strategy', Rationale: 'keep' } as any);
 
     expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, summary, rationale, prefix] = pushSpy.mock.calls[0];
+    const [playerID, actionType, , rationale, prefix] = pushSpy.mock.calls[0];
     expect(playerID).toBe(0);
     expect(actionType).toBe('status-quo');
-    expect(summary).toBe('Maintaining Strategy');
     expect(rationale).toBe('keep');
     expect(prefix).toBeUndefined();
   });

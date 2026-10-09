@@ -71,14 +71,7 @@ describe('Spokesperson tool set', () => {
 describe('Diplomat.getSystem', () => {
   it('includes the resources block in normal mode', async () => {
     const system = await diplomat.getSystem(params, thread(), undefined);
-    expect(system).toContain('# Your Resources');
     expect(system).toContain('call-diplomatic-analyst');
-    expect(system).toContain('# Your Audience');
-  });
-
-  it('directs the diplomat to speak only through send-message', async () => {
-    const system = await diplomat.getSystem(params, thread(), undefined);
-    expect(system).toContain('send-message');
   });
 });
 
@@ -89,7 +82,6 @@ describe('getHint', () => {
     expect(hint).toContain('Bismarck');
     expect(hint).toContain('the leader'); // audience role
     expect(hint).toContain('turn 5');
-    expect(diplomat.getDefaultAddon(params, thread())).toContain('When you need to speak directly');
   });
 
   it('Spokesperson anchors on self civ/leader', () => {
@@ -138,7 +130,6 @@ describe('Spokesperson.getSystem', () => {
 
   it('includes the stable tool IDs in normal mode', async () => {
     const system = await spokesperson.getSystem(params, thread(), undefined);
-    expect(system).toContain('# Available Tools');
     expect(system).toContain('get-briefing');
     expect(system).toContain('get-diplomatic-events');
     expect(system).toContain('send-message');

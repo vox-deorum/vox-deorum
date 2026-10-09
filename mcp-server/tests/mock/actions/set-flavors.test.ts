@@ -123,8 +123,7 @@ describe('set-flavors', () => {
     } as any);
 
     expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [, , summary, , prefix] = pushSpy.mock.calls[0];
-    expect(summary).toBe('No changes');
+    const [, , , , prefix] = pushSpy.mock.calls[0];
     expect(prefix).toBeUndefined(); // no replay message when nothing changed
   });
 

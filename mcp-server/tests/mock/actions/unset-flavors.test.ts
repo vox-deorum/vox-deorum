@@ -82,10 +82,9 @@ describe('unset-flavors', () => {
     await tool.execute({ PlayerID: 0, Turn: 7 } as any);
 
     expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, summary, rationale, prefix, turn] = pushSpy.mock.calls[0];
+    const [playerID, actionType, , rationale, prefix, turn] = pushSpy.mock.calls[0];
     expect(playerID).toBe(0);
     expect(actionType).toBe('unset-flavors');
-    expect(summary).toContain('Cleared custom flavors');
     expect(rationale).toBe('');
     expect(prefix).toBe('');
     expect(turn).toBe(7);

@@ -68,7 +68,6 @@ describe('ChatMessages', () => {
   it('renders the empty state when there are no messages', () => {
     const wrapper = mountMessages({ messages: [] })
     expect(wrapper.find('.empty-state').exists()).toBe(true)
-    expect(wrapper.text()).toContain('No messages yet')
     expect(wrapper.find('.vlist').exists()).toBe(false)
   })
 

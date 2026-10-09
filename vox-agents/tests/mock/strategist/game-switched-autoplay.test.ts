@@ -216,8 +216,6 @@ describe('model preflight', () => {
 
     await expect(s.start()).rejects.toThrow('Failed to start Civilization V');
 
-    expect(modelMocks.selectModelReference).toHaveBeenCalledWith('selected-strategist', 'small', overrides);
-    expect(modelMocks.selectModelReference).toHaveBeenCalledWith('specialized-briefer', 'small', overrides);
     for (const name of ['selected-strategist', 'simple-briefer', 'diplomat', 'specialized-briefer', 'diplomatic-analyst', 'negotiator']) {
       for (const tier of ['small', 'default', 'large']) {
         expect(modelMocks.selectModelReference).toHaveBeenCalledWith(name, tier, overrides);
