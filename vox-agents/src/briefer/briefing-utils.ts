@@ -10,7 +10,7 @@ import { z } from "zod";
 import { Tool } from "ai";
 import type { BriefingMode, SpecializedBrieferInput } from "./specialized-briefer.js";
 import type { StrategistParameters, GameState } from "../strategist/strategy-parameters.js";
-import { getGameState, withEventWindowFallback } from "../strategist/strategy-parameters.js";
+import { getGameState, retryWithFewerEvents } from "../strategist/strategy-parameters.js";
 import type { VoxContext } from "../infra/vox-context.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 
@@ -158,7 +158,7 @@ export async function requestBriefing(
     ? instruction
     : { mode, instruction } as SpecializedBrieferInput;
 
-  const promise = generateBriefing(agentName, input, state, context, parameters);
+  const promise = generateBriefing(agentName, input, state, context);
 
   // Track and clean up the promise
   const tracked = promise.finally(() => {
@@ -172,23 +172,15 @@ export async function requestBriefing(
 }
 
 /**
- * Invoke a briefer agent, narrowing the event window on context-length overflow.
- *
- * The first attempt reads the state as the caller left it — the briefer consumes
- * `state.mergedEvents ?? state.events`, so a strategist that already established a decision window
- * gets the full window, while an on-demand envoy/analyst caller (no window) gets the immutable
- * per-turn slice. Only when the briefer overflows the model context does it retry against
- * progressively narrower windows via {@link withEventWindowFallback}, which rewrites
- * `state.mergedEvents` (never the slice) — mirroring the strategist's own
- * `executeDecisionWithEventFallback` so pacing's large multi-turn windows no longer lose a turn.
- * A retry that fails for any other reason stops the narrowing.
+ * Invoke a briefer and trim its original event report by importance on context overflow.
+ * Retries preserve turning points and never widen an on-demand slice or restore events
+ * already removed by the strategist. Other failures stop the retry walk.
  */
 async function generateBriefing(
   agentName: string,
   input: unknown,
   state: GameState,
-  context: VoxContext<StrategistParameters>,
-  parameters: StrategistParameters
+  context: VoxContext<StrategistParameters>
 ): Promise<string | undefined> {
   let result: string | undefined;
   let contextLengthExceeded = false;
@@ -206,13 +198,11 @@ async function generateBriefing(
     return !contextLengthExceeded;
   };
 
-  // First attempt with the caller-populated event window. Only a context-length overflow narrows.
+  // Capture the exact report used for the first attempt before any concurrent work can replace it.
+  const failedEvents = state.mergedEvents ?? state.events ?? {};
   if (await attempt()) return result;
 
-  const eventFromTurn = parameters.lastDecisionTurn === undefined
-    ? parameters.turn
-    : parameters.lastDecisionTurn + 1;
-  await withEventWindowFallback(parameters, state, eventFromTurn, attempt);
+  await retryWithFewerEvents(state, failedEvents, attempt);
   return result;
 }
 

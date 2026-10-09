@@ -81,6 +81,23 @@ describe('evaluator trimming', () => {
       }
     });
 
+    it('should delete city IDs before coordinates and never a field the evaluator decides on', () => {
+      const cutAt = new Map<string, number>();
+      for (const [index, step] of evaluatorTrimConfig.ladder.entries()) {
+        for (const field of 'cityFields' in step ? step.cityFields : []) cutAt.set(field, index);
+      }
+      // IDs go before coordinates: the evaluator answers with no tools, so it never needs them.
+      expect(cutAt.get('X')!).toBeGreaterThan(cutAt.get('ID')!);
+      expect(cutAt.get('Y')!).toBeGreaterThan(cutAt.get('ID')!);
+      // Readouts the evaluator decides on stay in the state at every level of the walk.
+      for (const field of [
+        'ProductionTurnsLeft', 'HappinessDelta', 'Population', 'DefenseStrength', 'MajorityReligion',
+        'CurrentProduction',
+      ]) {
+        expect(cutAt.has(field), field).toBe(false);
+      }
+    });
+
     it('should drop event tiers from the least important up, matching the shared tier order', () => {
       const rank = new Map<string, number>(eventImportanceTiers.map((tier, index) => [tier.name, index]));
       const dropped = evaluatorTrimConfig.ladder.map(eventsTierOf).filter(tier => tier !== undefined);
@@ -243,6 +260,7 @@ describe('evaluator trimming', () => {
               { Type: 'SetAlly', Target: 2 },
               { Type: 'CombatResult', Winner: 'Rome' },
               { Type: 'CityTrained', City: 'Antium', Unit: 'Legion' },
+              { Type: 'UnitKilledInCombat', Loser: 'Greece' },
               { Type: 'TileRevealed', X: 12, Y: 8 },
               { Type: 'GameSave' },
             ],
@@ -277,14 +295,15 @@ describe('evaluator trimming', () => {
                 ID: 1, X: 12, Y: 8, Population: 6, MajorityReligion: null, DefenseStrength: 45,
                 IsCapital: true, Wonders: ['Great Library'], ImportantBuildings: ['Granary', 'Library'],
                 BuildingCount: 7, GreatWorkCount: 2, FoodStored: 12, FoodPerTurn: 6,
-                ProductionPerTurn: 8, GoldPerTurn: 3, SciencePerTurn: 7,
+                ProductionPerTurn: 8, ProductionTurnsLeft: 3, HappinessDelta: 2, GoldPerTurn: 3, SciencePerTurn: 7,
               },
             },
             '2': {
               Athens: {
                 ID: 4, X: 20, Y: 15, Population: 4, MajorityReligion: 'Orthodoxy', DefenseStrength: 30,
                 IsCapital: true, Wonders: [], ImportantBuildings: ['Marketplace'],
-                BuildingCount: 5, GreatWorkCount: 0, FoodPerTurn: 5, ProductionPerTurn: 4, CulturePerTurn: 3,
+                BuildingCount: 5, GreatWorkCount: 0, FoodPerTurn: 5, ProductionPerTurn: 4,
+                ProductionTurnsLeft: 6, HappinessDelta: -1, CulturePerTurn: 3,
               },
             },
           },
@@ -313,7 +332,7 @@ describe('evaluator trimming', () => {
 
         // Events: only the turning-points and diplomacy tiers survive; the render hint stays.
         expect(keptTypes(result.reports.events).sort()).toEqual(['DeclareWar', 'SetAlly']);
-        expect(result.droppedEvents).toBe(6);
+        expect(result.droppedEvents).toBe(7);
         expect(result.reports.events).toHaveProperty('_markdownConfig');
 
         // Military: the unit stats table and zone geometry are gone; every zone keeps its
@@ -353,11 +372,13 @@ describe('evaluator trimming', () => {
         );
         expect(playerOf(result.reports, '1').OurOpinionOfThem).toEqual(['Fear their army (-80)']);
 
-        // Cities: population, wonders, and capital status survive; buildings, yields, and
-        // coordinates do not.
+        // Cities: population, wonders, capital status, turns-left, and happiness survive;
+        // buildings, yields, IDs, and coordinates do not.
         for (const city of [cityOf(result.reports, '1', 'Antium'), cityOf(result.reports, '2', 'Athens')]) {
-          expect(Object.keys(city)).toEqual(expect.arrayContaining(['Population', 'Wonders', 'IsCapital']));
-          for (const gone of ['ImportantBuildings', 'FoodPerTurn', 'ID', 'X', 'Y']) {
+          expect(Object.keys(city)).toEqual(expect.arrayContaining([
+            'Population', 'Wonders', 'IsCapital', 'ProductionTurnsLeft', 'HappinessDelta',
+          ]));
+          for (const gone of ['ImportantBuildings', 'FoodPerTurn', 'ProductionPerTurn', 'ID', 'X', 'Y']) {
             expect(city, gone).not.toHaveProperty(gone);
           }
         }

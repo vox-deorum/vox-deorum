@@ -310,7 +310,7 @@ function consolidateConsecutiveEvents(events: Array<Record<string, unknown>>): A
       if (firstKeys.length === 1 && (item.Events as Record<string, unknown>[]).every((e: Record<string, unknown>) => Object.keys(e).length === 1 && Object.keys(e)[0] === firstKeys[0])) {
         const key = firstKeys[0];
         let properties = (item.Events as Record<string, unknown>[]).map((event: Record<string, unknown>) => event[key]);
-        if (item.Type === "UnitSetXY" && key === "Plot") {
+        if (item.Type === "UnitMoved" && key === "Plot") {
           // If the unit is a caravan, only keep the last plot
           if (item.AI == "TradeUnit") {
             properties = [properties[properties.length - 1]];

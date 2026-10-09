@@ -6,7 +6,6 @@ import {
 } from "../../../src/strategist/pacing.js";
 import { pacingInterruptionRegistry } from "../../../src/strategist/pacing/registry.js";
 import {
-  getDecisionEventWindows,
   getDecisionTurnContext,
   mergeCachedEvents,
   withEventWindowFallback,
@@ -298,16 +297,6 @@ describe("mergeCachedEvents", () => {
   });
 });
 
-describe("getDecisionEventWindows", () => {
-  it("drops the oldest event turn on each retry", () => {
-    expect(getDecisionEventWindows(1, 3)).toEqual([
-      { fromTurn: 1, toTurn: 3 },
-      { fromTurn: 2, toTurn: 3 },
-      { fromTurn: 3, toTurn: 3 }
-    ]);
-  });
-});
-
 describe("getDecisionTurnContext", () => {
   const baseParameters = {
     playerID: 2,
@@ -365,7 +354,7 @@ describe("withEventWindowFallback", () => {
     expect(state.events).toEqual({ "3": [{ Type: "T3" }] });
   });
 
-  it("narrows the merged window one turn at a time and leaves the final attempted window in place", async () => {
+  it("should preserve the full original window while cumulatively removing lowest tiers", async () => {
     const { parameters, state } = makeParams();
     const seen: Array<{ window: EventWindow; merged: Record<string, unknown> }> = [];
 
@@ -376,55 +365,46 @@ describe("withEventWindowFallback", () => {
     });
 
     expect(decided).toBe(false);
-    // Successively drops the oldest turn: {1,2,3} → {2,3} → {3}.
-    expect(Object.keys(seen[0]!.merged)).toEqual(["1", "2", "3"]);
-    expect(Object.keys(seen[1]!.merged)).toEqual(["2", "3"]);
-    expect(Object.keys(seen[2]!.merged)).toEqual(["3"]);
-    // T1 to T3 are unknown types that count as noise, so the last turn gets one more attempt
-    // without them: the noise drop after the window is already a single turn.
-    expect(seen[3]!.window).toEqual({ fromTurn: 3, toTurn: 3, droppedTiers: 1 });
-    expect(seen[3]!.merged).toEqual({});
-    expect(seen).toHaveLength(4);
-    // The trimmed (empty) window stays on the state for diagnostics.
+    expect(seen.map(entry => entry.window.fromTurn)).toEqual([1, 1]);
+    expect(seen.map(entry => Object.keys(entry.merged))).toEqual([["1", "2", "3"], []]);
+    expect(seen[1]!.window.droppedTiers).toBe(1);
+    expect(seen[1]!.merged).toEqual({});
+    expect(seen).toHaveLength(2);
     expect(state.mergedEvents).toEqual({});
     // The immutable slice is still just the current turn.
     expect(state.events).toEqual({ "3": [{ Type: "T3" }] });
   });
 
-  it("narrows from the widest window until an attempt succeeds", async () => {
+  it("should stop after the first successful trimmed attempt", async () => {
     const { parameters, state } = makeParams();
     const seen: Array<{ fromTurn: number; toTurn: number }> = [];
 
     const decided = await withEventWindowFallback(parameters, state, 1, async (window) => {
       seen.push(window);
-      // Succeed only once the window has narrowed to a single turn.
-      return window.fromTurn === window.toTurn;
+      return window.droppedTiers === 1;
     });
 
     expect(decided).toBe(true);
-    expect(seen).toEqual([
-      { fromTurn: 1, toTurn: 3 },
-      { fromTurn: 2, toTurn: 3 },
-      { fromTurn: 3, toTurn: 3 },
-    ]);
-    // The immutable per-turn slice is untouched after the successful narrowing.
+    expect(seen).toEqual([{ fromTurn: 1, toTurn: 3 }, { fromTurn: 1, toTurn: 3, droppedTiers: 1 }]);
+    // The immutable per-turn slice is untouched after successful trimming.
     expect(state.events).toEqual({ "3": [{ Type: "T3" }] });
   });
 
   /** A single-turn window (turn 3) with one event in each importance group the trims reach. */
   function makeTieredParams(): { parameters: StrategistParameters; state: GameState } {
+    const markdownConfig = { configs: [{ format: "Turn {key}" }] };
     const gameStates = {
       3: {
         turn: 3,
         reports: {},
-        events: { "3": [{ Type: "TileRevealed" }, { Type: "CombatResult" }, { Type: "DeclareWar" }] },
+        events: { _markdownConfig: markdownConfig, "3": [{ Type: "TileRevealed" }, { Type: "CombatResult" }, { Type: "DeclareWar" }] },
       },
     } as unknown as StrategistParameters["gameStates"];
     const parameters = { turn: 3, gameStates } as unknown as StrategistParameters;
     return { parameters, state: gameStates[3] };
   }
 
-  it("drops one importance group per retry once the window is a single turn", async () => {
+  it("should skip tiers with no events while preserving metadata and turning points", async () => {
     const { parameters, state } = makeTieredParams();
     const seen: Array<{ window: EventWindow; merged: Record<string, unknown> }> = [];
 
@@ -438,12 +418,19 @@ describe("withEventWindowFallback", () => {
     expect(seen.map(entry => entry.window)).toEqual([
       { fromTurn: 3, toTurn: 3 },
       { fromTurn: 3, toTurn: 3, droppedTiers: 1 },
-      { fromTurn: 3, toTurn: 3, droppedTiers: 3 },
+      { fromTurn: 3, toTurn: 3, droppedTiers: 4 },
     ]);
-    expect(Object.keys(seen[0]!.merged)).toEqual(["3"]);
-    expect(seen[1]!.merged).toEqual({ "3": [{ Type: "CombatResult" }, { Type: "DeclareWar" }] });
+    expect(Object.keys(seen[0]!.merged)).toEqual(["3", "_markdownConfig"]);
+    expect(seen[1]!.merged).toEqual({
+      "3": [{ Type: "CombatResult" }, { Type: "DeclareWar" }],
+      _markdownConfig: { configs: [{ format: "Turn {key}" }] },
+    });
     // The most important group is never dropped, even at the deepest level.
-    expect(seen[2]!.merged).toEqual({ "3": [{ Type: "DeclareWar" }] });
+    expect(seen[2]!.merged).toEqual({
+      "3": [{ Type: "DeclareWar" }],
+      _markdownConfig: { configs: [{ format: "Turn {key}" }] },
+    });
+    expect(state.mergedEvents?._markdownConfig).toEqual({ configs: [{ format: "Turn {key}" }] });
   });
 
   it("keeps the trimmed window when dropping a group is enough", async () => {
@@ -461,9 +448,73 @@ describe("withEventWindowFallback", () => {
       { fromTurn: 3, toTurn: 3 },
       { fromTurn: 3, toTurn: 3, droppedTiers: 1 },
     ]);
-    expect(state.mergedEvents).toEqual({ "3": [{ Type: "CombatResult" }, { Type: "DeclareWar" }] });
+    expect(state.mergedEvents).toEqual({
+      "3": [{ Type: "CombatResult" }, { Type: "DeclareWar" }],
+      _markdownConfig: { configs: [{ format: "Turn {key}" }] },
+    });
     // Trimming copies: the cached per-turn slice keeps every event.
-    expect(state.events).toEqual({ "3": [{ Type: "TileRevealed" }, { Type: "CombatResult" }, { Type: "DeclareWar" }] });
+    expect(state.events).toEqual({
+      "3": [{ Type: "TileRevealed" }, { Type: "CombatResult" }, { Type: "DeclareWar" }],
+      _markdownConfig: { configs: [{ format: "Turn {key}" }] },
+    });
+  });
+
+  it("should keep turning points while removing newer noise and unit events", async () => {
+    const events = {
+      "2": [{ Type: "DeclareWar" }, { Type: "TileRevealed" }],
+      "3": [{ Type: "UnitCreated" }, { Type: "RelayedMessage" }],
+    };
+    const parameters = {
+      turn: 3,
+      gameStates: {
+        2: { turn: 2, reports: {}, events: { "2": events["2"] } },
+        3: { turn: 3, reports: {}, events: { "3": events["3"] } },
+      },
+    } as unknown as StrategistParameters;
+    const state = parameters.gameStates[3]!;
+    const originalSlice = state.events;
+    const attempts: Array<{ window: EventWindow; merged: Record<string, unknown> }> = [];
+
+    const decided = await withEventWindowFallback(parameters, state, 2, async (window) => {
+      attempts.push({ window, merged: structuredClone(state.mergedEvents) as Record<string, unknown> });
+      return false;
+    });
+
+    expect(decided).toBe(false);
+    const fullWindow = attempts.filter(entry => entry.window.fromTurn === 2);
+    expect(fullWindow[0]!.merged).toEqual({ "2": events["2"], "3": events["3"] });
+    expect(fullWindow.at(-1)!.merged).toEqual({
+      "2": [{ Type: "DeclareWar" }],
+      "3": [{ Type: "RelayedMessage" }],
+    });
+    expect(state.events).toBe(originalSlice);
+    expect(state.events).toEqual({ "3": events["3"] });
+  });
+
+  it("should fall back to the current turn's turning points when older ones still overflow", async () => {
+    const parameters = {
+      turn: 3,
+      gameStates: {
+        1: { turn: 1, reports: {}, events: { "1": [{ Type: "DeclareWar" }] } },
+        2: { turn: 2, reports: {}, events: { "2": [{ Type: "TileRevealed" }] } },
+        3: { turn: 3, reports: {}, events: { "3": [{ Type: "MakePeace" }, { Type: "UnitMoved" }] } },
+      },
+    } as unknown as StrategistParameters;
+    const state = parameters.gameStates[3]!;
+    const windows: EventWindow[] = [];
+
+    // Only a report without the older turning point fits.
+    const decided = await withEventWindowFallback(parameters, state, 1, async (window) => {
+      windows.push(window);
+      return !JSON.stringify(state.mergedEvents).includes("DeclareWar");
+    });
+
+    expect(decided).toBe(true);
+    expect(windows.at(-1)).toMatchObject({ fromTurn: 3, toTurn: 3 });
+    expect(windows.slice(0, -1).every(window => window.fromTurn === 1)).toBe(true);
+    expect(state.mergedEvents).toEqual({ "3": [{ Type: "MakePeace" }] });
+    // Only the derived report narrowed; the cached per-turn slices are untouched.
+    expect(parameters.gameStates[1]!.events).toEqual({ "1": [{ Type: "DeclareWar" }] });
   });
 
   it("returns false without calling attempt when the window is empty", async () => {

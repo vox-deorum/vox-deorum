@@ -406,9 +406,9 @@ describe('buildStrategistEvaluationState', () => {
 
     const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, limit);
 
-    // Dropping events and city coordinates cannot save enough: the walk goes on to the next
-    // step with something to cut, skipping the ones in between that match nothing.
-    expect(evaluation.trim!.steps).toEqual(['events-noise', 'city-coordinates', 'city-buildings']);
+    // Dropping events and city identifiers cannot save enough: the walk goes on to the next
+    // steps with something to cut, skipping the ones in between that match nothing.
+    expect(evaluation.trim!.steps).toEqual(['events-noise', 'city-ids', 'city-coordinates', 'city-buildings']);
     expect(evaluation.trim!.fits).toBe(true);
     expect(evaluation.text).toContain('DeclareWar');
     expect(evaluation.text).not.toContain('Shrine of 7');

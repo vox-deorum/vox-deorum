@@ -44,35 +44,37 @@ export const evaluatorTrimConfig: { budgetShare: number; ladder: readonly TrimSt
 
   ladder: [
     { id: "events-noise", events: "noise", note: "minor tile and movement events left out" },
-    { id: "city-coordinates", cityFields: ["ID", "X", "Y"], note: "city IDs and coordinates left out" },
+    { id: "city-ids", cityFields: ["ID"], note: "city IDs left out" },
     { id: "events-economy", events: "economy", note: "city economy events left out" },
+    { id: "events-units", events: "units", note: "routine unit training and creation events left out" },
     { id: "opinions-top-3", opinions: { keep: 3 }, note: "opinions summarized to their 3 largest factors" },
     { id: "military-unit-stats", militaryKeys: ["Unit Stats"], note: "unit strength table left out" },
     { id: "events-combat", events: "combat", note: "battle, promotion, and barbarian camp events left out" },
-    {
-      id: "city-buildings",
-      cityFields: ["ImportantBuildings", "BuildingCount", "GreatWorkCount"],
-      note: "city buildings left out",
-    },
-    {
-      id: "city-yields",
-      cityFields: [
-        "FoodStored", "FoodPerTurn", "ProductionStored", "ProductionPerTurn", "ProductionTurnsLeft",
-        "GoldPerTurn", "SciencePerTurn", "CulturePerTurn", "FaithPerTurn", "TourismPerTurn", "HappinessDelta",
-      ],
-      note: "city yields left out",
-    },
     {
       id: "military-zone-geometry",
       militaryZoneFields: ["Plots", "AreaID", "CenterX", "CenterY"],
       note: "tactical zone sizes and positions left out",
     },
-    { id: "events-progress", events: "progress", note: "technology, policy, and building events left out" },
+    { id: "city-coordinates", cityFields: ["X", "Y"], note: "city coordinates left out" },
+    {
+      id: "city-buildings",
+      cityFields: ["ImportantBuildings", "BuildingCount", "GreatWorkCount"],
+      note: "city buildings left out",
+    },
+    { id: "events-force-changes", events: "force-changes", note: "unit upgrade, conversion, and loss events left out" },
+    {
+      id: "city-yields",
+      cityFields: [
+        "FoodStored", "FoodPerTurn", "ProductionStored", "ProductionPerTurn",
+        "GoldPerTurn", "SciencePerTurn", "CulturePerTurn", "FaithPerTurn", "TourismPerTurn",
+      ],
+      note: "city yields left out",
+    },
     {
       id: "city-state-relationships",
       cityStateRelationships: true,
       note: "city-state relationships with other civilizations left out",
     },
-    { id: "events-units", events: "units", note: "unit training, upgrade, and loss events left out" },
+    { id: "events-progress", events: "progress", note: "technology, policy, and building events left out" },
   ],
 };

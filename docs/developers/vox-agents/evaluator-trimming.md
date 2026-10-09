@@ -36,22 +36,24 @@ flowchart TD
 
 ## The ladder
 
-The steps are ordered by how much each cut matters to the evaluator's decisions, least first. The evaluator answers with no tools, so anything only useful for tool calls (city IDs) goes early, and the events that shift the balance of forces go last. The steps, in the order configured in `evaluator-trim-config.ts`:
+The steps are ordered by how much each cut matters to the evaluator's decisions, least first. City IDs go early because the evaluator answers with no tools. Routine unit production goes before technology and policy progress, while turning points stay protected. The steps, in the order configured in `evaluator-trim-config.ts`:
 
 | # | Id | Removes or compresses |
 | --- | --- | --- |
 | 1 | `events-noise` | Drops the `noise` event tier (tile changes, unit movement, system events, and every unlisted type) from # Events |
-| 2 | `city-coordinates` | Deletes each city's `ID`, `X`, and `Y` |
-| 3 | `events-economy` | Drops the `economy` tier (city growth, purchases, and city events) |
-| 4 | `opinions-top-3` | Compresses major civilizations' weighted opinion lists to their 3 largest factors plus one merged line |
-| 5 | `military-unit-stats` | Deletes the military report's `Unit Stats` section |
-| 6 | `events-combat` | Drops the `combat` tier (individual battles, promotions, and barbarian camps) |
-| 7 | `city-buildings` | Deletes each city's `ImportantBuildings`, `BuildingCount`, and `GreatWorkCount` |
-| 8 | `city-yields` | Deletes each city's yield fields: `FoodStored`, `FoodPerTurn`, `ProductionStored`, `ProductionPerTurn`, `ProductionTurnsLeft`, `GoldPerTurn`, `SciencePerTurn`, `CulturePerTurn`, `FaithPerTurn`, `TourismPerTurn`, and `HappinessDelta` |
-| 9 | `military-zone-geometry` | Deletes each tactical zone's `Plots`, `AreaID`, `CenterX`, and `CenterY` |
-| 10 | `events-progress` | Drops the `progress` tier (technology, policy, building, great person, religion, and city-state events) |
-| 11 | `city-state-relationships` | Deletes city-states' relationship entries for other civilizations, keeping our own |
-| 12 | `events-units` | Drops the `units` tier (units trained, created, upgraded, converted, killed, and captured) |
+| 2 | `city-ids` | Deletes each city's `ID` |
+| 3 | `events-economy` | Drops the `economy` tier (city growth, purchases, worker construction, gifts, and city events) |
+| 4 | `events-units` | Drops routine unit training, creation, and investment events |
+| 5 | `opinions-top-3` | Compresses major civilizations' weighted opinion lists to their 3 largest factors plus one merged line |
+| 6 | `military-unit-stats` | Deletes the military report's `Unit Stats` section |
+| 7 | `events-combat` | Drops individual battles, promotions, and barbarian camp events |
+| 8 | `military-zone-geometry` | Deletes each tactical zone's `Plots`, `AreaID`, `CenterX`, and `CenterY` |
+| 9 | `city-coordinates` | Deletes each city's `X` and `Y` |
+| 10 | `city-buildings` | Deletes each city's `ImportantBuildings`, `BuildingCount`, and `GreatWorkCount` |
+| 11 | `events-force-changes` | Drops unit upgrades, conversions, losses, and captures |
+| 12 | `city-yields` | Deletes stored food and production and per-turn food, production, gold, science, culture, faith, and tourism |
+| 13 | `city-state-relationships` | Deletes city-states' relationship entries for other civilizations, keeping our own |
+| 14 | `events-progress` | Drops technology, policy, building, era, great person, religion, and city-state progress events |
 
 The event tiers are defined by `eventImportanceTiers` in `src/utils/prompts/event-importance.ts`, shared with the player loop's event window fallback. The ladder drops them in the same order as that fallback does, from the least important up, so both paths agree on what matters.
 
@@ -63,9 +65,9 @@ Anything the ladder does not name stays in the state in full:
 | --- | --- |
 | System prompt, Situation, Your Civilization, Options, Strategies, Victory Progress, turn context | These are not on the ladder at all, so they are always sent whole. |
 | Players | Every civilization entry stays, with each city-state's `Quests` and `MajorAlly` and our own city-state relationship. Opinion lists are compressed but never removed. |
-| Cities | Every city keeps its name, owner, `Population`, `DefenseStrength`, `Health`, status flags, razing and resistance turns, `MajorityReligion`, `CurrentProduction`, and Wonders. |
+| Cities | Every city keeps its name, owner, `Population`, `DefenseStrength`, `Health`, status flags, razing and resistance turns, `MajorityReligion`, `CurrentProduction`, `ProductionTurnsLeft`, `HappinessDelta`, and Wonders. |
 | Military | Every tactical zone stays, with its value, dominance, posture, strength comparison, city, units, and neighbors. Only the `Unit Stats` section and the zones' size and position can go. |
-| Events | The `turning-points` and `diplomacy` tiers are never dropped. |
+| Events | This ladder preserves `turning-points` and `diplomacy`. The outer overflow fallback may drop diplomacy last, but always preserves turning points across the pending window. |
 
 ## Opinion compression
 
@@ -88,7 +90,7 @@ For example, a weighted list of one unweighted summary line plus factors at `(-5
 
 | Action | Effect |
 | --- | --- |
-| `events` | Drops one event tier by name. Valid names are the tiers in `eventImportanceTiers` in `src/utils/prompts/event-importance.ts`: `turning-points`, `diplomacy`, `units`, `progress`, `combat`, `economy`, and `noise`. Unlisted event types count as `noise`. |
+| `events` | Drops one event tier by name. Valid names in removal order are `noise`, `economy`, `units`, `combat`, `force-changes`, `progress`, `diplomacy`, and `turning-points`. Unlisted and malformed event types count as `noise`. |
 | `cityFields` | Deletes the listed fields from every city in # Cities. |
 | `militaryKeys` | Deletes the listed top-level sections from # Military. |
 | `militaryZoneFields` | Deletes the listed fields from every tactical zone in # Military. |
@@ -101,7 +103,7 @@ When editing:
 - Step notes are joined into the closing note, so write them as short lowercase phrases that read well after "this state was shortened".
 - Adding steps is cheap: a step that matches nothing in the current state is skipped and not reported.
 - Keep event steps in the shared tier order, least important first; a test checks this.
-- The ladder as configured stops at the `units` tier, so the two most important event tiers, `turning-points` and `diplomacy`, always survive.
+- The ladder stops at `progress`, so `turning-points` and `diplomacy` survive every evaluator trim.
 
 ## The closing note
 

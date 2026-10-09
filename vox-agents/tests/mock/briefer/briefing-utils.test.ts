@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLastBriefingState } from "../../../src/briefer/briefing-utils.js";
+import { getLastBriefingState, requestBriefing } from "../../../src/briefer/briefing-utils.js";
 import { type GameState, type StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
 
 /** Build a minimal GameState for a turn with the given reports. */
@@ -82,5 +82,53 @@ describe("getLastBriefingState", () => {
     // With only the combined key requested, the military-only turn is ignored.
     const combinedOnly = getLastBriefingState(parameters, 7, ["briefing"]);
     expect(combinedOnly?.turn).toBe(4);
+  });
+});
+
+describe("requestBriefing event fallback", () => {
+  it("should trim only the original failed snapshot without repeating its first attempt", async () => {
+    const original = { "4": [{ Type: "TileRevealed" }, { Type: "DeclareWar" }] };
+    const state = makeState(4, {}) as GameState & { events: Record<string, unknown> };
+    state.events = original;
+    const parameters = makeParameters(4, { 4: state });
+    const seen: unknown[] = [];
+    const context = {
+      callAgent: async (_agent: string, _input: unknown, onError?: () => void) => {
+        seen.push(structuredClone(state.mergedEvents ?? state.events));
+        if (seen.length === 1) {
+          onError?.();
+          state.events = { "1": [{ Type: "DeclareWar" }], "4": [{ Type: "TileRevealed" }] };
+        }
+        return undefined;
+      },
+    } as never;
+
+    await requestBriefing("combined", state, context, parameters);
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toEqual(original);
+    expect(seen[1]).toEqual({ "4": [{ Type: "DeclareWar" }] });
+    expect(state.events).toEqual({ "1": [{ Type: "DeclareWar" }], "4": [{ Type: "TileRevealed" }] });
+  });
+
+  it("should not restore events already absent from the strategist's merged window", async () => {
+    const state = makeState(4, {}) as GameState & { events: Record<string, unknown> };
+    state.events = { "4": [{ Type: "TileRevealed" }, { Type: "CityTrained" }, { Type: "DeclareWar" }] };
+    state.mergedEvents = { "4": [{ Type: "CityTrained" }, { Type: "DeclareWar" }] } as never;
+    const parameters = makeParameters(4, { 4: state });
+    const seen: unknown[] = [];
+    const context = {
+      callAgent: async (_agent: string, _input: unknown, onError?: () => void) => {
+        seen.push(structuredClone(state.mergedEvents ?? state.events));
+        onError?.();
+        return undefined;
+      },
+    } as never;
+
+    await requestBriefing("combined", state, context, parameters);
+
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toEqual({ "4": [{ Type: "CityTrained" }, { Type: "DeclareWar" }] });
+    expect(seen[1]).toEqual({ "4": [{ Type: "DeclareWar" }] });
   });
 });

@@ -46,14 +46,13 @@ export interface VoxPlayerOptions {
  */
 export class VoxPlayer {
   public readonly context: VoxContext<StrategistParameters>;
-  private parameters: StrategistParameters;
+  private parameters: StrategistParameters & { _decisionEventWindow: { fromTurn: number } };
   private logger;
   private pendingTurn?: number;
   private aborted = false;
   private running = false;
   private successful = false;
   private readonly pacing: NormalizedPacingConfig;
-  private lastDecisionTurn?: number;
   /**
    * Persistent event cursor: the highest event ID fetched so far. Each turn's root reads events
    * `after` this value and the cursor advances to the turn's `before` only after a successful
@@ -92,6 +91,7 @@ export class VoxPlayer {
       before: 0,
       workingMemory: {},
       gameStates: {},
+      _decisionEventWindow: { fromTurn: initialTurn },
       mode: playerConfig.strategist === "none-strategist" ? "Strategy" : (playerConfig.mode ?? "Flavor"),
       syncSeed,
       // Populated for every seat; only the human strategist reads it (to block
@@ -189,9 +189,7 @@ export class VoxPlayer {
           const turn = turnData;
           const before = turn * 1000000 + 999999;
           const after = this.eventCursor;
-          // lastDecisionTurn is seat-wide base state read by the strategist prompt; only the
-          // strategist root writes it (a chat root must never).
-          this.parameters.lastDecisionTurn = this.lastDecisionTurn;
+          const lastDecisionTurn = this.parameters.lastDecisionTurn;
           this.running = true;
 
           // Start a new trace for each turn (no parent)
@@ -206,7 +204,7 @@ export class VoxPlayer {
               'strategist.type': this.playerConfig.strategist,
               'pacing.every_turns': String(this.pacing.everyTurns),
               'pacing.interruption': this.pacing.interruption,
-              'pacing.last_decision_turn': this.lastDecisionTurn === undefined ? "" : String(this.lastDecisionTurn)
+              'pacing.last_decision_turn': lastDecisionTurn === undefined ? "" : String(lastDecisionTurn)
             }
           });
 
@@ -221,6 +219,9 @@ export class VoxPlayer {
                 await this.context.callTool("pause-game", { PlayerID: this.playerID }, params);
                 // Refresh all strategy parameters
                 const cullLimit = Math.max(10, this.pacing.everyTurns + 1);
+                // Pending decision events never reach back past the normal cache, so repeated
+                // failures cannot pin history forever.
+                this.releasePendingEventsBefore(turn - cullLimit + 1);
                 const state = await ensureGameState(this.context, params, cullLimit);
                 // Advance the event cursor: we've now fetched events through this turn. The next
                 // refresh fetches from here, so a turn dropped before it was processed folds its
@@ -228,14 +229,14 @@ export class VoxPlayer {
                 // leaving the cursor put so the next turn re-fetches the gap.
                 this.eventCursor = before;
 
-                const scheduled = isScheduledDecision(turn, this.lastDecisionTurn, this.pacing);
+                const scheduled = isScheduledDecision(turn, lastDecisionTurn, this.pacing);
                 const interrupted = shouldInterruptDecision(state, this.playerID, this.pacing);
                 const shouldDecide = scheduled || interrupted;
 
                 if (!shouldDecide) {
                   this.logger.info(
                     `Skipping ${this.playerConfig.strategist} on Turn ${turn} ` +
-                    `(lastDecisionTurn=${this.lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
+                    `(lastDecisionTurn=${lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
                     { GameID: params.gameID, PlayerID: params.playerID }
                   );
                   // Re-apply the current AI settings without recording a decision,
@@ -265,9 +266,7 @@ export class VoxPlayer {
                   return;
                 }
 
-                const eventFromTurn = this.lastDecisionTurn === undefined
-                  ? turn
-                  : this.lastDecisionTurn + 1;
+                const eventFromTurn = this.parameters._decisionEventWindow.fromTurn;
                 this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${turn}`, {
                   GameID: params.gameID,
                   PlayerID: params.playerID,
@@ -278,14 +277,11 @@ export class VoxPlayer {
                 const decided = await this.executeDecisionWithEventFallback(params, state, eventFromTurn, turnSpan);
 
                 // Finalizing (the event cursor was already advanced after the refresh).
-                // Only record a completed decision when one was actually made. If the
-                // decision was abandoned because even the current turn alone exceeded the
-                // model context, leave lastDecisionTurn untouched so this turn still counts
-                // as scheduled next turn — we retry next turn rather than waiting until the
-                // next paced decision point.
-                if (decided) {
-                  this.lastDecisionTurn = turn;
-                }
+                // Only record a decision that was actually made and not cancelled. Otherwise
+                // the event floor and lastDecisionTurn stay put, so this turn still counts as
+                // scheduled next turn: we retry next turn rather than waiting until the next
+                // paced decision point.
+                if (decided && !run.signal.aborted) this.recordDecision(turn);
 
                 // Recording the tokens and resume the game
                 this.running = false;
@@ -390,12 +386,31 @@ export class VoxPlayer {
   }
 
   /**
-   * Execute a strategist decision, narrowing the event window one turn at a
-   * time when the model context is exceeded. Returns true once a decision is
-   * made (including the no-op "none" strategist). If the current turn alone is
-   * still too large, drops its least important events one group at a time. If
-   * even its most important events are too large, returns false so the caller
-   * can retry next turn instead of recording a completed decision.
+   * Record a completed decision. Pacing counts from this turn, and pending decision events
+   * restart after it. lastDecisionTurn is seat-wide base state read by the strategist prompt;
+   * only the strategist root writes it (a chat root must never).
+   */
+  private recordDecision(turn: number): void {
+    this.parameters.lastDecisionTurn = turn;
+    this.parameters._decisionEventWindow.fromTurn = turn + 1;
+  }
+
+  /** Stop retaining pending decision events before `turn`, logging the turns a seat gives up. */
+  private releasePendingEventsBefore(turn: number): void {
+    const window = this.parameters._decisionEventWindow;
+    if (window.fromTurn >= turn) return;
+    this.logger.warn(
+      `No decision has covered turns ${window.fromTurn}-${turn - 1}; releasing their pending events.`,
+      { GameID: this.parameters.gameID, PlayerID: this.playerID }
+    );
+    window.fromTurn = turn;
+  }
+
+  /**
+   * Execute a decision, dropping lower importance events across the pending window on overflow,
+   * then older turns' turning points as a last resort. Return false if nothing fits, so the
+   * caller retains the pending history and retries next turn. The no-op "none" strategist
+   * counts as success.
    */
   private async executeDecisionWithEventFallback(
     parameters: StrategistParameters,
@@ -404,6 +419,12 @@ export class VoxPlayer {
     turnSpan: Span
   ): Promise<boolean> {
     const decided = await withEventWindowFallback(parameters, state, eventFromTurn, async (eventWindow) => {
+      if (eventWindow.fromTurn > eventFromTurn) {
+        this.logger.warn(
+          `Turning points still exceed the context on turn ${parameters.turn}; dropping events from turns ${eventFromTurn}-${eventWindow.fromTurn - 1}.`,
+          { GameID: parameters.gameID, PlayerID: parameters.playerID }
+        );
+      }
       turnSpan.setAttributes({
         event_from: eventWindow.fromTurn,
         event_to: eventWindow.toTurn,

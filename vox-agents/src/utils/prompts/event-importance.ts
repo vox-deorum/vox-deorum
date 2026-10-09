@@ -14,54 +14,61 @@ export interface EventTier {
 }
 
 /**
- * Event types grouped by importance, most important first. Unlisted types belong to the noise
- * tier. Events blocked by the DLL's forwarding blacklist are omitted.
+ * Event types grouped by importance, most important first. Unlisted, missing, and malformed types
+ * belong to the noise tier. Event types are the canonical names the knowledge store records,
+ * never the raw names it remaps. Events blocked by the DLL's forwarding blacklist are omitted.
  */
 export const eventImportanceTiers = [
-  // Turning points: war and peace, conquest, deals, messages, and ideology.
+  // Turning points: war and peace, conquest, deals, messages, policy branches (every branch
+  // unlock, ideologies included), victory, and projects.
   { name: "turning-points", types: [
     "DeclareWar", "MakePeace", "NuclearDetonation", "CityCaptureComplete", "CityRazed", "CityPuppeted",
     "CityFlipped", "PlayerLiberated", "CapitalChanged", "RelayedMessage", "DiplomaticMessage", "DealMade",
-    "IdeologyAdopted", "IdeologySwitched", "ResolutionResult", "ReligionFounded", "PlayerAnarchy",
+    "PlayerAdoptPolicyBranch", "IdeologySwitched", "ResolutionResult", "ReligionFounded", "PlayerAnarchy",
+    "PlayerVictory", "CityProjectComplete",
   ] },
   // Diplomatic and strategic shifts.
   { name: "diplomacy", types: [
     "TeamMeet", "SetAlly", "MinorAlliesChanged", "UiDiploEvent", "ElectionResultSuccess", "ElectionResultFailure",
-    "PlayerBullied", "PlayerGifted", "PlayerProtected", "PlayerRevoked", "PlayerBoughtOut",
+    "PlayerBullied", "PlayerProtected", "PlayerRevoked", "PlayerBoughtOut",
     "PlayerPlunderedTradeRoute", "StealPlot", "PlayerAdoptsGovernment", "PlayerSecularizes", "StateReligionAdopted",
-    "StateReligionChanged", "UnitCityFounded", "PlayerGoldenAge", "LoyaltyStateChanged", "CircumnavigatedGlobe",
+    "StateReligionChanged", "UnitCityFounded", "LoyaltyStateChanged",
   ] },
-  // Units: training, creation, upgrades, and losses, which change the balance of forces.
-  { name: "units", types: [
-    "CityTrained", "UnitCreated", "EventUnitCreated", "CityInvestedUnit", "UnitUpgraded", "UnitConverted",
-    "UnitKilledInCombat", "UnitCaptured",
-  ] },
-  // Progress: policies, technologies, wonders, great people, religion, and city-state relations.
+  // Progress: policies, technologies, buildings and wonders, eras, great people, religion, espionage.
   { name: "progress", types: [
-    "PlayerAdoptPolicy", "TeamTechResearched", "PlayerBuilt", "CityConstructed",
-    "CityProjectComplete", "GreatPersonExpended", "GreatWorkCreated", "PantheonFounded", "ReligionEnhanced",
-    "ReligionReformed", "CityConvertsReligion", "CityConvertsPantheon", "PlayerAdoptsCurrency", "ProvinceLevelChanged",
-    "ContractStarted", "ContractEnded", "ContractsRefreshed", "MinorFriendsChanged", "EspionageState",
-    "EspionageNotificationData", "MinorGift", "MinorGiftUnit", "NaturalWonderDiscovered", "PlayerTradeRouteCompleted",
-    "GovernmentCooldownChanges", "GovernmentCooldownRateChanges", "ReformCooldownChanges", "ReformCooldownRateChanges",
-    "PlayerEndOfMayaLongCount", "GoodyHutTechResearched",
+    "PlayerAdoptPolicy", "TeamTechResearched", "CityConstructed", "GreatPersonExpended", "GreatWorkCreated",
+    "PantheonFounded", "ReligionEnhanced", "ReligionReformed", "CityConvertsReligion", "CityConvertsPantheon",
+    "PlayerAdoptsCurrency", "ProvinceLevelChanged", "ContractStarted", "ContractEnded", "MinorFriendsChanged",
+    "EspionageState", "EspionageResult", "MinorGift", "MinorGiftUnit", "NaturalWonderDiscovered",
+    "PlayerTradeRouteCompleted", "PlayerEndOfMayaLongCount", "GoodyHutTechResearched",
+    "TeamSetEra", "PlayerGoldenAge", "CircumnavigatedGlobe",
+  ] },
+  // Force changes: upgrades, conversions, losses, and captures, which shift the balance of forces.
+  { name: "force-changes", types: [
+    "UnitUpgraded", "UnitConverted", "UnitKilledInCombat", "UnitCaptured",
   ] },
   // Combat detail: individual battles, promotions, and barbarian camps.
   { name: "combat", types: [
     "CombatResult", "UnitPromoted", "BarbariansCampCleared", "BarbariansCampFounded",
   ] },
-  // Economy detail: city growth, purchases, and city events.
+  // Routine units: training, creation, and production investment.
+  { name: "units", types: [
+    "CityTrained", "UnitCreated", "EventUnitCreated", "CityInvestedUnit",
+  ] },
+  // Economy detail: city growth, purchases, worker construction, and city events.
   { name: "economy", types: [
     "SetPopulation", "CityCreated", "CityBoughtPlot", "CityInvestedBuilding", "CitySoldBuilding", "BuildFinished",
-    "CityBeginsWLTKD", "CityEndsWLTKD", "CityExtendsWLTKD", "CityEventActivated", "CityEventChoiceActivated",
+    "CityBeginsWLTKD", "CityEndsWLTKD", "CityExtendsWeLoveKingDay", "CityEventActivated", "CityEventChoiceActivated",
     "CityEventChoiceEnded", "EventActivated", "EventChoiceActivated", "EventChoiceEnded",
     "ChangeGoldenAgeProgressMeter", "PietyChanged", "PietyRateChanged", "GoodyHutReceivedBonus", "PlaceResource",
-    "PlayerBuilding", "TileOwnershipChanged",
+    "UnitBuildStart", "UnitBuildCompleted", "TileOwnershipChanged", "PlayerGifted",
   ] },
-  // Noise: tiles, unit movement, remaining system events, and all unlisted types.
+  // Noise: tiles, unit movement, cooldown and contract refreshes, and all unlisted types.
   { name: "noise", types: [
     "TileFeatureChanged", "TileImprovementChanged", "TileRouteChanged", "TileRevealed", "TerraformingMap",
-    "UnitSetXY", "RebaseTo", "PushingMissionTo", "ParadropAt", "PlayerDoTurn", "PlayerDoneTurn", "TeamSetEra", "TurnComplete",
+    "UnitMoved", "RebaseTo", "PushingMissionTo", "ParadropAt", "PlayerDoTurn", "PlayerDoneTurn", "TurnComplete",
+    "ContractsRefreshed", "GovernmentCooldownChanges", "GovernmentCooldownRateChanges", "ReformCooldownChanges",
+    "ReformCooldownRateChanges",
   ] },
 ] as const satisfies readonly EventTier[];
 

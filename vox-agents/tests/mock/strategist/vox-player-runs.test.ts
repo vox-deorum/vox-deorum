@@ -54,7 +54,10 @@ describe('VoxPlayer per-turn root runs', () => {
     // resolve to a non-error stand-in so the real ensureGameState/refreshGameState path succeeds.
     vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
     // Stub the strategist execution itself — we only care about the surrounding run wiring.
-    const execute = vi.spyOn(player.context, 'execute').mockResolvedValue(undefined);
+    const decisionMarkers: Array<unknown> = [];
+    const execute = vi.spyOn(player.context, 'execute').mockImplementation(async () => {
+      decisionMarkers.push(player.context.currentParameters?._decisionEventWindow);
+    });
 
     // Capture each turn's withRun overrides and pump the next turn (then stop) once the turn settles.
     const overridesSeen: Array<Partial<StrategistParameters>> = [];
@@ -83,9 +86,84 @@ describe('VoxPlayer per-turn root runs', () => {
     // The strategist ran once per turn.
     expect(execute).toHaveBeenCalledTimes(2);
     expect(execute.mock.calls.every((c) => c[0] === 'simple-strategist')).toBe(true);
+    expect(decisionMarkers).toHaveLength(2);
+    expect(decisionMarkers.every((marker) => marker === player.context.getBaseParameters()?._decisionEventWindow)).toBe(true);
+    // Successful decisions release the shared pending floor for the next turn.
+    expect(player.context.getBaseParameters()?._decisionEventWindow).toEqual({ fromTurn: 3 });
+    expect(player.context.getBaseParameters()?.lastDecisionTurn).toBe(2);
 
     // The context's base parameters were never mutated per turn — turn is purely run-local.
     expect(player.context.getBaseParameters()?.turn).toBe(-1);
+  });
+
+  it('should keep the pending event floor when cancellation arrives as execution settles', async () => {
+    const player = new VoxPlayer({
+      playerID: 1,
+      playerConfig,
+      gameID: 'game-cancel-floor',
+      initialTurn: 0,
+      humanDecisionBus: new HumanDecisionBus(),
+    });
+    vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
+    vi.spyOn(player.context, 'execute').mockImplementation(async () => {
+      player.abort();
+    });
+    player.notifyTurn(1);
+
+    await player.execute();
+
+    expect(player.context.getBaseParameters()?._decisionEventWindow).toEqual({ fromTurn: 0 });
+    expect(player.context.getBaseParameters()?.lastDecisionTurn).toBeUndefined();
+  });
+
+  it('should retain a pending turning point across overflowed turns until it leaves the cache window', async () => {
+    const player = new VoxPlayer({
+      playerID: 1,
+      playerConfig,
+      gameID: 'game-pending-events',
+      initialTurn: 0,
+      humanDecisionBus: new HumanDecisionBus(),
+    });
+    let eventFetches = 0;
+    vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) => {
+      if (name === 'get-events') {
+        eventFetches++;
+        return (eventFetches === 1 ? { '1': [{ Type: 'DeclareWar' }] } : {}) as never;
+      }
+      return {} as never;
+    });
+    // The full pending window each turn's first attempt saw, by turn.
+    const firstWindows = new Map<number, unknown>();
+    vi.spyOn(player.context, 'execute').mockImplementation(async (...args) => {
+      const parameters = player.context.currentParameters!;
+      if (!firstWindows.has(parameters.turn)) {
+        firstWindows.set(parameters.turn, structuredClone(parameters.gameStates[parameters.turn]?.mergedEvents));
+      }
+      (args[4] as (() => void) | undefined)?.();
+    });
+
+    let turnsStarted = 0;
+    const realWithRun = player.context.withRun.bind(player.context);
+    vi.spyOn(player.context, 'withRun').mockImplementation((options: VoxRunOptions<StrategistParameters>, cb) =>
+      realWithRun(options, cb as never).then((result) => {
+        turnsStarted++;
+        if (turnsStarted < 12) player.notifyTurn(turnsStarted + 1);
+        else player.abort(true);
+        return result;
+      }));
+
+    player.notifyTurn(1);
+    await player.execute();
+
+    // With the default cache of 10 turns, turn 1 stays pending through turn 10 and is then released.
+    const base = player.context.getBaseParameters()!;
+    expect(firstWindows.size).toBe(12);
+    for (const [turn, window] of firstWindows) {
+      expect(window, `turn ${turn}`).toEqual(turn <= 10 ? { '1': [{ Type: 'DeclareWar' }] } : {});
+    }
+    expect(base._decisionEventWindow).toEqual({ fromTurn: 3 });
+    expect(base.lastDecisionTurn).toBeUndefined();
+    expect(base.gameStates[1]).toBeUndefined();
   });
 
 });

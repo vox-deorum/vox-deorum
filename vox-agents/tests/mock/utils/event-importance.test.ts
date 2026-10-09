@@ -1,9 +1,10 @@
 /**
  * Tests for importance-based event trimming (src/utils/prompts/event-importance.ts): the explicit
- * tier table names each group of types and lists no type twice, `dropEventTiers` removes tiers by
- * name in any combination (unlisted, missing, and non-string types count as noise, so dropping
- * `noise` removes them together with the noise tier), and `dropLeastImportantEvents` removes one
- * importance group per level from the least important end.
+ * tier table names each group of types once, in the approved order, using only the canonical
+ * names the knowledge store records, `dropEventTiers` removes tiers by name in any combination
+ * (unlisted, missing, and non-string types count as noise, so dropping `noise` removes them
+ * together with the noise tier), and `dropLeastImportantEvents` removes one importance group per
+ * level from the least important end.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -21,6 +22,21 @@ const tierLeaders = eventImportanceTiers.map(tier => tier.types[0]);
 
 /** The least important tier's type: dropped together with unknown types at level 1. */
 const noiseType = tierLeaders[tierLeaders.length - 1];
+
+/** The index of the tier with the given name. */
+function tierIndex(name: string): number {
+  return eventImportanceTiers.findIndex(tier => tier.name === name);
+}
+
+/** The name of the tier that explicitly lists a type, or `<unlisted>` when no tier names it. */
+function tierOf(type: string): string {
+  return eventImportanceTiers.find(tier => (tier.types as readonly string[]).includes(type))?.name ?? '<unlisted>';
+}
+
+/** The tier index of a type, treating unlisted types as noise (the deepest tier). */
+function rank(type: string): number {
+  return tierOf(type) === '<unlisted>' ? eventImportanceTiers.length - 1 : tierIndex(tierOf(type));
+}
 
 /** One event of a type, shaped like a consolidated `get-events` entry. */
 function event(type: string): { Type: string } {
@@ -53,18 +69,31 @@ describe('eventImportanceTiers', () => {
     }
   });
 
-  it('should rank unit events above progress, combat below it, and movement as noise', () => {
-    const rank = (type: string) => eventImportanceTiers.findIndex(tier => (tier.types as readonly string[]).includes(type));
-    const progress = rank('TeamTechResearched');
+  it('should protect turning points as the top tier, with victories, projects, and policy branches', () => {
+    expect(eventImportanceTiers[0].name).toBe('turning-points');
+    for (const type of ['DeclareWar', 'PlayerAdoptPolicyBranch', 'PlayerVictory', 'CityProjectComplete']) {
+      expect(tierOf(type), type).toBe('turning-points');
+    }
+  });
 
-    for (const type of ['CityTrained', 'UnitCreated', 'UnitUpgraded', 'UnitKilledInCombat']) {
-      expect(rank(type), type).toBeLessThan(progress);
+  it('should rank progress above force changes, combat, and routine units', () => {
+    const types = ['TeamTechResearched', 'UnitUpgraded', 'CombatResult', 'CityTrained', 'SetPopulation'];
+    const ranks = types.map(rank);
+    for (let index = 1; index < ranks.length; index++) {
+      expect(ranks[index], `${types[index]} below ${types[index - 1]}`).toBeGreaterThan(ranks[index - 1]);
     }
-    expect(rank('CombatResult')).toBeGreaterThan(progress);
-    expect(rank('CombatResult')).toBeLessThan(rank('SetPopulation'));
-    for (const type of ['UnitSetXY', 'ParadropAt', 'RebaseTo']) {
-      expect(rank(type), type).toBe(eventImportanceTiers.length - 1);
+  });
+
+  it('should list canonical names only, leaving the remapped raw names unlisted noise', () => {
+    for (const raw of ['PlayerBuilt', 'PlayerBuilding', 'UnitSetXY', 'EspionageNotificationData', 'CityExtendsWLTKD', 'IdeologyAdopted']) {
+      expect(tierOf(raw), raw).toBe('<unlisted>');
     }
+
+    // Unlisted raw names drop with the first trim level, together with the noise tier.
+    const events = { '5': [...tierLeaders.map(event), event('IdeologyAdopted')] };
+    const result = dropLeastImportantEvents(events, 1);
+    expect(keptTypes(result.events)).toEqual(tierLeaders.slice(0, -1));
+    expect(result.droppedEvents).toBe(2); // the noise-tier leader and the unlisted raw name
   });
 
   it('should allow trimming past every tier except the top one', () => {
@@ -78,12 +107,14 @@ describe('dropEventTiers', () => {
 
     // One tier: both its neighbours keep their events.
     const one = dropEventTiers(events, ['progress']);
-    expect(keptTypes(one.events)).toEqual(tierLeaders.filter((_, index) => index !== 3));
+    expect(keptTypes(one.events)).toEqual(tierLeaders.filter((_, index) => index !== tierIndex('progress')));
     expect(one.droppedEvents).toBe(1);
 
     // Two tiers at once, and an unnamed tier between them survives.
     const two = dropEventTiers(events, ['combat', 'noise']);
-    expect(keptTypes(two.events)).toEqual(tierLeaders.filter((_, index) => index !== 4 && index !== 6));
+    expect(keptTypes(two.events)).toEqual(
+      tierLeaders.filter((_, index) => index !== tierIndex('combat') && index !== tierIndex('noise')),
+    );
     expect(two.droppedEvents).toBe(2);
   });
 
@@ -130,10 +161,12 @@ describe('dropEventTiers', () => {
   });
 
   it('should report how many events were dropped, across every turn', () => {
+    const progress = tierLeaders[tierIndex('progress')];
+    const economy = tierLeaders[tierIndex('economy')];
     const events = {
-      '3': [event(tierLeaders[3]), event(unknownType)],
-      '4': [event(tierLeaders[3]), event(tierLeaders[0])],
-      '5': [event(tierLeaders[5])],
+      '3': [event(progress), event(unknownType)],
+      '4': [event(progress), event(tierLeaders[0])],
+      '5': [event(economy)],
     };
 
     const result = dropEventTiers(events, ['progress', 'economy']);

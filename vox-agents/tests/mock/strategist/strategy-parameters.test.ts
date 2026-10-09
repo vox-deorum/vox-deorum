@@ -143,6 +143,32 @@ describe("strategy-parameters", () => {
         expect(params.gameStates[35]).toBe(future);
         expect(params.gameStates[30]).toBeDefined();
       });
+
+      it("should retain pending history during concurrent refreshes and release it after success", async () => {
+        registerReportTools(ctx);
+        const params = makeStrategistParameters({
+          turn: 30,
+          gameStates: { 1: makeGameState(1), 18: makeGameState(18), 35: makeGameState(35) },
+        });
+        params._decisionEventWindow = { fromTurn: 1 };
+        const composed = { ...params, turn: 30 };
+
+        await Promise.all([
+          refreshGameState(ctx.asContext(), params, 10),
+          refreshGameState(ctx.asContext(), composed, 10),
+        ]);
+
+        expect(params.gameStates[1]).toBeDefined();
+        expect(params.gameStates[18]).toBeDefined();
+        expect(params.gameStates[35]).toBeDefined();
+        expect(composed._decisionEventWindow).toBe(params._decisionEventWindow);
+        params._decisionEventWindow.fromTurn = 31;
+        expect(composed._decisionEventWindow.fromTurn).toBe(31);
+        await refreshGameState(ctx.asContext(), composed, 10);
+        expect(params.gameStates[1]).toBeUndefined();
+        expect(params.gameStates[18]).toBeUndefined();
+        expect(params.gameStates[30]).toBeDefined();
+      });
     });
 
     describe("same-turn in-place update", () => {

@@ -32,6 +32,8 @@ export interface StrategistParameters extends AgentParameters {
   mode: StrategyDecisionType;
   /** Last turn where this player completed strategic decision-making. */
   lastDecisionTurn?: number;
+  /** Shared retention floor for events awaiting a successful strategic decision. */
+  _decisionEventWindow?: { fromTurn: number };
   /** Pre-defined sync random seed (RandomSeedsConfig.sync) configured in vox-agents, if fixed. */
   syncSeed?: number;
   /** Internal: the session's per-game human-decision bus (not serialized). Populated
@@ -213,9 +215,13 @@ export async function refreshGameState(
 
   // Cull old game states relative to the HIGHEST cached turn, not this run's turn, so a lagging
   // strategist refresh never deletes a newer chat snapshot — and never deletes an entry just for
-  // being "later" than this run's turn. Keep only turns within cullLimit of the newest cached turn.
+  // being "later" than this run's turn. Pending decisions pin their history until success;
+  // the shared marker also applies to concurrent chat refreshes.
   const highestTurn = Math.max(...Object.keys(parameters.gameStates).map(Number));
-  const oldestAllowedTurn = highestTurn - cullLimit;
+  const oldestAllowedTurn = Math.min(
+    highestTurn - cullLimit,
+    parameters._decisionEventWindow?.fromTurn ?? Infinity
+  );
 
   for (const turnStr of Object.keys(parameters.gameStates)) {
     const turn = Number(turnStr);
@@ -505,42 +511,11 @@ export function mergeCachedEvents(
 }
 
 /**
- * Return progressively narrower event windows for context-length retries.
- * Each retry drops the oldest remaining turn while keeping the current turn.
- */
-export function getDecisionEventWindows(fromTurn: number, toTurn: number): Array<{ fromTurn: number; toTurn: number }> {
-  if (fromTurn > toTurn) return [];
-
-  const windows: Array<{ fromTurn: number; toTurn: number }> = [];
-  for (let turn = fromTurn; turn <= toTurn; turn++) {
-    windows.push({ fromTurn: turn, toTurn });
-  }
-  return windows;
-}
-
-/**
- * Run `attempt` against progressively narrower event windows (from `eventFromTurn`
- * through `parameters.turn`), dropping the oldest remaining turn on each retry. Before
- * each try, the candidate window is assigned to the DERIVED `state.mergedEvents` field.
- *
- * It never mutates the immutable per-turn `state.events` slice. {@link mergeCachedEvents} builds
- * each window from the per-turn slices in `gameStates`, so writing `state.mergedEvents` here does
- * not feed back into the next (narrower) merge — the old snapshot/restore workaround is gone.
- * Strategists and briefers read `state.mergedEvents ?? state.events`, so the selected window stays
- * available to nested/cached briefer consumption; on total failure the final attempted window
- * remains on the state for diagnostics without disturbing the slice.
- *
- * Stops and returns `true` at the first window where `attempt` resolves `true` (success).
- * Returns `false` if every window was exhausted without success — including the case where
- * the window is empty (`eventFromTurn > parameters.turn`), in which case `attempt` is never
- * called and the caller should fall back to whatever it does when no decision is produced.
- *
- * When even the single-turn window fails, it keeps that turn and drops its least important
- * events one importance group at a time (see `utils/prompts/event-importance.ts`), passing the
- * number of dropped groups as `droppedTiers`. Groups that would drop nothing are skipped.
- *
- * Shared by the strategist decision loop (raw-event strategists) and the briefer
- * (`requestBriefing`), both of which need to shrink an oversized paced event window.
+ * Attempt a decision over the full pending event window, then retry it with cumulative
+ * importance tiers dropped, least first. Turning points survive every tier retry regardless of
+ * age. If even they do not fit, one last attempt keeps only the current turn's turning points,
+ * so an oversized history cannot block every later decision. Exhaustion returns false and leaves
+ * the final derived report for diagnostics without changing cached event slices.
  */
 export async function withEventWindowFallback(
   parameters: StrategistParameters,
@@ -548,32 +523,54 @@ export async function withEventWindowFallback(
   eventFromTurn: number,
   attempt: (window: EventWindow) => Promise<boolean>
 ): Promise<boolean> {
-  const windows = getDecisionEventWindows(eventFromTurn, parameters.turn);
+  const toTurn = parameters.turn;
+  if (eventFromTurn > toTurn) return false;
+  const window = { fromTurn: eventFromTurn, toTurn };
+  const events = mergeCachedEvents(parameters, eventFromTurn, toTurn);
+  state.mergedEvents = events;
+  if (await attempt(window)) return true;
+  if (await retryWithFewerEvents(state, events, droppedTiers => attempt({ ...window, droppedTiers }))) return true;
 
-  for (const window of windows) {
-    state.mergedEvents = mergeCachedEvents(parameters, window.fromTurn, window.toTurn);
-    if (await attempt(window)) return true;
-  }
+  // Last resort, only when older turns still hold turning points the current turn lacks.
+  if (eventFromTurn === toTurn) return false;
+  const current = dropLeastImportantEvents(mergeCachedEvents(parameters, toTurn, toTurn), maxEventTrimLevel).events;
+  if (countEvents(current) === countEvents(dropLeastImportantEvents(events, maxEventTrimLevel).events)) return false;
+  state.mergedEvents = current;
+  return attempt({ fromTurn: toTurn, toTurn, droppedTiers: maxEventTrimLevel });
+}
 
-  const last = windows[windows.length - 1];
-  if (!last) return false;
-  const singleTurn = mergeCachedEvents(parameters, last.fromTurn, last.toTurn);
+/**
+ * Retry an overflowed attempt with cumulative importance tiers dropped from `events`, least
+ * important first. Each trimmed copy goes to `state.mergedEvents` before its attempt. Levels that
+ * drop nothing new are skipped, and the first successful attempt stops the walk. Briefers call
+ * this directly with the report that just failed, so a retry never widens it.
+ */
+export async function retryWithFewerEvents(
+  state: GameState,
+  events: EventsReport,
+  attempt: (droppedTiers: number) => Promise<boolean>
+): Promise<boolean> {
   let droppedEvents = 0;
   for (let level = 1; level <= maxEventTrimLevel; level++) {
-    const trimmed = dropLeastImportantEvents(singleTurn, level);
+    const trimmed = dropLeastImportantEvents(events, level);
     if (trimmed.droppedEvents === droppedEvents) continue;
     droppedEvents = trimmed.droppedEvents;
     state.mergedEvents = trimmed.events;
-    if (await attempt({ ...last, droppedTiers: level })) return true;
+    if (await attempt(level)) return true;
   }
 
   return false;
+}
+
+/** Count the events in a turn-keyed report, ignoring non-array entries such as `_markdownConfig`. */
+function countEvents(events: EventsReport): number {
+  return Object.values(events).reduce((count: number, value) => count + (Array.isArray(value) ? value.length : 0), 0);
 }
 
 /** One candidate event window for {@link withEventWindowFallback}. */
 export interface EventWindow {
   fromTurn: number;
   toTurn: number;
-  /** Importance groups dropped from the window's events, when trimming went past turn narrowing. */
+  /** Cumulative importance groups dropped from the full window's events. */
   droppedTiers?: number;
 }
