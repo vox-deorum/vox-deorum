@@ -26,7 +26,7 @@ import { AgentParameters, VoxAgent } from "./vox-agent.js";
 import type { TriageDecision } from "./vox-agent.js";
 import { createLogger } from "../utils/logger.js";
 import { mcpClient } from "../utils/models/mcp-client.js";
-import { Model, ResolvedFilesConfig, StreamingEventCallback, TriageSetting } from "../types/index.js";
+import { Model, PromptsSetting, ResolvedFilesConfig, StreamingEventCallback, TriageSetting } from "../types/index.js";
 import { v4 as uuidv4 } from 'uuid';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
@@ -104,6 +104,12 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    * `resolveSeatFiles`); every other context has no workspace.
    */
   public files?: ResolvedFilesConfig;
+
+  /**
+   * Custom prompt folder for this context's system prompts. Strategist seat contexts set it (see
+   * `resolveSeatPrompts`); every other context leaves it unset and uses the root setting.
+   */
+  public prompts?: PromptsSetting;
 
   /** Workspaces by game and player, so every agent of a seat shares one shell. */
   private readonly workspaces = new Map<string, PlayerWorkspace>();

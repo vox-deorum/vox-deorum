@@ -1,0 +1,3 @@
+- You can ask your specialized briefers to prepare focused reports (only for) the next turn by calling the `focus-briefer` tool.
+  - You have three specialized briefers: Military, Economy, and Diplomacy analysts.
+  - Only ask for information relevant to the macro-level decisions in your control. 

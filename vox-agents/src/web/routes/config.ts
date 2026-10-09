@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import { isDeepStrictEqual } from 'node:util';
 import { createLogger } from '../../utils/logger.js';
 import { config, loadVoxConfig, refreshConfig } from '../../utils/config.js';
+import { reloadRootPrompts, validatePromptsSetting } from '../../utils/prompts/prompt-files.js';
 import { defaultConfig } from '../../utils/config/defaults.js';
 import { computeConfigDiff } from '../../utils/config/diff.js';
 import { discoverModels, DiscoveryError } from '../../utils/models/discovery.js';
@@ -285,6 +286,17 @@ router.post('/', async (req: Request<object, object, Partial<ConfigResponse>>, r
       ? undefined
       : computeConfigDiff(config as VoxAgentsConfig, defaultConfig);
 
+    // Reject an invalid root prompt folder before writing anything, so it is never saved and the
+    // dashboard shows the reason.
+    if (configDiff !== undefined) {
+      try {
+        validatePromptsSetting((config as VoxAgentsConfig).prompts ?? false, 'config.prompts');
+      } catch (error) {
+        res.status(400).json({ error: (error as Error).message });
+        return;
+      }
+    }
+
     // Update .env before config.json so an API-key write failure cannot install a new default model.
     if (apiKeys) {
       const envPath = path.join(process.cwd(), '.env');
@@ -318,6 +330,8 @@ router.post('/', async (req: Request<object, object, Partial<ConfigResponse>>, r
       // Refresh the in-memory configuration
       refreshConfig();
       logger.info('Refreshed system configuration');
+      // Reload the root prompt folder, validated above, so later chats read the saved files.
+      reloadRootPrompts();
     }
 
     res.json({ success: true });

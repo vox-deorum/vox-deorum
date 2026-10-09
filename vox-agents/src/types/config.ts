@@ -126,6 +126,8 @@ export interface VoxAgentsConfig {
   triage?: TriageSetting;
   /** Default files for every seat when neither the seat nor the session sets one. */
   files?: FilesSetting;
+  /** Default custom prompt folder for every seat and for runs outside a seat; false uses the built-ins. */
+  prompts?: PromptsSetting;
   /** Launch the DirectX 11 build of Civilization V when the install has one. Defaults to true. */
   useDX11?: boolean;
 }
@@ -239,6 +241,12 @@ export interface FilesConfig {
 /** The `files` setting: off, a shorthand game access level, or a full object. */
 export type FilesSetting = false | FileAccess | FilesConfig;
 
+/**
+ * The `prompts` setting: false for the built-in prompts, or a folder (relative to `vox-agents/`)
+ * whose Markdown files override built-in prompt templates of the same path.
+ */
+export type PromptsSetting = false | string;
+
 /** The normalized form agents read; quota is always set. */
 export type ResolvedFilesConfig = Required<FilesConfig>;
 
@@ -269,6 +277,8 @@ export interface PlayerConfig {
   triage?: TriageSetting;
   /** Files for this seat's workspace; replaces the session and root settings when present. */
   files?: FilesSetting;
+  /** Custom prompt folder for this seat's agents; replaces the session and root settings when present. */
+  prompts?: PromptsSetting;
 }
 
 /**
@@ -351,6 +361,9 @@ export interface StrategistSessionConfig extends SessionConfig {
 
   /** Files for every seat that doesn't set its own; replaces the root setting when present. */
   files?: FilesSetting;
+
+  /** Custom prompt folder for every seat that doesn't set its own; replaces the root setting when present. */
+  prompts?: PromptsSetting;
 
   /**
    * Controls randomization of the mapping between config slots and actual game

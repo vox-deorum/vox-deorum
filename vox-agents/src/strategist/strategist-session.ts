@@ -27,7 +27,8 @@ import { unwrapMcpResponse } from "../utils/models/mcp-response.js";
 import { agentRegistry } from '../infra/agent-registry.js';
 import { ensureModelsResolved, selectEvaluatorReference, selectModelReference } from '../utils/models/resolution.js';
 import { triageEnabled } from '../infra/triage.js';
-import { resolveSeatFiles, resolveSeatTriage, seatAgents } from './seat-config.js';
+import { resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage, seatAgents } from './seat-config.js';
+import { reloadPromptSets, rootPrompts } from '../utils/prompts/prompt-files.js';
 import { DEFAULT_NEGOTIATOR } from '../envoy/agents/resolve-negotiator.js';
 import {
   autoPlayTurnLimit,
@@ -126,6 +127,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       for (const [slot, playerConfig] of Object.entries(this.config.llmPlayers)) {
         await ensureModelsResolved(this.modelReferencesForPlayer(slot, playerConfig), playerConfig.llms);
       }
+      // Reload and validate every prompt folder in use, so template edits apply from this session on.
+      reloadPromptSets(this.promptFolders());
 
       const luaScript = this.config.gameMode === 'start' ? 'StartGame.lua' :
         this.config.gameMode === 'wait' ? 'LoadMods.lua' : 'LoadGame.lua';
@@ -584,6 +587,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
       const player = new VoxPlayer({
         playerID: actualPlayerID,
+        slot: configSlotStr,
         playerConfig,
         gameID: params.gameID,
         initialTurn: params.turn,
@@ -592,6 +596,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         session: this,
         triage: this.config.triage,
         files: this.config.files,
+        prompts: this.config.prompts,
       });
       await player.context.registerTools();
       this.activePlayers.set(actualPlayerID, player);
@@ -673,6 +678,20 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       this.ingameBridge.resetEventDedup();
     }
     await this.recoverGame();
+  }
+
+  /**
+   * The custom prompt folders this session uses: each seat's resolved setting and the root
+   * setting, which runs outside a seat use.
+   *
+   * @throws if a prompts setting is invalid (see {@link resolveSeatPrompts})
+   */
+  private promptFolders(): Set<string | undefined> {
+    const settings = [
+      rootPrompts(),
+      ...Object.entries(this.config.llmPlayers).map(([slot, playerConfig]) => resolveSeatPrompts(playerConfig, this.config.prompts, slot)),
+    ];
+    return new Set(settings.map(setting => setting === false ? undefined : setting));
   }
 
   /**

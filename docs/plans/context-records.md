@@ -38,7 +38,7 @@ Implement in order. Keep prompts inline through Stage 2 so agents retain their r
 
 ## Acceptance
 
-Use the checks in each stage as the acceptance checklist. Confirm all default prompts passed the temporary golden tests, then remove those tests and snapshots. Keep the behavior and contract tests.
+Use the checks in each stage as the acceptance checklist. Confirm all default prompts passed the temporary golden tests, then delete the local copies. They are gitignored and never committed. Keep the behavior and contract tests.
 
 Run the existing caching, step-budget, envoy, analyst, negotiator, pacing, and oracle suites, then `npm run build:all` and `npm run test:all` from the repository root.
 

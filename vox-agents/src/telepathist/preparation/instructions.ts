@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod';
-import { summarizerGuidelines } from '../summarizer.js';
+import { renderSystemPrompt } from '../../utils/prompts/prompt-files.js';
 
 /** Zod schema for turn summary structured output */
 export const turnSummarySchema = z.object({
@@ -63,7 +63,7 @@ function buildSummaryInstruction(scope: SummaryScope): [string, string] {
   const instruction = `${preamble}
 
 # Guidelines
-${summarizerGuidelines}
+${renderSystemPrompt(undefined, 'shared/historian-guidelines')}
 
 # Situation
 ${situationDesc}

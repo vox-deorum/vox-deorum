@@ -11,6 +11,6 @@
 
 /**
  * The `send-message` tool name, exported as a camelCase constant (the repo's exported-constant
- * convention, matching `worldContext` / `communicationStyle`).
+ * convention).
  */
 export const sendMessageToolName = "send-message";

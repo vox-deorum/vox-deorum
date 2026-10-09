@@ -44,6 +44,7 @@ describe('VoxPlayer per-turn root runs', () => {
   it('opens one root per turn with run-local turn/before/after, advances the event cursor, and never mutates the base turn', async () => {
     const player = new VoxPlayer({
       playerID: 1,
+      slot: '1',
       playerConfig,
       gameID: 'game-runs',
       initialTurn: 0,
@@ -99,6 +100,7 @@ describe('VoxPlayer per-turn root runs', () => {
   it('should keep the pending event floor when cancellation arrives as execution settles', async () => {
     const player = new VoxPlayer({
       playerID: 1,
+      slot: '1',
       playerConfig,
       gameID: 'game-cancel-floor',
       initialTurn: 0,
@@ -119,6 +121,7 @@ describe('VoxPlayer per-turn root runs', () => {
   it('should retain a pending turning point across overflowed turns until it leaves the cache window', async () => {
     const player = new VoxPlayer({
       playerID: 1,
+      slot: '1',
       playerConfig,
       gameID: 'game-pending-events',
       initialTurn: 0,
@@ -178,6 +181,7 @@ describe('VoxPlayer session pause gate', () => {
     const session = { paused: true, isPaused() { return this.paused; } };
     const player = new VoxPlayer({
       playerID: 1,
+      slot: '1',
       playerConfig,
       gameID: 'game-paused',
       initialTurn: 0,
@@ -230,5 +234,18 @@ describe('VoxPlayer session pause gate', () => {
 
     expect(whilePaused).toEqual({ pauseCalls: 3, turnsRun: 0 });
     expect(turnsRun).toEqual([1]);
+  });
+});
+
+describe('VoxPlayer seat settings', () => {
+  it('names the seat slot when a seat setting is invalid', () => {
+    expect(() => new VoxPlayer({
+      playerID: 4,
+      slot: '2',
+      playerConfig: { ...playerConfig, prompts: '' as never },
+      gameID: 'game-seat-settings',
+      initialTurn: 0,
+      humanDecisionBus: new HumanDecisionBus(),
+    })).toThrow('llmPlayers.2.prompts');
   });
 });

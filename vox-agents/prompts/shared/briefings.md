@@ -1,0 +1,2 @@
+- Briefings: prepared by your specialized briefers, covering Military, Economy, and Diplomacy aspects.
+  - You will make independent and wise judgment based on all briefings.

@@ -20,6 +20,7 @@ import { createDebugRoutes } from './routes/debug.js';
 import { processManager } from '../infra/process-manager.js';
 import type { HealthStatus, ErrorResponse } from '../types/index.js';
 import { isAllowedDashboardRequest, isAllowedLoopbackOrigin } from './origin.js';
+import { reloadRootPrompts } from '../utils/prompts/prompt-files.js';
 
 // Get __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -238,6 +239,9 @@ function tryListen(port: number): Promise<number | null> {
 
 // Start server function. It tries the configured port, then falls back to port + 1.
 export async function startWebServer(): Promise<number | null> {
+  // The web UI runs agents outside a session, such as telepathist chats, so an invalid root
+  // prompt folder fails here instead of in the middle of a chat.
+  reloadRootPrompts();
   const result = await tryListen(PORT);
   if (result !== null) return result;
 

@@ -31,7 +31,7 @@ A live envoy run that ends without speaking streams a short "could you say that 
 
 It opens the conversation with the civilization's identity, the players it knows, and its current strategy. It exposes a `get-briefing` tool so the envoy can pull fresh military, economic, or diplomatic [briefings](support-agents.md) on demand instead of carrying the whole game state in context. Subclasses supply a `getHint()`, a standing reminder of who they are and who they are talking to.
 
-Both concrete envoys share prompt building blocks (`src/envoy/context/envoy-prompts.ts`):
+Both concrete envoy prompts (`vox-agents/prompts/diplomat.md` and `spokesperson.md`, with fragments in `shared/`; see [Prompts](prompts.md#system-prompt-files)) cover:
 
 - The fictional-world framing.
 - An explicit disclaimer that the envoy has **no decision-making power**: it cannot bind its leader to anything.

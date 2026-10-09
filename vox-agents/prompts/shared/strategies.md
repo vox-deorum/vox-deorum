@@ -1,0 +1,2 @@
+- Strategies: existing strategic decisions and rationale from you.
+  - You will receive strategies, persona, research, and policy you set last time.

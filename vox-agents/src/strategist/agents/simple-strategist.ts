@@ -10,8 +10,8 @@ import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getRecentGameState, renderStrategistReports, StrategistParameters } from "../strategy-parameters.js";
-import { SimpleBriefer } from "../../briefer/simple-briefer.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
+import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
 /**
  * A simple strategist agent that analyzes the game state and sets an appropriate strategy.
@@ -38,24 +38,8 @@ export class SimpleStrategist extends SimpleStrategistBase {
   /**
    * Gets the system prompt for the strategist
    */
-  public async getSystem(parameters: StrategistParameters, _context: VoxContext<StrategistParameters>): Promise<string> {
-    return `
-${SimpleStrategistBase.expertPlayerPrompt}
-
-${SimpleStrategistBase.expectationPrompt}
-
-${SimpleStrategistBase.goalsPrompt}
-${SimpleStrategistBase.getDecisionPrompt(parameters.mode)}
-
-# Resources
-You will receive the following reports:
-${SimpleStrategistBase.optionsDescriptionPrompt}
-${SimpleStrategistBase.strategiesDescriptionPrompt}
-${SimpleStrategistBase.victoryConditionsPrompt}
-${SimpleStrategistBase.playersInfoPrompt}
-${SimpleBriefer.citiesPrompt}
-${SimpleBriefer.militaryPrompt}
-${SimpleBriefer.eventsPrompt}`.trim()
+  public async getSystem(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<string> {
+    return renderSystemPrompt(context, 'simple-strategist', { flavor: parameters.mode === "Flavor" });
   }
   
   /**

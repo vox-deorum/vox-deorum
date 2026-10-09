@@ -1,6 +1,6 @@
 # Stage 1: System prompt files and overrides
 
-Part of the [context-records plan](../context-records.md). **Status: planned.**
+Part of the [context-records plan](../context-records.md). **Status: implemented.** The temporary golden tests and their fixture are kept locally, gitignored, until the main plan's acceptance checks.
 
 ## Objective
 
@@ -8,7 +8,7 @@ Move authored system prompts into editable Markdown templates while preserving d
 
 ## Dependencies
 
-None. Capture the compatibility baseline before changing any prompt builder. Stage 2 also relies on it for initial messages. Keep these temporary golden tests until the acceptance checks in the main plan.
+None. Capture the compatibility baseline before changing any prompt builder. Stage 2 also relies on it for initial messages. Keep these temporary golden tests as local, gitignored files until the acceptance checks in the main plan.
 
 ## Current state
 
@@ -40,11 +40,12 @@ A custom prompt does not need to restate text added after `getSystem`. That incl
 
 The `prompts` setting names a folder, relative to `vox-agents/` like `configs/`. `resolveSeatPrompts` in `strategist/seat-config.ts` resolves it seat over session over root, as it does for `files`. Runs outside a seat, such as the summarizer and telepathist, use the root setting. Lookup checks the custom folder first, then the built-in one. Partials resolve the same way, so overriding `shared/goals.md` changes every strategist that includes it.
 
-Validation runs at session start and fails through the session's fatal setup path. It requires the following:
+Validation runs at session start and fails through the session's fatal setup path. Entry points that run agents outside a session (the web UI and summary preparation) validate the root folder the same way before any run, and a config save validates the proposed folder before writing it. It requires the following:
 
 - Every `.md` file in the custom folder matches a built-in path, which catches misspelled names.
 - Every partial exists.
-- A file uses only the names its built-in counterpart uses, including through its partials. The check walks each file's parsed token tree.
+- No partial includes itself.
+- A file uses only the names its built-in counterpart uses, including through its partials, as the same kind (variable or section) and in the same section scope or an enclosing one. The check walks each file's parsed token tree.
 
 Files are read and parsed once per session. Edits take effect in the next session.
 
@@ -54,7 +55,7 @@ Custom prompts replace system text only. Initial messages, section descriptions,
 
 ### Capture the compatibility baseline
 
-Create a compact recorded game-state fixture under `vox-agents/tests/fixtures/game-state/`, using local telemetry and cached tool definitions. Include metadata with `YouAre`, all six reports, and their Markdown configurations. Keep any capture script local.
+Create a compact recorded game-state fixture under `vox-agents/tests/fixtures/game-state/`, using local telemetry and cached tool definitions. Include metadata with `YouAre`, all six reports, and their Markdown configurations. Keep the fixture and any capture script local.
 
 Add temporary golden tests under `vox-agents/tests/mock/prompts/` for the four LLM strategists, the simple briefer, all three specialized briefer modes, and `buildGameContextMessages`. Pre-fill briefings, include a past briefing, fix working-memory instructions, and mock episode retrieval. Capture `getSystem` and `getInitialMessages` before refactoring. Also capture `getSystem` for the diplomat and spokesperson (with and without a teammate), negotiator, diplomatic analyst, talkative telepathist (normal and special message), summarizer, keyword librarian, and evaluator strategist, and both decision modes for the strategists, since this stage moves all of them into files.
 

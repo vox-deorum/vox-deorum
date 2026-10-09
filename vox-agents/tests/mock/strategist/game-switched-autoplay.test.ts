@@ -11,6 +11,9 @@
  * mocked and timers are made instant.
  */
 
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, textResult, structuredResult } from '../../helpers/mock-mcp-client.js';
 
@@ -361,6 +364,27 @@ describe('model preflight', () => {
 
     await expect(s.start()).rejects.toThrow('llmPlayers.0.triage');
     expect(voxCivilization.startGame).not.toHaveBeenCalled();
+  });
+
+  it('should reject an invalid seat prompt folder before launching the game', async () => {
+    vi.mocked(voxCivilization.startGame).mockClear();
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-prompts-'));
+    fs.writeFileSync(path.join(dir, 'not-a-built-in.md'), 'Unknown\n');
+
+    try {
+      const s = new StrategistSession({
+        name: 'invalid-prompts',
+        type: 'strategist',
+        autoPlay: false,
+        gameMode: 'start',
+        llmPlayers: { 0: { strategist: 'null-strategist', prompts: dir } },
+      }, {} as never, null);
+
+      await expect(s.start()).rejects.toThrow('not-a-built-in.md');
+      expect(voxCivilization.startGame).not.toHaveBeenCalled();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

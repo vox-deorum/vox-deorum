@@ -10,7 +10,7 @@
 import type { VoxAgentsConfig, LLMConfig } from '../../types/index.js';
 
 /** Top-level fields stored whole in config.json; llms is diffed per entry and versionInfo is runtime only. */
-const topLevelKeys: (keyof VoxAgentsConfig)[] = ['agent', 'webui', 'mcpServer', 'logging', 'configsDir', 'episodeDbPath', 'telemetryDir', 'obs', 'triage', 'files', 'useDX11'];
+const topLevelKeys: (keyof VoxAgentsConfig)[] = ['agent', 'webui', 'mcpServer', 'logging', 'configsDir', 'episodeDbPath', 'telemetryDir', 'obs', 'triage', 'files', 'prompts', 'useDX11'];
 
 /**
  * Recursive deep equality check for plain JSON values

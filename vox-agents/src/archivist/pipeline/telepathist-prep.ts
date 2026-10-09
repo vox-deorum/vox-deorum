@@ -14,6 +14,7 @@ import { prepareTurnSummaries } from '../../telepathist/preparation/turn-prepara
 import { summarizerModelReference } from '../../telepathist/summarizer.js';
 import { createTelepathistParameters, TelepathistParameters } from '../../telepathist/telepathist-parameters.js';
 import { ensureModelsResolved } from '../../utils/models/resolution.js';
+import { reloadRootPrompts } from '../../utils/prompts/prompt-files.js';
 
 const logger = createLogger('TelepathistPrep');
 
@@ -50,6 +51,8 @@ export async function prepareTelepathist(
   // caught there would silently degrade every player's summaries to null text fields.
   const modelOverrides: Record<string, string> = modelOverride ? { summarizer: modelOverride } : {};
   await ensureModelsResolved([summarizerModelReference(modelOverrides)], modelOverrides);
+  // Same reasoning for the summarizer's prompt folder (the root setting).
+  reloadRootPrompts();
 
   try {
     // Opens telemetry DB (read-only) + telepathist DB (read-write, created if absent)

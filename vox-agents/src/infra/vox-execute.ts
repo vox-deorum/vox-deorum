@@ -27,6 +27,7 @@ import { hostCapabilityTelemetryAttributes } from "../utils/telemetry/host-capab
 import { codexResponseTelemetryAttributes } from "../utils/telemetry/codex-response.js";
 import { stepTokenUsage } from "../utils/telemetry/model-usage.js";
 import { isHostCapabilityProvider } from "../utils/models/providers/host-tools.js";
+import { rootPrompts } from "../utils/prompts/prompt-files.js";
 import { stripMarkdownConfig, stripToolArtifacts } from "../utils/models/text-cleaning.js";
 import { appendReminder } from "../utils/prompts/reminders.js";
 import { compactWorkspaceTraffic, compactionReminder, dropOlderReasoning } from "../utils/prompts/message-history.js";
@@ -98,6 +99,8 @@ export async function executeAgent<TParameters extends AgentParameters>(
   return host.runInChildFrame(input, async (frame) => {
     const span = openAgentSpan(host, agentName, params.turn, input);
     span.setAttribute('triage.baseline', agent.modelSize);
+    // The custom prompt folder behind this run's system text, so analysis can group rows by prompt set.
+    span.setAttribute('context.prompts', host.prompts ?? rootPrompts());
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       try {

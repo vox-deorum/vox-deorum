@@ -223,11 +223,42 @@ With files on, a run often takes many steps, so its initial prompt (instructions
 
 Claude Code flattens the whole prompt into one CLI user message per step, so it does not reuse anything past the CLI's own system prompt between steps.
 
+## System prompt files
+
+Every authored system prompt is a Mustache file in `vox-agents/prompts/`, rendered by `renderSystemPrompt` in `utils/prompts/prompt-files.ts`. Each agent's prompt is `<agent-name>.md`, and a variant is `<agent-name>.<variant>.md` (the specialized briefer has `.military`, `.economy`, and `.diplomacy`). Fragments shared by several agents, such as the resource descriptions and the decision instructions, live under `shared/`. A template's name is its path without `.md`, such as `shared/goals`. The folder is found from the module path, so `src` and `dist` both read it, and the installer ships it.
+
+Prose lives in the files. `getSystem` passes only data and flags in the view:
+
+| Template | View |
+| --- | --- |
+| Simple, briefed, staffed, and learned strategists | `flavor` (Flavor or Strategy mode, read by `shared/decision`); `episodes` for the learned strategist |
+| Diplomat and spokesperson | `user`, and a `teammate` section over the teammate's fields |
+| Negotiator | `leader`, `civilization`, a `teammate` section, and `coopWarLabel` (the joint-war term name from the deal schema) |
+| Diplomatic analyst and summarizer | `leader` and `civilization` |
+| Talkative telepathist | `leader`, `civilization`, and an inverted `special` section around the tools passage |
+| Simple and specialized briefers, keyword librarian, evaluator strategist | Static |
+
+Rendering turns off HTML escaping, so `&` and `<` in game data stay intact, and trims the result. Partials go on their own line at column 0: Mustache removes a standalone tag's line, so each fragment file ends with exactly one newline. The summarizer's turn instructions (`telepathist/preparation/instructions.ts`) also render `shared/historian-guidelines` through the root setting, so they match its system prompt. Text added after `getSystem`, such as the workspace section, the completion-tool sentence, and prompt-mode schemas, stays in code. The oracle agent returns the recorded system text and never reads these files.
+
+### Custom folders
+
+The `prompts` setting names a folder relative to `vox-agents/`. `resolveSeatPrompts` in `strategist/seat-config.ts` resolves it seat over session over root, as `resolveSeatFiles` does, and `VoxPlayer` stores the result on the seat's context. Runs outside a seat use the root setting. Lookup checks the custom folder first, then the built-ins, and partials resolve the same way, so a custom `shared/goals.md` reaches every strategist that includes it.
+
+`StrategistSession.start` calls `reloadPromptSets` with every folder the session uses, before any player loop. Runs outside a session use the root folder, which `reloadRootPrompts` validates when the web server starts and before summary preparation. A dashboard config save calls `validatePromptsSetting` on the proposed value before writing anything, and refuses an invalid folder with the reason. The root `prompts` field is part of the runtime config and the saved diff (`utils/config.ts` and `utils/config/diff.ts`). Each folder is read, parsed, and validated once, and an invalid one fails with an error naming the file:
+
+- Every `.md` file must match a built-in path.
+- Every partial must exist, and no partial may include itself. A missing partial is reported with the file that includes it. The built-ins get these checks too, since Mustache would render a missing partial as nothing.
+- Each template may use only the names its built-in counterpart uses, including through partials. A name must keep its kind (variable or section) and its scope: a field the built-in reads inside `{{#teammate}}` is rejected outside it. A name the built-in reads outside a section stays valid inside one, since Mustache looks it up through enclosing sections. Inverted sections add no scope.
+
+Seat errors name the setting's config path, such as `llmPlayers.2.prompts`.
+
+A failed reload keeps the previous sets, and a reload leaves other folders' cached sets alone, so a second session in the same process changes a running session's text only for folders both use. Edits take effect in the next session. Each agent span records the folder in use as `context.prompts`, or `false` for built-ins only.
+
 ## Where to edit
 
 | To change | Edit | Notes |
 | --- | --- | --- |
-| An agent's main instructions | That agent's `getSystem()` | Strategist sections are static strings in `strategist/agents/simple-strategist-base.ts`. Envoy prompt text is in `envoy/context/envoy-prompts.ts`. |
+| An agent's main instructions | Its file in `vox-agents/prompts/`; the view in that agent's `getSystem()` | Shared passages are in `prompts/shared/`. See [System prompt files](#system-prompt-files). |
 | Opening game context | That agent's `getInitialMessages()` | Shared envoy and analyst context: `buildGameContextMessages` in `strategist/strategy-parameters.ts`. |
 | Envoy hint (identity, audience, turn) | `getHint` in `envoy/live-envoy.ts`, overridden in `telepathist/talkative-telepathist.ts` | Always the last opening message for a live envoy. |
 | Envoy add-on after the hint | `getDefaultAddon` in `envoy/envoy.ts`, overridden in `envoy/agents/diplomat.ts` and `envoy/agents/spokesperson.ts` | |
@@ -274,3 +305,4 @@ Tests check behavior and compose expected text through the same builders, so edi
 | Prompt-mode schema block | `utils/tool-rescue-prompt.test.ts` |
 | Rescue of required tool calls | `infra/required-tool-rescue.test.ts` |
 | Capability text | `utils/capability-prompt.test.ts` |
+| Prompt files, custom folders, and validation | `utils/prompt-files.test.ts` |

@@ -576,6 +576,19 @@ describe('config routes', () => {
       expect(res.body).toHaveProperty('error');
     });
 
+    it('rejects an invalid prompts folder with its reason before writing anything', async () => {
+      const writeFile = vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined as never);
+
+      const res = await request(app)
+        .post('/api/config')
+        .send({ apiKeys: { OPENAI_API_KEY: 'new-key' }, config: { agent: { name: 'changed' }, llms: {}, prompts: 'no-such-prompt-folder' } });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('no-such-prompt-folder');
+      expect(writeFile).not.toHaveBeenCalled();
+      expect(refreshConfig).not.toHaveBeenCalled();
+    });
+
     it('does not write config.json or refresh when the .env write fails', async () => {
       const writeFile = vi.spyOn(fs, 'writeFile').mockRejectedValue(new Error('EACCES'));
 

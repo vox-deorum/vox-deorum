@@ -3,7 +3,7 @@
  *
  * Summarizer is a PROMPT BUILDER (getSystem/getInitialMessages) plus a
  * content-hash-cached helper (summarizeWithCache) and an instruction builder
- * (buildToolSummaryInstruction). These tests assert imported constants by
+ * (buildToolSummaryInstruction). These tests assert shared template fragments by
  * reference, dynamic input values, branch behavior, and cache hit/miss via the
  * callAgent spy — never whole-prompt snapshots, prose, or hash values.
  */
@@ -13,8 +13,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 // leaf summarizer module is evaluated, avoiding a circular-import TDZ error.
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { createFakeVoxContext, FakeVoxContext } from '../../helpers/fake-vox-context.js';
+import { getPromptSet } from '../../../src/utils/prompts/prompt-files.js';
 import {
-  summarizerGuidelines,
   buildToolSummaryInstruction,
   summarizeWithCache,
   type SummarizerInput,
@@ -97,13 +97,13 @@ beforeEach(() => {
 
 describe('Summarizer', () => {
   describe('getSystem', () => {
-    it('includes the imported summarizerGuidelines constant by reference', async () => {
+    it('includes the shared historian guidelines fragment', async () => {
       const params = makeTelepathistParameters();
       const input: SummarizerInput = { text: 'data', instruction: 'do it' };
 
       const system = await summarizer.getSystem(params, input, ctx.asContext());
 
-      expect(system).toContain(summarizerGuidelines);
+      expect(system).toContain(getPromptSet().render('shared/historian-guidelines'));
     });
 
     it('includes the dynamic leader and civilization names', async () => {

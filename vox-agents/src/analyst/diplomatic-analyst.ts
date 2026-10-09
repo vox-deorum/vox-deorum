@@ -15,6 +15,7 @@ import { Analyst, AnalystInput, AnalystReport } from "./analyst.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { getGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { areTeammates } from "../strategist/pacing/utils.js";
+import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 
 /** How many past turns of diplomatic history the analyst reads for each involved player. */
 const historyTurns = 30;
@@ -145,10 +146,11 @@ export class DiplomaticAnalyst extends Analyst {
   }
 
   /** Build the analyst identity prompt. */
-  public async getSystem(parameters: StrategistParameters): Promise<string> {
-    const leader = parameters.metadata?.YouAre?.Leader ?? "your leader";
-    const civName = parameters.metadata?.YouAre?.Name ?? "your civilization";
-    return `You are an intelligence analyst serving ${civName}, under ${leader}. Evaluate whether the report warrants relay, classify its type and all relevant subject categories, and score confidence and importance from 0 to 9.`;
+  public async getSystem(parameters: StrategistParameters, _input: AnalystInput, context: VoxContext<StrategistParameters>): Promise<string> {
+    return renderSystemPrompt(context, 'diplomatic-analyst', {
+      leader: parameters.metadata?.YouAre?.Leader ?? "your leader",
+      civilization: parameters.metadata?.YouAre?.Name ?? "your civilization",
+    });
   }
 
   /** Prepare report, game context, and diplomatic history once for both evaluation and traces. */

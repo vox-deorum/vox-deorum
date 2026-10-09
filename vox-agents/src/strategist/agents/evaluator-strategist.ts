@@ -9,14 +9,13 @@
 
 import { trace } from "@opentelemetry/api";
 import { Strategist } from "../strategist.js";
-import { SimpleStrategistBase } from "./simple-strategist-base.js";
-import { SimpleBriefer } from "../../briefer/simple-briefer.js";
 import type { VoxContext } from "../../infra/vox-context.js";
 import type { PreparedAgentState } from "../../infra/vox-agent.js";
 import type { ExecuteTokenOutput } from "../../infra/vox-run.js";
 import type { Model, StrategistCall } from "../../types/index.js";
 import { inputTokenLimit } from "../../utils/models/models.js";
 import { isFailedToolResult } from "../../utils/tools/mcp-tools.js";
+import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 import { ensureGameState, type StrategistParameters } from "../strategy-parameters.js";
 import {
   buildStrategistEvaluationState,
@@ -34,31 +33,12 @@ export class EvaluatorStrategist extends Strategist {
   readonly description = "Decides flavors, persona, relationships, research, and policy with one evaluation call per decision";
 
   /**
-   * The game explanation from the simple strategist's prompt, without its tool-calling
+   * Gets the game explanation from the `evaluator-strategist` template, without tool-calling
    * instructions, since the evaluator answers questions instead. Being non-empty also lets the
    * evaluation path run and the in-game label name the model.
    */
-  public async getSystem(): Promise<string> {
-    return `
-${SimpleStrategistBase.expertPlayerPrompt}
-
-# Task
-Your answers to the questions below set the in-game AI's high-level decisions:
-- A grand (long-term) strategy and short-term flavors. Flavors change the weight of the in-game AI's NEXT decision and only take effect AFTER existing queues. Too many priorities weaken the impact of each.
-- The in-game AI's diplomatic decision-making weights (persona).
-- Its public and private stance toward each other MAJOR civilization (not city-states). Stances are added to the in-game AI's own evaluation and last until changed; higher values increase peace acceptance.
-- The NEXT technology to research and the NEXT policy to adopt.
-Only options listed in # Options take effect. Carefully reason about long-term goals, the short-term situation, and what each option changes. Analyze both your situation and your opponents, and avoid wishful thinking.
-
-# Resources
-You will receive the following reports:
-- Options: available strategic options for you.
-${SimpleStrategistBase.strategiesDescriptionPrompt}
-${SimpleStrategistBase.victoryConditionsPrompt}
-${SimpleStrategistBase.playersInfoPrompt}
-${SimpleBriefer.citiesPrompt}
-${SimpleBriefer.militaryPrompt}
-${SimpleBriefer.eventsPrompt}`.trim();
+  public async getSystem(_parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<string> {
+    return renderSystemPrompt(context, 'evaluator-strategist');
   }
 
   /**

@@ -1,15 +1,15 @@
-/** Tests for seat role defaults and per-seat triage and files resolution (src/strategist/seat-config.ts). */
+/** Tests for seat role defaults and per-seat triage, files, and prompts resolution (src/strategist/seat-config.ts). */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FilesSetting, PlayerConfig, TriageSetting } from '../../../src/types/config.js';
+import type { FilesSetting, PlayerConfig, PromptsSetting, TriageSetting } from '../../../src/types/config.js';
 
 const mocks = vi.hoisted(() => ({
-  config: { triage: undefined as TriageSetting | undefined, files: undefined as FilesSetting | undefined },
+  config: { triage: undefined as TriageSetting | undefined, files: undefined as FilesSetting | undefined, prompts: undefined as PromptsSetting | undefined },
 }));
 
 vi.mock('../../../src/utils/config.js', () => ({ config: mocks.config }));
 
-import { defaultDiplomat, defaultFilesQuota, resolveSeatFiles, resolveSeatTriage, seatAgents } from '../../../src/strategist/seat-config.js';
+import { defaultDiplomat, defaultFilesQuota, resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage, seatAgents } from '../../../src/strategist/seat-config.js';
 
 describe('seatAgents', () => {
   it('should default the diplomat to the built-in agent when the seat names none', () => {
@@ -203,5 +203,31 @@ describe('resolveSeatFiles', () => {
   it('should reject null as a files setting with its config path', () => {
     expect(() => resolveSeatFiles(seat(null as never), undefined, 3))
       .toThrow('llmPlayers.3.files');
+  });
+});
+
+describe('resolveSeatPrompts', () => {
+  beforeEach(() => {
+    mocks.config.prompts = undefined;
+  });
+
+  it('should use the built-ins when no level sets a folder', () => {
+    expect(resolveSeatPrompts({ strategist: 'simple-strategist' }, undefined, 1)).toBe(false);
+  });
+
+  it('should prefer the seat over the session over the root', () => {
+    mocks.config.prompts = 'root-prompts';
+    expect(resolveSeatPrompts({ strategist: 'simple-strategist' }, undefined, 1)).toBe('root-prompts');
+    expect(resolveSeatPrompts({ strategist: 'simple-strategist' }, 'session-prompts', 1)).toBe('session-prompts');
+    expect(resolveSeatPrompts({ strategist: 'simple-strategist', prompts: 'seat-prompts' }, 'session-prompts', 1)).toBe('seat-prompts');
+  });
+
+  it('should let a seat turn a session folder off', () => {
+    expect(resolveSeatPrompts({ strategist: 'simple-strategist', prompts: false }, 'session-prompts', 1)).toBe(false);
+  });
+
+  it('should reject a setting that is not a folder path, naming the seat slot', () => {
+    expect(() => resolveSeatPrompts({ strategist: 'simple-strategist', prompts: true as never }, undefined, 3)).toThrow('llmPlayers.3.prompts');
+    expect(() => resolveSeatPrompts({ strategist: 'simple-strategist' }, '' as never, 3)).toThrow('session.prompts');
   });
 });

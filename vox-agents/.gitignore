@@ -63,3 +63,7 @@ scripts/LoadGame.lua
 scripts/LoadGame.temp.lua
 scripts/LoadMods.lua
 scripts/LoadMods.temp.lua
+
+# Local-only golden prompt snapshots and their fixture (context-records plan validation)
+tests/mock/prompts/
+tests/fixtures/game-state/

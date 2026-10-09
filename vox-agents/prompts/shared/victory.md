@@ -1,0 +1,10 @@
+- Victory Progress:
+  - Domination Victory: Control or vassalize all original capitals.
+    - Vassals cannot achieve a domination victory before independence.
+  - Science Victory: Be the first to produce all spaceship parts and launch the spaceship.
+    - Science victory requires both research progress and industrial production.
+  - Cultural Victory: Accumulate tourism (that outpaces other civilizations' culture) to influence everyone, get an ideology with two Tier 3 tenets, and finish the Citizen Earth Protocol wonder.
+    - Open borders, trade routes, and shared religion increase tourism. Too many cities decrease it.
+  - Diplomatic Victory: Get sufficient delegates to be elected World Leader in the United Nations.
+    - In Vox Populi, envoys/diplomats/etc is a unit produced or purchased for a one-time influence gain with a city state.
+  - Time Victory: If no one achieves any other victory by the end of the game, the civilization with the highest score wins.

@@ -9,16 +9,18 @@
 import { describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../../src/infra/agent-registry.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import {
-  worldContext,
-  noDecisionPower,
-  communicationStyle,
-  audienceSection,
-  diplomatTeammateReporting,
-} from '../../../../src/envoy/context/envoy-prompts.js';
+import { getPromptSet } from '../../../../src/utils/prompts/prompt-files.js';
 
 const diplomat = agentRegistry.get('diplomat') as any;
 const spokesperson = agentRegistry.get('spokesperson') as any;
+
+/** The audience section as rendered from the built-in shared fragment for this test's audience. */
+const audience = (teammate?: { civName: string }) =>
+  getPromptSet().render('shared/audience', { user: 'the leader of Rome', teammate });
+
+/** Text the agent appends after the audience section (empty when the audience is the final section). */
+const afterAudience = (system: string, audienceText: string) =>
+  system.slice(system.indexOf(audienceText) + audienceText.length).trim();
 
 /**
  * Germany(3) ↔ leader(1) thread; the agent voices seat 3. The voiced seat carries its stored
@@ -95,7 +97,7 @@ describe('audience description', () => {
   it('combines the audience role with its stored civ identity', async () => {
     // The audience civ comes from the thread (resolved at open time), e.g. "the leader of Rome".
     const system = await diplomat.getSystem(params, thread(), undefined);
-    expect(system).toContain(audienceSection('the leader of Rome'));
+    expect(system).toContain(audience());
   });
 
   it('is never resolved from live game state', async () => {
@@ -108,24 +110,23 @@ describe('audience description', () => {
       },
     };
     const system = await diplomat.getSystem(identityParams, thread(), undefined);
-    expect(system).toContain(audienceSection('the leader of Rome'));
+    expect(system).toContain(audience());
     expect(system).not.toContain('France');
   });
 });
 
 describe('Spokesperson.getSystem', () => {
-  it('assembles the imported prompt sections by reference', async () => {
+  it('assembles the shared prompt fragments by reference', async () => {
     const system = await spokesperson.getSystem(params, thread(), undefined);
-    // Imported section constants are included verbatim (by reference), not paraphrased.
-    expect(system).toContain(worldContext);
-    expect(system).toContain(noDecisionPower);
-    expect(system).toContain(communicationStyle);
+    // Shared fragments are included verbatim from the built-in prompt files, not paraphrased.
+    expect(system).toContain(getPromptSet().render('shared/world-context'));
+    expect(system).toContain(getPromptSet().render('shared/communication-style'));
   });
 
-  it('includes the audienceSection built from the audience role and stored civ', async () => {
+  it('includes the shared audience fragment built from the audience role and stored civ', async () => {
     const system = await spokesperson.getSystem(params, thread(), undefined);
     // The thread audience is seat 1 — role "the leader", civ Rome — so "the leader of Rome".
-    expect(system).toContain(audienceSection('the leader of Rome'));
+    expect(system).toContain(audience());
   });
 
   it('includes the stable tool IDs in normal mode', async () => {
@@ -152,20 +153,23 @@ describe('teammate counterpart', () => {
 
   it('switches the Diplomat to the teammate audience and reporting sections', async () => {
     const system = await diplomat.getSystem(teamParams(1), thread(), undefined);
-    expect(system).toContain(audienceSection('the leader of Rome', { civName: 'Rome' }));
-    expect(system).toContain(diplomatTeammateReporting);
-    expect(system).not.toContain(audienceSection('the leader of Rome'));
+    expect(system).toContain(audience({ civName: 'Rome' }));
+    expect(system).not.toContain(audience());
+    // The teammate diplomat keeps a reporting section after the audience block.
+    expect(afterAudience(system, audience({ civName: 'Rome' }))).not.toBe('');
   });
 
   it('keeps the default audience for players on different teams', async () => {
     const system = await diplomat.getSystem(teamParams(3), thread(), undefined);
-    expect(system).toContain(audienceSection('the leader of Rome'));
-    expect(system).not.toContain(diplomatTeammateReporting);
+    expect(system).toContain(audience());
+    // Without a teammate the audience block is the final section: no reporting section follows.
+    expect(afterAudience(system, audience())).toBe('');
   });
 
   it('switches the Spokesperson to the teammate audience without the reporting section', async () => {
     const system = await spokesperson.getSystem(teamParams(1), thread(), undefined);
-    expect(system).toContain(audienceSection('the leader of Rome', { civName: 'Rome' }));
-    expect(system).not.toContain(diplomatTeammateReporting);
+    expect(system).toContain(audience({ civName: 'Rome' }));
+    // The spokesperson's prompt ends at the audience block: no reporting section follows.
+    expect(afterAudience(system, audience({ civName: 'Rome' }))).toBe('');
   });
 });

@@ -15,15 +15,17 @@ import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
 import { ensureGameState, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
-import type { FilesSetting, PlayerConfig, TriageSetting } from "../types/config.js";
+import type { FilesSetting, PlayerConfig, PromptsSetting, TriageSetting } from "../types/config.js";
 import type { HumanDecisionBus } from "./human-decision-bus.js";
-import { resolveSeatFiles, resolveSeatTriage } from "./seat-config.js";
+import { resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage } from "./seat-config.js";
 import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
 
 /** Construction inputs for one seat's {@link VoxPlayer}. */
 export interface VoxPlayerOptions {
   /** The actual in-game player index this seat controls. */
   playerID: number;
+  /** The seat's key in the session's `llmPlayers`, named in configuration errors. */
+  slot: string;
   playerConfig: PlayerConfig;
   gameID: string;
   initialTurn: number;
@@ -35,6 +37,8 @@ export interface VoxPlayerOptions {
   triage?: TriageSetting;
   /** The session config's top-level files setting, which the seat's own setting overrides. */
   files?: FilesSetting;
+  /** The session config's top-level prompts setting, which the seat's own setting overrides. */
+  prompts?: PromptsSetting;
 }
 
 /**
@@ -64,7 +68,7 @@ export class VoxPlayer {
   public readonly playerID: number;
   private readonly playerConfig: PlayerConfig;
 
-  constructor({ playerID, playerConfig, gameID, initialTurn, humanDecisionBus, syncSeed, session, triage, files }: VoxPlayerOptions) {
+  constructor({ playerID, slot, playerConfig, gameID, initialTurn, humanDecisionBus, syncSeed, session, triage, files, prompts }: VoxPlayerOptions) {
     this.playerID = playerID;
     this.playerConfig = playerConfig;
     this.logger = createLogger(`VoxPlayer-${playerID}`);
@@ -80,8 +84,9 @@ export class VoxPlayer {
     // Let the context reach its owning session for authoritative state (e.g. the live turn).
     this.context.session = session;
     // Set before the constructor returns: chats can reach the context by id as soon as it exists.
-    this.context.triage = resolveSeatTriage(playerConfig, triage);
-    this.context.files = resolveSeatFiles(playerConfig, files);
+    this.context.triage = resolveSeatTriage(playerConfig, triage, slot);
+    this.context.files = resolveSeatFiles(playerConfig, files, slot);
+    this.context.prompts = resolveSeatPrompts(playerConfig, prompts, slot);
 
     this.parameters = {
       playerID,

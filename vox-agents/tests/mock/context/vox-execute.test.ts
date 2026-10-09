@@ -102,6 +102,19 @@ describe('VoxContext.execute agent span telemetry', () => {
     }
   });
 
+  it('should record the context prompt folder on the agent span', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'tel-prompts');
+    ctx.prompts = 'custom-prompts';
+    const spans = recordSpans(ctx);
+    const system = vi.spyOn(telAgent, 'getSystem').mockResolvedValueOnce('');
+    try {
+      await ctx.withRun({ parameters: makeStrategistParameters() }, () => ctx.execute('tel-step-agent', {}));
+      expect(spans.find(s => s.name === 'agent.tel-step-agent')?.attributes['context.prompts']).toBe('custom-prompts');
+    } finally {
+      system.mockRestore();
+    }
+  });
+
   it('opens the agent span with the exact standard attributes and closes it OK with final usage', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'tel-agent-span');
     const spans = recordSpans(ctx);
@@ -121,6 +134,7 @@ describe('VoxContext.execute agent span telemetry', () => {
         'agent.name': 'tel-step-agent',
         'agent.input': '{"hello":"world"}',
         'triage.baseline': 'default',
+        'context.prompts': false,
         'model': 'test/test',
         'tokens.input': 100,
         'tokens.reasoning': 10,

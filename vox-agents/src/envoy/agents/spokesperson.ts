@@ -9,7 +9,7 @@ import { LiveEnvoy } from "../live-envoy.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { StrategistParameters } from "../../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../../types/index.js";
-import { worldContext, noDecisionPower, communicationStyle, audienceSection } from "../context/envoy-prompts.js";
+import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 import { getTeammateCounterpart } from "../context/diplomacy-context.js";
 
 /**
@@ -51,34 +51,12 @@ export class Spokesperson extends LiveEnvoy {
   public async getSystem(
     parameters: StrategistParameters,
     input: EnvoyThread,
-    _context: VoxContext<StrategistParameters>
+    context: VoxContext<StrategistParameters>
   ): Promise<string> {
-    const sections = [
-      `You are the official spokesperson serving your civilization.
-${worldContext}
-You represent your government's interests with diplomatic tact and strategic ambiguity when necessary. ${noDecisionPower}`,
-
-      `# Your Expectation
-- You convey your leader's existing viewpoints and positions. Do NOT draft, propose, or negotiate new terms.
-- Your purpose is to further your nation's goals and strategies, not to serve or please your audience
-- You maintain diplomatic decorum while protecting sensitive information (the bar depends on the diplomatic relationship and audience)
-- You answer the audience ONLY by calling the \`send-message\` tool: its \`Message\` is delivered verbatim as your spoken reply. Never write a reply as free text outside the tool. Answer purposefully.`,
-    ];
-
-    sections.push(`# Available Tools
-- Use the \`send-message\` tool to say something to the counterpart.
-  - Write a short, thoughtful message conversationally, within one short paragraph if possible.
-  - Never write a reply as free text outside this tool.
-- You have a \`get-briefing\` tool to retrieve briefings on Military, Economy, and/or Diplomacy.
-  - Call it when you need strategic intelligence.
-  - No need to call it for simple greetings or casual diplomatic exchanges.
-- You have a \`get-diplomatic-events\` tool to retrieve recent diplomatic history with another player.
-  - Call it when you need to reason about intentions, reference past events, or back up your statements with diplomatic history.`);
-
-    sections.push(communicationStyle);
-    sections.push(audienceSection(this.formatUserDescription(input), getTeammateCounterpart(parameters, input)));
-
-    return sections.join('\n\n').trim();
+    return renderSystemPrompt(context, 'spokesperson', {
+      user: this.formatUserDescription(input),
+      teammate: getTeammateCounterpart(parameters, input),
+    });
   }
 
   /**

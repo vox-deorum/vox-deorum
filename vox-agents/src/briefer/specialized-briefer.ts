@@ -13,13 +13,12 @@ import { getRecentGameState, StrategistParameters } from "../strategist/strategy
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
-import { SimpleBriefer } from "./simple-briefer.js";
 import { briefingInstructionKeys, briefingReportKeys, getLastBriefingState } from "./briefing-utils.js";
 import { filterEventsByCategory, EventCategory } from "../utils/prompts/event-filters.js";
 import { pickPlayerFields, omitPlayerFields, pickCityFields, omitCityFields } from "../utils/prompts/report-filters.js";
 import type { ConsolidatedEventsReport } from '../../../mcp-server/dist/tools/knowledge/get-events.js';
-import { SimpleStrategistBase } from "../strategist/agents/simple-strategist-base.js";
 import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
+import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 
 /**
  * Mode type for specialized briefer
@@ -35,10 +34,10 @@ export interface SpecializedBrieferInput {
 }
 
 /**
- * Configuration for a specific briefing mode
+ * Configuration for a specific briefing mode. System prompt prose lives in
+ * `prompts/specialized-briefer.<mode>.md`.
  */
 interface ModeConfig {
-  systemPrompt: string;
   eventCategory: EventCategory;
   getDataPrompt: (
     parameters: StrategistParameters,
@@ -47,42 +46,9 @@ interface ModeConfig {
 }
 
 /**
- * Introduction stating the briefer's role for specialized modes
- */
-function roleIntro(role: string): string {
-  return `You are an expert ${role} for Civilization V with the latest Vox Populi mod.
-Your role is to produce a concise ${role.toLowerCase()}-focused briefing based on the current game state, following your leader's instruction.
-Your leader only has control over macro-level decision making. Focus on providing relevant ${role.toLowerCase()} information.`;
-}
-
-/**
  * Military-focused briefing configuration
  */
 const militaryConfig: ModeConfig = {
-  systemPrompt: `
-${roleIntro('military intelligence analyst')}
-
-# Objective
-Summarize the military situation into a strategic briefing that highlights:
-- Important military development, esp. for active conflicts, during the past turn.
-- Military strength, weakness, and position relative to opponents.
-- Potential threats and war plans, considering diplomatic relationships and overall strength.
-- High-level needs, growth, or excesses of our military forces.
-- Comparison with the last available military briefing.
-
-# Guidelines
-${SimpleBriefer.commonGuidelines}
-
-# Resources
-You will receive the following reports:
-${SimpleStrategistBase.playersInfoPrompt}
-${SimpleBriefer.citiesPrompt}
-${SimpleBriefer.militaryPrompt}
-- Events: military-related events since the last decision-making.
-${SimpleBriefer.pastBriefingPrompt}
-
-${SimpleBriefer.instructionFooter}`.trim(),
-
   eventCategory: 'Military',
 
   getDataPrompt: (parameters, events) => {
@@ -124,30 +90,6 @@ ${jsonToMarkdown(events)}`.trim();
  * Economy-focused briefing configuration
  */
 const economyConfig: ModeConfig = {
-  systemPrompt: `
-${roleIntro('economic analyst')}
-
-# Objective
-Summarize the economic situation into a strategic briefing that highlights:
-- Economic position and development relative to opponents.
-- High-level needs, growth, or excesses in our economy.
-- Peaceful expansion (settlement) opportunities (if eligible).
-- Important economic development, technology progress, and policy changes during the past turn.
-- Comparison with the last available economic briefing.
-
-# Guidelines
-${SimpleBriefer.commonGuidelines}
-
-# Resources
-You will receive the following reports:
-${SimpleStrategistBase.victoryConditionsPrompt}
-${SimpleStrategistBase.playersInfoPrompt}
-${SimpleBriefer.citiesPrompt}
-- Events: economy-related events since the last decision-making.
-${SimpleBriefer.pastBriefingPrompt}
-
-${SimpleBriefer.instructionFooter}`.trim(),
-
   eventCategory: 'Economy',
 
   getDataPrompt: (parameters, events) => {
@@ -185,30 +127,6 @@ ${jsonToMarkdown(events)}`.trim();
  * Diplomacy-focused briefing configuration
  */
 const diplomacyConfig: ModeConfig = {
-  systemPrompt: `
-${roleIntro('diplomatic analyst')}
-
-# Objective
-Summarize the diplomatic situation into a strategic briefing that highlights:
-- Major diplomatic development (declarations of war, peace treaties, friendship, denouncement).
-- World Congress activities and resolutions.
-- City-state relationships, quests, and influence changes.
-- If relevant, religion situation and development. 
-- Comparison with the last available diplomatic briefing.
-
-# Guidelines
-${SimpleBriefer.commonGuidelines}
-
-# Resources
-You will receive the following reports:
-${SimpleStrategistBase.playersInfoPrompt}
-${SimpleBriefer.citiesPrompt}
-- World Congress: votes and resolutions in the World Congress.
-- Events: diplomacy-related events since the last decision-making.
-${SimpleBriefer.pastBriefingPrompt}
-
-${SimpleBriefer.instructionFooter}`.trim(),
-
   eventCategory: 'Diplomacy',
 
   getDataPrompt: (parameters, events) => {
@@ -277,10 +195,9 @@ export class SpecializedBriefer extends Briefer<SpecializedBrieferInput> {
   public async getSystem(
     _parameters: StrategistParameters,
     input: SpecializedBrieferInput,
-    _context: VoxContext<StrategistParameters>
+    context: VoxContext<StrategistParameters>
   ): Promise<string> {
-    const config = modeConfigs[input.mode];
-    return config.systemPrompt;
+    return renderSystemPrompt(context, `specialized-briefer.${input.mode.toLowerCase()}`);
   }
 
   /**

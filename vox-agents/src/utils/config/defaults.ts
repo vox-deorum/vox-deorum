@@ -48,5 +48,6 @@ export const defaultConfig: VoxAgentsConfig = {
   obs: {
     wsPort: 4455
   },
-  useDX11: true
+  useDX11: true,
+  prompts: false
 };

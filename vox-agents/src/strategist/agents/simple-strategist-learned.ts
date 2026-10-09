@@ -10,11 +10,11 @@
 import { ModelMessage, Tool } from "ai";
 import { z } from "zod";
 import { SimpleStrategistStaffed } from "./simple-strategist-staffed.js";
-import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { requestEpisodes, formatEpisodeResults } from "../../utils/prompts/episode-utils.js";
 import { createSimpleTool } from "../../utils/tools/simple-tools.js";
+import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
 /** Working memory key for storing a pending episode request between turns */
 const episodeRequestKey = "episode-request";
@@ -48,38 +48,11 @@ export class SimpleStrategistLearned extends SimpleStrategistStaffed {
   /**
    * Gets the system prompt for the strategist
    */
-  /**
-   * Shared prompt: Episode retrieval tool description
-   */
-  static readonly episodeGoalPrompt = `- You can steer the retrieval of historical episodes by calling the \`find-episodes\` tool.
-  - Describe the situation you want to find episodes for. Episodes will be available NEXT turn.`;
-
-  /**
-   * Shared prompt: Historical episodes resource description
-   */
-  static readonly episodesResourcePrompt = `- Historical Episodes (if available): similar situations from past games with their decisions and outcomes.
-  - Use these as reference points to inform your reasoning, not prescriptions. Your situation may differ in important ways.`;
-
-  public async getSystem(parameters: StrategistParameters, _context: VoxContext<StrategistParameters>): Promise<string> {
-    return `
-${SimpleStrategistBase.expertPlayerPrompt}
-
-${SimpleStrategistBase.expectationPrompt}
-
-${SimpleStrategistBase.goalsPrompt}
-${SimpleStrategistBase.specializedBrieferGoalPrompt}
-${SimpleStrategistBase.brieferCapabilitiesPrompt}
-${SimpleStrategistLearned.episodeGoalPrompt}
-${SimpleStrategistBase.getDecisionPrompt(parameters.mode)}
-
-# Resources
-You will receive the following reports:
-${SimpleStrategistBase.optionsDescriptionPrompt}
-${SimpleStrategistBase.strategiesDescriptionPrompt}
-${SimpleStrategistBase.victoryConditionsPrompt}
-${SimpleStrategistBase.playersInfoPrompt}
-${SimpleStrategistBase.briefingsResourcePrompt}
-${parameters.workingMemory[episodeRequestKey] ? SimpleStrategistLearned.episodesResourcePrompt : ""}`.trim()
+  public async getSystem(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<string> {
+    return renderSystemPrompt(context, 'simple-strategist-learned', {
+      flavor: parameters.mode === "Flavor",
+      episodes: !!parameters.workingMemory[episodeRequestKey]
+    });
   }
 
   /**

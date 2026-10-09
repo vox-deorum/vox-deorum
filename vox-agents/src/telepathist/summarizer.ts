@@ -12,24 +12,12 @@ import { VoxAgent } from '../infra/vox-agent.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
 import { VoxContext } from '../infra/vox-context.js';
 import { createLogger } from '../utils/logger.js';
+import { renderSystemPrompt } from '../utils/prompts/prompt-files.js';
 import type { Model } from '../types/index.js';
 import { getModelConfig, type ModelSize, selectModelReference } from '../utils/models/models.js';
 
 /** Historical summaries use the routine model; shared with the lookups outside `Summarizer.getModel`. */
 const summarizerSize: ModelSize = 'small';
-
-/**
- * Shared historian guidelines reused across summarization instructions.
- * Both the Summarizer's system prompt and caller-built instructions
- * reference these to maintain consistent tone and quality.
- */
-export const summarizerGuidelines = `- Write in past tense from an archivist's perspective, not the leader's.
-- Mention specific civilizations, cities, technologies, and policies by name.
-- The history happened in a generated world, and the geography had nothing to do with the real Earth.
-- ALWAYS follow the guidelines, including overall and for each heading.
-- Carefully distinguish between what is truth (game state) and what is perception of the leader.
-  - "Rationale" under the Options heading reflects the leader's perspective and can deviate from the reality.
-  - "RelayedMessage" type of events reflects the intelligence gathered by the government and can be incorrect.`.trim();
 
 /**
  * Input for the Summarizer agent.
@@ -72,15 +60,16 @@ export class Summarizer extends VoxAgent<TelepathistParameters, SummarizerInput,
   readonly description = 'General-purpose summarizer for historical data';
   public modelSize = summarizerSize;
 
+  /** Build the archivist system prompt from the shared historian guidelines template. */
   public async getSystem(
     params: TelepathistParameters,
     _input: SummarizerInput,
-    _context: VoxContext<TelepathistParameters>
+    context: VoxContext<TelepathistParameters>
   ): Promise<string> {
-    return `You are a senior archivist looking at a Civilization V game played by ${params.leaderName} of ${params.civilizationName}.
-
-# Guidelines
-${summarizerGuidelines}`.trim();
+    return renderSystemPrompt(context, 'summarizer', {
+      leader: params.leaderName,
+      civilization: params.civilizationName,
+    });
   }
 
   public async getInitialMessages(

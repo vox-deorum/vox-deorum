@@ -47,4 +47,17 @@ describe('loadConfig', () => {
     refreshConfig();
     expect(config.files).toBeUndefined();
   });
+
+  it('carries a saved prompts setting into the runtime config', async () => {
+    vi.resetModules();
+    const { config, refreshConfig } = await import('../../../src/utils/config.js');
+
+    fileConfig.json = JSON.stringify({ prompts: 'my-prompts' });
+    refreshConfig();
+    expect(config.prompts).toBe('my-prompts');
+
+    fileConfig.json = '{}';
+    refreshConfig();
+    expect(config.prompts).toBe(false);
+  });
 });

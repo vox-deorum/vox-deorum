@@ -27,7 +27,6 @@ import {
   type NegotiatorInput,
 } from '../../../../src/envoy/context/negotiator-utils.js';
 import { sessionRegistry } from '../../../../src/infra/session-registry.js';
-import { negotiatorTeammateExpectation } from '../../../../src/envoy/context/envoy-prompts.js';
 import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/utils/deal-schema.js';
 
 /** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
@@ -932,13 +931,18 @@ describe('getSystem teammate stance', () => {
 
   it('should judge deals by team benefit when the counterpart is a teammate', async () => {
     const negotiator = new Negotiator();
-    const system = await negotiator.getSystem(teamParams(1), negotiatorInput({ thread: teammateThread() }), {} as any);
-    expect(system).toContain(negotiatorTeammateExpectation('Germany', 'Rome'));
+    const teammateSystem = await negotiator.getSystem(teamParams(1), negotiatorInput({ thread: teammateThread() }), {} as any);
+    const rivalSystem = await negotiator.getSystem(teamParams(3), negotiatorInput({ thread: teammateThread() }), {} as any);
+    // The counterpart civ name flows into the stance only through the teammate check, so its
+    // presence marks the teammate stance and its absence the hard-bargain stance.
+    expect(teammateSystem).not.toBe(rivalSystem);
+    expect(teammateSystem).toContain('Rome');
+    expect(rivalSystem).not.toContain('Rome');
   });
 
   it('should keep the hard-bargain stance for other teams', async () => {
     const negotiator = new Negotiator();
     const system = await negotiator.getSystem(teamParams(3), negotiatorInput({ thread: teammateThread() }), {} as any);
-    expect(system).not.toContain(negotiatorTeammateExpectation('Germany', 'Rome'));
+    expect(system).not.toContain('Rome');
   });
 });

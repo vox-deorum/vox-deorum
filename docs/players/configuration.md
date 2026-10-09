@@ -49,6 +49,19 @@ In the shell, `/tmp` is scratch space shared by one civilization's agents for th
 
 Set `files` on a seat (`llmPlayers.<n>.files`), in the session config, or in `vox-agents/config.json`; the highest level that sets it wins and replaces lower ones whole, with no merging, the same as `triage`. An invalid value fails the session's preflight check before the game launches, and the error names the config path to fix. Two seats of the same game writing one shared name can pass information to each other, so use different names per seat or read access. The tool needs Node.js 22.17.0 or newer (Vox Deorum requires 22.23.3); on older Node it returns an error asking you to upgrade. See the [developer overview](../developers/vox-agents/overview.md#models-and-configuration) for the full policy.
 
+## Custom prompts
+
+The instructions each AI agent receives are plain Markdown files in `vox-agents/prompts/`. To change them, copy the built-in files you want to edit into a folder of your own (for example `vox-agents/my-prompts/`), keeping the same names and subfolders, and edit the copies. Then set `"prompts": "my-prompts"`, a folder relative to `vox-agents/`. Files you don't copy keep the built-in text.
+
+- Each agent has its own file, such as `simple-strategist.md` or `diplomat.md`. The specialized briefer has one per mode, such as `specialized-briefer.military.md`.
+- Text shared by several agents lives in `shared/`. Changing `shared/goals.md`, for example, changes every strategist that includes it.
+- `{{name}}` inserts game data, such as `{{civilization}}`. `{{#flavor}}...{{/flavor}}` keeps a passage only when a condition holds, and `{{^flavor}}...{{/flavor}}` only when it does not. `{{> shared/goals}}`, on its own line, includes a shared file. These follow [Mustache](https://mustache.github.io/mustache.5.html).
+- Keep the passages that tell an agent how to act, such as `{{> shared/decision}}` for strategists, which says which decision tool to call. Nothing checks that your text still makes sense.
+
+Set `prompts` on a seat (`llmPlayers.<n>.prompts`), in the session config, or in `vox-agents/config.json`; the highest level wins, the same as `files`. `false`, the default, uses only the built-ins. Agents that run outside a game seat, such as the replay summarizer and the telepathist, use the `config.json` setting.
+
+The files are read when a session starts, so edits apply to the next session. The folder set in `config.json` is also checked when Vox Deorum starts, and a Settings save with an invalid folder is refused with the reason. If Vox Deorum will not start because of this folder, fix the files or remove `prompts` from `config.json`. Either check fails, with an error naming the file, if a file name does not match a built-in one, a file includes a shared file that does not exist, or a file uses a `{{name}}` its built-in counterpart does not use in that place. For example, `{{civName}}` is only valid inside `{{#teammate}}...{{/teammate}}`, where the built-in uses it.
+
 ## Choosing a model
 
 The wizard lists the models available through whatever you connected:

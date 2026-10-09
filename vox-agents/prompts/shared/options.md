@@ -1,0 +1,4 @@
+- Options: available strategic options for you.
+  - Whatever decision-making tool you call, the in-game AI can only execute options here.
+  - When using tools, you must choose available options from # Options. Double-check if your choices match.
+  - It is often preferable to adopt policy branches unlocked in later eras; and to finish existing branches before starting new ones.

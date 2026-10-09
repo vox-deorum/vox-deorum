@@ -8,4 +8,4 @@
 
 Recreate `simple`, `simple-briefed`, and `simple-staffed` as workflows (briefer sub-agents; `shared/` carrying briefer and focus requests; three concurrent briefers for staffed). Add the one-time mock-tier tests: **prompt equivalence** against the static originals' `getSystem`/`getInitialMessages`, and **tool-call equivalence** for `null`/`none`. This is the acceptance gate for the workflow half, and it also proves the `state/` snapshot writer is complete.
 
-`learned` and episode retrieval are deferred with the memory expansion. The static strategists in `vox-agents/src/strategist/agents/simple-strategist-base.ts` are the canonical reference oracle for the equivalence tests.
+`learned` and episode retrieval are deferred with the memory expansion. The static strategists (`vox-agents/src/strategist/agents/`, with system prompts in the built-in templates under `vox-agents/prompts/`) are the canonical reference oracle for the equivalence tests.

@@ -14,6 +14,7 @@ import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
 import { requestBriefing, assembleBriefings, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
+import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
 /**
  * A briefed strategist agent that first requests a briefing before making strategic decisions.
@@ -40,26 +41,8 @@ export class SimpleStrategistBriefed extends SimpleStrategistBase {
   /**
    * Gets the system prompt for the strategist
    */
-  public async getSystem(parameters: StrategistParameters, _context: VoxContext<StrategistParameters>): Promise<string> {
-    return `
-${SimpleStrategistBase.expertPlayerPrompt}
-
-${SimpleStrategistBase.expectationPrompt}
-
-${SimpleStrategistBase.goalsPrompt}
-- You can ask your briefer to prepare a focused report (only for) the next turn by calling the \`focus-briefer\` tool.
-  - Only ask for information relevant to the macro-level decisions in your control.
-${SimpleStrategistBase.brieferCapabilitiesPrompt}
-${SimpleStrategistBase.getDecisionPrompt(parameters.mode)}
-
-# Resources
-You will receive the following reports:
-${SimpleStrategistBase.optionsDescriptionPrompt}
-${SimpleStrategistBase.strategiesDescriptionPrompt}
-${SimpleStrategistBase.victoryConditionsPrompt}
-${SimpleStrategistBase.playersInfoPrompt}
-- Briefing: prepared by your briefer, summarizing the current game situation.
-  - You will make independent and wise judgment.`.trim()
+  public async getSystem(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<string> {
+    return renderSystemPrompt(context, 'simple-strategist-briefed', { flavor: parameters.mode === "Flavor" });
   }
 
   /**

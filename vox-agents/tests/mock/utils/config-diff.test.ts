@@ -165,6 +165,13 @@ describe('mergeConfigWithDefaults', () => {
     expect(mergeConfigWithDefaults({ files: { game: 'read' } }, defaults).files).toEqual({ game: 'read' });
   });
 
+  it('should carry a prompts setting from the file and keep it in the diff', () => {
+    const defaults = makeDefaults();
+    const merged = mergeConfigWithDefaults({ prompts: 'my-prompts' }, defaults);
+    expect(merged.prompts).toBe('my-prompts');
+    expect(computeConfigDiff(merged, defaults)).toEqual({ prompts: 'my-prompts' });
+  });
+
   it('should ignore a stale deletion tombstone for an unknown default model', () => {
     const defaults = makeDefaults();
 

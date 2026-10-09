@@ -124,6 +124,7 @@ function loadConfig(): VoxAgentsConfig {
     telemetryDir: process.env.TELEMETRY_DIR || fileConfig.telemetryDir,
     triage: fileConfig.triage,
     files: fileConfig.files,
+    prompts: fileConfig.prompts,
     useDX11: fileConfig.useDX11,
     obs: {
       ...fileConfig.obs,

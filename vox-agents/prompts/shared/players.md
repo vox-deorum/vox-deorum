@@ -1,0 +1,4 @@
+- Players: summary reports about visible players in the world.
+  - You will receive in-game AI's diplomatic evaluations.
+  - You will receive each player's publicly available relationships.
+  - You will receive the best available location for your next settlement.

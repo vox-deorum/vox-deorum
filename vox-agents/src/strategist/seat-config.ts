@@ -1,12 +1,13 @@
 /**
  * @module strategist/seat-config
  *
- * Reads a seat's agent roles and resolves its triage and files settings. Shared by session
+ * Reads a seat's agent roles and resolves its triage, files, and prompts settings. Shared by session
  * preflight, player assignments, and the seat context so the defaults live in one place.
  */
 
-import type { FilesConfig, FilesSetting, PlayerConfig, ResolvedFilesConfig, TriageSetting } from "../types/config.js";
+import type { FilesConfig, FilesSetting, PlayerConfig, PromptsSetting, ResolvedFilesConfig, TriageSetting } from "../types/config.js";
 import { config } from "../utils/config.js";
+import { checkPromptsSetting } from "../utils/prompts/prompt-files.js";
 
 /** Agent that voices a seat's diplomacy when the seat doesn't name one. */
 export const defaultDiplomat = "diplomat";
@@ -140,4 +141,20 @@ export function resolveSeatFiles(playerConfig: PlayerConfig, sessionFiles?: File
     shared: { ...resolved.shared },
     quota: resolved.quota ?? defaultFilesQuota,
   };
+}
+
+/**
+ * Resolve the custom prompt folder for one seat: the seat's own value, else the session's, else
+ * the root config's, else the built-ins (false). Only the setting is checked here; the folder's
+ * templates are validated when the session loads them.
+ *
+ * @param playerConfig - The seat's configuration
+ * @param sessionPrompts - The session config's top-level prompts setting
+ * @param slot - The seat's config slot, used to identify an invalid seat setting
+ * @throws if the winning value is neither false nor a folder path
+ */
+export function resolveSeatPrompts(playerConfig: PlayerConfig, sessionPrompts: PromptsSetting | undefined, slot: string | number): PromptsSetting {
+  if (playerConfig.prompts !== undefined) return checkPromptsSetting(playerConfig.prompts, `llmPlayers.${slot}.prompts`);
+  if (sessionPrompts !== undefined) return checkPromptsSetting(sessionPrompts, "session.prompts");
+  return checkPromptsSetting(config.prompts ?? false, "config.prompts");
 }

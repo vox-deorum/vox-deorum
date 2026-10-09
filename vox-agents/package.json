@@ -34,8 +34,12 @@
   "dependencies": {
     "@types/uuid": "^10.0.0",
     "just-bash": "^3.6.0",
+    "mustache": "^4.2.0",
     "open": "^11.0.0",
     "openai": "^6.35.0",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.2.6"
   }
 }
