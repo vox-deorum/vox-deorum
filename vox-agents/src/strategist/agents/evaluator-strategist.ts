@@ -65,7 +65,7 @@ ${SimpleBriefer.eventsPrompt}`.trim();
    * Ask the evaluator about the whole action space, then issue the action tools that change
    * something. A failed action is logged and skipped, so one rejected choice does not void the
    * decision. The decision record goes on the agent span as `strategist.decision`, since the
-   * evaluate span already holds the raw answers.
+   * evaluate span already holds the raw answers, and any trimming of the state as `strategist.trim`.
    */
   public override async executeEvaluation(
     parameters: StrategistParameters,
@@ -80,9 +80,11 @@ ${SimpleBriefer.eventsPrompt}`.trim();
     }
 
     const state = await ensureGameState(context, parameters);
-    const evaluationState = buildStrategistEvaluationState(prepared.system, parameters, state, inputTokenLimit(model));
+    const { text, trim } = buildStrategistEvaluationState(prepared.system, parameters, state, inputTokenLimit(model));
+    // Recorded before the call, so a state that still overflows shows what was already cut.
+    if (trim) trace.getActiveSpan()?.setAttribute("strategist.trim", JSON.stringify(trim));
     const set = buildStrategistQuestions(state, parameters.playerID, context.mcpToolMap);
-    const { answers } = await context.evaluate(model, evaluationState, { questions: set.questions, tokenOutput });
+    const { answers } = await context.evaluate(model, text, { questions: set.questions, tokenOutput });
     const { actions, decision } = strategistActionsFromAnswers(answers as Record<string, StrategistAnswer>, set, parameters);
 
     const calls: StrategistCall[] = [];

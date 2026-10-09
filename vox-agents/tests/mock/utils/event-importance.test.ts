@@ -1,23 +1,23 @@
 /**
  * Tests for importance-based event trimming (src/utils/prompts/event-importance.ts): the explicit
- * tier table lists no type twice, `dropLeastImportantEvents` removes one importance group per
- * level from the least important end (unlisted, missing, and non-string types count as noise, so
- * level 1 drops them together with the noise tier and the top tier is last), and
- * `trimEventsToFit` walks those levels until a caller-supplied size check accepts the report.
+ * tier table names each group of types and lists no type twice, `dropEventTiers` removes tiers by
+ * name in any combination (unlisted, missing, and non-string types count as noise, so dropping
+ * `noise` removes them together with the noise tier), and `dropLeastImportantEvents` removes one
+ * importance group per level from the least important end.
  */
 import { describe, expect, it } from 'vitest';
 import {
+  dropEventTiers,
   dropLeastImportantEvents,
   eventImportanceTiers,
   maxEventTrimLevel,
-  trimEventsToFit,
 } from '../../../src/utils/prompts/event-importance.js';
 
 /** A type no tier lists, so it counts as noise and drops with the least important tier. */
 const unknownType = 'TypeNotInAnyTier';
 
 /** The first type of every tier, most important first. */
-const tierLeaders = eventImportanceTiers.map(tier => tier[0]);
+const tierLeaders = eventImportanceTiers.map(tier => tier.types[0]);
 
 /** The least important tier's type: dropped together with unknown types at level 1. */
 const noiseType = tierLeaders[tierLeaders.length - 1];
@@ -46,15 +46,109 @@ describe('eventImportanceTiers', () => {
   it('should list each explicit type in no more than one tier', () => {
     const listed = new Set<string>();
     for (const tier of eventImportanceTiers) {
-      for (const type of tier) {
+      for (const type of tier.types) {
         expect(listed.has(type), `${type} listed twice`).toBe(false);
         listed.add(type);
       }
     }
   });
 
+  it('should rank unit events above progress, combat below it, and movement as noise', () => {
+    const rank = (type: string) => eventImportanceTiers.findIndex(tier => (tier.types as readonly string[]).includes(type));
+    const progress = rank('TeamTechResearched');
+
+    for (const type of ['CityTrained', 'UnitCreated', 'UnitUpgraded', 'UnitKilledInCombat']) {
+      expect(rank(type), type).toBeLessThan(progress);
+    }
+    expect(rank('CombatResult')).toBeGreaterThan(progress);
+    expect(rank('CombatResult')).toBeLessThan(rank('SetPopulation'));
+    for (const type of ['UnitSetXY', 'ParadropAt', 'RebaseTo']) {
+      expect(rank(type), type).toBe(eventImportanceTiers.length - 1);
+    }
+  });
+
   it('should allow trimming past every tier except the top one', () => {
     expect(maxEventTrimLevel).toBe(eventImportanceTiers.length - 1);
+  });
+});
+
+describe('dropEventTiers', () => {
+  it('should drop only the named tiers, in any combination', () => {
+    const events = reportOf(tierLeaders);
+
+    // One tier: both its neighbours keep their events.
+    const one = dropEventTiers(events, ['progress']);
+    expect(keptTypes(one.events)).toEqual(tierLeaders.filter((_, index) => index !== 3));
+    expect(one.droppedEvents).toBe(1);
+
+    // Two tiers at once, and an unnamed tier between them survives.
+    const two = dropEventTiers(events, ['combat', 'noise']);
+    expect(keptTypes(two.events)).toEqual(tierLeaders.filter((_, index) => index !== 4 && index !== 6));
+    expect(two.droppedEvents).toBe(2);
+  });
+
+  it('should drop unlisted and malformed events together with the noise tier', () => {
+    const events = { '5': [event(tierLeaders[0]), event(noiseType), event(unknownType), { Type: 42 }, {}] };
+
+    const result = dropEventTiers(events, ['noise']);
+
+    expect(keptTypes(result.events)).toEqual([tierLeaders[0]]);
+    expect(result.droppedEvents).toBe(4);
+  });
+
+  it('should keep every event when no tier is named', () => {
+    const events = reportOf([...tierLeaders, unknownType]);
+
+    const result = dropEventTiers(events, []);
+
+    expect(result.events).toEqual(events);
+    expect(result.events).not.toBe(events);
+    expect(result.droppedEvents).toBe(0);
+  });
+
+  it('should keep non-array entries such as the markdown config', () => {
+    const markdownConfig = { configs: [{ format: 'Turn {key}' }] };
+    const events = { '5': [...tierLeaders, unknownType].map(event), _markdownConfig: markdownConfig };
+
+    const trimmed = dropEventTiers(events, ['noise']).events;
+
+    expect(trimmed._markdownConfig).toEqual(markdownConfig);
+    expect(trimmed['5'].length).toBe(tierLeaders.length - 1);
+  });
+
+  it('should remove turns left without events and keep the others', () => {
+    const events = {
+      '3': [event(noiseType)],
+      '4': [event(unknownType)],
+      '5': [event(tierLeaders[0]), event(noiseType)],
+    };
+
+    const result = dropEventTiers(events, ['noise']);
+
+    expect(Object.keys(result.events)).toEqual(['5']);
+    expect(keptTypes(result.events)).toEqual([tierLeaders[0]]);
+  });
+
+  it('should report how many events were dropped, across every turn', () => {
+    const events = {
+      '3': [event(tierLeaders[3]), event(unknownType)],
+      '4': [event(tierLeaders[3]), event(tierLeaders[0])],
+      '5': [event(tierLeaders[5])],
+    };
+
+    const result = dropEventTiers(events, ['progress', 'economy']);
+
+    expect(result.droppedEvents).toBe(3);
+    expect(keptTypes(result.events)).toEqual([unknownType, tierLeaders[0]]);
+  });
+
+  it('should not mutate the report it trims', () => {
+    const events = reportOf([...tierLeaders, unknownType]);
+    const before = JSON.parse(JSON.stringify(events));
+
+    dropEventTiers(events, ['noise', 'economy', 'progress']);
+
+    expect(events).toEqual(before);
   });
 });
 
@@ -165,95 +259,5 @@ describe('dropLeastImportantEvents', () => {
     dropLeastImportantEvents(events, maxEventTrimLevel);
 
     expect(events).toEqual(before);
-  });
-});
-
-describe('trimEventsToFit', () => {
-  /** A size check expressed as an event-count ceiling. */
-  function fitsAtMost(maxEvents: number): (candidate: Record<string, unknown[]>) => boolean {
-    return candidate => countEvents(candidate) <= maxEvents;
-  }
-
-  it('should return the report untouched when the first check already passes', () => {
-    const events = reportOf([...tierLeaders, unknownType]);
-    let checks = 0;
-
-    const result = trimEventsToFit(events, candidate => {
-      checks++;
-      return fitsAtMost(99)(candidate);
-    });
-
-    expect(result.fits).toBe(true);
-    expect(result.events).toBe(events);
-    expect(result.droppedTiers).toBe(0);
-    expect(result.droppedEvents).toBe(0);
-    expect(checks).toBe(1);
-  });
-
-  it('should drop the fewest groups that make the report fit', () => {
-    const events = reportOf([tierLeaders[0], tierLeaders[3], noiseType]);
-
-    const result = trimEventsToFit(events, fitsAtMost(2));
-
-    // One level is enough: the noise tier's type is the only event that goes.
-    expect(result.fits).toBe(true);
-    expect(result.droppedTiers).toBe(1);
-    expect(result.droppedEvents).toBe(1);
-    expect(keptTypes(result.events)).toEqual([tierLeaders[0], tierLeaders[3]]);
-  });
-
-  it('should drop unknown types together with noise, never as a step of their own', () => {
-    const events = reportOf([tierLeaders[0], noiseType, unknownType]);
-    const candidates: string[][] = [];
-
-    // Accept the first candidate that no longer holds the unknown type.
-    const result = trimEventsToFit(events, candidate => {
-      const types = keptTypes(candidate);
-      candidates.push(types);
-      return !types.includes(unknownType);
-    });
-
-    // There is no unknown-only candidate: the step that removes the unknown type removes noise
-    // in the same level, and that first accepted step already fits.
-    expect(result.fits).toBe(true);
-    expect(result.droppedTiers).toBe(1);
-    expect(result.droppedEvents).toBe(2);
-    expect(candidates).toEqual([
-      [tierLeaders[0], noiseType, unknownType],
-      [tierLeaders[0]],
-    ]);
-  });
-
-  it('should skip levels that would drop nothing new', () => {
-    const events = reportOf([tierLeaders[0], tierLeaders[3], noiseType]);
-    let checks = 0;
-
-    const result = trimEventsToFit(events, candidate => {
-      checks++;
-      return fitsAtMost(1)(candidate);
-    });
-
-    // One check for the original report plus one per level that actually changed it: the levels
-    // whose tiers hold no event in this report are skipped.
-    expect(result.fits).toBe(true);
-    expect(result.droppedEvents).toBe(2);
-    expect(keptTypes(result.events)).toEqual([tierLeaders[0]]);
-    expect(checks).toBe(3);
-  });
-
-  it('should report fits false with only the top tier left when nothing fits', () => {
-    const events = reportOf([...tierLeaders, unknownType]);
-    let checks = 0;
-
-    const result = trimEventsToFit(events, () => {
-      checks++;
-      return false;
-    });
-
-    expect(result.fits).toBe(false);
-    expect(keptTypes(result.events)).toEqual([tierLeaders[0]]);
-    expect(result.droppedEvents).toBe(tierLeaders.length);
-    expect(result.droppedTiers).toBe(maxEventTrimLevel);
-    expect(checks).toBe(maxEventTrimLevel + 1);
   });
 });

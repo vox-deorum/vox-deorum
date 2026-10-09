@@ -1,16 +1,16 @@
 /**
  * Tests for the evaluator strategist (src/strategist/agents/evaluator-strategist.ts): one
  * evaluation call per decision, then the action tools that change something in order. The whole
- * decision is recorded as the `strategist.decision` attribute on the active span, and nothing is
- * returned. The fake context carries a ready cached game state and the MCP tool schemas, so the
- * only tool calls are the actions.
+ * decision is recorded as the `strategist.decision` attribute on the active span, any state
+ * trimming as `strategist.trim`, and nothing is returned. The fake context carries a ready cached
+ * game state and the MCP tool schemas, so the only tool calls are the actions.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { trace } from "@opentelemetry/api";
 import { agentRegistry } from "../../../src/infra/agent-registry.js";
 import type { EvaluatorStrategist } from "../../../src/strategist/agents/evaluator-strategist.js";
 import type { StrategistAnswer } from "../../../src/strategist/agents/evaluator-questions.js";
-import type { Model, StrategistDecision } from "../../../src/types/index.js";
+import type { Model, StrategistDecision, StrategistTrim } from "../../../src/types/index.js";
 import {
   createFakeVoxContext,
   makeGameState,
@@ -70,13 +70,15 @@ const turn = 5;
 /**
  * Wire a decision: a fake context with a cached game state (no `eventsAfter`, so no refresh),
  * the tool schemas, a scripted evaluation, success handlers for every action, and a run signal.
- * `report` replaces top-level sections of the options report and `answers` scripts the evaluation.
+ * `report` replaces top-level sections of the options report, `answers` scripts the evaluation,
+ * and `events` replaces the events report.
  */
 function setup(options: {
   mode?: "Strategy" | "Flavor";
   signal?: AbortSignal;
   answers?: Record<string, StrategistAnswer>;
   report?: Record<string, unknown>;
+  events?: Record<string, unknown[]>;
 } = {}) {
   const fake = createFakeVoxContext();
   const state = makeGameState(turn, {
@@ -85,7 +87,7 @@ function setup(options: {
       "1": { Civilization: "Rome", IsMajor: true },
       "2": { Civilization: "Greece", IsMajor: true },
     } as never,
-    events: { [String(turn)]: [{ Type: "DeclareWar" }] } as never,
+    events: (options.events ?? { [String(turn)]: [{ Type: "DeclareWar" }] }) as never,
   });
   const parameters = makeStrategistParameters({ turn, mode: options.mode ?? "Flavor", gameStates: { [turn]: state } });
   fake.setBaseParameters(parameters);
@@ -106,9 +108,9 @@ function setup(options: {
 /** The prepared system prompt the evaluation state must lead with. */
 const systemMarker = "SYSTEM-MARKER";
 
-/** Run one decision with the evaluator model. */
-function decide({ context, parameters }: ReturnType<typeof setup>) {
-  return strategist.executeEvaluation(parameters, undefined, context, { system: systemMarker, messages: [], tools: undefined }, evaluatorModel);
+/** Run one decision with the evaluator model, or a model carrying its own input limit. */
+function decide({ context, parameters }: ReturnType<typeof setup>, model: Model = evaluatorModel) {
+  return strategist.executeEvaluation(parameters, undefined, context, { system: systemMarker, messages: [], tools: undefined }, model);
 }
 
 /** Stand the active span in for a recording double; returns its `setAttribute` spy. */
@@ -123,6 +125,12 @@ function recordedDecision(setAttribute: ReturnType<typeof vi.fn>): StrategistDec
   const call = setAttribute.mock.calls.find(args => args[0] === "strategist.decision");
   expect(call, "the strategist recorded no decision on the active span").toBeDefined();
   return JSON.parse((call as unknown as [string, string])[1]) as StrategistDecision;
+}
+
+/** Parse the `strategist.trim` attribute, or undefined when the strategist recorded no trimming. */
+function recordedTrim(setAttribute: ReturnType<typeof vi.fn>): StrategistTrim | undefined {
+  const call = setAttribute.mock.calls.find(args => args[0] === "strategist.trim");
+  return call === undefined ? undefined : JSON.parse((call as unknown as [string, string])[1]) as StrategistTrim;
 }
 
 // Loaded through the registry, which settles the agent module import cycle first.
@@ -191,6 +199,36 @@ describe("EvaluatorStrategist", () => {
       { tool: "set-relationship", status: "dropped", target: 2 },
     ]);
     expect(decision.questions.flavor_Science).toEqual({ current: 50, proposed: 50, sent: false });
+  });
+
+  it("should record strategist.trim when the model input limit forces trimming", async () => {
+    const setAttribute = recordSpanAttributes();
+    const noise = Array.from({ length: 40 }, (_, index) => ({ Type: "TileRevealed", Detail: `plot ${index} `.repeat(30) }));
+    const run = setup({ events: { [String(turn)]: [...noise, { Type: "DeclareWar" }] } });
+    // A limit whose 90% budget cannot hold even the trimmed state, so the ladder runs.
+    const tightModel = { ...evaluatorModel, options: { maxInputTokens: 100 } } as Model;
+
+    await decide(run, tightModel);
+
+    const trim = recordedTrim(setAttribute);
+    expect(trim, "the strategist recorded no trim on the active span").toBeDefined();
+    expect(trim!.steps).toEqual(["events-noise"]);
+    expect(trim!.droppedEvents).toBe(noise.length);
+    expect(typeof trim!.fits).toBe("boolean");
+    // The trimmed turning-point event still reaches the evaluation.
+    const [, state] = run.fake.evaluate.mock.calls[0] as [Model, string];
+    expect(state).toContain("DeclareWar");
+  });
+
+  it("should record no strategist.trim when the state fits the model input limit", async () => {
+    const setAttribute = recordSpanAttributes();
+    const run = setup();
+
+    await decide(run);
+
+    expect(recordedTrim(setAttribute)).toBeUndefined();
+    // The decision is still recorded: the absence is specific to the trim attribute.
+    expect(recordedDecision(setAttribute)).toBeDefined();
   });
 
   it("should refuse the Strategy decision mode without evaluating", async () => {

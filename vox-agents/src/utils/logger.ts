@@ -120,21 +120,30 @@ const expandErrors = winston.format((info) => {
 
 /**
  * Sanitize AI SDK errors to prevent full prompts from being logged.
- * APICallError includes requestBodyValues with the entire messages array;
- * this replaces the messages with a redacted placeholder.
+ * APICallError includes requestBodyValues with the entire messages array, or the whole state and
+ * question set for an evaluation call; this replaces each with a short redacted placeholder.
  */
-function sanitizeAIError(obj: any): any {
+export function sanitizeAIError(obj: any): any {
   if (obj == null || typeof obj !== 'object') return obj;
 
   // Handle requestBodyValues directly on the object (APICallError)
   if (obj.requestBodyValues && typeof obj.requestBodyValues === 'object') {
-    const { messages, prompt, ...rest } = obj.requestBodyValues;
+    const { messages, prompt, state, questions, ...rest } = obj.requestBodyValues;
     const sanitized = { ...obj, requestBodyValues: { ...rest } };
     if (messages) {
       sanitized.requestBodyValues.messages = `[redacted: ${Array.isArray(messages) ? messages.length : '?'} messages]`;
     }
     if (prompt) {
       sanitized.requestBodyValues.prompt = `[redacted: ${Array.isArray(prompt) ? prompt.length : '?'} prompt parts]`;
+    }
+    // Evaluation calls send the whole game state and question set instead of messages.
+    if (state) {
+      const size = typeof state === 'string' ? state.length : JSON.stringify(state)?.length ?? 0;
+      sanitized.requestBodyValues.state = `[redacted: ${size} chars]`;
+    }
+    if (questions) {
+      const count = Array.isArray(questions) ? questions.length : typeof questions === 'object' ? Object.keys(questions).length : '?';
+      sanitized.requestBodyValues.questions = `[redacted: ${count} questions]`;
     }
     return sanitized;
   }

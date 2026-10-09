@@ -2,7 +2,8 @@
  * Tests for the evaluator strategist's pure helpers (src/strategist/agents/evaluator-questions.ts):
  * the question set built from an options report and the MCP tool schemas, the plan of action tool
  * calls and decision record derived from the answers (calls that do not change something versus the
- * game are dropped), and the evaluation state with its event trimming.
+ * game are dropped), and the evaluation state: its text plus the trim ladder record the text was
+ * shortened with.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -337,9 +338,9 @@ describe('buildStrategistEvaluationState', () => {
 
     const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
 
-    expect(evaluation.startsWith(system)).toBe(true);
+    expect(evaluation.text.startsWith(system)).toBe(true);
     for (const value of ['Caesar', 'TheWheel', 'Tradition (Policy)', 'Domination', 'Greece', 'Antium', 'Legion', 'DeclareWar']) {
-      expect(evaluation).toContain(value);
+      expect(evaluation.text).toContain(value);
     }
   });
 
@@ -353,8 +354,8 @@ describe('buildStrategistEvaluationState', () => {
 
     const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
 
-    expect(evaluation).not.toContain('_markdownConfig');
-    expect(evaluation).not.toContain('{"');
+    expect(evaluation.text).not.toContain('_markdownConfig');
+    expect(evaluation.text).not.toContain('{"');
   });
 
   it('should prefer the merged decision window over the per-turn slice', () => {
@@ -365,11 +366,11 @@ describe('buildStrategistEvaluationState', () => {
 
     const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
 
-    expect(evaluation).toContain('DeclareWar');
-    expect(evaluation).not.toContain('GameSave');
+    expect(evaluation.text).toContain('DeclareWar');
+    expect(evaluation.text).not.toContain('GameSave');
   });
 
-  it('should trim the least important events until the whole state fits', () => {
+  it('should trim with event steps alone when dropping events makes the state fit', () => {
     const noise = Array.from({ length: 60 }, (_, index) => ({ Type: 'TileRevealed', Detail: `plot ${index} `.repeat(30) }));
     const war = { Type: 'DeclareWar', OriginatingPlayer: 2 };
     const state = fullState({ events: { '5': [...noise, war] } as never });
@@ -377,20 +378,54 @@ describe('buildStrategistEvaluationState', () => {
 
     const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, limit);
 
-    expect(evaluation).toContain('DeclareWar');
-    expect(evaluation).not.toContain('TileRevealed');
-    expect(evaluation).toContain(String(noise.length));
-    expect(countTokens(evaluation)).toBeLessThanOrEqual(limit);
+    expect(evaluation.text).toContain('DeclareWar');
+    expect(evaluation.text).not.toContain('TileRevealed');
+    expect(countTokens(evaluation.text)).toBeLessThanOrEqual(limit);
+    // The reports were small enough: only event tiers were dropped, and only noise held events.
+    expect(evaluation.trim!.steps).toEqual(['events-noise']);
+    expect(evaluation.trim!.steps.every(id => id.startsWith('events-'))).toBe(true);
+    expect(evaluation.trim!.droppedEvents).toBe(noise.length);
+    expect(evaluation.trim!.fits).toBe(true);
   });
 
-  it('should keep every event when there is no input limit', () => {
+  it('should apply a report step when dropping events alone cannot fit', () => {
+    const noise = Array.from({ length: 20 }, (_, index) => ({ Type: 'TileRevealed', Detail: `plot ${index} `.repeat(30) }));
+    const buildings = Array.from({ length: 400 }, (_, index) => `Shrine of ${index}`);
+    const state = fullState({
+      events: { '5': [...noise, { Type: 'DeclareWar' }] } as never,
+      cities: {
+        '1': {
+          Antium: {
+            ID: 1, X: 4, Y: 6, Population: 5, MajorityReligion: null, DefenseStrength: 20,
+            ImportantBuildings: buildings, FoodPerTurn: 6,
+          },
+        },
+      } as never,
+    });
+    const limit = 1_000;
+
+    const evaluation = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, limit);
+
+    // Dropping events and city coordinates cannot save enough: the walk goes on to the next
+    // step with something to cut, skipping the ones in between that match nothing.
+    expect(evaluation.trim!.steps).toEqual(['events-noise', 'city-coordinates', 'city-buildings']);
+    expect(evaluation.trim!.fits).toBe(true);
+    expect(evaluation.text).toContain('DeclareWar');
+    expect(evaluation.text).not.toContain('Shrine of 7');
+    expect(evaluation.text).toContain('Population');
+    expect(countTokens(evaluation.text)).toBeLessThanOrEqual(limit);
+  });
+
+  it('should report no trim when no limit is given or the state already fits', () => {
     const noise = { Type: 'TileRevealed', Detail: 'plot 0' };
     const state = fullState({ events: { '5': [noise] } as never });
 
     const withoutLimit = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state);
     const withRoom = buildStrategistEvaluationState(system, makeStrategistParameters({ playerID }), state, 100_000);
 
-    expect(withoutLimit).toContain('TileRevealed');
-    expect(withRoom).toBe(withoutLimit);
+    expect(withoutLimit.trim).toBeUndefined();
+    expect(withoutLimit.text).toContain('TileRevealed');
+    expect(withRoom.trim).toBeUndefined();
+    expect(withRoom.text).toBe(withoutLimit.text);
   });
 });

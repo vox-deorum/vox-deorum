@@ -15,7 +15,7 @@ The framework has a small core (an agent base class, an execution context, and a
 | [Oracle](oracle.md) | Replays past turns with modified prompts or different models for "what-if" experiments. |
 | [Archivist](archivist.md) | Batch-processes finished games into an episode database that strategists learn from. |
 
-The [web UI](ui.md), [media pipeline](media.md), and [observability](observability.md) pages cover the dashboard, OBS capture and video generation, and tracing and logging. [Prompts and tool calling](prompts.md) explains how a model request is built and where to edit each part of it. [Context compaction](compaction.md) shows how a long run with the `files` workspace drops old command output. [Evaluators](evaluators.md) covers evaluation models, triage, and the evaluator strategist.
+The [web UI](ui.md), [media pipeline](media.md), and [observability](observability.md) pages cover the dashboard, OBS capture and video generation, and tracing and logging. [Prompts and tool calling](prompts.md) explains how a model request is built and where to edit each part of it. [Context compaction](compaction.md) shows how a long run with the `files` workspace drops old command output. [Evaluators](evaluators.md) covers evaluation models, triage, and the evaluator strategist, and [Evaluator trimming](evaluator-trimming.md) shows how the evaluator strategist's state is shortened to fit the model's input limit.
 
 ## VoxAgent: the base class
 

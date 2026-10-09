@@ -103,8 +103,9 @@ The [diplomatic analyst](support-agents.md) judges each diplomat report in one e
 ```mermaid
 flowchart TD
   A["Game state<br/>(same reports as the simple strategist)"] --> B["Markdown state<br/>system prompt + reports"]
-  B --> C{"Over 95% of the<br/>input limit?"}
-  C -->|yes| D["Drop the least important events"] --> C
+  B --> C{"Over 90% of the<br/>input limit?"}
+  C -->|yes| D["Apply the next trim step"] --> C
+  D -.->|when a step ran| T["strategist.trim on the agent span"]
   C -->|no| E["One evaluation<br/>(questions from get-options and tool schemas)"]
   E --> F["Compare answers with in-game values"]
   F --> G["Call only the tools that change something"]
@@ -118,11 +119,7 @@ The state is one markdown text, built by `buildStrategistEvaluationState` in `sr
 1. **System prompt.** Evaluation calls have no separate system slot, so the text starts with the agent's `getSystem` prompt. It reuses the simple strategist's explanation of the game (`SimpleStrategistBase`), without the lines about calling tools, and adds a short section on what the answers decide.
 2. **Reports.** The same markdown the simple strategist sees, from `renderStrategistReports` in `src/strategist/strategy-parameters.ts`: situation, your civilization, options, current strategies, victory progress, players, cities, military, events since the last decision, and the turn context.
 
-When the text is over 95% of the model's input limit, events are trimmed:
-
-- Events are grouped by importance in `src/utils/prompts/event-importance.ts`, from turning points such as wars and deals down to noise such as revealed tiles.
-- The least important group goes first, until the whole text fits. The top group is never dropped.
-- A closing note says how many events were left out, so the model knows the history is partial.
+When the text is over 90% of the model's input limit, a trim ladder shortens it. Steps drop event importance tiers and remove or compress report details, run in order until the state fits, and a closing note tells the model what was left out. [Evaluator trimming](evaluator-trimming.md) covers the budget, the ladder, what is never trimmed, and the telemetry.
 
 ### What it asks
 
@@ -170,6 +167,7 @@ Every call carries the same fixed rationale with no probabilities, because `get-
 | --- | --- |
 | `evaluate` span | Raw state, questions, answers, and confidence |
 | Agent span, `strategist.decision` | JSON record of each question's current value, proposed value, and whether it was sent, plus each call and its status (applied, failed, or dropped) |
+| Agent span, `strategist.trim` | JSON of the applied trim step ids, the dropped event count, and whether the state fit. Set before the evaluate call, and only when at least one trim step ran |
 
 The record shapes live in `src/types/evaluation.ts`. `labelEvaluation` in `src/utils/models/evaluation-record.ts` labels the raw answers for display.
 
@@ -182,5 +180,6 @@ All under `vox-agents/tests/mock/`:
 | Both backends | `utils/evaluation-questions.test.ts`, `utils/evaluation.test.ts` |
 | The evaluate call | `context/vox-context-evaluate.test.ts` |
 | Evaluator strategist | `strategist/evaluator-questions.test.ts`, `strategist/evaluator-strategist.test.ts` |
-| Event trimming | `utils/event-importance.test.ts` |
+| Event trimming | `strategist/evaluator-trimming.test.ts`, `utils/event-importance.test.ts` |
+| Log redaction | `utils/logger-sanitize.test.ts` |
 | Answer labeling | `utils/evaluation-record.test.ts` |

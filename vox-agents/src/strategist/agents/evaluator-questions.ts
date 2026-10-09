@@ -9,12 +9,10 @@
 import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
 import type { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
 import { countTokens } from "../../utils/models/token-counter.js";
-import { trimEventsToFit } from "../../utils/prompts/event-importance.js";
+import { evaluatorTrimConfig } from "./evaluator-trim-config.js";
+import { trimToFit, type TrimmableReports } from "./evaluator-trimming.js";
 import { renderStrategistReports, type GameState, type StrategistParameters } from "../strategy-parameters.js";
-import type { StrategistDecision } from "../../types/evaluation.js";
-
-/** Share of the model's input limit the state may use, leaving room for the token estimate's error. */
-const stateBudgetShare = 0.95;
+import type { StrategistDecision, StrategistTrim } from "../../types/evaluation.js";
 
 /**
  * Flavor and relationship moves of this many points or fewer are sampling noise, so they keep the
@@ -164,36 +162,57 @@ function metMajors(state: GameState, playerID: number | undefined): Array<[numbe
     .map(([id, player]) => [Number(id), player as { Civilization: string }]);
 }
 
+/** The evaluation state text and, when the ladder ran, what it cut. */
+export interface StrategistEvaluationState {
+  text: string;
+  trim?: StrategistTrim;
+}
+
 /**
  * Build the evaluation state as markdown: the system prompt, then the reports the simple
  * strategist reads, rendered the same way (situation, the player's civilization, options, current
  * strategies, victory progress, players, cities, military, events since the last decision, and the
- * turn context). With `maxTokens`, the least important events are dropped until the whole text
- * fits, and a closing note tells the model the history is partial.
+ * turn context). With `maxTokens`, the trim ladder in `evaluator-trim-config.ts` shortens events
+ * and report details until the whole text fits the budget, and a closing note tells the model
+ * what was shortened.
  *
  * @param system - The system prompt, since evaluation calls have no separate slot for one
  * @param parameters - The strategist parameters for this decision
- * @param state - The game state for this turn
+ * @param state - The game state for this turn (never mutated)
  * @param maxTokens - The model's input limit, if it has one
- * @returns The state text for `context.evaluate`
+ * @returns The state text for `context.evaluate`, plus the trim record when anything was cut
  */
 export function buildStrategistEvaluationState(
   system: string,
   parameters: StrategistParameters,
   state: GameState,
   maxTokens?: number,
-): string {
-  /** Render the full state with one version of the events report. */
-  const render = (events: unknown) => [system, ...renderStrategistReports(parameters, state, events)].join("\n\n");
+): StrategistEvaluationState {
+  /** Render the full state with one version of the trimmable reports. */
+  const render = ({ events, ...reports }: TrimmableReports) =>
+    [system, ...renderStrategistReports(parameters, { ...state, ...reports }, events)].join("\n\n");
 
-  const events = state.mergedEvents ?? state.events;
-  if (!events || maxTokens === undefined) return render(events);
+  const reports: TrimmableReports = {
+    events: state.mergedEvents ?? state.events,
+    players: state.players,
+    cities: state.cities,
+    military: state.military,
+  };
+  if (maxTokens === undefined) return { text: render(reports) };
 
-  const budget = Math.floor(maxTokens * stateBudgetShare);
-  const trimmed = trimEventsToFit(events, candidate => countTokens(render(candidate)) <= budget);
-  const text = render(trimmed.events);
-  if (trimmed.droppedEvents === 0) return text;
-  return `${text}\n\nNote: ${trimmed.droppedEvents} less important events were left out of # Events to fit the input limit.`;
+  const budget = Math.floor(maxTokens * evaluatorTrimConfig.budgetShare);
+  const player = state.players?.[String(parameters.playerID ?? 0)];
+  const civilization = typeof player === "object" ? player.Civilization : undefined;
+  const result = trimToFit(reports, evaluatorTrimConfig.ladder, candidate => countTokens(render(candidate)) <= budget, { civilization });
+  const text = render(result.reports);
+  if (result.steps.length === 0) return { text };
+
+  const events = result.droppedEvents > 0 ? ` (${result.droppedEvents} events left out)` : "";
+  const note = `Note: To fit the input limit, this state was shortened${events}: ${result.steps.map(step => step.note).join("; ")}.`;
+  return {
+    text: `${text}\n\n${note}`,
+    trim: { steps: result.steps.map(step => step.id), droppedEvents: result.droppedEvents, fits: result.fits },
+  };
 }
 
 /**

@@ -59,3 +59,16 @@ export interface StrategistDecision {
   /** The calls made, in order, followed by the dropped calls. */
   calls: StrategistCall[];
 }
+
+/**
+ * What the evaluator strategist cut to fit the input limit, recorded as the `strategist.trim`
+ * span attribute when any trim step ran.
+ */
+export interface StrategistTrim {
+  /** The ids of the applied trim ladder steps, in order. */
+  steps: string[];
+  /** How many events the applied event steps removed. */
+  droppedEvents: number;
+  /** False when even the whole ladder could not bring the state under budget. */
+  fits: boolean;
+}
