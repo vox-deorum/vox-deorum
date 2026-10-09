@@ -54,4 +54,37 @@ describe('sanitizeAIError', () => {
     expect(json).not.toContain(marker);
     expect(sanitized.requestBodyValues.state).toBeTypeOf('string');
   });
+
+  it('should compact a rate-limited chat call to its settings, retry headers, and short body', () => {
+    const level = Symbol.for('level');
+    const sanitized = sanitizeAIError({
+      [level]: 'warn',
+      name: 'AI_APICallError',
+      message: 'Rate limited',
+      statusCode: 429,
+      url: 'https://example.test/v1/chat/completions',
+      stack: `AI_APICallError: Rate limited\n    at ${marker}`,
+      requestBodyValues: {
+        model: 'deepseek',
+        stream: true,
+        tool_choice: 'required',
+        messages: [{ role: 'user', content: marker }],
+        tools: Array.from({ length: 12 }, () => ({ name: 'tool', description: marker })),
+      },
+      responseHeaders: { 'retry-after': '30', server: marker, via: marker },
+      responseBody: `{"error":"${marker}${'z'.repeat(5_000)}"}`,
+      data: { error: marker },
+    });
+
+    const json = JSON.stringify(sanitized);
+    expect(json.length).toBeLessThan(1_000);
+    expect(sanitized[level]).toBe('warn');
+    expect(sanitized.statusCode).toBe(429);
+    expect(sanitized.requestBodyValues).toMatchObject({ model: 'deepseek', stream: true, tool_choice: 'required' });
+    expect(String(sanitized.requestBodyValues.tools)).toContain('12');
+    expect(String(sanitized.requestBodyValues.messages)).not.toContain(marker);
+    expect(sanitized.responseHeaders).toEqual({ 'retry-after': '30' });
+    expect(sanitized.stack).toBeUndefined();
+    expect(sanitized.data).toBeUndefined();
+  });
 });

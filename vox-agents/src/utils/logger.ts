@@ -118,32 +118,55 @@ const expandErrors = winston.format((info) => {
   return info;
 });
 
+/** Longest request value or response body kept verbatim when compacting an API call error. */
+const maxLoggedValueLength = 300;
+
+/** Response headers worth keeping from a failed call: the rest is proxy and CDN noise. */
+const keptResponseHeaders = ['retry-after', 'retry-after-ms', 'x-request-id'];
+
 /**
- * Sanitize AI SDK errors to prevent full prompts from being logged.
- * APICallError includes requestBodyValues with the entire messages array, or the whole state and
- * question set for an evaluation call; this replaces each with a short redacted placeholder.
+ * Summarize one request body value. Arrays (messages, tools, input parts) always become a count so
+ * prompt content never reaches the logs; other values pass through unless they are large.
+ */
+function summarizeRequestValue(value: unknown): unknown {
+  if (Array.isArray(value)) return `[redacted: ${value.length} items]`;
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    return value.length > maxLoggedValueLength ? `[redacted: ${value.length} chars]` : value;
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value).length;
+    return (JSON.stringify(value)?.length ?? 0) > maxLoggedValueLength ? `[redacted: ${keys} keys]` : value;
+  }
+  return value;
+}
+
+/**
+ * Compact AI SDK errors so a failed call logs what went wrong, not the whole request.
+ * APICallError carries the full request body (messages, tool schemas, or an evaluation's state and
+ * question set), every response header, the response body twice (raw and parsed), and an SDK-internal
+ * stack. This keeps the scalar request settings, the retry headers, and a truncated response body.
  */
 export function sanitizeAIError(obj: any): any {
   if (obj == null || typeof obj !== 'object') return obj;
 
   // Handle requestBodyValues directly on the object (APICallError)
   if (obj.requestBodyValues && typeof obj.requestBodyValues === 'object') {
-    const { messages, prompt, state, questions, ...rest } = obj.requestBodyValues;
-    const sanitized = { ...obj, requestBodyValues: { ...rest } };
-    if (messages) {
-      sanitized.requestBodyValues.messages = `[redacted: ${Array.isArray(messages) ? messages.length : '?'} messages]`;
+    const { requestBodyValues, responseHeaders, responseBody, data: _data, stack: _stack, ...rest } = obj;
+    const sanitized: Record<string | symbol, unknown> = { ...rest, requestBodyValues: {} };
+    for (const [key, value] of Object.entries(requestBodyValues)) {
+      (sanitized.requestBodyValues as Record<string, unknown>)[key] = summarizeRequestValue(value);
     }
-    if (prompt) {
-      sanitized.requestBodyValues.prompt = `[redacted: ${Array.isArray(prompt) ? prompt.length : '?'} prompt parts]`;
+    if (responseHeaders && typeof responseHeaders === 'object') {
+      const kept = Object.fromEntries(
+        Object.entries(responseHeaders).filter(([name]) => keptResponseHeaders.includes(name.toLowerCase()))
+      );
+      if (Object.keys(kept).length > 0) sanitized.responseHeaders = kept;
     }
-    // Evaluation calls send the whole game state and question set instead of messages.
-    if (state) {
-      const size = typeof state === 'string' ? state.length : JSON.stringify(state)?.length ?? 0;
-      sanitized.requestBodyValues.state = `[redacted: ${size} chars]`;
-    }
-    if (questions) {
-      const count = Array.isArray(questions) ? questions.length : typeof questions === 'object' ? Object.keys(questions).length : '?';
-      sanitized.requestBodyValues.questions = `[redacted: ${count} questions]`;
+    if (typeof responseBody === 'string') {
+      sanitized.responseBody = responseBody.length > maxLoggedValueLength
+        ? `${responseBody.slice(0, maxLoggedValueLength)}... [${responseBody.length} chars]`
+        : responseBody;
     }
     return sanitized;
   }
