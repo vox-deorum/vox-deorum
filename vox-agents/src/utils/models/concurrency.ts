@@ -189,6 +189,9 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       const originalOnChunk = params.onChunk;
       const originalOnStepEnd = params.onStepEnd;
       const callId = streamCallCounter++;
+      // A provider error that arrives mid-stream ends the step with finishReason "error"
+      // instead of rejecting, so it is kept here and rethrown to reach the retry policy.
+      let streamError: unknown;
       const modifiedParams = {
         ...params,
         allowSystemInMessages: true,
@@ -215,6 +218,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
             return;
           }
           logger.warn(`[${modelName}] Stream error`, error);
+          streamError ??= error;
         },
         experimental_transform: () => {
           return new TransformStream<TextStreamPart<ToolSet>, TextStreamPart<ToolSet>>({
@@ -242,6 +246,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
 
         // And return the found steps
         const steps = await result.steps;
+        if (streamError !== undefined) throw streamError;
 
         // Validate flex tier is effective when enabled
         if (process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google') {
@@ -261,9 +266,9 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
         return response;
       } catch (error) {
         // Resurface context length errors that the AI SDK swallowed into AI_NoOutputGeneratedError
-        const streamError = takePreservedModelError(modifiedParams);
-        if (streamError.found) {
-          throw streamError.error;
+        const preserved = takePreservedModelError(modifiedParams);
+        if (preserved.found) {
+          throw preserved.error;
         }
         throw error;
       }
