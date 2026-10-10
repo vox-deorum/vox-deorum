@@ -103,7 +103,7 @@ It overrides the public mutators (`writeFile`, `appendFile`, `mkdir`, `rm`, `cp`
 
 `PlayerWorkspace.open` builds the views from head for each command. After the command, it commits the writable notes view's touched paths as one `notes` commit bound to the command's run signal, so the next command sees them along with any host writes committed in between. A command whose run was cancelled commits nothing and returns an error, so each command lands whole or not at all. Stage 4 reuses one view per replay execution without committing.
 
-The game notes guide moves into the store. When the writable notes view lacks `game/AGENTS.md`, `open` adds the default guide to the view as a touched path, so it is committed with that command's `notes` commit. This covers a new seat and a rewind to a version before the guide existed, and never overwrites an agent's edits. Guides in shared folders are seeded on disk as today.
+The game notes guide moves into the store. When the writable notes view lacks `game/AGENTS.md`, `open` adds the default guide to the view as a touched path, so it is committed with that command's `notes` commit. This covers a new seat and a rewind to a version before the guide existed, and never overwrites an agent's edits. Stage 4 applies the same guide initialization to its writable game view before the first command, keeping the addition disposable. Guides in shared folders are seeded on disk as today.
 
 With files enabled, a seat can have these mounts:
 

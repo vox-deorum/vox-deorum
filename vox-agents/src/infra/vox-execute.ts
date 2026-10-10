@@ -103,6 +103,10 @@ export async function executeAgent<TParameters extends AgentParameters>(
     span.setAttribute('context.prompts', host.prompts ?? rootPrompts());
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
+      // Step loop state, kept outside the try so a context overflow can report where it happened.
+      let messages: ModelMessage[] = [];
+      let initialLength = 0;
+      let step = 0;
       try {
         // An empty system prompt means the agent has nothing to do this time.
         const system = await agent.getSystem(params, input, host);
@@ -143,7 +147,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
         }
 
         let shouldStop = false;
-        let messages: ModelMessage[] = [{
+        messages = [{
           role: "system",
           content: system
         }];
@@ -156,7 +160,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
           && countCacheBreakpoints(messages) < MAX_CACHE_BREAKPOINTS) {
           markBreakpointOnLast(messages);
         }
-        const initialLength = messages.length;
+        initialLength = messages.length;
         const allSteps: StepResult<ToolSet>[] = [];
         let finalText = "";
 
@@ -178,6 +182,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
 
         // Execute steps in a loop, one at a time
         for (let stepCount = 0; !shouldStop; stepCount++) {
+          step = stepCount + 1;
           host.logger.info(`Executing ${agentName}'s step ${stepCount + 1}`, {
             GameID: params.gameID,
             PlayerID: params.playerID
@@ -261,6 +266,25 @@ export async function executeAgent<TParameters extends AgentParameters>(
         host.logger.error(`Error executing agent ${agentName}!`, error);
         recordSpanError(span, error);
         const contextLengthError = isContextLengthError(error);
+        if (contextLengthError) {
+          // Split the overflowing request into the prepared prompt and the step history after it,
+          // so the log shows whether the initial state or the tool loop outgrew the context.
+          // Step 0 means the run failed while preparing, before any request.
+          const initialTokens = countRequestTokens(messages.slice(0, initialLength));
+          const historyTokens = countRequestTokens(messages.slice(initialLength));
+          span.setAttributes({
+            'overflow.step': step,
+            'overflow.tokens.initial': initialTokens,
+            'overflow.tokens.history': historyTokens,
+          });
+          host.logger.warn(`Context length exceeded for ${agentName}.`, {
+            GameID: params.gameID,
+            PlayerID: params.playerID,
+            Step: step,
+            InitialTokens: initialTokens,
+            HistoryTokens: historyTokens,
+          });
+        }
         if (onContextLengthError && contextLengthError) {
           onContextLengthError();
         }

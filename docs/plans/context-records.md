@@ -68,8 +68,8 @@ Finally, confirm the documentation describes the final behavior:
 The simple strategist's strategic players summary will be designed after the first revision lands. Until then, its file-mode prompt keeps full players inline while cities, military, and events move to records.
 
 - **Growth:** history grows without pruning.
-- **Reload timing:** a same-game reload takes effect when the strategist begins the loaded turn. Chats before then still use the abandoned timeline, and any still running at that point are cancelled.
-- **Forward loads:** only loads to an earlier turn are detected. Loading an earlier save and then a later save from the original timeline does not rewind. Notes from the branch in between carry over, and the catalog shows a gap in turns.
+- **Reload timing:** a same-game reload takes effect when the strategist next accepts a turn after detecting a backward or repeated notification. Chats before then still use the abandoned timeline, and any still running at that point are cancelled. Before the human startup turn's first real end-turn notification, a same-turn reload without an observed DLL reconnection or other backward notification can be mistaken for its normal acknowledgement.
+- **Forward loads:** loads to an earlier or repeated turn are detected, subject to the startup acknowledgement above. Loading an earlier save and then a later save from the original timeline does not rewind. Notes from the branch in between carry over, and the catalog shows a gap in turns.
 - **Shared folders:** they never rewind, so they can keep knowledge from a discarded timeline. Replay sees their current contents.
 - **Snapshot gap:** a live run's first bash call can see commits made after its first-step snapshot, such as host writes during its first model call. Replay shows the snapshot, so such files can differ.
 - **Portability:** replaying a file-enabled row needs its telemetry database, its seat store, and the game reference folder.

@@ -248,5 +248,18 @@ describe('workspace traffic compaction in the step loop', () => {
       expect(result).toBeUndefined();
       expect(onContextLengthError).toHaveBeenCalledTimes(1);
     });
+
+    it('should report the overflowing step and split its request size', async () => {
+      const ctx = seat('compact-overflow-no-files');
+      const warn = vi.spyOn(ctx.logger, 'warn');
+      recordBashSteps((call) => call === 2);
+      await run(ctx, overflowNoFiles.name, vi.fn());
+      const report = warn.mock.calls.map((call) => call[1] as any).find((meta) => meta?.Step !== undefined);
+      expect(report.Step).toBe(2);
+      // The initial prompt is only the system text; the history holds step 1's bash traffic.
+      expect(report.InitialTokens).toBeGreaterThan(0);
+      expect(report.HistoryTokens).toBeGreaterThanOrEqual(stepTokens);
+      expect(report.HistoryTokens).toBeGreaterThan(report.InitialTokens);
+    });
   });
 });

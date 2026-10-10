@@ -20,6 +20,8 @@ import type { HumanDecisionBus } from "./human-decision-bus.js";
 import { resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage } from "./seat-config.js";
 import { isScheduledDecision, normalizePacing, resolvePacingVerdict, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
 import { runStrategistTriage } from "./pacing/triage.js";
+import { countTokens } from "../utils/models/token-counter.js";
+import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 
 /** Construction inputs for one seat's {@link VoxPlayer}. */
 export interface VoxPlayerOptions {
@@ -461,7 +463,9 @@ export class VoxPlayer {
           PlayerID: parameters.playerID,
           EventFrom: eventWindow.fromTurn,
           EventTo: eventWindow.toTurn,
-          DroppedTiers: eventWindow.droppedTiers ?? 0
+          DroppedTiers: eventWindow.droppedTiers ?? 0,
+          // Size of this try's event window, to compare with the overflowing agent's token split.
+          EventTokens: countTokens(jsonToMarkdown(state.mergedEvents ?? {}))
         }
       );
       return false;
