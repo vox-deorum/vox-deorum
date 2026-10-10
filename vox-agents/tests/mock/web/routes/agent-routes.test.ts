@@ -11,6 +11,8 @@ import request from 'supertest';
 import express from 'express';
 import fs from 'fs/promises';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
+import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 
 const telepathistMocks = vi.hoisted(() => ({
   createParameters: vi.fn(),
@@ -147,19 +149,14 @@ function getTestSpanExporter(): VoxSpanExporter {
  */
 function echoAppends(mcp: ReturnType<typeof installMockMcpClient>, startID: number): void {
   let nextID = startID;
-  mcp.onTool('append-message', (args) => structuredResult({
+  mcp.onTool('append-message', (args) => structuredResult(transcriptRow({
     ID: nextID++,
-    Player1ID: 1,
-    Player2ID: 3,
-    Player1Role: 'the leader',
-    Player2Role: 'diplomat',
-    SpeakerID: args.SpeakerID,
-    MessageType: args.MessageType,
-    Content: args.Content,
-    Payload: args.Payload ?? {},
+    SpeakerID: args.SpeakerID as number,
+    MessageType: args.MessageType as TranscriptMessage['MessageType'],
+    Content: args.Content as string,
+    Payload: (args.Payload ?? {}) as Record<string, any>,
     Turn: 5,
-    CreatedAt: 0,
-  }));
+  })));
 }
 
 /** Make `reject-agent-deal` behave like the transactional action: commit and echo the deal-reject row. */
@@ -169,19 +166,14 @@ function echoRejections(mcp: ReturnType<typeof installMockMcpClient>, startID: n
     Result: 'rejected',
     ProposalMessageID: args.ProposalMessageID,
     AlreadyRejected: false,
-    Row: {
+    Row: transcriptRow({
       ID: nextID++,
-      Player1ID: 1,
-      Player2ID: 3,
-      Player1Role: 'the leader',
-      Player2Role: 'diplomat',
-      SpeakerID: args.SpeakerID,
+      SpeakerID: args.SpeakerID as number,
       MessageType: 'deal-reject',
-      Content: args.Content,
+      Content: args.Content as string,
       Payload: { ProposalMessageID: args.ProposalMessageID },
       Turn: 5,
-      CreatedAt: 0,
-    },
+    }),
   }));
 }
 
@@ -496,9 +488,8 @@ describe('agent routes', () => {
       });
 
     it('marks pastMessageID at open and keeps it across a GET re-sync (refresh)', async () => {
-      const textRow = (id: number, speaker: number, content: string, turn = 4) => ({
-        ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: speaker, MessageType: 'text', Content: content, Payload: {}, Turn: turn, CreatedAt: 0,
+      const textRow = (id: number, speaker: number, content: string, turn = 4) => transcriptRow({
+        ID: id, SpeakerID: speaker, Content: content, Turn: turn,
       });
       const { mcp, chatId } = await openDiplomacy({
         liveTurn: 5,
@@ -598,10 +589,7 @@ describe('agent routes', () => {
     });
 
     it('rejects with 409 when the conversation was closed THIS turn (not a stale turn-unavailable reason)', async () => {
-      const closeRow = {
-        ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'close', Content: '', Payload: {}, Turn: 5, CreatedAt: 0,
-      };
+      const closeRow = transcriptRow({ SpeakerID: 3, MessageType: 'close', Turn: 5 });
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [closeRow] });
 
       const res = await request(app).post('/api/agents/message').send({ kind: 'text', chatId, message: 'still there?' });
@@ -611,10 +599,7 @@ describe('agent routes', () => {
     });
 
     it('allows a message when the conversation was closed on an EARLIER turn', async () => {
-      const closeRow = {
-        ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'close', Content: '', Payload: {}, Turn: 4, CreatedAt: 0,
-      };
+      const closeRow = transcriptRow({ SpeakerID: 3, MessageType: 'close', Turn: 4 });
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [closeRow], execute: replyWith('Back to talks.') });
       echoAppends(mcp, 50);
 
@@ -679,11 +664,10 @@ describe('agent routes', () => {
       // submitting a deal with expectedProposalID 7; beginChatTurn reconciles it against the live state
       // under the lock — 7 is still the active open offer — so it archives a deal-counter and the diplomat
       // streams its reply. (The server derives the deal-counter type from the open offer; no wire flag.)
-      const proposal = {
-        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
-        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-      };
+      const proposal = transcriptRow({
+        ID: 7, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+      });
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [proposal], execute: replyWith('Considering your counter.') });
       mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
       echoAppends(mcp, 60);
@@ -704,11 +688,10 @@ describe('agent routes', () => {
       // The human reviewed proposal 7, but 9 is the active offer now (a concurrent change slipped in). The
       // submission carries expectedProposalID 7, so the under-lock reconcile rejects it as a conflict BEFORE
       // any archival — a stale submission must never revive a dead negotiation as the new active offer.
-      const newer = {
-        ID: 9, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Newer offer',
-        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-      };
+      const newer = transcriptRow({
+        ID: 9, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Newer offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+      });
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [newer] });
       mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
       echoAppends(mcp, 60);
@@ -730,11 +713,10 @@ describe('agent routes', () => {
       // expectedProposalID) while an offer is open is NOT allowed to silently supersede it. beginChatTurn
       // reconciles the submitter's "none open" view against the live open offer (ID 7) — a mismatch — and
       // 409s BEFORE any archival. The submitter must answer the open offer instead.
-      const open = {
-        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Open offer',
-        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-      };
+      const open = transcriptRow({
+        ID: 7, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Open offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+      });
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [open] });
       mcp.respondWith('inspect-deal', structuredResult({ items: [], promises: [], tradableRange: {} }));
       echoAppends(mcp, 60);
@@ -994,11 +976,10 @@ describe('agent routes', () => {
     });
 
     it('retracts the open proposal when the conversation is closed', async () => {
-      const proposal = {
-        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
-        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-      };
+      const proposal = transcriptRow({
+        ID: 7, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+        Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+      });
       const { mcp, chatId } = await openDiplomacy({ liveTurn: 5, transcript: [proposal] });
       echoRejections(mcp, 60);
       echoAppends(mcp, 61);
@@ -1160,19 +1141,13 @@ describe('agent routes', () => {
         title: 'Caesar of Rome ↔ Pacal of Maya',
       });
 
-      transcript = [{
+      transcript = [transcriptRow({
         ID: 41,
-        Player1ID: 1,
-        Player2ID: 3,
         Player1Role: 'Roman ruler',
-        Player2Role: 'diplomat',
         SpeakerID: 3,
-        MessageType: 'text',
         Content: 'An earlier answer.',
-        Payload: {},
         Turn: 12,
-        CreatedAt: 0,
-      }];
+      })];
       const reopened = await request(app).post('/api/agents/chat').send({
         mode: 'diplomacy',
         contextId: `${gameID}-player-1`,
@@ -1396,19 +1371,14 @@ describe('agent routes', () => {
     }
 
     it('rejects an ID that is not the chat current open proposal', async () => {
-      const transcript = [{
+      const transcript = [transcriptRow({
         ID: 7,
-        Player1ID: 1,
-        Player2ID: 3,
-        Player1Role: 'the leader',
-        Player2Role: 'diplomat',
         SpeakerID: 3,
         MessageType: 'deal-proposal',
         Content: 'Offer',
         Payload: { Deal: { version: 1, items: [], promises: [] } },
         Turn: 5,
-        CreatedAt: 0,
-      }];
+      })];
       const { mcp } = await openDiplomacyThread(transcript);
 
       const response = await request(app)
@@ -1420,19 +1390,14 @@ describe('agent routes', () => {
     });
 
     it('accepts only as the human audience endpoint', async () => {
-      const transcript = [{
+      const transcript = [transcriptRow({
         ID: 8,
-        Player1ID: 1,
-        Player2ID: 3,
-        Player1Role: 'the leader',
-        Player2Role: 'diplomat',
         SpeakerID: 3,
         MessageType: 'deal-proposal',
         Content: 'Offer',
         Payload: { Deal: { version: 1, items: [], promises: [] } },
         Turn: 5,
-        CreatedAt: 0,
-      }];
+      })];
       const { mcp } = await openDiplomacyThread(transcript);
       mcp.respondWith('enact-agent-deal', structuredResult({
         ProposalMessageID: 8,
@@ -1457,15 +1422,13 @@ describe('agent routes', () => {
 
   describe('deal-action status classes', () => {
     /** An open proposal authored by the diplomat seat, awaiting the human audience's answer. */
-    const openProposal = {
-      ID: 8, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
-      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-    };
+    const openProposal = transcriptRow({
+      ID: 8, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+    });
     /** A close row, used to put the conversation into the closed-this-turn state. */
-    const closeRow = (turn: number) => ({
-      ID: 4, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: 3, MessageType: 'close', Content: 'Enough.', Payload: {}, Turn: turn, CreatedAt: 0,
+    const closeRow = (turn: number) => transcriptRow({
+      ID: 4, SpeakerID: 3, MessageType: 'close', Content: 'Enough.', Turn: turn,
     });
 
     /** Open the pair over a live context reporting `liveTurn`; pass `null` for "the game has no turn". */
@@ -1590,11 +1553,10 @@ describe('agent routes', () => {
       // The idempotent path is a normal success for the Web client: same conversation, one row.
       mcp.respondWith('reject-agent-deal', structuredResult({
         Result: 'already-rejected', ProposalMessageID: 8, AlreadyRejected: true,
-        Row: {
-          ID: 12, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-          SpeakerID: 1, MessageType: 'deal-reject', Content: 'The deal was rejected.',
-          Payload: { ProposalMessageID: 8 }, Turn: 5, CreatedAt: 0,
-        },
+        Row: transcriptRow({
+          ID: 12, MessageType: 'deal-reject', Content: 'The deal was rejected.',
+          Payload: { ProposalMessageID: 8 }, Turn: 5,
+        }),
       }));
       const repeated = await post(chatId, 'reject', { proposalMessageID: 8 });
       expect(repeated.status).toBe(200);

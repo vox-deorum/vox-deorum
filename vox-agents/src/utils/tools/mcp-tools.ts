@@ -12,18 +12,13 @@ import { mcpClient } from "../models/mcp-client.js";
 import { trace, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { camelCase } from "change-case";
 import { createLogger } from "../logger.js";
+import { isRecord } from "../guards.js";
+import { errorMessage } from "../errors.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { AgentParameters } from "../../infra/vox-agent.js";
 import { HeadingConfig } from './json-to-markdown.js';
 
 const tracer = trace.getTracer('vox-tools');
-
-/**
- * Return true when the value is a plain object record.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Return whether a normalized tool result from `VoxContext.callTool` failed: no result,
@@ -183,7 +178,7 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
         span.recordException(error as Error);
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error)
+          message: errorMessage(error)
         });
         throw error;
       } finally {

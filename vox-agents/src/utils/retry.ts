@@ -7,6 +7,7 @@
 
 import { Logger } from "winston";
 import { setTimeout } from 'node:timers/promises';
+import { errorMessage } from './errors.js';
 
 /** Shared inactivity budget for one model execution attempt. */
 export const executionTimeoutDefault = 300_000;
@@ -30,7 +31,7 @@ export interface ExponentialRetryOptions {
 export function isContextLengthError(error: unknown): boolean {
   if (!error) return false;
   if (typeof error === 'object' && '__contextLengthError' in error) return true;
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorMessage(error);
   return contextLengthPattern.test(message);
 }
 

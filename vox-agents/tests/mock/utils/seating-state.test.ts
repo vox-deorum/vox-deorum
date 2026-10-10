@@ -43,6 +43,14 @@ function readState(configName: string): SeatingState {
   return JSON.parse(raw) as SeatingState;
 }
 
+/** Overwrite the on-disk state file in place, used to forge foreign, stale or terminated claims. */
+function writeStateFile(configName: string, state: SeatingState): void {
+  fs.writeFileSync(
+    path.join(tmpRoot, `${configName}.seating.json`),
+    JSON.stringify(state, null, 2)
+  );
+}
+
 beforeEach(() => {
   fs.mkdirSync(tmpRoot, { recursive: true });
 });
@@ -381,14 +389,6 @@ describe('SeatingStateManager — release safety', () => {
 });
 
 describe('SeatingStateManager — pick priority (pending beats stale steal)', () => {
-  /** Overwrite the state file in place. Used to forge foreign/stale claims. */
-  function writeStateFile(configName: string, state: SeatingState): void {
-    fs.writeFileSync(
-      path.join(tmpRoot, `${configName}.seating.json`),
-      JSON.stringify(state, null, 2)
-    );
-  }
-
   it('prefers a pending cell over stealing a stale foreign in-progress claim', async () => {
     const cfg = uniqueConfigName('prefer-pending');
     const mgr = new SeatingStateManager({
@@ -850,14 +850,6 @@ describe('seatingMapsEqual', () => {
 
 describe('SeatingStateManager — claimMatchingCell (load/wait resume)', () => {
   const ourId = `${os.hostname()}#${process.pid}`;
-
-  /** Overwrite the on-disk state file in place (to forge a terminated claim). */
-  function writeStateFile(configName: string, state: SeatingState): void {
-    fs.writeFileSync(
-      path.join(tmpRoot, `${configName}.seating.json`),
-      JSON.stringify(state, null, 2)
-    );
-  }
 
   it('returns the identity claim in trivial mode, ignoring observed input', async () => {
     const cfg = uniqueConfigName('match-trivial');

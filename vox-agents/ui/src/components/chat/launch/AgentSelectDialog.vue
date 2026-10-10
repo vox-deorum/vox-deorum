@@ -15,6 +15,8 @@ import SelectButton from 'primevue/selectbutton';
 import type { AgentInfo, Span, CreateChatRequest, PlayerAssignment, ParticipantIdentity } from '@/utils/types';
 import { userRoleSuggestions } from '@/utils/types';
 import { api } from '@/api/client';
+import { cachedAgentCatalogue, loadAgentCatalogue } from '@/stores/agents';
+import { errorMessage } from '@/utils/errors';
 import DiplomacyLaunchForm from './DiplomacyLaunchForm.vue';
 import ObserverIdentityForm from './ObserverIdentityForm.vue';
 import type { PlayerOption } from './types';
@@ -71,7 +73,6 @@ const assignments = ref<Record<number, PlayerAssignment>>({});
 const diplomacyInitiator = ref<PlayerOption | null>(null);
 const voiceOverride = ref<string | null>(null);
 const initiatorRole = ref('the diplomat');
-let agentsLoadPromise: Promise<void> | null = null;
 let playersLoadPromise: { contextId: string; promise: Promise<void> } | null = null;
 let loadedPlayersContextId: string | undefined;
 let playersLoadGeneration = 0;
@@ -166,23 +167,20 @@ const chattableAgents = computed(() => {
 async function loadAgents(): Promise<void> {
   loadError.value = null;
   clearLaunchError();
-  if (agents.value.length > 0) return;
-  if (agentsLoadPromise) return agentsLoadPromise;
+  const cached = cachedAgentCatalogue();
+  if (cached) {
+    agents.value = cached;
+    return;
+  }
   loading.value = true;
-
-  agentsLoadPromise = (async () => {
-    try {
-      const response = await api.getAgents();
-      agents.value = response.agents || [];
-    } catch (err) {
-      console.error('Error loading agents:', err);
-      loadError.value = err instanceof Error ? err.message : 'Failed to load agents';
-    } finally {
-      loading.value = false;
-      agentsLoadPromise = null;
-    }
-  })();
-  return agentsLoadPromise;
+  try {
+    agents.value = await loadAgentCatalogue();
+  } catch (err) {
+    console.error('Error loading agents:', err);
+    loadError.value = errorMessage(err, 'Failed to load agents');
+  } finally {
+    loading.value = false;
+  }
 }
 
 /** Load player options for the identity step */

@@ -11,6 +11,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { isDeepStrictEqual } from 'node:util';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
 import { config, loadVoxConfig, refreshConfig } from '../../utils/config.js';
 import { reloadRootPrompts, validatePromptsSetting } from '../../utils/prompts/prompt-files.js';
 import { defaultConfig } from '../../utils/config/defaults.js';
@@ -21,6 +22,7 @@ import { recommendTierModels } from '../../utils/models/rules.js';
 import { codexProxyManager, ensureCodexProxy } from '../../utils/models/providers/codex-proxy.js';
 import { isEvaluationOnlyProvider, providerCredentials } from '../../types/constants.js';
 import { isAllowedDashboardRequest } from '../origin.js';
+import { sendError } from '../http-utils.js';
 import type {
   CodexLoginResponse,
   CodexStatusResponse,
@@ -38,11 +40,6 @@ import type {
 const logger = createLogger('config', 'webui');
 const router = Router();
 let codexLoginError: string | null = null;
-
-/** Converts caught values to a safe message suitable for the local dashboard. */
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unexpected error';
-}
 
 /** Reports whether any credential required by a configured provider is nonempty. */
 function hasConfiguredCredential(): boolean {
@@ -134,7 +131,7 @@ function formatEnvFile(env: Record<string, string>): string {
  */
 router.get('/', async (req: Request, res: Response<ConfigResponse | ErrorResponse>) => {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This browser origin is not allowed to read configuration.' });
+    sendError(res, 403, 'This browser origin is not allowed to read configuration.');
     return;
   }
   try {
@@ -158,7 +155,7 @@ router.get('/', async (req: Request, res: Response<ConfigResponse | ErrorRespons
     });
   } catch (error) {
     logger.error('Error loading configuration', error);
-    res.status(500).json({ error: 'Failed to load configuration' });
+    sendError(res, 500, 'Failed to load configuration');
   }
 });
 
@@ -174,7 +171,7 @@ router.get('/check', async (_req: Request, res: Response<ConfigCheckResponse | E
     res.json({ configured });
   } catch (error) {
     logger.error('Error checking setup status', error);
-    res.status(500).json({ error: 'Failed to check setup status' });
+    sendError(res, 500, 'Failed to check setup status');
   }
 });
 
@@ -184,11 +181,11 @@ router.post('/models', async (
   res: Response<DiscoverModelsResponse | DiscoveryErrorResponse>,
 ) => {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This browser origin is not allowed to discover models.', kind: 'unsupported' });
+    sendError(res, 403, 'This browser origin is not allowed to discover models.', { kind: 'unsupported' });
     return;
   }
   if (!isDiscoveryRequest(req.body)) {
-    res.status(400).json({ error: 'A provider and string credentials are required for model discovery.', kind: 'unsupported' });
+    sendError(res, 400, 'A provider and string credentials are required for model discovery.', { kind: 'unsupported' });
     return;
   }
   try {
@@ -201,11 +198,11 @@ router.post('/models', async (
     });
   } catch (error) {
     if (error instanceof DiscoveryError) {
-      res.status(error.status).json({ error: error.message, kind: error.kind });
+      sendError(res, error.status, error.message, { kind: error.kind });
       return;
     }
     logger.error('Error discovering models', error);
-    res.status(502).json({ error: 'Could not discover models', kind: 'network' });
+    sendError(res, 502, 'Could not discover models', { kind: 'network' });
   }
 });
 
@@ -215,7 +212,7 @@ router.post('/models', async (
  */
 router.get('/models', async (req: Request, res: Response<ConfiguredModelsResponse | ErrorResponse>) => {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This browser origin is not allowed to discover models.' });
+    sendError(res, 403, 'This browser origin is not allowed to discover models.');
     return;
   }
 
@@ -224,7 +221,7 @@ router.get('/models', async (req: Request, res: Response<ConfiguredModelsRespons
     try {
       return { provider, models: await discoverModels(provider, {}) };
     } catch (error) {
-      return { provider, error: errorMessage(error) };
+      return { provider, error: errorMessage(error, 'Unexpected error') };
     }
   }));
   const successful = results.filter((result): result is { provider: string; models: ConfiguredModelsResponse['models'] } => 'models' in result);
@@ -234,7 +231,7 @@ router.get('/models', async (req: Request, res: Response<ConfiguredModelsRespons
   try {
     defaultModel = configuredModel(getModelConfig('default'));
   } catch (error) {
-    logger.warn(`Could not resolve the configured default model: ${errorMessage(error)}`);
+    logger.warn(`Could not resolve the configured default model: ${errorMessage(error, 'Unexpected error')}`);
   }
 
   res.json({
@@ -247,12 +244,12 @@ router.get('/models', async (req: Request, res: Response<ConfiguredModelsRespons
 /** Starts Codex authentication without holding the dashboard request open. */
 router.post('/codex/login', (req: Request, res: Response<CodexLoginResponse | ErrorResponse>) => {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This browser origin is not allowed to start Codex sign-in.' });
+    sendError(res, 403, 'This browser origin is not allowed to start Codex sign-in.');
     return;
   }
   codexLoginError = null;
   void ensureCodexProxy().catch((error) => {
-    codexLoginError = errorMessage(error);
+    codexLoginError = errorMessage(error, 'Unexpected error');
     logger.warn(`Codex login startup failed: ${codexLoginError}`);
   });
   res.status(202).json({ state: codexProxyManager.state });
@@ -261,7 +258,7 @@ router.post('/codex/login', (req: Request, res: Response<CodexLoginResponse | Er
 /** Returns Codex lifecycle state plus a non-secret login prompt or startup error. */
 router.get('/codex/status', (req: Request, res: Response<CodexStatusResponse | ErrorResponse>) => {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This browser origin is not allowed to read Codex sign-in status.' });
+    sendError(res, 403, 'This browser origin is not allowed to read Codex sign-in status.');
     return;
   }
   res.json({
@@ -277,7 +274,7 @@ router.get('/codex/status', (req: Request, res: Response<CodexStatusResponse | E
  */
 router.post('/', async (req: Request<object, object, Partial<ConfigResponse>>, res: Response<{ success: boolean } | ErrorResponse>) => {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This browser origin is not allowed to update configuration.' });
+    sendError(res, 403, 'This browser origin is not allowed to update configuration.');
     return;
   }
   try {
@@ -292,7 +289,7 @@ router.post('/', async (req: Request<object, object, Partial<ConfigResponse>>, r
       try {
         validatePromptsSetting((config as VoxAgentsConfig).prompts ?? false, 'config.prompts');
       } catch (error) {
-        res.status(400).json({ error: (error as Error).message });
+        sendError(res, 400, errorMessage(error));
         return;
       }
     }
@@ -337,7 +334,7 @@ router.post('/', async (req: Request<object, object, Partial<ConfigResponse>>, r
     res.json({ success: true });
   } catch (error) {
     logger.error('Error updating configuration', error);
-    res.status(500).json({ error: 'Failed to update configuration' });
+    sendError(res, 500, 'Failed to update configuration');
   }
 });
 

@@ -5,6 +5,7 @@
 
 import { SSE } from 'sse.js';
 import { extractLogParams } from './log-utils';
+import { errorMessage } from '../utils/errors';
 import type {
   HealthStatus,
   LogEntry,
@@ -444,7 +445,7 @@ class ApiClient {
       });
     } catch (error) {
       throw new ModelDiscoveryError(
-        error instanceof Error ? error.message : 'The provider could not be reached.',
+        errorMessage(error, 'The provider could not be reached.'),
         'network'
       );
     }

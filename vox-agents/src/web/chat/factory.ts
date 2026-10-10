@@ -32,6 +32,7 @@ import {
 } from '../../utils/telemetry/identifier-parser.js';
 import { VoxSpanExporter } from '../../utils/telemetry/vox-exporter.js';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
 import { ensureModelsResolved, selectModelReference } from '../../utils/models/resolution.js';
 import {
   civIdentity,
@@ -270,7 +271,7 @@ export function createChatThreadFactory(
       try {
         await ensureModelsResolved([selectModelReference(requestedAgentName, agent.modelSize)]);
       } catch (error) {
-        throw new ChatOpenError(400, error instanceof Error ? error.message : String(error));
+        throw new ChatOpenError(400, errorMessage(error));
       }
       try {
         const telepathist = await dependencies.createTelepathistContext(source.databasePath, id);

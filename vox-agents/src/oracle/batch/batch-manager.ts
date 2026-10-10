@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
 import { exponentialRetry } from '../../utils/retry.js';
 import { BatchDb } from './batch-db.js';
 import { getBatchEndpoint } from './batch-endpoints.js';
@@ -429,7 +430,7 @@ class BatchManager {
       logger.info(`Batch ${batchId} submitted with ${batch.length} request(s)`);
     } catch (error) {
       // Batch submission failed entirely — reject all promises and mark as failed
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = errorMessage(error);
       logger.error(`Batch submission failed: ${errorMsg}`);
 
       for (const q of batch) {
@@ -486,7 +487,7 @@ class BatchManager {
       } catch (error) {
         // Network error during poll — log and keep polling
         logger.warn(
-          `Error polling batch ${batchId}: ${error instanceof Error ? error.message : error}`
+          `Error polling batch ${batchId}: ${errorMessage(error)}`
         );
       }
     }

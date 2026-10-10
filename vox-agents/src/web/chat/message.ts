@@ -6,6 +6,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import type { ChatStreamSink, ErrorResponse } from '../../types/index.js';
+import { sendError } from '../http-utils.js';
 import { runChatTurn } from './turn.js';
 
 /** Register the unified text and deal message route. */
@@ -55,7 +56,7 @@ export function createAgentMessageRoutes(): Router {
 
       const rejection = await runChatTurn(req.body, sink);
       if (rejection) {
-        res.status(rejection.status).json({ error: rejection.error });
+        sendError(res, rejection.status, rejection.error);
         return;
       }
 

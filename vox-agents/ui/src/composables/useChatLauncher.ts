@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import type { CreateChatRequest } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 /** Centralize chat creation, navigation, error state, and dialog cleanup. */
 export function useChatLauncher(onComplete: () => void) {
@@ -18,7 +19,7 @@ export function useChatLauncher(onComplete: () => void) {
       await router.push({ name: 'chat-detail', params: { sessionId: session.id } });
       onComplete();
     } catch (error) {
-      launchError.value = error instanceof Error ? error.message : fallbackMessage;
+      launchError.value = errorMessage(error, fallbackMessage);
     } finally {
       isCreatingSession.value = false;
     }

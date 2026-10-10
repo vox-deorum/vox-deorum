@@ -10,7 +10,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
+import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
@@ -71,16 +73,14 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
 }
 
 /** A stored open proposal, authored by `speaker`, as `read-transcript` returns it. */
-const storedProposal = (speaker: number) => ({
-  ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-  SpeakerID: speaker, MessageType: 'deal-proposal', Content: 'Offer',
-  Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
+const storedProposal = (speaker: number) => transcriptRow({
+  ID: 7, SpeakerID: speaker, MessageType: 'deal-proposal', Content: 'Offer',
+  Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
 });
 
 /** A durable outcome row projection as the transactional actions return one. */
-const outcomeRow = (ID: number, MessageType: string, SpeakerID = 1) => ({
-  ID, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-  SpeakerID, MessageType, Content: '', Payload: { ProposalMessageID: 7 }, Turn: 5, CreatedAt: 0,
+const outcomeRow = (ID: number, MessageType: TranscriptMessage['MessageType'], SpeakerID = 1) => transcriptRow({
+  ID, MessageType, SpeakerID, Payload: { ProposalMessageID: 7 }, Turn: 5,
 });
 
 describe('acceptDealAction', () => {

@@ -29,6 +29,8 @@ import type {
   StrategistSessionConfig,
   VoxAgentsConfig
 } from '../utils/types';
+import { errorMessage } from '../utils/errors';
+import { loadAgentCatalogue } from '../stores/agents';
 
 /**
  * Session Control view for managing game sessions and configurations
@@ -82,7 +84,7 @@ async function loadConfigs() {
     configs.value = response.configs;
     globalLlms.value = response.globalLlms;
   } catch (caught) {
-    configError.value = caught instanceof Error ? caught.message : 'Failed to load configurations';
+    configError.value = errorMessage(caught, 'Failed to load configurations');
   } finally {
     loadingConfigs.value = false;
   }
@@ -93,8 +95,7 @@ async function loadAgents() {
   loadingAgents.value = true;
   agentCatalogueWarning.value = null;
   try {
-    const response = await api.getAgents();
-    agents.value = response.agents;
+    agents.value = await loadAgentCatalogue();
   } catch (caught) {
     agentCatalogueWarning.value = caught instanceof Error
       ? `Game setup styles are unavailable: ${caught.message}`
@@ -133,7 +134,7 @@ async function startSessionWithGameMode(mode: GameMode) {
     toast.add({
       severity: 'error',
       summary: 'Failed to Start',
-      detail: caught instanceof Error ? caught.message : 'Failed to start session',
+      detail: errorMessage(caught, 'Failed to start session'),
       life: 5000
     });
   } finally {
@@ -165,7 +166,7 @@ async function togglePause() {
     toast.add({
       severity: 'error',
       summary: wasPaused ? 'Failed to Resume' : 'Failed to Pause',
-      detail: caught instanceof Error ? caught.message : 'Failed to toggle pause',
+      detail: errorMessage(caught, 'Failed to toggle pause'),
       life: 5000
     });
   }
@@ -193,7 +194,7 @@ function confirmStopSession() {
         toast.add({
           severity: 'error',
           summary: 'Failed to Stop',
-          detail: caught instanceof Error ? caught.message : 'Failed to stop session',
+          detail: errorMessage(caught, 'Failed to stop session'),
           life: 5000
         });
       }
@@ -226,7 +227,7 @@ function confirmDeleteConfig(config: StrategistSessionConfig) {
         toast.add({
           severity: 'error',
           summary: 'Failed to Delete',
-          detail: caught instanceof Error ? caught.message : 'Failed to delete configuration',
+          detail: errorMessage(caught, 'Failed to delete configuration'),
           life: 5000
         });
       }
@@ -299,7 +300,7 @@ async function handleConfigSave(name: string, config: StrategistSessionConfig) {
     toast.add({
       severity: 'error',
       summary: 'Failed to Save',
-      detail: caught instanceof Error ? caught.message : 'Failed to save configuration',
+      detail: errorMessage(caught, 'Failed to save configuration'),
       life: 5000
     });
   }

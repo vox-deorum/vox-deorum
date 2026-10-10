@@ -9,6 +9,7 @@ import type {
   SessionStatusResponse
 } from '@/utils/types';
 import { createPoller } from '@/utils/polling';
+import { errorMessage } from '@/utils/errors';
 
 // Session status state
 export const sessionStatus = ref<SessionStatusResponse | null>(null);
@@ -41,7 +42,7 @@ function requestSessionStatus(): Promise<SessionStatusResponse> {
     syncPolling(response);
     return response;
   }).catch((caught) => {
-    error.value = caught instanceof Error ? caught.message : 'Failed to fetch session status';
+    error.value = errorMessage(caught, 'Failed to fetch session status');
     throw caught;
   }).finally(() => {
     statusRequest = null;
@@ -93,7 +94,7 @@ async function runSessionAction<T>(
     await action();
     await fetchFreshSessionStatus();
   } catch (caught) {
-    error.value = caught instanceof Error ? caught.message : 'Session action failed';
+    error.value = errorMessage(caught, 'Session action failed');
     throw caught;
   } finally {
     loading.value = false;

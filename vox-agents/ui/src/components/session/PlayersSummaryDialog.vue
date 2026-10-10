@@ -11,6 +11,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import { api } from '@/api/client';
 import { activeSessions, startActiveSessionPolling } from '@/stores/telemetry';
 import type { TelemetrySession } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 // Props interface
 interface Props {
@@ -64,7 +65,7 @@ async function loadPlayers() {
     lastUpdated.value = new Date();
   } catch (err) {
     console.error('Error loading players:', err);
-    error.value = err instanceof Error ? err.message : 'Failed to load players';
+    error.value = errorMessage(err, 'Failed to load players');
   } finally {
     loading.value = false;
   }

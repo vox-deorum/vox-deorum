@@ -19,6 +19,7 @@ import {
   type SimpleToolExecutionOptions,
 } from "../../utils/tools/simple-tools.js";
 import { createLogger } from "../../utils/logger.js";
+import { errorMessage } from "../../utils/errors.js";
 import type { EnvoyThread } from "../../types/index.js";
 import {
   appendDealProposal,
@@ -36,7 +37,7 @@ import {
   itemTypeLabel,
 } from "../../../../mcp-server/dist/utils/deal-format.js";
 import { deriveProposalOutcomes } from "../../utils/diplomacy/deal/deal-reduce.js";
-import { identityOf } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
 import {
   resolveLedger,
   formatResolutionErrors,
@@ -169,7 +170,7 @@ export function formatRecentDealHistory(
   });
   if (closed.length === 0) return undefined;
 
-  const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
+  const civName = civNameFor(thread);
   const entries = closed.slice(-limit).map((row) => {
     const outcome = outcomes.get(row.ID)!;
     const author = row.SpeakerID === thread.agent ? `YOU (${civName(row.SpeakerID)})` : civName(row.SpeakerID);
@@ -350,7 +351,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           }.`;
         } catch (error) {
           logger.warn("Could not accept stale or invalid proposal", { error });
-          return `Could not accept the deal: ${error instanceof Error ? error.message : "unknown error"}. Choose again.`;
+          return `Could not accept the deal: ${errorMessage(error, "unknown error")}. Choose again.`;
         }
       },
     },
@@ -453,7 +454,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
             return formatIllegalDealError(error, agentID);
           }
           logger.error("Failed to record proposal/counter", { error });
-          return `Failed to record the deal: ${error instanceof Error ? error.message : "unknown error"}`;
+          return `Failed to record the deal: ${errorMessage(error, "unknown error")}`;
         }
       },
     },
@@ -504,7 +505,7 @@ export function createNegotiatorTerminalTools(context: VoxContext<StrategistPara
           return `Rejected proposal #${ni.activeProposal.messageID} (deal-reject #${id}).`;
         } catch (error) {
           logger.error("Failed to record rejection", { error });
-          return `Failed to record the rejection: ${error instanceof Error ? error.message : "unknown error"}`;
+          return `Failed to record the rejection: ${errorMessage(error, "unknown error")}`;
         }
       },
     },

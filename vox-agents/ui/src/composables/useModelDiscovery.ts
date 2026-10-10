@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import { api, ModelDiscoveryError, type ModelDiscoveryErrorKind } from '@/api/client';
 import type { DiscoveredModel } from '@/utils/types';
 import { apiKeyFields, llmProviders, providerCredentials } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 interface UseModelDiscoveryOptions {
   isActive: () => boolean;
@@ -123,7 +124,7 @@ export function useModelDiscovery({ isActive }: UseModelDiscoveryOptions) {
       return true;
     } catch (error) {
       if (!isActive() || requestGeneration !== generation) return false;
-      discoveryError.value = error instanceof Error ? error.message : 'The model list could not be loaded.';
+      discoveryError.value = errorMessage(error, 'The model list could not be loaded.');
       discoveryErrorKind.value = error instanceof ModelDiscoveryError ? error.kind : 'provider';
       return false;
     } finally {

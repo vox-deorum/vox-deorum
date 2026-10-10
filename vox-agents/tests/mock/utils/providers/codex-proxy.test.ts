@@ -11,6 +11,7 @@ import {
   splitCodexProxyCommand,
 } from '../../../../src/utils/models/providers/codex-proxy.js';
 import { executionTimeoutDefault } from '../../../../src/utils/retry.js';
+import { createFakeLogger } from '../../../helpers/fake-logger.js';
 
 /** Creates an alive child process double with the manager's small required surface. */
 function createChild(pid = 42): any {
@@ -38,7 +39,7 @@ function createManager(fetch: typeof globalThis.fetch, spawn = vi.fn(() => creat
     registerShutdown: () => undefined,
     registerExit: () => undefined,
     makeDirectory: async () => undefined,
-    logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as any,
+    logger: createFakeLogger() as any,
     openLoginUrl: async () => undefined,
     ...extra,
   });
@@ -115,7 +116,7 @@ describe('CodexProxyManager startup', () => {
 
   it('should move past a responsive pre-existing listener onto the next free port', async () => {
     const spawn = vi.fn(() => createChild());
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const fetch = vi.fn()
       .mockResolvedValueOnce(response(200, { status: 'ok', proxy_version: '0.2.0' }))
       .mockRejectedValueOnce(new TypeError('connection refused'))
@@ -284,7 +285,7 @@ describe('CodexProxyManager startup', () => {
     const first = createChild(101);
     const second = createChild(102);
     const spawn = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const terminate = vi.fn(async () => {
       first.exitCode = 0;
       first.emit('exit', 0);
@@ -417,7 +418,7 @@ describe('CodexProxyManager startup', () => {
   it('should retain a custom command and log it without claiming the pinned proxy', async () => {
     const child = createChild();
     const spawn = vi.fn(() => child);
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const manager = createManager(
       vi.fn()
         .mockRejectedValueOnce(new TypeError('connection refused'))
@@ -484,7 +485,7 @@ describe('CodexProxyManager startup', () => {
 
   it('should redact buffered plain stderr secrets while preserving the device-login instruction', async () => {
     const child = createChild();
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const manager = createManager(
       vi.fn()
         .mockRejectedValueOnce(new TypeError('connection refused'))
@@ -509,7 +510,7 @@ describe('CodexProxyManager startup', () => {
 
   it('should redact credentials embedded in structured proxy log strings', async () => {
     const child = createChild();
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const manager = createManager(
       vi.fn()
         .mockRejectedValueOnce(new TypeError('connection refused'))
@@ -538,7 +539,7 @@ describe('CodexProxyManager startup', () => {
 
   it('should not forward empty proxy logs', async () => {
     const child = createChild();
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const manager = createManager(
       vi.fn()
         .mockRejectedValueOnce(new TypeError('connection refused'))
@@ -560,7 +561,7 @@ describe('CodexProxyManager startup', () => {
 
   it('should demote readiness and health request records to debug regardless of their own level', async () => {
     const child = createChild();
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const manager = createManager(
       vi.fn()
         .mockRejectedValueOnce(new TypeError('connection refused'))
@@ -584,7 +585,7 @@ describe('CodexProxyManager startup', () => {
   it('should open and announce each new device-login prompt while keeping the structured record redacted', async () => {
     const child = createChild();
     const openLoginUrl = vi.fn(async () => undefined);
-    const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const logger = createFakeLogger();
     const manager = createManager(
       vi.fn()
         .mockRejectedValueOnce(new TypeError('connection refused'))

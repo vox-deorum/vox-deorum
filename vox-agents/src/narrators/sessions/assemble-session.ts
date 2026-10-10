@@ -14,6 +14,7 @@ import type { PlayerInformation } from '../../../../mcp-server/dist/knowledge/sc
 import { MaxMajorCivs } from '../../../../mcp-server/dist/knowledge/schema/index.js';
 import { VoxSession } from '../../infra/vox-session.js';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
 import {
   openReadonlyGameDb,
   resolveKnowledgePath,
@@ -125,7 +126,7 @@ export class AssembleSession extends VoxSession<AssembleConfig> {
       logger.info(`Stage 1 complete: ${episodes.length} episodes, ${totalTurns} turns`);
       this.onStateChange('stopped');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       logger.error(`Assemble failed: ${message}`);
       this.onStateChange('error', message);
       throw error;

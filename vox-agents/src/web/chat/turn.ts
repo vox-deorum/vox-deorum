@@ -21,7 +21,7 @@
 import { agentRegistry } from '../../infra/agent-registry.js';
 import { contextRegistry } from '../../infra/context-registry.js';
 import type { StrategistParameters } from '../../strategist/strategy-parameters.js';
-import { ensureGameState } from '../../strategist/strategy-parameters.js';
+import { ensureGameState, turnEventWindow } from '../../strategist/strategy-parameters.js';
 import type {
   ChatMessageRequest,
   ChatStreamSink,
@@ -49,6 +49,8 @@ import {
 } from '../../utils/diplomacy/turn/live-turn.js';
 import { IllegalDealError, ProposalConflictError } from '../../utils/diplomacy/deal/deal.js';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
+import { isRecord } from '../../utils/guards.js';
 import {
   createSendMessageStreamer,
   type StreamChunk,
@@ -59,11 +61,6 @@ import { chatThreadStore } from './store.js';
 import { backfillThreadIdentities } from './enrichment.js';
 
 const logger = createLogger('webui:chat-turn');
-
-/** Test whether an untrusted request body is a record whose fields can be inspected safely. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Parse the untrusted route body into the canonical discriminated chat request contract. */
 function parseRequest(request: unknown): ChatMessageRequest | ChatTurnRejection {
@@ -280,8 +277,7 @@ export async function runChatTurn(
     const overrides: Partial<StrategistParameters> | undefined = thread.contextType === 'live'
       ? {
         turn: currentTurn,
-        before: currentTurn * 1000000 + 999999,
-        after: currentTurn * 1000000,
+        ...turnEventWindow(currentTurn),
       }
       : undefined;
     let contextLengthFailed = false;
@@ -354,8 +350,7 @@ export async function runChatTurn(
     });
   } catch (error) {
     logger.error('Failed to execute agent', { error });
-    const errorMessage = error instanceof Error ? error.message : 'unknown';
-    emitError(`Failed to execute agent: ${errorMessage}`);
+    emitError(`Failed to execute agent: ${errorMessage(error, 'unknown')}`);
   } finally {
     turn.finish();
     completed = true;

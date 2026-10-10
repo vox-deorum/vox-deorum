@@ -12,7 +12,7 @@ import type { EnvoyThread } from "../../types/index.js";
 import type { DealReduction } from "../../utils/diplomacy/deal/deal-reduce.js";
 import { inspectDeal, type InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
 import { createLogger } from "../../utils/logger.js";
-import { identityOf } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
 import {
   DealPayloadSchema,
   type DealTranscriptMessage,
@@ -141,7 +141,7 @@ export async function buildDealContextMessage(
     logger.warn("Could not inspect possible deal items for diplomat context", { error });
   }
 
-  const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
+  const civName = civNameFor(thread);
   const dealContext = openDeal
     ? formatDealContext(reduction, thread.agent, civName, {
         inspection,
@@ -175,7 +175,7 @@ export function renderDealRowInline(
   thread: EnvoyThread,
   openProposalID?: number
 ): string | undefined {
-  const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
+  const civName = civNameFor(thread);
   const answeredID = row.Payload.ProposalMessageID;
   const line = row.Content?.trim();
 

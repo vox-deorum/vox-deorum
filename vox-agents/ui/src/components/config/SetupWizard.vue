@@ -11,6 +11,7 @@ import ModelPickerList from '@/components/config/ModelPickerList.vue';
 import TierChoiceCard, { type TierOption } from '@/components/config/TierChoiceCard.vue';
 import { useModelDiscovery } from '@/composables/useModelDiscovery';
 import type { DiscoveredModel, LLMConfig, VoxAgentsConfig } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 type SetupStep = 'path' | 'credentials' | 'models' | 'helpers' | 'judge' | 'confirm';
 type SetupDoor = 'subscription' | 'api' | 'local';
@@ -298,7 +299,7 @@ async function beginCodexLogin(): Promise<void> {
   } catch (error) {
     if (generation !== wizardGeneration) return;
     codexState.value = 'stopped';
-    codexError.value = error instanceof Error ? error.message : 'ChatGPT sign-in could not start.';
+    codexError.value = errorMessage(error, 'ChatGPT sign-in could not start.');
   } finally {
     if (generation === wizardGeneration) codexStartPending = false;
   }
@@ -318,7 +319,7 @@ async function refreshCodexStatus(generation: number): Promise<void> {
     }
   } catch (error) {
     if (generation !== wizardGeneration) return;
-    codexError.value = error instanceof Error ? error.message : 'ChatGPT sign-in status could not be checked.';
+    codexError.value = errorMessage(error, 'ChatGPT sign-in status could not be checked.');
   }
 }
 
@@ -472,7 +473,7 @@ async function saveSetup(): Promise<void> {
     dialogVisible.value = false;
     await router.push('/session?setup=game');
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : 'Setup could not be saved.';
+    saveError.value = errorMessage(error, 'Setup could not be saved.');
   } finally {
     saving.value = false;
   }

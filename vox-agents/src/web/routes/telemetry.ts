@@ -12,6 +12,7 @@ import multer from 'multer';
 import { createLogger } from '../../utils/logger.js';
 import { sqliteExporter } from '../../instrumentation.js';
 import { parseDatabaseIdentifier, parseContextIdentifier } from '../../utils/telemetry/identifier-parser.js';
+import { sendError } from '../http-utils.js';
 import type {
   TelemetryDatabasesResponse,
   TelemetryMetadata,
@@ -90,7 +91,7 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
     res.json({ databases });
   } catch (error) {
     logger.error('Error listing databases', error);
-    res.status(500).json({ error: 'Failed to list databases' });
+    sendError(res, 500, 'Failed to list databases');
   }
 });
 
@@ -100,7 +101,7 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
 router.post('/upload', upload.single('database'), async (req: Request, res: Response<UploadResponse | ErrorResponse>) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return sendError(res, 400, 'No file uploaded');
     }
 
     const uploadedDir = path.join(process.cwd(), 'telemetry', 'uploaded');
@@ -126,7 +127,7 @@ router.post('/upload', upload.single('database'), async (req: Request, res: Resp
       await fs.unlink(req.file.path).catch(() => {});
     }
 
-    res.status(500).json({ error: 'Failed to upload database' });
+    sendError(res, 500, 'Failed to upload database');
   }
   return;
 });
@@ -162,7 +163,7 @@ router.get('/sessions/:id/spans', async (req: Request<{ id: string }>, res: Resp
   // Check if this is an active context
   const activeContexts = sqliteExporter.getActiveConnections();
   if (!activeContexts.includes(contextId)) {
-    res.status(404).json({ error: 'Session not found or not active' });
+    sendError(res, 404, 'Session not found or not active');
     return;
   }
 
@@ -195,7 +196,7 @@ router.get('/sessions/:id/stream', (req: Request<{ id: string }>, res: Response)
   // Check if this is an active context
   const activeContexts = sqliteExporter.getActiveConnections();
   if (!activeContexts.includes(contextId)) {
-    res.status(404).json({ error: 'Session not found or not active' });
+    sendError(res, 404, 'Session not found or not active');
     return;
   }
 
@@ -264,7 +265,7 @@ router.get('/db/:filename(*)/traces', async (req: Request<{ filename: string }>,
     // Parse the path - it might be just a filename or include folder path
     const db = sqliteExporter.openDatabaseFile(filename);
     if (!db) {
-      return res.status(404).json({ error: 'Database not found' });
+      return sendError(res, 404, 'Database not found');
     }
 
     try {
@@ -289,7 +290,7 @@ router.get('/db/:filename(*)/traces', async (req: Request<{ filename: string }>,
     }
   } catch (error) {
     logger.error('Error getting traces', error);
-    res.status(500).json({ error: 'Failed to get traces' });
+    sendError(res, 500, 'Failed to get traces');
   }
   return;
 });
@@ -307,7 +308,7 @@ router.get('/db/:filename(*)/trace/:traceId/spans', async (req: Request<{ filena
     // Parse the path - it might be just a filename or include folder path
     const db = sqliteExporter.openDatabaseFile(filename);
     if (!db) {
-      return res.status(404).json({ error: 'Database not found' });
+      return sendError(res, 404, 'Database not found');
     }
 
     try {
@@ -319,7 +320,7 @@ router.get('/db/:filename(*)/trace/:traceId/spans', async (req: Request<{ filena
         .execute();
 
       if (dbSpans.length === 0) {
-        return res.status(404).json({ error: 'Trace not found' });
+        return sendError(res, 404, 'Trace not found');
       }
 
       // Map database spans to API spans
@@ -334,7 +335,7 @@ router.get('/db/:filename(*)/trace/:traceId/spans', async (req: Request<{ filena
     }
   } catch (error) {
     logger.error('Error getting trace spans', error);
-    res.status(500).json({ error: 'Failed to get trace spans' });
+    sendError(res, 500, 'Failed to get trace spans');
   }
   return;
 });

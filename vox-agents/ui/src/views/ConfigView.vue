@@ -6,6 +6,8 @@ import Message from 'primevue/message';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useConfirm } from 'primevue/useconfirm';
 import { api } from '../api/client';
+import { loadAgentCatalogue } from '../stores/agents';
+import { errorMessage } from '../utils/errors';
 import type { AgentMapping, LLMConfig, VoxAgentsConfig, AgentInfo, DiscoveredModel, ModelSize } from '../utils/types';
 import { apiKeyFields, isEvaluationOnlyProvider } from '../utils/types';
 import AgentModelMappings from '../components/config/AgentModelMappings.vue';
@@ -198,10 +200,9 @@ watch(
 // Load agents from server
 async function loadAgents() {
   try {
-    const data = await api.getAgents();
-    agents.value = data.agents;
-  } catch (err: any) {
-    error.value = err.message || 'Failed to load agents';
+    agents.value = await loadAgentCatalogue();
+  } catch (err) {
+    error.value = errorMessage(err, 'Failed to load agents');
     console.error('Error loading agents:', err);
   }
 }

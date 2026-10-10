@@ -57,6 +57,7 @@ import {
 import { mcpClient, type GameEventNotification } from "../../models/mcp-client.js";
 import { unwrapMcpResponse } from "../../models/mcp-response.js";
 import { createLogger } from "../../logger.js";
+import { isRecord } from "../../guards.js";
 import type { StrategistParameters } from "../../../strategist/strategy-parameters.js";
 import { eventPipeDelimiter } from "../../../../../mcp-server/dist/bridge/protocol.js";
 
@@ -181,11 +182,6 @@ function enqueue(
  */
 function queueTail(queue: Map<string, Promise<void>>, key: string): Promise<void> {
   return queue.get(key) ?? Promise.resolve();
-}
-
-/** Whether a value can be read as a string-keyed object (a serialized deal payload, say). */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** Whether a value is a durable transcript row ID as the game may reference one. */

@@ -18,6 +18,7 @@ import type {
   StrategistSessionConfig
 } from '@/utils/types';
 import { api } from '@/api/client';
+import { loadAgentCatalogue } from '@/stores/agents';
 import PlayerConfigEditor from './config/PlayerConfigEditor.vue';
 import SessionRunControls from './config/SessionRunControls.vue';
 import {
@@ -151,9 +152,9 @@ function handleClose() {
 async function loadStrategistOptions() {
   loadingStrategists.value = true;
   try {
-    const response = await api.getAgents();
+    const list = await loadAgentCatalogue();
     // Filter for strategist agents (those with 'strategist' tag or in their name)
-    const strategists = response.agents.filter(agent =>
+    const strategists = list.filter(agent =>
       agent.tags.includes('strategist') ||
       agent.name.toLowerCase().includes('strategist')
     );

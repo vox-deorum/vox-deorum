@@ -20,8 +20,8 @@ import type { NormalizedSideRange } from "../../../../mcp-server/dist/tools/know
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
 import type { InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
 import type { EnvoyThread } from "../../types/index.js";
+import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
 import {
-  civNameFor,
   detailClause,
   durationPhrase,
   endpoints,

@@ -14,6 +14,8 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 import type { SpawnOptions } from 'node:child_process';
 import { createLogger } from '../../logger.js';
+import { isRecord } from '../../guards.js';
+import { errorMessage } from '../../errors.js';
 import { executionTimeoutDefault } from '../../retry.js';
 import { processManager } from '../../../infra/process-manager.js';
 
@@ -680,11 +682,6 @@ function occupiedPortError(firstPort: number, lastPort: number): CodexProxyError
   return new CodexProxyError(`${scanned}. Stop a listener or change CODEX_PROXY_PORT.`, false);
 }
 
-/** Narrows an unknown JSON payload to a record. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 /** Identifies transport failures that mean the loopback listener is absent. */
 function isConnectionFailure(error: unknown): boolean {
   const code = isRecord(error) ? error.code : undefined;
@@ -701,11 +698,6 @@ function isMissingTool(error: unknown): boolean {
 function optionalEnvironmentValue(value: string | undefined): string | undefined {
   const normalized = value?.trim();
   return normalized ? normalized : undefined;
-}
-
-/** Converts arbitrary caught values into a compact safe diagnostic. */
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /** Routes one proxy structured stderr record through Winston after removing secret-looking fields. */

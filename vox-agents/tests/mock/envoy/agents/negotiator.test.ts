@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow, emptySideRange } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
@@ -56,28 +57,6 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
     contextId: 'g-player-3',
     messages: [],
     ...partial,
-  };
-}
-
-/**
- * A complete-but-empty tradable side range, matching what `inspect-deal` actually returns for a seat
- * (both seats are always present, every category populated — see inspect-deal.lua). Nothing is legal
- * or available, so the menu renders its header with no rows.
- */
-function emptySideRange() {
-  return {
-    gold: { available: false, max: 0, reasons: [] },
-    goldPerTurn: { available: false, reasons: [] },
-    resources: [], cities: [], techs: [], thirdPartyPeace: [], thirdPartyWar: [], voteCommitments: [],
-    maps: { legal: false, reasons: [] },
-    allowEmbassy: { legal: false, reasons: [] },
-    openBorders: { legal: false, reasons: [] },
-    declarationOfFriendship: { legal: false, reasons: [] },
-    defensivePact: { legal: false, reasons: [] },
-    researchAgreement: { legal: false, reasons: [] },
-    peaceTreaty: { legal: false, reasons: [] },
-    vassalage: { legal: false, reasons: [] },
-    vassalageRevoke: { legal: false, reasons: [] },
   };
 }
 
@@ -139,39 +118,28 @@ function setOpenProposal(
   deal = { version: 1 as const, items: [], promises: [] }
 ) {
   mcp.respondWith('read-transcript', structuredResult({ messages: [
-    {
-      ID: id,
-      Player1ID: 1,
-      Player2ID: 3,
-      Player1Role: 'the leader',
-      Player2Role: 'negotiator',
-      SpeakerID: speakerID,
-      MessageType: 'deal-proposal',
-      Content: 'Offer',
-      Payload: { Deal: deal },
-      Turn: 5,
-      CreatedAt: 0,
-    },
+    transcriptRow({
+      ID: id, Player2Role: 'negotiator', SpeakerID: speakerID, MessageType: 'deal-proposal',
+      Content: 'Offer', Payload: { Deal: deal }, Turn: 5,
+    }),
   ] }));
 }
 
 /** A stored proposal row from seat `speaker` carrying one gold term. */
 function dealProposalRow(id: number, speaker = 1): any {
-  return {
-    ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'negotiator',
-    SpeakerID: speaker, MessageType: 'deal-proposal', Content: 'Offer',
+  return transcriptRow({
+    ID: id, Player2Role: 'negotiator', SpeakerID: speaker, MessageType: 'deal-proposal', Content: 'Offer',
     Payload: { Deal: { version: 1, message: `fixture-offer-${id}`, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 10 }], promises: [] } },
-    Turn: 4, CreatedAt: 0,
-  };
+    Turn: 4,
+  });
 }
 
 /** A deal-reject row answering proposal `answers`. */
 function dealRejectRow(id: number, answers: number, speaker = 3): any {
-  return {
-    ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'negotiator',
-    SpeakerID: speaker, MessageType: 'deal-reject', Content: 'We decline.',
-    Payload: { ProposalMessageID: answers }, Turn: 4, CreatedAt: 0,
-  };
+  return transcriptRow({
+    ID: id, Player2Role: 'negotiator', SpeakerID: speaker, MessageType: 'deal-reject', Content: 'We decline.',
+    Payload: { ProposalMessageID: answers }, Turn: 4,
+  });
 }
 
 describe('accept-deal', () => {
@@ -459,11 +427,10 @@ describe('reject-deal', () => {
       Result: 'rejected',
       ProposalMessageID: args.ProposalMessageID,
       AlreadyRejected: false,
-      Row: {
-        ID: 13, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: args.SpeakerID, MessageType: 'deal-reject', Content: args.Content,
-        Payload: { ProposalMessageID: args.ProposalMessageID }, Turn: 5, CreatedAt: 0,
-      },
+      Row: transcriptRow({
+        ID: 13, SpeakerID: args.SpeakerID as number, MessageType: 'deal-reject', Content: args.Content as string,
+        Payload: { ProposalMessageID: args.ProposalMessageID }, Turn: 5,
+      }),
     }));
     const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
     const tools = createNegotiatorTerminalTools(makeContext(input));
@@ -492,11 +459,10 @@ describe('reject-deal', () => {
       Result: 'rejected',
       ProposalMessageID: args.ProposalMessageID,
       AlreadyRejected: false,
-      Row: {
-        ID: 16, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: args.SpeakerID, MessageType: 'deal-reject', Content: args.Content,
-        Payload: { ProposalMessageID: args.ProposalMessageID }, Turn: 5, CreatedAt: 0,
-      },
+      Row: transcriptRow({
+        ID: 16, SpeakerID: args.SpeakerID as number, MessageType: 'deal-reject', Content: args.Content as string,
+        Payload: { ProposalMessageID: args.ProposalMessageID }, Turn: 5,
+      }),
     }));
     const input = negotiatorInput({ activeProposal: { messageID: 7, deal: { version: 1, items: [], promises: [] } } });
     const tools = createNegotiatorTerminalTools(makeContext(input));

@@ -12,6 +12,7 @@ import type {
 } from '@/utils/types';
 import { buildSideCatalog, type AddTermPayload } from '@/utils/deal/deal-catalog';
 import { addItemWithMirror, removeItemWithMirror } from '@/utils/deal/deal-helpers';
+import { errorMessage } from '@/utils/errors';
 import { deriveActiveProposal } from '@vox/utils/diplomacy/deal/deal-reduce';
 
 /** A normalized deal submission emitted to the chat streaming workflow. */
@@ -171,7 +172,7 @@ export function useDealEditor(options: UseDealEditorOptions) {
       return applied;
     } catch (caught) {
       if (sequence === inspectSequence) {
-        error.value = caught instanceof Error ? caught.message : 'Failed to inspect the deal';
+        error.value = errorMessage(caught, 'Failed to inspect the deal');
       }
       return false;
     } finally {
@@ -204,7 +205,7 @@ export function useDealEditor(options: UseDealEditorOptions) {
       }
       return await runInspect();
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Failed to load deal messages';
+      error.value = errorMessage(caught, 'Failed to load deal messages');
       return false;
     }
   };
@@ -266,14 +267,14 @@ export function useDealEditor(options: UseDealEditorOptions) {
     toast.add({
       severity: 'error',
       summary: 'Deal action failed',
-      detail: caught instanceof Error ? caught.message : caught,
+      detail: errorMessage(caught),
       life: 4000,
     });
   };
 
   /** Show a retryable failure while explaining that the draft remains available. */
   const retryableError = (caught: Error | string, summary: string): void => {
-    const reason = caught instanceof Error ? caught.message : caught;
+    const reason = errorMessage(caught);
     toast.add({ severity: 'error', summary, detail: `${reason}: your draft is intact, try again.`, life: 5000 });
   };
 

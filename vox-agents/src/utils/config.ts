@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { createLogger } from './logger.js';
+import { errorMessage } from './errors.js';
 import type { VoxAgentsConfig, TransportType } from '../types/index.js';
 import { defaultConfig } from './config/defaults.js';
 import { mergeConfigWithDefaults } from './config/diff.js';
@@ -33,7 +34,7 @@ export function loadVoxConfig(filename: string): VoxAgentsConfig {
       fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       logger.info(`Loaded configuration from ${filename}`);
     } catch (error) {
-      logger.warn(`Failed to load ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.warn(`Failed to load ${filename}: ${errorMessage(error, 'Unknown error')}`);
     }
   } else {
     logger.info(`No ${filename} found, using default configuration`);
@@ -66,7 +67,7 @@ export function loadConfigFromFile<T extends object>(
       fileConfig = JSON.parse(fileContent) as Partial<T>;
       logger.info(`Loaded configuration from ${filename}`);
     } catch (error) {
-      logger.warn(`Failed to load ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.warn(`Failed to load ${filename}: ${errorMessage(error, 'Unknown error')}`);
       logger.info('Using default configuration');
     }
   } else {

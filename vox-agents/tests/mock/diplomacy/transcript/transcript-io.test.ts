@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
@@ -155,18 +156,12 @@ describe('appendTranscriptMessageRow', () => {
 });
 
 describe('syncThreadMessages', () => {
-  /** A stored transcript row with sensible defaults for the ordered pair 1↔3. */
-  const row = (over: Record<string, unknown>) => ({
-    ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-    SpeakerID: 1, MessageType: 'text', Content: '', Payload: {}, Turn: 1, CreatedAt: 0, ...over,
-  });
-
   it('re-hydrates the thread from the store: text + deal rows inline, in append order', async () => {
     mcp.respondWith('read-transcript', structuredResult({ messages: [
-      row({ ID: 1, SpeakerID: 1, MessageType: 'text', Content: 'hello', Turn: 5, CreatedAt: 2 }),
-      row({ ID: 2, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'deal', Turn: 5,
+      transcriptRow({ Content: 'hello', Turn: 5, CreatedAt: 2 }),
+      transcriptRow({ ID: 2, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'deal', Turn: 5,
         Payload: { Deal: { version: 1, items: [], promises: [] } } }),
-      row({ ID: 3, SpeakerID: 3, MessageType: 'close', Content: 'bye', Turn: 6 }),
+      transcriptRow({ ID: 3, SpeakerID: 3, MessageType: 'close', Content: 'bye', Turn: 6 }),
     ] }));
     const t = thread();
 
@@ -192,9 +187,9 @@ describe('syncThreadMessages', () => {
       ],
     });
     mcp.respondWith('read-transcript', structuredResult({ messages: [
-      row({ ID: 1, SpeakerID: 1, Content: 'offer?', Turn: 5 }),
-      row({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
-      row({ ID: 3, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+      transcriptRow({ Content: 'offer?', Turn: 5 }),
+      transcriptRow({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+      transcriptRow({ ID: 3, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
     ] }));
 
     await syncThreadMessages(t);
@@ -217,8 +212,8 @@ describe('syncThreadMessages', () => {
       ],
     });
     mcp.respondWith('read-transcript', structuredResult({ messages: [
-      row({ ID: 1, SpeakerID: 1, Content: 'offer?', Turn: 5 }),
-      row({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+      transcriptRow({ Content: 'offer?', Turn: 5 }),
+      transcriptRow({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
     ] }));
 
     await autoCompact(t);
@@ -233,8 +228,8 @@ describe('syncThreadMessages', () => {
 
   it('derives the close turn from the latest close row', async () => {
     mcp.respondWith('read-transcript', structuredResult({ messages: [
-      row({ ID: 1, MessageType: 'text', Turn: 4 }),
-      row({ ID: 2, MessageType: 'close', Turn: 8 }),
+      transcriptRow({ Turn: 4 }),
+      transcriptRow({ ID: 2, MessageType: 'close', Turn: 8 }),
     ] }));
     const t = thread();
 
@@ -277,10 +272,6 @@ describe('appendCloseMessage', () => {
 });
 
 describe('maybeAutoCompact (token gate)', () => {
-  const row = (over: Record<string, unknown>) => ({
-    ID: 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-    SpeakerID: 1, MessageType: 'text', Content: '', Payload: {}, Turn: 1, CreatedAt: 0, ...over,
-  });
   const withOngoing = () => thread({
     diplomacy: true,
     pastMessageID: 1,
@@ -302,8 +293,8 @@ describe('maybeAutoCompact (token gate)', () => {
   it('auto-compacts when the ongoing exchange exceeds the limit', async () => {
     const t = withOngoing();
     mcp.respondWith('read-transcript', structuredResult({ messages: [
-      row({ ID: 1, SpeakerID: 1, Content: 'offer?', Turn: 5 }),
-      row({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
+      transcriptRow({ Content: 'offer?', Turn: 5 }),
+      transcriptRow({ ID: 2, SpeakerID: 3, Content: 'We decline.', Turn: 6 }),
     ] }));
 
     await maybeAutoCompact(t, 1); // a 1-token ceiling forces the gate

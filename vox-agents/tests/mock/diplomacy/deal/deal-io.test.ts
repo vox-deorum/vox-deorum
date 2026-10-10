@@ -6,7 +6,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
+import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
@@ -533,10 +535,9 @@ describe('appendDealProposal promise legality (stage 7.04)', () => {
 
 describe('appendDealReject', () => {
   /** The durable deal-reject row `reject-agent-deal` returns for either successful outcome. */
-  const rejectRow = (over: Record<string, unknown> = {}) => ({
-    ID: 9, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-    SpeakerID: 1, MessageType: 'deal-reject', Content: 'No thanks',
-    Payload: { ProposalMessageID: 7 }, Turn: 6, CreatedAt: 0, ...over,
+  const rejectRow = (over: Partial<TranscriptMessage> = {}) => transcriptRow({
+    ID: 9, MessageType: 'deal-reject', Content: 'No thanks',
+    Payload: { ProposalMessageID: 7 }, Turn: 6, ...over,
   });
 
   it('rejects through the transactional action, never through append-message', async () => {
@@ -615,11 +616,10 @@ describe('appendDealReject', () => {
 describe('requireCurrentOpenProposal', () => {
   /** A stored open proposal authored by `speaker` for the ordered pair 1↔3. */
   const openProposal = (speaker: number) => structuredResult({
-    messages: [{
-      ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: speaker, MessageType: 'deal-proposal', Content: 'Offer',
-      Payload: { Deal: emptyDeal }, Turn: 4, CreatedAt: 0,
-    }],
+    messages: [transcriptRow({
+      ID: 7, SpeakerID: speaker, MessageType: 'deal-proposal', Content: 'Offer',
+      Payload: { Deal: emptyDeal }, Turn: 4,
+    })],
   });
 
   it('resolves the open proposal authored by the counterpart', async () => {
@@ -647,11 +647,10 @@ describe('requireCurrentOpenProposal', () => {
 
   it('throws ProposalConflictError (not a bare Error) for malformed stored terms', async () => {
     mcp.respondWith('read-transcript', structuredResult({
-      messages: [{
-        ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
-        Payload: { Deal: { nonsense: true } }, Turn: 4, CreatedAt: 0,
-      }],
+      messages: [transcriptRow({
+        ID: 7, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+        Payload: { Deal: { nonsense: true } }, Turn: 4,
+      })],
     }));
     await expect(requireCurrentOpenProposal(thread(), 7, 1)).rejects.toBeInstanceOf(ProposalConflictError);
   });
@@ -659,10 +658,9 @@ describe('requireCurrentOpenProposal', () => {
 
 describe('classifyDealSubmission', () => {
   /** A stored proposal row authored by the agent (seat 3) for the ordered pair 1↔3. */
-  const proposalRow = (over: Record<string, unknown> = {}) => ({
-    ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-    SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
-    Payload: { Deal: emptyDeal }, Turn: 4, CreatedAt: 0, ...over,
+  const proposalRow = (over: Partial<TranscriptMessage> = {}) => transcriptRow({
+    ID: 7, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+    Payload: { Deal: emptyDeal }, Turn: 4, ...over,
   });
 
   it('classifies as deal-counter when the expected ID is still the active open offer (no author check)', async () => {
@@ -683,10 +681,9 @@ describe('classifyDealSubmission', () => {
   });
 
   it('throws ProposalConflictError when the expected proposal was rejected under the actor', async () => {
-    const rejectRow = {
-      ID: 8, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: 1, MessageType: 'deal-reject', Content: '', Payload: { ProposalMessageID: 7 }, Turn: 4, CreatedAt: 1,
-    };
+    const rejectRow = transcriptRow({
+      ID: 8, MessageType: 'deal-reject', Payload: { ProposalMessageID: 7 }, Turn: 4, CreatedAt: 1,
+    });
     mcp.respondWith('read-transcript', structuredResult({ messages: [proposalRow(), rejectRow] }));
     await expect(classifyDealSubmission(thread(), 7)).rejects.toBeInstanceOf(ProposalConflictError);
   });

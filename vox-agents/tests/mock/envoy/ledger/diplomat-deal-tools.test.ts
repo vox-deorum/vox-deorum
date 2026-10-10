@@ -8,6 +8,7 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow, emptySideRange } from '../../../helpers/diplomacy-fixtures.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
@@ -27,7 +28,6 @@ import type { InspectDealResult } from '../../../../src/utils/diplomacy/deal/dea
 import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 import type { DealPayload, DealTranscriptMessage } from '../../../../../mcp-server/dist/utils/deal-schema.js';
-import type { NormalizedSideRange } from '../../../../../mcp-server/dist/tools/knowledge/inspect-deal.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {
@@ -35,28 +35,7 @@ beforeEach(() => {
 });
 
 function msg(messageType: TranscriptMessage['MessageType'], payload: Record<string, unknown>, id = 1): TranscriptMessage {
-  return {
-    ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-    SpeakerID: 3, MessageType: messageType, Content: '', Payload: payload, Turn: 1, CreatedAt: 0,
-  };
-}
-
-/** A complete empty tradable range with every game toggle represented. */
-function emptySideRange(): NormalizedSideRange {
-  return {
-    gold: { available: false, max: 0, reasons: [] },
-    goldPerTurn: { available: false, reasons: [] },
-    resources: [], cities: [], techs: [], thirdPartyPeace: [], thirdPartyWar: [], voteCommitments: [],
-    maps: { legal: false, reasons: [] },
-    allowEmbassy: { legal: false, reasons: [] },
-    openBorders: { legal: false, reasons: [] },
-    declarationOfFriendship: { legal: false, reasons: [] },
-    defensivePact: { legal: false, reasons: [] },
-    researchAgreement: { legal: false, reasons: [] },
-    peaceTreaty: { legal: false, reasons: [] },
-    vassalage: { legal: false, reasons: [] },
-    vassalageRevoke: { legal: false, reasons: [] },
-  };
+  return transcriptRow({ ID: id, SpeakerID: 3, MessageType: messageType, Payload: payload });
 }
 
 /** A valid 50-gold deal with optional field overrides. */
@@ -72,10 +51,9 @@ function goldDeal(overrides: Partial<DealPayload> = {}): DealPayload {
 /** An incoming gold proposal from the counterpart. */
 function incomingGoldProposal(options: { id?: number; deal?: DealPayload } = {}): DealTranscriptMessage {
   const { id = 5, deal = goldDeal() } = options;
-  return {
-    ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-    SpeakerID: 1, MessageType: 'deal-proposal', Content: '', Payload: { Deal: deal }, Turn: 1, CreatedAt: 0,
-  };
+  return transcriptRow({
+    ID: id, MessageType: 'deal-proposal', Payload: { Deal: deal },
+  }) as DealTranscriptMessage;
 }
 
 /** Diplomat thread: seat 3 is Germany and the counterpart is Rome. */
@@ -435,11 +413,10 @@ describe('renderDealRowInline', () => {
     payload: Record<string, unknown>,
     over: Partial<Pick<TranscriptMessage, 'ID' | 'SpeakerID' | 'Content'>> = {}
   ): any {
-    return {
-      ID: over.ID ?? 1, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: over.SpeakerID ?? 1, MessageType: messageType, Content: over.Content ?? '',
-      Payload: payload, Turn: 1, CreatedAt: 0,
-    };
+    return transcriptRow({
+      ID: over.ID ?? 1, SpeakerID: over.SpeakerID ?? 1, MessageType: messageType,
+      Content: over.Content ?? '', Payload: payload,
+    });
   }
 
   it('renders a proposal as its message plus direction-grouped, viewer-first, terms-only text', () => {

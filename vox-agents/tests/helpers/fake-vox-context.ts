@@ -39,6 +39,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { vi } from 'vitest';
 import { Tool } from 'ai';
 import { composeParameters } from '../../src/infra/vox-run.js';
+import { createFakeLogger } from './fake-logger.js';
 import { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
 import type { VoxContext } from '../../src/infra/vox-context.js';
 import type { GameState, StrategistParameters } from '../../src/strategist/strategy-parameters.js';
@@ -110,17 +111,7 @@ export class FakeVoxContext {
   private _runCounter = 0;
 
   /** Silent logger stand-in — agents call `this.logger`, contexts expose `.logger`. */
-  public logger = (() => {
-    const base: any = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    };
-    // `.child()` returns the same logger so child-logger call sites are recorded alongside it.
-    base.child = vi.fn(() => base);
-    return base;
-  })();
+  public logger: any = createFakeLogger();
 
   /**
    * The active run's composed parameters, falling back to the base outside a run — mirrors

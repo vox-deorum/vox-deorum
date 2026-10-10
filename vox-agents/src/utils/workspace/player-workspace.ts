@@ -12,6 +12,7 @@ import { Bash, InMemoryFs, MountableFs, OverlayFs, ReadWriteFs, type MountConfig
 import type { FileAccess, ResolvedFilesConfig } from '../../types/config.js';
 import { config } from '../config.js';
 import { createLogger } from '../logger.js';
+import { errorMessage } from '../errors.js';
 
 const logger = createLogger('PlayerWorkspace');
 
@@ -147,7 +148,7 @@ function seedWorkspaceGuide(directory: string, scope: 'game' | 'shared'): void {
     fs.writeFileSync(guidePath, workspaceGuide(scope), { encoding: 'utf8', flag: 'wx' });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') return;
-    logger.warn(`Could not seed workspace guide ${guidePath}: ${(error as Error).message}`);
+    logger.warn(`Could not seed workspace guide ${guidePath}: ${errorMessage(error)}`);
   }
 }
 
@@ -191,14 +192,14 @@ export class PlayerWorkspace {
       bash = this.open();
     } catch (error) {
       logger.error('Could not open workspace', { error });
-      return failure(`Could not open the workspace: ${(error as Error).message}`);
+      return failure(`Could not open the workspace: ${errorMessage(error)}`);
     }
 
     try {
       const result = await bash.exec(command, { signal });
       return { stdout: capOutput(result.stdout), stderr: capOutput(result.stderr), exitCode: result.exitCode };
     } catch (error) {
-      return failure(error instanceof Error ? error.message : String(error));
+      return failure(errorMessage(error));
     }
   }
 

@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import Mustache from 'mustache';
 import type { PromptsSetting } from '../../types/config.js';
 import { config } from '../config.js';
+import { errorMessage } from '../errors.js';
 
 /** The vox-agents package root, found from this module so `src` and `dist` agree. */
 export const voxAgentsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -108,7 +109,7 @@ function templateRefs(name: string, source: string, folder: string): TemplateRef
   try {
     tokens = Mustache.parse(source);
   } catch (error) {
-    throw new Error(`Prompt template ${folder}/${name}.md does not parse: ${(error as Error).message}`);
+    throw new Error(`Prompt template ${folder}/${name}.md does not parse: ${errorMessage(error)}`);
   }
   const refs: TemplateRefs = { uses: [], partials: [] };
   /** Visit tokens, descending into section bodies with their scope. */

@@ -32,6 +32,11 @@ export function stripSpokenEcho(text: string, selfLabel?: string): string {
   return rest;
 }
 
+/** Remove one leading ``` or ```json fence and one trailing ``` fence around a JSON answer. */
+export function stripJsonFence(text: string): string {
+  return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+}
+
 /**
  * Strips structural artifacts left behind by tool call extraction from LLM text.
  * Removes empty JSON arrays, empty markdown code blocks, and standalone fence markers.

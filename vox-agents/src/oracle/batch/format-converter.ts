@@ -11,6 +11,7 @@
 
 import type { ModelMessage } from 'ai';
 import type { ChatCompletion } from './types.js';
+import { errorMessage } from '../../utils/errors.js';
 
 // ── OpenAI → Vercel Conversion ──
 
@@ -161,11 +162,6 @@ async function refineToolCall(call: any, refineToolInput: RefineToolInput | unde
 /** The assistant-message form of a tool call, without the step-only invalid/error fields. */
 function toToolCallMessagePart(call: any): any {
   return { type: 'tool-call', toolCallId: call.toolCallId, toolName: call.toolName, input: call.input };
-}
-
-/** The text of a thrown value, as the SDK renders a tool error for the model. */
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /**

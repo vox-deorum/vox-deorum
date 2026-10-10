@@ -17,7 +17,7 @@
  */
 
 import OBSWebSocket from 'obs-websocket-js';
-import { spawn, execSync } from 'child_process';
+import { spawn } from 'child_process';
 import { setTimeout } from 'node:timers/promises';
 import fs from 'fs';
 import path from 'path';
@@ -25,6 +25,7 @@ import { createLogger } from '../utils/logger.js';
 import { processManager } from './process-manager.js';
 import type { ProductionMode, ObsConfig } from '../types/config.js';
 import { civ5ExecutableDefault } from '../utils/game/civ5-executable.js';
+import { findProcessByImageName } from '../utils/game/windows-process.js';
 
 const logger = createLogger('ObsManager');
 
@@ -85,7 +86,7 @@ class ObsManager {
     }
 
     // Ensure OBS is running
-    if (!this.isObsRunning()) {
+    if (!(await this.isObsRunning())) {
       const launched = this.launchObs();
       if (!launched) {
         logger.error('Failed to launch OBS Studio');
@@ -509,17 +510,9 @@ class ObsManager {
   }
 
   /** Check if OBS is currently running. */
-  private isObsRunning(): boolean {
+  private async isObsRunning(): Promise<boolean> {
     if (process.platform !== 'win32') return false;
-    try {
-      const output = execSync(
-        'tasklist /FI "IMAGENAME eq obs64.exe" /FO CSV',
-        { encoding: 'utf-8' }
-      );
-      return output.includes('obs64.exe');
-    } catch {
-      return false;
-    }
+    return (await findProcessByImageName('obs64.exe')) !== null;
   }
 
   /** Launch OBS Studio as a detached process. */
@@ -610,7 +603,7 @@ class ObsManager {
       logger.info(`Attempting OBS recovery (backoff: ${this.backoffMs / 1000}s)`);
 
       // Check if OBS process is still running
-      if (!this.isObsRunning()) {
+      if (!(await this.isObsRunning())) {
         logger.warn('OBS process not found — attempting to relaunch');
         const launched = this.launchObs();
         if (!launched) {

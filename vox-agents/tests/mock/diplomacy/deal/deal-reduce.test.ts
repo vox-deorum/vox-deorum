@@ -11,23 +11,11 @@ import {
   isAgreed,
 } from '../../../../src/utils/diplomacy/deal/deal-reduce.js';
 import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 
 let nextId = 1;
 function msg(messageType: TranscriptMessage['MessageType'], payload: Record<string, unknown> = {}, partial: Partial<TranscriptMessage> = {}): TranscriptMessage {
-  return {
-    ID: nextId++,
-    Player1ID: 1,
-    Player2ID: 3,
-    Player1Role: 'the leader',
-    Player2Role: 'diplomat',
-    SpeakerID: 1,
-    MessageType: messageType,
-    Content: '',
-    Payload: payload,
-    Turn: 1,
-    CreatedAt: 0,
-    ...partial,
-  };
+  return transcriptRow({ ID: nextId++, MessageType: messageType, Payload: payload, ...partial });
 }
 
 const deal = { version: 1 as const, items: [], promises: [] };

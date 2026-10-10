@@ -14,6 +14,7 @@ import type {
   SharedV4ProviderOptions,
 } from '@ai-sdk/provider';
 import { createLogger } from '../../logger.js';
+import { asRecord } from '../../guards.js';
 import { preserveModelError } from '../preserved-model-error.js';
 import type { PreservedModelErrorCarrier } from '../preserved-model-error.js';
 import { classifyProviderActivityStatus } from './activity-status.js';
@@ -130,13 +131,6 @@ const terminalQuotaCodes = new Set([
 const quotaRetryFallbackMs = 5 * 60 * 1000;
 const quotaRetryGraceMs = 15 * 1000;
 const maximumQuotaRetryDelayMs = 8 * 24 * 60 * 60 * 1000;
-
-/** Return a record only for object values that can safely be inspected. */
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : undefined;
-}
 
 /** Read the proxy's verbatim instruction-source paths from one response envelope. */
 function extractInstructionSources(value: unknown): string[] | undefined {

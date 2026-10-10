@@ -17,6 +17,7 @@ import fs from 'fs';
 import path from 'path';
 import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../../logger.js';
+import { errorMessage } from '../../errors.js';
 import { arraysEqual, buildFreshState } from './cycle.js';
 import type { SeatingState } from './types.js';
 
@@ -83,7 +84,7 @@ export function releaseLock(lockPath: string, configName: string): void {
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== 'ENOENT') {
-      logger.warn(`Failed to release lock for ${configName}: ${(err as Error).message}`);
+      logger.warn(`Failed to release lock for ${configName}: ${errorMessage(err)}`);
     }
   }
 }
@@ -115,7 +116,7 @@ export function readStateUnlocked(statePath: string): SeatingState | null {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') return null;
     logger.warn(
-      `Failed to read seating state ${statePath}: ${(err as Error).message}; treating as fresh`
+      `Failed to read seating state ${statePath}: ${errorMessage(err)}; treating as fresh`
     );
     return null;
   }

@@ -32,10 +32,11 @@ import type { EnvoyThread } from "../../../types/index.js";
 import { mcpClient } from "../../models/mcp-client.js";
 import { unwrapMcpResponse } from "../../models/mcp-response.js";
 import type { TranscriptMessage, TranscriptPushMessage } from "../transcript/transcript-utils.js";
-import { identityOf } from "../transcript/transcript-utils.js";
+import { civNameFor } from "../transcript/transcript-utils.js";
 import { reportThreadRow, reportThreadRows } from "../turn/active-turn-state.js";
 import { appendCloseMessage, readTranscript } from "../transcript/transcript.js";
 import { createLogger } from "../../logger.js";
+import { errorMessage } from "../../errors.js";
 import { deriveActiveProposal, type DealReduction } from "./deal-reduce.js";
 // Pinned deal contract — the single source of truth shared across stages 4–6.
 import {
@@ -257,7 +258,7 @@ async function inspectForArchival(thread: EnvoyThread, deal: DealPayload): Promi
   } catch (error) {
     logger.error("Could not inspect proposal before archival", { error });
     throw new Error(
-      `Could not inspect deal before storing proposal: ${error instanceof Error ? error.message : "unknown error"}`
+      `Could not inspect deal before storing proposal: ${errorMessage(error, "unknown error")}`
     );
   }
 }
@@ -324,7 +325,7 @@ export async function appendDealProposal(
   // legality; only `agreeabilityFactors` stays advisory. The inspected items/promises are
   // index-aligned with `symmetricDeal`, so the authored term (for a friendly, data-bearing label) is
   // available by index; civ names come from the thread's stored identities.
-  const civName = (id: number): string => identityOf(thread, id)?.name ?? `Player ${id}`;
+  const civName = civNameFor(thread);
   const illegalItems = inspection.items
     .map((it, index) => ({ it, index }))
     .filter(({ it }) => !it.legality)

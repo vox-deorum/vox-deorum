@@ -6,6 +6,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
+import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
@@ -40,10 +42,8 @@ function thread(): EnvoyThread {
 }
 
 /** A durable outcome row projection as `enact-agent-deal` returns it. */
-const outcomeRow = (id: number, messageType: string) => ({
-  ID: id, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-  SpeakerID: 1, MessageType: messageType, Content: '', Payload: { ProposalMessageID: 7 },
-  Turn: 4, CreatedAt: 0,
+const outcomeRow = (id: number, messageType: TranscriptMessage['MessageType']) => transcriptRow({
+  ID: id, MessageType: messageType, Payload: { ProposalMessageID: 7 }, Turn: 4,
 });
 
 describe('enactAgentDeal', () => {

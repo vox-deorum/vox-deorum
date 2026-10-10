@@ -11,6 +11,7 @@ import fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import { createLogger } from '../utils/logger.js';
 import { sseManager } from './sse-manager.js';
+import { sendError } from './http-utils.js';
 import config from '../utils/config.js';
 import telemetryRoutes from './routes/telemetry.js';
 import configRoutes from './routes/config.js';
@@ -49,7 +50,7 @@ function allowLoopbackCorsOrigin(
 /** Rejects browser and Host-header requests that do not identify the loopback dashboard. */
 function requireAllowedDashboardRequest(req: Request, res: Response<ErrorResponse>, next: NextFunction): void {
   if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    res.status(403).json({ error: 'This request is not allowed to access the local dashboard.' });
+    sendError(res, 403, 'This request is not allowed to access the local dashboard.');
     return;
   }
   next();
@@ -178,7 +179,7 @@ app.post('/shutdown', (_req: Request, res: Response) => {
 
 // Return JSON for unknown API endpoints before the SPA fallback can serve index.html.
 app.use('/api', (_req: Request, res: Response<ErrorResponse>) => {
-  res.status(404).json({ error: 'API endpoint not found' });
+  sendError(res, 404, 'API endpoint not found');
 });
 
 // Catch-all route for SPA - must come AFTER all API routes
@@ -187,8 +188,7 @@ app.get('*', (_req: Request, res: Response<ErrorResponse>) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(404).json({
-      error: 'UI not built',
+    sendError(res, 404, 'UI not built', {
       details: 'Run "npm run build" in ui/ directory to build the frontend'
     });
   }

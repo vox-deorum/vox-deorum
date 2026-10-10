@@ -19,6 +19,7 @@ import type {
   ListPacingInterruptionsResponse,
 } from '../../types/index.js';
 import { createLogger } from '../../utils/logger.js';
+import { sendError } from '../http-utils.js';
 import { enrichChat } from './enrichment.js';
 import {
   ChatOpenError,
@@ -49,7 +50,7 @@ export function createAgentDiscoveryRoutes(): Router {
         res.json({ agents });
       } catch (error) {
         logger.error('Failed to list agents', { error });
-        res.status(500).json({ error: 'Failed to list agents' });
+        sendError(res, 500, 'Failed to list agents');
       }
     },
   );
@@ -66,7 +67,7 @@ export function createAgentDiscoveryRoutes(): Router {
         res.json({ interruptions });
       } catch (error) {
         logger.error('Failed to list pacing interruptions', { error });
-        res.status(500).json({ error: 'Failed to list pacing interruptions' });
+        sendError(res, 500, 'Failed to list pacing interruptions');
       }
     },
   );
@@ -76,18 +77,19 @@ export function createAgentDiscoveryRoutes(): Router {
     async (
       req: Request<object, object, CreateChatRequest>,
       res: Response<CreateChatResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       try {
         const thread = req.body.mode === 'diplomacy'
           ? await openDiplomacyChat(req.body)
           : await openOrdinaryChat(req.body);
-        return res.json({ ...thread, ...enrichChat(thread) });
+        res.json({ ...thread, ...enrichChat(thread) });
       } catch (error) {
         if (error instanceof ChatOpenError) {
-          return res.status(error.status).json({ error: error.message });
+          sendError(res, error.status, error.message);
+          return;
         }
         logger.error('Failed to create session', { error });
-        return res.status(500).json({ error: 'Failed to create session' });
+        sendError(res, 500, 'Failed to create session');
       }
     },
   );
@@ -99,7 +101,7 @@ export function createAgentDiscoveryRoutes(): Router {
         res.json({ chats: chatThreadStore.list() });
       } catch (error) {
         logger.error('Failed to list chat threads', { error });
-        res.status(500).json({ error: 'Failed to list chat threads' });
+        sendError(res, 500, 'Failed to list chat threads');
       }
     },
   );
@@ -109,14 +111,17 @@ export function createAgentDiscoveryRoutes(): Router {
     async (
       req: Request<{ chatId: string }>,
       res: Response<GetChatResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       try {
         const thread = await chatThreadStore.read(req.params.chatId);
-        if (!thread) return res.status(404).json({ error: 'Chat thread not found' });
-        return res.json({ ...thread, ...enrichChat(thread) });
+        if (!thread) {
+          sendError(res, 404, 'Chat thread not found');
+          return;
+        }
+        res.json({ ...thread, ...enrichChat(thread) });
       } catch (error) {
         logger.error('Failed to get chat thread', { error });
-        return res.status(500).json({ error: 'Failed to get chat thread' });
+        sendError(res, 500, 'Failed to get chat thread');
       }
     },
   );
@@ -126,14 +131,17 @@ export function createAgentDiscoveryRoutes(): Router {
     async (
       req: Request<{ chatId: string }>,
       res: Response<DeleteChatResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       try {
         const deleted = await chatThreadStore.delete(req.params.chatId);
-        if (!deleted) return res.status(404).json({ error: 'Chat thread not found' });
-        return res.json({ success: true });
+        if (!deleted) {
+          sendError(res, 404, 'Chat thread not found');
+          return;
+        }
+        res.json({ success: true });
       } catch (error) {
         logger.error('Failed to delete chat thread', { error });
-        return res.status(500).json({ error: 'Failed to delete chat thread' });
+        sendError(res, 500, 'Failed to delete chat thread');
       }
     },
   );

@@ -11,6 +11,8 @@ import { runStrategistLoop } from '../../strategist/loop.js';
 import { resolveMaxRepetitions } from '../../strategist/repetition.js';
 import { Model, SessionConfig, StrategistSessionConfig } from '../../types/config.js';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
+import { sendError } from '../http-utils.js';
 import { config, getConfigsDir } from '../../utils/config.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -95,8 +97,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to get session status', { error });
-      const errorResponse: ErrorResponse = { error: 'Failed to get session status' };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, 'Failed to get session status');
     }
   });
 
@@ -150,8 +151,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to list configs', { error });
-      const errorResponse: ErrorResponse = { error: 'Failed to list configurations' };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, 'Failed to list configurations');
     }
   });
 
@@ -163,21 +163,18 @@ export function createSessionRoutes(): Router {
     const { config: requestedConfig, gameMode = 'start' } = req.body;
 
     if (!requestedConfig) {
-      const errorResponse: ErrorResponse = { error: 'Config object required' };
-      res.status(400).json(errorResponse);
+      sendError(res, 400, 'Config object required');
       return;
     }
 
     if (!isGameMode(gameMode)) {
-      const errorResponse: ErrorResponse = { error: 'gameMode must be start, load, or wait' };
-      res.status(400).json(errorResponse);
+      sendError(res, 400, 'gameMode must be start, load, or wait');
       return;
     }
 
     // Check for existing session
     if (sessionRegistry.hasActiveSession()) {
-      const errorResponse: ErrorResponse = { error: 'A session is already active' };
-      res.status(400).json(errorResponse);
+      sendError(res, 400, 'A session is already active');
       return;
     }
 
@@ -194,8 +191,7 @@ export function createSessionRoutes(): Router {
 
       // Validate required fields
       if (!strategistConfig.llmPlayers || typeof strategistConfig.llmPlayers !== 'object') {
-        const errorResponse: ErrorResponse = { error: 'Config must include llmPlayers configuration' };
-        res.status(400).json(errorResponse);
+        sendError(res, 400, 'Config must include llmPlayers configuration');
         return;
       }
 
@@ -218,8 +214,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to start session', { error });
-      const errorResponse: ErrorResponse = { error: `Failed to start session: ${(error as Error).message}` };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to start session: ${errorMessage(error)}`);
     }
   });
 
@@ -231,14 +226,12 @@ export function createSessionRoutes(): Router {
     const { filename, config } = req.body;
 
     if (!filename) {
-      const errorResponse: ErrorResponse = { error: 'Filename required' };
-      res.status(400).json(errorResponse);
+      sendError(res, 400, 'Filename required');
       return;
     }
 
     if (!config) {
-      const errorResponse: ErrorResponse = { error: 'Config object required' };
-      res.status(400).json(errorResponse);
+      sendError(res, 400, 'Config object required');
       return;
     }
 
@@ -266,8 +259,7 @@ export function createSessionRoutes(): Router {
       if (configToSave.type === 'strategist') {
         const strategistConfig = configToSave as StrategistSessionConfig;
         if (!strategistConfig.llmPlayers || typeof strategistConfig.llmPlayers !== 'object') {
-          const errorResponse: ErrorResponse = { error: 'Strategist config must include llmPlayers configuration' };
-          res.status(400).json(errorResponse);
+          sendError(res, 400, 'Strategist config must include llmPlayers configuration');
           return;
         }
       }
@@ -289,8 +281,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to save config', { error });
-      const errorResponse: ErrorResponse = { error: `Failed to save configuration: ${(error as Error).message}` };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to save configuration: ${errorMessage(error)}`);
     }
   });
 
@@ -302,8 +293,7 @@ export function createSessionRoutes(): Router {
     const { filename } = req.params;
 
     if (!filename) {
-      const errorResponse: ErrorResponse = { error: 'Filename required' };
-      res.status(400).json(errorResponse);
+      sendError(res, 400, 'Filename required');
       return;
     }
 
@@ -319,8 +309,7 @@ export function createSessionRoutes(): Router {
       try {
         await fs.access(configPath);
       } catch {
-        const errorResponse: ErrorResponse = { error: `Config file not found: ${finalFilename}` };
-        res.status(404).json(errorResponse);
+        sendError(res, 404, `Config file not found: ${finalFilename}`);
         return;
       }
 
@@ -336,8 +325,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to delete config', { error });
-      const errorResponse: ErrorResponse = { error: `Failed to delete configuration: ${(error as Error).message}` };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to delete configuration: ${errorMessage(error)}`);
     }
   });
 
@@ -349,8 +337,7 @@ export function createSessionRoutes(): Router {
     const session = sessionRegistry.getActive();
 
     if (!session) {
-      const errorResponse: ErrorResponse = { error: 'No active session' };
-      res.status(404).json(errorResponse);
+      sendError(res, 404, 'No active session');
       return;
     }
 
@@ -367,8 +354,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to stop session', { error });
-      const errorResponse: ErrorResponse = { error: `Failed to stop session: ${(error as Error).message}` };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to stop session: ${errorMessage(error)}`);
     }
   });
 
@@ -381,8 +367,7 @@ export function createSessionRoutes(): Router {
     const session = sessionRegistry.getActive();
 
     if (!session) {
-      const errorResponse: ErrorResponse = { error: 'No active session' };
-      res.status(404).json(errorResponse);
+      sendError(res, 404, 'No active session');
       return;
     }
 
@@ -398,8 +383,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to pause session', { error });
-      const errorResponse: ErrorResponse = { error: `Failed to pause session: ${(error as Error).message}` };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to pause session: ${errorMessage(error)}`);
     }
   });
 
@@ -411,8 +395,7 @@ export function createSessionRoutes(): Router {
     const session = sessionRegistry.getActive();
 
     if (!session) {
-      const errorResponse: ErrorResponse = { error: 'No active session' };
-      res.status(404).json(errorResponse);
+      sendError(res, 404, 'No active session');
       return;
     }
 
@@ -428,8 +411,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to resume session', { error });
-      const errorResponse: ErrorResponse = { error: `Failed to resume session: ${(error as Error).message}` };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to resume session: ${errorMessage(error)}`);
     }
   });
 
@@ -442,15 +424,13 @@ export function createSessionRoutes(): Router {
     const session = sessionRegistry.getActive();
 
     if (!session) {
-      const errorResponse: ErrorResponse = { error: 'No active session' };
-      res.status(404).json(errorResponse);
+      sendError(res, 404, 'No active session');
       return;
     }
 
     // The turn is only known once the MCP server has loaded a game, so skip the call until then
     if (session.getTurn() === undefined) {
-      const errorResponse: ErrorResponse = { error: 'Game not loaded yet' };
-      res.status(409).json(errorResponse);
+      sendError(res, 409, 'Game not loaded yet');
       return;
     }
 
@@ -484,10 +464,7 @@ export function createSessionRoutes(): Router {
       res.json(response);
     } catch (error) {
       logger.error('Failed to get players summary', { error });
-      const errorResponse: ErrorResponse = {
-        error: `Failed to get players summary: ${(error as Error).message}`
-      };
-      res.status(500).json(errorResponse);
+      sendError(res, 500, `Failed to get players summary: ${errorMessage(error)}`);
     }
   });
 

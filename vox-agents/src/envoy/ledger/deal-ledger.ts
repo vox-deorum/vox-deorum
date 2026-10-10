@@ -9,13 +9,13 @@
  *
  * It is a pure formatter: it imports only types and other pure formatters (never the terminal-tool
  * machinery in `negotiator-utils.ts`), so both consumers can share it without dragging in the
- * durable-store writers. The primitive label/duration helpers (`endpoints`, `civNameFor`,
+ * durable-store writers. The primitive label/duration helpers (`endpoints`,
  * `detailClause`, `renderPromiseDuration`, `namedItemLabel`, …) live here as the single source the
  * menu renderer and the ledger both reuse.
  */
 
 import type { EnvoyThread } from "../../types/index.js";
-import { identityOf } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
 import type { InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
 import {
   formatEstimate,
@@ -38,11 +38,6 @@ import type { OptionsReport } from "../../../../mcp-server/dist/tools/knowledge/
 
 /** The viewer's own `set-relationship` directives, keyed by target civ name (from `get-options`). */
 export type RelationshipDirectives = OptionsReport["Relationships"];
-
-/** A seat → civ-name resolver from the thread's stored identities ("Player <id>" fallback). */
-export function civNameFor(thread: EnvoyThread): (playerID: number) => string {
-  return (id: number) => identityOf(thread, id)?.name ?? `Player ${id}`;
-}
 
 /** The negotiator's own seat and its counterpart (the other endpoint of the thread). */
 export function endpoints(thread: EnvoyThread): { agentID: number; counterpartID: number } {

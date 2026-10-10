@@ -15,6 +15,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
 - **Provider modules**: Provider-specific implementations live in `src/utils/models/providers/` and may import shared types or sibling helpers, but never `models.ts`
 - **Config defaults**: `config.json` is gitignored. Effective values come from `src/utils/config/defaults.ts` merged by `src/utils/config/diff.ts`, loaded through `src/utils/config.ts`
+- **Shared helpers**: Use `isRecord`/`asRecord` from `utils/guards.ts`, `errorMessage` from `utils/errors.ts` (the UI has its own in `ui/src/utils/errors.ts`), and `sendError` from `web/http-utils.ts` instead of local copies. Test fixtures for transcript rows and fake loggers live in `tests/helpers/`
 - **Use Map for registries** (players, handlers, etc.)
 - **Graceful cancellation**: each root run owns its `AbortController`; pass the active root's signal (resolved from `AsyncLocalStorage`) to async operations. `context.abort()` cancels every active root
 

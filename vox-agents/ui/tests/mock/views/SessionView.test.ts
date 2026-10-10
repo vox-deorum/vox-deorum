@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, ref } from 'vue';
-import SessionView from '@/views/SessionView.vue';
 import type { AgentInfo, SessionConfigEntry } from '@/utils/types';
+
+let SessionView: typeof import('@/views/SessionView.vue').default;
 
 const { api, routerReplace, route } = vi.hoisted(() => ({
   api: {
@@ -103,8 +104,11 @@ function mountView() {
 }
 
 describe('SessionView', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // Reload the component so each case gets a fresh catalogue cache.
+    vi.resetModules();
+    SessionView = (await import('@/views/SessionView.vue')).default;
     route.query = { setup: 'game' };
     api.getSessionConfigs.mockResolvedValue({ configs: [config], globalLlms: { default: 'openai/gpt-5-mini' } });
     api.getAgents.mockResolvedValue({ agents });

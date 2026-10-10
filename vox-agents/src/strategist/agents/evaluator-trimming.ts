@@ -11,6 +11,7 @@ import type { CitiesReport } from "../../../../mcp-server/dist/tools/knowledge/g
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
 import type { MilitaryReport } from "../../../../mcp-server/dist/tools/knowledge/get-military-report.js";
 import { dropEventTiers, type EventTierName } from "../../utils/prompts/event-importance.js";
+import { isRecord } from "../../utils/guards.js";
 import type { TrimStep } from "./evaluator-trim-config.js";
 
 /** The reports the ladder can shorten. Every other part of the state is never trimmed. */
@@ -44,11 +45,6 @@ type Applied = { reports: TrimmableReports; droppedEvents?: number } | undefined
 
 /** A weight at the end of an opinion line, such as `(-30)`, `(+12)`, or `(-51).`. */
 const opinionWeight = /\(([+-]?\d+)\)\.?$/;
-
-/** Check for a plain object, as opposed to an array, null, or a scalar. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Map the object values of a record through `change`, which returns undefined to leave a value

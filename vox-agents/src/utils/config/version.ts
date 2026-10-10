@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { createLogger } from '../logger.js';
+import { errorMessage } from '../errors.js';
 import type { VersionInfo } from '../../types/index.js';
 
 const logger = createLogger('Config');
@@ -60,7 +61,7 @@ export function loadVersionInfo(): VersionInfo | undefined {
       commit
     };
   } catch (error) {
-    logger.warn('Failed to load version info:', error instanceof Error ? error.message : 'Unknown error');
+    logger.warn('Failed to load version info:', errorMessage(error, 'Unknown error'));
     return undefined;
   }
 }

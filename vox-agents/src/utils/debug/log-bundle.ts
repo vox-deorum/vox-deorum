@@ -13,6 +13,7 @@ import type { Readable } from 'stream';
 import yazl from 'yazl';
 import { debugLogSources, listLogFiles, type LogSourceDirs } from './log-sources.js';
 import type { DebugLogFile, DebugLogSource } from '../../types/index.js';
+import { errorMessage } from '../errors.js';
 
 /** Folder name used inside the zip for each source. */
 const bundleFolders: Record<DebugLogSource, string> = {
@@ -113,7 +114,7 @@ export async function createLogBundle(options: LogBundleOptions): Promise<LogBun
         opened.push({ handle, start, entryName, mtime: new Date(file.modified) });
         included.push(`${entryName} (${start > 0 ? `last ${tailBytes} of ${file.size}` : file.size} bytes)`);
       } catch (error) {
-        skipped.push(`${entryName}: ${error instanceof Error ? error.message : String(error)}`);
+        skipped.push(`${entryName}: ${errorMessage(error)}`);
       }
     }
   }

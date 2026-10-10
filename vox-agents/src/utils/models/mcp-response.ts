@@ -7,10 +7,7 @@
  * forgetting cannot silently read as an empty success.
  */
 
-/** Return whether a value can be read as a string-keyed object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+import { isRecord } from "../guards.js";
 
 /**
  * Unwrap a structured MCP tool result or throw with the tool's text explanation.

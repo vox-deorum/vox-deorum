@@ -13,6 +13,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
+import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
@@ -116,16 +118,14 @@ function echoAppends(startID: number, failOn?: string): void {
   let nextID = startID;
   mcp.onTool('append-message', (args) => {
     if (args.MessageType === failOn) throw new Error(`store refused the ${failOn}`);
-    return structuredResult({
+    return structuredResult(transcriptRow({
       ID: nextID++,
-      Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: args.SpeakerID,
-      MessageType: args.MessageType,
-      Content: args.Content,
-      Payload: args.Payload ?? {},
+      SpeakerID: args.SpeakerID as number,
+      MessageType: args.MessageType as TranscriptMessage['MessageType'],
+      Content: args.Content as string,
+      Payload: (args.Payload ?? {}) as Record<string, any>,
       Turn: 5,
-      CreatedAt: 0,
-    });
+    }));
   });
 }
 
@@ -144,9 +144,8 @@ async function speak(thread: EnvoyThread, text: string): Promise<void> {
 }
 
 /** A durable outcome row projection as the transactional deal actions return one. */
-const outcomeRow = (ID: number, MessageType: string) => ({
-  ID, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-  SpeakerID: 3, MessageType, Content: '', Payload: { ProposalMessageID: 7 }, Turn: 5, CreatedAt: 0,
+const outcomeRow = (ID: number, MessageType: TranscriptMessage['MessageType']) => transcriptRow({
+  ID, SpeakerID: 3, MessageType, Payload: { ProposalMessageID: 7 }, Turn: 5,
 });
 
 beforeEach(() => {
@@ -255,11 +254,10 @@ describe('runChatTurn row contract', () => {
   });
 
   it('reports a counter caller row when the submission answers the open offer', async () => {
-    const open = {
-      ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
-      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-    };
+    const open = transcriptRow({
+      ID: 7, SpeakerID: 3, MessageType: 'deal-proposal', Content: 'Offer',
+      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+    });
     mcp.respondWith('read-transcript', structuredResult({ messages: [open] }));
     const thread = registerThread();
     vi.spyOn(contextRegistry, 'get').mockReturnValue(mockContext(async (_n, input) => {
@@ -330,11 +328,10 @@ describe('runChatTurn row contract', () => {
   });
 
   it('captures the ordered rejection and close rows a mid-run close writes', async () => {
-    const open = {
-      ID: 7, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: 1, MessageType: 'deal-proposal', Content: 'Offer',
-      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5, CreatedAt: 0,
-    };
+    const open = transcriptRow({
+      ID: 7, MessageType: 'deal-proposal', Content: 'Offer',
+      Payload: { Deal: { version: 1, items: [], promises: [] } }, Turn: 5,
+    });
     mcp.respondWith('read-transcript', structuredResult({ messages: [open] }));
     mcp.respondWith('reject-agent-deal', structuredResult({
       Result: 'rejected', ProposalMessageID: 7, AlreadyRejected: false,
@@ -343,12 +340,11 @@ describe('runChatTurn row contract', () => {
     // The caller row commits first (100), then the retraction (101, written by the reject action),
     // then the close (102) — so the ids follow the real append order across the two writers.
     const appendIDs = [100, 102];
-    mcp.onTool('append-message', (args) => structuredResult({
+    mcp.onTool('append-message', (args) => structuredResult(transcriptRow({
       ID: appendIDs.shift(),
-      Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-      SpeakerID: args.SpeakerID, MessageType: args.MessageType, Content: args.Content,
-      Payload: {}, Turn: 5, CreatedAt: 0,
-    }));
+      SpeakerID: args.SpeakerID as number, MessageType: args.MessageType as TranscriptMessage['MessageType'],
+      Content: args.Content as string, Turn: 5,
+    })));
     const thread = registerThread();
     vi.spyOn(contextRegistry, 'get').mockReturnValue(mockContext(async (_n, input) => {
       await closeConversation(input, input.agent, 'Until next time.');
@@ -553,11 +549,11 @@ describe('runChatTurn row contract', () => {
     mcp.onTool('append-message', (args) => {
       appended += 1;
       if (appended > 1) throw new Error('store refused the reply');
-      return structuredResult({
-        ID: 100, Player1ID: 1, Player2ID: 3, Player1Role: 'the leader', Player2Role: 'diplomat',
-        SpeakerID: args.SpeakerID, MessageType: args.MessageType, Content: args.Content,
-        Payload: {}, Turn: 5, CreatedAt: 0,
-      });
+      return structuredResult(transcriptRow({
+        ID: 100,
+        SpeakerID: args.SpeakerID as number, MessageType: args.MessageType as TranscriptMessage['MessageType'],
+        Content: args.Content as string, Turn: 5,
+      }));
     });
     const thread = registerThread();
     vi.spyOn(contextRegistry, 'get').mockReturnValue(mockContext(async (_n, input) => {

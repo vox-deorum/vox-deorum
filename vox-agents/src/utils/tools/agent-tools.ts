@@ -12,6 +12,7 @@ import { VoxContext } from "../../infra/vox-context.js";
 import type { ModelSize } from "../models/models.js";
 import { modelTiers } from '../../types/config.js';
 import { createLogger } from "../logger.js";
+import { errorMessage } from "../errors.js";
 import { Tool as VercelTool, dynamicTool, jsonSchema, zodSchema } from 'ai';
 import { trace, SpanStatusCode, ROOT_CONTEXT, context as otelContext } from '@opentelemetry/api';
 
@@ -131,7 +132,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         span.recordException(error as Error);
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error)
+          message: errorMessage(error)
         });
         throw error;
       } finally {

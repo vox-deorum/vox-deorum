@@ -56,7 +56,9 @@ import {
 } from '../../utils/diplomacy/turn/live-turn.js';
 import { audienceID, insertDurableRows } from '../../utils/diplomacy/transcript/transcript.js';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
 import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import { sendError } from '../http-utils.js';
 import { enrichChat } from './enrichment.js';
 import { chatThreadStore } from './store.js';
 
@@ -72,11 +74,11 @@ interface MappedFailure {
 function resolveDealThread(chatId: string, res: Response): EnvoyThread | undefined {
   const thread = chatThreadStore.get(chatId);
   if (!thread) {
-    res.status(404).json({ error: 'Chat thread not found' });
+    sendError(res, 404, 'Chat thread not found');
     return undefined;
   }
   if (!thread.diplomacy) {
-    res.status(400).json({ error: 'Only diplomacy conversations support deal actions' });
+    sendError(res, 400, 'Only diplomacy conversations support deal actions');
     return undefined;
   }
   return thread;
@@ -104,7 +106,7 @@ function mapDealActionError(error: unknown, fallback: string, fallbackStatus = 5
   logger.error(fallback, { error });
   return {
     status: fallbackStatus,
-    error: fallbackStatus === 500 ? fallback : (error instanceof Error ? error.message : fallback),
+    error: fallbackStatus === 500 ? fallback : errorMessage(error, fallback),
   };
 }
 
@@ -117,11 +119,15 @@ export function createAgentDealStatusRoutes(): Router {
     async (
       req: Request<{ chatId: string }, object, { message?: string }>,
       res: Response<GetChatResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       const thread = chatThreadStore.get(req.params.chatId);
-      if (!thread) return res.status(404).json({ error: 'Chat thread not found' });
+      if (!thread) {
+        sendError(res, 404, 'Chat thread not found');
+        return;
+      }
       if (!thread.diplomacy) {
-        return res.status(400).json({ error: 'Only diplomacy conversations can be closed.' });
+        sendError(res, 400, 'Only diplomacy conversations can be closed.');
+        return;
       }
 
       const content = req.body?.message?.trim() || 'The conversation has been closed.';
@@ -137,10 +143,10 @@ export function createAgentDealStatusRoutes(): Router {
           insertDurableRows(thread, rows);
           thread.metadata!.updatedAt = new Date();
         });
-        return res.json({ ...thread, ...enrichChat(thread) });
+        res.json({ ...thread, ...enrichChat(thread) });
       } catch (error) {
         const mapped = mapDealActionError(error, 'Failed to close conversation', 500);
-        return res.status(mapped.status).json({ error: mapped.error });
+        sendError(res, mapped.status, mapped.error);
       }
     },
   );
@@ -150,27 +156,26 @@ export function createAgentDealStatusRoutes(): Router {
     async (
       req: Request<{ chatId: string }, object, InspectDealRequest>,
       res: Response<InspectDealResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       const thread = resolveDealThread(req.params.chatId, res);
-      if (!thread) return res;
+      if (!thread) return;
 
       let deal: InspectDealRequest['deal'];
       if (req.body?.deal !== undefined) {
         const parsed = DealPayloadSchema.safeParse(req.body.deal);
         if (!parsed.success) {
-          return res.status(400).json({ error: `Invalid deal payload: ${parsed.error.message}` });
+          sendError(res, 400, `Invalid deal payload: ${parsed.error.message}`);
+          return;
         }
         deal = parsed.data;
       }
 
       try {
         const result = await inspectDeal(thread.player1ID, thread.player2ID, deal);
-        return res.json(result as InspectDealResponse);
+        res.json(result as InspectDealResponse);
       } catch (error) {
         logger.error('Failed to inspect deal', { error });
-        return res.status(502).json({
-          error: error instanceof Error ? error.message : 'Failed to inspect deal',
-        });
+        sendError(res, 502, errorMessage(error, 'Failed to inspect deal'));
       }
     },
   );
@@ -180,13 +185,14 @@ export function createAgentDealStatusRoutes(): Router {
     async (
       req: Request<{ chatId: string }, object, DealRejectRequest>,
       res: Response<GetChatResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       const thread = resolveDealThread(req.params.chatId, res);
-      if (!thread) return res;
+      if (!thread) return;
 
       const proposalMessageID = req.body?.proposalMessageID;
       if (typeof proposalMessageID !== 'number') {
-        return res.status(400).json({ error: 'proposalMessageID (number) is required' });
+        sendError(res, 400, 'proposalMessageID (number) is required');
+        return;
       }
 
       try {
@@ -194,10 +200,10 @@ export function createAgentDealStatusRoutes(): Router {
         // nothing (`changed: false`); the Web response is identical either way, since the client
         // renders the conversation, not the transition.
         await rejectDealAction(thread, proposalMessageID, req.body?.content);
-        return res.json({ ...thread, ...enrichChat(thread) });
+        res.json({ ...thread, ...enrichChat(thread) });
       } catch (error) {
         const mapped = mapDealActionError(error, 'Failed to append deal-reject');
-        return res.status(mapped.status).json({ error: mapped.error });
+        sendError(res, mapped.status, mapped.error);
       }
     },
   );
@@ -207,11 +213,12 @@ export function createAgentDealStatusRoutes(): Router {
     async (
       req: Request<{ chatId: string }, object, DealAcceptRequest>,
       res: Response<GetChatResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       const thread = resolveDealThread(req.params.chatId, res);
-      if (!thread) return res;
+      if (!thread) return;
       if (typeof req.body?.proposalMessageID !== 'number') {
-        return res.status(400).json({ error: 'proposalMessageID (number) is required' });
+        sendError(res, 400, 'proposalMessageID (number) is required');
+        return;
       }
 
       try {
@@ -220,10 +227,10 @@ export function createAgentDealStatusRoutes(): Router {
         // infrastructure failure (502) without a second, race-prone read that could report a verdict
         // already stale by the time it lands.
         await acceptDealAction(thread, req.body.proposalMessageID);
-        return res.json({ ...thread, ...enrichChat(thread) });
+        res.json({ ...thread, ...enrichChat(thread) });
       } catch (error) {
         const mapped = mapDealActionError(error, 'Failed to enact deal');
-        return res.status(mapped.status).json({ error: mapped.error });
+        sendError(res, mapped.status, mapped.error);
       }
     },
   );
@@ -233,17 +240,15 @@ export function createAgentDealStatusRoutes(): Router {
     async (
       req: Request<{ chatId: string }>,
       res: Response<DealMessagesResponse | ErrorResponse>,
-    ): Promise<Response> => {
+    ): Promise<void> => {
       const thread = resolveDealThread(req.params.chatId, res);
-      if (!thread) return res;
+      if (!thread) return;
       try {
         const messages = await readDealMessages(thread.player1ID, thread.player2ID);
-        return res.json({ messages: messages as DealMessagesResponse['messages'] });
+        res.json({ messages: messages as DealMessagesResponse['messages'] });
       } catch (error) {
         logger.error('Failed to read deal messages', { error });
-        return res.status(502).json({
-          error: error instanceof Error ? error.message : 'Failed to read deal messages',
-        });
+        sendError(res, 502, errorMessage(error, 'Failed to read deal messages'));
       }
     },
   );

@@ -12,6 +12,7 @@ import type { ResolvedFilesConfig } from '../../types/config.js';
 import { workspaceCwd, workspaceScratchPath, type WorkspaceExecResult } from '../workspace/player-workspace.js';
 import { createSimpleTool } from './simple-tools.js';
 import { bashToolName } from './tool-names.js';
+import { errorMessage } from '../errors.js';
 
 export { bashToolName } from './tool-names.js';
 
@@ -60,7 +61,7 @@ export function createBashTool<TParameters extends AgentParameters>(context: Vox
       try {
         workspace = context.workspace(parameters.gameID, parameters.playerID);
       } catch (error) {
-        return failure(`Could not open the workspace: ${(error as Error).message}`);
+        return failure(`Could not open the workspace: ${errorMessage(error)}`);
       }
       if (!workspace) return failure('No workspace is available for this player.');
       return workspace.exec(input.Command, context.currentSignal());

@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import type { Span } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 type SpanLoader = () => Promise<Span[]>;
 type RootSpanSelector = (spans: Span[]) => Span | null;
@@ -54,7 +55,7 @@ export function useTelemetrySpanPage(
       return true;
     } catch (caught) {
       if (generation !== loadGeneration) return false;
-      error.value = caught instanceof Error ? caught.message : fallbackError;
+      error.value = errorMessage(caught, fallbackError);
       return false;
     } finally {
       if (generation === loadGeneration) loading.value = false;

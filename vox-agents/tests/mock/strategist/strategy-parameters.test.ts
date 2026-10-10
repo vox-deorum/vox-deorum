@@ -15,6 +15,7 @@ import {
   getGameState,
   getRecentGameState,
   buildGameContextMessages,
+  turnEventWindow,
 } from "../../../src/strategist/strategy-parameters.js";
 import {
   createFakeVoxContext,
@@ -116,6 +117,23 @@ describe("strategy-parameters", () => {
         await expect(refreshGameState(ctx.asContext(), params)).rejects.toThrow(
           /Failed to fetch players: no players/
         );
+      });
+
+      it("reports the tool text from an isError content envelope", async () => {
+        registerReportTools(ctx);
+        ctx.respondWith("get-events", { isError: true, content: [{ type: "text", text: "events offline" }] });
+        const params = makeStrategistParameters({ turn: 5 });
+
+        await expect(refreshGameState(ctx.asContext(), params)).rejects.toThrow(/events offline/);
+      });
+
+      it("treats a Success: false report as a failure", async () => {
+        registerReportTools(ctx);
+        ctx.respondWith("get-military-report", { Success: false, error: "no military" });
+        const params = makeStrategistParameters({ turn: 5 });
+
+        await expect(refreshGameState(ctx.asContext(), params)).rejects.toThrow(/no military/);
+        expect(params.gameStates[5]).toBeUndefined();
       });
     });
 
@@ -259,6 +277,13 @@ describe("strategy-parameters", () => {
         expect(wide.events).toEqual({ "6": [{ Type: "T6" }], "7": [{ Type: "p" }] });
         expect(wide.eventsAfter).toBe(5_999_999);
       });
+    });
+  });
+
+  describe("turnEventWindow", () => {
+    it("spans every event ID a turn can hold", () => {
+      expect(turnEventWindow(5)).toEqual({ after: 5_000_000, before: 5_999_999 });
+      expect(turnEventWindow(6).after).toBe(turnEventWindow(5).before + 1);
     });
   });
 

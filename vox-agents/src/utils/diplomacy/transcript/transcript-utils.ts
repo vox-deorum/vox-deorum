@@ -74,6 +74,11 @@ export function identityOf(thread: EnvoyThread, id: number): ParticipantIdentity
   return id === thread.player1ID ? thread.player1Identity : thread.player2Identity;
 }
 
+/** A seat → civ-name resolver from the thread's stored identities ("Player <id>" fallback). */
+export function civNameFor(thread: EnvoyThread): (playerID: number) => string {
+  return (id: number) => identityOf(thread, id)?.name ?? `Player ${id}`;
+}
+
 /** Build the speaker label shared by prompt rendering and spoken-message archival. */
 export function speakerLabel(thread: EnvoyThread, seat: number): string {
   const civ = identityOf(thread, seat)?.name?.trim();

@@ -18,6 +18,7 @@ import { mcpClient } from '../utils/models/mcp-client.js';
 import { spanProcessor } from '../instrumentation.js';
 import { config as appConfig } from '../utils/config.js';
 import { createLogger } from '../utils/logger.js';
+import { errorMessage } from '../utils/errors.js';
 import { resolveModel } from './utils/model-resolver.js';
 import { runOracleTasks } from './run-control.js';
 import { loadToolSchemaCache, replaceToolsWithSchemaOnly } from './utils/schema-tools.js';
@@ -191,7 +192,7 @@ export async function runReplay(
             if (repetition !== undefined) result.repetition = repetition;
             return result;
           } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
+            const errorMsg = errorMessage(error);
             logger.error(`Error replaying task ${i + 1}: ${errorMsg}`);
             return failed(errorMsg);
           }
@@ -278,7 +279,7 @@ async function replaySingleRow(
       logger.info(`Using cached oracle replay: ${trailJsonPath}`);
       return cachedResult;
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = errorMessage(error);
       logger.warn(`Failed to read cached oracle replay at ${trailJsonPath}; rerunning task: ${errorMsg}`);
     }
   }

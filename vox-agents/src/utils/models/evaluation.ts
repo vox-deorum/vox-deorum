@@ -21,6 +21,7 @@ import { createLogger } from '../logger.js';
 import type { Model } from '../../types/index.js';
 import { buildProviderOptions, getModel, getModelConfig } from './models.js';
 import { selectEvaluatorReference } from './resolution.js';
+import { stripJsonFence } from './text-cleaning.js';
 import { streamTextWithConcurrency, withModelConfig } from './concurrency.js';
 import type { ConcurrencyContext } from './concurrency.js';
 import { formatModelReference } from './model-reference.js';
@@ -109,7 +110,7 @@ export function createLanguageModelEvaluator(config: Model, context: Concurrency
       // strip code fences, jaison, then schema.
       let parsed: unknown = null;
       const text = typeof lastStep?.text === 'string'
-        ? lastStep.text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
+        ? stripJsonFence(lastStep.text).trim()
         : '';
       if (text) {
         try {

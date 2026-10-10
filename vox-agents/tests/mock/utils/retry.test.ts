@@ -13,10 +13,11 @@ vi.mock('node:timers/promises', () => ({
 }));
 
 import { exponentialRetry } from '../../../src/utils/retry.js';
+import { createFakeLogger } from '../../helpers/fake-logger.js';
 
 /** Build the Winston subset used by exponentialRetry. */
 function logger() {
-  return { warn: vi.fn() } as any;
+  return createFakeLogger() as any;
 }
 
 afterEach(() => {

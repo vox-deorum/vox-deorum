@@ -81,6 +81,7 @@ import { api } from '@/api/client';
 import { extractLogParams, filterLogs, levelOptions, logMatchesQuery } from '@/api/log-utils';
 import { formatFileSize } from '@/api/telemetry-utils';
 import type { DebugLogFile, DebugLogFileResponse, DebugLogSource, LogEntry } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 import LogTable from './LogTable.vue';
 
 const props = defineProps<{
@@ -186,7 +187,7 @@ async function loadFile() {
     });
   } catch (error) {
     if (generation !== loadGeneration) return;
-    toast.add({ severity: 'error', summary: 'Could not read log', detail: String(error instanceof Error ? error.message : error), life: 5000 });
+    toast.add({ severity: 'error', summary: 'Could not read log', detail: errorMessage(error), life: 5000 });
   } finally {
     if (generation === loadGeneration) loading.value = false;
   }

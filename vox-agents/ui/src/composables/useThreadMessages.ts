@@ -5,6 +5,7 @@
 
 import type { Ref } from 'vue';
 import type { EnvoyThread, ChatMessageRequest, MessageWithMetadata, DealPayload, DealTranscriptMessage } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 import type { LanguageModelV4TextPart, LanguageModelV4ReasoningPart } from '@ai-sdk/provider';
 import { api, type SendCommitState } from '@/api/client';
 import type { ModelMessage } from 'ai';
@@ -305,7 +306,7 @@ export function useThreadMessages(options: UseThreadMessagesOptions) {
     } catch (error) {
       console.error('Failed to start streaming turn:', error);
       rollbackTo(optimisticStart);
-      onFailure?.(error instanceof Error ? error.message : 'Failed to send', 'uncommitted');
+      onFailure?.(errorMessage(error, 'Failed to send'), 'uncommitted');
       isStreaming.value = false;
     }
   };

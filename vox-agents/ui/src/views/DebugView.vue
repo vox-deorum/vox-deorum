@@ -12,6 +12,7 @@ import LogViewer from '@/components/logging/LogViewer.vue';
 import LogFileViewer from '@/components/logging/LogFileViewer.vue';
 import { api } from '@/api/client';
 import type { DebugLogSource, DebugStatusResponse } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 /** File-backed tabs, in display order. */
 const fileSources: { id: DebugLogSource; label: string; preferredFile?: string; emptyHint?: string }[] = [
@@ -32,11 +33,6 @@ const loggingAtLoad = ref<boolean>();
 /** Civ 5 reads config.ini only at startup, so any change needs a restart. */
 const restartNeeded = computed(() => loggingAtLoad.value !== undefined && civLogging.value !== loggingAtLoad.value);
 
-/** Turn a caught value into toast text. */
-function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /** Counts logging saves so a status response requested before or during a save cannot undo the switch. */
 let loggingSaves = 0;
 
@@ -49,7 +45,7 @@ async function loadStatus() {
     if (!savingAtRequest && savesAtRequest === loggingSaves) civLogging.value = status.value.civLogging;
     loggingAtLoad.value ??= status.value.civLogging;
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Could not load logs', detail: describeError(error), life: 5000 });
+    toast.add({ severity: 'error', summary: 'Could not load logs', detail: errorMessage(error), life: 5000 });
   }
 }
 
@@ -61,7 +57,7 @@ async function setCivLogging(enabled: boolean) {
     civLogging.value = (await api.setCivLogging(enabled)).civLogging;
   } catch (error) {
     civLogging.value = !enabled;
-    toast.add({ severity: 'error', summary: 'Could not change Civ 5 logging', detail: describeError(error), life: 5000 });
+    toast.add({ severity: 'error', summary: 'Could not change Civ 5 logging', detail: errorMessage(error), life: 5000 });
   } finally {
     savingLogging.value = false;
   }

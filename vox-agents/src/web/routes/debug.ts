@@ -9,6 +9,8 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import { createLogger } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errors.js';
+import { sendError } from '../http-utils.js';
 import config from '../../utils/config.js';
 import { getCiv5UserFilePath } from '../../utils/game/civ5-user-files.js';
 import { readCivLoggingEnabledContent, updateCivLoggingEnabledContent } from '../../utils/game/civ5-ini.js';
@@ -61,11 +63,6 @@ async function readCivLogging(configPath: string): Promise<boolean | undefined> 
   }
 }
 
-/** Converts caught values to a safe message suitable for the local dashboard. */
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unexpected error';
-}
-
 /**
  * Build the debug router. Tests pass their own paths; the server uses the real ones,
  * resolved once because finding the Documents folder starts PowerShell.
@@ -85,14 +82,14 @@ export function createDebugRoutes(resolvePaths: () => Promise<DebugPaths> = reso
       res.json({ civLogging: (await readCivLogging(civConfigPath)) ?? false, sources });
     } catch (error) {
       logger.error('Failed to read debug status', { error });
-      res.status(500).json({ error: errorMessage(error) });
+      sendError(res, 500, errorMessage(error, 'Unexpected error'));
     }
   });
 
-  router.put('/civ-logging', async (req: Request<{}, {}, SetCivLoggingRequest>, res: Response<SetCivLoggingResponse | ErrorResponse>) => {
+  router.put('/civ-logging', async (req: Request<object, object, SetCivLoggingRequest>, res: Response<SetCivLoggingResponse | ErrorResponse>) => {
     const enabled = req.body?.enabled;
     if (typeof enabled !== 'boolean') {
-      res.status(400).json({ error: 'enabled must be true or false' });
+      sendError(res, 400, 'enabled must be true or false');
       return;
     }
 
@@ -111,14 +108,14 @@ export function createDebugRoutes(resolvePaths: () => Promise<DebugPaths> = reso
       res.json({ civLogging: enabled });
     } catch (error) {
       logger.error('Failed to update Civ 5 logging', { error });
-      res.status(500).json({ error: errorMessage(error) });
+      sendError(res, 500, errorMessage(error, 'Unexpected error'));
     }
   });
 
   router.get('/logs/:source/:file', async (req: Request, res: Response<DebugLogFileResponse | ErrorResponse>) => {
     const { source, file } = req.params;
     if (!isDebugLogSource(source)) {
-      res.status(404).json({ error: 'Unknown log source' });
+      sendError(res, 404, 'Unknown log source');
       return;
     }
 
@@ -127,7 +124,7 @@ export function createDebugRoutes(resolvePaths: () => Promise<DebugPaths> = reso
       // Only names from the folder listing are readable, so a crafted path cannot escape it.
       const listed = (await listLogFiles(dirs[source])).find(entry => entry.name === file);
       if (!listed) {
-        res.status(404).json({ error: 'Log file not found' });
+        sendError(res, 404, 'Log file not found');
         return;
       }
 
@@ -135,7 +132,7 @@ export function createDebugRoutes(resolvePaths: () => Promise<DebugPaths> = reso
       res.json({ source, name: listed.name, ...tail });
     } catch (error) {
       logger.error(`Failed to read log ${source}/${file}`, { error });
-      res.status(500).json({ error: errorMessage(error) });
+      sendError(res, 500, errorMessage(error, 'Unexpected error'));
     }
   });
 
@@ -161,7 +158,7 @@ export function createDebugRoutes(resolvePaths: () => Promise<DebugPaths> = reso
       bundle.stream.pipe(res);
     } catch (error) {
       logger.error('Failed to build log bundle', { error });
-      res.status(500).json({ error: errorMessage(error) });
+      sendError(res, 500, errorMessage(error, 'Unexpected error'));
     }
   });
 

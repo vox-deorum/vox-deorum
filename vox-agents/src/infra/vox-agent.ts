@@ -16,7 +16,7 @@ import { getModelConfig, type ModelSize, resolveToolFraming, selectModelReferenc
 import { getValidCalls, hasOnlyTerminalCalls, isTerminalTool } from "../utils/tools/terminal-tools.js";
 import { buildClosingReminder } from "../utils/prompts/closing-reminder.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
-import { buildRescuePrompt } from "../utils/models/text-cleaning.js";
+import { buildRescuePrompt, stripJsonFence } from "../utils/models/text-cleaning.js";
 import { appendReminder } from "../utils/prompts/reminders.js";
 // @ts-expect-error - jaison doesn't have type definitions
 import jaison from 'jaison';
@@ -419,7 +419,7 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
     if (finalText === "") return;
     if (this.outputSchema) {
       const cleanedText = typeof finalText === 'string'
-        ? finalText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
+        ? stripJsonFence(finalText)
         : finalText;
       const parsed = typeof cleanedText === 'string' ? jaison(cleanedText) : cleanedText;
       return this.outputSchema.parse(parsed);

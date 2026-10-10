@@ -2,6 +2,8 @@ import { ModelMessage } from "ai";
 import { AgentParameters } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
+import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
+import { isRecord } from "../utils/guards.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
 import type { PlayersReport } from "../../../mcp-server/dist/tools/knowledge/get-players.js";
 import type { EventsReport } from "../../../mcp-server/dist/tools/knowledge/get-events.js";
@@ -93,16 +95,9 @@ export interface GameState {
   _pendingBriefings?: Record<string, Promise<string | undefined>>;
 }
 
-/**
- * Checks if a tool call result is an error result
- * @param result - The result from a tool call
- * @returns True if the result indicates an error
- */
-function isErrorResult(result: unknown): boolean {
-  return result == null ||
-    (typeof result === 'object' &&
-      'isError' in result &&
-      (result as Record<string, unknown>).isError === true);
+/** First and last event IDs a turn can hold (event IDs are `turn * 1_000_000 + n`). */
+export function turnEventWindow(turn: number): { after: number; before: number } {
+  return { after: turn * 1_000_000, before: turn * 1_000_000 + 999_999 };
 }
 
 /**
@@ -112,10 +107,13 @@ function isErrorResult(result: unknown): boolean {
  */
 function extractErrorText(result: unknown): string {
   if (result == null) return 'No result returned';
-  if (result != null && typeof result === 'object') {
-    const obj = result as Record<string, unknown>;
-    if (obj.error) return String(obj.error);
-    if (obj.message) return String(obj.message);
+  if (isRecord(result)) {
+    if (result.isError === true && Array.isArray(result.content)) {
+      const textItem = result.content.find((item) => isRecord(item) && typeof item.text === 'string');
+      if (textItem) return textItem.text as string;
+    }
+    if (result.error) return String(result.error);
+    if (result.message) return String(result.message);
   }
   return 'Unknown error';
 }
@@ -154,12 +152,12 @@ export async function refreshGameState(
   ]);
 
   // Validate all results are defined and not errors
-  if (isErrorResult(players)) throw new Error(`Failed to fetch players: ${extractErrorText(players)}`);
-  if (isErrorResult(events)) throw new Error(`Failed to fetch events: ${extractErrorText(events)}`);
-  if (isErrorResult(cities)) throw new Error(`Failed to fetch cities: ${extractErrorText(cities)}`);
-  if (isErrorResult(options)) throw new Error(`Failed to fetch options: ${extractErrorText(options)}`);
-  if (isErrorResult(victory)) throw new Error(`Failed to fetch victory: ${extractErrorText(victory)}`);
-  if (isErrorResult(military)) throw new Error(`Failed to fetch military: ${extractErrorText(military)}`);
+  if (isFailedToolResult(players)) throw new Error(`Failed to fetch players: ${extractErrorText(players)}`);
+  if (isFailedToolResult(events)) throw new Error(`Failed to fetch events: ${extractErrorText(events)}`);
+  if (isFailedToolResult(cities)) throw new Error(`Failed to fetch cities: ${extractErrorText(cities)}`);
+  if (isFailedToolResult(options)) throw new Error(`Failed to fetch options: ${extractErrorText(options)}`);
+  if (isFailedToolResult(victory)) throw new Error(`Failed to fetch victory: ${extractErrorText(victory)}`);
+  if (isFailedToolResult(military)) throw new Error(`Failed to fetch military: ${extractErrorText(military)}`);
 
   // Store the freshly-fetched snapshot. When an entry for this turn already exists (a concurrent
   // same-turn refresh), update its fields IN PLACE rather than replacing the object reference.

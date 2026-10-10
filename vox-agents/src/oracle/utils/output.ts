@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Papa from 'papaparse';
 import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
+import { isRecord } from '../../utils/guards.js';
 import type { OracleRow, ReplayResult } from '../types.js';
 
 /** Resolve a path that may be relative or absolute */
@@ -70,8 +71,8 @@ export function getTrailPaths(experimentDir: string, trailBase: string): { jsonP
  */
 export function readReplayCache(jsonPath: string): ReplayResult {
   const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as unknown;
-  const trail = asRecord(data, 'Oracle replay cache must be a JSON object');
-  const replay = asRecord(trail.replay, 'Oracle replay cache is missing replay data');
+  const trail = requireRecord(data, 'Oracle replay cache must be a JSON object');
+  const replay = requireRecord(trail.replay, 'Oracle replay cache is missing replay data');
 
   if (!isRecord(trail.row)) {
     throw new Error('Oracle replay cache is missing row data');
@@ -116,15 +117,12 @@ function numberOrZero(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function asRecord(value: unknown, errorMessage: string): Record<string, any> {
+/** Return the value as a record, or throw with the given message when it is not one. */
+function requireRecord(value: unknown, message: string): Record<string, any> {
   if (!isRecord(value)) {
-    throw new Error(errorMessage);
+    throw new Error(message);
   }
   return value;
-}
-
-function isRecord(value: unknown): value is Record<string, any> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**

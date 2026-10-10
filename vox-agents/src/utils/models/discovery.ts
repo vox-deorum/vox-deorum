@@ -5,6 +5,8 @@
  */
 
 import type { DiscoveredModel, DiscoveryErrorKind } from '../../types/api.js';
+import { isRecord } from '../guards.js';
+import { errorMessage } from '../errors.js';
 import { applyModelRules } from './rules.js';
 import { discoverClaudeCodeModelValues } from './providers/claude-code-discovery.js';
 import { ensureCodexProxy, getActiveCodexProxyPort, getCodexProxyApiBase } from './providers/codex-proxy.js';
@@ -56,11 +58,6 @@ function model(provider: string, name: string): DiscoveredModel {
     name,
     ...(recommendedOptions === undefined ? {} : { recommendedOptions }),
   };
-}
-
-/** Narrows unknown JSON to an object record. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Reads a bounded, safe response excerpt for a provider error. */
@@ -172,7 +169,7 @@ export async function discoverModels(provider: string, credentials: DiscoveryCre
         throw new DiscoveryError(
           'provider',
           502,
-          error instanceof Error ? error.message : 'Could not read the Claude Code model list from your local Claude Code sign-in.',
+          errorMessage(error, 'Could not read the Claude Code model list from your local Claude Code sign-in.'),
         );
       }
     }

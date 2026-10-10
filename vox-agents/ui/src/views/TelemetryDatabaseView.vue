@@ -19,6 +19,7 @@ import TurnViewButton from '@/components/telemetry/strategist/TurnViewButton.vue
 import { isStrategistTurnSpan } from '@/api/strategist-turn';
 import { api } from '@/api/client';
 import type { Span } from '../utils/types';
+import { errorMessage } from '@/utils/errors';
 import {
   formatDuration,
   formatTimestamp,
@@ -118,7 +119,7 @@ async function loadTraces() {
 
     traces.value = response.traces.map(parseSpanAttributes);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load traces';
+    error.value = errorMessage(err, 'Failed to load traces');
     console.error('Error loading traces:', err);
   } finally {
     loading.value = false;
@@ -147,7 +148,7 @@ async function openTurnView(trace: Span) {
     showTurnDialog.value = true;
   } catch (err) {
     if (requestGeneration !== turnRequestGeneration) return;
-    toast.add({ severity: 'error', summary: 'Could not load turn', detail: err instanceof Error ? err.message : String(err), life: 5000 });
+    toast.add({ severity: 'error', summary: 'Could not load turn', detail: errorMessage(err), life: 5000 });
   } finally {
     if (requestGeneration === turnRequestGeneration) loadingTurnId.value = null;
   }

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { defineComponent } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
-import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue'
 import { deferred } from '../../../../helpers/async.js'
 import { ButtonStub, TagStub } from '../../../../helpers/stubs.js'
+
+let AgentSelectDialog: typeof import('@/components/chat/launch/AgentSelectDialog.vue').default
 
 // --- Mocks -----------------------------------------------------------------
 
@@ -111,8 +112,11 @@ function clickButton(wrapper: any, label: string) {
 }
 
 describe('AgentSelectDialog', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    // Reload the component so each case gets a fresh catalogue cache.
+    vi.resetModules()
+    AgentSelectDialog = (await import('@/components/chat/launch/AgentSelectDialog.vue')).default
     ;(api.getAgents as any).mockResolvedValue(AGENTS)
     ;(api.getPlayersSummary as any).mockResolvedValue(PLAYERS)
     ;(api.createAgentChat as any).mockResolvedValue({ id: 'sess-1' })

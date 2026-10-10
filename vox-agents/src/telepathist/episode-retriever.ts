@@ -11,6 +11,7 @@ import { TelepathistParameters } from './telepathist-parameters.js';
 import { EnvoyThread } from '../types/index.js';
 import { requestEpisodesFromTelemetry, formatEpisodeResults } from '../utils/prompts/episode-utils.js';
 import { createLogger } from '../utils/logger.js';
+import { errorMessage } from '../utils/errors.js';
 
 const logger = createLogger('EpisodeRetriever');
 
@@ -105,7 +106,7 @@ export class EpisodeRetriever extends VoxAgent<TelepathistParameters, EnvoyThrea
       }
     } catch (error) {
       logger.error('Error in episode retriever', { error });
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errorMsg = errorMessage(error, 'Unknown error');
       streamProgress(`Error retrieving episodes: ${errorMsg}`);
     }
   }

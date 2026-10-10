@@ -7,6 +7,7 @@
  */
 
 import { createLogger } from "../utils/logger.js";
+import { errorMessage } from "../utils/errors.js";
 import { mcpClient, type GameEventNotification } from "../utils/models/mcp-client.js";
 import { VoxPlayer } from "./vox-player.js";
 import { HumanDecisionBus, type HumanDecisionSubmission } from "./human-decision-bus.js";
@@ -292,7 +293,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       this.ingameBridge.dispose();
       this.detachMcpListeners();
       logger.error('Session failed with error:', error);
-      this.onStateChange('error', (error as Error).message);
+      this.onStateChange('error', errorMessage(error));
       await voxCivilization.restoreRandomSeeds();
       sessionRegistry.unregister(this.id);
       throw error;
@@ -380,7 +381,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
       await this.obsCall('stopProduction', () => this.production!.stop());
       await mcpClient.disconnect().catch((err) => {
-        logger.warn(`mcpClient.disconnect failed (non-fatal): ${(err as Error).message}`);
+        logger.warn(`mcpClient.disconnect failed (non-fatal): ${errorMessage(err)}`);
       });
 
       await voxCivilization.restoreRandomSeeds().catch(() => { });
@@ -537,7 +538,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       try {
         this.seatingClaim = await this.recoverSeatingClaimFromGame();
       } catch (err) {
-        const message = `Failed to match the launched game to the seating cycle: ${(err as Error).message}`;
+        const message = `Failed to match the launched game to the seating cycle: ${errorMessage(err)}`;
         logger.error(message);
         this.onStateChange('error', message);
         this.abortController.abort();
@@ -983,7 +984,7 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
     try {
       await this.seatingManager.releaseCell(this.seatingClaim, success);
     } catch (err) {
-      logger.warn(`Failed to release seating claim: ${(err as Error).message}`);
+      logger.warn(`Failed to release seating claim: ${errorMessage(err)}`);
     }
   }
 

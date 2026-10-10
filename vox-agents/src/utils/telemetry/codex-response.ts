@@ -2,13 +2,7 @@
 
 import type { Attributes } from '@opentelemetry/api';
 import type { CodexThreadReuse } from '../models/providers/codex-response.js';
-
-/** Return a record for an object value that can be safely inspected. */
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : undefined;
-}
+import { asRecord } from '../guards.js';
 
 /** Return the provider-reported instruction paths without changing their text. */
 function instructionSources(providerMetadata: unknown): string[] | undefined {

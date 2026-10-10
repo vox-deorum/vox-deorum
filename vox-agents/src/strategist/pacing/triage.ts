@@ -11,6 +11,7 @@ import { triageEnabled } from "../../infra/triage.js";
 import { getEvaluatorConfig } from "../../utils/models/evaluation.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 import { isContextLengthError } from "../../utils/retry.js";
+import { errorMessage } from "../../utils/errors.js";
 import { evaluateStrategistState } from "../agents/evaluator-questions.js";
 import { withEventWindowFallback, type GameState, type StrategistParameters } from "../strategy-parameters.js";
 import type { TriageVerdict } from "../pacing.js";
@@ -82,7 +83,7 @@ export async function runStrategistTriage(
     context.currentSignal().throwIfAborted();
     context.logger.warn(`Strategist triage failed on turn ${parameters.turn}; pacing falls back to its cadence.`, {
       PlayerID: parameters.playerID,
-      Error: error instanceof Error ? error.message : String(error),
+      Error: errorMessage(error),
     });
     return undefined;
   }

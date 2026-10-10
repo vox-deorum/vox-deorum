@@ -9,6 +9,7 @@
 
 import { sqliteExporter } from "../instrumentation.js";
 import { createLogger } from "../utils/logger.js";
+import { errorMessage } from "../utils/errors.js";
 import { loadConfigFromFile, getConfigsDir } from "../utils/config.js";
 import { StrategistSession } from "./strategist-session.js";
 import { runStrategistLoop } from "./loop.js";
@@ -134,7 +135,7 @@ if (values.seed !== undefined) {
     // config independently: `--seed 1:` changes only sync, `--seed :2` only map.
     seedOverride = parseSeedArgument(values.seed as string);
   } catch (error) {
-    logger.error(`Invalid --seed argument: ${(error as Error).message}`);
+    logger.error(`Invalid --seed argument: ${errorMessage(error)}`);
     process.exit(1);
   }
 }
@@ -186,7 +187,7 @@ try {
     sessionConfig.randomSeeds = mergeRandomSeeds(validateRandomSeeds(fileSeeds), seedOverride);
   }
 } catch (error) {
-  logger.error(`Invalid random seed configuration: ${(error as Error).message}`);
+  logger.error(`Invalid random seed configuration: ${errorMessage(error)}`);
   process.exit(1);
 }
 

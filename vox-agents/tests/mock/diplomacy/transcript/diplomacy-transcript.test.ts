@@ -21,6 +21,7 @@ import {
   type TranscriptMessage,
 } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../../src/types/index.js';
+import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 
 /** Minimal thread for the ordered-pair derivation helpers. */
 function thread(partial: Partial<EnvoyThread>): EnvoyThread {
@@ -35,20 +36,7 @@ function thread(partial: Partial<EnvoyThread>): EnvoyThread {
 
 /** Build a transcript row with sensible defaults. */
 function row(partial: Partial<TranscriptMessage>): TranscriptMessage {
-  return {
-    ID: 1,
-    Player1ID: 1,
-    Player2ID: 3,
-    Player1Role: 'the leader',
-    Player2Role: 'diplomat',
-    SpeakerID: 1,
-    MessageType: 'text',
-    Content: 'hello',
-    Payload: {},
-    Turn: 10,
-    CreatedAt: 0,
-    ...partial,
-  };
+  return transcriptRow({ Content: 'hello', Turn: 10, ...partial });
 }
 
 describe('diplomacy transcript helpers', () => {

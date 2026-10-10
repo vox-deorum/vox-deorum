@@ -17,6 +17,7 @@ import type winston from 'winston';
 import type { AgentParameters } from "./vox-agent.js";
 import type { Model } from "../types/index.js";
 import type { ExecuteTokenOutput, RootRun } from "./vox-run.js";
+import { errorMessage } from "../utils/errors.js";
 
 /**
  * Everything the telemetry helpers and the evaluation path read or write on the context: the
@@ -129,7 +130,7 @@ export function recordSpanError(span: Span, error: unknown): void {
   span.recordException(error as Error);
   span.setStatus({
     code: SpanStatusCode.ERROR,
-    message: error instanceof Error ? error.message : String(error)
+    message: errorMessage(error)
   });
 }
 

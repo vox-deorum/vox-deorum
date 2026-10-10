@@ -148,6 +148,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { api } from '../api/client';
 import type { EnvoyThread, DealPayload, GetChatResponse } from '../utils/types';
+import { errorMessage } from '../utils/errors';
 import ChatMessages from '../components/chat/ChatMessages.vue';
 import DeleteSessionDialog from '../components/chat/DeleteSessionDialog.vue';
 import DealScreen from '../components/deal/DealScreen.vue';
@@ -381,7 +382,7 @@ const runInlineDealAction = async (
     toast.add({
       severity: 'error',
       summary: failureSummary,
-      detail: err instanceof Error ? err.message : 'Unknown error',
+      detail: errorMessage(err, 'Unknown error'),
       life: 4000,
     });
   } finally {
@@ -411,7 +412,7 @@ const closeConversation = async () => {
     toast.add({
       severity: 'error',
       summary: 'Failed to close conversation',
-      detail: err instanceof Error ? err.message : 'Unknown error',
+      detail: errorMessage(err, 'Unknown error'),
       life: 4000,
     });
   } finally {

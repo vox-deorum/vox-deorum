@@ -19,6 +19,7 @@ import {
   formatToolResultText,
   formatToolResultOutput,
   buildRescuePrompt,
+  stripJsonFence,
 } from '../../../src/utils/models/text-cleaning.js';
 
 describe('text-cleaning', () => {
@@ -44,6 +45,15 @@ describe('text-cleaning', () => {
     it('leaves a generic word-colon opening and other civ labels untouched', () => {
       expect(stripSpokenEcho('[Turn 3] Chairman: we accept', 'Brazil, the diplomat')).toBe('Chairman: we accept');
       expect(stripSpokenEcho('[Turn 3] China, the leader: hello', 'Brazil, the diplomat')).toBe('China, the leader: hello');
+    });
+  });
+
+  describe('stripJsonFence', () => {
+    it('removes a plain or json-tagged fence and leaves unfenced text alone', () => {
+      expect(JSON.parse(stripJsonFence('```\n{"a":1}\n```'))).toEqual({ a: 1 });
+      expect(JSON.parse(stripJsonFence('```json\n{"a":1}\n```'))).toEqual({ a: 1 });
+      expect(JSON.parse(stripJsonFence('```JSON {"a":1}```'))).toEqual({ a: 1 });
+      expect(stripJsonFence('{"a":1}')).toBe('{"a":1}');
     });
   });
 

@@ -14,6 +14,7 @@ import { api } from '@/api/client';
 import SeatSummaryTable from './SeatSummaryTable.vue';
 import type { LLMConfig, StrategistSessionConfig } from '@/utils/types';
 import { buildSeats, describeConfig, type SetupAgent, type WizardAnswers, type WizardRole } from '@/utils/session-summary';
+import { errorMessage } from '@/utils/errors';
 
 /** Props supplied by the session view's shared catalogue state. */
 interface Props {
@@ -204,7 +205,7 @@ async function loadPacingChoices(): Promise<void> {
     interruption.value = defaultInterruption.value;
     pacingLoaded.value = true;
   } catch (caught) {
-    pacingError.value = caught instanceof Error ? caught.message : 'Could not load pacing choices.';
+    pacingError.value = errorMessage(caught, 'Could not load pacing choices.');
   } finally {
     loadingPacing.value = false;
   }
@@ -224,7 +225,7 @@ async function loadModelChoices(force = false): Promise<void> {
       : '';
     modelsLoaded.value = true;
   } catch (caught) {
-    modelsError.value = caught instanceof Error ? caught.message : 'Could not load the available models.';
+    modelsError.value = errorMessage(caught, 'Could not load the available models.');
   } finally {
     loadingModels.value = false;
   }
@@ -260,7 +261,7 @@ async function persist(config: StrategistSessionConfig, play: boolean): Promise<
     emit('saved', config, play);
     emit('update:visible', false);
   } catch (caught) {
-    saveError.value = caught instanceof Error ? caught.message : 'The configuration could not be saved.';
+    saveError.value = errorMessage(caught, 'The configuration could not be saved.');
   } finally {
     saving.value = false;
   }

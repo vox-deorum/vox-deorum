@@ -9,6 +9,7 @@
 import { z, ZodType } from "zod";
 import { AgentParameters } from "../../infra/vox-agent.js";
 import { createLogger } from "../logger.js";
+import { errorMessage } from "../errors.js";
 import { Tool as VercelTool, dynamicTool } from 'ai';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { VoxContext } from "../../infra/vox-context.js";
@@ -142,7 +143,7 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
         span.recordException(error as Error);
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error)
+          message: errorMessage(error)
         });
         throw error;
       } finally {

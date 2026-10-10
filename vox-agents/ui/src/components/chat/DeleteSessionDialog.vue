@@ -34,6 +34,7 @@ import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { api } from '@/api/client';
 import type { EnvoyThread } from '@/utils/types';
+import { errorMessage } from '@/utils/errors';
 
 // Props
 const props = withDefaults(defineProps<{
@@ -102,7 +103,7 @@ const handleDelete = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: error instanceof Error ? error.message : 'Failed to delete session',
+      detail: errorMessage(error, 'Failed to delete session'),
       life: 3000
     });
   } finally {

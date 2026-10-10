@@ -13,7 +13,7 @@ import { createLogger } from "../utils/logger.js";
 import { setTimeout } from 'node:timers/promises';
 import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
-import { ensureGameState, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
+import { ensureGameState, turnEventWindow, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
 import type { FilesSetting, ModelSize, PlayerConfig, PromptsSetting, TriageSetting } from "../types/config.js";
 import type { HumanDecisionBus } from "./human-decision-bus.js";
@@ -22,6 +22,7 @@ import { isScheduledDecision, normalizePacing, resolvePacingVerdict, shouldInter
 import { runStrategistTriage } from "./pacing/triage.js";
 import { countTokens } from "../utils/models/token-counter.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
+import { errorMessage } from "../utils/errors.js";
 
 /** Construction inputs for one seat's {@link VoxPlayer}. */
 export interface VoxPlayerOptions {
@@ -95,7 +96,7 @@ export class VoxPlayer {
       playerID,
       gameID,
       turn: -1,
-      after: initialTurn * 1000000,
+      after: turnEventWindow(initialTurn).after,
       before: 0,
       workingMemory: {},
       gameStates: {},
@@ -108,7 +109,7 @@ export class VoxPlayer {
     };
 
     // The persistent event cursor starts where the strategist begins fetching.
-    this.eventCursor = initialTurn * 1000000;
+    this.eventCursor = turnEventWindow(initialTurn).after;
 
     // Install these as the context's stable base parameters. Each strategist turn composes a
     // run-local view over this object (overriding turn/before/after via withRun), so the base is
@@ -195,7 +196,7 @@ export class VoxPlayer {
           // cursor only advances after a successful refresh (below).
           this.pendingTurn = undefined;
           const turn = turnData;
-          const before = turn * 1000000 + 999999;
+          const before = turnEventWindow(turn).before;
           const after = this.eventCursor;
           const lastDecisionTurn = this.parameters.lastDecisionTurn;
           this.running = true;
@@ -325,7 +326,7 @@ export class VoxPlayer {
             turnSpan.recordException(error as Error);
             turnSpan.setStatus({
               code: SpanStatusCode.ERROR,
-              message: error instanceof Error ? error.message : String(error)
+              message: errorMessage(error)
             });
             // Still need to resume the game to avoid a total block. The event
             // cursor is left as-is: if the refresh succeeded it already advanced;
@@ -345,7 +346,7 @@ export class VoxPlayer {
         span.recordException(error as Error);
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error)
+          message: errorMessage(error)
         });
       } finally {
         this.logger.info(`Player ${this.playerID} (${this.parameters.gameID}) completion: ${this.aborted} (successful: ${this.successful})`);

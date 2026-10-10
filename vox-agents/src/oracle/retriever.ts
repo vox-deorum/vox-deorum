@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Papa from 'papaparse';
 import { createLogger } from '../utils/logger.js';
+import { errorMessage } from '../utils/errors.js';
 import { discoverDbPath, openReadonlyDb } from './utils/db-resolver.js';
 import { runOracleTasks } from './run-control.js';
 import { extractPrompt, findTurnByRationale } from './utils/prompt-extractor.js';
@@ -173,6 +174,6 @@ async function retrieveRow(
       await db.destroy();
     }
   } catch (error) {
-    return { ...base, error: error instanceof Error ? error.message : String(error) };
+    return { ...base, error: errorMessage(error) };
   }
 }
