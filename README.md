@@ -47,17 +47,17 @@ Not necessarily.
 - You can use existing Claude or ChatGPT subscriptions as well.
 - Asking models to decide every X turns cuts the cost further.
 
-## Play
+## Help! I can't set it up!
 
 Can't set this thing up? Start with **[Getting Started](docs/players/getting-started.md)** for prerequisites, the installer, and your first launch. From there the [player guide](docs/README.md) covers playing, configuring your LLM provider, reviewing sessions with the replayer, and troubleshooting. Still stuck? Ask in [Vox Populi's Discord server](https://forums.civfanatics.com/threads/official-vox-populi-discord-server.640955/).
 
-## Develop
+## Help us develop Vox Deorum
 
 Want to understand or change the code? Start with **[Architecture](docs/developers/architecture.md)**: the components, how data flows between them, and why each layer exists. The [developer guide](docs/README.md) continues into setup, the end-to-end protocol, diplomacy, testing, operations, releasing, and a folder per component. Development needs Node.js 22.23.3 or newer; see [developer setup](docs/developers/setup.md).
 
-## Documentation
+## Where is the documentation
 
-All documentation lives under **[docs/](docs/README.md)**. Pick the player door or the developer door from the index. Working rules for contributors and agents are in [AGENTS.md](AGENTS.md).
+All documentation lives under **[docs/](docs/README.md)**. Working rules for contributors and agents are in [AGENTS.md](AGENTS.md).
 
 ## License
 
