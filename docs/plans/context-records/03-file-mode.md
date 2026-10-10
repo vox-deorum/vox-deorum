@@ -47,7 +47,7 @@ Record three facts on every agent span:
 | Attribute | Meaning |
 | --- | --- |
 | `context.files` | The context's resolved files setting (game access, shared folders and their access, quota), or `false` |
-| `context.workspace` | The seat store's head commit at the run's first model step, when files are enabled |
+| `context.workspace` | The seat store's head commit at the run's first model step, when files are enabled, including its empty initial commit if no content has been written |
 | `context.prompts` | The resolved custom prompt folder, or `false`, so analysis can group rows by prompt set. Replay ignores it because the recorded system text already contains the custom prompt |
 
 Whether a run used file mode follows from `context.files` and the recorded step tools, so it is not stored separately.
@@ -68,7 +68,7 @@ The retriever carries these fields into `RetrievedRow`. Missing fields on older 
 | Area | Required checks |
 | --- | --- |
 | File mode | Uses the tools resolved before prompt preparation; runs without bash and agents without tools stay inline; the simple strategist's sections and record paths are correct with controlled state, including the temporary full players section; directions are appended for envoys and the negotiator without adding a cache breakpoint |
-| Telemetry | Recorded files setting or `false`; a staffed strategist's recorded commit includes the briefings archived during its preparation; older rows default to files disabled |
+| Telemetry | Recorded files setting or `false`; a staffed strategist's recorded commit includes the briefings archived during its preparation; an early chat before any turn, briefing, or note commit records the empty initial commit; a run with no model step records no workspace commit; older rows default to files disabled |
 
 Run the existing caching, step-budget, envoy, analyst, and negotiator suites. Confirm files-disabled prompts still pass the unchanged golden tests.
 
