@@ -13,11 +13,11 @@ This implementation plan gives Vox Deorum agents durable game reports and editab
 
 ## Overall approach
 
-A **workspace store** keeps versioned files in one SQLite database per game and player, independent of the chosen strategist. Bash reads and writes it through a small subclass of just-bash's `InMemoryFs` that loads files lazily and records what each command changed. Shared folders and scratch space stay plain folders on disk. The game reference is a plain read-only folder written once per game. A materialize command exports a stored version for reading outside the game.
+A **workspace store** keeps versioned files in one SQLite database per game and player, independent of the chosen strategist. Bash reads and writes it through a small subclass of just-bash's `InMemoryFs` that loads files lazily and records what each command changed. Shared folders and scratch space stay plain folders on disk. The game reference is a plain read-only folder written once per game. A materialize command and a telemetry page download export a stored version for reading outside the game.
 
 Each seat starts a timeline when its player is created and again when the strategist begins a turn at or below its last processed turn, which means the game was reloaded. Starting a timeline cancels the seat's running chats, resets its cached state and pacing, and rewinds its records and notes together to before that turn. Shared folders and the reference never rewind. Discarded timelines remain in the store's history for analysis. The oracle replays only the last attempt at each turn, so turns lost to a reload are never replayed (see `docs/developers/vox-agents/oracle.md`).
 
-Each agent run records its files setting and prompt folder, then captures the seat store's head commit immediately before its first model step, after preparation. Oracle uses recorded system text and that pinned commit, with disposable writes isolated per replay execution. Reference setup failures stop the session; record and briefing write failures propagate to the affected turn or requesting run.
+Each agent run records its files setting and prompt folder, then captures the seat store's head commit immediately before its first model step, after preparation. Oracle uses recorded system text and that pinned commit, with disposable writes isolated per replay execution. Reference setup failures stop the session. Record, briefing, and rewind failures propagate to the affected turn or requesting run, and a failed rewind is retried on the next turn.
 
 ## Conventions
 
@@ -47,7 +47,7 @@ Manual checks:
 1. Run several turns with a file-enabled simple strategist. Check the core prompt, bash reads, records, reference, catalog, and note commits.
 2. Kill the game process mid-run and let crash recovery reload an earlier autosave. Once the strategist begins the reloaded turn, it decides on fresh state, open chats are cancelled, and the discarded records and notes disappear from the seat's view and remain in history. The oracle skips the discarded turns.
 3. Replay a recorded decision and confirm its pinned files and mounts.
-4. Materialize a seat store and check the notes.
+4. Materialize a seat store from the command line and download it from the telemetry page, then check the notes.
 5. Start a seat with a custom strategist prompt and confirm the recorded system text and `context.prompts`.
 6. Restart the same game with a different strategist for that seat and confirm it opens the same store and reads the earlier strategist's notes.
 7. Check a files-disabled seat for unchanged prompts and an untouched store.
@@ -59,7 +59,7 @@ Finally, confirm the documentation describes the final behavior:
 | `docs/developers/vox-agents/prompts.md` | Section registry, core prompts, records directions, prompt files, Mustache usage, template names, lookup order |
 | `docs/developers/vox-agents/overview.md` | Workspace store, bash view, records, game reference, catalog, reload rewinds |
 | `docs/developers/vox-agents/oracle.md` | File telemetry, pinned replay workspaces, last-attempt rule, replay limitations |
-| `docs/players/configuration.md` | Records and reference mounts, notes in the seat store, the materialize command, notes rewinding on reload, disk use, the `prompts` setting |
+| `docs/players/configuration.md` | Records and reference mounts, notes in the seat store, the materialize command and telemetry page download, notes rewinding on reload, disk use, the `prompts` setting |
 | `vox-agents/AGENTS.md` | Render game-state sections through the registry; write workspace files only through the store; keep system prompt prose in `vox-agents/prompts/` |
 | `docs/plans/strategist-orchestrator/02-working-folder.md` | Its working folder should reuse the section registry, records, and workspace store |
 

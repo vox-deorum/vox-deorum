@@ -20,7 +20,7 @@ The code lives in a few places:
 
 | Flavor | Question it answers | Higher value means |
 | --- | --- | --- |
-| **RISK** | How much danger and loss will we accept? | More risk-taking: fewer HP needed to hold the line, one loss allowed in large groups, and less weight on danger |
+| **RISK** | How much danger and loss will we accept? | More risk-taking: fewer HP needed to hold the line, one loss allowed in large groups, less weight on danger, and a more tolerant turn-end HP-versus-danger check |
 | **OCCUPATION** | How much do cities matter as targets? | City damage and captures count more |
 | **ATTRITION** | How much does damaging enemy units matter? | Unit damage and kills count more |
 | **HOLD_CITY** | How much should units guard our threatened cities? | Units hold friendly frontline cities and focus attacks on enemies threatening friendly cities in the search area |
@@ -96,7 +96,7 @@ With the `VOX_TACTICAL_INTENT_FLAVORS` mod option on, each search also adds a de
 
 ### When RISK counts as set
 
-RISK always sets the [thresholds](#risk-thresholds). It also weighs the danger penalty, but only when it is **set**, meaning something beyond the leader default moved it:
+RISK always sets the [thresholds](#risk-thresholds). It also weighs the danger penalty and scales the turn-end safety threshold, but only when it is **set**, meaning something beyond the leader default moved it:
 
 - a strategy or custom flavor changed the general RISK,
 - a civ, operation, or zone modifier changes RISK,
@@ -138,6 +138,7 @@ flowchart TD
     P --> P1["Desirability<br/>outside friendly territory / w(HOLD_GROUND)"]
     P --> P2[End-of-turn score]
     P2 --> E1["Danger penalty / w(RISK), when RISK is set"]
+    P2 --> E4["Turn-end safety threshold / w(RISK), when RISK is set"]
     P2 --> E2["Frontline bonus x city hold weight in a city<br/>or w(HOLD_GROUND) in a citadel"]
     P2 --> E3["Home ground: HOLD_GROUND bonus"]
 ```
@@ -148,12 +149,14 @@ Damage and bonuses count ten times as much as plot score in the [assignment scor
 
 | Part | Stock rule | Flavored rule |
 | --- | --- | --- |
-| City damage | As forecast | x w(OCCUPATION), change capped at 500 |
-| Unit damage | As forecast | x w(ATTRITION), change capped at 500. On an enemy land unit standing on a plot our team owns, ATTRITION is read as max(ATTRITION, 50 + (HOLD_GROUND - 50) / 2), so HOLD_GROUND 100 counts as ATTRITION 75, HOLD_GROUND 50 lifts a low ATTRITION to neutral, and the two never stack |
-| City capture bonus | +100 | x w(OCCUPATION), capped |
-| Unit kill bonus | +15 | x w(ATTRITION), capped, with the same HOLD_GROUND rule on our land |
+| City damage | As forecast | x w(OCCUPATION), change capped at 500, with the positive shift faded by trade quality and safety (below) |
+| Unit damage | As forecast | x w(ATTRITION), change capped at 500, with the positive shift faded the same way. On an enemy land unit standing on a plot our team owns, ATTRITION is read as max(ATTRITION, 50 + (HOLD_GROUND - 50) / 2), so HOLD_GROUND 100 counts as ATTRITION 75, HOLD_GROUND 50 lifts a low ATTRITION to neutral, and the two never stack |
+| City capture bonus | +100 | x w(OCCUPATION), capped. The bonus keeps its full shift, but the city and garrison damage on a capture still fades |
+| Unit kill bonus | +15 | x w(ATTRITION), capped, with the same HOLD_GROUND rule on our land, and faded by safety alone |
 | Attacks on city threats | None | HOLD_CITY above 50 rewards damage to enemies that threaten friendly cities in the search area. Each enemy gets one credit budget; both that budget and the extra bonus per attack are capped at 500. |
 | Damage taken, focus fire, kill effects, melee trade veto | As stock | Same, unscaled |
+
+A flavor above 50 lifts a damage score only as far as the attack is worth. The positive part of each damage shift is faded by two factors, each between 0 and 1. **Trade quality** is the damage dealt minus the damage taken (taken floored at 0), over the damage dealt. **Safety** is 1 minus k x danger over HP squared after the attack, where k is the same RISK-adjusted threshold `ScoreCombatUnitTurnEnd` uses (see [Positions](#positions-scoreplotforcombatunitmove-and-scorecombatunitturnend)), and danger is measured at the plot the attacker ends on: the target plot for an advancing kill, otherwise its attack plot. City and unit damage shifts fade by both factors; the kill bonus shift fades by safety alone. Negative shifts, the subtraction of damage taken, and the native bonuses never fade, so an attack with neutral flavors scores exactly as stock, and the fade takes no exemptions, not BRAVEHEART and not a frontline city. One limitation: the fade reads immediate post-attack exposure with raw danger, without the turn-end cover halving or edge floor, so it can undervalue a hit-and-retreat attack by a mobile ranged unit. The single-enemy condition that lowers k to 12 is read before the attack in the fade and after it at turn end.
 
 ### Positions: `ScorePlotForCombatUnitMove` and `ScoreCombatUnitTurnEnd`
 
@@ -161,6 +164,7 @@ Damage and bonuses count ten times as much as plot score in the [assignment scor
 | --- | --- | --- |
 | Desirability with enemies present | Line-distance table, or a flat 12 in a friendly city or when HP is below the minimum HP | With HOLD_GROUND above 50, a land unit's positive desirability on a plot outside our territory is divided by w(HOLD_GROUND). The minimum HP comes from RISK. |
 | Danger penalty | Danger relative to HP, flattened, adjusted for experience, doubled when alone | Divided by w(RISK) when RISK is set |
+| Turn-end safety threshold | `ScoreCombatUnitTurnEnd` rejects an end-turn plot when HP squared is below k x danger, with k 42, 23 after a kill or when the unit has no safe plot to flee to, or 12 for a kill while one enemy is counted | When RISK is set, k becomes k x 1000 / w(RISK), so at strength 1 a RISK of 100 halves k and a RISK of 0 doubles it; unset RISK or a RISK of 50 keeps k exactly. The stock exemptions for a frontline city or citadel and BRAVEHEART aggression, and the other gates, are unchanged. `canProbablyEndTurnAfterAssignment` runs the same check, so the effect applies there too |
 | Frontline bonus | +67 in a city or our own citadel within two plots of an enemy, or +33 in the weaker case | In a friendly-team city, x w(HOLD_CITY) at 50 or above, and x HOLD_CITY / 50 below it, so the bonus fades linearly to nothing at 0. A city captured during the search keeps the stock bonus. In an own citadel, x w(HOLD_GROUND) |
 | Terrain defense | Defense modifier / 5 | Same, unscaled |
 | Home ground | None | A land unit ending on a plot our team owns gets a HOLD_GROUND bonus on 5 + defense / 5. Below 50 the base is just 5, so a low flavor never makes cover look worse. |
@@ -193,6 +197,7 @@ At strength 1. "Bonus" terms are zero at 50.
 | Flavor | Term | Stock value | At 0 | At 100 |
 | --- | --- | --- | --- | --- |
 | RISK (set) | Danger penalty | -60 for example | -120 | -30 |
+| RISK (set) | Turn-end rejection threshold | k 42 for example | k 84 | k 21 |
 | OCCUPATION | City damage | As forecast | Half | Double, change at most 500 |
 | OCCUPATION | City capture bonus | +100 | +50 | +200 |
 | ATTRITION | Unit damage | As forecast | Half | Double, change at most 500 |
