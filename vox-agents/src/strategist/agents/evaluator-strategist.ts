@@ -13,13 +13,12 @@ import type { VoxContext } from "../../infra/vox-context.js";
 import type { PreparedAgentState } from "../../infra/vox-agent.js";
 import type { ExecuteTokenOutput } from "../../infra/vox-run.js";
 import type { Model, StrategistCall } from "../../types/index.js";
-import { inputTokenLimit } from "../../utils/models/models.js";
 import { isFailedToolResult } from "../../utils/tools/mcp-tools.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 import { ensureGameState, type StrategistParameters } from "../strategy-parameters.js";
 import {
-  buildStrategistEvaluationState,
   buildStrategistQuestions,
+  evaluateStrategistState,
   strategistActionsFromAnswers,
   type StrategistAnswer,
 } from "./evaluator-questions.js";
@@ -60,11 +59,8 @@ export class EvaluatorStrategist extends Strategist {
     }
 
     const state = await ensureGameState(context, parameters);
-    const { text, trim } = buildStrategistEvaluationState(prepared.system, parameters, state, inputTokenLimit(model));
-    // Recorded before the call, so a state that still overflows shows what was already cut.
-    if (trim) trace.getActiveSpan()?.setAttribute("strategist.trim", JSON.stringify(trim));
     const set = buildStrategistQuestions(state, parameters.playerID, context.mcpToolMap);
-    const { answers } = await context.evaluate(model, text, { questions: set.questions, tokenOutput });
+    const { answers } = await evaluateStrategistState(context, model, prepared.system, parameters, state, { questions: set.questions, tokenOutput });
     const { actions, decision } = strategistActionsFromAnswers(answers as Record<string, StrategistAnswer>, set, parameters);
 
     const calls: StrategistCall[] = [];

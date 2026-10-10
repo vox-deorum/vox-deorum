@@ -1,13 +1,22 @@
 /**
  * @module strategist/agents/evaluator-questions
  *
- * Pure helpers for the evaluator strategist: build the evaluation state, ask one question per
- * decision in the Flavor-mode action space, and turn the answers into action tool calls. Persona
- * axes, the flavor scale, and the relationship descriptions come from the MCP tool schemas.
+ * Helpers for the evaluator strategist: build and evaluate the trimmed state (shared with
+ * strategist triage), ask one question per decision in the Flavor-mode action space, and turn the
+ * answers into action tool calls. Persona axes, the flavor scale, and the relationship
+ * descriptions come from the MCP tool schemas.
  */
 
-import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
+import { trace } from "@opentelemetry/api";
+import type {
+  Experimental_EvaluationQuestion as EvaluationQuestion,
+  Experimental_EvaluationResult as EvaluationResult,
+} from "ai";
 import type { Tool as MCPTool } from "@modelcontextprotocol/sdk/types.js";
+import type { VoxContext } from "../../infra/vox-context.js";
+import type { EvaluateOptions } from "../../infra/vox-evaluate.js";
+import type { Model } from "../../types/index.js";
+import { inputTokenLimit } from "../../utils/models/models.js";
 import { countTokens } from "../../utils/models/token-counter.js";
 import { evaluatorTrimConfig } from "./evaluator-trim-config.js";
 import { trimToFit, type TrimmableReports } from "./evaluator-trimming.js";
@@ -213,6 +222,35 @@ export function buildStrategistEvaluationState(
     text: `${text}\n\n${note}`,
     trim: { steps: result.steps.map(step => step.id), droppedEvents: result.droppedEvents, fits: result.fits },
   };
+}
+
+/**
+ * Evaluate the strategist state with a model: build it with {@link buildStrategistEvaluationState}
+ * under the model's input limit, record any trimming on the active span as `strategist.trim`, and
+ * ask the questions. The evaluator strategist and strategist triage both go through here, so they
+ * see the same trimmed state. A state that still overflows throws a context-length error, which
+ * callers route into `withEventWindowFallback`.
+ *
+ * @param context - The seat context, inside an active run
+ * @param model - The evaluating model, whose input limit sets the trim budget
+ * @param system - The system prompt that opens the state
+ * @param parameters - The strategist parameters for this turn
+ * @param state - The game state for this turn, with `mergedEvents` set to the event window (never mutated)
+ * @param options - The questions and other evaluate options
+ * @returns The provider's evaluation result
+ */
+export async function evaluateStrategistState<TQuestions extends Record<string, EvaluationQuestion>>(
+  context: VoxContext<StrategistParameters>,
+  model: Model,
+  system: string,
+  parameters: StrategistParameters,
+  state: GameState,
+  options: EvaluateOptions<TQuestions>,
+): Promise<EvaluationResult<TQuestions>> {
+  const { text, trim } = buildStrategistEvaluationState(system, parameters, state, inputTokenLimit(model));
+  // Record each attempt before the call; an untrimmed retry clears the earlier trim record.
+  trace.getActiveSpan()?.setAttribute("strategist.trim", trim ? JSON.stringify(trim) : "");
+  return await context.evaluate(model, text, options);
 }
 
 /**

@@ -90,7 +90,7 @@ Only the diplomat has a hook today. It rates intent and stakes from the recent c
 
 ### Strategist triage
 
-Strategists have no hook. Pacing triages them before the strategist runs, so triage can also skip a turn. When the `strategist` role (or the strategist's name) is in `triage` and an evaluator is configured, `runStrategistTriage` in `src/strategist/pacing/triage.ts` asks one score question, `revision`: how much the current strategic decisions need to change, rated none, tweaks, revision, or overhaul. The question is about what the strategist would change, not how eventful the turns were, and a finished research or policy counts as at least a tweak because the next one needs choosing. The evaluator reads the system prompt in `prompts/strategist-triage.md` and the same reports as the [evaluator strategist](#what-it-reads), with the events since the last decision.
+Strategists have no hook. Pacing triages them before the strategist runs, so triage can also skip a turn. When the `strategist` role (or the strategist's name) is in `triage` and an evaluator is configured, `runStrategistTriage` in `src/strategist/pacing/triage.ts` asks one score question, `revision`: how much the current strategic decisions need to change, rated none, tweaks, revision, or overhaul. The question is about what the strategist would change, not how eventful the turns were, and a finished research or policy counts as at least a tweak because the next one needs choosing. The evaluator reads the system prompt in `prompts/strategist-triage.md` and the same reports as the [evaluator strategist](#what-it-reads), with the events since the last decision. Both go through `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts`, so triage gets the same [trimming](evaluator-trimming.md) and `strategist.trim` record (on the turn span). If the state still overflows, triage retries with fewer events through the same `withEventWindowFallback` the decision uses.
 
 `resolvePacingVerdict` in `src/strategist/pacing.ts` combines the answer with the cadence. Without a triage verdict, pacing keeps the strategist's own model tier. With triage, a turn that `everyTurns` or an interruption already calls for always decides, and triage can only escalate it:
 
@@ -101,7 +101,7 @@ Strategists have no hook. Pacing triages them before the strategist runs, so tri
 
 - A triage skip calls `keep-status-quo` like a cadence skip.
 - The turn span records `pacing.triage`, plus `pacing.tier` on decided turns or `pacing.skip_reason` (`turn` or `evaluator`) on skipped ones. The strategist's agent span shows the tier with source `caller`.
-- If the evaluation fails, pacing falls back to the cadence. Cancellation still stops the turn.
+- If the evaluation fails, or the state never fits, pacing falls back to the cadence. Cancellation still stops the turn.
 - Session preflight checks the strategist's evaluator reference like a hooked agent's.
 
 With `everyTurns` at 1 (the default), every turn is scheduled, so triage can only escalate to `large`. Raise `everyTurns` to let it skip or downsize the turns in between.

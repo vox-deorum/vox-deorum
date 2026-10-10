@@ -9,10 +9,10 @@ import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
 import type { VoxContext } from "../../infra/vox-context.js";
 import { triageEnabled } from "../../infra/triage.js";
 import { getEvaluatorConfig } from "../../utils/models/evaluation.js";
-import { inputTokenLimit } from "../../utils/models/models.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
-import { buildStrategistEvaluationState } from "../agents/evaluator-questions.js";
-import { mergeCachedEvents, type GameState, type StrategistParameters } from "../strategy-parameters.js";
+import { isContextLengthError } from "../../utils/retry.js";
+import { evaluateStrategistState } from "../agents/evaluator-questions.js";
+import { withEventWindowFallback, type GameState, type StrategistParameters } from "../strategy-parameters.js";
 import type { TriageVerdict } from "../pacing.js";
 
 /** The single triage question, with one level per verdict in {@link revisionVerdicts}. */
@@ -34,9 +34,11 @@ const revisionVerdicts: TriageVerdict[] = ["skip", "small", "default", "large"];
 
 /**
  * Ask the strategist's evaluator how much the current strategic decisions need to change. The evaluator sees
- * what the evaluator strategist sees, with the events since the last decision. Returns undefined
- * when triage is off for the strategist, no evaluator is configured, or the evaluation fails, so
- * pacing falls back to its cadence. Cancellation still propagates.
+ * what the evaluator strategist sees, with the events since the last decision, trimmed the same
+ * way: the trim ladder in {@link evaluateStrategistState}, then fewer events through
+ * `withEventWindowFallback` if it still overflows. Returns undefined when triage is off for the
+ * strategist, no evaluator is configured, or the evaluation fails (including a state that never
+ * fits), so pacing falls back to its cadence. Cancellation still propagates.
  *
  * @param context - The seat context, inside the turn's root run
  * @param parameters - The turn's strategist parameters
@@ -57,12 +59,25 @@ export async function runStrategistTriage(
   if (!evaluator) return undefined;
 
   try {
-    const window = { ...state, mergedEvents: mergeCachedEvents(parameters, eventFromTurn, parameters.turn) };
     const system = renderSystemPrompt(context, "strategist-triage");
-    const { text } = buildStrategistEvaluationState(system, parameters, window, inputTokenLimit(evaluator));
-    const { answers } = await context.evaluate(evaluator, text, { questions: triageQuestions, purpose: "triage" });
-    const level = Math.min(Math.max(Math.round(answers.revision.score), 0), revisionVerdicts.length - 1);
-    return revisionVerdicts[level];
+    // A copy, since the event window fallback rewrites `mergedEvents` on every attempt.
+    const window: GameState = { ...state };
+    let verdict: TriageVerdict | undefined;
+    const fitted = await withEventWindowFallback(parameters, window, eventFromTurn, async () => {
+      try {
+        const { answers } = await evaluateStrategistState(
+          context, evaluator, system, parameters, window, { questions: triageQuestions, purpose: "triage" },
+        );
+        const level = Math.min(Math.max(Math.round(answers.revision.score), 0), revisionVerdicts.length - 1);
+        verdict = revisionVerdicts[level];
+        return true;
+      } catch (error) {
+        if (isContextLengthError(error)) return false;
+        throw error;
+      }
+    });
+    if (!fitted) throw new Error("The state exceeds the evaluator's input limit even with the fewest events.");
+    return verdict;
   } catch (error) {
     context.currentSignal().throwIfAborted();
     context.logger.warn(`Strategist triage failed on turn ${parameters.turn}; pacing falls back to its cadence.`, {

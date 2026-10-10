@@ -220,14 +220,13 @@ describe("EvaluatorStrategist", () => {
     expect(state).toContain("DeclareWar");
   });
 
-  it("should record no strategist.trim when the state fits the model input limit", async () => {
+  it("should record an empty strategist.trim when the state fits the model input limit", async () => {
     const setAttribute = recordSpanAttributes();
     const run = setup();
 
     await decide(run);
 
-    expect(recordedTrim(setAttribute)).toBeUndefined();
-    // The decision is still recorded: the absence is specific to the trim attribute.
+    expect(setAttribute).toHaveBeenCalledWith("strategist.trim", "");
     expect(recordedDecision(setAttribute)).toBeDefined();
   });
 

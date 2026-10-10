@@ -1,6 +1,6 @@
 # Evaluator trimming
 
-The evaluator strategist answers a whole decision in one evaluation call over one markdown state (see [Evaluators](evaluators.md#evaluator-strategist)). Late in a game that state outgrows the model's input limit, so `buildStrategistEvaluationState` in `src/strategist/agents/evaluator-questions.ts` shortens it with a **trim ladder**: an ordered list of cuts that removes event tiers and report details until the state fits. This page covers the budget, the ladder, what is never trimmed, how to retune it, and what trimming reports.
+The evaluator strategist answers a whole decision in one evaluation call over one markdown state (see [Evaluators](evaluators.md#evaluator-strategist)). Late in a game that state outgrows the model's input limit, so `buildStrategistEvaluationState` in `src/strategist/agents/evaluator-questions.ts` shortens it with a **trim ladder**: an ordered list of cuts that removes event tiers and report details until the state fits. [Strategist triage](evaluators.md#strategist-triage) builds its state the same way, through the shared `evaluateStrategistState`, so everything here applies to it too. This page covers the budget, the ladder, what is never trimmed, how to retune it, and what trimming reports.
 
 Paths are relative to `vox-agents/`.
 
@@ -21,7 +21,7 @@ The share leaves headroom below the limit because the token count is a local est
 - Steps run in order and are cumulative: every applied step stays in place for the next check.
 - The walk stops at the first step after which the state fits.
 - A step that would change nothing (the tier holds no events left, the fields are not present, the opinion lists are already short) is skipped: it is not applied, not reported, and costs no size check.
-- If the whole ladder is not enough, the most trimmed state goes out as it is. A provider overflow error then falls into the player loop's existing event window fallback (`withEventWindowFallback`, see [Strategist](strategist.md#event-windows)).
+- If the whole ladder is not enough, the most trimmed state goes out as it is. A provider overflow error then falls into the event window fallback (`withEventWindowFallback`, see [Strategist](strategist.md#event-windows)), which the player loop runs for the decision and triage runs for itself.
 
 ```mermaid
 flowchart TD
@@ -98,8 +98,8 @@ When at least one step ran, the state ends with a note so the model knows it is 
 
 ## Telemetry
 
-- The agent span gets `strategist.trim`: JSON with `steps` (the applied step ids, in order), `droppedEvents`, and `fits` (false when even the whole ladder was not enough). The shape is `StrategistTrim` in `src/types/evaluation.ts`.
-- `executeEvaluation` in `src/strategist/agents/evaluator-strategist.ts` sets the attribute before the evaluate call, so a request that still overflows shows what was already cut. The attribute is only set when at least one step ran.
+- The active span gets `strategist.trim` (the agent span for the evaluator strategist, the turn span for triage): JSON with `steps` (the applied step ids, in order), `droppedEvents`, and `fits` (false when even the whole ladder was not enough). The shape is `StrategistTrim` in `src/types/evaluation.ts`.
+- `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts` sets the attribute before every evaluation call: JSON when trimming ran, an empty string when no trimming ran, so a retry cannot leave an earlier attempt's trim record behind.
 - Error logs: `sanitizeAIError` in `src/utils/logger.ts` redacts the state and question set carried in an evaluation request, alongside the existing message redaction, so a provider overflow error does not write the game state into the logs.
 
 ## Tests
