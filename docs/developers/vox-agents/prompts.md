@@ -225,7 +225,7 @@ Claude Code flattens the whole prompt into one CLI user message per step, so it 
 
 ## System prompt files
 
-Every authored system prompt is a Mustache file in `vox-agents/prompts/`, rendered by `renderSystemPrompt` in `utils/prompts/prompt-files.ts`. Each agent's prompt is `<agent-name>.md`, and a variant is `<agent-name>.<variant>.md` (the specialized briefer has `.military`, `.economy`, and `.diplomacy`). Fragments shared by several agents, such as the resource descriptions and the decision instructions, live under `shared/`. A template's name is its path without `.md`, such as `shared/goals`. The folder is found from the module path, so `src` and `dist` both read it, and the installer ships it.
+Every authored system prompt is a Mustache file in `vox-agents/prompts/`, rendered by `renderSystemPrompt` in `utils/prompts/prompt-files.ts`. Each agent's prompt is `<agent-name>.md`, and a variant is `<agent-name>.<variant>.md` (the specialized briefer has `.military`, `.economy`, and `.diplomacy`). `strategist-triage.md` is not an agent: it is the system prompt for [strategist triage](evaluators.md#strategist-triage). Fragments shared by several agents, such as the resource descriptions and the decision instructions, live under `shared/`. A template's name is its path without `.md`, such as `shared/goals`. The folder is found from the module path, so `src` and `dist` both read it, and the installer ships it.
 
 Prose lives in the files. `getSystem` passes only data and flags in the view:
 

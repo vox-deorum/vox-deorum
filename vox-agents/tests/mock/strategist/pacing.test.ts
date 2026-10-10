@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   isScheduledDecision,
   normalizePacing,
+  resolvePacingVerdict,
   shouldInterruptDecision,
+  type PacingVerdict,
+  type TriageVerdict,
 } from "../../../src/strategist/pacing.js";
 import { pacingInterruptionRegistry } from "../../../src/strategist/pacing/registry.js";
 import { eventImportanceTiers } from "../../../src/utils/prompts/event-importance.js";
@@ -247,6 +250,25 @@ describe("strategist pacing", () => {
     } finally {
       pacingInterruptionRegistry.unregister(name);
     }
+  });
+});
+
+describe("resolvePacingVerdict", () => {
+  /** Build a decision verdict with an explicit tier override. */
+  const decide = (tier: "small" | "default" | "large"): PacingVerdict => ({ decide: true, tier });
+
+  it.each<[string, boolean, TriageVerdict | undefined, PacingVerdict]>([
+    ["no triage, due", true, undefined, { decide: true }],
+    ["no triage, not due", false, undefined, { decide: false, reason: "turn" }],
+    ["triage skips a due turn", true, "skip", decide("default")],
+    ["triage demotes a due turn", true, "small", decide("default")],
+    ["triage escalates a due turn", true, "large", decide("large")],
+    ["triage skips", false, "skip", { decide: false, reason: "evaluator" }],
+    ["triage picks small", false, "small", decide("small")],
+    ["triage picks large", false, "large", decide("large")],
+  ])("%s", (_name, due, triage, verdict) => {
+    expect(resolvePacingVerdict({ scheduled: due, interrupted: false, triage })).toEqual(verdict);
+    expect(resolvePacingVerdict({ scheduled: false, interrupted: due, triage })).toEqual(verdict);
   });
 });
 

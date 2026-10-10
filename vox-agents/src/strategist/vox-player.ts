@@ -15,10 +15,11 @@ import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
 import { ensureGameState, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
-import type { FilesSetting, PlayerConfig, PromptsSetting, TriageSetting } from "../types/config.js";
+import type { FilesSetting, ModelSize, PlayerConfig, PromptsSetting, TriageSetting } from "../types/config.js";
 import type { HumanDecisionBus } from "./human-decision-bus.js";
 import { resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage } from "./seat-config.js";
-import { isScheduledDecision, normalizePacing, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
+import { isScheduledDecision, normalizePacing, resolvePacingVerdict, shouldInterruptDecision, type NormalizedPacingConfig } from "./pacing.js";
+import { runStrategistTriage } from "./pacing/triage.js";
 
 /** Construction inputs for one seat's {@link VoxPlayer}. */
 export interface VoxPlayerOptions {
@@ -236,12 +237,16 @@ export class VoxPlayer {
 
                 const scheduled = isScheduledDecision(turn, lastDecisionTurn, this.pacing);
                 const interrupted = shouldInterruptDecision(state, this.playerID, this.pacing);
-                const shouldDecide = scheduled || interrupted;
+                const eventFromTurn = this.parameters._decisionEventWindow.fromTurn;
+                // Undefined when triage is off for this strategist or has no evaluator.
+                const triage = await runStrategistTriage(this.context, params, state, this.playerConfig.strategist, eventFromTurn);
+                const verdict = resolvePacingVerdict({ scheduled, interrupted, triage });
+                turnSpan.setAttribute('pacing.triage', triage ?? "");
 
-                if (!shouldDecide) {
+                if (!verdict.decide) {
                   this.logger.info(
                     `Skipping ${this.playerConfig.strategist} on Turn ${turn} ` +
-                    `(lastDecisionTurn=${lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
+                    `(reason=${verdict.reason}, lastDecisionTurn=${lastDecisionTurn}, everyTurns=${this.pacing.everyTurns})`,
                     { GameID: params.gameID, PlayerID: params.playerID }
                   );
                   // Re-apply the current AI settings without recording a decision,
@@ -260,10 +265,12 @@ export class VoxPlayer {
                   turnSpan.setAttributes({
                     'completed': true,
                     'pacing.skipped': true,
+                    'pacing.skip_reason': verdict.reason,
                     'pacing.interrupted': false,
-                    'tokens.input': 0,
-                    'tokens.reasoning': 0,
-                    'tokens.output': 0,
+                    // Only triage's evaluation, if any, used tokens on a skipped turn.
+                    'tokens.input': run.tokens.inputTokens,
+                    'tokens.reasoning': run.tokens.reasoningTokens,
+                    'tokens.output': run.tokens.outputTokens,
                     // No deliberation on a paced skip (the strategist never ran).
                     'deliberation.ms': 0
                   });
@@ -271,15 +278,15 @@ export class VoxPlayer {
                   return;
                 }
 
-                const eventFromTurn = this.parameters._decisionEventWindow.fromTurn;
                 this.logger.warn(`Running ${this.playerConfig.strategist} on Turn ${turn}`, {
                   GameID: params.gameID,
                   PlayerID: params.playerID,
                   scheduled,
-                  interrupted
+                  interrupted,
+                  tier: verdict.tier
                 });
 
-                const decided = await this.executeDecisionWithEventFallback(params, state, eventFromTurn, turnSpan);
+                const decided = await this.executeDecisionWithEventFallback(params, state, eventFromTurn, turnSpan, verdict.tier);
 
                 // Finalizing (the event cursor was already advanced after the refresh).
                 // Only record a decision that was actually made and not cancelled. Otherwise
@@ -300,6 +307,7 @@ export class VoxPlayer {
                   'pacing.skipped': false,
                   'pacing.decided': decided,
                   'pacing.interrupted': interrupted,
+                  'pacing.tier': verdict.tier ?? "",
                   'tokens.input': run.tokens.inputTokens,
                   'tokens.reasoning': run.tokens.reasoningTokens,
                   'tokens.output': run.tokens.outputTokens,
@@ -415,13 +423,14 @@ export class VoxPlayer {
    * Execute a decision, dropping lower importance events across the pending window on overflow,
    * then older turns' turning points as a last resort. Return false if nothing fits, so the
    * caller retains the pending history and retries next turn. The no-op "none" strategist
-   * counts as success.
+   * counts as success. A tier from triage overrides the strategist's own for every attempt.
    */
   private async executeDecisionWithEventFallback(
     parameters: StrategistParameters,
     state: GameState,
     eventFromTurn: number,
-    turnSpan: Span
+    turnSpan: Span,
+    tier?: ModelSize
   ): Promise<boolean> {
     const decided = await withEventWindowFallback(parameters, state, eventFromTurn, async (eventWindow) => {
       if (eventWindow.fromTurn > eventFromTurn) {
@@ -441,7 +450,7 @@ export class VoxPlayer {
       let contextLengthExceeded = false;
       await this.context.execute(this.playerConfig.strategist, undefined, undefined, undefined, () => {
         contextLengthExceeded = true;
-      }, { throwOnError: true });
+      }, { throwOnError: true, triage: tier && { tier, note: "pacing" } });
 
       if (!contextLengthExceeded) return true;
 

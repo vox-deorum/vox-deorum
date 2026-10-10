@@ -5,7 +5,7 @@
  */
 
 import type { GameState } from "./strategy-parameters.js";
-import type { PacingConfig, PacingInterruption } from "../types/config.js";
+import type { ModelSize, PacingConfig, PacingInterruption } from "../types/config.js";
 import { pacingInterruptionRegistry } from "./pacing/registry.js";
 
 /**
@@ -73,4 +73,31 @@ export function shouldInterruptDecision(
   const strategy = pacingInterruptionRegistry.get(pacing.interruption)
     ?? pacingInterruptionRegistry.get(DEFAULT_PACING.interruption);
   return strategy?.shouldInterrupt({ state, playerID }) ?? false;
+}
+
+/** What strategist triage says about a turn: skip it, or decide on a model tier. */
+export type TriageVerdict = "skip" | ModelSize;
+
+/** The pacing outcome: skip with a reason, or decide with an optional model tier override. */
+export type PacingVerdict =
+  | { decide: false; reason: "turn" | "evaluator" }
+  | { decide: true; tier?: ModelSize };
+
+/**
+ * Combine the cadence, interruption, and triage into one verdict. Without triage, a scheduled or
+ * interrupted turn keeps the strategist's own tier and any other turn skips. With triage, a scheduled
+ * or interrupted turn still decides and only escalates to `large`, while any other turn follows
+ * the evaluator, which may skip it.
+ */
+export function resolvePacingVerdict({ scheduled, interrupted, triage }: {
+  scheduled: boolean;
+  interrupted: boolean;
+  triage?: TriageVerdict;
+}): PacingVerdict {
+  if (triage === undefined) return scheduled || interrupted
+    ? { decide: true }
+    : { decide: false, reason: "turn" };
+  if (scheduled || interrupted) return { decide: true, tier: triage === "large" ? "large" : "default" };
+  if (triage === "skip") return { decide: false, reason: "evaluator" };
+  return { decide: true, tier: triage };
 }

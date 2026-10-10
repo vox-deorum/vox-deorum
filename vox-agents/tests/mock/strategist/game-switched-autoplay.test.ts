@@ -237,7 +237,7 @@ describe('model preflight', () => {
     ], overrides);
   });
 
-  it('skips evaluator preflight for agents without a triage hook even when triage covers everything', async () => {
+  it('preflights the strategist evaluator for pacing triage but skips other agents without a triage hook', async () => {
     const llms = { 'selected-strategist': 'openai/strategist' };
     modelMocks.selectModelReference.mockImplementation((name: string, size?: string) =>
       (size === 'small' || size === 'large') ? `${name}.${size}` : llms[name as keyof typeof llms] ?? name);
@@ -257,11 +257,14 @@ describe('model preflight', () => {
 
     await expect(s.start()).rejects.toThrow('Failed to start Civilization V');
 
-    expect(modelMocks.selectEvaluatorReference).not.toHaveBeenCalled();
+    // Pacing triages the strategist; the hookless diplomat stand-in is never looked up.
+    expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledTimes(1);
+    expect(modelMocks.selectEvaluatorReference).toHaveBeenCalledWith('selected-strategist', llms);
     expect(modelMocks.ensureModelsResolved).toHaveBeenCalledWith([
       'selected-strategist.small',
       'openai/strategist',
       'selected-strategist.large',
+      'evaluator',
       'diplomat.small',
       'diplomat',
       'diplomat.large',

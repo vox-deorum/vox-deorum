@@ -698,8 +698,9 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
    * Resolve the model references for the configured seat agents and their declared child agents.
    * Agents that triage on this seat also preflight their evaluator reference, so a misspelled
    * evaluator assignment surfaces at session start rather than on the first triaged call. Only
-   * agents with a triage hook count; a triaged agent without any evaluator logs a warning
-   * because its hook would otherwise skip silently. Arbitrary override-map entries are
+   * agents with a triage hook count, plus the seat's strategist, which pacing triages. A triaged
+   * agent without any evaluator logs a warning because its triage would otherwise skip silently.
+   * Arbitrary override-map entries are
    * deliberately excluded because they cannot run in this session.
    *
    * @throws if a seat role is not an agent name (see {@link seatAgents}) or a files setting is invalid (see {@link resolveSeatFiles})
@@ -731,7 +732,8 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       for (const tier of modelTiers) {
         references.add(selectModelReference(name, tier, playerConfig.llms));
       }
-      if (!triageEnabled(name, triage) || !agentRegistry.get(name)?.triage) continue;
+      const triages = Boolean(agentRegistry.get(name)?.triage) || name === seat.strategist;
+      if (!triageEnabled(name, triage) || !triages) continue;
       const evaluator = selectEvaluatorReference(name, playerConfig.llms);
       if (evaluator !== undefined) references.add(evaluator);
       else logger.warn(`Triage is on for ${name} on seat ${slot}, but neither \`${name}.evaluator\` nor \`evaluator\` is configured; it will run without triage.`);

@@ -21,6 +21,12 @@ vi.mock('node:timers/promises', () => ({
   }
 }));
 
+// Strategist triage is scripted per test; undefined means triage is off.
+const triageMock = vi.hoisted(() => ({ verdict: undefined as string | undefined }));
+vi.mock('../../../src/strategist/pacing/triage.js', () => ({
+  runStrategistTriage: async () => triageMock.verdict,
+}));
+
 import { VoxPlayer } from '../../../src/strategist/vox-player.js';
 import { HumanDecisionBus } from '../../../src/strategist/human-decision-bus.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
@@ -33,6 +39,7 @@ const playerConfig: PlayerConfig = { strategist: 'simple-strategist', llms: {} }
 
 beforeEach(() => {
   sleepHook.onSleep = undefined;
+  triageMock.verdict = undefined;
   // Telemetry exporters: keep construction + shutdown cheap and offline.
   vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockResolvedValue(undefined);
   vi.spyOn(VoxSpanExporter.getInstance(), 'closeContext').mockResolvedValue(undefined);
@@ -169,6 +176,59 @@ describe('VoxPlayer per-turn root runs', () => {
     expect(base.gameStates[1]).toBeUndefined();
   });
 
+});
+
+describe('VoxPlayer strategist triage', () => {
+  /** Run turns 1 through `turns` on a seat that decides every third turn, and return its spies. */
+  async function runTurns(turns: number) {
+    const player = new VoxPlayer({
+      playerID: 1,
+      slot: '1',
+      playerConfig: { ...playerConfig, pacing: { everyTurns: 3 } } as PlayerConfig,
+      gameID: 'game-triage',
+      initialTurn: 0,
+      humanDecisionBus: new HumanDecisionBus(),
+    });
+    const callTool = vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
+    const execute = vi.spyOn(player.context, 'execute').mockResolvedValue(undefined);
+    let turnsRun = 0;
+    const realWithRun = player.context.withRun.bind(player.context);
+    vi.spyOn(player.context, 'withRun').mockImplementation((options: VoxRunOptions<StrategistParameters>, cb) =>
+      realWithRun(options, cb as never).then((result) => {
+        turnsRun++;
+        if (turnsRun < turns) player.notifyTurn(turnsRun + 1);
+        else player.abort(true);
+        return result;
+      }));
+
+    player.notifyTurn(1);
+    await player.execute();
+    return { callTool, execute };
+  }
+
+  it('should skip an off-cadence turn when triage says nothing changed', async () => {
+    triageMock.verdict = 'skip';
+
+    const { callTool, execute } = await runTurns(2);
+
+    // Turn 1 is scheduled and decides anyway; turn 2 is off-cadence and skips.
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(callTool).toHaveBeenCalledWith('keep-status-quo', expect.objectContaining({ Rationale: '[skipped]' }), expect.anything());
+  });
+
+  it('should run a triaged turn on the tier triage picked', async () => {
+    triageMock.verdict = 'large';
+
+    const { execute } = await runTurns(1);
+
+    expect(execute.mock.calls[0][5]).toMatchObject({ triage: { tier: 'large' } });
+  });
+
+  it('should leave the strategist on its own tier when triage is off', async () => {
+    const { execute } = await runTurns(1);
+
+    expect(execute.mock.calls[0][5]?.triage).toBeUndefined();
+  });
 });
 
 describe('VoxPlayer session pause gate', () => {

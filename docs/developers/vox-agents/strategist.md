@@ -43,7 +43,7 @@ If the DLL disconnects and stays down, the session kills and relaunches the game
 
 Each LLM-controlled player gets a `VoxPlayer` (`src/strategist/vox-player.ts`) with its own `VoxContext`. When the player's turn-done notification arrives, the loop refreshes the game state through MCP knowledge tools, then decides whether this is a turn worth a full decision.
 
-That **pacing** logic mixes scheduled decisions (every N turns) with event-driven interruptions when something important happens, such as a war declaration or a completed wonder. On turns it skips, the player still calls `keep-status-quo` so the in-game AI knows the LLM is intentionally staying the course.
+That **pacing** logic mixes scheduled decisions (every N turns) with event-driven interruptions when something important happens, such as a war declaration or a completed wonder. On turns it skips, the player still calls `keep-status-quo` so the in-game AI knows the LLM is intentionally staying the course. With [strategist triage](evaluators.md#strategist-triage) on, an evaluator also rates each turn: it can skip or downsize the turns between scheduled ones, and escalate any turn to the `large` tier.
 
 Each processed turn runs inside its own [root run](overview.md) carrying that turn's event window. This is what keeps the strategist's queued (and possibly lagging) decision turn independent from a diplomat chatting on the session's live turn: the two run concurrently on the same seat without disturbing each other.
 

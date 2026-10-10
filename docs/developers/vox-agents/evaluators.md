@@ -4,7 +4,7 @@ An evaluator answers a fixed set of typed questions about one piece of state, in
 
 | Job | What it decides | Section |
 | --- | --- | --- |
-| Triage | Which model tier runs an agent's turn | [Triage](#triage) |
+| Triage | Which model tier runs an agent's turn, and whether a strategist decides at all | [Triage](#triage) |
 | Diplomatic analyst | Whether to relay a diplomat's report, and how | [Diplomatic analyst](#diplomatic-analyst) |
 | Evaluator strategist | A strategist seat's whole decision, without a chat loop | [Evaluator strategist](#evaluator-strategist) |
 
@@ -81,12 +81,30 @@ Triage picks a model tier (`small`, `default`, or `large`) once at the start of 
 
 | Topic | Details |
 | --- | --- |
-| Turning it on | The `triage` setting takes `true` (every agent with a triage hook), a list of agent names or the roles `strategist` and `diplomat`, or `false` (the default). Set it on a seat, in the session config, or in the root `config.json`; the highest level that sets a value wins. `resolveSeatTriage` in `src/strategist/seat-config.ts` resolves it, and a malformed value fails session preflight before the game launches. |
+| Turning it on | The `triage` setting takes `true` (every agent with a triage hook, plus the strategist), a list of agent names or the roles `strategist` and `diplomat`, or `false` (the default). Set it on a seat, in the session config, or in the root `config.json`; the highest level that sets a value wins. `resolveSeatTriage` in `src/strategist/seat-config.ts` resolves it, and a malformed value fails session preflight before the game launches. |
 | Writing a hook | Use `createTriage` in `src/infra/triage.ts` with questions and a router from answers to a tier. The evaluator sees the agent's prepared prompt by default. An optional projector builds a smaller state instead, and a `TriageShortcut` decides obvious cases without a call. |
 | Failures | The agent keeps its own tier and the span notes `triage failed`. Cancellation still stops the run. |
 | Bypassing it | Pass a decision through the execute options, or `Tier` on any `call-*` tool. Neither needs triage enabled. |
 
-Only the diplomat has a hook today. It rates intent and stakes from the recent conversation and any open deal, then routes small talk to `small`, high-stakes deals and threats to `large`, and everything else to `default` (see [Envoys](envoy.md)). The `strategist` role is accepted, but strategists do not triage yet.
+Only the diplomat has a hook today. It rates intent and stakes from the recent conversation and any open deal, then routes small talk to `small`, high-stakes deals and threats to `large`, and everything else to `default` (see [Envoys](envoy.md)).
+
+### Strategist triage
+
+Strategists have no hook. Pacing triages them before the strategist runs, so triage can also skip a turn. When the `strategist` role (or the strategist's name) is in `triage` and an evaluator is configured, `runStrategistTriage` in `src/strategist/pacing/triage.ts` asks one score question, `revision`: how much the current strategic decisions need to change, rated none, tweaks, revision, or overhaul. The question is about what the strategist would change, not how eventful the turns were, and a finished research or policy counts as at least a tweak because the next one needs choosing. The evaluator reads the system prompt in `prompts/strategist-triage.md` and the same reports as the [evaluator strategist](#what-it-reads), with the events since the last decision.
+
+`resolvePacingVerdict` in `src/strategist/pacing.ts` combines the answer with the cadence. Without a triage verdict, pacing keeps the strategist's own model tier. With triage, a turn that `everyTurns` or an interruption already calls for always decides, and triage can only escalate it:
+
+| Turn | none | tweaks | revision | overhaul |
+| --- | --- | --- | --- | --- |
+| Scheduled or interrupted | `default` | `default` | `default` | `large` |
+| Any other turn | skip | `small` | `default` | `large` |
+
+- A triage skip calls `keep-status-quo` like a cadence skip.
+- The turn span records `pacing.triage`, plus `pacing.tier` on decided turns or `pacing.skip_reason` (`turn` or `evaluator`) on skipped ones. The strategist's agent span shows the tier with source `caller`.
+- If the evaluation fails, pacing falls back to the cadence. Cancellation still stops the turn.
+- Session preflight checks the strategist's evaluator reference like a hooked agent's.
+
+With `everyTurns` at 1 (the default), every turn is scheduled, so triage can only escalate to `large`. Raise `everyTurns` to let it skip or downsize the turns in between.
 
 ## Diplomatic analyst
 
