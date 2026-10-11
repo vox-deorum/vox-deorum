@@ -142,10 +142,10 @@ router.get('/workspace/:gameID/:playerID/download', (req: Request, res: Response
     return sendError(res, 400, 'commit must be a whole number');
   }
   const requested = commitParam === undefined ? undefined : Number(commitParam);
-  if (requested !== undefined && !seatStoreHasCommit(dbPath, requested)) {
-    return sendError(res, 404, `Workspace store has no commit ${requested}`);
-  }
   try {
+    if (requested !== undefined && !seatStoreHasCommit(dbPath, requested)) {
+      return sendError(res, 404, `Workspace store has no commit ${requested}`);
+    }
     const zip = zipSink();
     const commit = materialize(dbPath, zip.sink, requested);
     res.setHeader('Content-Type', 'application/zip');
