@@ -1,3 +1,5 @@
+One more known issue: get-military-report.lua does not report strength = 0 units, eg nuke.
+
 # Let strategists choose their ideology
 
 Strategists cannot choose their civilization's first ideology today. The game's AI picks Freedom, Order, or Autocracy at the start of a turn, before the strategist sees the choice. This plan adds a pre-selection slot: the strategist picks an ideology ahead of time, and the game adopts that pick when ideologies unlock.
