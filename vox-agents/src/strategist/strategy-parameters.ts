@@ -1,7 +1,7 @@
 import { ModelMessage } from "ai";
 import { AgentParameters } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { renderSection } from "../knowledge/sections.js";
+import { fileModeOmittedSections, renderSection, type SectionKey } from "../knowledge/sections.js";
 import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
 import { isRecord } from "../utils/guards.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
@@ -358,15 +358,31 @@ export function buildGameContextMessages(parameters: StrategistParameters): Mode
  * and the reports (strategies, victory progress, players, cities, military, events, turn context).
  * The simple strategist and the evaluator strategist read this text.
  *
- * @param events - The events report to render, by default the decision window's
+ * @param options - `events` replaces the events report, by default the decision window's.
+ *   `fileMode` leaves out the {@link fileModeOmittedSections}, which the run reads from its
+ *   records, and states the last decision turn explicitly.
  */
 export function renderStrategistReports(
   parameters: StrategistParameters,
   state: GameState,
-  events: unknown = state.mergedEvents ?? state.events,
+  { events = state.mergedEvents ?? state.events, fileMode = false }: { events?: unknown; fileMode?: boolean } = {},
 ): [overview: string, reports: string] {
   const { YouAre, ...SituationData } = parameters.metadata || {};
   const { Options, ...Strategy } = state.options || {};
+  const sectionData: [SectionKey, unknown][] = [
+    ["strategies", Strategy],
+    ["victory", state.victory],
+    ["players", state.players],
+    ["cities", state.cities],
+    ["military", state.military],
+    ["events", events],
+  ];
+  const reports = [
+    ...sectionData
+      .filter(([key]) => !fileMode || !fileModeOmittedSections.includes(key))
+      .map(([key, data]) => renderSection(key, data)),
+    getDecisionTurnContext(parameters, fileMode),
+  ];
   return [`
 You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
 
@@ -375,21 +391,7 @@ ${renderSection("situation", SituationData)}
 ${renderSection("civilization", YouAre)}
 
 ${renderSection("options", Options)}
-`.trim(), `
-${renderSection("strategies", Strategy)}
-
-${renderSection("victory", state.victory)}
-
-${renderSection("players", state.players)}
-
-${renderSection("cities", state.cities)}
-
-${renderSection("military", state.military)}
-
-${renderSection("events", events)}
-
-${getDecisionTurnContext(parameters)}
-`.trim()];
+`.trim(), reports.join("\n\n").trim()];
 }
 
 /**
@@ -423,12 +425,20 @@ export function getRecentGameState(
 }
 
 /**
- * Build the turn-context sentence for a strategist decision prompt.
+ * Build the turn-context sentence for a strategist decision prompt. Inline, a last decision on the
+ * previous turn goes unmentioned. In file mode the strategist picks its own reads from the records,
+ * so the sentence always names the last completed decision turn, or says there is none.
+ *
+ * @param fileMode - Whether the run reads its records through bash
  */
-export function getDecisionTurnContext(parameters: StrategistParameters): string {
-  const lastDecisionClause = parameters.lastDecisionTurn !== undefined && parameters.lastDecisionTurn !== parameters.turn - 1
-    ? ` (last decision made at turn ${parameters.lastDecisionTurn})`
-    : "";
+export function getDecisionTurnContext(parameters: StrategistParameters, fileMode = false): string {
+  const last = parameters.lastDecisionTurn;
+  let lastDecisionClause = "";
+  if (last !== undefined && (fileMode || last !== parameters.turn - 1)) {
+    lastDecisionClause = ` (last decision made at turn ${last})`;
+  } else if (last === undefined && fileMode) {
+    lastDecisionClause = " (no decision has completed on the current timeline)";
+  }
 
   return `You, ${parameters.metadata?.YouAre!.Leader} (leader of ${parameters.metadata?.YouAre!.Name}, Player ${parameters.playerID ?? 0}), are making strategic decisions after turn ${parameters.turn}${lastDecisionClause}.`;
 }

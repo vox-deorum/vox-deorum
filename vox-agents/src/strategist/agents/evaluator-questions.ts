@@ -199,7 +199,7 @@ export function buildStrategistEvaluationState(
 ): StrategistEvaluationState {
   /** Render the full state with one version of the trimmable reports. */
   const render = ({ events, ...reports }: TrimmableReports) =>
-    [system, ...renderStrategistReports(parameters, { ...state, ...reports }, events)].join("\n\n");
+    [system, ...renderStrategistReports(parameters, { ...state, ...reports }, { events })].join("\n\n");
 
   const reports: TrimmableReports = {
     events: state.mergedEvents ?? state.events,

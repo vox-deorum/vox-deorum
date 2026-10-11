@@ -15,6 +15,7 @@ import { discoverDbPath, openReadonlyDb } from './utils/db-resolver.js';
 import { runOracleTasks } from './run-control.js';
 import { extractPrompt, findTurnByRationale } from './utils/prompt-extractor.js';
 import { resolvePath } from './utils/output.js';
+import { unrecordedRunContext } from './types.js';
 import type { OracleConfig, OracleRow, RetrievedRow } from './types.js';
 
 const logger = createLogger('OracleRetriever');
@@ -120,6 +121,7 @@ async function retrieveRow(
     system: [],
     messages: [],
     activeTools: [],
+    ...unrecordedRunContext,
   };
 
   try {
@@ -169,6 +171,9 @@ async function retrieveRow(
         activeTools: extracted.activeTools,
         stepTools: extracted.stepTools,
         framing: extracted.framing,
+        files: extracted.files,
+        workspace: extracted.workspace,
+        prompts: extracted.prompts,
       };
     } finally {
       await db.destroy();

@@ -58,7 +58,8 @@ Finally, confirm the documentation describes the final behavior:
 
 | File | Covers |
 | --- | --- |
-| `docs/developers/vox-agents/framework/prompt-files.md` | Section registry, core prompts, records directions, last-decision context, per-turn event categories, strategist-chosen reads, inline event filtering, prompt files, Mustache usage, template names, lookup order |
+| `docs/developers/vox-agents/framework/prompt-files.md` | Section registry, prompt files, Mustache usage, template names, lookup order |
+| `docs/developers/vox-agents/framework/prompts.md` | File mode: core prompts, records directions, last-decision context, per-turn event categories, strategist-chosen reads, inline event filtering |
 | `docs/developers/vox-agents/workspace/store.md` | Workspace store, bash view, records, game reference, catalog, reload rewinds |
 | `docs/developers/vox-agents/agents/oracle.md` | File telemetry, pinned replay workspaces, last-attempt rule, replay limitations |
 | `docs/players/configuration.md` | Records and reference mounts, notes in the seat store, the materialize command and telemetry page download, notes rewinding on reload, disk use, the `prompts` setting |

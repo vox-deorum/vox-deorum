@@ -10,6 +10,7 @@ import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
+import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
 import { renderSection } from "../../knowledge/sections.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
@@ -53,6 +54,9 @@ export class SimpleStrategistStaffed extends SimpleStrategistBase {
    * Gets the initial messages for the conversation
    */
   public async getInitialMessages(parameters: StrategistParameters, input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
+    // Await the extra-reports hook first so subclass retrieval runs before briefing preparation
+    const additionalReports = await this.getAdditionalReports(parameters, input, context);
+
     const state = getRecentGameState(parameters)!;
     let briefingsContent: string;
     const militaryInstruction = parameters.workingMemory[briefingInstructionKeys.Military];
@@ -102,8 +106,24 @@ export class SimpleStrategistStaffed extends SimpleStrategistBase {
     // Save the assembled briefings for spokesperson use
     state.reports["briefing"] = briefingsContent;
 
+    // Build the user reports content, appending any additional reports so they land before the records directions
+    let reportsContent = `
+${renderSection("strategies", Strategy)}
+
+${renderSection("players", getStrategicPlayersReport(state.players!))}
+
+${renderSection("victory", state.victory)}
+
+${renderSection("briefings", briefingsContent, { rendered: true })}
+
+${getDecisionTurnContext(parameters, fileMode(context))}
+`.trim();
+    if (additionalReports) {
+      reportsContent += `\n\n${additionalReports}`;
+    }
+
     // Return the messages with all briefings
-    return [{
+    const messages: ModelMessage[] = [{
       role: "system",
       content: `
 You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
@@ -116,18 +136,18 @@ ${renderSection("options", Options)}`.trim(),
       providerOptions: { ...cacheBreakpoint }
     }, {
       role: "user",
-      content: `
-${renderSection("strategies", Strategy)}
-
-${renderSection("players", getStrategicPlayersReport(state.players!))}
-
-${renderSection("victory", state.victory)}
-
-${renderSection("briefings", briefingsContent, { rendered: true })}
-
-${getDecisionTurnContext(parameters)}
-`.trim()
+      content: reportsContent
     }];
+    appendRecordsDirections(messages, context);
+    return messages;
+  }
+
+  /**
+   * Hook for subclasses to append extra report text to the user messages, after the game-state
+   * reports and before any records directions. Returns an empty string by default.
+   */
+  protected async getAdditionalReports(_parameters: StrategistParameters, _input: unknown, _context: VoxContext<StrategistParameters>): Promise<string> {
+    return "";
   }
 
   /**

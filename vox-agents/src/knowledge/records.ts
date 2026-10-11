@@ -177,7 +177,7 @@ const splitLabels: Record<SectionSplit['by'], string> = {
 };
 
 /** Where one section's record files live, for the catalog's section index. */
-function sectionFiles(section: SectionDefinition): string {
+export function sectionFiles(section: SectionDefinition): string {
   if (section.scope === 'game') return `\`game/${section.key}.md\``;
   if (section.key === 'events') {
     return `\`turn-<N>/events-all.md\`, and views by category: ${eventCategoryFiles.map(([suffix]) => `\`events-${suffix}.md\``).join(', ')}`;
@@ -188,21 +188,34 @@ function sectionFiles(section: SectionDefinition): string {
 }
 
 /**
+ * The processed turns recorded in a records tree, ascending. A turn counts once its complete
+ * event slice is written, so a folder holding only briefings does not count.
+ *
+ * @param tree - The store version to read
+ */
+export function recordedTurns(tree: Manifest): number[] {
+  const recorded: number[] = [];
+  for (const storePath of tree.keys()) {
+    const match = /^records\/turn-(\d+)\/events-all\.json$/.exec(storePath);
+    if (match) recorded.push(Number(match[1]));
+  }
+  return recorded.sort((a, b) => a - b);
+}
+
+/**
  * Build the catalog for a records tree: the layout, a section index, recorded turn ranges, any
  * missing processed-turn folders, the latest files' sizes, and how to query large files.
  *
  * @param tree - The store version the catalog describes
  */
 export function buildCatalog(tree: Manifest): string {
-  const recorded = new Set<number>();
+  const turns = recordedTurns(tree);
+  const recorded = new Set(turns);
   const briefed = new Set<number>();
   for (const storePath of tree.keys()) {
-    const match = /^records\/turn-(\d+)\/(.+)$/.exec(storePath);
-    if (!match) continue;
-    if (match[2] === 'events-all.json') recorded.add(Number(match[1]));
-    if (match[2].startsWith('briefings/')) briefed.add(Number(match[1]));
+    const match = /^records\/turn-(\d+)\/briefings\//.exec(storePath);
+    if (match) briefed.add(Number(match[1]));
   }
-  const turns = [...recorded].sort((a, b) => a - b);
   const latest = turns.at(-1);
   const missing: number[] = [];
   if (latest !== undefined) {

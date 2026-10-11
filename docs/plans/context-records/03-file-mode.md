@@ -1,6 +1,6 @@
 # Stage 3: File mode and telemetry
 
-Part of the [context-records plan](../context-records.md). **Status: planned.**
+Part of the [context-records plan](../context-records.md). **Status: implemented.**
 
 ## Objective
 
@@ -36,7 +36,7 @@ The simple strategist's reduced set is its core prompt, produced by one file-mod
 
 ### Records directions
 
-`recordsDirections(parameters, state)` in `knowledge/` names `/workspace/records` and `/workspace/reference`, the recorded turn range, the current `turn-<N>/` folder, and `CATALOG.md`. For strategists, pass the current turn and `parameters.lastDecisionTurn` explicitly. List the sections omitted from inline context and their file patterns, including `turn-<N>/events-all.md` and the economic, military, diplomatic, others, and system event files from Stage 2. Explain that folders contain refresh slices with original event-turn keys and that the catalog shows gaps.
+`recordsDirections(context)` in `knowledge/` names `/workspace/records` and `/workspace/reference`, the recorded turn range, the current `turn-<N>/` folder, and `CATALOG.md`. Strategists get the current and last completed decision turns from their decision-context sentence, which states the last decision explicitly in file mode. List the sections omitted from inline context and their file patterns, including `turn-<N>/events-all.md` and the economic, military, diplomatic, others, and system event files from Stage 2. Explain that folders contain refresh slices with original event-turn keys and that the catalog shows gaps.
 
 The strategist decides whether and when to read events, and which turns, categories, and portions to inspect. All recorded turns stay accessible. If its last completed decision was turn 0 and it now acts on turn 5, the same directions expose the patterns for `turn-0/events-all.md`, `turn-0/events-economic.md`, and the other categories through `turn-5/`. The last decision supplies context for its own choice of reads. No host-generated merged event file or mandatory read sequence is added.
 
@@ -64,7 +64,7 @@ Whether a run used file mode follows from `context.files` and the recorded step 
 
 `vox-execute.ts` captures `context.workspace` after preparation (system text, initial messages, run tools, and triage) and immediately before the first model step, not when the agent span opens. A staffed strategist's briefer runs finish inside `getInitialMessages` and archive their briefings; capturing at the span's start would miss them, so a replayed bash call could not find files the live run's first step could read. A run that stops before any model step records none.
 
-The retriever carries these fields into `RetrievedRow`. Missing fields on older rows default to files disabled. Replay enables file support from `context.files`, not by inspecting prompt text.
+The retriever carries these fields into `RetrievedRow`. Missing fields on older rows default to files disabled. Replay will enable file support from `context.files`, not by inspecting prompt text; that work is [Stage 4](04-oracle-replay.md).
 
 ## Work items
 

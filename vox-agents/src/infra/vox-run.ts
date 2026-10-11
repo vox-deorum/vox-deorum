@@ -16,12 +16,19 @@ export interface ExecuteTokenOutput {
   outputTokens: number;
 }
 
+/** A resolved declaration; undefined tools means all registered tools. */
+export interface ResolvedRunTools {
+  tools: string[] | undefined;
+}
+
 /** Optional controls for a single agent execution. */
 export interface ExecuteOptions {
   /** Re-throw non-context-length agent errors after recording telemetry. */
   throwOnError?: boolean;
   /** Precomputed triage decision, which takes precedence over the agent's hook. */
   triage?: TriageDecision;
+  /** Reuse tools already resolved by the caller when choosing this execution's input path. */
+  runTools?: ResolvedRunTools;
 }
 
 /** Options for opening a root run via VoxContext.withRun. */
@@ -83,6 +90,11 @@ export interface ExecutionFrame<TParameters extends AgentParameters> {
   readonly agentName?: string;
   /** Triage decision for this execution, isolated from parent and sibling frames. */
   triage?: TriageDecision;
+  /**
+   * Tools declared for this execution, set once the run's tools are resolved and before prompt
+   * preparation. `tools` undefined means all registered tools.
+   */
+  runTools?: ResolvedRunTools;
   /** Values loaded once for this execution and shared by its hooks (see VoxContext.memoizeForExecution). */
   readonly memo: Map<string, Promise<unknown>>;
   /** Per-execution timeout-refresh callback, rebound per model call by the concurrency wrapper. */

@@ -70,6 +70,8 @@ function extracted(overrides: Record<string, any> = {}) {
     activeTools: ['set-flavors'],
     modelString: 'test/model@low',
     agentName: 'simple-strategist',
+    files: false,
+    prompts: false,
     ...overrides,
   };
 }
@@ -146,6 +148,10 @@ describe('oracle runRetrieve', () => {
       expect(rows[0].system).toEqual([]);
       expect(rows[0].messages).toEqual([]);
       expect(rows[0].activeTools).toEqual([]);
+      // Error rows carry the same context defaults: files off and no custom prompts.
+      expect(rows[0].files).toBe(false);
+      expect(rows[0].prompts).toBe(false);
+      expect(rows[0].workspace).toBeUndefined();
       expect(mocks.openReadonlyDb).not.toHaveBeenCalled();
     });
 
@@ -268,6 +274,21 @@ describe('oracle runRetrieve', () => {
       expect(db.destroy).toHaveBeenCalledTimes(1);
       // The configured targetAgent is forwarded to extractPrompt.
       expect(mocks.extractPrompt).toHaveBeenCalledWith(db, 30, 'simple-strategist');
+    });
+
+    it('should carry the run context fields from the extraction into the row', async () => {
+      const dir = makeTempDir();
+      const csv = writeCsvFile(dir, `${CSV_HEADER}\ng1,1,30,Test,`);
+      const files = { game: 'write', shared: {}, quota: 20 };
+      const db = makeFakeDb();
+      mocks.discoverDbPath.mockReturnValue('/fake/db.db');
+      mocks.openReadonlyDb.mockReturnValue(db);
+      mocks.extractPrompt.mockResolvedValue(extracted({ files, workspace: 7, prompts: 'custom-prompts' }));
+
+      const rows = await runRetrieve(baseConfig(csv, dir));
+
+      expect(rows[0]).toMatchObject({ files, workspace: 7, prompts: 'custom-prompts' });
+      expect(rows[0].error).toBeUndefined();
     });
 
     it('returns an error row when extraction yields no prompt data', async () => {

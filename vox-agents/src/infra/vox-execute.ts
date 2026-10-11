@@ -34,7 +34,7 @@ import { compactWorkspaceTraffic, compactionReminder, dropOlderReasoning } from 
 import { buildRemovedToolRejections } from "../utils/tools/tool-availability.js";
 import { isContextLengthError } from "../utils/retry.js";
 import { agentRegistry } from "./agent-registry.js";
-import type { ExecuteTokenOutput, ExecuteOptions } from "./vox-run.js";
+import type { ExecuteTokenOutput, ExecuteOptions, ResolvedRunTools } from "./vox-run.js";
 import {
   openAgentSpan,
   openStepSpan,
@@ -42,6 +42,24 @@ import {
   accrueTokens,
   updateModelLabel,
 } from "./vox-telemetry.js";
+
+/**
+ * Resolve the tools an agent declares for one run. The execution loop and callers that pick an
+ * input path before executing (such as `VoxPlayer`) share this, so both see one declaration.
+ *
+ * @param agent - The agent to run
+ * @param parameters - The run's parameters
+ * @param input - The agent input for the run
+ * @param host - The run's context
+ */
+export async function resolveRunTools<TParameters extends AgentParameters>(
+  agent: VoxAgent<TParameters>,
+  parameters: TParameters,
+  input: unknown,
+  host: VoxContext<TParameters>
+): Promise<ResolvedRunTools> {
+  return { tools: await agent.getRunTools(parameters, input, host) };
+}
 
 /**
  * Execute an agent with the given parameters on the host context. Requires an active root run;
@@ -101,6 +119,10 @@ export async function executeAgent<TParameters extends AgentParameters>(
     span.setAttribute('triage.baseline', agent.modelSize);
     // The custom prompt folder behind this run's system text, so analysis can group rows by prompt set.
     span.setAttribute('context.prompts', host.prompts ?? rootPrompts());
+    // The run's resolved files setting, so a replay can rebuild the workspace without inspecting
+    // prompt text. Span attributes must be primitives, so the config is recorded as JSON, and a
+    // run without files records false.
+    span.setAttribute('context.files', host.files ? JSON.stringify(host.files) : false);
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       // Step loop state, kept outside the try so a context overflow can report where it happened.
@@ -108,6 +130,12 @@ export async function executeAgent<TParameters extends AgentParameters>(
       let initialLength = 0;
       let step = 0;
       try {
+        // The run's tools come first, so prompt builders can tell whether this run reads records
+        // through bash (see fileMode in knowledge/directions.ts).
+        const runTools = options.runTools ?? await resolveRunTools(agent, params, input, host);
+        frame.runTools = runTools;
+        const { tools } = runTools;
+
         // An empty system prompt means the agent has nothing to do this time.
         const system = await agent.getSystem(params, input, host);
         if (system === "") {
@@ -118,7 +146,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
         const prepared: PreparedAgentState = {
           system,
           messages: await agent.getInitialMessages(params, input, host),
-          tools: await agent.getRunTools(params, input, host),
+          tools,
         };
         const decision = await resolveTriage(host, agent, params, input, options, prepared);
         frame.triage = decision;
@@ -179,6 +207,15 @@ export async function executeAgent<TParameters extends AgentParameters>(
         let lastResponseStart: number | undefined;
         let compactionReminded = false;
         let overflowRetried = false;
+
+        // The seat store commit the first model step will read, so a replay finds the same files.
+        // Captured here, after all preparation and triage and immediately before the first step:
+        // a staffed strategist's briefer runs finish inside getInitialMessages and archive their
+        // briefings, so a snapshot taken when the span opened would miss them. A run that ends
+        // during preparation records none, and neither does an evaluation run, which reads no files.
+        if (host.files && host.store) {
+          span.setAttribute('context.workspace', host.store.head());
+        }
 
         // Execute steps in a loop, one at a time
         for (let stepCount = 0; !shouldStop; stepCount++) {

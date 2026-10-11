@@ -64,6 +64,18 @@ Prompt-mode models don't call tools natively; the tool-rescue middleware strips 
 
 Retrieve surfaces this on every row as `framing`. It is **informational**, because replay framing derives solely from the replay model: a prompt-mode model replaying a claude-code turn is told "tools", not "actions". To reproduce the original view deliberately, either return a model with `options.framing` set from `modelOverride`, or apply the exported `reframeToolWording` helper to the system prompt inside `modifyPrompt`. `framing` is `undefined` for turns that predate the telemetry, ran a native tool path, had no tools, or failed before recording.
 
+### Workspace fields
+
+Every agent span records three workspace facts, and Retrieve carries them onto each row:
+
+| Row field | Span attribute | Meaning |
+| --- | --- | --- |
+| `files` | `context.files` | The seat's resolved files setting (game access, shared folders, quota), or `false` |
+| `workspace` | `context.workspace` | The seat store's head commit just before the run's first model step, when files are on |
+| `prompts` | `context.prompts` | The custom prompt folder behind the recorded system text, or `false` |
+
+The execution loop (`src/infra/vox-execute.ts`) captures the commit after all preparation, so a staffed strategist's snapshot includes the briefings archived while its briefers ran. Every store starts with an empty commit, so even an early chat pins a version. A run that ends during preparation records no commit, and neither does an evaluation run, which reads no files. Whether a run used file mode follows from `files` and the recorded step tools. Rows from older telemetry, and retrieved files saved before these fields existed, default to files off and built-in prompts. `prompts` is for grouping results; replay ignores it, since the recorded system text already contains the custom prompt.
+
 ## Where things land
 
 Outputs default under `temp/oracle/`: the per-experiment results CSV next to a directory of retrieved JSONs and replay trails. The replay's own OpenTelemetry database lands under `telemetry/oracle/`, which means a replayed experiment can itself be inspected with the telemetry browser like any live run.

@@ -13,6 +13,7 @@ import { cacheBreakpoint, countCacheBreakpoints, markBreakpointOnLast, MAX_CACHE
 import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../types/index.js";
 import { VoxContext } from "../infra/vox-context.js";
+import { appendRecordsDirections } from "../knowledge/directions.js";
 import { createBriefingTool } from "../briefer/briefing-utils.js";
 import { createSendMessageTool } from "./tools/send-message-tool.js";
 import { getValidCalls } from "../utils/tools/terminal-tools.js";
@@ -88,6 +89,10 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
     const messages = this.getContextMessages(parameters, input);
+
+    // File mode: the records directions join the stable prefix, ahead of the past-conversation
+    // anchor. They carry no breakpoint of their own, so the breakpoint count is unchanged.
+    appendRecordsDirections(messages, context);
 
     // Layer the agent's grounding around the chat record (see {@link LiveEnvoyContext}
     // for the bracket ordering and rationale) — `preamble` before it, `dealRenderer` inline within

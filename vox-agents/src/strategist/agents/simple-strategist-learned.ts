@@ -7,7 +7,7 @@
  * and episodes are integrated into the next turn's context as reference material.
  */
 
-import { ModelMessage, Tool } from "ai";
+import { Tool } from "ai";
 import { z } from "zod";
 import { SimpleStrategistStaffed } from "./simple-strategist-staffed.js";
 import { VoxContext } from "../../infra/vox-context.js";
@@ -56,31 +56,21 @@ export class SimpleStrategistLearned extends SimpleStrategistStaffed {
   }
 
   /**
-   * Gets the initial messages for the conversation, injecting episodes if requested last turn
+   * Gets the extra reports for the staffed user messages: the historical episodes requested last
+   * turn, formatted under the episode heading, or an empty string when none were retrieved.
    */
-  public async getInitialMessages(parameters: StrategistParameters, input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
+  protected override async getAdditionalReports(parameters: StrategistParameters, _input: unknown, _context: VoxContext<StrategistParameters>): Promise<string> {
     // Check for a pending episode request from last turn
-    let episodesContent: string | undefined;
     const pendingSituation = parameters.workingMemory[episodeRequestKey];
     const state = getRecentGameState(parameters)!;
     const results = await requestEpisodes(state, parameters, pendingSituation);
-    if (results.length > 0) {
-      episodesContent = formatEpisodeResults(results);
-    }
     delete parameters.workingMemory[episodeRequestKey];
 
-    // Get the standard messages from the staffed strategist
-    const messages = await super.getInitialMessages(parameters, input, context);
-
-    // Append episodes to the user message if available
-    if (episodesContent) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === "user" && typeof lastMessage.content === "string") {
-        lastMessage.content += `\n\n# Historical Episodes\nBefore making your decisions, reason around the following episodes: what happened, what did the leader decide on, and whether that can inform your reasoning.\n${episodesContent}`;
-      }
+    if (results.length === 0) {
+      return "";
     }
 
-    return messages;
+    return `# Historical Episodes\nBefore making your decisions, reason around the following episodes: what happened, what did the leader decide on, and whether that can inform your reasoning.\n${formatEpisodeResults(results)}`;
   }
 
   /**

@@ -13,7 +13,11 @@ import { createLogger } from "../utils/logger.js";
 import { setTimeout } from 'node:timers/promises';
 import { sqliteExporter, spanProcessor } from "../instrumentation.js";
 import { config } from "../utils/config.js";
-import { ensureGameState, turnEventWindow, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
+import { ensureGameState, mergeCachedEvents, turnEventWindow, withEventWindowFallback, type GameState, StrategistParameters } from "./strategy-parameters.js";
+import { agentRegistry } from "../infra/agent-registry.js";
+import { runUsesFiles } from "../knowledge/directions.js";
+import { resolveRunTools } from "../infra/vox-execute.js";
+import type { ResolvedRunTools } from "../infra/vox-run.js";
 import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
 import type { FilesSetting, ModelSize, PlayerConfig, PromptsSetting, TriageSetting } from "../types/config.js";
 import type { HumanDecisionBus } from "./human-decision-bus.js";
@@ -423,7 +427,7 @@ export class VoxPlayer {
                   tier: verdict.tier
                 });
 
-                const decided = await this.executeDecisionWithEventFallback(params, state, eventFromTurn, turnSpan, verdict.tier);
+                const decided = await this.executeDecision(params, state, eventFromTurn, turnSpan, verdict.tier);
 
                 // Finalizing (the event cursor was already advanced after the refresh).
                 // Only record a decision that was actually made and not cancelled. Otherwise
@@ -562,16 +566,62 @@ export class VoxPlayer {
   }
 
   /**
-   * Execute a decision, dropping lower importance events across the pending window on overflow,
-   * then older turns' turning points as a last resort. Return false if nothing fits, so the
-   * caller retains the pending history and retries next turn. The no-op "none" strategist
-   * counts as success. A tier from triage overrides the strategist's own for every attempt.
+   * Execute a decision through the strategist's event input path. A strategist that reads events
+   * from files runs once; every other strategist gets the inline event fallback. Return false
+   * when the decision did not fit, so the caller retains the pending history and retries next turn.
+   */
+  private async executeDecision(
+    parameters: StrategistParameters,
+    state: GameState,
+    eventFromTurn: number,
+    turnSpan: Span,
+    tier?: ModelSize
+  ): Promise<boolean> {
+    // Resolve once and pass the declaration into every attempt, so event handling and prompt
+    // preparation use the same tools.
+    const agent = agentRegistry.get<StrategistParameters>(this.playerConfig.strategist);
+    const runTools = agent && await resolveRunTools(agent, parameters, undefined, this.context);
+    const filesInput = runTools !== undefined && runUsesFiles(this.context, runTools.tools);
+    turnSpan.setAttribute('event.input', filesInput ? 'files' : 'inline');
+    if (!filesInput) return this.executeDecisionWithEventFallback(parameters, state, eventFromTurn, turnSpan, runTools, tier);
+
+    // Briefers of a briefed or staffed strategist still read the pending window inline. On
+    // overflow they trim this shared window and retry themselves, so the strategist never reruns.
+    state.mergedEvents = mergeCachedEvents(parameters, eventFromTurn, parameters.turn);
+    turnSpan.setAttributes({ event_from: eventFromTurn, event_to: parameters.turn, event_dropped_tiers: 0 });
+    if (await this.executeStrategist(runTools, tier)) return true;
+    this.logger.warn(
+      `Context length exceeded on turn ${parameters.turn} with file input; abandoning the decision to retry next turn.`,
+      { GameID: parameters.gameID, PlayerID: parameters.playerID }
+    );
+    return false;
+  }
+
+  /**
+   * Run the seat's strategist once inside the turn root. Return false when it exceeded the
+   * context length. A tier from triage overrides the strategist's own.
+   */
+  private async executeStrategist(runTools: ResolvedRunTools | undefined, tier?: ModelSize): Promise<boolean> {
+    // Nested execution inside the established turn root: execute() uses the root's composed
+    // parameters, inherits its cancellation, and accrues its tokens to the run handle.
+    let contextLengthExceeded = false;
+    await this.context.execute(this.playerConfig.strategist, undefined, undefined, undefined, () => {
+      contextLengthExceeded = true;
+    }, { throwOnError: true, triage: tier && { tier, note: "pacing" }, runTools });
+    return !contextLengthExceeded;
+  }
+
+  /**
+   * Execute an inline-event decision, dropping lower importance events across the pending window
+   * on overflow, then older turns' turning points as a last resort. Return false if nothing fits.
+   * The no-op "none" strategist counts as success.
    */
   private async executeDecisionWithEventFallback(
     parameters: StrategistParameters,
     state: GameState,
     eventFromTurn: number,
     turnSpan: Span,
+    runTools: ResolvedRunTools | undefined,
     tier?: ModelSize
   ): Promise<boolean> {
     const decided = await withEventWindowFallback(parameters, state, eventFromTurn, async (eventWindow) => {
@@ -587,14 +637,7 @@ export class VoxPlayer {
         event_dropped_tiers: eventWindow.droppedTiers ?? 0
       });
 
-      // Nested execution inside the established turn root: execute() uses the root's composed
-      // parameters, inherits its cancellation, and accrues its tokens to the run handle.
-      let contextLengthExceeded = false;
-      await this.context.execute(this.playerConfig.strategist, undefined, undefined, undefined, () => {
-        contextLengthExceeded = true;
-      }, { throwOnError: true, triage: tier && { tier, note: "pacing" } });
-
-      if (!contextLengthExceeded) return true;
+      if (await this.executeStrategist(runTools, tier)) return true;
 
       this.logger.warn(
         `Context length exceeded on turn ${parameters.turn}; retrying with fewer events.`,

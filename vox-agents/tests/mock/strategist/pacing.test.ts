@@ -345,6 +345,27 @@ describe("getDecisionTurnContext", () => {
       lastDecisionTurn: 32
     })).toBe("You, Wu Zetian (leader of China, Player 2), are making strategic decisions after turn 37 (last decision made at turn 32).");
   });
+
+  describe("in file mode", () => {
+    it("should name the last decision turn even when it was the previous turn", () => {
+      const inline = getDecisionTurnContext({ ...baseParameters, lastDecisionTurn: 36 });
+      const files = getDecisionTurnContext({ ...baseParameters, lastDecisionTurn: 36 }, true);
+      expect(inline).not.toContain("36");
+      expect(files).toContain("36");
+      expect(files).toContain("37");
+    });
+
+    it("should say when no decision has completed", () => {
+      const none = getDecisionTurnContext({ ...baseParameters, lastDecisionTurn: undefined }, true);
+      expect(none).not.toBe(getDecisionTurnContext({ ...baseParameters, lastDecisionTurn: undefined }));
+      expect(none).toContain("37");
+    });
+
+    it("should name a distant last decision turn as inline does", () => {
+      const parameters = { ...baseParameters, lastDecisionTurn: 32 };
+      expect(getDecisionTurnContext(parameters, true)).toBe(getDecisionTurnContext(parameters));
+    });
+  });
 });
 
 describe("withEventWindowFallback", () => {

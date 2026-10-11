@@ -13,6 +13,7 @@ This page covers the built-in files, custom folders, and the game-state section 
 | `<agent-name>.md` | An agent's system prompt. |
 | `<agent-name>.<variant>.md` | A variant. The specialized briefer has `.military`, `.economy`, and `.diplomacy`. |
 | `strategist-triage.md` | The system prompt for [strategist triage](../models/tiers-and-triage.md#strategist-triage). It is not an agent. |
+| `records-directions.md` | The records directions an agent adds to its opening messages in [file mode](prompts.md#file-mode). It is not an agent. |
 | `shared/*.md` | Passages several agents include, such as resource descriptions and decision instructions. |
 
 A template's name is its path without `.md`, such as `shared/goals`. The folder is found relative to the module, so both `src` and `dist` builds read it, and the installer ships it.
@@ -76,4 +77,4 @@ Prompt builders render a section with `renderSection`. It takes the data plus op
 
 Builders still decide their own message order, field filtering, and cache anchors. But a builder that shows a section always goes through the registry instead of formatting the report itself.
 
-The same definitions name the files in the [seat records](../workspace/store.md#records), so a prompt and a record file describe a section the same way.
+The same definitions name the files in the [seat records](../workspace/store.md#records), so a prompt and a record file describe a section the same way. In [file mode](prompts.md#file-mode), the records directions use them to point to the sections left out of the prompt.

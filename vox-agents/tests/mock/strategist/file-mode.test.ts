@@ -1,0 +1,188 @@
+/**
+ * Tests for file mode in the strategist prompt builders (src/strategist/agents).
+ *
+ * When a run's resolved tools include bash and the seat has files on, a strategist reads cities,
+ * military, and events from its seat's records instead of carrying them inline, so each builder adds
+ * the records directions and leaves its cache anchors where the inline build puts them. Briefings are
+ * pre-filled and episode retrieval is mocked, so nothing reaches a model, MCP server, or network.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ModelMessage } from 'ai';
+import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { recordsDirections } from '../../../src/knowledge/directions.js';
+import { sections, type SectionKey } from '../../../src/knowledge/sections.js';
+import { countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
+import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
+import { createFakeVoxContext, type FakeVoxContext } from '../../helpers/fake-vox-context.js';
+import { makeFixtureParameters } from '../../fixtures/game-state/index.js';
+import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../knowledge/directions-fixtures.js';
+
+// Replace episode retrieval with a canned result; formatting stays the real implementation.
+const episodeResults = vi.hoisted(() => ({ current: [] as unknown[] }));
+vi.mock('../../../src/utils/prompts/episode-utils.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/utils/prompts/episode-utils.js')>()),
+  requestEpisodes: vi.fn(async () => episodeResults.current),
+}));
+
+/** Sections a file-mode strategist still reads inline. */
+const inlineSections: SectionKey[] = ['strategies', 'victory', 'players'];
+
+/** Sections a file-mode strategist reads from its records, so they leave the inline reports. */
+const recordSections: SectionKey[] = ['cities', 'military', 'events'];
+
+/** Text only the retrieved episode carries, so the message it lands in is findable. */
+const episodeMarker = 'Episode marker: a fragile peace on the tin coast';
+
+/** A canned historical episode with the fields the real formatter reads. */
+const episode = {
+  gameId: 'past-game', turn: 88, civilization: 'Arabia', era: 'Classical Era',
+  isWinner: true, victoryType: 'Cultural', similarity: 0.87,
+  situationAbstract: episodeMarker,
+  decisionAbstract: null, situation: null, decisions: 'Set Culture & Growth flavors.',
+  outcomes: [],
+  indicators: { culturePerPop: 2.25 },
+};
+
+/** Fetch an agent from the registry by name. */
+function agent(name: string): any {
+  return agentRegistry.get(name);
+}
+
+/** Matcher for one section's own level-1 heading, which report data never emits at that level. */
+function sectionHeading(key: SectionKey): RegExp {
+  return new RegExp(`^# ${sections[key].title}$`, 'm');
+}
+
+/** Index of the first message whose text contains `marker`, or -1 when none does. */
+function messageWith(messages: ModelMessage[], marker: string): number {
+  return messages.findIndex((m) => typeof m.content === 'string' && m.content.includes(marker));
+}
+
+/** Assert the run ends with exactly one breakpoint-free user message holding the records directions. */
+function expectTrailingDirections(messages: ModelMessage[], directions: string): void {
+  expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
+  const last = messages[messages.length - 1];
+  expect(last.role).toBe('user');
+  expect(last.content).toBe(directions);
+  expect(hasCacheBreakpoint(last)).toBe(false);
+}
+
+/** Fresh fixture parameters for one builder call. */
+function freshParameters(): StrategistParameters {
+  return makeFixtureParameters();
+}
+
+/** Fixture parameters with the combined briefing pre-filled, so no briefer is called. */
+function briefedParameters(): StrategistParameters {
+  const parameters = makeFixtureParameters();
+  parameters.gameStates[parameters.turn].reports['briefing'] = 'Combined briefing: the island empire grows, the peace holds.';
+  return parameters;
+}
+
+/** {@link briefedParameters} plus the pending episode request that steers retrieval. */
+function episodesParameters(): StrategistParameters {
+  const parameters = briefedParameters();
+  parameters.workingMemory['episode-request'] = 'A coastal peaceful culture game.';
+  return parameters;
+}
+
+describe('strategist prompt builders in file mode', () => {
+  let temp: TempRecords;
+
+  beforeEach(() => {
+    temp = openTempRecords();
+    temp.records.recordTurn(recordParameters(), recordableState(98));
+    temp.records.recordTurn(recordParameters(), recordableState(99));
+  });
+
+  afterEach(() => {
+    episodeResults.current = [];
+    temp.dispose();
+  });
+
+  /**
+   * Build one agent's initial messages twice, with independent parameters each time: inline, and in
+   * file mode over the temp records store with `tools` as the run's resolved tools (undefined means
+   * every registered tool). Also returns the file-mode context and the directions text it implies.
+   */
+  async function build(
+    name: string,
+    makeParameters: () => StrategistParameters = freshParameters,
+    tools?: string[],
+  ): Promise<{ inline: ModelMessage[]; messages: ModelMessage[]; fake: FakeVoxContext; directions: string }> {
+    const inlineContext = createFakeVoxContext();
+    const inline = (await agent(name).getInitialMessages(makeParameters(), undefined, inlineContext.asContext())) as ModelMessage[];
+
+    const fake = enableFileMode(createFakeVoxContext(), temp.store, tools);
+    const parameters = makeParameters();
+    const messages = (await agent(name).getInitialMessages(parameters, undefined, fake.asContext())) as ModelMessage[];
+    return { inline, messages, fake, directions: recordsDirections(fake.asContext()) };
+  }
+
+  describe('simple-strategist', () => {
+    it('should keep the overview and shrink the reports to the core plus directions', async () => {
+      const { inline, messages, directions } = await build('simple-strategist');
+
+      expect(messages).toHaveLength(3);
+      expect(messages.map((m) => m.role)).toEqual(['system', 'user', 'user']);
+      // The system overview is the inline one and still carries its breakpoint.
+      expect(messages[0]).toEqual(inline[0]);
+      expect(hasCacheBreakpoint(messages[0])).toBe(true);
+
+      // The inline reports hold all six sections; the core keeps only the ones records do not cover.
+      const inlineReports = String(inline[1].content);
+      for (const key of [...inlineSections, ...recordSections]) expect(inlineReports).toMatch(sectionHeading(key));
+      const core = String(messages[1].content);
+      for (const key of inlineSections) expect(core).toMatch(sectionHeading(key));
+      for (const key of recordSections) expect(core).not.toMatch(sectionHeading(key));
+      expect(core).not.toBe(inlineReports);
+
+      expectTrailingDirections(messages, directions);
+      expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+    });
+
+    it('should build exactly the inline messages when the resolved tools exclude bash', async () => {
+      const { inline, messages } = await build('simple-strategist', freshParameters, ['set-flavors']);
+      expect(messages).toEqual(inline);
+    });
+  });
+
+  for (const name of ['simple-strategist-briefed', 'simple-strategist-staffed']) {
+    describe(name, () => {
+      it('should append one directions message to the inline messages', async () => {
+        const { inline, messages, fake, directions } = await build(name, briefedParameters);
+
+        // The pre-filled briefing means no briefer runs for either build.
+        expect(fake.callAgent).not.toHaveBeenCalled();
+        expect(messages).toHaveLength(inline.length + 1);
+        expect(messages.slice(0, -1)).toEqual(inline);
+        expect(messages.map((m) => m.role)).toEqual([...inline.map((m) => m.role), 'user']);
+
+        expectTrailingDirections(messages, directions);
+        expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+      });
+    });
+  }
+
+  describe('simple-strategist-learned', () => {
+    it('should keep the directions last with the episodes in the message before it', async () => {
+      episodeResults.current = [episode];
+      const { inline, messages, directions } = await build('simple-strategist-learned', episodesParameters);
+
+      expectTrailingDirections(messages, directions);
+      expect(messageWith(messages, episodeMarker)).toBe(messages.length - 2);
+      expect(messages[messages.length - 2].role).toBe('user');
+      expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+    });
+
+    it('should put the episodes in the last message without file mode', async () => {
+      episodeResults.current = [episode];
+      const inline = (await agent('simple-strategist-learned').getInitialMessages(
+        episodesParameters(), undefined, createFakeVoxContext().asContext(),
+      )) as ModelMessage[];
+
+      expect(messageWith(inline, episodeMarker)).toBe(inline.length - 1);
+    });
+  });
+});

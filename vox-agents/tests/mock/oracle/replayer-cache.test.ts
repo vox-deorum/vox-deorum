@@ -148,6 +148,8 @@ const baseRetrieved: RetrievedRow = {
   system: ['system prompt'],
   messages: [{ role: 'user', content: 'user message' }],
   activeTools: ['set-flavors'],
+  files: false,
+  prompts: false,
 };
 
 function baseConfig(outputDir: string, experimentName: string, modifyPrompt: OracleConfig['modifyPrompt']): OracleConfig {

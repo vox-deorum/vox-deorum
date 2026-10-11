@@ -1,7 +1,8 @@
 /**
  * Tests for the negotiator agent (src/envoy/negotiator.ts): its three terminal tools, the
  * `call-negotiator` handoff input mapping (resolveHandoffInput), the transcript-driven task
- * determination + upfront inspect in getInitialMessages, and the diplomat-facing summary in
+ * determination + upfront inspect in getInitialMessages (including where the file-mode records
+ * directions sit), and the diplomat-facing summary in
  * getOutput. The terminal tools read the live NegotiatorInput from context.currentInput, persist
  * their move through the durable store, and record the move on input.outcome. Uses the shared
  * mcpClient fixture — no live game / LLM.
@@ -10,6 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow, emptySideRange } from '../../../helpers/diplomacy-fixtures.js';
+import { createFakeVoxContext } from '../../../helpers/fake-vox-context.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
@@ -28,6 +30,9 @@ import {
   type NegotiatorInput,
 } from '../../../../src/envoy/context/negotiator-utils.js';
 import { sessionRegistry } from '../../../../src/infra/session-registry.js';
+import { buildGameContextMessages } from '../../../../src/strategist/strategy-parameters.js';
+import { recordsDirections } from '../../../../src/knowledge/directions.js';
+import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../../knowledge/directions-fixtures.js';
 import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/utils/deal-schema.js';
 
 /** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
@@ -799,6 +804,43 @@ describe('getInitialMessages task determination', () => {
       expect(text.split(proposal.Payload.Deal.message)).toHaveLength(2);
     }
     expect(input.activeProposal).toEqual({ messageID: open.ID, deal: open.Payload.Deal });
+  });
+
+  describe('file mode', () => {
+    let temp: TempRecords;
+
+    beforeEach(() => {
+      temp = openTempRecords();
+      temp.records.recordTurn(recordParameters(), recordableState(4));
+    });
+    afterEach(() => temp.dispose());
+
+    it('should add the records directions once, directly after the shared game context', async () => {
+      mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
+      const negotiator = new Negotiator();
+      const fake = enableFileMode(createFakeVoxContext(), temp.store);
+
+      const plain = await negotiator.getInitialMessages(params, negotiatorInput(), createFakeVoxContext().asContext());
+      const messages = await negotiator.getInitialMessages(params, negotiatorInput(), fake.asContext());
+      const contextMessages = buildGameContextMessages(params);
+      const directions = recordsDirections(fake.asContext(), params);
+
+      expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
+      // The directions ride between the game context and the deal grounding; nothing else moves.
+      expect(messages).toEqual([...contextMessages, { role: 'user', content: directions }, ...plain.slice(contextMessages.length)]);
+    });
+
+    it('should add no directions when files are off', async () => {
+      mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
+      const negotiator = new Negotiator();
+      // The same store and parameters a file-mode run would have used.
+      const directions = recordsDirections(enableFileMode(createFakeVoxContext(), temp.store).asContext(), params);
+
+      const messages = await negotiator.getInitialMessages(params, negotiatorInput(), createFakeVoxContext().asContext());
+
+      expect(messages.some((m) => m.content === directions)).toBe(false);
+      expect(messages).toHaveLength(buildGameContextMessages(params).length + 2);
+    });
   });
 });
 

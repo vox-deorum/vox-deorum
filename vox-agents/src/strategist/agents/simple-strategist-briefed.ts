@@ -10,6 +10,7 @@ import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
+import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
 import { renderSection } from "../../knowledge/sections.js";
 import { requestBriefing, assembleBriefings, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
@@ -63,7 +64,7 @@ export class SimpleStrategistBriefed extends SimpleStrategistBase {
     const filteredPlayers = getStrategicPlayersReport(state.players!);
 
     // Return the messages with briefing instead of full state
-    return [{
+    const messages: ModelMessage[] = [{
       role: "system",
       content: `
 You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
@@ -85,9 +86,11 @@ ${renderSection("victory", state.victory)}
 
 ${renderSection("briefings", assembleBriefings(briefing, instruction), { rendered: true })}
 
-${getDecisionTurnContext(parameters)}
+${getDecisionTurnContext(parameters, fileMode(context))}
 `.trim()
     }];
+    appendRecordsDirections(messages, context);
+    return messages;
   }
   
   /**

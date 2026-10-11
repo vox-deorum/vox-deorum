@@ -10,6 +10,7 @@ import type { ModelMessage, StepResult, Tool } from 'ai';
 import type { AgentParameters } from '../infra/vox-agent.js';
 import type { ExecuteTokenOutput } from '../infra/vox-run.js';
 import type { Model } from '../types/index.js';
+import type { ResolvedFilesConfig } from '../types/config.js';
 import type { ToolCallFraming } from '../utils/models/tool-rescue/types.js';
 
 /** A single tool call decision from a replay */
@@ -212,8 +213,21 @@ export interface ExtractionContext {
   agentName: string;
 }
 
+/** The run's recorded workspace context from its agent span */
+export interface RecordedRunContext {
+  /** The run's resolved files setting from context.files, false when files were off or unrecorded */
+  files: ResolvedFilesConfig | false;
+  /** The seat store commit captured before the run's first model step (context.workspace), undefined when unrecorded */
+  workspace?: number;
+  /** The run's custom prompt folder from context.prompts, false for built-ins or unrecorded */
+  prompts: string | false;
+}
+
+/** Defaults for rows whose telemetry predates these attributes */
+export const unrecordedRunContext: RecordedRunContext = { files: false, prompts: false };
+
 /** Data extracted from a telemetry span for a single turn */
-export interface ExtractedPrompt {
+export interface ExtractedPrompt extends RecordedRunContext {
   /** System prompt parts (one per system message) */
   system: string[];
   /** Non-system messages */
@@ -231,7 +245,7 @@ export interface ExtractedPrompt {
 }
 
 /** Raw telemetry data extracted for a single CSV row. No prompt modifications applied. */
-export interface RetrievedRow {
+export interface RetrievedRow extends RecordedRunContext {
   /** Original CSV row */
   row: OracleRow;
   /** Raw model string from telemetry (e.g. 'openai-compatible/Kimi-K2.5@Medium') */

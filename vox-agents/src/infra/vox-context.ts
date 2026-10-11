@@ -61,6 +61,7 @@ import type {
   VoxRunHandle,
   RootRun,
   ExecutionFrame,
+  ResolvedRunTools,
 } from "./vox-run.js";
 import winston from "winston";
 
@@ -201,6 +202,14 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    */
   public get currentTriage(): TriageDecision | undefined {
     return this.als.getStore()?.triage;
+  }
+
+  /**
+   * The tools declared for the active execution, or undefined outside an execution or before the
+   * execution loop resolves them. Inside, `tools` undefined means all registered tools.
+   */
+  public get currentRunTools(): ResolvedRunTools | undefined {
+    return this.als.getStore()?.runTools;
   }
 
   /**

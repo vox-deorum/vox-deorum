@@ -51,6 +51,12 @@ export interface RenderSectionOptions {
   rendered?: boolean;
 }
 
+/**
+ * Sections a file-mode run reads from its records instead of its prompt. The simple strategist
+ * leaves these out of its reports, and the records directions list them with their files.
+ */
+export const fileModeOmittedSections: SectionKey[] = ["cities", "military", "events"];
+
 /** The section registry, keyed by section key. */
 export const sections: Record<SectionKey, SectionDefinition> = {
   situation: { key: "situation", title: "Situation", scope: "game" },

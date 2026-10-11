@@ -103,7 +103,7 @@ vi.mock('../../../src/oracle/batch/batch-manager.js', () => ({
   startBatchManager: mocks.startBatchManager,
 }));
 
-import { runReplay } from '../../../src/oracle/replayer.js';
+import { loadRetrievedRows, runReplay } from '../../../src/oracle/replayer.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import type { OracleAgent } from '../../../src/oracle/oracle-agent.js';
 
@@ -137,6 +137,8 @@ function retrieved(overrides: Partial<RetrievedRow> = {}): RetrievedRow {
     system: ['SYSTEM_PLACEHOLDER'],
     messages: [{ role: 'user', content: 'USER_PLACEHOLDER' }],
     activeTools: ['set-flavors'],
+    files: false,
+    prompts: false,
     ...overrides,
   };
 }
@@ -190,6 +192,20 @@ function readCsvRows(outputDir: string, experimentName: string): Record<string, 
 // ---------------------------------------------------------------------------
 
 describe('oracle replayer (non-cache paths)', () => {
+  describe('loadRetrievedRows', () => {
+    it('should default the workspace fields of rows saved before they existed and keep recorded ones', () => {
+      const dir = makeTempDir();
+      const { files: _files, prompts: _prompts, ...older } = retrieved();
+      const recorded = retrieved({ files: { game: 'write', shared: {}, quota: 20 }, workspace: 7, prompts: 'custom-prompts' });
+      fs.writeFileSync(path.join(dir, 'a-older.json'), JSON.stringify(older));
+      fs.writeFileSync(path.join(dir, 'b-recorded.json'), JSON.stringify(recorded));
+
+      const rows = loadRetrievedRows(dir);
+
+      expect(rows).toEqual([{ ...older, files: false, prompts: false }, recorded]);
+    });
+  });
+
   describe('model-override expansion', () => {
     it('runs once with the original model when modelOverride is absent', async () => {
       const outputDir = makeTempDir();

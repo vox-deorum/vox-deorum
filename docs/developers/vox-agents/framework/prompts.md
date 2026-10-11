@@ -41,9 +41,9 @@ A run is a loop of model calls. Each call is a **step**: it sends the whole conv
 ```
 executeAgent
  │
+ ├─ getRunTools()          ──► tools offered for the whole run (decides file mode)
  ├─ getSystem()            ──► empty string? stop, nothing to do
  ├─ getInitialMessages()   ──► opening context (game state, chat record, hint)
- ├─ getRunTools()          ──► tools offered for the whole run
  ├─ triage() (optional)    ──► picks a model tier
  ├─ getModel()             ──► model config for the run
  │
@@ -85,6 +85,35 @@ One request on step 2 of a strategist run, top to bottom, for a provider with na
 The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for a finishing call.
 
 For models in prompt mode, the tool block is removed and its content moves into the text. See [Prompt-mode tool calling](../models/middleware.md#prompt-mode-tool-calling).
+
+## File mode
+
+A run is in file mode when its seat has files on and its resolved run tools include `bash`. The loop resolves `getRunTools()` before any prompt text is built and keeps the result on the execution frame, so `fileMode(context)` in `src/knowledge/directions.ts` gives every prompt builder in the run the same answer. Agents without tools, or without `bash`, stay inline even when files are on.
+
+In file mode, an agent adds **records directions** to its opening messages through `appendRecordsDirections`, placing them where its context needs them. The helper checks file mode; the text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
+
+- that the seat's records and the shared reference are read-only folders in the workspace;
+- which turns are recorded, as ranges, and the latest turn folder;
+- that each records folder has a catalog of its files;
+- which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports.
+
+Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, others, and system files. The directions depend only on which turns are recorded, so briefing and note commits leave them unchanged and they stay fixed for the turn. The directions message carries no cache breakpoint.
+
+| Agent | Opening messages in file mode |
+| --- | --- |
+| Simple strategist | System message, then a core message (strategies, victory, full players, decision context), then the directions. |
+| Briefed, staffed, and learned strategists | The same inline content as before, with the directions as the last opening message. |
+| Diplomat, spokesperson, and negotiator | The directions follow the shared game context. |
+| Briefers and the diplomatic analyst | Unchanged. |
+
+A file-mode strategist's decision context (`getDecisionTurnContext`) always names the last completed decision turn, even when it was the previous turn, or says that no decision has completed on the current timeline. The strategist chooses what to read. There is no merged events file and no prescribed reading order.
+
+The input decides how events are filtered:
+
+- A file-mode strategist runs once per decision. If its request overflows, the decision fails and the last decision turn stays where it was.
+- Inline consumers keep the merged events window. On overflow they retry with fewer events, dropping the least important first. These are strategists without `bash`, briefers, and pacing triage.
+
+`VoxPlayer` (`src/strategist/vox-player.ts`) resolves the strategist's tools once per decision and passes that declaration into each execution attempt, so event handling and prompt preparation use the same tools.
 
 ## Offered and allowed tools
 
@@ -147,6 +176,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | --- | --- | --- |
 | An agent's main instructions | Its file in `vox-agents/prompts/`, and the data passed by its `getSystem()` | See [Prompt files](prompt-files.md). |
 | Opening game context | The agent's `getInitialMessages()` | Shared envoy and analyst context is `buildGameContextMessages` in `src/strategist/strategy-parameters.ts`. |
+| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text fixed within a turn. |
 | A game-state section's title, description, or default Markdown | The registry in `src/knowledge/sections.ts` | See [Prompt files](prompt-files.md#game-state-sections). |
 | Envoy hint (identity, audience, turn) | `getHint` in `src/envoy/live-envoy.ts`, overridden in `src/telepathist/talkative-telepathist.ts` | Always the last opening message for a live envoy. |
 | Envoy add-on after the hint | `getDefaultAddon` in `src/envoy/envoy.ts`, overridden by the diplomat and spokesperson | |
@@ -194,3 +224,5 @@ Tests build their expected text through the same builders, so a wording change d
 | Rescue of required tool calls | `infra/required-tool-rescue.test.ts` |
 | Capability text | `utils/capability-prompt.test.ts` |
 | Prompt files and custom folders | `utils/prompt-files.test.ts` |
+| File mode and records directions | `knowledge/directions.test.ts`, `strategist/file-mode.test.ts` |
+| Event input path per strategist | `strategist/vox-player-file-events.test.ts` |

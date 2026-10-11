@@ -24,6 +24,7 @@ import { runOracleTasks } from './run-control.js';
 import { loadToolSchemaCache, replaceToolsWithSchemaOnly } from './utils/schema-tools.js';
 import { getTrailBase, getTrailPaths, readReplayCache, resolvePath, writeCsv, writeTrail } from './utils/output.js';
 import { startBatchManager, shutdownBatchManager } from './batch/batch-manager.js';
+import { unrecordedRunContext } from './types.js';
 import type {
   OracleConfig,
   OracleParameters,
@@ -39,6 +40,26 @@ const logger = createLogger('OracleReplayer');
 
 /** Marker on a task that shutdown dropped before it ran, rather than a real replay failure. */
 const INTERRUPTED_ERROR = 'Interrupted by shutdown';
+
+/**
+ * Load the retrieved rows saved in a retrieve directory. Rows saved before the workspace fields
+ * existed default to files off and built-in prompts.
+ *
+ * @param retrieveDir - The directory holding one JSON file per retrieved row
+ */
+export function loadRetrievedRows(retrieveDir: string): RetrievedRow[] {
+  if (!fs.existsSync(retrieveDir)) {
+    throw new Error(`No retrieved rows found at ${retrieveDir}. Run --retrieve first.`);
+  }
+  const files = fs.readdirSync(retrieveDir).filter(f => f.endsWith('.json'));
+  if (files.length === 0) {
+    throw new Error(`No retrieved rows found at ${retrieveDir}. Run --retrieve first.`);
+  }
+  return files.map(f => ({
+    ...unrecordedRunContext,
+    ...JSON.parse(fs.readFileSync(path.join(retrieveDir, f), 'utf-8')),
+  }) as RetrievedRow);
+}
 
 /**
  * Replay phase: run retrieved rows through the LLM.
@@ -60,14 +81,7 @@ export async function runReplay(
 
   // Load retrieved rows from disk if not provided
   if (!rows) {
-    if (!fs.existsSync(retrieveDir)) {
-      throw new Error(`No retrieved rows found at ${retrieveDir}. Run --retrieve first.`);
-    }
-    const files = fs.readdirSync(retrieveDir).filter(f => f.endsWith('.json'));
-    if (files.length === 0) {
-      throw new Error(`No retrieved rows found at ${retrieveDir}. Run --retrieve first.`);
-    }
-    rows = files.map(f => JSON.parse(fs.readFileSync(path.join(retrieveDir, f), 'utf-8')) as RetrievedRow);
+    rows = loadRetrievedRows(retrieveDir);
     logger.info(`Loaded ${rows.length} retrieved rows from ${retrieveDir}`);
   }
 

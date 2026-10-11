@@ -38,6 +38,7 @@ import { PROMISE_METADATA } from "../../../../mcp-server/dist/utils/deal-schema.
 import { activeProposalDeal, deriveActiveProposal } from "../../utils/diplomacy/deal/deal-reduce.js";
 import { resolveNegotiator } from "./resolve-negotiator.js";
 import { getTeammateCounterpart } from "../context/diplomacy-context.js";
+import { appendRecordsDirections } from "../../knowledge/directions.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 import {
   NEGOTIATOR_TERMINAL_TOOLS,
@@ -226,8 +227,10 @@ export class Negotiator extends VoxAgent<StrategistParameters, NegotiatorInput, 
           "(options unavailable)")
     );
 
+    const messages = buildGameContextMessages(parameters);
+    appendRecordsDirections(messages, context);
     return [
-      ...buildGameContextMessages(parameters),
+      ...messages,
       ...(background.text ? [{ role: "user" as const, content: background.text }] : []),
       { role: "user", content: sections.join("\n\n") },
       { role: "system", content: `You are the negotiator for ${civName}, serving ${leader}. Once you are confidence in your decision, use exactly *one* tool in the provided format to ${(input.activeProposal ? "negotiate" : "propose")} ${civName}'s diplomatic deals and terms.` },

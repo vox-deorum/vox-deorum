@@ -10,6 +10,8 @@ import type { Kysely } from 'kysely';
 import type { ModelMessage } from 'ai';
 import { fuzzy } from 'fast-fuzzy';
 import { createLogger } from '../../utils/logger.js';
+import { isRecord } from '../../utils/guards.js';
+import type { ResolvedFilesConfig } from '../../types/config.js';
 import type { TelemetryDatabase, Span } from '../../utils/telemetry/schema.js';
 import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
 import type { ExtractedPrompt } from '../types.js';
@@ -131,10 +133,6 @@ export async function extractPrompt(
     }
   }
 
-  // Get the agent's model from its span attributes
-  const agentAttrs = parseSpanAttributes(selectedAgentSpans[0]);
-  const modelString = agentAttrs['model'] as string || '';
-
   // Find step spans (children of agent spans)
   const agentSpanIds = selectedAgentSpans.map(s => s.spanId);
   const stepSpans = await db
@@ -151,6 +149,18 @@ export async function extractPrompt(
 
   // Extract from the first step span (we only replay the initial prompt)
   const firstStep = stepSpans[0];
+
+  // The attributes come from the run that produced the first step. Rows predating these
+  // attributes default to files off, no workspace commit, and built-in prompts.
+  const sourceAgentSpan = selectedAgentSpans.find(s => s.spanId === firstStep.parentSpanId) ?? selectedAgentSpans[0];
+  const agentAttrs = parseSpanAttributes(sourceAgentSpan);
+  const modelString = agentAttrs['model'] as string || '';
+  const files = parseRecordedFiles(agentAttrs['context.files']);
+  const rawWorkspace = agentAttrs['context.workspace'];
+  const workspace = typeof rawWorkspace === 'number' ? rawWorkspace : undefined;
+  const rawPrompts = agentAttrs['context.prompts'];
+  const prompts = typeof rawPrompts === 'string' ? rawPrompts : false;
+
   const stepAttrs = parseSpanAttributes(firstStep);
 
   // Parse messages
@@ -205,6 +215,9 @@ export async function extractPrompt(
     modelString: finalModelString,
     agentName,
     framing,
+    files,
+    workspace,
+    prompts,
   };
 }
 
@@ -273,6 +286,20 @@ export async function findTurnByRationale(
   }
 
   return 'mismatch';
+}
+
+/**
+ * Read a recorded context.files attribute: the files config as a JSON string, or false. Any
+ * other value (absent, malformed JSON, or a parse result that is not an object) means files off.
+ */
+function parseRecordedFiles(value: unknown): ResolvedFilesConfig | false {
+  if (typeof value !== 'string') return false;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isRecord(parsed) ? parsed as ResolvedFilesConfig : false;
+  } catch {
+    return false;
+  }
 }
 
 /** Safely parse JSON, returning the value as-is if already parsed */

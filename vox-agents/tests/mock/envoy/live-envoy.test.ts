@@ -4,19 +4,22 @@
  * hazard of importing the abstract module directly). LiveEnvoy's lifecycle hooks are public
  * or protected; we reach them through a loosely-typed handle (as in diplomat-prompts.test.ts).
  *
- * Covered: getInitialMessages (shared game context, hint append), getRunTools (full tool list,
- * plus bash with files on), and getExtraTools (exposes get-briefing). Identity/context derive from the typed
+ * Covered: getInitialMessages (shared game context, hint append, file-mode records directions),
+ * getRunTools (full tool list, plus bash with files on), and getExtraTools (exposes get-briefing).
+ * Identity/context derive from the typed
  * parameters; buildGameContextMessages requires a seeded game state near parameters.turn.
  */
 
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../src/types/index.js';
 import { speakerLabel } from '../../../src/utils/diplomacy/transcript/transcript-utils.js';
 import { buildGameContextMessages } from '../../../src/strategist/strategy-parameters.js';
+import { recordsDirections } from '../../../src/knowledge/directions.js';
 import { createFakeVoxContext } from '../../helpers/fake-vox-context.js';
-import { cacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
+import { cacheBreakpoint, countCacheBreakpoints } from '../../../src/utils/models/cache-breakpoint.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../knowledge/directions-fixtures.js';
 
 const spokesperson = agentRegistry.get('spokesperson') as any;
 
@@ -141,6 +144,65 @@ describe('LiveEnvoy.getInitialMessages past/ongoing split (cache-aware record)',
     expect(messages.some((m: any) => typeof m.content === 'string' && m.content.startsWith('The conversation so far'))).toBe(false);
     const joined = messages.map((m: any) => (typeof m.content === 'string' ? m.content : '')).join('\n');
     expect(joined).toContain('[Turn 5] Rome, the leader: hello there');
+  });
+});
+
+describe('LiveEnvoy.getInitialMessages file mode', () => {
+  let temp: TempRecords;
+
+  beforeEach(() => {
+    temp = openTempRecords();
+    temp.records.recordTurn(recordParameters(), recordableState(4));
+  });
+  afterEach(() => temp.dispose());
+
+  /** A thread with one settled past row (store id 1) and one ongoing question. */
+  function chat(): EnvoyThread {
+    return thread({
+      pastMessageID: 1,
+      messages: [
+        { message: { role: 'user', content: 'What are your borders?' } as any, metadata: { datetime: new Date(0), turn: 3, id: 1 } },
+        textMessage('And the river along them?'),
+      ],
+    });
+  }
+
+  /**
+   * The same envoy's messages built inline and in file mode over the temp records store, with the
+   * directions text the file-mode build should carry. Each build gets its own parameters and thread.
+   */
+  async function both(): Promise<{ plain: any[]; messages: any[]; directions: string }> {
+    const plain = await spokesperson.getInitialMessages(liveParams(), chat(), createFakeVoxContext().asContext());
+
+    const fake = enableFileMode(createFakeVoxContext(), temp.store);
+    const parameters = liveParams();
+    const messages = await spokesperson.getInitialMessages(parameters, chat(), fake.asContext());
+    return { plain, messages, directions: recordsDirections(fake.asContext(), parameters) };
+  }
+
+  it('adds the directions once, after the game context and ahead of the conversation record', async () => {
+    const { plain, messages, directions } = await both();
+    const contextMessages = buildGameContextMessages(liveParams() as any);
+    const at = messages.findIndex((m: any) => m.content === directions);
+
+    expect(messages.filter((m: any) => m.content === directions)).toHaveLength(1);
+    expect(at).toBe(contextMessages.length);
+    expect(messages.slice(0, at)).toEqual(contextMessages);
+    // Everything after the game context rides along unchanged: the compiled past block and its anchor,
+    // the ongoing rows, then the always-last hint, so the directions only widen the cached prefix.
+    expect(messages.slice(at + 1)).toEqual(plain.slice(contextMessages.length));
+    expect(messages[at + 1].role).toBe('user');
+    expect(messages[messages.length - 1].role).toBe('system');
+    // The directions carry no breakpoint of their own.
+    expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(plain));
+  });
+
+  it('adds no directions when files are off', async () => {
+    const { plain, messages, directions } = await both();
+
+    expect(plain).toHaveLength(messages.length - 1);
+    expect(plain.some((m: any) => m.content === directions)).toBe(false);
+    expect(countCacheBreakpoints(plain)).toBe(countCacheBreakpoints(messages));
   });
 });
 

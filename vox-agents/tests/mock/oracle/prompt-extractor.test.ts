@@ -514,6 +514,79 @@ describe('oracle prompt-extractor', () => {
     });
   });
 
+  describe('extractPrompt recorded run context', () => {
+    it('should read files, workspace, and prompts from the agent span attributes', async () => {
+      const files = { game: 'write', shared: {}, quota: 20 };
+      await seedTurn({
+        turn: 40,
+        traceId: 'ctx-attrs',
+        agentAttrs: {
+          model: 'm/m@low',
+          'context.files': JSON.stringify(files),
+          'context.workspace': 7,
+          'context.prompts': 'custom-prompts',
+        },
+      });
+
+      const result = await extractPrompt(db, 40);
+      expect(result).not.toBeNull();
+      expect(result!.files).toEqual(files);
+      expect(result!.workspace).toBe(7);
+      expect(result!.prompts).toBe('custom-prompts');
+    });
+
+    it('should default older rows to files off, no workspace, and no custom prompts', async () => {
+      await seedTurn({ turn: 41, traceId: 'ctx-legacy' });
+
+      const result = await extractPrompt(db, 41);
+      expect(result).not.toBeNull();
+      expect(result!.files).toBe(false);
+      expect(result!.workspace).toBeUndefined();
+      expect(result!.prompts).toBe(false);
+    });
+
+    it('should read a false files attribute as files off with no workspace recorded', async () => {
+      // A files-disabled run records false on both settings and never records a workspace.
+      await seedTurn({
+        turn: 42,
+        traceId: 'ctx-files-false',
+        agentAttrs: { model: 'm/m@low', 'context.files': false, 'context.prompts': false },
+      });
+
+      const result = await extractPrompt(db, 42);
+      expect(result!.files).toBe(false);
+      expect(result!.workspace).toBeUndefined();
+      expect(result!.prompts).toBe(false);
+    });
+
+    it('should fall back to files off when the files JSON is unparsable or not an object', async () => {
+      await seedTurn({
+        turn: 43,
+        traceId: 'ctx-files-malformed',
+        agentAttrs: { model: 'm/m@low', 'context.files': '{ not json' },
+      });
+      expect((await extractPrompt(db, 43))!.files).toBe(false);
+
+      await seedTurn({
+        turn: 44,
+        traceId: 'ctx-files-scalar',
+        agentAttrs: { model: 'm/m@low', 'context.files': '"a string"' },
+      });
+      expect((await extractPrompt(db, 44))!.files).toBe(false);
+    });
+
+    it('should ignore a non-numeric workspace attribute', async () => {
+      await seedTurn({
+        turn: 45,
+        traceId: 'ctx-workspace-string',
+        agentAttrs: { model: 'm/m@low', 'context.workspace': '7' },
+      });
+
+      const result = await extractPrompt(db, 45);
+      expect(result!.workspace).toBeUndefined();
+    });
+  });
+
   describe('extractPrompt malformed-JSON tolerance', () => {
     it('treats a malformed step.messages attribute as empty (no throw, null result)', async () => {
       await seedTurn({
