@@ -24,7 +24,7 @@ const logger = createLogger('PlayerWorkspace');
 export const workspaceCwd = '/workspace';
 
 /** Characters kept from each output stream before the rest is cut off. */
-export const workspaceOutputLimit = 8000;
+export const workspaceOutputLimit = 10000;
 
 /** Name of the guide file seeded at the writable game notes root and writable shared roots. */
 export const workspaceGuideFile = 'AGENTS.md';

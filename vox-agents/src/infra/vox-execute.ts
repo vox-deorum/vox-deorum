@@ -33,6 +33,7 @@ import { appendReminder } from "../utils/prompts/reminders.js";
 import { compactWorkspaceTraffic, compactionReminder, dropOlderReasoning } from "../utils/prompts/message-history.js";
 import { buildRemovedToolRejections } from "../utils/tools/tool-availability.js";
 import { isContextLengthError } from "../utils/retry.js";
+import { recordedTurns } from "../knowledge/records.js";
 import { agentRegistry } from "./agent-registry.js";
 import type { ExecuteTokenOutput, ExecuteOptions, ResolvedRunTools } from "./vox-run.js";
 import {
@@ -436,6 +437,12 @@ async function executeAgentStep<TParameters extends AgentParameters>(
       // Derived from the executable list, so a step that may run nothing is never forced to call.
       const stepToolChoice = executableTools && executableTools.length > 0 ? agent.toolChoice : "auto";
       const stepOutputSchema = stepConfig.outputSchema;
+      // The workspace guidance shows the latest recorded turn. It is read once per execution, so a
+      // turn recorded mid-run never changes the system text between steps.
+      const latestTurn = host.files
+        ? await host.memoizeForExecution('latestRecordedTurn', async () =>
+          host.store ? recordedTurns(host.store.manifest()).at(-1) : undefined)
+        : undefined;
 
       // Append the closing reminder (the requirement when the choice is required, tool policy when
       // narrowed, finalize nudge after the first step). Provider middleware keeps its system text the
@@ -485,6 +492,8 @@ async function executeAgentStep<TParameters extends AgentParameters>(
           model: getModel(stepModel, {
             // Describes the workspace when the step declares bash.
             files: host.files,
+            latestTurn,
+            prompts: host.prompts,
             onToolFraming: ({ framing }) => { stepToolFraming = framing; },
             // Provider guidance names these as what ends the turn. Passed unfiltered: each
             // middleware intersects them with the run's declared tools, so its text stays stable on

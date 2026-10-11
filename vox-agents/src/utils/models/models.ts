@@ -8,7 +8,7 @@
 import { type EmbeddingModel, LanguageModel, ProviderMetadata, extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { config } from '../config.js';
-import type { Model, ReasoningEffort, ResolvedFilesConfig } from '../../types/index.js';
+import type { Model, PromptsSetting, ReasoningEffort, ResolvedFilesConfig } from '../../types/index.js';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
@@ -206,6 +206,10 @@ export function resolveToolFraming(config: Model): ToolCallFraming {
 export function getModel(config: Model, options?: {
   /** The seat's workspace, described to the model when the request declares the bash tool. */
   files?: ResolvedFilesConfig;
+  /** The latest recorded turn, which the workspace guidance uses in its examples. */
+  latestTurn?: number;
+  /** The run's prompt folder setting, for the workspace guidance template. */
+  prompts?: PromptsSetting;
   onToolFraming?: (info: { framing: ToolCallFraming }) => void;
   /** The calling agent's completion tools, named by provider prompt guidance. */
   completionTools?: string[];
@@ -365,10 +369,11 @@ export function getModel(config: Model, options?: {
     result = wrapLanguageModel({
       model: result,
       middleware: capabilityMiddleware(
-        { files: options?.files, web },
+        { files: options?.files, latestTurn: options?.latestTurn, web },
         {
           completionTools: options?.completionTools,
           terminalNoun: toolFraming === 'action' ? 'actions' : 'tools',
+          prompts: options?.prompts,
         },
       ),
     });

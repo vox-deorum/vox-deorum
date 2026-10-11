@@ -7,6 +7,7 @@ import { SeatRecords } from '../../../src/knowledge/records.js';
 import type { GameState, StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 
 /** A temporary seat store with a records writer, removed by `dispose`. */
 export interface TempRecords {
@@ -49,11 +50,12 @@ export function recordParameters(): StrategistParameters {
 
 /**
  * Put a fake context in file mode: files on, bash registered, and the run's tools resolved as the
- * execution loop would. Pass `tools` to resolve a declared list instead of all registered tools.
+ * execution loop would. Pass `tools` to resolve a declared list instead of all registered tools,
+ * and `files` to set the seat's folders.
  */
-export function enableFileMode<T extends object>(context: T, store?: WorkspaceStore, tools?: string[]): T {
+export function enableFileMode<T extends object>(context: T, store?: WorkspaceStore, tools?: string[], files: Partial<ResolvedFilesConfig> = {}): T {
   Object.assign(context, {
-    files: {},
+    files,
     store,
     prompts: false,
     tools: { ...((context as { tools?: object }).tools ?? {}), [bashToolName]: {} },

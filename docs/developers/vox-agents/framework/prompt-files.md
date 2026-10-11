@@ -14,6 +14,7 @@ This page covers the built-in files, custom folders, and the game-state section 
 | `<agent-name>.<variant>.md` | A variant. The specialized briefer has `.military`, `.economy`, and `.diplomacy`. |
 | `strategist-triage.md` | The system prompt for [strategist triage](../models/tiers-and-triage.md#strategist-triage). It is not an agent. |
 | `records-directions.md` | The records directions an agent adds to its opening messages in [file mode](prompts.md#file-mode). It is not an agent. |
+| `workspace.md` | The Workspace section of the [capability reminder](../models/middleware.md#capability-reminder) in the system prompt. It is not an agent. |
 | `shared/*.md` | Passages several agents include, such as resource descriptions and decision instructions. |
 
 A template's name is its path without `.md`, such as `shared/goals`. The folder is found relative to the module, so both `src` and `dist` builds read it, and the installer ships it.

@@ -4,15 +4,10 @@
  */
 
 import type { LanguageModelV4Middleware } from '@ai-sdk/provider';
-import type { ResolvedFilesConfig } from '../../types/config.js';
+import type { PromptsSetting, ResolvedFilesConfig } from '../../types/config.js';
+import { renderSystemPrompt } from '../prompts/prompt-files.js';
 import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
-import {
-  workspaceCatalogFile,
-  workspaceCwd,
-  workspaceGuideFile,
-  workspaceRecordsPath,
-  workspaceReferenceMountPath,
-} from '../workspace/player-workspace.js';
+import { workspaceOutputLimit } from '../workspace/player-workspace.js';
 import { clientFunctionToolNames } from './providers/required-tool-choice.js';
 import { appendSystemInstruction } from './providers/system-prompt.js';
 
@@ -26,6 +21,8 @@ export type TerminalNoun = 'tools' | 'actions';
 export interface Capabilities {
   /** The seat's workspace, described only when the request declares the bash tool. */
   files?: ResolvedFilesConfig;
+  /** The latest recorded turn, used by the workspace examples; undefined before any is recorded. */
+  latestTurn?: number;
   /** Native web search and fetch, executed by a CLI provider. */
   web: boolean;
 }
@@ -35,33 +32,30 @@ export interface CapabilityMiddlewareOptions {
   /** The calling agent's completion tools, named as what to call after the capabilities. */
   completionTools?: string[];
   terminalNoun?: TerminalNoun;
+  /** The run's prompt folder setting; undefined uses the root setting. */
+  prompts?: PromptsSetting;
 }
 
-/** One bullet per mounted folder, naming its access and purpose. */
-function folderBullets(files: ResolvedFilesConfig): string[] {
-  const bullets: string[] = [
-    `- \`${workspaceRecordsPath}\` (read): reports, events, and briefings recorded for each turn. Read its ${workspaceCatalogFile} to find files.`,
-    `- \`${workspaceReferenceMountPath}\` (read): game reference on technologies, policies, buildings, and units.`,
-  ];
-  if (files.game) {
-    bullets.push(`- \`${workspaceCwd}/game\` (${files.game}): shared with the other agents of your civilization in this game. Read its ${workspaceGuideFile} first.`);
-  }
-  for (const [name, access] of Object.entries(files.shared)) {
-    bullets.push(`- \`${workspaceCwd}/shared/${name}\` (${access}): outlives this game and is seen by other games and seats. Keep only general lessons and references here.`);
-  }
-  return bullets;
-}
-
-/** The workspace section: mounted folders, then expectations for using bash. */
-function workspaceSection(files: ResolvedFilesConfig, terminalNoun: TerminalNoun): string {
-  const toolNoun = terminalNoun === 'actions' ? 'action' : 'tool';
-  return `## Workspace
-You have a file workspace through the \`${bashToolName}\` ${toolNoun}.
-${folderBullets(files).join('\n')}
-- Keep notes organized. Current game information from your ${terminalNoun} should take priority over stale notes.
-- Each round of \`${bashToolName}\` calls uses one step of your limited step budget.
-  - Make independent \`${bashToolName}\` calls in parallel, or combine them in one script.
-  - Write files with heredocs.`;
+/**
+ * The workspace section from `prompts/workspace.md`: mounted folders, expectations for using bash,
+ * and how to read large files, with examples on the latest recorded turn folder.
+ */
+function workspaceSection(
+  files: ResolvedFilesConfig,
+  terminalNoun: TerminalNoun,
+  latestTurn: number | undefined,
+  prompts: PromptsSetting | undefined,
+): string {
+  return renderSystemPrompt(prompts === undefined ? undefined : { prompts }, 'workspace', {
+    toolName: bashToolName,
+    toolNoun: terminalNoun === 'actions' ? 'action' : 'tool',
+    terminalNoun,
+    game: files.game ? { access: files.game } : false,
+    shared: Object.entries(files.shared).map(([name, access]) => ({ name, access })),
+    outputLimit: workspaceOutputLimit.toLocaleString('en-US'),
+    hasTurn: latestTurn !== undefined,
+    turn: latestTurn ?? '<N>',
+  });
 }
 
 /** The web section for CLI providers with native web access. */
@@ -76,20 +70,22 @@ const webSection = `## Web
  * @param capabilities - The workspace and web access to describe
  * @param terminalNames - Completion tools declared on this request
  * @param terminalNoun - What the prompt calls a tool
+ * @param prompts - The prompt folder setting for the workspace template; undefined uses the root
  */
 export function capabilityInstruction(
   capabilities: Capabilities,
   terminalNames: string[] = [],
   terminalNoun: TerminalNoun = 'tools',
+  prompts?: PromptsSetting,
 ): string | undefined {
-  const { files, web } = capabilities;
+  const { files, latestTurn, web } = capabilities;
   if (!files && !web) return undefined;
 
   const terminalList = formatToolChoiceList(terminalNames);
   const sections = [
     `${capabilityHeading}
 To support your core mission, extra capabilities are enabled.`,
-    files ? workspaceSection(files, terminalNoun) : undefined,
+    files ? workspaceSection(files, terminalNoun, latestTurn, prompts) : undefined,
     web ? webSection : undefined,
     terminalList ? `If you plan to use these capabilities, use them before any terminal ${terminalNoun}: ${terminalList}.` : undefined,
   ];
@@ -99,10 +95,11 @@ To support your core mission, extra capabilities are enabled.`,
 /**
  * Add the capability reminder as an outer middleware wrapper. Workspace guidance and terminal
  * names follow the tools declared on each request, so the text stays fixed for a run whose
- * declarations do not change.
+ * declarations do not change. The latest recorded turn in the workspace examples is fixed by the
+ * caller for the whole run, so it changes the text only between runs.
  *
  * @param capabilities - The workspace and web access available to the model
- * @param options - Completion tools and terminology
+ * @param options - Completion tools, terminology, and prompt folder
  */
 export function capabilityMiddleware(
   capabilities: Capabilities,
@@ -116,10 +113,12 @@ export function capabilityMiddleware(
       const instruction = capabilityInstruction(
         {
           files: declared.includes(bashToolName) ? capabilities.files : undefined,
+          latestTurn: capabilities.latestTurn,
           web: capabilities.web,
         },
         declared.filter((name) => completionNames.has(name)),
         options.terminalNoun,
+        options.prompts,
       );
       return instruction === undefined
         ? params

@@ -26,7 +26,7 @@ export { bashToolName } from './tool-names.js';
 /** One line per mount, naming its virtual path and access, for the tool description. */
 function describeMounts(files: ResolvedFilesConfig): string[] {
   const lines: string[] = [
-    `- ${workspaceRecordsPath} (read): reports, events, and briefings the game recorded for each turn. Start with ${workspaceCatalogFile}`,
+    `- ${workspaceRecordsPath} (read): reports, events, and briefings the game recorded for each turn. ${workspaceCatalogFile} indexes sections, gaps, briefings, and file sizes`,
     `- ${workspaceReferenceMountPath} (read): game reference on technologies, policies, buildings, and units`,
   ];
   if (files.game) lines.push(`- ${workspaceCwd}/game (${files.game}): notes for your civilization in this game`);

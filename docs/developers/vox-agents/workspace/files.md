@@ -61,7 +61,7 @@ Players read the game notes, including the guide, by exporting the store (see [R
 
 `src/utils/tools/bash-tool.ts` wraps the shell as a tool. `VoxAgent.getRunTools` adds `bash` to any agent whose `getActiveTools()` list is not empty. Runs that restrict their tools leave it out; for example, a telepathist answering a special message has no tools.
 
-Each output stream is capped at 8,000 characters.
+Each output stream is capped at 10,000 characters.
 
 ## Step budget
 

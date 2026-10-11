@@ -18,6 +18,7 @@ import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import {
   workspaceCatalogFile,
   workspaceGuideFile,
+  workspaceOutputLimit,
   workspaceRecordsPath,
   workspaceReferenceMountPath,
 } from '../../../src/utils/workspace/player-workspace.js';
@@ -88,6 +89,17 @@ describe('capabilityInstruction', () => {
       expect(instruction).toContain(workspaceCatalogFile);
       expect(instruction).toContain(workspaceReferenceMountPath);
     }
+  });
+
+  it('gives the output limit and uses the latest recorded turn in its examples', () => {
+    const limit = workspaceOutputLimit.toLocaleString('en-US');
+    const recorded = capabilityInstruction({ files: gameWrite, latestTurn: 42, web: false })!;
+    const none = capabilityInstruction({ files: gameWrite, web: false })!;
+    expect(recorded).toContain(limit);
+    expect(recorded).toContain(`${workspaceRecordsPath}/turn-42/`);
+    expect(none).toContain(limit);
+    expect(none).not.toMatch(/turn-\d+\//);
+    expect(capabilityInstruction({ web: true })).not.toContain(limit);
   });
 
   it('describes web access without inventing a workspace', () => {

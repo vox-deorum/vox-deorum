@@ -92,12 +92,16 @@ A run is in file mode when its seat has files on and its resolved run tools incl
 
 In file mode, an agent adds **records directions** to its opening messages through `appendRecordsDirections`, placing them where its context needs them. The helper checks file mode; the text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
 
-- that the seat's records and the shared reference are read-only folders in the workspace;
+- which folders are mounted and their access: the records and the shared reference are read-only, the game notes folder and each shared folder are read-only or writable according to the seat's files setting, and `/tmp` is writable;
 - which turns are recorded, as ranges, and the latest turn folder;
-- that each records folder has a catalog of its files;
+- when to open the records `CATALOG.md`: only for the full section index, gaps between turn folders, briefings, or file sizes;
 - which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports.
 
-Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, others, and system files. The directions depend only on which turns are recorded, so briefing and note commits leave them unchanged and they stay fixed for the turn. The directions message carries no cache breakpoint.
+Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, others, and system files.
+
+The message ends with the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
+
+The directions depend on which turns are recorded and on the guide's text. Briefing commits still leave the text unchanged within a turn. An agent that edits the guide changes it for later runs. The directions message carries no cache breakpoint.
 
 | Agent | Opening messages in file mode |
 | --- | --- |
@@ -189,6 +193,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | Error text for a call to a removed tool | `buildRemovedToolRejections` in `src/utils/tools/tool-availability.ts` | The model sees it as the call's result. |
 | Empty-reply rescue wording | `buildRescuePrompt` in `src/utils/models/text-cleaning.ts` | |
 | Completion-tool sentence (Anthropic, Codex) | `completionToolsInstruction` in `src/utils/models/providers/required-tool-choice.ts` | Must not depend on whether the step requires a call. |
+| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | See [Capability reminder](../models/middleware.md#capability-reminder). |
 | Extra Capabilities section | `capabilityInstruction` in `src/utils/models/capability-prompt.ts` | |
 | Prompt-mode tool instructions | `createToolPrompts` in `src/utils/models/tool-rescue/prompt.ts` | Keep it in step with `buildToolCallArraySchema` and `formatToolCallText`. |
 | Which models use prompt mode | `options.toolMiddleware` in the model config; defaults in `src/utils/models/rules.ts` | |

@@ -10,7 +10,6 @@ import type { ConsolidatedEventsReport } from "../../../mcp-server/dist/tools/kn
 import type { GameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { filterEventsByCategory, type EventCategory } from "../utils/prompts/event-filters.js";
 import { jsonToMarkdown, type JsonToMarkdownConfig } from "../utils/tools/json-to-markdown.js";
-import { workspaceOutputLimit } from "../utils/workspace/player-workspace.js";
 import type { CommitID, Manifest, PathChange, WorkspaceStore } from "../utils/workspace/workspace-store.js";
 import { renderSection, sections, type SectionDefinition, type SectionKey, type SectionSplit } from "./sections.js";
 
@@ -204,7 +203,8 @@ export function recordedTurns(tree: Manifest): number[] {
 
 /**
  * Build the catalog for a records tree: the layout, a section index, recorded turn ranges, any
- * missing processed-turn folders, the latest files' sizes, and how to query large files.
+ * missing processed-turn folders, and the latest files' sizes. General advice on reading large
+ * files is in the workspace section of the system prompt (prompts/workspace.md).
  *
  * @param tree - The store version the catalog describes
  */
@@ -254,17 +254,6 @@ export function buildCatalog(tree: Manifest): string {
   if (latestRows.length > 0) {
     lines.push('', '## Latest file sizes', '| File | Size |', '| --- | --- |', ...latestRows);
   }
-
-  lines.push(
-    '',
-    '## Querying',
-    `Bash output is cut at ${workspaceOutputLimit.toLocaleString('en-US')} characters per stream, so read large files in pieces:`,
-    '- Check sizes first: `wc -c turn-<N>/*.md`.',
-    '- Find lines: `grep -n "Babylon" turn-<N>/players.md`.',
-    '- Read a slice: `head -n 60 turn-<N>/cities.md` or `sed -n \'120,180p\' turn-<N>/military.md`.',
-    '- Query JSON: `jq \'keys\' turn-<N>/players.json` or `jq \'.["12"]\' turn-<N>/events-all.json`.',
-    '- Prefer split parts, such as `turn-<N>/players/<civilization>.md`, when you need one civilization or zone.',
-  );
   return `${lines.join('\n')}\n`;
 }
 

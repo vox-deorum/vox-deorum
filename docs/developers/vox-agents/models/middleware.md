@@ -42,13 +42,15 @@ These wrappers do not change prompt text:
 
 ## Capability reminder
 
-A model call that has `bash` or CLI web access gets one short system reminder, built by `capabilityInstruction` in `src/utils/models/capability-prompt.ts`.
+A model call that has `bash` or CLI web access gets one system reminder, built by `capabilityInstruction` in `src/utils/models/capability-prompt.ts`.
 
 | Part | Included when |
 | --- | --- |
-| Workspace | The request offers the `bash` tool (any provider). Names the mounted folders and their access, points to the game folder's guide, and asks the agent to keep notes tidy and trust current game information over old notes. |
+| Workspace | The request offers the `bash` tool (any provider). Lists the mounted folders and their access, points to the game folder's guide, sets step-budget expectations, and explains how to read large files. |
 | Web | Codex or Claude Code with `hostTools: ["Web"]`. |
 | What to call next | The agent's completion tools. |
+
+The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). Its large-file advice covers the bash output limit per stream (`workspaceOutputLimit`), and examples for `wc -c`, `grep -n`, `head` and `sed`, `jq`, and split parts of a civilization or zone. The examples use the latest recorded turn folder. The execution loop reads that turn once per execution (`memoizeForExecution`), so the text stays fixed within a run and changes only between turns. Before any turn is recorded, the examples use a placeholder turn number.
 
 Model-step spans record what was enabled in `host.capability`, comma-separated:
 

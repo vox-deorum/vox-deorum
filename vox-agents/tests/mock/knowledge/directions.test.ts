@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileMode, recordsDirections } from '../../../src/knowledge/directions.js';
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { workspaceGuide, workspaceGuideFile } from '../../../src/utils/workspace/player-workspace.js';
+import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from './directions-fixtures.js';
 
 /** A bare context object standing in for a VoxContext. */
@@ -69,6 +71,56 @@ describe('recordsDirections', () => {
       expect(text).toContain('turn-<N>/events-all.md');
       for (const [suffix] of eventCategoryFiles) expect(text).toContain(`events-${suffix}.md`);
       expect(text).not.toContain('turn-<N>/players.md');
+    });
+  });
+
+  describe('folders and notes guide', () => {
+    /** Commit a game notes guide, as an agent's bash command would. */
+    function writeGuide(content: string): void {
+      temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: `game/${workspaceGuideFile}`, type: 'file', content }] });
+    }
+
+    /** Directions for a seat with the given folders. */
+    function directions(files: Partial<ResolvedFilesConfig>): string {
+      return recordsDirections(enableFileMode(bareContext(), temp.store, undefined, files));
+    }
+
+    it('should show the default guide when the game folder is writable and the guide is not seeded yet', () => {
+      const text = directions({ game: 'write', shared: {} });
+      expect(text).toContain(`/workspace/game/${workspaceGuideFile}`);
+      expect(text).toContain(workspaceGuide('game').trim());
+    });
+
+    it('should show an edited guide instead of the default', () => {
+      writeGuide('# Guide\nKeep war plans in plans/war.md.\n');
+      const text = directions({ game: 'write', shared: {} });
+      expect(text).toContain('Keep war plans in plans/war.md.');
+      expect(text).not.toContain(workspaceGuide('game').trim());
+    });
+
+    it('should tell a writable seat apart from a read-only one', () => {
+      writeGuide('# Guide\nShared rules.\n');
+      const write = directions({ game: 'write', shared: {} });
+      const read = directions({ game: 'read', shared: {} });
+      expect(read).toContain('Shared rules.');
+      expect(read).not.toBe(write);
+    });
+
+    it('should not invent a guide for a read-only folder without one', () => {
+      const missing = directions({ game: 'read', shared: {} });
+      writeGuide('   \n');
+      const blank = directions({ game: 'read', shared: {} });
+      expect(missing).toContain(`/workspace/game/${workspaceGuideFile}`);
+      expect(missing).not.toContain(workspaceGuide('game').trim());
+      expect(blank).toBe(missing);
+    });
+
+    it('should leave out the game folder and guide when the seat has none, and list shared folders', () => {
+      const text = directions({ game: false, shared: { lessons: 'write', library: 'read' } });
+      expect(text).not.toContain('/workspace/game');
+      expect(text).not.toContain(workspaceGuide('game').trim());
+      expect(text).toContain('/workspace/shared/lessons');
+      expect(text).toContain('/workspace/shared/library');
     });
   });
 

@@ -34,7 +34,7 @@ Each processed turn is recorded before pacing decides whether to skip, so skippe
 | `records/turn-<N>/events-*` | Events as `events-all`, plus economic, military, diplomatic, others, and system files. |
 | `records/turn-<N>/briefings/<kind>.md` | Briefings. See below. |
 | `records/game/` | Game-wide `situation` and `civilization` files. |
-| `records/CATALOG.md` | A list of what exists. |
+| `records/CATALOG.md` | Rebuilt in each turn and briefing commit. It holds the section index, the note that each complete report has a JSON twin, recorded turn ranges, missing processed-turn folders, turns that have only briefings, and the latest file sizes. |
 
 **Briefings.** `requestBriefing` in `src/briefer/briefing-utils.ts` writes each briefing to the records before publishing it to the game state. So no caller ever sees a briefing that was not archived.
 
