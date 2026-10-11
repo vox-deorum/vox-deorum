@@ -44,6 +44,8 @@ The reference is separate from the store. It is written once per game and shared
 
 Before any player loop starts, `StrategistSession` calls `writeGameReference` (`src/knowledge/reference.ts`). It writes technologies, policies, buildings, and units from the game database, as Markdown and JSON, into `games/<gameID>/reference/`. It writes to a temporary folder first and renames it, so seats never see a half-written reference. Every file-enabled seat mounts it read-only.
 
+Buildings without help text remain in the reference with an empty `Help` string, as in the MCP tool's detailed reports.
+
 **Setup failures.** If a store cannot open or the reference write fails, the session stops before any loop starts. A session stopped during setup starts none. In both cases `VoxPlayer.dispose` shuts down each prepared player's context and closes its store.
 
 ## Timeline and reloads

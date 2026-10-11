@@ -79,6 +79,7 @@ class GetBuildingTool extends DatabaseQueryTool<BuildingSummary, BuildingReport>
       ])
       .execute() as BuildingSummary[];
     summaries.forEach(p => {
+      p.Help = p.Help ?? '';
       p.Era = getEraName(p.Era) ?? null;
     });
     return summaries;
