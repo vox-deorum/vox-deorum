@@ -1,154 +1,90 @@
-# Flavorful tactical search: upstream VP pull request
+# Flavorful tactical search: finish in VD, then send upstream
 
-This plan sends flavorful tactical search to upstream Vox Populi (`LoneGazebo/Community-Patch-DLL`) as one pull request. It also keeps VD's training and simulation features working.
+This plan finishes flavorful tactical search on VD's `vox-deorum-5.2` branch first and tests it there. Once it is done, the finished code goes to upstream Vox Populi (`LoneGazebo/Community-Patch-DLL`) as one pull request. VD's training and simulation features must keep working throughout.
 
 ## Background
 
-The offline simulator in `vox-deorum-rl` showed that flavorful search beats a ten times larger search budget. The write-up is `vox-deorum-rl/plans/flavorful-search-issue.md`. The PR has two parts, both behind one switch that defaults off:
+The offline simulator in `vox-deorum-rl` showed that flavorful search beats a ten times larger search budget. The write-up is `vox-deorum-rl/plans/flavorful-search-issue.md`.
+
+The feature has two parts, both behind one switch that defaults off:
 
 1. **Strategy rows.** Military and economic strategies carry values for the five tactical flavors: RISK, OCCUPATION, ATTRITION, HOLD_CITY and HOLD_GROUND.
-2. **Purpose table.** Each tactical search adds a small fixed modifier for its purpose, such as a city assault, a hedgehog or a reinforcement move. The table is the one we tested.
+2. **Purpose table.** Each tactical search adds a small fixed modifier for its purpose, such as a city assault, a hedgehog or a reinforcement move. This is the tested table, `TACTICAL_INTENT_FLAVOR_DEFAULTS`.
 
-Upstream has none of the five-flavor machinery yet. Issue #13342 was a proposal, and it is now closed. The PR must therefore also carry the base:
+VD already has the five-flavor machinery and the purpose table. Today the purpose table sits behind `MOD_VOX_TACTICAL_INTENT_FLAVORS`.
 
-- the flavor declarations
-- how the flavors for one search are worked out
-- the scoring changes
+What VD still lacks:
 
-All of it behaves exactly like stock VP at neutral values.
+- the shared switch with an Advanced Setup checkbox
+- strategy rows, and the switch check on them
+- a way to measure rows the way the game actually applies them
 
-VD's fork (`vox-deorum-5.2`, based on VP 5.2.7) already has all of this. The RL simulator pulls that code out of VD's source by exact symbol name, and in two places by exact text. The PR branch is separate from VD. Keeping training and simulation working therefore depends on how VD later adopts the same behavior (Part C).
+Upstream has none of it. Issue #13342 was a proposal, and it is now closed.
+
+The RL simulator pulls VD's tactical code out of VD's source by exact symbol name, and in two places by exact text. Every VD change below has to respect that.
 
 ## Decisions
 
 | Topic | Decision |
 | --- | --- |
+| Order | Finish and test everything on the VD branch first. Port to upstream only after that. |
 | Switch | A CustomModOption that defaults to 0, **plus** an Advanced Setup checkbox. Either one turns the feature on. |
 | Part 2 form | The purpose table as tested: the `SearchIntent` enum plus `TACTICAL_INTENT_FLAVOR_DEFAULTS`, with the same names and values. |
-| Modifiers | Include the civ, operation and zone modifiers and the Lua API. Only Lua sets the civ modifiers. The operation and zone modifiers are C++ hooks that nothing sets yet, so they are labelled experimental. |
-| Part 1 data | Strategy rows only. Re-measure in the simulator before opening the PR, and add a personality fallback only if the gain disappears. |
+| Modifiers | The upstream PR includes the civ, operation and zone modifiers and the Lua API. Only Lua sets the civ modifiers. The operation and zone modifiers are C++ hooks that nothing sets yet, so they are labelled experimental. |
+| Part 1 data | Strategy rows only. Measure them before relying on them, and add a personality fallback only if the gain disappears. |
 
-## Part A: the PR branch
+## Stage 1: the switch in VD
 
-The branch is `pr/flavorful-tactical-search` in `civ5-dll`. Follow the upstream-pr skill and `docs/developers/civ5-dll/upstream-contributions.md`.
-
-- **Branch setup.**
-  - Run the `vp-diff` export first.
-  - Then run `vp-pr new flavorful-tactical-search` from `upstream/master`.
-  - Remove the automatic upstream tracking and set `pushRemote` to `origin`.
-- **Porting.**
-  - Port by hand from the VD source: the commits "Flavorful tactical search", "part 2", "Hold_ground improvement", "Improved hold_city factors" and "Improved flavorful search", plus later edits in the current HEAD.
-  - Leave the edits unstaged.
-
-### A1. The switch
+### Option rows
 
 - **CustomModOption `FLAVORFUL_TACTICAL_SEARCH`.**
   - Declare it in `CustomMods.h` and `CustomMods.cpp`.
-  - Add a row with value 0 and a comment in `(1) Community Patch/Database Changes/NewCustomModOptions.xml`.
-  - Follow the `ROUTE_PLANNER` pattern.
+  - Add a row with value 0 and a comment to `(1) Community Patch/Database Changes/NewCustomModOptions.xml`.
+  - Follow the `ROUTE_PLANNER` pattern, and use the same name upstream will get.
 - **Advanced Setup checkbox `GAMEOPTION_FLAVORFUL_TACTICAL_SEARCH`.**
   - Add a string define in `CvGameCoreDLLUtil/include/CvEnums.h`, next to the endgame aggression option.
   - Add a row in `(1) Community Patch/Database Changes/CoreNewGameOptions.xml`.
   - Add description and help text in the CP game option text file.
   - String options need no enum value and add no save data.
-- **One helper.** `TacticalAIHelpers::IsFlavorfulSearchEnabled()` checks the CustomModOption, then the game option.
-  - The string option lookup is a short linear scan, the same as existing uses such as the chill barbarians option.
-  - Call the helper once when working out a search's flavors, never inside scoring loops.
-- **Civ modifiers ignore the switch.** They are explicit Lua requests. The PR description says so.
+  - The row must exist. Without it, every lookup queries the database.
 
-### A2. The five flavors (the base, not gated, stock at neutral)
+### Keep the macro name
 
-- **Database.**
-  - A new CP SQL file in `(1) Community Patch/Database Changes/AI/` inserts the five `Flavors` rows.
-  - Register it in the CP `.civ5proj`, then regenerate the `.modinfo` and its checksums with `scripts/generate_modinfo.py`.
-  - Do the same for every edited XML or SQL file.
-  - No upstream code loops over the Flavors table in a way that the new rows would change.
-- **`CvFlavorManager`.**
-  - Port the game-scale table and its helpers: `FlavorToGameScale`, `FlavorFromGameScale` and `ShiftFlavor`.
-  - Add a `GetActiveFlavor` accessor.
-  - Read the base personality through upstream's existing `GetPersonalityIndividualFlavor`. The diplomacy variant is rescaled, so don't use it.
-  - Drop all of VD's custom flavor code.
-- **`CvTacticalAI`.** Port these as they are:
-  - **Types and constants:** `STacticalFlavors`, the city threat credit, the flavor type names, the attack shift limit, the slot count checks, and `NUM_TACTICAL_FLAVOR_SLOTS` in `CvDefines.h`.
-  - **`CvTacticalPosition`:** the flavor weights and their helpers, plus how `initFromScratch` and `initFromParent` set them.
-  - **Scoring:** the changes in `ScoreAttackDamage`, `ScoreCombatUnitTurnEnd` and `ScorePlotForCombatUnitMove`.
-  - **Per-search setup:** the city threat map, `SetSearchCityFlavorTerms` and `SetSearchRiskThresholds`.
-  - **Search entry:** the defaulted `flavors` parameter on `FindBestUnitAssignments`. Merge it with upstream's newer plot storage reservation (#13254).
-- **`GetGeneralTacticalFlavors`.** Port it without the custom flavor branches.
+Redefine `MOD_VOX_TACTICAL_INTENT_FLAVORS` to mean "the CustomModOption or the checkbox".
 
-### A3. Part 1: strategy rows, gated in the DLL
+- Retire the old `VOX_TACTICAL_INTENT_FLAVORS` row, or let it act as a third way to turn the feature on.
+- Because the name stays, these simulator pieces keep working unchanged:
+  - the extracted `ResolveSearchFlavors`
+  - the simulator's stubs and its intent flavor setter
+  - the recorded option field
+  - the generated capture code
+- The simulator's stand-in for game options only knows one option. Extracted code must keep going through the macro and never call the game option lookup directly.
+- The game option lookup is a short linear string scan, which is fine once per search. Keep it out of scoring loops.
 
-- **Why the DLL.**
-  - The rows always load, and the DLL decides whether to read them.
-  - A SQL condition would miss modmods that load later, and it cannot see a per-game checkbox.
-- **What is gated.**
-  - In `GetGeneralTacticalFlavors`, the strategy delta applies to the five slots only while the switch is on. The strategy delta is the active flavor minus the personality.
-  - Only economic and military strategies feed the active flavor. The grand strategy does not.
-- **With the switch off:**
+### Flavors in the database
+
+- Move the five `Flavors` rows into a new CP SQL file in `(1) Community Patch/Database Changes/AI/`. That is where upstream will need them.
+- Register it in the CP `.civ5proj` and `.modinfo`.
+- In `civ5-mod/SQL/VoxDeorum_Options.sql`, change the five-row Flavors insert to `INSERT OR IGNORE`, so a duplicate insert can't fail the file. Then run `civ5-mod/update_md5.py`.
+- `FLAVOR_MOBILIZATION` gets a later ID. The simulator looks flavors up by name, so that is fine.
+
+## Stage 2: the strategy delta behind the switch
+
+In `GetGeneralTacticalFlavors`, the strategy delta applies to the five slots only while the switch is on. The strategy delta is the active flavor minus the base personality.
+
+- **Branches.** Apply the check in both the normal branch and the custom flavor branch. In the custom flavor branch, the custom value stays the base either way.
+- **Placement.** Insert the check after the function's opening brace and its first two statements. A simulator text match starts there.
+- **With the switch off** (and no custom flavors):
   - RISK is 10 times the leader's FLAVOR_RISK. If the leader has none, it is 10 times OFFENSE with the grand strategy, exactly as in stock VP.
   - The other slots stay at 50.
   - RISK counts as unset.
-- **The rows file.**
-  - The rows from Part B go into a new sweep file in `(2) Vox Populi/Database Changes/AI/`, in the same style as `StrategyFlavorSweeps.sql`.
-  - It loads after that file, and it is registered through the VP `.civ5proj`.
+- **Civ, operation and zone modifiers** keep ignoring the switch. They are explicit requests.
 
-### A4. Part 2: the purpose table
+Only economic and military strategies feed the active flavor. The grand strategy does not.
 
-- **The enum.** Define `SearchIntent` in `CvTacticalAI.h`, with the same constants and values as VD.
-- **The table.** Port `TACTICAL_INTENT_FLAVOR_DEFAULTS` (14 rows of five signed values) and the check that it has one row per purpose.
-- **Passing the purpose.** Pass the purpose through these functions:
-  - `ExecuteAttackWithUnits`
-  - `PositionUnitsAroundTarget`
-  - `ExecuteDestroyEnemyUnits`
-  - `FindAndExecuteBestUnitAssignments`
-  - the search for ranged opportunities
+## Stage 3: derive and measure the strategy rows
 
-  This covers the same 13 call sites as in VD.
-- **The flavor functions.** Port `ApplyIntentFlavorDefaults`, `ApplyFlavorModifiers` and `ResolveSearchFlavors`. Use the helper instead of the VD option macro.
-
-### A5. Civ, operation and zone modifiers
-
-- **Civ.** The `CvMilitaryAI` modifier array, its accessors and its save entry, plus the recount after loading.
-- **Lua.** `Player:SetTacticalFlavorModifiers` and `Player:GetTacticalFlavorModifiers` in `CvLuaPlayer`.
-- **Operation.**
-  - The `CvAIOperation` modifier array, its accessors, its reset and its save entry.
-  - Drop VD's capture notification.
-- **Current operation.**
-  - `CvTacticalAI` keeps the current operation ID while it runs, without saving it.
-  - A scoped guard in `PlotOperationalArmyMoves` sets the ID around each operation's turn and restores the previous value afterwards. Every tactical search an operation runs happens inside that call.
-  - `ResolveSearchFlavors` reads the ID.
-- **Zone.**
-  - Port the zone modifier map in `CvTacticalAnalysisMap`. It is not saved and is cleared whenever the zones are rebuilt.
-  - Port the zone lookups that skip the refresh, if upstream lacks them.
-  - Open PR #13424 touches the same cache, so compare against it.
-- **Saves.**
-  - Add a tag to `CvGlobals::SaveVersionTags`.
-  - Read the two new arrays only from saves at or above that tag, so older saves still load.
-  - Follow how `CvGame` reads the save version.
-
-### A6. Clean up, build and draft
-
-- **Remove VD-only code.**
-  - `// Vox Deorum:` markers, `MOD_IPC_CHANNEL` and the `VoxDeorumRL/` includes.
-  - The capture wrappers around the search. Call `FindBestUnitAssignments` directly instead.
-  - Rewrite comments in VP style.
-- **Review the delta.**
-  - Read the full diff against `upstream/master`.
-  - Run `git diff --check`.
-  - Look for untracked files.
-  - Scan for leftover VD code by hand.
-- **Build** the debug DLL with `build_vp_clang_sdk.py`, using the process-local PATH setup.
-- **Draft** `temp/upstream-review/flavorful-tactical-search-pr.md`:
-  - **Lead:** what players get when they tick the option, and why. Use the issue's results.
-  - **Implementation:** described file by file and function by function.
-  - **Modifiers:** civ modifiers ignore the switch, and operation and zone modifiers are experimental.
-  - **Saves:** a short note on the save version tag.
-  - **Issue link:** if the issue has been posted.
-- **Other open PRs.** #13393, #13421, #13424 and #13366 touch the same code. Report the likely conflicts, and don't base this PR on them.
-
-## Part B: derive and check the strategy rows
-
-This work happens in `vox-deorum-rl`.
+This stage works in `vox-deorum-rl`, and its rows land in VD.
 
 The tested mapping is linear on the 0 to 100 scale. The DLL works differently:
 
@@ -182,8 +118,10 @@ The rows must therefore be derived and measured on the game scale.
    - Run a new config with the game-scale mode and the purpose table on.
    - Compare it with the native baseline and the tested variant on the same starts.
    - **To pass:** the 3-turn gain stays clearly positive and close to +0.22.
-   - **If it falls apart:** revisit a personality fallback for HOLD_CITY and ATTRITION before opening the PR.
-5. **Write the rows.** A small script in `simulator/scripts/` computes each strategy's rows from the fitted weights and rounds them.
+   - **If it falls apart:** add a personality fallback for HOLD_CITY and ATTRITION in Stage 2 before going further.
+5. **Write the rows.**
+   - A small script in `simulator/scripts/` computes each strategy's rows from the fitted weights and rounds them.
+   - It writes a new sweep file in VD's `(2) Vox Populi/Database Changes/AI/`, in the same style as `StrategyFlavorSweeps.sql`. That file loads after the existing sweep.
 6. **Hand adjustments.**
 
    | Strategy | Adjustment |
@@ -193,97 +131,109 @@ The rows must therefore be derived and measured on the game scale.
    | GS_CONQUEST | OCCUPATION up a little |
 
    - Keep them small.
-   - Existing recordings capture only a few strategy flags, such as AT_WAR, so the simulator cannot test these adjustments.
-   - Instead, make one new VD recording with the switch on, and confirm the five slots stay in sensible ranges.
+   - Existing recordings capture only a few strategy flags, such as AT_WAR, so the simulator cannot test these adjustments. Stage 4 checks them with a new recording.
 
-## Part C: keep VD training and simulation working
+### Rollout documentation
 
-VD stays on the 5.2 line. Align it afterwards in a separate change on `vox-deorum-5.2`, keeping the `// Vox Deorum:` markers.
+Note in `docs/rollouts/flavor-matching.md` and `docs/rollouts/index.md` that:
 
-### VD DLL
+- The variant's `intent` switch only turns part 2 on or off for fresh searches. The focal player's part 1 comes from the recorded values.
+- Fresh searches for other players read personality only. This existing gap now matters for recordings made with the switch on.
 
-- **Keep the option macro's name.**
-  - Redefine `MOD_VOX_TACTICAL_INTENT_FLAVORS` to mean "the upstream CustomModOption or the checkbox".
-  - Add the upstream CustomModOption.
-  - Either retire the old VD option row or let it act as a third way to turn the feature on.
-  - Because the name stays, nothing on the simulator side changes:
-    - the extracted `ResolveSearchFlavors`
-    - the simulator's stubs and its intent flavor setter
-    - the recorded option field
-    - the generated capture code
-  - The simulator's stand-in for game options only knows one option. Extracted code must keep going through the macro.
-- **Gate the strategy delta in `GetGeneralTacticalFlavors`.**
-  - Gate it in both the normal branch and the custom flavor branch.
-  - Insert the check after the function's opening brace and its first two statements, because a simulator text match starts there.
-- **Keep every name the simulator extracts unchanged:**
-  - `STacticalFlavors`
-  - the purpose table and its row check
-  - `ResolveSearchFlavors`, `ApplyFlavorModifiers`, `ApplyIntentFlavorDefaults` and `GetGeneralTacticalFlavors`
-  - the `kSearchIntent` constants
-  - `VoxRlCurrentOperationId`
-  - the ranged opportunity block
-- **Where `SearchIntent` comes from.**
-  - VD keeps getting `SearchIntent` from the simulator's installed schema header.
-  - If VD ever merges upstream, resolve that one conflict by keeping the include.
-- **Bring in the CP files.**
-  - Bring in the CP Flavors SQL, the game option row and its text, and the VP rows file. Without the game option row, every lookup queries the database.
-  - Register them in VD's `.civ5proj` and `.modinfo`.
+The learning flavor projection is independent and needs nothing.
 
-### VD mod
+## Stage 4: test everything in VD
 
-- In `civ5-mod/SQL/VoxDeorum_Options.sql`, change the five-row Flavors insert to `INSERT OR IGNORE`, so a duplicate insert can't fail the file.
-- `FLAVOR_MOBILIZATION` gets a later ID. The simulator looks flavors up by name, so that is fine.
-- Run `civ5-mod/update_md5.py`.
+- **Builds.**
+  - The VD DLL builds with `build-and-copy.bat`.
+  - In `vox-deorum-rl`, `simulator/scripts/build.sh` passes. It runs:
+    - extraction
+    - the harness, including the flavor weights, flavor modifiers, purpose metadata and campaign flavor tests
+    - the CLI tests
+    - the deploy check
+  - The capture and extraction Python tests pass.
+- **Switch off equals stock.**
+  - One existing recording replays unchanged against its stock baseline.
+  - Review that every path with the switch off reduces to stock behavior: neutral weights, RISK from OFFENSE, no strategy delta, no purpose rows.
+- **Switch on in a real game.**
+  - Record at least one new VD game with the checkbox on.
+  - Confirm the five slots stay in sensible ranges, including under the hand-adjusted strategies.
+  - Confirm the rows reach the recorded flavors.
+- **Each way to turn it on.** Run in-game smoke tests three ways: checkbox on, checkbox off, and the CustomModOption on.
+- **Rollouts on the new recording.** Run the native baseline and the flavorful variant to confirm the gain holds with real rows.
+- **Docs.** Update these pages with the switch and the strategy rows:
+  - `docs/developers/civ5-dll/unit-ai/concepts.md`
+  - `docs/developers/civ5-dll/unit-ai/military-tactical-flavors.md`
+  - `mcp-server/docs/influence/flavors.md`
 
-### RL repository
+Stage 5 starts only once all of these pass.
 
-- **Code:** add the game-scale mapping mode and the config from Part B.
-- **Rollout docs:** note in `docs/rollouts/flavor-matching.md` and `docs/rollouts/index.md` that:
-  - The variant's `intent` switch only turns part 2 on or off for fresh searches. The focal player's part 1 comes from the recorded values.
-  - Fresh searches for other players read personality only. This existing gap now matters for recordings made with the switch on.
-- **Unchanged:** the learning flavor projection is independent and needs nothing.
+## Stage 5: the upstream pull request
 
-### Documentation
+Port the finished VD code to a branch `pr/flavorful-tactical-search` in `civ5-dll`. Follow the upstream-pr skill and `docs/developers/civ5-dll/upstream-contributions.md`.
 
-Update these pages with the switch and the strategy rows:
+- **Branch setup.**
+  - Run the `vp-diff` export first.
+  - Then run `vp-pr new flavorful-tactical-search` from `upstream/master`.
+  - Remove the automatic upstream tracking and set `pushRemote` to `origin`.
+- **Porting.** Port by hand from VD. Leave the edits unstaged.
 
-- `docs/developers/civ5-dll/unit-ai/concepts.md`
-- `docs/developers/civ5-dll/unit-ai/military-tactical-flavors.md`
-- `mcp-server/docs/influence/flavors.md`
+### What the PR carries
 
-## Verification
+- **Switch and data.**
+  - The CustomModOption, the checkbox and their text.
+  - The CP Flavors file and the VP rows file.
+  - Register new files in each `.civ5proj`, then regenerate the `.modinfo` files and checksums with `scripts/generate_modinfo.py`.
+  - Upstream needs a small helper, `TacticalAIHelpers::IsFlavorfulSearchEnabled()`, in place of VD's macro.
+- **`CvFlavorManager`.**
+  - The game-scale table and its helpers: `FlavorToGameScale`, `FlavorFromGameScale` and `ShiftFlavor`.
+  - A `GetActiveFlavor` accessor.
+  - The base personality comes from upstream's existing `GetPersonalityIndividualFlavor`. The diplomacy variant is rescaled, so don't use it.
+  - No custom flavor code.
+- **`CvTacticalAI`.**
+  - **Types and constants:** `STacticalFlavors`, the city threat credit, the flavor type names, the attack shift limit, the slot count checks, and `NUM_TACTICAL_FLAVOR_SLOTS` in `CvDefines.h`.
+  - **`CvTacticalPosition`:** the flavor weights and their helpers.
+  - **Scoring:** the changes in `ScoreAttackDamage`, `ScoreCombatUnitTurnEnd` and `ScorePlotForCombatUnitMove`.
+  - **Per-search setup:** the city threat map, `SetSearchCityFlavorTerms` and `SetSearchRiskThresholds`.
+  - **Search entry:** the defaulted `flavors` parameter on `FindBestUnitAssignments`. Merge it with upstream's newer plot storage reservation (#13254).
+- **Purpose table.**
+  - `SearchIntent` defined in `CvTacticalAI.h`, with the same constants and values.
+  - `TACTICAL_INTENT_FLAVOR_DEFAULTS` and its row check.
+  - The purpose passed through the same 13 call sites.
+  - `ApplyIntentFlavorDefaults`, `ApplyFlavorModifiers`, `ResolveSearchFlavors` and `GetGeneralTacticalFlavors`, without the custom flavor branches.
+- **Civ, operation and zone modifiers.**
+  - **Civ:** the `CvMilitaryAI` array, its save entry, and the recount after loading.
+  - **Lua:** `Player:SetTacticalFlavorModifiers` and `Player:GetTacticalFlavorModifiers`.
+  - **Operation:** the `CvAIOperation` array and its save entry.
+  - **Zone:** the zone map in `CvTacticalAnalysisMap`, and the zone lookups that skip the refresh if upstream lacks them. Compare with open PR #13424.
+  - **Current operation:** upstream has no VD capture, so `CvTacticalAI` keeps the current operation ID while it runs, without saving it. A scoped guard in `PlotOperationalArmyMoves` sets the ID around each operation's turn.
+  - **Saves:** add a tag to `CvGlobals::SaveVersionTags`, and read the two new arrays only from saves at or above it, so older saves still load.
 
-**PR branch**
+### Clean up, build and draft
 
-- The debug build succeeds.
-- The diff has no leftover VD code.
-- Every path with the switch off reduces to stock behavior:
-  - neutral weights
-  - RISK from OFFENSE
-  - no strategy delta
-  - no purpose rows
-- An older save loads, which exercises the save version tag.
-- If possible, run an in-game smoke test three ways: checkbox on, checkbox off, and the CustomModOption on. Report anything that was not run.
-
-**Part B**
-
-- The new harness test for the mapping mode passes.
-- The rollout report for the rows config is compared with the native baseline and the tested variant.
-
-**VD alignment**
-
-- The VD DLL builds with `build-and-copy.bat`.
-- In `vox-deorum-rl`, `simulator/scripts/build.sh` passes. It runs:
-  - extraction
-  - the harness, including the flavor weights, flavor modifiers, purpose metadata and campaign flavor tests
-  - the CLI tests
-  - the deploy check
-- The capture and extraction Python tests pass.
-- One existing recording replays unchanged against its stock baseline.
+- **Remove VD-only code.**
+  - `// Vox Deorum:` markers, `MOD_IPC_CHANNEL` and the `VoxDeorumRL/` includes.
+  - The capture wrappers around the search. Call `FindBestUnitAssignments` directly instead.
+  - Rewrite comments in VP style.
+- **Review the delta.**
+  - Read the full diff against `upstream/master`.
+  - Run `git diff --check`.
+  - Look for untracked files.
+  - Scan for leftover VD code by hand.
+  - A Haiku subagent can do the scans. OpenCode does an independent review.
+- **Build** the debug DLL with `build_vp_clang_sdk.py`, using the process-local PATH setup.
+- **Smoke test.** If possible, run one in-game test with the checkbox on and off, and load an older save to exercise the save version tag. Report anything that was not run.
+- **Draft** `temp/upstream-review/flavorful-tactical-search-pr.md`:
+  - **Lead:** what players get when they tick the option, and why. Use the issue's results and the Stage 4 re-measure.
+  - **Implementation:** described file by file and function by function.
+  - **Modifiers:** civ modifiers ignore the switch, and operation and zone modifiers are experimental.
+  - **Saves:** a short note on the save version tag.
+  - **Issue link:** if the issue has been posted.
+- **Other open PRs.** #13393, #13421, #13424 and #13366 touch the same code. Report the likely conflicts, and don't base this PR on them.
 
 ## Delegation
 
-- **Haiku subagents:** collecting the strategy rows (B1), and the diff scans for leftover VD code.
-- **OpenCode:** independent review of the PR changes.
-- **Main agent:** the port, the switch, the scoring, and the game-scale mapping mode.
+- **Haiku subagents:** collecting the strategy rows, and the diff scans for leftover VD code.
+- **OpenCode:** independent review of the VD change and the PR changes.
+- **Main agent:** the switch, the strategy delta check, the game-scale mapping mode, and the port.
 - Each handoff reports the models used.
