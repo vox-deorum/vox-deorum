@@ -1,14 +1,21 @@
-# vox-agents: Context compaction
+# Context compaction
 
-With the per-seat `files` setting on, an agent can spend many steps running `bash` in its workspace, and each step's command output stays in the conversation. A long run would eventually overflow the model's context. Compaction keeps such a run going by dropping old command output once the request grows large. The agent's workspace notes are what make this safe: anything it still needs, it should have saved to a file.
+When a seat has the `files` setting on, an agent can spend many steps running `bash` commands, and every command's output stays in the conversation. A long run would eventually be too big for the model. Compaction keeps such a run going: once the request gets large, old command output is replaced with a short note.
 
-Runs without `files` never compact and keep the normal context-length error handling.
+This is safe because the agent has a workspace. It is warned first, saves what it still needs to its notes, and can read them back later.
 
-Paths are relative to `vox-agents/src/`.
+```
+request size:   small ........ 75% of threshold ........ threshold
+what happens:   nothing        reminder: "save what     old bash output
+                               you need, it will be     and old reasoning
+                               dropped soon"            are dropped
+```
+
+Runs without `files` never compact. They keep the normal handling for context-length errors.
 
 ## The rules
 
-Before each step after the first, `executeAgent` (`infra/vox-execute.ts`) estimates the size of the conversation so far with `countRequestTokens` (`utils/models/token-counter.ts`). The estimate is local and counts text, tool calls, tool results, retained reasoning, and a small per-message overhead. It is not the provider's exact count.
+Before each step after the first, `executeAgent` (`src/infra/vox-execute.ts`) estimates the size of the conversation so far with `countRequestTokens` (`src/utils/models/token-counter.ts`). The estimate is local and counts text, tool calls, tool results, retained reasoning, and a small per-message overhead. It is not the provider's exact count.
 
 The estimate is compared with the model's `continuityThreshold` option. The default is 300,000 tokens for Claude Code, Codex, OpenAI, and Anthropic models, and 100,000 for everything else.
 
@@ -19,9 +26,21 @@ The estimate is compared with the model's `continuityThreshold` option. The defa
 | At the threshold or more, on a step after the reminder | The history is compacted before the step runs (see below). The step span records `step.compacted` as `threshold`. |
 | The provider rejects a step after the first for context length, the first time in the run | The step's request is compacted the same way and sent again once, inside the same step span. The span records `step.compacted` as `overflow`. This path does not wait for the reminder. |
 
-A step that jumps straight past the threshold gets the reminder first, so old output is never dropped without warning. A second context-length error in the same run ends the run the normal way (`onContextLengthError`, then `throwOnError`). Every run that ends on a context-length error, with or without files, logs a warning and sets span attributes (`overflow.step`, `overflow.tokens.initial`, `overflow.tokens.history`) that show which step overflowed and how the estimated request splits between the prepared prompt and the step history after it. Step 0 means the run failed while preparing. A step that already compacted at the threshold does not get the overflow retry either, because it would only resend the same request. The same goes for step 1, which has no earlier output to drop.
+Edge cases:
 
-Compacting does two things, both with helpers in `utils/prompts/message-history.ts`:
+- A step that jumps straight past the threshold gets the reminder first, so old output is never dropped without warning.
+- The overflow retry happens at most once per run. A second context-length error ends the run the normal way (`onContextLengthError`, then `throwOnError`).
+- There is no overflow retry on step 1, which has no earlier output to drop, or on a step that already compacted at the threshold, which would only resend the same request.
+
+Every run that ends on a context-length error, with or without files, logs a warning and records where the space went:
+
+| Span attribute | Meaning |
+| --- | --- |
+| `overflow.step` | The step that overflowed. Step 0 means the run failed while preparing. |
+| `overflow.tokens.initial` | Estimated tokens in the prepared prompt. |
+| `overflow.tokens.history` | Estimated tokens in the step history after it. |
+
+Compacting does two things, both with helpers in `src/utils/prompts/message-history.ts`:
 
 - `compactWorkspaceTraffic` replaces the output of every `bash` result older than the last step with a one-line note saying the output was dropped and to re-run the command or read the notes. The tool calls stay, so every call still has its result.
 - `dropOlderReasoning` removes reasoning from every assistant message except the most recent one, which Anthropic models need next to pending tool results.
@@ -75,7 +94,7 @@ Step 4 then runs on the compacted history with a new closing reminder ("17 steps
 ## What compaction does not do
 
 - It never shrinks the latest step. If one step's output alone is too large for the model, compaction cannot help; the `bash` tool caps each output stream at 8,000 characters to make that unlikely.
-- It never rewrites the initial prompt, so the cached prefix stays valid (see [Caching](prompts.md#caching)). With files on, the run marks its last initial message (#2 above) as a cache anchor, and everything compaction changes comes after it.
+- It never rewrites the initial prompt, so the cached prefix stays valid (see [Caching](caching.md)). With files on, the run marks its last initial message (#2 above) as a cache anchor, and everything compaction changes comes after it.
 - It does not carry anything across runs. Each agent run starts with a fresh history; the workspace is what persists.
 
 On Codex, a step that compacted sends the full compacted history instead of continuing the previous step's native thread.
@@ -84,8 +103,8 @@ On Codex, a step that compacted sends the full compacted history instead of cont
 
 | Piece | File |
 | --- | --- |
-| Threshold default and validation | `continuityThreshold` in `utils/models/models.ts` |
-| Request size estimate | `countRequestTokens` in `utils/models/token-counter.ts` |
-| Dropping output and reasoning, reminder text | `utils/prompts/message-history.ts` |
-| When to remind, compact, and retry | `executeAgent` and `executeAgentStep` in `infra/vox-execute.ts` |
+| Threshold default and validation | `continuityThreshold` in `src/utils/models/models.ts` |
+| Request size estimate | `countRequestTokens` in `src/utils/models/token-counter.ts` |
+| Dropping output and reasoning, reminder text | `src/utils/prompts/message-history.ts` |
+| When to remind, compact, and retry | `executeAgent` and `executeAgentStep` in `src/infra/vox-execute.ts` |
 | Tests | `tests/mock/utils/message-history.test.ts`, `tests/mock/context/vox-execute-compaction.test.ts` |

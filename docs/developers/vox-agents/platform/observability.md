@@ -1,11 +1,19 @@
-# vox-agents: Observability
+# Observability
 
-LLM agents fail in ways a debugger can't show you: a subtly wrong prompt, a tool result the model misread, a decision that made sense given what it saw. Vox-agents therefore records everything. Every agent run is traced with OpenTelemetry, every span lands in a queryable SQLite database, and the rest of the system is built on top of that record:
+LLM agents fail in ways a debugger cannot show: a slightly wrong prompt, a misread tool result, a decision that made sense given what the model saw. So Vox Agents records everything. Every agent run is traced with OpenTelemetry, and every span lands in a SQLite database you can query.
 
-- the [telepathist](telepathist.md) narrates it,
-- the [oracle](oracle.md) replays it,
-- the [archivist](archivist.md) mines it,
-- and the [web UI](ui.md) browses it live.
+```
+agent runs ──spans──► SQLite (one file per seat) ──► dashboard, telepathist, oracle, archivist
+```
+
+Other parts of the system are built on that record:
+
+| Tool | Uses the record to |
+| --- | --- |
+| [Telepathist](../agents/telepathist.md) | Explain what happened. |
+| [Oracle](../agents/oracle.md) | Replay turns with changes. |
+| [Archivist](../agents/archivist.md) | Mine past games for similar situations. |
+| [Web UI](ui.md) | Browse it live. |
 
 ## Tracing
 
@@ -17,8 +25,8 @@ Each row stores the span's identifiers and hierarchy (trace, span, parent), name
 
 What the spans contain is the valuable part:
 
-- **Agent executions** record their starting tier, including when triage does not run or the system prompt is empty. They also record the system prompt, the messages, the active tools, and the model per step when execution reaches those stages.
-- **Agent triage** records the chosen tier when a decision exists, and whether the choice came from an evaluator, a shortcut, a caller, or a failed hook. An optional note gives human-readable context.
+- **Agent executions** record their starting tier, even when triage does not run or the system prompt is empty. As the run gets that far, they also record the system prompt, the messages, the active tools, and the model for each step.
+- **Agent triage** records the chosen tier and where it came from: an evaluator, a shortcut, a caller, or a failed hook. An optional note explains it. See [Tiers and triage](../models/tiers-and-triage.md#telemetry).
 - **Evaluations** record their purpose (`triage` or `execution`), the requesting agent, the state, questions, answers, and token usage. A triage evaluation is nested under its agent span, so its cost and latency can be analyzed alongside the resulting tier.
 - **Tool calls** record their inputs and outputs.
 - **Turn-level spans** record pacing decisions, completion status, and token usage (input, reasoning, and output, counted per step and accumulated per context).
@@ -44,7 +52,7 @@ The usual workflow when an agent does something puzzling:
 
 1. Open the dashboard's **Telemetry** view ([ui.md](ui.md)), either the live context while the game runs or the stored database afterward, and find the turn's trace.
 2. Walk the span hierarchy. The step spans show exactly what the model was sent and what it answered; the tool spans show what the game reported back.
-3. For a conversational view of the same record, open a [telepathist](telepathist.md) chat on the database and ask. `get-conversation-log` reconstructs the full exchange per agent.
-4. To test a hypothesis ("would it have attacked with a different briefing?"), feed the turn to the [oracle](oracle.md) and replay it with the prompt changed.
+3. For a conversational view of the same record, open a [telepathist](../agents/telepathist.md) chat on the database and ask. `get-conversation-log` reconstructs the full exchange per agent.
+4. To test a hypothesis ("would it have attacked with a different briefing?"), feed the turn to the [oracle](../agents/oracle.md) and replay it with the prompt changed.
 
 Telemetry databases are plain SQLite. Nothing stops ad-hoc analysis with any SQLite client, and the schema in `src/utils/telemetry/schema.ts` is small enough to read in one sitting.

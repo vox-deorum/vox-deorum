@@ -56,7 +56,7 @@ Also verify that older rows default to files disabled, recorded system text need
 
 ## Documentation
 
-Update `docs/developers/vox-agents/oracle.md` with pinned workspaces, required files, disposable writes, and the fact that replay sees shared folders as they are now.
+Update `docs/developers/vox-agents/agents/oracle.md` with pinned workspaces, required files, disposable writes, and the fact that replay sees shared folders as they are now.
 
 ## Done when
 

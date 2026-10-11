@@ -29,7 +29,7 @@ Vox Deorum works with any of these providers, and you can mix several in one gam
 
 The Setup wizard connects you with the API service, authenticates for you, and lists available models. Keys stay on your machine and go to the provider you chose. You can use your Claude subscription through connecting with Claude Code, or ChatGPT subscription through Codex. For Codex-related questions, see [Troubleshooting](troubleshooting.md#codex-login-doesnt-start-or-finish).
 
-A Codex or Claude Code model can reach the web during its turn when its model options include `"hostTools": ["Web"]`, and it is told when it has that access. `Web` is the only accepted entry. The older `Read`, `Write`, and `everything` entries were removed: a config that still lists them fails with an error naming `Web`. For files, use the `files` setting below instead, which works on every provider. See the [developer overview](../developers/vox-agents/overview.md#models-and-configuration) for the full policy.
+A Codex or Claude Code model can reach the web during its turn when its model options include `"hostTools": ["Web"]`, and it is told when it has that access. `Web` is the only accepted entry. The older `Read`, `Write`, and `everything` entries were removed: a config that still lists them fails with an error naming `Web`. For files, use the `files` setting below instead, which works on every provider. See the [developer overview](../developers/vox-agents/models/configuration.md#host-tools-for-cli-models) for the full policy.
 
 ## File workspace
 
@@ -53,7 +53,7 @@ To read a seat's notes and records outside the game, export them. The past games
 
 In the shell, `/tmp` is scratch space shared by one civilization's agents for the whole game, saved under `workspaces/scratch/`, and anything written elsewhere is discarded after each call. Nothing deletes workspace files automatically; remove them from the telemetry folder when you no longer need them. Agents cannot change a `"read"` folder; a `"write"` folder is saved. Each writable shared folder gets an `AGENTS.md` guide on disk, created once and never overwritten, so agents and you can edit it. The writable game folder gets its own `AGENTS.md` inside the store, added again whenever it is missing, including after a reload to a turn before it existed. Agents can edit that one; you can read it in an export.
 
-Set `files` on a seat (`llmPlayers.<n>.files`), in the session config, or in `vox-agents/config.json`; the highest level that sets it wins and replaces lower ones whole, with no merging, the same as `triage`. An invalid value fails the session's preflight check before the game launches, and the error names the config path to fix. Two seats of the same game writing one shared name can pass information to each other, so use different names per seat or read access. The tool needs Node.js 22.17.0 or newer (Vox Deorum requires 22.23.3); on older Node it returns an error asking you to upgrade. See the [developer overview](../developers/vox-agents/overview.md#models-and-configuration) for the full policy.
+Set `files` on a seat (`llmPlayers.<n>.files`), in the session config, or in `vox-agents/config.json`; the highest level that sets it wins and replaces lower ones whole, with no merging, the same as `triage`. An invalid value fails the session's preflight check before the game launches, and the error names the config path to fix. Two seats of the same game writing one shared name can pass information to each other, so use different names per seat or read access. The tool needs Node.js 22.17.0 or newer (Vox Deorum requires 22.23.3); on older Node it returns an error asking you to upgrade. See the [developer overview](../developers/vox-agents/workspace/files.md) for the full policy.
 
 ## Custom prompts
 
@@ -82,7 +82,7 @@ Your **Main AI** makes most of the AI civilizations' decisions. The service's us
 
 The optional **Judge AI** is experimental. It sizes up each moment and passes it to a **Quick AI** for small jobs (reports, small talk) or a **Deep AI** for big moments (war, peace, major deals). Either can stay on the Main AI. Once Quick and Deep are set, agents can also pick one themselves when handing off a job; for example, a diplomat asks for the Deep AI before passing a major deal to the negotiator.
 
-You can change all of these in Settings under **Agent-Model Assignments**, including models for individual jobs. **More** finds additional models, and nothing is kept until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand (see the [developer overview](../developers/vox-agents/overview.md#models-and-configuration)). A mid-tier model is a sensible start; move up or down once you've seen it play.
+You can change all of these in Settings under **Agent-Model Assignments**, including models for individual jobs. **More** finds additional models, and nothing is kept until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand (see the [developer overview](../developers/vox-agents/models/configuration.md)). A mid-tier model is a sensible start; move up or down once you've seen it play.
 
 ## Controlling cost
 

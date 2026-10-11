@@ -47,7 +47,7 @@ One quirk is worth knowing: while the leaderhead or trade scene is up, the engin
 
 ## The diplomat answers
 
-A chat message becomes a call to `runChatTurn` (`vox-agents/src/web/chat/turn.ts`), the same function the dashboard route calls. The voiced agent is a `Diplomat` (`vox-agents/src/envoy/agents/diplomat.ts`), a [live envoy](vox-agents/envoy.md) restricted to diplomacy threads.
+A chat message becomes a call to `runChatTurn` (`vox-agents/src/web/chat/turn.ts`), the same function the dashboard route calls. The voiced agent is a `Diplomat` (`vox-agents/src/envoy/agents/diplomat.ts`), a [live envoy](vox-agents/agents/envoys.md) restricted to diplomacy threads.
 
 The diplomat never writes free text. It speaks through the `send-message` tool (`vox-agents/src/envoy/tools/send-message-tool.ts`), which appends the durable transcript row as part of delivering the line. A thread will not even open for an agent that could reply any other way. `close-conversation` stages a farewell that the turn commits last, and a closed conversation cannot be reopened until a later turn.
 
@@ -134,7 +134,7 @@ If the action must answer the game, prefer an existing registered push function.
 
 ## Where the per-component detail lives
 
-- [vox-agents/envoy.md](vox-agents/envoy.md) for envoys, threads, and how a chat reaches an agent.
+- [vox-agents/agents/envoys.md](vox-agents/agents/envoys.md) for envoys, threads, and how a chat reaches an agent.
 - [mcp-server/tools.md](mcp-server/tools.md) for how MCP tools are organized and built, and [mcp-server/knowledge.md](mcp-server/knowledge.md) for the store the transcript lives in.
 - [civ5-mod/diplomacy-panel.md](civ5-mod/diplomacy-panel.md) and [civ5-mod/deal-screen.md](civ5-mod/deal-screen.md) for the in-game surfaces.
 

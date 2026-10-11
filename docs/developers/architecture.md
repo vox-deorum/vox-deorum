@@ -75,12 +75,12 @@ The [vox-agents](vox-agents/overview.md) framework is the top of the stack: Type
 
 Concrete families build on that core:
 
-- [strategists](vox-agents/strategist.md) make per-turn decisions for LLM-controlled civilizations.
-- [envoys](vox-agents/envoy.md) hold in-character conversations with the player.
-- [support agents](vox-agents/support-agents.md) do delegated work.
-- The [telepathist](vox-agents/telepathist.md), [oracle](vox-agents/oracle.md), and [archivist](vox-agents/archivist.md) handle post-game analysis, counterfactual replay, and episode extraction.
+- [strategists](vox-agents/agents/strategists/overview.md) make per-turn decisions for LLM-controlled civilizations.
+- [envoys](vox-agents/agents/envoys.md) hold in-character conversations with the player.
+- [support agents](vox-agents/agents/support-agents.md) do delegated work.
+- The [telepathist](vox-agents/agents/telepathist.md), [oracle](vox-agents/agents/oracle.md), and [archivist](vox-agents/agents/archivist.md) handle post-game analysis, counterfactual replay, and episode extraction.
 
-The framework is provider-agnostic (OpenAI, Anthropic, Google, AWS Bedrock, OpenRouter, and local OpenAI-compatible endpoints) with per-agent model assignment. A [Vue web UI](vox-agents/ui.md) ships alongside it for driving and watching sessions.
+The framework is provider-agnostic (OpenAI, Anthropic, Google, AWS Bedrock, OpenRouter, and local OpenAI-compatible endpoints) with per-agent model assignment. A [Vue web UI](vox-agents/platform/ui.md) ships alongside it for driving and watching sessions.
 
 ## How data flows
 

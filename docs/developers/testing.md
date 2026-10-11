@@ -60,7 +60,7 @@ Because the game and OBS suites are environment-heavy and slow, the convention i
 
 `vox-agents/ui` is a separate Vue project with its own `vitest.config.ts`, running in a jsdom environment with shared setup in `tests/setup.ts`. It has roughly 26 test files, all under `tests/mock/**`, organized to mirror the app: API clients, stores, composables, views, and components for chat, deals, logging, sessions, and telemetry.
 
-Its scripts are `npm test`, `npm run test:watch`, and `npm run test:coverage`, run from `vox-agents/ui`. Remember that root `test:all` already includes it. See [vox-agents/ui.md](vox-agents/ui.md).
+Its scripts are `npm test`, `npm run test:watch`, and `npm run test:coverage`, run from `vox-agents/ui`. Remember that root `test:all` already includes it. See [vox-agents/platform/ui.md](vox-agents/platform/ui.md).
 
 ## Before you submit
 

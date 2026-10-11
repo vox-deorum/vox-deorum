@@ -1,8 +1,8 @@
-# vox-agents: Telepathists
+# Telepathist
 
-A telepathist lets you interrogate a finished game. Ask it "what happened between turns 30 and 50?", "why did the AI build a settler on turn 45?", or "show me the full conversation behind that decision." It answers from the record every live game leaves behind: each agent's prompts, tool calls, decisions, and rationales are saved to a telemetry database (see [observability.md](observability.md)). The telepathist reads that record as if it had read the AI player's mind.
+A telepathist lets you interrogate a finished game. Ask it "what happened between turns 30 and 50?", "why did the AI build a settler on turn 45?", or "show me the full conversation behind that decision." It answers from the record every live game leaves behind: each agent's prompts, tool calls, decisions, and rationales are saved to a telemetry database (see [Observability](../platform/observability.md)). The telepathist reads that record as if it had read the AI player's mind.
 
-Telepathists are [envoys](envoy.md). They reuse the same chat-thread machinery, special messages, and streaming, but their context is a database on disk rather than a live game. The source lives in `src/telepathist/`.
+Telepathists are [envoys](envoys.md). They reuse the same chat-thread machinery, special messages, and streaming, but their context is a database on disk rather than a live game. The source lives in `src/telepathist/`.
 
 ## Two databases
 
@@ -64,4 +64,4 @@ npm run telepathist -- -d <database>
 
 Bare filenames resolve under `telemetry/`. Use `-a` to select a different agent, and `--prepare` to run summarization only.
 
-The same experience is available in the dashboard. Create a chat with a database path instead of a live context, and the web backend builds the telepathist context, runs initialization with streamed progress, and chats over the same SSE channel. See [ui.md](ui.md).
+The same experience is available in the dashboard. Create a chat with a database path instead of a live context, and the web backend builds the telepathist context, runs initialization with streamed progress, and chats over the same SSE channel. See [Web UI](../platform/ui.md).

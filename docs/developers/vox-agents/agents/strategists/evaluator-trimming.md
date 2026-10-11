@@ -1,8 +1,21 @@
 # Evaluator trimming
 
-The evaluator strategist answers a whole decision in one evaluation call over one markdown state (see [Evaluators](evaluators.md#evaluator-strategist)). Late in a game that state outgrows the model's input limit, so `buildStrategistEvaluationState` in `src/strategist/agents/evaluator-questions.ts` shortens it with a **trim ladder**: an ordered list of cuts that removes event tiers and report details until the state fits. [Strategist triage](evaluators.md#strategist-triage) builds its state the same way, through the shared `evaluateStrategistState`, so everything here applies to it too. This page covers the budget, the ladder, what is never trimmed, how to retune it, and what trimming reports.
+Late in a game, the full game state can be too big for an evaluator model's input limit. Trimming shortens it by removing the least useful details first, one step at a time, until it fits. The model is then told what was left out.
 
-Paths are relative to `vox-agents/`.
+```
+full state ──► over budget? ──yes──► drop least useful detail ──► check again
+                   │
+                   no
+                   ▼
+            send it (with a note listing what was cut)
+```
+
+Two callers use it, through the shared `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts`:
+
+- The [evaluator strategist](evaluator-strategist.md), which answers a whole decision in one evaluation.
+- [Strategist triage](../../models/tiers-and-triage.md#strategist-triage), which reads the same state.
+
+The list of cuts is called the **trim ladder**. This page covers the budget, the ladder, what is never trimmed, how to change it, and what trimming reports.
 
 ## Why it exists
 
@@ -21,7 +34,7 @@ The share leaves headroom below the limit because the token count is a local est
 - Steps run in order and are cumulative: every applied step stays in place for the next check.
 - The walk stops at the first step after which the state fits.
 - A step that would change nothing (the tier holds no events left, the fields are not present, the opinion lists are already short) is skipped: it is not applied, not reported, and costs no size check.
-- If the whole ladder is not enough, the most trimmed state goes out as it is. A provider overflow error then falls into the event window fallback (`withEventWindowFallback`, see [Strategist](strategist.md#event-windows)), which the player loop runs for the decision and triage runs for itself.
+- If the whole ladder is not enough, the most trimmed state goes out as it is. A provider overflow error then falls into the event window fallback (`withEventWindowFallback`, see [Player loop](player-loop.md#event-windows)), which the player loop runs for the decision and triage runs for itself.
 
 ```mermaid
 flowchart TD

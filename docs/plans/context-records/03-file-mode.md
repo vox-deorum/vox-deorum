@@ -87,7 +87,7 @@ Run the existing caching, step-budget, envoy, analyst, and negotiator suites. Co
 
 ## Documentation
 
-Update `docs/developers/vox-agents/prompts.md` with core prompts, last-decision context, per-turn event categories, the strategist's choice of file reads, and unchanged inline event filtering; update `docs/developers/vox-agents/oracle.md` with the recorded workspace fields.
+Update `docs/developers/vox-agents/framework/prompts.md` with core prompts, last-decision context, per-turn event categories, the strategist's choice of file reads, and unchanged inline event filtering; update `docs/developers/vox-agents/agents/oracle.md` with the recorded workspace fields.
 
 ## Risks and open questions
 

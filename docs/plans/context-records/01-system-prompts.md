@@ -74,7 +74,7 @@ Add `prompts` to `PlayerConfig` and `StrategistSessionConfig` in `types/config.t
 
 ## Documentation
 
-Update `docs/developers/vox-agents/prompts.md` with Mustache usage, template names, and lookup order; `docs/players/configuration.md` with copying and editing built-ins and the `prompts` setting; and `vox-agents/AGENTS.md` with the rule that prompt prose belongs in files and code supplies data and flags.
+Update `docs/developers/vox-agents/framework/prompt-files.md` with Mustache usage, template names, and lookup order; `docs/players/configuration.md` with copying and editing built-ins and the `prompts` setting; and `vox-agents/AGENTS.md` with the rule that prompt prose belongs in files and code supplies data and flags.
 
 ## Risks and open questions
 

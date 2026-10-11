@@ -29,7 +29,7 @@ The registry in `mcp-server/src/tools/index.ts` holds 43 tools. The reference gr
 - Some steer the AI: set strategies, flavors, personas, diplomatic relationships, next research, next policy. These are the subject of [influence.md](influence.md).
 - Some record agent decisions into the knowledge store: `set-metadata`, `relay-message`, `keep-status-quo`.
 - The **deal tools** (`append-message`, `enact-agent-deal`, `reject-agent-deal`, and their read-side counterparts `read-transcript` and `inspect-deal`) carry agent-to-agent negotiation and turn an agreed draft into a real in-game deal. `inspect-deal` also reports the pair's war status as a field pair, `atWar` and `warLockTurns` (the turns peace stays locked out between them). The full round trip is [diplomacy.md](../diplomacy.md).
-- Two push content at a human watching the game: `post-notification` raises a native in-game notification, and `present-decision`, used by the [human-control mode](../vox-agents/strategist.md#human-control-mode), pushes the current option landscape into the in-game decision panel.
+- Two push content at a human watching the game: `post-notification` raises a native in-game notification, and `present-decision`, used by the [human-control mode](../vox-agents/agents/strategists/human-control.md), pushes the current option landscape into the in-game decision panel.
 
 **Game-control tools** (`pause-game`, `resume-game`, `set-production-mode`) do not change the game world at all. They change when it runs, which is how an agent buys itself time to think.
 

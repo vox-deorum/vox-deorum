@@ -20,7 +20,7 @@ The rest of the page walks three message journeys, then covers pacing, resilienc
 
 ## Journey 1: an agent reads or acts on the game
 
-A [strategist](vox-agents/strategist.md) is deciding a turn. To see the board and then act, it calls MCP tools: "what can this player build?", then "set this civ's grand strategy."
+A [strategist](vox-agents/agents/strategists/overview.md) is deciding a turn. To see the board and then act, it calls MCP tools: "what can this player build?", then "set this civ's grand strategy."
 
 **1. The agent calls a tool (MCP).** The agent runs inside a `VoxContext`, connected to the [MCP server](mcp-server/overview.md) as an MCP client over stdio or HTTP. A tool call travels over that connection.
 

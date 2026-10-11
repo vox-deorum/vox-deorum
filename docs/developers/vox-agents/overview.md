@@ -1,175 +1,62 @@
-# vox-agents: Overview
+# Vox Agents: Overview
 
-Vox-agents is the top of the Vox Deorum stack: the TypeScript framework in which language-model agents actually play Civilization V. The [MCP server](../mcp-server/overview.md) exposes the game as tools, and the bridge and DLL carry those tool calls into the running game. Everything player-facing (strategic decisions, in-character chat, post-game analysis) is produced here.
+Vox Agents is the part of Vox Deorum where language models play Civilization V. It is a TypeScript framework that runs LLM agents, gives them the game as tools, and turns their answers into in-game decisions and conversations.
 
-The source lives in `vox-agents/src/`. Generated API reference stays with the component in `vox-agents/docs/api/`.
+```
+Vox Agents  ──(MCP tools)──►  MCP Server  ──►  Bridge  ──►  DLL  ──►  Civilization V
+    │
+    └──►  LLM providers (OpenAI, Anthropic, Codex, Claude Code, ...)
+```
 
-The framework has a small core (an agent base class, an execution context, and a few global registries) with families of concrete agents built on top. Each family has its own page:
+Vox Agents never talks to the game directly. It is an MCP client of the [MCP server](../mcp-server/overview.md): it calls tools to read the game and act on it, and it listens for notifications such as "a player finished a turn". The full message path is in [protocol.md](../protocol.md) and the component map is in [architecture.md](../architecture.md).
 
-| Family | What it does |
+## What it does
+
+| Job | Who does it | Read more |
+| --- | --- | --- |
+| Play a civilization, turn by turn | Strategists | [Strategists](agents/strategists/overview.md) |
+| Chat with the player in character, and negotiate deals | Envoys (spokesperson, diplomat, negotiator) | [Envoys](agents/envoys.md) |
+| Summarize the game, assess reports, look up rules | Support agents (briefers, analysts, librarians) | [Support agents](agents/support-agents.md) |
+| Explain a finished game | Telepathist | [Telepathist](agents/telepathist.md) |
+| Replay past turns with a changed prompt or model | Oracle | [Oracle](agents/oracle.md) |
+| Turn finished games into searchable experience | Archivist | [Archivist](agents/archivist.md) |
+
+## How the docs are organized
+
+| Folder | What it covers |
 | --- | --- |
-| [Strategists](strategist.md) | Make the per-turn strategic decisions for the civilizations the LLM controls. |
-| [Envoys](envoy.md) | Hold conversations: spokespersons and diplomats that players chat with in-game. |
-| [Support agents](support-agents.md) | Briefers, analysts, and librarians that do focused work the other agents delegate to. |
-| [Telepathists](telepathist.md) | Answer questions about a finished game by reading its recorded telemetry. |
-| [Oracle](oracle.md) | Replays past turns with modified prompts or different models for "what-if" experiments. |
-| [Archivist](archivist.md) | Batch-processes finished games into an episode database that strategists learn from. |
+| [framework/](framework/) | The core that every agent runs on: the agent base class, runs, sessions, how a model request is built, and context compaction. |
+| [models/](models/) | Choosing and configuring models: the model registry, tiers and triage, provider middleware, evaluators, and the Codex proxy. |
+| [workspace/](workspace/) | The optional per-seat file workspace: the `bash` tool, its folders, and the store that keeps records and notes. |
+| [agents/](agents/) | Each agent family. Strategists have their own subfolder. |
+| [platform/](platform/) | What surrounds the agents: the web dashboard, tracing and logs, and video capture. |
 
-The [web UI](ui.md), [media pipeline](media.md), and [observability](observability.md) pages cover the dashboard, OBS capture and video generation, and tracing and logging. [Prompts and tool calling](prompts.md) explains how a model request is built and where to edit each part of it. [Context compaction](compaction.md) shows how a long run with the `files` workspace drops old command output. [Evaluators](evaluators.md) covers evaluation models, triage, and the evaluator strategist, and [Evaluator trimming](evaluator-trimming.md) shows how the evaluator strategist's state is shortened to fit the model's input limit.
+A good reading order for a new developer:
 
-## VoxAgent: the base class
+1. [Agents](framework/agent-framework.md) and [Runs](framework/runs.md), to learn how one agent call works.
+2. [Strategists](agents/strategists/overview.md), the agents that play the game.
+3. [Model configuration](models/configuration.md), to run with your own models.
+4. [Observability](platform/observability.md), to see what an agent actually did.
 
-Every agent extends `VoxAgent` (`src/infra/vox-agent.ts`). An agent is not a long-running object. It is a bundle of _lifecycle hooks_ that the execution context calls while driving an agentic loop.
+## Source layout
 
-The main hooks, in the order they matter:
+Paths in these pages are relative to `vox-agents/` unless they say otherwise.
 
-| Hook | Responsibility |
+| Folder | Holds |
 | --- | --- |
-| `getSystem()` | Returns the system prompt. |
-| `getInitialMessages()` | Builds the opening context. For strategists, that is the formatted game state. |
-| `triage()` | Optionally evaluates the prepared prompt to choose a model tier. Its decision is available through `context.currentTriage`. |
-| `getModel()` | Chooses the model using the supplied tier or the agent's `modelSize`. Resolves per-agent and tier mappings in `config.json`. |
-| `executeEvaluation()` | When implemented, evaluates prepared state and processes answers in place of the chat loop. |
-| `getActiveTools()` | Names the agent's full tool list. |
-| `getRunTools()` | Picks the tools declared for one run, once before the first step. Defaults to `getActiveTools()`, plus `bash` when the seat has files on. Envoys and telepathists restrict special-message runs here, without bash. |
-| `getExtraTools()` | Contributes agent-specific tools beyond the shared MCP set. |
-| `prepareStep()` | Runs before each step. Can prune messages, switch models mid-run, or remove tools after an earlier step ran. It never adds tools. |
-| `stopCheck()` | Decides after each step whether the loop is done. |
-| `getOutput()` / `postprocessOutput()` | Turn the final exchange into a typed result, optionally validated against a Zod schema. |
+| `src/infra/` | The framework core: agent base class, context, runs, sessions, registries, game launch. |
+| `src/strategist/` | Strategist sessions, players, pacing, and strategist agents. |
+| `src/envoy/`, `src/briefer/`, `src/analyst/`, `src/librarian/` | The other live agent families. |
+| `src/telepathist/`, `src/oracle/`, `src/archivist/`, `src/narrators/` | Post-game tools. |
+| `src/knowledge/` | Game-state sections, seat records, and the per-game reference. |
+| `src/utils/models/` | Model registry, providers, and middleware. |
+| `src/utils/workspace/` | The per-seat file workspace. |
+| `src/web/` and `ui/` | The dashboard backend and the Vue app. |
+| `prompts/` | System prompt templates. |
+| `configs/` | Session configurations. |
 
-Most agents declare `completionTools` to control stopping. The loop ends once one of those tools has been called successfully (a strategist stops after `set-strategy` or `keep-status-quo`, for example), with a maximum step count as a backstop. Some providers (Anthropic, Codex) reject a wire-level forced tool choice, so their middleware switches it to `auto` and the step's closing reminder states the requirement, for every provider. The middleware's own sentence names the completion tools from the run's declared tools and does not depend on the tool choice.
+Other references:
 
-Removing a tool mid-run does not remove its definition from the request. A call to a removed tool comes back as an error, and a closing reminder at the end of the request names what may run. [prompts.md](prompts.md) covers how a request is assembled across hooks, the step loop, and model middleware, and where each piece of prompt text lives.
-
-Two flags change the execution shape entirely:
-
-- **`fireAndForget`**: the agent returns to its caller immediately and runs detached as its own root run, started with `forkRun()`. It gets an independent cancellation signal and token sink, so it survives cancellation of the caller's run. This is what lets a diplomat hand a report to an [analyst](support-agents.md) and keep talking without waiting for the intelligence processing.
-- **`programmatic`**: the agent skips the LLM altogether and implements `handleMessage()` directly. The telepathist's episode retriever is one.
-
-## VoxContext: the execution engine
-
-`VoxContext` (`src/infra/vox-context.ts`) runs agents. It owns one seat's long-lived resources: the MCP client connection, the tool registry, and the on-disk cache of tool definitions. The work itself happens inside **root runs**.
-
-The context does not hold the agentic loop. `src/infra/vox-execute.ts` drives an agent's steps, `src/infra/vox-telemetry.ts` holds the span, token-accrual, and model-label helpers it shares with the single-call evaluation path in `src/infra/vox-evaluate.ts`, and `execute()` and `evaluate()` on the context are thin delegators that hand themselves to those modules.
-
-### Root runs
-
-A root run is one operation on the seat: a strategist turn, a diplomat chat, an automatic deal response, or a detached analyst. Each root run owns that operation's own cancellation signal, progress callback, timeout refresh, token sink, and run-local turn and event window.
-
-Because every operation gets its own root, several can run on the same seat at once without overwriting one another's state. A strategist can finish an older queued turn while a diplomat chats on the current live turn, and a client disconnecting from one chat cancels only that chat.
-
-The run-model types and helpers live in `src/infra/vox-run.ts`. There are three ways to enter or move between runs:
-
-| Call | Behavior |
-| --- | --- |
-| `withRun()` | Opens a root run wrapping the whole operation, including the setup and game-state refresh before the first agent call. Hands its callback a run handle that can cancel just that operation. |
-| `forkRun()` | Starts a _detached_ root for fire-and-forget work that must outlive its caller, such as the analyst handoff above. |
-| `callAgent(name, input)` | Runs a nested agent inside the active root. The nested call inherits the caller's cancellation and token accounting, replacing only the current agent input. |
-
-`execute(agentName, input)` also runs inside the active root. Neither it nor `callAgent()` takes a parameters argument, because the run already carries them; calling either outside a run is therefore a programming error. The step loop assembles the prompt from the agent's hooks and runs steps (calling the model, executing tool calls, consulting `stopCheck()`) until the agent is done. It streams text and tool events to an optional callback along the way, which is what the web UI's chat rides on.
-
-### Parameters and cancellation
-
-The run's parameters come from the seat's base. `setBaseParameters()` installs the stable parameter object the context owns. `currentParameters` is the active root's composed view of it: it overlays that run's turn fields on the shared seat state, and falls back to the base outside a run.
-
-Cancellation has two scopes that mirror these layers. `run.abort()` cancels a single operation. `context.abort()` cancels every active root, and is the one used by player abort, game switching, and shutdown.
-
-Token usage accumulates into both the run's own sink and the seat-wide totals, so per-turn cost stays separable from the seat's running total. Model-step and agent-execution spans record provider-reported cache reads as `tokens.input.cached` when available. `tokens.input` remains the total input count, including both cached and uncached tokens.
-
-### Tools
-
-Tools come from two sources. `registerTools()` fetches the tool list from the [MCP server](../mcp-server/tools.md), wraps each one for the AI SDK (auto-filling identifiers like player ID and turn, and formatting JSON results as markdown), and caches the definitions on disk so a context can come up offline from `loadToolCache()`.
-
-On top of those, every registered agent is itself wrapped as a `call-{name}` tool, so agents can invoke each other. Every wrapper accepts an optional `Tier` (`small`, `default`, or `large`) to select the called agent's model for that execution. The wrapper removes this control field before mapping the agent's input. A diplomat calling `call-diplomatic-analyst` is an ordinary tool call.
-
-Agents can also bypass the LLM and invoke things directly. `callTool()` runs a single tool; it still takes explicit parameters and needs no active run, so setup and shutdown paths keep working. `callAgent()` runs a nested agent inside the current root and returns its typed output.
-
-Each context has a stable ID. For a strategist player it is `{gameID}-player-{playerID}`, and that ID names the SQLite telemetry database all of the context's spans are exported to. See [observability.md](observability.md).
-
-## Sessions, registries, and process lifecycle
-
-A `VoxSession` (`src/infra/vox-session.ts`) is a long-running workflow: a game being played, or a narrator pipeline stage. It has a state machine (starting, running, recovering, stopping) that the web UI can display and control. `StrategistSession` is the main implementation; the [media pipeline](media.md) stages are others.
-
-Sessions that launch the game itself do so through `VoxCivilization` (`src/infra/vox-civilization.ts`). It generates launch Lua from templates, prepares Civ's `config.ini` (including the random seeds described in [strategist.md](strategist.md)), spawns and binds to the Civilization V process, and kills it on shutdown. The `useDX11` setting (on by default) picks the DirectX 11 binary; the launch script falls back to the standard one on installs without it, so the manager watches for both image names and reports the one it bound through `getGameExecutable`.
-
-Three global registries tie the process together:
-
-- **`agentRegistry`** holds every available agent. All core agents register at startup in `src/infra/agent-registry.ts`.
-- **`sessionRegistry`** tracks active sessions and enforces a single game session at a time.
-- **`contextRegistry`** tracks live contexts so the web routes can find them.
-
-`processManager` (`src/infra/process-manager.ts`) consolidates signal handling for SIGINT, SIGTERM, SIGBREAK, and SIGHUP. Every console entry point and long-lived service registers a named shutdown hook, and hooks run in registration order. The strategist console registers three: `terminal` restores the console, `session` stops the running game session, and `telemetry` flushes pending spans. Closing databases is not its own hook. Each `VoxContext` closes its own telemetry database as part of its shutdown, which the session hook triggers.
-
-## Models and configuration
-
-`vox-agents/config.json` holds the runtime configuration, including the `llms` block that maps a key like `openai/gpt-5-mini` to a provider and model name, with a `default` alias and an `embedder` alias for embedding models. That file is gitignored, so a fresh checkout has none. The effective values come from `src/utils/config/defaults.ts` merged with whatever the local file overrides; `src/utils/config.ts` performs the load, and `src/utils/config/diff.ts` does the per-entry merge and the diffing the dashboard's Config view shows.
-
-The built-in registry contains only the openai-compatible default and embedder. `src/utils/models/rules.ts` provides recommended settings for known provider and model-name patterns, with prompt middleware scoped to the providers that serve open-weight models over an OpenAI-compatible surface (openai-compatible, Chutes, Synthetic, OpenRouter). Before agent work begins, `src/utils/models/resolution.ts` verifies unregistered provider-qualified IDs against provider catalogs and keeps matching configurations in memory for the process. A reference that is neither a registered `llms` alias nor a supported `provider/model` ID is an error, as is a confirmed live-catalog miss; discovery failures and static-list misses warn and fall back to rule synthesis. Catalog matching is exact first, then case-insensitive. Explicit local configuration always wins. Codex discovery reads the managed proxy's authenticated live catalog, while Claude Code discovers its model list live from the locally signed-in Claude Code runtime through a small helper in `src/utils/models/providers/`, reading the catalog the runtime exposes. Agent names are not model references: an agent resolves through its own name, and one with no `llms` assignment runs on `default`, so preflight verifies the assignment when it exists and `default` when it does not.
-
-The framework is provider-agnostic. OpenRouter, OpenAI, Anthropic, Google, AWS Bedrock, Codex, and OpenAI-compatible endpoints are supported. API-backed providers read keys from `.env`; Codex uses the player's ChatGPT login, and the bundled Claude Code runtime uses the player's local Claude Code sign-in. The Setup wizard fetches live, provider-reported model lists for API-backed and local providers, and saves the chosen Main AI as the `default` alias with any rule-derived recommended settings. An optional Judge AI, off by default and never recommended because triage is still under study, saves as the shared `evaluator` alias. Only with a judge does the wizard offer Quick and Deep AI picks for the `small` and `large` tier aliases; without a judge, or with a tier kept on the Main AI, it removes those aliases. Agents can reach any tier through caller-selected `Tier`, while automatic triage requires the `triage` setting described below. Codex reads its live choices through the authenticated managed proxy. Claude Code reads the catalog the runtime exposes with a process-lifetime cache and one concurrent lookup, as before. AWS Bedrock remains a manual Settings-page configuration. Agents resolve their model through `getModel()`, so a config can assign different models to different agents, or different strategists to different players in the same game.
-
-The root `package.json` overrides the Claude Agent SDK dependency so model discovery and `ai-sdk-provider-claude-code` use the same SDK version and bundled runtime. Stop Vox Agents and run `npm run update:claude-agent-sdk` from the repo root to move it to the latest release, or `npm run update:claude-agent-sdk -- <version>` for a specific one. The script at `scripts/utilities/update-claude-agent-sdk.mjs` updates the dependency spec, reinstalls, and prints each Claude Code model alias with the model ID it resolves to, such as `opus => claude-opus-5-5`. If Claude Code is missing or not signed in, it prints a warning instead of the mapping and the update still counts as successful. Restart Vox Agents afterward.
-
-Evaluation models answer typed questions about one state in a single call. TypeSafe's Jev is one, and any chat model can serve as one through an adapter. They drive triage, the diplomatic analyst, and the evaluator strategist; [Evaluators](evaluators.md) covers their configuration, the `triage` setting, and the evaluate call.
-
-The engine prepares the system prompt and initial messages once, then shares that state with triage and execution. Durable reads needed by multiple hooks can share one load through `context.memoizeForExecution`. An empty system prompt ends execution before initial-message preparation or model selection.
-
-The three model tiers are `small`, `default`, and `large`. For `small` and `large`, lookup tries `<agent>.<tier>`, then `<tier>`, then `<agent>`, then `default`, checking seat overrides before global configuration at each key. The default tier uses the agent assignment before the default alias. Triage runs once per execution, and its tier remains in effect across model steps. Callers can supply `ExecuteOptions.triage`, or `Tier` on any `call-*` tool, to bypass the hook without triage opt-in. Session preflight checks all three tiers for reachable agents, including the configured negotiator. Decisions live on execution frames, so nested and concurrent agents each see their own `currentTriage`. When the hook fails, execution logs a warning and keeps the agent's own `modelSize`, noting `triage failed` on the decision; cancellation still stops the run. Every agent span records the starting tier. Spans with a triage decision also record the selected tier and decision source, plus an optional note. Evaluation spans identify their purpose and requesting agent. Evaluation usage counts toward run and seat totals.
-
-Provider-specific code lives under `src/utils/models/providers/` and imports shared types and sibling helpers without importing `models.ts`.
-
-The shared `hostTools` policy governs what a CLI-backed model (Codex or Claude Code) may do on the host machine. It is deny-by-default and accepts only `Web`. `host-tools.ts` validates it once, and any other entry, including the retired `Read`, `Write`, and `everything`, fails with an error naming the supported value. Claude Code maps `Web` to its web fetch and search tools, and Codex maps it to live search. Neither CLI gets a working directory, local file tools, or a shell: Claude Code runs without a cwd and denies any tool outside its allowed list, and Codex always keeps its sandbox disabled. File access comes only from the per-seat `files` setting below, which works the same on every provider.
-
-The per-seat `files` setting gives a `bash` tool for every tool-using agent of the seat, on any provider: a simulated shell (just-bash) with no network, Python, or JavaScript, where common text tools, `jq`, and `sqlite3` work. `FilesConfig` in `src/types/config.ts` defines the shape (a `"read"` / `"write"` shorthand for game access, or `game`, `shared`, and `quota`), and `resolveSeatFiles` in `src/strategist/seat-config.ts` resolves it like `triage`: seat, then session config, then the root `vox-agents/config.json`, else off, with the highest level that sets a value replacing lower ones whole. Invalid values name the config path and fail session preflight before the game launches. `src/utils/workspace/player-workspace.ts` mounts the folders, all stored under `<telemetryDir>/workspaces`: `/workspace/records` (read-only) and `/workspace/game` (the seat's notes, with the seat's game access) from the [seat workspace store](#seat-workspace-store); `/workspace/reference` (read-only) to `games/<gameID>/reference/`, mounted once that folder exists; `/workspace/shared/<name>` to `shared/<name>/`, persisting across games and seats (names match lowercase letters, digits, `-`, or `_`, starting with a letter or digit); and `/tmp` to `scratch/<gameID>-player-<playerID>/`, scratch space shared by one player's agents, including concurrent ones, for the whole game. Shared folders and `/tmp` live on disk and nothing reaps them. Anything written elsewhere is discarded after each call. Read mounts reject changes, and each writable shared root gets an `AGENTS.md` guide created once and never overwritten, so agents and players may edit it. The game notes have no disk folder. Their guide lives in the store, and a writable command that finds it missing writes the default as part of that command's commit, so it returns after an agent deletes it or a rewind drops it. Players read it, like the rest of the notes, through an export (see [Reading the store from outside](#reading-the-store-from-outside)). `src/utils/tools/bash-tool.ts` wraps the shell as the tool, and the base `VoxAgent.getRunTools` adds `bash` to an agent's non-empty `getActiveTools()` list. Overrides that restrict a whole run leave it out: a telepathist's special message declares no tools. With files on, workspace work and the final decision share one step budget: `VoxAgent.stepLimit` raises the agent's `maxSteps` to `quota` (default 20) unless `maxSteps` is already higher, and every stop check ends the run through `reachedStepLimit`. Each step costs a full model call while commands are cheap, so the prompts ask for parallel bash calls or one combined script, and the closing reminder counts down the steps left for the final decision. A Briefer ignores text from a step that also calls bash, so "checking notes" does not end the briefing. A long run with files on compacts itself: once the request nears the model's `continuityThreshold` (an `LLMConfig` option; 300,000 tokens for Claude Code, Codex, OpenAI, and Anthropic models, 100,000 otherwise), `executeAgent` drops old bash output and older reasoning after a one-time reminder, and the first context-length error compacts and retries once. A separate `LLMConfig` option, `maxInputTokens`, caps the model's largest input in estimated tokens, which evaluation calls enforce before reaching the provider; it defaults to 30,000 for TypeSafe and no limit for other models (`inputTokenLimit` in `src/utils/models/models.ts`). [Context compaction](compaction.md) walks through an example. Runs without files never compact. With files on, `executeAgent` also marks the run's last initial message as a prompt-cache anchor, so later steps on Anthropic-family models can re-read the initial prompt from cache (see [Caching](prompts.md#caching)). Two seats of one game writing the same shared name can pass information to each other; users avoid that with per-seat names or read access. The workspace needs Node 22.17.0 or newer (the repo requires 22.23.3); on older Node the tool returns an upgrade error instead of mounting.
-
-A model call with bash or CLI web access receives one short system reminder, built by `capabilityInstruction` in `src/utils/models/capability-prompt.ts` and added by the outermost model middleware. It describes the workspace only when the request declares the `bash` tool, describes web access only for Codex or Claude Code with `Web`, and names the agent's declared completion tools as what to call after using these capabilities. The workspace part names the mounted folders and their access, points agents to the game folder's guide, and asks them to keep notes organized and to trust current game information over stale notes.
-
-Model-step spans record enabled host capabilities in `host.capability`, joined with commas: `write` when the seat's files include a writable mount, otherwise `read` when files are on (any provider), then `web` for Codex or Claude Code with `Web`. For example, a Codex seat with `files: "write"` and `Web` records `write,web`. Steps with neither omit the attribute.
-
-The managed Codex proxy is pinned and starts lazily. It never adopts a listener already occupying its port, because `/health` and `/ready` do not expose enough identity to verify the required activity contract. Startup scans upward from the configured port for a free one, and fails only once every candidate is occupied. `CODEX_PROXY_COMMAND` remains a trusted launch override. See [Updating the Codex proxy](codex.md) for the version upgrade procedure.
-
-Each model request uses a fresh local connection to the Codex proxy, with HTTP keep-alive reuse disabled. Failed requests use the normal request retry policy. The manager restarts its proxy after five consecutive connection failures or HTTP 5xx responses across its model requests. Other HTTP responses, including validation and rate-limit errors, reset the count. Starting a new proxy also resets the count. Upstream warnings on stderr are logged but do not count as failed requests.
-
-Middleware sits between agents and providers:
-
-- Per-model concurrency limiting (`src/utils/models/concurrency.ts`) caps parallel requests with semaphore-style tracking.
-- Claude Code subscription limits wait until the provider's reset time, with a slow fallback when no valid reset is supplied.
-- Codex response middleware converts observational `tool_calls` and `tool_results` into provider-executed AI SDK lifecycles, removes them from replay history, and leaves client game tools executable. It also threads the previous step's response id as `previous_response_id` between the steps of one agent run, so the proxy prefers native Codex thread continuation, and records the admitted outcome as `host.thread_reuse` telemetry.
-- The tool-rescue middleware (`src/utils/models/tool-rescue/`) salvages tool calls that weaker models emit as JSON text instead of structured calls.
-
-Provider-executed Claude Code and Codex calls are shown in the dashboard and recorded as retrospective built-in tool spans. Preliminary progress is not a successful outcome: a failed or missing terminal result records an error.
-
-## Seat workspace store
-
-A seat with `files` on keeps its game files in one SQLite store, `WorkspaceStore` in `src/utils/workspace/workspace-store.ts`, at `<telemetryDir>/workspaces/games/<gameID>-player-<playerID>.db`. File contents are stored once by hash and every change is a commit with a parent, so the store holds a history that can be rewound or read at any version. A strategist switch on the same seat keeps the same store. Only the host and the bash tool write to it. `src/utils/workspace/store-fs.ts` is the bash view: each command rebuilds its mounts from the head version, and a command that changes notes makes one `notes` commit afterward. A cancelled command commits nothing. Old notes folders from before the store are not imported.
-
-The store holds two trees:
-
-- **Records** (`records/`, read-only to agents, mounted at `/workspace/records`): written by `SeatRecords` in `src/knowledge/records.ts`. Each processed turn is recorded before pacing can skip or decide, including paced skips. It writes `turn-<N>/<section>.md` and `.json` for each section, using the [section registry](prompts.md#game-state-sections), with players, cities, and military also split into smaller Markdown parts, and the events as `events-all` plus economic, military, diplomatic, others, and system files. Game-scoped `situation` and `civilization` files sit in the records tree under `records/game/`. `CATALOG.md` lists what exists. A failed record write fails that turn, like a failed refresh.
-- **Notes** (`game/`, mounted at `/workspace/game`): the agents' own files.
-
-Briefings are archived by `requestBriefing` in `src/briefer/briefing-utils.ts`: the generated text is written to `records/turn-<N>/briefings/<kind>.md` before it is published to the game state, so callers never see a briefing that is not archived.
-
-The game reference is separate and per game. Before any player loop starts, `StrategistSession` calls `writeGameReference` (`src/knowledge/reference.ts`), which writes technologies, policies, buildings, and units from the game database, as Markdown and JSON, into `games/<gameID>/reference/` through a temporary folder and a rename. Every file-enabled seat mounts it read-only. A setup failure, such as a store that cannot open or a failed reference write, stops the session before the loops start, and a session stopped during setup starts none. Either way, `VoxPlayer.dispose` shuts down each prepared player's context and closes its store.
-
-### Timeline start and reloads
-
-`VoxPlayer.beginTimeline` (`src/strategist/vox-player.ts`) starts a seat's timeline at a turn: it cancels the seat's active runs, clears its cached game states, working memory, and decision cursor in place, resets the event window, and rewinds the store so records and notes from that turn on leave the seat's view. Nothing is deleted, so discarded commits stay in the file. It runs when the player is created and again on a reload, which is a real turn notification at or below the last processed turn. The lowest such turn stays pending, even while the seat is busy, and the next processed turn begins the new timeline from there, before its run starts. A failed rewind fails that turn and is retried on the next one. The human seat's proactive turn 0 notification is a startup acknowledgement, and the real notification for it is not a reload. A DLL reconnection clears that acknowledgement, so a recovered notification counts as a reload.
-
-### Reading the store from outside
-
-The store file is not meant to be opened by hand. `npm run workspace -- materialize <gameID> <playerID> <outDir> [commit]` (`src/utils/workspace/console.ts`) writes the head version, or the given commit, as ordinary files into a new or empty folder. The telemetry page's past games table has a "Download files" button that does the same as a zip, through `GET /api/telemetry/workspace/:gameID/:playerID/download` with an optional `commit` query (`src/web/routes/telemetry.ts`). Both read through a separate read-only connection inside one transaction (`src/utils/workspace/materialize.ts`), so they see a whole commit and work while a session writes. The output holds `records/` and `game/` as the store does; edits to it never flow back.
-
-## Where this sits in the stack
-
-Vox-agents connects to the [MCP server](../mcp-server/overview.md) below it as an MCP client over stdio or HTTP, calls its tools, and reacts to its notifications (turn completion, game switches, DLL connect and disconnect). The agents never talk to the bridge or the game directly.
-
-The end-to-end message path is traced in the top-level [protocol](../protocol.md) page, and the overall component map in the [architecture](../architecture.md) page.
-
-## Where the details live
-
-This folder explains what the framework does and why. The exact API surface stays with the component:
-
-- `vox-agents/docs/api/` holds the generated TypeDoc reference for the source.
-- `vox-agents/AGENTS.md` holds working conventions for contributors (imports, logging, testing rules).
-- For building and testing the module, see [setup.md](../setup.md) and [testing.md](../testing.md).
+- `vox-agents/docs/api/` holds the generated TypeDoc reference.
+- `vox-agents/AGENTS.md` holds contributor conventions (imports, logging, tests).
+- [setup.md](../setup.md) and [testing.md](../testing.md) cover building and testing.

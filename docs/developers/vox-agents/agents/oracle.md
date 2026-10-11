@@ -1,8 +1,12 @@
-# vox-agents: Oracle
+# Oracle
 
 The Oracle answers counterfactual questions: _what would the AI have decided on that turn if the prompt had been different, or the model had been someone else?_
 
 Given a CSV of real game turns, it re-runs each turn's original LLM call, extracted verbatim from recorded telemetry, with whatever modifications an experiment specifies, then records what the model decides this time. Nothing touches a live game. The replayed model is given **schema-only tools**, so it produces tool-call intents that are captured as decisions but never executed.
+
+```
+recorded telemetry ──retrieve──► original prompts (JSON) ──replay with changes──► new decisions (CSV, trails)
+```
 
 The source lives in `src/oracle/`. Run experiments with:
 
@@ -30,7 +34,13 @@ The split is what makes iteration cheap. Extract once, confirm the right turns w
 
 Turn numbers alone are unreliable, because botched and re-run turns reuse them. The Oracle validates its target with **rationale matching**: each CSV row carries a fragment of the original decision rationale, and the extractor fuzzy-matches it against the recorded tool calls. When a turn's record doesn't match, it falls back to the previous turn and emits a warning.
 
-Only the last attempt at each turn is replayed. Earlier attempts at the same turn are botched retries. A reload also discards attempts: if a seat played to turn 60 and the player then loaded a turn-50 save, every turn root recorded before that reload for turns 50 and later is superseded. Turns 56-60 are never replayed if the new timeline stopped at 55, and their rows come back as errors, without the previous-turn fallback. The rule reads one telemetry database, which is per strategist, so a reload played under a different strategist is not visible to it. Retrieved JSON and replay trails made before this rule existed can still hold discarded turns; run retrieval again and replay with `--forceReplay` to rebuild them.
+Only the last attempt at each turn is replayed:
+
+- **Retries.** Earlier attempts at the same turn are botched retries and are skipped.
+- **Reloads.** A reload also discards attempts. Say a seat played to turn 60, then the player loaded a turn-50 save and played to turn 55. Every turn recorded before the reload for turns 50 and later is discarded. Turns 56 to 60 are never replayed, and their rows come back as errors without the previous-turn fallback.
+- **One database.** The rule reads one telemetry database, and each database belongs to one strategist. A reload played under a different strategist is not visible to it.
+
+Retrieved JSON and replay trails made before this rule existed may still hold discarded turns. Run retrieval again and replay with `--forceReplay` to rebuild them.
 
 ## Experiments
 
@@ -44,7 +54,9 @@ An experiment is an ES module exporting an `OracleConfig`. See `src/oracle/types
 - **`filter`** narrows which CSV rows run.
 - **`extractColumns`** pulls experiment-specific values out of each replay into extra CSV columns.
 
-Replays run with bounded concurrency, reuse existing trail files to skip already-completed rows, and can route through provider batch APIs for large experiments (`src/oracle/batch/`). The batch path serializes the request directly to the provider and does **not** run the tool-rescue middleware, so it is incompatible with prompt-mode models (`options.toolMiddleware: 'prompt'`). Replaying one under `batch` throws rather than silently sending native tools. Override to a native tool-calling model or drop batch mode for those rows. Tools the original run removed mid-run are still rejected on the batch path: the batch response conversion applies the same rejection hooks the live path passes to the AI SDK. Rejected calls never count as decisions in either mode.
+Replays run with limited concurrency and reuse existing trail files to skip rows already done.
+
+**Batch mode.** Large experiments can go through provider batch APIs (`src/oracle/batch/`). Batch requests go straight to the provider without the [tool-rescue middleware](../models/middleware.md#prompt-mode-tool-calling), so batch mode does not work with prompt-mode models (`options.toolMiddleware: 'prompt'`). Replaying one in batch mode throws an error. Switch those rows to a native tool-calling model or turn batch mode off. Tools the original run removed mid-run are still rejected in batch mode, using the same rejection hooks as the normal path. Rejected calls never count as decisions in either mode.
 
 ### Tool framing
 
@@ -58,8 +70,18 @@ Outputs default under `temp/oracle/`: the per-experiment results CSV next to a d
 
 CLI flags override the output and telemetry directories and the target agent. Bare experiment filenames resolve to `experiments/`.
 
-Ctrl+A is a reversible graceful-stop toggle, the same key the strategist console uses. The first press stops admitting queued work, lets admitted work finish (including requests already accepted by the batch manager), and skips any later phase. Press Ctrl+A again before that work drains to continue normally. A graceful stop keeps successful retrieved JSON artifacts and replay trails; it leaves the results CSV untouched whenever it withheld queued tasks, and publishes normally when the stop arrived after every task had already started. Replay trails are reused as cache by the next replay, while retrieved JSON artifacts are retained for inspection rather than used as a retrieval cache. Oracle shuts down through its process manager once the run ends, whether it stopped early or finished.
+### Stopping a run
 
-Ctrl+C is distinct and irreversible: it shuts down the process using the existing interrupted-task behavior. Press Ctrl+C again to force-quit. The trails already written are kept and reused as cache on the next run.
+| Key | Effect |
+| --- | --- |
+| Ctrl+A | Graceful stop, and the same key the strategist console uses. No new work starts, work already started finishes (including requests the batch manager accepted), and later phases are skipped. Press Ctrl+A again before the work drains to continue normally. |
+| Ctrl+C | Shuts down right away, using the normal interrupted-task behavior. Press it again to force-quit. |
+
+What survives a stop:
+
+- Retrieved JSON files and replay trails that finished are kept. The next replay reuses trails as a cache. Retrieved JSON is kept for inspection only and is not reused as a cache.
+- After a graceful stop, the results CSV is left untouched if any queued task was held back. If every task had already started, the CSV is written normally.
+
+The Oracle shuts down through its process manager when the run ends, whether it stopped early or finished.
 
 The Oracle reads the same telemetry the [telepathist](telepathist.md) reads. One explains what happened; the other explores what could have happened instead.

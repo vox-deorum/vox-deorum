@@ -1,4 +1,4 @@
-# vox-agents: Media, Capture and Narration
+# Media: capture and narration
 
 Vox Deorum can record or livestream its games and turn the recordings into narrated video. Two systems cooperate:
 
@@ -7,7 +7,7 @@ Vox Deorum can record or livestream its games and turn the recordings into narra
 
 ## Production modes
 
-A [strategist session's](strategist.md) config carries a `production` mode that decides how the game looks and whether OBS is involved.
+A [game session's](../agents/strategists/game-session.md) config carries a `production` mode that decides how the game looks and whether OBS is involved.
 
 | Mode | Animations | OBS | Notes |
 | --- | --- | --- | --- |
@@ -24,8 +24,14 @@ Helper predicates in `src/types/config.ts` split these into "visual" modes (play
 
 On initialization it makes sure OBS is running (launching it if needed), connects, and builds its scenes programmatically:
 
-- a game scene with a window capture of the Civilization V executable and an application-audio capture of the same process. Both inputs are retargeted on every setup, and again whenever a game process is bound (first launch, an attached game, or a crash-recovery relaunch), so the capture follows the build that is actually running rather than the one the DX11 setting asked for. A change made while OBS is disconnected is applied when it reconnects. Desktop and microphone audio are muted for the session, so only game audio lands in the recording;
-- for livestreams, a pause scene showing a static image.
+- **A game scene** with a window capture and an application-audio capture of the Civilization V process.
+- **A pause scene** with a static image, for livestreams.
+
+Capture details:
+
+- Both game inputs are pointed at the running game on every setup, and again whenever a game process is attached (first launch, an existing game, or a crash relaunch). So the capture follows the build that is actually running, whichever the DX11 setting asked for.
+- A change made while OBS is disconnected is applied when it reconnects.
+- Desktop and microphone audio are muted for the session, so only game audio is recorded.
 
 Production then follows a simple lifecycle: start, pause, resume, stop. Pausing means different things by mode: recordings pause the file so there is no dead air, while livestreams switch to the pause scene.
 
@@ -39,7 +45,7 @@ Recording a whole game produces hours of dead time, so the strategist session ne
 
 The game's render events drive a small state machine:
 
-1. A segment starts when the in-game top panel switches to a player, the moment something noteworthy is being shown (see the civ5-mod [ui.md](../civ5-mod/ui.md)).
+1. A segment starts when the in-game top panel switches to a player, the moment something noteworthy is being shown (see the civ5-mod [ui.md](../../civ5-mod/ui.md)).
 2. When animation activity suggests the action is ending, a grace timer arms.
 3. If nothing else happens before the timer expires, the segment stops.
 
@@ -47,11 +53,19 @@ In livestream mode the controller passes straight through to ObsManager.
 
 Alongside the video files, the controller writes `segments.jsonl` in the recording directory: one line per start, switch, or stop event, with the turn, player, wall-clock timestamp, and (on stop) the output filename. That log is the contract with the narrators pipeline.
 
-When the MCP server archives a completed game, it archives the finalized DLL recording as `archive/<experiment>/<game-id>.zip` and then attempts to remove the source folder. A failed publication leaves the source folder in place; cleanup errors are logged without failing the rest of the archive. The package contains one `<game-id>/` root, excludes `tactical-training/`, stores `stream.bin` members without compression, and reuses an existing package with the same name. To package a recording manually, run `npm run archive:raw -- SOURCE_ROOT OUTPUT_DIRECTORY` from the repository root.
+### Archiving the DLL recording
+
+When the MCP server archives a finished game, it also packages the DLL's recording as `archive/<experiment>/<game-id>.zip`, then tries to remove the source folder.
+
+- The zip has one `<game-id>/` root folder, leaves out `tactical-training/`, and stores `stream.bin` files without compression.
+- An existing zip with the same name is reused.
+- If packaging fails, the source folder stays. Cleanup errors are logged without failing the rest of the archive.
+
+To package a recording by hand, run `npm run archive:raw -- SOURCE_ROOT OUTPUT_DIRECTORY` from the repository root.
 
 ## The narrators pipeline
 
-The narrators system (`src/narrators/`) is a five-stage batch pipeline that turns a recorded game (the segments plus the game's knowledge database) into narrated video, from short clips to full-game documentaries. Unlike the [telepathist](telepathist.md), which speaks from one player's perspective, the narrator is omniscient: it sees all players and all events.
+The narrators system (`src/narrators/`) is a five-stage batch pipeline that turns a recorded game (the segments plus the game's knowledge database) into narrated video, from short clips to full-game documentaries. Unlike the [telepathist](../agents/telepathist.md), which speaks from one player's perspective, the narrator is omniscient: it sees all players and all events.
 
 Each stage is its own `VoxSession` subclass and is independently runnable. Stages communicate only through files in a shared workspace (managed by `NarratorWorkspace` in `src/narrators/workspace.ts`), so intermediate products can be inspected or hand-edited between stages.
 

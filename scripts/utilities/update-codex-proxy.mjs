@@ -10,7 +10,7 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '.
 const targetPaths = {
   source: 'vox-agents/src/utils/models/providers/codex-proxy.ts',
   test: 'vox-agents/tests/mock/utils/providers/codex-proxy.test.ts',
-  developerGuide: 'docs/developers/vox-agents/codex.md',
+  developerGuide: 'docs/developers/vox-agents/models/codex.md',
   operations: 'docs/developers/operations.md',
 };
 const exactVersionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;

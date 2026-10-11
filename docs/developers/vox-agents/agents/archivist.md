@@ -1,8 +1,8 @@
-# vox-agents: Archivist
+# Archivist
 
 The archivist turns finished games into experience. It batch-processes an archive of completed game databases into a single DuckDB **episode database**, where each row is a snapshot of one player on one turn: its situation, metrics, and what happened next, indexed for similarity search.
 
-That database is what lets the retrieval-augmented strategist (`simple-strategist-learned`, see [strategist.md](strategist.md)) ask "have I been in a situation like this before, and how did it turn out?"
+That database is what lets the retrieval-augmented strategist (`simple-strategist-learned`, see [Strategists](strategists/overview.md)) ask "have I been in a situation like this before, and how did it turn out?"
 
 The source lives in `src/archivist/`. The entry point is:
 
@@ -10,7 +10,7 @@ The source lives in `src/archivist/`. The entry point is:
 npm run archivist -- -a <archive-path> -o <output.duckdb>
 ```
 
-The exact episode table schema is documented in [schema.md](../../../vox-agents/docs/developers/vox-agents/schema.md).
+The exact episode table schema is documented in [schema.md](../../../../vox-agents/docs/developers/vox-agents/schema.md).
 
 ## What an episode is
 

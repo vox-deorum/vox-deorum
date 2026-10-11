@@ -6,7 +6,7 @@
  * touching the trimming code in `evaluator-trimming.ts`. Steps are cumulative and run top to
  * bottom; the walk stops at the first step after which the state fits. Steps are ordered by how
  * little each cut matters to the evaluator's decisions, least first. Anything no step names is
- * never trimmed (see docs/developers/vox-agents/evaluator-trimming.md).
+ * never trimmed (see docs/developers/vox-agents/agents/strategists/evaluator-trimming.md).
  */
 
 import type { EventTierName } from "../../utils/prompts/event-importance.js";

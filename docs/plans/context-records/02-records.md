@@ -273,7 +273,7 @@ Also update the existing workspace mount, capability prompt, and bash-tool tests
 
 ## Documentation
 
-Update `docs/developers/vox-agents/prompts.md` with the section registry; `docs/developers/vox-agents/overview.md` with the store, bash view, records, reference, catalog, and reloads; `docs/players/configuration.md` with the records and reference mounts, notes in the seat store, the materialize command and telemetry page button, notes rewinding on reload, and measured disk use; and `vox-agents/AGENTS.md` with the rules to render game-state sections through the registry and write workspace files through the store.
+Update `docs/developers/vox-agents/framework/prompt-files.md` with the section registry; `docs/developers/vox-agents/workspace/store.md` with the store, bash view, records, reference, catalog, and reloads; `docs/players/configuration.md` with the records and reference mounts, notes in the seat store, the materialize command and telemetry page button, notes rewinding on reload, and measured disk use; and `vox-agents/AGENTS.md` with the rules to render game-state sections through the registry and write workspace files through the store.
 
 ## Risks and open questions
 
