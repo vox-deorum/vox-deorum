@@ -57,6 +57,7 @@ import { voxCivilization } from '../../../src/infra/vox-civilization.js';
 import { VoxPlayer } from '../../../src/strategist/vox-player.js';
 import { VoxContext } from '../../../src/infra/vox-context.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 import { workspaceReferencePath } from '../../../src/utils/workspace/player-workspace.js';
 import { config as rootConfig } from '../../../src/utils/config.js';
@@ -462,13 +463,22 @@ describe('handleGameSwitched player preparation', () => {
   let referenceAtStart: boolean[];
   /** Players a session started, closed after each test. */
   const preparedPlayers: VoxPlayer[] = [];
+  /** IDs of every context registered during a test. */
+  let registeredContexts: string[];
 
   beforeEach(() => {
     savedTelemetryDir = rootConfig.telemetryDir;
     telemetryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-prepare-'));
     rootConfig.telemetryDir = telemetryDir;
     vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockResolvedValue(undefined);
+    vi.spyOn(VoxSpanExporter.getInstance(), 'closeContext').mockResolvedValue(undefined);
     vi.spyOn(VoxContext.prototype, 'registerTools').mockResolvedValue(undefined);
+    registeredContexts = [];
+    const register = contextRegistry.register.bind(contextRegistry);
+    vi.spyOn(contextRegistry, 'register').mockImplementation((context) => {
+      registeredContexts.push(context.id);
+      register(context);
+    });
     referenceAtStart = [];
     execute = vi.spyOn(VoxPlayer.prototype, 'execute').mockImplementation(async function (this: VoxPlayer) {
       referenceAtStart.push(fs.existsSync(workspaceReferencePath('G-prep')));
@@ -505,6 +515,11 @@ describe('handleGameSwitched player preparation', () => {
     } as any, { attachGameID: vi.fn(async () => {}) } as any, { seatingMap: {}, rotation: 0, seedIndex: 0 } as any);
     (s as any).state = 'starting';
     return s;
+  }
+
+  /** The registered contexts still in the registry. */
+  function liveContexts(): string[] {
+    return registeredContexts.filter((id) => contextRegistry.get(id) !== undefined);
   }
 
   /** Remember the players a session started, for cleanup. */
@@ -546,7 +561,7 @@ describe('handleGameSwitched player preparation', () => {
     expect(execute).toHaveBeenCalledTimes(2);
   });
 
-  it('should put the session in error, start no loops, and close opened stores when the reference fails', async () => {
+  it('should put the session in error, start no loops, and release opened seats when the reference fails', async () => {
     mcp.respondWith('get-unit', structuredResult({ Count: 0, Items: [], Error: 'database not ready' }));
     const close = vi.spyOn(WorkspaceStore.prototype, 'close');
     const s = preparedSession(true);
@@ -558,10 +573,12 @@ describe('handleGameSwitched player preparation', () => {
     expect(execute).not.toHaveBeenCalled();
     expect((s as any).activePlayers.size).toBe(0);
     expect(close).toHaveBeenCalledTimes(2);
+    expect(registeredContexts).toHaveLength(2);
+    expect(liveContexts()).toEqual([]);
     expect(fs.existsSync(workspaceReferencePath('G-prep'))).toBe(false);
   });
 
-  it('should put the session in error, start no loops, and close opened stores when a store cannot open', async () => {
+  it('should put the session in error, start no loops, and release opened seats when a store cannot open', async () => {
     const realOpen = WorkspaceStore.open.bind(WorkspaceStore);
     let opens = 0;
     vi.spyOn(WorkspaceStore, 'open').mockImplementation((dbPath, options) => {
@@ -577,7 +594,32 @@ describe('handleGameSwitched player preparation', () => {
     expect(voxCivilization.killGame).toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledOnce();
+    expect(liveContexts()).toEqual([]);
     for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
+  });
+
+  it('should start no loops and release prepared seats when the session stops during preparation', async () => {
+    let answer!: () => void;
+    const pending = new Promise<void>((resolve) => { answer = resolve; });
+    mcp.onTool('get-unit', async () => {
+      await pending;
+      return structuredResult({ Count: 1, Items: [{ Type: 'UNIT_A', Name: 'Alpha' }] });
+    });
+    const close = vi.spyOn(WorkspaceStore.prototype, 'close');
+    const s = preparedSession(true);
+
+    const switching = gameSwitched(s, 10, 'G-prep');
+    await vi.waitFor(() => expect(mcp.calls('get-unit')).toHaveLength(1));
+    // What shutdown does before its first await.
+    (s as any).state = 'stopping';
+    (s as any).abortController.abort();
+    answer();
+    await switching;
+
+    expect(execute).not.toHaveBeenCalled();
+    expect((s as any).activePlayers.size).toBe(0);
+    expect(close).toHaveBeenCalledTimes(2);
+    expect(liveContexts()).toEqual([]);
   });
 
   it('should label the proactive human turn-0 notification as a startup notification', async () => {

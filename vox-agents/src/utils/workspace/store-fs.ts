@@ -120,9 +120,14 @@ export class StoreFs extends InMemoryFs {
     return super.appendFile(viewPath, content, options);
   }
 
-  /** Create a directory and note the path. */
+  /** Create a directory and note the path, plus any missing parents a recursive call creates. */
   override async mkdir(viewPath: string, options?: MkdirOptions): Promise<void> {
     this.mutate('mkdir', viewPath);
+    if (options?.recursive) {
+      for (let parent = path.posix.dirname(normalize(viewPath)); parent !== '/' && !(await this.exists(parent)); parent = path.posix.dirname(parent)) {
+        this.touch(parent);
+      }
+    }
     return super.mkdir(viewPath, options);
   }
 
@@ -195,8 +200,8 @@ export class StoreFs extends InMemoryFs {
    * update the entry before their first await, so the change is in place when they return.
    */
   private setDirMetadata(viewPath: string, mode: number, mtime: number): void {
-    void super.chmod(viewPath, mode);
-    void super.utimes(viewPath, new Date(mtime), new Date(mtime));
+    super.chmod(viewPath, mode).catch(() => undefined);
+    super.utimes(viewPath, new Date(mtime), new Date(mtime)).catch(() => undefined);
   }
 
   /** Whether a store path or anything under it was in the version this view was built from. */

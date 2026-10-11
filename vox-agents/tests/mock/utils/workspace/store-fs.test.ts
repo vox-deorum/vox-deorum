@@ -123,9 +123,17 @@ describe('StoreFs', () => {
       expect(summary(changes)).toEqual([['game/a.md', 'file', 'a row\n']]);
     });
 
-    it('should record mkdir', async () => {
+    it('should record mkdir with the parents it creates', async () => {
       const changes = await runAndCommit('mkdir -p game/x/y');
-      expect(summary(changes)).toEqual([['game/x/y', 'dir']]);
+      expect(summary(changes)).toEqual([['game/x', 'dir'], ['game/x/y', 'dir']]);
+    });
+
+    it('should keep an empty parent after a later command removes its child', async () => {
+      await runAndCommit('mkdir -p game/x/y');
+      await runAndCommit('rm -r game/x/y');
+      const { stdout } = await run('ls game');
+      expect(stdout).toBe('a.md\nx\n');
+      expect([...store.manifest().keys()].sort()).toEqual(['game/a.md', 'game/x']);
     });
 
     it('should record rm -r as one delete', async () => {

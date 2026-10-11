@@ -85,6 +85,8 @@ export async function writeGameReference(gameID: string): Promise<boolean> {
     fs.renameSync(temp, target);
   } catch (error) {
     fs.rmSync(temp, { recursive: true, force: true });
+    // Another session of the same game finished its write first.
+    if (fs.existsSync(target)) return false;
     throw error;
   }
   logger.info(`Wrote the game reference for ${gameID}`, { path: target });

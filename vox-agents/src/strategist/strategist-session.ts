@@ -611,13 +611,20 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         await writeGameReference(params.gameID);
       }
     } catch (err) {
-      for (const player of players) player.closeStore();
+      await this.disposePlayers(players);
       const message = `Failed to prepare the players: ${errorMessage(err)}`;
       logger.error(message);
       this.onStateChange('error', message);
       this.abortController.abort();
       await voxCivilization.killGame();
       this.victoryResolve?.();
+      return;
+    }
+    // A shutdown during preparation found no active players to stop, so these never start.
+    // Re-read the state: the guard at the top narrowed it, but a shutdown can change it across awaits.
+    const state = this.state as string;
+    if (this.abortController.signal.aborted || state === 'stopping' || state === 'stopped') {
+      await this.disposePlayers(players);
       return;
     }
     for (const player of players) {
@@ -682,6 +689,17 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
     // the execute() loop then enacts the decision and issues the first resume-game.
     if (params.turn === 0 && this.humanPlayerID !== undefined) {
       this.activePlayers.get(this.humanPlayerID)?.notifyTurn(params.turn, 'startup');
+    }
+  }
+
+  /** Release prepared players whose loops never started. A failed release is logged and skipped. */
+  private async disposePlayers(players: VoxPlayer[]): Promise<void> {
+    for (const player of players) {
+      try {
+        await player.dispose();
+      } catch (err) {
+        logger.warn(`Failed to release prepared player ${player.playerID}: ${errorMessage(err)}`);
+      }
     }
   }
 

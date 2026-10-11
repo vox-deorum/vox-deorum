@@ -234,6 +234,19 @@ export class VoxPlayer {
     store.close();
   }
 
+  /**
+   * Release a player whose loop never started: shut down its context, which flushes telemetry
+   * and unregisters it, then close the seat store. The loop does the same when it ends.
+   */
+  async dispose(): Promise<void> {
+    this.aborted = true;
+    try {
+      await this.context.shutdown();
+    } finally {
+      this.closeStore();
+    }
+  }
+
   /** Drop a notification that arrived while busy, holding the seat until the current turn finishes. */
   private holdWhileBusy(turn: number): void {
     this.logger.warn(`The ${this.playerConfig.strategist} is still working on turn ${this.parameters.turn}. Skipping turn ${turn}...`);

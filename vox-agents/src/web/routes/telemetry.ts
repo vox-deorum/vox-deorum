@@ -44,6 +44,16 @@ function seatStorePath(gameID: string, playerID: string): string | undefined {
   }
 }
 
+/** Whether an existing seat workspace store holds a commit, checked through a read-only connection. */
+function seatStoreHasCommit(dbPath: string, commit: number): boolean {
+  const store = WorkspaceStore.open(dbPath, { readonly: true });
+  try {
+    return store.hasCommit(commit);
+  } finally {
+    store.close();
+  }
+}
+
 /** Whether a seat workspace store exists on disk. */
 function hasWorkspaceStore(gameID: string, playerID: string): boolean {
   const dbPath = seatStorePath(gameID, playerID);
@@ -131,9 +141,13 @@ router.get('/workspace/:gameID/:playerID/download', (req: Request, res: Response
   if (commitParam !== undefined && !/^\d+$/.test(String(commitParam))) {
     return sendError(res, 400, 'commit must be a whole number');
   }
+  const requested = commitParam === undefined ? undefined : Number(commitParam);
+  if (requested !== undefined && !seatStoreHasCommit(dbPath, requested)) {
+    return sendError(res, 404, `Workspace store has no commit ${requested}`);
+  }
   try {
     const zip = zipSink();
-    const commit = materialize(dbPath, zip.sink, commitParam === undefined ? undefined : Number(commitParam));
+    const commit = materialize(dbPath, zip.sink, requested);
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${gameID}-player-${playerID}-${commit}.zip"`);
     zip.stream.on('error', (error) => {
@@ -146,10 +160,8 @@ router.get('/workspace/:gameID/:playerID/download', (req: Request, res: Response
     zip.stream.pipe(res);
     zip.end();
   } catch (error) {
-    const message = errorMessage(error, 'Failed to download workspace files');
-    const unknownCommit = message.includes('has no commit');
-    if (!unknownCommit) logger.error('Failed to materialize workspace', { error });
-    sendError(res, unknownCommit ? 404 : 500, message);
+    logger.error('Failed to materialize workspace', { error });
+    sendError(res, 500, errorMessage(error, 'Failed to download workspace files'));
   }
   return;
 });

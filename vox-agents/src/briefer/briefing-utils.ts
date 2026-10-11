@@ -125,7 +125,8 @@ export function getLastBriefingState(
  * @param context - VoxContext for calling briefer agents
  * @param parameters - Agent parameters passed to the briefer agents
  * @param agent - Override the default briefer agent ("simple-briefer" for combined, "specialized-briefer" for modes)
- * @returns The briefing content, or undefined if generation fails
+ * @returns The briefing content, or undefined if generation produced nothing
+ * @throws when archiving the briefing fails, which publishes nothing
  */
 export async function requestBriefing(
   mode: BriefingMode | "combined",
