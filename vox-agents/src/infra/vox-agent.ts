@@ -207,12 +207,12 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * and says other calls will error. With `stepsLeft` (set when files are on) it counts down the
    * steps left for the final decision. From the second step on it also
    * nudges the model to finalize with the {@link completionTools} that are allowed, so it never names
-   * a tool the model cannot run. Return undefined to add nothing (e.g. a replay agent that must not
+   * a tool the model cannot run, and with `notes` says to write notes in that same response. Return undefined to add nothing (e.g. a replay agent that must not
    * perturb the reproduced prompt).
    */
   public continuationNudge(
     _parameters: TParameters,
-    step: { executable: string[]; narrowed: boolean; step: number; required: boolean; stepsLeft?: number },
+    step: { executable: string[]; narrowed: boolean; step: number; required: boolean; stepsLeft?: number; notes?: boolean },
   ): string | undefined {
     return buildClosingReminder(step.executable, this.completionTools, step);
   }

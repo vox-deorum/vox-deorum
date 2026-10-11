@@ -18,7 +18,7 @@ Files written anywhere else disappear after each command.
 
 ## Recorded turns
 {{#hasTurns}}
-Recorded turns: {{turnRanges}}. The latest folder is `/workspace/records/turn-{{latestTurn}}/`.
+Recorded turns, the `<N>` in `turn-<N>` paths: {{turnRanges}}. The latest is `/workspace/records/turn-{{latestTurn}}/`.
 {{/hasTurns}}
 {{^hasTurns}}
 No turns are recorded yet.

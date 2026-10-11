@@ -61,6 +61,8 @@ Players read the game notes, including the guide, by exporting the store (see [R
 
 `src/utils/tools/bash-tool.ts` wraps the shell as a tool. `VoxAgent.getRunTools` adds `bash` to any agent whose `getActiveTools()` list is not empty. Runs that restrict their tools leave it out; for example, a telepathist answering a special message has no tools.
 
+The tool description covers only shell mechanics: where each call starts, which commands exist, how files are written, and what a result contains. It does not list folders. The records directions message names the mounted folders and which ones the agent can write, and the description is the same for every seat.
+
 Each output stream is capped at 10,000 characters.
 
 ## Step budget
@@ -79,7 +81,8 @@ A briefer ignores text from a step that also calls bash, so a line like "checkin
 
 | Feature | Page |
 | --- | --- |
-| The model gets a short reminder describing the folders. | [Capability reminder](../models/middleware.md#capability-reminder) |
+| The model gets a short reminder on keeping notes, the step budget, and reading large files. | [Capability reminder](../models/middleware.md#capability-reminder) |
+| The records directions list the folders and the recorded turns. | [File mode](../framework/prompts.md#file-mode) |
 | The run's last initial message becomes a cache anchor. | [Caching](../framework/caching.md) |
 | Old bash output is dropped when the request gets large. | [Compaction](../framework/compaction.md) |
 

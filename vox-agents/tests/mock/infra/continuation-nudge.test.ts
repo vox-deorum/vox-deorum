@@ -88,7 +88,7 @@ describe('continuationNudge', () => {
     const policy = formatToolChoiceList(gated)!;
     const finishing = formatToolChoiceList(['send-message', 'call-negotiator'])!;
     /** The diplomat's reminder for a step with the given shape. */
-    const remind = (step: { executable?: string[]; narrowed?: boolean; step?: number; required?: boolean }) =>
+    const remind = (step: { executable?: string[]; narrowed?: boolean; step?: number; required?: boolean; notes?: boolean }) =>
       diplomat().continuationNudge({}, { executable: gated, narrowed: false, step: 0, required: false, ...step });
 
     it('adds nothing on an unnarrowed auto first step', () => {
@@ -119,6 +119,15 @@ describe('continuationNudge', () => {
       expect(reminder).toBeDefined();
       expect(reminder).not.toBe(remind({ narrowed: true }));
       for (const name of gated) expect(reminder).not.toContain(name);
+    });
+
+    it('asks for notes with the finishing call only on a finalize step', () => {
+      const finalize = remind({ step: 1 });
+      const withNotes: string = remind({ step: 1, notes: true });
+      expect(withNotes).not.toBe(finalize);
+      expect(withNotes.startsWith(finalize)).toBe(true);
+      expect(remind({ notes: true })).toBeUndefined();
+      expect(remind({ step: 1, executable: [], narrowed: true, notes: true })).toBe(remind({ step: 1, executable: [], narrowed: true }));
     });
   });
 });

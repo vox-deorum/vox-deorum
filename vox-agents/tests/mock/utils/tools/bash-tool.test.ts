@@ -49,16 +49,16 @@ describe('bash tool', () => {
     expect(seat.tools[bashToolName]).toBeDefined();
   });
 
-  it('should list the records and reference mounts as read-only whatever the game access', () => {
-    for (const game of ['write', 'read', false] as const) {
-      const seat = new VoxContext<AgentParameters>({}, `bash-mounts-${game}`);
-      seat.files = { ...files, game };
+  it('should describe the same shell for every files setting and leave folders to the records directions', () => {
+    const descriptions = (['write', 'read', false] as const).map((game) => {
+      const seat = new VoxContext<AgentParameters>({}, `bash-description-${game}`);
+      seat.files = { ...files, game, shared: game ? { lessons: game } : {} };
       seat.registerAgentTools();
-      const description = (seat.tools[bashToolName] as any).description as string;
-      expect(description).toContain('/workspace/records (read)');
-      expect(description).toContain('/workspace/reference (read)');
-      expect(description.includes('/workspace/game')).toBe(game !== false);
-    }
+      return (seat.tools[bashToolName] as any).description as string;
+    });
+    expect(new Set(descriptions).size).toBe(1);
+    expect(descriptions[0]).not.toContain('/workspace/game');
+    expect(descriptions[0]).not.toContain('lessons');
   });
 
   it('should share one workspace per player across calls over the attached store', () => {

@@ -82,7 +82,7 @@ One request on step 2 of a strategist run, top to bottom, for a provider with na
 └─────────────────────────────────────────────┘
 ```
 
-The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for a finishing call.
+The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for a finishing call, and when bash can run and a workspace folder is writable, it also asks for any notes to be written in that same reply.
 
 For models in prompt mode, the tool block is removed and its content moves into the text. See [Prompt-mode tool calling](../models/middleware.md#prompt-mode-tool-calling).
 
@@ -92,8 +92,8 @@ A run is in file mode when its seat has files on and its resolved run tools incl
 
 In file mode, an agent adds **records directions** to its opening messages through `appendRecordsDirections`, placing them where its context needs them. The helper checks file mode; the text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
 
-- which folders are mounted and their access: the records and the shared reference are read-only, the game notes folder and each shared folder are read-only or writable according to the seat's files setting, and `/tmp` is writable;
-- which turns are recorded, as ranges, and the latest turn folder;
+- a table of the mounted folders and their access, with the records and the shared reference read-only, the game notes folder and each shared folder read-only or writable according to the seat's files setting, and `/tmp` writable. The table is the only folder listing, because the workspace section and the bash tool description leave folders out;
+- which turns are recorded, as ranges, and the latest turn folder. It states that the recorded turns are the `<N>` in `turn-<N>` paths, which the workspace section's examples also use;
 - when to open the records `CATALOG.md`: only for the full section index, gaps between turn folders, briefings, or file sizes;
 - which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports.
 
@@ -108,7 +108,7 @@ The directions depend on which turns are recorded and on the guide's text. Brief
 | Simple strategist | System message, then a core message (strategies, victory, full players, decision context), then the directions. |
 | Briefed, staffed, and learned strategists | The same inline content as before, with the directions as the last opening message. |
 | Diplomat, spokesperson, and negotiator | The directions follow the shared game context. |
-| Briefers and the diplomatic analyst | Unchanged. |
+| Briefers and the diplomatic analyst | No directions. They declare no `bash` tool, so they never run in file mode. |
 
 A file-mode strategist's decision context (`getDecisionTurnContext`) always names the last completed decision turn, even when it was the previous turn, or says that no decision has completed on the current timeline. The strategist chooses what to read. There is no merged events file and no prescribed reading order.
 
@@ -170,7 +170,7 @@ The closing reminder is built from up to four sentences. Sentences that do not a
 | "You must issue tool calls" | The step requires a tool call. |
 | "You may only call X or Y", or "no tools are available" | Some offered tools are not allowed on this step. |
 | "Make your final decision within N steps", or "this is your last step" | The seat has files on. |
-| "Make sure to call ... to finalize" | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. |
+| "Finalize your decisions in this response by calling ..." | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. With bash able to run and a workspace folder writable, it also asks for notes in the same response. |
 
 The "must call" requirement lives here rather than in provider middleware, so every provider gets it and the earlier parts of the prompt never depend on it. When there is nothing to say, such as on the first step of an agent that does not require tools, no message is added. An agent can override `continuationNudge` to change or drop the reminder.
 
@@ -180,7 +180,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | --- | --- | --- |
 | An agent's main instructions | Its file in `vox-agents/prompts/`, and the data passed by its `getSystem()` | See [Prompt files](prompt-files.md). |
 | Opening game context | The agent's `getInitialMessages()` | Shared envoy and analyst context is `buildGameContextMessages` in `src/strategist/strategy-parameters.ts`. |
-| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text fixed within a turn. |
+| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text fixed within a turn. Its folder table is the only folder listing. |
 | A game-state section's title, description, or default Markdown | The registry in `src/knowledge/sections.ts` | See [Prompt files](prompt-files.md#game-state-sections). |
 | Envoy hint (identity, audience, turn) | `getHint` in `src/envoy/live-envoy.ts`, overridden in `src/telepathist/talkative-telepathist.ts` | Always the last opening message for a live envoy. |
 | Envoy add-on after the hint | `getDefaultAddon` in `src/envoy/envoy.ts`, overridden by the diplomat and spokesperson | |
@@ -193,7 +193,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | Error text for a call to a removed tool | `buildRemovedToolRejections` in `src/utils/tools/tool-availability.ts` | The model sees it as the call's result. |
 | Empty-reply rescue wording | `buildRescuePrompt` in `src/utils/models/text-cleaning.ts` | |
 | Completion-tool sentence (Anthropic, Codex) | `completionToolsInstruction` in `src/utils/models/providers/required-tool-choice.ts` | Must not depend on whether the step requires a call. |
-| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | See [Capability reminder](../models/middleware.md#capability-reminder). |
+| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | Folders and recorded turns belong to the records directions. See [Capability reminder](../models/middleware.md#capability-reminder). |
 | Extra Capabilities section | `capabilityInstruction` in `src/utils/models/capability-prompt.ts` | |
 | Prompt-mode tool instructions | `createToolPrompts` in `src/utils/models/tool-rescue/prompt.ts` | Keep it in step with `buildToolCallArraySchema` and `formatToolCallText`. |
 | Which models use prompt mode | `options.toolMiddleware` in the model config; defaults in `src/utils/models/rules.ts` | |

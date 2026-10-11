@@ -20,6 +20,7 @@ import {
   workspaceOutputLimit,
   workspaceReferencePath,
   workspaceRoot,
+  workspaceWritable,
 } from '../../../src/utils/workspace/player-workspace.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 
@@ -41,6 +42,15 @@ describe('workspaceNodeSupported', () => {
     expect(workspaceNodeSupported('22.17.0')).toBe(true);
     expect(workspaceNodeSupported('22.23.3')).toBe(true);
     expect(workspaceNodeSupported('24.1.0')).toBe(true);
+  });
+});
+
+describe('workspaceWritable', () => {
+  it('should be true when the game folder or any shared folder is writable', () => {
+    expect(workspaceWritable(files())).toBe(true);
+    expect(workspaceWritable(files({ game: 'read', shared: { lessons: 'write' } }))).toBe(true);
+    expect(workspaceWritable(files({ game: 'read', shared: { lessons: 'read' } }))).toBe(false);
+    expect(workspaceWritable(files({ game: false }))).toBe(false);
   });
 });
 

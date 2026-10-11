@@ -17,7 +17,6 @@ import {
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import {
   workspaceCatalogFile,
-  workspaceGuideFile,
   workspaceOutputLimit,
   workspaceRecordsPath,
   workspaceReferenceMountPath,
@@ -59,46 +58,35 @@ describe('capabilityInstruction', () => {
     expect(capabilityInstruction({ web: false })).toBeUndefined();
   });
 
-  it('describes the game folder and its guide', () => {
-    const instruction = capabilityInstruction({ files: gameWrite, web: false })!;
-    expect(instruction).toContain('/workspace/game');
-    expect(instruction).toContain(workspaceGuideFile);
-    expect(instruction).toContain(bashToolName);
-  });
-
-  it('describes a read-only game folder differently from a writable one', () => {
-    const write = capabilityInstruction({ files: gameWrite, web: false })!;
-    const read = capabilityInstruction({ files: { ...gameWrite, game: 'read' }, web: false })!;
-    expect(read).not.toBe(write);
-  });
-
-  it('names each shared folder and leaves out an unmounted game folder', () => {
+  it('leaves folders to the records directions', () => {
     const instruction = capabilityInstruction({
-      files: { game: false, shared: { lessons: 'write', reference: 'read' }, quota: 20 },
+      files: { game: 'write', shared: { lessons: 'write' }, quota: 20 },
       web: false,
     })!;
-    expect(instruction).toContain('/workspace/shared/lessons');
-    expect(instruction).toContain('/workspace/shared/reference');
+    expect(instruction).toContain(bashToolName);
     expect(instruction).not.toContain('/workspace/game');
+    expect(instruction).not.toContain('/workspace/shared');
+    expect(instruction).not.toContain('lessons');
+    expect(instruction).not.toContain(workspaceCatalogFile);
+    expect(instruction).not.toContain(workspaceReferenceMountPath);
   });
 
-  it('lists the records catalog and the reference whatever the game access', () => {
-    for (const game of ['write', 'read', false] as const) {
-      const instruction = capabilityInstruction({ files: { ...gameWrite, game }, web: false })!;
-      expect(instruction).toContain(workspaceRecordsPath);
-      expect(instruction).toContain(workspaceCatalogFile);
-      expect(instruction).toContain(workspaceReferenceMountPath);
-    }
+  it('adds the write rule only when some folder is writable', () => {
+    const terminals = ['found_city'];
+    const read = capabilityInstruction({ files: { game: 'read', shared: { lessons: 'read' }, quota: 17 }, web: false }, terminals)!;
+    const game = capabilityInstruction({ files: gameWrite, web: false }, terminals)!;
+    const shared = capabilityInstruction({ files: { game: 'read', shared: { lessons: 'write' }, quota: 17 }, web: false }, terminals)!;
+    expect(game).not.toBe(read);
+    expect(game.length).toBeGreaterThan(read.length);
+    expect(shared).toBe(game);
   });
 
-  it('gives the output limit and uses the latest recorded turn in its examples', () => {
+  it('gives the output limit and no recorded turn number', () => {
     const limit = workspaceOutputLimit.toLocaleString('en-US');
-    const recorded = capabilityInstruction({ files: gameWrite, latestTurn: 42, web: false })!;
-    const none = capabilityInstruction({ files: gameWrite, web: false })!;
-    expect(recorded).toContain(limit);
-    expect(recorded).toContain(`${workspaceRecordsPath}/turn-42/`);
-    expect(none).toContain(limit);
-    expect(none).not.toMatch(/turn-\d+\//);
+    const instruction = capabilityInstruction({ files: gameWrite, web: false })!;
+    expect(instruction).toContain(limit);
+    expect(instruction).toContain(workspaceRecordsPath);
+    expect(instruction).not.toMatch(/turn-\d+\//);
     expect(capabilityInstruction({ web: true })).not.toContain(limit);
   });
 

@@ -5,6 +5,7 @@
 import type { Attributes } from '@opentelemetry/api';
 import type { Model, ResolvedFilesConfig } from '../../types/config.js';
 import { isHostCapabilityProvider, resolveHostToolCapabilities } from '../models/providers/host-tools.js';
+import { workspaceWritable } from '../workspace/player-workspace.js';
 
 /**
  * Return queryable host-capability attributes for one step. `host.capability` joins the enabled
@@ -14,8 +15,7 @@ import { isHostCapabilityProvider, resolveHostToolCapabilities } from '../models
 export function hostCapabilityTelemetryAttributes(model: Model, files?: ResolvedFilesConfig): Attributes {
   const capabilities: string[] = [];
   if (files) {
-    const writable = files.game === 'write' || Object.values(files.shared).includes('write');
-    capabilities.push(writable ? 'write' : 'read');
+    capabilities.push(workspaceWritable(files) ? 'write' : 'read');
   }
   if (isHostCapabilityProvider(model.provider) && resolveHostToolCapabilities(model.options?.hostTools).web) {
     capabilities.push('web');

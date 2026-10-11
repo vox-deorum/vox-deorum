@@ -153,6 +153,11 @@ export function workspaceMounts(files: ResolvedFilesConfig, gameID: string, play
   return mounts;
 }
 
+/** Whether a files setting lets the seat keep notes: the game folder or any shared folder is writable. */
+export function workspaceWritable(files: ResolvedFilesConfig): boolean {
+  return files.game === 'write' || Object.values(files.shared).includes('write');
+}
+
 /** Cut a stream to the output limit, noting how much was dropped. */
 function capOutput(text: string): string {
   if (text.length <= workspaceOutputLimit) return text;

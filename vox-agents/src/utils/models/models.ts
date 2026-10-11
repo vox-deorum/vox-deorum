@@ -206,8 +206,6 @@ export function resolveToolFraming(config: Model): ToolCallFraming {
 export function getModel(config: Model, options?: {
   /** The seat's workspace, described to the model when the request declares the bash tool. */
   files?: ResolvedFilesConfig;
-  /** The latest recorded turn, which the workspace guidance uses in its examples. */
-  latestTurn?: number;
   /** The run's prompt folder setting, for the workspace guidance template. */
   prompts?: PromptsSetting;
   onToolFraming?: (info: { framing: ToolCallFraming }) => void;
@@ -369,7 +367,7 @@ export function getModel(config: Model, options?: {
     result = wrapLanguageModel({
       model: result,
       middleware: capabilityMiddleware(
-        { files: options?.files, latestTurn: options?.latestTurn, web },
+        { files: options?.files, web },
         {
           completionTools: options?.completionTools,
           terminalNoun: toolFraming === 'action' ? 'actions' : 'tools',

@@ -16,19 +16,21 @@ import { formatToolChoiceList } from '../tools/tool-names.js';
  * - Tool policy: the step was narrowed below the run's declared tools, which stay declared to the
  *   model, so it names what may actually run.
  * - Steps left: the run counts its steps down (files on).
- * - Finalize: from the second step on, the completion tools allowed on this step.
+ * - Finalize: from the second step on, the completion tools allowed on this step. With `notes`
+ *   (bash may run and a workspace folder is writable), it adds that notes go in the same response,
+ *   since nothing runs after a finishing call.
  * Returns undefined when no sentence applies.
  *
  * @param executable - The tools that may run on this step
  * @param completionTools - The agent's completion tools
- * @param options - Whether the step is narrowed, its index, whether a call is required, and the steps left
+ * @param options - Whether the step is narrowed, its index, whether a call is required, the steps left, and whether notes can be written
  */
 export function buildClosingReminder(
   executable: string[],
   completionTools: string[] | undefined,
-  options: { narrowed: boolean; step: number; required: boolean; stepsLeft?: number },
+  options: { narrowed: boolean; step: number; required: boolean; stepsLeft?: number; notes?: boolean },
 ): string | undefined {
-  const { narrowed, step, required, stepsLeft } = options;
+  const { narrowed, step, required, stepsLeft, notes } = options;
   const allowed = new Set(executable);
   const tools = formatToolChoiceList(executable);
   const finishing = formatToolChoiceList((completionTools ?? []).filter((name) => allowed.has(name)));
@@ -37,6 +39,6 @@ export function buildClosingReminder(
 ${required ? `IMPORTANT: You must issue tool calls to collect information or make actions. Whenever possible, call all tools you need at once.` : ''}
 ${!narrowed ? '' : tools ? `For this step, you may only call ${tools}; other tools will return an error.` : `No tools are available for this step. Write response in plain text.`}
 ${stepsLeft === undefined ? '' : stepsLeft > 1 ? `IMPORTANT: You must make your final decision within ${stepsLeft} steps.` : `IMPORTANT: This is your last step. Make your final decision now.`}
-${step > 0 && finishing ? `Finalize your decisions in this response by calling ${finishing} following the EXACT provided format.` : ''}`;
+${step > 0 && finishing ? `Finalize your decisions in this response by calling ${finishing} following the EXACT provided format.${notes ? ' Write any notes you want to keep in this same response.' : ''}` : ''}`;
   return reminder.split('\n').filter((line) => line).join(' ') || undefined;
 }

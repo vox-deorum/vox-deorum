@@ -46,11 +46,15 @@ A model call that has `bash` or CLI web access gets one system reminder, built b
 
 | Part | Included when |
 | --- | --- |
-| Workspace | The request offers the `bash` tool (any provider). Lists the mounted folders and their access, points to the game folder's guide, sets step-budget expectations, and explains how to read large files. |
+| Intro | Whenever the reminder is added. When the request declares completion tools, it names them and says to use the capabilities before calling any of them, since nothing runs after a terminal call. |
+| Workspace | The request offers the `bash` tool (any provider). Covers keeping notes current, saving notes for later turns when a folder is writable, the step budget, and reading large files. |
 | Web | Codex or Claude Code with `hostTools: ["Web"]`. |
-| What to call next | The agent's completion tools. |
 
-The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). Its large-file advice covers the bash output limit per stream (`workspaceOutputLimit`), and examples for `wc -c`, `grep -n`, `head` and `sed`, `jq`, and split parts of a civilization or zone. The examples use the latest recorded turn folder. The execution loop reads that turn once per execution (`memoizeForExecution`), so the text stays fixed within a run and changes only between turns. Before any turn is recorded, the examples use a placeholder turn number.
+When the game folder or a shared folder is writable, the Workspace part also asks the model to save what later turns or its civilization's other agents should know in a writable folder, before a terminal tool or in the same reply.
+
+The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). Its large-file advice covers the bash output limit per stream (`workspaceOutputLimit`), and examples for `wc -c`, `grep -n`, `head` and `sed`, `jq`, and split parts of a civilization or zone. The examples name recorded turns as `turn-<N>`, where `<N>` is a turn listed in the records directions.
+
+The text depends only on the seat's files setting and on the agent's terminal tools and their noun. It is the same across turns and runs, which keeps the tools, the system text, and the cached game-context message a cache hit on every turn (see [Caching](../framework/caching.md)).
 
 Model-step spans record what was enabled in `host.capability`, comma-separated:
 
