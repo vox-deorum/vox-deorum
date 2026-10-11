@@ -25,6 +25,8 @@
     "test:obs": "cross-env TEST_TIER=live/obs vitest run",
     "archivist": "npm run build && npm run archivist:dist --",
     "archivist:dist": "node --import ./dist/instrumentation.js dist/archivist/console.js",
+    "workspace": "npm run build && npm run workspace:dist --",
+    "workspace:dist": "node dist/utils/workspace/console.js",
     "narrator": "npm run build && npm run narrator:dist --",
     "narrator:dist": "node --inspect=0 --import ./dist/instrumentation.js --experimental-loader=@opentelemetry/instrumentation/hook.mjs dist/narrators/console.js",
     "type-check": "tsc --noEmit",

@@ -31,6 +31,7 @@ import { triageEnabled } from '../infra/triage.js';
 import { resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage, seatAgents } from './seat-config.js';
 import { reloadPromptSets, rootPrompts } from '../utils/prompts/prompt-files.js';
 import { DEFAULT_NEGOTIATOR } from '../envoy/agents/resolve-negotiator.js';
+import { writeGameReference } from '../knowledge/reference.js';
 import {
   autoPlayTurnLimit,
   buildNonFreshTransitionLua,
@@ -583,24 +584,44 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     const seatingMap = this.seatingClaim!.seatingMap;
     await this.writeSeatingMetadata();
 
-    // Create new players using the seating map
-    for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
-      const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
-      const player = new VoxPlayer({
-        playerID: actualPlayerID,
-        slot: configSlotStr,
-        playerConfig,
-        gameID: params.gameID,
-        initialTurn: params.turn,
-        humanDecisionBus: this.humanDecisionBus,
-        syncSeed: this.seatingClaim?.seeds?.sync,
-        session: this,
-        triage: this.config.triage,
-        files: this.config.files,
-        prompts: this.config.prompts,
-      });
-      await player.context.registerTools();
-      this.activePlayers.set(actualPlayerID, player);
+    // Prepare every player using the seating map, write the game reference, and only then start
+    // the loops. A setup failure (a store that cannot open, a failed reference write, or any
+    // other construction error) stops the session before any loop starts.
+    const players: VoxPlayer[] = [];
+    try {
+      for (const [configSlotStr, playerConfig] of Object.entries(this.config.llmPlayers)) {
+        const actualPlayerID = seatingMap[configSlotStr] ?? parseInt(configSlotStr);
+        const player = new VoxPlayer({
+          playerID: actualPlayerID,
+          slot: configSlotStr,
+          playerConfig,
+          gameID: params.gameID,
+          initialTurn: params.turn,
+          humanDecisionBus: this.humanDecisionBus,
+          syncSeed: this.seatingClaim?.seeds?.sync,
+          session: this,
+          triage: this.config.triage,
+          files: this.config.files,
+          prompts: this.config.prompts,
+        });
+        players.push(player);
+        await player.context.registerTools();
+      }
+      if (players.some((player) => player.context.files)) {
+        await writeGameReference(params.gameID);
+      }
+    } catch (err) {
+      for (const player of players) player.closeStore();
+      const message = `Failed to prepare the players: ${errorMessage(err)}`;
+      logger.error(message);
+      this.onStateChange('error', message);
+      this.abortController.abort();
+      await voxCivilization.killGame();
+      this.victoryResolve?.();
+      return;
+    }
+    for (const player of players) {
+      this.activePlayers.set(player.playerID, player);
       player.execute();
     }
 
@@ -660,7 +681,7 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
     // The seat was paused above, so its turn 0 stays held until the human submits;
     // the execute() loop then enacts the decision and issues the first resume-game.
     if (params.turn === 0 && this.humanPlayerID !== undefined) {
-      this.activePlayers.get(this.humanPlayerID)?.notifyTurn(params.turn);
+      this.activePlayers.get(this.humanPlayerID)?.notifyTurn(params.turn, 'startup');
     }
   }
 
@@ -677,6 +698,9 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       // (crash recovery, manual reload) re-issues IDs this session already consumed. Clear only
       // on the connection-state transition because pipe and SSE can report the same connection.
       this.ingameBridge.resetEventDedup();
+      // A reconnection may be crash recovery, so a recovered startup-turn notification must
+      // count as a reload rather than the expected startup acknowledgement.
+      for (const player of this.activePlayers.values()) player.clearStartupAcknowledgement();
     }
     await this.recoverGame();
   }

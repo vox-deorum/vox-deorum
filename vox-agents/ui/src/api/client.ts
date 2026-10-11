@@ -751,6 +751,12 @@ class ApiClient {
     );
   }
 
+  /** Link that downloads a seat's workspace files, head by default, as one zip. */
+  workspaceDownloadUrl(gameID: string, playerID: string, commit?: number): string {
+    const query = commit === undefined ? '' : `?commit=${commit}`;
+    return `${this.baseUrl}/api/telemetry/workspace/${encodeURIComponent(gameID)}/${encodeURIComponent(playerID)}/download${query}`;
+  }
+
   /** Link that downloads every log plus a setup summary as one zip. */
   get debugBundleUrl(): string {
     return `${this.baseUrl}/api/debug/bundle`;

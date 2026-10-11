@@ -21,6 +21,8 @@ export interface TelemetryMetadata {
   size: number;
   /** ISO timestamp of last modification */
   lastModified: string;
+  /** Whether a seat workspace store exists for this game and player */
+  hasWorkspace: boolean;
 }
 
 /**

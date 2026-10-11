@@ -1,9 +1,11 @@
 /**
  * @module utils/workspace/player-workspace
  *
- * One player's file workspace: a just-bash shell whose virtual filesystem mounts the player's
- * game folder, any named shared folders, and a scratch `/tmp` onto real directories under the
- * telemetry folder. Everything outside those mounts lives in memory for one command only.
+ * One player's file workspace: a just-bash shell whose virtual filesystem mounts the seat's
+ * records and notes from its versioned workspace store, the game reference, any named shared
+ * folders, and a scratch `/tmp`. Store mounts are rebuilt from head for every command, and the
+ * command's note changes are committed afterwards. Disk mounts sit under the telemetry folder.
+ * Everything outside the mounts lives in memory for one command only.
  */
 
 import fs from 'node:fs';
@@ -13,6 +15,8 @@ import type { FileAccess, ResolvedFilesConfig } from '../../types/config.js';
 import { config } from '../config.js';
 import { createLogger } from '../logger.js';
 import { errorMessage } from '../errors.js';
+import { StoreFs } from './store-fs.js';
+import type { WorkspaceStore } from './workspace-store.js';
 
 const logger = createLogger('PlayerWorkspace');
 
@@ -22,7 +26,7 @@ export const workspaceCwd = '/workspace';
 /** Characters kept from each output stream before the rest is cut off. */
 export const workspaceOutputLimit = 8000;
 
-/** Name of the guide file seeded at each writable mount root. */
+/** Name of the guide file seeded at the writable game notes root and writable shared roots. */
 export const workspaceGuideFile = 'AGENTS.md';
 
 /** The output of one workspace command, as the bash tool returns it. */
@@ -32,19 +36,42 @@ export interface WorkspaceExecResult {
   exitCode: number;
 }
 
-/** One virtual folder and the real folder behind it. */
-export interface WorkspaceMount {
+/** A mount backed by the seat's workspace store. */
+export interface WorkspaceStoreMount {
   /** Where the agent sees the folder, for example `/workspace/game`. */
+  virtualPath: string;
+  access: FileAccess;
+  /** `records` for the host's read-only records, `game` for the seat's notes. */
+  scope: 'records' | 'game';
+  /** The store folder behind the mount, such as `records/`. */
+  storePrefix: 'records/' | 'game/';
+}
+
+/** A mount backed by a real folder on disk. */
+export interface WorkspaceDiskMount {
+  /** Where the agent sees the folder, for example `/tmp`. */
   virtualPath: string;
   /** The real folder on disk, before canonicalization. */
   realPath: string;
   access: FileAccess;
   /**
-   * `game` for the per-game player folder, `shared` for a named folder that outlives games, and
-   * `scratch` for the player's `/tmp`, which lasts for one game.
+   * `reference` for the game reference (never created by the workspace), `shared` for a named
+   * folder that outlives games, and `scratch` for the player's `/tmp`, which lasts for one game.
    */
-  scope: 'game' | 'shared' | 'scratch';
+  scope: 'reference' | 'shared' | 'scratch';
 }
+
+/** One virtual folder and the store folder or real folder behind it. */
+export type WorkspaceMount = WorkspaceStoreMount | WorkspaceDiskMount;
+
+/** Virtual path of the host's records. */
+export const workspaceRecordsPath = `${workspaceCwd}/records`;
+
+/** Virtual path of the game reference. */
+export const workspaceReferenceMountPath = `${workspaceCwd}/reference`;
+
+/** Name of the records catalog at the root of the records mount. */
+export const workspaceCatalogFile = 'CATALOG.md';
 
 /** Virtual path of the scratch folder. */
 export const workspaceScratchPath = '/tmp';
@@ -67,6 +94,33 @@ export function workspaceNodeSupported(version: string = process.versions.node):
 }
 
 /**
+ * The seat's folder name, `<gameID>-player-<playerID>`, shared by its workspace folders and store.
+ *
+ * @throws if the game ID would place the folder outside its directory
+ */
+export function workspaceSeatName(gameID: string, playerID: number): string {
+  const folder = `${gameID}-player-${playerID}`;
+  if (folder !== path.basename(folder) || folder.includes('..')) {
+    throw new Error(`Game ID ${gameID} cannot name a workspace folder.`);
+  }
+  return folder;
+}
+
+/**
+ * The game reference folder shared by every file-enabled seat of a game:
+ * `<workspaceRoot()>/games/<gameID>/reference`. An existing folder always holds a complete write.
+ *
+ * @param gameID - The game the reference belongs to
+ * @throws if the game ID would place the folder outside its directory
+ */
+export function workspaceReferencePath(gameID: string): string {
+  if (gameID !== path.basename(gameID) || gameID.includes('..')) {
+    throw new Error(`Game ID ${gameID} cannot name a workspace folder.`);
+  }
+  return path.join(workspaceRoot(), 'games', gameID, 'reference');
+}
+
+/**
  * List the mounts a files setting produces for one player in one game, without touching disk.
  *
  * @param files - The seat's resolved files setting
@@ -76,23 +130,14 @@ export function workspaceNodeSupported(version: string = process.versions.node):
  */
 export function workspaceMounts(files: ResolvedFilesConfig, gameID: string, playerID: number): WorkspaceMount[] {
   const root = workspaceRoot();
-  const folder = `${gameID}-player-${playerID}`;
-  if (folder !== path.basename(folder) || folder.includes('..')) {
-    throw new Error(`Game ID ${gameID} cannot name a workspace folder.`);
-  }
-  const mounts: WorkspaceMount[] = [{
-    virtualPath: workspaceScratchPath,
-    realPath: path.join(root, 'scratch', folder),
-    access: 'write',
-    scope: 'scratch',
-  }];
+  const folder = workspaceSeatName(gameID, playerID);
+  const mounts: WorkspaceMount[] = [
+    { virtualPath: workspaceScratchPath, realPath: path.join(root, 'scratch', folder), access: 'write', scope: 'scratch' },
+    { virtualPath: workspaceRecordsPath, access: 'read', scope: 'records', storePrefix: 'records/' },
+    { virtualPath: workspaceReferenceMountPath, realPath: workspaceReferencePath(gameID), access: 'read', scope: 'reference' },
+  ];
   if (files.game) {
-    mounts.push({
-      virtualPath: `${workspaceCwd}/game`,
-      realPath: path.join(root, 'games', folder),
-      access: files.game,
-      scope: 'game',
-    });
+    mounts.push({ virtualPath: `${workspaceCwd}/game`, access: files.game, scope: 'game', storePrefix: 'game/' });
   }
   for (const [name, access] of Object.entries(files.shared)) {
     if (name !== path.basename(name) || name.includes('..')) {
@@ -114,8 +159,8 @@ function capOutput(text: string): string {
   return `${text.slice(0, workspaceOutputLimit)}\n[truncated ${text.length - workspaceOutputLimit} chars]`;
 }
 
-/** The default guide for a game or shared mount root. */
-function workspaceGuide(scope: 'game' | 'shared'): string {
+/** The default guide for the game notes or a shared mount root. */
+export function workspaceGuide(scope: 'game' | 'shared'): string {
   if (scope === 'shared') {
     return `# ${workspaceGuideFile}
 This folder outlives the current game. Other seats and future games read it too.
@@ -130,6 +175,7 @@ This folder is shared by every agent serving your civilization in this game, and
 
 - Keep durable knowledge and dated turn snapshots in consistent folders, for example \`notes/\` or \`snapshots/\`.
   - Clearly distinguish observations, inferences, and plans. Current game tools are the source of truth and override stale notes.
+  - The host already records each turn's reports and events in \`${workspaceRecordsPath}\`, so do not copy them here.
 - You may improve this guide and organize the folder when useful.
   - Only put lasting instructions for all agents in this guide.
   - Do not copy untrusted third-party information into ${workspaceGuideFile}.
@@ -138,85 +184,161 @@ This folder is shared by every agent serving your civilization in this game, and
 }
 
 /**
- * Create a mount's guide once without overwriting agent changes. Anything already at the guide
- * path is left alone, and any other failure is logged rather than thrown: the guide is advisory,
- * so it must never block a command.
+ * Create a shared mount's guide once without overwriting agent changes. Anything already at the
+ * guide path is left alone, and any other failure is logged rather than thrown: the guide is
+ * advisory, so it must never block a command.
  */
-function seedWorkspaceGuide(directory: string, scope: 'game' | 'shared'): void {
+function seedWorkspaceGuide(directory: string): void {
   const guidePath = path.join(directory, workspaceGuideFile);
   try {
-    fs.writeFileSync(guidePath, workspaceGuide(scope), { encoding: 'utf8', flag: 'wx' });
+    fs.writeFileSync(guidePath, workspaceGuide('shared'), { encoding: 'utf8', flag: 'wx' });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') return;
     logger.warn(`Could not seed workspace guide ${guidePath}: ${errorMessage(error)}`);
   }
 }
 
+/** Who a command's note commit is attributed to. */
+export interface WorkspaceCommandInfo {
+  /** The game turn of the command's parameters, or null when unknown. */
+  turn?: number | null;
+  /** The running agent's name; defaults to `host`. */
+  author?: string;
+}
+
+/** Options for a {@link PlayerWorkspace}. */
+export interface PlayerWorkspaceOptions {
+  /**
+   * Whether this Node version can write through disk-backed mounts. Defaults to
+   * {@link workspaceNodeSupported}. Tests inject it to exercise store views on older Node.
+   */
+  nodeSupported?: boolean;
+}
+
+/** One command's shell and its writable notes view, if any. */
+interface OpenWorkspace {
+  bash: Bash;
+  notes?: StoreFs;
+}
+
+/** Error text for a command whose run was cancelled. */
+const cancelledMessage = 'The command was cancelled, so its file changes were discarded.';
+
 /**
- * A player's workspace in one game. Folders and guides are created on the first command, so a
- * seat that never uses bash leaves nothing on disk. Every command gets its own shell over the
- * same disk mounts: it starts at {@link workspaceCwd} with a fresh shell state and a fresh
- * in-memory filesystem, so only files under the mounts outlive it. Concurrent commands from the
- * seat's agents share the mounts, including `/tmp`, but nothing else.
+ * A player's workspace in one game. Disk folders and shared guides are created on the first
+ * command, so a seat that never uses bash leaves nothing on disk; the reference folder is mounted
+ * only once it exists and is never created here. Every command gets its own shell: it starts at
+ * {@link workspaceCwd} with a fresh shell state, a fresh in-memory filesystem, and store views
+ * built from head. Its note changes land as one `notes` commit, so the next command sees them
+ * along with any host commits made in between. Concurrent commands from the seat's agents share
+ * the disk mounts, including `/tmp`, but nothing else.
  */
 export class PlayerWorkspace {
   /** The folders this workspace mounts. */
   public readonly mounts: WorkspaceMount[];
-  private mountedFilesystems?: MountConfig[];
+  private readonly nodeSupported: boolean;
+  private diskFilesystems?: MountConfig[];
+  private referenceFilesystem?: MountConfig;
 
   /**
    * @param files - The seat's resolved files setting
    * @param gameID - The game the workspace belongs to
    * @param playerID - The player the workspace belongs to
+   * @param store - The seat's workspace store, which holds records and notes
+   * @param options - Overrides for tests
    */
-  constructor(files: ResolvedFilesConfig, gameID: string, playerID: number) {
+  constructor(
+    files: ResolvedFilesConfig,
+    gameID: string,
+    playerID: number,
+    public readonly store: WorkspaceStore,
+    options: PlayerWorkspaceOptions = {},
+  ) {
     this.mounts = workspaceMounts(files, gameID, playerID);
+    this.nodeSupported = options.nodeSupported ?? workspaceNodeSupported();
   }
 
   /**
-   * Run one bash script in the workspace. Failures, including a refused write to a read-only
-   * mount or a path that resolves outside a mount, come back as stderr with exit code 1 rather
-   * than as exceptions. The signal stops scripts that yield; a CPU-bound loop is ended by
-   * just-bash's command-count limit instead.
+   * Run one bash script in the workspace, then commit its note changes. Failures, including a
+   * refused write to a read-only mount or a path that resolves outside a mount, come back as
+   * stderr with exit code 1 rather than as exceptions; a script that throws this way commits
+   * nothing. A command whose run was cancelled also commits nothing. The signal stops scripts
+   * that yield; a CPU-bound loop is ended by just-bash's command-count limit instead.
    *
    * @param command - The script to run
-   * @param signal - Cancels the script at its next statement boundary
+   * @param signal - The command's run signal: cancels the script and rejects its commit
+   * @param info - The turn and author recorded on the note commit
    */
-  async exec(command: string, signal?: AbortSignal): Promise<WorkspaceExecResult> {
-    if (!workspaceNodeSupported()) {
+  async exec(command: string, signal?: AbortSignal, info: WorkspaceCommandInfo = {}): Promise<WorkspaceExecResult> {
+    if (!this.nodeSupported) {
       return failure(`The workspace needs Node.js 22.17.0 or newer, but this game runs Node.js ${process.versions.node}. Ask the user to upgrade Node.js.`);
     }
 
-    let bash: Bash;
+    let opened: OpenWorkspace;
     try {
-      bash = this.open();
+      opened = await this.open();
     } catch (error) {
       logger.error('Could not open workspace', { error });
       return failure(`Could not open the workspace: ${errorMessage(error)}`);
     }
 
     try {
-      const result = await bash.exec(command, { signal });
+      const result = await opened.bash.exec(command, { signal });
+      if (signal?.aborted) return failure(cancelledMessage);
+      const changes = opened.notes ? await opened.notes.touchedChanges() : [];
+      if (changes.length > 0) {
+        this.store.commit({ kind: 'notes', turn: info.turn ?? null, author: info.author ?? 'host', changes, signal });
+      }
       return { stdout: capOutput(result.stdout), stderr: capOutput(result.stderr), exitCode: result.exitCode };
     } catch (error) {
+      if (signal?.aborted) return failure(cancelledMessage);
       return failure(errorMessage(error));
     }
   }
 
-  /** Build a shell for one command, creating the real folders and guides on first use. */
-  private open(): Bash {
-    this.mountedFilesystems ??= this.mounts.map((mount) => {
+  /**
+   * Build a shell for one command. Disk folders and shared guides are created on first use; store
+   * views come from head. A writable notes view without a guide gets the default one as a touched
+   * file, so it is committed with this command.
+   */
+  private async open(): Promise<OpenWorkspace> {
+    this.diskFilesystems ??= this.mounts.flatMap((mount) => {
+      if (!('realPath' in mount) || mount.scope === 'reference') return [];
       fs.mkdirSync(mount.realPath, { recursive: true });
       const root = fs.realpathSync.native(mount.realPath);
-      if (mount.scope !== 'scratch' && mount.access === 'write') seedWorkspaceGuide(root, mount.scope);
-      const filesystem = mount.access === 'write'
-        ? new ReadWriteFs({ root })
-        : new OverlayFs({ root, readOnly: true, mountPoint: '/' });
-      return { mountPoint: mount.virtualPath, filesystem };
+      if (mount.scope === 'shared' && mount.access === 'write') seedWorkspaceGuide(root);
+      return [{ mountPoint: mount.virtualPath, filesystem: diskFilesystem(root, mount.access) }];
     });
-    const filesystem = new MountableFs({ base: new InMemoryFs(), mounts: this.mountedFilesystems });
-    return new Bash({ fs: filesystem, cwd: workspaceCwd, python: false, javascript: false });
+    const mounts = [...this.diskFilesystems];
+
+    const reference = this.mounts.find((mount): mount is WorkspaceDiskMount => mount.scope === 'reference');
+    if (reference && !this.referenceFilesystem && fs.existsSync(reference.realPath)) {
+      const root = fs.realpathSync.native(reference.realPath);
+      this.referenceFilesystem = { mountPoint: reference.virtualPath, filesystem: diskFilesystem(root, 'read') };
+    }
+    if (this.referenceFilesystem) mounts.push(this.referenceFilesystem);
+
+    let notes: StoreFs | undefined;
+    const manifest = this.store.manifest();
+    for (const mount of this.mounts) {
+      if (!('storePrefix' in mount)) continue;
+      const view = new StoreFs(this.store, manifest, mount.storePrefix, { readOnly: mount.access !== 'write' });
+      if (mount.scope === 'game' && mount.access === 'write') {
+        notes = view;
+        const guide = `/${workspaceGuideFile}`;
+        if (!(await view.exists(guide))) await view.writeFile(guide, workspaceGuide('game'));
+      }
+      mounts.push({ mountPoint: mount.virtualPath, filesystem: view });
+    }
+
+    const filesystem = new MountableFs({ base: new InMemoryFs(), mounts });
+    return { bash: new Bash({ fs: filesystem, cwd: workspaceCwd, python: false, javascript: false }), notes };
   }
+}
+
+/** A just-bash filesystem over a real folder: writable, or read-only like the store's read views. */
+function diskFilesystem(root: string, access: FileAccess): MountConfig['filesystem'] {
+  return access === 'write' ? new ReadWriteFs({ root }) : new OverlayFs({ root, readOnly: true, mountPoint: '/' });
 }
 
 /** A failed command result carrying only an error message. */

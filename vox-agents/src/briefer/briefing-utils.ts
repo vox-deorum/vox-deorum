@@ -12,6 +12,7 @@ import type { BriefingMode, SpecializedBrieferInput } from "./specialized-briefe
 import type { StrategistParameters, GameState } from "../strategist/strategy-parameters.js";
 import { getGameState, retryWithFewerEvents } from "../strategist/strategy-parameters.js";
 import type { VoxContext } from "../infra/vox-context.js";
+import type { BriefingKind } from "../knowledge/records.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 
 /**
@@ -21,6 +22,14 @@ export const briefingReportKeys: Record<BriefingMode, string> = {
   Military: "briefing-military",
   Economy: "briefing-economy",
   Diplomacy: "briefing-diplomacy"
+};
+
+/** The archive kind of each briefing report key. */
+const briefingKinds: Record<string, BriefingKind> = {
+  briefing: "combined",
+  "briefing-military": "military",
+  "briefing-economy": "economy",
+  "briefing-diplomacy": "diplomacy",
 };
 
 /**
@@ -103,8 +112,11 @@ export function getLastBriefingState(
 }
 
 /**
- * Requests a single briefing with promise-based deduplication.
- * Returns cached results, awaits in-flight generation, or starts new generation.
+ * Requests a single briefing with promise-based deduplication. This is the only owner of a
+ * briefing's lifecycle: returns cached results, awaits in-flight generation, or starts a new
+ * generation that archives the briefing (when the seat has files), publishes it to
+ * `state.reports`, and only then resolves. A failed generation or archive publishes nothing, and
+ * the pending entry is cleared so the next request starts over.
  * If a combined ("briefing") result exists or is pending, it serves as fallback for any specific mode.
  * Instructions are read from parameters.workingMemory automatically (set by the strategist's focus-briefer tool).
  *
@@ -158,7 +170,13 @@ export async function requestBriefing(
     ? instruction
     : { mode, instruction } as SpecializedBrieferInput;
 
-  const promise = generateBriefing(agentName, input, state, context);
+  const promise = generateBriefing(agentName, input, state, context).then((text) => {
+    if (!text) return text;
+    // Archive before publishing, so a published briefing always matches its archived file
+    context.records()?.recordBriefing(state.turn, briefingKinds[reportKey], text, context.currentSignal());
+    state.reports[reportKey] = text;
+    return text;
+  });
 
   // Track and clean up the promise
   const tracked = promise.finally(() => {

@@ -1,0 +1,298 @@
+/** Tests for the versioned seat store (src/utils/workspace/workspace-store.ts). */
+
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import Database from 'better-sqlite3';
+import { trace } from '@opentelemetry/api';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  config: { telemetryDir: '' },
+}));
+
+vi.mock('../../../../src/utils/config.js', () => ({ config: mocks.config }));
+
+import { WorkspaceStore, type PathChange } from '../../../../src/utils/workspace/workspace-store.js';
+import { workspaceRoot } from '../../../../src/utils/workspace/player-workspace.js';
+
+/** Decode stored bytes as UTF-8 text. */
+function text(bytes: Uint8Array | undefined): string | undefined {
+  return bytes === undefined ? undefined : Buffer.from(bytes).toString('utf8');
+}
+
+describe('WorkspaceStore', () => {
+  let dir: string;
+  let dbPath: string;
+  let store: WorkspaceStore;
+
+  /** Commit file changes with a given kind and turn. */
+  function commit(changes: PathChange[], kind: 'turn' | 'briefing' | 'notes' = 'notes', turn: number | null = 1): number {
+    return store.commit({ kind, turn, author: 'host', changes });
+  }
+
+  /** Commit one `turn` record for a turn. */
+  function recordTurn(turn: number): number {
+    return commit([{ path: `records/turn-${turn}/state.md`, type: 'file', content: `turn ${turn}` }], 'turn', turn);
+  }
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-store-'));
+    mocks.config.telemetryDir = dir;
+    dbPath = path.join(dir, 'nested', 'seat.db');
+    store = WorkspaceStore.open(dbPath);
+  });
+
+  afterEach(() => {
+    store.close();
+    vi.restoreAllMocks();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  describe('creation', () => {
+    it('should create an empty init commit and head together', () => {
+      const history = store.history();
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({ parent: null, turn: null, kind: 'init' });
+      expect(store.head()).toBe(history[0].id);
+      expect(store.manifest().size).toBe(0);
+      expect(store.lastRecordedTurn()).toBeUndefined();
+    });
+
+    it('should keep the init commit and head on reopening', () => {
+      const id = commit([{ path: 'game/a.md', type: 'file', content: 'a' }]);
+      store.close();
+      store = WorkspaceStore.open(dbPath);
+      expect(store.head()).toBe(id);
+      expect(store.history().map((entry) => entry.kind)).toEqual(['init', 'notes']);
+      expect(text(store.readFile('game/a.md'))).toBe('a');
+    });
+
+    it('should use WAL mode', () => {
+      const db = new Database(dbPath, { readonly: true });
+      expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
+      db.close();
+    });
+
+    it('should refuse a read-only open of a missing store', () => {
+      expect(() => WorkspaceStore.open(path.join(dir, 'missing.db'), { readonly: true })).toThrow();
+      expect(fs.existsSync(path.join(dir, 'missing.db'))).toBe(false);
+    });
+  });
+
+  describe('pathFor', () => {
+    it('should give one path per game and player under the workspace root', () => {
+      expect(WorkspaceStore.pathFor('game-1', 3)).toBe(path.join(workspaceRoot(), 'games', 'game-1-player-3.db'));
+      expect(WorkspaceStore.pathFor('game-1', 3)).toBe(WorkspaceStore.pathFor('game-1', 3));
+    });
+
+    it('should reject game IDs that escape the games folder', () => {
+      expect(() => WorkspaceStore.pathFor('../evil', 1)).toThrow();
+      expect(() => WorkspaceStore.pathFor('a/b', 1)).toThrow();
+    });
+  });
+
+  describe('files and versions', () => {
+    it('should round-trip text and binary files', () => {
+      const binary = new Uint8Array([0, 255, 1, 254, 0, 10, 13]);
+      commit([
+        { path: 'records/a.md', type: 'file', content: 'héllo' },
+        { path: 'game/bin.dat', type: 'file', content: binary, mode: 0o600, mtime: 1234 },
+        { path: 'game/empty.txt', type: 'file', content: '' },
+      ]);
+      expect(text(store.readFile('records/a.md'))).toBe('héllo');
+      expect(store.readFile('game/bin.dat')).toEqual(binary);
+      expect(store.readFile('game/empty.txt')).toEqual(new Uint8Array(0));
+      expect(store.manifest().get('game/bin.dat')).toMatchObject({ type: 'file', size: binary.length, mode: 0o600, mtime: 1234 });
+    });
+
+    it('should store identical contents once and compress only when smaller', () => {
+      const compressible = 'abc'.repeat(1000);
+      const random = new Uint8Array(crypto.randomBytes(512));
+      commit([
+        { path: 'game/one.md', type: 'file', content: compressible },
+        { path: 'game/two.md', type: 'file', content: compressible },
+        { path: 'game/random.bin', type: 'file', content: random },
+      ]);
+      expect(store.readFile('game/two.md')).toEqual(store.readFile('game/one.md'));
+      expect(store.readFile('game/random.bin')).toEqual(random);
+
+      const db = new Database(dbPath, { readonly: true });
+      const rows = db.prepare('SELECT size, compressed, length(data) AS stored FROM ws_blobs ORDER BY size').all() as
+        { size: number; compressed: number; stored: number }[];
+      db.close();
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({ size: 512, compressed: 0, stored: 512 });
+      expect(rows[1].size).toBe(3000);
+      expect(rows[1].compressed).toBe(1);
+      expect(rows[1].stored).toBeLessThan(3000);
+    });
+
+    it('should read older commits as they were', () => {
+      const first = commit([{ path: 'game/a.md', type: 'file', content: 'v1' }]);
+      commit([{ path: 'game/a.md', type: 'file', content: 'v2' }, { path: 'game/b.md', type: 'file', content: 'b' }]);
+      expect(text(store.readFile('game/a.md', first))).toBe('v1');
+      expect(store.manifest(first).has('game/b.md')).toBe(false);
+      expect(text(store.readFile('game/a.md'))).toBe('v2');
+      expect(store.manifest(store.history()[0].id).size).toBe(0);
+    });
+
+    it('should keep empty directories and let a delete remove everything under a path', () => {
+      commit([
+        { path: 'game/empty', type: 'dir', mode: 0o700, mtime: 99 },
+        { path: 'game/notes/a.md', type: 'file', content: 'a' },
+        { path: 'game/notes/deep/b.md', type: 'file', content: 'b' },
+        { path: 'game/keep.md', type: 'file', content: 'k' },
+      ]);
+      expect(store.manifest().get('game/empty')).toEqual({ type: 'dir', mode: 0o700, mtime: 99 });
+      expect(store.manifest().has('game/notes')).toBe(false);
+
+      commit([{ path: 'game/notes', type: 'delete' }]);
+      expect([...store.manifest().keys()].sort()).toEqual(['game/empty', 'game/keep.md']);
+    });
+
+    it('should let later commits win path by path', () => {
+      commit([{ path: 'game/a.md', type: 'file', content: 'a1' }, { path: 'game/b.md', type: 'file', content: 'b1' }]);
+      commit([{ path: 'game/b.md', type: 'file', content: 'b2' }]);
+      expect(text(store.readFile('game/a.md'))).toBe('a1');
+      expect(text(store.readFile('game/b.md'))).toBe('b2');
+    });
+
+    it('should see commits made through another connection', () => {
+      store.manifest();
+      const other = WorkspaceStore.open(dbPath);
+      other.commit({ kind: 'notes', turn: 1, author: 'other', changes: [{ path: 'game/x.md', type: 'file', content: 'x' }] });
+      other.close();
+      expect(text(store.readFile('game/x.md'))).toBe('x');
+    });
+
+    it('should reject paths outside records and game', () => {
+      const head = store.head();
+      expect(() => commit([{ path: 'other/a.md', type: 'file', content: 'a' }])).toThrow();
+      expect(() => commit([{ path: 'game/../x', type: 'file', content: 'a' }])).toThrow();
+      expect(() => commit([{ path: '/game/a', type: 'file', content: 'a' }])).toThrow();
+      expect(store.head()).toBe(head);
+      expect(store.history()).toHaveLength(1);
+    });
+  });
+
+  describe('commit', () => {
+    it('should apply derived files from the resulting tree in the same commit', () => {
+      commit([{ path: 'records/old.md', type: 'file', content: 'old' }]);
+      const id = store.commit({
+        kind: 'turn',
+        turn: 2,
+        author: 'host',
+        changes: [{ path: 'records/new.md', type: 'file', content: 'new' }],
+        derive: (tree, read) => [{
+          path: 'records/CATALOG.md',
+          type: 'file',
+          content: [...tree.keys()].sort().map((key) => `${key}=${text(read(key))}`).join('\n'),
+        }],
+      });
+      expect(store.head()).toBe(id);
+      expect(text(store.readFile('records/CATALOG.md'))).toBe('records/new.md=new\nrecords/old.md=old');
+      expect(store.history()).toHaveLength(3);
+    });
+
+    it('should write nothing when the signal is aborted', () => {
+      const head = store.head();
+      const controller = new AbortController();
+      controller.abort();
+      expect(() => store.commit({
+        kind: 'notes', turn: 1, author: 'agent', signal: controller.signal,
+        changes: [{ path: 'game/a.md', type: 'file', content: 'a' }],
+      })).toThrow();
+      expect(store.head()).toBe(head);
+      expect(store.history()).toHaveLength(1);
+      expect(store.manifest().size).toBe(0);
+    });
+
+    it('should write nothing when derive throws', () => {
+      const head = store.head();
+      expect(() => store.commit({
+        kind: 'turn', turn: 1, author: 'host',
+        changes: [{ path: 'records/a.md', type: 'file', content: 'a' }],
+        derive: () => { throw new Error('boom'); },
+      })).toThrow('boom');
+      expect(store.head()).toBe(head);
+      expect(store.manifest().size).toBe(0);
+    });
+
+    it('should record the active span and the author', () => {
+      const traceId = 'a'.repeat(32);
+      const spanId = 'b'.repeat(16);
+      vi.spyOn(trace, 'getActiveSpan').mockReturnValue(trace.wrapSpanContext({ traceId, spanId, traceFlags: 1 }));
+      const id = store.commit({ kind: 'notes', turn: 4, author: 'diplomat', changes: [] });
+      expect(store.history().find((entry) => entry.id === id)).toMatchObject({ traceId, spanId, author: 'diplomat', turn: 4, kind: 'notes' });
+    });
+
+    it('should leave trace IDs empty outside a span', () => {
+      const id = commit([]);
+      expect(store.history().find((entry) => entry.id === id)).toMatchObject({ traceId: null, spanId: null });
+    });
+  });
+
+  describe('lastRecordedTurn', () => {
+    it('should count only turn commits', () => {
+      recordTurn(1);
+      commit([{ path: 'records/turn-2/briefing.md', type: 'file', content: 'early' }], 'briefing', 2);
+      commit([{ path: 'game/note.md', type: 'file', content: 'n' }], 'notes', 2);
+      expect(store.lastRecordedTurn()).toBe(1);
+    });
+  });
+
+  describe('rewind', () => {
+    it('should do nothing unless the last recorded turn reaches the target', () => {
+      expect(store.rewind(1)).toBe(false);
+      recordTurn(1);
+      commit([{ path: 'records/turn-2/briefing.md', type: 'file', content: 'early' }], 'briefing', 2);
+      const head = store.head();
+      expect(store.rewind(2)).toBe(false);
+      expect(store.head()).toBe(head);
+      expect(store.history()).toHaveLength(3);
+    });
+
+    it('should move head before the oldest turn commit at or after the target and add a reload commit', () => {
+      recordTurn(1);
+      commit([{ path: 'game/turn1.md', type: 'file', content: 'kept' }], 'notes', 1);
+      const beforeTwo = store.head();
+      recordTurn(2);
+      commit([{ path: 'game/turn2.md', type: 'file', content: 'dropped' }], 'notes', 2);
+      recordTurn(3);
+      // A late note tagged with an older turn, committed after turn 3 was recorded.
+      commit([{ path: 'game/late.md', type: 'file', content: 'dropped' }], 'notes', 1);
+      const total = store.history().length;
+
+      expect(store.rewind(2)).toBe(true);
+      const head = store.history().find((entry) => entry.id === store.head())!;
+      expect(head).toMatchObject({ kind: 'reload', turn: 2, parent: beforeTwo });
+      expect([...store.manifest().keys()].sort()).toEqual(['game/turn1.md', 'records/turn-1/state.md']);
+      expect(store.lastRecordedTurn()).toBe(1);
+      expect(store.history()).toHaveLength(total + 1);
+      expect(store.hasCommit(beforeTwo + 1)).toBe(true);
+    });
+
+    it('should keep the init commit when the first turn is discarded', () => {
+      const init = store.head();
+      recordTurn(5);
+      recordTurn(6);
+      expect(store.rewind(5)).toBe(true);
+      const head = store.history().find((entry) => entry.id === store.head())!;
+      expect(head).toMatchObject({ kind: 'reload', turn: 5, parent: init });
+      expect(store.manifest().size).toBe(0);
+      expect(store.lastRecordedTurn()).toBeUndefined();
+    });
+
+    it('should let a new timeline build on the reload commit', () => {
+      recordTurn(1);
+      recordTurn(2);
+      store.rewind(2);
+      recordTurn(2);
+      expect(store.lastRecordedTurn()).toBe(2);
+      expect(store.rewind(3)).toBe(false);
+      expect(text(store.readFile('records/turn-2/state.md'))).toBe('turn 2');
+    });
+  });
+});

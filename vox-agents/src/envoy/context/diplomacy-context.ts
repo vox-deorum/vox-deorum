@@ -7,8 +7,10 @@
  * from the game, distinct from the diplomat's on-the-table deal context (which reflects the agent
  * transcript's in-flight proposal, see {@link ../diplomat.ts}).
  *
- * All three sub-fetches are perspective-aware (`PlayerID = the voiced seat`) so cities and standing
- * deals carry the right visibility. We do NOT reuse the strategist's cached `GameState` (fetched with
+ * All three sub-fetches are perspective-aware so cities and standing deals carry the right
+ * visibility. They pass `PlayerID = the voiced seat`, but MCP auto-completion of `PlayerID` (see
+ * `wrapMCPTool` in utils/tools/mcp-tools.ts) overwrites it with `parameters.playerID` whenever that
+ * is defined, so the explicit value only takes effect when the parameters carry no seat. We do NOT reuse the strategist's cached `GameState` (fetched with
  * no perspective, so it strips `DiplomaticDeals` and over-shares cities), nor do we adjust
  * `refreshGameState` (that would ripple into the strategist and its briefers).
  */
@@ -18,7 +20,7 @@ import { getRecentGameState, type StrategistParameters } from "../../strategist/
 import { areTeammates } from "../../strategist/pacing/utils.js";
 import type { EnvoyThread } from "../../types/index.js";
 import { identityOf } from "../../utils/diplomacy/transcript/transcript-utils.js";
-import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
+import { renderSection } from "../../knowledge/sections.js";
 import { createLogger } from "../../utils/logger.js";
 import { endpoints } from "../ledger/deal-ledger.js";
 import {
@@ -70,10 +72,10 @@ function citiesSection(
   const own = cities[selfCiv];
   const theirs = cities[counterpartCiv];
   if (own && Object.keys(own).length > 0) {
-    blocks.push(`## ${selfCiv}'s Cities (You)\n${jsonToMarkdown(own)}`);
+    blocks.push(renderSection("cities", own, { heading: `${selfCiv}'s Cities (You)`, description: false, headingLevel: 2 }));
   }
   if (theirs && Object.keys(theirs).length > 0) {
-    blocks.push(`## ${counterpartCiv}'s Cities (Visible Only)\n${jsonToMarkdown(theirs)}`);
+    blocks.push(renderSection("cities", theirs, { heading: `${counterpartCiv}'s Cities (Visible Only)`, description: false, headingLevel: 2 }));
   }
   return blocks.length ? blocks.join("\n\n") : undefined;
 }
@@ -202,7 +204,7 @@ export async function buildDiplomacyBackgroundMessage(
   }
 
   if (parameters.playerID !== undefined && parameters.playerID !== viewerID) {
-    logger.warn("Envoy seat differs from parameters.playerID; using the voiced seat", {
+    logger.warn("Envoy seat differs from parameters.playerID; MCP auto-completion will fetch from parameters.playerID", {
       viewerID,
       playerID: parameters.playerID,
     });

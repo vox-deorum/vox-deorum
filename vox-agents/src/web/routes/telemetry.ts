@@ -7,12 +7,17 @@
 
 import { Router, Request, Response } from 'express';
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { createLogger } from '../../utils/logger.js';
 import { sqliteExporter } from '../../instrumentation.js';
 import { parseDatabaseIdentifier, parseContextIdentifier } from '../../utils/telemetry/identifier-parser.js';
 import { sendError } from '../http-utils.js';
+import { errorMessage } from '../../utils/errors.js';
+import { WorkspaceStore } from '../../utils/workspace/workspace-store.js';
+import { materialize } from '../../utils/workspace/materialize.js';
+import { zipSink } from '../../utils/workspace/materialize-zip.js';
 import type {
   TelemetryDatabasesResponse,
   TelemetryMetadata,
@@ -28,6 +33,22 @@ import type {
 
 const logger = createLogger('telemetry', 'webui');
 const router = Router();
+
+/** The seat store path for a game and player, or undefined when the identifiers cannot name one. */
+function seatStorePath(gameID: string, playerID: string): string | undefined {
+  try {
+    if (!/^\d+$/.test(playerID)) return undefined;
+    return WorkspaceStore.pathFor(gameID, Number(playerID));
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a seat workspace store exists on disk. */
+function hasWorkspaceStore(gameID: string, playerID: string): boolean {
+  const dbPath = seatStorePath(gameID, playerID);
+  return dbPath !== undefined && existsSync(dbPath);
+}
 
 // Configure multer for file uploads
 const upload = multer({
@@ -79,7 +100,8 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
             gameID: identifierInfo.gameID,
             playerID: identifierInfo.playerID.toString(),
             size: stats.size,
-            lastModified: stats.mtime.toISOString()
+            lastModified: stats.mtime.toISOString(),
+            hasWorkspace: hasWorkspaceStore(identifierInfo.gameID, identifierInfo.playerID.toString())
           });
         }
       }
@@ -93,6 +115,43 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
     logger.error('Error listing databases', error);
     sendError(res, 500, 'Failed to list databases');
   }
+});
+
+/**
+ * Download one version of a seat workspace store, head by default, as a zip of ordinary files.
+ * The store is only read.
+ */
+router.get('/workspace/:gameID/:playerID/download', (req: Request, res: Response) => {
+  const { gameID, playerID } = req.params;
+  const dbPath = seatStorePath(gameID, playerID);
+  if (!dbPath || !existsSync(dbPath)) {
+    return sendError(res, 404, `No workspace files for game ${gameID} player ${playerID}`);
+  }
+  const commitParam = req.query.commit;
+  if (commitParam !== undefined && !/^\d+$/.test(String(commitParam))) {
+    return sendError(res, 400, 'commit must be a whole number');
+  }
+  try {
+    const zip = zipSink();
+    const commit = materialize(dbPath, zip.sink, commitParam === undefined ? undefined : Number(commitParam));
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${gameID}-player-${playerID}-${commit}.zip"`);
+    zip.stream.on('error', (error) => {
+      logger.error('Workspace zip stream failed', { error });
+      res.destroy(error);
+    });
+    res.on('close', () => {
+      if (!res.writableFinished) zip.stream.destroy();
+    });
+    zip.stream.pipe(res);
+    zip.end();
+  } catch (error) {
+    const message = errorMessage(error, 'Failed to download workspace files');
+    const unknownCommit = message.includes('has no commit');
+    if (!unknownCommit) logger.error('Failed to materialize workspace', { error });
+    sendError(res, unknownCommit ? 404 : 500, message);
+  }
+  return;
 });
 
 /**

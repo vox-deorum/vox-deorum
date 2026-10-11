@@ -8,7 +8,9 @@
  * intentionally not retested here — see pacing.test.ts.
  */
 
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
+import { VoxContext } from "../../../src/infra/vox-context.js";
+import type { StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
 import {
   refreshGameState,
   ensureGameState,
@@ -475,3 +477,80 @@ describe("strategy-parameters", () => {
 type StrategistParametersMetadata = NonNullable<
   ReturnType<typeof makeStrategistParameters>["metadata"]
 >;
+
+describe("refreshGameState cancellation", () => {
+  /**
+   * A real context whose tool calls wait on a gate, so a test can reset the timeline (abort every
+   * run) while an old chat's MCP results are still in flight. `players` names the snapshot.
+   */
+  function heldContext(players: string, metadata?: StrategistParameters["metadata"]) {
+    const context = new VoxContext<StrategistParameters>({}, `cancel-${Math.random()}`);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const respond = (name: string): unknown => {
+      if (name === "get-game-settings") return metadata;
+      if (name === "get-players") return { snapshot: players };
+      return {};
+    };
+    vi.spyOn(context, "callTool").mockImplementation(async (name: string) => {
+      await gate;
+      return respond(name) as never;
+    });
+    return { context, release };
+  }
+
+  it("should reject and leave the cache empty when results arrive after the run is cancelled", async () => {
+    const { context, release } = heldContext("stale");
+    const params = makeStrategistParameters({ turn: 5 });
+    context.setBaseParameters(params);
+
+    const refresh = context.withRun({}, (run) => refreshGameState(context, run.parameters));
+    context.abort();
+    release();
+
+    await expect(refresh).rejects.toThrow();
+    expect(params.gameStates).toEqual({});
+  });
+
+  it("should leave a fresh same-turn snapshot unchanged when an old refresh resolves late", async () => {
+    const old = heldContext("stale");
+    const params = makeStrategistParameters({ turn: 5 });
+    old.context.setBaseParameters(params);
+    const refresh = old.context.withRun({}, (run) => refreshGameState(old.context, run.parameters));
+    old.context.abort();
+
+    // The new timeline publishes a fresh snapshot for the same turn before the old results land.
+    const fresh = heldContext("fresh");
+    fresh.release();
+    const state = await refreshGameState(fresh.context, params);
+    old.release();
+
+    await expect(refresh).rejects.toThrow();
+    expect(params.gameStates[5]).toBe(state);
+    expect(state.players).toEqual({ snapshot: "fresh" });
+  });
+
+  it("should not publish delayed metadata from a cancelled refresh", async () => {
+    const { context, release } = heldContext("stale", { YouAre: { Name: "Egypt", Leader: "Cleopatra" } } as never);
+    const params = makeStrategistParameters({ turn: 5, metadata: undefined });
+    context.setBaseParameters(params);
+
+    const refresh = context.withRun({}, (run) => refreshGameState(context, run.parameters));
+    context.abort();
+    release();
+
+    await expect(refresh).rejects.toThrow();
+    expect(params.metadata).toBeUndefined();
+  });
+
+  it("should still publish a refresh made outside any run", async () => {
+    const { context, release } = heldContext("outside", { YouAre: { Name: "Egypt", Leader: "Cleopatra" } } as never);
+    const params = makeStrategistParameters({ turn: 5, metadata: undefined });
+    release();
+
+    const state = await refreshGameState(context, params);
+
+    expect(params.gameStates[5]).toBe(state);
+    expect(params.metadata?.YouAre).toEqual({ Name: "Egypt", Leader: "Cleopatra" });
+  });
+});

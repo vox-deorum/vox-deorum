@@ -88,6 +88,10 @@ The closing reminder is always the last message. It comes after any rescue messa
 
 In prompt mode the tool block disappears from the wire. Its content moves into the text, as described in [Prompt-mode tool calling](#prompt-mode-tool-calling).
 
+### Game-state sections
+
+Each section of the game state (situation, civilization, options, strategies, victory progress, players, cities, military, events, briefings) is defined once in the registry in `knowledge/sections.ts`: its key, default title and description, whether it lasts the whole game or changes each turn, and its default Markdown settings. Prompt builders render a section through `renderSection`, which takes the data and optional overrides for the heading, the description (`false` for none), the heading level, and the Markdown settings. Data that is already Markdown, such as a briefing, is inserted as is with the `rendered` override. Builders keep their own message order, field filtering, and cache breakpoints. The same definitions name the files in the [seat records](overview.md#seat-workspace-store), so a prompt and a record file describe a section the same way. A builder that shows a game-state section renders it through the registry instead of formatting the report itself.
+
 ## Declared and executable tools
 
 Each step has two tool lists:
@@ -260,6 +264,7 @@ A failed reload keeps the previous sets, and a reload leaves other folders' cach
 | --- | --- | --- |
 | An agent's main instructions | Its file in `vox-agents/prompts/`; the view in that agent's `getSystem()` | Shared passages are in `prompts/shared/`. See [System prompt files](#system-prompt-files). |
 | Opening game context | That agent's `getInitialMessages()` | Shared envoy and analyst context: `buildGameContextMessages` in `strategist/strategy-parameters.ts`. |
+| A game-state section's title, description, or default Markdown | The registry in `knowledge/sections.ts` | Per-call overrides go to `renderSection`. |
 | Envoy hint (identity, audience, turn) | `getHint` in `envoy/live-envoy.ts`, overridden in `telepathist/talkative-telepathist.ts` | Always the last opening message for a live envoy. |
 | Envoy add-on after the hint | `getDefaultAddon` in `envoy/envoy.ts`, overridden in `envoy/agents/diplomat.ts` and `envoy/agents/spokesperson.ts` | |
 | Special messages (telepathist only) | `getSpecialMessages` in `telepathist/talkative-telepathist.ts` | A special message also removes the run's tools (`getRunTools` in `telepathist/telepathist.ts`). |

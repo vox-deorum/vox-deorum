@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getLastBriefingState, requestBriefing } from "../../../src/briefer/briefing-utils.js";
+import { SeatRecords } from "../../../src/knowledge/records.js";
 import { type GameState, type StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
+import { WorkspaceStore } from "../../../src/utils/workspace/workspace-store.js";
 
 /** Build a minimal GameState for a turn with the given reports. */
 function makeState(turn: number, reports: Record<string, string> = {}): GameState {
@@ -130,5 +135,133 @@ describe("requestBriefing event fallback", () => {
     expect(seen).toHaveLength(2);
     expect(seen[0]).toEqual({ "4": [{ Type: "CityTrained" }, { Type: "DeclareWar" }] });
     expect(seen[1]).toEqual({ "4": [{ Type: "DeclareWar" }] });
+  });
+});
+
+describe("requestBriefing publication", () => {
+  let dir: string;
+  let store: WorkspaceStore;
+  let records: SeatRecords;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "vox-briefing-"));
+    store = WorkspaceStore.open(path.join(dir, "seat.db"));
+    records = new SeatRecords(store);
+  });
+
+  afterEach(() => {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** A stored briefing archive as text. */
+  function archived(turn: number, kind: string): string | undefined {
+    const bytes = store.readFile(`records/turn-${turn}/briefings/${kind}.md`);
+    return bytes === undefined ? undefined : Buffer.from(bytes).toString("utf8");
+  }
+
+  /** A fake context whose briefer resolves when released, with an optional records writer. */
+  function fakeContext(options: { records?: () => SeatRecords | undefined; signal?: AbortSignal; outputs?: string[] } = {}) {
+    const calls: string[] = [];
+    const outputs = options.outputs ?? ["briefing text"];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const context = {
+      callAgent: async (agent: string) => {
+        calls.push(agent);
+        await gate;
+        return outputs[Math.min(calls.length, outputs.length) - 1];
+      },
+      records: options.records ?? (() => records),
+      currentSignal: () => options.signal ?? new AbortController().signal,
+    };
+    return { context: context as never, calls, release };
+  }
+
+  it("should make a concurrent caller wait until the briefing is archived and published", async () => {
+    const state = makeState(4);
+    const parameters = makeParameters(4, { 4: state });
+    const { context, calls, release } = fakeContext();
+
+    const first = requestBriefing("Military", state, context, parameters);
+    const second = requestBriefing("Military", state, context, parameters);
+    let secondDone = false;
+    void second.then(() => { secondDone = true; });
+    await Promise.resolve();
+    expect(secondDone).toBe(false);
+    expect(state.reports["briefing-military"]).toBeUndefined();
+
+    release();
+    expect(await second).toBe("briefing text");
+    expect(archived(4, "military")).toBe("briefing text\n");
+    expect(state.reports["briefing-military"]).toBe("briefing text");
+    expect(await first).toBe("briefing text");
+    expect(calls).toEqual(["specialized-briefer"]);
+  });
+
+  it("should publish to the requested state and archive under that state's turn", async () => {
+    const requested = makeState(4);
+    const current = makeState(9);
+    const parameters = makeParameters(9, { 4: requested, 9: current });
+    const { context, release } = fakeContext();
+    release();
+
+    const text = await requestBriefing("combined", requested, context, parameters);
+    expect(requested.reports["briefing"]).toBe(text);
+    expect(current.reports).toEqual({});
+    expect(archived(4, "combined")).toBe(`${text}\n`);
+    expect(archived(9, "combined")).toBeUndefined();
+  });
+
+  it("should publish nothing when archiving fails, and regenerate on the next request", async () => {
+    const state = makeState(4);
+    const parameters = makeParameters(4, { 4: state });
+    let failures = 1;
+    const failing = {
+      recordBriefing: (...args: Parameters<SeatRecords["recordBriefing"]>) => {
+        if (failures-- > 0) throw new Error("disk full");
+        return records.recordBriefing(...args);
+      },
+    } as SeatRecords;
+    const { context, calls, release } = fakeContext({ records: () => failing, outputs: ["first", "second"] });
+    release();
+
+    const waiter = requestBriefing("Economy", state, context, parameters);
+    const concurrent = requestBriefing("Economy", state, context, parameters);
+    await expect(waiter).rejects.toThrow("disk full");
+    await expect(concurrent).rejects.toThrow("disk full");
+    expect(state.reports["briefing-economy"]).toBeUndefined();
+    expect(state._pendingBriefings?.["briefing-economy"]).toBeUndefined();
+    expect(archived(4, "economy")).toBeUndefined();
+
+    expect(await requestBriefing("Economy", state, context, parameters)).toBe("second");
+    expect(calls).toHaveLength(2);
+    expect(state.reports["briefing-economy"]).toBe("second");
+    expect(archived(4, "economy")).toBe("second\n");
+  });
+
+  it("should publish nothing when the requesting run was cancelled before archiving", async () => {
+    const state = makeState(4);
+    const parameters = makeParameters(4, { 4: state });
+    const controller = new AbortController();
+    const { context, release } = fakeContext({ signal: controller.signal });
+    const pending = requestBriefing("Diplomacy", state, context, parameters);
+    controller.abort();
+    release();
+
+    await expect(pending).rejects.toBeDefined();
+    expect(state.reports["briefing-diplomacy"]).toBeUndefined();
+    expect(archived(4, "diplomacy")).toBeUndefined();
+  });
+
+  it("should publish without archiving when files are off", async () => {
+    const state = makeState(4);
+    const parameters = makeParameters(4, { 4: state });
+    const { context, release } = fakeContext({ records: () => undefined });
+    release();
+
+    expect(await requestBriefing("combined", state, context, parameters)).toBe("briefing text");
+    expect(state.reports["briefing"]).toBe("briefing text");
+    expect(store.history().map((commit) => commit.kind)).toEqual(["init"]);
   });
 });

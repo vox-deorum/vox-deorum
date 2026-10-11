@@ -41,6 +41,8 @@ import { createAgentTool } from "../utils/tools/agent-tools.js";
 import { wrapMCPTools } from "../utils/tools/mcp-tools.js";
 import { bashToolName, createBashTool } from "../utils/tools/bash-tool.js";
 import { PlayerWorkspace } from "../utils/workspace/player-workspace.js";
+import type { WorkspaceStore } from "../utils/workspace/workspace-store.js";
+import { SeatRecords } from "../knowledge/records.js";
 import { executeAgent } from "./vox-execute.js";
 import { evaluateOn } from "./vox-evaluate.js";
 import type { EvaluateOptions } from "./vox-evaluate.js";
@@ -111,8 +113,17 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    */
   public prompts?: PromptsSetting;
 
+  /**
+   * The seat's versioned file store. A file-enabled `VoxPlayer` opens it, attaches it here, and
+   * closes it after `shutdown()`; every other context leaves it unset.
+   */
+  public store?: WorkspaceStore;
+
   /** Workspaces by game and player, so every agent of a seat shares one shell. */
   private readonly workspaces = new Map<string, PlayerWorkspace>();
+
+  /** The records writer for the attached store, created on first use. */
+  private seatRecords?: SeatRecords;
 
   /**
    * Current execution frame for concurrent root runs. The store points at a {@link RootRun}
@@ -316,21 +327,32 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
   }
 
   /**
-   * The workspace of one player in one game, created on first use and shared by later calls.
-   * Undefined when this context has no files setting.
+   * The workspace of one player in one game, created on first use and shared by later calls. It
+   * reads and commits through the attached store, and is rebuilt when a different store is
+   * attached. Undefined when this context has no files setting or no attached store.
    *
    * @param gameID - The game the workspace belongs to
    * @param playerID - The player the workspace belongs to
    */
   public workspace(gameID: string, playerID: number): PlayerWorkspace | undefined {
-    if (!this.files) return undefined;
+    if (!this.files || !this.store) return undefined;
     const key = `${gameID}-player-${playerID}`;
     let workspace = this.workspaces.get(key);
-    if (!workspace) {
-      workspace = new PlayerWorkspace(this.files, gameID, playerID);
+    if (workspace?.store !== this.store) {
+      workspace = new PlayerWorkspace(this.files, gameID, playerID, this.store);
       this.workspaces.set(key, workspace);
     }
     return workspace;
+  }
+
+  /**
+   * The seat's records writer, created on first use. Undefined when this context has no files
+   * setting or no attached store.
+   */
+  public records(): SeatRecords | undefined {
+    if (!this.files || !this.store) return undefined;
+    if (this.seatRecords?.store !== this.store) this.seatRecords = new SeatRecords(this.store);
+    return this.seatRecords;
   }
 
   /**

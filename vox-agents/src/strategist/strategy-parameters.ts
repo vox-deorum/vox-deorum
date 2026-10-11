@@ -1,7 +1,7 @@
 import { ModelMessage } from "ai";
 import { AgentParameters } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
+import { renderSection } from "../knowledge/sections.js";
 import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
 import { isRecord } from "../utils/guards.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
@@ -130,8 +130,13 @@ export async function refreshGameState(
   parameters: StrategistParameters,
   cullLimit: number = 10
 ): Promise<GameState> {
-  // Get the game metadata as a prerequisite
-  parameters.metadata = parameters.metadata ??
+  // Capture the active run's signal before any await. A timeline reset cancels the seat's runs,
+  // and a refresh it cancelled must not publish results that arrive afterwards. Refreshes outside
+  // a run have no signal and always publish.
+  const signal = context.activeRoot ? context.currentSignal() : undefined;
+
+  // Get the game metadata as a prerequisite; it is published together with the game state below.
+  const metadata = parameters.metadata ??
     await context.callTool<GameMetadata>("get-game-settings", { PlayerID: parameters.playerID }, parameters);
 
   // Get the information
@@ -158,6 +163,11 @@ export async function refreshGameState(
   if (isFailedToolResult(options)) throw new Error(`Failed to fetch options: ${extractErrorText(options)}`);
   if (isFailedToolResult(victory)) throw new Error(`Failed to fetch victory: ${extractErrorText(victory)}`);
   if (isFailedToolResult(military)) throw new Error(`Failed to fetch military: ${extractErrorText(military)}`);
+
+  // Publish nothing from a cancelled refresh. Everything from here to the return is synchronous,
+  // so no reset can slip between this check and the writes below.
+  signal?.throwIfAborted();
+  parameters.metadata = metadata;
 
   // Store the freshly-fetched snapshot. When an entry for this turn already exists (a concurrent
   // same-turn refresh), update its fields IN PLACE rather than replacing the object reference.
@@ -328,30 +338,18 @@ export function buildGameContextMessages(parameters: StrategistParameters): Mode
 
   return [{
       role: "system",
-      content: `
-# Situation
-${jsonToMarkdown(SituationData)}
-
-# Your Civilization
-${jsonToMarkdown(YouAre)}`.trim(),
+      content: [
+        renderSection("situation", SituationData),
+        renderSection("civilization", YouAre),
+      ].join("\n\n").trim(),
       providerOptions: { ...cacheBreakpoint }
     }, {
       role: "user",
-      content: `
-# Victory Progress
-Victory Progress: current progress towards each type of victory.
-
-${jsonToMarkdown(state.victory)}
-
-# Players
-Players: summary reports about visible players in the world.
-
-${jsonToMarkdown(state.players)}
-
-# Strategies
-Strategies: existing strategic decisions from your leader.
-
-${jsonToMarkdown(Strategy)}`.trim()
+      content: [
+        renderSection("victory", state.victory),
+        renderSection("players", state.players),
+        renderSection("strategies", Strategy, { description: "Strategies: existing strategic decisions from your leader." }),
+      ].join("\n\n").trim()
   }];
 }
 
@@ -372,48 +370,23 @@ export function renderStrategistReports(
   return [`
 You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
 
-# Situation
-${jsonToMarkdown(SituationData)}
+${renderSection("situation", SituationData)}
 
-# Your Civilization
-${jsonToMarkdown(YouAre)}
+${renderSection("civilization", YouAre)}
 
-# Options
-Options: available strategic options for you.
-
-${jsonToMarkdown(Options, {
-configs: [{}]
-})}
+${renderSection("options", Options)}
 `.trim(), `
-# Strategies
-Strategies: existing strategic decisions from you.
+${renderSection("strategies", Strategy)}
 
-${jsonToMarkdown(Strategy)}
+${renderSection("victory", state.victory)}
 
-# Victory Progress
-Victory Progress: current progress towards each type of victory.
+${renderSection("players", state.players)}
 
-${jsonToMarkdown(state.victory)}
+${renderSection("cities", state.cities)}
 
-# Players
-Players: summary reports about visible players in the world.
+${renderSection("military", state.military)}
 
-${jsonToMarkdown(state.players)}
-
-# Cities
-Cities: summary reports about discovered cities in the world.
-
-${jsonToMarkdown(state.cities)}
-
-# Military
-Military: summary reports about tactical zones and visible units.
-
-${jsonToMarkdown(state.military)}
-
-# Events
-Events: events since you last made a decision.
-
-${jsonToMarkdown(events)}
+${renderSection("events", events)}
 
 ${getDecisionTurnContext(parameters)}
 `.trim()];

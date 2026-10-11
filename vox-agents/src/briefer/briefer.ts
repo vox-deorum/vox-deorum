@@ -21,22 +21,6 @@ export abstract class Briefer<TInput = string> extends VoxAgent<StrategistParame
   public modelSize = 'small' as const;
 
   /**
-   * Post-processes the output before returning it.
-   * Override this method to modify the output after getOutput.
-   *
-   * @param output - The output from getOutput
-   * @returns The post-processed output
-   */
-  public postprocessOutput(
-    parameters: StrategistParameters,
-    _input: TInput,
-    output: string
-  ): string {
-    parameters.gameStates[parameters.turn].reports["briefing"] = output;
-    return output;
-  }
-
-  /**
    * Stops once a step without bash produced the briefing text, or at the step limit. Text next to a
    * bash call is the model working in the workspace ("checking notes"), not the briefing.
    */

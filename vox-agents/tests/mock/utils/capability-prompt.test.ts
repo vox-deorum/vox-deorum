@@ -15,7 +15,12 @@ import {
   requiredToolChoiceMiddleware,
 } from '../../../src/utils/models/providers/required-tool-choice.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
-import { workspaceGuideFile } from '../../../src/utils/workspace/player-workspace.js';
+import {
+  workspaceCatalogFile,
+  workspaceGuideFile,
+  workspaceRecordsPath,
+  workspaceReferenceMountPath,
+} from '../../../src/utils/workspace/player-workspace.js';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 
 /** One declared client function tool. */
@@ -74,6 +79,15 @@ describe('capabilityInstruction', () => {
     expect(instruction).toContain('/workspace/shared/lessons');
     expect(instruction).toContain('/workspace/shared/reference');
     expect(instruction).not.toContain('/workspace/game');
+  });
+
+  it('lists the records catalog and the reference whatever the game access', () => {
+    for (const game of ['write', 'read', false] as const) {
+      const instruction = capabilityInstruction({ files: { ...gameWrite, game }, web: false })!;
+      expect(instruction).toContain(workspaceRecordsPath);
+      expect(instruction).toContain(workspaceCatalogFile);
+      expect(instruction).toContain(workspaceReferenceMountPath);
+    }
   });
 
   it('describes web access without inventing a workspace', () => {

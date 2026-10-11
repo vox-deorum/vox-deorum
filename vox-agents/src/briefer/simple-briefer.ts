@@ -9,7 +9,7 @@ import { ModelMessage } from "ai";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
+import { renderSection } from "../knowledge/sections.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { getLastBriefingState } from "./briefing-utils.js";
 import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
@@ -51,39 +51,22 @@ export class SimpleBriefer extends Briefer {
       content: `
 You are an expert briefing writer for ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
 
-# Situation
-${jsonToMarkdown(SituationData)}
+${renderSection("situation", SituationData)}
 
-# Your Civilization
-${jsonToMarkdown(YouAre)}`.trim(),
+${renderSection("civilization", YouAre)}`.trim(),
       providerOptions: { ...cacheBreakpoint }
     }, {
       role: "user",
       content: `
-# Victory Progress
-Victory Progress: current progress towards each type of victory.
+${renderSection("victory", state.victory)}
 
-${jsonToMarkdown(state.victory)}
+${renderSection("players", state.players)}
 
-# Players
-Players: summary reports about visible players in the world.
+${renderSection("cities", state.cities)}
 
-${jsonToMarkdown(state.players)}
+${renderSection("military", state.military)}
 
-# Cities
-Cities: summary reports about discovered cities in the world.
-
-${jsonToMarkdown(state.cities)}
-
-# Military
-Military: summary reports about tactical zones and visible units.
-
-${jsonToMarkdown(state.military)}
-
-# Events
-Events: events since the last decision-making.
-
-${jsonToMarkdown(state.mergedEvents ?? state.events)}
+${renderSection("events", state.mergedEvents ?? state.events, { description: "Events: events since the last decision-making." })}
 
 # Leader's Instruction
 You are writing a strategic briefing for ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}), after turn ${parameters.turn}.

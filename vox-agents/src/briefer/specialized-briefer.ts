@@ -10,7 +10,7 @@ import { z } from "zod";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../infra/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
+import { renderSection } from "../knowledge/sections.js";
 import { createSimpleTool } from "../utils/tools/simple-tools.js";
 import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
 import { briefingInstructionKeys, briefingReportKeys, getLastBriefingState } from "./briefing-utils.js";
@@ -64,25 +64,13 @@ const militaryConfig: ModeConfig = {
       'CurrentProduction', 'ProductionTurnsLeft'
     ]);
     return `
-# Players
-Players: summary reports about visible players in the world.
+${renderSection("players", filteredPlayers)}
 
-${jsonToMarkdown(filteredPlayers)}
+${renderSection("cities", filteredCities)}
 
-# Cities
-Cities: summary reports about discovered cities in the world.
+${renderSection("military", state.military)}
 
-${jsonToMarkdown(filteredCities)}
-
-# Military
-Military: summary reports about tactical zones and visible units.
-
-${jsonToMarkdown(state.military)}
-
-# Events
-Events: military-related events since the last decision-making.
-
-${jsonToMarkdown(events)}`.trim();
+${renderSection("events", events, { description: "Events: military-related events since the last decision-making." })}`.trim();
   },
 };
 
@@ -101,25 +89,13 @@ const economyConfig: ModeConfig = {
       'MajorityReligion'
     ]);
     return `
-# Victory Progress
-Victory Progress: current progress towards each type of victory.
+${renderSection("victory", state.victory)}
 
-${jsonToMarkdown(state.victory)}
+${renderSection("players", filteredPlayers)}
 
-# Players
-Players: summary reports about visible players in the world.
+${renderSection("cities", filteredCities)}
 
-${jsonToMarkdown(filteredPlayers)}
-
-# Cities
-Cities: summary reports about discovered cities in the world.
-
-${jsonToMarkdown(filteredCities)}
-
-# Events
-Events: economy-related events since the last decision-making.
-
-${jsonToMarkdown(events)}`.trim();
+${renderSection("events", events, { description: "Events: economy-related events since the last decision-making." })}`.trim();
   },
 };
 
@@ -143,23 +119,13 @@ const diplomacyConfig: ModeConfig = {
       'IsCapital', 'IsPuppet', 'IsCoastal', 'IsOccupied', 'FaithPerTurn'
     ]);
     return `
-# World Congress
-${jsonToMarkdown(state.victory!.DiplomaticVictory)}
+${renderSection("victory", state.victory!.DiplomaticVictory, { heading: "World Congress", description: false })}
 
-# Players
-Players: summary reports about visible players in the world.
+${renderSection("players", filteredPlayers)}
 
-${jsonToMarkdown(filteredPlayers)}
+${renderSection("cities", filteredCities)}
 
-# Cities
-Cities: summary reports about discovered cities in the world.
-
-${jsonToMarkdown(filteredCities)}
-
-# Events
-Events: diplomacy-related events since the last decision-making.
-
-${jsonToMarkdown(events)}`.trim();
+${renderSection("events", events, { description: "Events: diplomacy-related events since the last decision-making." })}`.trim();
   },
 };
 
@@ -225,11 +191,9 @@ export class SpecializedBriefer extends Briefer<SpecializedBrieferInput> {
       content: `
 You are an expert ${config.eventCategory.toLowerCase()} analyst for ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
 
-# Situation
-${jsonToMarkdown(SituationData)}
+${renderSection("situation", SituationData)}
 
-# Your Civilization
-${jsonToMarkdown(YouAre)}`.trim(),
+${renderSection("civilization", YouAre)}`.trim(),
       providerOptions: { ...cacheBreakpoint }
     }, {
       role: "user",
@@ -256,19 +220,6 @@ ${lastState.reports[reportKey] ?? lastState.reports["briefing"]}`
     }
 
     return messages;
-  }
-
-  /**
-   * Post-processes the output and stores it in the appropriate report key
-   */
-  public postprocessOutput(
-    parameters: StrategistParameters,
-    input: SpecializedBrieferInput,
-    output: string
-  ): string {
-    const reportKey = briefingReportKeys[input.mode];
-    parameters.gameStates[parameters.turn].reports[reportKey] = output;
-    return output;
   }
 
   /** Briefers run at the low reasoning tier. */

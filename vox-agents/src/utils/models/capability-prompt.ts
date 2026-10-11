@@ -6,7 +6,13 @@
 import type { LanguageModelV4Middleware } from '@ai-sdk/provider';
 import type { ResolvedFilesConfig } from '../../types/config.js';
 import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
-import { workspaceCwd, workspaceGuideFile } from '../workspace/player-workspace.js';
+import {
+  workspaceCatalogFile,
+  workspaceCwd,
+  workspaceGuideFile,
+  workspaceRecordsPath,
+  workspaceReferenceMountPath,
+} from '../workspace/player-workspace.js';
 import { clientFunctionToolNames } from './providers/required-tool-choice.js';
 import { appendSystemInstruction } from './providers/system-prompt.js';
 
@@ -33,7 +39,10 @@ export interface CapabilityMiddlewareOptions {
 
 /** One bullet per mounted folder, naming its access and purpose. */
 function folderBullets(files: ResolvedFilesConfig): string[] {
-  const bullets: string[] = [];
+  const bullets: string[] = [
+    `- \`${workspaceRecordsPath}\` (read): reports, events, and briefings recorded for each turn. Read its ${workspaceCatalogFile} to find files.`,
+    `- \`${workspaceReferenceMountPath}\` (read): game reference on technologies, policies, buildings, and units.`,
+  ];
   if (files.game) {
     bullets.push(`- \`${workspaceCwd}/game\` (${files.game}): shared with the other agents of your civilization in this game. Read its ${workspaceGuideFile} first.`);
   }

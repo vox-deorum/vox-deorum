@@ -23,6 +23,10 @@ import { runStrategistTriage } from "./pacing/triage.js";
 import { countTokens } from "../utils/models/token-counter.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { errorMessage } from "../utils/errors.js";
+import { WorkspaceStore } from "../utils/workspace/workspace-store.js";
+
+/** Where a turn notification came from: a real `PlayerDoneTurn`, or the session's proactive human startup turn. */
+export type TurnSource = 'done' | 'startup';
 
 /** Construction inputs for one seat's {@link VoxPlayer}. */
 export interface VoxPlayerOptions {
@@ -67,7 +71,13 @@ export class VoxPlayer {
    * refresh, so a failed refresh leaves it put and the next turn re-fetches the gap. Lives on the
    * player (not the shared parameters) so concurrent chat/analyst runs can't disturb it.
    */
-  private eventCursor: number;
+  private eventCursor = 0;
+  /** The last turn the loop accepted, or N - 1 after a timeline start at N. Undefined until a start succeeds. */
+  private lastProcessedTurn?: number;
+  /** The lowest turn a reload must cut at, kept until a timeline start succeeds. */
+  private pendingReload?: number;
+  /** The session's proactive startup turn whose first real notification is still expected. */
+  private startupTurn?: number;
 
   public readonly playerID: number;
   private readonly playerConfig: PlayerConfig;
@@ -78,25 +88,39 @@ export class VoxPlayer {
     this.logger = createLogger(`VoxPlayer-${playerID}`);
     // Throws on an unknown interruption name so misconfiguration fails fast.
     this.pacing = normalizePacing(playerConfig.pacing);
+    // Resolve the seat settings first so an invalid one throws before anything is opened.
+    const seatTriage = resolveSeatTriage(playerConfig, triage, slot);
+    const seatFiles = resolveSeatFiles(playerConfig, files, slot);
+    const seatPrompts = resolveSeatPrompts(playerConfig, prompts, slot);
+    // A file-enabled seat opens its store now, because its first timeline start may rewind it.
+    // An open failure throws, which the session treats as a setup failure.
+    const store = seatFiles ? WorkspaceStore.open(WorkspaceStore.pathFor(gameID, playerID)) : undefined;
 
-    const id = `${gameID}-player-${playerID}`
-    VoxSpanExporter.getInstance().createContext(id, this.playerConfig.strategist);
+    try {
+      const id = `${gameID}-player-${playerID}`
+      VoxSpanExporter.getInstance().createContext(id, this.playerConfig.strategist);
 
-    // Pass model overrides to VoxContext
-    // Agents are now registered globally in agent-registry.ts
-    this.context = new VoxContext(playerConfig.llms || {}, id);
+      // Pass model overrides to VoxContext
+      // Agents are now registered globally in agent-registry.ts
+      this.context = new VoxContext(playerConfig.llms || {}, id);
+    } catch (error) {
+      store?.close();
+      throw error;
+    }
     // Let the context reach its owning session for authoritative state (e.g. the live turn).
     this.context.session = session;
     // Set before the constructor returns: chats can reach the context by id as soon as it exists.
-    this.context.triage = resolveSeatTriage(playerConfig, triage, slot);
-    this.context.files = resolveSeatFiles(playerConfig, files, slot);
-    this.context.prompts = resolveSeatPrompts(playerConfig, prompts, slot);
+    this.context.triage = seatTriage;
+    this.context.files = seatFiles;
+    this.context.prompts = seatPrompts;
+    this.context.store = store;
 
+    // The timeline fields (event window and cursor, cached states, memory) are set by beginTimeline.
     this.parameters = {
       playerID,
       gameID,
       turn: -1,
-      after: turnEventWindow(initialTurn).after,
+      after: 0,
       before: 0,
       workingMemory: {},
       gameStates: {},
@@ -108,36 +132,114 @@ export class VoxPlayer {
       _humanDecisionBus: humanDecisionBus
     };
 
-    // The persistent event cursor starts where the strategist begins fetching.
-    this.eventCursor = turnEventWindow(initialTurn).after;
-
     // Install these as the context's stable base parameters. Each strategist turn composes a
     // run-local view over this object (overriding turn/before/after via withRun), so the base is
     // never mutated per turn — a diplomat conversation opened before the first strategist turn
     // still reads valid seat state (gameStates, metadata, …) through it, and concurrent runs keep
     // their own turn cursor. Shared seat state (gameStates, workingMemory, metadata) lives here.
     this.context.setBaseParameters(this.parameters);
+
+    // A rewind that fails here is retried by the first processed turn.
+    try {
+      this.beginTimeline(initialTurn);
+    } catch (error) {
+      this.logger.error(`Player ${playerID} (${gameID}) failed to start its timeline at turn ${initialTurn}; the first turn retries it.`, error);
+      this.pendingReload = initialTurn;
+    }
   }
 
   /**
-   * Queue a turn notification for processing.
-   * Notifications are queued if the agent is still processing the previous turn.
+   * Start the seat's timeline at a turn, for a new session or after a reload. Cancels the seat's
+   * active runs, resets its live state in place (runs hold references to the base parameters),
+   * and rewinds the seat store so records and notes from turn N on leave the seat's view. Game
+   * metadata stays, because the game is the same. Runs synchronously.
+   *
+   * @param turn - The first turn of the new timeline
+   * @throws when the store rewind fails; the reload then stays pending
+   */
+  private beginTimeline(turn: number): void {
+    this.context.abort();
+
+    const parameters = this.parameters;
+    for (const key of Object.keys(parameters.gameStates)) delete parameters.gameStates[Number(key)];
+    for (const key of Object.keys(parameters.workingMemory)) delete parameters.workingMemory[key];
+    delete parameters.lastDecisionTurn;
+    parameters._decisionEventWindow.fromTurn = turn;
+    parameters.after = turnEventWindow(turn).after;
+    this.eventCursor = turnEventWindow(turn).after;
+    this.startupTurn = undefined;
+
+    // Only file-enabled seats have a store; the others make no store calls.
+    this.context.store?.rewind(turn);
+
+    this.lastProcessedTurn = turn - 1;
+    this.pendingReload = undefined;
+  }
+
+  /**
+   * Queue a turn notification for processing. A notification that arrives while the agent is
+   * still processing the previous turn is dropped, and the seat is held until that turn finishes.
+   *
+   * The first real notification for the session's startup turn is consumed without processing that
+   * turn again. Any other real notification at or below the last processed turn is a reload: the
+   * lowest such turn stays pending, even while busy, and the next accepted turn starts a new
+   * timeline from there.
    *
    * @param turn - The turn number
-   * @returns True if this is a new turn notification, false if duplicate
+   * @param source - `startup` for the session's proactive human turn, `done` for a real `PlayerDoneTurn`
+   * @returns True if this is a new turn notification, false if duplicate or consumed
    */
-  notifyTurn(turn: number): boolean {
+  notifyTurn(turn: number, source: TurnSource = 'done'): boolean {
+    if (source === 'startup') {
+      this.startupTurn = turn;
+    } else if (this.startupTurn === turn) {
+      // The real notification for the startup turn, whether that turn is queued, running, or finished.
+      this.startupTurn = undefined;
+      if (this.running) this.holdWhileBusy(turn);
+      return false;
+    } else {
+      if (this.startupTurn !== undefined && turn > this.startupTurn) this.startupTurn = undefined;
+      if (this.lastProcessedTurn !== undefined && turn <= this.lastProcessedTurn) {
+        this.pendingReload = Math.min(this.pendingReload ?? turn, turn);
+        this.logger.warn(`Turn ${turn} arrived after turn ${this.lastProcessedTurn} was processed; the seat reloads from turn ${this.pendingReload}.`);
+      }
+    }
+
     if (this.running) {
-      this.logger.warn(`The ${this.playerConfig.strategist} is still working on turn ${this.parameters.turn}. Skipping turn ${turn}...`);
-      this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters).then(() => {
-        if (!this.running) this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
-      });
+      this.holdWhileBusy(turn);
       return this.pendingTurn !== turn;
     }
 
     const result = this.pendingTurn !== turn;
     this.pendingTurn = turn;
     return result;
+  }
+
+  /**
+   * Forget the startup acknowledgement. The session calls this when the DLL reconnects after a
+   * disconnection, so a recovered startup-turn notification counts as a reload.
+   */
+  clearStartupAcknowledgement(): void {
+    this.startupTurn = undefined;
+  }
+
+  /**
+   * Close the seat store. The loop calls this after its context shuts down, and the session calls
+   * it for a player whose loop never started. Safe to call more than once.
+   */
+  closeStore(): void {
+    const store = this.context.store;
+    if (!store) return;
+    this.context.store = undefined;
+    store.close();
+  }
+
+  /** Drop a notification that arrived while busy, holding the seat until the current turn finishes. */
+  private holdWhileBusy(turn: number): void {
+    this.logger.warn(`The ${this.playerConfig.strategist} is still working on turn ${this.parameters.turn}. Skipping turn ${turn}...`);
+    this.context.callTool("pause-game", { PlayerID: this.playerID }, this.parameters).then(() => {
+      if (!this.running) this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);
+    });
   }
 
   /**
@@ -190,15 +292,12 @@ export class VoxPlayer {
             continue;
           }
 
-          // Initializing. turn/before/after are run-local (passed to withRun as overrides), so the
-          // context's base strategist parameters are never mutated per turn — concurrent diplomat
-          // chats keep their own live turn. `after` starts at the persistent event cursor; the
-          // cursor only advances after a successful refresh (below).
+          // Accept the turn. It counts as processed from here, before any work is awaited, so a
+          // repeated notification for it while it runs is detected as a reload.
           this.pendingTurn = undefined;
           const turn = turnData;
-          const before = turnEventWindow(turn).before;
-          const after = this.eventCursor;
-          const lastDecisionTurn = this.parameters.lastDecisionTurn;
+          const reloadTurn = this.pendingReload === undefined ? undefined : Math.min(this.pendingReload, turn);
+          this.lastProcessedTurn = turn;
           this.running = true;
 
           // Start a new trace for each turn (no parent)
@@ -208,18 +307,37 @@ export class VoxPlayer {
               'vox.context.id': this.context.id,
               'player.id': String(this.playerID),
               'game.turn': String(turn),
-              'event.before': String(before),
-              'event.after': String(after),
               'strategist.type': this.playerConfig.strategist,
               'pacing.every_turns': String(this.pacing.everyTurns),
               'pacing.interruption': this.pacing.interruption,
-              'pacing.last_decision_turn': lastDecisionTurn === undefined ? "" : String(lastDecisionTurn)
+              'timeline.reload_turn': reloadTurn === undefined ? "" : String(reloadTurn)
             }
           });
 
           try {
             // Create a new root context for this turn's trace
             await context.with(trace.setSpan(context.active(), turnSpan), async () => {
+              // A pending reload starts a new timeline before the turn's root run exists, because
+              // its abort would cancel that run too. A failed rewind fails this turn (neither
+              // recorded nor decided) and the reload stays pending for the next turn.
+              if (reloadTurn !== undefined) {
+                this.beginTimeline(reloadTurn);
+                this.lastProcessedTurn = turn;
+              }
+
+              // turn/before/after are run-local (passed to withRun as overrides), so the context's
+              // base strategist parameters are never mutated per turn — concurrent diplomat chats
+              // keep their own live turn. `after` starts at the persistent event cursor; the cursor
+              // only advances after a successful refresh and record (below).
+              const before = turnEventWindow(turn).before;
+              const after = this.eventCursor;
+              const lastDecisionTurn = this.parameters.lastDecisionTurn;
+              turnSpan.setAttributes({
+                'event.before': String(before),
+                'event.after': String(after),
+                'pacing.last_decision_turn': lastDecisionTurn === undefined ? "" : String(lastDecisionTurn)
+              });
+
               // One root run per turn owns this turn's cancellation, token sink, and the run-local
               // turn/before/after. It covers pause, refresh, pacing, the optional LLM decision, and
               // resume — all the work belonging to this strategist turn.
@@ -232,10 +350,13 @@ export class VoxPlayer {
                 // failures cannot pin history forever.
                 this.releasePendingEventsBefore(turn - cullLimit + 1);
                 const state = await ensureGameState(this.context, params, cullLimit);
+                // Record the processed turn before pacing can skip or decide. A failed write
+                // throws and fails the turn like a failed refresh.
+                if (this.context.files) this.context.records()?.recordTurn(params, state);
                 // Advance the event cursor: we've now fetched events through this turn. The next
                 // refresh fetches from here, so a turn dropped before it was processed folds its
-                // events into the following fetch (nothing is lost). A failed refresh throws above,
-                // leaving the cursor put so the next turn re-fetches the gap.
+                // events into the following fetch (nothing is lost). A failed refresh or record
+                // throws above, leaving the cursor put so the next turn re-fetches the gap.
                 this.eventCursor = before;
 
                 const scheduled = isScheduledDecision(turn, lastDecisionTurn, this.pacing);
@@ -371,8 +492,13 @@ export class VoxPlayer {
           this.logger.warn(`Failed to report final metadata for player ${this.playerID}:`, error);
         }
 
-        // Shutdown the VoxContext to ensure all telemetry is flushed
-        await this.context.shutdown();
+        // Shutdown the VoxContext to ensure all telemetry is flushed, then close the seat store,
+        // which the context's runs may use until they stop.
+        try {
+          await this.context.shutdown();
+        } finally {
+          this.closeStore();
+        }
         await setTimeout(5000);
       }
     });

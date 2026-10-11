@@ -54,6 +54,12 @@ vi.mock('node:timers/promises', () => ({ setTimeout: () => Promise.resolve() }))
 import { StrategistSession } from '../../../src/strategist/strategist-session.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { voxCivilization } from '../../../src/infra/vox-civilization.js';
+import { VoxPlayer } from '../../../src/strategist/vox-player.js';
+import { VoxContext } from '../../../src/infra/vox-context.js';
+import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
+import { workspaceReferencePath } from '../../../src/utils/workspace/player-workspace.js';
+import { config as rootConfig } from '../../../src/utils/config.js';
 import {
   autoPlayTurnLimit,
   buildStrategicViewLua,
@@ -430,5 +436,157 @@ describe('handleDLLConnected', () => {
     (s as any).dllConnected = false;
     await (s as any).handleDLLConnected({});
     expect(resetEventDedup).toHaveBeenCalledTimes(2);
+  });
+
+  it('should clear each player\'s startup acknowledgement only on a disconnected-to-connected transition', async () => {
+    const s = session(false);
+    const clearStartupAcknowledgement = vi.fn();
+    (s as any).activePlayers.set(0, { clearStartupAcknowledgement });
+
+    await (s as any).handleDLLConnected({});
+    await (s as any).handleDLLConnected({});
+    expect(clearStartupAcknowledgement).toHaveBeenCalledOnce();
+
+    (s as any).dllConnected = false;
+    await (s as any).handleDLLConnected({});
+    expect(clearStartupAcknowledgement).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('handleGameSwitched player preparation', () => {
+  const referenceTools = ['get-technology', 'get-policy', 'get-building', 'get-unit'];
+  let telemetryDir: string;
+  let savedTelemetryDir: string | undefined;
+  let execute: ReturnType<typeof vi.spyOn>;
+  /** Whether the reference folder existed when each loop started. */
+  let referenceAtStart: boolean[];
+  /** Players a session started, closed after each test. */
+  const preparedPlayers: VoxPlayer[] = [];
+
+  beforeEach(() => {
+    savedTelemetryDir = rootConfig.telemetryDir;
+    telemetryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-prepare-'));
+    rootConfig.telemetryDir = telemetryDir;
+    vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockResolvedValue(undefined);
+    vi.spyOn(VoxContext.prototype, 'registerTools').mockResolvedValue(undefined);
+    referenceAtStart = [];
+    execute = vi.spyOn(VoxPlayer.prototype, 'execute').mockImplementation(async function (this: VoxPlayer) {
+      referenceAtStart.push(fs.existsSync(workspaceReferencePath('G-prep')));
+    });
+    vi.mocked(voxCivilization.killGame).mockClear();
+    for (const tool of referenceTools) {
+      mcp.respondWith(tool, structuredResult({ Count: 2, Items: [{ Type: `${tool}-A`, Name: 'Alpha' }, { Type: `${tool}-B`, Name: 'Beta' }] }));
+    }
+  });
+
+  afterEach(() => {
+    // Close every store the session left open so the temporary folder can be removed.
+    for (const player of preparedPlayers) player.closeStore();
+    preparedPlayers.length = 0;
+    rootConfig.telemetryDir = savedTelemetryDir as string;
+    try {
+      fs.rmSync(telemetryDir, { recursive: true, force: true });
+    } catch {
+      // A store left open by a failed test can keep the folder locked on Windows.
+    }
+  });
+
+
+  /** A session with two seats, both file-enabled unless `files` is false. */
+  function preparedSession(files: boolean, strategist = 'simple-strategist') {
+    const s = new StrategistSession({
+      name: 'prepare',
+      type: 'strategist',
+      production: 'none',
+      autoPlay: false,
+      gameMode: 'start',
+      files: files ? 'write' : false,
+      llmPlayers: { 0: { strategist }, 1: { strategist: 'simple-strategist' } },
+    } as any, { attachGameID: vi.fn(async () => {}) } as any, { seatingMap: {}, rotation: 0, seedIndex: 0 } as any);
+    (s as any).state = 'starting';
+    return s;
+  }
+
+  /** Remember the players a session started, for cleanup. */
+  function rememberPlayers(s: StrategistSession): void {
+    preparedPlayers.push(...(s as any).activePlayers.values());
+  }
+
+  it('should write the reference once with four calls before any loop starts', async () => {
+    const s = preparedSession(true);
+    await gameSwitched(s, 10, 'G-prep');
+    rememberPlayers(s);
+
+    for (const tool of referenceTools) {
+      expect(mcp.calls(tool)).toHaveLength(1);
+      expect(mcp.calls(tool)[0].args).toEqual({ MaxResults: 5000 });
+    }
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(referenceAtStart).toEqual([true, true]);
+    expect((s as any).state).toBe('running');
+  });
+
+  it('should make no reference calls when no seat has files enabled', async () => {
+    const s = preparedSession(false);
+    await gameSwitched(s, 10, 'G-prep');
+    rememberPlayers(s);
+
+    for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(fs.existsSync(workspaceReferencePath('G-prep'))).toBe(false);
+  });
+
+  it('should skip the reference calls when an earlier session already wrote it', async () => {
+    fs.mkdirSync(workspaceReferencePath('G-prep'), { recursive: true });
+    const s = preparedSession(true);
+    await gameSwitched(s, 10, 'G-prep');
+    rememberPlayers(s);
+
+    for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it('should put the session in error, start no loops, and close opened stores when the reference fails', async () => {
+    mcp.respondWith('get-unit', structuredResult({ Count: 0, Items: [], Error: 'database not ready' }));
+    const close = vi.spyOn(WorkspaceStore.prototype, 'close');
+    const s = preparedSession(true);
+
+    await gameSwitched(s, 10, 'G-prep');
+
+    expect((s as any).state).toBe('error');
+    expect(voxCivilization.killGame).toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect((s as any).activePlayers.size).toBe(0);
+    expect(close).toHaveBeenCalledTimes(2);
+    expect(fs.existsSync(workspaceReferencePath('G-prep'))).toBe(false);
+  });
+
+  it('should put the session in error, start no loops, and close opened stores when a store cannot open', async () => {
+    const realOpen = WorkspaceStore.open.bind(WorkspaceStore);
+    let opens = 0;
+    vi.spyOn(WorkspaceStore, 'open').mockImplementation((dbPath, options) => {
+      if (++opens === 2) throw new Error('SQLITE_CANTOPEN');
+      return realOpen(dbPath, options);
+    });
+    const close = vi.spyOn(WorkspaceStore.prototype, 'close');
+    const s = preparedSession(true);
+
+    await gameSwitched(s, 10, 'G-prep');
+
+    expect((s as any).state).toBe('error');
+    expect(voxCivilization.killGame).toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
+    for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
+  });
+
+  it('should label the proactive human turn-0 notification as a startup notification', async () => {
+    const notifyTurn = vi.spyOn(VoxPlayer.prototype, 'notifyTurn');
+    const s = preparedSession(false, 'human-strategist');
+
+    await gameSwitched(s, 0, 'G-prep');
+    rememberPlayers(s);
+
+    expect(notifyTurn).toHaveBeenCalledWith(0, 'startup');
   });
 });

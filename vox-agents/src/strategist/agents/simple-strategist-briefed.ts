@@ -10,7 +10,7 @@ import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { jsonToMarkdown } from "../../utils/tools/json-to-markdown.js";
+import { renderSection } from "../../knowledge/sections.js";
 import { requestBriefing, assembleBriefings, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
@@ -68,37 +68,22 @@ export class SimpleStrategistBriefed extends SimpleStrategistBase {
       content: `
 You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
 
-# Situation
-${jsonToMarkdown(SituationData)}
+${renderSection("situation", SituationData)}
 
-# Your Civilization
-${jsonToMarkdown(YouAre)}
+${renderSection("civilization", YouAre)}
 
-# Options
-Options: available strategic options for you.
-
-${jsonToMarkdown(Options, { configs: [{}] })}`.trim(),
+${renderSection("options", Options)}`.trim(),
       providerOptions: { ...cacheBreakpoint }
     }, {
       role: "user",
       content: `
-# Strategies
-Strategies: existing strategic decisions from you.
+${renderSection("strategies", Strategy)}
 
-${jsonToMarkdown(Strategy)}
+${renderSection("players", filteredPlayers)}
 
-# Players
-Players: summary reports about visible players in the world.
+${renderSection("victory", state.victory)}
 
-${jsonToMarkdown(filteredPlayers)}
-
-# Victory Progress
-Victory Progress: current progress towards each type of victory.
-
-${jsonToMarkdown(state.victory)}
-
-# Briefings
-${assembleBriefings(briefing, instruction)}
+${renderSection("briefings", assembleBriefings(briefing, instruction), { rendered: true })}
 
 ${getDecisionTurnContext(parameters)}
 `.trim()

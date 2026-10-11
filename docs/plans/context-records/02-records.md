@@ -1,6 +1,6 @@
 # Stage 2: Sections, records, and reloads
 
-Part of the [context-records plan](../context-records.md). **Status: planned.**
+Part of the [context-records plan](../context-records.md). **Status: implemented.**
 
 ## Objective
 
