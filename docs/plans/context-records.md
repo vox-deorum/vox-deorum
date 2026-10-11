@@ -9,6 +9,7 @@ This implementation plan gives Vox Deorum agents durable game reports and editab
 - Preserve default system text and inline messages byte for byte when `files` and custom `prompts` are disabled, with the same MCP calls and no workspace-store writes.
 - With `files`, archive every processed turn, including paced skips, and generated briefings. Expose reports through read-only `/workspace/records` and a once-per-game listing reference through `/workspace/reference`.
 - Give the simple strategist a smaller core prompt and access to detailed reports through bash. The diplomat, spokesperson, and negotiator keep their inline content and gain records directions. Runs without bash, including every briefer and the diplomatic analyst, stay inline.
+- Give file-mode strategists their current and last completed decision turns and per-turn event files, with categories reused from the briefer filter. They choose when and how to read events at every pacing cadence. Inline event input keeps merged windows and gradual importance filtering.
 - Preserve records and notes across reloads and strategist changes, and let oracle replay read the files its source run saw without changing stored files.
 
 ## Overall approach
@@ -33,7 +34,7 @@ Implement in order. Keep prompts inline through Stage 2 so agents retain their r
 | --- | --- | --- |
 | [1. System prompt files](context-records/01-system-prompts.md) | Capture compatibility fixtures; move prose to templates; add overrides and validation. | Default output is unchanged and invalid templates stop setup. |
 | [2. Sections, records, and reloads](context-records/02-records.md) | Add the section registry; store seat files with history; write records, catalog, briefings, and the game reference; rewind on reload. | Inline prompts are unchanged, every processed turn is recorded before pacing or decisions, and bash commits its writes. |
-| [3. File mode and telemetry](context-records/03-file-mode.md) | Resolve run tools before prompt preparation; add records directions and the simple strategist's core prompt; capture each run's first-step commit. | Bash-capable agents can read records; other runs stay inline. |
+| [3. File mode and telemetry](context-records/03-file-mode.md) | Resolve run tools before prompt preparation; add records directions, last-decision context, and the simple strategist's core prompt; let file-mode strategists choose event reads; capture each run's first-step commit. | Bash-capable agents can read records; file-mode strategists choose reads at every cadence; inline event windows and filtering stay unchanged. |
 | [4. Oracle workspaces](context-records/04-oracle-replay.md) | Restore pinned seat files and per-execution writes using recorded metadata. | Concurrent replays stay isolated and leave stores unchanged. |
 
 ## Acceptance
@@ -51,12 +52,13 @@ Manual checks:
 5. Start a seat with a custom strategist prompt and confirm the recorded system text and `context.prompts`.
 6. Restart the same game with a different strategist for that seat and confirm it opens the same store and reads the earlier strategist's notes.
 7. Check a files-disabled seat for unchanged prompts and an untouched store.
+8. Decide on turn 0, skip turns 1-4 through pacing, and decide on turn 5 in file mode. Confirm the strategist knows its last completed decision was turn 0 and can choose among `turn-0/events-all.md`, `turn-0/events-economic.md`, the other categories, and later turn folders. Compare an every-turn run for the same access rules; confirm inline consumers still merge events and filter on overflow.
 
 Finally, confirm the documentation describes the final behavior:
 
 | File | Covers |
 | --- | --- |
-| `docs/developers/vox-agents/prompts.md` | Section registry, core prompts, records directions, prompt files, Mustache usage, template names, lookup order |
+| `docs/developers/vox-agents/prompts.md` | Section registry, core prompts, records directions, last-decision context, per-turn event categories, strategist-chosen reads, inline event filtering, prompt files, Mustache usage, template names, lookup order |
 | `docs/developers/vox-agents/overview.md` | Workspace store, bash view, records, game reference, catalog, reload rewinds |
 | `docs/developers/vox-agents/oracle.md` | File telemetry, pinned replay workspaces, last-attempt rule, replay limitations |
 | `docs/players/configuration.md` | Records and reference mounts, notes in the seat store, the materialize command and telemetry page download, notes rewinding on reload, disk use, the `prompts` setting |

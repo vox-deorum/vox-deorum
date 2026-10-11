@@ -15,7 +15,7 @@ Stage 1 supplies the golden tests that guard the section registry's adoption. `e
 | Area | Existing behavior and source |
 | --- | --- |
 | State collection | `refreshGameState` in `strategist/strategy-parameters.ts` fetches players, events, cities, options, victory progress, and military reports, and updates the seat's cached state in place. The six reports already use the seat's perspective through MCP `PlayerID` auto-completion. |
-| Event windows | `state.events` holds a refresh's event slice. `withEventWindowFallback` builds `state.mergedEvents` for a decision covering several turns and narrows it on context overflow. |
+| Event windows | `state.events` holds a refresh's event slice. `withEventWindowFallback` builds `state.mergedEvents` for inline consumers, drops importance tiers on overflow, then keeps only the current turn's turning points as a last resort. `utils/prompts/event-filters.ts` supplies the category filter used by specialized briefers. |
 | Prompts | About ten builders (strategists, briefers, `buildGameContextMessages`, envoy and negotiator contexts) write each section by hand as a heading, a description, and `jsonToMarkdown` output that uses the report's `_markdownConfig`. The same description sentences are retyped across files. |
 | Workspaces | `utils/workspace/player-workspace.ts` mounts game notes (`workspaces/games/<gameID>-player-<playerID>`), optional shared folders, and scratch space from disk. Each command runs in a new just-bash `Bash` over a `MountableFs`, with `ReadWriteFs` for writable mounts and a read-only `OverlayFs` otherwise. On the first command, it creates each mount's folder and seeds an `AGENTS.md` guide at every writable game or shared mount root without overwriting an existing one; the workspace capability prompt tells agents to read it first. Bash output is capped at 8,000 characters per stream. The bash tool's description in `utils/tools/bash-tool.ts` lists the seat's mounts. |
 | Telemetry storage | `SQLiteSpanExporter.getDatabase` opens one database per seat under the strategist's folder, so the same seat run by a different strategist writes to a different database. The gameID persists across save and load, so a reload appends to the same database. |
@@ -32,21 +32,34 @@ Stage 1 supplies the golden tests that guard the section registry's adoption. `e
 
 `renderSection(key, data, options)` renders one section: heading, description, and `jsonToMarkdown` output with the report's own configuration. Options override the heading, description, or Markdown configuration where an agent's wording differs. Builders keep their structure, message order, field filtering, and cache breakpoints, and replace their hand-written headings and descriptions with this call. Output stays byte-identical under the golden tests. There is no layout engine and no separate knowledge assembler; builders keep reading `GameState`.
 
-### Events: record the slice, render the decision window
+### Events: per-turn files and inline decision windows
 
-Records use `state.events`, the refresh's slice. Inline prompts use the decision window, `state.mergedEvents`, falling back to the slice.
+Records use `state.events`, the refresh's slice, and keep all importance levels. Each processed turn gets `turn-<N>/events-all.md` plus category files generated with the specialized briefer's `filterEventsByCategory` in `utils/prompts/event-filters.ts`. Reuse its event-type mapping, relayed-report categories, overlapping membership, nested event handling, and Markdown configuration. Use these stable filenames:
 
-For example, after a decision on turn 20, pacing skips turns 21 and 22 and the strategist decides on turn 23:
+| File | Source |
+| --- | --- |
+| `events-all.md` | The complete refresh slice, including events with no category mapping |
+| `events-economic.md` | `Economy` |
+| `events-military.md` | `Military` |
+| `events-diplomatic.md` | `Diplomacy` |
+| `events-others.md` | `Others` |
+| `events-system.md` | `System` |
+
+Write every category file, including an empty report when no events match, so the paths are predictable. These are filtered views of the factual slice; they require no LLM call or additional event fetching.
+
+In Stage 3, a file-mode strategist gets the current turn, its last completed decision turn, and the file patterns. It chooses when to read events, which turns and categories to inspect, and how much to read, just as it would when deciding every turn. Pacing changes when it runs; event access follows the same rules at every cadence. The host keeps all recorded turns accessible and does not merge, trim, or prescribe reads for the strategist's file-based event input.
+
+For example, after a decision on turn 0, pacing skips turns 1-4 and the strategist decides on turn 5:
 
 | Consumer | Events |
 | --- | --- |
-| Turn 21 record | Turn 21's refresh |
-| Turn 22 record | Turn 22's refresh |
-| Turn 23 record | Turn 23's refresh |
-| Turn 23 inline prompt | The selected decision window, initially turns 21-23 |
-| Turn 23 file-mode strategist (Stage 3) | Directions to the records covering turns 21-23 |
+| Each turn's records | That turn's refresh in `turn-<N>/events-all.md` and its category files |
+| Turn 5 inline prompt | The existing merged decision window, initially turns 1-5 |
+| Turn 5 file-mode strategist (Stage 3) | Current turn 5, last completed decision turn 0, and access to `turn-0/events-all.md`, `turn-0/events-economic.md`, the other categories, and the same files for each recorded turn through `turn-5/` |
 
-If an inline attempt overflows and retries with turns 22-23, rendering uses that narrower window and the records stay unchanged. A refresh can also cover a dropped turn; its events keep their real turn keys inside the report. No additional event fetching is needed.
+Inline event input keeps today's behavior: use `state.mergedEvents`, falling back to the slice, and retry overflow by progressively dropping lower importance tiers. Turning points survive those retries; the final fallback keeps only the current turn's turning points. Inline briefers and pacing triage retain this behavior even on a file-enabled seat. These attempts never change the archived files or the strategist's last completed decision turn.
+
+A folder identifies the processed refresh, while events inside retain their real turn keys. A refresh can cover a dropped turn or include late events from an earlier turn. The catalog explains this and shows any missing processed-turn folders; reading only a matching folder name is not enough to find every event from that game turn.
 
 ### Workspace store
 
@@ -125,11 +138,13 @@ Only the host writes records, through `SeatRecords`. The bash mount description 
 | --- | --- |
 | `CATALOG.md` | Generated section index, turn ranges, file sizes, and query guidance |
 | `game/<key>.md` and `.json` | Situation and civilization |
-| `turns/<N>/<key>.md` and `.json` | Complete turn reports |
-| `turns/<N>/<key>/<part>.md` | Markdown split by civilization, city owner, military zone, or event category |
-| `turns/<N>/briefings/<kind>.md` | Generated briefing text |
+| `turn-<N>/<key>.md` and `.json` | Complete turn reports other than events |
+| `turn-<N>/<key>/<part>.md` | Markdown split by civilization, city owner, or military zone |
+| `turn-<N>/events-all.md` and `.json` | Complete refresh event slice |
+| `turn-<N>/events-<category>.md` | Event views using the briefer's category filter and filenames above |
+| `turn-<N>/briefings/<kind>.md` | Generated briefing text |
 
-Markdown uses the registry's titles and `jsonToMarkdown` with the source report's configuration and full data. JSON omits `_markdownConfig`. Agent-specific filtering affects inline rendering only. Split filenames use readable slugs with collision suffixes.
+Complete Markdown reports use the registry's titles and `jsonToMarkdown` with the source report's configuration and full data. JSON omits `_markdownConfig`. Event category files use the shared briefer filter; other agent-specific filtering affects inline rendering only. Other split filenames use readable slugs with collision suffixes.
 
 Reports can exceed the bash output cap even after splitting. The catalog explains how to select smaller pieces with `grep`, `head`, `sed -n`, or `jq`, and lists compressed turn ranges, such as `1-40, 42`, and the latest files' sizes.
 
@@ -226,7 +241,7 @@ The button appears only when the row's seat store exists. Both entry points repo
 - Implement the store tables, commit kinds, atomic empty initial commit and head, file and directory entries, run-bound commits, version reads, the head manifest cache, the last recorded turn, and `rewind`. Add `StoreFs`.
 - Add `materialize.ts`, the workspace console and its npm scripts, the telemetry download route and `hasWorkspace` flag, and the telemetry page button.
 - Switch `PlayerWorkspace` to store views for records and notes with a `notes` commit after each command, bound to the command's run signal. Seed the game guide into the notes view when missing, and mount the reference folder without creating it. Update the workspace capability instructions and bash descriptions.
-- Implement `SeatRecords`, catalog generation, and record splitting, with the cached accessor on `VoxContext`.
+- Implement `SeatRecords`, catalog generation, and record splitting, with the cached accessor on `VoxContext`. Write the full event slice and all five category files for each processed refresh through the shared briefer filter. Document the refresh-folder and event-turn distinction in the catalog.
 - In `vox-player.ts`, open the seat store and attach it to the context, and close it after `context.shutdown()`. Move the constructor's timeline initialization into `beginTimeline`, call it from the constructor and from the turn loop's reload check, and track the last processed turn and the lowest pending reload turn. Distinguish startup from real notifications, consume the startup acknowledgement once, and retain backward notifications before the busy-turn drop path. In `strategist-session.ts`, label the proactive human notification and clear its acknowledgement on a DLL reconnection.
 - In `strategy-parameters.ts`, capture the refresh's run signal and guard publication of fetched metadata and game state against cancellation, keeping outside-run callers supported.
 - In `handleGameSwitched`, prepare all players before launching their loops and write the reference there. Route setup failures, including a failure to open a seat store, through the fatal session path, with abort and completion signaling, and close any opened stores there.
@@ -239,7 +254,7 @@ The button appears only when the row's seat store exists. Both entry points repo
 | Area | Required checks |
 | --- | --- |
 | Sections | Builders using the registry keep the unchanged golden tests; overrides change only the overridden heading or description |
-| Events | A paced decision renders several turns while each record keeps its refresh slice; a narrowed retry changes only the rendered window |
+| Events | Each record keeps its complete refresh slice at every pacing cadence; all five category files match the shared briefer filter, including overlapping categories, relayed reports, nested events, empty categories, and Markdown configuration; uncategorized events remain in `events-all.md`; inline importance-tier retries and the final current-turn fallback change only rendered input; dropped-turn and late events retain their real turn keys |
 | Store | Atomic creation of an empty initial commit and head, stable head on reopening, empty-version reads and materialization, rewind retaining the initial ancestor, round-trip of text and binary files, deduplication, compression only when smaller, reads at an older commit, path-level last-writer-wins, and one store path for a seat whichever strategist runs it |
 | Bash view | `>`, `>>`, `tee`, `sed -i`, `mkdir`, `rm -r`, `mv`, and `cp -r` are each recorded and committed; an empty `mkdir`, a `chmod`, and a `touch` persist into the next command; `ln -s` is rejected; read-only mounts reject writes; the next command sees the previous command's writes and host commits made in between; a command whose run is cancelled leaves head unchanged |
 | Records | Markdown and JSON output, split files, a turn and its catalog in one commit, a complete catalog when turn and briefing commits interleave, a repeat briefing write replacing the file, and correct catalog ranges and sizes |
@@ -273,7 +288,7 @@ Update `docs/developers/vox-agents/prompts.md` with the section registry; `docs/
 
 ## Future image support
 
-This plan does not capture or send images. The store is binary-safe, so the host can later commit images such as `records/turns/<N>/screens/<name>.png`. A dedicated view tool would need to return image parts to multimodal models, and the capture source needs its own design.
+This plan does not capture or send images. The store is binary-safe, so the host can later commit images such as `records/turn-<N>/screens/<name>.png`. A dedicated view tool would need to return image parts to multimodal models, and the capture source needs its own design.
 
 ## Done when
 
