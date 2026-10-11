@@ -453,7 +453,7 @@ async function executeAgentStep<TParameters extends AgentParameters>(
           required: stepToolChoice === 'required',
           // With files on, workspace work and the final decision share one step budget.
           stepsLeft: host.files ? agent.stepLimit(host) - allSteps.length : undefined,
-          // Notes must be written before or with the finishing call, since nothing runs after it.
+          // Save notes before or alongside finishing calls; there is no further step to inspect results.
           notes: host.files ? workspaceWritable(host.files) && executableNames.includes(bashToolName) : false,
         }),
       );

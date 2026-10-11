@@ -59,14 +59,15 @@ describe('capabilityInstruction', () => {
   });
 
   it('leaves folders to the records directions', () => {
+    const sharedName = 'fixtureSharedNotes';
     const instruction = capabilityInstruction({
-      files: { game: 'write', shared: { lessons: 'write' }, quota: 20 },
+      files: { game: 'write', shared: { [sharedName]: 'write' }, quota: 20 },
       web: false,
     })!;
     expect(instruction).toContain(bashToolName);
     expect(instruction).not.toContain('/workspace/game');
     expect(instruction).not.toContain('/workspace/shared');
-    expect(instruction).not.toContain('lessons');
+    expect(instruction).not.toContain(sharedName);
     expect(instruction).not.toContain(workspaceCatalogFile);
     expect(instruction).not.toContain(workspaceReferenceMountPath);
   });

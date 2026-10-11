@@ -6,7 +6,7 @@
  * one place.
  */
 
-import { formatToolChoiceList } from '../tools/tool-names.js';
+import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
 
 /**
  * Builds the single closing reminder appended to a step. Each template line is one part and
@@ -17,8 +17,9 @@ import { formatToolChoiceList } from '../tools/tool-names.js';
  *   model, so it names what may actually run.
  * - Steps left: the run counts its steps down (files on).
  * - Finalize: from the second step on, the completion tools allowed on this step. With `notes`
- *   (bash may run and a workspace folder is writable), it adds that notes go in the same response,
- *   since nothing runs after a finishing call.
+ *   (bash may run and a workspace folder is writable), it explicitly asks the model to save notes
+ *   with bash in that same response, since a finishing call ends the run and there is no
+ *   subsequent step.
  * Returns undefined when no sentence applies.
  *
  * @param executable - The tools that may run on this step
@@ -39,6 +40,6 @@ export function buildClosingReminder(
 ${required ? `IMPORTANT: You must issue tool calls to collect information or make actions. Whenever possible, call all tools you need at once.` : ''}
 ${!narrowed ? '' : tools ? `For this step, you may only call ${tools}; other tools will return an error.` : `No tools are available for this step. Write response in plain text.`}
 ${stepsLeft === undefined ? '' : stepsLeft > 1 ? `IMPORTANT: You must make your final decision within ${stepsLeft} steps.` : `IMPORTANT: This is your last step. Make your final decision now.`}
-${step > 0 && finishing ? `Finalize your decisions in this response by calling ${finishing} following the EXACT provided format.${notes ? ' Write any notes you want to keep in this same response.' : ''}` : ''}`;
+${step > 0 && finishing ? `Finalize your decisions in this response by calling ${finishing} following the EXACT provided format.${notes ? ` Use \`${bashToolName}\` to save any notes you want to keep in this response.` : ''}` : ''}`;
   return reminder.split('\n').filter((line) => line).join(' ') || undefined;
 }

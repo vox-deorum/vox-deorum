@@ -27,7 +27,7 @@ export interface Capabilities {
 
 /** Install options for the capability middleware. */
 export interface CapabilityMiddlewareOptions {
-  /** The calling agent's completion tools, named as what to call after the capabilities. */
+  /** The calling agent's completion tools, named as the calls that end the run. */
   completionTools?: string[];
   terminalNoun?: TerminalNoun;
   /** The run's prompt folder setting; undefined uses the root setting. */
@@ -80,7 +80,7 @@ export function capabilityInstruction(
 
   const terminalList = formatToolChoiceList(terminalNames);
   const terminalRule = terminalList
-    ? ` Use them before any terminal ${terminalNoun}: ${terminalList}. Nothing runs after a terminal call.`
+    ? ` Finish any needed calls before calling terminal ${terminalNoun}: ${terminalList}. The run ends once terminal calls are completed.`
     : '';
   const sections = [
     `${capabilityHeading}

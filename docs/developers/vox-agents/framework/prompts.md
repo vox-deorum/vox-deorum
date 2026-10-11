@@ -82,7 +82,7 @@ One request on step 2 of a strategist run, top to bottom, for a provider with na
 └─────────────────────────────────────────────┘
 ```
 
-The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for a finishing call, and when bash can run and a workspace folder is writable, it also asks for any notes to be written in that same reply.
+The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for a finishing call, and when bash can run and a workspace folder is writable, it explicitly asks the model to save any notes with `bash` in that same reply, since there is no subsequent step.
 
 For models in prompt mode, the tool block is removed and its content moves into the text. See [Prompt-mode tool calling](../models/middleware.md#prompt-mode-tool-calling).
 
@@ -93,7 +93,7 @@ A run is in file mode when its seat has files on and its resolved run tools incl
 In file mode, an agent adds **records directions** to its opening messages through `appendRecordsDirections`, placing them where its context needs them. The helper checks file mode; the text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
 
 - a table of the mounted folders and their access, with the records and the shared reference read-only, the game notes folder and each shared folder read-only or writable according to the seat's files setting, and `/tmp` writable. The table is the only folder listing, because the workspace section and the bash tool description leave folders out;
-- which turns are recorded, as ranges, and the latest turn folder. It states that the recorded turns are the `<N>` in `turn-<N>` paths, which the workspace section's examples also use;
+- which turns are recorded, as ranges, and the latest turn folder. It states that the recorded turns are the `<N>` in `turn-<N>` paths, the numbers the workspace section's example scripts assign to `turn`;
 - when to open the records `CATALOG.md`: only for the full section index, gaps between turn folders, briefings, or file sizes;
 - which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports.
 
@@ -170,7 +170,7 @@ The closing reminder is built from up to four sentences. Sentences that do not a
 | "You must issue tool calls" | The step requires a tool call. |
 | "You may only call X or Y", or "no tools are available" | Some offered tools are not allowed on this step. |
 | "Make your final decision within N steps", or "this is your last step" | The seat has files on. |
-| "Finalize your decisions in this response by calling ..." | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. With bash able to run and a workspace folder writable, it also asks for notes in the same response. |
+| "Finalize your decisions in this response by calling ..." | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. With bash able to run and a workspace folder writable, it explicitly asks the model to save notes with `bash` in the same response. |
 
 The "must call" requirement lives here rather than in provider middleware, so every provider gets it and the earlier parts of the prompt never depend on it. When there is nothing to say, such as on the first step of an agent that does not require tools, no message is added. An agent can override `continuationNudge` to change or drop the reminder.
 
