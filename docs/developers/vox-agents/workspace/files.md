@@ -26,7 +26,7 @@ Where it can be set, checked in this order: the seat, the session config, then t
 
 An invalid value fails session preflight before the game launches, and the error names the config path.
 
-The workspace needs Node 22.17.0 or newer (the repo requires 22.23.3). On older Node the tool returns an upgrade error instead.
+The workspace needs Node 22.17.0 or newer (the repo requires 22.23.3). On older Node, a session with any files-enabled seat fails at start.
 
 ## The folders
 

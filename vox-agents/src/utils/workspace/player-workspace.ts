@@ -206,15 +206,6 @@ export interface WorkspaceCommandInfo {
   author?: string;
 }
 
-/** Options for a {@link PlayerWorkspace}. */
-export interface PlayerWorkspaceOptions {
-  /**
-   * Whether this Node version can write through disk-backed mounts. Defaults to
-   * {@link workspaceNodeSupported}. Tests inject it to exercise store views on older Node.
-   */
-  nodeSupported?: boolean;
-}
-
 /** One command's shell and its writable notes view, if any. */
 interface OpenWorkspace {
   bash: Bash;
@@ -236,7 +227,6 @@ const cancelledMessage = 'The command was cancelled, so its file changes were di
 export class PlayerWorkspace {
   /** The folders this workspace mounts. */
   public readonly mounts: WorkspaceMount[];
-  private readonly nodeSupported: boolean;
   private diskFilesystems?: MountConfig[];
   private referenceFilesystem?: MountConfig;
 
@@ -245,17 +235,14 @@ export class PlayerWorkspace {
    * @param gameID - The game the workspace belongs to
    * @param playerID - The player the workspace belongs to
    * @param store - The seat's workspace store, which holds records and notes
-   * @param options - Overrides for tests
    */
   constructor(
     files: ResolvedFilesConfig,
     gameID: string,
     playerID: number,
     public readonly store: WorkspaceStore,
-    options: PlayerWorkspaceOptions = {},
   ) {
     this.mounts = workspaceMounts(files, gameID, playerID);
-    this.nodeSupported = options.nodeSupported ?? workspaceNodeSupported();
   }
 
   /**
@@ -270,10 +257,6 @@ export class PlayerWorkspace {
    * @param info - The turn and author recorded on the note commit
    */
   async exec(command: string, signal?: AbortSignal, info: WorkspaceCommandInfo = {}): Promise<WorkspaceExecResult> {
-    if (!this.nodeSupported) {
-      return failure(`The workspace needs Node.js 22.17.0 or newer, but this game runs Node.js ${process.versions.node}. Ask the user to upgrade Node.js.`);
-    }
-
     let opened: OpenWorkspace;
     try {
       opened = await this.open();

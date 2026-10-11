@@ -20,7 +20,6 @@ import {
   workspaceOutputLimit,
   workspaceReferencePath,
   workspaceRoot,
-  type PlayerWorkspaceOptions,
 } from '../../../src/utils/workspace/player-workspace.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 
@@ -56,9 +55,9 @@ describe('PlayerWorkspace', () => {
     return store;
   }
 
-  /** A workspace over a store, with the Node gate passed so store views run on any Node. */
-  function workspace(store: WorkspaceStore, setting = files(), gameID = 'g1', playerID = 0, options: PlayerWorkspaceOptions = { nodeSupported: true }): PlayerWorkspace {
-    return new PlayerWorkspace(setting, gameID, playerID, store, options);
+  /** A workspace over a store. */
+  function workspace(store: WorkspaceStore, setting = files(), gameID = 'g1', playerID = 0): PlayerWorkspace {
+    return new PlayerWorkspace(setting, gameID, playerID, store);
   }
 
   beforeEach(() => {
@@ -89,14 +88,6 @@ describe('PlayerWorkspace', () => {
 
   it('should reject a shared name that would leave the shared folder', () => {
     expect(() => workspace(openStore(), files({ shared: { '../games': 'write' } }))).toThrow();
-  });
-
-  it('should refuse to run and commit nothing on an unsupported Node version', async () => {
-    const store = openStore();
-    const head = store.head();
-    const result = await workspace(store, files(), 'g1', 0, { nodeSupported: false }).exec('echo x > game/a.md');
-    expect(result.exitCode).toBe(1);
-    expect(store.head()).toBe(head);
   });
 
   describe('store views', () => {
