@@ -123,12 +123,12 @@ With files enabled, a seat can have these mounts:
 | Virtual path | Source | When mounted | Access |
 | --- | --- | --- | --- |
 | `/workspace/records` | Seat store, `records/` | Always | Read-only |
-| `/workspace/reference` | Game reference folder on disk | Always | Read-only |
+| `/workspace/reference` | Seat store, `reference/` | Always | Read-only |
 | `/workspace/game` | Seat store, `game/` | When the seat has game access | The seat's game access |
 | `/workspace/shared/<name>` | Shared folder on disk | For each configured shared folder | The configured access |
 | `/tmp` | Per-seat scratch folder on disk | Always | Writable |
 
-Only the host writes records, through `SeatRecords`. The bash mount description still depends only on the files setting. The workspace mounts the reference folder without creating it, so an existing reference folder always means a complete write.
+Only the host writes records, through `SeatRecords`, and the reference, through `writeGameReference`. The bash mount description still depends only on the files setting.
 
 ### Records and catalog
 
@@ -220,7 +220,7 @@ The four listing tools take no `PlayerID`, so one set of calls serves every seat
 
 These are listing results. A query that resolves to exactly one item returns a detailed report instead, so the writer must not assume every result is a listing row. Recording turns and briefings adds no MCP calls, and files-disabled games make no added calls.
 
-The reference is written to a temporary folder and renamed to `<workspaceRoot()>/games/<gameID>/reference/`, so an existing folder always means a complete write. A later session of the same game skips the calls. Any fetch failure, error result, or write failure stops the session through its fatal setup path. Handle both MCP errors and the database tools' returned `Error` field.
+All four listings are fetched before anything is written, then committed under `reference/` as one `reference` commit in each seat store whose head lacks them. A later session of the same game skips the calls when every store already has the reference. A rewind carries reference files forward, since they do not depend on the turn. Any fetch failure, error result, or write failure stops the session through its fatal setup path. Handle both MCP errors and the database tools' returned `Error` field.
 
 ### Viewing files outside the game
 
@@ -240,7 +240,7 @@ The button appears only when the row's seat store exists. Both entry points repo
 - Capture a local golden test for `envoy/context/diplomacy-context.ts`. Add the section registry and `renderSection`, and adopt them in each builder while keeping the golden tests unchanged.
 - Implement the store tables, commit kinds, atomic empty initial commit and head, file and directory entries, run-bound commits, version reads, the head manifest cache, the last recorded turn, and `rewind`. Add `StoreFs`.
 - Add `materialize.ts`, the workspace console and its npm scripts, the telemetry download route and `hasWorkspace` flag, and the telemetry page button.
-- Switch `PlayerWorkspace` to store views for records and notes with a `notes` commit after each command, bound to the command's run signal. Seed the game guide into the notes view when missing, and mount the reference folder without creating it. Update the workspace capability instructions and bash descriptions.
+- Switch `PlayerWorkspace` to store views for records and notes with a `notes` commit after each command, bound to the command's run signal. Seed the game guide into the notes view when missing, and mount the reference from the store. Update the workspace capability instructions and bash descriptions.
 - Implement `SeatRecords`, catalog generation, and record splitting, with the cached accessor on `VoxContext`. Write the full event slice and all five category files for each processed refresh through the shared briefer filter. Document the refresh-folder and event-turn distinction in the catalog.
 - In `vox-player.ts`, open the seat store and attach it to the context, and close it after `context.shutdown()`. Move the constructor's timeline initialization into `beginTimeline`, call it from the constructor and from the turn loop's reload check, and track the last processed turn and the lowest pending reload turn. Distinguish startup from real notifications, consume the startup acknowledgement once, and retain backward notifications before the busy-turn drop path. In `strategist-session.ts`, label the proactive human notification and clear its acknowledgement on a DLL reconnection.
 - In `strategy-parameters.ts`, capture the refresh's run signal and guard publication of fetched metadata and game state against cancellation, keeping outside-run callers supported.

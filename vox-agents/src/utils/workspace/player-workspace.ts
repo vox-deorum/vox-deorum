@@ -2,7 +2,7 @@
  * @module utils/workspace/player-workspace
  *
  * One player's file workspace: a just-bash shell whose virtual filesystem mounts the seat's
- * records and notes from its versioned workspace store, the game reference, any named shared
+ * records, notes, and game reference from its versioned workspace store, any named shared
  * folders, and a scratch `/tmp`. Store mounts are rebuilt from head for every command, and the
  * command's note changes are committed afterwards. Disk mounts sit under the telemetry folder.
  * Everything outside the mounts lives in memory for one command only.
@@ -41,10 +41,10 @@ export interface WorkspaceStoreMount {
   /** Where the agent sees the folder, for example `/workspace/game`. */
   virtualPath: string;
   access: FileAccess;
-  /** `records` for the host's read-only records, `game` for the seat's notes. */
-  scope: 'records' | 'game';
+  /** `records` for the host's read-only records, `game` for the seat's notes, `reference` for the game reference. */
+  scope: 'records' | 'game' | 'reference';
   /** The store folder behind the mount, such as `records/`. */
-  storePrefix: 'records/' | 'game/';
+  storePrefix: 'records/' | 'game/' | 'reference/';
 }
 
 /** A mount backed by a real folder on disk. */
@@ -54,11 +54,8 @@ export interface WorkspaceDiskMount {
   /** The real folder on disk, before canonicalization. */
   realPath: string;
   access: FileAccess;
-  /**
-   * `reference` for the game reference (never created by the workspace), `shared` for a named
-   * folder that outlives games, and `scratch` for the player's `/tmp`, which lasts for one game.
-   */
-  scope: 'reference' | 'shared' | 'scratch';
+  /** `shared` for a named folder that outlives games, `scratch` for the player's `/tmp`, which lasts for one game. */
+  scope: 'shared' | 'scratch';
 }
 
 /** One virtual folder and the store folder or real folder behind it. */
@@ -107,20 +104,6 @@ export function workspaceSeatName(gameID: string, playerID: number): string {
 }
 
 /**
- * The game reference folder shared by every file-enabled seat of a game:
- * `<workspaceRoot()>/games/<gameID>/reference`. An existing folder always holds a complete write.
- *
- * @param gameID - The game the reference belongs to
- * @throws if the game ID would place the folder outside its directory
- */
-export function workspaceReferencePath(gameID: string): string {
-  if (gameID !== path.basename(gameID) || gameID.includes('..')) {
-    throw new Error(`Game ID ${gameID} cannot name a workspace folder.`);
-  }
-  return path.join(workspaceRoot(), 'games', gameID, 'reference');
-}
-
-/**
  * List the mounts a files setting produces for one player in one game, without touching disk.
  *
  * @param files - The seat's resolved files setting
@@ -134,7 +117,7 @@ export function workspaceMounts(files: ResolvedFilesConfig, gameID: string, play
   const mounts: WorkspaceMount[] = [
     { virtualPath: workspaceScratchPath, realPath: path.join(root, 'scratch', folder), access: 'write', scope: 'scratch' },
     { virtualPath: workspaceRecordsPath, access: 'read', scope: 'records', storePrefix: 'records/' },
-    { virtualPath: workspaceReferenceMountPath, realPath: workspaceReferencePath(gameID), access: 'read', scope: 'reference' },
+    { virtualPath: workspaceReferenceMountPath, access: 'read', scope: 'reference', storePrefix: 'reference/' },
   ];
   if (files.game) {
     mounts.push({ virtualPath: `${workspaceCwd}/game`, access: files.game, scope: 'game', storePrefix: 'game/' });
@@ -228,8 +211,7 @@ const cancelledMessage = 'The command was cancelled, so its file changes were di
 
 /**
  * A player's workspace in one game. Disk folders and shared guides are created on the first
- * command, so a seat that never uses bash leaves nothing on disk; the reference folder is mounted
- * only once it exists and is never created here. Every command gets its own shell: it starts at
+ * command, so a seat that never uses bash leaves nothing on disk. Every command gets its own shell: it starts at
  * {@link workspaceCwd} with a fresh shell state, a fresh in-memory filesystem, and store views
  * built from head. Its note changes land as one `notes` commit, so the next command sees them
  * along with any host commits made in between. Concurrent commands from the seat's agents share
@@ -240,13 +222,12 @@ export class PlayerWorkspace {
   public readonly mounts: WorkspaceMount[];
   private readonly files: ResolvedFilesConfig;
   private diskFilesystems?: MountConfig[];
-  private referenceFilesystem?: MountConfig;
 
   /**
    * @param files - The seat's resolved files setting
    * @param gameID - The game the workspace belongs to
    * @param playerID - The player the workspace belongs to
-   * @param store - The seat's workspace store, which holds records and notes
+   * @param store - The seat's workspace store, which holds records, notes, and the game reference
    */
   constructor(
     files: ResolvedFilesConfig,
@@ -300,20 +281,13 @@ export class PlayerWorkspace {
    */
   private async open(): Promise<OpenWorkspace> {
     this.diskFilesystems ??= this.mounts.flatMap((mount) => {
-      if (!('realPath' in mount) || mount.scope === 'reference') return [];
+      if (!('realPath' in mount)) return [];
       fs.mkdirSync(mount.realPath, { recursive: true });
       const root = fs.realpathSync.native(mount.realPath);
       if (mount.scope === 'shared' && mount.access === 'write') seedWorkspaceGuide(root);
       return [{ mountPoint: mount.virtualPath, filesystem: diskFilesystem(root, mount.access) }];
     });
     const mounts = [...this.diskFilesystems];
-
-    const reference = this.mounts.find((mount): mount is WorkspaceDiskMount => mount.scope === 'reference');
-    if (reference && !this.referenceFilesystem && fs.existsSync(reference.realPath)) {
-      const root = fs.realpathSync.native(reference.realPath);
-      this.referenceFilesystem = { mountPoint: reference.virtualPath, filesystem: diskFilesystem(root, 'read') };
-    }
-    if (this.referenceFilesystem) mounts.push(this.referenceFilesystem);
 
     let notes: StoreFs | undefined;
     const manifest = this.store.manifest();

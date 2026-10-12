@@ -14,7 +14,7 @@ This implementation plan gives Vox Deorum agents durable game reports and editab
 
 ## Overall approach
 
-A **workspace store** keeps versioned files in one SQLite database per game and player, independent of the chosen strategist. Bash reads and writes it through a small subclass of just-bash's `InMemoryFs` that loads files lazily and records what each command changed. Shared folders and scratch space stay plain folders on disk. The game reference is a plain read-only folder written once per game. A materialize command and a telemetry page download export a stored version for reading outside the game.
+A **workspace store** keeps versioned files in one SQLite database per game and player, independent of the chosen strategist. Bash reads and writes it through a small subclass of just-bash's `InMemoryFs` that loads files lazily and records what each command changed. Shared folders and scratch space stay plain folders on disk. The game reference is committed into each seat store before the first turn and mounted read-only. A materialize command and a telemetry page download export a stored version for reading outside the game.
 
 Each seat starts a timeline when its player is created and again after a backward or repeated real turn notification. Turn intake handles the human's proactive startup decision separately and retains the earliest reload turn even while the strategist is busy. The next accepted turn starts the timeline from that cut. Starting a timeline cancels the seat's running chats, resets its cached state and pacing, and rewinds its records and notes together to before that turn. Cancelled refreshes cannot publish into the reset cache. Shared folders and the reference never rewind. Discarded timelines remain in the store's history for analysis. The oracle replays only the last attempt at each turn, so turns lost to a reload are never replayed (see `docs/developers/vox-agents/agents/oracle.md`).
 
@@ -75,7 +75,7 @@ The simple strategist's strategic players summary will be designed after the fir
 - **Forward loads:** loads to an earlier or repeated turn are detected, subject to the startup acknowledgement above. Loading an earlier save and then a later save from the original timeline does not rewind. Notes from the branch in between carry over, and the catalog shows a gap in turns.
 - **Shared folders:** they never rewind, so they can keep knowledge from a discarded timeline. Replay sees their current contents.
 - **Snapshot gap:** a live run's first bash call can see commits made after its first-step snapshot, such as host writes during its first model call. Replay shows the snapshot, so such files can differ.
-- **Portability:** replaying a file-enabled row needs its telemetry database, its seat store, and the game reference folder.
+- **Portability:** replaying a file-enabled row needs its telemetry database and its seat store.
 - **Old notes:** notes written before the store existed stay in the old seat folder on disk and are not imported.
 
 ## Out of scope

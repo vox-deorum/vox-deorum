@@ -59,7 +59,7 @@ import { VoxContext } from '../../../src/infra/vox-context.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
-import { workspaceReferencePath } from '../../../src/utils/workspace/player-workspace.js';
+import { hasGameReference } from '../../../src/knowledge/reference.js';
 import { config as rootConfig } from '../../../src/utils/config.js';
 import {
   autoPlayTurnLimit,
@@ -459,7 +459,7 @@ describe('handleGameSwitched player preparation', () => {
   let telemetryDir: string;
   let savedTelemetryDir: string | undefined;
   let execute: ReturnType<typeof vi.spyOn>;
-  /** Whether the reference folder existed when each loop started. */
+  /** Whether the seat store held the reference when each loop started. */
   let referenceAtStart: boolean[];
   /** Players a session started, closed after each test. */
   const preparedPlayers: VoxPlayer[] = [];
@@ -481,7 +481,7 @@ describe('handleGameSwitched player preparation', () => {
     });
     referenceAtStart = [];
     execute = vi.spyOn(VoxPlayer.prototype, 'execute').mockImplementation(async function (this: VoxPlayer) {
-      referenceAtStart.push(fs.existsSync(workspaceReferencePath('G-prep')));
+      referenceAtStart.push(this.context.store !== undefined && hasGameReference(this.context.store));
     });
     vi.mocked(voxCivilization.killGame).mockClear();
     for (const tool of referenceTools) {
@@ -548,17 +548,22 @@ describe('handleGameSwitched player preparation', () => {
 
     for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
     expect(execute).toHaveBeenCalledTimes(2);
-    expect(fs.existsSync(workspaceReferencePath('G-prep'))).toBe(false);
+    expect(referenceAtStart).toEqual([false, false]);
   });
 
-  it('should skip the reference calls when an earlier session already wrote it', async () => {
-    fs.mkdirSync(workspaceReferencePath('G-prep'), { recursive: true });
+  it('should skip the reference calls when an earlier session already wrote it to every seat', async () => {
+    for (const playerID of [0, 1]) {
+      const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID));
+      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'warrior\n' }] });
+      store.close();
+    }
     const s = preparedSession(true);
     await gameSwitched(s, 10, 'G-prep');
     rememberPlayers(s);
 
     for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
     expect(execute).toHaveBeenCalledTimes(2);
+    expect(referenceAtStart).toEqual([true, true]);
   });
 
   it('should put the session in error, start no loops, and release opened seats when the reference fails', async () => {
@@ -575,7 +580,11 @@ describe('handleGameSwitched player preparation', () => {
     expect(close).toHaveBeenCalledTimes(2);
     expect(registeredContexts).toHaveLength(2);
     expect(liveContexts()).toEqual([]);
-    expect(fs.existsSync(workspaceReferencePath('G-prep'))).toBe(false);
+    for (const playerID of [0, 1]) {
+      const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID), { readonly: true });
+      expect(hasGameReference(store)).toBe(false);
+      store.close();
+    }
   });
 
   it('should put the session in error, start no loops, and release opened seats when a store cannot open', async () => {

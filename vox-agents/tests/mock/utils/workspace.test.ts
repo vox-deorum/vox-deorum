@@ -18,7 +18,6 @@ import {
   workspaceGuideFile,
   workspaceNodeSupported,
   workspaceOutputLimit,
-  workspaceReferencePath,
   workspaceRoot,
   workspaceWritable,
 } from '../../../src/utils/workspace/player-workspace.js';
@@ -300,19 +299,19 @@ console.log(mean);`;
   });
 
   describe('game reference', () => {
-    it('should skip the reference mount until the folder exists, without creating it', async () => {
+    it('should show the stored reference read-only and leave nothing on disk', async () => {
       const store = openStore();
       const shell = workspace(store);
-      expect((await shell.exec('ls reference')).exitCode).not.toBe(0);
-      expect(fs.existsSync(workspaceReferencePath('g1'))).toBe(false);
+      expect((await shell.exec('ls reference')).stdout).toBe('');
 
-      fs.mkdirSync(workspaceReferencePath('g1'), { recursive: true });
-      fs.writeFileSync(path.join(workspaceReferencePath('g1'), 'units.md'), 'warrior\n');
+      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'warrior\n' }] });
       expect((await shell.exec('cat reference/units.md')).stdout).toBe('warrior\n');
 
+      const head = store.head();
       const write = await shell.exec('echo x > reference/new.md');
       expect(write.exitCode).not.toBe(0);
-      expect(fs.readdirSync(workspaceReferencePath('g1'))).toEqual(['units.md']);
+      expect(store.head()).toBe(head);
+      expect(fs.existsSync(path.join(workspaceRoot(), 'games'))).toBe(false);
     });
   });
 

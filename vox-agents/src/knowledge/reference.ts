@@ -1,20 +1,18 @@
 /**
  * @module knowledge/reference
  *
- * Writes a game's reference folder once per game: the technology, policy, building, and unit
- * listings from the game database, as Markdown and JSON. Every file-enabled seat of the game mounts
- * the folder read-only. The files are written into a temporary folder and renamed into place, so an
- * existing folder always holds a complete write.
+ * Writes the game reference into each file-enabled seat's workspace store: the technology, policy,
+ * building, and unit listings from the game database, as Markdown and JSON under `reference/`. Each
+ * seat mounts it read-only, and its commits keep it next to the records, so a recorded version
+ * holds everything the seat's bash workspace showed.
  */
 
-import fs from "node:fs";
-import path from "node:path";
 import { mcpClient } from "../utils/models/mcp-client.js";
 import { unwrapMcpResponse } from "../utils/models/mcp-response.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { isRecord } from "../utils/guards.js";
 import { createLogger } from "../utils/logger.js";
-import { workspaceReferencePath } from "../utils/workspace/player-workspace.js";
+import { referenceStorePrefix, type PathChange, type WorkspaceStore } from "../utils/workspace/workspace-store.js";
 
 const logger = createLogger('GameReference');
 
@@ -58,37 +56,38 @@ function renderItems(title: string, items: Record<string, unknown>[]): string {
   return `# ${title}\n\n${body}\n`;
 }
 
+/** Whether a store's head holds any game reference file. */
+export function hasGameReference(store: WorkspaceStore): boolean {
+  for (const storePath of store.manifest().keys()) {
+    if (storePath.startsWith(referenceStorePrefix)) return true;
+  }
+  return false;
+}
+
 /**
- * Write the game reference unless it already exists. All four listings are fetched before any file
- * is written, and the folder appears only through the final rename.
+ * Write the game reference into every store whose head lacks it, as one `reference` commit each.
+ * All four listings are fetched, once, before any store is written, and only when some store needs
+ * them.
  *
- * @param gameID - The game the reference belongs to
- * @returns true when the reference was written, false when an earlier session already wrote it
- * @throws on any fetch, result, or write failure; a partial temporary folder is removed
+ * @param stores - The file-enabled seats' stores
+ * @returns how many stores received the reference
+ * @throws on any fetch, result, or commit failure; a failed fetch writes nothing
  */
-export async function writeGameReference(gameID: string): Promise<boolean> {
-  const target = workspaceReferencePath(gameID);
-  if (fs.existsSync(target)) return false;
+export async function writeGameReference(stores: WorkspaceStore[]): Promise<number> {
+  const missing = stores.filter((store) => !hasGameReference(store));
+  if (missing.length === 0) return 0;
 
-  const listings = [];
-  for (const entry of referenceTools) {
-    listings.push({ ...entry, items: await fetchItems(entry.tool) });
+  const changes: PathChange[] = [];
+  for (const { tool, file, title } of referenceTools) {
+    const items = await fetchItems(tool);
+    changes.push(
+      { path: `${referenceStorePrefix}${file}.md`, type: "file", content: renderItems(title, items) },
+      { path: `${referenceStorePrefix}${file}.json`, type: "file", content: JSON.stringify(items, null, 2) },
+    );
   }
-
-  const temp = `${target}.tmp-${process.pid}-${Date.now()}`;
-  try {
-    fs.mkdirSync(temp, { recursive: true });
-    for (const { file, title, items } of listings) {
-      fs.writeFileSync(path.join(temp, `${file}.md`), renderItems(title, items));
-      fs.writeFileSync(path.join(temp, `${file}.json`), JSON.stringify(items, null, 2));
-    }
-    fs.renameSync(temp, target);
-  } catch (error) {
-    fs.rmSync(temp, { recursive: true, force: true });
-    // Another session of the same game finished its write first.
-    if (fs.existsSync(target)) return false;
-    throw error;
+  for (const store of missing) {
+    store.commit({ kind: "reference", turn: null, author: "host", changes });
   }
-  logger.info(`Wrote the game reference for ${gameID}`, { path: target });
-  return true;
+  logger.info(`Wrote the game reference into ${missing.length} seat store(s)`);
+  return missing.length;
 }

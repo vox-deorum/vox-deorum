@@ -28,7 +28,7 @@ describe('WorkspaceStore', () => {
   let store: WorkspaceStore;
 
   /** Commit file changes with a given kind and turn. */
-  function commit(changes: PathChange[], kind: 'turn' | 'briefing' | 'notes' = 'notes', turn: number | null = 1): number {
+  function commit(changes: PathChange[], kind: 'turn' | 'briefing' | 'notes' | 'reference' = 'notes', turn: number | null = 1): number {
     return store.commit({ kind, turn, author: 'host', changes });
   }
 
@@ -167,7 +167,7 @@ describe('WorkspaceStore', () => {
       expect(text(store.readFile('game/x.md'))).toBe('x');
     });
 
-    it('should reject paths outside records and game', () => {
+    it('should reject paths outside records, game, and reference', () => {
       const head = store.head();
       expect(() => commit([{ path: 'other/a.md', type: 'file', content: 'a' }])).toThrow();
       expect(() => commit([{ path: 'game/../x', type: 'file', content: 'a' }])).toThrow();
@@ -293,6 +293,29 @@ describe('WorkspaceStore', () => {
       expect(store.lastRecordedTurn()).toBe(2);
       expect(store.rewind(3)).toBe(false);
       expect(text(store.readFile('records/turn-2/state.md'))).toBe('turn 2');
+    });
+
+    it('should carry forward reference files the discarded commits added or changed', () => {
+      commit([{ path: 'reference/units.md', type: 'file', content: 'old units' }], 'reference', null);
+      recordTurn(1);
+      recordTurn(2);
+      // A store from before the reference moved in gets it only after some turns are recorded.
+      commit([
+        { path: 'reference/units.md', type: 'file', content: 'new units' },
+        { path: 'reference/techs.md', type: 'file', content: 'techs' },
+      ], 'reference', null);
+      recordTurn(3);
+
+      expect(store.rewind(2)).toBe(true);
+      expect(text(store.readFile('reference/units.md'))).toBe('new units');
+      expect(text(store.readFile('reference/techs.md'))).toBe('techs');
+      expect(store.readFile('records/turn-2/state.md')).toBeUndefined();
+
+      // Reopening rebuilds the tree from stored rows rather than the cache.
+      store.close();
+      store = WorkspaceStore.open(dbPath);
+      expect(text(store.readFile('reference/units.md'))).toBe('new units');
+      expect(store.lastRecordedTurn()).toBe(1);
     });
   });
 });

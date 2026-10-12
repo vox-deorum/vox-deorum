@@ -1,6 +1,6 @@
 # Workspace store
 
-A seat with [files](files.md) on keeps its records and notes in one SQLite file, the **workspace store**. It works like a small version-control system: file contents are stored once by hash, and every change is a commit with a parent. So the store keeps full history, can be read at any past version, and can be rewound when the player reloads an older save.
+A seat with [files](files.md) on keeps its records, notes, and game reference in one SQLite file, the **workspace store**. It works like a small version-control system: file contents are stored once by hash, and every change is a commit with a parent. So the store keeps full history, can be read at any past version, and can be rewound when the player reloads an older save.
 
 ```
 commit 1 (records, turn 1) ──► commit 2 (notes) ──► commit 3 (records, turn 2) ──► ...
@@ -12,12 +12,13 @@ commit 1 (records, turn 1) ──► commit 2 (notes) ──► commit 3 (record
 
 ## Who writes it
 
-Only two things write to the store:
+Only three things write to the store:
 
 | Writer | Writes | Where it is mounted |
 | --- | --- | --- |
 | `SeatRecords` (`src/knowledge/records.ts`) and the briefing archive | `records/` | `/workspace/records`, read-only to agents |
 | The bash tool | `game/` (the agents' notes) | `/workspace/game` |
+| `writeGameReference` (`src/knowledge/reference.ts`) | `reference/` | `/workspace/reference`, read-only to agents |
 
 The bash view is `src/utils/workspace/store-fs.ts`. Each command rebuilds its folders from the head version. A command that changes notes makes one `notes` commit afterward. A cancelled command commits nothing.
 
@@ -40,9 +41,9 @@ Each processed turn is recorded before pacing decides whether to skip, so skippe
 
 ## Game reference
 
-The reference is separate from the store. It is written once per game and shared by every seat.
+Before any player loop starts, `StrategistSession` calls `writeGameReference` (`src/knowledge/reference.ts`) with every file-enabled seat's store. It fetches technologies, policies, buildings, and units from the game database once, then commits them as Markdown and JSON under `reference/` in each store whose head lacks them, as one `reference` commit. A later session of the same game skips the fetch when every store already has the reference.
 
-Before any player loop starts, `StrategistSession` calls `writeGameReference` (`src/knowledge/reference.ts`). It writes technologies, policies, buildings, and units from the game database, as Markdown and JSON, into `games/<gameID>/reference/`. It writes to a temporary folder first and renames it, so seats never see a half-written reference. Every file-enabled seat mounts it read-only.
+Because the reference lives in the store, a recorded commit holds everything the seat's bash workspace showed except shared folders and `/tmp`. Oracle replay and the exports below need no other files.
 
 Buildings without help text remain in the reference with an empty `Help` string, as in the MCP tool's detailed reports.
 
@@ -57,7 +58,7 @@ When the player loads an earlier save, the seat should forget what happened afte
 3. Resets the event window.
 4. Rewinds the store, so records and notes from that turn onward disappear from the seat's view.
 
-Nothing is deleted. The discarded commits stay in the file.
+Nothing is deleted. The discarded commits stay in the file. The reference does not depend on the turn, so the `reload` commit restores any reference file that the discarded commits added or changed. This matters for stores that got the reference only after some turns were recorded.
 
 **When it runs:**
 

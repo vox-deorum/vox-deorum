@@ -585,8 +585,8 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     const seatingMap = this.seatingClaim!.seatingMap;
     await this.writeSeatingMetadata();
 
-    // Prepare every player using the seating map, write the game reference, and only then start
-    // the loops. A setup failure (a store that cannot open, a failed reference write, or any
+    // Prepare every player using the seating map, write the game reference into the seat stores
+    // that lack it, and only then start the loops. A setup failure (a store that cannot open, a failed reference write, or any
     // other construction error) stops the session before any loop starts.
     const players: VoxPlayer[] = [];
     try {
@@ -608,9 +608,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         players.push(player);
         await player.context.registerTools();
       }
-      if (players.some((player) => player.context.files)) {
-        await writeGameReference(params.gameID);
-      }
+      await writeGameReference(players.flatMap((player) => player.context.store ?? []));
     } catch (err) {
       await this.disposePlayers(players);
       const message = `Failed to prepare the players: ${errorMessage(err)}`;

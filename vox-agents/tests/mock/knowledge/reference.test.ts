@@ -1,7 +1,7 @@
 /**
- * Tests for the game reference writer (src/knowledge/reference.ts): one set of listing calls,
- * a folder that appears only after every listing succeeds, single-item detailed results, and
- * skipping a folder an earlier session wrote.
+ * Tests for the game reference writer (src/knowledge/reference.ts): one set of listing calls for
+ * every store that lacks the reference, one commit per store only after every listing succeeds,
+ * single-item detailed results, and skipping stores that already hold it.
  */
 
 import fs from 'node:fs';
@@ -15,62 +15,69 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
   return helper.mockMcpClientModule();
 });
 
-import { writeGameReference } from '../../../src/knowledge/reference.js';
-import { config } from '../../../src/utils/config.js';
-import { workspaceReferencePath } from '../../../src/utils/workspace/player-workspace.js';
+import { hasGameReference, writeGameReference } from '../../../src/knowledge/reference.js';
+import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 
 const tools = ['get-technology', 'get-policy', 'get-building', 'get-unit'];
 
 let mcp: ReturnType<typeof installMockMcpClient>;
-let telemetryDir: string;
-let savedTelemetryDir: string | undefined;
+let dir: string;
+let stores: WorkspaceStore[];
+
+/** Open a fresh seat store in the test folder. */
+function openStore(name: string): WorkspaceStore {
+  const store = WorkspaceStore.open(path.join(dir, `${name}.db`));
+  stores.push(store);
+  return store;
+}
+
+/** A stored file as UTF-8 text. */
+function read(store: WorkspaceStore, storePath: string): string {
+  return Buffer.from(store.readFile(storePath)!).toString('utf8');
+}
 
 beforeEach(() => {
   mcp = installMockMcpClient();
-  savedTelemetryDir = config.telemetryDir;
-  telemetryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-reference-'));
-  config.telemetryDir = telemetryDir;
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-reference-'));
+  stores = [];
   for (const tool of tools) {
     mcp.respondWith(tool, structuredResult({ Count: 2, Items: [{ Type: `${tool}-A`, Name: 'Alpha', Cost: 10 }, { Type: `${tool}-B`, Name: 'Beta', Cost: 20 }] }));
   }
 });
 
 afterEach(() => {
-  config.telemetryDir = savedTelemetryDir as string;
-  fs.rmSync(telemetryDir, { recursive: true, force: true });
+  for (const store of stores) store.close();
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
-/** Every entry in the reference folder's parent, to catch leftover temporary folders. */
-function gameFolderEntries(gameID: string): string[] {
-  const parent = path.dirname(workspaceReferencePath(gameID));
-  return fs.existsSync(parent) ? fs.readdirSync(parent) : [];
-}
-
 describe('writeGameReference', () => {
-  it('should write Markdown and JSON for every listing with one call per tool', async () => {
-    await expect(writeGameReference('G1')).resolves.toBe(true);
+  it('should commit Markdown and JSON for every listing to each store with one call per tool', async () => {
+    const [a, b] = [openStore('a'), openStore('b')];
+
+    await expect(writeGameReference([a, b])).resolves.toBe(2);
 
     for (const tool of tools) {
       expect(mcp.calls(tool)).toHaveLength(1);
       expect(mcp.calls(tool)[0].args).toEqual({ MaxResults: 5000 });
     }
-    const folder = workspaceReferencePath('G1');
-    const files = fs.readdirSync(folder).sort();
-    expect(files).toHaveLength(8);
-    const units = JSON.parse(fs.readFileSync(path.join(folder, 'units.json'), 'utf8'));
-    expect(units.map((item: { Type: string }) => item.Type)).toEqual(['get-unit-A', 'get-unit-B']);
-    const technologies = fs.readFileSync(path.join(folder, 'technologies.md'), 'utf8');
-    expect(technologies).toContain('Alpha');
-    expect(technologies).toContain('Beta');
-    expect(gameFolderEntries('G1')).toEqual(['reference']);
+    for (const store of [a, b]) {
+      const paths = [...store.manifest().keys()].filter((storePath) => storePath.startsWith('reference/'));
+      expect(paths).toHaveLength(8);
+      expect(store.history().at(-1)).toMatchObject({ kind: 'reference', turn: null, author: 'host' });
+      const units = JSON.parse(read(store, 'reference/units.json'));
+      expect(units.map((item: { Type: string }) => item.Type)).toEqual(['get-unit-A', 'get-unit-B']);
+      expect(read(store, 'reference/technologies.md')).toContain('Alpha');
+      expect(read(store, 'reference/technologies.md')).toContain('Beta');
+    }
   });
 
   it('should render a single detailed item, not only listing rows', async () => {
     mcp.respondWith('get-policy', structuredResult({ Count: 1, Items: [{ Type: 'POLICY_ONLY', Name: 'Only', Branch: 'Tradition', PrereqPolicies: ['Root'] }] }));
+    const store = openStore('a');
 
-    await writeGameReference('G1');
+    await writeGameReference([store]);
 
-    const policies = fs.readFileSync(path.join(workspaceReferencePath('G1'), 'policies.md'), 'utf8');
+    const policies = read(store, 'reference/policies.md');
     expect(policies).toContain('Only');
     expect(policies).toContain('Tradition');
     expect(policies).toContain('Root');
@@ -79,28 +86,38 @@ describe('writeGameReference', () => {
   it.each([
     ['a returned Error field', structuredResult({ Count: 0, Items: [], Error: 'database not ready' })],
     ['an MCP error result', errorResult('tool failed')],
-  ])('should write nothing when a listing returns %s', async (_label, result) => {
+  ])('should commit nothing when a listing returns %s', async (_label, result) => {
     mcp.respondWith('get-building', result);
+    const store = openStore('a');
+    const head = store.head();
 
-    await expect(writeGameReference('G1')).rejects.toThrow();
+    await expect(writeGameReference([store])).rejects.toThrow();
 
-    expect(fs.existsSync(workspaceReferencePath('G1'))).toBe(false);
-    expect(gameFolderEntries('G1')).toEqual([]);
+    expect(store.head()).toBe(head);
+    expect(hasGameReference(store)).toBe(false);
   });
 
-  it('should write nothing when a listing call throws', async () => {
+  it('should commit nothing when a listing call throws', async () => {
     mcp.onTool('get-unit', () => { throw new Error('connection lost'); });
+    const store = openStore('a');
 
-    await expect(writeGameReference('G1')).rejects.toThrow('connection lost');
+    await expect(writeGameReference([store])).rejects.toThrow('connection lost');
 
-    expect(fs.existsSync(workspaceReferencePath('G1'))).toBe(false);
+    expect(hasGameReference(store)).toBe(false);
   });
 
-  it('should skip every call when the folder already exists', async () => {
-    fs.mkdirSync(workspaceReferencePath('G1'), { recursive: true });
+  it('should write only the stores that lack the reference, and make no calls when none do', async () => {
+    const [a, b] = [openStore('a'), openStore('b')];
+    a.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'kept' }] });
+    const headA = a.head();
 
-    await expect(writeGameReference('G1')).resolves.toBe(false);
+    await expect(writeGameReference([a, b])).resolves.toBe(1);
+    expect(a.head()).toBe(headA);
+    expect(read(a, 'reference/units.md')).toBe('kept');
+    expect(hasGameReference(b)).toBe(true);
 
-    for (const tool of tools) expect(mcp.calls(tool)).toHaveLength(0);
+    const calls = tools.map((tool) => mcp.calls(tool).length);
+    await expect(writeGameReference([a, b])).resolves.toBe(0);
+    expect(tools.map((tool) => mcp.calls(tool).length)).toEqual(calls);
   });
 });

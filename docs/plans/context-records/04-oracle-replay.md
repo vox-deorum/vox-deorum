@@ -26,14 +26,13 @@ Add a shared `Workspace` interface with `exec(command, signal)`. `PlayerWorkspac
 
 | Mount | Replay source |
 | --- | --- |
-| `/workspace/records`, `/workspace/game` | One `StoreFs` view per mount at the commit in `context.workspace`, with committing disabled. Each view is kept for the whole execution, so writes persist across that execution's bash calls. Game notes are writable when the recorded files setting grants it. |
-| `/workspace/reference` | The game reference folder, read-only |
+| `/workspace/records`, `/workspace/game`, `/workspace/reference` | One `StoreFs` view per mount at the commit in `context.workspace`, with committing disabled. Each view is kept for the whole execution, so writes persist across that execution's bash calls. Game notes are writable when the recorded files setting grants it; records and the reference are read-only. |
 | `/workspace/shared/<name>` | An `OverlayFs` over the shared folder's current contents, with writes kept in memory |
 | `/tmp` | In memory |
 
-A replay workspace is created for each replay execution, including each model variant and repetition, passed to that task's `withRun`, and discarded when the execution ends. Concurrent variants of one source row cannot see each other's writes, and nothing on disk or in the store changes. A row fails without running if its seat store, its recorded commit, or the game reference folder is missing.
+A replay workspace is created for each replay execution, including each model variant and repetition, passed to that task's `withRun`, and discarded when the execution ends. Concurrent variants of one source row cannot see each other's writes, and nothing on disk or in the store changes. A row fails without running if its seat store or its recorded commit is missing.
 
-The store's initial commit is a valid recorded version. Its records and notes trees start empty. Before the first command, replay applies the same game-guide initialization as `PlayerWorkspace.open`: seed the default `game/AGENTS.md` when game access is writable and the guide is missing. This is a disposable addition to the pinned tree, including after a rewind to before the guide existed; an existing guide is preserved. All writable game notes persist only within that replay execution. Replay still requires the reference folder and the recorded mount access.
+The store's initial commit is a valid recorded version. Its records and notes trees start empty. Before the first command, replay applies the same game-guide initialization as `PlayerWorkspace.open`: seed the default `game/AGENTS.md` when game access is writable and the guide is missing. This is a disposable addition to the pinned tree, including after a rewind to before the guide existed; an existing guide is preserved. All writable game notes persist only within that replay execution. Replay still requires the recorded mount access.
 
 Use the existing oracle context for rows with files disabled and one file-enabled context for each distinct recorded files setting, so each bash tool description matches the original. Each file-enabled context uses the recorded quota, schema-only tools, and a real bash tool registered after schema replacement. Keep the original run's declared tool list, so restricted runs do not gain bash just because the replay context has it. Give the contexts distinct identities, register their telemetry outputs under the oracle experiment, close them all during shutdown, and report their output locations.
 
@@ -41,14 +40,14 @@ This stage keeps the oracle's first-step replay. A future full-history replay, w
 
 ## Work items
 
-Introduce the `Workspace` interface, the root-run workspace, and `ReplayWorkspace`. Extend row validation (seat store, commit, and reference checks), replay routing, per-setting contexts, and context lifecycle. Preserve declared tools when restoring file support. Create and discard a replay workspace within each replay task.
+Introduce the `Workspace` interface, the root-run workspace, and `ReplayWorkspace`. Extend row validation (seat store and commit checks), replay routing, per-setting contexts, and context lifecycle. Preserve declared tools when restoring file support. Create and discard a replay workspace within each replay task.
 
 ## Verify
 
 | Area | Required checks |
 | --- | --- |
 | Replay | Files from the recorded commit, including an empty initial version, plus the same missing-guide initialization as a live command; existing guides are preserved and read-only game mounts receive no guide; original mounts and access, matching bash description, store unchanged, and writes preserved across commands within one replay |
-| Replay checks | A row with a missing seat store, commit, or reference folder fails without running |
+| Replay checks | A row with a missing seat store or commit fails without running |
 | Replay isolation | Two concurrent variants of one source row cannot read each other's notes, shared-folder, or scratch writes |
 | Replay tools | The recorded files setting controls file support, quota, and bash description; the recorded tool list still controls whether bash is available |
 

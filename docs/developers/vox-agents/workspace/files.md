@@ -36,7 +36,7 @@ The workspace needs Node 22.17.0 or newer (the repo requires 22.23.3). On older 
 | --- | --- | --- | --- |
 | `/workspace/records` | Read-only | The seat's [workspace store](store.md) | The game |
 | `/workspace/game` | The seat's `game` access | The seat's workspace store | The game |
-| `/workspace/reference` | Read-only | `games/<gameID>/reference/`, mounted once it exists | The game |
+| `/workspace/reference` | Read-only | The seat's workspace store, written before the first turn | The game |
 | `/workspace/shared/<name>` | Per the `shared` setting | `shared/<name>/` | Across games and seats |
 | `/tmp` | Read and write | `scratch/<gameID>-player-<playerID>/` | The game, shared by that player's agents, including concurrent ones |
 
