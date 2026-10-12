@@ -18,6 +18,7 @@ import type {
 // @ts-expect-error - jaison doesn't have type definitions
 import jaison from 'jaison';
 import { createLogger } from '../logger.js';
+import { exponentialRetry } from '../retry.js';
 import type { Model } from '../../types/index.js';
 import { buildProviderOptions, getModel, getModelConfig } from './models.js';
 import { selectEvaluatorReference } from './resolution.js';
@@ -59,10 +60,33 @@ export function getEvaluatorConfig(name: string, overrides?: Record<string, Mode
 export function getEvaluationModel(config: Model, context?: ConcurrencyContext): EvaluationModelV4 {
   switch (config.provider) {
     case 'typesafe':
-      return createTypeSafeAi().evaluationModel(config.name);
+      return withEvaluationRetry(createTypeSafeAi().evaluationModel(config.name), config, context ?? detachedContext);
     default:
       return createLanguageModelEvaluator(config, context ?? detachedContext);
   }
+}
+
+/**
+ * Run a native evaluation model's calls through the shared exponential retry, so transient
+ * failures such as DNS or connection errors wait and retry like chat-model calls do instead of
+ * surfacing after the AI SDK's few quick attempts.
+ *
+ * @param model - The native evaluation model to wrap
+ * @param config - Its model configuration, used to label retry logs
+ * @param context - Execution context whose logger receives retry diagnostics
+ * @returns The model's public fields with a retrying `doEvaluate`
+ */
+function withEvaluationRetry(model: EvaluationModelV4, config: Model, context: ConcurrencyContext): EvaluationModelV4 {
+  return {
+    specificationVersion: model.specificationVersion,
+    provider: model.provider,
+    modelId: model.modelId,
+    supportedQuestionTypes: model.supportedQuestionTypes,
+    doEvaluate: (options) => exponentialRetry(async () => await model.doEvaluate(options), context.logger, {
+      source: formatModelReference(config),
+      abortSignal: options.abortSignal,
+    }),
+  };
 }
 
 /**

@@ -1,7 +1,8 @@
 import { ModelMessage } from "ai";
 import { AgentParameters } from "../infra/vox-agent.js";
 import { VoxContext } from "../infra/vox-context.js";
-import { fileModeOmittedSections, renderSection, type SectionKey } from "../knowledge/sections.js";
+import { renderSection, type SectionKey } from "../knowledge/sections.js";
+import { splitEntries } from "../knowledge/records.js";
 import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
 import { isRecord } from "../utils/guards.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
@@ -15,6 +16,7 @@ import { StrategyDecisionType } from "../types/config.js";
 import type { HumanDecisionBus } from "./human-decision-bus.js";
 import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
 import { dropLeastImportantEvents, maxEventTrimLevel } from "../utils/prompts/event-importance.js";
+import { workspaceRecordsPath } from "../utils/workspace/player-workspace.js";
 
 /**
  * Parameters for the strategist agent
@@ -354,13 +356,31 @@ export function buildGameContextMessages(parameters: StrategistParameters): Mode
 }
 
 /**
+ * Render the file-mode Cities section: our own cities, then the record files of every other city
+ * owner for this turn, so the run reads them without listing the folder. Without our entry the
+ * whole report stays inline.
+ *
+ * @param ownName - Our civilization's name, the key of our cities in the report
+ */
+function renderOwnCities(cities: CitiesReport | undefined, ownName: string | undefined, turn: number): string {
+  const report = cities as Record<string, unknown> | undefined;
+  if (!report || !ownName || !(ownName in report)) return renderSection("cities", cities);
+  const own = Object.fromEntries(Object.entries(report).filter(([key]) => key === ownName || key.startsWith("_")));
+  const others = splitEntries("cities", report).filter(({ entry }) => entry !== ownName);
+  const rendered = renderSection("cities", own);
+  if (others.length === 0) return rendered;
+  const files = others.map(({ name }) => `\`${workspaceRecordsPath}/turn-${turn}/cities/${name}.md\``).join(", ");
+  return `${rendered}\n\nOnly your cities are shown here. Other owners' cities this turn: ${files}.`;
+}
+
+/**
  * Render the game reports as markdown: the overview (identity, situation, civilization, options)
  * and the reports (strategies, victory progress, players, cities, military, events, turn context).
  * The simple strategist and the evaluator strategist read this text.
  *
  * @param options - `events` replaces the events report, by default the decision window's.
- *   `fileMode` leaves out the {@link fileModeOmittedSections}, which the run reads from its
- *   records, and states the last decision turn explicitly.
+ *   `fileMode` keeps only our own cities, points to the other owners' city files, leaves out
+ *   events, which the run reads from its records, and states the last decision turn explicitly.
  */
 export function renderStrategistReports(
   parameters: StrategistParameters,
@@ -379,8 +399,10 @@ export function renderStrategistReports(
   ];
   const reports = [
     ...sectionData
-      .filter(([key]) => !fileMode || !fileModeOmittedSections.includes(key))
-      .map(([key, data]) => renderSection(key, data)),
+      .filter(([key]) => !fileMode || key !== "events")
+      .map(([key, data]) => fileMode && key === "cities"
+        ? renderOwnCities(state.cities, parameters.metadata?.YouAre?.Name, state.turn)
+        : renderSection(key, data)),
     getDecisionTurnContext(parameters, fileMode),
   ];
   return [`

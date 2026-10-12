@@ -31,7 +31,7 @@ These sections are not in your prompt. Read them from the records when you need 
 {{/omitted}}
 {{#inPrompt}}
 
-These sections are already in your prompt for the latest turn. Read their record files only for earlier turns: {{inPrompt}}.
+These sections are already in your prompt for the latest turn. Read their record files for earlier turns, or where the prompt points to them: {{inPrompt}}.
 {{/inPrompt}}
 
 Every recorded turn stays readable. You choose whether to read events, and which turns, categories, and portions of them to read.
@@ -56,3 +56,19 @@ Its current text is below (don't re-read the file):
 ````
 {{/empty}}
 {{/guide}}
+{{#notes}}
+
+## Latest note: `{{latest.path}}`
+Its current text is below (don't re-read the file):
+
+````markdown
+{{latest.content}}
+````
+{{#earlier.length}}
+
+Earlier notes, newest first:
+{{/earlier.length}}
+{{#earlier}}
+- `{{.}}`
+{{/earlier}}
+{{/notes}}

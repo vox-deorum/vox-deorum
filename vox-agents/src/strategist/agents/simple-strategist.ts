@@ -12,7 +12,7 @@ import { VoxContext } from "../../infra/vox-context.js";
 import { getRecentGameState, renderStrategistReports, StrategistParameters } from "../strategy-parameters.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
 import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
-import { strategistInlineSections } from "../../knowledge/sections.js";
+import { simpleStrategistInlineSections } from "../../knowledge/sections.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
 /**
@@ -45,8 +45,9 @@ export class SimpleStrategist extends SimpleStrategistBase {
   }
   
   /**
-   * Gets the initial messages for the conversation. In file mode the reports leave out the sections
-   * the records directions point to; otherwise everything is inline.
+   * Gets the initial messages for the conversation. In file mode the reports keep only our own
+   * cities and leave out events, which the records directions point to; otherwise everything is
+   * inline.
    */
   public async getInitialMessages(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
     const [overview, reports] = renderStrategistReports(parameters, getRecentGameState(parameters)!, { fileMode: fileMode(context) });
@@ -54,7 +55,7 @@ export class SimpleStrategist extends SimpleStrategistBase {
       { role: "system", content: overview, providerOptions: { ...cacheBreakpoint } },
       { role: "user", content: reports },
     ];
-    appendRecordsDirections(messages, context, strategistInlineSections);
+    appendRecordsDirections(messages, context, simpleStrategistInlineSections);
     return messages;
   }
 }

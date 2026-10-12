@@ -95,18 +95,20 @@ In file mode, an agent adds **records directions** to its opening messages throu
 - a table of the mounted folders and their access, with the records and the shared reference read-only, the game notes folder and each shared folder read-only or writable according to the seat's files setting, and `/tmp` writable. The table is the only folder listing, because the workspace section and the bash tool description leave folders out;
 - which turns are recorded, as ranges, and the latest turn folder. It states that the recorded turns are the `<N>` in `turn-<N>` paths, the numbers the workspace section's example scripts assign to `turn`;
 - when to open the records `CATALOG.md`: only for the full section index, gaps between turn folders, briefings, or file sizes;
-- which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports;
-- which sections the caller already keeps in the prompt for the latest turn, so the model reads their files only for earlier turns. The simple strategist variants pass `strategistInlineSections` (options, strategies, victory progress, and players); envoys pass none.
+- which sections are not given inline and the file pattern for each: the sections in `fileModeOmittedSections` (`src/knowledge/sections.ts`: cities, military, and events) that the caller does not keep in the prompt;
+- which sections the caller already keeps in the prompt for the latest turn, so the model reads their files for earlier turns or where the prompt points to them. The plain simple strategist passes `simpleStrategistInlineSections`, which adds cities and military to `strategistInlineSections`. The briefed, staffed, and learned variants pass `strategistInlineSections` (options, strategies, victory progress, and players). Envoys pass none.
 
 Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, others, and system files.
 
-The message ends with the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text, noting that the file need not be read again. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
+Next comes the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text, noting that the file need not be read again. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
 
-The directions depend on which turns are recorded and on the guide's text. Briefing commits still leave the text unchanged within a turn. An agent that edits the guide changes it for later runs. The directions message carries no cache breakpoint.
+The message ends with the seat's notes: the text of the most recently written file in the game folder, other than the guide, and the paths of the five written before it. Recency comes from each file's modification time in the store, and the shown text is capped like bash output. Seats without a game folder or without notes get no notes block.
+
+The directions depend on which turns are recorded, the guide's text, and the notes. Briefing commits still leave the text unchanged within a turn. An agent that edits the guide or writes a note changes it for later runs. The directions message carries no cache breakpoint.
 
 | Agent | Opening messages in file mode |
 | --- | --- |
-| Simple strategist | System message, then a core message (strategies, victory, full players, decision context), then the directions. |
+| Simple strategist | System message, then a core message (strategies, victory, full players, our own cities, full military, decision context), then the directions. The Cities section names the other owners' split files for the turn (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
 | Briefed, staffed, and learned strategists | The same inline content as before, with the directions as the last opening message. |
 | Diplomat, spokesperson, and negotiator | The directions follow the shared game context. |
 | Briefers and the diplomatic analyst | No directions. They declare no `bash` tool, so they never run in file mode. |

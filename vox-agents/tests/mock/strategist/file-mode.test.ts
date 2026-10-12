@@ -1,9 +1,10 @@
 /**
  * Tests for file mode in the strategist prompt builders (src/strategist/agents).
  *
- * When a run's resolved tools include bash and the seat has files on, a strategist reads cities,
- * military, and events from its seat's records instead of carrying them inline, so each builder adds
- * the records directions and leaves its cache anchors where the inline build puts them. Briefings are
+ * When a run's resolved tools include bash and the seat has files on, a strategist reads what its
+ * prompt leaves out from its seat's records, so each builder adds the records directions and leaves
+ * its cache anchors where the inline build puts them. The plain simple strategist keeps Military and
+ * its own cities inline and points to the other owners' city files. Briefings are
  * pre-filled and episode retrieval is mocked, so nothing reaches a model, MCP server, or network.
  */
 
@@ -11,12 +12,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelMessage } from 'ai';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { recordsDirections } from '../../../src/knowledge/directions.js';
-import { strategistInlineSections } from '../../../src/knowledge/sections.js';
+import { simpleStrategistInlineSections, strategistInlineSections } from '../../../src/knowledge/sections.js';
 import { sections, type SectionKey } from '../../../src/knowledge/sections.js';
+import { renderStrategistReports } from '../../../src/strategist/strategy-parameters.js';
+import { splitEntries } from '../../../src/knowledge/records.js';
 import { countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { createFakeVoxContext, type FakeVoxContext } from '../../helpers/fake-vox-context.js';
-import { makeFixtureParameters } from '../../fixtures/game-state/index.js';
+import { makeFixtureGameState, makeFixtureParameters } from '../../fixtures/game-state/index.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../knowledge/directions-fixtures.js';
 
 // Replace episode retrieval with a canned result; formatting stays the real implementation.
@@ -26,11 +29,11 @@ vi.mock('../../../src/utils/prompts/episode-utils.js', async (importOriginal) =>
   requestEpisodes: vi.fn(async () => episodeResults.current),
 }));
 
-/** Sections a file-mode strategist still reads inline. */
-const inlineSections: SectionKey[] = ['strategies', 'victory', 'players'];
+/** Sections the file-mode simple strategist still reads inline. */
+const inlineSections: SectionKey[] = ['strategies', 'victory', 'players', 'cities', 'military'];
 
-/** Sections a file-mode strategist reads from its records, so they leave the inline reports. */
-const recordSections: SectionKey[] = ['cities', 'military', 'events'];
+/** Sections the file-mode simple strategist reads from its records, so they leave the inline reports. */
+const recordSections: SectionKey[] = ['events'];
 
 /** Text only the retrieved episode carries, so the message it lands in is findable. */
 const episodeMarker = 'Episode marker: a fragile peace on the tin coast';
@@ -111,6 +114,7 @@ describe('strategist prompt builders in file mode', () => {
     name: string,
     makeParameters: () => StrategistParameters = freshParameters,
     tools?: string[],
+    inPrompt: SectionKey[] = strategistInlineSections,
   ): Promise<{ inline: ModelMessage[]; messages: ModelMessage[]; fake: FakeVoxContext; directions: string }> {
     const inlineContext = createFakeVoxContext();
     const inline = (await agent(name).getInitialMessages(makeParameters(), undefined, inlineContext.asContext())) as ModelMessage[];
@@ -118,12 +122,12 @@ describe('strategist prompt builders in file mode', () => {
     const fake = enableFileMode(createFakeVoxContext(), temp.store, tools);
     const parameters = makeParameters();
     const messages = (await agent(name).getInitialMessages(parameters, undefined, fake.asContext())) as ModelMessage[];
-    return { inline, messages, fake, directions: recordsDirections(fake.asContext(), strategistInlineSections) };
+    return { inline, messages, fake, directions: recordsDirections(fake.asContext(), inPrompt) };
   }
 
   describe('simple-strategist', () => {
     it('should keep the overview and shrink the reports to the core plus directions', async () => {
-      const { inline, messages, directions } = await build('simple-strategist');
+      const { inline, messages, directions } = await build('simple-strategist', freshParameters, undefined, simpleStrategistInlineSections);
 
       expect(messages).toHaveLength(3);
       expect(messages.map((m) => m.role)).toEqual(['system', 'user', 'user']);
@@ -141,6 +145,35 @@ describe('strategist prompt builders in file mode', () => {
 
       expectTrailingDirections(messages, directions);
       expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+    });
+
+    it("should keep only our cities inline and name the other owners' city files", async () => {
+      const parameters = freshParameters();
+      const state = makeFixtureGameState();
+      const ownName = parameters.metadata!.YouAre!.Name;
+      const others = splitEntries('cities', state.cities).filter(({ entry }) => entry !== ownName);
+      expect(others.length).toBeGreaterThan(0);
+
+      const [, inline] = renderStrategistReports(parameters, state);
+      const [, core] = renderStrategistReports(parameters, state, { fileMode: true });
+      const cityHeading = (owner: string) => `## Player: ${owner}`;
+
+      expect(core).toContain(cityHeading(ownName));
+      expect(inline).toContain(cityHeading(ownName));
+      for (const { entry, name } of others) {
+        expect(inline).toContain(cityHeading(entry));
+        expect(core).not.toContain(cityHeading(entry));
+        expect(core).toContain(`/workspace/records/turn-${state.turn}/cities/${name}.md`);
+      }
+    });
+
+    it('should keep the whole cities report when our civilization has no entry', async () => {
+      const parameters = freshParameters();
+      parameters.metadata!.YouAre!.Name = 'Atlantis';
+      const state = makeFixtureGameState();
+      const [, core] = renderStrategistReports(parameters, state, { fileMode: true });
+      for (const { entry } of splitEntries('cities', state.cities)) expect(core).toContain(`## Player: ${entry}`);
+      expect(core).not.toContain('/cities/');
     });
 
     it('should build exactly the inline messages when the resolved tools exclude bash', async () => {

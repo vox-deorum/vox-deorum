@@ -52,8 +52,8 @@ export interface RenderSectionOptions {
 }
 
 /**
- * Sections a file-mode run reads from its records instead of its prompt. The simple strategist
- * leaves these out of its reports, and the records directions list them with their files.
+ * Sections a file-mode run may read from its records instead of its prompt. The records
+ * directions list those the caller does not keep inline, with their files.
  */
 export const fileModeOmittedSections: SectionKey[] = ["cities", "military", "events"];
 
@@ -62,6 +62,12 @@ export const fileModeOmittedSections: SectionKey[] = ["cities", "military", "eve
  * them so the run does not read the latest turn's copy again.
  */
 export const strategistInlineSections: SectionKey[] = ["options", "strategies", "victory", "players"];
+
+/**
+ * Sections the plain simple strategist keeps inline in file mode: the shared ones plus Military
+ * and our own Cities, which point to the other owners' city files.
+ */
+export const simpleStrategistInlineSections: SectionKey[] = [...strategistInlineSections, "cities", "military"];
 
 /** The section registry, keyed by section key. */
 export const sections: Record<SectionKey, SectionDefinition> = {

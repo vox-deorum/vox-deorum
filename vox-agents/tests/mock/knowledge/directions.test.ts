@@ -5,7 +5,7 @@ import { fileMode, recordsDirections } from '../../../src/knowledge/directions.j
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
-import { workspaceGuide, workspaceGuideFile } from '../../../src/utils/workspace/player-workspace.js';
+import { workspaceGuide, workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from './directions-fixtures.js';
 
@@ -74,6 +74,14 @@ describe('recordsDirections', () => {
       expect(text).not.toContain('turn-<N>/players.md');
     });
 
+    it('should leave sections the caller keeps inline out of the omitted list', () => {
+      record(1);
+      const text = recordsDirections(enableFileMode(bareContext(), temp.store), ['cities', 'military']);
+      expect(text).not.toContain('turn-<N>/cities.md');
+      expect(text).not.toContain('turn-<N>/military.md');
+      expect(text).toContain('turn-<N>/events-all.md');
+    });
+
     it('should name the sections the caller keeps in the prompt, and only those', () => {
       record(1);
       const context = enableFileMode(bareContext(), temp.store);
@@ -133,6 +141,52 @@ describe('recordsDirections', () => {
       expect(text).not.toContain(workspaceGuide('game').trim());
       expect(text).toContain('/workspace/shared/lessons');
       expect(text).toContain('/workspace/shared/library');
+    });
+  });
+
+  describe('recent notes', () => {
+    /** Commit one note file with a fixed write time. */
+    function writeNote(storePath: string, content: string, mtime: number): void {
+      temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: storePath, type: 'file', content, mtime }] });
+    }
+
+    /** Directions for a seat with a writable game folder. */
+    function directions(): string {
+      return recordsDirections(enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} }));
+    }
+
+    /** The bulleted paths after the earlier-notes line, in order. */
+    function earlierPaths(text: string): string[] {
+      return [...text.matchAll(/^- `(\/workspace\/game\/[^`]+)`$/gm)].map((match) => match[1]);
+    }
+
+    it('should show the newest note and name the five before it, newest first', () => {
+      for (let index = 0; index < 8; index++) writeNote(`game/notes/turn-${index}.md`, `Note body ${index}.`, 1000 + index);
+      writeNote(`game/${workspaceGuideFile}`, '# Guide\nNewest write of all.\n', 5000);
+
+      const text = directions();
+      expect(text).toContain('/workspace/game/notes/turn-7.md');
+      expect(text).toContain('Note body 7.');
+      expect(text).not.toContain('Note body 6.');
+      expect(earlierPaths(text)).toEqual([6, 5, 4, 3, 2].map((index) => `/workspace/game/notes/turn-${index}.md`));
+      expect(text).not.toContain('turn-1.md');
+    });
+
+    it('should show no notes block without notes or without a game folder', () => {
+      const withoutNotes = directions();
+      writeNote('game/plan.md', 'Plan body.', 1000);
+      const withoutFolder = recordsDirections(enableFileMode(bareContext(), temp.store, undefined, { game: false, shared: {} }));
+      expect(withoutNotes).not.toContain('Plan body.');
+      expect(withoutFolder).not.toContain('Plan body.');
+      expect(directions()).toContain('Plan body.');
+      expect(earlierPaths(directions())).toEqual([]);
+    });
+
+    it('should cap an oversized note', () => {
+      writeNote('game/plan.md', 'x'.repeat(workspaceOutputLimit + 500), 1000);
+      const text = directions();
+      expect(text).toContain('[truncated 500 chars');
+      expect(text).not.toContain('x'.repeat(workspaceOutputLimit + 1));
     });
   });
 

@@ -10,7 +10,7 @@ import type { ModelMessage } from "ai";
 import type { VoxContext } from "../infra/vox-context.js";
 import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
-import { workspaceGuide, workspaceGuideFile } from "../utils/workspace/player-workspace.js";
+import { capOutput, workspaceCwd, workspaceGuide, workspaceGuideFile } from "../utils/workspace/player-workspace.js";
 import { formatTurnRanges, recordedTurns, sectionFiles } from "./records.js";
 import { fileModeOmittedSections, sections, type SectionKey } from "./sections.js";
 
@@ -61,12 +61,36 @@ function notesGuide<T extends AgentParameters>(context: VoxContext<T>): { writab
   return { writable, empty: content === "", content };
 }
 
+/** How many earlier notes the records directions name after the latest one. */
+const earlierNotesShown = 5;
+
+/**
+ * The seat's game notes by recency: the text of the most recently written note and the paths of
+ * the five before it. The guide and folders are not notes. Undefined when the seat has no game
+ * folder or no notes yet.
+ */
+function recentNotes<T extends AgentParameters>(context: VoxContext<T>): { latest: { path: string; content: string }; earlier: string[] } | undefined {
+  const store = context.store;
+  if (!context.files?.game || !store) return undefined;
+  const notes = [...store.manifest()]
+    .filter(([storePath, entry]) => entry.type === "file" && storePath.startsWith("game/") && storePath !== `game/${workspaceGuideFile}`)
+    .sort(([pathA, a], [pathB, b]) => b.mtime - a.mtime || pathB.localeCompare(pathA))
+    .map(([storePath]) => storePath);
+  if (notes.length === 0) return undefined;
+  const content = Buffer.from(store.readFile(notes[0]) ?? new Uint8Array()).toString("utf8").trim();
+  return {
+    latest: { path: `${workspaceCwd}/${notes[0]}`, content: capOutput(content) },
+    earlier: notes.slice(1, 1 + earlierNotesShown).map((storePath) => `${workspaceCwd}/${storePath}`),
+  };
+}
+
 /**
  * The records directions: which folders are read-only or writable, which turns are recorded,
- * which sections to read from files, which are already in the prompt, and the game notes guide. The text reads only the recorded
- * turns (folders with a complete event slice) and the guide, so briefing commits leave it
- * unchanged within a turn, and the message built from it carries no cache breakpoint. An agent
- * editing the guide changes it for later runs.
+ * which sections to read from files, which are already in the prompt, the game notes guide, and
+ * the latest notes. The text reads only the recorded turns (folders with a complete event slice),
+ * the guide, and the notes, so briefing commits leave it unchanged within a turn, and the message
+ * built from it carries no cache breakpoint. An agent editing the guide or writing a note changes
+ * it for later runs.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
  * @param inPrompt - Sections already in the prompt for the latest turn, named so the run skips them
@@ -80,8 +104,11 @@ export function recordsDirections<T extends AgentParameters>(context: VoxContext
     hasTurns: turns.length > 0,
     turnRanges: formatTurnRanges(turns),
     latestTurn: turns.at(-1),
-    omitted: fileModeOmittedSections.map((key) => ({ title: sections[key].title, files: sectionFiles(sections[key]) })),
+    omitted: fileModeOmittedSections
+      .filter((key) => !inPrompt.includes(key))
+      .map((key) => ({ title: sections[key].title, files: sectionFiles(sections[key]) })),
     inPrompt: inPrompt.map((key) => sections[key].title).join(", ") || false,
     guide: notesGuide(context) ?? false,
+    notes: recentNotes(context) ?? false,
   });
 }

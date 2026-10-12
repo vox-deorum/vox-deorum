@@ -108,6 +108,8 @@ export async function evaluateOn<TParameters extends AgentParameters, TQuestions
         model: getEvaluationModel(model, host),
         state: input,
         questions: options.questions,
+        // Every evaluation model retries through exponentialRetry, so the SDK's own retry stays off.
+        maxRetries: 0,
         // Cancellation: the active root's signal, so aborting the run stops the evaluation.
         abortSignal: host.currentSignal(),
       });

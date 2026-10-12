@@ -159,7 +159,7 @@ export function workspaceWritable(files: ResolvedFilesConfig): boolean {
 }
 
 /** Cut a stream to the output limit, noting how much was dropped. */
-function capOutput(text: string): string {
+export function capOutput(text: string): string {
   if (text.length <= workspaceOutputLimit) return text;
   return `${text.slice(0, workspaceOutputLimit)}\n[truncated ${text.length - workspaceOutputLimit} chars; read the rest in pieces with sed -n, head, tail, or grep]`;
 }
@@ -178,8 +178,9 @@ This folder outlives the current game. Other seats and future games read it too.
   return `# ${workspaceGuideFile}
 This folder is shared by every agent serving your civilization in this game, and it persists across turns. You will:
 
-- Keep durable knowledge and dated turn snapshots in consistent folders, for example \`notes/\` or \`snapshots/\`.
-  - Clearly distinguish observations, inferences, and plans. Current game tools are the source of truth and override stale notes.
+- Keep one current plan, for example \`plan.md\`, and update it in place with goals, open commitments, and what to check next. Every agent sees the most recently written note at the start of each run, and the names of the five before it.
+  - Put other durable knowledge in consistent folders, for example \`notes/\`.
+  - Clearly distinguish observations, inferences, and plans. The latest reports and records are the source of truth and override stale notes.
   - The host already records each turn's reports and events in \`${workspaceRecordsPath}\`, so do not copy them here.
 - You may improve this guide and organize the folder when useful.
   - Only put lasting instructions for all agents in this guide.

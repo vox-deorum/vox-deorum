@@ -26,6 +26,9 @@ vi.mock('@ai-sdk/typesafe-ai', () => ({
   typeSafeAi: { evaluationModel: sdkMocks.evaluationModel },
 }));
 
+// Retry backoff resolves immediately.
+vi.mock('node:timers/promises', () => ({ setTimeout: async () => {} }));
+
 const modelsMocks = vi.hoisted(() => ({ chatModel: undefined as unknown }));
 
 vi.mock('../../../src/utils/models/models.js', async (importOriginal) => {
@@ -98,14 +101,42 @@ describe('evaluation model factory', () => {
   });
 
   describe('getEvaluationModel typesafe provider', () => {
-    it('should build the native evaluation model from the configured name', () => {
-      const native = { specificationVersion: 'v4' };
+    it('should preserve the native model contract including its prototype provider getter', () => {
+      const native = new class {
+        readonly specificationVersion = 'v4';
+        readonly modelId = 'jev-latest';
+        readonly supportedQuestionTypes = ['choice', 'score', 'boolean'];
+        readonly doEvaluate = vi.fn();
+
+        /** Expose provider identity through a prototype getter like the TypeSafe model. */
+        get provider(): string { return 'typesafe.evaluation'; }
+      }();
       sdkMocks.evaluationModel.mockReturnValue(native);
 
       const model = getEvaluationModel({ provider: 'typesafe', name: 'jev-latest' });
 
       expect(sdkMocks.evaluationModel).toHaveBeenCalledWith('jev-latest');
-      expect(model).toBe(native as never);
+      expect(model).toMatchObject({
+        specificationVersion: native.specificationVersion,
+        provider: native.provider,
+        modelId: native.modelId,
+        supportedQuestionTypes: native.supportedQuestionTypes,
+      });
+    });
+
+    it('should retry transient connection failures instead of surfacing them', async () => {
+      const result = { answers: {}, usage: {}, warnings: [], response: { modelId: 'jev-latest', timestamp: new Date() } };
+      const doEvaluate = vi.fn()
+        .mockRejectedValueOnce(Object.assign(new Error('Cannot connect to API: getaddrinfo EAI_AGAIN'), { isRetryable: true }))
+        .mockRejectedValueOnce(Object.assign(new Error('Cannot connect to API: getaddrinfo EAI_AGAIN'), { isRetryable: true }))
+        .mockRejectedValueOnce(Object.assign(new Error('Cannot connect to API: getaddrinfo EAI_AGAIN'), { isRetryable: true }))
+        .mockResolvedValueOnce(result);
+      sdkMocks.evaluationModel.mockReturnValue({ specificationVersion: 'v4', doEvaluate });
+
+      const model = getEvaluationModel({ provider: 'typesafe', name: 'jev-latest' }, context);
+
+      await expect(model.doEvaluate({ state: 'the situation', questions } as never)).resolves.toBe(result);
+      expect(doEvaluate).toHaveBeenCalledTimes(4);
     });
   });
 

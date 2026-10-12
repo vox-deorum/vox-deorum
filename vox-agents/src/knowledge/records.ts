@@ -67,28 +67,37 @@ function partLabel(key: SectionKey, entryKey: string, value: unknown): string {
   return entryKey;
 }
 
+/** One top-level entry of a report being split, with its label and file name (no extension). */
+interface SplitEntry { entry: string; value: unknown; label: string; name: string }
+
 /**
- * Split a report's Markdown by its top-level entries (civilizations, city owners, or military
- * zones). Each part keeps the report's heading configuration and gets a readable slug, with a
- * numeric suffix when two parts would share a name.
+ * The top-level entries of a report being split (civilizations, city owners, or military zones).
+ * Each gets a readable slug, with a numeric suffix when two entries would share a name.
  */
-function splitParts(key: SectionKey, data: unknown): Array<{ name: string; content: string }> {
+export function splitEntries(key: SectionKey, data: unknown): SplitEntry[] {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
-  const report = data as Record<string, unknown>;
-  const config = sections[key].markdown ?? (report._markdownConfig as Partial<JsonToMarkdownConfig> | undefined) ?? {};
   const used = new Set<string>();
-  const parts: Array<{ name: string; content: string }> = [];
-  for (const [entryKey, value] of Object.entries(report)) {
-    if (entryKey.startsWith('_')) continue;
-    const label = partLabel(key, entryKey, value);
+  const entries: SplitEntry[] = [];
+  for (const [entry, value] of Object.entries(data as Record<string, unknown>)) {
+    if (entry.startsWith('_')) continue;
+    const label = partLabel(key, entry, value);
     const base = slug(label);
     let name = base;
     for (let index = 2; used.has(name); index++) name = `${base}-${index}`;
     used.add(name);
-    const body = jsonToMarkdown({ [entryKey]: value }, config);
-    parts.push({ name, content: `# ${sections[key].title}: ${label}\n\n${body}\n` });
+    entries.push({ entry, value, label, name });
   }
-  return parts;
+  return entries;
+}
+
+/** Split a report's Markdown by its top-level entries, each part keeping the report's heading configuration. */
+function splitParts(key: SectionKey, data: unknown): Array<{ name: string; content: string }> {
+  const report = data as Record<string, unknown>;
+  const config = sections[key].markdown ?? (report?._markdownConfig as Partial<JsonToMarkdownConfig> | undefined) ?? {};
+  return splitEntries(key, data).map(({ entry, value, label, name }) => ({
+    name,
+    content: `# ${sections[key].title}: ${label}\n\n${jsonToMarkdown({ [entry]: value }, config)}\n`,
+  }));
 }
 
 /** The data each turn-scoped section records, read from the turn's state. */
