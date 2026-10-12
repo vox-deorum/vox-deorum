@@ -21,6 +21,17 @@ function failure(message: string): WorkspaceExecResult {
 }
 
 /**
+ * Render a command result as the model reads it: stdout as is, then stderr and the exit code
+ * only when they carry something.
+ */
+export function bashResultText({ stdout, stderr, exitCode }: WorkspaceExecResult): string {
+  const parts = [stdout.trimEnd()];
+  if (stderr) parts.push(`[stderr]\n${stderr.trimEnd()}`);
+  if (exitCode !== 0) parts.push(`[exit code ${exitCode}]`);
+  return parts.filter((part) => part).join('\n') || '[completed with no output]';
+}
+
+/**
  * Create the bash tool for a context. The description covers only shell mechanics and leaves the
  * folders to the records directions, so it is the same for every seat, turn, and call. Each call
  * runs in the workspace of the player and game in the active parameters, stops with the active
@@ -36,7 +47,7 @@ export function createBashTool<TParameters extends AgentParameters>(context: Vox
     description: [
       `Run a bash script in a simulated shell with file access. Each call starts in ${workspaceCwd} with a fresh shell state. The \`# Records\` message lists the mounted folders and which ones you can write.`,
       'There is no network, Python, or JavaScript. Available commands include ls, cat, head, tail, grep, rg, sed, awk, find, sort, jq, sqlite3, and tee. Write files with heredocs.',
-      'Returns stdout, stderr, and exitCode; long output is truncated.',
+      'Returns stdout as text, followed by stderr and the exit code when they are present; long output is truncated.',
     ].join('\n'),
     inputSchema: z.object({
       Command: z.string().describe('The bash script to run. Combine related reads and writes into one script.'),
@@ -54,5 +65,6 @@ export function createBashTool<TParameters extends AgentParameters>(context: Vox
         author: context.currentAgentName ?? 'host',
       });
     },
+    toModelText: bashResultText,
   }, context);
 }

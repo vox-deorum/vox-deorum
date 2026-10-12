@@ -12,7 +12,7 @@ import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
 import { workspaceGuide, workspaceGuideFile } from "../utils/workspace/player-workspace.js";
 import { formatTurnRanges, recordedTurns, sectionFiles } from "./records.js";
-import { fileModeOmittedSections, sections } from "./sections.js";
+import { fileModeOmittedSections, sections, type SectionKey } from "./sections.js";
 
 /**
  * Whether a run with these declared tools reads records: the context has files on and the tools
@@ -37,9 +37,13 @@ export function fileMode<T extends AgentParameters>(context: VoxContext<T>): boo
   return resolved !== undefined && runUsesFiles(context, resolved.tools);
 }
 
-/** Append records directions at the caller's chosen position when this execution is in file mode. */
-export function appendRecordsDirections<T extends AgentParameters>(messages: ModelMessage[], context: VoxContext<T>): void {
-  if (fileMode(context)) messages.push({ role: "user", content: recordsDirections(context) });
+/**
+ * Append records directions at the caller's chosen position when this execution is in file mode.
+ *
+ * @param inPrompt - Sections the caller already put in the prompt for the latest turn
+ */
+export function appendRecordsDirections<T extends AgentParameters>(messages: ModelMessage[], context: VoxContext<T>, inPrompt: SectionKey[] = []): void {
+  if (fileMode(context)) messages.push({ role: "user", content: recordsDirections(context, inPrompt) });
 }
 
 /**
@@ -59,14 +63,15 @@ function notesGuide<T extends AgentParameters>(context: VoxContext<T>): { writab
 
 /**
  * The records directions: which folders are read-only or writable, which turns are recorded,
- * which sections to read from files, and the game notes guide. The text reads only the recorded
+ * which sections to read from files, which are already in the prompt, and the game notes guide. The text reads only the recorded
  * turns (folders with a complete event slice) and the guide, so briefing commits leave it
  * unchanged within a turn, and the message built from it carries no cache breakpoint. An agent
  * editing the guide changes it for later runs.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
+ * @param inPrompt - Sections already in the prompt for the latest turn, named so the run skips them
  */
-export function recordsDirections<T extends AgentParameters>(context: VoxContext<T>): string {
+export function recordsDirections<T extends AgentParameters>(context: VoxContext<T>, inPrompt: SectionKey[] = []): string {
   const turns = context.store ? recordedTurns(context.store.manifest()) : [];
   const files = context.files;
   return renderSystemPrompt(context, "records-directions", {
@@ -76,6 +81,7 @@ export function recordsDirections<T extends AgentParameters>(context: VoxContext
     turnRanges: formatTurnRanges(turns),
     latestTurn: turns.at(-1),
     omitted: fileModeOmittedSections.map((key) => ({ title: sections[key].title, files: sectionFiles(sections[key]) })),
+    inPrompt: inPrompt.map((key) => sections[key].title).join(", ") || false,
     guide: notesGuide(context) ?? false,
   });
 }

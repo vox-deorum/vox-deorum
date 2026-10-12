@@ -63,7 +63,7 @@ Players read the game notes, including the guide, by exporting the store (see [R
 
 The tool description covers only shell mechanics: where each call starts, which commands exist, how files are written, and what a result contains. It does not list folders. The records directions message names the mounted folders and which ones the agent can write, and the description is the same for every seat.
 
-Each output stream is capped at 10,000 characters.
+Each output stream is capped at 30,000 characters (`workspaceOutputLimit`), and a cut stream ends with a note on how to read the rest. The model receives the result as plain text: stdout first, then stderr and the exit code only when they are present. Telemetry keeps the full result object.
 
 ## Step budget
 

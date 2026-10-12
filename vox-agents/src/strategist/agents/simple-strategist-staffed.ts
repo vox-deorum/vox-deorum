@@ -11,7 +11,7 @@ import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
-import { renderSection } from "../../knowledge/sections.js";
+import { renderSection, strategistInlineSections } from "../../knowledge/sections.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
@@ -138,7 +138,7 @@ ${renderSection("options", Options)}`.trim(),
       role: "user",
       content: reportsContent
     }];
-    appendRecordsDirections(messages, context);
+    appendRecordsDirections(messages, context, strategistInlineSections);
     return messages;
   }
 

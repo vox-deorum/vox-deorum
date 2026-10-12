@@ -95,11 +95,12 @@ In file mode, an agent adds **records directions** to its opening messages throu
 - a table of the mounted folders and their access, with the records and the shared reference read-only, the game notes folder and each shared folder read-only or writable according to the seat's files setting, and `/tmp` writable. The table is the only folder listing, because the workspace section and the bash tool description leave folders out;
 - which turns are recorded, as ranges, and the latest turn folder. It states that the recorded turns are the `<N>` in `turn-<N>` paths, the numbers the workspace section's example scripts assign to `turn`;
 - when to open the records `CATALOG.md`: only for the full section index, gaps between turn folders, briefings, or file sizes;
-- which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports.
+- which sections are not given inline (cities, military, and events) and the file pattern for each. The list is `fileModeOmittedSections` in `src/knowledge/sections.ts`, which the simple strategist also uses to shrink its reports;
+- which sections the caller already keeps in the prompt for the latest turn, so the model reads their files only for earlier turns. The simple strategist variants pass `strategistInlineSections` (options, strategies, victory progress, and players); envoys pass none.
 
 Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, others, and system files.
 
-The message ends with the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
+The message ends with the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text, noting that the file need not be read again. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
 
 The directions depend on which turns are recorded and on the guide's text. Briefing commits still leave the text unchanged within a turn. An agent that edits the guide changes it for later runs. The directions message carries no cache breakpoint.
 

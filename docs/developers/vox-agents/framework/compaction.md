@@ -93,7 +93,7 @@ Step 4 then runs on the compacted history with a new closing reminder ("17 steps
 
 ## What compaction does not do
 
-- It never shrinks the latest step. If one step's output alone is too large for the model, compaction cannot help; the `bash` tool caps each output stream at 10,000 characters to make that unlikely.
+- It never shrinks the latest step. If one step's output alone is too large for the model, compaction cannot help; the `bash` tool caps each output stream at 30,000 characters to make that unlikely.
 - It never rewrites the initial prompt, so the cached prefix stays valid (see [Caching](caching.md)). With files on, the run marks its last initial message (#2 above) as a cache anchor, and everything compaction changes comes after it.
 - It does not carry anything across runs. Each agent run starts with a fresh history; the workspace is what persists.
 

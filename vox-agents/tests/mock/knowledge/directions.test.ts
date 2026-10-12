@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileMode, recordsDirections } from '../../../src/knowledge/directions.js';
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
+import { sections } from '../../../src/knowledge/sections.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import { workspaceGuide, workspaceGuideFile } from '../../../src/utils/workspace/player-workspace.js';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
@@ -71,6 +72,17 @@ describe('recordsDirections', () => {
       expect(text).toContain('turn-<N>/events-all.md');
       for (const [suffix] of eventCategoryFiles) expect(text).toContain(`events-${suffix}.md`);
       expect(text).not.toContain('turn-<N>/players.md');
+    });
+
+    it('should name the sections the caller keeps in the prompt, and only those', () => {
+      record(1);
+      const context = enableFileMode(bareContext(), temp.store);
+      const plain = recordsDirections(context);
+      const inline = recordsDirections(context, ['options', 'victory']);
+      expect(inline).toContain(sections.options.title);
+      expect(inline).toContain(sections.victory.title);
+      expect(plain).not.toContain(sections.victory.title);
+      expect(inline.length).toBeGreaterThan(plain.length);
     });
   });
 

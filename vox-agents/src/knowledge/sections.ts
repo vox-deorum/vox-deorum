@@ -57,6 +57,12 @@ export interface RenderSectionOptions {
  */
 export const fileModeOmittedSections: SectionKey[] = ["cities", "military", "events"];
 
+/**
+ * Sections every simple strategist variant keeps inline in file mode. The records directions name
+ * them so the run does not read the latest turn's copy again.
+ */
+export const strategistInlineSections: SectionKey[] = ["options", "strategies", "victory", "players"];
+
 /** The section registry, keyed by section key. */
 export const sections: Record<SectionKey, SectionDefinition> = {
   situation: { key: "situation", title: "Situation", scope: "game" },

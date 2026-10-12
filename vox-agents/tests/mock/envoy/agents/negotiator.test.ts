@@ -823,7 +823,7 @@ describe('getInitialMessages task determination', () => {
       const plain = await negotiator.getInitialMessages(params, negotiatorInput(), createFakeVoxContext().asContext());
       const messages = await negotiator.getInitialMessages(params, negotiatorInput(), fake.asContext());
       const contextMessages = buildGameContextMessages(params);
-      const directions = recordsDirections(fake.asContext(), params);
+      const directions = recordsDirections(fake.asContext());
 
       expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
       // The directions ride between the game context and the deal grounding; nothing else moves.
@@ -834,7 +834,7 @@ describe('getInitialMessages task determination', () => {
       mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
       const negotiator = new Negotiator();
       // The same store and parameters a file-mode run would have used.
-      const directions = recordsDirections(enableFileMode(createFakeVoxContext(), temp.store).asContext(), params);
+      const directions = recordsDirections(enableFileMode(createFakeVoxContext(), temp.store).asContext());
 
       const messages = await negotiator.getInitialMessages(params, negotiatorInput(), createFakeVoxContext().asContext());
 

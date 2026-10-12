@@ -24,7 +24,7 @@ const logger = createLogger('PlayerWorkspace');
 export const workspaceCwd = '/workspace';
 
 /** Characters kept from each output stream before the rest is cut off. */
-export const workspaceOutputLimit = 10000;
+export const workspaceOutputLimit = 30000;
 
 /** Name of the guide file seeded at the writable game notes root and writable shared roots. */
 export const workspaceGuideFile = 'AGENTS.md';
@@ -161,7 +161,7 @@ export function workspaceWritable(files: ResolvedFilesConfig): boolean {
 /** Cut a stream to the output limit, noting how much was dropped. */
 function capOutput(text: string): string {
   if (text.length <= workspaceOutputLimit) return text;
-  return `${text.slice(0, workspaceOutputLimit)}\n[truncated ${text.length - workspaceOutputLimit} chars]`;
+  return `${text.slice(0, workspaceOutputLimit)}\n[truncated ${text.length - workspaceOutputLimit} chars; read the rest in pieces with sed -n, head, tail, or grep]`;
 }
 
 /** The default guide for the game notes or a shared mount root. */

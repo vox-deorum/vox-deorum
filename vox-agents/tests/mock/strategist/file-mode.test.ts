@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelMessage } from 'ai';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { recordsDirections } from '../../../src/knowledge/directions.js';
+import { strategistInlineSections } from '../../../src/knowledge/sections.js';
 import { sections, type SectionKey } from '../../../src/knowledge/sections.js';
 import { countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
@@ -117,7 +118,7 @@ describe('strategist prompt builders in file mode', () => {
     const fake = enableFileMode(createFakeVoxContext(), temp.store, tools);
     const parameters = makeParameters();
     const messages = (await agent(name).getInitialMessages(parameters, undefined, fake.asContext())) as ModelMessage[];
-    return { inline, messages, fake, directions: recordsDirections(fake.asContext()) };
+    return { inline, messages, fake, directions: recordsDirections(fake.asContext(), strategistInlineSections) };
   }
 
   describe('simple-strategist', () => {

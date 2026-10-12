@@ -29,6 +29,10 @@ These sections are not in your prompt. Read them from the records when you need 
 {{#omitted}}
 - {{title}}: {{files}}
 {{/omitted}}
+{{#inPrompt}}
+
+These sections are already in your prompt for the latest turn. Read their record files only for earlier turns: {{inPrompt}}.
+{{/inPrompt}}
 
 Every recorded turn stays readable. You choose whether to read events, and which turns, categories, and portions of them to read.
 Open `/workspace/records/CATALOG.md` only when you need the full section index, gaps between turn folders, briefings, or file sizes.
@@ -45,7 +49,7 @@ This guide is read-only for you.
 It is empty.
 {{/empty}}
 {{^empty}}
-Its current text:
+Its current text is below (don't re-read the file):
 
 ````markdown
 {{content}}

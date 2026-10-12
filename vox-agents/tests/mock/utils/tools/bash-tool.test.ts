@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { VoxContext } from '../../../../src/infra/vox-context.js';
 import type { AgentParameters } from '../../../../src/infra/vox-agent.js';
 import { config } from '../../../../src/utils/config.js';
-import { bashToolName } from '../../../../src/utils/tools/bash-tool.js';
+import { bashResultText, bashToolName } from '../../../../src/utils/tools/bash-tool.js';
 import { workspaceNodeSupported } from '../../../../src/utils/workspace/player-workspace.js';
 import { WorkspaceStore } from '../../../../src/utils/workspace/workspace-store.js';
 
@@ -88,6 +88,22 @@ describe('bash tool', () => {
       tool.execute({ Command: 'echo hi' }, { toolCallId: 'c1', messages: [] }),
     );
     expect(result).toMatchObject({ stdout: '', exitCode: 1 });
+  });
+
+  it('should hand the model plain text that shows stderr and the exit code only when present', async () => {
+    const seat = new VoxContext<AgentParameters>({}, 'bash-model-output');
+    seat.files = files;
+    seat.registerAgentTools();
+    const tool = seat.tools[bashToolName] as any;
+
+    const output = { stdout: 'line "one"\nline two\n', stderr: '', exitCode: 0 };
+    expect(await tool.toModelOutput({ toolCallId: 'c1', input: { Command: 'cat a.md' }, output }))
+      .toEqual({ type: 'text', value: 'line "one"\nline two' });
+
+    const failed = bashResultText({ stdout: '', stderr: 'no such file\n', exitCode: 1 });
+    expect(failed).toContain('no such file');
+    expect(failed).toContain('1');
+    expect(bashResultText({ stdout: '', stderr: '', exitCode: 0 })).not.toBe('');
   });
 
   it.skipIf(!workspaceNodeSupported())('should run commands in the workspace of the run parameters and commit notes', async () => {

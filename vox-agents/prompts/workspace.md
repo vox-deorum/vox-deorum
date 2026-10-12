@@ -2,13 +2,17 @@
 You have a file workspace through the `{{toolName}}` {{toolNoun}}. The `# Records` message lists its folders, which ones you can write, and the recorded turns.
 - Keep notes organized. Current game information from your {{terminalNoun}} should take priority over stale notes.
 {{#writable}}
-- Save useful notes with `{{toolName}}`: game observations, inferences, and plans only in a writable game notes folder; generalized lessons and reusable references only in writable shared folders.{{#terminals}} Save before or alongside your terminal {{terminalNoun}}.{{/terminals}}
+- Save useful notes with `{{toolName}}`: 
+  - Game observations, inferences, and plans in a writable game notes folder;
+  - Generalized lessons and reusable references in writable shared folders.
 {{/writable}}
-- Each round of `{{toolName}}` calls uses one step of your limited step budget. Make independent `{{toolName}}` calls in parallel, or combine them in one script.
-- Output is cut at {{outputLimit}} characters per stream, so read large files in pieces.
+- Each round of `{{toolName}}` calls uses one step of your limited step budget. Minimize the number of steps by:
+  - In each round, read as much as you need{{#terminals}}。
+  - Make all decisions{{#writable}}, notes,{{/writable}} and your terminal call together in the next response{{/terminals}}.
+- Output is cut at {{outputLimit}} characters per stream. When a file may be larger, read it in pieces.
 - Use these record reads only when `# Records` lists recorded turns. In each script, set `turn` to a listed number, then define `record="/workspace/records/turn-$turn"` before reading:
-  - Check sizes first: `wc -c "$record"/*.md`.
+  - Read several files at once: `cat "$record/cities.md" "$record/military.md" "$record/events-all.md"`.
   - Find lines: `grep -n "Babylon" "$record/players.md"`, or search every turn with `grep -rn`.
-  - Read a slice: `head -n 60 "$record/cities.md"` or `sed -n '120,180p' "$record/military.md"`.
+  - Read a slice: `head -n 60 "$record/cities.md"` or `sed -n '120,180p' "$record/military.md"`, after `wc -c "$record"/*.md` shows the sizes.
   - Query a JSON twin: `jq 'keys' "$record/players.json"`.
   - When you need one civilization or zone, prefer split parts: list `"$record/players/"`, then read the matching file.

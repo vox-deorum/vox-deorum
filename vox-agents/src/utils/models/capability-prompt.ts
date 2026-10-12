@@ -17,6 +17,11 @@ export const capabilityHeading = '# Extra Capabilities';
 /** What the prompt calls a tool: 'actions' under Claude Code's action framing. */
 export type TerminalNoun = 'tools' | 'actions';
 
+/** The singular of a {@link TerminalNoun}. */
+function singular(noun: TerminalNoun): string {
+  return noun === 'actions' ? 'action' : 'tool';
+}
+
 /** The capabilities a request may describe. */
 export interface Capabilities {
   /** The seat's workspace, described only when the request declares the bash tool. */
@@ -47,7 +52,7 @@ function workspaceSection(
 ): string {
   return renderSystemPrompt(prompts === undefined ? undefined : { prompts }, 'workspace', {
     toolName: bashToolName,
-    toolNoun: terminalNoun === 'actions' ? 'action' : 'tool',
+    toolNoun: singular(terminalNoun),
     terminalNoun,
     writable: workspaceWritable(files),
     terminals: hasTerminals,
@@ -80,7 +85,7 @@ export function capabilityInstruction(
 
   const terminalList = formatToolChoiceList(terminalNames);
   const terminalRule = terminalList
-    ? ` Finish any needed calls before calling terminal ${terminalNoun}: ${terminalList}. The run ends once terminal calls are completed.`
+    ? ` Calling a terminal ${singular(terminalNoun)} (${terminalList}) ends the run after that response, so make your other calls in the same response.`
     : '';
   const sections = [
     `${capabilityHeading}

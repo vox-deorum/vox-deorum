@@ -177,7 +177,7 @@ describe('LiveEnvoy.getInitialMessages file mode', () => {
     const fake = enableFileMode(createFakeVoxContext(), temp.store);
     const parameters = liveParams();
     const messages = await spokesperson.getInitialMessages(parameters, chat(), fake.asContext());
-    return { plain, messages, directions: recordsDirections(fake.asContext(), parameters) };
+    return { plain, messages, directions: recordsDirections(fake.asContext()) };
   }
 
   it('adds the directions once, after the game context and ahead of the conversation record', async () => {

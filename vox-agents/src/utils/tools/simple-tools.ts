@@ -49,6 +49,8 @@ export interface SimpleToolConfig<TParameters extends AgentParameters, TInput = 
   outputSchema?: ZodType<TOutput>;
   /** The function to execute */
   execute: SimpleToolFunction<TParameters, TInput, TOutput>;
+  /** Optional text rendering of a result for the model; without it the model receives the result as JSON */
+  toModelText?: (output: TOutput) => string;
 }
 
 /**
@@ -99,9 +101,13 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
     // Schema not representable as JSON Schema: keep the raw schema rather than break tool creation.
   }
 
+  const toModelText = config.toModelText;
   return dynamicTool({
     description: config.description,
     inputSchema: inputSchema as any,
+    ...(toModelText && {
+      toModelOutput: ({ output }: { output: unknown }) => ({ type: 'text' as const, value: toModelText(output as TOutput) }),
+    }),
     execute: async (input, options) => {
       const span = tracer.startSpan(`simple-tool.${config.name}`, {
         attributes: {
