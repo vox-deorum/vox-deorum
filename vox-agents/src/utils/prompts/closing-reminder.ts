@@ -18,9 +18,10 @@ import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
  * Decisions:
  * - Steps left: the run counts its steps down (files on).
  * - Finalize: from the second step on, asks for all decisions together in one response through the
- *   completion tools allowed on this step. With `notes` (bash may run and a workspace folder is
- *   writable), it asks the model to save notes with bash in that same response, since a finishing
- *   call ends the run and there is no subsequent step.
+ *   completion tools allowed on this step. A finishing call ends the run, so results of other calls
+ *   in that response are never seen, and it asks the model to do all reading on earlier steps.
+ *   With `notes` (bash may run and a workspace folder is writable), it limits bash in that same
+ *   response to writing notes.
  * Returns undefined when no part applies.
  *
  * @param executable - The tools that may run on this step
@@ -43,8 +44,8 @@ export function buildClosingReminder(
   ];
   const decisions = [
     stepsLeft === undefined ? '' : stepsLeft > 1 ? `IMPORTANT: You have ${stepsLeft} steps left to make your decisions.` : `IMPORTANT: This is your last step to make your decisions.`,
-    step > 0 && finishing ? `Once you are ready, make all your decisions together in one response by calling ${finishing} following the EXACT provided format.` : '',
-    step > 0 && finishing && notes ? `In that same response, use \`${bashToolName}\` to save any notes you want to keep, since finishing ends the run.` : '',
+    step > 0 && finishing ? `Once you have the information you need, make all your decisions together in one response by calling ${finishing} following the EXACT provided format. Finishing ends the run.` : '',
+    step > 0 && finishing && notes ? `In that same response, use \`${bashToolName}\` only to write any notes you want to keep.` : '',
   ];
   return [rules, decisions]
     .map((parts) => parts.filter(Boolean).join(' '))

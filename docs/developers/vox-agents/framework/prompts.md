@@ -82,7 +82,7 @@ One request on step 2 of a strategist run, top to bottom, for a provider with na
 └─────────────────────────────────────────────┘
 ```
 
-The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for all decisions together in one finishing response, and when bash can run and a workspace folder is writable, it explicitly asks the model to save any notes with `bash` in that same reply, since there is no subsequent step.
+The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for all decisions together in one finishing response. Since finishing ends the run, the model never sees results of other calls in that reply, so the reminder asks it to do all reading on earlier steps. When bash can run and a workspace folder is writable, it limits `bash` in the finishing reply to writing notes.
 
 For models in prompt mode, the tool block is removed and its content moves into the text. See [Prompt-mode tool calling](../models/middleware.md#prompt-mode-tool-calling).
 
@@ -173,7 +173,7 @@ The closing reminder has two paragraphs: tool rules, then decisions. Parts that 
 | Tool rules | "You must call tools on this step", asking for every call at once | The step requires a tool call. |
 | Tool rules | "You may only call X or Y", or "no tools are available" | Some offered tools are not allowed on this step. |
 | Decisions | "You have N steps left to make your decisions", or "this is your last step" | The seat has files on. |
-| Decisions | "Make all your decisions together in one response by calling ..." | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. With bash able to run and a workspace folder writable, it also asks the model to save notes with `bash` in that same response. |
+| Decisions | "Make all your decisions together in one response by calling ..." | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. It warns that finishing ends the run, so reading belongs on earlier steps. With bash able to run and a workspace folder writable, it limits `bash` in that same response to writing notes. |
 
 The "must call" requirement lives here rather than in provider middleware, so every provider gets it and the earlier parts of the prompt never depend on it. When there is nothing to say, such as on the first step of an agent that does not require tools, no message is added. An agent can override `continuationNudge` to change or drop the reminder.
 
