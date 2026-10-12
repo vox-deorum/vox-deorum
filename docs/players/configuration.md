@@ -33,7 +33,7 @@ A Codex or Claude Code model can reach the web during its turn when its model op
 
 ## File workspace
 
-The per-seat `files` setting gives one AI civilization's agents a `bash` tool: a simulated shell, on any provider, where they can keep notes and work with data. It is off by default. There is no network, Python, or JavaScript; common text tools, `jq`, and `sqlite3` work.
+The per-seat `files` setting gives one AI civilization's agents a `bash` tool: a simulated shell, on any provider, where they can keep notes and work with data. It is off by default. There is no network or Python. Common text tools, `jq`, `sqlite3`, and JavaScript (for calculations) work.
 
 `"files": "write"` or `"read"` is the shorthand that gives your seat's game folder write or read access. The full form is:
 

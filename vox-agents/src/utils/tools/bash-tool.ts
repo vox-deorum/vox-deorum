@@ -46,7 +46,8 @@ export function createBashTool<TParameters extends AgentParameters>(context: Vox
     name: bashToolName,
     description: [
       `Run a bash script in a simulated shell with file access. Each call starts in ${workspaceCwd} with a fresh shell state. The \`# Records\` message lists the mounted folders and which ones you can write.`,
-      'There is no network, Python, or JavaScript. Available commands include ls, cat, head, tail, grep, rg, sed, awk, find, sort, jq, sqlite3, and tee. Write files with heredocs.',
+      'There is no network or Python. Available commands include ls, cat, head, tail, grep, rg, sed, awk, find, sort, jq, sqlite3, tee, and js-exec. Write files with heredocs.',
+      'For calculations, run JavaScript with `js-exec -c \'...\'` or a script file; it can read and write workspace files through the `fs` module. `$(( ))` is integer-only.',
       'Returns stdout as text, followed by stderr and the exit code when they are present; long output is truncated.',
     ].join('\n'),
     inputSchema: z.object({

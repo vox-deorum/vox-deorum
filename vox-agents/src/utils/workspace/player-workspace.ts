@@ -252,7 +252,8 @@ export class PlayerWorkspace {
    * refused write to a read-only mount or a path that resolves outside a mount, come back as
    * stderr with exit code 1 rather than as exceptions; a script that throws this way commits
    * nothing. A command whose run was cancelled also commits nothing. The signal stops scripts
-   * that yield; a CPU-bound loop is ended by just-bash's command-count limit instead.
+   * that yield, including `js-exec`; a CPU-bound shell loop is ended by just-bash's command-count
+   * limit, and a runaway `js-exec` script by its QuickJS timeout.
    *
    * @param command - The script to run
    * @param signal - The command's run signal: cancels the script and rejects its commit
@@ -317,7 +318,7 @@ export class PlayerWorkspace {
     }
 
     const filesystem = new MountableFs({ base: new InMemoryFs(), mounts });
-    return { bash: new Bash({ fs: filesystem, cwd: workspaceCwd, python: false, javascript: false }), notes };
+    return { bash: new Bash({ fs: filesystem, cwd: workspaceCwd, python: false, javascript: true }), notes };
   }
 }
 

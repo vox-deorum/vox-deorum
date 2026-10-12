@@ -1,6 +1,6 @@
 # Seat files
 
-The `files` setting gives a seat's agents a place to read records and keep notes. When it is on, every agent of that seat that uses tools also gets a `bash` tool. The shell is simulated (just-bash): it has common text tools, `jq`, and `sqlite3`, but no network, Python, or JavaScript. It works the same on every provider.
+The `files` setting gives a seat's agents a place to read records and keep notes. When it is on, every agent of that seat that uses tools also gets a `bash` tool. The shell is simulated (just-bash): it has common text tools, `jq`, `sqlite3`, and `js-exec` for JavaScript, but no network or Python. It works the same on every provider.
 
 With files on, a strategist can look back at earlier turns, keep its own notes between turns, and share notes across games.
 
@@ -61,7 +61,9 @@ Players read the game notes, including the guide, by exporting the store (see [R
 
 `src/utils/tools/bash-tool.ts` wraps the shell as a tool. `VoxAgent.getRunTools` adds `bash` to any agent whose `getActiveTools()` list is not empty. Runs that restrict their tools leave it out; for example, a telepathist answering a special message has no tools.
 
-The tool description covers only shell mechanics: where each call starts, which commands exist, how files are written, and what a result contains. It does not list folders. The records directions message names the mounted folders and which ones the agent can write, and the description is the same for every seat.
+The tool description covers only shell mechanics: where each call starts, which commands exist, how files are written, how to calculate, and what a result contains.
+
+**JavaScript** runs through `js-exec` in just-bash's QuickJS sandbox, with a 64 MB memory limit and a 30-second timeout. Agents use it for calculations because `$(( ))` handles only whole numbers. Scripts see the same mounts through the `fs` module, so read-only folders still reject writes and note changes are committed like any other command. They cannot reach the real disk or the network. It does not list folders. The records directions message names the mounted folders and which ones the agent can write, and the description is the same for every seat.
 
 Each output stream is capped at 30,000 characters (`workspaceOutputLimit`), and a cut stream ends with a note on how to read the rest. The model receives the result as plain text: stdout first, then stderr and the exit code only when they are present. Telemetry keeps the full result object.
 

@@ -203,6 +203,61 @@ describe('PlayerWorkspace', () => {
     });
   });
 
+  describe('javascript', () => {
+    it('should compute over records and commit notes written through fs', async () => {
+      const store = openStore();
+      store.commit({ kind: 'turn', turn: 1, author: 'host', changes: [{ path: 'records/turn-1/yields.json', type: 'file', content: '[3, 4.5]' }] });
+      const script = `const fs = require('fs');
+const values = JSON.parse(fs.readFileSync('records/turn-1/yields.json', 'utf8'));
+const mean = values.reduce((a, b) => a + b, 0) / values.length;
+fs.writeFileSync('game/mean.md', String(mean));
+console.log(mean);`;
+      const result = await workspace(store).exec(`cat > /tmp/mean.js <<'EOF'\n${script}\nEOF\njs-exec /tmp/mean.js`);
+
+      expect(result.stdout).toBe('3.75\n');
+      expect(text(store.readFile('game/mean.md'))).toBe('3.75');
+    });
+
+    it('should refuse writes to read-only mounts', async () => {
+      const store = openStore();
+      store.commit({ kind: 'turn', turn: 1, author: 'host', changes: [{ path: 'records/turn-1/a.md', type: 'file', content: 'fact\n' }] });
+      const shell = workspace(store);
+      await shell.exec('true');
+      const head = store.head();
+      const result = await shell.exec(`js-exec -c "require('fs').writeFileSync('records/turn-1/a.md', 'x')"`);
+
+      expect(result.exitCode).not.toBe(0);
+      expect(text(store.readFile('records/turn-1/a.md'))).toBe('fact\n');
+      expect(store.head()).toBe(head);
+    });
+
+    it('should keep scripts off the real disk and the network', async () => {
+      const outside = path.join(telemetryDir, 'outside.txt');
+      fs.writeFileSync(outside, 'secret');
+      const shell = workspace(openStore());
+      const read = await shell.exec(`js-exec -c "console.log(require('fs').readFileSync(${JSON.stringify(outside)}, 'utf8'))"`);
+      const fetched = await shell.exec(`js-exec -c "await fetch('https://example.com'); console.log('reached')"`);
+
+      expect(read.stdout).not.toContain('secret');
+      expect(fetched.stdout).not.toContain('reached');
+    });
+
+    it('should discard note changes when the run is cancelled during a script', async () => {
+      const store = openStore();
+      const shell = workspace(store);
+      await shell.exec('true');
+      const head = store.head();
+
+      const controller = new AbortController();
+      const pending = shell.exec(`js-exec -c "require('fs').writeFileSync('game/lost.md', 'x'); while (true) {}"`, controller.signal);
+      setTimeout(() => controller.abort(), 200);
+      const result = await pending;
+
+      expect(result.exitCode).toBe(1);
+      expect(store.head()).toBe(head);
+    });
+  });
+
   describe('game guide', () => {
     const guidePath = `game/${workspaceGuideFile}`;
 
