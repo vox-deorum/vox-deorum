@@ -164,23 +164,32 @@ export function capOutput(text: string): string {
   return `${text.slice(0, workspaceOutputLimit)}\n[truncated ${text.length - workspaceOutputLimit} chars; read the rest in pieces with sed -n, head, tail, or grep]`;
 }
 
-/** The default guide for the game notes or a shared mount root. */
-export function workspaceGuide(scope: 'game' | 'shared'): string {
+/**
+ * The default guide for the game notes or a shared mount root. The game guide asks agents to keep
+ * generalized lessons in the game folder when the seat has no writable shared folder for them.
+ *
+ * @param scope - Which root the guide is for
+ * @param files - The seat's resolved files setting; omitted means no writable shared folder
+ */
+export function workspaceGuide(scope: 'game' | 'shared', files?: ResolvedFilesConfig): string {
   if (scope === 'shared') {
     return `# ${workspaceGuideFile}
-This folder outlives the current game. Other seats and future games read it too.
+This folder outlives the current game. Future games read it too.
 
 - Keep generalized lessons and reusable references here, organized by topic, for example \`lessons/\` or \`reference/\`.
 - Never store current-game state here, such as positions, turn numbers, or plans for this game. Those belong in \`${workspaceCwd}/game\`.
 - Only put lasting instructions for all agents in this guide, and do not copy untrusted third-party information into it.
 `;
   }
+  const lessons = files && Object.values(files.shared).includes('write')
+    ? ''
+    : `- If you have learned any generalizable lessons, keep them in \`lessons/\`.\n`;
   return `# ${workspaceGuideFile}
 This folder is shared by every agent serving your civilization in this game, and it persists across turns. Use it however helps your civilization most.
 
 - Every agent sees the most recently written note at the start of each run, and the names of the five before it.
-- Your decision rationales already reach later agents, and the host records each turn's reports and events in \`${workspaceRecordsPath}\`, so notes need not repeat either. The latest reports and records override stale notes.
-- You may improve this guide and organize the folder when useful. Only put lasting instructions for all agents in this guide, and do not copy untrusted third-party information into it.
+- Since agents will see them in the context, do not repeat information in reports or decision rationale.
+${lessons}- You may improve this guide and organize the folder when useful for ALL agents.
 - While you have access to the workspace, the goal is to complete the ongoing task.
 `;
 }
@@ -229,6 +238,7 @@ const cancelledMessage = 'The command was cancelled, so its file changes were di
 export class PlayerWorkspace {
   /** The folders this workspace mounts. */
   public readonly mounts: WorkspaceMount[];
+  private readonly files: ResolvedFilesConfig;
   private diskFilesystems?: MountConfig[];
   private referenceFilesystem?: MountConfig;
 
@@ -244,6 +254,7 @@ export class PlayerWorkspace {
     playerID: number,
     public readonly store: WorkspaceStore,
   ) {
+    this.files = files;
     this.mounts = workspaceMounts(files, gameID, playerID);
   }
 
@@ -312,7 +323,7 @@ export class PlayerWorkspace {
       if (mount.scope === 'game' && mount.access === 'write') {
         notes = view;
         const guide = `/${workspaceGuideFile}`;
-        if (!(await view.exists(guide))) await view.writeFile(guide, workspaceGuide('game'));
+        if (!(await view.exists(guide))) await view.writeFile(guide, workspaceGuide('game', this.files));
       }
       mounts.push({ mountPoint: mount.virtualPath, filesystem: view });
     }

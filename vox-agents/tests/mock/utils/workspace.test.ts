@@ -288,6 +288,15 @@ console.log(mean);`;
       await shell.exec('true');
       expect(text(store.readFile(guidePath))).toBe('edited\n');
     });
+
+    it('should seed a different guide when the seat can write a shared folder', async () => {
+      const store = openStore();
+      const sharedFiles = files({ shared: { lessons: 'write' } });
+      await workspace(store, sharedFiles).exec('true');
+      expect(text(store.readFile(guidePath))).toBe(workspaceGuide('game', sharedFiles));
+      expect(workspaceGuide('game', sharedFiles)).not.toBe(workspaceGuide('game'));
+      expect(workspaceGuide('game', files({ shared: { lessons: 'read' } }))).toBe(workspaceGuide('game'));
+    });
   });
 
   describe('game reference', () => {

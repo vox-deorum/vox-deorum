@@ -57,7 +57,7 @@ function notesGuide<T extends AgentParameters>(context: VoxContext<T>): { writab
   const writable = access === "write";
   const stored = context.store?.readFile(`game/${workspaceGuideFile}`);
   let content = stored === undefined ? "" : Buffer.from(stored).toString("utf8").trim();
-  if (stored === undefined && writable && context.store) content = workspaceGuide("game").trim();
+  if (stored === undefined && writable && context.store) content = workspaceGuide("game", context.files).trim();
   return { writable, empty: content === "", content };
 }
 
