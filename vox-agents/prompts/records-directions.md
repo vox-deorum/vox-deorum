@@ -17,7 +17,8 @@ Your workspace holds the game's records and your civilization's notes. Use bash 
 Files written anywhere else disappear after each command.
 
 ## Reference
-Each reference file has one `## <Name>` heading per entry, in game order (era, then cost), followed by the game's tooltip and the entry's details. Technology entries list what each technology unlocks.
+Each Markdown reference file has one `## <Name>` heading per entry, followed by compact facts and a `### Help` section with the game's tooltip. Entries follow game order: era and cost, or era, branch, and level for policies. Entries that share a name each get a suffix, such as `## Longswordsman (England)`. The JSON twin is an array with `Name`, gameplay facts, and `Help`; internal `Type` and policy `Level` fields are omitted. A unique unit or building names the standard one it replaces. Technology entries list what each technology unlocks.
+
 - List the names in a file: `grep '^## ' /workspace/reference/units.md`
 - Read one whole entry, up to the next heading: `awk '/^## /{p=($0=="## Mining")} p' /workspace/reference/technologies.md`
 - Or select it from the `.json` twin: `jq '.[] | select(.Name == "Mining")' /workspace/reference/technologies.json`

@@ -40,8 +40,8 @@ const UnitSummarySchema = z.object({
  * Schema for full unit information including relations
  */
 const UnitReportSchema = UnitSummarySchema.extend({
-  // Unit classification
-  Class: z.string(),
+  // The standard unit a unique unit replaces
+  Replaces: z.string().nullable(),
   AIType: z.string().nullable(),
   
   // Advanced combat attributes
@@ -147,7 +147,7 @@ class GetUnitTool extends DatabaseQueryTool<UnitSummary, UnitReport> {
 export async function getUnit(unitType: string) {
   const db = gameDatabase.getDatabase();
   
-  // Fetch base unit info with technology names and unique civilization
+  // Fetch base unit info with technology names, unique civilization, and its class's standard unit
   const unit = await db
     .selectFrom('Units as u')
     .leftJoin('Technologies as prereqTech', 'u.PrereqTech', 'prereqTech.Type')
@@ -155,12 +155,14 @@ export async function getUnit(unitType: string) {
     .leftJoin('Civilization_UnitClassOverrides as cuo', 'cuo.UnitType', 'u.Type')
     .leftJoin('Civilizations as c', 'c.Type', 'cuo.CivilizationType')
     .leftJoin('UnitClasses as uc', 'u.Class', 'uc.Type')
+    .leftJoin('Units as baseUnit', 'baseUnit.Type', 'uc.DefaultUnit')
     .selectAll('u')
     .select([
       'prereqTech.Description as PrereqTechName',
       'obsoleteTech.Description as ObsoleteTechName',
       'c.ShortDescription as UniqueCivName',
-      'uc.Description as ClassName'
+      'baseUnit.Type as DefaultUnitType',
+      'baseUnit.Description as DefaultUnitName'
     ])
     .where('u.Type', '=', unitType)
     .executeTakeFirst();
@@ -233,7 +235,7 @@ export async function getUnit(unitType: string) {
     PrereqTech: unit.PrereqTechName || null,
     UniqueOf: unit.UniqueCivName || null,
     Era: era?.Era ? getEraName(era.Era) ?? null : null,
-    Class: unit.ClassName || unit.Class || '',
+    Replaces: unit.UniqueCivName && unit.DefaultUnitType !== unit.Type ? unit.DefaultUnitName || null : null,
     AIType: changeCase.pascalCase(unit.DefaultUnitAI?.substring(7) ?? ""),
     Range: unit.Range || 0,
     Maintenance: unit.ExtraMaintenanceCost || 0,

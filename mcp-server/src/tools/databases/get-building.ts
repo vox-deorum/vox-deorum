@@ -21,7 +21,8 @@ const BuildingSummarySchema = z.object({
  */
 const BuildingReportSchema = BuildingSummarySchema.extend({
   Strategy: z.string().nullable(),
-  Class: z.string(),
+  // The standard building a unique building replaces
+  Replaces: z.string().nullable(),
   PrereqBuildings: z.array(z.string()),
   IsNationalWonder: z.boolean(),
   IsWorldWonder: z.boolean(),
@@ -104,7 +105,7 @@ export default function createGetBuildingTool() {
  * Fetch full building information for a specific building
  */
 export async function getBuilding(buildingType: string) {
-  // Fetch base building info with technology name, era, and unique civilization
+  // Fetch base building info with technology name, era, unique civilization, and its class's standard building
   const db = gameDatabase.getDatabase();
   const building = await db
     .selectFrom('Buildings as b')
@@ -112,8 +113,16 @@ export async function getBuilding(buildingType: string) {
     .leftJoin('Eras as e', 't.Era', 'e.Type')
     .leftJoin('Civilization_BuildingClassOverrides as cbo', 'cbo.BuildingType', 'b.Type')
     .leftJoin('Civilizations as c', 'c.Type', 'cbo.CivilizationType')
+    .leftJoin('BuildingClasses as bc', 'bc.Type', 'b.BuildingClass')
+    .leftJoin('Buildings as baseBuilding', 'baseBuilding.Type', 'bc.DefaultBuilding')
     .selectAll('b')
-    .select(['t.Description as PrereqTechName', 'c.ShortDescription as UniqueCivName', 'e.Type as EraType'])
+    .select([
+      't.Description as PrereqTechName',
+      'c.ShortDescription as UniqueCivName',
+      'e.Type as EraType',
+      'baseBuilding.Type as DefaultBuildingType',
+      'baseBuilding.Description as DefaultBuildingName'
+    ])
     .where('b.Type', '=', buildingType)
     .executeTakeFirst();
   
@@ -150,7 +159,7 @@ export async function getBuilding(buildingType: string) {
     PrereqTech: building.PrereqTechName || null,
     Era: getEraName(building?.EraType) || null,
     Strategy: building.Strategy,
-    Class: building.BuildingClass || '',
+    Replaces: building.UniqueCivName && building.DefaultBuildingType !== building.Type ? building.DefaultBuildingName || null : null,
     PrereqBuildings: prereqBuildings.map(p => p.Description || ''),
     IsNationalWonder: isNationalWonder || false,
     IsWorldWonder: isWorldWonder || false,

@@ -303,18 +303,21 @@ describe('WorkspaceStore', () => {
       commit([
         { path: 'reference/units.md', type: 'file', content: 'new units' },
         { path: 'reference/techs.md', type: 'file', content: 'techs' },
+        { path: 'reference/.format-version', type: 'file', content: '1\n' },
       ], 'reference', null);
       recordTurn(3);
 
       expect(store.rewind(2)).toBe(true);
       expect(text(store.readFile('reference/units.md'))).toBe('new units');
       expect(text(store.readFile('reference/techs.md'))).toBe('techs');
+      expect(text(store.readFile('reference/.format-version'))).toBe('1\n');
       expect(store.readFile('records/turn-2/state.md')).toBeUndefined();
 
       // Reopening rebuilds the tree from stored rows rather than the cache.
       store.close();
       store = WorkspaceStore.open(dbPath);
       expect(text(store.readFile('reference/units.md'))).toBe('new units');
+      expect(text(store.readFile('reference/.format-version'))).toBe('1\n');
       expect(store.lastRecordedTurn()).toBe(1);
     });
   });

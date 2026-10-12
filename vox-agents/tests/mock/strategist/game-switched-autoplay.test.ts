@@ -59,7 +59,7 @@ import { VoxContext } from '../../../src/infra/vox-context.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
-import { hasGameReference } from '../../../src/knowledge/reference.js';
+import { hasGameReference, writeGameReference } from '../../../src/knowledge/reference.js';
 import { config as rootConfig } from '../../../src/utils/config.js';
 import {
   autoPlayTurnLimit,
@@ -554,9 +554,10 @@ describe('handleGameSwitched player preparation', () => {
   it('should skip the reference calls when an earlier session already wrote it to every seat', async () => {
     for (const playerID of [0, 1]) {
       const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID));
-      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'warrior\n' }] });
+      await writeGameReference([store]);
       store.close();
     }
+    mcp.callLog = [];
     const s = preparedSession(true);
     await gameSwitched(s, 10, 'G-prep');
     rememberPlayers(s);
@@ -564,6 +565,25 @@ describe('handleGameSwitched player preparation', () => {
     for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(0);
     expect(execute).toHaveBeenCalledTimes(2);
     expect(referenceAtStart).toEqual([true, true]);
+  });
+
+  it('should refresh legacy references before starting any player loop', async () => {
+    for (const playerID of [0, 1]) {
+      const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID));
+      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'legacy' }] });
+      store.close();
+    }
+    const s = preparedSession(true);
+    execute.mockImplementation(async function (this: VoxPlayer) {
+      expect(this.context.store!.readFile('reference/.format-version')).toBeDefined();
+      expect(Buffer.from(this.context.store!.readFile('reference/units.md')!).toString('utf8')).not.toBe('legacy');
+    });
+
+    await gameSwitched(s, 10, 'G-prep');
+    rememberPlayers(s);
+
+    for (const tool of referenceTools) expect(mcp.calls(tool)).toHaveLength(1);
+    expect(execute).toHaveBeenCalledTimes(2);
   });
 
   it('should put the session in error, start no loops, and release opened seats when the reference fails', async () => {

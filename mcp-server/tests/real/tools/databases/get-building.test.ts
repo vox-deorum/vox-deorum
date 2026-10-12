@@ -82,7 +82,7 @@ describe("Get Building Tool via MCP", () => {
       const building = parsed.Items[0];
       // Should have full information
       expect(building.Type).toBe("BUILDING_LIBRARY");
-      expect(building.Class).toBeDefined();
+      expect(building).toHaveProperty("Replaces");
       expect(building.PrereqBuildings).toBeDefined();
       expect(Array.isArray(building.PrereqBuildings)).toBe(true);
       expect(typeof building.IsNationalWonder).toBe("boolean");

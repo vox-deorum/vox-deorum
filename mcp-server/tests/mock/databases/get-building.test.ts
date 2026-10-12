@@ -1,4 +1,4 @@
-/** Regression coverage for building listings used by the files-mode reference. */
+/** Regression coverage for building listings and full reports used by the files-mode reference. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { Kysely, SqliteDialect } from 'kysely';
@@ -7,7 +7,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { DB } from '../../../src/database/database.js';
 import { gameDatabase } from '../../../src/server.js';
-import createGetBuildingTool from '../../../src/tools/databases/get-building.js';
+import createGetBuildingTool, { getBuilding } from '../../../src/tools/databases/get-building.js';
 import { wrapResults } from '../../../src/utils/mcp.js';
 
 vi.mock('../../../src/server.js', () => ({
@@ -64,5 +64,42 @@ describe('get-building reference listing via MCP', () => {
         { Type: 'BUILDING_WITHOUT_HELP', Help: '' },
       ],
     });
+  });
+});
+
+describe('get-building full report', () => {
+  let db: Kysely<DB>;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+    sqlite.exec(`
+      CREATE TABLE Buildings (Type TEXT, Description TEXT, Help TEXT, Strategy TEXT, Cost INTEGER, PrereqTech TEXT, BuildingClass TEXT, Happiness INTEGER, Defense INTEGER, ExtraCityHitPoints INTEGER, GoldMaintenance INTEGER);
+      CREATE TABLE BuildingClasses (Type TEXT, Description TEXT, DefaultBuilding TEXT, MaxPlayerInstances INTEGER, MaxGlobalInstances INTEGER);
+      CREATE TABLE Building_ClassesNeededInCity (BuildingType TEXT, BuildingClassType TEXT);
+      CREATE TABLE Technologies (Type TEXT, Description TEXT, Era TEXT);
+      CREATE TABLE Civilization_BuildingClassOverrides (BuildingType TEXT, CivilizationType TEXT);
+      CREATE TABLE Civilizations (Type TEXT, ShortDescription TEXT);
+      CREATE TABLE Eras (Type TEXT);
+      INSERT INTO BuildingClasses VALUES ('BUILDINGCLASS_TEMPLE', 'Temple class', 'BUILDING_TEMPLE', -1, -1);
+      INSERT INTO Civilizations VALUES ('CIVILIZATION_MAYA', 'Maya');
+      INSERT INTO Buildings VALUES ('BUILDING_TEMPLE', 'Temple', NULL, NULL, 100, NULL, 'BUILDINGCLASS_TEMPLE', 0, 0, 0, 2);
+      INSERT INTO Buildings VALUES ('BUILDING_MAYA_PYRAMID', 'Pyramid', NULL, NULL, 100, NULL, 'BUILDINGCLASS_TEMPLE', 0, 0, 0, 2);
+      INSERT INTO Civilization_BuildingClassOverrides VALUES ('BUILDING_MAYA_PYRAMID', 'CIVILIZATION_MAYA');
+    `);
+    db = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+    vi.spyOn(gameDatabase, 'getDatabase').mockReturnValue(db);
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await db.destroy();
+  });
+
+  it('should name the standard building a unique building replaces', async () => {
+    expect(await getBuilding('BUILDING_MAYA_PYRAMID')).toMatchObject({ UniqueOf: 'Maya', Replaces: 'Temple' });
+  });
+
+  it('should leave Replaces empty for standard buildings', async () => {
+    expect((await getBuilding('BUILDING_TEMPLE')).Replaces).toBeNull();
   });
 });
