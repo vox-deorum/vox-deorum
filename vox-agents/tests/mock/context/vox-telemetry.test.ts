@@ -21,6 +21,12 @@ import type { RootRun } from '../../../src/infra/vox-run.js';
 import type { Model } from '../../../src/types/index.js';
 import { createLogger } from '../../../src/utils/logger.js';
 import { makeRecordingTracer } from '../../helpers/recording-tracer.js';
+import { installMockMcpClient, textResult } from '../../helpers/mock-mcp-client.js';
+
+vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+  const helper = await import('../../helpers/mock-mcp-client.js');
+  return helper.mockMcpClientModule();
+});
 
 /** The seat token totals carried by an ExecutionHost fake. */
 interface FakeHostTotals {
@@ -46,7 +52,6 @@ function makeHost(tracer: Tracer = makeRecordingTracer().tracer): ExecutionHost<
     reasoningTokens: 0,
     outputTokens: 0,
     lastModelName: undefined,
-    callTool: vi.fn(async () => undefined),
   };
 }
 
@@ -159,9 +164,11 @@ describe('accrueTokens', () => {
 
 describe('updateModelLabel', () => {
   const params = { playerID: 3 } as AgentParameters;
+  let mcp: ReturnType<typeof installMockMcpClient>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mcp = installMockMcpClient();
+    mcp.respondWith('set-metadata', textResult(true));
   });
 
   it('should send the model short name for a strategist with a system prompt', async () => {
@@ -170,11 +177,7 @@ describe('updateModelLabel', () => {
 
     await updateModelLabel(host, 'simple-strategist', model, 'system', params);
 
-    expect(host.callTool).toHaveBeenCalledWith(
-      'set-metadata',
-      { Key: 'model-3', Value: 'gpt-5.6-luna' },
-      params
-    );
+    expect(mcp.calls('set-metadata').map(c => c.args)).toEqual([{ Key: 'model-3', Value: 'gpt-5.6-luna' }]);
     expect(host.lastModelName).toBe('gpt-5.6-luna');
   });
 
@@ -184,11 +187,15 @@ describe('updateModelLabel', () => {
 
     await updateModelLabel(host, 'simple-strategist', model, '', params);
 
-    expect(host.callTool).toHaveBeenCalledWith(
-      'set-metadata',
-      { Key: 'model-3', Value: 'VPAI' },
-      params
-    );
+    expect(mcp.calls('set-metadata').map(c => c.args)).toEqual([{ Key: 'model-3', Value: 'VPAI' }]);
+  });
+
+  it('should not throw when the metadata write fails', async () => {
+    const host = makeHost();
+    mcp.failWith('set-metadata', 'bridge down');
+    const model = { provider: 'codex', name: 'codex/gpt-5.6-luna' } as Model;
+
+    await expect(updateModelLabel(host, 'simple-strategist', model, 'system', params)).resolves.toBeUndefined();
   });
 
   it('should skip the send when the label is unchanged', async () => {
@@ -198,7 +205,7 @@ describe('updateModelLabel', () => {
 
     await updateModelLabel(host, 'simple-strategist', model, 'system', params);
 
-    expect(host.callTool).not.toHaveBeenCalled();
+    expect(mcp.calls('set-metadata')).toHaveLength(0);
   });
 
   it('should stay silent for non-strategist agents', async () => {
@@ -207,7 +214,7 @@ describe('updateModelLabel', () => {
 
     await updateModelLabel(host, 'diplomat', model, 'system', params);
 
-    expect(host.callTool).not.toHaveBeenCalled();
+    expect(mcp.calls('set-metadata')).toHaveLength(0);
   });
 });
 
