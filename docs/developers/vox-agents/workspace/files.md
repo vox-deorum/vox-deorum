@@ -53,7 +53,7 @@ Rules:
 Each folder an agent can write gets an `AGENTS.md` guide:
 
 - **Shared folders.** The guide is created once on disk and never overwritten, so agents and players can edit it.
-- **Game notes.** The guide lives in the store. If a command that can write finds it missing, the default is written back as part of that command. So the guide returns after an agent deletes it or a rewind drops it. The default asks agents to keep one current plan file updated in place.
+- **Game notes.** The guide lives in the store. If a command that can write finds it missing, the default is written back as part of that command. So the guide returns after an agent deletes it or a rewind drops it. The default leaves it to agents how to use the folder. It notes which notes they see at the start of each run and that decision rationales and turn records already carry forward.
 
 Players read the game notes, including the guide, by exporting the store (see [Reading the store from outside](store.md#reading-the-store-from-outside)).
 

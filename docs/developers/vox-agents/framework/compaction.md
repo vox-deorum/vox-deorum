@@ -58,7 +58,7 @@ A strategist seat runs with `"files": { "game": "write", "quota": 20 }` and a mo
 | 0 | System: strategist instructions | 1,500 |
 | 1 | System: game context (the strategist's own cache anchor) | 500 |
 | 2 | User: game state report (the run's cache anchor, added because files are on) | 5,000 |
-| 3 | User: closing reminder, "make your final decision within 20 steps" | 20 |
+| 3 | User: closing reminder, "you have 20 steps left to make your decisions" | 20 |
 | 4 | Assistant: reasoning, then three `bash` calls printing the game folder's `AGENTS.md`, `notes.md`, and a turn log | 450 |
 | 5 | Tool: the three outputs | 5,500 |
 

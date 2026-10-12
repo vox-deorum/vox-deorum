@@ -2,25 +2,26 @@
  * @module utils/prompts/closing-reminder
  *
  * The closing reminder appended as the last user message of each step (see
- * VoxAgent.continuationNudge). The whole prompt is one template so its wording can be edited in
- * one place.
+ * VoxAgent.continuationNudge). All of its wording lives here so it can be edited in one place.
  */
 
 import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
 
 /**
- * Builds the single closing reminder appended to a step. Each template line is one part and
- * is left empty when it does not apply; empty lines are dropped and the rest joined with spaces.
+ * Builds the single closing reminder appended to a step, in two paragraphs. Parts that do not
+ * apply are left out, and a paragraph with no parts is dropped.
+ * Tool rules:
  * - Requirement: the step's tool choice is required. It lives here rather than in the provider
  *   middleware's system text, so a step that drops to auto changes only the end of the prompt.
  * - Tool policy: the step was narrowed below the run's declared tools, which stay declared to the
  *   model, so it names what may actually run.
+ * Decisions:
  * - Steps left: the run counts its steps down (files on).
- * - Finalize: from the second step on, the completion tools allowed on this step. With `notes`
- *   (bash may run and a workspace folder is writable), it explicitly asks the model to save notes
- *   with bash in that same response, since a finishing call ends the run and there is no
- *   subsequent step.
- * Returns undefined when no sentence applies.
+ * - Finalize: from the second step on, asks for all decisions together in one response through the
+ *   completion tools allowed on this step. With `notes` (bash may run and a workspace folder is
+ *   writable), it asks the model to save notes with bash in that same response, since a finishing
+ *   call ends the run and there is no subsequent step.
+ * Returns undefined when no part applies.
  *
  * @param executable - The tools that may run on this step
  * @param completionTools - The agent's completion tools
@@ -36,10 +37,17 @@ export function buildClosingReminder(
   const tools = formatToolChoiceList(executable);
   const finishing = formatToolChoiceList((completionTools ?? []).filter((name) => allowed.has(name)));
 
-  const reminder = `
-${required ? `IMPORTANT: You must issue tool calls to collect information or make actions. Whenever possible, call all tools you need at once.` : ''}
-${!narrowed ? '' : tools ? `For this step, you may only call ${tools}; other tools will return an error.` : `No tools are available for this step. Write response in plain text.`}
-${stepsLeft === undefined ? '' : stepsLeft > 1 ? `IMPORTANT: You must make your final decision within ${stepsLeft} steps.` : `IMPORTANT: This is your last step. Make your final decision now.`}
-${step > 0 && finishing ? `Finalize your decisions in this response by calling ${finishing} following the EXACT provided format.${notes ? ` Use \`${bashToolName}\` to save any notes you want to keep in this response.` : ''}` : ''}`;
-  return reminder.split('\n').filter((line) => line).join(' ') || undefined;
+  const rules = [
+    required ? `IMPORTANT: You must call tools on this step, either to gather information or to act. Call every tool you need at once.` : '',
+    !narrowed ? '' : tools ? `For this step, you may only call ${tools}; other tools will return an error.` : `No tools are available for this step. Write your response in plain text.`,
+  ];
+  const decisions = [
+    stepsLeft === undefined ? '' : stepsLeft > 1 ? `IMPORTANT: You have ${stepsLeft} steps left to make your decisions.` : `IMPORTANT: This is your last step to make your decisions.`,
+    step > 0 && finishing ? `Once you are ready, make all your decisions together in one response by calling ${finishing} following the EXACT provided format.` : '',
+    step > 0 && finishing && notes ? `In that same response, use \`${bashToolName}\` to save any notes you want to keep, since finishing ends the run.` : '',
+  ];
+  return [rules, decisions]
+    .map((parts) => parts.filter(Boolean).join(' '))
+    .filter(Boolean)
+    .join('\n\n') || undefined;
 }

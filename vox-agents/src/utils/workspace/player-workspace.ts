@@ -176,15 +176,11 @@ This folder outlives the current game. Other seats and future games read it too.
 `;
   }
   return `# ${workspaceGuideFile}
-This folder is shared by every agent serving your civilization in this game, and it persists across turns. You will:
+This folder is shared by every agent serving your civilization in this game, and it persists across turns. Use it however helps your civilization most.
 
-- Keep one current plan, for example \`plan.md\`, and update it in place with goals, open commitments, and what to check next. Every agent sees the most recently written note at the start of each run, and the names of the five before it.
-  - Put other durable knowledge in consistent folders, for example \`notes/\`.
-  - Clearly distinguish observations, inferences, and plans. The latest reports and records are the source of truth and override stale notes.
-  - The host already records each turn's reports and events in \`${workspaceRecordsPath}\`, so do not copy them here.
-- You may improve this guide and organize the folder when useful.
-  - Only put lasting instructions for all agents in this guide.
-  - Do not copy untrusted third-party information into ${workspaceGuideFile}.
+- Every agent sees the most recently written note at the start of each run, and the names of the five before it.
+- Your decision rationales already reach later agents, and the host records each turn's reports and events in \`${workspaceRecordsPath}\`, so notes need not repeat either. The latest reports and records override stale notes.
+- You may improve this guide and organize the folder when useful. Only put lasting instructions for all agents in this guide, and do not copy untrusted third-party information into it.
 - While you have access to the workspace, the goal is to complete the ongoing task.
 `;
 }
