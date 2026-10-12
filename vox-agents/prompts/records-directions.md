@@ -5,7 +5,7 @@ Your workspace holds the game's records and your civilization's notes. Use bash 
 | Folder | Access | Holds |
 | --- | --- | --- |
 | `/workspace/records` | read-only | Complete reports, events, and briefings for each processed turn, written by the host. |
-| `/workspace/reference` | read-only | Game technologies, policies, buildings, and units with their tooltips, each as `.md` and `.json`. |
+| `/workspace/reference` | read-only | Game technologies, policies, buildings, and units with their tooltips, one `.md` and `.json` pair per era. |
 {{#game}}
 | `/workspace/game` | {{#writable}}writable{{/writable}}{{^writable}}read-only{{/writable}} | Notes shared by every agent of your civilization in this game. They persist across turns. |
 {{/game}}
@@ -17,12 +17,14 @@ Your workspace holds the game's records and your civilization's notes. Use bash 
 Files written anywhere else disappear after each command.
 
 ## Reference
-Each Markdown reference file has one `## <Name>` heading per entry, followed by compact facts and a `### Help` section with the game's tooltip. Entries follow game order: era and cost, or era, branch, and level for policies. Entries that share a name each get a suffix, such as `## Longswordsman (England)`. The JSON twin is an array with `Name`, gameplay facts, and `Help`; internal `Type` and policy `Level` fields are omitted. A unique unit or building names the standard one it replaces. Technology entries list what each technology unlocks.
+The reference is one folder per category (`technologies`, `policies`, `buildings`, `units`) holding a Markdown and a JSON file per era: `ancient`, `classical`, `medieval`, `renaissance`, `industrial`, `modern`, `atomic`, `information`, and `other`. Entries with no era, such as starting units, are in `ancient`, and entries with an unknown era are in `other`. Read only the category and era you need; when the era is unknown or you are following a `Replaces` entry, search every era file of the category.
 
-- List the names in a file: `grep '^## ' /workspace/reference/units.md`
-- Read one whole entry, up to the next heading: `awk '/^## /{p=($0=="## Mining")} p' /workspace/reference/technologies.md`
-- Or select it from the `.json` twin: `jq '.[] | select(.Name == "Mining")' /workspace/reference/technologies.json`
-- Filter the `.json` twin with `jq`, for example `jq -r '.[] | select(.Era == "Medieval") | .Name' /workspace/reference/units.json`
+Each Markdown file opens with the category title and has one `## <Name>` heading per entry, followed by compact facts and a `### Help` section with the game's tooltip. Within a file, entries follow cost and name order, or branch, level, and name for policies. Entries that share a name each get a suffix, such as `## Longswordsman (England)`. The JSON twin is an array with `Name`, gameplay facts, and `Help`; internal `Type`, policy `Level`, and the era are omitted, since the file names the era. A unique unit or building names the standard one it replaces. Technology entries list what each technology unlocks.
+
+- List the names in one era: `grep '^## ' /workspace/reference/units/ancient.md`
+- Read one whole entry, up to the next heading: `awk '/^## /{p=($0=="## Agriculture")} p' /workspace/reference/technologies/ancient.md`
+- Or select it from the `.json` twin: `jq '.[] | select(.Name == "Agriculture")' /workspace/reference/technologies/ancient.json`
+- Find which era files of a category name an entry: `grep -l '^## Agriculture' /workspace/reference/technologies/*.md`
 
 ## Recorded turns
 {{#hasTurns}}

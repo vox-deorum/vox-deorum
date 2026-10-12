@@ -73,7 +73,9 @@ const defaultFileMode = 0o644;
 const defaultDirMode = 0o755;
 
 /** Store folder of the game reference, static game data that a rewind carries forward. */
-export const referenceStorePrefix = 'reference/';
+export const referenceStoreFolder = 'reference';
+/** Path prefix of every entry in the reference folder. */
+export const referenceStorePrefix = `${referenceStoreFolder}/`;
 
 const schema = `
 CREATE TABLE IF NOT EXISTS ws_blobs (
@@ -121,10 +123,10 @@ interface ChangeRow { path: string; type: 'file' | 'dir' | 'delete'; hash: strin
 /** A `ws_commits` row as SQLite returns it. */
 interface CommitRow { id: number; parent: number | null; turn: number | null; kind: CommitKind; author: string; trace_id: string | null; span_id: string | null; time: number }
 
-/** Check that a store path is relative, starts with `records/`, `game/`, or `reference/`, and has no `.` or `..` parts. */
-function checkStorePath(storePath: string): void {
+/** Require a relative path in a store folder, allowing the folder itself only for deletion. */
+function checkStorePath({ path: storePath, type }: PathChange): void {
   const parts = storePath.split('/');
-  if (!['records', 'game', 'reference'].includes(parts[0]) || parts.length < 2
+  if (!['records', 'game', 'reference'].includes(parts[0]) || (parts.length < 2 && type !== 'delete')
     || parts.some((part) => part === '' || part === '.' || part === '..')) {
     throw new Error(`Invalid workspace store path: ${storePath}`);
   }
@@ -309,8 +311,8 @@ export class WorkspaceStore {
   /**
    * Discard the timeline from turn N on. Does nothing unless the last recorded turn is N or later.
    * Otherwise moves head to the parent of the oldest `turn` commit for turn N or later in head's
-   * ancestry and adds a `reload` commit for turn N there. The reload commit restores any reference
-   * file the discarded commits added or changed, since the reference does not depend on the turn.
+   * ancestry and adds a `reload` commit for turn N there. The reload commit preserves the current
+   * reference, including deletions, since the reference does not depend on the turn.
    * Discarded commits stay in history.
    *
    * @returns whether head moved
@@ -323,19 +325,17 @@ export class WorkspaceStore {
       const anchor = this.db.prepare(`${chainCte}
         SELECT id, parent FROM ws_commits WHERE id IN chain AND kind = 'turn' AND turn >= ? ORDER BY id ASC LIMIT 1`)
         .get(this.head(), turn) as { id: number; parent: number };
-      const kept = this.manifest(anchor.parent);
       const reload = Number(this.db.prepare(
         `INSERT INTO ws_commits (parent, turn, kind, author, time) VALUES (?, ?, 'reload', 'host', ?)`,
       ).run(anchor.parent, turn, Date.now()).lastInsertRowid);
       const insert = this.db.prepare(
-        `INSERT INTO ws_changes (commit_id, seq, path, type, hash, mode, mtime) VALUES (?, ?, ?, 'file', ?, ?, ?)`,
+        `INSERT INTO ws_changes (commit_id, seq, path, type, hash, mode, mtime) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       );
       let seq = 0;
+      insert.run(reload, seq++, referenceStoreFolder, 'delete', null, null, null);
       for (const [storePath, entry] of discarded) {
-        if (!storePath.startsWith(referenceStorePrefix) || entry.type !== 'file') continue;
-        const old = kept.get(storePath);
-        if (old?.type === 'file' && old.hash === entry.hash) continue;
-        insert.run(reload, seq++, storePath, entry.hash, entry.mode, entry.mtime);
+        if (!storePath.startsWith(referenceStorePrefix)) continue;
+        insert.run(reload, seq++, storePath, entry.type, entry.type === 'file' ? entry.hash : null, entry.mode, entry.mtime);
       }
       this.db.prepare(`UPDATE ws_refs SET commit_id = ? WHERE name = 'head'`).run(reload);
       logger.info(`Rewound workspace store to before turn ${turn} (last recorded turn ${last})`);
@@ -378,7 +378,7 @@ export class WorkspaceStore {
       'INSERT INTO ws_changes (commit_id, seq, path, type, hash, mode, mtime) VALUES (?, ?, ?, ?, ?, ?, ?)',
     );
     for (const change of changes) {
-      checkStorePath(change.path);
+      checkStorePath(change);
       let entry: ManifestEntry | null = null;
       if (change.type === 'file') {
         const bytes = typeof change.content === 'string' ? asBytes(Buffer.from(change.content, 'utf8')) : change.content;

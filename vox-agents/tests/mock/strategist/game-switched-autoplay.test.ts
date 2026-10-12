@@ -567,16 +567,17 @@ describe('handleGameSwitched player preparation', () => {
     expect(referenceAtStart).toEqual([true, true]);
   });
 
-  it('should refresh legacy references before starting any player loop', async () => {
+  it('should replace stale references before starting any player loop', async () => {
     for (const playerID of [0, 1]) {
       const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID));
-      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'legacy' }] });
+      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'stale' }] });
       store.close();
     }
     const s = preparedSession(true);
     execute.mockImplementation(async function (this: VoxPlayer) {
       expect(this.context.store!.readFile('reference/.format-version')).toBeDefined();
-      expect(Buffer.from(this.context.store!.readFile('reference/units.md')!).toString('utf8')).not.toBe('legacy');
+      expect(this.context.store!.readFile('reference/units.md')).toBeUndefined();
+      expect(this.context.store!.readFile('reference/units/ancient.md')).toBeDefined();
     });
 
     await gameSwitched(s, 10, 'G-prep');

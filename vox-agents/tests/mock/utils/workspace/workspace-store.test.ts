@@ -175,6 +175,25 @@ describe('WorkspaceStore', () => {
       expect(store.head()).toBe(head);
       expect(store.history()).toHaveLength(1);
     });
+
+    it('should replace a store folder atomically while keeping other folders and history', () => {
+      const original = commit([
+        { path: 'reference/units.md', type: 'file', content: 'old' },
+        { path: 'game/note.md', type: 'file', content: 'note' },
+      ]);
+      commit([
+        { path: 'reference', type: 'delete' },
+        { path: 'reference/units/ancient.md', type: 'file', content: 'new' },
+      ]);
+
+      expect(store.readFile('reference/units.md')).toBeUndefined();
+      expect(text(store.readFile('reference/units/ancient.md'))).toBe('new');
+      expect(text(store.readFile('game/note.md'))).toBe('note');
+      expect(text(store.readFile('reference/units.md', original))).toBe('old');
+      expect(() => commit([{ path: 'reference', type: 'file', content: 'invalid' }])).toThrow();
+      expect(() => commit([{ path: 'reference', type: 'dir' }])).toThrow();
+      expect(() => commit([{ path: 'other', type: 'delete' }])).toThrow();
+    });
   });
 
   describe('commit', () => {
@@ -319,6 +338,33 @@ describe('WorkspaceStore', () => {
       expect(text(store.readFile('reference/units.md'))).toBe('new units');
       expect(text(store.readFile('reference/.format-version'))).toBe('1\n');
       expect(store.lastRecordedTurn()).toBe(1);
+    });
+
+    it('should preserve reference removals across repeated reloads and reopening', () => {
+      const original = commit([
+        { path: 'reference/units/ancient.md', type: 'file', content: 'outdated units' },
+        { path: 'reference/units/obsolete.md', type: 'file', content: 'obsolete' },
+      ], 'reference', null);
+      recordTurn(1);
+      recordTurn(2);
+      commit([
+        { path: 'reference/units/obsolete.md', type: 'delete' },
+        { path: 'reference/units/ancient.md', type: 'file', content: 'current units' },
+        { path: 'reference/units/other.json', type: 'file', content: '[]\n' },
+        { path: 'reference/.format-version', type: 'file', content: '2\n' },
+      ], 'reference', null);
+
+      expect(store.rewind(2)).toBe(true);
+      expect(store.rewind(1)).toBe(true);
+      store.close();
+      store = WorkspaceStore.open(dbPath);
+
+      expect(store.readFile('reference/units/obsolete.md')).toBeUndefined();
+      expect(text(store.readFile('reference/units/ancient.md'))).toBe('current units');
+      expect(text(store.readFile('reference/units/other.json'))).toBe('[]\n');
+      expect(text(store.readFile('reference/.format-version'))).toBe('2\n');
+      expect(store.readFile('records/turn-1/state.md')).toBeUndefined();
+      expect(text(store.readFile('reference/units/obsolete.md', original))).toBe('obsolete');
     });
   });
 });

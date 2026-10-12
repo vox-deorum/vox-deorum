@@ -304,12 +304,13 @@ console.log(mean);`;
       const shell = workspace(store);
       expect((await shell.exec('ls reference')).stdout).toBe('');
 
-      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'warrior\n' }] });
-      expect((await shell.exec('cat reference/units.md')).stdout).toBe('warrior\n');
+      store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units/ancient.md', type: 'file', content: 'warrior\n' }] });
+      expect((await shell.exec('cat reference/units/ancient.md')).stdout).toBe('warrior\n');
 
       const head = store.head();
-      const write = await shell.exec('echo x > reference/new.md');
+      const write = await shell.exec('echo x > reference/units/ancient.md');
       expect(write.exitCode).not.toBe(0);
+      expect(text(store.readFile('reference/units/ancient.md'))).toBe('warrior\n');
       expect(store.head()).toBe(head);
       expect(fs.existsSync(path.join(workspaceRoot(), 'games'))).toBe(false);
     });

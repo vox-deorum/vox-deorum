@@ -7,7 +7,7 @@ With files on, a strategist can look back at earlier turns, keep its own notes b
 ```
 /workspace/records     read-only    what the seat saw each turn
 /workspace/game        notes        the seat's own notes for this game
-/workspace/reference   read-only    game rules: techs, policies, buildings, units
+/workspace/reference   read-only    game rules: techs, policies, buildings, units, one file pair per era
 /workspace/shared/<n>  configurable notes kept across games and seats
 /tmp                   scratch      shared by one player's agents for the game
 ```
