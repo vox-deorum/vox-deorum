@@ -240,7 +240,7 @@ onMounted(() => {
             <div class="col-fixed-80">Input</div>
             <div class="col-fixed-80">Reasoning</div>
             <div class="col-fixed-80">Output</div>
-            <div class="col-fixed-100">Actions</div>
+            <div class="col-fixed-120">Actions</div>
           </div>
 
           <!-- Table Body -->
@@ -278,7 +278,7 @@ onMounted(() => {
               <div class="col-fixed-80">
                 {{ formatTokenCount(trace.attributes['tokens.output']) }}
               </div>
-              <div class="col-fixed-100">
+              <div class="col-fixed-120 flex align-items-center flex-nowrap">
                 <TurnViewButton
                   v-if="isStrategistTurnSpan(trace)"
                   :loading="loadingTurnId === trace.traceId"
