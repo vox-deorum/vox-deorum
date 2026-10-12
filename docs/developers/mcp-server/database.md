@@ -23,7 +23,7 @@ Raw rows are full of `TXT_KEY_*` references rather than readable text: a unit's 
 
 Given any result object, it walks the whole structure recursively, through nested objects and arrays, and even through tags embedded inside larger strings. It collects every `TXT_KEY_*` reference, looks them all up in one batched query against the localization database for the configured language, and substitutes the readable text back in.
 
-If a key has no translation, the manager falls back to the key itself rather than failing, so a missing string degrades gracefully instead of breaking a query. The language defaults to `en_US` and can be changed at runtime.
+If a key has no translation, the manager falls back to the key itself rather than failing, so a missing string degrades gracefully instead of breaking a query. A key that is present with empty text resolves to an empty string; `localizeObjects` (`database/manager.ts`) does not leave the raw tag in the result. The language defaults to `en_US` and can be changed at runtime.
 
 ## Enum mappings
 
@@ -44,6 +44,8 @@ In practice this means the server can be launched alongside the game and will si
 ## How tools use it
 
 The database-query tools (described in [tools.md](tools.md)) don't query Kysely directly in an ad-hoc way. They extend `DatabaseQueryTool`, which sits on top of the `DatabaseManager`. Each such tool provides a cached summary list of its items and a way to fetch one item's full detail; the base class adds fuzzy search and returns the full detail automatically when a search narrows to a single match. The manager's connection caching and localization caching mean repeated queries stay cheap.
+
+A `Detailed` input returns the full report for every result, not just for a single match. On the tools that declare a tooltip kind (`get-unit`, `get-building`, `get-technology`), a full report carries the game's own tooltip in `Help`. `fetchGameTooltips` (`src/utils/database/game-tooltips.ts`) gets that text by calling the mod's `VoxDeorumReferenceTooltips` function through the bridge in batches of 50, and stripping the game's markup with `stripTags`. When a call finds the function unregistered, it runs a short script that fires `LuaEvents.VoxDeorumReferenceRegister` so the mod registers it, then retries once. In Detailed mode a tooltip failure comes back as the result's `Error` field; when a search narrows to a single match, the tool falls back to the database text instead. After localization, a subclass's `formatItem` hook can clean the items, as `get-policy` does with `formatPolicyHelp`.
 
 ## Where the details live
 

@@ -11,8 +11,10 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as z from 'zod';
-import { gameDatabase } from '../../../../src/server.js';
+import { bridgeManager, gameDatabase } from '../../../../src/server.js';
 import { DatabaseQueryTool } from '../../../../src/tools/abstract/database-query.js';
+import type { TooltipKind } from '../../../../src/utils/database/game-tooltips.js';
+
 
 const ItemSchema = z.object({
   Type: z.string(),
@@ -134,6 +136,20 @@ describe('DatabaseQueryTool', () => {
     expect(result.Items[0]).not.toHaveProperty('Detail');
   });
 
+  it('returns an Error result when any fetchFullInfo fails in detailed mode', async () => {
+    const tool = new TestQueryTool(FIXTURES);
+    const fetchFullInfo = (tool as any).fetchFullInfo.bind(tool);
+    vi.spyOn(tool as any, 'fetchFullInfo').mockImplementation(async (identifier: any) => {
+      if (identifier === 'TECH_ARCHERY') throw new Error('boom');
+      return fetchFullInfo(identifier);
+    });
+
+    const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+    expect(result.Count).toBe(0);
+    expect(result.Items).toEqual([]);
+    expect(result.Error).toBe('boom');
+  });
+
   it('localizes the returned items through gameDatabase.localizeObjects', async () => {
     const tool = new TestQueryTool(FIXTURES);
     await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
@@ -168,5 +184,103 @@ describe('DatabaseQueryTool', () => {
 
     expect(tool.fullInfoCalls).toEqual(['Writing']);
     expect(result.Items[0].Detail).toBe('by-name-Writing');
+  });
+
+  describe('detailed listings and game tooltips', () => {
+    /** A tool whose full reports carry the game's technology tooltip, with policy-style help cleanup. */
+    class TooltipTool extends TestQueryTool {
+      protected readonly tooltipKind: TooltipKind = 'technology';
+      protected formatItem(item: Item): Item {
+        return { ...item, Help: item.Help?.replace(/^Tip for /, '') };
+      }
+    }
+
+    /** Answer tooltip calls with a tooltip for every type except the ones listed. */
+    function answerTooltips(missing: string[] = []) {
+      return vi.spyOn(bridgeManager, 'callLuaFunction').mockImplementation(async (_name, args) => {
+        const types = args[1] as string[];
+        const result = Object.fromEntries(types.filter((type) => !missing.includes(type))
+          .map((type) => [type, `Tip for ${type}[NEWLINE][ICON_BULLET]Detail`]));
+        return { success: true, result };
+      });
+    }
+
+    it('should expand every result to full information in detailed mode', async () => {
+      const tool = new TestQueryTool(FIXTURES);
+      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+
+      expect(result.Count).toBe(3);
+      expect(tool.fullInfoCalls.sort()).toEqual(['TECH_ARCHERY', 'TECH_POTTERY', 'TECH_WRITING']);
+      expect(result.Items.every((item: any) => item.Detail)).toBe(true);
+    });
+
+    it('should replace help with stripped game tooltips fetched in batches', async () => {
+      const many = Array.from({ length: 60 }, (_, index) => ({ Type: `TECH_${index}`, Name: `Tech ${index}`, Help: 'Database help' }));
+      const call = answerTooltips(['TECH_7']);
+      const tool = new TooltipTool(many);
+
+      const result = await tool.execute({ MaxResults: 100, Detailed: true } as any);
+
+      expect(call).toHaveBeenCalledTimes(2);
+      expect(call.mock.calls.every(([name, args]) => name === 'VoxDeorumReferenceTooltips' && args[0] === 'technology')).toBe(true);
+      const byType = new Map(result.Items.map((item: any) => [item.Type, item.Help]));
+      expect(byType.get('TECH_0')).toBe('TECH_0\n* Detail');
+      expect(byType.get('TECH_7')).toBe('Database help');
+    });
+
+    it('should leave cached summaries unchanged', async () => {
+      answerTooltips();
+      const tool = new TooltipTool(FIXTURES);
+
+      await tool.execute({ MaxResults: 20, Detailed: true } as any);
+
+      expect((await tool.getSummaries()).map((item) => item.Help)).toEqual(FIXTURES.map((item) => item.Help));
+    });
+
+    it('should ask the game to register the tooltip function once it is missing, then retry', async () => {
+      let registered = false;
+      const script = vi.spyOn(bridgeManager, 'executeLuaScript').mockImplementation(async () => {
+        registered = true;
+        return { success: true, result: true } as any;
+      });
+      const call = vi.spyOn(bridgeManager, 'callLuaFunction').mockImplementation(async (_name, args) => registered
+        ? { success: true, result: Object.fromEntries((args[1] as string[]).map((type) => [type, `Tip for ${type}`])) }
+        : { success: false, error: { code: 'INVALID_FUNCTION', message: 'not found' } } as any);
+      const tool = new TooltipTool(FIXTURES);
+
+      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+
+      expect(script).toHaveBeenCalledTimes(1);
+      expect(call).toHaveBeenCalledTimes(2);
+      expect(result.Error).toBeUndefined();
+      expect(result.Items.every((item: any) => item.Help === item.Type)).toBe(true);
+    });
+
+    it('should report an error in detailed mode when the function stays unregistered', async () => {
+      const script = vi.spyOn(bridgeManager, 'executeLuaScript').mockResolvedValue({ success: true, result: true } as any);
+      const call = vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({
+        success: false, error: { code: 'INVALID_FUNCTION', message: 'not found' },
+      } as any);
+      const tool = new TooltipTool(FIXTURES);
+
+      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+
+      expect(script).toHaveBeenCalledTimes(1);
+      expect(call).toHaveBeenCalledTimes(2);
+      expect(result.Count).toBe(0);
+      expect(result.Error).toMatch(/VoxDeorumReferenceTooltips/);
+    });
+
+    it('should keep the database text for a single match when tooltips fail', async () => {
+      vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({
+        success: false, error: { code: 'DLL_DISCONNECTED', message: 'down' },
+      } as any);
+      const tool = new TooltipTool(FIXTURES);
+
+      const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+
+      expect(result.Error).toBeUndefined();
+      expect(result.Items[0]).toMatchObject({ Type: 'TECH_POTTERY', Help: 'Unlocks granary', Detail: 'detail-for-TECH_POTTERY' });
+    });
   });
 });

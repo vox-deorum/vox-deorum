@@ -56,6 +56,11 @@ class GetTechnologyTool extends DatabaseQueryTool<TechnologySummary, TechnologyR
   protected readonly fullSchema = TechnologyReportSchema;
 
   /**
+   * Full reports carry the in-game technology tooltip
+   */
+  protected readonly tooltipKind = 'technology';
+
+  /**
    * Fetch technology summaries from database
    */
   protected async fetchSummaries(): Promise<TechnologySummary[]> {

@@ -5,7 +5,7 @@ Your workspace holds the game's records and your civilization's notes. Use bash 
 | Folder | Access | Holds |
 | --- | --- | --- |
 | `/workspace/records` | read-only | Complete reports, events, and briefings for each processed turn, written by the host. |
-| `/workspace/reference` | read-only | Game database listings (technologies, policies, buildings, units), each as `.md` and `.json`. |
+| `/workspace/reference` | read-only | Game technologies, policies, buildings, and units with their tooltips, each as `.md` and `.json`. |
 {{#game}}
 | `/workspace/game` | {{#writable}}writable{{/writable}}{{^writable}}read-only{{/writable}} | Notes shared by every agent of your civilization in this game. They persist across turns. |
 {{/game}}
@@ -15,6 +15,12 @@ Your workspace holds the game's records and your civilization's notes. Use bash 
 | `/tmp` | writable | Scratch space for your civilization's agents, kept for this game. |
 
 Files written anywhere else disappear after each command.
+
+## Reference
+Each reference file has one `## <Name>` heading per entry, in game order (era, then cost), followed by the game's tooltip and the entry's details. Technology entries list what each technology unlocks.
+- List the names in a file: `grep '^## ' /workspace/reference/units.md`
+- Read one entry: `grep -A25 '^## Mining$' /workspace/reference/technologies.md`
+- Filter the `.json` twin with `jq`, for example `jq -r '.[] | select(.Era == "Medieval") | .Name' /workspace/reference/units.json`
 
 ## Recorded turns
 {{#hasTurns}}

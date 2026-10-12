@@ -41,11 +41,13 @@ Each processed turn is recorded before pacing decides whether to skip, so skippe
 
 ## Game reference
 
-Before any player loop starts, `StrategistSession` calls `writeGameReference` (`src/knowledge/reference.ts`) with every file-enabled seat's store. It fetches technologies, policies, buildings, and units from the game database once, then commits them as Markdown and JSON under `reference/` in each store whose head lacks them, as one `reference` commit. A later session of the same game skips the fetch when every store already has the reference.
+Before any player loop starts, `StrategistSession` calls `writeGameReference` (`src/knowledge/reference.ts`) with every file-enabled seat's store. It fetches technologies, policies, buildings, and units once through the MCP database tools in `Detailed` mode, so every entry is a full report, then commits them as Markdown and JSON under `reference/` in each store whose head lacks them, as one `reference` commit. A later session of the same game skips the fetch when every store already has the reference.
+
+The help text comes from the game itself: units, buildings, and technologies carry the in-game tooltip as `Help`, fetched through the bridge from the mod's `VoxDeorumReferenceTooltips` (see [lua-hooks.md](../../civ5-mod/lua-hooks.md)). Policies keep their localized help with the line that only repeats the policy name removed. An entry with neither a tooltip nor help text has no `Help` field. Failing to get tooltips fails the reference write, so a tooltip problem stops the session during setup like any other reference failure.
+
+Each entry is trimmed with the same rules as the MCP server's `cleanEventData`: nulls, empty strings, false, -1, `None`, and empty arrays or objects are dropped, and zero is dropped for the combat, range, maintenance, happiness, defense, and hit-point fields. `AIType`, `Strategy`, and unit `Description` are left out, and barbarian-only units are dropped. Technologies, buildings, and units are ordered by era, then cost, then name; policies by era, branch, level, then name. The Markdown file gives each entry a level-two heading with the tooltip text first and the other fields as a list; the JSON twin holds the same trimmed objects.
 
 Because the reference lives in the store, a recorded commit holds everything the seat's bash workspace showed except shared folders and `/tmp`. Oracle replay and the exports below need no other files.
-
-Buildings without help text remain in the reference with an empty `Help` string, as in the MCP tool's detailed reports.
 
 **Setup failures.** If a store cannot open or the reference write fails, the session stops before any loop starts. A session stopped during setup starts none. In both cases `VoxPlayer.dispose` shuts down each prepared player's context and closes its store.
 

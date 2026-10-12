@@ -27,11 +27,12 @@
   <References />
   <Blocks />
   <Files>
-    <File md5="F8F6AABA8C4278EBCD58E50B69A2519B" import="0">SQL/VoxDeorum_Options.sql</File>
+    <File md5="4BC7A08E88BA22D79F8AD615AC00F891" import="0">SQL/VoxDeorum_Options.sql</File>
     <File md5="F6F89F2AA28625F4CAA536C36FF07332" import="0">Text/VoxDeorum_Text.xml</File>
     <File md5="33CA4604421E8178D0D7591CC340CB11" import="0">Text/VoxDeorum_Text.sql</File>
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
+    <File md5="E92C92E07B508C1C79B950EF5E5710E1" import="1">Lua/VoxDeorumReference.lua</File>
     <File md5="9C7CAAB0E8FB817E9FB26A29AD4555F1" import="1">UI/VoxDeorumHumanPanel.lua</File>
     <File md5="6452B033FCDA2F344C0E4D046440F5D5" import="0">UI/VoxDeorumHumanPanel.xml</File>
     <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/VoxDeorumHumanTrigger.lua</File>
@@ -67,6 +68,10 @@
     <EntryPoint type="InGameUIAddin" file="Lua/VoxDeorumTest.lua">
       <Name>VoxDeorumTest</Name>
       <Description>Test listener for Vox Deorum observer API events</Description>
+    </EntryPoint>
+    <EntryPoint type="InGameUIAddin" file="Lua/VoxDeorumReference.lua">
+      <Name>VoxDeorumReference</Name>
+      <Description>Game tooltips for the agents' game reference</Description>
     </EntryPoint>
     <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumHumanPanel.xml">
       <Name>VoxDeorumHumanPanel</Name>

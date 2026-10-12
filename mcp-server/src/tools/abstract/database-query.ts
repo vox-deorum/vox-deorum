@@ -4,6 +4,7 @@ import * as z from "zod";
 import { search } from "fast-fuzzy";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { createLogger } from "../../utils/logger.js";
+import { fetchGameTooltips, type TooltipKind } from "../../utils/database/game-tooltips.js";
 
 const logger = createLogger('DatabaseQueryTool');
 
@@ -31,6 +32,16 @@ export abstract class DatabaseQueryTool<
   protected abstract readonly fullSchema: z.ZodSchema<TFull>;
 
   /**
+   * Set by tools whose entries have an in-game tooltip; full reports then carry it as `Help`
+   */
+  protected readonly tooltipKind?: TooltipKind;
+
+  /**
+   * Optional cleanup of one item after localization; returns a copy rather than changing the item
+   */
+  protected formatItem?(item: TSummary): TSummary;
+
+  /**
    * Optional annotations for database query tools
    */
   readonly annotations: ToolAnnotations = {
@@ -49,7 +60,8 @@ export abstract class DatabaseQueryTool<
    */
   readonly inputSchema = z.object({
     Search: z.string().optional().describe("Fuzzy-matching search term"),
-    MaxResults: z.number().optional().default(20).describe("Maximum number to return (default: 20)")
+    MaxResults: z.number().optional().default(20).describe("Maximum number to return (default: 20)"),
+    Detailed: z.boolean().optional().default(false).describe("Return full details for every result, not only a single match")
   });
 
   /**
@@ -153,23 +165,20 @@ export abstract class DatabaseQueryTool<
       // Limit results
       results = results.slice(0, args.MaxResults);
       
-      // If only one result, fetch full information
-      if (results.length === 1) {
-        try {
-          const identifierField = this.getIdentifierField();
-          const identifier = results[0][identifierField] as string;
-          const fullInfo = await this.fetchFullInfo(identifier);
-          if (fullInfo) {
-            results = [fullInfo] as TSummary[];
-          }
-        } catch (error) {
-          // Fall back to summary if full info fetch fails
-          logger.error("Failed to fetch full info:", error);
-        }
+      // Fetch full information for every result in detailed mode, or for a single result
+      const expand = args.Detailed || results.length === 1;
+      if (expand) {
+        results = await this.expandResults(results, args.Detailed);
       }
       
       // Localize all text fields
-      const localized = await gameDatabase.localizeObjects(results);
+      let localized = await gameDatabase.localizeObjects(results);
+      if (expand && this.tooltipKind) {
+        localized = await this.applyTooltips(localized, this.tooltipKind, args.Detailed);
+      }
+      if (this.formatItem) {
+        localized = localized.map(item => this.formatItem!(item));
+      }
       
       return {
         Count: results.length,
@@ -182,6 +191,45 @@ export abstract class DatabaseQueryTool<
         Items: [],
         Error: error instanceof Error ? error.message : "Unknown query error."
       };
+    }
+  }
+
+  /**
+   * Replace each result with its full information. Detailed listings fail when any fetch fails; a
+   * single lookup keeps the summary instead.
+   */
+  private async expandResults(results: TSummary[], required: boolean): Promise<TSummary[]> {
+    const identifierField = this.getIdentifierField();
+    const expanded: TSummary[] = [];
+    for (const result of results) {
+      try {
+        const fullInfo = await this.fetchFullInfo(result[identifierField] as string);
+        expanded.push((fullInfo ?? result) as TSummary);
+      } catch (error) {
+        if (required) throw error;
+        logger.error("Failed to fetch full info:", error);
+        expanded.push(result);
+      }
+    }
+    return expanded;
+  }
+
+  /**
+   * Copy items with the game's own tooltip as `Help`. Detailed listings fail without the game's
+   * tooltips; a single lookup keeps the database text instead.
+   */
+  private async applyTooltips(items: TSummary[], kind: TooltipKind, required: boolean): Promise<TSummary[]> {
+    const identifierField = this.getIdentifierField();
+    try {
+      const tooltips = await fetchGameTooltips(kind, items.map(item => item[identifierField] as string));
+      return items.map(item => {
+        const tooltip = tooltips.get(item[identifierField] as string);
+        return tooltip ? { ...item, Help: tooltip } : item;
+      });
+    } catch (error) {
+      if (required) throw error;
+      logger.warn(`Using database text instead of game tooltips: ${error instanceof Error ? error.message : String(error)}`);
+      return items;
     }
   }
 }

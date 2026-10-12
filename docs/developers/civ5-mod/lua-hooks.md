@@ -44,6 +44,12 @@ Put together, the addin sits in the middle of a loop that crosses every layer:
 
 This is why the mod is required even though it is small: it is the in-game end of the protocol, and the place where external decisions become events the game and its UI can see.
 
+## The reference tooltips addin
+
+`Lua/VoxDeorumReference.lua` is a second standalone Lua addin. It provides the function `VoxDeorumReferenceTooltips(kind, types)`, which the MCP server calls through the bridge when a database tool returns a full report (see [mcp-server/database.md](../mcp-server/database.md)). The addin does not register the function when it loads, because UI contexts load before the DLL's connection service starts and registering that early crashes the game. It registers when `LuaEvents.VoxDeorumReferenceRegister` fires, which the MCP server triggers the first time a call finds the function missing, including after a save is loaded. `kind` is `unit`, `building`, or `technology`, `types` is a list of type keys, and the function returns a map from each type to its in-game tooltip text.
+
+To match what a player reads on screen, the file includes the Community Patch tooltip code that EUI uses, `InfoTooltipInclude` and `TechHelpInclude`, and builds each tooltip in general-info mode: `GetHelpTextForUnit` and `GetHelpTextForBuilding` with the general-info flag set, and the short form of `GetHelpTextForTech`. General-info mode leaves out anything specific to a player or city, so every seat gets the same text.
+
 ## The map script
 
 `Mapscripts/Vox_Deorum.lua` is the mod's other non-UI entry point, and a different kind of script entirely: a **map generator**, not a runtime hook. It is a parameter-tuned copy of the community **Communitu_79a** script (Communitas lineage, adapted for Vox Populi) whose values are fixed for Vox Deorum research, so studies run on consistent terrain.

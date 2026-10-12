@@ -2,6 +2,7 @@ import { gameDatabase } from "../../server.js";
 import { DatabaseQueryTool } from "../abstract/database-query.js";
 import * as z from "zod";
 import * as changeCase from "change-case";
+import { getEraName } from "../../utils/database/enums.js";
 
 // =============================================================================
 // Schemas & Types
@@ -29,7 +30,10 @@ const UnitSummarySchema = z.object({
   UniqueOf: z.string().nullable(),
   
   // Description
-  Description: z.string().nullable()
+  Description: z.string().nullable(),
+
+  // In-game tooltip, filled in for full reports
+  Help: z.string().optional()
 });
 
 /**
@@ -59,6 +63,9 @@ const UnitReportSchema = UnitSummarySchema.extend({
 type UnitSummary = z.infer<typeof UnitSummarySchema>;
 type UnitReport = z.infer<typeof UnitReportSchema>;
 
+/** The civilization type whose unique units only barbarians field. */
+const barbarianCivilization = "CIVILIZATION_BARBARIAN";
+
 // =============================================================================
 // Tool Implementation
 // =============================================================================
@@ -75,7 +82,7 @@ class GetUnitTool extends DatabaseQueryTool<UnitSummary, UnitReport> {
   /**
    * Human-readable description of the get unit tool
    */
-  readonly description = "Retrieves unit information from the Civilization V game database with listing and fuzzy search capabilities";
+  readonly description = "Retrieves unit information from the Civilization V game database with listing and fuzzy search capabilities.";
 
   /**
    * Schema for unit summary
@@ -86,6 +93,11 @@ class GetUnitTool extends DatabaseQueryTool<UnitSummary, UnitReport> {
    * Schema for full unit information
    */
   protected readonly fullSchema = UnitReportSchema;
+
+  /**
+   * Full reports carry the in-game unit tooltip
+   */
+  protected readonly tooltipKind = 'unit';
 
   /**
    * Fetch unit summaries from database
@@ -110,9 +122,14 @@ class GetUnitTool extends DatabaseQueryTool<UnitSummary, UnitReport> {
         'e.Type as Era'
       ])
       .where('u.ShowInPedia', '=', 1)
+      // Barbarian-only units can't be trained by any player
+      .where(eb => eb.or([
+        eb('cuo.CivilizationType', 'is', null),
+        eb('cuo.CivilizationType', '!=', barbarianCivilization),
+      ]))
       .execute() as UnitSummary[];
     summaries.forEach(p => {
-      p.Era = changeCase.pascalCase(p?.Era?.substring(4) ?? "") || null;
+      p.Era = p.Era ? getEraName(p.Era) ?? null : null;
     });
     return summaries;
   }
@@ -215,7 +232,7 @@ export async function getUnit(unitType: string) {
     Cost: unit.Cost || 0,
     PrereqTech: unit.PrereqTechName || null,
     UniqueOf: unit.UniqueCivName || null,
-    Era: changeCase.pascalCase(era?.Era?.substring(4) ?? "") || null,
+    Era: era?.Era ? getEraName(era.Era) ?? null : null,
     Class: unit.ClassName || unit.Class || '',
     AIType: changeCase.pascalCase(unit.DefaultUnitAI?.substring(7) ?? ""),
     Range: unit.Range || 0,

@@ -116,7 +116,7 @@ export class DatabaseManager {
         .where('Tag', '=', key)
         .executeTakeFirst();
       
-      return result?.Text || key; // Return key if no translation found
+      return result?.Text ?? key; // Return key if no translation found; empty text stays empty
     } catch (error) {
       logger.error('Localization lookup failed:', error);
       return key; // Return key as fallback
@@ -191,9 +191,10 @@ export class DatabaseManager {
         .execute();
       
       // Build localization map with fallbacks
+      // An empty text (Vox Populi leaves some help keys empty) localizes to an empty string
       localizations.forEach(({ Tag, Text }) => {
-        if (!Tag || !Text) return;
-        localizationMap.set(Tag, stripTags(Text));
+        if (!Tag || Text == null || (Text === '' && localizationMap.get(Tag))) return;
+        localizationMap.set(Tag, stripTags(Text) ?? '');
       });
     } catch (error) {
       logger.error('Batch localization lookup failed:', error);
@@ -213,9 +214,8 @@ export class DatabaseManager {
         }
         // Then check for embedded TXT_KEY patterns and replace them
         return obj.replaceAll(TXT_KEY_PATTERN, (match) => {
-          if (match.startsWith('{') && match.endsWith('}'))
-            return localizationMap.get(match.slice(1, -1)) || match;
-          else return localizationMap.get(match) || match;
+          const key = match.startsWith('{') && match.endsWith('}') ? match.slice(1, -1) : match;
+          return localizationMap.get(key) ?? match;
         });
       }
       

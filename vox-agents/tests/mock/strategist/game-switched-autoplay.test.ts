@@ -534,7 +534,7 @@ describe('handleGameSwitched player preparation', () => {
 
     for (const tool of referenceTools) {
       expect(mcp.calls(tool)).toHaveLength(1);
-      expect(mcp.calls(tool)[0].args).toEqual({ MaxResults: 5000 });
+      expect(mcp.calls(tool)[0].args).toEqual({ MaxResults: 5000, Detailed: true });
     }
     expect(execute).toHaveBeenCalledTimes(2);
     expect(referenceAtStart).toEqual([true, true]);

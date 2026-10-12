@@ -82,7 +82,7 @@ class GetPolicyTool extends DatabaseQueryTool<PolicySummary, PolicyReport> {
     Summaries.forEach(p => {
       p.Era = getEraName(p.Era ?? p.Era2) ?? null,
       p.Branch = p.Branch ?? p.Branch2;
-      p.Help = formatPolicyHelp(p.Help2 ?? p.Help, p.Type).join('\n');
+      p.Help = p.Help2 ?? p.Help;
       delete (p as Record<string, unknown>).Era2;
       delete (p as Record<string, unknown>).Branch2;
       delete (p as Record<string, unknown>).Help2;
@@ -91,6 +91,13 @@ class GetPolicyTool extends DatabaseQueryTool<PolicySummary, PolicyReport> {
   }
   
   protected fetchFullInfo = getPolicy;
+
+  /**
+   * Clean localized help: drop blank lines and the line that only repeats the policy name
+   */
+  protected formatItem(item: PolicySummary): PolicySummary {
+    return { ...item, Help: formatPolicyHelp(item.Help, item.Name).join('\n') };
+  }
 }
 
 /**
@@ -140,7 +147,7 @@ export async function getPolicy(policyType: string) {
   return {
     Type: policy.Type,
     Name: policy.Name!,
-    Help: formatPolicyHelp(policy.Help2 ?? policy.Help!, policy.Type).join('\n'),
+    Help: policy.Help2 ?? policy.Help!,
     Era: getEraName(policy.Era ?? policy.Era2 ?? "ERA_ANCIENT"),
     Branch: policy.Branch ?? policy.Branch2,
     Level: policy.Level,

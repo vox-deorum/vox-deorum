@@ -1,7 +1,8 @@
 /**
- * Tests for the game reference writer (src/knowledge/reference.ts): one set of listing calls for
- * every store that lacks the reference, one commit per store only after every listing succeeds,
- * single-item detailed results, and skipping stores that already hold it.
+ * Tests for the game reference writer (src/knowledge/reference.ts): one set of detailed listing
+ * calls for every store that lacks the reference, one commit per store only after every listing
+ * succeeds, trimmed and ordered entries with the tooltip first, and skipping stores that already
+ * hold it.
  */
 
 import fs from 'node:fs';
@@ -58,7 +59,7 @@ describe('writeGameReference', () => {
 
     for (const tool of tools) {
       expect(mcp.calls(tool)).toHaveLength(1);
-      expect(mcp.calls(tool)[0].args).toEqual({ MaxResults: 5000 });
+      expect(mcp.calls(tool)[0].args).toEqual({ MaxResults: 5000, Detailed: true });
     }
     for (const store of [a, b]) {
       const paths = [...store.manifest().keys()].filter((storePath) => storePath.startsWith('reference/'));
@@ -71,16 +72,59 @@ describe('writeGameReference', () => {
     }
   });
 
-  it('should render a single detailed item, not only listing rows', async () => {
-    mcp.respondWith('get-policy', structuredResult({ Count: 1, Items: [{ Type: 'POLICY_ONLY', Name: 'Only', Branch: 'Tradition', PrereqPolicies: ['Root'] }] }));
+  it('should put the tooltip first and the other fields after it', async () => {
+    mcp.respondWith('get-policy', structuredResult({ Count: 1, Items: [{ Type: 'POLICY_ONLY', Name: 'Only', Help: 'Grants culture.', Branch: 'Tradition', PrereqPolicies: ['Root'] }] }));
     const store = openStore('a');
 
     await writeGameReference([store]);
 
     const policies = read(store, 'reference/policies.md');
-    expect(policies).toContain('Only');
-    expect(policies).toContain('Tradition');
-    expect(policies).toContain('Root');
+    const section = policies.slice(policies.indexOf('## Only'));
+    expect(section.indexOf('Grants culture.')).toBeGreaterThan(0);
+    expect(section.indexOf('Grants culture.')).toBeLessThan(section.indexOf('Tradition'));
+    expect(section).toContain('Root');
+    expect(section).not.toMatch(/Help/);
+  });
+
+  it('should drop empty values and AI internals', async () => {
+    mcp.respondWith('get-unit', structuredResult({ Count: 1, Items: [
+      { Type: 'UNIT_WARRIOR', Name: 'Warrior', Help: 'Melee unit.', Combat: 8, RangedCombat: 0, Cost: 40, UniqueOf: null, AIType: 'Attack', Description: 'Advice', FreePromotions: [], RequiredResources: {}, PrereqTech: null },
+    ] }));
+    mcp.respondWith('get-building', structuredResult({ Count: 1, Items: [{ Type: 'BUILDING_PALACE', Name: 'Palace', Help: 'Capital.', Cost: -1, Maintenance: 0, IsWorldWonder: false, Strategy: 'Advice' }] }));
+    const store = openStore('a');
+
+    await writeGameReference([store]);
+
+    expect(JSON.parse(read(store, 'reference/units.json'))).toEqual([{ Type: 'UNIT_WARRIOR', Name: 'Warrior', Help: 'Melee unit.', Combat: 8, Cost: 40 }]);
+    expect(JSON.parse(read(store, 'reference/buildings.json'))).toEqual([{ Type: 'BUILDING_PALACE', Name: 'Palace', Help: 'Capital.' }]);
+    expect(read(store, 'reference/units.md')).not.toMatch(/null|AIType|Advice/);
+  });
+
+  it('should order entries by era then cost, and policies by era, branch, then level', async () => {
+    mcp.respondWith('get-technology', structuredResult({ Count: 4, Items: [
+      { Type: 'TECH_C', Name: 'Classical Cheap', Era: 'Classical', Cost: 10 },
+      { Type: 'TECH_B', Name: 'Ancient Dear', Era: 'Ancient', Cost: 90 },
+      { Type: 'TECH_A', Name: 'Ancient Cheap', Era: 'Ancient', Cost: 20 },
+      { Type: 'TECH_D', Name: 'Atomic', Era: 'Atomic', Cost: 5 },
+    ] }));
+    mcp.respondWith('get-policy', structuredResult({ Count: 3, Items: [
+      { Type: 'P3', Name: 'Tradition Two', Era: 'Ancient', Branch: 'Tradition', Level: 2 },
+      { Type: 'P2', Name: 'Tradition One', Era: 'Ancient', Branch: 'Tradition', Level: 1 },
+      { Type: 'P1', Name: 'Authority One', Era: 'Ancient', Branch: 'Authority', Level: 1 },
+    ] }));
+    mcp.respondWith('get-unit', structuredResult({ Count: 2, Items: [
+      { Type: 'UNIT_SPEARMAN', Name: 'Spearman', Era: 'Ancient', Cost: 60 },
+      { Type: 'UNIT_WORKER', Name: 'Worker', Era: null, Cost: 70 },
+    ] }));
+    const store = openStore('a');
+
+    await writeGameReference([store]);
+
+    const headings = (file: string) => read(store, `reference/${file}.md`).split(/\r?\n/).filter((line) => line.startsWith('## '));
+    expect(headings('technologies')).toEqual(['## Ancient Cheap', '## Ancient Dear', '## Classical Cheap', '## Atomic']);
+    expect(headings('policies')).toEqual(['## Authority One', '## Tradition One', '## Tradition Two']);
+    expect(headings('units')).toEqual(['## Worker', '## Spearman']);
+    expect(JSON.parse(read(store, 'reference/technologies.json')).map((item: { Type: string }) => item.Type)).toEqual(['TECH_A', 'TECH_B', 'TECH_C', 'TECH_D']);
   });
 
   it.each([

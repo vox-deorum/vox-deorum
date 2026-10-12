@@ -59,6 +59,11 @@ class GetBuildingTool extends DatabaseQueryTool<BuildingSummary, BuildingReport>
   protected readonly fullSchema = BuildingReportSchema;
 
   /**
+   * Full reports carry the in-game building tooltip
+   */
+  protected readonly tooltipKind = 'building';
+
+  /**
    * Fetch building summaries from database
    */
   protected async fetchSummaries(): Promise<BuildingSummary[]> {
