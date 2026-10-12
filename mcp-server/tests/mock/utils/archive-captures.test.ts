@@ -117,8 +117,8 @@ describe('archiveGameData capture wiring', () => {
       path.join(workDir, 'archive', 'exp-test'),
       captureRoot(gameId),
     ]));
-    // The published package is canonical, so the source tree is gone.
-    await expect(fs.access(captureRoot(gameId))).rejects.toThrow();
+    // The published package is canonical, so the source tree and its removal folder are gone.
+    expect(await fs.readdir(path.dirname(captureRoot(gameId)))).toEqual([]);
     await expect(fs.access(path.join(workDir, 'archive', 'exp-test', 'captures'))).rejects.toThrow();
     await expect(fs.access(result!.savePath)).resolves.toBeUndefined();
   });

@@ -58,8 +58,11 @@ Alongside the video files, the controller writes `segments.jsonl` in the recordi
 When the MCP server archives a finished game, it also packages the DLL's recording as `archive/<experiment>/<game-id>.zip`, then tries to remove the source folder.
 
 - The zip has one `<game-id>/` root folder, leaves out `tactical-training/`, and stores `stream.bin` files without compression.
-- An existing zip with the same name is reused.
+- The archive script rebuilds the zip from the source recording every time it runs. It writes a hidden `.<game-id>.<pid>.partial` file next to the zip and renames it over the old zip only after writing finishes, so a failed or killed run leaves any earlier zip intact. On Windows it holds an exclusive handle on the partial file, blocking copies by tools such as robocopy.
+- If the old zip is open in another process when the rename happens (for example, a copy in progress on Windows), packaging fails and the source stays.
 - If packaging fails, the source folder stays. Cleanup errors are logged without failing the rest of the archive.
+- A failed run tries to remove its partial file. If that cleanup fails or the process is killed, delete the leftover `.partial` file by hand.
+- After a successful package, the MCP server renames the source folder to a hidden `.<game-id>.<timestamp>.removing` folder before deleting it. A deletion that stops partway therefore never leaves an incomplete recording under the game ID for a later run to package. A leftover `.removing` folder can be deleted by hand.
 
 To package a recording by hand, run `npm run archive:raw -- SOURCE_ROOT OUTPUT_DIRECTORY` from the repository root.
 

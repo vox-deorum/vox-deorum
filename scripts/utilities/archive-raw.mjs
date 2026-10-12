@@ -1,9 +1,12 @@
 /** Assemble one finalized DLL recording into a streaming ZIP64 package. */
-import { createWriteStream } from 'node:fs';
-import { link, mkdir, readdir, stat, unlink } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { mkdir, open, readdir, rename, stat, unlink } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import yazl from 'yazl';
+
+// libuv's UV_FS_O_EXLOCK denies Windows read/write/delete sharing. Node does not export it.
+const exclusiveLock = process.platform === 'win32' ? 0x10000000 : 0;
 
 /** Return source files in stable order while excluding derived training data. */
 async function recordingFiles(sourceRoot) {
@@ -26,55 +29,55 @@ async function recordingFiles(sourceRoot) {
   return files;
 }
 
-/** Check whether a path exists without turning a missing path into an error. */
-async function pathExists(target) {
-  try { await stat(target); return true; } catch { return false; }
-}
-
-/** Rename a completed temporary package while refusing to replace an existing one. */
-async function renameNoReplace(source, target) {
-  await link(source, target);
-  await unlink(source);
-}
-
-/** Stream source files into a ZIP64 package with stored stream members. */
-async function writeArchive(sourceRoot, partialPath, gameId) {
-  const files = await recordingFiles(sourceRoot);
-  if (files.length === 0) throw new Error('Recording source contains no package files');
+/** Write a ZIP64 package to a temporary path, denying Windows copies until the stream closes. */
+async function writeArchive(files, partialPath, gameId) {
   const zipfile = new yazl.ZipFile();
-  const output = createWriteStream(partialPath, { flags: 'wx' });
+  const handle = await open(partialPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | exclusiveLock);
+  const output = handle.createWriteStream();
   /** Close the destination stream when yazl reports an archive error. */
   const zipError = (error) => zipfile.outputStream.destroy(error);
-  zipfile.once('error', zipError);
+  zipfile.on('error', zipError);
   const completed = pipeline(zipfile.outputStream, output);
-  for (const file of files) {
-    const metadataPath = `${gameId}/${file.logical}`;
-    const isStream = file.logical.split('/').at(-1) === 'stream.bin';
-    zipfile.addFile(file.absolute, metadataPath, {
-      compress: !isStream,
-      forceZip64Format: true,
-    });
+  try {
+    for (const file of files) {
+      const metadataPath = `${gameId}/${file.logical}`;
+      const isStream = file.logical.split('/').at(-1) === 'stream.bin';
+      zipfile.addFile(file.absolute, metadataPath, {
+        compress: !isStream,
+        forceZip64Format: true,
+      });
+    }
+    zipfile.end({ forceZip64Format: true });
+    await completed;
+  } catch (error) {
+    zipfile.outputStream.destroy(error);
+    await completed.catch(() => {});
+    throw error;
   }
-  zipfile.end({ forceZip64Format: true });
-  await completed;
 }
 
-/** Publish a package without overwriting a package created by another process. */
+/** Rebuild the game's ZIP beside the old one and replace it only after the new one is complete. */
 async function publishArchive(sourceRoot, outputDirectory) {
   const gameId = sourceRoot.split(/[\\/]/).filter(Boolean).at(-1);
   if (!gameId) throw new Error('Source directory must have a game ID name');
+  const files = await recordingFiles(sourceRoot);
+  if (files.length === 0) throw new Error('Recording source contains no package files');
   const finalPath = join(outputDirectory, `${gameId}.zip`);
-  if (await pathExists(finalPath)) return finalPath;
-  const partialPath = join(outputDirectory, `.${gameId}.${process.pid}.${Date.now()}.partial`);
+  const partialPath = join(outputDirectory, `.${gameId}.${process.pid}.partial`);
   try {
-    await writeArchive(sourceRoot, partialPath, gameId);
-    await renameNoReplace(partialPath, finalPath);
-    return finalPath;
+    await writeArchive(files, partialPath, gameId);
+    await rename(partialPath, finalPath);
   } catch (error) {
-    try { await unlink(partialPath); } catch { /* best effort */ }
-    if (await pathExists(finalPath)) return finalPath;
+    try {
+      await unlink(partialPath);
+    } catch (cleanupError) {
+      if (cleanupError.code !== 'ENOENT') {
+        process.stderr.write(`archive-raw: failed to remove incomplete ZIP ${partialPath}: ${cleanupError.message}\n`);
+      }
+    }
     throw error;
   }
+  return finalPath;
 }
 
 /** Parse the manual archive command and validate its required positional paths. */

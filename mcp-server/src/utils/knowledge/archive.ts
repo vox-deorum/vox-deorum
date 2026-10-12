@@ -134,8 +134,12 @@ async function archiveRawCaptureRecording(
     return { status: 'failed', detail: String(error) };
   }
 
+  // Move the source aside first so a deletion that stops partway cannot leave an
+  // incomplete recording under the game ID for a later archive run to package.
+  const removingRoot = path.join(path.dirname(resolvedSourceRoot), `.${gameId}.${Date.now()}.removing`);
   try {
-    await fs.rm(resolvedSourceRoot, { recursive: true, force: true });
+    await fs.rename(resolvedSourceRoot, removingRoot);
+    await fs.rm(removingRoot, { recursive: true, force: true });
     logger.debug(`Removed capture source folder for raw package ${gameId}`);
   } catch (error) {
     logger.warn(`Failed to remove capture source folder for game ${gameId}: ${String(error)}`);
