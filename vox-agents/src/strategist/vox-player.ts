@@ -27,6 +27,7 @@ import { runStrategistTriage } from "./pacing/triage.js";
 import { countTokens } from "../utils/models/token-counter.js";
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
 import { errorMessage } from "../utils/errors.js";
+import { setMetadata } from "../utils/game/metadata.js";
 import { WorkspaceStore } from "../utils/workspace/workspace-store.js";
 
 /** Where a turn notification came from: a real `PlayerDoneTurn`, or the session's proactive human startup turn. */
@@ -497,12 +498,13 @@ export class VoxPlayer {
         });
         span.end();
 
-        // Best-effort metadata reporting - don't let failures prevent context shutdown
+        // Best-effort metadata reporting - don't let failures prevent context shutdown.
+        // Goes straight to MCP so the token bookkeeping writes stay out of telemetry spans.
         try {
           await Promise.all([
-            this.context.callTool("set-metadata", { Key: `inputTokens-${this.playerID}`, Value: String(this.context.inputTokens) }, this.parameters),
-            this.context.callTool("set-metadata", { Key: `reasoningTokens-${this.playerID}`, Value: String(this.context.reasoningTokens) }, this.parameters),
-            this.context.callTool("set-metadata", { Key: `outputTokens-${this.playerID}`, Value: String(this.context.outputTokens) }, this.parameters),
+            setMetadata(`inputTokens-${this.playerID}`, this.context.inputTokens),
+            setMetadata(`reasoningTokens-${this.playerID}`, this.context.reasoningTokens),
+            setMetadata(`outputTokens-${this.playerID}`, this.context.outputTokens),
             sqliteExporter.forceFlush()
           ]);
         } catch (error) {
