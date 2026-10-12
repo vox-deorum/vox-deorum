@@ -23,6 +23,7 @@ import { Strategist } from "../strategist.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { StrategistParameters, ensureGameState } from "../strategy-parameters.js";
 import { HumanDecisionSubmission } from "../human-decision-bus.js";
+import { setMetadata } from "../../utils/game/metadata.js";
 
 /**
  * Human strategist seat. Presents the decision, waits for the human's
@@ -234,10 +235,12 @@ export class HumanStrategist extends Strategist {
     const runningTotal = previousTotal + deliberationMs;
     parameters.workingMemory["deliberationMsTotal"] = String(runningTotal);
 
-    await context.callTool("set-metadata", {
-      Key: `deliberationMs-${playerID}`,
-      Value: String(runningTotal)
-    }, parameters);
+    // Goes straight to MCP so the bookkeeping write stays out of telemetry spans.
+    try {
+      await setMetadata(`deliberationMs-${playerID}`, runningTotal);
+    } catch (error) {
+      this.logger.error(`Failed to record deliberation total for player ${playerID}:`, error);
+    }
   }
 
   /**

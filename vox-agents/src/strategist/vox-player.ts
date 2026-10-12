@@ -279,8 +279,12 @@ export class VoxPlayer {
 
     return await context.with(trace.setSpan(context.active(), span), async () => {
       try {
-        // Set the player's AI type
-        await this.context.callTool("set-metadata", { Key: `strategist-${this.playerID}`, Value: this.playerConfig.strategist }, this.parameters);
+        // Set the player's AI type (straight to MCP so the label write stays out of telemetry spans)
+        try {
+          await setMetadata(`strategist-${this.playerID}`, this.playerConfig.strategist);
+        } catch (error) {
+          this.logger.error(`Failed to set strategist label for player ${this.playerID}:`, error);
+        }
 
         // Resume the game in case the vox agent was aborted
         await this.context.callTool("resume-game", { PlayerID: this.playerID }, this.parameters);

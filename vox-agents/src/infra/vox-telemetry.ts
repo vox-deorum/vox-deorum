@@ -18,11 +18,12 @@ import type { AgentParameters } from "./vox-agent.js";
 import type { Model } from "../types/index.js";
 import type { ExecuteTokenOutput, RootRun } from "./vox-run.js";
 import { errorMessage } from "../utils/errors.js";
+import { setMetadata } from "../utils/game/metadata.js";
 
 /**
  * Everything the telemetry helpers and the evaluation path read or write on the context: the
- * tracer and context id that stamp every span, the seat-wide token totals, the label state plus
- * tool-call path the model label update needs, and the run accessors the single-call evaluate path
+ * tracer and context id that stamp every span, the seat-wide token totals, the label state the
+ * model label update needs, and the run accessors the single-call evaluate path
  * needs (the active root, its abort signal, and the logger/timeout-refresh pair that doubles as
  * the model factory's concurrency context). VoxContext implements it, and it is deliberately no
  * wider than that. The agent loop in vox-execute.ts works against the full VoxContext instead,
@@ -61,9 +62,6 @@ export interface ExecutionHost<TParameters extends AgentParameters> {
 
   /** Last model short name sent via set-metadata, so {@link updateModelLabel} can dedupe repeat sends. */
   lastModelName?: string;
-
-  /** Invoke a registered tool by name (the set-metadata label update calls through this). */
-  callTool<T = unknown>(name: string, args: Record<string, unknown>, parameters: TParameters): Promise<T | undefined>;
 }
 
 /**
@@ -170,7 +168,7 @@ export function accrueTokens<TParameters extends AgentParameters>(
  * "VPAI" when there is no system prompt (in-game AI only). A dedupe against the host's
  * lastModelName keeps repeat executions on the same model from re-sending the label.
  *
- * @param host - The execution host providing lastModelName state and the callTool path
+ * @param host - The execution host providing lastModelName state and the logger
  * @param agentName - The agent being executed (checked for the "-strategist" suffix marker)
  * @param modelConfig - The resolved model configuration for this execution
  * @param system - The composed system prompt (empty selects the "VPAI" label)
@@ -190,9 +188,12 @@ export async function updateModelLabel<TParameters extends AgentParameters>(
       : "VPAI";
     if (shortName !== host.lastModelName) {
       host.lastModelName = shortName;
-      await host.callTool("set-metadata", {
-        Key: `model-${parameters.playerID}`, Value: shortName
-      }, parameters);
+      // Goes straight to MCP so the label write stays out of telemetry spans.
+      try {
+        await setMetadata(`model-${parameters.playerID}`, shortName);
+      } catch (error) {
+        host.logger.error(`Failed to update model label for player ${parameters.playerID}:`, error);
+      }
     }
   }
 }
