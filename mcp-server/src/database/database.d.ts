@@ -9002,5 +9002,5 @@ export interface DB {
   // Votes: Vote;
   // VoteSources: VoteSource;
   // Worlds: World;
-  // Yields: Yield;
+  Yields: Yield;
 }

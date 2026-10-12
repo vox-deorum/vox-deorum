@@ -19,7 +19,8 @@ Files written anywhere else disappear after each command.
 ## Reference
 Each reference file has one `## <Name>` heading per entry, in game order (era, then cost), followed by the game's tooltip and the entry's details. Technology entries list what each technology unlocks.
 - List the names in a file: `grep '^## ' /workspace/reference/units.md`
-- Read one entry: `grep -A25 '^## Mining$' /workspace/reference/technologies.md`
+- Read one whole entry, up to the next heading: `awk '/^## /{p=($0=="## Mining")} p' /workspace/reference/technologies.md`
+- Or select it from the `.json` twin: `jq '.[] | select(.Name == "Mining")' /workspace/reference/technologies.json`
 - Filter the `.json` twin with `jq`, for example `jq -r '.[] | select(.Era == "Medieval") | .Name' /workspace/reference/units.json`
 
 ## Recorded turns

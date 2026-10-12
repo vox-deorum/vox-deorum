@@ -4,7 +4,7 @@
  * player-agnostic text with the same tooltip code the in-game screens use.
  */
 
-import { bridgeManager } from '../../server.js';
+import { bridgeManager, gameDatabase } from '../../server.js';
 import { stripTags } from './localized.js';
 
 /** Entry kinds the game function can describe. */
@@ -26,15 +26,63 @@ const batchSize = 50;
  * @throws when the bridge call fails or the mod does not register the function
  */
 export async function fetchGameTooltips(kind: TooltipKind, types: string[]): Promise<Map<string, string>> {
-  const tooltips = new Map<string, string>();
+  const texts: [string, string][] = [];
   for (let start = 0; start < types.length; start += batchSize) {
     const result = await callTooltips(kind, types.slice(start, start + batchSize));
     for (const [type, text] of Object.entries(result)) {
-      const stripped = typeof text === 'string' ? stripTags(text)?.trim() : undefined;
-      if (stripped) tooltips.set(type, stripped);
+      if (typeof text === 'string') texts.push([type, text]);
     }
   }
+  const tooltips = new Map<string, string>();
+  if (texts.length === 0) return tooltips;
+  const iconNames = await loadIconNames();
+  for (const [type, text] of texts) {
+    const stripped = stripTags(nameIcons(text, iconNames))?.trim();
+    if (stripped) tooltips.set(type, stripped);
+  }
   return tooltips;
+}
+
+/** Map each yield and resource icon to its localized name; the first row wins when rows share an icon. */
+async function loadIconNames(): Promise<Map<string, string>> {
+  const db = gameDatabase.getDatabase();
+  const rows = [
+    ...await db.selectFrom('Yields').select(['IconString', 'Description']).orderBy('ID').execute(),
+    ...await db.selectFrom('Resources').select(['IconString', 'Description']).orderBy('ID').execute(),
+  ];
+  const names = new Map<string, string>();
+  for (const { IconString, Description } of await gameDatabase.localizeObjects(rows)) {
+    if (!IconString || !Description || Description.startsWith('TXT_KEY_') || names.has(IconString)) continue;
+    names.set(IconString, Description);
+  }
+  return names;
+}
+
+/**
+ * Replace icons that stand for a yield or resource with its name, so text such as "+1 [ICON_PRODUCTION]
+ * +1 [ICON_GOLD]" keeps which amount is which. An icon whose next word already names it is dropped.
+ */
+export function nameIcons(text: string, iconNames: Map<string, string>): string {
+  return text.replace(/(\[ICON_[A-Z0-9_]+\])([^[\]\n]*)/g, (match, icon: string, after: string, offset: number) => {
+    const name = iconNames.get(icon);
+    if (!name) return match;
+    const separated = offset === 0 || /[\s\]]/.test(text[offset - 1]);
+    if (sameWord(firstWord(name), firstWord(after))) return separated ? after.trimStart() : after;
+    const space = separated ? '' : ' ';
+    return `${space}${name}${after}`;
+  });
+}
+
+/** The first word of a text, lowercased. */
+function firstWord(text: string): string {
+  return text.trimStart().split(/[\s:,.;!?()]/, 1)[0].toLowerCase();
+}
+
+/** Whether two words match, allowing a plural ending on either one (Horse and Horses). */
+function sameWord(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return long === short || long === `${short}s` || long === `${short}es`;
 }
 
 /** Call the game function for one batch; when it is not registered yet, ask the mod to register it and retry once. */

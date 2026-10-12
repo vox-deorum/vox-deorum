@@ -11,6 +11,9 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as z from 'zod';
+import Database from 'better-sqlite3';
+import { Kysely, SqliteDialect } from 'kysely';
+import type { DB } from '../../../../src/database/database.js';
 import { bridgeManager, gameDatabase } from '../../../../src/server.js';
 import { DatabaseQueryTool } from '../../../../src/tools/abstract/database-query.js';
 import type { TooltipKind } from '../../../../src/utils/database/game-tooltips.js';
@@ -195,6 +198,26 @@ describe('DatabaseQueryTool', () => {
       }
     }
 
+    let db: Kysely<DB>;
+
+    beforeEach(() => {
+      // Icon names come from the yield and resource tables; a later yield reusing an icon must not rename it.
+      const sqlite = new Database(':memory:');
+      sqlite.exec(`
+        CREATE TABLE Yields (ID INTEGER, IconString TEXT, Description TEXT);
+        CREATE TABLE Resources (ID INTEGER, IconString TEXT, Description TEXT);
+        INSERT INTO Yields VALUES (0, '[ICON_PRODUCTION]', 'Production'), (1, '[ICON_GOLD]', 'Gold'),
+          (2, '[ICON_PEACE]', 'Faith'), (3, '[ICON_GOLDEN_AGE]', 'Golden Age Points'), (9, '[ICON_GOLD]', 'Loot');
+        INSERT INTO Resources VALUES (0, '[ICON_RES_IRON]', 'Iron'), (1, '[ICON_RES_HORSE]', 'Horses');
+      `);
+      db = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+      vi.spyOn(gameDatabase, 'getDatabase').mockReturnValue(db);
+    });
+
+    afterEach(async () => {
+      await db.destroy();
+    });
+
     /** Answer tooltip calls with a tooltip for every type except the ones listed. */
     function answerTooltips(missing: string[] = []) {
       return vi.spyOn(bridgeManager, 'callLuaFunction').mockImplementation(async (_name, args) => {
@@ -226,6 +249,20 @@ describe('DatabaseQueryTool', () => {
       const byType = new Map(result.Items.map((item: any) => [item.Type, item.Help]));
       expect(byType.get('TECH_0')).toBe('TECH_0\n* Detail');
       expect(byType.get('TECH_7')).toBe('Database help');
+    });
+
+    it('should name yield and resource icons that the text does not already name', async () => {
+      vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({ success: true, result: {
+        TECH_POTTERY: '[ICON_RES_IRON] Iron: +1 [ICON_PRODUCTION] +1 [ICON_GOLD][NEWLINE][ICON_PEACE] Faith from [ICON_RES_HORSE] Horse',
+        TECH_ARCHERY: '+2 [ICON_GOLDEN_AGE] Golden Age, +1 [ICON_GOLD] Golden Age Points, [ICON_CAPITAL] Capital',
+      } });
+      const tool = new TooltipTool(FIXTURES);
+
+      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+
+      const byType = new Map(result.Items.map((item: any) => [item.Type, item.Help]));
+      expect(byType.get('TECH_POTTERY')).toBe('Iron: +1 Production +1 Gold\nFaith from Horse');
+      expect(byType.get('TECH_ARCHERY')).toBe('+2 Golden Age, +1 Gold Golden Age Points, Capital');
     });
 
     it('should leave cached summaries unchanged', async () => {
