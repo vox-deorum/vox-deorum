@@ -65,3 +65,4 @@ Documentation is centralized in `/docs/` and serves two audiences: players (how 
 - Keep the detail light. Avoid raw code in docs; describe the behavior and name the source file instead.
 - No line-number anchors. They drift, so refer to files, functions, or concepts by name.
 - Component `docs/` folders are only for component-specific reference material (for example, `mcp-server/docs/events/`). Don't add new root-level markdown inside components.
+- When editing documentation, do not just append another sentence. Rewrite relevant sections to be more readable if needed.

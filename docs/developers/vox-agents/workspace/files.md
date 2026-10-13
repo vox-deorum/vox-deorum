@@ -7,7 +7,7 @@ With files on, a strategist can look back at earlier turns, keep its own notes b
 ```
 /workspace/records     read-only    what the seat saw each turn
 /workspace/game        notes        the seat's own notes for this game
-/workspace/reference   read-only    game rules: techs, policies, buildings, units, one file pair per era
+/workspace/reference   read-only    game rules: techs, policies, buildings, units, one file pair per era or policy branch
 /workspace/shared/<n>  configurable notes kept across games and seats
 /tmp                   scratch      shared by one player's agents for the game
 ```
@@ -53,7 +53,7 @@ Rules:
 Each folder an agent can write gets an `AGENTS.md` guide:
 
 - **Shared folders.** The guide is created once on disk and never overwritten, so agents and players can edit it.
-- **Game notes.** The guide lives in the store. If a command that can write finds it missing, the default is written back as part of that command. So the guide returns after an agent deletes it or a rewind drops it. The default leaves it to agents how to use the folder. It notes which notes they see at the start of each run and that decision rationales and turn records already carry forward. When the seat has no writable shared folder, it also asks agents to keep generalized lessons in a `lessons/` folder inside the game notes.
+- **Game notes.** The guide lives in the store and is seeded only when missing, so existing games keep their guide. If a command that can write finds it missing, the default is written back as part of that command, and the guide returns after an agent deletes it or a rewind drops it. The default (`workspaceGuide` in `src/utils/workspace/player-workspace.ts`) says when to write a note: a plan that spans several turns and its target turns, a promise to another civilization, a threat to watch, or a lesson from a decision that went wrong. It asks agents to keep one living file, such as `plan.md`, up to date instead of adding a new file every turn, and not to copy report data or decision rationale, which agents already see. It notes which notes they see at the start of each run. When the seat has no writable shared folder, it also asks agents to keep generalized lessons in a `lessons/` folder inside the game notes.
 
 Players read the game notes, including the guide, by exporting the store (see [Reading the store from outside](store.md#reading-the-store-from-outside)).
 

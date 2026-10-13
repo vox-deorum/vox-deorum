@@ -223,7 +223,9 @@ export abstract class DatabaseQueryTool<
     try {
       const tooltips = await fetchGameTooltips(kind, items.map(item => item[identifierField] as string));
       return items.map(item => {
-        const tooltip = tooltips.get(item[identifierField] as string);
+        const identifier = item[identifierField] as string;
+        const tooltip = tooltips.get(identifier);
+        if (required && !tooltip) throw new Error(`Missing game tooltip for ${kind} ${identifier}.`);
         return tooltip ? { ...item, Help: tooltip } : item;
       });
     } catch (error) {

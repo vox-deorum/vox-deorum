@@ -1,9 +1,11 @@
 /**
  * Tests for the game reference writer (src/knowledge/reference.ts): one set of detailed listing
  * calls for stores that need a refresh, one commit per store after every listing succeeds that
- * replaces the reference with a file pair for every category and era, entries trimmed and bucketed
- * by era (missing eras as ancient, unknown ones as other) without the `Era` field, per-bucket
- * order with facts before help, and skipping complete current references.
+ * replaces the reference with a file pair for every filled bucket, entries trimmed and bucketed
+ * (technologies, buildings, and units by era, with untechnologied costless entries and unknown
+ * eras as other; policies by branch) without the bucketing fields, per-bucket order, Markdown
+ * facts limited to what tooltips lack while JSON keeps every fact, and skipping complete current
+ * references.
  */
 
 import fs from 'node:fs';
@@ -22,9 +24,8 @@ import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js'
 
 const tools = ['get-technology', 'get-policy', 'get-building', 'get-unit'];
 const categories = ['technologies', 'policies', 'buildings', 'units'];
-const eras = ['ancient', 'classical', 'medieval', 'renaissance', 'industrial', 'modern', 'atomic', 'information', 'other'];
-/** Every category and era file pair plus the format marker. */
-const referenceFileCount = categories.length * eras.length * 2 + 1;
+/** The default listings fill one bucket per category: one file pair each plus the format marker. */
+const referenceFileCount = categories.length * 2 + 1;
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 let dir: string;
@@ -67,7 +68,7 @@ afterEach(() => {
 });
 
 describe('writeGameReference', () => {
-  it('should commit every category and era file pair to each store with one call per tool', async () => {
+  it('should commit a file pair for every filled bucket to each store with one call per tool', async () => {
     const [a, b] = [openStore('a'), openStore('b')];
 
     await expect(writeGameReference([a, b])).resolves.toBe(2);
@@ -84,40 +85,92 @@ describe('writeGameReference', () => {
       expect(read(store, 'reference/units/ancient.json')).toMatch(/\n$/);
       expect(read(store, 'reference/technologies/ancient.md')).toContain('Alpha');
       expect(read(store, 'reference/technologies/ancient.md')).toContain('Beta');
-      expect(read(store, 'reference/units/other.json')).toBe('[]\n');
+      expect(store.readFile('reference/units/other.json')).toBeUndefined();
     }
   });
 
-  it('should generate every era file even when all listings are empty', async () => {
+  it('should write no category files when all listings are empty, and still count as incomplete', async () => {
     for (const tool of tools) mcp.respondWith(tool, structuredResult({ Items: [] }));
     const store = openStore('a');
 
     await writeGameReference([store]);
 
-    expect(referencePaths(store)).toHaveLength(referenceFileCount);
-    for (const category of categories) {
-      const title = category.charAt(0).toUpperCase() + category.slice(1);
-      for (const era of eras) {
-        expect(read(store, `reference/${category}/${era}.json`)).toBe('[]\n');
-        expect(read(store, `reference/${category}/${era}.md`).trim()).toBe(`# ${title}`);
-      }
-    }
-    await expect(writeGameReference([store])).resolves.toBe(0);
+    expect(referencePaths(store)).toEqual(['reference/.format-version']);
+    expect(hasGameReference(store)).toBe(false);
   });
 
-  it('should put facts before a separate help section and order JSON keys for reading', async () => {
-    mcp.respondWith('get-policy', structuredResult({ Count: 1, Items: [{ Type: 'POLICY_ONLY', Name: 'Only', Help: 'Grants culture.', Branch: 'Tradition', PrereqPolicies: ['Root'] }] }));
+  it('should list only the tooltip-missing facts in Markdown while JSON keeps every fact', async () => {
+    mcp.respondWith('get-policy', structuredResult({ Count: 1, Items: [{ Type: 'POLICY_ONLY', Name: 'Only', Help: 'Grants culture.', Branch: 'Tradition', Era: 'Ancient', PrereqPolicies: ['Root'] }] }));
+    mcp.respondWith('get-unit', structuredResult({ Count: 1, Items: [
+      { Type: 'UNIT_SPEARMAN', Name: 'Spearman', Combat: 12, Cost: 70, PrereqTech: 'Bronze Working', UpgradesTo: 'Pikeman', Help: 'Cost: 70 Production\nStrength: 12' },
+    ] }));
     const store = openStore('a');
 
     await writeGameReference([store]);
 
-    const policies = read(store, 'reference/policies/ancient.md');
-    const section = policies.slice(policies.indexOf('## Only'));
-    expect(section.indexOf('Grants culture.')).toBeGreaterThan(0);
-    expect(section.indexOf('Grants culture.')).toBeGreaterThan(section.indexOf('Tradition'));
+    const policy = read(store, 'reference/policies/tradition.md');
+    const section = policy.slice(policy.indexOf('## Only'));
     expect(section).toContain('Root');
-    expect(section).toContain('### Help');
-    expect(Object.keys(JSON.parse(read(store, 'reference/policies/ancient.json'))[0])).toEqual(['Name', 'Branch', 'PrereqPolicies', 'Help']);
+    expect(section.indexOf('Grants culture.')).toBeGreaterThan(section.indexOf('Root'));
+    expect(section).not.toContain('###');
+    expect(Object.keys(JSON.parse(read(store, 'reference/policies/tradition.json'))[0])).toEqual(['Name', 'PrereqPolicies', 'Help']);
+
+    const unit = read(store, 'reference/units/ancient.md');
+    expect(unit).toContain('Pikeman');
+    expect(unit).not.toMatch(/\*\*(Combat|Cost|Prereq Tech)\*\*/);
+    expect(JSON.parse(read(store, 'reference/units/ancient.json'))[0]).toMatchObject({ Combat: 12, Cost: 70, PrereqTech: 'Bronze Working', UpgradesTo: 'Pikeman' });
+  });
+
+  it('should list every fact in Markdown for an entry without a tooltip', async () => {
+    mcp.respondWith('get-unit', structuredResult({ Count: 1, Items: [{ Type: 'UNIT_X', Name: 'Bare', Combat: 9, Cost: 30, PrereqTech: 'Mining' }] }));
+    const store = openStore('a');
+
+    await writeGameReference([store]);
+
+    expect(read(store, 'reference/units/ancient.md')).toMatch(/\*\*Combat\*\*/);
+  });
+
+  it('should file policies by branch, titled with the branch era, and branchless ones as other', async () => {
+    mcp.respondWith('get-policy', structuredResult({ Items: [
+      { Type: 'P1', Name: 'Fealty One', Era: 'Medieval', Branch: 'Fealty', Level: 1 },
+      { Type: 'P2', Name: 'Free Spirit', Era: 'Industrial', Branch: 'Free Spirit', Level: 1 },
+      { Type: 'P3', Name: 'Loose', Era: 'Ancient' },
+      { Type: 'P4', Name: 'Ершов', Era: 'Ancient', Branch: 'Традиция', Level: 1 },
+    ] }));
+    const store = openStore('a');
+
+    await writeGameReference([store]);
+
+    const files = referencePaths(store).filter((storePath) => storePath.startsWith('reference/policies/')).sort();
+    expect(files).toEqual([
+      'reference/policies/fealty.json', 'reference/policies/fealty.md',
+      'reference/policies/free-spirit.json', 'reference/policies/free-spirit.md',
+      'reference/policies/other.json', 'reference/policies/other.md',
+      'reference/policies/традиция.json', 'reference/policies/традиция.md',
+    ]);
+    expect(read(store, 'reference/policies/fealty.md').split('\n')[0]).toMatch(/Fealty.*Medieval/);
+    expect(namesIn(store, 'reference/policies/other.json')).toEqual(['Loose']);
+    expect(read(store, 'reference/policies/fealty.json')).not.toMatch(/"Branch"|"Era"/);
+  });
+
+  it('should file buildings and units no technology unlocks and that have no cost as other', async () => {
+    mcp.respondWith('get-building', structuredResult({ Items: [
+      { Type: 'B1', Name: 'Franchise', Cost: -1 },
+      { Type: 'B2', Name: 'Monument', Cost: 65 },
+      { Type: 'B3', Name: 'Granary', Cost: 65, PrereqTech: 'Pottery', Era: 'Ancient' },
+    ] }));
+    mcp.respondWith('get-unit', structuredResult({ Items: [
+      { Type: 'U1', Name: 'Great Engineer', Cost: 0 },
+      { Type: 'U2', Name: 'Warrior', Cost: 40 },
+    ] }));
+    const store = openStore('a');
+
+    await writeGameReference([store]);
+
+    expect(namesIn(store, 'reference/buildings/other.json')).toEqual(['Franchise']);
+    expect(namesIn(store, 'reference/buildings/ancient.json')).toEqual(['Granary', 'Monument']);
+    expect(namesIn(store, 'reference/units/other.json')).toEqual(['Great Engineer']);
+    expect(namesIn(store, 'reference/units/ancient.json')).toEqual(['Warrior']);
   });
 
   it('should drop empty values and AI internals', async () => {
@@ -130,9 +183,9 @@ describe('writeGameReference', () => {
     await writeGameReference([store]);
 
     expect(JSON.parse(read(store, 'reference/units/ancient.json'))).toEqual([{ Name: 'Warrior', Combat: 8, Cost: 40, Help: 'Melee unit.' }]);
-    expect(JSON.parse(read(store, 'reference/buildings/ancient.json'))).toEqual([{ Name: 'Palace', Help: 'Capital.' }]);
-    for (const file of ['units', 'buildings']) {
-      expect(read(store, `reference/${file}/ancient.md`)).not.toMatch(/null|AIType|Advice|Type/);
+    expect(JSON.parse(read(store, 'reference/buildings/other.json'))).toEqual([{ Name: 'Palace', Help: 'Capital.' }]);
+    for (const file of ['units/ancient', 'buildings/other']) {
+      expect(read(store, `reference/${file}.md`)).not.toMatch(/null|AIType|Advice|Type/);
     }
   });
 
@@ -146,14 +199,14 @@ describe('writeGameReference', () => {
 
     await writeGameReference([store]);
 
-    expect(JSON.parse(read(store, 'reference/units/ancient.json'))).toEqual([
+    expect(JSON.parse(read(store, 'reference/units/other.json'))).toEqual([
       { Name: 'Jaguar', UniqueOf: 'Aztec', Replaces: 'Warrior' },
       { Name: 'Warrior' },
     ]);
-    expect(JSON.parse(read(store, 'reference/buildings/ancient.json'))).toEqual([{ Name: 'Pyramid', UniqueOf: 'Maya', Replaces: 'Temple' }]);
+    expect(JSON.parse(read(store, 'reference/buildings/other.json'))).toEqual([{ Name: 'Pyramid', UniqueOf: 'Maya', Replaces: 'Temple' }]);
   });
 
-  it('should order entries within each era bucket, title files by category only, and remove the era', async () => {
+  it('should order entries within each bucket, title files by category and bucket, and remove bucketing fields', async () => {
     mcp.respondWith('get-technology', structuredResult({ Count: 5, Items: [
       { Type: 'T1', Name: 'Wheel', Era: 'Ancient', Cost: 20 },
       { Type: 'T2', Name: 'Agriculture', Era: 'Ancient', Cost: 20 },
@@ -181,24 +234,25 @@ describe('writeGameReference', () => {
     expect(headings('technologies/classical')).toEqual(['## Architecture']);
     expect(headings('technologies/medieval')).toEqual(['## Smithing']);
     expect(namesIn(store, 'reference/technologies/ancient.json')).toEqual(['Agriculture', 'Wheel', 'Bronze Working']);
-    expect(headings('policies/ancient')).toEqual(['## Authority One', '## Tradition One', '## Tradition Two']);
-    expect(headings('policies/classical')).toEqual(['## Centralization']);
+    expect(headings('policies/tradition')).toEqual(['## Tradition One', '## Tradition Two']);
+    expect(headings('policies/authority')).toEqual(['## Authority One']);
+    expect(headings('policies/liberty')).toEqual(['## Centralization']);
     expect(headings('units/ancient')).toEqual(['## Chariot', '## Spearman', '## Worker']);
-    expect(read(store, 'reference/policies/ancient.json')).not.toMatch(/"Type"|"Level"/);
-    expect(read(store, 'reference/policies/ancient.md')).not.toMatch(/Type|Level/);
-    expect(read(store, 'reference/technologies/ancient.md')).not.toMatch(/Era/);
+    expect(read(store, 'reference/policies/tradition.json')).not.toMatch(/"Type"|"Level"/);
+    expect(read(store, 'reference/policies/tradition.md')).not.toMatch(/Type|Level/);
     for (const era of ['ancient', 'classical', 'medieval']) {
       expect(read(store, `reference/technologies/${era}.json`)).not.toMatch(/"Era"/);
     }
-    expect(read(store, 'reference/technologies/ancient.md')).toMatch(/^# Technologies$/m);
+    expect(read(store, 'reference/technologies/ancient.md').split('\n')[0]).toMatch(/^# Technologies\b.*Ancient/);
+    expect(read(store, 'reference/technologies/ancient.md').split('\n').slice(1).join('\n')).not.toMatch(/Era/);
   });
 
   it('should file missing eras as ancient and unknown eras as other, keeping every entry', async () => {
     mcp.respondWith('get-unit', structuredResult({ Items: [
-      { Type: 'U1', Name: 'Warrior', Era: null },
-      { Type: 'U2', Name: 'Settler' },
-      { Type: 'U3', Name: 'Slinger', Era: 'Ancient' },
-      { Type: 'U4', Name: 'Alien', Era: 'Future' },
+      { Type: 'U1', Name: 'Warrior', Era: null, Cost: 10 },
+      { Type: 'U2', Name: 'Settler', Cost: 10 },
+      { Type: 'U3', Name: 'Slinger', Era: 'Ancient', Cost: 10 },
+      { Type: 'U4', Name: 'Alien', Era: 'Future', Cost: 10 },
     ] }));
     const store = openStore('a');
 
@@ -207,8 +261,8 @@ describe('writeGameReference', () => {
     expect(namesIn(store, 'reference/units/ancient.json')).toEqual(['Settler', 'Slinger', 'Warrior']);
     expect(namesIn(store, 'reference/units/other.json')).toEqual(['Alien']);
     expect(read(store, 'reference/units/other.json')).not.toMatch(/"Era"/);
-    const total = eras.reduce((sum, era) => sum + namesIn(store, `reference/units/${era}.json`).length, 0);
-    expect(total).toBe(4);
+    const unitFiles = referencePaths(store).filter((storePath) => storePath.startsWith('reference/units/') && storePath.endsWith('.json'));
+    expect(unitFiles.reduce((sum, file) => sum + namesIn(store, file).length, 0)).toBe(4);
   });
 
   it.each([
@@ -265,7 +319,7 @@ describe('writeGameReference', () => {
     const store = openStore('a');
     await writeGameReference([store]);
     store.commit({ kind: 'reference', turn: null, author: 'host', changes: reason === 'missing twin'
-      ? [{ path: 'reference/policies/medieval.json', type: 'delete' }]
+      ? [{ path: 'reference/policies/other.json', type: 'delete' }]
       : [{ path: 'reference/.format-version', type: 'file', content: 'old\n' }] });
     const head = store.head();
 
@@ -273,7 +327,7 @@ describe('writeGameReference', () => {
 
     expect(store.head()).not.toBe(head);
     expect(referencePaths(store)).toHaveLength(referenceFileCount);
-    expect(namesIn(store, 'reference/policies/ancient.json')).toEqual(['Alpha', 'Beta']);
+    expect(namesIn(store, 'reference/policies/other.json')).toEqual(['Alpha', 'Beta']);
     for (const tool of tools) expect(mcp.calls(tool)).toHaveLength(2);
   });
 
@@ -298,8 +352,7 @@ describe('writeGameReference', () => {
 
     await writeGameReference([store]);
 
-    expect(JSON.parse(read(store, 'reference/buildings/ancient.json'))).toEqual([
-      { Name: 'Alpha' }, { Name: 'Zulu' }, { Name: 'Paid', Cost: 10 },
-    ]);
+    expect(JSON.parse(read(store, 'reference/buildings/other.json'))).toEqual([{ Name: 'Alpha' }, { Name: 'Zulu' }]);
+    expect(JSON.parse(read(store, 'reference/buildings/ancient.json'))).toEqual([{ Name: 'Paid', Cost: 10 }]);
   });
 });

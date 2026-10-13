@@ -387,10 +387,11 @@ export class DatabaseManager {
       await this.addEnumMappings("GreatWorks", "GreatWorkType");
       await this.addEnumMappings("Beliefs", "BeliefType");
       await this.addEnumMappings("GoodyHuts", "GoodyType");
-      await this.addEnumMappings("GreatPersons", "GreatPersonType", "Great ");
       await this.addEnumMappings("PolicyBranchTypes", "BranchType");
       await this.addEnumMappings("Resolutions", "ResolutionType");
       await this.addEnumMappings("Units", "UnitType");
+      // GreatPersonExpended sends the expended unit's type under this name
+      enumMappings["GreatPersonType"] = enumMappings["UnitType"];
       await this.addEnumMappings("UnitClasses", "UnitClass");
       await this.addEnumMappings("Technologies", "TechID");
       await this.addEnumMappings("Policies", "PolicyID");

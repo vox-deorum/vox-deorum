@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { sections, renderSection, type SectionKey } from '../../../src/knowledge/sections.js';
+import { jsonToMarkdown } from '../../../src/utils/tools/json-to-markdown.js';
 
 const keys: SectionKey[] = [
   'situation', 'civilization', 'options', 'strategies', 'victory',
@@ -64,5 +65,48 @@ describe('renderSection', () => {
 
   it('inserts already rendered text unchanged', () => {
     expect(renderSection('briefings', 'Already **rendered**.', { rendered: true })).toContain('Already **rendered**.');
+  });
+
+  it('renders string player entries after every civilization section under their own heading', () => {
+    const report = {
+      '0': { Civilization: 'Rome' },
+      '1': 'Defeated Minor Civilization Ormus',
+      '2': { Civilization: 'Greece' },
+      '63': 'Barbarians',
+      _markdownConfig: { configs: [{ format: 'Player {key}' }] },
+    };
+    const out = renderSection('players', report);
+    const blockAt = out.indexOf('## Other players');
+    expect(blockAt).toBeGreaterThan(-1);
+    expect(blockAt).toBeGreaterThan(out.indexOf('Player 2'));
+    const body = out.slice(0, blockAt);
+    expect(body).not.toContain('Ormus');
+    expect(body).not.toContain('Barbarians');
+    const block = out.slice(blockAt);
+    expect(block).toContain('- 1: Defeated Minor Civilization Ormus');
+    expect(block).toContain('- 63: Barbarians');
+    expect(block.indexOf('- 1:')).toBeLessThan(block.indexOf('- 63:'));
+  });
+
+  it('renders players data without string entries unchanged', () => {
+    const report = {
+      '0': { Civilization: 'Rome' },
+      '1': { Civilization: 'Greece' },
+      _markdownConfig: { configs: [{ format: 'Player {key}' }] },
+    };
+    const out = renderSection('players', report);
+    expect(out).not.toContain('Other players');
+    expect(out).toBe(`# ${sections.players.title}\n${sections.players.description}\n\n${jsonToMarkdown(report)}`);
+  });
+
+  it('leaves underscore string keys out of the players rendering', () => {
+    const report = {
+      '0': { Civilization: 'Rome' },
+      _note: 'internal marker',
+      _markdownConfig: { configs: [{ format: 'Player {key}' }] },
+    };
+    const out = renderSection('players', report);
+    expect(out).not.toContain('Other players');
+    expect(out).not.toContain('internal marker');
   });
 });

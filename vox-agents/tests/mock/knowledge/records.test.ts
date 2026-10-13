@@ -20,6 +20,11 @@ function markdownConfig(...formats: string[]) {
   return { configs: formats.map((format) => ({ format })) };
 }
 
+/** The catalog's note on which record files are Markdown only. */
+function markdownOnlyNote(catalog: string): string {
+  return catalog.split('\n').find((line) => line.includes('Markdown only'))!;
+}
+
 /** Seat parameters with game metadata. */
 function makeParameters(metadata: Record<string, unknown> = { Turn: 1, YouAre: { Name: 'Rome', Leader: 'Augustus' }, Speed: 'Standard' }): StrategistParameters {
   return { playerID: 1, gameID: 'g1', turn: 1, after: 0, before: 0, workingMemory: {}, gameStates: {}, mode: 'Flavor', metadata } as unknown as StrategistParameters;
@@ -111,7 +116,6 @@ describe('SeatRecords', () => {
         'records/turn-5/military/unit-stats.md',
         'records/turn-5/players/greece-2.md',
         'records/turn-5/players/greece.md',
-        'records/turn-5/players/player-63.md',
         'records/turn-5/players/rome.md',
       ]);
       expect(read('records/turn-5/players/greece.md')).toContain('Alexander');
@@ -120,6 +124,15 @@ describe('SeatRecords', () => {
       expect(read('records/turn-5/players/greece-2.md')).toContain('Player 2');
       expect(read('records/turn-5/cities/augustus.md')).toContain('Roma');
       expect(read('records/turn-5/cities/augustus.md')).not.toContain('Athens');
+    });
+
+    it('should give string player entries no split file while keeping them in the report', () => {
+      records.recordTurn(makeParameters(), makeState(5));
+      const playerParts = [...store.manifest().keys()].filter((key) => key.startsWith('records/turn-5/players/'));
+      expect(playerParts).not.toContain('records/turn-5/players/player-63.md');
+      expect(playerParts.some((key) => key.includes('barbarian'))).toBe(false);
+      expect(playerParts).toContain('records/turn-5/players/rome.md');
+      expect(read('records/turn-5/players.md')).toContain('Barbarians');
     });
 
     it('should write the turn and its catalog in one turn commit by the host', () => {
@@ -220,6 +233,14 @@ describe('SeatRecords', () => {
       expect(markers.some((marker) => system.includes(marker))).toBe(false);
     });
 
+    it('should keep a body line below the heading for a category view with no events', () => {
+      recordSlice();
+      const system = read('records/turn-5/events-system.md')!;
+      expect(markers.some((marker) => system.includes(marker))).toBe(false);
+      const body = system.split('\n').slice(2).join('\n').trim();
+      expect(body.length).toBeGreaterThan(0);
+    });
+
     it('should write every event file for a refresh without events', () => {
       const state = makeState(6);
       delete state.events;
@@ -262,6 +283,18 @@ describe('SeatRecords', () => {
       records.recordBriefing(2, 'economy', 'two');
       expect(read(catalogPath)).toBe(buildCatalog(store.manifest()));
       expect(read(catalogPath)).toContain('turn-2/briefings/economy.md');
+    });
+
+    it('should list briefings in the catalog only when the tree holds briefing files', () => {
+      records.recordTurn(makeParameters(), makeState(1));
+      const withoutBriefings = read(catalogPath)!;
+      expect(withoutBriefings).not.toMatch(/^\| Briefings \|/m);
+      expect(markdownOnlyNote(withoutBriefings)).not.toMatch(/briefing/i);
+
+      records.recordBriefing(1, 'combined', 'one');
+      const withBriefings = read(catalogPath)!;
+      expect(withBriefings).toMatch(/^\| Briefings \|/m);
+      expect(markdownOnlyNote(withBriefings)).toMatch(/briefing/i);
     });
 
     it('should list compressed turn ranges, missing turns, and the latest sizes', () => {

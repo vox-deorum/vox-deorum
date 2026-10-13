@@ -168,10 +168,11 @@ This folder outlives the current game. Future games read it too.
     ? ''
     : `- If you have learned any generalizable lessons, keep them in \`lessons/\`.\n`;
   return `# ${workspaceGuideFile}
-This folder is shared by every agent serving your civilization in this game, and it persists across turns. Use it however helps your civilization most.
+This folder is shared by every agent serving your civilization in this game, and it persists across turns.
 
-- Every agent sees the most recently written note at the start of each run, and the names of the five before it.
-- Since agents will see them in the context, do not repeat information in reports or decision rationale.
+- Write a note when you learn or decide something later turns will need and the reports will not show, such as a plan that spans several turns and its target turns, a promise to another civilization, a threat to watch, or a lesson from a decision that went wrong.
+- Keep one living file, such as \`plan.md\`, up to date instead of adding a new file every turn. Every agent sees the most recently written note at the start of each run, and the names of the five before it.
+- Do not copy report data or decision rationale into notes, since agents already see them.
 ${lessons}- You may improve this guide and organize the folder when useful for ALL agents.
 - While you have access to the workspace, the goal is to complete the ongoing task.
 `;

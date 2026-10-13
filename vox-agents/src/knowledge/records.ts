@@ -72,7 +72,8 @@ interface SplitEntry { entry: string; value: unknown; label: string; name: strin
 
 /**
  * The top-level entries of a report being split (civilizations, city owners, or military zones).
- * Each gets a readable slug, with a numeric suffix when two entries would share a name.
+ * Each gets a readable slug, with a numeric suffix when two entries would share a name. Only
+ * object entries are split: plain strings (unmet, defeated, and barbarian players) get no part.
  */
 export function splitEntries(key: SectionKey, data: unknown): SplitEntry[] {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
@@ -80,6 +81,7 @@ export function splitEntries(key: SectionKey, data: unknown): SplitEntry[] {
   const entries: SplitEntry[] = [];
   for (const [entry, value] of Object.entries(data as Record<string, unknown>)) {
     if (entry.startsWith('_')) continue;
+    if (typeof value !== 'object' || value === null) continue;
     const label = partLabel(key, entry, value);
     const base = slug(label);
     let name = base;
@@ -130,6 +132,11 @@ function sectionChanges(folder: string, key: SectionKey, data: unknown): PathCha
   return changes;
 }
 
+/** Whether a category-filtered events report holds any events. The `_markdownConfig` hint does not count. */
+function hasEvents(filtered: ConsolidatedEventsReport): boolean {
+  return Object.keys(filtered).some((key) => key !== '_markdownConfig');
+}
+
 /** The event files of one processed refresh: the complete slice and the five category views. */
 function eventChanges(folder: string, events: ConsolidatedEventsReport): PathChange[] {
   const changes: PathChange[] = [
@@ -142,14 +149,12 @@ function eventChanges(folder: string, events: ConsolidatedEventsReport): PathCha
   ];
   for (const [suffix, category] of eventCategoryFiles) {
     const filtered = filterEventsByCategory(events, category);
-    changes.push({
-      path: `${folder}/events-${suffix}.md`,
-      type: 'file',
-      content: `${renderSection('events', filtered, {
-        heading: `Events: ${category}`,
-        description: `Events: ${category.toLowerCase()} events of this processed refresh.`,
-      })}\n`,
+    const rendered = renderSection('events', filtered, {
+      heading: `Events: ${category}`,
+      description: `Events: ${category.toLowerCase()} events of this processed refresh.`,
     });
+    const content = hasEvents(filtered) ? rendered : `${rendered.trimEnd()}\n\nNo events in this category.`;
+    changes.push({ path: `${folder}/events-${suffix}.md`, type: 'file', content: `${content}\n` });
   }
   return changes;
 }
@@ -231,6 +236,7 @@ export function buildCatalog(tree: Manifest): string {
     for (let turn = turns[0]; turn < latest; turn++) if (!recorded.has(turn)) missing.push(turn);
   }
   const briefingOnly = [...briefed].filter((turn) => !recorded.has(turn));
+  const hasBriefings = briefed.size > 0;
 
   const lines: string[] = [
     '# Records catalog',
@@ -239,9 +245,14 @@ export function buildCatalog(tree: Manifest): string {
     '## Sections',
     '| Section | Files |',
     '| --- | --- |',
-    ...Object.values(sections).map((section) => `| ${section.title} | ${sectionFiles(section)} |`),
+    ...Object.values(sections)
+      .filter((section) => section.key !== 'briefings' || hasBriefings)
+      .map((section) => `| ${section.title} | ${sectionFiles(section)} |`),
     '',
-    'Each complete report has Markdown and a JSON twin with the same name. Split parts, event category views, and briefings are Markdown only.',
+    `Each complete report has Markdown and a JSON twin with the same name. ${
+      hasBriefings
+        ? 'Split parts, event category views, and briefings are Markdown only.'
+        : 'Split parts and event category views are Markdown only.'}`,
     '',
     '## Turns',
     `- Recorded turns: ${turns.length > 0 ? formatTurnRanges(turns) : 'none yet'}`,

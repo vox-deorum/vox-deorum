@@ -1,9 +1,10 @@
 /**
  * Tests for the reference renderer (src/knowledge/reference-format.ts): the heading structure
  * that keeps grep and awk entry extraction valid, compact facts with humanized bold labels ahead
- * of the tooltip, tooltip normalization (separator breaks, bullet characters, colon subheadings,
- * blank lines around blocks) that keeps every gameplay statement and its order, unique headings
- * for duplicate or missing names, and input that is never changed.
+ * of the tooltip and limited to a category's list when a tooltip exists, tooltip normalization
+ * (separator breaks, bullet characters, colon labels as bold bullets with nested lists, blank
+ * lines around blocks) that keeps every gameplay statement and its order, unique headings for
+ * duplicate or missing names, and input that is never changed.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -73,12 +74,9 @@ function entry(markdown: string, heading: string): string {
   return rest.slice(0, end === -1 ? rest.length : end).join("\n");
 }
 
-/** The normalized tooltip of one entry, after its `### Help` subheading. */
-function helpOf(markdown: string, heading: string): string {
-  const body = entry(markdown, heading);
-  const marker = body.indexOf("### Help");
-  expect(marker).toBeGreaterThanOrEqual(0);
-  return body.slice(marker + "### Help".length);
+/** The normalized tooltip of one entry, rendered with no facts so the body is the tooltip alone. */
+function helpOf(title: string, items: Record<string, unknown>[], heading: string): string {
+  return entry(renderReferenceMarkdown(title, items, []), heading);
 }
 
 describe('renderReferenceMarkdown', () => {
@@ -129,73 +127,87 @@ describe('renderReferenceMarkdown', () => {
       expect(body).not.toMatch(/\*\*Help\*\*/);
     });
 
-    it('should place every fact between the entry heading and Help', () => {
+    it('should place every fact between the entry heading and the tooltip', () => {
       const body = entry(renderReferenceMarkdown('Technologies', technologies), 'Bronze Working');
-      const help = body.indexOf('### Help');
+      const help = body.indexOf('Allows the construction');
       expect(help).toBeGreaterThan(-1);
       for (const label of ['**Cost**', '**Era**', '**Resources Revealed**']) {
         expect(body.indexOf(label)).toBeGreaterThan(-1);
         expect(body.indexOf(label)).toBeLessThan(help);
       }
     });
+
+    it('should list only the given facts for an entry with a tooltip', () => {
+      const body = entry(renderReferenceMarkdown('Technologies', technologies, ['Cost']), 'Bronze Working');
+      expect(body).toContain('**Cost**');
+      expect(body).not.toContain('**Era**');
+      expect(body).not.toContain('**Resources Revealed**');
+      expect(body).toContain('Reveals Copper and Tin.');
+    });
+
+    it('should list every fact for an entry without a tooltip even when facts are limited', () => {
+      const body = entry(renderReferenceMarkdown('Units', units, []), 'Warrior');
+      expect(body).toContain('**Combat**');
+      expect(body).toContain('**Moves**');
+    });
   });
 
   describe('tooltip normalization', () => {
-    it('should leave out the Help subheading when an entry has no Help', () => {
+    it('should render the tooltip without any subheading', () => {
+      expect(renderReferenceMarkdown('Policies', policies)).not.toMatch(/^#{3,} /m);
       expect(entry(renderReferenceMarkdown('Units', units), 'Warrior')).not.toContain('###');
     });
 
     it('should turn separator lines into paragraph breaks that never underline the text above', () => {
-      const help = helpOf(renderReferenceMarkdown('Policies', policies), 'Oligarchy');
-      expect(help).toContain('Friendly Lands\n\n#### Free Promotions');
-      expect(help).toContain('- Wary\n\nGREAT GENERAL BONUS');
+      const help = helpOf('Policies', policies, 'Oligarchy');
+      expect(help).toContain('Friendly Lands\n\n- **Free Promotions**:');
+      expect(help).toContain('  - Wary\n\nGREAT GENERAL BONUS');
       expect(help).not.toMatch(/-{2,}/);
     });
 
     it.each(['-', '--', '---', '=', '===='])('should prevent %s separators from creating setext headings', (separator) => {
-      const help = helpOf(renderReferenceMarkdown('Units', [{ Name: 'Example', Help: `First effect\n${separator}\nSecond effect` }]), 'Example');
+      const help = helpOf('Units', [{ Name: 'Example', Help: `First effect\n${separator}\nSecond effect` }], 'Example');
       expect(help.trim()).toBe('First effect\n\nSecond effect');
     });
 
     it('should normalize asterisk and Unicode bullets to Markdown list items', () => {
-      const help = helpOf(renderReferenceMarkdown('Policies', policies), 'Oligarchy');
-      expect(help).toContain('- Shock I\n- Wary');
-      expect(help).not.toMatch(/^\*/m);
+      const help = helpOf('Policies', policies, 'Oligarchy');
+      expect(help).toContain('  - Shock I\n  - Wary');
+      expect(help).not.toMatch(/^\s*\*\s/m);
       expect(help).not.toContain('\u2022');
     });
 
-    it('should promote colon section labels ahead of a bullet list to subheadings', () => {
-      const tech = helpOf(renderReferenceMarkdown('Technologies', technologies), 'The Wheel');
-      expect(tech).toContain('#### Leads To\n\n- Construction');
-      const authority = helpOf(renderReferenceMarkdown('Policies', policies), 'Authority');
-      expect(authority).toContain('#### Adopting Authority grants\n\n- Capital provides +6 Gold and +6 Production');
+    it('should turn colon section labels ahead of a bullet list into bold bullets with the list nested', () => {
+      const tech = helpOf('Technologies', technologies, 'The Wheel');
+      expect(tech).toContain('- **Leads To**:\n  - Construction');
+      const authority = helpOf('Policies', policies, 'Authority');
+      expect(authority).toContain('- **Adopting Authority grants**:\n  - Capital provides +6 Gold and +6 Production');
     });
 
     it('should keep a colon line as plain text when no bullets follow it', () => {
-      const authority = helpOf(renderReferenceMarkdown('Policies', policies), 'Authority');
+      const authority = helpOf('Policies', policies, 'Authority');
       expect(authority).toContain('Unlocks:');
-      expect(authority).not.toContain('#### Unlocks');
+      expect(authority).not.toContain('**Unlocks**');
       const building = entry(renderReferenceMarkdown('Buildings', buildings), 'Palace');
       expect(building).toContain('Grants:');
-      expect(building).not.toContain('#### Grants');
+      expect(building).not.toContain('**Grants**');
     });
 
-    it('should put blank lines around every paragraph, list, and subheading', () => {
-      const help = helpOf(renderReferenceMarkdown('Policies', policies), 'Oligarchy');
-      expect(help.startsWith('\n\n')).toBe(true);
+    it('should put blank lines around every paragraph and list', () => {
+      const help = helpOf('Policies', policies, 'Oligarchy');
+      expect(help.startsWith('\n')).toBe(true);
       expect(help.trim().split('\n\n')).toEqual([
         '+10% Strength when fighting in Friendly Lands',
-        '#### Free Promotions',
-        '- Shock I\n- Wary',
+        '- **Free Promotions**:\n  - Shock I\n  - Wary',
         'GREAT GENERAL BONUS\nHeal 50 HP',
       ]);
     });
 
     it('should preserve every gameplay statement of the tooltip in order', () => {
-      const help = helpOf(renderReferenceMarkdown('Policies', policies), 'Oligarchy');
+      const help = helpOf('Policies', policies, 'Oligarchy');
       const statements = [
         '+10% Strength when fighting in Friendly Lands',
-        '#### Free Promotions',
+        '- **Free Promotions**:',
         '- Shock I',
         '- Wary',
         'GREAT GENERAL BONUS',

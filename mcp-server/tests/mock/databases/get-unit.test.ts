@@ -10,7 +10,7 @@ import { gameDatabase } from '../../../src/server.js';
 import createGetUnitTool, { getUnit } from '../../../src/tools/databases/get-unit.js';
 
 vi.mock('../../../src/server.js', () => ({
-  gameDatabase: { getDatabase: vi.fn(), localizeObjects: vi.fn() },
+  gameDatabase: { getDatabase: vi.fn(), localizeObjects: vi.fn(), localize: vi.fn() },
 }));
 
 describe('get-unit listing', () => {
@@ -69,9 +69,17 @@ describe('get-unit full report', () => {
       INSERT INTO Units VALUES ('UNIT_JAGUAR', 'Jaguar', NULL, 8, 0, 2, 40, NULL, NULL, 'UNITCLASS_WARRIOR', 'UNITAI_ATTACK', 0, 0, 1);
       INSERT INTO Units VALUES ('UNIT_PATHFINDER', 'Pathfinder', NULL, 4, 0, 3, 30, NULL, NULL, 'UNITCLASS_SCOUT', 'UNITAI_EXPLORE', 0, 0, 1);
       INSERT INTO Civilization_UnitClassOverrides VALUES ('UNIT_JAGUAR', 'CIVILIZATION_AZTEC'), ('UNIT_PATHFINDER', 'CIVILIZATION_AZTEC');
+      INSERT INTO UnitClasses VALUES ('UNITCLASS_SPEARMAN', 'Spearman class', 'UNIT_SPEARMAN'), ('UNITCLASS_PIKEMAN', 'Pikeman class', 'UNIT_PIKEMAN');
+      INSERT INTO Units VALUES ('UNIT_SPEARMAN', 'Spearman', NULL, 11, 0, 2, 56, NULL, NULL, 'UNITCLASS_SPEARMAN', 'UNITAI_DEFENSE', 0, 0, 1);
+      INSERT INTO Units VALUES ('UNIT_LANDSKNECHT', 'Landsknecht', NULL, 16, 0, 2, 90, NULL, NULL, 'UNITCLASS_PIKEMAN', 'UNITAI_DEFENSE', 0, 0, 1);
+      INSERT INTO Units VALUES ('UNIT_PIKEMAN', 'Pikeman', NULL, 16, 0, 2, 90, NULL, NULL, 'UNITCLASS_PIKEMAN', 'UNITAI_DEFENSE', 0, 0, 1);
+      INSERT INTO Unit_ClassUpgrades VALUES ('UNIT_JAGUAR', 'UNITCLASS_SPEARMAN'), ('UNIT_WARRIOR', 'UNITCLASS_SPEARMAN'), ('UNIT_SPEARMAN', 'UNITCLASS_PIKEMAN');
+      INSERT INTO Resources VALUES ('RESOURCE_IRON', 'TXT_KEY_RESOURCE_IRON');
+      INSERT INTO Unit_ResourceQuantityRequirements VALUES ('UNIT_PIKEMAN', 'RESOURCE_IRON', 1);
     `);
     db = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
     vi.spyOn(gameDatabase, 'getDatabase').mockReturnValue(db);
+    vi.spyOn(gameDatabase, 'localize').mockImplementation(async key => key === 'TXT_KEY_RESOURCE_IRON' ? 'Iron' : key);
   });
 
   afterEach(async () => {
@@ -86,5 +94,16 @@ describe('get-unit full report', () => {
   it('should leave Replaces empty for standard units and classes without a standard unit', async () => {
     expect((await getUnit('UNIT_WARRIOR')).Replaces).toBeNull();
     expect((await getUnit('UNIT_PATHFINDER')).Replaces).toBeNull();
+  });
+
+  it('should name the standard unit that upgrades into this one, separately from the upgrade target', async () => {
+    // Landsknecht shares the Pikeman class and comes first, but the standard unit is named
+    expect(await getUnit('UNIT_SPEARMAN')).toMatchObject({ UpgradedFrom: 'Warrior', UpgradesTo: 'Pikeman' });
+    expect(await getUnit('UNIT_PIKEMAN')).toMatchObject({ UpgradedFrom: 'Spearman', UpgradesTo: null });
+    expect((await getUnit('UNIT_WARRIOR')).UpgradedFrom).toBeNull();
+  });
+
+  it('should key required resources by their localized names', async () => {
+    expect((await getUnit('UNIT_PIKEMAN')).RequiredResources).toEqual({ Iron: 1 });
   });
 });

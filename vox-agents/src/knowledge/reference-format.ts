@@ -5,13 +5,13 @@
  * units, already sorted with Name first and Help last, Type removed, and sort-only fields such as
  * policy Level dropped. The `# title` category heading and each entry's `## Name` heading stay
  * intact so grep and awk entry extraction keeps working; duplicate names get a suffix on every
- * entry of the group. Compact facts come first with bold, humanized
- * labels, rendered through the shared jsonToMarkdown converter. The entry's tooltip
- * follows under `### Help`, normalized so every gameplay statement keeps its words and order:
- * separator dashes become paragraph breaks, `*` and Unicode bullets become Markdown list items,
- * and colon section labels ahead of a bullet list become `####` subheadings. Blank lines go around
- * every block because the game's own text handling strips them. The renderer never changes its
- * input.
+ * entry of the group. Compact facts come first with bold, humanized labels, rendered through the
+ * shared jsonToMarkdown converter; a category can limit them to the facts its tooltips lack. The
+ * entry's tooltip follows directly, normalized so every gameplay statement keeps its words and
+ * order: separator dashes become paragraph breaks, `*` and Unicode bullets become Markdown list
+ * items, and a colon section label ahead of a bullet list becomes a bold bullet with the list
+ * nested under it, matching the facts. Blank lines go around every block because the game's own
+ * text handling strips them. The renderer never changes its input.
  */
 
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
@@ -24,11 +24,12 @@ type HelpLine = { kind: "text" | "bullet" | "break"; text: string };
 
 /**
  * Render one category of cleaned, sorted reference entries as a Markdown document ending with a
- * newline. An empty category renders as just its title heading.
+ * newline. An empty category renders as just its title heading. With `facts`, an entry that has a
+ * tooltip lists only those fields as facts; an entry without one lists every fact.
  */
-export function renderReferenceMarkdown(title: string, items: Item[]): string {
+export function renderReferenceMarkdown(title: string, items: Item[], facts?: readonly string[]): string {
   const headings = assignHeadings(items);
-  const sections = items.map((item, index) => renderEntry(item, headings[index]));
+  const sections = items.map((item, index) => renderEntry(item, headings[index], facts));
   return [`# ${title}`, ...sections].join("\n\n") + "\n";
 }
 
@@ -70,17 +71,18 @@ function headingSuffix(item: Item): string {
   return "";
 }
 
-/** Render one entry: its heading, the compact facts, then the tooltip under a Help subheading. */
-function renderEntry(item: Item, heading: string): string {
+/** Render one entry: its heading, the compact facts (only `shown` when it has a tooltip), then the tooltip. */
+function renderEntry(item: Item, heading: string, shown?: readonly string[]): string {
   const parts = [`## ${heading}`];
+  const help = item.Help === undefined || item.Help === null ? "" : String(item.Help);
+  const normalized = normalizeHelp(help);
   const facts = Object.fromEntries(Object.entries(item)
     .filter(([key, value]) => key !== "Name" && key !== "Help" && value !== undefined && value !== null)
+    .filter(([key]) => !shown || normalized === "" || shown.includes(key))
     .map(([key, value]) => [`**${humanizeLabel(key)}**`, value]));
   const renderedFacts = jsonToMarkdown(facts);
   if (renderedFacts !== "") parts.push(renderedFacts);
-  const help = item.Help === undefined || item.Help === null ? "" : String(item.Help);
-  const normalized = normalizeHelp(help);
-  if (normalized !== "") parts.push(["### Help", normalized].join("\n\n"));
+  if (normalized !== "") parts.push(normalized);
   return parts.join("\n\n");
 }
 
@@ -95,14 +97,15 @@ function humanizeLabel(key: string): string {
  * Normalize tooltip text into Markdown blocks joined by blank lines, which the game's own
  * cleanup strips: separator dash lines break blocks (never underlining the text above as a
  * heading), `*` and Unicode bullets become list items, and a colon section label followed by a
- * bullet list becomes a subheading. Statements keep their words and order. Text that is empty
- * normalizes to nothing.
+ * bullet list becomes a bold bullet with the list nested under it. Statements keep their words and
+ * order. Text that is empty normalizes to nothing.
  */
 function normalizeHelp(help: string): string {
   const lines = classifyHelpLines(help);
   const blocks: string[] = [];
   const paragraph: string[] = [];
   const bullets: string[] = [];
+  let indent = "";
   /** Finish the current prose block. */
   const flushParagraph = () => {
     if (paragraph.length > 0) blocks.push(paragraph.join("\n"));
@@ -112,6 +115,7 @@ function normalizeHelp(help: string): string {
   const flushBullets = () => {
     if (bullets.length > 0) blocks.push(bullets.join("\n"));
     bullets.length = 0;
+    indent = "";
   };
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
@@ -120,12 +124,13 @@ function normalizeHelp(help: string): string {
       flushBullets();
     } else if (line.kind === "bullet") {
       flushParagraph();
-      bullets.push(`- ${line.text}`);
+      bullets.push(`${indent}- ${line.text}`);
     } else {
       flushBullets();
       if (line.text.endsWith(":") && lines[index + 1]?.kind === "bullet") {
         flushParagraph();
-        blocks.push(`#### ${line.text.replace(/:+$/, "").trim()}`);
+        bullets.push(`- **${line.text.replace(/:+$/, "").trim()}**:`);
+        indent = "  ";
       } else {
         paragraph.push(line.text);
       }

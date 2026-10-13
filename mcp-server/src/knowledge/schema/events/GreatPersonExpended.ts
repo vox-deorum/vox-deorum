@@ -9,7 +9,7 @@ export const GreatPersonExpended = z.object({
   PlayerID: z.number(),
   /** The unique identifier of the specific Great Person unit */
   UnitID: z.number(),
-  /** The specific type identifier of the Great Person unit that was expended */
+  /** The unit type of the expended Great Person (a Units ID, not a GreatPersons ID) */
   GreatPersonType: z.number(),
   /** The X map coordinate where the Great Person was expended */
   CityX: z.number(),

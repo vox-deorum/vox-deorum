@@ -239,7 +239,7 @@ describe('DatabaseQueryTool', () => {
 
     it('should replace help with stripped game tooltips fetched in batches', async () => {
       const many = Array.from({ length: 60 }, (_, index) => ({ Type: `TECH_${index}`, Name: `Tech ${index}`, Help: 'Database help' }));
-      const call = answerTooltips(['TECH_7']);
+      const call = answerTooltips();
       const tool = new TooltipTool(many);
 
       const result = await tool.execute({ MaxResults: 100, Detailed: true } as any);
@@ -248,13 +248,41 @@ describe('DatabaseQueryTool', () => {
       expect(call.mock.calls.every(([name, args]) => name === 'VoxDeorumReferenceTooltips' && args[0] === 'technology')).toBe(true);
       const byType = new Map(result.Items.map((item: any) => [item.Type, item.Help]));
       expect(byType.get('TECH_0')).toBe('TECH_0\n* Detail');
-      expect(byType.get('TECH_7')).toBe('Database help');
+      expect(byType.get('TECH_7')).toBe('TECH_7\n* Detail');
+    });
+
+    it.each(['missing entry', 'empty response', 'blank text'])('should reject a detailed listing with %s instead of using database help', async (missing) => {
+      const result: Record<string, string> = missing === 'empty response' ? {} : {
+        TECH_POTTERY: 'Pottery tooltip',
+        TECH_WRITING: 'Writing tooltip',
+        ...(missing === 'blank text' ? { TECH_ARCHERY: ' \n ' } : {}),
+      };
+      vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({ success: true, result });
+      const tool = new TooltipTool(FIXTURES);
+
+      const response = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+
+      expect(response.Count).toBe(0);
+      expect(response.Items).toEqual([]);
+      expect(response.Error).toEqual(expect.any(String));
+      expect(response.Error).toContain(missing === 'empty response' ? 'TECH_POTTERY' : 'TECH_ARCHERY');
+    });
+
+    it('should keep database help for a single match with no game tooltip', async () => {
+      answerTooltips(['TECH_POTTERY']);
+      const tool = new TooltipTool(FIXTURES);
+
+      const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+
+      expect(result.Error).toBeUndefined();
+      expect(result.Items[0]).toMatchObject({ Type: 'TECH_POTTERY', Help: FIXTURES[0].Help, Detail: 'detail-for-TECH_POTTERY' });
     });
 
     it('should name yield and resource icons that the text does not already name', async () => {
       vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({ success: true, result: {
         TECH_POTTERY: '[ICON_RES_IRON] Iron: +1 [ICON_PRODUCTION] +1 [ICON_GOLD][NEWLINE][ICON_PEACE] Faith from [ICON_RES_HORSE] Horse',
         TECH_ARCHERY: '+2 [ICON_GOLDEN_AGE] Golden Age, +1 [ICON_GOLD] Golden Age Points, [ICON_CAPITAL] Capital',
+        TECH_WRITING: 'Writing tooltip',
       } });
       const tool = new TooltipTool(FIXTURES);
 

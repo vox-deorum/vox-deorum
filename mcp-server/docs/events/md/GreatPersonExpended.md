@@ -24,7 +24,7 @@ The event passes the following parameters:
 
 1. **Player ID** (`GetID()`) - The unique identifier of the player who owned the Great Person
 2. **Unit ID** (`pGreatPersonUnit->GetID()`) - The unique identifier of the specific Great Person unit
-3. **Great Person Unit Type** (`eGreatPersonUnit`) - The specific type identifier of the Great Person unit that was expended
+3. **Great Person Unit Type** (`eGreatPersonUnit`) - The unit type (a `UnitTypes` value, not a GreatPersons ID) of the Great Person that was expended. The MCP server field is named `GreatPersonType` and decodes to the unit name, such as "Great Engineer".
 4. **X Coordinate** (`pGreatPersonUnit->getX()`) - The X map coordinate where the Great Person was expended
 5. **Y Coordinate** (`pGreatPersonUnit->getY()`) - The Y map coordinate where the Great Person was expended
 

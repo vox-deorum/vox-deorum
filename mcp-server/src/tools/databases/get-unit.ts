@@ -171,28 +171,31 @@ export async function getUnit(unitType: string) {
     throw new Error(`Unit ${unitType} not found`);
   }
   
-  // Get the unit this upgrades from
-  const upgradeFrom = await db
+  // Get the unit this upgrades from: a unit whose upgrade row targets this unit's class,
+  // preferring the standard unit of its class over civilization-unique ones
+  const upgradeSources = unit.Class ? await db
     .selectFrom('Unit_ClassUpgrades as ucu')
-    .innerJoin('UnitClasses as fromClass', 'fromClass.Type', 'ucu.UnitClassType')
-    .innerJoin('Units as fromUnit', 'fromUnit.Class', 'fromClass.Type')
-    .select('fromUnit.Description')
-    .where('ucu.UnitType', '=', unitType)
+    .innerJoin('Units as fromUnit', 'fromUnit.Type', 'ucu.UnitType')
+    .leftJoin('UnitClasses as fromClass', 'fromClass.Type', 'fromUnit.Class')
+    .select(['fromUnit.Type', 'fromUnit.Description', 'fromClass.DefaultUnit'])
+    .where('ucu.UnitClassType', '=', unit.Class)
     .where('fromUnit.ShowInPedia', '=', 1)
-    .executeTakeFirst();
+    .execute() : [];
+  const upgradeFrom = upgradeSources.find(source => source.Type === source.DefaultUnit) ?? upgradeSources[0];
   
-  // Get the unit this can upgrade to
-  const upgradeTo = await db
+  // Get the unit this can upgrade to, preferring the standard unit of the target class
+  const upgradeTargets = await db
     .selectFrom('Unit_ClassUpgrades as ucu')
     .innerJoin('UnitClasses as uc', 'uc.Type', 'ucu.UnitClassType')
     .innerJoin('Units as toUnit', 'toUnit.Class', 'uc.Type')
-    .innerJoin('Units as fromUnit', 'fromUnit.Type', 'ucu.UnitType')
-    .select('toUnit.Description')
-    .where('fromUnit.Type', '=', unitType)
+    .select(['toUnit.Type', 'toUnit.Description', 'uc.DefaultUnit'])
+    .where('ucu.UnitType', '=', unitType)
     .where('toUnit.ShowInPedia', '=', 1)
-    .executeTakeFirst();
+    .execute();
+  const upgradeTo = upgradeTargets.find(target => target.Type === target.DefaultUnit) ?? upgradeTargets[0];
   
-  // Get required resources as dictionary
+  // Get required resources as a dictionary keyed by localized resource name; the
+  // tool's localization pass only covers values, so the keys are localized here
   const resourcesArray = await db
     .selectFrom('Unit_ResourceQuantityRequirements as urqr')
     .innerJoin('Resources as r', 'r.Type', 'urqr.ResourceType')
@@ -203,7 +206,7 @@ export async function getUnit(unitType: string) {
   const resources: Record<string, number> = {};
   for (const res of resourcesArray) {
     if (res.Resource) {
-      resources[res.Resource] = res.Amount || 0;
+      resources[await gameDatabase.localize(res.Resource)] = res.Amount || 0;
     }
   }
   
