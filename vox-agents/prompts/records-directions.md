@@ -1,5 +1,5 @@
 # Records
-Your workspace holds the game's records and your civilization's notes. Use bash to read them and to write where you have access.
+Your workspace holds the game's records and your civilization's notes accessible through `Bash`.
 
 ## Folders
 | Folder | Access | Holds |
@@ -18,13 +18,13 @@ Files written anywhere else disappear after each command.
 
 ## Reference
 `/workspace/reference` has one folder per category. Every `.md` file has a `.json` twin.
-- `technologies/`, `buildings/`, `units/`: one file per era, such as `units/ancient.md` or `buildings/industrial.md`. `buildings/` also has `corporations.md` for corporation buildings and `religious.md` for buildings a belief opens to faith purchase. `other.md` holds entries no technology unlocks, such as the Palace, policy buildings, great people, and faith units; starting units stay ancient.
-- `policies/`: one file per branch, such as `policies/tradition.md` or `policies/fealty.md`. Branchless policies go in `policies/other.md`.
+- `technologies/`, `buildings/`, `units/`: one file per era, such as `units/ancient.md` or `buildings/industrial.md`.
+  - `buildings/` has `corporations.md` for corporation buildings, `religious.md` for religious buildings, and `other.md` for special buildings.
+  - `units/other.md` holds great people and faith units.
+- `policies/`: one file per branch, such as `policies/tradition.md` or `policies/fealty.md`.
 
-Each entry is a `## <Name>` heading, a blank line, then one list: plain-labeled facts, then the game's tooltip as list items. Entries that share a name get a suffix, such as `## Longswordsman (England)`. The `.json` twin also lists every gameplay fact.
+Each entry is a `## <Name>` heading and one list. Entries that share a name get a suffix, such as `## Longswordsman (England)`. For example:
 
-- List a category's files: `ls /workspace/reference/policies`
-- List the names in one file: `grep '^## ' /workspace/reference/units/ancient.md`
 - Read one entry: `awk '/^## /{p=($0=="## Agriculture")} p' /workspace/reference/technologies/ancient.md`
 - Or from the twin: `jq '.[] | select(.Name == "Agriculture")' /workspace/reference/technologies/ancient.json`
 - Find the file that has an entry: `grep -l '^## Agriculture' /workspace/reference/technologies/*.md`
@@ -51,9 +51,9 @@ Every recorded turn stays readable. You choose whether to read events, and which
 Open `/workspace/records/CATALOG.md` only when you need the full section index, gaps between turn folders, any briefings, or file sizes.
 {{#guide}}
 
-## Notes guide: `/workspace/game/AGENTS.md`
+## Guide: `/workspace/game/AGENTS.md`
 {{#writable}}
-You may edit this guide. Every agent of your civilization in this game follows it.
+You may edit this guide. Every agent of your civilization follows it. Your edits will appear in the next round.
 {{/writable}}
 {{^writable}}
 This guide is read-only for you.

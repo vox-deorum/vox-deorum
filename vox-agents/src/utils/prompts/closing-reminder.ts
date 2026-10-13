@@ -39,7 +39,7 @@ export function buildClosingReminder(
   const finishing = formatToolChoiceList((completionTools ?? []).filter((name) => allowed.has(name)));
 
   const rules = [
-    required ? `IMPORTANT: You must call tools on this step, either to gather information or to act. Call every tool you need at once.` : '',
+    required ? `IMPORTANT: You must call tools on this step to gather information OR to act (mutually exclusive). In either case, call every tool you need at once.` : '',
     !narrowed ? '' : tools ? `For this step, you may only call ${tools}; other tools will return an error.` : `No tools are available for this step. Write your response in plain text.`,
   ];
   const decisions = [
