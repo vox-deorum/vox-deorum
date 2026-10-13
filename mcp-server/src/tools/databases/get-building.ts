@@ -29,7 +29,11 @@ const BuildingReportSchema = BuildingSummarySchema.extend({
   Happiness: z.number(),
   Defense: z.number(),
   HP: z.number(),
-  Maintenance: z.number()
+  Maintenance: z.number(),
+  // The corporation whose headquarters, office, or franchise this building is
+  Corporation: z.string().nullable(),
+  // Beliefs that let players buy this building with faith
+  UnlockedByBeliefs: z.array(z.string())
 });
 
 type BuildingSummary = z.infer<typeof BuildingSummarySchema>;
@@ -146,6 +150,25 @@ export async function getBuilding(buildingType: string) {
     .where('BuildingType', '=', buildingType)
     .execute();
   
+  // Get the corporation this building belongs to, if any
+  const corporation = await db
+    .selectFrom('Corporations')
+    .select('Description')
+    .where(eb => eb.or([
+      eb('HeadquartersBuildingClass', '=', building.BuildingClass),
+      eb('OfficeBuildingClass', '=', building.BuildingClass),
+      eb('FranchiseBuildingClass', '=', building.BuildingClass)
+    ]))
+    .executeTakeFirst();
+
+  // Get beliefs that unlock this building for faith purchase
+  const beliefs = await db
+    .selectFrom('Belief_BuildingClassFaithPurchase as f')
+    .innerJoin('Beliefs as be', 'be.Type', 'f.BeliefType')
+    .select('be.ShortDescription')
+    .where('f.BuildingClassType', '=', building.BuildingClass)
+    .execute();
+
   // Determine if it's a wonder
   const isNationalWonder = buildingClass?.MaxPlayerInstances === 1;
   const isWorldWonder = buildingClass?.MaxGlobalInstances === 1;
@@ -167,6 +190,8 @@ export async function getBuilding(buildingType: string) {
     Defense: building.Defense || 0,
     HP: building.ExtraCityHitPoints || 0,
     Maintenance: building.GoldMaintenance || 0,
-    UniqueOf: building.UniqueCivName || null
+    UniqueOf: building.UniqueCivName || null,
+    Corporation: corporation?.Description || null,
+    UnlockedByBeliefs: beliefs.map(b => b.ShortDescription || '')
   };
 }

@@ -80,11 +80,25 @@ describe('get-building full report', () => {
       CREATE TABLE Civilization_BuildingClassOverrides (BuildingType TEXT, CivilizationType TEXT);
       CREATE TABLE Civilizations (Type TEXT, ShortDescription TEXT);
       CREATE TABLE Eras (Type TEXT);
+      CREATE TABLE Corporations (Type TEXT, Description TEXT, HeadquartersBuildingClass TEXT, OfficeBuildingClass TEXT, FranchiseBuildingClass TEXT);
+      CREATE TABLE Belief_BuildingClassFaithPurchase (BeliefType TEXT, BuildingClassType TEXT);
+      CREATE TABLE Beliefs (Type TEXT, ShortDescription TEXT);
       INSERT INTO BuildingClasses VALUES ('BUILDINGCLASS_TEMPLE', 'Temple class', 'BUILDING_TEMPLE', -1, -1);
+      INSERT INTO BuildingClasses VALUES ('BUILDINGCLASS_STEEL_HEADQUARTERS', 'Steel headquarters class', 'BUILDING_STEEL_HEADQUARTERS', -1, -1);
+      INSERT INTO BuildingClasses VALUES ('BUILDINGCLASS_STEEL_OFFICE', 'Steel office class', 'BUILDING_STEEL_OFFICE', -1, -1);
+      INSERT INTO BuildingClasses VALUES ('BUILDINGCLASS_MONUMENT', 'Monument class', 'BUILDING_MONUMENT', -1, -1);
       INSERT INTO Civilizations VALUES ('CIVILIZATION_MAYA', 'Maya');
       INSERT INTO Buildings VALUES ('BUILDING_TEMPLE', 'Temple', NULL, NULL, 100, NULL, 'BUILDINGCLASS_TEMPLE', 0, 0, 0, 2);
       INSERT INTO Buildings VALUES ('BUILDING_MAYA_PYRAMID', 'Pyramid', NULL, NULL, 100, NULL, 'BUILDINGCLASS_TEMPLE', 0, 0, 0, 2);
+      INSERT INTO Buildings VALUES ('BUILDING_STEEL_HEADQUARTERS', 'Steel Works', NULL, NULL, 200, NULL, 'BUILDINGCLASS_STEEL_HEADQUARTERS', 0, 0, 0, 4);
+      INSERT INTO Buildings VALUES ('BUILDING_STEEL_OFFICE', 'Steel Office', NULL, NULL, 100, NULL, 'BUILDINGCLASS_STEEL_OFFICE', 0, 0, 0, 1);
+      INSERT INTO Buildings VALUES ('BUILDING_MONUMENT', 'Monument', NULL, NULL, 65, NULL, 'BUILDINGCLASS_MONUMENT', 1, 0, 0, 0);
       INSERT INTO Civilization_BuildingClassOverrides VALUES ('BUILDING_MAYA_PYRAMID', 'CIVILIZATION_MAYA');
+      INSERT INTO Corporations VALUES ('CORPORATION_STEEL', 'Steel', 'BUILDINGCLASS_STEEL_HEADQUARTERS', 'BUILDINGCLASS_STEEL_OFFICE', 'BUILDINGCLASS_STEEL_FRANCHISE');
+      INSERT INTO Beliefs VALUES ('BELIEF_SKY_GOD', 'God of the Open Sky');
+      INSERT INTO Beliefs VALUES ('BELIEF_HARVEST_GOD', 'God of the Harvest');
+      INSERT INTO Belief_BuildingClassFaithPurchase VALUES ('BELIEF_SKY_GOD', 'BUILDINGCLASS_TEMPLE');
+      INSERT INTO Belief_BuildingClassFaithPurchase VALUES ('BELIEF_HARVEST_GOD', 'BUILDINGCLASS_TEMPLE');
     `);
     db = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
     vi.spyOn(gameDatabase, 'getDatabase').mockReturnValue(db);
@@ -101,5 +115,24 @@ describe('get-building full report', () => {
 
   it('should leave Replaces empty for standard buildings', async () => {
     expect((await getBuilding('BUILDING_TEMPLE')).Replaces).toBeNull();
+  });
+
+  describe('corporations and beliefs', () => {
+    it('should name the corporation whose headquarters or office class a building belongs to', async () => {
+      expect((await getBuilding('BUILDING_STEEL_HEADQUARTERS')).Corporation).toBe('Steel');
+      expect((await getBuilding('BUILDING_STEEL_OFFICE')).Corporation).toBe('Steel');
+    });
+
+    it('should list the beliefs that unlock faith purchase for the building class', async () => {
+      const beliefs = (await getBuilding('BUILDING_TEMPLE')).UnlockedByBeliefs;
+      expect(beliefs).toHaveLength(2);
+      expect(beliefs.sort()).toEqual(['God of the Harvest', 'God of the Open Sky']);
+    });
+
+    it('should report no corporation and no beliefs for a plain building', async () => {
+      const monument = await getBuilding('BUILDING_MONUMENT');
+      expect(monument.Corporation).toBeNull();
+      expect(monument.UnlockedByBeliefs).toEqual([]);
+    });
   });
 });

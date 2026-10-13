@@ -22,13 +22,15 @@ const recordsRoot = 'records';
 /** Store path of the generated catalog. */
 export const catalogPath = `${recordsRoot}/CATALOG.md`;
 
-/** Event category files written for every processed turn, by file suffix. */
+/**
+ * Event category views written for every processed turn, by file suffix. Each view also keeps the
+ * system events, such as turn starts and ends, as turn markers.
+ */
 export const eventCategoryFiles: ReadonlyArray<readonly [suffix: string, category: EventCategory]> = [
   ['economic', 'Economy'],
   ['military', 'Military'],
   ['diplomatic', 'Diplomacy'],
   ['others', 'Others'],
-  ['system', 'System'],
 ];
 
 /** Turn-scoped sections written as complete reports, in catalog order. Events have their own files. */
@@ -71,7 +73,7 @@ function partLabel(key: SectionKey, entryKey: string, value: unknown): string {
 interface SplitEntry { entry: string; value: unknown; label: string; name: string }
 
 /**
- * The top-level entries of a report being split (civilizations, city owners, or military zones).
+ * The top-level entries of a report being split (civilizations or city owners).
  * Each gets a readable slug, with a numeric suffix when two entries would share a name. Only
  * object entries are split: plain strings (unmet, defeated, and barbarian players) get no part.
  */
@@ -137,7 +139,10 @@ function hasEvents(filtered: ConsolidatedEventsReport): boolean {
   return Object.keys(filtered).some((key) => key !== '_markdownConfig');
 }
 
-/** The event files of one processed refresh: the complete slice and the five category views. */
+/**
+ * The event files of one processed refresh: the complete slice and the category views. Each view
+ * keeps the system events as turn markers but reports no events when its own category has none.
+ */
 function eventChanges(folder: string, events: ConsolidatedEventsReport): PathChange[] {
   const changes: PathChange[] = [
     {
@@ -148,12 +153,12 @@ function eventChanges(folder: string, events: ConsolidatedEventsReport): PathCha
     { path: `${folder}/events-all.json`, type: 'file', content: toJson(events) },
   ];
   for (const [suffix, category] of eventCategoryFiles) {
-    const filtered = filterEventsByCategory(events, category);
+    const filtered = filterEventsByCategory(events, [category, 'System']);
     const rendered = renderSection('events', filtered, {
       heading: `Events: ${category}`,
       description: `Events: ${category.toLowerCase()} events of this processed refresh.`,
     });
-    const content = hasEvents(filtered) ? rendered : `${rendered.trimEnd()}\n\nNo events in this category.`;
+    const content = hasEvents(filterEventsByCategory(events, category)) ? rendered : `${rendered.trimEnd()}\n\nNo events in this category.`;
     changes.push({ path: `${folder}/events-${suffix}.md`, type: 'file', content: `${content}\n` });
   }
   return changes;
@@ -186,14 +191,13 @@ function formatSize(bytes: number): string {
 const splitLabels: Record<SectionSplit['by'], string> = {
   civilization: 'civilization',
   cityOwner: 'city owner',
-  militaryZone: 'military zone',
 };
 
 /** Where one section's record files live, for the catalog's section index. */
 export function sectionFiles(section: SectionDefinition): string {
   if (section.scope === 'game') return `\`game/${section.key}.md\``;
   if (section.key === 'events') {
-    return `\`turn-<N>/events-all.md\`, and views by category: ${eventCategoryFiles.map(([suffix]) => `\`events-${suffix}.md\``).join(', ')}`;
+    return `\`turn-<N>/events-all.md\`, and views by category: ${eventCategoryFiles.map(([suffix]) => `\`events-${suffix}.md\``).join(', ')}, each with system events as turn markers`;
   }
   if (section.key === 'briefings') return '`turn-<N>/briefings/<kind>.md`: combined, military, economy, diplomacy';
   const split = section.split ? `, one file per ${splitLabels[section.split.by]} in \`turn-<N>/${section.key}/\`` : '';

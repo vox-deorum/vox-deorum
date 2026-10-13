@@ -5,13 +5,13 @@
  * units, already sorted with Name first and Help last, Type removed, and sort-only fields such as
  * policy Level dropped. The `# title` category heading and each entry's `## Name` heading stay
  * intact so grep and awk entry extraction keeps working; duplicate names get a suffix on every
- * entry of the group. Compact facts come first with bold, humanized labels, rendered through the
- * shared jsonToMarkdown converter; a category can limit them to the facts its tooltips lack. The
- * entry's tooltip follows directly, normalized so every gameplay statement keeps its words and
- * order: separator dashes become paragraph breaks, `*` and Unicode bullets become Markdown list
- * items, and a colon section label ahead of a bullet list becomes a bold bullet with the list
- * nested under it, matching the facts. Blank lines go around every block because the game's own
- * text handling strips them. The renderer never changes its input.
+ * entry of the group. Each entry body is one Markdown list in a single format: the compact facts
+ * first, as plain humanized labels rendered through the shared jsonToMarkdown converter (a category
+ * can limit them to the facts its tooltips lack), then the entry's tooltip. Every tooltip line keeps
+ * its words and order and becomes a list item; a colon section label ahead of a bullet list becomes
+ * an item with the list nested under it, and a few long labels get short names. Separator dashes
+ * and blank lines are dropped, so blank lines appear only around headings. The renderer never
+ * changes its input.
  */
 
 import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
@@ -21,6 +21,11 @@ type Item = Record<string, unknown>;
 
 /** One tooltip line, classified by how it should render. */
 type HelpLine = { kind: "text" | "bullet" | "break"; text: string };
+
+/** Tooltip section labels too long to read at a glance, and their short names. */
+const shortLabels = new Map([
+  ["List of possible boosts to this Building", "Possible Boosts"],
+]);
 
 /**
  * Render one category of cleaned, sorted reference entries as a Markdown document ending with a
@@ -71,19 +76,19 @@ function headingSuffix(item: Item): string {
   return "";
 }
 
-/** Render one entry: its heading, the compact facts (only `shown` when it has a tooltip), then the tooltip. */
+/**
+ * Render one entry: its heading, a blank line, then one list holding the compact facts (only
+ * `shown` when it has a tooltip) followed by the tooltip.
+ */
 function renderEntry(item: Item, heading: string, shown?: readonly string[]): string {
-  const parts = [`## ${heading}`];
   const help = item.Help === undefined || item.Help === null ? "" : String(item.Help);
   const normalized = normalizeHelp(help);
   const facts = Object.fromEntries(Object.entries(item)
     .filter(([key, value]) => key !== "Name" && key !== "Help" && value !== undefined && value !== null)
     .filter(([key]) => !shown || normalized === "" || shown.includes(key))
-    .map(([key, value]) => [`**${humanizeLabel(key)}**`, value]));
-  const renderedFacts = jsonToMarkdown(facts);
-  if (renderedFacts !== "") parts.push(renderedFacts);
-  if (normalized !== "") parts.push(normalized);
-  return parts.join("\n\n");
+    .map(([key, value]) => [humanizeLabel(key), value]));
+  const body = [jsonToMarkdown(facts), normalized].filter((part) => part !== "").join("\n");
+  return body === "" ? `## ${heading}` : `## ${heading}\n\n${body}`;
 }
 
 /** Split a PascalCase field name into words for its label, keeping acronym runs whole (AIType, HP). */
@@ -94,54 +99,35 @@ function humanizeLabel(key: string): string {
 }
 
 /**
- * Normalize tooltip text into Markdown blocks joined by blank lines, which the game's own
- * cleanup strips: separator dash lines break blocks (never underlining the text above as a
- * heading), `*` and Unicode bullets become list items, and a colon section label followed by a
- * bullet list becomes a bold bullet with the list nested under it. Statements keep their words and
- * order. Text that is empty normalizes to nothing.
+ * Normalize tooltip text into one Markdown list: every text line and bullet becomes a list item,
+ * and a colon section label followed by bullets becomes an item with those bullets nested under it
+ * until the next text line or separator. Separator dash lines and blank lines end a section and are
+ * dropped. Long section labels get their short names. Statements keep their words and order. Text
+ * that is empty normalizes to nothing.
  */
 function normalizeHelp(help: string): string {
   const lines = classifyHelpLines(help);
-  const blocks: string[] = [];
-  const paragraph: string[] = [];
-  const bullets: string[] = [];
+  const items: string[] = [];
   let indent = "";
-  /** Finish the current prose block. */
-  const flushParagraph = () => {
-    if (paragraph.length > 0) blocks.push(paragraph.join("\n"));
-    paragraph.length = 0;
-  };
-  /** Finish the current list block. */
-  const flushBullets = () => {
-    if (bullets.length > 0) blocks.push(bullets.join("\n"));
-    bullets.length = 0;
-    indent = "";
-  };
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
     if (line.kind === "break") {
-      flushParagraph();
-      flushBullets();
+      indent = "";
     } else if (line.kind === "bullet") {
-      flushParagraph();
-      bullets.push(`${indent}- ${line.text}`);
+      items.push(`${indent}- ${line.text}`);
+    } else if (line.text.endsWith(":") && lines[index + 1]?.kind === "bullet") {
+      const label = line.text.replace(/:+$/, "").trim();
+      items.push(`- ${shortLabels.get(label) ?? label}:`);
+      indent = "  ";
     } else {
-      flushBullets();
-      if (line.text.endsWith(":") && lines[index + 1]?.kind === "bullet") {
-        flushParagraph();
-        bullets.push(`- **${line.text.replace(/:+$/, "").trim()}**:`);
-        indent = "  ";
-      } else {
-        paragraph.push(line.text);
-      }
+      items.push(`- ${line.text}`);
+      indent = "";
     }
   }
-  flushParagraph();
-  flushBullets();
-  return blocks.join("\n\n");
+  return items.join("\n");
 }
 
-/** Classify tooltip lines while preserving existing paragraph breaks. */
+/** Classify tooltip lines as text, bullets, or breaks (blank and separator lines). */
 function classifyHelpLines(help: string): HelpLine[] {
   const lines: HelpLine[] = [];
   for (const raw of help.split(/\r?\n/)) {

@@ -16,4 +16,4 @@ You have a file workspace through the `{{toolName}}` {{toolNoun}}. The `# Record
   - Find lines: `grep -n "Babylon" "$record/players.md"`, or search every turn with `grep -rn`.
   - Read a slice: `head -n 60 "$record/cities.md"` or `sed -n '120,180p' "$record/military.md"`, after `wc -c "$record"/*.md` shows the sizes.
   - Query a JSON twin: `jq 'keys' "$record/players.json"`.
-  - When you need one civilization or zone, prefer split parts: list `"$record/players/"`, then read the matching file. Unmet, defeated, and barbarian players have no split file and are listed at the end of `players.md`.
+  - When you need one civilization or city owner, prefer split parts: list `"$record/players/"` or `"$record/cities/"`, then read the matching file. Unmet, defeated, and barbarian players have no split file and are listed at the end of `players.md`.

@@ -8236,7 +8236,7 @@ export interface DB {
   // AudioSoundTypes: AudioSoundType;
   // AudioSpeakerChannels: AudioSpeakerChannel;
   // Automates: Automate;
-  // BeliefBuildingClassFaithPurchase: BeliefBuildingClassFaithPurchase;
+  Belief_BuildingClassFaithPurchase: BeliefBuildingClassFaithPurchase;
   // BeliefBuildingClassHappiness: BeliefBuildingClassHappiness;
   // BeliefBuildingClassTourism: BeliefBuildingClassTourism;
   // BeliefBuildingClassYieldChanges: BeliefBuildingClassYieldChange;
@@ -8527,7 +8527,7 @@ export interface DB {
   // CorporationResourceMonopolyAnds: CorporationResourceMonopolyAnd;
   // CorporationResourceMonopolyOrs: CorporationResourceMonopolyOr;
   // CorporationResourceYieldChanges: CorporationResourceYieldChange;
-  // Corporations: Corporation;
+  Corporations: Corporation;
   // CorporationSpecialistYieldChanges: CorporationSpecialistYieldChange;
   // CorporationTradeRouteCityYield: CorporationTradeRouteCityYield;
   // CorporationTradeRouteMod: CorporationTradeRouteMod;

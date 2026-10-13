@@ -34,7 +34,7 @@ Stage 1 supplies the golden tests that guard the section registry's adoption. `e
 
 ### Events: per-turn files and inline decision windows
 
-Records use `state.events`, the refresh's slice, and keep all importance levels. Each processed turn gets `turn-<N>/events-all.md` plus category files generated with the specialized briefer's `filterEventsByCategory` in `utils/prompts/event-filters.ts`. Reuse its event-type mapping, relayed-report categories, overlapping membership, nested event handling, and Markdown configuration. Use these stable filenames:
+Records use `state.events`, the refresh's slice, and keep all importance levels. Each processed turn gets `turn-<N>/events-all.md` plus a category view per file generated with the specialized briefer's `filterEventsByCategory` in `utils/prompts/event-filters.ts`. Reuse its event-type mapping, relayed-report categories, overlapping membership, nested event handling, and Markdown configuration. The filter takes one category or a list, so a view asks for its own category plus `System`. Use these stable filenames:
 
 | File | Source |
 | --- | --- |
@@ -43,9 +43,8 @@ Records use `state.events`, the refresh's slice, and keep all importance levels.
 | `events-military.md` | `Military` |
 | `events-diplomatic.md` | `Diplomacy` |
 | `events-others.md` | `Others` |
-| `events-system.md` | `System` |
 
-Write every category file, including an empty report when no events match, so the paths are predictable. These are filtered views of the factual slice; they require no LLM call or additional event fetching.
+Write every category view, so the paths are predictable. Each view also keeps the `System` events, such as turn starts and ends, as turn markers, and a view whose own category has no events says there are no events in that category. These are filtered views of the factual slice; they require no LLM call or additional event fetching.
 
 In Stage 3, a file-mode strategist gets the current turn, its last completed decision turn, and the file patterns. It chooses when to read events, which turns and categories to inspect, and how much to read, just as it would when deciding every turn. Pacing changes when it runs; event access follows the same rules at every cadence. The host keeps all recorded turns accessible and does not merge, trim, or prescribe reads for the strategist's file-based event input.
 
@@ -139,7 +138,7 @@ Only the host writes records, through `SeatRecords`, and the reference, through 
 | `CATALOG.md` | Generated section index, turn ranges, file sizes, and query guidance |
 | `game/<key>.md` and `.json` | Situation and civilization |
 | `turn-<N>/<key>.md` and `.json` | Complete turn reports other than events |
-| `turn-<N>/<key>/<part>.md` | Markdown split by civilization, city owner, or military zone |
+| `turn-<N>/<key>/<part>.md` | Markdown split by civilization or city owner |
 | `turn-<N>/events-all.md` and `.json` | Complete refresh event slice |
 | `turn-<N>/events-<category>.md` | Event views using the briefer's category filter and filenames above |
 | `turn-<N>/briefings/<kind>.md` | Generated briefing text |
@@ -215,7 +214,7 @@ The four listing tools take no `PlayerID`, so one set of calls serves every seat
 | --- | --- | --- |
 | `get-technology` | `MaxResults: 5000`, no search | Names, help, cost, era, and technologies unlocked |
 | `get-policy` | `MaxResults: 5000`, no search | Names, help, branch, level, and era |
-| `get-building` | `MaxResults: 5000`, no search | Names, help, cost, prerequisite technology, era, and civilization uniqueness |
+| `get-building` | `MaxResults: 5000`, no search | Names, help, cost, prerequisite technology, era, civilization uniqueness, corporation, and beliefs that unlock faith purchase |
 | `get-unit` | `MaxResults: 5000`, no search | Names, descriptions, combat values, cost, prerequisite technology, era, and civilization uniqueness |
 
 These are listing results. A query that resolves to exactly one item returns a detailed report instead, so the writer must not assume every result is a listing row. Recording turns and briefings adds no MCP calls, and files-disabled games make no added calls.
@@ -241,7 +240,7 @@ The button appears only when the row's seat store exists. Both entry points repo
 - Implement the store tables, commit kinds, atomic empty initial commit and head, file and directory entries, run-bound commits, version reads, the head manifest cache, the last recorded turn, and `rewind`. Add `StoreFs`.
 - Add `materialize.ts`, the workspace console and its npm scripts, the telemetry download route and `hasWorkspace` flag, and the telemetry page button.
 - Switch `PlayerWorkspace` to store views for records and notes with a `notes` commit after each command, bound to the command's run signal. Seed the game guide into the notes view when missing, and mount the reference from the store. Update the workspace capability instructions and bash descriptions.
-- Implement `SeatRecords`, catalog generation, and record splitting, with the cached accessor on `VoxContext`. Write the full event slice and all five category files for each processed refresh through the shared briefer filter. Document the refresh-folder and event-turn distinction in the catalog.
+- Implement `SeatRecords`, catalog generation, and record splitting, with the cached accessor on `VoxContext`. Write the full event slice and the four category views for each processed refresh through the shared briefer filter, each keeping system events as turn markers. Document the refresh-folder and event-turn distinction in the catalog.
 - In `vox-player.ts`, open the seat store and attach it to the context, and close it after `context.shutdown()`. Move the constructor's timeline initialization into `beginTimeline`, call it from the constructor and from the turn loop's reload check, and track the last processed turn and the lowest pending reload turn. Distinguish startup from real notifications, consume the startup acknowledgement once, and retain backward notifications before the busy-turn drop path. In `strategist-session.ts`, label the proactive human notification and clear its acknowledgement on a DLL reconnection.
 - In `strategy-parameters.ts`, capture the refresh's run signal and guard publication of fetched metadata and game state against cancellation, keeping outside-run callers supported.
 - In `handleGameSwitched`, prepare all players before launching their loops and write the reference there. Route setup failures, including a failure to open a seat store, through the fatal session path, with abort and completion signaling, and close any opened stores there.
@@ -254,7 +253,7 @@ The button appears only when the row's seat store exists. Both entry points repo
 | Area | Required checks |
 | --- | --- |
 | Sections | Builders using the registry keep the unchanged golden tests; overrides change only the overridden heading or description |
-| Events | Each record keeps its complete refresh slice at every pacing cadence; all five category files match the shared briefer filter, including overlapping categories, relayed reports, nested events, empty categories, and Markdown configuration; uncategorized events remain in `events-all.md`; inline importance-tier retries and the final current-turn fallback change only rendered input; dropped-turn and late events retain their real turn keys |
+| Events | Each record keeps its complete refresh slice at every pacing cadence; all four category views match the shared briefer filter, including system events kept as turn markers, overlapping categories, relayed reports, nested events, categories with no events of their own, and Markdown configuration; uncategorized events remain in `events-all.md`; inline importance-tier retries and the final current-turn fallback change only rendered input; dropped-turn and late events retain their real turn keys |
 | Store | Atomic creation of an empty initial commit and head, stable head on reopening, empty-version reads and materialization, rewind retaining the initial ancestor, round-trip of text and binary files, deduplication, compression only when smaller, reads at an older commit, path-level last-writer-wins, and one store path for a seat whichever strategist runs it |
 | Bash view | `>`, `>>`, `tee`, `sed -i`, `mkdir`, `rm -r`, `mv`, and `cp -r` are each recorded and committed; an empty `mkdir`, a `chmod`, and a `touch` persist into the next command; `ln -s` is rejected; read-only mounts reject writes; the next command sees the previous command's writes and host commits made in between; a command whose run is cancelled leaves head unchanged |
 | Records | Markdown and JSON output, split files, a turn and its catalog in one commit, a complete catalog when turn and briefing commits interleave, a repeat briefing write replacing the file, and correct catalog ranges and sizes |

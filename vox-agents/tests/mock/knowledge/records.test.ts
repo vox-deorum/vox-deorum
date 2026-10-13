@@ -25,6 +25,12 @@ function markdownOnlyNote(catalog: string): string {
   return catalog.split('\n').find((line) => line.includes('Markdown only'))!;
 }
 
+/** Whether a rendered category view ends with the note for a category holding no events of its own. */
+function endsWithNote(file: string): boolean {
+  const last = file.trimEnd().split('\n').at(-1)!;
+  return !/^(?:#|-|\s)/.test(last);
+}
+
 /** Seat parameters with game metadata. */
 function makeParameters(metadata: Record<string, unknown> = { Turn: 1, YouAre: { Name: 'Rome', Leader: 'Augustus' }, Speed: 'Standard' }): StrategistParameters {
   return { playerID: 1, gameID: 'g1', turn: 1, after: 0, before: 0, workingMemory: {}, gameStates: {}, mode: 'Flavor', metadata } as unknown as StrategistParameters;
@@ -106,18 +112,17 @@ describe('SeatRecords', () => {
       expect(JSON.parse(read('records/turn-5/strategies.json')!)).not.toHaveProperty('_markdownConfig');
     });
 
-    it('should split players, cities, and military into readable parts with collision suffixes', () => {
+    it('should split players and cities into readable parts with collision suffixes, but keep military whole', () => {
       records.recordTurn(makeParameters(), makeState(5));
       const parts = [...store.manifest().keys()].filter((key) => /^records\/turn-5\/[a-z]+\//.test(key)).sort();
       expect(parts).toEqual([
         'records/turn-5/cities/alexander.md',
         'records/turn-5/cities/augustus.md',
-        'records/turn-5/military/friendly-land-zone-3.md',
-        'records/turn-5/military/unit-stats.md',
         'records/turn-5/players/greece-2.md',
         'records/turn-5/players/greece.md',
         'records/turn-5/players/rome.md',
       ]);
+      expect([...store.manifest().keys()].some((key) => key.startsWith('records/turn-5/military/'))).toBe(false);
       expect(read('records/turn-5/players/greece.md')).toContain('Alexander');
       expect(read('records/turn-5/players/greece.md')).not.toContain('Pericles');
       expect(read('records/turn-5/players/greece-2.md')).toContain('Pericles');
@@ -181,12 +186,13 @@ describe('SeatRecords', () => {
     const tile = { Type: 'TileRevealed', Note: 'marker-tile' };
     const unknown = { Type: 'UnknownEvent', Note: 'marker-unknown' };
     const late = { Type: 'CityTrained', Note: 'marker-late' };
+    const turnStart = { Type: 'PlayerDoTurn', Note: 'marker-system' };
     const slice = {
       '3': [late],
-      '5': [relayed, war, tile, unknown],
+      '5': [turnStart, relayed, war, tile, unknown],
       _markdownConfig: markdownConfig('Turn {key}', '{key}'),
     };
-    const markers = ['marker-relayed', 'marker-war', 'marker-nested', 'marker-tile', 'marker-unknown', 'marker-late'];
+    const markers = ['marker-relayed', 'marker-war', 'marker-nested', 'marker-tile', 'marker-unknown', 'marker-late', 'marker-system'];
 
     /** Record turn 5 with the slice, plus a different merged window that must not be recorded. */
     function recordSlice(): void {
@@ -205,12 +211,13 @@ describe('SeatRecords', () => {
       expect(all).toContain('Turn 3');
     });
 
-    it('should write all five category files matching the shared filter', () => {
+    it('should write all four category files matching the shared category-or-system filter', () => {
       recordSlice();
+      expect(eventCategoryFiles.map(([suffix]) => suffix)).toEqual(['economic', 'military', 'diplomatic', 'others']);
       for (const [suffix, category] of eventCategoryFiles) {
         const file = read(`records/turn-5/events-${suffix}.md`);
         expect(file, suffix).toBeDefined();
-        const expected = JSON.stringify(filterEventsByCategory(slice as never, category));
+        const expected = JSON.stringify(filterEventsByCategory(slice as never, [category, 'System']));
         for (const marker of markers) {
           expect(file!.includes(marker), `${suffix} ${marker}`).toBe(expected.includes(marker));
         }
@@ -223,22 +230,29 @@ describe('SeatRecords', () => {
       expect(read('records/turn-5/events-economic.md')).toContain('Turn 5');
     });
 
+    it('should keep each system event as a turn marker in every category view and write no system file', () => {
+      recordSlice();
+      expect(read('records/turn-5/events-system.md')).toBeUndefined();
+      for (const [suffix] of eventCategoryFiles) {
+        expect(read(`records/turn-5/events-${suffix}.md`)).toContain('marker-system');
+      }
+    });
+
     it('should keep uncategorized events only in the complete file and still write empty categories', () => {
       recordSlice();
       expect(read('records/turn-5/events-all.md')).toContain('marker-unknown');
       for (const [suffix] of eventCategoryFiles) {
         expect(read(`records/turn-5/events-${suffix}.md`)).not.toContain('marker-unknown');
       }
-      const system = read('records/turn-5/events-system.md')!;
-      expect(markers.some((marker) => system.includes(marker))).toBe(false);
     });
 
-    it('should keep a body line below the heading for a category view with no events', () => {
+    it('should keep the no-events note for a view whose own category has no events even with system events', () => {
       recordSlice();
-      const system = read('records/turn-5/events-system.md')!;
-      expect(markers.some((marker) => system.includes(marker))).toBe(false);
-      const body = system.split('\n').slice(2).join('\n').trim();
-      expect(body.length).toBeGreaterThan(0);
+      // The slice holds no Others-category events, only the system turn marker.
+      const others = read('records/turn-5/events-others.md')!;
+      expect(others).toContain('marker-system');
+      expect(endsWithNote(others)).toBe(true);
+      expect(endsWithNote(read('records/turn-5/events-economic.md')!)).toBe(false);
     });
 
     it('should write every event file for a refresh without events', () => {
@@ -246,7 +260,12 @@ describe('SeatRecords', () => {
       delete state.events;
       records.recordTurn(makeParameters(), state);
       expect(read('records/turn-6/events-all.json')).toBeDefined();
-      for (const [suffix] of eventCategoryFiles) expect(read(`records/turn-6/events-${suffix}.md`)).toBeDefined();
+      for (const [suffix] of eventCategoryFiles) {
+        const file = read(`records/turn-6/events-${suffix}.md`)!;
+        const body = file.split('\n').slice(2).join('\n').trim();
+        expect(body.length).toBeGreaterThan(0);
+        expect(endsWithNote(file)).toBe(true);
+      }
     });
   });
 
@@ -283,6 +302,17 @@ describe('SeatRecords', () => {
       records.recordBriefing(2, 'economy', 'two');
       expect(read(catalogPath)).toBe(buildCatalog(store.manifest()));
       expect(read(catalogPath)).toContain('turn-2/briefings/economy.md');
+    });
+
+    it('should index the four event views as turn-marker holders and the military report without split parts', () => {
+      records.recordTurn(makeParameters(), makeState(1));
+      const catalog = read(catalogPath)!;
+      expect(catalog).toContain('events-economic.md');
+      expect(catalog).toContain('events-military.md');
+      expect(catalog).toContain('events-diplomatic.md');
+      expect(catalog).toContain('events-others.md');
+      expect(catalog).not.toContain('events-system.md');
+      expect(catalog).toMatch(/\| Military \| `turn-<N>\/military\.md` \|/);
     });
 
     it('should list briefings in the catalog only when the tree holds briefing files', () => {

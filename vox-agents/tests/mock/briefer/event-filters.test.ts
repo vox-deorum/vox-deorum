@@ -57,6 +57,45 @@ describe('filterEventsByCategory', () => {
     expect(filterEventsByCategory(events, 'Diplomacy')).toEqual({});
   });
 
+  describe('given a list of categories', () => {
+    it('should keep an event when any listed category matches its type mapping', () => {
+      const doTurn = { Type: 'PlayerDoTurn' };
+      const tile = { Type: 'TileRevealed' };
+      const war = { Type: 'DeclareWar' };
+      const unknown = { Type: 'UnknownEvent' };
+      const events = { '4': [doTurn, tile, war, unknown] };
+      expect(filterEventsByCategory(events, ['Economy', 'System'])).toEqual({ '4': [doTurn, tile, war] });
+      expect(filterEventsByCategory(events, ['System'])).toEqual({ '4': [doTurn] });
+      expect(filterEventsByCategory(events, [])).toEqual({});
+    });
+
+    it('should match relayed reports when any listed category is among their assessed Categories', () => {
+      const relayed = { Type: 'RelayedMessage', Categories: ['Military', 'Economy'], Content: 'report' };
+      const events = { '6': [relayed] };
+      expect(filterEventsByCategory(events, ['Diplomacy', 'Economy'])).toEqual({ '6': [relayed] });
+      expect(filterEventsByCategory(events, ['Diplomacy', 'Others'])).toEqual({});
+    });
+
+    it('should equal the union of the same filter applied one category at a time', () => {
+      const doTurn = { Type: 'PlayerDoTurn' };
+      const war = { Type: 'DeclareWar' };
+      const tile = { Type: 'TileRevealed' };
+      const events = { '4': [doTurn, war], '5': [tile] };
+      const union = (['Military', 'System'] as const)
+        .flatMap((category) => Object.values(filterEventsByCategory(events, category)).flat());
+      const listed = Object.values(filterEventsByCategory(events, ['Military', 'System'])).flat();
+      expect(listed).toHaveLength(union.length);
+      expect(new Set(listed)).toEqual(new Set(union));
+    });
+
+    it('should omit turns with no matching events and keep the input untouched', () => {
+      const tile = { Type: 'TileRevealed' };
+      const events = { '4': [tile], '5': [] };
+      expect(filterEventsByCategory(events, ['Military', 'System'])).toEqual({});
+      expect(events['4']).toEqual([tile]);
+    });
+  });
+
   it('should give every ranked event type a category, so renames cannot silently drop it', () => {
     // Relayed reports are routed by their own assessed Categories instead of the type mapping.
     const types = eventImportanceTiers.flatMap(tier => tier.types).filter(type => type !== 'RelayedMessage');

@@ -57,21 +57,22 @@ function loadEventCategories(): Record<string, EventCategory[]> {
 
 /**
  * Filters consolidated events (turn-keyed format) to only include those belonging
- * to the specified category. Events can belong to multiple categories, so an event
- * is included if the category is present in its category list.
+ * to the specified category or categories. Events can belong to multiple categories,
+ * so an event is included if any requested category is present in its category list.
  *
  * Relayed reports use their assessed Categories. Other events use the type mapping.
  * Nested Events arrays are preserved since they don't have their own Type field.
  *
  * @param eventsByTurn - Consolidated events report (turn-keyed object)
- * @param category - The event category to filter by
+ * @param category - The event category, or list of categories, to filter by
  * @returns Filtered consolidated events report with only matching events
  */
 export function filterEventsByCategory(
   eventsByTurn: ConsolidatedEventsReport,
-  category: EventCategory
+  category: EventCategory | readonly EventCategory[]
 ): ConsolidatedEventsReport {
   const categories = loadEventCategories();
+  const wanted: readonly EventCategory[] = Array.isArray(category) ? category : [category];
   const filtered: ConsolidatedEventsReport = {};
 
   for (const [turn, events] of Object.entries(eventsByTurn)) {
@@ -82,10 +83,11 @@ export function filterEventsByCategory(
 
     const turnFiltered = events.filter(event => {
       if (event.Type === 'RelayedMessage') {
-        return Array.isArray(event.Categories) && event.Categories.includes(category);
+        const relayed = event.Categories;
+        return Array.isArray(relayed) && wanted.some(entry => relayed.includes(entry));
       }
       const eventCategories = categories[event.Type];
-      return eventCategories && eventCategories.includes(category);
+      return eventCategories && wanted.some(entry => eventCategories.includes(entry));
     });
 
     // Only include turn if it has events

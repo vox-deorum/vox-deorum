@@ -5,7 +5,7 @@ Your workspace holds the game's records and your civilization's notes. Use bash 
 | Folder | Access | Holds |
 | --- | --- | --- |
 | `/workspace/records` | read-only | Complete reports, events, and any briefings for each processed turn, written by the host. |
-| `/workspace/reference` | read-only | Game technologies, policies, buildings, and units with their tooltips, by era, or by branch for policies. |
+| `/workspace/reference` | read-only | Game technologies, policies, buildings, and units with their tooltips, in files by era (buildings also by corporation and belief), or by branch for policies. |
 {{#game}}
 | `/workspace/game` | {{#writable}}writable{{/writable}}{{^writable}}read-only{{/writable}} | Notes shared by every agent of your civilization in this game. They persist across turns. |
 {{/game}}
@@ -18,10 +18,10 @@ Files written anywhere else disappear after each command.
 
 ## Reference
 `/workspace/reference` has one folder per category. Every `.md` file has a `.json` twin.
-- `technologies/`, `buildings/`, `units/`: one file per era, such as `units/ancient.md` or `buildings/industrial.md`. `other.md` holds entries no technology unlocks, such as great people, faith units, and corporation buildings.
-- `policies/`: one file per branch, such as `policies/tradition.md` or `policies/fealty.md`.
+- `technologies/`, `buildings/`, `units/`: one file per era, such as `units/ancient.md` or `buildings/industrial.md`. `buildings/` also has `corporations.md` for corporation buildings and `religious.md` for buildings a belief opens to faith purchase. `other.md` holds entries no technology unlocks, such as the Palace, policy buildings, great people, and faith units; starting units stay ancient.
+- `policies/`: one file per branch, such as `policies/tradition.md` or `policies/fealty.md`. Branchless policies go in `policies/other.md`.
 
-Each entry is a `## <Name>` heading with facts and the game's tooltip. Entries that share a name get a suffix, such as `## Longswordsman (England)`. The `.json` twin also lists every gameplay fact.
+Each entry is a `## <Name>` heading, a blank line, then one list: plain-labeled facts, then the game's tooltip as list items. Entries that share a name get a suffix, such as `## Longswordsman (England)`. The `.json` twin also lists every gameplay fact.
 
 - List a category's files: `ls /workspace/reference/policies`
 - List the names in one file: `grep '^## ' /workspace/reference/units/ancient.md`

@@ -18,8 +18,8 @@ export type SectionKey =
 
 /** How a report's Markdown could be split into several record files. */
 export interface SectionSplit {
-  /** The top-level grouping of the report: per civilization, per city owner, or per military zone. */
-  by: "civilization" | "cityOwner" | "militaryZone";
+  /** The top-level grouping of the report: per civilization or per city owner. */
+  by: "civilization" | "cityOwner";
 }
 
 /** One registered section. */
@@ -112,7 +112,6 @@ export const sections: Record<SectionKey, SectionDefinition> = {
     title: "Military",
     description: "Military: summary reports about tactical zones and visible units.",
     scope: "turn",
-    split: { by: "militaryZone" },
   },
   events: {
     key: "events",

@@ -5,7 +5,8 @@
  * policies, buildings, and units of the game database with their full details and the game's own
  * tooltips, trimmed and in game order, as Markdown and JSON. Each category gets a folder under
  * `reference/` with a `.md` and `.json` pair per bucket: one per era for technologies, buildings,
- * and units (plus `other` for entries no technology unlocks), and one per branch for policies. The
+ * and units (plus `other` for entries no technology unlocks), `corporations` and `religious` for
+ * buildings that corporations or beliefs provide, and one per branch for policies. The
  * file name carries the bucket, so entries keep no `Era` or `Branch` field. The Markdown lists only
  * the facts a category's tooltips lack; the JSON keeps every fact. Each seat mounts it read-only,
  * and its commits keep it next to the records, so a recorded version holds everything the seat's
@@ -59,15 +60,15 @@ type ReferenceTool = {
 const referenceTools: ReferenceTool[] = [
   { tool: "get-technology", file: "technologies", title: "Technologies", bucketOf: eraBucket, sortKey: byCost, facts: ["Cost", "TechsPrereq"], sortOnly: ["Era"] },
   { tool: "get-policy", file: "policies", title: "Policies", bucketOf: branchBucket, sortKey: byLevel, facts: ["PrereqPolicies"], sortOnly: ["Era", "Branch", "Level"] },
-  { tool: "get-building", file: "buildings", title: "Buildings", bucketOf: unlockBucket, sortKey: byCost, facts: ["Replaces", "UniqueOf", "IsWorldWonder", "IsNationalWonder"], sortOnly: ["Era"] },
-  { tool: "get-unit", file: "units", title: "Units", bucketOf: unlockBucket, sortKey: byCost, facts: ["UpgradedFrom", "UpgradesTo", "Replaces", "UniqueOf", "Maintenance"], sortOnly: ["Era"] },
+  { tool: "get-building", file: "buildings", title: "Buildings", bucketOf: buildingBucket, sortKey: byCost, facts: [], sortOnly: ["Era"] },
+  { tool: "get-unit", file: "units", title: "Units", bucketOf: unlockBucket, sortKey: byCost, facts: ["UpgradedFrom", "UpgradesTo", "Maintenance"], sortOnly: ["Era"] },
 ];
 
 /** Upper bound on listing rows, large enough to return every row of each table. */
 const referenceMaxResults = 5000;
 
 /** Bump when generated reference files need to be refreshed in existing games. */
-const referenceFormatVersion = "3\n";
+const referenceFormatVersion = "4\n";
 /** Workspace path of the generated format marker. */
 const referenceVersionPath = `${referenceStorePrefix}.format-version`;
 
@@ -93,13 +94,31 @@ function eraBucket(item: Item): Bucket {
 }
 
 /**
- * Choose a building's or unit's bucket: `other` when no technology unlocks it and it has no
- * production cost, such as great people, faith units, and corporation buildings; its era otherwise.
- * Starting entries such as the Warrior or Monument have a cost and stay ancient.
+ * Choose a unit's bucket: `other` when no technology unlocks it and it has no production cost, such
+ * as great people and faith units; its era otherwise. Starting units such as the Warrior have a
+ * cost and stay ancient.
  */
 function unlockBucket(item: Item): Bucket {
   if (item.PrereqTech === undefined && numberOf(item.Cost) <= 0) return otherBucket;
   return eraBucket(item);
+}
+
+/** Buildings a corporation provides: its headquarters, offices, and franchises. */
+const corporationsBucket: Bucket = { file: "corporations", label: "Corporations" };
+
+/** Buildings a belief unlocks for faith purchase. */
+const religiousBucket: Bucket = { file: "religious", label: "Religious" };
+
+/**
+ * Choose a building's bucket: `corporations` for corporation buildings; for buildings no technology
+ * unlocks, `religious` when a belief unlocks them and `other` otherwise, such as the Palace,
+ * Monument, and policy buildings; and its era for the rest, including technology buildings a belief
+ * also lets players buy with faith.
+ */
+function buildingBucket(item: Item): Bucket {
+  if (item.Corporation !== undefined) return corporationsBucket;
+  if (item.PrereqTech !== undefined) return eraBucket(item);
+  return Array.isArray(item.UnlockedByBeliefs) ? religiousBucket : otherBucket;
 }
 
 /** Choose a policy's bucket: its branch, titled with the branch's era, or `other` without a branch. */
