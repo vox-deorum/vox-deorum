@@ -48,7 +48,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `get-metadata` | Read a metadata value by key from the knowledge store | `Key`: string |
 | `get-options` | Available strategic options (techs, policies, strategies/flavors, persona) with current selections | `PlayerID` (0-21), `Mode?`: "Flavor" or "Strategy" |
 | `summarize-units` | Unit overview grouped by civilization and AI type, with military stats | `PlayerID` |
-| `get-military-report` | Military report with units by AI type and tactical zones | `PlayerID` (0-21) |
+| `get-military-report` | Military report with units by AI type and tactical zones. Counts nukes and support units (generals, admirals, siege towers) alongside combat units | `PlayerID` (0-21) |
 | `get-victory-progress` | Victory progress for all players, filtered by diplomatic visibility | `PlayerID?` (0-21) |
 
 For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw ID scan before the optional `Role` filter. A filtered page can therefore contain no messages while `hasMore` is `true`.
