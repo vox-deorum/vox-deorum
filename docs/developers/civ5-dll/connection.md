@@ -75,6 +75,8 @@ Outgoing, game to bridge:
 
 The two registries are easy to confuse, and they point in opposite directions. `lua_register` announces a function that lives **in the game** for the bridge to call with `lua_call`. `external_register` announces a function that lives **in the bridge** for the game to call with `external_call`, which game Lua reaches through `Game.CallExternal`. Each side publishes its own registry to the other.
 
+Inside the game, the service keeps registered functions in a private Lua registry table keyed by function name, and the callbacks of async `Game.CallExternal` calls in a second table keyed by call ID. It does not use `luaL_ref`. Those numbered slots come from a free list that the engine and every UI context share without a lock, and the service runs Lua from both the game-core and UI threads. A lost race on that list once gave two functions the same slot, so calls to one silently ran the other. Name keys avoid the list entirely. If a function's entry is ever missing, `lua_call` answers `INVALID_FUNCTION`, and the MCP server registers the function again and retries.
+
 One sharp edge when reading the code: the JSON library returns pointers that alias shared main-thread buffers. Handlers copy every string they need into stable locals before doing work that might re-enter `RouteMessage`. The source comments mark each such site.
 
 ## Flow control and game pacing

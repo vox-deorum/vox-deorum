@@ -716,8 +716,12 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
       // on the connection-state transition because pipe and SSE can report the same connection.
       this.ingameBridge.resetEventDedup();
       // A reconnection may be crash recovery, so a recovered startup-turn notification must
-      // count as a reload rather than the expected startup acknowledgement.
-      for (const player of this.activePlayers.values()) player.clearStartupAcknowledgement();
+      // count as a reload rather than the expected startup acknowledgement. Refreshes failed by
+      // the disconnection don't count toward the refresh-failure pause.
+      for (const player of this.activePlayers.values()) {
+        player.clearStartupAcknowledgement();
+        player.resetRefreshFailures();
+      }
     }
     await this.recoverGame();
   }

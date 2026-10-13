@@ -62,4 +62,4 @@ Other flags: `--config`/`-c`, `--players`/`-p`, `--strategist`/`-s`, `--autoPlay
 
 ## Crash recovery
 
-If the DLL disconnects and stays down, the session kills and relaunches the game (with a limited number of attempts), recreates the players, and resumes where the strategists left off. Each new `VoxPlayer` keeps its event cursor, and last-decision turns survive the restart.
+If the DLL disconnects and stays down, the session kills and relaunches the game (with a limited number of attempts) and resumes where the strategists left off. A relaunch that loads the same game keeps the existing `VoxPlayer`s: each one treats a repeated turn as a reload and restarts its timeline from there. Players are only recreated when `GameSwitched` reports a different game ID.

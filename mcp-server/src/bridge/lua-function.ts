@@ -152,7 +152,13 @@ export class LuaFunction {
         };
       }
     }
-    
+
+    // Log failed calls here so every getter and tool surfaces the real Lua error.
+    // DLL_DISCONNECTED is expected while the game reloads.
+    if (!response.success && response.error?.code !== 'DLL_DISCONNECTED') {
+      logger.warn(`Lua function ${this.name} failed: ${response.error?.code ?? 'UNKNOWN'} ${response.error?.message ?? ''}`.trim());
+    }
+
     return response;
   }
 

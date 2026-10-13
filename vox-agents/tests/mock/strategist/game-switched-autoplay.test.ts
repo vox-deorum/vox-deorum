@@ -439,18 +439,21 @@ describe('handleDLLConnected', () => {
     expect(resetEventDedup).toHaveBeenCalledTimes(2);
   });
 
-  it('should clear each player\'s startup acknowledgement only on a disconnected-to-connected transition', async () => {
+  it('should clear each player\'s startup acknowledgement and refresh failures only on a disconnected-to-connected transition', async () => {
     const s = session(false);
     const clearStartupAcknowledgement = vi.fn();
-    (s as any).activePlayers.set(0, { clearStartupAcknowledgement });
+    const resetRefreshFailures = vi.fn();
+    (s as any).activePlayers.set(0, { clearStartupAcknowledgement, resetRefreshFailures });
 
     await (s as any).handleDLLConnected({});
     await (s as any).handleDLLConnected({});
     expect(clearStartupAcknowledgement).toHaveBeenCalledOnce();
+    expect(resetRefreshFailures).toHaveBeenCalledOnce();
 
     (s as any).dllConnected = false;
     await (s as any).handleDLLConnected({});
     expect(clearStartupAcknowledgement).toHaveBeenCalledTimes(2);
+    expect(resetRefreshFailures).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -23,6 +23,12 @@ On a skipped turn, the player still calls `keep-status-quo`, so the in-game AI k
 
 With [strategist triage](../../models/tiers-and-triage.md#strategist-triage) on, an evaluator also rates each turn. It can skip or downsize the turns between scheduled ones, and raise any turn to the `large` tier.
 
+## Failed refreshes
+
+If the game-state refresh fails, the turn ends without a decision and the game resumes. The event cursor stays where it was, so the next turn fetches the missed events again.
+
+Two failed refreshes in a row **pause the session**: without game state no seat can decide, so letting the game play on would waste turns. The second failure logs an error naming the player and the cause. The player's next turn is then held in the game until someone resumes the session from the dashboard or the console. A game crash fails the refresh in flight, and [crash recovery](game-session.md#crash-recovery) of the same game keeps the players, so the count restarts when the DLL reconnects or the player reloads to an earlier turn. A refresh cut short by cancellation does not count.
+
 ## One run per turn
 
 Each processed turn runs in its own [run](../../framework/runs.md), carrying that turn's events. This keeps the strategist's turn separate from chats on the same seat. If the strategist is still working through an older turn, a diplomat can chat about the current turn at the same time without either one disturbing the other.

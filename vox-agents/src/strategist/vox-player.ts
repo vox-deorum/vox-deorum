@@ -83,6 +83,8 @@ export class VoxPlayer {
   private pendingReload?: number;
   /** The session's proactive startup turn whose first real notification is still expected. */
   private startupTurn?: number;
+  /** Consecutive turns whose game-state refresh failed. Reset by any successful refresh. */
+  private refreshFailures = 0;
 
   public readonly playerID: number;
   private readonly playerConfig: PlayerConfig;
@@ -173,6 +175,7 @@ export class VoxPlayer {
     parameters.after = turnEventWindow(turn).after;
     this.eventCursor = turnEventWindow(turn).after;
     this.startupTurn = undefined;
+    this.refreshFailures = 0;
 
     // Only file-enabled seats have a store; the others make no store calls.
     this.context.store?.rewind(turn);
@@ -226,6 +229,14 @@ export class VoxPlayer {
    */
   clearStartupAcknowledgement(): void {
     this.startupTurn = undefined;
+  }
+
+  /**
+   * Forget earlier failed refreshes. The session calls this when the DLL reconnects, because a
+   * crash fails the refresh in flight and same-game recovery keeps this player.
+   */
+  resetRefreshFailures(): void {
+    this.refreshFailures = 0;
   }
 
   /**
@@ -371,7 +382,14 @@ export class VoxPlayer {
                 // Pending decision events never reach back past the normal cache, so repeated
                 // failures cannot pin history forever.
                 this.releasePendingEventsBefore(turn - cullLimit + 1);
-                const state = await ensureGameState(this.context, params, cullLimit);
+                let state: GameState;
+                try {
+                  state = await ensureGameState(this.context, params, cullLimit);
+                } catch (error) {
+                  if (!this.aborted && !run.signal.aborted) this.noteRefreshFailure(turn, error);
+                  throw error;
+                }
+                this.refreshFailures = 0;
                 // Record the processed turn before pacing can skip or decide. A failed write
                 // throws and fails the turn like a failed refresh.
                 if (this.context.files) this.context.records()?.recordTurn(params, state);
@@ -558,6 +576,25 @@ export class VoxPlayer {
   private recordDecision(turn: number): void {
     this.parameters.lastDecisionTurn = turn;
     this.parameters._decisionEventWindow.fromTurn = turn + 1;
+  }
+
+  /**
+   * Count a failed game-state refresh. On the second consecutive failure, pause the whole
+   * session: the seat cannot decide without game state, so letting the game run on would only
+   * burn turns (and tokens on other seats). The turn's catch still resumes the game, and the
+   * pause gate holds the seat on the next turn until someone resumes the session. Failures
+   * caused by a crash don't add up: a DLL reconnect or a reload clears the count.
+   */
+  private noteRefreshFailure(turn: number, error: unknown): void {
+    this.refreshFailures++;
+    if (this.refreshFailures < 2) return;
+    const session = this.context.session;
+    if (!session || session.isPaused()) return;
+    this.logger.error(
+      `Pausing session: player ${this.playerID} failed to read the game state on ${this.refreshFailures} consecutive turns (latest: turn ${turn}): ${errorMessage(error)}`,
+      { GameID: this.parameters.gameID, PlayerID: this.playerID }
+    );
+    session.pause();
   }
 
   /** Stop retaining pending decision events before `turn`, logging the turns a seat gives up. */

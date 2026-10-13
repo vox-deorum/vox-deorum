@@ -297,6 +297,86 @@ describe('VoxPlayer session pause gate', () => {
   });
 });
 
+describe('VoxPlayer refresh failure pause', () => {
+  /**
+   * Run one turn per entry in `outcomes`: 'ok' refreshes normally, 'fail' makes get-victory-progress
+   * fail, and 'abort' aborts the player during that failing refresh. `turns` gives each turn's
+   * number (default 1, 2, ...), and `betweenTurns` runs before the next turn is queued. Returns
+   * whether the session was paused after each turn.
+   */
+  async function runTurns(
+    outcomes: Array<'ok' | 'fail' | 'abort'>,
+    turns: number[] = outcomes.map((_, index) => index + 1),
+    betweenTurns?: (player: VoxPlayer) => void
+  ) {
+    const session = { paused: false, isPaused() { return this.paused; }, pause() { this.paused = true; } };
+    const player = new VoxPlayer({
+      playerID: 1,
+      slot: '1',
+      playerConfig,
+      gameID: 'game-refresh-failure',
+      initialTurn: 0,
+      humanDecisionBus: new HumanDecisionBus(),
+      session: session as never,
+    });
+
+    // Every turn refreshes once and ends with resume-game (after the loop marks itself idle,
+    // on success and failure alike), so the turn's resume queues the next turn or stops.
+    const pausedAfterTurn: boolean[] = [];
+    let turnIndex = 0;
+    let inTurn = false;
+    vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) => {
+      if (name === 'get-victory-progress') {
+        inTurn = true;
+        const outcome = outcomes[turnIndex];
+        if (outcome === 'ok') return {} as never;
+        if (outcome === 'abort') player.abort();
+        return undefined as never;
+      }
+      if (name === 'resume-game' && inTurn) {
+        inTurn = false;
+        pausedAfterTurn.push(session.paused);
+        turnIndex++;
+        if (turnIndex < outcomes.length) {
+          betweenTurns?.(player);
+          player.notifyTurn(turns[turnIndex]);
+        } else player.abort(true);
+      }
+      return {} as never;
+    });
+    vi.spyOn(player.context, 'execute').mockResolvedValue(undefined);
+
+    player.notifyTurn(turns[0]);
+    await player.execute();
+    return pausedAfterTurn;
+  }
+
+  it('should not pause the session after a single failed refresh', async () => {
+    expect(await runTurns(['fail'])).toEqual([false]);
+  });
+
+  it('should pause the session on the second consecutive failed refresh', async () => {
+    expect(await runTurns(['fail', 'fail'])).toEqual([false, true]);
+  });
+
+  it('should not pause when a successful refresh separates two failures', async () => {
+    expect(await runTurns(['fail', 'ok', 'fail'])).toEqual([false, false, false]);
+  });
+
+  it('should not count a refresh that failed because the player was aborted', async () => {
+    expect(await runTurns(['fail', 'abort'])).toEqual([false, false]);
+  });
+
+  it('should start counting again after a reload of the same game', async () => {
+    // The second notification repeats turn 5, which the seat treats as a reload.
+    expect(await runTurns(['fail', 'fail'], [5, 5])).toEqual([false, false]);
+  });
+
+  it('should start counting again after the DLL reconnects', async () => {
+    expect(await runTurns(['fail', 'fail'], undefined, (player) => player.resetRefreshFailures())).toEqual([false, false]);
+  });
+});
+
 describe('VoxPlayer seat settings', () => {
   it('names the seat slot when a seat setting is invalid', () => {
     expect(() => new VoxPlayer({
