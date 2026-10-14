@@ -90,11 +90,11 @@ For models in prompt mode, the tool block is removed and its content moves into 
 
 A run is in file mode when its seat has files on and its resolved run tools include `bash`. The loop resolves `getRunTools()` before any prompt text is built and keeps the result on the execution frame, so `fileMode(context)` in `src/knowledge/directions.ts` gives every prompt builder in the run the same answer. Agents without tools, or without `bash`, stay inline even when files are on.
 
-In file mode, an agent adds **records directions** to its opening messages through `appendRecordsDirections`, placing them where its context needs them. The helper checks file mode; the text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
+In file mode, an agent adds **records directions** to its opening messages through `insertRecordsDirections`. The helper checks file mode and inserts the directions as a system message right after the leading system messages (the overview or shared game context), so they come before the game state that starts with `# Strategies`. The text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
 
 - a table of the mounted folders and their access, with the records and the shared reference read-only, the game notes folder and each shared folder read-only or writable according to the seat's files setting, and `/tmp` writable. The table is the only folder listing, because the workspace section and the bash tool description leave folders out;
-- which turns are recorded, as ranges, and the latest turn folder. It states that the recorded turns are the `<N>` in `turn-<N>` paths, the numbers the workspace section's example scripts assign to `turn`;
-- when to open the records `CATALOG.md`: only for the full section index, gaps between turn folders, briefings, or file sizes;
+- that each `turn-<N>` folder is one processed refresh, and the newest is the latest recorded refresh, which can trail the current turn. It names no turn numbers;
+- that the records `CATALOG.md` lists the recorded turns and gaps between them, the full section index, briefings, and file sizes;
 - which sections are not given inline and the file pattern for each: the sections in `fileModeOmittedSections` (`src/knowledge/sections.ts`: cities, military, and events) that the caller does not keep in the prompt;
 - which sections the caller already keeps in the prompt for the latest turn, so the model reads their files for earlier turns or where the prompt points to them. The plain simple strategist passes `simpleStrategistInlineSections`, which adds cities and military to `strategistInlineSections`. The briefed, staffed, and learned variants pass `strategistInlineSections` (options, strategies, victory progress, and players). Envoys pass none.
 
@@ -104,13 +104,13 @@ Next comes the game notes guide, `/workspace/game/AGENTS.md`. It says whether th
 
 The message ends with the seat's notes: the text of the most recently written file in the game folder, other than the guide, and the paths of the five written before it. Recency comes from each file's modification time in the store, and the shown text is capped like bash output. Seats without a game folder or without notes get no notes block.
 
-The directions depend on which turns are recorded, the guide's text, and the notes. Briefing commits still leave the text unchanged within a turn. An agent that edits the guide or writes a note changes it for later runs. The directions message carries no cache breakpoint.
+The directions depend only on the files setting, the sections kept in the prompt, the guide's text, and the notes, so recording a turn or a briefing leaves them unchanged. They are built once per run, so they stay fixed across the run's steps and sit inside the prefix cached for later steps. An agent that edits the guide or writes a note changes them for later runs. The directions message carries no cache breakpoint of its own.
 
 | Agent | Opening messages in file mode |
 | --- | --- |
-| Simple strategist | System message, then a core message (strategies, victory, full players, our own cities, full military, decision context), then the directions. The Cities section names the other owners' split files for the turn (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
-| Briefed, staffed, and learned strategists | The same inline content as before, with the directions as the last opening message. |
-| Diplomat, spokesperson, and negotiator | The directions follow the shared game context. |
+| Simple strategist | System overview, then the directions, then a core message (strategies, victory, full players, our own cities, full military, decision context). The Cities section names the other owners' split files for the turn (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
+| Briefed, staffed, and learned strategists | The same inline content, with the directions between the system overview and the reports. |
+| Diplomat, spokesperson, and negotiator | The directions sit between the shared game-context system message and its game-state user message. |
 | Briefers and the diplomatic analyst | No directions. They declare no `bash` tool, so they never run in file mode. |
 
 A file-mode strategist's decision context (`getDecisionTurnContext`) always names the last completed decision turn, even when it was the previous turn, or says that no decision has completed on the current timeline. The strategist chooses what to read. There is no merged events file and no prescribed reading order.
@@ -183,7 +183,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | --- | --- | --- |
 | An agent's main instructions | Its file in `vox-agents/prompts/`, and the data passed by its `getSystem()` | See [Prompt files](prompt-files.md). |
 | Opening game context | The agent's `getInitialMessages()` | Shared envoy and analyst context is `buildGameContextMessages` in `src/strategist/strategy-parameters.ts`. |
-| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text fixed within a turn. Its folder table is the only folder listing. |
+| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text free of turn numbers so it stays fixed across turns. Its folder table is the only folder listing. |
 | A game-state section's title, description, or default Markdown | The registry in `src/knowledge/sections.ts` | See [Prompt files](prompt-files.md#game-state-sections). |
 | Envoy hint (identity, audience, turn) | `getHint` in `src/envoy/live-envoy.ts`, overridden in `src/telepathist/talkative-telepathist.ts` | Always the last opening message for a live envoy. |
 | Envoy add-on after the hint | `getDefaultAddon` in `src/envoy/envoy.ts`, overridden by the diplomat and spokesperson | |
@@ -196,7 +196,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | Error text for a call to a removed tool | `buildRemovedToolRejections` in `src/utils/tools/tool-availability.ts` | The model sees it as the call's result. |
 | Empty-reply rescue wording | `buildRescuePrompt` in `src/utils/models/text-cleaning.ts` | |
 | Completion-tool sentence (Anthropic, Codex) | `completionToolsInstruction` in `src/utils/models/providers/required-tool-choice.ts` | Must not depend on whether the step requires a call. |
-| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | Folders and recorded turns belong to the records directions. See [Capability reminder](../models/middleware.md#capability-reminder). |
+| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | Folders and where to find recorded turns belong to the records directions. See [Capability reminder](../models/middleware.md#capability-reminder). |
 | Extra Capabilities section | `capabilityInstruction` in `src/utils/models/capability-prompt.ts` | |
 | Prompt-mode tool instructions | `createToolPrompts` in `src/utils/models/tool-rescue/prompt.ts` | Keep it in step with `buildToolCallArraySchema` and `formatToolCallText`. |
 | Which models use prompt mode | `options.toolMiddleware` in the model config; defaults in `src/utils/models/rules.ts` | |

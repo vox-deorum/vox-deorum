@@ -1,9 +1,13 @@
 /** Tests for the records directions and file-mode check (src/knowledge/directions.ts). */
 
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileMode, recordsDirections } from '../../../src/knowledge/directions.js';
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
+import { reloadPromptSets } from '../../../src/utils/prompts/prompt-files.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import { workspaceGuide, workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
@@ -47,13 +51,6 @@ describe('recordsDirections', () => {
       expect(text).toContain('/workspace/records');
       expect(text).toContain('/workspace/reference');
       expect(text).toContain('CATALOG.md');
-    });
-
-    it('should give recorded ranges and the latest turn folder', () => {
-      record(1, 2, 3, 5);
-      const text = recordsDirections(enableFileMode(bareContext(), temp.store));
-      expect(text).toContain('1-3, 5');
-      expect(text).toContain('turn-5/');
     });
 
     it('should handle no recorded turns and no store without throwing', () => {
@@ -209,11 +206,35 @@ describe('recordsDirections', () => {
       expect(turnFiles()).toEqual(filesBefore);
     });
 
-    it('should expose every recorded turn as one range', () => {
-      record(0, 1, 2, 3, 4, 5);
-      const text = recordsDirections(enableFileMode(bareContext(), temp.store));
-      expect(text).toContain('0-5');
-      expect(text).toContain('turn-5/');
+    it('should stay unchanged and name no turn numbers when new turns are recorded', () => {
+      record(1);
+      const context = enableFileMode(bareContext(), temp.store);
+      const before = recordsDirections(context);
+      record(2, 3);
+      expect(recordsDirections(context)).toBe(before);
+      expect(before).not.toMatch(/turn-\d+/);
+    });
+  });
+
+  describe('custom prompt folders', () => {
+    let dir: string;
+
+    beforeEach(() => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-prompts-'));
+    });
+    afterEach(() => {
+      reloadPromptSets([]);
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    it('should still load and fill a custom file that reads the retired turn names', () => {
+      fs.writeFileSync(path.join(dir, 'records-directions.md'),
+        '{{#hasTurns}}[{{turnRanges}}|{{latestTurn}}]{{/hasTurns}}{{^hasTurns}}[none]{{/hasTurns}}\n');
+      reloadPromptSets([dir]);
+      const context = { ...enableFileMode(bareContext(), temp.store), prompts: dir };
+      expect(recordsDirections(context).trim()).toBe('[none]');
+      record(1, 2, 3);
+      expect(recordsDirections(context).trim()).toBe('[1-3|3]');
     });
   });
 });

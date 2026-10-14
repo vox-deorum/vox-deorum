@@ -11,7 +11,7 @@ import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getRecentGameState, renderStrategistReports, StrategistParameters } from "../strategy-parameters.js";
 import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
-import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
+import { insertRecordsDirections, fileMode } from "../../knowledge/directions.js";
 import { simpleStrategistInlineSections } from "../../knowledge/sections.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
@@ -55,7 +55,7 @@ export class SimpleStrategist extends SimpleStrategistBase {
       { role: "system", content: overview, providerOptions: { ...cacheBreakpoint } },
       { role: "user", content: reports },
     ];
-    appendRecordsDirections(messages, context, simpleStrategistInlineSections);
+    insertRecordsDirections(messages, context, simpleStrategistInlineSections);
     return messages;
   }
 }

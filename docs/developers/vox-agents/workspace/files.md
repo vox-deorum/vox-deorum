@@ -84,7 +84,7 @@ A briefer ignores text from a step that also calls bash, so a line like "checkin
 | Feature | Page |
 | --- | --- |
 | The model gets a short reminder on keeping notes, the step budget, and reading large files. | [Capability reminder](../models/middleware.md#capability-reminder) |
-| The records directions list the folders and the recorded turns, and show the latest note with the names of the five before it. | [File mode](../framework/prompts.md#file-mode) |
+| The records directions list the folders and explain the turn folders, and show the latest note with the names of the five before it. | [File mode](../framework/prompts.md#file-mode) |
 | The run's last initial message becomes a cache anchor. | [Caching](../framework/caching.md) |
 | Old bash output is dropped when the request gets large. | [Compaction](../framework/compaction.md) |
 

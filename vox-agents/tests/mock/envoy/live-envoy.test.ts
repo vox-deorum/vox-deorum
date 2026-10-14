@@ -180,17 +180,20 @@ describe('LiveEnvoy.getInitialMessages file mode', () => {
     return { plain, messages, directions: recordsDirections(fake.asContext()) };
   }
 
-  it('adds the directions once, after the game context and ahead of the conversation record', async () => {
+  it('adds the directions once, as a system message between the game context and the game state', async () => {
     const { plain, messages, directions } = await both();
     const contextMessages = buildGameContextMessages(liveParams() as any);
     const at = messages.findIndex((m: any) => m.content === directions);
+    // The game state starts at the first non-system message; the directions go right before it.
+    const boundary = plain.findIndex((m: any) => m.role !== 'system');
 
     expect(messages.filter((m: any) => m.content === directions)).toHaveLength(1);
-    expect(at).toBe(contextMessages.length);
-    expect(messages.slice(0, at)).toEqual(contextMessages);
-    // Everything after the game context rides along unchanged: the compiled past block and its anchor,
+    expect(at).toBe(boundary);
+    expect(messages[at].role).toBe('system');
+    expect(messages.slice(0, at)).toEqual(contextMessages.slice(0, boundary));
+    // Everything else rides along unchanged: the game state, the compiled past block and its anchor,
     // the ongoing rows, then the always-last hint, so the directions only widen the cached prefix.
-    expect(messages.slice(at + 1)).toEqual(plain.slice(contextMessages.length));
+    expect(messages.slice(at + 1)).toEqual(plain.slice(boundary));
     expect(messages[at + 1].role).toBe('user');
     expect(messages[messages.length - 1].role).toBe('system');
     // The directions carry no breakpoint of their own.

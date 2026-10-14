@@ -10,7 +10,7 @@ import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
+import { insertRecordsDirections, fileMode } from "../../knowledge/directions.js";
 import { renderSection, strategistInlineSections } from "../../knowledge/sections.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
@@ -106,7 +106,7 @@ export class SimpleStrategistStaffed extends SimpleStrategistBase {
     // Save the assembled briefings for spokesperson use
     state.reports["briefing"] = briefingsContent;
 
-    // Build the user reports content, appending any additional reports so they land before the records directions
+    // Build the user reports content, appending any additional reports after the game state
     let reportsContent = `
 ${renderSection("strategies", Strategy)}
 
@@ -138,13 +138,13 @@ ${renderSection("options", Options)}`.trim(),
       role: "user",
       content: reportsContent
     }];
-    appendRecordsDirections(messages, context, strategistInlineSections);
+    insertRecordsDirections(messages, context, strategistInlineSections);
     return messages;
   }
 
   /**
    * Hook for subclasses to append extra report text to the user messages, after the game-state
-   * reports and before any records directions. Returns an empty string by default.
+   * reports. Returns an empty string by default.
    */
   protected async getAdditionalReports(_parameters: StrategistParameters, _input: unknown, _context: VoxContext<StrategistParameters>): Promise<string> {
     return "";

@@ -30,13 +30,7 @@ Each entry is a `## <Name>` heading and one list. Entries that share a name get 
 - Find the file that has an entry: `grep -l '^## Agriculture' /workspace/reference/technologies/*.md`
 
 ## Recorded turns
-{{#hasTurns}}
-Recorded turns, the `<N>` in `turn-<N>` paths: {{turnRanges}}. The latest is `/workspace/records/turn-{{latestTurn}}/`.
-{{/hasTurns}}
-{{^hasTurns}}
-No turns are recorded yet.
-{{/hasTurns}}
-Each `turn-<N>` folder is one processed refresh. Events inside keep their original event-turn keys, so a folder can hold events from an earlier turn.
+Each `/workspace/records/turn-<N>` folder is one processed refresh. The newest folder is the latest recorded refresh, and the current turn may not be recorded yet. Events inside keep their original event-turn keys, so a folder can hold events from an earlier turn.
 
 These sections are not in your prompt. Read them from the records when you need them:
 {{#omitted}}
@@ -48,7 +42,7 @@ These sections are already in your prompt for the latest turn. Read their record
 {{/inPrompt}}
 
 Every recorded turn stays readable. You choose whether to read events, and which turns, categories, and portions of them to read.
-Open `/workspace/records/CATALOG.md` only when you need the full section index, gaps between turn folders, any briefings, or file sizes.
+`/workspace/records/CATALOG.md` lists the recorded turns and the gaps between them, the full section index, any briefings, and file sizes. Open it when you need any of these, such as before reading an earlier turn.
 {{#guide}}
 
 ## Guide: `/workspace/game/AGENTS.md`

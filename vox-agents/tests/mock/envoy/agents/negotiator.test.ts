@@ -815,7 +815,7 @@ describe('getInitialMessages task determination', () => {
     });
     afterEach(() => temp.dispose());
 
-    it('should add the records directions once, directly after the shared game context', async () => {
+    it('should add the records directions once, between the game-context system message and the game state', async () => {
       mcp.respondWith('inspect-deal', structuredResult(emptyInspection));
       const negotiator = new Negotiator();
       const fake = enableFileMode(createFakeVoxContext(), temp.store);
@@ -825,9 +825,13 @@ describe('getInitialMessages task determination', () => {
       const contextMessages = buildGameContextMessages(params);
       const directions = recordsDirections(fake.asContext());
 
+      // The game state starts at the first non-system message; the directions go right before it.
+      const boundary = plain.findIndex((m) => m.role !== 'system');
+
       expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
-      // The directions ride between the game context and the deal grounding; nothing else moves.
-      expect(messages).toEqual([...contextMessages, { role: 'user', content: directions }, ...plain.slice(contextMessages.length)]);
+      expect(plain.slice(0, boundary)).toEqual(contextMessages.slice(0, boundary));
+      // The directions ride after the game-context system messages, before the game state; nothing else moves.
+      expect(messages).toEqual([...plain.slice(0, boundary), { role: 'system', content: directions }, ...plain.slice(boundary)]);
     });
 
     it('should add no directions when files are off', async () => {

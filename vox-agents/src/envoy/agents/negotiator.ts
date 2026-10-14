@@ -38,7 +38,7 @@ import { PROMISE_METADATA } from "../../../../mcp-server/dist/utils/deal-schema.
 import { activeProposalDeal, deriveActiveProposal } from "../../utils/diplomacy/deal/deal-reduce.js";
 import { resolveNegotiator } from "./resolve-negotiator.js";
 import { getTeammateCounterpart } from "../context/diplomacy-context.js";
-import { appendRecordsDirections } from "../../knowledge/directions.js";
+import { insertRecordsDirections } from "../../knowledge/directions.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 import {
   NEGOTIATOR_TERMINAL_TOOLS,
@@ -228,7 +228,7 @@ export class Negotiator extends VoxAgent<StrategistParameters, NegotiatorInput, 
     );
 
     const messages = buildGameContextMessages(parameters);
-    appendRecordsDirections(messages, context);
+    insertRecordsDirections(messages, context);
     return [
       ...messages,
       ...(background.text ? [{ role: "user" as const, content: background.text }] : []),

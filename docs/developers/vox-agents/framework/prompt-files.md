@@ -58,7 +58,7 @@ Each folder is read and checked once. An invalid folder fails with an error nami
 
 - Every `.md` file must match a built-in path.
 - Every partial must exist, and no partial may include itself. A missing partial is reported with the file that includes it. The built-ins get these checks too, because Mustache would quietly render a missing partial as nothing.
-- A template may use only the names its built-in counterpart uses, including through partials. Each name keeps its kind (variable or section) and its scope. For example, a field the built-in reads inside `{{#teammate}}` is rejected outside it. A name the built-in reads outside a section is still allowed inside one, since Mustache looks names up through enclosing sections.
+- A template may use only the names its built-in counterpart uses, including through partials. Each name keeps its kind (variable or section) and its scope. For example, a field the built-in reads inside `{{#teammate}}` is rejected outside it. A name the built-in reads outside a section is still allowed inside one, since Mustache looks names up through enclosing sections. Names a built-in has dropped but its caller still supplies stay allowed, so an older custom file keeps working. The records directions keep `hasTurns`, `turnRanges`, and `latestTurn` this way.
 
 Errors for a seat name the setting's path, such as `llmPlayers.2.prompts`.
 

@@ -6,7 +6,7 @@
  * as `&` and `<` stays intact. A custom folder is validated when it loads: every file must match a
  * built-in path, every partial must exist without cycles, and each template may use only the names
  * its built-in counterpart uses, as the same kind (variable or section) and in the same section
- * scope. Folders are read and validated once and cached until a session or entry point reloads them.
+ * scope, plus any retired names its callers still supply. Folders are read and validated once and cached until a session or entry point reloads them.
  */
 
 import fs from 'node:fs';
@@ -50,6 +50,18 @@ interface TemplateRefs {
   uses: NameUse[];
   partials: PartialUse[];
 }
+
+/**
+ * Names a built-in template no longer uses but custom folders may keep, by template. Their
+ * callers still supply them, so a custom file written for the older built-in renders as before.
+ */
+const retiredUses: Record<string, NameUse[]> = {
+  'records-directions': [
+    { name: 'hasTurns', kind: 'section', scope: [] },
+    { name: 'turnRanges', kind: 'variable', scope: [] },
+    { name: 'latestTurn', kind: 'variable', scope: [] },
+  ],
+};
 
 /** Cached prompt sets by custom folder ("" for built-ins only). */
 const promptSets = new Map<string, PromptSet>();
@@ -221,7 +233,7 @@ export function loadPromptSet(folder?: string): PromptSet {
     if (effective.cycles.size > 0) {
       throw new Error(`${label}: ${name}.md includes itself through partials: ${[...effective.cycles].join('; ')}.`);
     }
-    const builtInUses = transitiveUses(name, builtInRefs).uses;
+    const builtInUses = [...transitiveUses(name, builtInRefs).uses, ...(retiredUses[name] ?? [])];
     const allowed = new Set(builtInUses.map(use => useKey(use.kind, use.name, use.scope)));
     const extra = new Set(effective.uses.filter(use => !allowedUse(use, allowed)).map(describeUse));
     if (extra.size > 0) {

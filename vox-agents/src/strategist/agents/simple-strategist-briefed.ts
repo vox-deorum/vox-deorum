@@ -10,7 +10,7 @@ import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { appendRecordsDirections, fileMode } from "../../knowledge/directions.js";
+import { insertRecordsDirections, fileMode } from "../../knowledge/directions.js";
 import { renderSection, strategistInlineSections } from "../../knowledge/sections.js";
 import { requestBriefing, assembleBriefings, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
 import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
@@ -89,7 +89,7 @@ ${renderSection("briefings", assembleBriefings(briefing, instruction), { rendere
 ${getDecisionTurnContext(parameters, fileMode(context))}
 `.trim()
     }];
-    appendRecordsDirections(messages, context, strategistInlineSections);
+    insertRecordsDirections(messages, context, strategistInlineSections);
     return messages;
   }
   

@@ -38,12 +38,16 @@ export function fileMode<T extends AgentParameters>(context: VoxContext<T>): boo
 }
 
 /**
- * Append records directions at the caller's chosen position when this execution is in file mode.
+ * Insert the records directions as a system message before the game state, when this execution
+ * is in file mode: right after the leading system messages (the game context or overview), or at
+ * the end when every message is a system message.
  *
  * @param inPrompt - Sections the caller already put in the prompt for the latest turn
  */
-export function appendRecordsDirections<T extends AgentParameters>(messages: ModelMessage[], context: VoxContext<T>, inPrompt: SectionKey[] = []): void {
-  if (fileMode(context)) messages.push({ role: "user", content: recordsDirections(context, inPrompt) });
+export function insertRecordsDirections<T extends AgentParameters>(messages: ModelMessage[], context: VoxContext<T>, inPrompt: SectionKey[] = []): void {
+  if (!fileMode(context)) return;
+  const at = messages.findIndex((message) => message.role !== "system");
+  messages.splice(at === -1 ? messages.length : at, 0, { role: "system", content: recordsDirections(context, inPrompt) });
 }
 
 /**
@@ -85,25 +89,27 @@ function recentNotes<T extends AgentParameters>(context: VoxContext<T>): { lates
 }
 
 /**
- * The records directions: which folders are read-only or writable, which turns are recorded,
- * which sections to read from files, which are already in the prompt, the game notes guide, and
- * the latest notes. The text reads only the recorded turns (folders with a complete event slice),
- * the guide, and the notes, so briefing commits leave it unchanged within a turn, and the message
- * built from it carries no cache breakpoint. An agent editing the guide or writing a note changes
- * it for later runs.
+ * The records directions: which folders are read-only or writable, which sections to read from
+ * files, which are already in the prompt, the game notes guide, and the latest notes. The built-in
+ * text names no turn numbers and depends only on the files setting, `inPrompt`, the guide, and the
+ * notes, so recording a turn or a briefing leaves it unchanged. The view still supplies the
+ * recorded turns for custom files written for the older built-in. It is built once per run, so it
+ * stays fixed across the run's steps; an agent editing the guide or writing a note changes it for
+ * later runs. The message built from it carries no cache breakpoint.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
  * @param inPrompt - Sections already in the prompt for the latest turn, named so the run skips them
  */
 export function recordsDirections<T extends AgentParameters>(context: VoxContext<T>, inPrompt: SectionKey[] = []): string {
-  const turns = context.store ? recordedTurns(context.store.manifest()) : [];
   const files = context.files;
+  // Retired names: the built-in text no longer reads them, but a custom file may (see prompt-files)
+  const turns = context.store ? recordedTurns(context.store.manifest()) : [];
   return renderSystemPrompt(context, "records-directions", {
-    game: files?.game ? { writable: files.game === "write" } : false,
-    shared: Object.entries(files?.shared ?? {}).map(([name, access]) => ({ name, writable: access === "write" })),
     hasTurns: turns.length > 0,
     turnRanges: formatTurnRanges(turns),
     latestTurn: turns.at(-1),
+    game: files?.game ? { writable: files.game === "write" } : false,
+    shared: Object.entries(files?.shared ?? {}).map(([name, access]) => ({ name, writable: access === "write" })),
     omitted: fileModeOmittedSections
       .filter((key) => !inPrompt.includes(key))
       .map((key) => ({ title: sections[key].title, files: sectionFiles(sections[key]) })),
