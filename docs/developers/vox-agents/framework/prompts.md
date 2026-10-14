@@ -82,7 +82,7 @@ One request on step 2 of a strategist run, top to bottom, for a provider with na
 └─────────────────────────────────────────────┘
 ```
 
-The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for all decisions together in one finishing response. Since finishing ends the run, the model never sees results of other calls in that reply, so the reminder asks it to do all reading on earlier steps. When bash can run and a workspace folder is writable, it limits `bash` in the finishing reply to writing notes.
+The closing reminder is always last. If a rescue message is needed, it comes just before, so the model reads "your last reply was empty, try again" and then "here is what you may call and how to finish". On steps that require a tool call, the reminder asks for all independent calls in one reply. On later steps it asks for all decisions together in one finishing response. Since finishing ends the run, the model never sees results of other calls in that reply, so the reminder asks it to do all reading on earlier steps. When bash can run and a workspace folder is writable, it limits `bash` in the finishing reply to writing notes. On the first step, where many runs finish, it says the same reply that acts may also call `bash` to write notes.
 
 For models in prompt mode, the tool block is removed and its content moves into the text. See [Prompt-mode tool calling](../models/middleware.md#prompt-mode-tool-calling).
 
@@ -90,7 +90,12 @@ For models in prompt mode, the tool block is removed and its content moves into 
 
 A run is in file mode when its seat has files on and its resolved run tools include `bash`. The loop resolves `getRunTools()` before any prompt text is built and keeps the result on the execution frame, so `fileMode(context)` in `src/knowledge/directions.ts` gives every prompt builder in the run the same answer. Agents without tools, or without `bash`, stay inline even when files are on.
 
-In file mode, an agent adds **records directions** to its opening messages through `insertRecordsDirections`. The helper checks file mode and inserts the directions as a system message right after the leading system messages (the overview or shared game context), so they come before the game state that starts with `# Strategies`. The text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
+In file mode, an agent adds **records directions** and the **latest notes** to its opening messages through `insertRecordsDirections`. The helper checks file mode, then inserts two system messages:
+
+- The directions go first, right after the agent's system prompt and before the overview or shared game context. The overview's cache breakpoint then covers them.
+- The latest notes, when the seat has any, go right after the leading system messages, before the game state that starts with `# Strategies`. They change whenever an agent writes a note, so they sit after the cached overview instead of ahead of it.
+
+The directions text comes from `recordsDirections` and the `records-directions` prompt file. It tells the model:
 
 - a table of the mounted folders and their access, with the records and the shared reference read-only, the game notes folder and each shared folder read-only or writable according to the seat's files setting, and `/tmp` writable. The table is the only folder listing, because the workspace section and the bash tool description leave folders out;
 - that each `turn-<N>` folder is one processed refresh, and the newest is the latest recorded refresh, which can trail the current turn. It names no turn numbers;
@@ -102,15 +107,17 @@ Events are stored in each turn folder as one file with all events, plus economic
 
 Next comes the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text, noting that the file need not be read again. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
 
-The message ends with the seat's notes: the text of the most recently written file in the game folder, other than the guide, and the paths of the five written before it. Recency comes from each file's modification time in the store, and the shown text is capped like bash output. Seats without a game folder or without notes get no notes block.
+The directions depend only on the files setting, the sections kept in the prompt, and the guide's text, so recording a turn, a briefing, or a note leaves them unchanged. An agent that edits the guide changes them for later runs.
 
-The directions depend only on the files setting, the sections kept in the prompt, the guide's text, and the notes, so recording a turn or a briefing leaves them unchanged. They are built once per run, so they stay fixed across the run's steps and sit inside the prefix cached for later steps. An agent that edits the guide or writes a note changes them for later runs. The directions message carries no cache breakpoint of its own.
+The notes message comes from `recordsNotes` and the `records-notes` prompt file. It shows the text of the most recently written file in the game folder, other than the guide, and the paths of the five written before it. Recency comes from each file's modification time in the store, and the shown text is capped like bash output. Seats without a game folder or without notes get no notes message.
+
+Both messages are built once per run, so they stay fixed across the run's steps and sit inside the prefix cached for later steps. Neither carries a cache breakpoint of its own.
 
 | Agent | Opening messages in file mode |
 | --- | --- |
-| Simple strategist | System overview, then the directions, then a core message (strategies, victory, full players, our own cities, full military, decision context). The Cities section names the other owners' split files for the turn (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
-| Briefed, staffed, and learned strategists | The same inline content, with the directions between the system overview and the reports. |
-| Diplomat, spokesperson, and negotiator | The directions sit between the shared game-context system message and its game-state user message. |
+| Simple strategist | The directions, then the system overview, then any notes, then a core message (strategies, victory, full players, our own cities, full military, decision context). The Cities section names the other owners' split files for the turn (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
+| Briefed, staffed, and learned strategists | The same inline content, with the directions before the system overview and any notes between the overview and the reports. |
+| Diplomat, spokesperson, and negotiator | The directions come before the shared game-context system message, and any notes sit between it and its game-state user message. |
 | Briefers and the diplomatic analyst | No directions. They declare no `bash` tool, so they never run in file mode. |
 
 A file-mode strategist's decision context (`getDecisionTurnContext`) always names the last completed decision turn, even when it was the previous turn, or says that no decision has completed on the current timeline. The strategist chooses what to read. There is no merged events file and no prescribed reading order.
@@ -174,6 +181,7 @@ The closing reminder has two paragraphs: tool rules, then decisions. Parts that 
 | Tool rules | "You may only call X or Y", or "no tools are available" | Some offered tools are not allowed on this step. |
 | Decisions | "You have N steps left to make your decisions", or "this is your last step" | The seat has files on. |
 | Decisions | "Make all your decisions together in one response by calling ..." | Step 2 onward, naming the agent's `completionTools` that are allowed on this step. It warns that finishing ends the run, so reading belongs on earlier steps. With bash able to run and a workspace folder writable, it limits `bash` in that same response to writing notes. |
+| First-step notes | "When you act by calling ..., you may also call `bash` in that same response ..." | The first step only, with bash able to run, a workspace folder writable, and a completion tool allowed. |
 
 The "must call" requirement lives here rather than in provider middleware, so every provider gets it and the earlier parts of the prompt never depend on it. When there is nothing to say, such as on the first step of an agent that does not require tools, no message is added. An agent can override `continuationNudge` to change or drop the reminder.
 
@@ -183,7 +191,8 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | --- | --- | --- |
 | An agent's main instructions | Its file in `vox-agents/prompts/`, and the data passed by its `getSystem()` | See [Prompt files](prompt-files.md). |
 | Opening game context | The agent's `getInitialMessages()` | Shared envoy and analyst context is `buildGameContextMessages` in `src/strategist/strategy-parameters.ts`. |
-| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text free of turn numbers so it stays fixed across turns. Its folder table is the only folder listing. |
+| Records directions in file mode | `vox-agents/prompts/records-directions.md`, and the data passed by `recordsDirections` in `src/knowledge/directions.ts` | Keep the text free of turn numbers and notes so it stays fixed across turns. Its folder table is the only folder listing. |
+| Latest notes in file mode | `vox-agents/prompts/records-notes.md`, and the data passed by `recordsNotes` in `src/knowledge/directions.ts` | |
 | A game-state section's title, description, or default Markdown | The registry in `src/knowledge/sections.ts` | See [Prompt files](prompt-files.md#game-state-sections). |
 | Envoy hint (identity, audience, turn) | `getHint` in `src/envoy/live-envoy.ts`, overridden in `src/telepathist/talkative-telepathist.ts` | Always the last opening message for a live envoy. |
 | Envoy add-on after the hint | `getDefaultAddon` in `src/envoy/envoy.ts`, overridden by the diplomat and spokesperson | |

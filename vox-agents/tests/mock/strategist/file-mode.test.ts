@@ -65,17 +65,17 @@ function messageWith(messages: ModelMessage[], marker: string): number {
 
 /**
  * Assert the run holds exactly one breakpoint-free system message with the records directions,
- * right after the leading system messages of the inline build and before the game-state user message.
+ * first in the run, followed by the inline build's leading system messages (which carry the cache
+ * breakpoint that now covers the directions) and then the game-state user message.
  */
-function expectDirectionsBeforeState(messages: ModelMessage[], inline: ModelMessage[], directions: string): void {
+function expectDirectionsFirst(messages: ModelMessage[], inline: ModelMessage[], directions: string): void {
   const boundary = inline.findIndex((m) => m.role !== 'system');
-  const at = messages.findIndex((m) => m.content === directions);
   expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
-  expect(at).toBe(boundary);
-  expect(messages[at].role).toBe('system');
-  expect(hasCacheBreakpoint(messages[at])).toBe(false);
-  expect(messages.slice(0, at)).toEqual(inline.slice(0, boundary));
-  expect(messages[at + 1].role).toBe('user');
+  expect(messages[0]).toEqual({ role: 'system', content: directions });
+  expect(hasCacheBreakpoint(messages[0])).toBe(false);
+  expect(messages.slice(1, 1 + boundary)).toEqual(inline.slice(0, boundary));
+  expect(messages.slice(1, 1 + boundary).some(hasCacheBreakpoint)).toBe(true);
+  expect(messages[1 + boundary].role).toBe('user');
 }
 
 /** The messages without the records directions. */
@@ -143,8 +143,8 @@ describe('strategist prompt builders in file mode', () => {
       expect(messages).toHaveLength(inline.length + 1);
       expect(withoutDirections(messages, directions).map((m) => m.role)).toEqual(inline.map((m) => m.role));
       // The system overview is the inline one and still carries its breakpoint.
-      expect(messages[0]).toEqual(inline[0]);
-      expect(hasCacheBreakpoint(messages[0])).toBe(true);
+      expect(messages[1]).toEqual(inline[0]);
+      expect(hasCacheBreakpoint(messages[1])).toBe(true);
 
       // The inline reports hold all six sections; the core keeps only the ones records do not cover.
       const inlineReports = String(inline[inline.findIndex((m) => m.role !== 'system')].content);
@@ -154,7 +154,7 @@ describe('strategist prompt builders in file mode', () => {
       for (const key of recordSections) expect(core).not.toMatch(sectionHeading(key));
       expect(core).not.toBe(inlineReports);
 
-      expectDirectionsBeforeState(messages, inline, directions);
+      expectDirectionsFirst(messages, inline, directions);
       expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
     });
 
@@ -195,7 +195,7 @@ describe('strategist prompt builders in file mode', () => {
 
   for (const name of ['simple-strategist-briefed', 'simple-strategist-staffed']) {
     describe(name, () => {
-      it('should insert one directions message after the overview of the inline messages', async () => {
+      it('should insert one directions message ahead of the inline messages', async () => {
         const { inline, messages, fake, directions } = await build(name, briefedParameters);
 
         // The pre-filled briefing means no briefer runs for either build.
@@ -203,18 +203,18 @@ describe('strategist prompt builders in file mode', () => {
         expect(messages).toHaveLength(inline.length + 1);
         expect(withoutDirections(messages, directions)).toEqual(inline);
 
-        expectDirectionsBeforeState(messages, inline, directions);
+        expectDirectionsFirst(messages, inline, directions);
         expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
       });
     });
   }
 
   describe('simple-strategist-learned', () => {
-    it('should put the directions before the game state and the episodes in the last message', async () => {
+    it('should put the directions first and the episodes in the last message', async () => {
       episodeResults.current = [episode];
       const { inline, messages, directions } = await build('simple-strategist-learned', episodesParameters);
 
-      expectDirectionsBeforeState(messages, inline, directions);
+      expectDirectionsFirst(messages, inline, directions);
       expect(messageWith(messages, episodeMarker)).toBe(messages.length - 1);
       expect(messages[messages.length - 1].role).toBe('user');
       expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));

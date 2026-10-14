@@ -22,6 +22,8 @@ import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
  *   in that response are never seen, and it asks the model to do all reading on earlier steps.
  *   With `notes` (bash may run and a workspace folder is writable), it limits bash in that same
  *   response to writing notes.
+ * - Notes on the first step: with `notes` and a completion tool allowed, the first step says bash
+ *   may write notes in the same response that acts, since many runs finish on their first step.
  * Returns undefined when no part applies.
  *
  * @param executable - The tools that may run on this step
@@ -45,7 +47,9 @@ export function buildClosingReminder(
   const decisions = [
     stepsLeft === undefined ? '' : stepsLeft > 1 ? `IMPORTANT: You have ${stepsLeft} steps left to make your decisions.` : `IMPORTANT: This is your last step to make your decisions.`,
     step > 0 && finishing ? `Once you have the information you need, make all your decisions together in one response by calling ${finishing} following the EXACT provided format. Finishing ends the run.` : '',
-    step > 0 && finishing && notes ? `In that same response, use \`${bashToolName}\` only to write any notes you want to keep.` : '',
+    !finishing || !notes ? '' : step > 0
+      ? `In that same response, use \`${bashToolName}\` only to write any notes you want to keep.`
+      : `When you act by calling ${finishing}, you may also call \`${bashToolName}\` in that same response, only to write any notes you want to keep.`,
   ];
   return [rules, decisions]
     .map((parts) => parts.filter(Boolean).join(' '))

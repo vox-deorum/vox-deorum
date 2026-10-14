@@ -60,6 +60,13 @@ const retiredUses: Record<string, NameUse[]> = {
     { name: 'hasTurns', kind: 'section', scope: [] },
     { name: 'turnRanges', kind: 'variable', scope: [] },
     { name: 'latestTurn', kind: 'variable', scope: [] },
+    // The notes moved to records-notes
+    { name: 'notes', kind: 'section', scope: [] },
+    { name: 'latest.path', kind: 'variable', scope: ['notes'] },
+    { name: 'latest.content', kind: 'variable', scope: ['notes'] },
+    { name: 'earlier.length', kind: 'section', scope: ['notes'] },
+    { name: 'earlier', kind: 'section', scope: ['notes'] },
+    { name: '.', kind: 'variable', scope: ['notes', 'earlier'] },
   ],
 };
 

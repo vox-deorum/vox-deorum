@@ -90,9 +90,10 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   ): Promise<ModelMessage[]> {
     const messages = this.getContextMessages(parameters, input);
 
-    // File mode: the records directions join the stable prefix as a system message between the
-    // game-context system message and the game state, ahead of the past-conversation anchor. They
-    // carry no breakpoint of their own, so the breakpoint count is unchanged.
+    // File mode: the records directions lead the stable prefix as a system message ahead of the
+    // game context, and any latest notes go between the game context and the game state, both
+    // ahead of the past-conversation anchor. Neither carries a breakpoint of its own, so the
+    // breakpoint count is unchanged.
     insertRecordsDirections(messages, context);
 
     // Layer the agent's grounding around the chat record (see {@link LiveEnvoyContext}

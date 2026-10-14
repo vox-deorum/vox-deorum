@@ -4,12 +4,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fileMode, recordsDirections } from '../../../src/knowledge/directions.js';
+import { fileMode, insertRecordsDirections, recordsDirections, recordsNotes } from '../../../src/knowledge/directions.js';
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
 import { reloadPromptSets } from '../../../src/utils/prompts/prompt-files.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import { workspaceGuide, workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
+import type { ModelMessage } from 'ai';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from './directions-fixtures.js';
 
@@ -147,9 +148,9 @@ describe('recordsDirections', () => {
       temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: storePath, type: 'file', content, mtime }] });
     }
 
-    /** Directions for a seat with a writable game folder. */
-    function directions(): string {
-      return recordsDirections(enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} }));
+    /** A file-mode context for a seat with the given game folder access. */
+    function seat(game: ResolvedFilesConfig['game'] = 'write'): any {
+      return enableFileMode(bareContext(), temp.store, undefined, { game, shared: {} });
     }
 
     /** The bulleted paths after the earlier-notes line, in order. */
@@ -161,7 +162,7 @@ describe('recordsDirections', () => {
       for (let index = 0; index < 8; index++) writeNote(`game/notes/turn-${index}.md`, `Note body ${index}.`, 1000 + index);
       writeNote(`game/${workspaceGuideFile}`, '# Guide\nNewest write of all.\n', 5000);
 
-      const text = directions();
+      const text = recordsNotes(seat())!;
       expect(text).toContain('/workspace/game/notes/turn-7.md');
       expect(text).toContain('Note body 7.');
       expect(text).not.toContain('Note body 6.');
@@ -169,21 +170,57 @@ describe('recordsDirections', () => {
       expect(text).not.toContain('turn-1.md');
     });
 
-    it('should show no notes block without notes or without a game folder', () => {
-      const withoutNotes = directions();
+    it('should give no notes without notes or without a game folder', () => {
+      expect(recordsNotes(seat())).toBeUndefined();
       writeNote('game/plan.md', 'Plan body.', 1000);
-      const withoutFolder = recordsDirections(enableFileMode(bareContext(), temp.store, undefined, { game: false, shared: {} }));
-      expect(withoutNotes).not.toContain('Plan body.');
-      expect(withoutFolder).not.toContain('Plan body.');
-      expect(directions()).toContain('Plan body.');
-      expect(earlierPaths(directions())).toEqual([]);
+      expect(recordsNotes(seat(false))).toBeUndefined();
+      expect(recordsNotes(seat())).toContain('Plan body.');
+      expect(earlierPaths(recordsNotes(seat())!)).toEqual([]);
     });
 
     it('should cap an oversized note', () => {
       writeNote('game/plan.md', 'x'.repeat(workspaceOutputLimit + 500), 1000);
-      const text = directions();
+      const text = recordsNotes(seat())!;
       expect(text).toContain('[truncated 500 chars');
       expect(text).not.toContain('x'.repeat(workspaceOutputLimit + 1));
+    });
+
+    it('should leave the directions unchanged when a note is written', () => {
+      const before = recordsDirections(seat());
+      writeNote('game/plan.md', 'Plan body.', 1000);
+      const after = recordsDirections(seat());
+      expect(after).toBe(before);
+      expect(after).not.toContain('Plan body.');
+    });
+  });
+
+  describe('insertRecordsDirections', () => {
+    /** Opening messages shaped like a strategist's: a cached overview, then the game state. */
+    function opening(): ModelMessage[] {
+      return [
+        { role: 'system', content: 'overview', providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
+        { role: 'user', content: 'game state' },
+      ];
+    }
+
+    it('should put the directions first and the latest note between the overview and the game state', () => {
+      temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: 'game/plan.md', type: 'file', content: 'Plan body.', mtime: 1000 }] });
+      const context = enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} });
+      const messages = opening();
+      insertRecordsDirections(messages, context);
+      expect(messages.map((m) => m.content)).toEqual([recordsDirections(context), 'overview', recordsNotes(context), 'game state']);
+      expect(messages[2].role).toBe('system');
+    });
+
+    it('should add only the directions without notes, and nothing outside file mode', () => {
+      const context = enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} });
+      const messages = opening();
+      insertRecordsDirections(messages, context);
+      expect(messages).toEqual([{ role: 'system', content: recordsDirections(context) }, ...opening()]);
+
+      const plain = opening();
+      insertRecordsDirections(plain, bareContext());
+      expect(plain).toEqual(opening());
     });
   });
 
@@ -235,6 +272,16 @@ describe('recordsDirections', () => {
       expect(recordsDirections(context).trim()).toBe('[none]');
       record(1, 2, 3);
       expect(recordsDirections(context).trim()).toBe('[1-3|3]');
+    });
+
+    it('should still load and fill a custom directions file that reads the retired notes names', () => {
+      fs.writeFileSync(path.join(dir, 'records-directions.md'),
+        '{{#notes}}[{{latest.path}}|{{latest.content}}{{#earlier.length}}|more{{/earlier.length}}{{#earlier}},{{.}}{{/earlier}}]{{/notes}}{{^notes}}[none]{{/notes}}\n');
+      reloadPromptSets([dir]);
+      const context = { ...enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} }), prompts: dir };
+      expect(recordsDirections(context).trim()).toBe('[none]');
+      temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: 'game/plan.md', type: 'file', content: 'Plan body.', mtime: 1000 }] });
+      expect(recordsDirections(context).trim()).toBe('[/workspace/game/plan.md|Plan body.]');
     });
   });
 });

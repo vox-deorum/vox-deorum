@@ -38,16 +38,22 @@ export function fileMode<T extends AgentParameters>(context: VoxContext<T>): boo
 }
 
 /**
- * Insert the records directions as a system message before the game state, when this execution
- * is in file mode: right after the leading system messages (the game context or overview), or at
- * the end when every message is a system message.
+ * Insert the records directions and the latest notes as system messages, when this execution is
+ * in file mode. The directions go first, right after the agent's system prompt and ahead of the
+ * game context or overview, so the overview's cache breakpoint covers them. The notes change
+ * whenever an agent writes one, so they go after the leading system messages (or at the end when
+ * every message is a system message), before the game state.
  *
  * @param inPrompt - Sections the caller already put in the prompt for the latest turn
  */
 export function insertRecordsDirections<T extends AgentParameters>(messages: ModelMessage[], context: VoxContext<T>, inPrompt: SectionKey[] = []): void {
   if (!fileMode(context)) return;
-  const at = messages.findIndex((message) => message.role !== "system");
-  messages.splice(at === -1 ? messages.length : at, 0, { role: "system", content: recordsDirections(context, inPrompt) });
+  const notes = recordsNotes(context);
+  if (notes !== undefined) {
+    const at = messages.findIndex((message) => message.role !== "system");
+    messages.splice(at === -1 ? messages.length : at, 0, { role: "system", content: notes });
+  }
+  messages.unshift({ role: "system", content: recordsDirections(context, inPrompt) });
 }
 
 /**
@@ -89,20 +95,34 @@ function recentNotes<T extends AgentParameters>(context: VoxContext<T>): { lates
 }
 
 /**
+ * The latest game notes for the run, rendered from the `records-notes` prompt file: the text of the
+ * most recent note and the paths of the ones before it. Undefined when the seat has no game folder
+ * or no notes yet. Built once per run; a note written during the run shows in later runs.
+ *
+ * @param context - The run's context, for its files setting, store, and prompt folder
+ */
+export function recordsNotes<T extends AgentParameters>(context: VoxContext<T>): string | undefined {
+  const notes = recentNotes(context);
+  return notes ? renderSystemPrompt(context, "records-notes", notes) : undefined;
+}
+
+/**
  * The records directions: which folders are read-only or writable, which sections to read from
- * files, which are already in the prompt, the game notes guide, and the latest notes. The built-in
- * text names no turn numbers and depends only on the files setting, `inPrompt`, the guide, and the
- * notes, so recording a turn or a briefing leaves it unchanged. The view still supplies the
- * recorded turns for custom files written for the older built-in. It is built once per run, so it
- * stays fixed across the run's steps; an agent editing the guide or writing a note changes it for
- * later runs. The message built from it carries no cache breakpoint.
+ * files, which are already in the prompt, and the game notes guide. The built-in text names no
+ * turn numbers and depends only on the files setting, `inPrompt`, and the guide, so recording a
+ * turn, a briefing, or a note leaves it unchanged. The view still supplies the recorded turns and
+ * the notes for custom files written for older built-ins (the notes now come from
+ * {@link recordsNotes}). It is built once per run, so it stays fixed across the run's steps; an
+ * agent editing the guide changes it for later runs. The message built from it carries no cache
+ * breakpoint of its own and sits ahead of the caller's.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
  * @param inPrompt - Sections already in the prompt for the latest turn, named so the run skips them
  */
 export function recordsDirections<T extends AgentParameters>(context: VoxContext<T>, inPrompt: SectionKey[] = []): string {
   const files = context.files;
-  // Retired names: the built-in text no longer reads them, but a custom file may (see prompt-files)
+  // Retired names (turns and notes): the built-in text no longer reads them, but a custom file may
+  // (see prompt-files)
   const turns = context.store ? recordedTurns(context.store.manifest()) : [];
   return renderSystemPrompt(context, "records-directions", {
     hasTurns: turns.length > 0,

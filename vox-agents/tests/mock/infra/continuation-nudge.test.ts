@@ -121,13 +121,23 @@ describe('continuationNudge', () => {
       for (const name of gated) expect(reminder).not.toContain(name);
     });
 
-    it('asks for notes with the finishing call only on a finalize step', () => {
+    it('asks for notes with the finishing call on a finalize step', () => {
       const finalize = remind({ step: 1 });
       const withNotes: string = remind({ step: 1, notes: true });
       expect(withNotes).not.toBe(finalize);
       expect(withNotes.startsWith(finalize)).toBe(true);
-      expect(remind({ notes: true })).toBeUndefined();
       expect(remind({ step: 1, executable: [], narrowed: true, notes: true })).toBe(remind({ step: 1, executable: [], narrowed: true }));
+    });
+
+    it('allows notes alongside acting on the first step only when notes can be written and a finishing tool runs', () => {
+      const first = remind({ notes: true });
+      expect(first).toBeDefined();
+      expect(first).toContain(finishing);
+      expect(first).not.toBe(remind({ step: 1, notes: true }));
+      expect(remind({})).toBeUndefined();
+      expect(remind({ executable: [], narrowed: true, notes: true })).toBe(remind({ executable: [], narrowed: true }));
+      const required: string = remind({ required: true, notes: true });
+      expect(required.startsWith(remind({ required: true })!)).toBe(true);
     });
   });
 });
