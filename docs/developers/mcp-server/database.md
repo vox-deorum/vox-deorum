@@ -37,7 +37,9 @@ Building the mappings is treated as critical. If they can't be read, `initialize
 
 The game database files only become complete after Civilization V has launched and the mod has finished loading, so the MCP server may start before the data it needs exists.
 
-`loadDatabaseWithRetry` handles this with one loop that covers every way startup can be too early. On each pass it checks that both database files exist and open, waits for a known late-loading table (`GreatPersons`) to appear, waits for the policy descriptions to actually resolve in the localization database, and then reads the enum mappings. Any failure along the way, including a failure to build the mappings, is caught, logged, and retried five seconds later. The loop has no attempt limit, so the server retries indefinitely.
+`loadDatabaseWithRetry` handles this with one loop that covers every way startup can be too early. On each pass it checks that both database files exist and open, waits for Vox Populi to finish loading, waits for the policy descriptions to actually resolve in the localization database, and then reads the enum mappings. Any failure along the way, including a failure to build the mappings, is caught, logged, and retried five seconds later. The loop has no attempt limit, so the server retries indefinitely.
+
+The Vox Populi check matters because Vox Populi renames base-game items as it loads, for example Collective Rule becomes Organization. If the mappings are read too early, they keep the old names and stop matching the rest of the data. Vox Populi creates no tables of its own, so the server instead waits for a trigger created by `Triggers.sql`, which Vox Populi always loads last. The trigger name is kept in `manager.ts`.
 
 In practice this means the server can be launched alongside the game and will simply wait for it. If the log shows the retry message repeating forever, the game has not yet produced usable data: start Civilization V once with the mod enabled and let it reach the main menu.
 

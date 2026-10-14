@@ -3,7 +3,7 @@
  * Provides structured access to game rules, units, buildings, technologies, and localized text
  */
 
-import { Kysely, SqliteDialect } from 'kysely';
+import { Kysely, SqliteDialect, sql } from 'kysely';
 import Database from 'better-sqlite3';
 import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../utils/logger.js';
@@ -17,6 +17,9 @@ import * as changeCase from "change-case";
 import { stripTags } from '../utils/database/localized.js';
 
 const logger = createLogger('DatabaseManager');
+
+// Created by Vox Populi's Triggers.sql, which VP loads last; once it exists, all VP database changes are in
+const voxPopuliLastTrigger = 'VP_BlanketPlagueImmunityCompatibility';
 
 /**
  * Manages SQLite database connections and queries for Civilization V using Kysely
@@ -81,9 +84,9 @@ export class DatabaseManager {
         });
         logger.info('Connected to localization database');
 
-        // Sanity check: Wait 10s for VD to load, then for GreatPersons table to exist
+        // Sanity check: Wait 10s for VD to load, then for Vox Populi to finish loading
         await setTimeout(10000);
-        await this.waitForTable('GreatPersons');
+        await this.waitForTrigger(voxPopuliLastTrigger);
 
         // Wait for policy descriptions to be localized before reading mappings
         await this.waitForPolicyDescriptions();
@@ -294,10 +297,10 @@ export class DatabaseManager {
   }
 
   /**
-   * Wait for a table to exist in the database, polling every 10 seconds
-   * @returns true if had to wait for the table, false if table existed immediately
+   * Wait for a trigger to exist in the main database, polling every 10 seconds
+   * @returns true if had to wait for the trigger, false if it existed immediately
    */
-  private async waitForTable(tableName: string): Promise<boolean> {
+  private async waitForTrigger(triggerName: string): Promise<boolean> {
     if (!this.mainDb) {
       throw new Error('Database not initialized');
     }
@@ -305,20 +308,17 @@ export class DatabaseManager {
     let hadToWait = false;
 
     for (;;) {
-      try {
-        // Try to query the table - if it exists, this will succeed
-        await this.mainDb
-          .selectFrom(tableName as any)
-          .select('ID')
-          .limit(1)
-          .execute();
+      const result = await sql<{ name: string }>`
+        SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = ${triggerName}
+      `.execute(this.mainDb);
 
+      if (result.rows.length > 0) {
         return hadToWait;
-      } catch (error) {
-        hadToWait = true;
-        logger.warn(`Table ${tableName} not found yet, waiting for the game and mod to load...`);
-        await setTimeout(10000);
       }
+
+      hadToWait = true;
+      logger.warn(`Trigger ${triggerName} not found yet, waiting for Vox Populi to finish loading...`);
+      await setTimeout(10000);
     }
   }
 
