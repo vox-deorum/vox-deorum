@@ -634,8 +634,10 @@ Game.RegisterFunction("${Name}", function(${Arguments})
             local itemType, duration, finalTurn, data1, data2, data3, flag1, fromPlayer = deal:GetNextItem()
 
             while itemType ~= nil do
-              -- Capture finalTurn from any item that has it
-              if finalTurn and not dealFinalTurn then
+              -- Capture finalTurn from any item that has it. Permanent items (e.g. an
+              -- Embassy) report finalTurn 0, which Lua treats as true, so only a positive
+              -- final turn counts; permanent deals fall through to the -1 sentinel below.
+              if finalTurn and finalTurn > 0 and not dealFinalTurn then
                 dealFinalTurn = finalTurn
               end
 

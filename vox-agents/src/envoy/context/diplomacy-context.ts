@@ -55,9 +55,13 @@ interface DealMadeEvent {
   StartTurn?: number;
 }
 
-/** The trailing "(N turns remaining)" clause for a standing deal (no StartTurn to derive expiry from). */
-function standingDealFraming(turnsRemaining: number): string {
-  return turnsRemaining > 0
+/**
+ * The trailing "(N turns remaining)" clause for a standing deal (no StartTurn to derive expiry from).
+ * Permanent deals carry no TurnsRemaining (the server drops the non-positive sentinel), so an absent
+ * count frames as ongoing, like a zero or negative one.
+ */
+function standingDealFraming(turnsRemaining: number | undefined): string {
+  return turnsRemaining !== undefined && turnsRemaining > 0
     ? ` (${turnsRemaining} ${turnsRemaining === 1 ? "turn" : "turns"} remaining)`
     : " (ongoing)";
 }

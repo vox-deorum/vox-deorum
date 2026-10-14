@@ -82,7 +82,7 @@ const PlayerDataSchema = z.object({
   IncomingTradeRoutes: z.record(z.string(), z.union([z.string(), z.record(z.string(), z.any())])).optional(),
   Spies: z.record(z.string(), z.record(z.string(), z.any())).optional(),
   DiplomaticDeals: z.record(z.string(), z.array(z.object({
-    TurnsRemaining: z.number(),
+    TurnsRemaining: z.number().optional(),
     WeGive: z.array(z.string()),
     TheyGive: z.array(z.string())
   }))).optional(),

@@ -83,6 +83,33 @@ describe('getPlayerSummaries', () => {
     ]);
   });
 
+  it('drops TurnsRemaining for permanent or already-expired deals and keeps finite terms', async () => {
+    const summary = baseSummary(0, {
+      DiplomaticDeals: {
+        Egypt: [
+          { TurnsRemaining: -75, WeGive: ['Embassy'], TheyGive: ['Embassy'] },
+          { TurnsRemaining: 0, WeGive: ['Open Borders'], TheyGive: ['Gold per turn: 5'] },
+          { TurnsRemaining: 12, WeGive: ['Gold: 100'], TheyGive: ['Iron'] },
+        ],
+      },
+    });
+    mockLua([summary]);
+
+    const result = await getPlayerSummaries();
+    const deals = (result[0].DiplomaticDeals as any).Egypt as Array<Record<string, unknown>>;
+    // The -1/0 sentinels come out with no TurnsRemaining field at all; a real term survives.
+    expect(deals[0]).not.toHaveProperty('TurnsRemaining');
+    expect(deals[1]).not.toHaveProperty('TurnsRemaining');
+    expect(deals[2].TurnsRemaining).toBe(12);
+    expect(deals[0]).toMatchObject({ WeGive: ['Embassy'] });
+
+    // The stored row carries the same sanitized deals.
+    const stored = await store.getMutableKnowledge('PlayerSummaries', 0);
+    const storedDeals = (stored!.DiplomaticDeals as any).Egypt as Array<Record<string, unknown>>;
+    expect(storedDeals[0]).not.toHaveProperty('TurnsRemaining');
+    expect(storedDeals[2].TurnsRemaining).toBe(12);
+  });
+
   it('stores each player summary under its own key', async () => {
     mockLua([
       baseSummary(0, { Era: 'ERA_ANCIENT' }),

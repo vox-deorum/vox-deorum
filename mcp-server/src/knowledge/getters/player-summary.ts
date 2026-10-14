@@ -4,7 +4,7 @@
 
 import { Selectable } from 'kysely';
 import { LuaFunction } from '../../bridge/lua-function.js';
-import { PlayerSummary } from '../schema/timed.js';
+import { PlayerSummary, DiplomaticDealDetails } from '../schema/timed.js';
 import { getEraName } from '../../utils/database/enums.js';
 import { knowledgeManager } from '../../server.js';
 import { stripTags } from '../../utils/database/localized.js';
@@ -61,6 +61,18 @@ export async function getPlayerSummaries(saving: boolean = true): Promise<Select
         if (currentQuest !== "")
           quests.push(currentQuest);
         summary.Quests[key] = quests;
+      }
+    }
+
+    // Diplomatic deals: permanent deals arrive from Lua with the -1 sentinel (and an
+    // already-expired term can compute to 0 or less). Drop TurnsRemaining unless it is a
+    // positive countdown so no consumer ever frames a negative or zero term.
+    if (summary.DiplomaticDeals) {
+      for (const deals of Object.values(summary.DiplomaticDeals) as DiplomaticDealDetails[][]) {
+        for (const deal of deals) {
+          if (deal.TurnsRemaining !== undefined && deal.TurnsRemaining <= 0)
+            delete deal.TurnsRemaining;
+        }
       }
     }
   }

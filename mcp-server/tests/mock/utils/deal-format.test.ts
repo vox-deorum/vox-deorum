@@ -52,6 +52,7 @@ describe('getDealExpirySuffix', () => {
 
   it('returns "" for a permanent/termless deal or a missing start turn', () => {
     expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 0 }, 20)).toBe('');
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: -75 }, 20)).toBe('');
     expect(getDealExpirySuffix({ TurnsRemaining: 30 }, 20)).toBe('');
   });
 });

@@ -86,7 +86,7 @@ export interface SpyDetails {
  * Diplomatic deal details for a specific deal
  */
 export interface DiplomaticDealDetails {
-  TurnsRemaining: number; // Turns until the deal expires
+  TurnsRemaining?: number; // Turns until the deal expires; absent for permanent deals
   WeGive: string[]; // Array of items the player is giving (formatted strings)
   TheyGive: string[]; // Array of items the other player is giving (formatted strings)
 }

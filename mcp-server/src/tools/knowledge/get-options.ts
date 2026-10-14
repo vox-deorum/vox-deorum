@@ -247,7 +247,8 @@ class GetOptionsTool extends ToolBase {
         Rationale: research?.Rationale
       },
       Policy: {
-        Next: policy?.Policy ? `${policy.Policy} (${policy.IsBranch ? "New Branch" : "Policy"})` : "None",
+        // "None" is a cleared selection, not a policy name; frame it plainly as no next policy.
+        Next: policy?.Policy && policy.Policy !== "None" ? `${policy.Policy} (${policy.IsBranch ? "New Branch" : "Policy"})` : "None",
         Rationale: policy?.Rationale
       },
       Relationships: Object.keys(relationships).length > 0 ? relationships : undefined
