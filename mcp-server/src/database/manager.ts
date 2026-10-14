@@ -18,8 +18,9 @@ import { stripTags } from '../utils/database/localized.js';
 
 const logger = createLogger('DatabaseManager');
 
-// Created by Vox Populi's Triggers.sql, which VP loads last; once it exists, all VP database changes are in
-const voxPopuliLastTrigger = 'VP_BlanketPlagueImmunityCompatibility';
+// First trigger in Vox Populi's Triggers.sql, which VP loads last; once it exists, all earlier VP database changes are in.
+// Use the first trigger rather than the last, since VP adds new triggers to the end of that file across versions.
+const voxPopuliTrigger = 'Unit_BuildingClassPurchaseRequireds';
 
 /**
  * Manages SQLite database connections and queries for Civilization V using Kysely
@@ -86,7 +87,7 @@ export class DatabaseManager {
 
         // Sanity check: Wait 10s for VD to load, then for Vox Populi to finish loading
         await setTimeout(10000);
-        await this.waitForTrigger(voxPopuliLastTrigger);
+        await this.waitForTrigger(voxPopuliTrigger);
 
         // Wait for policy descriptions to be localized before reading mappings
         await this.waitForPolicyDescriptions();
