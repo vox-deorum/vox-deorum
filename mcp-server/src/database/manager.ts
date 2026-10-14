@@ -22,6 +22,11 @@ const logger = createLogger('DatabaseManager');
 // Use the first trigger rather than the last, since VP adds new triggers to the end of that file across versions.
 const voxPopuliTrigger = 'Unit_BuildingClassPurchaseRequireds';
 
+// Vox Populi renames Legalism to Ceremony in its en_US text changes. The localization DB is a separate file that can lag
+// behind the main DB, so this rename tells us VP's text changes are in before policy names are read.
+const voxPopuliRenamedTextTag = 'TXT_KEY_POLICY_LEGALISM';
+const voxPopuliRenamedTextVanilla = 'Legalism';
+
 /**
  * Manages SQLite database connections and queries for Civilization V using Kysely
  */
@@ -325,7 +330,8 @@ export class DatabaseManager {
 
   /**
    * Wait for policy localized descriptions to be available in the localization DB.
-   * Policies in the main DB use TXT_KEY_* references that must resolve in the localization DB.
+   * Policies in the main DB use TXT_KEY_* references that must resolve in the localization DB,
+   * and Vox Populi's text changes must be applied so names match what tools read later.
    * @returns true if had to wait, false if descriptions were ready immediately
    */
   private async waitForPolicyDescriptions(): Promise<boolean> {
@@ -360,11 +366,23 @@ export class DatabaseManager {
       const unresolved = txtKeys.filter(k => !resolvedTags.has(k));
 
       if (unresolved.length === 0) {
-        return hadToWait;
+        // Keys can resolve to vanilla text before VP's changes land, so also wait for VP's rename
+        const renamed = await this.localizationDb!
+          .selectFrom('LocalizedText')
+          .select('Text')
+          .where('Language', '=', 'en_US')
+          .where('Tag', '=', voxPopuliRenamedTextTag)
+          .executeTakeFirst();
+
+        if (renamed?.Text && renamed.Text !== voxPopuliRenamedTextVanilla) {
+          return hadToWait;
+        }
+        logger.warn(`${voxPopuliRenamedTextTag} still has vanilla text, waiting for Vox Populi text changes...`);
+      } else {
+        logger.warn(`${unresolved.length} policy descriptions not yet in localization DB, waiting...`);
       }
 
       hadToWait = true;
-      logger.warn(`${unresolved.length} policy descriptions not yet in localization DB, waiting...`);
       await setTimeout(10000);
     }
   }
