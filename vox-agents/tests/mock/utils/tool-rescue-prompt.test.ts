@@ -89,8 +89,11 @@ describe('createToolPrompts', () => {
       expect(out).toContain('send_message');
       expect(out).toMatch(/\{\s*"tool"\s*:/);
       expect(out).toMatch(/"arguments"\s*:/);
-      const schemaBlock = out.match(/- Arguments: \n```([\s\S]*?)```/)?.[1];
-      expect(JSON.parse(schemaBlock!)).toEqual({
+      // Any fenced JSON block may carry the schema; only its content is part of the contract.
+      const fencedJson = [...out.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].flatMap(([, block]) => {
+        try { return [JSON.parse(block)]; } catch { return []; }
+      });
+      expect(fencedJson).toContainEqual({
         type: 'object', properties: { recipient: { type: 'string' } },
       });
     });

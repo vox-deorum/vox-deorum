@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileMode, insertRecordsDirections, recordsDirections, recordsNotes } from '../../../src/knowledge/directions.js';
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
-import { reloadPromptSets } from '../../../src/utils/prompts/prompt-files.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import { workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
 import type { ModelMessage } from 'ai';
@@ -110,13 +109,9 @@ describe('recordsDirections', () => {
         '{{#game}}G={{#writable}}write{{/writable}}{{^writable}}read{{/writable}};{{/game}}'
           + '{{#guide}}empty={{#empty}}yes{{/empty}}{{^empty}}no{{/empty}};content={{content}}{{/guide}}'
           + '{{#shared}}{{name}}={{#writable}}write{{/writable}}{{^writable}}read{{/writable}};{{/shared}}');
-      reloadPromptSets([promptDir]);
     });
 
-    afterEach(() => {
-      reloadPromptSets([]);
-      fs.rmSync(promptDir, { recursive: true, force: true });
-    });
+    afterEach(() => fs.rmSync(promptDir, { recursive: true, force: true }));
 
     /** Commit a game notes guide, as an agent's bash command would. */
     function writeGuide(content: string): void {
@@ -283,15 +278,11 @@ describe('recordsDirections', () => {
     beforeEach(() => {
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-prompts-'));
     });
-    afterEach(() => {
-      reloadPromptSets([]);
-      fs.rmSync(dir, { recursive: true, force: true });
-    });
+    afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
     it('should still load and fill a custom file that reads the retired turn names', () => {
       fs.writeFileSync(path.join(dir, 'records-directions.md'),
         '{{#hasTurns}}[{{turnRanges}}|{{latestTurn}}]{{/hasTurns}}{{^hasTurns}}[none]{{/hasTurns}}\n');
-      reloadPromptSets([dir]);
       const context = { ...enableFileMode(bareContext(), temp.store), prompts: dir };
       expect(recordsDirections(context).trim()).toBe('[none]');
       record(1, 2, 3);
@@ -301,7 +292,6 @@ describe('recordsDirections', () => {
     it('should still load and fill a custom directions file that reads the retired notes names', () => {
       fs.writeFileSync(path.join(dir, 'records-directions.md'),
         '{{#notes}}[{{latest.path}}|{{latest.content}}{{#earlier.length}}|more{{/earlier.length}}{{#earlier}},{{.}}{{/earlier}}]{{/notes}}{{^notes}}[none]{{/notes}}\n');
-      reloadPromptSets([dir]);
       const context = { ...enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} }), prompts: dir };
       expect(recordsDirections(context).trim()).toBe('[none]');
       temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: 'game/plan.md', type: 'file', content: 'Plan body.', mtime: 1000 }] });

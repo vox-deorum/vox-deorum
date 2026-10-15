@@ -62,6 +62,7 @@ vi.mock("../../../../src/utils/logger.js", () => ({
 import { IngameBridge } from "../../../../src/utils/diplomacy/ingame/ingame-bridge.js";
 import { ProposalConflictError } from "../../../../src/utils/diplomacy/deal/deal.js";
 import { ThreadBusyError, threadBusyMessage } from "../../../../src/utils/diplomacy/turn/chat-turn-commit.js";
+import { deferred } from "../../../helpers/deferred.js";
 
 /** Build one committed transcript row. */
 function row(id: number, content: string = `row ${id}`, speakerID = 3) {
@@ -71,13 +72,6 @@ function row(id: number, content: string = `row ${id}`, speakerID = 3) {
 /** Build one durable deal outcome row. */
 function dealRow(id: number, type: string, content = `deal ${id}`) {
   return { ID: id, SpeakerID: 1, MessageType: type, Content: content, Turn: 7, Payload: { ProposalMessageID: 7 } };
-}
-
-/** Create an unresolved promise whose test controls its completion. */
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((complete) => { resolve = complete; });
-  return { promise, resolve };
 }
 
 /** Build a live counterpart context and reset the bridge to that game. */

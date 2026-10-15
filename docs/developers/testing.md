@@ -49,7 +49,7 @@ The default `npm test` and `npm run test:mock` run the in-process mock tier. Too
 
 | Tier | Command | Notes |
 | --- | --- | --- |
-| **Mock** | `npm test` or `npm run test:mock` | The default in-process tier in `tests/mock/**`, with the MCP client replaced at the client seam. Telepathist coverage lives under `tests/mock/telepathist` and skips when recorded telemetry is unavailable. |
+| **Mock** | `npm test` or `npm run test:mock` | The default tier in `tests/mock/**`, with the MCP client replaced at the client seam. Tests run in-process, except the Archivist CLI test, which runs the source CLI as a child process against temp fixtures. Telepathist coverage lives under `tests/mock/telepathist` and skips when recorded telemetry is unavailable. |
 | **Real** | `npm run test:real` | **Not wired yet.** `tests/real/` does not exist, and the script runs with `--passWithNoTests`, so it is a clean no-op. The tier is reserved for a future out-of-process run against a real MCP server over a mock-DLL bridge. |
 | **Game** | `npm run test:game` | The live Civilization V tier in `tests/live/game/**`. It needs Windows and Civ V, runs sequentially with long timeouts, and is excluded from the default suite. |
 | **OBS** | `npm run test:obs` | The live OBS tier in `tests/live/obs/**`. It needs OBS Studio with its WebSocket server, and is excluded from the default suite. |

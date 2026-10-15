@@ -152,7 +152,7 @@ describe('capabilityMiddleware', () => {
       tools: [functionTool('found_city')],
       providerOptions: {},
     } as any);
-    expect(lastSystem(recorder)).toContain('Web');
+    expect(lastSystem(recorder)).toContain(capabilityInstruction({ web: true })!);
     expect(lastSystem(recorder)).not.toContain('/workspace/records');
   });
 

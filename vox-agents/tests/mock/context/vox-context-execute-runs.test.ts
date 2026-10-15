@@ -30,6 +30,7 @@ import { spanProcessor } from '../../../src/instrumentation.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
+import { deferred, type Deferred } from '../../helpers/deferred.js';
 import type { Model } from '../../../src/types/index.js';
 import { buildClosingReminder } from '../../../src/utils/prompts/closing-reminder.js';
 import { buildRescuePrompt } from '../../../src/utils/models/text-cleaning.js';
@@ -53,12 +54,6 @@ function fakeResult(text = 'done') {
     toolResults: [],
   };
   return { steps: [step], text } as any;
-}
-
-function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>(r => (resolve = r));
-  return { promise, resolve };
 }
 
 /** Minimal real agent that runs exactly one model step (mocked) and returns its text. */
@@ -508,8 +503,8 @@ describe('VoxContext.execute cancellation isolation', () => {
   it('aborts one root mid-step while the concurrent root’s step completes unaffected', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'exec-abort-mid-step');
     const base = makeStrategistParameters();
-    const arrived: Record<number, ReturnType<typeof deferred>> = { 100: deferred(), 200: deferred() };
-    const gate: Record<number, ReturnType<typeof deferred>> = { 100: deferred(), 200: deferred() };
+    const arrived: Record<number, Deferred> = { 100: deferred(), 200: deferred() };
+    const gate: Record<number, Deferred> = { 100: deferred(), 200: deferred() };
 
     stc.mockImplementation(async (params: any) => {
       const turn = (params.runtimeContext as { turn: number }).turn;

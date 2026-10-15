@@ -9,23 +9,28 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, describe, it, expect } from 'vitest';
+import { afterAll, beforeAll, describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../../src/infra/agent-registry.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 const diplomat = agentRegistry.get('diplomat') as any;
 const spokesperson = agentRegistry.get('spokesperson') as any;
 
-const promptFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'vd-diplomat-prompts-'));
-const sharedPromptFolder = path.join(promptFolder, 'shared');
-fs.mkdirSync(sharedPromptFolder);
-fs.writeFileSync(
-  path.join(sharedPromptFolder, 'audience.md'),
-  `CONTROLLED-AUDIENCE: {{user}}
+let promptFolder: string;
+let promptContext: any;
+
+/** Create a custom prompt folder whose audience fragment marks each branch. */
+beforeAll(() => {
+  promptFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'vd-diplomat-prompts-'));
+  fs.mkdirSync(path.join(promptFolder, 'shared'));
+  fs.writeFileSync(
+    path.join(promptFolder, 'shared', 'audience.md'),
+    `CONTROLLED-AUDIENCE: {{user}}
 {{#teammate}}CONTROLLED-TEAMMATE: {{civName}}{{/teammate}}{{^teammate}}CONTROLLED-NO-TEAMMATE{{/teammate}}
 `,
-);
-const promptContext = { prompts: promptFolder } as any;
+  );
+  promptContext = { prompts: promptFolder };
+});
 
 /** Remove the temporary custom prompt fixture after the audience tests finish. */
 afterAll(() => fs.rmSync(promptFolder, { recursive: true, force: true }));

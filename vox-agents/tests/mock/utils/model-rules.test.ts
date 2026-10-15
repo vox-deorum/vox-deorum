@@ -95,12 +95,16 @@ describe('model rules', () => {
     });
   });
 
-  it('should apply reasoning to a synthesized model', () => {
+  it('should apply reasoning to a synthesized model and log it only on first use', () => {
     expect(getModelConfig('openai/gpt-oss-synth', 'high')).toMatchObject({
       provider: 'openai',
       name: 'gpt-oss-synth',
       options: { reasoningEffort: 'high' },
     });
+    const logged = mocks.logger.info.mock.calls.length;
+    expect(logged).toBeGreaterThan(0);
+    getModelConfig('openai/gpt-oss-synth', 'high');
+    expect(mocks.logger.info).toHaveBeenCalledTimes(logged);
   });
 
   it('should scope prompt middleware to open-weight providers', () => {
@@ -143,9 +147,13 @@ describe('model rules', () => {
     }
   });
 
-  it('should fall back from an unknown ID', () => {
+  it('should fall back from an unknown ID and warn only on first use', () => {
     expect(getModelConfig('missing-provider/example')).toEqual({
       provider: 'openai', name: 'configured-default',
     });
+    const warned = mocks.logger.warn.mock.calls.length;
+    expect(warned).toBeGreaterThan(0);
+    getModelConfig('missing-provider/example');
+    expect(mocks.logger.warn).toHaveBeenCalledTimes(warned);
   });
 });

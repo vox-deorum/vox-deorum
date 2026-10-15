@@ -4,15 +4,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { runOracleTasks } from '../../../src/oracle/run-control.js';
-
-/** Creates a promise whose settlement is controlled by the test. */
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>(innerResolve => {
-    resolve = innerResolve;
-  });
-  return { promise, resolve };
-}
+import { deferred } from '../../helpers/deferred.js';
 
 /** Waits until an assertion succeeds while scheduler microtasks are progressing. */
 async function waitFor(assertion: () => void): Promise<void> {

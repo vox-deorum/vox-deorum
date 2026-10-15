@@ -59,7 +59,10 @@ vi.mock('ai-sdk-provider-claude-code', () => {
 
 import { getModel, getModelConfig, inputTokenLimit, resolveToolFraming } from '../../../src/utils/models/models.js';
 import { toolRescueMiddleware } from '../../../src/utils/models/tool-rescue/middleware.js';
-import { capabilityHeading } from '../../../src/utils/models/capability-prompt.js';
+import { capabilityHeading, capabilityInstruction } from '../../../src/utils/models/capability-prompt.js';
+
+// The web section is the last section of a web-only capability reminder.
+const webGuidance = capabilityInstruction({ web: true })!.split('\n\n').at(-1)!;
 import type { Model, ResolvedFilesConfig } from '../../../src/types/index.js';
 
 /** Build a ReadableStream that emits the given chunks then closes (for wrapStream tests). */
@@ -1188,6 +1191,8 @@ describe('claude-code provider', () => {
         { ...tools[0], name: 'finalize_decision', description: 'Finish this turn' },
         { ...tools[0], name: 'bash', description: 'Run a script' },
       ];
+      const originalPrompt = structuredClone(prompt);
+      const originalTools = structuredClone(offeredTools);
       await (model as any).doGenerate({
         tools: offeredTools,
         toolChoice: { type: 'auto' },
@@ -1199,15 +1204,15 @@ describe('claude-code provider', () => {
       expect(finalPrompt.some((m: any) => m.role === 'system')).toBe(false);
       const sys = { content: userText(finalPrompt) };
       expect(sys.content).toContain('/workspace/records');
-      expect(sys.content).toContain('Web');
+      expect(sys.content).toContain(webGuidance);
       expect(sys.content).toContain('send_message');
       expect(sys.content).toContain('messageText');
       expect(sys.content).toContain('get_briefing');
       expect(sys.content).toContain('briefingId');
       expect(sys.content).toContain('finalize_decision');
       expect(sys.content).not.toContain('inactive_action');
-      expect(offeredTools.map((tool) => tool.name)).toEqual(['send_message', 'get_briefing', 'finalize_decision', 'bash']);
-      expect(prompt[0].content[0].text).toBe('hi');
+      expect(offeredTools).toEqual(originalTools);
+      expect(prompt).toEqual(originalPrompt);
     });
 
     it('keeps a reused caller prompt unchanged and produces the same provider prompt on repeat calls', async () => {
@@ -1239,7 +1244,7 @@ describe('claude-code provider', () => {
       for (const call of requests) {
         expect(call.prompt.some((message: any) => message.role === 'system')).toBe(false);
         const system = userText(call.prompt);
-        expect(system).toContain('Web');
+        expect(system).toContain(webGuidance);
         expect(system).toContain('send_message');
         expect(system).toContain('messageText');
       }

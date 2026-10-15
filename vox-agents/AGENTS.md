@@ -17,7 +17,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
 - **Provider modules**: Provider-specific implementations live in `src/utils/models/providers/` and may import shared types or sibling helpers, but never `models.ts`
 - **Config defaults**: `config.json` is gitignored. Effective values come from `src/utils/config/defaults.ts` merged by `src/utils/config/diff.ts`, loaded through `src/utils/config.ts`
-- **Shared helpers**: Use `isRecord`/`asRecord` from `utils/guards.ts`, `errorMessage` from `utils/errors.ts` (the UI has its own in `ui/src/utils/errors.ts`), and `sendError` from `web/http-utils.ts` instead of local copies. Test fixtures for transcript rows and fake loggers live in `tests/helpers/`
+- **Shared helpers**: Use `isRecord`/`asRecord` from `utils/guards.ts`, `errorMessage` from `utils/errors.ts` (the UI has its own in `ui/src/utils/errors.ts`), and `sendError` from `web/http-utils.ts` instead of local copies. Test fixtures (transcript rows, fake loggers, telemetry and knowledge databases, deferred promises) live in `tests/helpers/`; the telemetry fixture reuses `spansTableSql` from `utils/telemetry/schema.ts`
 - **Use Map for registries** (players, handlers, etc.)
 - **Graceful cancellation**: each root run owns its `AbortController`; pass the active root's signal (resolved from `AsyncLocalStorage`) to async operations. `context.abort()` cancels every active root
 
@@ -38,7 +38,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 ### Test Pathways
 
-- **Mock** (`tests/mock/**`): Default in-process mock tier. Telepathist coverage lives in `tests/mock/telepathist` and can skip when recorded telemetry is unavailable.
+- **Mock** (`tests/mock/**`): Default mock tier. Tests run in-process, except the Archivist CLI test, which runs the source CLI through tsx against SQLite and DuckDB fixtures in a temp folder. Telepathist coverage lives in `tests/mock/telepathist` and can skip when recorded telemetry is unavailable.
 - **Real** (`tests/real/**`): Reserved for a future out-of-process real MCP Server and mock Bridge bottom. `npm run test:real` currently passes with no tests.
 - **Game** (`tests/live/game/**`): Live Civilization V tier. Launches Civilization V with long timeouts and sequential execution through `singleFork: true`.
 - **OBS** (`tests/live/obs/**`): Live OBS tier. Requires OBS Studio with its WebSocket server and skips gracefully when OBS is unreachable.

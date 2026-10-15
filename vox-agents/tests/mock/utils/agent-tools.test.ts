@@ -14,6 +14,7 @@ import { VoxContext } from '../../../src/infra/vox-context.js';
 import type { AgentParameters } from '../../../src/infra/vox-agent.js';
 import { createAgentTool } from '../../../src/utils/tools/agent-tools.js';
 import { createFakeVoxContext, FakeVoxContext } from '../../helpers/fake-vox-context.js';
+import { deferred } from '../../helpers/deferred.js';
 
 /** Build a minimal fake agent with only the fields the wrapper reads. */
 function fakeAgent(overrides: Record<string, unknown> = {}): any {
@@ -199,33 +200,16 @@ describe('createAgentTool', () => {
   describe('fire-and-forget execution', () => {
     it('returns while detached work is pending and lets it finish after caller cancellation', async () => {
       const context = new VoxContext<AgentParameters>({}, 'detached-agent-tool');
-      let startWorker!: () => void;
-      let releaseWorker!: () => void;
-      let finishWorker!: (result: string) => void;
-      let failWorker!: (error: unknown) => void;
+      const workerStarted = deferred();
+      const workerGate = deferred();
       let workerSignal!: AbortSignal;
-      const workerStarted = new Promise<void>((resolve) => { startWorker = resolve; });
-      const workerGate = new Promise<void>((resolve) => { releaseWorker = resolve; });
-      const workerResult = new Promise<string>((resolve, reject) => {
-        finishWorker = resolve;
-        failWorker = reject;
-      });
-      let workerFinished = false;
-      // Track the deferred worker result so failures settle the assertion instead of hanging.
-      void workerResult.then(() => { workerFinished = true; }, () => {});
       // Hold the real context's detached execution until after the caller run is aborted.
       const execute = vi.spyOn(context, 'execute').mockImplementation(async () => {
         workerSignal = context.currentSignal();
-        startWorker();
-        try {
-          await workerGate;
-          workerSignal.throwIfAborted();
-          finishWorker('worker completed');
-          return 'worker completed';
-        } catch (error) {
-          failWorker(error);
-          throw error;
-        }
+        workerStarted.resolve();
+        await workerGate.promise;
+        workerSignal.throwIfAborted();
+        return 'worker completed';
       });
       const input = { Prompt: 'async task' };
 
@@ -236,8 +220,7 @@ describe('createAgentTool', () => {
       try {
         const out = await context.withRun({ parameters: { playerID: 1, gameID: 'game-1', turn: 4 } }, async (run) => {
           const submitted = await tool.execute!(input, { toolCallId: 'x', messages: [] });
-          await workerStarted;
-          expect(workerFinished).toBe(false);
+          await workerStarted.promise;
           run.abort();
           expect(run.signal.aborted).toBe(true);
           expect(workerSignal.aborted).toBe(false);
@@ -246,13 +229,12 @@ describe('createAgentTool', () => {
 
         expect(out).toMatchObject({ result: expect.any(String) });
         expect(execute).toHaveBeenCalledWith('async-agent', input);
-        releaseWorker();
-        await expect(workerResult).resolves.toBe('worker completed');
+        workerGate.resolve();
+        await expect(execute.mock.results[0].value).resolves.toBe('worker completed');
       } finally {
-        releaseWorker();
-        if (workerSignal) await workerResult.catch(() => undefined);
+        workerGate.resolve();
         execute.mockRestore();
-        context.abort();
+        await context.shutdown();
       }
     });
 
