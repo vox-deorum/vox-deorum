@@ -73,10 +73,17 @@ describe('capabilityInstruction', () => {
     const terminals = ['found_city'];
     const read = capabilityInstruction({ files: { game: 'read', shared: { lessons: 'read' }, quota: 17 }, web: false }, terminals)!;
     const game = capabilityInstruction({ files: gameWrite, web: false }, terminals)!;
-    const shared = capabilityInstruction({ files: { game: 'read', shared: { lessons: 'write' }, quota: 17 }, web: false }, terminals)!;
+    const gameWithReadShared = capabilityInstruction({ files: { game: 'write', shared: { lessons: 'read' }, quota: 17 }, web: false }, terminals)!;
+    const gameWithSharedWrite = capabilityInstruction({ files: { game: 'write', shared: { lessons: 'write' }, quota: 17 }, web: false }, terminals)!;
+    const sharedWriteOnly = capabilityInstruction({ files: { game: 'read', shared: { lessons: 'write' }, quota: 17 }, web: false }, terminals)!;
     expect(game).not.toBe(read);
     expect(game.length).toBeGreaterThan(read.length);
-    expect(shared).toBe(game);
+    // A read-only shared folder adds nothing to the game-folder write rule.
+    expect(gameWithReadShared).toBe(game);
+    // A writable shared folder changes where lessons go, so the text differs.
+    expect(gameWithSharedWrite).not.toBe(game);
+    // Any writable folder asks for the same note targets, whichever folder is writable.
+    expect(sharedWriteOnly).toBe(gameWithSharedWrite);
   });
 
   it('gives the output limit and no recorded turn number', () => {

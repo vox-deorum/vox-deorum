@@ -49,8 +49,9 @@ function makeState(turn: number, events: Record<string, unknown> = { '1': [{ Typ
       _markdownConfig: markdownConfig('Player {key}'),
     },
     cities: {
-      Augustus: { Roma: { Population: 5 } },
-      Alexander: { Athens: { Population: 4 } },
+      Rome: { Roma: { Population: 5 } },
+      Greece: { Athens: { Population: 4 } },
+      'City-States': { Geneva: { Population: 3 } },
       _markdownConfig: markdownConfig('Player: {key}', '{key}'),
     },
     military: {
@@ -101,7 +102,7 @@ describe('SeatRecords', () => {
       expect(JSON.parse(read('records/turn-5/players.json')!)).toEqual(
         Object.fromEntries(Object.entries(state.players!).filter(([key]) => key !== '_markdownConfig')),
       );
-      expect(read('records/turn-5/cities.md')).toContain('Player: Augustus');
+      expect(read('records/turn-5/cities.md')).toContain('Player: Rome');
       expect(read('records/turn-5/military.md')).toBe(`${renderSection('military', state.military)}\n`);
       expect(read('records/turn-5/victory.md')).toBe(`${renderSection('victory', state.victory)}\n`);
 
