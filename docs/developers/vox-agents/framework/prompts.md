@@ -101,9 +101,10 @@ The directions text comes from `recordsDirections` and the `records-directions` 
 - that each `turn-<N>` folder is one processed refresh, and the newest is the latest recorded refresh, which can trail the current turn. It names no turn numbers;
 - that the records `CATALOG.md` lists the recorded turns and gaps between them, the full section index, briefings, and file sizes;
 - which sections are not given inline and the file pattern for each: the sections in `fileModeOmittedSections` (`src/knowledge/sections.ts`: cities, military, and events) that the caller does not keep in the prompt;
-- which sections the caller already keeps in the prompt for the latest turn, so the model reads their files for earlier turns or where the prompt points to them. The plain simple strategist passes `simpleStrategistInlineSections`, which adds cities and military to `strategistInlineSections`. The briefed, staffed, and learned variants pass `strategistInlineSections` (options, strategies, victory progress, and players). Envoys pass none.
+- which sections the caller already keeps in the prompt for the latest turn, so the model reads their files for earlier turns or where the prompt points to them. The plain simple strategist passes `simpleStrategistInlineSections`, which adds cities and military to `strategistInlineSections`. The briefed, staffed, and learned variants pass `strategistInlineSections` (options, strategies, victory progress, and players). Envoys pass none;
+- read examples for recorded turns: a combined `cat` of several files, `grep -n` searches, `head` and `sed` slices after `wc -c` shows the sizes, and one player's files under `players/` and `cities/`.
 
-Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, and others views. Each view also keeps system events, such as turn starts and ends, as turn markers, and a view whose own category has no events says there are none in that category. Wherever the Players section renders, in a prompt or in `players.md`, unmet, defeated, and barbarian players are listed last under an `Other players` heading and get no split file.
+Events are stored in each turn folder as one file with all events, plus economic, military, diplomatic, and others views. Each view also keeps system events, such as turn starts and ends, as turn markers, and a view whose own category has no events says there are none in that category. Players are also split per player in `players/player-<ID>.md`, and cities per civilization in `cities/player-<ID>.md`, with city-states, barbarians, and unmet owners together in `cities/others.md`. Wherever the Players section renders, in a prompt or in `players.md`, unmet, defeated, and barbarian players are listed last under an `Other players` heading and get no split file.
 
 Next comes the game notes guide, `/workspace/game/AGENTS.md`. It says whether the agent may edit the guide and shows the guide's text, noting that the file need not be read again. When the game folder is writable and the guide is not seeded yet, the default guide is shown, since the first bash command seeds exactly that text. An empty guide is shown as "It is empty."
 
@@ -115,7 +116,7 @@ Both messages are built once per run, so they stay fixed across the run's steps 
 
 | Agent | Opening messages in file mode |
 | --- | --- |
-| Simple strategist | The directions, then the system overview, then any notes, then a core message (strategies, victory, full players, our own cities, full military, decision context). The Cities section names the other owners' split files for the turn (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
+| Simple strategist | The directions, then the system overview, then any notes, then a core message (strategies, victory, full players, our own cities, full military, decision context). The Cities section names the other owners' city files for the turn: `player-<ID>.md` per civilization plus `others.md` (`renderStrategistReports` in `src/strategist/strategy-parameters.ts`). Without an entry for our civilization, all cities stay inline. |
 | Briefed, staffed, and learned strategists | The same inline content, with the directions before the system overview and any notes between the overview and the reports. |
 | Diplomat, spokesperson, and negotiator | The directions come before the shared game-context system message, and any notes sit between it and its game-state user message. |
 | Briefers and the diplomatic analyst | No directions. They declare no `bash` tool, so they never run in file mode. |
@@ -205,7 +206,7 @@ The "must call" requirement lives here rather than in provider middleware, so ev
 | Error text for a call to a removed tool | `buildRemovedToolRejections` in `src/utils/tools/tool-availability.ts` | The model sees it as the call's result. |
 | Empty-reply rescue wording | `buildRescuePrompt` in `src/utils/models/text-cleaning.ts` | |
 | Completion-tool sentence (Anthropic, Codex) | `completionToolsInstruction` in `src/utils/models/providers/required-tool-choice.ts` | Must not depend on whether the step requires a call. |
-| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | Folders and where to find recorded turns belong to the records directions. See [Capability reminder](../models/middleware.md#capability-reminder). |
+| Workspace section of the capability reminder | `vox-agents/prompts/workspace.md`, rendered through the run's prompt folder | Folders, recorded turns, and the read examples belong to the records directions. See [Capability reminder](../models/middleware.md#capability-reminder). |
 | Extra Capabilities section | `capabilityInstruction` in `src/utils/models/capability-prompt.ts` | |
 | Prompt-mode tool instructions | `createToolPrompts` in `src/utils/models/tool-rescue/prompt.ts` | Keep it in step with `buildToolCallArraySchema` and `formatToolCallText`. |
 | Which models use prompt mode | `options.toolMiddleware` in the model config; defaults in `src/utils/models/rules.ts` | |

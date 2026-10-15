@@ -90,7 +90,7 @@ describe('capabilityInstruction', () => {
     const limit = workspaceOutputLimit.toLocaleString('en-US');
     const instruction = capabilityInstruction({ files: gameWrite, web: false })!;
     expect(instruction).toContain(limit);
-    expect(instruction).toContain(workspaceRecordsPath);
+    expect(instruction).not.toContain(workspaceRecordsPath);
     expect(instruction).not.toMatch(/turn-\d+\//);
     expect(capabilityInstruction({ web: true })).not.toContain(limit);
   });
@@ -114,8 +114,8 @@ describe('capabilityInstruction', () => {
     const tools = capabilityInstruction({ files: gameWrite, web: true }, ['found_city'], 'tools')!;
     const actions = capabilityInstruction({ files: gameWrite, web: true }, ['found_city'], 'actions')!;
     expect(actions).not.toBe(tools);
-    expect(actions).toContain('actions');
-    expect(tools).not.toContain('actions');
+    expect(actions).toMatch(/\baction\b/);
+    expect(tools).not.toMatch(/\baction\b/);
   });
 
   it('omits terminal guidance when no terminal tool is declared', () => {
@@ -143,7 +143,7 @@ describe('capabilityMiddleware', () => {
       params: { prompt, tools: [functionTool('found_city'), functionTool(bashToolName)] },
     });
     const system = withBash.prompt.filter((m: any) => m.role === 'system').map((m: any) => m.content).join('\n');
-    expect(system).toContain('/workspace/records');
+    expect(system).toContain(workspaceOutputLimit.toLocaleString('en-US'));
     expect(system).toContain('found_city');
     expect(withBash.tools.map((tool: any) => tool.name)).toEqual(['found_city', bashToolName]);
   });
@@ -160,10 +160,10 @@ describe('capabilityMiddleware', () => {
       providerOptions: {},
     } as any);
     expect(lastSystem(recorder)).toContain(capabilityInstruction({ web: true })!);
-    expect(lastSystem(recorder)).not.toContain('/workspace/records');
+    expect(lastSystem(recorder)).not.toContain(workspaceOutputLimit.toLocaleString('en-US'));
   });
 
-  it('includes workspace paths and the declared completion tool in the model request', async () => {
+  it('includes the workspace guidance and the declared completion tool in the model request', async () => {
     const recorder = recordingModel();
     const model = wrapLanguageModel({
       model: recorder,
@@ -184,7 +184,7 @@ describe('capabilityMiddleware', () => {
     } as any);
 
     const system = lastSystem(recorder);
-    expect(system).toContain('/workspace/records');
+    expect(system).toContain(workspaceOutputLimit.toLocaleString('en-US'));
     expect(system).toContain('found_city');
     expect(system).toContain(bashToolName);
     expect(system).not.toContain('inactive_tool');

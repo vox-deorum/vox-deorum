@@ -370,7 +370,8 @@ function renderOwnCities(cities: CitiesReport | undefined, ownName: string | und
   const others = splitEntries("cities", report, players).filter(({ entry }) => entry !== ownName);
   const rendered = renderSection("cities", own);
   if (others.length === 0) return rendered;
-  const files = others.map(({ name }) => `\`${workspaceRecordsPath}/turn-${turn}/cities/${name}.md\``).join(", ");
+  const files = [...new Set(others.map(({ name }) => name))]
+    .map((name) => `\`${workspaceRecordsPath}/turn-${turn}/cities/${name}.md\``).join(", ");
   return `${rendered}\n\nOnly your cities are shown here. Other owners' cities this turn: ${files}.`;
 }
 

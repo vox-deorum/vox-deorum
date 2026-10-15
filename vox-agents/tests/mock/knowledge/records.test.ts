@@ -44,7 +44,7 @@ function makeState(turn: number, events: Record<string, unknown> = { '1': [{ Typ
     players: {
       '0': { Civilization: 'Rome', Leader: 'Augustus', IsMajor: true, Score: 10 },
       '1': { Civilization: 'Greece', Leader: 'Alexander', IsMajor: true, Score: 8 },
-      '2': { Civilization: 'Greece', Leader: 'Pericles', IsMajor: true, Score: 7 },
+      '2': { Civilization: 'Egypt', Leader: 'Ramesses', IsMajor: true, Score: 7 },
       '63': 'Barbarians',
       _markdownConfig: markdownConfig('Player {key}'),
     },
@@ -52,6 +52,7 @@ function makeState(turn: number, events: Record<string, unknown> = { '1': [{ Typ
       Rome: { Roma: { Population: 5 } },
       Greece: { Athens: { Population: 4 } },
       'City-States': { Geneva: { Population: 3 } },
+      Barbarians: { Camp: { Population: 1 } },
       _markdownConfig: markdownConfig('Player: {key}', '{key}'),
     },
     military: {
@@ -113,23 +114,28 @@ describe('SeatRecords', () => {
       expect(JSON.parse(read('records/turn-5/strategies.json')!)).not.toHaveProperty('_markdownConfig');
     });
 
-    it('should split players and cities into readable parts with collision suffixes, but keep military whole', () => {
+    it('should split players and cities by player ID, with other city owners in one file', () => {
       records.recordTurn(makeParameters(), makeState(5));
       const parts = [...store.manifest().keys()].filter((key) => /^records\/turn-5\/[a-z]+\//.test(key)).sort();
       expect(parts).toEqual([
-        'records/turn-5/cities/alexander.md',
-        'records/turn-5/cities/augustus.md',
-        'records/turn-5/players/greece-2.md',
-        'records/turn-5/players/greece.md',
-        'records/turn-5/players/rome.md',
+        'records/turn-5/cities/others.md',
+        'records/turn-5/cities/player-0.md',
+        'records/turn-5/cities/player-1.md',
+        'records/turn-5/players/player-0.md',
+        'records/turn-5/players/player-1.md',
+        'records/turn-5/players/player-2.md',
       ]);
       expect([...store.manifest().keys()].some((key) => key.startsWith('records/turn-5/military/'))).toBe(false);
-      expect(read('records/turn-5/players/greece.md')).toContain('Alexander');
-      expect(read('records/turn-5/players/greece.md')).not.toContain('Pericles');
-      expect(read('records/turn-5/players/greece-2.md')).toContain('Pericles');
-      expect(read('records/turn-5/players/greece-2.md')).toContain('Player 2');
-      expect(read('records/turn-5/cities/augustus.md')).toContain('Roma');
-      expect(read('records/turn-5/cities/augustus.md')).not.toContain('Athens');
+      expect(read('records/turn-5/players/player-1.md')).toContain('Alexander');
+      expect(read('records/turn-5/players/player-1.md')).not.toContain('Ramesses');
+      expect(read('records/turn-5/players/player-2.md')).toContain('Ramesses');
+      expect(read('records/turn-5/cities/player-0.md')).toContain('Roma');
+      expect(read('records/turn-5/cities/player-0.md')).not.toContain('Athens');
+      expect(read('records/turn-5/cities/player-1.md')).toContain('Athens');
+      // Owners without a player ID share one file.
+      expect(read('records/turn-5/cities/others.md')).toContain('Geneva');
+      expect(read('records/turn-5/cities/others.md')).toContain('Camp');
+      expect(read('records/turn-5/cities/others.md')).not.toContain('Roma');
     });
 
     it('should give string player entries no split file while keeping them in the report', () => {
@@ -137,7 +143,7 @@ describe('SeatRecords', () => {
       const playerParts = [...store.manifest().keys()].filter((key) => key.startsWith('records/turn-5/players/'));
       expect(playerParts).not.toContain('records/turn-5/players/player-63.md');
       expect(playerParts.some((key) => key.includes('barbarian'))).toBe(false);
-      expect(playerParts).toContain('records/turn-5/players/rome.md');
+      expect(playerParts).toContain('records/turn-5/players/player-0.md');
       expect(read('records/turn-5/players.md')).toContain('Barbarians');
     });
 

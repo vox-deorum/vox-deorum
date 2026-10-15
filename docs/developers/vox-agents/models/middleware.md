@@ -47,14 +47,12 @@ A model call that has `bash` or CLI web access gets one system reminder, built b
 | Part | Included when |
 | --- | --- |
 | Intro | Whenever the reminder is added. When the request declares completion tools, it names them and asks for every other call in the same response as the completion call. A successful completion ends the run once all calls in that response finish, with no further step to inspect results. |
-| Workspace | The request offers the `bash` tool (any provider). Covers keeping notes current, where to save notes for later turns when a folder is writable, the step budget with its two-step turn (one read script, then every decision, note, and terminal call together), and reading large records. |
+| Workspace | The request offers the `bash` tool (any provider). Covers keeping notes current, where to save game notes and general lessons when a folder is writable, the step budget with its two-step turn (one read script, then every decision, note, and terminal call together), and the output limit per stream. |
 | Web | Codex or Claude Code with `hostTools: ["Web"]`. |
 
-When the game folder or a shared folder is writable, the Workspace part asks the model to save useful notes with `bash` in the same response as its terminal call. Game observations, inferences, and plans belong only in a writable game notes folder. Writable shared folders hold only generalized lessons and reusable references. The records directions table stays the only folder listing.
+When any folder is writable, the Workspace part always asks for both kinds of notes: game observations, inferences, and plans in the game notes folder, and generalized lessons and reusable references in writable shared folders when one exists or in `lessons/` of the game notes folder otherwise. The records directions table stays the only folder listing.
 
-The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). Its large-file advice covers the bash output limit per stream (`workspaceOutputLimit`) and read examples for one combined `cat` of several files, `grep -n`, `head` and `sed` after `wc -c`, `jq`, and split parts of a civilization or zone. The examples use quoted shell variables for a recorded turn, initialized in each command script, and apply only after a turn has been recorded. The model finds the recorded turns as the records directions describe.
-
-The text depends only on the seat's files setting and on the agent's terminal tools and their noun. It is the same across turns and runs, which keeps the tools, the system text, and the cached game-context message a cache hit on every turn (see [Caching](../framework/caching.md)).
+The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). The text depends only on the seat's files setting and on the agent's terminal tools and their noun. It is the same across turns and runs, which keeps the tools, the system text, and the cached game-context message a cache hit on every turn (see [Caching](../framework/caching.md)).
 
 Model-step spans record what was enabled in `host.capability`, comma-separated:
 

@@ -54,12 +54,8 @@ function toJson(data: unknown): string {
   return `${JSON.stringify(withoutMarkdownConfig(data), null, 2)}\n`;
 }
 
-/** A readable file name for a split part: lowercase words joined by dashes. */
-function slug(label: string): string {
-  const cleaned = label.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return cleaned || 'part';
-}
+/** File name (no extension) of the city part holding every owner without a player ID. */
+const otherOwnersPart = 'others';
 
 /** The label of one top-level entry of a report being split. */
 function partLabel(key: SectionKey, entryKey: string, value: unknown): string {
@@ -70,67 +66,55 @@ function partLabel(key: SectionKey, entryKey: string, value: unknown): string {
   return entryKey;
 }
 
-/**
- * The player ID of each civilization name in a players report, for naming city parts. A name two
- * players share maps to no ID, so their cities keep a name-based file.
- */
-function playerIDsByCivilization(players: unknown): Map<string, string | undefined> {
-  const ids = new Map<string, string | undefined>();
+/** The player ID of each civilization name in a players report, for naming city parts. */
+function playerIDsByCivilization(players: unknown): Map<string, string> {
+  const ids = new Map<string, string>();
   if (!isRecord(players)) return ids;
   for (const [id, value] of Object.entries(players)) {
     if (id.startsWith('_') || !isRecord(value) || typeof value.Civilization !== 'string') continue;
-    ids.set(value.Civilization, ids.has(value.Civilization) ? undefined : id);
+    if (!ids.has(value.Civilization)) ids.set(value.Civilization, id);
   }
   return ids;
-}
-
-/**
- * The base file name of one split entry. Players and the cities of a known civilization use
- * `player-<ID>`, so agents can name the file from a `Player <ID>` heading without listing the
- * folder. Other city owners (city-states, barbarians) use a slug of their name.
- */
-function partName(key: SectionKey, entry: string, label: string, ownerIDs: Map<string, string | undefined>): string {
-  if (key === 'players') return `player-${entry}`;
-  const id = ownerIDs.get(entry);
-  return id === undefined ? slug(label) : `player-${id}`;
 }
 
 /** One top-level entry of a report being split, with its label and file name (no extension). */
 interface SplitEntry { entry: string; value: unknown; label: string; name: string }
 
 /**
- * The top-level entries of a report being split (players or city owners).
- * Each gets a file name from {@link partName}, with a numeric suffix when two entries would share
- * one. Only object entries are split: plain strings (unmet, defeated, and barbarian players) get
- * no part.
+ * The top-level entries of a report being split (players or city owners). Players and the cities
+ * of a civilization in the players report go to `player-<ID>`, so agents can name the file from a
+ * `Player <ID>` heading without listing the folder. Every other city owner (city-states,
+ * barbarians, unmet players) shares the `others` part. Only object entries are split: plain
+ * strings (unmet, defeated, and barbarian players) get no part.
  *
  * @param players - The same turn's players report, which maps city owners to player IDs
  */
 export function splitEntries(key: SectionKey, data: unknown, players?: unknown): SplitEntry[] {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
-  const ownerIDs = key === 'cities' ? playerIDsByCivilization(players) : new Map<string, string | undefined>();
-  const used = new Set<string>();
+  const ownerIDs = key === 'cities' ? playerIDsByCivilization(players) : new Map<string, string>();
   const entries: SplitEntry[] = [];
   for (const [entry, value] of Object.entries(data as Record<string, unknown>)) {
     if (entry.startsWith('_')) continue;
     if (typeof value !== 'object' || value === null) continue;
-    const label = partLabel(key, entry, value);
-    const base = partName(key, entry, label, ownerIDs);
-    let name = base;
-    for (let index = 2; used.has(name); index++) name = `${base}-${index}`;
-    used.add(name);
-    entries.push({ entry, value, label, name });
+    const id = key === 'players' ? entry : ownerIDs.get(entry);
+    const name = id === undefined ? otherOwnersPart : `player-${id}`;
+    entries.push({ entry, value, label: partLabel(key, entry, value), name });
   }
   return entries;
 }
 
-/** Split a report's Markdown by its top-level entries, each part keeping the report's heading configuration. */
+/**
+ * Split a report's Markdown into its parts, each keeping the report's heading configuration.
+ * Entries that share a part, such as the other city owners, are rendered together.
+ */
 function splitParts(key: SectionKey, data: unknown, players: unknown): Array<{ name: string; content: string }> {
   const report = data as Record<string, unknown>;
   const config = sections[key].markdown ?? (report?._markdownConfig as Partial<JsonToMarkdownConfig> | undefined) ?? {};
-  return splitEntries(key, data, players).map(({ entry, value, label, name }) => ({
+  const parts = new Map<string, SplitEntry[]>();
+  for (const entry of splitEntries(key, data, players)) parts.set(entry.name, [...(parts.get(entry.name) ?? []), entry]);
+  return [...parts].map(([name, entries]) => ({
     name,
-    content: `# ${sections[key].title}: ${label}\n\n${jsonToMarkdown({ [entry]: value }, config)}\n`,
+    content: `# ${sections[key].title}: ${entries.map(({ label }) => label).join(', ')}\n\n${jsonToMarkdown(Object.fromEntries(entries.map(({ entry, value }) => [entry, value])), config)}\n`,
   }));
 }
 
@@ -224,7 +208,7 @@ function formatSize(bytes: number): string {
 /** The split part files of each grouping, for the catalog's section index. */
 const splitFiles: Record<SectionSplit['by'], string> = {
   civilization: 'one file per player in `turn-<N>/players/player-<ID>.md`',
-  cityOwner: 'one file per civilization in `turn-<N>/cities/player-<ID>.md`, plus `city-states.md` and `barbarians.md`',
+  cityOwner: 'one file per civilization in `turn-<N>/cities/player-<ID>.md`, and `others.md` for city-states, barbarians, and unmet owners',
 };
 
 /** Where one section's record files live, for the catalog's section index. */

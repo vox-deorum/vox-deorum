@@ -162,7 +162,7 @@ describe('strategist prompt builders in file mode', () => {
       const parameters = freshParameters();
       const state = makeFixtureGameState();
       const ownName = parameters.metadata!.YouAre!.Name;
-      const others = splitEntries('cities', state.cities).filter(({ entry }) => entry !== ownName);
+      const others = splitEntries('cities', state.cities, state.players).filter(({ entry }) => entry !== ownName);
       expect(others.length).toBeGreaterThan(0);
 
       const [, inline] = renderStrategistReports(parameters, state);
@@ -183,7 +183,7 @@ describe('strategist prompt builders in file mode', () => {
       parameters.metadata!.YouAre!.Name = 'Atlantis';
       const state = makeFixtureGameState();
       const [, core] = renderStrategistReports(parameters, state, { fileMode: true });
-      for (const { entry } of splitEntries('cities', state.cities)) expect(core).toContain(`## Player: ${entry}`);
+      for (const { entry } of splitEntries('cities', state.cities, state.players)) expect(core).toContain(`## Player: ${entry}`);
       expect(core).not.toContain('/cities/');
     });
 

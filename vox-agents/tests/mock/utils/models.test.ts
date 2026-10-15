@@ -60,6 +60,7 @@ vi.mock('ai-sdk-provider-claude-code', () => {
 import { getModel, getModelConfig, inputTokenLimit, resolveToolFraming } from '../../../src/utils/models/models.js';
 import { toolRescueMiddleware } from '../../../src/utils/models/tool-rescue/middleware.js';
 import { capabilityHeading, capabilityInstruction } from '../../../src/utils/models/capability-prompt.js';
+import { workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
 
 // The web section is the last section of a web-only capability reminder.
 const webGuidance = capabilityInstruction({ web: true })!.split('\n\n').at(-1)!;
@@ -1203,7 +1204,7 @@ describe('claude-code provider', () => {
       const finalPrompt = calls[calls.length - 1].prompt;
       expect(finalPrompt.some((m: any) => m.role === 'system')).toBe(false);
       const sys = { content: userText(finalPrompt) };
-      expect(sys.content).toContain('/workspace/records');
+      expect(sys.content).toContain(workspaceOutputLimit.toLocaleString('en-US'));
       expect(sys.content).toContain(webGuidance);
       expect(sys.content).toContain('send_message');
       expect(sys.content).toContain('messageText');

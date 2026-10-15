@@ -31,7 +31,7 @@ Each processed turn is recorded before pacing decides whether to skip, so skippe
 | Path | Holds |
 | --- | --- |
 | `records/turn-<N>/<section>.md` and `.json` | One pair per [game-state section](../framework/prompt-files.md#game-state-sections). |
-| `records/turn-<N>/...` (extra parts) | Players and cities are also split into smaller Markdown files, by civilization and by city owner. Unmet, defeated, and barbarian players get no split file; the shared Players section renderer (`src/knowledge/sections.ts`) lists them at the end under an `Other players` heading, in every prompt and in `players.md`. |
+| `records/turn-<N>/...` (extra parts) | Players and cities are also split into smaller Markdown files. Each player is one file, `players/player-<ID>.md`. Cities go to `cities/player-<ID>.md` when the owner is a civilization in the players report, matched by name, and every other owner (city-states, barbarians, unmet players) shares `cities/others.md`. Unmet, defeated, and barbarian players get no split file; the shared Players section renderer (`src/knowledge/sections.ts`) lists them at the end under an `Other players` heading, in every prompt and in `players.md`. |
 | `records/turn-<N>/events-*` | Events as `events-all`, plus four category views: economic, military, diplomatic, and others. Each view also keeps system events, such as turn starts and ends, as turn markers. A view whose own category has no events says there are no events in that category. |
 | `records/turn-<N>/briefings/<kind>.md` | Briefings. See below. |
 | `records/game/` | Game-wide `situation` and `civilization` files. |
