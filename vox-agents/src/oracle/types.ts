@@ -157,6 +157,8 @@ export interface OracleParameters extends AgentParameters {
   resolvedModel: Model;
   /** Agent type being replayed -- controls stop behavior */
   agentType?: string;
+  /** Mark the end of the prompt for prompt caching, set when the same prompt is replayed several times */
+  cachePrompt?: boolean;
   /** Set by stopCheck, read by getOutput to collect all steps */
   capturedSteps: StepResult<Record<string, Tool>>[];
 }

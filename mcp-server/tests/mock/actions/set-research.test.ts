@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { enumMappings } from '../../../src/utils/knowledge/enum.js';
 import createSetResearchTool from '../../../src/tools/actions/set-research.js';
@@ -46,7 +46,7 @@ describe('set-research', () => {
     ).rejects.toThrow();
   });
 
-  it('resolves the tech name, stores a ResearchChanges row, and stamps the turn', async () => {
+  it('resolves the tech name, stores a ResearchChanges row, stamps the turn, and pushes the before/after names', async () => {
     mockLua({ Previous: 5 }); // previously Pottery
 
     await client.call({ PlayerID: 0, Technology: 'Writing', Rationale: 'go wide' });
@@ -56,15 +56,22 @@ describe('set-research', () => {
     expect(row.Technology).toBe('Writing');
     expect(row.Rationale).toBe('go wide');
     expect(row.Turn).toBe(10);
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'research', replayPrefix: 'Changed next research', rationale: 'go wide', turn: 10 });
+    expect(pushes[0].summary).toContain('Pottery');
+    expect(pushes[0].summary).toContain('Writing');
   });
 
-  it('throws and writes nothing on a validation failure (already researched, Next === -2)', async () => {
+  it('throws and writes no store row or push on a validation failure (already researched, Next === -2)', async () => {
     mockLua({ Next: -2 });
 
     await expect(
       client.call({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' })
     ).rejects.toThrow();
     expect(await store.getMutableKnowledgeHistory('ResearchChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(0);
   });
 
   it('does no store write or push when the Lua call fails', async () => {
@@ -73,5 +80,6 @@ describe('set-research', () => {
     const result = await client.call({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('ResearchChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(0);
   });
 });

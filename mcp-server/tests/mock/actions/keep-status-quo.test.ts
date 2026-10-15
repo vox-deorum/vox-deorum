@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import createKeepStatusQuoTool from '../../../src/tools/actions/keep-status-quo.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
@@ -44,7 +44,7 @@ async function seedStrategy(playerID: number) {
 }
 
 describe('keep-status-quo', () => {
-  it('carries the previous strategies forward into a new version with the new rationale', async () => {
+  it('carries the previous strategies forward into a new version and pushes a status-quo action with no replay message', async () => {
     mockLua();
     await seedStrategy(0);
 
@@ -60,6 +60,12 @@ describe('keep-status-quo', () => {
     expect(latest.MilitaryStrategies).toEqual(['War']);
     expect(latest.Rationale).toBe('Stay the course');
     expect(latest.Turn).toBe(10);
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'status-quo', rationale: 'Stay the course', turn: 10 });
+    expect(pushes[0].replayPrefix).toBeUndefined(); // status-quo fires the event only, no replay message
+    expect(pushes[0].summary).toContain('Strategy');
   });
 
   it('writes defaults when no previous strategy exists', async () => {
@@ -83,6 +89,7 @@ describe('keep-status-quo', () => {
     // No new StrategyChanges version, no action push.
     const history = await store.getMutableKnowledgeHistory('StrategyChanges', 0);
     expect(history.map((h) => h.Version)).toEqual([1]);
+    expect(actionPushes()).toHaveLength(0);
   });
 
   it('does no store write or push when the Lua refresh fails', async () => {
@@ -94,5 +101,6 @@ describe('keep-status-quo', () => {
 
     const history = await store.getMutableKnowledgeHistory('StrategyChanges', 0);
     expect(history.map((h) => h.Version)).toEqual([1]); // only the seed remains
+    expect(actionPushes()).toHaveLength(0);
   });
 });

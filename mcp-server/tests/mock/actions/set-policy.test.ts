@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { enumMappings } from '../../../src/utils/knowledge/enum.js';
 import createSetPolicyTool from '../../../src/tools/actions/set-policy.js';
@@ -71,13 +71,26 @@ describe('set-policy', () => {
     expect(row.IsBranch).toBe(0);
   });
 
-  it('throws and writes nothing on a validation failure (Next === -1)', async () => {
+  it('resolves the previous branch id back to a name in the replay summary', async () => {
+    mockLua({ PreviousPolicy: -1, PreviousBranch: 1 }); // previously Tradition
+
+    await client.call({ PlayerID: 0, Policy: 'Liberty', Rationale: 'switch' });
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'policy', replayPrefix: 'Changed next policy branch', rationale: 'switch', turn: 10 });
+    expect(pushes[0].summary).toContain('Tradition');
+    expect(pushes[0].summary).toContain('Liberty');
+  });
+
+  it('throws and writes no store row or push on a validation failure (Next === -1)', async () => {
     mockLua({ Next: -1 });
 
     await expect(
       client.call({ PlayerID: 0, Policy: 'Liberty', Rationale: 'r' })
     ).rejects.toThrow();
     expect(await store.getMutableKnowledgeHistory('PolicyChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(0);
   });
 
   it('does no store write or push when the Lua call fails', async () => {
@@ -86,5 +99,6 @@ describe('set-policy', () => {
     const result = await client.call({ PlayerID: 0, Policy: 'Liberty', Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('PolicyChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(0);
   });
 });

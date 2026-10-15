@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import createSetPersonaTool from '../../../src/tools/actions/set-persona.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
@@ -62,7 +62,7 @@ describe('set-persona', () => {
     expect(latest?.Boldness).toBe(value);
   });
 
-  it('writes previous + new versions, clamps values, and stamps the turn', async () => {
+  it('writes previous + new versions, clamps values, stamps the turn, and pushes the changed fields', async () => {
     mockLua(fullPersona({ Boldness: 3, WarBias: 5 }));
 
     await client.call({
@@ -86,6 +86,21 @@ describe('set-persona', () => {
     expect(latest.WarBias).toBe(7);
     expect(latest.Rationale).toBe('Get aggressive');
     expect(latest.Turn).toBe(10);
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'persona', replayPrefix: 'Diplomatic persona', rationale: 'Get aggressive', turn: 10 });
+    expect(pushes[0].summary).toContain('Boldness');
+    expect(pushes[0].summary).toContain('WarBias');
+    expect(pushes[0].summary).not.toContain('Loyalty'); // unchanged field omitted
+  });
+
+  it('does not push a replay action when nothing changed', async () => {
+    mockLua(fullPersona({ Boldness: 4 }));
+
+    await client.call({ PlayerID: 0, Boldness: 4, Rationale: 'noop' });
+
+    expect(actionPushes()).toHaveLength(0);
   });
 
   it('writes PersonaChanges visible only to the acting player', async () => {
@@ -103,14 +118,16 @@ describe('set-persona', () => {
     const result = await client.call({ PlayerID: 0, Boldness: 8, Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('PersonaChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(0);
   });
 
-  it('still applies the change when the previous persona comes back empty', async () => {
+  it('still applies and pushes the change when the previous persona comes back empty', async () => {
     mockLua([]);
 
     const result = await client.call({ PlayerID: 0, Boldness: 8, Rationale: 'r' });
     expect(result.Success).toBe(true);
     // Without a complete previous persona no history row can be written.
     expect(await store.getMutableKnowledgeHistory('PersonaChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(1);
   });
 });

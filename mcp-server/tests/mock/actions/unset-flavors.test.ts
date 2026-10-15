@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { composeVisibility } from '../../../src/utils/knowledge/visibility.js';
 import createUnsetFlavorsTool from '../../../src/tools/actions/unset-flavors.js';
@@ -77,6 +77,16 @@ describe('unset-flavors', () => {
     expect(await store.getMutableKnowledge('FlavorChanges', 1)).not.toBeUndefined();
   });
 
+  it('pushes an unset-flavors action with empty rationale and empty replay prefix', async () => {
+    mockLua();
+
+    await client.call({ PlayerID: 0, Turn: 7 });
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'unset-flavors', rationale: '', replayPrefix: '', turn: 7 });
+  });
+
   it('does not touch the store or push when the Lua call fails', async () => {
     await seedFlavorRow(0);
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
@@ -85,5 +95,6 @@ describe('unset-flavors', () => {
     expect(result.Success).toBe(false);
     // The seeded latest row is untouched.
     expect(await store.getMutableKnowledge('FlavorChanges', 0)).not.toBeUndefined();
+    expect(actionPushes()).toHaveLength(0);
   });
 });

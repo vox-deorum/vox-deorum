@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore, seedPlayer } from '../helpers.js';
+import { setupStore, seedPlayer, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import createSetRelationshipTool from '../../../src/tools/actions/set-relationship.js';
 import createGetOptionsTool from '../../../src/tools/knowledge/get-options.js';
@@ -84,11 +84,12 @@ describe('set-relationship', () => {
     expect(options.Relationships.Egypt).toMatchObject({ Public: value, Private: value });
   });
 
-  it('throws when the target player is not seeded', async () => {
+  it('throws and pushes nothing when the target player is not seeded', async () => {
     mockLua(0, 0);
     await expect(
       client.call({ PlayerID: 0, TargetID: 5, Public: 10, Rationale: 'r' })
     ).rejects.toThrow();
+    expect(actionPushes()).toHaveLength(0);
   });
 
   it('stores a RelationshipChanges row stamped with the turn', async () => {
@@ -111,6 +112,40 @@ describe('set-relationship', () => {
     });
   });
 
+  it('pushes a replay action with the changed deltas, omitting the unchanged value', async () => {
+    mockLua(5, 5); // previous public/private both 5
+
+    await client.call({
+      PlayerID: 0,
+      TargetID: 1,
+      Public: 30,
+      Private: 5, // unchanged vs previous private
+      Rationale: 'shift',
+    });
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'relationship', replayPrefix: '', rationale: 'shift', turn: 10 });
+    expect(pushes[0].summary).toContain('Egypt');
+    expect(pushes[0].summary).toContain('Public');
+    expect(pushes[0].summary).toContain('30');
+    expect(pushes[0].summary).not.toContain('Private'); // unchanged value omitted
+  });
+
+  it('does not push a replay action when both values are unchanged', async () => {
+    mockLua(10, 20);
+
+    await client.call({
+      PlayerID: 0,
+      TargetID: 1,
+      Public: 10,
+      Private: 20,
+      Rationale: 'noop',
+    });
+
+    expect(actionPushes()).toHaveLength(0);
+  });
+
   it('does no store write or push when the Lua call fails', async () => {
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
 
@@ -123,5 +158,6 @@ describe('set-relationship', () => {
     expect(result.Success).toBe(false);
     const options = await client.call({ PlayerID: 0 }, readTool.name);
     expect(options.Relationships ?? {}).toEqual({});
+    expect(actionPushes()).toHaveLength(0);
   });
 });

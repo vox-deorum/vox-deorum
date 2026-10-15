@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { enumMappings } from '../../../src/utils/knowledge/enum.js';
 import createSetFlavorsTool from '../../../src/tools/actions/set-flavors.js';
@@ -97,7 +97,7 @@ describe('set-flavors', () => {
     expect(row.Turn).toBe(10);
   });
 
-  it('resolves the grand strategy enum and records the change', async () => {
+  it('resolves the grand strategy enum, records the change, and pushes the before/after names', async () => {
     mockLua({ grandStrategy: 1 }); // previously Conquest
 
     await client.call({
@@ -109,6 +109,11 @@ describe('set-flavors', () => {
     const row = (await store.getMutableKnowledge('FlavorChanges', 0)) as any;
     expect(row.GrandStrategy).toBe('Culture');
 
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'flavors', replayPrefix: 'AI preferences', rationale: 'pivot', turn: 10 });
+    expect(pushes[0].summary).toContain('Conquest');
+    expect(pushes[0].summary).toContain('Culture');
   });
 
   it('writes FlavorChanges visible only to the acting player', async () => {
@@ -118,6 +123,37 @@ describe('set-flavors', () => {
 
     expect(await store.getMutableKnowledge('FlavorChanges', 0, 0)).not.toBeUndefined();
     expect(await store.getMutableKnowledge('FlavorChanges', 0, 1)).toBeUndefined();
+  });
+
+  it('reports a changed flavor value in the replay summary', async () => {
+    mockLua({ flavors: { FLAVOR_OFFENSE: 30 } }); // previously Offense=30
+
+    await client.call({
+      PlayerID: 0,
+      Flavors: { Offense: 90 },
+      Rationale: 'aggressive',
+    });
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]).toMatchObject({ playerID: 0, actionType: 'flavors', replayPrefix: 'AI preferences', rationale: 'aggressive', turn: 10 });
+    expect(pushes[0].summary).toContain('Offense');
+    expect(pushes[0].summary).toContain('30');
+    expect(pushes[0].summary).toContain('90');
+  });
+
+  it('pushes an event without a replay message when nothing changed', async () => {
+    mockLua({ flavors: { FLAVOR_OFFENSE: 70 } }); // previously Offense=70
+
+    await client.call({
+      PlayerID: 0,
+      Flavors: { Offense: 70 }, // same value
+      Rationale: 'noop',
+    });
+
+    const pushes = actionPushes();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].replayPrefix).toBeUndefined(); // no replay message when nothing changed
   });
 
   it('ignores unknown flavor keys not present in flavors.json', async () => {
@@ -140,5 +176,6 @@ describe('set-flavors', () => {
     const result = await client.call({ PlayerID: 0, Flavors: { Offense: 70 }, Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('FlavorChanges', 0)).toHaveLength(0);
+    expect(actionPushes()).toHaveLength(0);
   });
 });

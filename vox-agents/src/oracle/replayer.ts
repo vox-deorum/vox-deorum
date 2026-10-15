@@ -41,6 +41,57 @@ const logger = createLogger('OracleReplayer');
 /** Marker on a task that shutdown dropped before it ran, rather than a real replay failure. */
 const INTERRUPTED_ERROR = 'Interrupted by shutdown';
 
+/** Opens once the first repetition of a prompt is done, so the later ones can read its cache. */
+interface PromptGate {
+  opened: Promise<void>;
+  open: () => void;
+}
+
+/** One replay of a retrieved row with one model. */
+interface ReplayTask {
+  retrieved: RetrievedRow;
+  resolvedModel: Model;
+  suffix: string;
+  /** 1-based index when the same model replays the row several times */
+  repetition?: number;
+  /** Mark the end of the prompt for prompt caching */
+  cachePrompt?: boolean;
+  /** Opened when this task, the first of its repetitions, is done */
+  primes?: PromptGate;
+  /** Resolves when the first of this task's repetitions is done */
+  waitFor?: Promise<void>;
+}
+
+/** Creates a closed {@link PromptGate}. */
+function createPromptGate(): PromptGate {
+  let open!: () => void;
+  const opened = new Promise<void>(resolve => { open = resolve; });
+  return { opened, open };
+}
+
+/**
+ * Whether a model reuses a repeated prompt through Anthropic prompt caching: the direct Anthropic
+ * provider, the Claude Code CLI (which caches on its own), or a Claude model served elsewhere.
+ */
+function cachesLikeAnthropic(model: Model): boolean {
+  return model.provider === 'anthropic' || model.provider === 'claude-code' || model.name.includes('claude');
+}
+
+/**
+ * Wraps a task so it starts only after `waitFor` resolves and opens `primes` when it settles,
+ * whatever the outcome, so later repetitions never wait forever.
+ */
+function afterGate<T>(waitFor: Promise<void> | undefined, primes: PromptGate | undefined, task: () => Promise<T>): () => Promise<T> {
+  return async () => {
+    try {
+      if (waitFor) await waitFor;
+      return await task();
+    } finally {
+      primes?.open();
+    }
+  };
+}
+
 /**
  * Load the retrieved rows saved in a retrieve directory. Rows saved before the workspace fields
  * existed default to files off and built-in prompts.
@@ -96,7 +147,7 @@ export async function runReplay(
   fs.mkdirSync(experimentDir, { recursive: true });
 
   // Expand rows into (retrieved, resolvedModel, suffix, repetition) tasks for multi-model support
-  const tasks = rows.flatMap(retrieved => {
+  const tasks = rows.flatMap((retrieved): ReplayTask[] => {
     if (retrieved.error) {
       logger.warn(`Skipping row with error: game=${retrieved.row.game_id}, player=${retrieved.row.player_id}, turn=${retrieved.row.turn}: ${retrieved.error}`);
       return [];
@@ -110,7 +161,7 @@ export async function runReplay(
       : Array.isArray(override) ? override : [override];
 
     if (modelInputs.length <= 1) {
-      return [{ retrieved, resolvedModel: resolveModel(modelInputs[0]), suffix: '', repetition: undefined as number | undefined }];
+      return [{ retrieved, resolvedModel: resolveModel(modelInputs[0]), suffix: '' }];
     }
 
     // Resolve all models and count occurrences for duplicate detection
@@ -120,24 +171,32 @@ export async function runReplay(
       nameCounts.set(r.name, (nameCounts.get(r.name) ?? 0) + 1);
     }
     const nameIndexes = new Map<string, number>();
+    const firstRepetitions = new Map<string, PromptGate>();
 
-    return resolved.map(resolvedModel => {
+    return resolved.map((resolvedModel): ReplayTask => {
       const baseSuffix = resolvedModel.name.split('/').pop()!.replace(/[^a-zA-Z0-9._-]/g, '-');
-      const isDuplicate = nameCounts.get(resolvedModel.name)! > 1;
-      let suffix: string;
-      let repetition: number | undefined;
-
-      if (isDuplicate) {
-        const index = (nameIndexes.get(resolvedModel.name) ?? 0) + 1;
-        nameIndexes.set(resolvedModel.name, index);
-        suffix = `-${baseSuffix}-${index}`;
-        repetition = index;
-      } else {
-        suffix = `-${baseSuffix}`;
-        repetition = undefined;
+      if (nameCounts.get(resolvedModel.name)! <= 1) {
+        return { retrieved, resolvedModel, suffix: `-${baseSuffix}` };
       }
 
-      return { retrieved, resolvedModel, suffix, repetition };
+      const index = (nameIndexes.get(resolvedModel.name) ?? 0) + 1;
+      nameIndexes.set(resolvedModel.name, index);
+      const task: ReplayTask = { retrieved, resolvedModel, suffix: `-${baseSuffix}-${index}`, repetition: index };
+
+      // Repeated Claude replays share one cached prompt: the first repetition writes it and the
+      // rest wait for it, since requests sent at the same moment would all miss the cache.
+      // Batch mode is left alone, where waiting would hold the rest back for a whole batch.
+      if (cachesLikeAnthropic(resolvedModel) && !config.batch) {
+        task.cachePrompt = true;
+        const first = firstRepetitions.get(resolvedModel.name);
+        if (first) {
+          task.waitFor = first.opened;
+        } else {
+          task.primes = createPromptGate();
+          firstRepetitions.set(resolvedModel.name, task.primes);
+        }
+      }
+      return task;
     });
   });
 
@@ -183,8 +242,8 @@ export async function runReplay(
     }
 
     const { results, stopped } = await runOracleTasks(
-      tasks.map(({ retrieved, resolvedModel, suffix, repetition }, i) =>
-        async (): Promise<ReplayResult> => {
+      tasks.map(({ retrieved, resolvedModel, suffix, repetition, cachePrompt, primes, waitFor }, i) =>
+        afterGate(waitFor, primes, async (): Promise<ReplayResult> => {
           const failed = (error: string): ReplayResult => ({
             row: retrieved.row,
             model: `${resolvedModel.provider}/${resolvedModel.name}`,
@@ -202,7 +261,7 @@ export async function runReplay(
           const { game_id: gameId, player_id: playerId, turn } = retrieved.row;
           logger.info(`Replaying task ${i + 1}/${tasks.length}: game=${gameId}, player=${playerId}, turn=${turn}${suffix}`);
           try {
-            const result = await replaySingleRow(retrieved, resolvedModel, config, voxContext, experimentDir, suffix);
+            const result = await replaySingleRow(retrieved, resolvedModel, config, voxContext, experimentDir, suffix, cachePrompt);
             if (repetition !== undefined) result.repetition = repetition;
             return result;
           } catch (error) {
@@ -210,7 +269,7 @@ export async function runReplay(
             logger.error(`Error replaying task ${i + 1}: ${errorMsg}`);
             return failed(errorMsg);
           }
-        }
+        })
       ),
       config.concurrency ?? 5,
       shouldStop
@@ -280,7 +339,8 @@ async function replaySingleRow(
   config: OracleConfig,
   voxContext: VoxContext<OracleParameters>,
   experimentDir: string,
-  trailSuffix: string
+  trailSuffix: string,
+  cachePrompt?: boolean
 ): Promise<ReplayResult> {
   const { game_id: gameId, player_id: playerId, turn: turnStr } = retrieved.row;
   const turn = parseInt(turnStr, 10);
@@ -334,6 +394,7 @@ async function replaySingleRow(
     stepTools: retrieved.stepTools ?? [],
     resolvedModel,
     agentType: retrieved.agentType,
+    cachePrompt,
     capturedSteps: [],
   };
 

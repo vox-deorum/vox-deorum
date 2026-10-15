@@ -48,6 +48,9 @@ describe('present-decision', () => {
 
     expect(result).toBe(true);
 
+    expect(getOptionsSpy).toHaveBeenCalledTimes(1);
+    expect(getOptionsSpy).toHaveBeenCalledWith({ PlayerID: 1, Mode: 'Flavor' });
+
     expect(presentSpy).toHaveBeenCalledTimes(1);
     const [playerID, turn, report] = presentSpy.mock.calls[0];
     expect(playerID).toBe(1);

@@ -10,6 +10,7 @@ import { Tool, StepResult, ModelMessage } from 'ai';
 import { VoxAgent } from '../infra/vox-agent.js';
 import type { VoxContext } from '../infra/vox-context.js';
 import type { Model } from '../types/index.js';
+import { countCacheBreakpoints, hasCacheBreakpoint, markBreakpointOnLast, MAX_CACHE_BREAKPOINTS } from '../utils/models/cache-breakpoint.js';
 import { formatModelString } from './utils/model-resolver.js';
 import type { OracleConfig, OracleParameters, OracleInput, ReplayResult, ReplayDecision } from './types.js';
 
@@ -58,13 +59,23 @@ export class OracleAgent extends VoxAgent<OracleParameters, OracleInput, ReplayR
     return input.system.join('\n');
   }
 
-  /** Return the non-system messages from the original conversation (possibly modified) */
+  /**
+   * Return the non-system messages from the original conversation (possibly modified). When the
+   * prompt is replayed several times, the last message carries a cache breakpoint so later
+   * replays reuse the whole prompt rather than only the prefix the original run marked.
+   */
   public override async getInitialMessages(
-    _parameters: OracleParameters,
+    parameters: OracleParameters,
     input: OracleInput,
     _context: VoxContext<OracleParameters>
   ): Promise<ModelMessage[]> {
-    return input.messages;
+    if (!parameters.cachePrompt) return input.messages;
+    const messages = [...input.messages];
+    const last = messages.at(-1);
+    if (last && !hasCacheBreakpoint(last) && countCacheBreakpoints(messages) < MAX_CACHE_BREAKPOINTS) {
+      markBreakpointOnLast(messages);
+    }
+    return messages;
   }
 
   /** Return the active tool set from the original span */

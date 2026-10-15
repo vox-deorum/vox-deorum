@@ -387,6 +387,72 @@ describe('oracle replayer (non-cache paths)', () => {
     });
   });
 
+  describe('repeated prompt caching', () => {
+    const claude = { provider: 'anthropic', name: 'claude-test' } as any;
+    const other = { provider: 'oracle-test', name: 'other-test' } as any;
+
+    /** Records each execution's start and end, plus whether it asked for prompt caching. */
+    function mockLoggedExecution(log: string[], cacheFlags: (boolean | undefined)[], fail = false): void {
+      mocks.execute.mockImplementation(async (_agentName, input) => {
+        const parameters = mocks.runState.parameters;
+        cacheFlags.push(parameters.cachePrompt);
+        log.push('start');
+        await new Promise(resolve => setTimeout(resolve, 10));
+        log.push('end');
+        if (fail && log.length === 2) throw new Error('first repetition failed');
+        return {
+          row: input.row,
+          model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
+          decisions: [],
+          tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+          messages: [],
+        };
+      });
+    }
+
+    it('should cache the prompt and start later Claude repetitions only after the first is done', async () => {
+      const log: string[] = [];
+      const cacheFlags: (boolean | undefined)[] = [];
+      mockLoggedExecution(log, cacheFlags);
+
+      const results = await runReplay(
+        baseConfig(makeTempDir(), 'claude-reps', () => ({}), { concurrency: 3, modelOverride: () => [claude, claude, claude] }),
+        [retrieved()]
+      );
+
+      expect(results).toHaveLength(3);
+      expect(log.slice(0, 2)).toEqual(['start', 'end']);
+      expect(cacheFlags).toEqual([true, true, true]);
+    });
+
+    it('should still run later repetitions when the first one fails', async () => {
+      const log: string[] = [];
+      mockLoggedExecution(log, [], true);
+
+      const results = await runReplay(
+        baseConfig(makeTempDir(), 'claude-reps-fail', () => ({}), { concurrency: 3, modelOverride: () => [claude, claude] }),
+        [retrieved()]
+      );
+
+      expect(results.filter(r => r.error)).toHaveLength(1);
+      expect(results.filter(r => !r.error)).toHaveLength(1);
+    });
+
+    it('should leave single replays and non-Claude repetitions uncached and concurrent', async () => {
+      const log: string[] = [];
+      const cacheFlags: (boolean | undefined)[] = [];
+      mockLoggedExecution(log, cacheFlags);
+
+      await runReplay(
+        baseConfig(makeTempDir(), 'other-reps', () => ({}), { concurrency: 3, modelOverride: () => [other, other, claude] }),
+        [retrieved()]
+      );
+
+      expect(log.slice(0, 3)).toEqual(['start', 'start', 'start']);
+      expect(cacheFlags.every(flag => !flag)).toBe(true);
+    });
+  });
+
   describe('modifyPrompt merge behavior', () => {
     it('passes original prompt context into modifyPrompt and merges overrides', async () => {
       const outputDir = makeTempDir();

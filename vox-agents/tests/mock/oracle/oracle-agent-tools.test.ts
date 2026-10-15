@@ -11,6 +11,8 @@ import { describe, it, expect } from 'vitest';
 import '../../../src/infra/agent-registry.js';
 import { OracleAgent, removedToolsAtStep } from '../../../src/oracle/oracle-agent.js';
 import type { OracleParameters } from '../../../src/oracle/types.js';
+import type { ModelMessage } from 'ai';
+import { cacheBreakpoint, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
 
 /** Build oracle parameters with the given declared tools and recorded per-step lists. */
 function params(activeTools: string[], stepTools: string[][]): OracleParameters {
@@ -60,6 +62,26 @@ describe('OracleAgent.prepareStep', () => {
     const config = await agent.prepareStep(params(['a', 'b', 'extra'], [['a', 'b'], ['a']]), {} as any,
       toolStep, [toolStep], [], context);
     expect(config.activeTools).toEqual(['a', 'extra']);
+  });
+});
+
+describe('OracleAgent.getInitialMessages', () => {
+  const agent = new OracleAgent();
+  const input = (messages: ModelMessage[]) => ({ system: [], messages, row: {} as any });
+  const messages: ModelMessage[] = [
+    { role: 'user', content: 'earlier', providerOptions: { ...cacheBreakpoint } },
+    { role: 'user', content: 'last' },
+  ];
+
+  it('should mark the end of the prompt when it is replayed several times, leaving the input untouched', async () => {
+    const result = await agent.getInitialMessages({ ...params([], []), cachePrompt: true }, input(messages), context);
+    expect(result.map(hasCacheBreakpoint)).toEqual([true, true]);
+    expect(hasCacheBreakpoint(messages[1])).toBe(false);
+  });
+
+  it('should keep the original breakpoints only for a single replay', async () => {
+    const result = await agent.getInitialMessages(params([], []), input(messages), context);
+    expect(result.map(hasCacheBreakpoint)).toEqual([true, false]);
   });
 });
 
