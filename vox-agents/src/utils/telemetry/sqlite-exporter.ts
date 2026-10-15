@@ -17,7 +17,7 @@ import { EventEmitter } from 'events';
 import { createLogger } from '../logger.js';
 import { spanProcessor } from '../../instrumentation.js';
 import { VoxSpanExporter } from './vox-exporter.js';
-import type { TelemetryDatabase, NewSpan } from './schema.js';
+import { spansTableSql, type TelemetryDatabase, type NewSpan } from './schema.js';
 
 const logger = createLogger('SQLiteExporter');
 
@@ -82,31 +82,7 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
       const filename = path.join(contextDir, `${contextId}.db`);
       const { db: kyselyDb, sqlite: sqliteDb } = openSqliteKysely<TelemetryDatabase>(filename);
 
-      // Create table if not exists - using camelCase for column names to match Kysely interface
-      sqliteDb.exec(`
-        CREATE TABLE IF NOT EXISTS spans (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          contextId TEXT NOT NULL,
-          turn INTEGER,
-          traceId TEXT NOT NULL,
-          spanId TEXT NOT NULL,
-          parentSpanId TEXT,
-          name TEXT NOT NULL,
-          startTime INTEGER NOT NULL,
-          endTime INTEGER NOT NULL,
-          durationMs INTEGER NOT NULL,
-          attributes TEXT,
-          statusCode INTEGER NOT NULL,
-          statusMessage TEXT
-        );
-
-        -- Create indexes for common queries
-        CREATE INDEX IF NOT EXISTS idx_spans_contextId ON spans(contextId);
-        CREATE INDEX IF NOT EXISTS idx_spans_turn ON spans(turn);
-        CREATE INDEX IF NOT EXISTS idx_spans_traceId ON spans(traceId);
-        CREATE INDEX IF NOT EXISTS idx_spans_parentSpanId ON spans(parentSpanId);
-        CREATE INDEX IF NOT EXISTS idx_spans_startTime ON spans(startTime);
-      `);
+      sqliteDb.exec(spansTableSql);
 
       // Store both Kysely and SQLite instances
       databases.set(contextId, { kysely: kyselyDb, sqlite: sqliteDb });

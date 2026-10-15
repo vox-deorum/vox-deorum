@@ -10,6 +10,7 @@ import request from 'supertest';
 import fs from 'fs';
 import os from 'node:os';
 import path from 'node:path';
+import { EventEmitter } from 'node:events';
 
 // Replace the singleton imported by web route modules with the shared MCP mock.
 vi.mock('../../../src/utils/models/mcp-client.js', async () => {
@@ -20,6 +21,15 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 import { app, shutdownWebServer, startWebServer } from '../../../src/web/server.js';
 import config from '../../../src/utils/config.js';
 import { installMockMcpClient } from '../../helpers/mock-mcp-client.js';
+
+/** A fake listening server whose address reports the port it was asked to bind. */
+function fakeServer(port: number) {
+  return Object.assign(new EventEmitter(), {
+    address: () => ({ address: '127.0.0.1', port }),
+    close: (callback: (error?: Error) => void) => callback(),
+    closeAllConnections: vi.fn(),
+  });
+}
 
 describe('web server', () => {
   let shutdownTempDir: string | undefined;
@@ -84,12 +94,7 @@ describe('web server', () => {
   });
 
   it('binds the dashboard server to the loopback interface', async () => {
-    const server = {
-      address: () => ({ address: '127.0.0.1', port: 7654 }),
-      on: vi.fn(),
-      close: (callback: (error?: Error) => void) => callback(),
-      closeAllConnections: vi.fn(),
-    };
+    const server = fakeServer(7654);
     const listen = vi.spyOn(app, 'listen').mockImplementation(((_port: number, _host: string, callback: () => void) => {
       queueMicrotask(callback);
       return server;
@@ -98,5 +103,30 @@ describe('web server', () => {
     await expect(startWebServer()).resolves.toBe(7654);
     expect(listen).toHaveBeenCalledWith(config.webui.port, '127.0.0.1', expect.any(Function));
     await expect(shutdownWebServer()).resolves.toBeUndefined();
+  });
+
+  it('should publish the shutdown URL for the fallback port it binds', async () => {
+    shutdownTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-server-fallback-'));
+    const discoveryPath = path.join(shutdownTempDir, 'shutdown-url.txt');
+    process.env.VOX_SHUTDOWN_URL_FILE = discoveryPath;
+    const fallbackPort = config.webui.port + 1;
+    // The configured port reports EADDRINUSE; the fallback port binds.
+    const listen = vi.spyOn(app, 'listen').mockImplementation(((port: number, _host: string, callback: () => void) => {
+      const server = fakeServer(port);
+      queueMicrotask(() => {
+        if (port === config.webui.port) {
+          server.emit('error', Object.assign(new Error('in use'), { code: 'EADDRINUSE' }));
+        } else {
+          callback();
+        }
+      });
+      return server;
+    }) as never);
+
+    await expect(startWebServer()).resolves.toBe(fallbackPort);
+    expect(listen).toHaveBeenLastCalledWith(fallbackPort, '127.0.0.1', expect.any(Function));
+    await vi.waitFor(() => {
+      expect(fs.readFileSync(discoveryPath, 'utf8').trim()).toBe(`http://127.0.0.1:${fallbackPort}/shutdown`);
+    });
   });
 });

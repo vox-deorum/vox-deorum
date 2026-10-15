@@ -90,13 +90,17 @@ describe('renderSection', () => {
 
   it('renders players data without string entries unchanged', () => {
     const report = {
-      '0': { Civilization: 'Rome' },
-      '1': { Civilization: 'Greece' },
+      '0': { Civilization: 'Rome', Score: 23 },
+      '1': { Civilization: 'Greece', Score: 17 },
       _markdownConfig: { configs: [{ format: 'Player {key}' }] },
     };
     const out = renderSection('players', report);
     expect(out).not.toContain('Other players');
-    expect(out).toBe(`# ${sections.players.title}\n${sections.players.description}\n\n${jsonToMarkdown(report)}`);
+    expect(out).toContain('Rome');
+    expect(out).toContain('Greece');
+    expect(out).toContain('Score');
+    expect(out).toContain('23');
+    expect(out).toContain('17');
   });
 
   it('leaves underscore string keys out of the players rendering', () => {

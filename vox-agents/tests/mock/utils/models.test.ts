@@ -59,7 +59,7 @@ vi.mock('ai-sdk-provider-claude-code', () => {
 
 import { getModel, getModelConfig, inputTokenLimit, resolveToolFraming } from '../../../src/utils/models/models.js';
 import { toolRescueMiddleware } from '../../../src/utils/models/tool-rescue/middleware.js';
-import { capabilityHeading, capabilityInstruction } from '../../../src/utils/models/capability-prompt.js';
+import { capabilityHeading } from '../../../src/utils/models/capability-prompt.js';
 import type { Model, ResolvedFilesConfig } from '../../../src/types/index.js';
 
 /** Build a ReadableStream that emits the given chunks then closes (for wrapStream tests). */
@@ -223,7 +223,12 @@ describe('claude-code provider', () => {
 
   describe('tool-rescue action framing (Stage 2)', () => {
     const tools = [
-      { type: 'function', name: 'send_message', description: 'Send a message', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+      {
+        type: 'function',
+        name: 'send_message',
+        description: 'Send a message',
+        inputSchema: { type: 'object', properties: { messageText: { type: 'string', description: 'Controlled message field' } }, required: ['messageText'], additionalProperties: false },
+      },
     ];
 
     it("injects Action headings and the \"action\" JSON key when framing is 'action'", async () => {
@@ -1169,27 +1174,43 @@ describe('claude-code provider', () => {
           name: 'sonnet',
           options: { toolMiddleware: 'prompt', hostTools: ['Web'] },
         },
-        { files, completionTools: ['send_message', 'inactive_action'] }
+        { files, completionTools: ['finalize_decision', 'inactive_action'] }
       );
+      const prompt = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }];
+      const offeredTools = [
+        ...tools,
+        {
+          ...tools[0],
+          name: 'get_briefing',
+          description: 'Read the briefing.',
+          inputSchema: { type: 'object', properties: { briefingId: { type: 'string', description: 'Controlled briefing identifier' } }, required: ['briefingId'], additionalProperties: false },
+        },
+        { ...tools[0], name: 'finalize_decision', description: 'Finish this turn' },
+        { ...tools[0], name: 'bash', description: 'Run a script' },
+      ];
       await (model as any).doGenerate({
-        tools: [...tools, { ...tools[0], name: 'bash', description: 'Run a script' }],
+        tools: offeredTools,
         toolChoice: { type: 'auto' },
-        prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
+        prompt,
         providerOptions: {},
       });
       const calls = mocks.model.doGenerateCalls;
       const finalPrompt = calls[calls.length - 1].prompt;
       expect(finalPrompt.some((m: any) => m.role === 'system')).toBe(false);
       const sys = { content: userText(finalPrompt) };
-      expect(sys.content).toContain(capabilityInstruction({ files, web: true }, ['send_message'], 'actions'));
+      expect(sys.content).toContain('/workspace/records');
+      expect(sys.content).toContain('Web');
+      expect(sys.content).toContain('send_message');
+      expect(sys.content).toContain('messageText');
+      expect(sys.content).toContain('get_briefing');
+      expect(sys.content).toContain('briefingId');
+      expect(sys.content).toContain('finalize_decision');
       expect(sys.content).not.toContain('inactive_action');
-      expect(sys.content).toContain('## Action Calling');
-      expect(sys.content).toContain('## Available Actions');
-      // The reframed prompt must not mention the built-in CLI tools at all.
-      expect(sys.content).not.toContain('Built-in');
+      expect(offeredTools.map((tool) => tool.name)).toEqual(['send_message', 'get_briefing', 'finalize_decision', 'bash']);
+      expect(prompt[0].content[0].text).toBe('hi');
     });
 
-    it('adds one capability reminder per call to a reused prompt, ahead of the rescue action list', async () => {
+    it('keeps a reused caller prompt unchanged and produces the same provider prompt on repeat calls', async () => {
       const model = getModel(
         {
           provider: 'claude-code',
@@ -1201,8 +1222,10 @@ describe('claude-code provider', () => {
         { role: 'system', content: 'You are the strategist.' },
         { role: 'user', content: [{ type: 'text', text: 'Choose an action.' }] },
       ];
+      const originalPrompt = structuredClone(prompt);
+      const originalTools = structuredClone(tools);
       const generate = () => (model as any).doGenerate({
-        tools,
+        tools: originalTools,
         toolChoice: { type: 'required' },
         prompt,
         providerOptions: {},
@@ -1212,14 +1235,17 @@ describe('claude-code provider', () => {
       await generate();
 
       expect(prompt[0].content).toBe('You are the strategist.');
-      const instruction = capabilityInstruction({ web: true }, [], 'actions')!;
-      for (const call of mocks.model.doGenerateCalls.slice(-2)) {
+      const requests = mocks.model.doGenerateCalls.slice(-2);
+      for (const call of requests) {
         expect(call.prompt.some((message: any) => message.role === 'system')).toBe(false);
         const system = userText(call.prompt);
-        expect(system.split(instruction)).toHaveLength(2);
-        expect(system).toContain('## Available Actions');
-        expect(system.indexOf(instruction)).toBeLessThan(system.indexOf('## Available Actions'));
+        expect(system).toContain('Web');
+        expect(system).toContain('send_message');
+        expect(system).toContain('messageText');
       }
+      expect(requests[0].prompt).toEqual(requests[1].prompt);
+      expect(prompt).toEqual(originalPrompt);
+      expect(originalTools).toEqual(tools);
     });
 
     it('adds no capability reminder when files are on but the request declares no bash tool', async () => {
@@ -1227,13 +1253,16 @@ describe('claude-code provider', () => {
         { provider: 'claude-code', name: 'sonnet', options: { toolMiddleware: 'prompt' } },
         { files: { game: 'write', shared: {}, quota: 20 } },
       );
+      const prompt = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }];
       await (model as any).doGenerate({
         tools,
         toolChoice: { type: 'auto' },
-        prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
+        prompt,
         providerOptions: {},
       });
-      expect(userText(mocks.model.doGenerateCalls.at(-1).prompt)).not.toContain(capabilityHeading);
+      const finalPrompt = mocks.model.doGenerateCalls.at(-1).prompt;
+      expect(userText(finalPrompt)).not.toContain('/workspace/records');
+      expect(prompt[0].content[0].text).toBe('hi');
     });
 
     it('uses Action framing for pure-text claude-code too (no built-in tools)', async () => {

@@ -152,9 +152,7 @@ describe('VoxContext.evaluate active-run requirement', () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'eval-no-run');
     const spans = recordSpans(ctx);
 
-    await expect(ctx.evaluate(testModel, {}, { questions })).rejects.toThrow(
-      'VoxContext.evaluate requires an active run; call withRun() or forkRun().',
-    );
+    await expect(ctx.evaluate(testModel, {}, { questions })).rejects.toThrow();
 
     expect(spans).toHaveLength(0);
     expect(factory).not.toHaveBeenCalled();

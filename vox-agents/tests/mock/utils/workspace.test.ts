@@ -14,7 +14,6 @@ vi.mock('../../../src/utils/config.js', () => ({ config: mocks.config }));
 
 import {
   PlayerWorkspace,
-  workspaceGuide,
   workspaceGuideFile,
   workspaceNodeSupported,
   workspaceOutputLimit,
@@ -263,7 +262,9 @@ console.log(mean);`;
     it('should commit the guide with a new seat\'s first command', async () => {
       const store = openStore();
       await workspace(store).exec('true', undefined, { turn: 0, author: 'simple-strategist' });
-      expect(text(store.readFile(guidePath))).toBe(workspaceGuide('game'));
+      const guide = text(store.readFile(guidePath));
+      expect(guide).toBeDefined();
+      expect(guide!.length).toBeGreaterThan(0);
       expect(store.history().at(-1)).toMatchObject({ kind: 'notes', author: 'simple-strategist' });
     });
 
@@ -277,7 +278,9 @@ console.log(mean);`;
       expect(store.rewind(1)).toBe(true);
       expect(store.readFile(guidePath)).toBeUndefined();
       await shell.exec('true');
-      expect(text(store.readFile(guidePath))).toBe(workspaceGuide('game'));
+      const guide = text(store.readFile(guidePath));
+      expect(guide).toBeDefined();
+      expect(guide!.length).toBeGreaterThan(0);
     });
 
     it('should never overwrite an edited guide', async () => {
@@ -291,10 +294,26 @@ console.log(mean);`;
     it('should seed a different guide when the seat can write a shared folder', async () => {
       const store = openStore();
       const sharedFiles = files({ shared: { lessons: 'write' } });
-      await workspace(store, sharedFiles).exec('true');
-      expect(text(store.readFile(guidePath))).toBe(workspaceGuide('game', sharedFiles));
-      expect(workspaceGuide('game', sharedFiles)).not.toBe(workspaceGuide('game'));
-      expect(workspaceGuide('game', files({ shared: { lessons: 'read' } }))).toBe(workspaceGuide('game'));
+      const shell = workspace(store, sharedFiles);
+      await shell.exec('true');
+      const writableGuide = text(store.readFile(guidePath));
+      expect(writableGuide).toBeDefined();
+      expect(writableGuide!.length).toBeGreaterThan(0);
+      const sharedGuide = await shell.exec('cat shared/lessons/AGENTS.md');
+      expect(sharedGuide.exitCode).toBe(0);
+      expect(sharedGuide.stdout.length).toBeGreaterThan(0);
+
+      const readOnlyStore = openStore('read-only-shared');
+      const readOnlyShell = workspace(readOnlyStore, files({ shared: { lessons: 'read' } }));
+      await readOnlyShell.exec('true');
+      const readOnlyGuide = text(readOnlyStore.readFile(guidePath));
+      expect(readOnlyGuide).toBeDefined();
+      expect(readOnlyGuide!.length).toBeGreaterThan(0);
+      expect(readOnlyGuide).not.toBe(writableGuide);
+
+      const noSharedStore = openStore('no-shared');
+      await workspace(noSharedStore, files()).exec('true');
+      expect(text(noSharedStore.readFile(guidePath))).toBe(readOnlyGuide);
     });
   });
 

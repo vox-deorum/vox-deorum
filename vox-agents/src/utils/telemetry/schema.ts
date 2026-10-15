@@ -105,3 +105,29 @@ export type Span = Selectable<SpanRecord>;
  * Type-safe updateable span data
  */
 export type SpanUpdate = Updateable<SpanRecord>;
+/**
+ * SQL that creates the spans table and its indexes. Column names are camelCase to match SpanRecord.
+ */
+export const spansTableSql = `
+  CREATE TABLE IF NOT EXISTS spans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contextId TEXT NOT NULL,
+    turn INTEGER,
+    traceId TEXT NOT NULL,
+    spanId TEXT NOT NULL,
+    parentSpanId TEXT,
+    name TEXT NOT NULL,
+    startTime INTEGER NOT NULL,
+    endTime INTEGER NOT NULL,
+    durationMs INTEGER NOT NULL,
+    attributes TEXT,
+    statusCode INTEGER NOT NULL,
+    statusMessage TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_spans_contextId ON spans(contextId);
+  CREATE INDEX IF NOT EXISTS idx_spans_turn ON spans(turn);
+  CREATE INDEX IF NOT EXISTS idx_spans_traceId ON spans(traceId);
+  CREATE INDEX IF NOT EXISTS idx_spans_parentSpanId ON spans(parentSpanId);
+  CREATE INDEX IF NOT EXISTS idx_spans_startTime ON spans(startTime);
+`;

@@ -112,9 +112,10 @@ describe('requiredToolChoiceMiddleware', () => {
     const middleware = requiredToolChoiceMiddleware({ completionTools: ['found_city'] });
     const params = requiredParams();
     const out: any = await (middleware.transformParams as any)({ params });
-    expect(out.prompt[0].content).toBe(
-      `Make sound strategic decisions.\n\n${completionToolsInstruction(['found_city', 'get_briefing'], ['found_city'], false)}`,
-    );
+    expect(out.prompt[0].content).toContain('found_city');
+    expect(out.prompt[0].content).toContain('get_briefing');
+    expect(out.prompt[0].content).not.toContain('raze_city');
+    expect(out.toolChoice).toEqual({ type: 'auto' });
     expect(params.prompt[0].content).toBe('Make sound strategic decisions.');
   });
 
@@ -143,9 +144,8 @@ describe('requiredToolChoiceMiddleware', () => {
     };
     const middleware = requiredToolChoiceMiddleware({ completionTools: ['found_city'] });
     const out: any = await (middleware.transformParams as any)({ params });
-    expect(out.prompt[0].content).toContain(
-      completionToolsInstruction(['found_city'], ['found_city'], true),
-    );
+    expect(out.prompt[0].content).toContain('found_city');
+    expect(out.tools.some((tool: any) => tool.type === 'provider' && tool.id === 'codex.shell')).toBe(true);
   });
 
   it('creates a leading system message when the prompt has none', async () => {
@@ -154,7 +154,8 @@ describe('requiredToolChoiceMiddleware', () => {
     const out: any = await (middleware.transformParams as any)({ params });
     expect(out.prompt).toHaveLength(2);
     expect(out.prompt[0].role).toBe('system');
-    expect(out.prompt[0].content).toBe(completionToolsInstruction(['found_city', 'get_briefing'], ['found_city'], false));
+    expect(out.prompt[0].content).toContain('found_city');
+    expect(out.prompt[0].content).toContain('get_briefing');
   });
 
   it('returns auto params without a completion tool unchanged', async () => {
@@ -186,8 +187,8 @@ describe('getModel required-tool-choice wiring', () => {
     );
     await (model as any).doGenerate({ ...requiredParams(), providerOptions: {} });
     const call = mocks.anthropic.doGenerateCalls.at(-1);
-    expect(call.prompt[0].content).toContain(
-      completionToolsInstruction(['found_city', 'get_briefing'], ['found_city'], false),
-    );
+    expect(call.prompt[0].content).toContain('found_city');
+    expect(call.prompt[0].content).toContain('get_briefing');
+    expect(call.toolChoice).toEqual({ type: 'auto' });
   });
 });

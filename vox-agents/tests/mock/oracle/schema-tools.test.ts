@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
 import {
   schemaOnlyTool,
@@ -108,6 +108,12 @@ describe('oracle schema-tools', () => {
   describe('replaceToolsWithSchemaOnly', () => {
     it('replaces every mcpToolMap entry with a non-executing schema-only tool', async () => {
       const ctx = createFakeVoxContext();
+      const alphaExecutor = vi.fn();
+      const betaExecutor = vi.fn();
+      ctx.tools = {
+        alpha: { execute: alphaExecutor } as any,
+        beta: { execute: betaExecutor } as any,
+      };
       ctx.setMcpTools([
         baseMcpTool({ name: 'alpha' }),
         baseMcpTool({ name: 'beta', description: 'Beta tool' }),
@@ -119,9 +125,11 @@ describe('oracle schema-tools', () => {
       for (const name of ['alpha', 'beta']) {
         const tool = ctx.tools[name] as any;
         expect(tool.type).toBe('dynamic');
-        const result = await tool.execute({}, {} as any);
-        expect(result.message).toContain('Successfully executed');
+        await tool.execute({}, {} as any);
       }
+      expect(alphaExecutor).not.toHaveBeenCalled();
+      expect(betaExecutor).not.toHaveBeenCalled();
+      expect(ctx.callTool).not.toHaveBeenCalled();
     });
 
     it('applies autoComplete stripping and the rewriter to each tool', () => {

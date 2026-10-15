@@ -84,7 +84,6 @@ describe('WorkspaceStore', () => {
   describe('pathFor', () => {
     it('should give one path per game and player under the workspace root', () => {
       expect(WorkspaceStore.pathFor('game-1', 3)).toBe(path.join(workspaceRoot(), 'games', 'game-1-player-3.db'));
-      expect(WorkspaceStore.pathFor('game-1', 3)).toBe(WorkspaceStore.pathFor('game-1', 3));
     });
 
     it('should reject game IDs that escape the games folder', () => {

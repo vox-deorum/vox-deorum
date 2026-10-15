@@ -4,10 +4,11 @@
  * Skips gracefully if the telemetry database is not available.
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { Kysely } from 'kysely';
 import { z } from 'zod';
 
 // Mock agent-registry to break circular dependency chain:
@@ -30,6 +31,8 @@ import { TelepathistTool } from '../../../src/telepathist/telepathist-tool.js';
 import { GetSituationTool } from '../../../src/telepathist/tools/get-situation.js';
 import { GetDecisionTool } from '../../../src/telepathist/tools/get-decision.js';
 import { GetConversationLogTool } from '../../../src/telepathist/tools/get-conversation-log.js';
+import type { TelemetryDatabase } from '../../../src/utils/telemetry/schema.js';
+import { createTelemetryDb } from '../../helpers/telemetry-db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = path.resolve(__dirname, '../../../telemetry/upload');
@@ -46,6 +49,42 @@ const telemetryDbPath = findTelemetryDb();
 const dbExists = !!telemetryDbPath;
 
 let params: TelepathistParameters;
+const controlledDatabases: Kysely<TelemetryDatabase>[] = [];
+
+/** Create an in-memory telemetry database containing controlled game-state spans. */
+function createControlledTelemetryParams(
+  spanTurns: number[],
+  availableTurns = spanTurns
+): TelepathistParameters {
+  const { db } = createTelemetryDb(spanTurns.flatMap((turn) => [
+    {
+      contextId: 'controlled-context', turn, traceId: `trace-${turn}`, spanId: `root-${turn}`,
+      name: `strategist.turn.${turn}`, startTime: turn,
+    },
+    {
+      contextId: 'controlled-context', turn, traceId: `trace-${turn}`, spanId: `players-${turn}`,
+      parentSpanId: `root-${turn}`, name: 'mcp-tool.get-players', startTime: turn + 1,
+      attributes: { 'tool.output': { CallerFact: `FACT_TURN_${turn}` } },
+    },
+  ]));
+  controlledDatabases.push(db);
+
+  return {
+    playerID: 1,
+    gameID: 'controlled-game',
+    turn: availableTurns[availableTurns.length - 1] ?? 0,
+    databasePath: '/tmp/controlled-telemetry.db',
+    db,
+    telepathistDb: {} as any,
+    civilizationName: 'Rome',
+    leaderName: 'Augustus Caesar',
+    availableTurns,
+  } as TelepathistParameters;
+}
+
+afterEach(async () => {
+  await Promise.all(controlledDatabases.splice(0).map((db) => db.destroy()));
+});
 
 beforeAll(async () => {
   if (!dbExists || !telemetryDbPath) return;
@@ -59,7 +98,7 @@ afterAll(async () => {
   }
 });
 
-// --- parseTurns helper tests (via test subclass) ---
+// --- parseTurns helper boundary tests ---
 
 /** Minimal concrete subclass to expose protected parseTurns for testing */
 class TestTool extends TelepathistTool<{ Turns: string }> {
@@ -77,23 +116,6 @@ describe('TelepathistTool.parseTurns', () => {
   const tool = new TestTool();
   const available = [0, 5, 10, 15, 20, 25, 30];
 
-  it('should parse a single turn', () => {
-    expect(tool.testParseTurns('10', available)).toEqual([10]);
-  });
-
-  it('should parse comma-separated turns', () => {
-    expect(tool.testParseTurns('5,15,25', available)).toEqual([5, 15, 25]);
-  });
-
-  it('should parse a range', () => {
-    expect(tool.testParseTurns('10-25', available)).toEqual([10, 15, 20, 25]);
-  });
-
-  it('should filter to available turns only', () => {
-    expect(tool.testParseTurns('7', available)).toEqual([]);
-    expect(tool.testParseTurns('5,7,10', available)).toEqual([5, 10]);
-  });
-
   it('should respect maxLength', () => {
     const result = tool.testParseTurns('0-30', available, 3);
     expect(result).toHaveLength(3);
@@ -102,6 +124,64 @@ describe('TelepathistTool.parseTurns', () => {
 
   it('should handle non-numeric input', () => {
     expect(tool.testParseTurns('abc', available)).toEqual([]);
+  });
+});
+
+describe('GetSituationTool turn selection', () => {
+  const tool = new GetSituationTool();
+
+  it('should return the selected fact for a single available turn', async () => {
+    const controlledParams = createControlledTelemetryParams([5, 10, 15]);
+
+    const sections = await tool.execute(
+      { Turns: '10', Detailed: true, Categories: ['players'] },
+      controlledParams
+    );
+    const result = sections.join('\n');
+
+    expect(result).toContain('FACT_TURN_10');
+    expect(result).not.toContain('FACT_TURN_5');
+    expect(result).not.toContain('FACT_TURN_15');
+  });
+
+  it('should select requested comma-separated turns that are available', async () => {
+    const controlledParams = createControlledTelemetryParams([5, 7, 10, 15], [5, 10, 15]);
+
+    const sections = await tool.execute(
+      { Turns: '5,7,10', Detailed: true, Categories: ['players'] },
+      controlledParams
+    );
+    const result = sections.join('\n');
+
+    expect(result).toContain('FACT_TURN_5');
+    expect(result).toContain('FACT_TURN_10');
+    expect(result).not.toContain('FACT_TURN_7');
+    expect(result).not.toContain('FACT_TURN_15');
+  });
+
+  it('should return facts within the requested available-turn range', async () => {
+    const controlledParams = createControlledTelemetryParams([5, 10, 15]);
+
+    const sections = await tool.execute(
+      { Turns: '5-10', Detailed: true, Categories: ['players'] },
+      controlledParams
+    );
+    const result = sections.join('\n');
+
+    expect(result).toContain('FACT_TURN_5');
+    expect(result).toContain('FACT_TURN_10');
+    expect(result).not.toContain('FACT_TURN_15');
+  });
+
+  it('should not return telemetry facts for an unavailable turn', async () => {
+    const controlledParams = createControlledTelemetryParams([5, 10, 15]);
+
+    const sections = await tool.execute(
+      { Turns: '12', Detailed: true, Categories: ['players'] },
+      controlledParams
+    );
+
+    expect(sections.join('\n')).not.toContain('FACT_TURN_');
   });
 });
 

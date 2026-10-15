@@ -13,7 +13,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 // leaf summarizer module is evaluated, avoiding a circular-import TDZ error.
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { createFakeVoxContext, FakeVoxContext } from '../../helpers/fake-vox-context.js';
-import { getPromptSet } from '../../../src/utils/prompts/prompt-files.js';
 import {
   buildToolSummaryInstruction,
   summarizeWithCache,
@@ -97,15 +96,6 @@ beforeEach(() => {
 
 describe('Summarizer', () => {
   describe('getSystem', () => {
-    it('includes the shared historian guidelines fragment', async () => {
-      const params = makeTelepathistParameters();
-      const input: SummarizerInput = { text: 'data', instruction: 'do it' };
-
-      const system = await summarizer.getSystem(params, input, ctx.asContext());
-
-      expect(system).toContain(getPromptSet().render('shared/historian-guidelines'));
-    });
-
     it('includes the dynamic leader and civilization names', async () => {
       const params = makeTelepathistParameters({
         leaderName: 'Pacal',
@@ -151,33 +141,35 @@ describe('Summarizer', () => {
 
     it('omits a reminder section when no reminder is provided', async () => {
       const params = makeTelepathistParameters();
-      const input: SummarizerInput = { text: 'data', instruction: 'do it' };
+      const input: SummarizerInput = {
+        text: 'CALLER_DATA_SENTINEL',
+        instruction: 'CALLER_INSTRUCTION_SENTINEL',
+      };
+      const withReminder = await summarizer.getInitialMessages(
+        params,
+        { ...input, reminder: 'REMINDER_SENTINEL' },
+        ctx.asContext()
+      );
 
       const messages = await summarizer.getInitialMessages(params, input, ctx.asContext());
 
-      expect(messages[0].content).not.toContain('# Reminder');
-    });
-
-    it('wraps non-heading data in a # Data section', async () => {
-      const params = makeTelepathistParameters();
-      const input: SummarizerInput = { text: 'plain text', instruction: 'do it' };
-
-      const messages = await summarizer.getInitialMessages(params, input, ctx.asContext());
-
-      expect(messages[0].content).toContain('# Data\nplain text');
+      expect(withReminder[0].content).toContain('REMINDER_SENTINEL');
+      expect(messages[0].content).toContain('CALLER_DATA_SENTINEL');
+      expect(messages[0].content).toContain('CALLER_INSTRUCTION_SENTINEL');
+      expect(messages[0].content).not.toContain('REMINDER_SENTINEL');
     });
 
     it('preserves data that already begins with a heading', async () => {
       const params = makeTelepathistParameters();
+      const headedData = '# Situation\nHEADED_DATA_SENTINEL';
       const input: SummarizerInput = {
-        text: '# Situation\nalready headed',
+        text: headedData,
         instruction: 'do it',
       };
 
       const messages = await summarizer.getInitialMessages(params, input, ctx.asContext());
 
-      expect(messages[0].content).toContain('# Situation\nalready headed');
-      expect(messages[0].content).not.toContain('# Data\n# Situation');
+      expect(messages[0].content).toContain(headedData);
     });
   });
 

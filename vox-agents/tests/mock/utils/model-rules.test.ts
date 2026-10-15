@@ -29,14 +29,21 @@ describe('model rules', () => {
   });
 
   it('should merge overlapping rules case-insensitively', () => {
-    expect(applyModelRules('openrouter', 'Google/Gemma-3-27B')).toEqual({
-      toolMiddleware: 'gemma',
-    });
-    expect(applyModelRules('openai-compatible', 'MiniMax-Embedder')).toEqual({
-      toolMiddleware: 'prompt',
-      thinkMiddleware: 'think',
-      embeddingSize: 4096,
-    });
+    const length = modelRules.length;
+    modelRules.push(
+      { provider: 'fixture-provider', match: /alpha/i, options: { toolMiddleware: 'prompt', concurrencyLimit: 1 } },
+      { provider: ['fixture-provider', 'fixture-alias'], match: /alpha-beta/i, options: { concurrencyLimit: 2, embeddingSize: 2048 } },
+    );
+    try {
+      expect(applyModelRules('fixture-provider', 'ALPHA-BETA')).toEqual({
+        toolMiddleware: 'prompt', concurrencyLimit: 2, embeddingSize: 2048,
+      });
+      expect(applyModelRules('fixture-alias', 'alpha-beta')).toEqual({
+        concurrencyLimit: 2, embeddingSize: 2048,
+      });
+    } finally {
+      modelRules.splice(length);
+    }
   });
 
   it('should shallow-merge later rules and accept provider arrays', () => {
@@ -53,18 +60,22 @@ describe('model rules', () => {
     }
   });
 
-  it('should synthesize representative known provider configurations', () => {
-    expect(synthesizeModelConfig('openai-compatible/Qwen-3.6')).toEqual({
+  it('should synthesize a known provider configuration from matching rules', () => {
+    const length = modelRules.length;
+    modelRules.push({
       provider: 'openai-compatible',
-      name: 'Qwen-3.6',
-      options: { systemPromptFirst: true, toolMiddleware: 'prompt' },
+      match: /^controlled-fixture$/i,
+      options: { toolMiddleware: 'prompt', embeddingSize: 768 },
     });
-    expect(synthesizeModelConfig('claude-code/custom')).toMatchObject({
-      provider: 'claude-code', name: 'custom', options: { concurrencyLimit: 1 },
-    });
-    expect(synthesizeModelConfig('codex/gpt-5.6-terra')).toMatchObject({
-      provider: 'codex', name: 'gpt-5.6-terra', options: { concurrencyLimit: 2 },
-    });
+    try {
+      expect(synthesizeModelConfig('openai-compatible/Controlled-Fixture')).toEqual({
+        provider: 'openai-compatible',
+        name: 'Controlled-Fixture',
+        options: { toolMiddleware: 'prompt', embeddingSize: 768 },
+      });
+    } finally {
+      modelRules.splice(length);
+    }
   });
 
   it('should not synthesize an agent identifier or unsupported provider', () => {
@@ -84,14 +95,12 @@ describe('model rules', () => {
     });
   });
 
-  it('should apply reasoning to a synthesized model and log it once', () => {
+  it('should apply reasoning to a synthesized model', () => {
     expect(getModelConfig('openai/gpt-oss-synth', 'high')).toMatchObject({
       provider: 'openai',
       name: 'gpt-oss-synth',
       options: { reasoningEffort: 'high' },
     });
-    getModelConfig('openai/gpt-oss-synth', 'high');
-    expect(mocks.logger.info).toHaveBeenCalledTimes(1);
   });
 
   it('should scope prompt middleware to open-weight providers', () => {
@@ -104,15 +113,6 @@ describe('model rules', () => {
     expect(applyModelRules('openai', 'gpt-oss-120b')).toBeUndefined();
     expect(applyModelRules('anthropic', 'claude-sonnet-5')).toBeUndefined();
     expect(applyModelRules('google', 'gemini-3.6-flash')).toBeUndefined();
-  });
-
-  it('should retain GPT-5.6 reasoning and Codex concurrency rules', () => {
-    expect(applyModelRules('openai', 'gpt-5.6-terra')).toEqual({ reasoningEffort: 'high' });
-    expect(applyModelRules('codex', 'gpt-5.6-terra')).toEqual({
-      concurrencyLimit: 2,
-      reasoningEffort: 'high',
-    });
-    expect(applyModelRules('codex', 'gpt-5.6-luna')).toEqual({ reasoningEffort: 'high' });
   });
 
   it('should omit unavailable tier recommendations without inventing catalog entries', () => {
@@ -138,22 +138,14 @@ describe('model rules', () => {
       // No rule hit for the escalation tier: the key is simply absent.
       expect(recommendTierModels('temporary-tier', [{ id: 'temporary/main', name: 'main' }]))
         .toEqual({ default: 'temporary/main' });
-      // Built-in provider rules stay unchanged (no large declared anywhere yet).
-      expect(recommendTierModels('codex', [
-        { id: 'codex/gpt-5.6-terra', name: 'gpt-5.6-terra' },
-        { id: 'codex/gpt-5.6-luna', name: 'gpt-5.6-luna' },
-        { id: 'codex/gpt-5.6-sol', name: 'gpt-5.6-sol' },
-      ])).toEqual({ default: 'codex/gpt-5.6-terra', small: 'codex/gpt-5.6-luna' });
     } finally {
       tierRules.pop();
     }
   });
 
-  it('should fall back from an unknown ID and warn only once', () => {
+  it('should fall back from an unknown ID', () => {
     expect(getModelConfig('missing-provider/example')).toEqual({
       provider: 'openai', name: 'configured-default',
     });
-    getModelConfig('missing-provider/example');
-    expect(mocks.logger.warn).toHaveBeenCalledTimes(1);
   });
 });

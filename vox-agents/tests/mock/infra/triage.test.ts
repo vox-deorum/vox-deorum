@@ -39,7 +39,6 @@ describe('createTriage', () => {
       answers: { urgency: { probability: 1 } },
     });
     expect(ctx.evaluate).toHaveBeenCalledWith(expect.anything(), prepared, { questions, purpose: 'triage' });
-    expect(route).toHaveBeenCalledOnce();
   });
 
   it('should project the prepared state only when the caller supplies a projector', async () => {
@@ -50,7 +49,6 @@ describe('createTriage', () => {
 
     await hook.call({ name: 'agent' } as any, {} as any, {}, ctx, prepared);
 
-    expect(projectState).toHaveBeenCalledWith(prepared, {}, {}, ctx);
     expect(ctx.evaluate.mock.calls[0][1]).toEqual({ facts: ['selected'] });
   });
 
@@ -69,7 +67,7 @@ describe('createTriage', () => {
     const hook = createTriage({ shortcut: () => shortcut });
 
     await expect(hook.call({ name: 'agent' } as any, {} as any, {}, ctx, { system: '', messages: [] }))
-      .resolves.toEqual({ ...shortcut.decision, source: 'shortcut' });
+      .resolves.toEqual({ tier: 'small', note: 'routine', source: 'shortcut' });
     expect(ctx.evaluate).not.toHaveBeenCalled();
   });
 

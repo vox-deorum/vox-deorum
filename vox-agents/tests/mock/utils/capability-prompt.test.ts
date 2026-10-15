@@ -10,10 +10,7 @@ import {
   capabilityInstruction,
   capabilityMiddleware,
 } from '../../../src/utils/models/capability-prompt.js';
-import {
-  completionToolsInstruction,
-  requiredToolChoiceMiddleware,
-} from '../../../src/utils/models/providers/required-tool-choice.js';
+import { requiredToolChoiceMiddleware } from '../../../src/utils/models/providers/required-tool-choice.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import {
   workspaceCatalogFile,
@@ -139,10 +136,12 @@ describe('capabilityMiddleware', () => {
       params: { prompt, tools: [functionTool('found_city'), functionTool(bashToolName)] },
     });
     const system = withBash.prompt.filter((m: any) => m.role === 'system').map((m: any) => m.content).join('\n');
-    expect(system).toContain(capabilityInstruction({ files: gameWrite, web: false }, ['found_city'])!);
+    expect(system).toContain('/workspace/records');
+    expect(system).toContain('found_city');
+    expect(withBash.tools.map((tool: any) => tool.name)).toEqual(['found_city', bashToolName]);
   });
 
-  it('keeps web guidance on a request without bash', async () => {
+  it('keeps Web capability guidance on a request without bash', async () => {
     const recorder = recordingModel();
     const model = wrapLanguageModel({
       model: recorder,
@@ -153,10 +152,11 @@ describe('capabilityMiddleware', () => {
       tools: [functionTool('found_city')],
       providerOptions: {},
     } as any);
-    expect(lastSystem(recorder)).toContain(capabilityInstruction({ web: true })!);
+    expect(lastSystem(recorder)).toContain('Web');
+    expect(lastSystem(recorder)).not.toContain('/workspace/records');
   });
 
-  it('keeps the capability reminder ahead of the completion-tool instruction', async () => {
+  it('includes workspace paths and the declared completion tool in the model request', async () => {
     const recorder = recordingModel();
     const model = wrapLanguageModel({
       model: recorder,
@@ -177,11 +177,12 @@ describe('capabilityMiddleware', () => {
     } as any);
 
     const system = lastSystem(recorder);
-    const instruction = capabilityInstruction({ files: gameWrite, web: false }, ['found_city'])!;
-    const completion = completionToolsInstruction(['found_city', bashToolName], ['found_city'], false)!;
-    expect(system).toContain(instruction);
-    expect(system).toContain(completion);
+    expect(system).toContain('/workspace/records');
+    expect(system).toContain('found_city');
+    expect(system).toContain(bashToolName);
     expect(system).not.toContain('inactive_tool');
-    expect(system.indexOf(instruction)).toBeLessThan(system.indexOf(completion));
+    const request = (recorder as any).doGenerateCalls.at(-1);
+    expect(request.tools.map((tool: any) => tool.name)).toEqual(['found_city', bashToolName]);
+    expect(request.toolChoice).toEqual({ type: 'auto' });
   });
 });

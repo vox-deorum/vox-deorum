@@ -13,7 +13,7 @@ import Database from 'better-sqlite3';
 import { Kysely, SqliteDialect } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { extractPrompt, findTurnByRationale } from '../../../src/oracle/utils/prompt-extractor.js';
-import type { NewSpan, TelemetryDatabase } from '../../../src/utils/telemetry/schema.js';
+import { spansTableSql, type NewSpan, type TelemetryDatabase } from '../../../src/utils/telemetry/schema.js';
 
 // ---------------------------------------------------------------------------
 // In-memory telemetry DB helpers
@@ -25,23 +25,7 @@ let seq = 0;
 
 function openMemoryDb(): void {
   sqlite = new Database(':memory:');
-  sqlite.exec(`
-    CREATE TABLE spans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      contextId TEXT NOT NULL,
-      turn INTEGER,
-      traceId TEXT NOT NULL,
-      spanId TEXT NOT NULL,
-      parentSpanId TEXT,
-      name TEXT NOT NULL,
-      startTime INTEGER NOT NULL,
-      endTime INTEGER NOT NULL,
-      durationMs INTEGER NOT NULL,
-      attributes TEXT,
-      statusCode INTEGER NOT NULL,
-      statusMessage TEXT
-    );
-  `);
+  sqlite.exec(spansTableSql);
   db = new Kysely<TelemetryDatabase>({ dialect: new SqliteDialect({ database: sqlite }) });
   seq = 0;
 }

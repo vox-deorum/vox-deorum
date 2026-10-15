@@ -157,27 +157,27 @@ describe('prompt files', () => {
 
     it('should reject a variable the built-in template does not use', () => {
       const dir = promptFolder({ 'keyword-librarian.md': 'Hello {{leader}}\n' });
-      expect(() => loadPromptSet(dir)).toThrow('leader');
+      expect(() => loadPromptSet(dir)).toThrow('keyword-librarian.md');
     });
 
     it('should reject a section the built-in template does not use', () => {
       const dir = promptFolder({ 'diplomatic-analyst.md': '{{#teammate}}Team{{/teammate}}\n' });
-      expect(() => loadPromptSet(dir)).toThrow('teammate');
+      expect(() => loadPromptSet(dir)).toThrow('diplomatic-analyst.md');
     });
 
     it('should reject a name reached only through an included partial', () => {
       const dir = promptFolder({ 'keyword-librarian.md': `${builtIn('keyword-librarian')}{{> shared/decision}}\n` });
-      expect(() => loadPromptSet(dir)).toThrow('flavor');
+      expect(() => loadPromptSet(dir)).toThrow('keyword-librarian.md');
     });
 
     it('should reject a section name used as a variable', () => {
       const dir = promptFolder({ 'negotiator.md': `${builtIn('negotiator')}{{teammate}}\n` });
-      expect(() => loadPromptSet(dir)).toThrow('teammate');
+      expect(() => loadPromptSet(dir)).toThrow('negotiator.md');
     });
 
     it('should reject a section field used outside its section', () => {
       const dir = promptFolder({ 'negotiator.md': `${builtIn('negotiator')}{{civName}}\n` });
-      expect(() => loadPromptSet(dir)).toThrow('civName');
+      expect(() => loadPromptSet(dir)).toThrow('negotiator.md');
     });
 
     it('should accept a section field inside its section and outer names inside a section', () => {
@@ -189,12 +189,12 @@ describe('prompt files', () => {
 
     it('should reject a partial that includes itself', () => {
       const dir = promptFolder({ 'shared/goals.md': '{{> shared/goals}}\n' });
-      expect(() => loadPromptSet(dir)).toThrow('shared/goals > shared/goals');
+      expect(() => loadPromptSet(dir)).toThrow('shared/goals.md');
     });
 
     it('should reject a missing partial', () => {
       const dir = promptFolder({ 'simple-strategist.md': '{{> shared/no-such-fragment}}\n' });
-      expect(() => loadPromptSet(dir)).toThrow('shared/no-such-fragment');
+      expect(() => loadPromptSet(dir)).toThrow('simple-strategist.md');
     });
 
     it('should name the fragment that includes a missing partial', () => {
@@ -208,7 +208,8 @@ describe('prompt files', () => {
     });
 
     it('should reject a folder that does not exist', () => {
-      expect(() => loadPromptSet(path.join(os.tmpdir(), 'vox-prompts-missing-folder'))).toThrow('does not exist');
+      const missingFolder = path.join(os.tmpdir(), 'vox-prompts-missing-folder');
+      expect(() => loadPromptSet(missingFolder)).toThrow(missingFolder);
     });
 
     it('should keep another session\'s folder cached when a session reloads its own', () => {

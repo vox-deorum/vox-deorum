@@ -1,11 +1,10 @@
 /**
  * Mock-tier unit tests for the tool-rescue prompt shaping (`prompt.ts`).
  *
- * `createToolPrompts`: the instruction branches (auto, which unwrapped required
- * shares, tool, and wrapped required) under both the default `'tool'` framing and
- * the claude-code `'action'` framing, plus the `'none'` short-circuit. The default-framing assertions pin the wording
- * the ~15 prompt-mode models depend on; the action-framing assertions pin the
- * reframed terminology and JSON key.
+ * `createToolPrompts`: the instruction branches (auto, unwrapped required, tool,
+ * and wrapped required) under both default `'tool'` and claude-code `'action'`
+ * framing, plus the `'none'` short-circuit. Assertions check offered names and
+ * the JSON protocol fields independently of surrounding prompt prose.
  *
  * `convertPromptToolMessagesToText`: prompt-emulated (client) tool parts get
  * reframed to text, while provider-executed built-in tool parts (e.g. claude-code's
@@ -67,79 +66,80 @@ describe('buildToolCallArraySchema', () => {
 
 describe('createToolPrompts', () => {
   describe("default ('tool') framing", () => {
-    it('uses Tool headings and the "tool" JSON key for the auto branch', () => {
+    it('exposes the offered tool name and JSON call fields for the auto branch', () => {
       const out = createToolPrompts(tools, { type: 'auto' })!;
-      expect(out).toContain('## Tool Calling');
-      expect(out).toContain('## Available Tools');
-      expect(out).toContain('{ "tool": "<tool_name>", "arguments": { <parameters> } }');
-      expect(out).not.toContain('Action');
-      // The per-tool schema block is always appended.
-      expect(out).toContain('### send_message');
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/\[\s*\{\s*"tool"\s*:/);
+      expect(out).toMatch(/"arguments"\s*:/);
     });
 
-    it('gives the unwrapped required branch the same text as auto', () => {
-      // The requirement is the agent loop's closing reminder, so a step that drops to auto keeps
-      // this prompt (and its cached prefix).
+    it('describes the unwrapped required branch as a bare list of calls', () => {
       const out = createToolPrompts(tools, { type: 'required' })!;
-      expect(out).toBe(createToolPrompts(tools, { type: 'auto' }));
-      // Unwrapped by default: teaches a bare array, never the wrapper object.
-      expect(out).not.toMatch(/"tools":\s*\[/);
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/\[\s*\{\s*"tool"\s*:/);
+      expect(out).not.toMatch(/"tools"\s*:/);
     });
 
-    it('mandates the single tool for the tool branch', () => {
-      const out = createToolPrompts(tools, { type: 'tool', toolName: 'send_message' })!;
-      expect(out).toContain('## Tool Calling');
-      expect(out).toMatch(/You must use the tool defined below/);
+    it('preserves the selected tool schema for the tool branch', () => {
+      const selected = {
+        ...tools[0],
+        inputSchema: { type: 'object', properties: { recipient: { type: 'string' } } },
+      };
+      const out = createToolPrompts([selected], { type: 'tool', toolName: 'send_message' })!;
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/\{\s*"tool"\s*:/);
+      expect(out).toMatch(/"arguments"\s*:/);
+      const schemaBlock = out.match(/- Arguments: \n```([\s\S]*?)```/)?.[1];
+      expect(JSON.parse(schemaBlock!)).toEqual({
+        type: 'object', properties: { recipient: { type: 'string' } },
+      });
     });
   });
 
   describe("'action' framing", () => {
-    it('uses Action headings and the "action" JSON key for the auto branch', () => {
+    it('exposes the offered action name and JSON call fields for the auto branch', () => {
       const out = createToolPrompts(tools, { type: 'auto' }, 'action')!;
-      expect(out).toContain('## Action Calling');
-      expect(out).toContain('## Available Actions');
-      expect(out).toContain('{ "action": "<action_name>", "arguments": { <parameters> } }');
-      expect(out).not.toContain('## Tool Calling');
-      expect(out).not.toContain('## Available Tools');
-      expect(out).toMatch(/You have access to actions/);
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/\[\s*\{\s*"action"\s*:/);
+      expect(out).toMatch(/"arguments"\s*:/);
     });
 
-    it('gives the unwrapped required branch the same Action text as auto', () => {
+    it('describes the unwrapped required branch with action calls', () => {
       const out = createToolPrompts(tools, { type: 'required' }, 'action')!;
-      expect(out).toBe(createToolPrompts(tools, { type: 'auto' }, 'action'));
-      expect(out).toContain('{ "action": "<action_name>", "arguments": { <parameters> } }');
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/\[\s*\{\s*"action"\s*:/);
+      expect(out).not.toMatch(/"actions"\s*:/);
     });
 
-    it('uses Action wording for the tool branch', () => {
+    it('identifies the selected action for the tool branch', () => {
       const out = createToolPrompts(tools, { type: 'tool', toolName: 'send_message' }, 'action')!;
-      expect(out).toContain('## Action Calling');
-      expect(out).toMatch(/You must use the action defined below/);
-      expect(out).toContain('{ "action": "<action_name>", "arguments": { <parameters> } }');
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/\{\s*"action"\s*:/);
+      expect(out).toMatch(/"arguments"\s*:/);
     });
   });
 
   describe('wrapped (constrained-decoding) required branch', () => {
-    it('teaches the wrapper object matching the responseFormat schema under action framing', () => {
+    it('describes the wrapper object under the schema keys for action framing', () => {
       const out = createToolPrompts(tools, { type: 'required' }, 'action', true)!;
-      expect(out).toContain('## Action Calling');
-      expect(out).toMatch(/Respond ONLY with a JSON object/);
-      expect(out).toMatch(/"actions":\s*\[/);
-      expect(out).toContain('{ "action": "<action_name>", "arguments": { <parameters> } }');
-      // Must NOT reuse the bare-array phrasing that would contradict the enforced grammar.
-      expect(out).not.toMatch(/Respond ONLY with a JSON array/);
+      expect(out).toMatch(/\{\s*"actions"\s*:\s*\[/);
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/"action"\s*:/);
+      expect(out).toMatch(/"arguments"\s*:/);
     });
 
     it("uses the framing's listKey wrapper under tool framing", () => {
       const out = createToolPrompts(tools, { type: 'required' }, 'tool', true)!;
-      expect(out).toContain('## Tool Calling');
-      expect(out).toMatch(/"tools":\s*\[/);
-      expect(out).toContain('{ "tool": "<tool_name>", "arguments": { <parameters> } }');
+      expect(out).toMatch(/\{\s*"tools"\s*:\s*\[/);
+      expect(out).toContain('send_message');
+      expect(out).toMatch(/"tool"\s*:/);
+      expect(out).toMatch(/"arguments"\s*:/);
     });
 
-    it('only affects the required branch — auto stays bare even when wrapped is true', () => {
+    it('keeps the auto branch as an array when wrapped mode is requested', () => {
       const out = createToolPrompts(tools, { type: 'auto' }, 'action', true)!;
-      expect(out).toMatch(/You have access to actions/);
       expect(out).not.toMatch(/"actions":\s*\[/);
+      expect(out).toMatch(/\[\s*\{\s*"action"\s*:/);
     });
   });
 

@@ -3,24 +3,32 @@
  * Agents are resolved through the registry (the canonical load entry) to avoid the
  * circular-import hazard of importing an agent module in isolation; the prompt methods are
  * protected, so we reach them through a loosely-typed handle (as in identity.test.ts).
- * Identity is derived from the typed parameters (live game state) — no live game needed.
+ * Audience identity comes from the persisted thread; teammate status comes from cached game state.
  */
 
-import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterAll, describe, it, expect } from 'vitest';
 import { agentRegistry } from '../../../../src/infra/agent-registry.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import { getPromptSet } from '../../../../src/utils/prompts/prompt-files.js';
 
 const diplomat = agentRegistry.get('diplomat') as any;
 const spokesperson = agentRegistry.get('spokesperson') as any;
 
-/** The audience section as rendered from the built-in shared fragment for this test's audience. */
-const audience = (teammate?: { civName: string }) =>
-  getPromptSet().render('shared/audience', { user: 'the leader of Rome', teammate });
+const promptFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'vd-diplomat-prompts-'));
+const sharedPromptFolder = path.join(promptFolder, 'shared');
+fs.mkdirSync(sharedPromptFolder);
+fs.writeFileSync(
+  path.join(sharedPromptFolder, 'audience.md'),
+  `CONTROLLED-AUDIENCE: {{user}}
+{{#teammate}}CONTROLLED-TEAMMATE: {{civName}}{{/teammate}}{{^teammate}}CONTROLLED-NO-TEAMMATE{{/teammate}}
+`,
+);
+const promptContext = { prompts: promptFolder } as any;
 
-/** Text the agent appends after the audience section (empty when the audience is the final section). */
-const afterAudience = (system: string, audienceText: string) =>
-  system.slice(system.indexOf(audienceText) + audienceText.length).trim();
+/** Remove the temporary custom prompt fixture after the audience tests finish. */
+afterAll(() => fs.rmSync(promptFolder, { recursive: true, force: true }));
 
 /**
  * Germany(3) ↔ leader(1) thread; the agent voices seat 3. The voiced seat carries its stored
@@ -95,38 +103,39 @@ describe('getHint', () => {
 
 describe('audience description', () => {
   it('combines the audience role with its stored civ identity', async () => {
-    // The audience civ comes from the thread (resolved at open time), e.g. "the leader of Rome".
-    const system = await diplomat.getSystem(params, thread(), undefined);
-    expect(system).toContain(audience());
+    const input = thread({
+      player1Role: 'envoy-from-seat-1',
+      player1Identity: { name: 'StoredAudienceCiv-314', leader: 'StoredAudienceLeader-271' },
+    });
+    const system = await diplomat.getSystem(params, input, promptContext);
+    expect(system).toContain('CONTROLLED-AUDIENCE: envoy-from-seat-1 of StoredAudienceCiv-314');
+    expect(system).toContain('CONTROLLED-NO-TEAMMATE');
   });
 
   it('is never resolved from live game state', async () => {
-    // A civ seeded only in game state must not surface — identity is stored on the thread, so the
-    // audience line reflects the thread identity (Rome), never the game-state one (France).
     const identityParams = {
       ...params,
       gameStates: {
-        5: { turn: 5, reports: {}, players: { '1': { Civilization: 'France', Leader: 'Napoleon' } } },
+        5: { turn: 5, reports: {}, players: { '1': { Civilization: 'GameStateCiv-963', Leader: 'GameStateLeader-852' } } },
       },
     };
-    const system = await diplomat.getSystem(identityParams, thread(), undefined);
-    expect(system).toContain(audience());
-    expect(system).not.toContain('France');
+    const input = thread({ player1Identity: { name: 'ThreadCiv-741', leader: 'ThreadLeader-630' } });
+    const system = await diplomat.getSystem(identityParams, input, promptContext);
+    expect(system).toContain('CONTROLLED-AUDIENCE: the leader of ThreadCiv-741');
+    expect(system).not.toContain('GameStateCiv-963');
+    expect(system).not.toContain('GameStateLeader-852');
   });
 });
 
 describe('Spokesperson.getSystem', () => {
-  it('assembles the shared prompt fragments by reference', async () => {
-    const system = await spokesperson.getSystem(params, thread(), undefined);
-    // Shared fragments are included verbatim from the built-in prompt files, not paraphrased.
-    expect(system).toContain(getPromptSet().render('shared/world-context'));
-    expect(system).toContain(getPromptSet().render('shared/communication-style'));
-  });
-
-  it('includes the shared audience fragment built from the audience role and stored civ', async () => {
-    const system = await spokesperson.getSystem(params, thread(), undefined);
-    // The thread audience is seat 1 — role "the leader", civ Rome — so "the leader of Rome".
-    expect(system).toContain(audience());
+  it('uses the audience role and stored civ identity', async () => {
+    const input = thread({
+      player1Role: 'voice-from-seat-1',
+      player1Identity: { name: 'SpokespersonAudience-528', leader: 'SpokespersonLeader-417' },
+    });
+    const system = await spokesperson.getSystem(params, input, promptContext);
+    expect(system).toContain('CONTROLLED-AUDIENCE: voice-from-seat-1 of SpokespersonAudience-528');
+    expect(system).toContain('CONTROLLED-NO-TEAMMATE');
   });
 
   it('includes the stable tool IDs in normal mode', async () => {
@@ -138,38 +147,45 @@ describe('Spokesperson.getSystem', () => {
 });
 
 describe('teammate counterpart', () => {
-  /** Params whose cached players report puts seats 1 and 3 on the given teams (seat 1 hides its own TeamID). */
+  /** Build cached player reports for the requested team relation. */
   function teamParams(seat3Team: number) {
     return {
       ...params,
       gameStates: {
         5: { turn: 5, reports: {}, players: {
-          '1': { Civilization: 'Rome', Leader: 'Caesar' },
-          '3': { Civilization: 'Germany', Leader: 'Bismarck', ...(seat3Team === 3 ? {} : { TeamID: seat3Team }) },
+          '1': { Civilization: 'GameStateAudience-194', Leader: 'GameStateAudienceLeader-183' },
+          '3': { Civilization: 'GameStateAgent-372', Leader: 'GameStateAgentLeader-361', ...(seat3Team === 3 ? {} : { TeamID: seat3Team }) },
         } },
       },
     };
   }
 
-  it('switches the Diplomat to the teammate audience and reporting sections', async () => {
-    const system = await diplomat.getSystem(teamParams(1), thread(), undefined);
-    expect(system).toContain(audience({ civName: 'Rome' }));
-    expect(system).not.toContain(audience());
-    // The teammate diplomat keeps a reporting section after the audience block.
-    expect(afterAudience(system, audience({ civName: 'Rome' }))).not.toBe('');
+  /** Build a thread whose persisted identities conflict with the cached game-state names. */
+  function teamThread(): EnvoyThread {
+    return thread({
+      player1Identity: { name: 'StoredCounterpart-936', leader: 'StoredCounterpartLeader-825' },
+      player2Identity: { name: 'StoredAgent-714', leader: 'StoredAgentLeader-603' },
+    });
+  }
+
+  it('includes the stored counterpart identity when cached players share a team', async () => {
+    const system = await diplomat.getSystem(teamParams(1), teamThread(), promptContext);
+    expect(system).toContain('CONTROLLED-AUDIENCE: the leader of StoredCounterpart-936');
+    expect(system).toContain('CONTROLLED-TEAMMATE: StoredCounterpart-936');
+    expect(system).not.toContain('GameStateAudience-194');
   });
 
-  it('keeps the default audience for players on different teams', async () => {
-    const system = await diplomat.getSystem(teamParams(3), thread(), undefined);
-    expect(system).toContain(audience());
-    // Without a teammate the audience block is the final section: no reporting section follows.
-    expect(afterAudience(system, audience())).toBe('');
+  it('omits teammate context for players on different teams', async () => {
+    const system = await diplomat.getSystem(teamParams(3), teamThread(), promptContext);
+    expect(system).toContain('CONTROLLED-AUDIENCE: the leader of StoredCounterpart-936');
+    expect(system).toContain('CONTROLLED-NO-TEAMMATE');
+    expect(system).not.toContain('CONTROLLED-TEAMMATE:');
   });
 
-  it('switches the Spokesperson to the teammate audience without the reporting section', async () => {
-    const system = await spokesperson.getSystem(teamParams(1), thread(), undefined);
-    expect(system).toContain(audience({ civName: 'Rome' }));
-    // The spokesperson's prompt ends at the audience block: no reporting section follows.
-    expect(afterAudience(system, audience({ civName: 'Rome' }))).toBe('');
+  it('includes the stored counterpart identity for a Spokesperson addressing a teammate', async () => {
+    const system = await spokesperson.getSystem(teamParams(1), teamThread(), promptContext);
+    expect(system).toContain('CONTROLLED-AUDIENCE: the leader of StoredCounterpart-936');
+    expect(system).toContain('CONTROLLED-TEAMMATE: StoredCounterpart-936');
+    expect(system).not.toContain('GameStateAudience-194');
   });
 });

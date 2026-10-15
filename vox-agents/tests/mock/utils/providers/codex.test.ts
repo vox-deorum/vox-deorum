@@ -51,7 +51,6 @@ vi.mock('../../../../src/utils/logger.js', () => ({
 
 import { buildCodexModel, buildCodexProviderOptions } from '../../../../src/utils/models/providers/codex.js';
 import { codexActivityMiddleware } from '../../../../src/utils/models/providers/codex-response.js';
-import { completionToolsInstruction } from '../../../../src/utils/models/providers/required-tool-choice.js';
 import { streamTextWithConcurrency, withModelConfig } from '../../../../src/utils/models/concurrency.js';
 
 /** Creates a standard non-streaming Chat Completions response. */
@@ -278,9 +277,9 @@ describe('Codex compatible adapter requests', () => {
     });
 
     const [body] = capturedBodies(fetchMock);
-    expect(body.messages[0].content).toContain(
-      completionToolsInstruction(['found_city', 'choose_research'], ['found_city'], false),
-    );
+    expect(body.messages[0].content).toContain('found_city');
+    expect(body.messages[0].content).toContain('choose_research');
+    expect(body.tools.map((item: any) => item.function.name)).toEqual(['found_city', 'choose_research']);
   });
 
   it('names only the client tools active for the current high-level step', async () => {
@@ -321,8 +320,8 @@ describe('Codex compatible adapter requests', () => {
 
     const [body] = capturedBodies(fetchMock);
     expect(body.tool_choice).toBe('auto');
-    expect(body.messages[0].content).toContain(completionToolsInstruction(['choose_research'], ['choose_research'], false));
-    expect(body.messages[0].content).not.toContain('`found_city`');
+    expect(body.messages[0].content).toContain('choose_research');
+    expect(body.messages[0].content).not.toContain('found_city');
     expect(body.tools).toHaveLength(1);
     expect(body.tools[0].function.name).toBe('choose_research');
   });

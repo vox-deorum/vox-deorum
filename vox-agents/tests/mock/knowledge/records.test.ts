@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildCatalog, catalogPath, eventCategoryFiles, formatTurnRanges, SeatRecords } from '../../../src/knowledge/records.js';
+import { catalogPath, eventCategoryFiles, formatTurnRanges, SeatRecords } from '../../../src/knowledge/records.js';
 import { renderSection } from '../../../src/knowledge/sections.js';
 import type { GameState, StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { filterEventsByCategory } from '../../../src/utils/prompts/event-filters.js';
@@ -297,11 +297,16 @@ describe('SeatRecords', () => {
     it('should stay complete when turn and briefing commits interleave', () => {
       records.recordTurn(makeParameters(), makeState(1));
       records.recordBriefing(1, 'combined', 'one');
+      const catalogAfterFirstBriefing = read(catalogPath)!;
       records.recordBriefing(2, 'military', 'early');
       records.recordTurn(makeParameters(), makeState(2));
       records.recordBriefing(2, 'economy', 'two');
-      expect(read(catalogPath)).toBe(buildCatalog(store.manifest()));
-      expect(read(catalogPath)).toContain('turn-2/briefings/economy.md');
+      const catalog = read(catalogPath)!;
+      expect(catalogAfterFirstBriefing).toContain('turn-1/briefings/combined.md');
+      expect(read('records/turn-1/briefings/combined.md')).toBe('one\n');
+      expect(catalog).toContain('turn-2/briefings/military.md');
+      expect(catalog).toContain('turn-2/briefings/economy.md');
+      expect(catalog).toContain('Recorded turns: 1-2');
     });
 
     it('should index the four event views as turn-marker holders and the military report without split parts', () => {

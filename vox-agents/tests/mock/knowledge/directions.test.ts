@@ -9,7 +9,7 @@ import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
 import { reloadPromptSets } from '../../../src/utils/prompts/prompt-files.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
-import { workspaceGuide, workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
+import { workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
 import type { ModelMessage } from 'ai';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from './directions-fixtures.js';
@@ -83,16 +83,41 @@ describe('recordsDirections', () => {
     it('should name the sections the caller keeps in the prompt, and only those', () => {
       record(1);
       const context = enableFileMode(bareContext(), temp.store);
-      const plain = recordsDirections(context);
-      const inline = recordsDirections(context, ['options', 'victory']);
-      expect(inline).toContain(sections.options.title);
-      expect(inline).toContain(sections.victory.title);
-      expect(plain).not.toContain(sections.victory.title);
-      expect(inline.length).toBeGreaterThan(plain.length);
+      const oldOptionsTitle = sections.options.title;
+      const oldVictoryTitle = sections.victory.title;
+      sections.options.title = 'Caller options marker';
+      sections.victory.title = 'Caller victory marker';
+      try {
+        const plain = recordsDirections(context);
+        const inline = recordsDirections(context, ['options', 'victory']);
+        expect(inline).toContain('Caller options marker');
+        expect(inline).toContain('Caller victory marker');
+        expect(plain).not.toContain('Caller victory marker');
+        expect(inline.length).toBeGreaterThan(plain.length);
+      } finally {
+        sections.options.title = oldOptionsTitle;
+        sections.victory.title = oldVictoryTitle;
+      }
     });
   });
 
   describe('folders and notes guide', () => {
+    let promptDir: string;
+
+    beforeEach(() => {
+      promptDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-guide-prompts-'));
+      fs.writeFileSync(path.join(promptDir, 'records-directions.md'),
+        '{{#game}}G={{#writable}}write{{/writable}}{{^writable}}read{{/writable}};{{/game}}'
+          + '{{#guide}}empty={{#empty}}yes{{/empty}}{{^empty}}no{{/empty}};content={{content}}{{/guide}}'
+          + '{{#shared}}{{name}}={{#writable}}write{{/writable}}{{^writable}}read{{/writable}};{{/shared}}');
+      reloadPromptSets([promptDir]);
+    });
+
+    afterEach(() => {
+      reloadPromptSets([]);
+      fs.rmSync(promptDir, { recursive: true, force: true });
+    });
+
     /** Commit a game notes guide, as an agent's bash command would. */
     function writeGuide(content: string): void {
       temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: `game/${workspaceGuideFile}`, type: 'file', content }] });
@@ -100,20 +125,20 @@ describe('recordsDirections', () => {
 
     /** Directions for a seat with the given folders. */
     function directions(files: Partial<ResolvedFilesConfig>): string {
-      return recordsDirections(enableFileMode(bareContext(), temp.store, undefined, files));
+      return recordsDirections({ ...enableFileMode(bareContext(), temp.store, undefined, files), prompts: promptDir });
     }
 
     it('should show the default guide when the game folder is writable and the guide is not seeded yet', () => {
       const text = directions({ game: 'write', shared: {} });
-      expect(text).toContain(`/workspace/game/${workspaceGuideFile}`);
-      expect(text).toContain(workspaceGuide('game').trim());
+      expect(text).toContain('G=write;empty=no;content=');
+      expect(text.match(/content=([\s\S]*)/)?.[1].trim().length).toBeGreaterThan(0);
     });
 
     it('should show an edited guide instead of the default', () => {
-      writeGuide('# Guide\nKeep war plans in plans/war.md.\n');
+      const guide = '# Guide\nKeep war plans in plans/war.md.\n';
+      writeGuide(guide);
       const text = directions({ game: 'write', shared: {} });
-      expect(text).toContain('Keep war plans in plans/war.md.');
-      expect(text).not.toContain(workspaceGuide('game').trim());
+      expect(text).toBe(`G=write;empty=no;content=${guide.trim()}`);
     });
 
     it('should tell a writable seat apart from a read-only one', () => {
@@ -121,24 +146,23 @@ describe('recordsDirections', () => {
       const write = directions({ game: 'write', shared: {} });
       const read = directions({ game: 'read', shared: {} });
       expect(read).toContain('Shared rules.');
-      expect(read).not.toBe(write);
+      expect(read).toContain('G=read;empty=no;content=');
+      expect(write).toContain('G=write;empty=no;content=');
     });
 
     it('should not invent a guide for a read-only folder without one', () => {
       const missing = directions({ game: 'read', shared: {} });
       writeGuide('   \n');
       const blank = directions({ game: 'read', shared: {} });
-      expect(missing).toContain(`/workspace/game/${workspaceGuideFile}`);
-      expect(missing).not.toContain(workspaceGuide('game').trim());
-      expect(blank).toBe(missing);
+      expect(missing).toContain('G=read;empty=yes;content=');
+      expect(blank).toContain('G=read;empty=yes;content=');
     });
 
     it('should leave out the game folder and guide when the seat has none, and list shared folders', () => {
       const text = directions({ game: false, shared: { lessons: 'write', library: 'read' } });
-      expect(text).not.toContain('/workspace/game');
-      expect(text).not.toContain(workspaceGuide('game').trim());
-      expect(text).toContain('/workspace/shared/lessons');
-      expect(text).toContain('/workspace/shared/library');
+      expect(text).not.toContain('G=');
+      expect(text).toContain('lessons=write;');
+      expect(text).toContain('library=read;');
     });
   });
 

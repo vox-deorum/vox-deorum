@@ -251,6 +251,43 @@ beforeEach(() => {
   bpo.mockImplementation(() => ({}));
 });
 
+describe('VoxContext run-required API boundary', () => {
+  // Each public agent entry point must reject before preparing the agent or calling the provider.
+  it.each(['execute', 'callAgent'] as const)('should reject %s when called outside a run', async api => {
+    const ctx = new VoxContext<StrategistParameters>({}, `exec-no-run-${api}`);
+    const agent = agentRegistry.get<StrategistParameters>('test-step-a')!;
+    const buildSystem = vi.spyOn(agent, 'getSystem');
+
+    try {
+      if (api === 'execute') {
+        await expect(ctx.execute('test-step-a', {})).rejects.toThrow();
+      } else {
+        await expect(ctx.callAgent('test-step-a', {})).rejects.toThrow();
+      }
+
+      expect(buildSystem).not.toHaveBeenCalled();
+      expect(stc).not.toHaveBeenCalled();
+    } finally {
+      buildSystem.mockRestore();
+      await ctx.shutdown();
+    }
+  });
+
+  it('should call a tool outside a run with the explicitly supplied parameters', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'call-tool-no-run');
+    const parameters = makeStrategistParameters();
+    // Echo the supplied parameter object so the observable result proves the manual call used it.
+    const executeTool = vi.fn(async (_args: Record<string, unknown>, options: { context: StrategistParameters }) => options.context);
+    ctx.tools['parameter-echo'] = { execute: executeTool } as any;
+
+    try {
+      await expect(ctx.callTool('parameter-echo', { request: 'sentinel' }, parameters)).resolves.toBe(parameters);
+    } finally {
+      await ctx.shutdown();
+    }
+  });
+});
+
 describe('VoxContext.execute token accounting', () => {
   it('passes the required tool choice through for provider middleware to adapt', async () => {
     const ctx = new VoxContext<StrategistParameters>({}, 'exec-codex-tool-choice');

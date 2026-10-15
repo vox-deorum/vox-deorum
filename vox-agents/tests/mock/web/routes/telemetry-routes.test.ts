@@ -14,11 +14,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 
-
 import telemetryRoutes from '../../../../src/web/routes/telemetry.js';
 import { sqliteExporter } from '../../../../src/instrumentation.js';
 import { config } from '../../../../src/utils/config.js';
 import { WorkspaceStore } from '../../../../src/utils/workspace/workspace-store.js';
+import { createTelemetryDb } from '../../../helpers/telemetry-db.js';
 
 function makeApp() {
   const app = express();
@@ -115,6 +115,30 @@ describe('telemetry routes', () => {
       const res = await request(app).get('/api/telemetry/sessions/ghost/spans');
       expect(res.status).toBe(404);
       expect(res.body).toHaveProperty('error');
+    });
+
+    it('should return spans for an active telemetry context', async () => {
+      const { db } = createTelemetryDb([{
+        contextId: 'active-fixture', turn: 4, traceId: 'trace-fixture', spanId: 'span-fixture',
+        name: 'strategist.turn.4', startTime: 10, attributes: { fixture: 'ACTIVE_SPAN_SENTINEL' },
+      }]);
+      vi.spyOn(sqliteExporter, 'getActiveConnections').mockReturnValue(['active-fixture']);
+      vi.spyOn(sqliteExporter, 'getDatabase').mockReturnValue(db);
+
+      try {
+        const res = await request(app).get('/api/telemetry/sessions/active-fixture/spans');
+
+        expect(res.status).toBe(200);
+        expect(res.body.spans).toEqual([
+          expect.objectContaining({
+            spanId: 'span-fixture',
+            contextId: 'active-fixture',
+            attributes: JSON.stringify({ fixture: 'ACTIVE_SPAN_SENTINEL' }),
+          }),
+        ]);
+      } finally {
+        await db.destroy();
+      }
     });
   });
 
