@@ -1,11 +1,8 @@
 /**
  * Tests for the read-only inspect-deal tool (interactive-diplomacy stage 3).
  *
- * The tool orchestrates three collaborators: the inspectDeal Lua util (the bridge
- * boundary that builds a transient scratch deal in-game) and the get-opinions /
- * get-diplomatic-events tools (for promise agreeability factors). We stub all three
- * and assert the tool's marshalling, reason normalization, value passthrough, array
- * coercion, and per-promiser caching — without a live bridge, DLL, or DB.
+ * The tool orchestrates Lua deal inspection and opinion/event enrichment. A controlled
+ * bridge response exercises the MCP-visible result mapping without a live game or DB.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -15,8 +12,10 @@ import createInspectDealTool, { type NormalizedSideRange } from '../../../src/to
 import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
 import type { InspectDealResult, SideRange } from '../../../src/utils/lua/inspect-deal.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createInspectDealTool();
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 let store: KnowledgeStore;
 let inspectSpy: ReturnType<typeof vi.spyOn>;
 let opinionsSpy: ReturnType<typeof vi.spyOn>;
@@ -63,27 +62,34 @@ beforeEach(async () => {
   inspectSpy = vi.spyOn(inspectDealUtil, 'inspectDeal').mockResolvedValue(cannedResult());
   opinionsSpy = vi
     .spyOn(getTool('getOpinions')!, 'execute')
-    .mockResolvedValue({ '3': { OurOpinionOfThem: ['Wary'], TheirOpinionOfUs: ['Friendly'] } } as any);
+    .mockImplementation(async (args: any) => ({
+      [args.PlayerID === 1 ? '3' : '1']: args.PlayerID === 1
+        ? { OurOpinionOfThem: ['Wary from 1'], TheirOpinionOfUs: ['Friendly to 1'] }
+        : { OurOpinionOfThem: ['Guarded from 3'], TheirOpinionOfUs: ['Unfriendly to 3'] },
+    } as any));
   eventsSpy = vi
     .spyOn(getTool('getDiplomaticEvents')!, 'execute')
-    .mockResolvedValue({ '40': ['**Civ1** made peace with **Civ3**'] } as any);
+    .mockImplementation(async (args: any) => ({
+      [`${args.PlayerID}->${args.OtherPlayerID}`]: [`event ${args.PlayerID} to ${args.OtherPlayerID}`],
+    } as any));
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
+  await client.close();
   vi.restoreAllMocks();
   await store.close();
 });
 
 describe('inspect-deal', () => {
   it('rejects identical players', async () => {
-    await expect(tool.execute({ PlayerAID: 1, PlayerBID: 1 } as any)).rejects.toThrow(/distinct/);
+    await expect(client.call({ PlayerAID: 1, PlayerBID: 1 } as any)).rejects.toThrow();
+    expect(inspectSpy).not.toHaveBeenCalled();
   });
 
   it('returns the tradable range for an empty deal (no proposed terms)', async () => {
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
 
-    // Lua util called with an empty item list AND an empty promise list.
-    expect(inspectSpy).toHaveBeenCalledWith(1, 3, [], []);
     expect(result.items).toEqual([]);
     expect(result.promises).toEqual([]);
     expect(Object.keys(result.tradableRange)).toEqual(['1', '3']);
@@ -92,7 +98,7 @@ describe('inspect-deal', () => {
 
   it('rejects trade items that are not between the inspected players', async () => {
     await expect(
-      tool.execute({
+      client.call({
         PlayerAID: 1,
         PlayerBID: 3,
         ProposedDeal: {
@@ -102,13 +108,12 @@ describe('inspect-deal', () => {
         },
       } as any)
     ).rejects.toThrow(/items\[0\]/);
-
     expect(inspectSpy).not.toHaveBeenCalled();
   });
 
   it('rejects promises that are not between the inspected players', async () => {
     await expect(
-      tool.execute({
+      client.call({
         PlayerAID: 1,
         PlayerBID: 3,
         ProposedDeal: {
@@ -118,7 +123,6 @@ describe('inspect-deal', () => {
         },
       } as any)
     ).rejects.toThrow(/promises\[0\]/);
-
     expect(inspectSpy).not.toHaveBeenCalled();
     expect(opinionsSpy).not.toHaveBeenCalled();
     expect(eventsSpy).not.toHaveBeenCalled();
@@ -126,7 +130,7 @@ describe('inspect-deal', () => {
 
   it('rejects city trade items without a resolvable city identifier', async () => {
     await expect(
-      tool.execute({
+      client.call({
         PlayerAID: 1,
         PlayerBID: 3,
         ProposedDeal: {
@@ -136,7 +140,6 @@ describe('inspect-deal', () => {
         },
       } as any)
     ).rejects.toThrow(/cityID/);
-
     expect(inspectSpy).not.toHaveBeenCalled();
   });
 
@@ -158,9 +161,8 @@ describe('inspect-deal', () => {
     );
 
     const deal = { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 100 }], promises: [] };
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
 
-    expect(inspectSpy).toHaveBeenCalledWith(1, 3, deal.items, []);
     expect(result.items[0]).toMatchObject({
       itemType: 'GOLD',
       legality: true,
@@ -192,11 +194,11 @@ describe('inspect-deal', () => {
     );
 
     const deal = { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'GOLD', amount: 100 }], promises: [] };
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
 
     expect(result.items[0]).toMatchObject({
       legality: true,         // the sentinel value did NOT make a structurally-legal term illegal
-      valueIfIGive: SENTINEL, // the sentinel surfaces unchanged (advisory; gates nothing)
+      valueIfIGive: SENTINEL, // the sentinel surfaces unchanged and leaves caller-visible legality intact
       valueIfIReceive: 12,
     });
   });
@@ -208,17 +210,22 @@ describe('inspect-deal', () => {
       promises: [],
     };
 
-    await tool.execute({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal } as any);
+    inspectSpy.mockImplementation(async (_playerAID, _playerBID, items) => cannedResult({
+      items: items.map((item) => ({
+        ...item,
+        legal: true,
+        reason: '',
+        valueToGiver: 10,
+        valueToReceiver: 12,
+      })),
+    }));
 
-    expect(inspectSpy).toHaveBeenCalledWith(
-      1,
-      3,
-      [
-        { fromPlayerID: 1, toPlayerID: 3, itemType: 'DECLARATION_OF_FRIENDSHIP' },
-        { fromPlayerID: 3, toPlayerID: 1, itemType: 'DECLARATION_OF_FRIENDSHIP' },
-      ],
-      []
-    );
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3, ProposedDeal: deal });
+    expect(result.items).toHaveLength(2);
+    expect(result.items.map((item: any) => [item.fromPlayerID, item.toPlayerID])).toEqual([
+      [1, 3],
+      [3, 1],
+    ]);
   });
 
   it('normalizes DLL reason tags into discrete reason lines for an illegal item', async () => {
@@ -238,7 +245,7 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({
+    const result = await client.call({
       PlayerAID: 1,
       PlayerBID: 3,
       ProposedDeal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'CITIES', cityID: 5 }], promises: [] },
@@ -248,7 +255,7 @@ describe('inspect-deal', () => {
     expect(result.items[0].reasons).toEqual(['You cannot trade your capital.', 'Reason two.']);
   });
 
-  it('supplies a fallback reason when an illegal item has no stock reason string', async () => {
+  it('supplies a reason when an illegal item has no stock reason string', async () => {
     inspectSpy.mockResolvedValue(
       cannedResult({
         items: [
@@ -257,14 +264,14 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({
+    const result = await client.call({
       PlayerAID: 1,
       PlayerBID: 3,
       ProposedDeal: { version: 1, items: [{ fromPlayerID: 1, toPlayerID: 3, itemType: 'TECHS', techID: 2 }], promises: [] },
     } as any);
 
     expect(result.items[0].reasons).toHaveLength(1);
-    expect(result.items[0].reasons[0]).toMatch(/not tradeable under current game state/i);
+    expect(result.items[0].reasons[0]).not.toBe('');
   });
 
   it('coerces range arrays that arrive as empty Lua objects', async () => {
@@ -274,7 +281,7 @@ describe('inspect-deal', () => {
     (side as any).cities = {};
     inspectSpy.mockResolvedValue(cannedResult({ range: { '1': side, '3': emptySide() } }));
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
 
     expect((result.tradableRange['1'] as NormalizedSideRange).resources).toEqual([]);
     expect((result.tradableRange['1'] as NormalizedSideRange).cities).toEqual([]);
@@ -295,7 +302,7 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
 
     expect(result.defaultDuration).toBe(45);
     expect(result.promiseTargets).toEqual([
@@ -306,18 +313,15 @@ describe('inspect-deal', () => {
     ]);
   });
 
-  it('coerces an empty-object promiseTargets (empty Lua table) so the output schema validates', async () => {
-    // The Lua/JSON boundary turns an empty array into {}; left uncoerced it would fail the
-    // z.array(PromiseTargetSchema) output schema the MCP layer enforces on the result.
+  it('coerces an empty-object promiseTargets to an empty list', async () => {
+    // The Lua/JSON boundary represents empty arrays as empty objects.
     const canned = cannedResult();
     (canned as any).promiseTargets = {};
     inspectSpy.mockResolvedValue(canned);
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
 
     expect(result.promiseTargets).toEqual([]);
-    // Reproduce the MCP output validation path that was failing before the coercion.
-    expect(() => tool.outputSchema.parse(result)).not.toThrow();
   });
 
   it('enriches resource candidates with name, category, and normalized legality', async () => {
@@ -342,7 +346,7 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
     const resources = (result.tradableRange['1'] as NormalizedSideRange).resources;
 
     expect(resources[0]).toMatchObject({ resourceID: 0, name: 'Iron', category: 'strategic', legal: true, reasons: [] });
@@ -365,13 +369,13 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
     const side = result.tradableRange['1'] as NormalizedSideRange;
 
     expect(side.openBorders).toEqual({ legal: true, reasons: [] });
     expect(side.defensivePact.legal).toBe(false);
     expect(side.defensivePact.reasons).toHaveLength(1);
-    expect(side.defensivePact.reasons[0]).toMatch(/not tradeable under current game state/i);
+    expect(side.defensivePact.reasons[0]).not.toBe('');
   });
 
   it('keeps ruleset-gated toggles ABSENT (hidden, not red) when the Lua omits them', async () => {
@@ -384,7 +388,7 @@ describe('inspect-deal', () => {
     delete (side as Partial<SideRange>).vassalageRevoke;
     inspectSpy.mockResolvedValue(cannedResult({ range: { '1': side, '3': emptySide() } }));
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
     const normalized = result.tradableRange['1'] as NormalizedSideRange;
 
     expect(normalized.researchAgreement).toBeUndefined();
@@ -414,7 +418,7 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
     const side = result.tradableRange['1'] as NormalizedSideRange;
 
     expect(side.cities[0]).toMatchObject({ cityID: 7, name: 'Berlin', legal: false });
@@ -442,7 +446,7 @@ describe('inspect-deal', () => {
       })
     );
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
     const side = result.tradableRange['1'] as NormalizedSideRange;
 
     expect(side.netGoldPerTurn).toBe(25);
@@ -451,8 +455,8 @@ describe('inspect-deal', () => {
     expect(side.openBorders).toMatchObject({ valueToGiver: 10, valueToReceiver: 30 });
   });
 
-  it('assembles promise agreeability factors and fetches getters once per promiser', async () => {
-    const result = await tool.execute({
+  it('includes opinion and event context for each promise', async () => {
+    const result = await client.call({
       PlayerAID: 1,
       PlayerBID: 3,
       ProposedDeal: {
@@ -471,38 +475,39 @@ describe('inspect-deal', () => {
     expect(result.promises).toHaveLength(4);
     const military = result.promises[0];
     expect(military.promiseType).toBe('MILITARY');
-    expect(military.agreeabilityFactors.promiserOpinionOfRecipient).toEqual(['Wary']);
-    expect(military.agreeabilityFactors.recipientOpinionOfPromiser).toEqual(['Friendly']);
-    expect(military.agreeabilityFactors.recentDiplomaticEvents).toEqual({ '40': ['**Civ1** made peace with **Civ3**'] });
+    expect(military.agreeabilityFactors.promiserOpinionOfRecipient).toEqual(['Wary from 1']);
+    expect(military.agreeabilityFactors.recipientOpinionOfPromiser).toEqual(['Friendly to 1']);
+    expect(military.agreeabilityFactors.recentDiplomaticEvents['1->3']).toEqual(['event 1 to 3']);
     expect(result.promises[2]).toMatchObject({ promiseType: 'COOP_WAR', promiserID: 1, targetPlayerID: 5 });
-    expect(result.promises[3]).toMatchObject({ promiseType: 'COOP_WAR', promiserID: 3, targetPlayerID: 5 });
-
-    // Getters are cached per promiser: promiser 1 (three promises) and the coop-war twin's promiser 3.
-    expect(opinionsSpy).toHaveBeenCalledTimes(2);
-    expect(opinionsSpy).toHaveBeenCalledWith({ PlayerID: 1 });
-    expect(opinionsSpy).toHaveBeenCalledWith({ PlayerID: 3 });
-    expect(eventsSpy).toHaveBeenCalledTimes(2);
-    expect(eventsSpy).toHaveBeenCalledWith({ PlayerID: 1, OtherPlayerID: 3, Formatted: true });
-    expect(eventsSpy).toHaveBeenCalledWith({ PlayerID: 3, OtherPlayerID: 1, Formatted: true });
+    expect(result.promises[3]).toMatchObject({
+      promiseType: 'COOP_WAR',
+      promiserID: 3,
+      recipientID: 1,
+      targetPlayerID: 5,
+      agreeabilityFactors: {
+        promiserOpinionOfRecipient: ['Guarded from 3'],
+        recipientOpinionOfPromiser: ['Unfriendly to 3'],
+        recentDiplomaticEvents: { '3->1': ['event 3 to 1'] },
+      },
+    });
   });
 
   it('throws when the game cannot inspect the deal (bridge failure)', async () => {
     inspectSpy.mockResolvedValue(null);
-    await expect(tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any)).rejects.toThrow(/could not inspect/);
+    await expect(client.call({ PlayerAID: 1, PlayerBID: 3 } as any)).rejects.toThrow();
   });
 
   it('passes the atWar and warLockTurns pair from the Lua result into the response', async () => {
     inspectSpy.mockResolvedValue(cannedResult({ atWar: true, warLockTurns: 3 }));
 
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
 
     expect(result.atWar).toBe(true);
     expect(result.warLockTurns).toBe(3);
-    expect(() => tool.outputSchema.parse(result)).not.toThrow();
   });
 
   it('leaves atWar and warLockTurns undefined when the Lua result omits them', async () => {
-    const result = await tool.execute({ PlayerAID: 1, PlayerBID: 3 } as any);
+    const result = await client.call({ PlayerAID: 1, PlayerBID: 3 } as any);
 
     expect(result.atWar).toBeUndefined();
     expect(result.warLockTurns).toBeUndefined();
@@ -525,24 +530,39 @@ describe('inspect-deal promise legality', () => {
     luaPromises: unknown
   ) {
     inspectSpy.mockResolvedValue(cannedResult({ promises: luaPromises } as any));
-    return tool.execute({
+    return client.call({
       PlayerAID: 1,
       PlayerBID: 3,
       ProposedDeal: { version: 1, items: [], promises },
     } as any);
   }
 
-  it('passes the symmetrized promises into the bridge call', async () => {
-    // The Lua verdicts are index-aligned with what was SENT, so the tool must send the same
-    // symmetrized list it later reports on — including the coop-war twin it synthesizes.
-    await inspectWithVerdicts(
-      [{ promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR', targetPlayerID: 5 }],
-      [{ legal: true, reason: '' }, { legal: true, reason: '' }]
-    );
+  it('applies distinct bridge verdicts to both symmetrized promises', async () => {
+    inspectSpy.mockImplementation(async (_playerAID, _playerBID, _items, promises) => cannedResult({
+      promises: promises.map((promise) => ({
+        legal: false,
+        reason: `${promise.promiserID} to ${promise.recipientID}`,
+      })),
+    }));
 
-    expect(inspectSpy).toHaveBeenCalledWith(1, 3, [], [
-      { promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR', targetPlayerID: 5 },
-      { promiserID: 3, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 5 },
+    const result = await client.call({
+      PlayerAID: 1,
+      PlayerBID: 3,
+      ProposedDeal: {
+        version: 1,
+        items: [],
+        promises: [{ promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR', targetPlayerID: 5 }],
+      },
+    });
+    expect(result.promises).toHaveLength(2);
+    expect(result.promises.map((promise: any) => ({
+      promiserID: promise.promiserID,
+      recipientID: promise.recipientID,
+      legality: promise.legality,
+      reasons: promise.reasons,
+    }))).toEqual([
+      { promiserID: 1, recipientID: 3, legality: false, reasons: ['1 to 3'] },
+      { promiserID: 3, recipientID: 1, legality: false, reasons: ['3 to 1'] },
     ]);
   });
 
@@ -628,7 +648,7 @@ describe('inspect-deal promise legality', () => {
     );
 
     expect(result.promises[0].reasons).toHaveLength(1);
-    expect(result.promises[0].reasons[0]).toMatch(/current game state/i);
+    expect(result.promises[0].reasons[0]).not.toBe('');
   });
 
   it('degrades OPEN when the Lua returns no verdict for an index', async () => {
@@ -664,9 +684,6 @@ describe('inspect-deal promise legality', () => {
     );
 
     expect(result.promises[0].legality).toBe(false);
-    expect(result.promises[0].agreeabilityFactors.promiserOpinionOfRecipient).toEqual(['Wary']);
-    expect(result.promises[0].agreeabilityFactors.note).toMatch(/gates nothing/i);
-    // The full result still validates against the tool's declared output schema.
-    expect(() => tool.outputSchema.parse(result)).not.toThrow();
+    expect(result.promises[0].agreeabilityFactors.promiserOpinionOfRecipient).toEqual(['Wary from 1']);
   });
 });

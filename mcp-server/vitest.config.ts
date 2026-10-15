@@ -1,25 +1,20 @@
 import { defineConfig } from 'vitest/config'
 
-// Unified convention: tests/mock/** is the default (no server, no bridge, no game —
-// pure in-process unit tests). Set USE_MOCK=false to run tests/real/**, which boots
-// the real mcp-server (tests/setup.ts) against a real bridge in mock-DLL mode
-// (tests/real.setup.ts spawns bridge-service `start:mock`). The stack bottoms out at
-// the mock DLL, so the real tier needs no Civilization V game and is CI-able.
+// tests/mock/** is the default tier. It needs no bridge or game: tools run against
+// in-memory stores, and a few suites start the source server over real HTTP and stdio
+// transports with external managers stubbed. Set USE_MOCK=false to run tests/real/**,
+// which boots the source mcp-server (tests/setup.ts) against the real bridge-service on
+// a mock DLL (tests/real.setup.ts spawns tests/fixtures/start-bridge.ts). The stack
+// bottoms out at the mock DLL, so the real tier needs no Civilization V game.
 const useMock = process.env.USE_MOCK !== 'false'
 
 export default defineConfig({
   test: {
     environment: 'node',
     include: [`tests/${useMock ? 'mock' : 'real'}/**/*.test.ts`],
-    // The server-/client-booting setup and the bridge-spawning global setup are
-    // real-tier only; the mock tier runs instantly with neither.
+    // The shared server/client setup and the bridge-spawning global setup are real-tier only.
     setupFiles: useMock ? [] : ['./tests/setup.ts'],
     globalSetup: useMock ? [] : ['./tests/real.setup.ts'],
-    // Bind the real-tier test server to a dedicated port so it never collides with a
-    // live production mcp-server on the default 4000.
-    env: {
-      MCP_PORT: process.env.MCP_TEST_PORT || '4100',
-    },
     coverage: {
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts'],

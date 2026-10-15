@@ -6,13 +6,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createLogger } from './utils/logger.js';
 import { config } from './utils/config.js';
-import { wrapResults } from './utils/mcp.js';
+import { registerToolOnServer } from './utils/mcp.js';
 import { ToolBase } from './tools/base.js';
 import { BridgeManager } from './bridge/manager.js';
 import { DatabaseManager } from './database/manager.js';
 import { KnowledgeManager } from './knowledge/manager.js';
 import { setTimeout } from 'node:timers/promises';
-import * as z from "zod";
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
@@ -89,7 +88,7 @@ export class MCPServer {
     
     // Register all existing tools with the new server
     this.tools.forEach(tool => {
-      this.registerToolOnServer(server, tool);
+      registerToolOnServer(server, tool);
     });
     
     this.servers.set(id, server);
@@ -107,48 +106,6 @@ export class MCPServer {
   }
   
   /**
-   * Register a tool on a specific server
-   */
-  private registerToolOnServer(server: McpServer, tool: ToolBase): void {
-    server.registerTool(
-      tool.name,
-      {
-        title: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema.shape,
-        outputSchema: (tool.getOutputSchema() as z.ZodObject<z.ZodRawShape>).shape,
-        annotations: tool.annotations,
-        _meta: tool.metadata
-      },
-      (async (args: z.infer<typeof tool.inputSchema>) => {
-        logger.debug(`Handling tool request ${tool.name}`, args);
-        try {
-          const results = await tool.execute(args);
-          logger.debug(`Finishing tool request ${tool.name}`);
-          // If tool already returns CallToolResult, use it directly
-          if (results && typeof results === 'object' && 'content' in results) {
-            return results;
-          }
-          // Otherwise wrap for backward compatibility
-          return wrapResults(results);
-        } catch (error: unknown) {
-          const message = `Error executing tool ${tool.name}: ${error instanceof Error ? error.message : "unknown"}`;
-          logger.error(message, error);
-          return {
-            isError: true,
-            content: [
-              {
-                type: "text",
-                text: message,
-              }
-            ]
-          }
-        }
-      }) as any
-    );
-  }
-
-  /**
    * Register a tool with all servers
    */
   public registerTool(tool: ToolBase) {
@@ -158,7 +115,7 @@ export class MCPServer {
 
     // Register tool with all existing McpServers
     this.servers.forEach(server => {
-      this.registerToolOnServer(server, tool);
+      registerToolOnServer(server, tool);
     });
 
     this.tools.set(tool.name, tool);

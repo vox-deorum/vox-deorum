@@ -24,15 +24,20 @@ const mockEnv = vi.hoisted(() => ({
   rawArchiveArgs: [] as unknown[],
 }));
 
-vi.mock('node:child_process', () => ({
-  execFile: vi.fn((...args: unknown[]) => {
-    mockEnv.rawArchiveArgs = args.slice(0, 3);
-    const callback = args.at(-1) as (error: Error | null, result?: { stdout: string; stderr: string }) => void;
-    if (mockEnv.failRawArchive) callback(new Error('raw archive forced to fail by the test'));
-    else callback(null, { stdout: '', stderr: '' });
-    return {};
-  }),
-}));
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  return {
+    ...actual,
+    execFile: vi.fn((...args: any[]) => {
+      const callback = args.at(-1) as (error: Error | null, stdout?: string, stderr?: string) => void;
+      if (mockEnv.failRawArchive) {
+        callback(new Error('raw archive forced to fail by the test'));
+        return {};
+      }
+      return actual.execFile(...args);
+    }),
+  };
+});
 
 vi.mock('../../../src/utils/config.js', () => ({
   getDocumentsPath: vi.fn(async () => mockEnv.documentsPath),
@@ -61,7 +66,6 @@ async function makeTempDir(): Promise<string> {
 
 afterEach(async () => {
   mockEnv.failRawArchive = false;
-  mockEnv.rawArchiveArgs = [];
   await Promise.all(tempDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
 });
 
@@ -110,16 +114,9 @@ describe('archiveGameData capture wiring', () => {
     const result = await archiveGameData('exp-test');
 
     expect(result).not.toBeNull();
-    // The raw package command is the only capture archive output.
-    expect(result).not.toHaveProperty('captures');
-    expect(mockEnv.rawArchiveArgs[0]).toBe(process.execPath);
-    expect(mockEnv.rawArchiveArgs[1]).toEqual(expect.arrayContaining([
-      path.join(workDir, 'archive', 'exp-test'),
-      captureRoot(gameId),
-    ]));
-    // The published package is canonical, so the source tree and its removal folder are gone.
+    const packagePath = path.join(workDir, 'archive', 'exp-test', `${gameId}.zip`);
+    expect((await fs.readFile(packagePath)).subarray(0, 2).toString()).toBe('PK');
     expect(await fs.readdir(path.dirname(captureRoot(gameId)))).toEqual([]);
-    await expect(fs.access(path.join(workDir, 'archive', 'exp-test', 'captures'))).rejects.toThrow();
     await expect(fs.access(result!.savePath)).resolves.toBeUndefined();
   });
 

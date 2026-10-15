@@ -15,6 +15,8 @@ describe('DatabaseManager localization', () => {
     sqlite.exec(`
       CREATE TABLE LocalizedText (Language TEXT, Tag TEXT, Text TEXT, Gender TEXT, Plurality TEXT);
       INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('en_US', 'TXT_KEY_FILLED', 'Filled [NEWLINE]text');
+      INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('en_US', 'TXT_KEY_NESTED_LABEL', 'English label');
+      INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('de_DE', 'TXT_KEY_NESTED_LABEL', 'Deutsche Bezeichnung');
       INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('en_US', 'TXT_KEY_EMPTY_HELP', '');
       INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('de_DE', 'TXT_KEY_EMPTY_HELP', 'Deutscher Text');
     `);
@@ -38,5 +40,19 @@ describe('DatabaseManager localization', () => {
     const [item] = await manager.localizeObjects([{ Help: 'TXT_KEY_MISSING', Name: 'TXT_KEY_FILLED' }]);
 
     expect(item.Help).toBe('TXT_KEY_MISSING');
+  });
+
+  it('uses the newly selected language for nested values', async () => {
+    const input = [{ Panel: { Label: 'TXT_KEY_NESTED_LABEL' }, Rows: [{ Label: 'TXT_KEY_NESTED_LABEL' }] }];
+
+    const [english] = await manager.localizeObjects(input);
+    manager.setLanguage('de_DE');
+    const [german] = await manager.localizeObjects(input);
+
+    expect(english.Panel.Label).toBe('English label');
+    expect(german).toEqual({
+      Panel: { Label: 'Deutsche Bezeichnung' },
+      Rows: [{ Label: 'Deutsche Bezeichnung' }],
+    });
   });
 });

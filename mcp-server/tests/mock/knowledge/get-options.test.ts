@@ -15,12 +15,15 @@ import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { enumMappings } from '../../../src/utils/knowledge/enum.js';
 import * as playerPersona from '../../../src/knowledge/getters/player-persona.js';
 import * as playerStrategy from '../../../src/knowledge/getters/player-strategy.js';
+import * as strategyLoader from '../../../src/utils/strategies/loader.js';
 import { getTool } from '../../../src/tools/index.js';
 import createGetOptionsTool from '../../../src/tools/knowledge/get-options.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { connectToolClient } from '../tool-client.js';
 
 const tool = createGetOptionsTool();
+const originalEconomicStrategy = enumMappings.EconomicStrategy;
+const originalMilitaryStrategy = enumMappings.MilitaryStrategy;
 let store: KnowledgeStore;
 let client: Awaited<ReturnType<typeof connectToolClient>>;
 
@@ -62,6 +65,10 @@ afterEach(async () => {
   await client.close();
   vi.restoreAllMocks();
   delete (enumMappings as any).GrandStrategy;
+  if (originalEconomicStrategy) enumMappings.EconomicStrategy = originalEconomicStrategy;
+  else delete enumMappings.EconomicStrategy;
+  if (originalMilitaryStrategy) enumMappings.MilitaryStrategy = originalMilitaryStrategy;
+  else delete enumMappings.MilitaryStrategy;
   await store.close();
 });
 
@@ -71,29 +78,93 @@ async function seedPolicy(policy: string, isBranch: number, rationale?: string):
 }
 
 describe('get-options: Policy.Next framing', () => {
-  it('renders a cleared selection as plain None and drops its rationale', async () => {
+  it('returns no rationale for a cleared policy selection', async () => {
     await seedPolicy('None', 1, 'Branch completed');
 
     const result = await client.call({ PlayerID: 0 });
-    expect(result.Policy).toEqual({ Next: 'None' });
+    expect(result.Policy.Next).toBe('None');
+    expect(result.Policy).not.toHaveProperty('Rationale');
   });
 
-  it('reports None when the player has no stored policy selection', async () => {
+  it('returns no next policy when the player has no stored selection', async () => {
     const result = await client.call({ PlayerID: 0 });
-    expect(result.Policy).toEqual({ Next: 'None' });
+    expect(result.Policy.Next).toBe('None');
+    expect(result.Policy).not.toHaveProperty('Rationale');
   });
 
-  it('keeps the pending branch selection framed with its rationale', async () => {
+  it('returns a pending branch selection and its rationale', async () => {
     await seedPolicy('Liberty', 1, 'expand');
 
     const result = await client.call({ PlayerID: 0 });
-    expect(result.Policy).toEqual({ Next: 'Liberty (New Branch)', Rationale: 'expand' });
+    expect(result.Policy.Next).toContain('Liberty');
+    expect(result.Policy.Rationale).toBe('expand');
   });
 
-  it('keeps the pending single-policy selection framed', async () => {
+  it('returns a pending single-policy selection', async () => {
     await seedPolicy('Aristocracy', 0, 'tall');
 
     const result = await client.call({ PlayerID: 0 });
-    expect(result.Policy).toEqual({ Next: 'Aristocracy (Policy)', Rationale: 'tall' });
+    expect(result.Policy.Next).toContain('Aristocracy');
+    expect(result.Policy.Rationale).toBe('tall');
+  });
+
+  it('returns mode-specific current strategy and flavor data through MCP', async () => {
+    enumMappings.EconomicStrategy = { 10: 'Growth' };
+    enumMappings.MilitaryStrategy = { 20: 'Defense' };
+    await store.storeMutableKnowledge('StrategyChanges', 0, {
+      GrandStrategy: 'Capitalist',
+      EconomicStrategies: ['Growth'],
+      MilitaryStrategies: ['Defense'],
+      Rationale: 'Protect the economy',
+    } as any);
+    // Writers always store every flavor, defaulting untouched ones to 50.
+    const defaultFlavors = Object.fromEntries(Object.keys(await strategyLoader.loadFlavorDescriptions()).map(key => [key, 50]));
+    await store.storeMutableKnowledge('FlavorChanges', 0, {
+      ...defaultFlavors,
+      GrandStrategy: 'Capitalist',
+      Offense: 72,
+      Defense: 48,
+      Rationale: 'Prefer balanced engagements',
+    } as any);
+    vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({
+      success: true,
+      result: [{
+        PlayerID: 0,
+        EconomicStrategies: [10],
+        MilitaryStrategies: [20],
+        Technologies: [],
+        NextResearch: null,
+        Policies: [],
+        PolicyBranches: [],
+        NextPolicy: null,
+        NextBranch: null,
+      }],
+    } as any);
+    vi.spyOn(strategyLoader, 'loadGrandStrategyDescriptions').mockResolvedValue({ Capitalist: 'Long-term direction' } as any);
+    vi.spyOn(strategyLoader, 'loadFlavorDescriptions').mockResolvedValue({ Offense: 'Combat preference', Defense: 'Protection preference' } as any);
+    vi.spyOn(getTool('getEconomicStrategy')!, 'getSummaries').mockResolvedValue([
+      { Type: 'Growth', Description: 'Expand the economy' },
+    ] as any);
+    vi.spyOn(getTool('getMilitaryStrategy')!, 'getSummaries').mockResolvedValue([
+      { Type: 'Defense', Description: 'Protect the empire' },
+    ] as any);
+
+    const strategy = await client.call({ PlayerID: 0, Mode: 'Strategy' });
+    expect(strategy.Strategy).toMatchObject({
+      GrandStrategy: 'Capitalist',
+      EconomicStrategies: ['Growth'],
+      MilitaryStrategies: ['Defense'],
+      Rationale: 'Protect the economy',
+    });
+    expect(strategy.Options.EconomicStrategies).toHaveProperty('Growth');
+    expect(strategy.Options.MilitaryStrategies).toHaveProperty('Defense');
+
+    const flavor = await client.call({ PlayerID: 0, Mode: 'Flavor' });
+    expect(flavor.Strategy).toMatchObject({
+      GrandStrategy: 'Capitalist',
+      Flavors: { Offense: 72, Defense: 48 },
+      Rationale: 'Prefer balanced engagements',
+    });
+    expect(flavor.Options.Flavors).toMatchObject({ Offense: 'Combat preference' });
   });
 });

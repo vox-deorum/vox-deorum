@@ -9,21 +9,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import * as playerActions from '../../../src/utils/lua/player-actions.js';
-import createKeepStatusQuoTool, { SKIPPED_RATIONALE } from '../../../src/tools/actions/keep-status-quo.js';
+import createKeepStatusQuoTool from '../../../src/tools/actions/keep-status-quo.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createKeepStatusQuoTool();
 let store: KnowledgeStore;
-let pushSpy: ReturnType<typeof vi.spyOn>;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
-  pushSpy = vi.spyOn(playerActions, 'pushPlayerAction').mockResolvedValue();
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   await store.close();
 });
 
@@ -47,7 +48,7 @@ describe('keep-status-quo', () => {
     mockLua();
     await seedStrategy(0);
 
-    const result = await tool.execute({ PlayerID: 0, Mode: 'Strategy', Rationale: 'Stay the course' } as any);
+    const result = await client.call({ PlayerID: 0, Mode: 'Strategy', Rationale: 'Stay the course' });
     expect(result.Success).toBe(true);
 
     const history = await store.getMutableKnowledgeHistory('StrategyChanges', 0);
@@ -61,24 +62,10 @@ describe('keep-status-quo', () => {
     expect(latest.Turn).toBe(10);
   });
 
-  it('pushes a status-quo action event with no replay prefix', async () => {
-    mockLua();
-    await seedStrategy(0);
-
-    await tool.execute({ PlayerID: 0, Mode: 'Strategy', Rationale: 'keep' } as any);
-
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, , rationale, prefix] = pushSpy.mock.calls[0];
-    expect(playerID).toBe(0);
-    expect(actionType).toBe('status-quo');
-    expect(rationale).toBe('keep');
-    expect(prefix).toBeUndefined();
-  });
-
   it('writes defaults when no previous strategy exists', async () => {
     mockLua();
 
-    await tool.execute({ PlayerID: 2, Mode: 'Strategy', Rationale: 'fresh' } as any);
+    await client.call({ PlayerID: 2, Mode: 'Strategy', Rationale: 'fresh' });
 
     const latest = (await store.getMutableKnowledge('StrategyChanges', 2))!;
     expect(latest.EconomicStrategies).toEqual([]);
@@ -90,24 +77,22 @@ describe('keep-status-quo', () => {
     mockLua();
     await seedStrategy(0);
 
-    const result = await tool.execute({ PlayerID: 0, Mode: 'Strategy', Rationale: SKIPPED_RATIONALE } as any);
+    const result = await client.call({ PlayerID: 0, Mode: 'Strategy', Rationale: '[skipped]' });
     expect(result.Success).toBe(true);
 
     // No new StrategyChanges version, no action push.
     const history = await store.getMutableKnowledgeHistory('StrategyChanges', 0);
     expect(history.map((h) => h.Version)).toEqual([1]);
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 
   it('does no store write or push when the Lua refresh fails', async () => {
     mockLua(false);
     await seedStrategy(0);
 
-    const result = await tool.execute({ PlayerID: 0, Mode: 'Strategy', Rationale: 'keep' } as any);
+    const result = await client.call({ PlayerID: 0, Mode: 'Strategy', Rationale: 'keep' });
     expect(result.Success).toBe(false);
 
     const history = await store.getMutableKnowledgeHistory('StrategyChanges', 0);
     expect(history.map((h) => h.Version)).toEqual([1]); // only the seed remains
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 });

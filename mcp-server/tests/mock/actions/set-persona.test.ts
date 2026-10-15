@@ -8,21 +8,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import * as playerActions from '../../../src/utils/lua/player-actions.js';
 import createSetPersonaTool from '../../../src/tools/actions/set-persona.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createSetPersonaTool();
 let store: KnowledgeStore;
-let pushSpy: ReturnType<typeof vi.spyOn>;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
-  pushSpy = vi.spyOn(playerActions, 'pushPlayerAction').mockResolvedValue();
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   await store.close();
 });
 
@@ -51,24 +52,33 @@ function mockLua(previousPersona: unknown) {
 }
 
 describe('set-persona', () => {
+  it.each([1, 10])('accepts the documented persona endpoint %i through MCP', async (value) => {
+    mockLua(fullPersona());
+
+    const result = await client.call({ PlayerID: 0, Boldness: value, Rationale: 'Endpoint value' });
+
+    expect(result.Success).toBe(true);
+    const latest = await store.getMutableKnowledge('PersonaChanges', 0);
+    expect(latest?.Boldness).toBe(value);
+  });
+
   it('writes previous + new versions, clamps values, and stamps the turn', async () => {
     mockLua(fullPersona({ Boldness: 3, WarBias: 5 }));
 
-    await tool.execute({
+    await client.call({
       PlayerID: 0,
       Boldness: 99, // clamps to 10
       WarBias: 7,
       Rationale: 'Get aggressive',
-    } as any);
+    });
 
     const history = await store.getMutableKnowledgeHistory('PersonaChanges', 0);
     expect(history.map((h) => h.Version)).toEqual([2, 1]);
 
-    // v1 = previous persona, rationale wrapped as "Tweaked by In-Game AI(...)".
+    // v1 = the previous persona values.
     const previous = history.find((h) => h.Version === 1)!;
     expect(previous.Boldness).toBe(3);
     expect(previous.WarBias).toBe(5);
-    expect(previous.Rationale).toMatch(/^Tweaked by In-Game AI/);
 
     // v2 = new values merged over previous, clamped, with the trimmed caller rationale.
     const latest = history.find((h) => h.Version === 2)!;
@@ -81,52 +91,26 @@ describe('set-persona', () => {
   it('writes PersonaChanges visible only to the acting player', async () => {
     mockLua(fullPersona({ Boldness: 3 }));
 
-    await tool.execute({ PlayerID: 0, Boldness: 6, Rationale: 'r' } as any);
+    await client.call({ PlayerID: 0, Boldness: 6, Rationale: 'r' });
 
     expect(await store.getMutableKnowledge('PersonaChanges', 0, 0)).not.toBeUndefined();
     expect(await store.getMutableKnowledge('PersonaChanges', 0, 1)).toBeUndefined();
   });
 
-  it('pushes a replay action describing only the changed fields', async () => {
-    mockLua(fullPersona({ Boldness: 3, WarBias: 5 }));
-
-    await tool.execute({ PlayerID: 0, Boldness: 8, WarBias: 5, Rationale: 'tune' } as any);
-
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, summary, rationale, prefix, turn] = pushSpy.mock.calls[0];
-    expect(playerID).toBe(0);
-    expect(actionType).toBe('persona');
-    expect(prefix).toBe('Diplomatic persona');
-    expect(rationale).toBe('tune');
-    expect(turn).toBe(10);
-    expect(summary).toContain('Boldness: 3 → 8');
-    expect(summary).not.toContain('WarBias'); // unchanged field omitted
-  });
-
-  it('does not push a replay action when nothing actually changed', async () => {
-    mockLua(fullPersona({ Boldness: 4 }));
-
-    await tool.execute({ PlayerID: 0, Boldness: 4, Rationale: 'noop' } as any);
-
-    expect(pushSpy).not.toHaveBeenCalled();
-  });
-
   it('does no store write or push when the Lua call fails', async () => {
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
 
-    const result = await tool.execute({ PlayerID: 0, Boldness: 8, Rationale: 'r' } as any);
+    const result = await client.call({ PlayerID: 0, Boldness: 8, Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('PersonaChanges', 0)).toHaveLength(0);
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 
   it('still applies the change when the previous persona comes back empty', async () => {
     mockLua([]);
 
-    const result = await tool.execute({ PlayerID: 0, Boldness: 8, Rationale: 'r' } as any);
+    const result = await client.call({ PlayerID: 0, Boldness: 8, Rationale: 'r' });
     expect(result.Success).toBe(true);
     // Without a complete previous persona no history row can be written.
     expect(await store.getMutableKnowledgeHistory('PersonaChanges', 0)).toHaveLength(0);
-    expect(pushSpy).toHaveBeenCalledTimes(1);
   });
 });

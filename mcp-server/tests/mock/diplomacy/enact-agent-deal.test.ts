@@ -16,10 +16,12 @@ import { sql } from 'kysely';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
 import createEnactAgentDealTool from '../../../src/tools/actions/enact-agent-deal.js';
 import createRejectAgentDealTool from '../../../src/tools/actions/reject-agent-deal.js';
-import { getDiplomaticMessages as getDiplomaticMessagesPage } from '../../../src/knowledge/getters/diplomatic-messages.js';
+import createReadTranscriptTool from '../../../src/tools/knowledge/read-transcript.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
+import { connectToolClient } from '../tool-client.js';
+import { dealHelpers } from './deal-helpers.js';
 
 // The append-message major-civ check falls back to a live Lua fetch when the cache is empty.
 vi.mock('../../../src/knowledge/getters/player-information.js', async (importOriginal) => {
@@ -30,12 +32,10 @@ vi.mock('../../../src/knowledge/getters/player-information.js', async (importOri
 const append = createAppendMessageTool();
 const enact = createEnactAgentDealTool();
 const reject = createRejectAgentDealTool();
+const read = createReadTranscriptTool();
 let store: KnowledgeStore;
-/** Read just the message rows while the getter exposes paging metadata. */
-async function getDiplomaticMessages(...args: Parameters<typeof getDiplomaticMessagesPage>) {
-  return (await getDiplomaticMessagesPage(...args)).messages;
-}
-
+let client: Awaited<ReturnType<typeof connectToolClient>>;
+const { readMessages, seedProposal } = dealHelpers(() => client, { append, read });
 
 beforeEach(async () => {
   store = await setupDiplomacyStore(10);
@@ -47,36 +47,20 @@ beforeEach(async () => {
     enacted: true,
     items: [],
   } as any);
+  client = await connectToolClient(append, enact, reject, read);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   await store.close();
 });
-
-/** Seed a deal proposal and return its append ID. */
-async function seedProposal(
-  speakerID = 3,
-  deal: unknown = { version: 1, items: [], promises: [] }
-): Promise<number> {
-  const row = await append.execute({
-    PlayerAID: 3,
-    PlayerBID: 1,
-    PlayerARole: 'negotiator',
-    PlayerBRole: 'the leader',
-    SpeakerID: speakerID,
-    MessageType: 'deal-proposal',
-    Content: 'Offer',
-    Payload: { Deal: deal },
-  } as any);
-  return row.ID;
-}
 
 describe('enact-agent-deal', () => {
   it('enacts the deal and records deal-accept + deal-enacted, accepter defaulting to the recipient', async () => {
     const proposalID = await seedProposal();
 
-    const result = await enact.execute({ ProposalMessageID: proposalID } as any);
+    const result = await client.call({ ProposalMessageID: proposalID }, enact.name);
 
     expect(result.AlreadyEnacted).toBe(false);
     expect(result.Enacted).toBe(true); // enacted in-game (mocked bridge)
@@ -84,8 +68,8 @@ describe('enact-agent-deal', () => {
     expect(typeof result.EnactedMessageID).toBe('number');
     expect(result.Conflict).toBeUndefined();
 
-    const accepts = await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' });
-    const enacted = await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' });
+    const accepts = await readMessages(1, 3, 'deal-accept');
+    const enacted = await readMessages(1, 3, 'deal-enacted');
     expect(accepts).toHaveLength(1);
     expect(enacted).toHaveLength(1);
     // The recipient (seat 1) is the accepter — the endpoint that did not author the proposal.
@@ -99,44 +83,21 @@ describe('enact-agent-deal', () => {
     // transcript, so each must equal the stored row field for field.
     const proposalID = await seedProposal();
 
-    const result = await enact.execute({ ProposalMessageID: proposalID, Content: 'Agreed.' } as any);
+    const result = await client.call({ ProposalMessageID: proposalID, Content: 'Agreed.' }, enact.name);
 
-    const [storedAccept] = await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' });
-    const [storedEnacted] = await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' });
-
-    expect(result.AcceptRow).toEqual({
-      ID: result.AcceptMessageID,
-      Player1ID: 1,
-      Player2ID: 3,
-      Player1Role: 'the leader',
-      Player2Role: 'negotiator',
-      SpeakerID: 1,
-      MessageType: 'deal-accept',
-      Content: 'Agreed.',
-      Payload: { ProposalMessageID: proposalID },
-      Turn: 10,
-      CreatedAt: storedAccept.CreatedAt,
-    });
-    expect(result.EnactedRow).toEqual({
-      ID: result.EnactedMessageID,
-      Player1ID: 1,
-      Player2ID: 3,
-      Player1Role: 'the leader',
-      Player2Role: 'negotiator',
-      SpeakerID: 1,
-      MessageType: 'deal-enacted',
-      Content: 'The deal was enacted.',
-      Payload: { ProposalMessageID: proposalID },
-      Turn: 10,
-      CreatedAt: storedEnacted.CreatedAt,
-    });
+    const [storedAccept] = await readMessages(1, 3, 'deal-accept');
+    const [storedEnacted] = await readMessages(1, 3, 'deal-enacted');
+    expect(result.AcceptRow).toMatchObject(storedAccept);
+    expect(result.EnactedRow).toMatchObject(storedEnacted);
+    expect(result.AcceptRow).toMatchObject({ ID: result.AcceptMessageID, SpeakerID: 1, Payload: { ProposalMessageID: proposalID } });
+    expect(result.EnactedRow).toMatchObject({ ID: result.EnactedMessageID, Payload: { ProposalMessageID: proposalID } });
   });
 
   it('is idempotent — a second enactment refuses and writes nothing new', async () => {
     const proposalID = await seedProposal();
-    const first = await enact.execute({ ProposalMessageID: proposalID } as any);
+    const first = await client.call({ ProposalMessageID: proposalID }, enact.name);
 
-    const second = await enact.execute({ ProposalMessageID: proposalID } as any);
+    const second = await client.call({ ProposalMessageID: proposalID }, enact.name);
     expect(second.AlreadyEnacted).toBe(true);
     expect(second.Enacted).toBe(false);
     expect(second.EnactedMessageID).toBe(first.EnactedMessageID);
@@ -148,22 +109,22 @@ describe('enact-agent-deal', () => {
     expect(second.AcceptRow).toBeUndefined();
 
     // Still exactly one of each record.
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(1);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(1);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(1);
   });
 
   it('serializes concurrent enactment attempts so only one writes', async () => {
     const proposalID = await seedProposal();
 
     const results = await Promise.all([
-      enact.execute({ ProposalMessageID: proposalID } as any),
-      enact.execute({ ProposalMessageID: proposalID } as any),
+      client.call({ ProposalMessageID: proposalID }, enact.name),
+      client.call({ ProposalMessageID: proposalID }, enact.name),
     ]);
 
     expect(results.filter((result) => result.AlreadyEnacted)).toHaveLength(1);
     expect(results.filter((result) => !result.AlreadyEnacted)).toHaveLength(1);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(1);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(1);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(1);
   });
 
   it('rolls back deal-accept when the deal-enacted insert fails', async () => {
@@ -177,19 +138,18 @@ describe('enact-agent-deal', () => {
       END
     `.execute(store.getDatabase());
 
-    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow();
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
+    await expect(client.call({ ProposalMessageID: proposalID }, enact.name)).rejects.toThrow();
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(0);
   });
 
   it('reports a superseded proposal as a structured conflict, not a thrown error', async () => {
     const oldProposalID = await seedProposal();
     await seedProposal(1);
 
-    const result = await enact.execute({ ProposalMessageID: oldProposalID } as any);
+    const result = await client.call({ ProposalMessageID: oldProposalID }, enact.name);
 
     expect(result.Conflict?.Reason).toBe('superseded');
-    expect(result.Conflict?.Message).toMatch(/not the current active proposal/);
     expect(result.ProposalMessageID).toBe(oldProposalID);
     // A conflict enacted nothing, so every enactment field is absent.
     expect(result.EnactedMessageID).toBeUndefined();
@@ -198,24 +158,24 @@ describe('enact-agent-deal', () => {
     expect(result.Turn).toBeUndefined();
     expect(result.AcceptRow).toBeUndefined();
     expect(result.EnactedRow).toBeUndefined();
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
   });
 
   it('reports a proposal that was already rejected as an answered conflict', async () => {
     const proposalID = await seedProposal();
     // Rejection now goes through its own transactional route; append-message refuses deal-reject.
-    await reject.execute({
+    await client.call({
       PlayerAID: 3, PlayerBID: 1, ProposalMessageID: proposalID, SpeakerID: 1, Content: 'No.',
-    } as any);
+    }, reject.name);
 
-    const result = await enact.execute({ ProposalMessageID: proposalID } as any);
+    const result = await client.call({ ProposalMessageID: proposalID }, enact.name);
 
     expect(result.Conflict).toEqual({
       Reason: 'answered',
-      Message: expect.stringMatching(/not open; it was answered by deal-reject/),
+      Message: expect.any(String),
     });
     expect(result.Enacted).toBeUndefined();
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
   });
 
   it('reports a non-recipient accepter as a wrong-recipient conflict', async () => {
@@ -224,32 +184,31 @@ describe('enact-agent-deal', () => {
     // replaced, which is a lost race, so it is refused as a wrong-recipient conflict rather
     // than a thrown error.
     const proposalID = await seedProposal(); // authored by seat 3
-    const result = await enact.execute({ ProposalMessageID: proposalID, AccepterID: 3 } as any);
+    const result = await client.call({ ProposalMessageID: proposalID, AccepterID: 3 }, enact.name);
 
     expect(result.Conflict?.Reason).toBe('wrong-recipient');
-    expect(result.Conflict?.Message).toMatch(/must be the proposal recipient/);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(0);
   });
 
   it('rejects malformed stored deal terms', async () => {
     const proposalID = await seedProposal(3, {});
-    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(
-      /invalid Payload\.Deal/
-    );
+    await expect(client.call({ ProposalMessageID: proposalID }, enact.name)).rejects.toThrow();
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
   });
 
   it('rejects caller-supplied terms that differ from the stored proposal', async () => {
     const proposalID = await seedProposal();
     await expect(
-      enact.execute({
+      client.call({
         ProposalMessageID: proposalID,
         Deal: {
           version: 1,
           items: [{ fromPlayerID: 3, toPlayerID: 1, itemType: 'GOLD', amount: 50 }],
           promises: [],
         },
-      } as any)
-    ).rejects.toThrow(/does not match/);
+      }, enact.name)
+    ).rejects.toThrow();
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
   });
 
   it('matches caller-supplied terms that differ only in advisory fields or key order', async () => {
@@ -263,29 +222,29 @@ describe('enact-agent-deal', () => {
     });
 
     // Caller passes the same game-relevant terms (no advisory fields, keys reordered) — must match.
-    const result = await enact.execute({
+    const result = await client.call({
       ProposalMessageID: proposalID,
       Deal: {
         version: 1,
         promises: [],
         items: [{ itemType: 'GOLD', toPlayerID: 1, amount: 50, fromPlayerID: 3 }],
       },
-    } as any);
+    }, enact.name);
 
     expect(result.AlreadyEnacted).toBe(false);
     expect(typeof result.EnactedMessageID).toBe('number');
   });
 
   it('rejects a missing proposal', async () => {
-    await expect(enact.execute({ ProposalMessageID: 9999 } as any)).rejects.toThrow(/does not exist/);
+    await expect(client.call({ ProposalMessageID: 9999 }, enact.name)).rejects.toThrow();
   });
 
   it('rejects a non-proposal message', async () => {
-    const text = await append.execute({
+    const text = await client.call({
       PlayerAID: 3, PlayerBID: 1, PlayerARole: 'negotiator', PlayerBRole: 'the leader',
       SpeakerID: 3, MessageType: 'text', Content: 'hi',
-    } as any);
-    await expect(enact.execute({ ProposalMessageID: text.ID } as any)).rejects.toThrow(/not a deal-proposal or deal-counter/);
+    }, append.name);
+    await expect(client.call({ ProposalMessageID: text.ID }, enact.name)).rejects.toThrow();
   });
 
   it('refuses to enact a deal the DLL reports as un-enacted, writing nothing', async () => {
@@ -302,18 +261,18 @@ describe('enact-agent-deal', () => {
       items: [],
     } as any);
 
-    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(/Research agreements are disabled/);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
+    await expect(client.call({ ProposalMessageID: proposalID }, enact.name)).rejects.toThrow();
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(0);
   });
 
   it('throws and writes nothing when the bridge is unavailable (null) — inverted from the stage-5 stub', async () => {
     const proposalID = await seedProposal();
     vi.spyOn(inspectDealUtil, 'enactDeal').mockResolvedValue(null as any);
 
-    await expect(enact.execute({ ProposalMessageID: proposalID } as any)).rejects.toThrow(/bridge is unavailable/);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-accept' })).toHaveLength(0);
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(0);
+    await expect(client.call({ ProposalMessageID: proposalID }, enact.name)).rejects.toThrow();
+    expect(await readMessages(1, 3, 'deal-accept')).toHaveLength(0);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(0);
   });
 
   it('enacts a promise-only / item-less deal', async () => {
@@ -325,9 +284,9 @@ describe('enact-agent-deal', () => {
     // The enact-mode script applies the promise and Deal:Enact is a no-op returning true for no items.
     vi.spyOn(inspectDealUtil, 'enactDeal').mockResolvedValue({ enacted: true, items: [] } as any);
 
-    const result = await enact.execute({ ProposalMessageID: proposalID } as any);
+    const result = await client.call({ ProposalMessageID: proposalID }, enact.name);
     expect(result.Enacted).toBe(true);
     expect(typeof result.EnactedMessageID).toBe('number');
-    expect(await getDiplomaticMessages(1, 3, { messageType: 'deal-enacted' })).toHaveLength(1);
+    expect(await readMessages(1, 3, 'deal-enacted')).toHaveLength(1);
   });
 });

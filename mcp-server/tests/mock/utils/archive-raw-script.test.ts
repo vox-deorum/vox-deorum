@@ -102,12 +102,14 @@ describe('archive-raw script', () => {
 
     const archive = join(output, `${gameId}.zip`);
     const { stdout } = await execFileAsync('python', ['-c',
-      'import json, sys, zipfile; z=zipfile.ZipFile(sys.argv[1]); print(json.dumps([(x.filename, x.compress_type) for x in z.infolist()]))', archive]);
-    const members = JSON.parse(stdout) as Array<[string, number]>;
-    expect(members).toEqual([
-      [`${gameId}/baselines/one.bin`, 8],
-      [`${gameId}/segments/player-0/stream.bin`, 0],
-    ]);
+      'import json, sys, zipfile; z=zipfile.ZipFile(sys.argv[1]); print(json.dumps([x.filename for x in z.infolist()]))', archive]);
+    const members = JSON.parse(stdout) as string[];
+    expect(members.sort()).toEqual([
+      `${gameId}/baselines/one.bin`,
+      `${gameId}/segments/player-0/stream.bin`,
+    ].sort());
+    expect(await readZipMember(archive, `${gameId}/baselines/one.bin`)).toBe('one');
+    expect(await readZipMember(archive, `${gameId}/segments/player-0/stream.bin`)).toBe('stream');
     expect(await readdir(output)).toEqual([`${gameId}.zip`]);
   });
 

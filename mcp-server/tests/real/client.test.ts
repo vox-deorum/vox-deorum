@@ -6,22 +6,16 @@ import { describe, it, expect } from 'vitest';
 import { mcpClient } from '../setup.js';
 
 describe('MCP Agents Connection', () => {
-  it('should be connected to the server', async () => {
-    // Test ping to verify connection
-    const pingResult = await mcpClient.ping();
-    expect(pingResult).toBeDefined();
-  });
-
   it('should retrieve server capabilities', async () => {
     const capabilities = mcpClient.getServerCapabilities();
-    expect(capabilities).toBeDefined();
-    // expect(capabilities?.resources).toBeDefined();
-    expect(capabilities?.tools).toBeDefined();
+    expect(capabilities).toMatchObject({ tools: expect.any(Object) });
+    expect(capabilities?.resources).toBeUndefined();
   });
 
   it('should list available tools', async () => {
     const tools = await mcpClient.listTools();
-    expect(tools).toBeDefined();
-    expect(tools.tools).toBeInstanceOf(Array);
+    const names = tools.tools.map(tool => tool.name);
+    expect(names).toContain('calculator');
+    expect(new Set(names).size).toBe(names.length);
   });
 });

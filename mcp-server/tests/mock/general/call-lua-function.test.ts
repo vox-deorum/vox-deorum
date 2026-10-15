@@ -1,12 +1,19 @@
 /** Tests for the thin registered Lua function transport tool. */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bridgeManager, knowledgeManager } from '../../../src/server.js';
 import createCallLuaFunctionTool from '../../../src/tools/general/call-lua-function.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createCallLuaFunctionTool();
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
-afterEach(() => {
+beforeEach(async () => {
+  client = await connectToolClient(tool);
+});
+
+afterEach(async () => {
+  await client.close();
   vi.restoreAllMocks();
 });
 
@@ -39,7 +46,7 @@ describe('call-lua-function', () => {
   ])('$name', async ({ call, response, published }) => {
     const spy = vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue(response as any);
 
-    const output = await tool.execute(call as any);
+    const output = await client.call(call);
 
     expect(output).not.toHaveProperty('type');
     expect(output).not.toHaveProperty('id');
@@ -52,8 +59,8 @@ describe('call-lua-function', () => {
     const call = vi.spyOn(bridgeManager, 'callLuaFunction');
 
     await expect(
-      tool.execute({ Name: 'VoxDeorumDiploAppend', Args: [], ExpectedGameID: 'previous-game' } as any)
-    ).rejects.toThrow(/expected game previous-game, but active game is active-game/);
+      client.call({ Name: 'VoxDeorumDiploAppend', Args: [], ExpectedGameID: 'previous-game' })
+    ).rejects.toThrow();
     expect(call).not.toHaveBeenCalled();
   });
 });

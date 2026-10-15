@@ -96,8 +96,7 @@ describe('getPlayerStrategy', () => {
 
     await getPlayerStrategy(0);
     const first = await store.getMutableKnowledge('StrategyChanges', 0, 0);
-    // First write: prior rationale "Unknown" gets wrapped.
-    expect(first!.Rationale).toBe('Tweaked by In-Game AI(Unknown)');
+    const priorRationale = first!.Rationale;
 
     // A second read that produces a real change keeps the already-wrapped rationale
     // rather than double-wrapping it.
@@ -105,6 +104,6 @@ describe('getPlayerStrategy', () => {
     await getPlayerStrategy(0);
     const latest = await store.getMutableKnowledge('StrategyChanges', 0, 0);
     expect(latest!.GrandStrategy).toBe('Culture');
-    expect(latest!.Rationale).toBe('Tweaked by In-Game AI(Unknown)');
+    expect(latest!.Rationale).toBe(priorRationale);
   });
 });

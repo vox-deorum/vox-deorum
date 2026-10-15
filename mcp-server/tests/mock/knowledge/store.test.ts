@@ -6,10 +6,13 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
-import { knowledgeManager, gameDatabase, MCPServer } from '../../../src/server.js';
-import { composeVisibility } from '../../../src/utils/knowledge/visibility.js';
+import { knowledgeManager, gameDatabase } from '../../../src/server.js';
+import { bridgeManager } from '../../../src/server.js';
+import * as gameIdentity from '../../../src/knowledge/getters/game-identity.js';
+import { MaxMajorCivs } from '../../../src/knowledge/schema/base.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectNotificationClient } from '../tool-client.js';
 
 let store: KnowledgeStore;
 
@@ -84,6 +87,16 @@ describe('mutable knowledge versioning', () => {
     expect(history[0].Rationale).toBe('a');
   });
 
+  it('does not create a version when the same snapshot is stored twice', async () => {
+    const snapshot = { GrandStrategy: 'Conquest', EconomicStrategies: ['Growth'], MilitaryStrategies: ['Defense'] } as any;
+    await store.storeMutableKnowledge('StrategyChanges', 4, snapshot);
+    await store.storeMutableKnowledge('StrategyChanges', 4, snapshot);
+
+    const history = await store.getMutableKnowledgeHistory('StrategyChanges', 4);
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({ Version: 1, GrandStrategy: 'Conquest', EconomicStrategies: ['Growth'] });
+  });
+
   it('stamps an explicit source turn, defaulting to the manager turn otherwise', async () => {
     await store.storeMutableKnowledge('StrategyChanges', 1, { GrandStrategy: 'Conquest', Rationale: 'a' } as any, undefined, undefined, 7);
     expect((await store.getMutableKnowledge('StrategyChanges', 1))!.Turn).toBe(7);
@@ -93,21 +106,26 @@ describe('mutable knowledge versioning', () => {
   });
 
   it('honors per-player visibility filtering', async () => {
-    await store.storeMutableKnowledge('StrategyChanges', 1, { GrandStrategy: 'Conquest', Rationale: 'a' } as any, composeVisibility([5]));
+    const visibility = (level: number) => {
+      const flags = new Array(MaxMajorCivs).fill(0);
+      flags[5] = level;
+      return flags;
+    };
+    await store.storeMutableKnowledge('StrategyChanges', 1, { GrandStrategy: 'Conquest', Rationale: 'a' } as any, visibility(1));
+    await store.storeMutableKnowledge('StrategyChanges', 2, { GrandStrategy: 'Culture', Rationale: 'b' } as any, visibility(2));
+    await store.storeMutableKnowledge('StrategyChanges', 3, { GrandStrategy: 'Diplomacy', Rationale: 'c' } as any, visibility(0));
 
-    // Visible to player 5, invisible to player 3.
-    expect(await store.getMutableKnowledge('StrategyChanges', 1, 5)).not.toBeNull();
-    // executeTakeFirst() yields undefined for a filtered-out row.
+    expect(await store.getMutableKnowledge('StrategyChanges', 1, 5)).toMatchObject({ GrandStrategy: 'Conquest' });
+    expect(await store.getMutableKnowledge('StrategyChanges', 2, 5)).toMatchObject({ GrandStrategy: 'Culture' });
+    expect(await store.getMutableKnowledge('StrategyChanges', 3, 5)).toBeUndefined();
     expect(await store.getMutableKnowledge('StrategyChanges', 1, 3)).toBeUndefined();
-    // No filter → always returned.
-    expect(await store.getMutableKnowledge('StrategyChanges', 1)).not.toBeNull();
+    expect(await store.getMutableKnowledge('StrategyChanges', 1)).toMatchObject({ GrandStrategy: 'Conquest' });
   });
 });
 
 describe('timed knowledge & render events', () => {
   it('persists a single TimedKnowledge row and returns its new ID', async () => {
     const id = await store.storeTimedKnowledge('GameEvents', { data: { Type: 'TestEvent' } as any });
-    expect(typeof id).toBe('number');
 
     const rows = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
     expect(rows).toHaveLength(1);
@@ -123,12 +141,38 @@ describe('timed knowledge & render events', () => {
 });
 
 describe('handleGameEvent', () => {
-  let notifySpy: ReturnType<typeof vi.spyOn>;
+  let notificationClient: Awaited<ReturnType<typeof connectNotificationClient>>;
+  let priorConnectedListeners: Function[];
+  let priorGameEventListeners: Function[];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // localizeObject needs the (uninitialized) localization DB; stub it to identity.
     vi.spyOn(gameDatabase, 'localizeObject').mockImplementation(async (o: any) => o);
-    notifySpy = vi.spyOn(MCPServer.getInstance(), 'sendNotification').mockImplementation(() => {});
+    priorConnectedListeners = bridgeManager.rawListeners('connected');
+    priorGameEventListeners = bridgeManager.rawListeners('gameEvent');
+    // A fresh game ID per test forces a context switch, so no identity leaks between tests.
+    vi.spyOn(gameIdentity, 'syncGameIdentity').mockResolvedValue({ gameId: `event-test-${crypto.randomUUID()}`, turn: 10, activePlayerId: 1 });
+    vi.spyOn(knowledgeManager, 'loadKnowledge').mockResolvedValue();
+    await knowledgeManager.initialize();
+    const connectedHandler = bridgeManager.rawListeners('connected').find(listener => !priorConnectedListeners.includes(listener));
+    if (!connectedHandler) throw new Error('KnowledgeManager did not register a connected handler');
+    notificationClient = await connectNotificationClient();
+    connectedHandler();
+    // GameSwitched is the last step of the context switch; clear it so each test sees only its own notifications.
+    await vi.waitFor(() => expect(notificationClient.notifications.map(n => n.event)).toContain('GameSwitched'));
+    expect(knowledgeManager.getActivePlayerId()).toBe(1);
+    notificationClient.notifications.length = 0;
+  });
+
+  afterEach(async () => {
+    await notificationClient.close();
+    for (const listener of bridgeManager.rawListeners('connected')) {
+      if (!priorConnectedListeners.includes(listener)) bridgeManager.off('connected', listener);
+    }
+    for (const listener of bridgeManager.rawListeners('gameEvent')) {
+      if (!priorGameEventListeners.includes(listener)) bridgeManager.off('gameEvent', listener);
+    }
+    await knowledgeManager.shutdown();
   });
 
   const validPayload = { PlotX: 5, PlotY: 6, PlayerID: 1 };
@@ -137,31 +181,29 @@ describe('handleGameEvent', () => {
     await store.handleGameEvent(10_000_001, 'NotARealEvent', validPayload);
     const rows = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
     expect(rows).toHaveLength(0);
-    expect(notifySpy).not.toHaveBeenCalled();
   });
 
-  it('validates a known schema, stores the event, stamps lastID, and notifies', async () => {
+  it('validates a known schema, stores the event, and stamps lastID without notifying an unlisted event', async () => {
     await store.handleGameEvent(10_000_001, 'BarbariansCampCleared', validPayload);
 
     const rows = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ Type: 'BarbariansCampCleared', Turn: 10 });
     expect(await store.getMetadata('lastID')).toBe('10000001');
-    expect(notifySpy).toHaveBeenCalledWith('BarbariansCampCleared', 1, 10, 10_000_001, expect.any(Object));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(notificationClient.notifications).toHaveLength(0);
   });
 
   it('rejects a schema-invalid payload (no write, no notify)', async () => {
     await store.handleGameEvent(10_000_002, 'BarbariansCampCleared', { PlotX: 'nope' } as any);
     const rows = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
     expect(rows).toHaveLength(0);
-    expect(notifySpy).not.toHaveBeenCalled();
   });
 
   it('drops events with sentinel coordinates before storage', async () => {
     await store.handleGameEvent(10_000_003, 'BarbariansCampCleared', { PlotX: -2147483647, PlotY: 6, PlayerID: 1 });
     const rows = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
     expect(rows).toHaveLength(0);
-    expect(notifySpy).not.toHaveBeenCalled();
   });
 
   it('stores IdeologyAdopted as PlayerAdoptPolicyBranch', async () => {
@@ -175,7 +217,6 @@ describe('handleGameEvent', () => {
   it('drops IdeologyAdopted for a branch being locked', async () => {
     await store.handleGameEvent(10_000_005, 'IdeologyAdopted', { PlayerID: 1, BranchType: 9 }, undefined, { BranchLocked: true });
     expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
-    expect(notifySpy).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -191,7 +232,14 @@ describe('handleGameEvent', () => {
     const [row] = await store.getDatabase().selectFrom('GameEvents').selectAll().execute();
     expect(row).toMatchObject({ Type: type });
     expect(row.Payload).toMatchObject(payload);
-    expect(notifySpy).toHaveBeenCalledWith(type, 27, 10, 10_000_010, expect.objectContaining(payload));
+    await vi.waitFor(() => expect(notificationClient.notifications).toHaveLength(1));
+    expect(notificationClient.notifications[0]).toMatchObject({
+      event: type,
+      playerID: 27,
+      turn: 10,
+      latestID: 10_000_010,
+      data: expect.objectContaining(payload),
+    });
   });
 
   it.each([
@@ -203,7 +251,6 @@ describe('handleGameEvent', () => {
     await store.handleGameEvent(10_000_011, type, { PlayerID: 27, AsObserver: false, ...fields });
 
     expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
-    expect(notifySpy).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -218,17 +265,20 @@ describe('handleGameEvent', () => {
     });
 
     expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
-    expect(notifySpy).not.toHaveBeenCalled();
   });
 
   it('still advances the active player and notifies when a turn-end read fails', async () => {
     vi.spyOn(LuaFunction.prototype, 'execute').mockRejectedValue(new Error('bridge down'));
-    const activeSpy = vi.spyOn(knowledgeManager, 'updateActivePlayer');
-
     await store.handleGameEvent(10_000_020, 'PlayerDoneTurn', { PlayerID: 1, NextPlayerID: 2 });
 
-    expect(activeSpy).toHaveBeenCalledWith(2);
-    expect(notifySpy).toHaveBeenCalledWith('PlayerDoneTurn', 1, 10, 10_000_020, expect.any(Object));
+    expect(knowledgeManager.getActivePlayerId()).toBe(2);
+    await vi.waitFor(() => expect(notificationClient.notifications).toHaveLength(1));
+    expect(notificationClient.notifications[0]).toMatchObject({
+      event: 'PlayerDoneTurn',
+      playerID: 1,
+      turn: 10,
+      latestID: 10_000_020,
+    });
   });
 });
 

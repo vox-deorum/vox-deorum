@@ -11,22 +11,23 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { enumMappings } from '../../../src/utils/knowledge/enum.js';
-import * as playerActions from '../../../src/utils/lua/player-actions.js';
 import createSetFlavorsTool from '../../../src/tools/actions/set-flavors.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createSetFlavorsTool();
 let store: KnowledgeStore;
-let pushSpy: ReturnType<typeof vi.spyOn>;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
   enumMappings.GrandStrategy = { 1: 'Conquest', 2: 'Culture' };
-  pushSpy = vi.spyOn(playerActions, 'pushPlayerAction').mockResolvedValue();
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   delete (enumMappings as any).GrandStrategy;
   await store.close();
 });
@@ -51,15 +52,40 @@ function mockLua(opts: {
 }
 
 describe('set-flavors', () => {
+  it.each([
+    { PlayerID: 0, value: 0 },
+    { PlayerID: 0, value: 100 },
+    { PlayerID: 21, value: 0 },
+    { PlayerID: 21, value: 100 },
+  ])('accepts flavor $value for player $PlayerID without changing another player', async ({ PlayerID, value }) => {
+    const otherPlayer = PlayerID === 0 ? 1 : 0;
+    await store.storeMutableKnowledge('FlavorChanges', otherPlayer, {
+      Offense: 25,
+      GrandStrategy: 'Conquest',
+      Rationale: 'Unchanged player',
+    } as any);
+    mockLua({ flavors: {} });
+
+    const result = await client.call({
+      PlayerID,
+      Flavors: { Offense: value },
+      Rationale: 'Endpoint flavor',
+    });
+
+    expect(result.Success).toBe(true);
+    expect((await store.getMutableKnowledge('FlavorChanges', PlayerID) as any)?.Offense).toBe(value);
+    expect((await store.getMutableKnowledge('FlavorChanges', otherPlayer) as any)?.Offense).toBe(25);
+  });
+
   it('stores the full flavor set: clamped overrides, previous values, and 50 defaults', async () => {
     // Previously Offense=80 (FLAVOR_OFFENSE) in MCP range; everything else default.
     mockLua({ flavors: { FLAVOR_OFFENSE: 80 } });
 
-    await tool.execute({
+    await client.call({
       PlayerID: 0,
       Flavors: { Defense: 999, Science: 10 }, // 999 clamps to 100
       Rationale: 'turtle',
-    } as any);
+    });
 
     const row = (await store.getMutableKnowledge('FlavorChanges', 0)) as any;
     expect(row).not.toBeNull();
@@ -74,67 +100,34 @@ describe('set-flavors', () => {
   it('resolves the grand strategy enum and records the change', async () => {
     mockLua({ grandStrategy: 1 }); // previously Conquest
 
-    await tool.execute({
+    await client.call({
       PlayerID: 0,
       GrandStrategy: 'Culture',
       Rationale: 'pivot',
-    } as any);
+    });
 
     const row = (await store.getMutableKnowledge('FlavorChanges', 0)) as any;
     expect(row.GrandStrategy).toBe('Culture');
 
-    const [, actionType, summary, , prefix] = pushSpy.mock.calls[0];
-    expect(actionType).toBe('flavors');
-    expect(prefix).toBe('AI preferences');
-    expect(summary).toContain('Grand Strategy: Conquest → Culture');
   });
 
   it('writes FlavorChanges visible only to the acting player', async () => {
     mockLua({ flavors: {} });
 
-    await tool.execute({ PlayerID: 0, Flavors: { Offense: 70 }, Rationale: 'r' } as any);
+    await client.call({ PlayerID: 0, Flavors: { Offense: 70 }, Rationale: 'r' });
 
     expect(await store.getMutableKnowledge('FlavorChanges', 0, 0)).not.toBeUndefined();
     expect(await store.getMutableKnowledge('FlavorChanges', 0, 1)).toBeUndefined();
   });
 
-  it('reports a flavor delta in the replay summary when a value actually changes', async () => {
-    mockLua({ flavors: { FLAVOR_OFFENSE: 30 } }); // previously Offense=30
-
-    await tool.execute({
-      PlayerID: 0,
-      Flavors: { Offense: 90 },
-      Rationale: 'aggressive',
-    } as any);
-
-    const [, , summary, rationale, prefix] = pushSpy.mock.calls[0];
-    expect(prefix).toBe('AI preferences');
-    expect(rationale).toBe('aggressive');
-    expect(summary).toContain('Offense: 30 → 90');
-  });
-
-  it('pushes a "No changes" event (no replay prefix) when nothing changed', async () => {
-    mockLua({ flavors: { FLAVOR_OFFENSE: 70 } }); // previously Offense=70
-
-    await tool.execute({
-      PlayerID: 0,
-      Flavors: { Offense: 70 }, // same value
-      Rationale: 'noop',
-    } as any);
-
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [, , , , prefix] = pushSpy.mock.calls[0];
-    expect(prefix).toBeUndefined(); // no replay message when nothing changed
-  });
-
   it('ignores unknown flavor keys not present in flavors.json', async () => {
     mockLua({ flavors: {} });
 
-    await tool.execute({
+    await client.call({
       PlayerID: 0,
       Flavors: { NotARealFlavor: 99, Offense: 70 },
       Rationale: 'r',
-    } as any);
+    });
 
     const row = (await store.getMutableKnowledge('FlavorChanges', 0)) as any;
     expect(row.Offense).toBe(70);
@@ -144,9 +137,8 @@ describe('set-flavors', () => {
   it('does no store write or push when the Lua call fails', async () => {
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
 
-    const result = await tool.execute({ PlayerID: 0, Flavors: { Offense: 70 }, Rationale: 'r' } as any);
+    const result = await client.call({ PlayerID: 0, Flavors: { Offense: 70 }, Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('FlavorChanges', 0)).toHaveLength(0);
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 });

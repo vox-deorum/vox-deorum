@@ -18,8 +18,14 @@ vi.mock('../../../src/tools/index.js', () => ({
 
 import { getTool } from '../../../src/tools/index.js';
 import createSearchDatabaseTool from '../../../src/tools/general/search-database.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createSearchDatabaseTool();
+let client: Awaited<ReturnType<typeof connectToolClient>>;
+
+beforeEach(async () => {
+  client = await connectToolClient(tool);
+});
 
 /**
  * Build a row whose every weighted field is populated, so an exact Name match clears
@@ -54,7 +60,8 @@ function wireTools(map: Record<string, ReturnType<typeof fakeTool> | undefined>)
   );
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await client.close();
   vi.restoreAllMocks();
   vi.clearAllMocks();
 });
@@ -69,7 +76,7 @@ describe('search-database', () => {
       ]),
     });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 10 });
     const keys = Object.keys(result);
 
     expect(keys).toEqual(['Technology: Pottery', 'Technology: Archery']);
@@ -89,10 +96,10 @@ describe('search-database', () => {
       ]),
     });
 
-    const result = await tool.execute({
+    const result = await client.call({
       Keywords: ['Pottery', 'Archery'],
       MaxResults: 10,
-    } as any);
+    });
     const keys = Object.keys(result);
 
     expect(keys[0]).toBe('Technology: Pottery');
@@ -108,13 +115,42 @@ describe('search-database', () => {
       getPolicy: fakeTool([row('Tradition', 'Pottery')]),
     });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 10 });
     const keys = Object.keys(result);
 
     // One result from each tool, prefixed with the human-readable type name.
     expect(keys).toContain('Technology: Pottery');
     expect(keys).toContain('Policy: Tradition');
     expect(keys).toHaveLength(2);
+  });
+
+  it('searches each supported family and excludes strategic-option families', async () => {
+    const families = {
+      getTechnology: 'Technology',
+      getPolicy: 'Policy',
+      getBuilding: 'Building',
+      getCivilization: 'Civilization',
+      getUnit: 'Unit',
+      getFlavors: 'Flavor',
+      getEconomicStrategy: 'Economic Strategy',
+      getMilitaryStrategy: 'Military Strategy',
+    } as const;
+    wireTools(Object.fromEntries(Object.keys(families).map((toolName) => [
+      toolName,
+      fakeTool([row('SharedSearchTerm', 'SharedSearchTerm')]),
+    ])));
+
+    const result = await client.call({ Keywords: ['SharedSearchTerm'], MaxResults: 20 });
+    const keys = Object.keys(result).sort();
+
+    expect(keys).toEqual([
+      'Building: SharedSearchTerm',
+      'Civilization: SharedSearchTerm',
+      'Flavor: SharedSearchTerm',
+      'Policy: SharedSearchTerm',
+      'Technology: SharedSearchTerm',
+      'Unit: SharedSearchTerm',
+    ]);
   });
 
   it('honours MaxResults by truncating the fused list', async () => {
@@ -125,7 +161,7 @@ describe('search-database', () => {
       ]),
     });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 1 } as any);
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 1 });
     expect(Object.keys(result)).toEqual(['Technology: Pottery']);
   });
 
@@ -134,7 +170,7 @@ describe('search-database', () => {
       getTechnology: fakeTool([row('Pottery', 'Pottery', { Cost: 35, Era: 'Ancient' })]),
     });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 10 });
     const entry = result['Technology: Pottery'];
 
     expect(entry).toBeDefined();
@@ -151,14 +187,14 @@ describe('search-database', () => {
       getTechnology: fakeTool([row('Pottery', 'Pottery')]),
     });
 
-    const result = await tool.execute({ Keywords: ['zzzzzzzz'], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: ['zzzzzzzz'], MaxResults: 10 });
     expect(result).toEqual({});
   });
 
   it('returns an empty object for an empty keyword list', async () => {
     wireTools({ getTechnology: fakeTool([row('Pottery', 'Pottery')]) });
 
-    const result = await tool.execute({ Keywords: [], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: [], MaxResults: 10 });
     expect(result).toEqual({});
   });
 
@@ -169,7 +205,7 @@ describe('search-database', () => {
       getBuilding: { notGetSummaries: true } as any,
     });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 10 });
     expect(Object.keys(result)).toEqual(['Technology: Pottery']);
   });
 
@@ -180,8 +216,7 @@ describe('search-database', () => {
       getPolicy: failing as any,
     });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 10 } as any);
-    expect(failing.getSummaries).toHaveBeenCalled();
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 10 });
     expect(Object.keys(result)).toEqual(['Technology: Pottery']);
   });
 
@@ -197,7 +232,7 @@ describe('search-database', () => {
     };
     wireTools({ getTechnology: fakeTool([noName]) });
 
-    const result = await tool.execute({ Keywords: ['Pottery'], MaxResults: 10 } as any);
+    const result = await client.call({ Keywords: ['Pottery'], MaxResults: 10 });
     const keys = Object.keys(result);
     expect(keys).toEqual(['Technology: Pottery']);
     expect(result[keys[0]]).not.toHaveProperty('Type');

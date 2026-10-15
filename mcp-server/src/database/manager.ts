@@ -27,6 +27,34 @@ const voxPopuliTrigger = 'Unit_BuildingClassPurchaseRequireds';
 const voxPopuliRenamedTextTag = 'TXT_KEY_POLICY_LEGALISM';
 const voxPopuliRenamedTextVanilla = 'Legalism';
 
+/** Game tables read into enumMappings at startup, paired with the enum name each fills. */
+export const enumMappingTables: ReadonlyArray<readonly [tableName: string, mappedName: string]> = [
+  ['AICityStrategies', 'CityStrategy'],
+  ['AIEconomicStrategies', 'EconomicStrategy'],
+  ['AIMilitaryStrategies', 'MilitaryStrategy'],
+  ['AIGrandStrategies', 'GrandStrategy'],
+  ['Improvements', 'ImprovementType'],
+  ['Builds', 'BuildType'],
+  ['Buildings', 'BuildingType'],
+  ['BuildingClasses', 'BuildingClass'],
+  ['Projects', 'ProjectType'],
+  ['Specialists', 'SpecialistType'],
+  ['GreatWorks', 'GreatWorkType'],
+  ['Beliefs', 'BeliefType'],
+  ['GoodyHuts', 'GoodyType'],
+  ['PolicyBranchTypes', 'BranchType'],
+  ['Resolutions', 'ResolutionType'],
+  ['Units', 'UnitType'],
+  ['UnitClasses', 'UnitClass'],
+  ['Technologies', 'TechID'],
+  ['Policies', 'PolicyID'],
+  ['Resources', 'ResourceType'],
+  ['Religions', 'ReligionID'],
+  ['Features', 'FeatureType'],
+  ['UnitPromotions', 'PromotionType'],
+  ['Victories', 'VictoryType'],
+];
+
 /**
  * Manages SQLite database connections and queries for Civilization V using Kysely
  */
@@ -393,32 +421,11 @@ export class DatabaseManager {
    */
   async initializeMappings() {
     try {
-      await this.addEnumMappings("AICityStrategies", "CityStrategy");
-      await this.addEnumMappings("AIEconomicStrategies", "EconomicStrategy");
-      await this.addEnumMappings("AIMilitaryStrategies", "MilitaryStrategy");
-      await this.addEnumMappings("AIGrandStrategies", "GrandStrategy");
-      await this.addEnumMappings("Improvements", "ImprovementType");
-      await this.addEnumMappings("Builds", "BuildType");
-      await this.addEnumMappings("Buildings", "BuildingType");
-      await this.addEnumMappings("BuildingClasses", "BuildingClass");
-      await this.addEnumMappings("Projects", "ProjectType");
-      await this.addEnumMappings("Specialists", "SpecialistType");
-      await this.addEnumMappings("GreatWorks", "GreatWorkType");
-      await this.addEnumMappings("Beliefs", "BeliefType");
-      await this.addEnumMappings("GoodyHuts", "GoodyType");
-      await this.addEnumMappings("PolicyBranchTypes", "BranchType");
-      await this.addEnumMappings("Resolutions", "ResolutionType");
-      await this.addEnumMappings("Units", "UnitType");
+      for (const [tableName, mappedName] of enumMappingTables) {
+        await this.addEnumMappings(tableName, mappedName);
+      }
       // GreatPersonExpended sends the expended unit's type under this name
       enumMappings["GreatPersonType"] = enumMappings["UnitType"];
-      await this.addEnumMappings("UnitClasses", "UnitClass");
-      await this.addEnumMappings("Technologies", "TechID");
-      await this.addEnumMappings("Policies", "PolicyID");
-      await this.addEnumMappings("Resources", "ResourceType");
-      await this.addEnumMappings("Religions", "ReligionID");
-      await this.addEnumMappings("Features", "FeatureType");
-      await this.addEnumMappings("UnitPromotions", "PromotionType");
-      await this.addEnumMappings("Victories", "VictoryType");
     } catch (error) {
       logger.error('Failed to initialize enum mappings:', error);
       throw new Error(`Critical error: Failed to initialize enum mappings from the game database. Try to successfully start the game at least once. MCP server cannot start.`);

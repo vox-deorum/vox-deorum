@@ -12,13 +12,13 @@ describe('sortBySchema', () => {
     Era: z.string().optional(),
   });
 
-  it('should order schema keys first, in schema definition order, and preserve all values', () => {
+  it('orders schema keys first while preserving the corresponding values', () => {
     const data = { Dyn: { nested: true }, Score: 0, Name: 'Test', Era: 'Classical' };
     const sorted = sortBySchema(data, schema as any);
     expect(Object.keys(sorted)).toEqual(['Name', 'Score', 'Era', 'Dyn']);
     expect(sorted).toEqual(data);
-    // Values carry through by identity, including nested and falsy ones.
-    expect(sorted.Dyn).toBe(data.Dyn);
+    expect(sorted.Dyn).toEqual({ nested: true });
+    expect(sorted.Score).toBe(0);
   });
 
   it('should append dynamic keys alphabetically after schema keys', () => {
@@ -33,11 +33,11 @@ describe('sortBySchema', () => {
     expect(Object.keys(sorted)).toEqual(['Score', 'Zeta']);
   });
 
-  it('should return a new object without mutating the input', () => {
+  it('preserves the caller input and its insertion order', () => {
     const data = { Score: 50, Name: 'Test' };
     const sorted = sortBySchema(data, schema as any);
-    expect(sorted).not.toBe(data);
-    // Original insertion order must survive, since callers may reuse the input
+    expect(sorted).toEqual({ Name: 'Test', Score: 50 });
+    expect(data).toEqual({ Score: 50, Name: 'Test' });
     expect(Object.keys(data)).toEqual(['Score', 'Name']);
   });
 });

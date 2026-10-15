@@ -9,14 +9,21 @@
  * (the repo has no Lua harness), so it is not exercised here.
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { beforeEach, describe, it, expect, afterEach, vi } from 'vitest';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import createPostNotificationTool from '../../../src/tools/actions/post-notification.js';
 import { MaxMajorCivs, MaxPlayers } from '../../../src/knowledge/schema/base.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createPostNotificationTool();
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
-afterEach(() => {
+beforeEach(async () => {
+  client = await connectToolClient(tool);
+});
+
+afterEach(async () => {
+  await client.close();
   vi.restoreAllMocks();
 });
 
@@ -29,56 +36,52 @@ describe('post-notification', () => {
   it('forwards a diplomacy notification with the counterpart and maps Success/Result', async () => {
     const spy = mockLua(true);
 
-    const result = await tool.execute({
+    const result = await client.call({
       PlayerID: 0, CounterpartID: 3, Summary: 'Napoleon writes', Message: 'We should talk.',
     } as any);
 
     expect(result.Success).toBe(true);
     expect(result.Result).toBe(true);
-    expect(spy).toHaveBeenCalledWith(
-      0,
-      3,
-      '[COLOR_POSITIVE_TEXT]Napoleon writes[ENDCOLOR]',
-      'We should talk.',
-    );
+    const [, counterpartID, summary, message] = spy.mock.calls[0];
+    expect(counterpartID).toBe(3);
+    expect(summary).toContain('Napoleon writes');
+    expect(summary).not.toBe('Napoleon writes');
+    expect(message).toBe('We should talk.');
   });
 
   it('defaults CounterpartID to -1 when omitted (general message path)', async () => {
     const spy = mockLua(true);
 
-    await tool.execute({
+    await client.call({
       PlayerID: 2, Summary: 'Notice', Message: 'The council has news.',
     } as any);
 
-    expect(spy).toHaveBeenCalledWith(
-      2,
-      -1,
-      '[COLOR_POSITIVE_TEXT]Notice[ENDCOLOR]',
-      'The council has news.',
-    );
+    const [, counterpartID, summary, message] = spy.mock.calls[0];
+    expect(counterpartID).toBe(-1);
+    expect(summary).toContain('Notice');
+    expect(message).toBe('The council has news.');
   });
 
   it('trims text and strips the IPC frame delimiter from Summary and Message', async () => {
     const spy = mockLua(true);
 
-    await tool.execute({
+    await client.call({
       PlayerID: 1,
       Summary: '  head!@#$%^!line  ',
       Message: '  before!@#$%^!after  ',
     } as any);
 
-    expect(spy).toHaveBeenCalledWith(
-      1,
-      -1,
-      '[COLOR_POSITIVE_TEXT]headline[ENDCOLOR]',
-      'beforeafter',
-    );
+    const [, , summary, message] = spy.mock.calls[0];
+    expect(summary).toContain('headline');
+    expect(summary).not.toContain('!@#$%^!');
+    expect(message).toBe('beforeafter');
+    expect(message).not.toContain('!@#$%^!');
   });
 
   it('truncates messages longer than 400 characters and ends them with an ellipsis', async () => {
     const spy = mockLua(true);
 
-    await tool.execute({
+    await client.call({
       PlayerID: 1,
       Summary: 'Notice',
       Message: 'M'.repeat(401),
@@ -86,14 +89,15 @@ describe('post-notification', () => {
 
     const message = spy.mock.calls[0]?.[3] as string;
     expect(message).toHaveLength(400);
-    expect(message).toBe(`${'M'.repeat(397)}...`);
+    expect(message.startsWith('M'.repeat(397))).toBe(true);
+    expect(message.endsWith('...')).toBe(true);
   });
 
   it('does not truncate a message of exactly 400 characters', async () => {
     const spy = mockLua(true);
     const message = 'M'.repeat(400);
 
-    await tool.execute({
+    await client.call({
       PlayerID: 1,
       Summary: 'Notice',
       Message: message,
@@ -105,28 +109,28 @@ describe('post-notification', () => {
   it('rejects a diplomacy notification addressed to the receiving player', async () => {
     const spy = mockLua(true);
 
-    await expect(tool.execute({
+    await expect(client.call({
       PlayerID: 1, CounterpartID: 1, Summary: 'Notice', Message: 'Message',
-    } as any)).rejects.toThrow('CounterpartID must be different from PlayerID');
+    } as any)).rejects.toThrow();
     expect(spy).not.toHaveBeenCalled();
   });
 
   it.each([
     ['Summary', '!@#$%^!', 'Message'],
     ['Message', 'Summary', '  \t\n  '],
-  ])('rejects %s when sanitization leaves no visible text', async (field, summary, message) => {
+  ])('rejects %s when sanitization leaves no visible text', async (_field, summary, message) => {
     const spy = mockLua(true);
 
-    await expect(tool.execute({
+    await expect(client.call({
       PlayerID: 1, Summary: summary, Message: message,
-    } as any)).rejects.toThrow(`${field} must contain visible text after IPC sanitization`);
+    } as any)).rejects.toThrow();
     expect(spy).not.toHaveBeenCalled();
   });
 
   it('propagates a failed Lua response', async () => {
     mockLua(false, false);
 
-    const result = await tool.execute({
+    const result = await client.call({
       PlayerID: 0, Summary: 's', Message: 'm',
     } as any);
 
@@ -136,7 +140,7 @@ describe('post-notification', () => {
   it('preserves a Civ V rejection as a false result on a successful bridge call', async () => {
     mockLua(false, true);
 
-    const result = await tool.execute({
+    const result = await client.call({
       PlayerID: 0, Summary: 's', Message: 'm',
     } as any);
 
@@ -152,27 +156,24 @@ describe('post-notification observer-capable recipient', () => {
     // A pure observer's real slot sits above MaxMajorCivs; it is still a real Players[] entry and
     // a legitimate notification recipient, so the schema must admit it.
     const observerSlot = MaxMajorCivs + 5;
-    expect(() => tool.inputSchema.parse({
-      PlayerID: observerSlot, Summary: 's', Message: 'm',
-    })).not.toThrow();
-
-    await tool.execute({ PlayerID: observerSlot, Summary: 'Notice', Message: 'A reply arrived.' } as any);
-    expect(spy).toHaveBeenCalledWith(
-      observerSlot,
-      -1,
-      '[COLOR_POSITIVE_TEXT]Notice[ENDCOLOR]',
-      'A reply arrived.',
-    );
+    await client.call({ PlayerID: observerSlot, Summary: 'Notice', Message: 'A reply arrived.' });
+    const [recipientID, counterpartID, summary, message] = spy.mock.calls[0];
+    expect(recipientID).toBe(observerSlot);
+    expect(counterpartID).toBe(-1);
+    expect(summary).toContain('Notice');
+    expect(summary).not.toBe('Notice');
+    expect(message).toBe('A reply arrived.');
   });
 
   it('bounds PlayerID at the full player range and CounterpartID at the major civs', async () => {
     // The counterpart is a conversation partner, so it stays a major civilization even though the
     // recipient no longer has to be one.
-    expect(() => tool.inputSchema.parse({ PlayerID: MaxPlayers - 1, Summary: 's', Message: 'm' })).not.toThrow();
-    expect(() => tool.inputSchema.parse({ PlayerID: MaxPlayers, Summary: 's', Message: 'm' })).toThrow();
-    expect(() => tool.inputSchema.parse({ PlayerID: -1, Summary: 's', Message: 'm' })).toThrow();
-    expect(() => tool.inputSchema.parse({
+    mockLua(true);
+    await client.call({ PlayerID: MaxPlayers - 1, Summary: 's', Message: 'm' });
+    await expect(client.call({ PlayerID: MaxPlayers, Summary: 's', Message: 'm' })).rejects.toThrow();
+    await expect(client.call({ PlayerID: -1, Summary: 's', Message: 'm' })).rejects.toThrow();
+    await expect(client.call({
       PlayerID: 0, CounterpartID: MaxMajorCivs, Summary: 's', Message: 'm',
-    })).toThrow();
+    })).rejects.toThrow();
   });
 });

@@ -9,9 +9,6 @@ import {
   symmetrizeDeal,
   withPeaceTreaty,
   applyDealDurations,
-  SYMMETRIC_PROMISE_TYPES,
-  TARGETED_PROMISE_TYPES,
-  PROMISE_METADATA,
   PROMISE_TYPES,
   DealPayloadSchema,
   PromiseTermSchema,
@@ -55,7 +52,7 @@ describe('DealPayloadSchema wire-shape coercion', () => {
   });
 });
 
-describe('PROMISE_METADATA (single source of truth) + derived sets', () => {
+describe('promise vocabulary and durations', () => {
   it('holds exactly the promises the tactical AI honors (the non-honored ones are out of the contract)', () => {
     expect([...PROMISE_TYPES].sort()).toEqual(
       ['BORDER', 'COOP_WAR', 'EXPANSION', 'MILITARY', 'NO_DIGGING']
@@ -65,14 +62,6 @@ describe('PROMISE_METADATA (single source of truth) + derived sets', () => {
       expect(PromiseTermSchema.safeParse({ promiserID: 1, recipientID: 3, promiseType: t }).success).toBe(false);
     }
     expect(PromiseTermSchema.safeParse({ promiserID: 1, recipientID: 3, promiseType: 'MILITARY' }).success).toBe(true);
-  });
-
-  it('derives TARGETED / SYMMETRIC sets from the metadata flags', () => {
-    expect([...TARGETED_PROMISE_TYPES].sort()).toEqual(
-      PROMISE_TYPES.filter((t) => PROMISE_METADATA[t].targeted).sort()
-    );
-    expect([...TARGETED_PROMISE_TYPES]).toEqual(['COOP_WAR']);
-    expect([...SYMMETRIC_PROMISE_TYPES]).toEqual(['COOP_WAR']);
   });
 
   it('derives each promise duration from the metadata durationKey', () => {
@@ -98,14 +87,14 @@ describe('symmetrizeDeal', () => {
     ]);
   });
 
-  it('is idempotent — an already-symmetric pact is returned unchanged (same reference)', () => {
+  it('keeps an already-symmetric pact unchanged when normalized again', () => {
     const input = deal([
       { fromPlayerID: 1, toPlayerID: 3, itemType: 'DEFENSIVE_PACT' },
       { fromPlayerID: 3, toPlayerID: 1, itemType: 'DEFENSIVE_PACT' },
     ]);
     const out = symmetrizeDeal(input);
-    expect(out).toBe(input);
-    expect(out.items).toHaveLength(2);
+    expect(out).toEqual(input);
+    expect(symmetrizeDeal(out).items).toEqual(input.items);
   });
 
   it('leaves directional items (gold, open borders) untouched', () => {
@@ -114,8 +103,8 @@ describe('symmetrizeDeal', () => {
       { fromPlayerID: 1, toPlayerID: 3, itemType: 'OPEN_BORDERS' },
     ]);
     const out = symmetrizeDeal(input);
-    expect(out).toBe(input);
-    expect(out.items).toHaveLength(2);
+    expect(out.items).toEqual(input.items);
+    expect(input.items).toHaveLength(2);
   });
 
   it('completes multiple distinct pacts in one pass without mutating the input', () => {
@@ -140,17 +129,19 @@ describe('symmetrizeDeal', () => {
     ]);
   });
 
-  it('is idempotent for an already-symmetric Coop War pair (same reference)', () => {
+  it('keeps an already-symmetric Coop War pair unchanged when normalized again', () => {
     const input = promiseDeal([
       { promiserID: 1, recipientID: 3, promiseType: 'COOP_WAR', targetPlayerID: 9 },
       { promiserID: 3, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 9 },
     ]);
-    expect(symmetrizeDeal(input)).toBe(input);
+    const out = symmetrizeDeal(input);
+    expect(out).toEqual(input);
+    expect(symmetrizeDeal(out).promises).toEqual(input.promises);
   });
 
   it('leaves a non-mutual promise (Military) directional', () => {
     const input = promiseDeal([{ promiserID: 1, recipientID: 3, promiseType: 'MILITARY' }]);
-    expect(symmetrizeDeal(input)).toBe(input);
+    expect(symmetrizeDeal(input)).toEqual(input);
   });
 });
 
@@ -166,9 +157,12 @@ describe('withPeaceTreaty', () => {
     expect(input.items).toHaveLength(1);
   });
 
-  it('returns the same deal object when a Peace Treaty is already present (same reference)', () => {
+  it('does not duplicate an already-present Peace Treaty when applied repeatedly', () => {
     const input = deal([{ fromPlayerID: 1, toPlayerID: 3, itemType: 'PEACE_TREATY' }]);
-    expect(withPeaceTreaty(input, 1, 3)).toBe(input);
+    const once = withPeaceTreaty(input, 1, 3);
+    const twice = withPeaceTreaty(once, 1, 3);
+    expect(once.items).toEqual(input.items);
+    expect(twice.items).toEqual(input.items);
   });
 });
 

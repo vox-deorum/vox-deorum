@@ -1,63 +1,104 @@
 /**
- * Test setup configuration for MCP Server tests
- * Provides global test configuration and utilities
+ * Real-tier server setup. Every suite gets a real MCP server and client, while
+ * the bridge and Civ database remain controlled test fixtures.
  */
 
-import { beforeAll, afterAll } from 'vitest';
+import { afterAll, beforeAll } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { setTimeout } from 'node:timers/promises';
-import { startHttpServer } from '../src/http.js';
-import { MCPServer } from '../src/server.js';
-import config from '../src/utils/config.js';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readPublishedUrl } from './fixtures/server-process.js';
 
-// Set test environment variables
 process.env.NODE_ENV = 'test';
 
-let server: MCPServer;
-let closeTransport: () => Promise<void>;
 let mcpClient: Client;
+let closeTransport: () => Promise<void>;
+let shutdownFileDirectory: string | undefined;
+let fixtureCleanup: (() => Promise<void>) | undefined;
+let knowledgeFixtureCleanup: (() => Promise<void>) | undefined;
+let originalShutdownFile: string | undefined;
 
-// Global test setup - start bridge service once for all tests
 beforeAll(async () => {
-  mcpClient = new Client({
-    name: "test-client",
-    version: "1.0.0"
-  });
-  // Start server and client with appropriate transport
-  switch (process.env.TEST_TRANSPORT ?? "http") {
-    case 'stdio':
+  const fixture = await import('./fixtures/game-database.js');
+  const { gameDatabase, knowledgeManager } = await import('../src/server.js');
+  fixtureCleanup = await fixture.configureGameDatabase(gameDatabase);
+  const knowledgeFixture = await import('./fixtures/knowledge.js');
+  knowledgeFixtureCleanup = await knowledgeFixture.configureKnowledgeManager(knowledgeManager);
+
+  mcpClient = new Client({ name: 'test-client', version: '1.0.0' });
+  switch (process.env.TEST_TRANSPORT ?? 'http') {
+    case 'stdio': {
+      const { config } = await import('../src/utils/config.js');
       config.transport.type = 'stdio';
+      config.bridgeService.eventPipe.enabled = false;
       await mcpClient.connect(new StdioClientTransport({
-        command: 'node',
-        args: ['dist/index.js']
+        command: process.execPath,
+        args: ['--import', 'tsx', 'tests/real-source-bootstrap.ts'],
+        env: {
+          ...process.env,
+          MCP_TRANSPORT: 'stdio',
+          TEST_TRANSPORT: 'stdio',
+        },
+        cwd: process.cwd(),
       }));
       closeTransport = () => mcpClient.close();
       break;
-    case 'http':
-      closeTransport = await startHttpServer();
-      // Connect MCP client
+    }
+    case 'http': {
+      shutdownFileDirectory = await mkdtemp(join(tmpdir(), 'vox-mcp-real-'));
+      const shutdownFile = join(shutdownFileDirectory, 'shutdown-url.txt');
+      originalShutdownFile = process.env.MCP_SHUTDOWN_URL_FILE;
+      process.env.MCP_SHUTDOWN_URL_FILE = shutdownFile;
+
+      const { config } = await import('../src/utils/config.js');
+      config.transport.type = 'http';
+      config.transport.host = '127.0.0.1';
+      config.transport.port = 0;
+      config.bridgeService.eventPipe.enabled = false;
+      const { startHttpServer } = await import('../src/http.js');
+      const closeServer = await startHttpServer();
+      closeTransport = async () => {
+        await mcpClient.close();
+        await closeServer();
+      };
+
+      // startHttpServer returns only after initialization, so the server is ready here.
+      const shutdownUrl = await readPublishedUrl(shutdownFile);
       await mcpClient.connect(new StreamableHTTPClientTransport(
-        new URL(`http://${config.transport.host || '127.0.0.1'}:${config.transport.port || 4000}/mcp`)
+        new URL(shutdownUrl.replace('/shutdown', '/mcp'))
       ));
       break;
+    }
     default:
       throw new Error(`Unknown transport type: ${process.env.TEST_TRANSPORT}`);
   }
-  server = MCPServer.getInstance();
-  // Delay 5s to allow loading database, etc.
-  await setTimeout(5000);
-}, 15000); // 15 second timeout for service startup
 
-// Global test teardown - stop bridge service
+  // Both transports finish initialization before accepting the client, so tools are listed at once.
+  const { tools } = await mcpClient.listTools();
+  if (!tools.some(tool => tool.name === 'calculator')) throw new Error('MCP server did not expose its tools');
+}, 30000);
+
 afterAll(async () => {
-  await closeTransport();
-  // Delay 1s to allow cleanup
-  await setTimeout(1000);
+  try {
+    await closeTransport?.();
+  } finally {
+    try {
+      await knowledgeFixtureCleanup?.();
+    } finally {
+      try {
+        await fixtureCleanup?.();
+      } finally {
+        if (originalShutdownFile === undefined) delete process.env.MCP_SHUTDOWN_URL_FILE;
+        else process.env.MCP_SHUTDOWN_URL_FILE = originalShutdownFile;
+        if (shutdownFileDirectory) {
+          await rm(shutdownFileDirectory, { recursive: true, force: true });
+        }
+      }
+    }
+  }
 });
 
-// Export utilities for tests
-export {
-  mcpClient
-};
+export { mcpClient };

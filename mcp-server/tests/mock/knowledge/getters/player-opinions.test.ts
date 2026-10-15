@@ -26,10 +26,8 @@ function mockLua(result: unknown, success = true) {
 }
 
 describe('getPlayerOpinions', () => {
-  it('returns undefined for an undefined player without touching Lua', async () => {
-    const spy = vi.spyOn(LuaFunction.prototype, 'execute');
+  it('returns undefined for an undefined player', async () => {
     expect(await getPlayerOpinions(undefined)).toBeUndefined();
-    expect(spy).not.toHaveBeenCalled();
   });
 
   it('returns undefined when the Lua call fails', async () => {

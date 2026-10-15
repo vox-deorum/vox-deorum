@@ -1,158 +1,46 @@
-/**
- * Tests for get-building tool
- * Tests building database querying functionality through MCP
- */
+/** Building queries over the selected real MCP transport and controlled SQLite rules. */
+import { describe, it, expect } from 'vitest';
+import { mcpClient } from '../../../setup.js';
 
-import { describe, it, expect } from "vitest";
-import { mcpClient } from "../../../setup.js";
+/** Decode a building report delivered by the server. */
+async function query(args: Record<string, unknown> = {}) {
+  const result = await mcpClient.callTool({ name: 'get-building', arguments: args });
+  expect(result.isError).not.toBe(true);
+  return result.structuredContent as any;
+}
 
-describe("Get Building Tool via MCP", () => {
-
-  /**
-   * Test listing all buildings without search
-   */
-  it("should list all buildings without search", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-building",
-      arguments: {}
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    const parsed = JSON.parse(content.text);
-    expect(parsed.Count).toBeGreaterThan(0);
-    expect(parsed.Items).toBeDefined();
-    expect(Array.isArray(parsed.Items)).toBe(true);
-    
-    // Check first building has expected fields
-    if (parsed.Items.length > 0) {
-      const building = parsed.Items[0];
-      expect(building.Type).toBeDefined();
-      expect(building.Name).toBeDefined();
-      expect(building.Help).toBeDefined();
-      expect(building.Cost).toBeDefined();
-      // PrereqTech can be null
-    }
+describe('get-building through MCP', () => {
+  it('lists the fixture buildings with their costs and localized names', async () => {
+    const report = await query();
+    expect(report.Count).toBe(4);
+    expect(report.Items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ Type: 'BUILDING_LIBRARY', Name: 'Library', Cost: 80, PrereqTech: 'Writing' }),
+      expect.objectContaining({ Type: 'BUILDING_BARRACKS', Name: 'Barracks', Cost: 75 })
+    ]));
   });
 
-  /**
-   * Test fuzzy search functionality
-   */
-  it("should handle fuzzy search", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-building",
-      arguments: { 
-        Search: "baracks" // Intentional typo
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      // Should find Barracks despite typo
-      const barracks = parsed.Items.find((b: any) => b.Name === "Barracks");
-      expect(barracks).toBeDefined();
-    }
+  it('finds a building despite a misspelled name', async () => {
+    const report = await query({ Search: 'baracks' });
+    expect(report.Items).toEqual(expect.arrayContaining([expect.objectContaining({ Type: 'BUILDING_BARRACKS' })]));
   });
 
-  /**
-   * Test searching for an exact match returns full details
-   */
-  it("should return full details for exact match", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-building",
-      arguments: { 
-        Search: "BUILDING_LIBRARY" // Exact Type match
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      expect(parsed.Count).toBe(1);
-      
-      const building = parsed.Items[0];
-      // Should have full information
-      expect(building.Type).toBe("BUILDING_LIBRARY");
-      expect(building).toHaveProperty("Replaces");
-      expect(building.PrereqBuildings).toBeDefined();
-      expect(Array.isArray(building.PrereqBuildings)).toBe(true);
-      expect(typeof building.IsNationalWonder).toBe("boolean");
-      expect(typeof building.IsWorldWonder).toBe("boolean");
-      expect(typeof building.Happiness).toBe("number");
-      expect(typeof building.Defense).toBe("number");
-      expect(typeof building.HP).toBe("number");
-      expect(typeof building.Maintenance).toBe("number");
-      expect(building.UniqueOf).toBeDefined();
-      expect(Array.isArray(building.UniqueOf)).toBe(true);
-    }
+  it('returns a complete report for an exact building identifier', async () => {
+    const report = await query({ Search: 'BUILDING_LIBRARY' });
+    expect(report.Count).toBe(1);
+    expect(report.Items).toMatchObject([{
+      Type: 'BUILDING_LIBRARY', Name: 'Library', Cost: 80, PrereqTech: 'Writing',
+      Replaces: null, PrereqBuildings: [], IsNationalWonder: false, IsWorldWonder: false,
+      Happiness: 0, Defense: 0, HP: 0, Maintenance: 1, UniqueOf: null
+    }]);
   });
 
-  /**
-   * Test that prerequisite buildings are properly linked
-   */
-  it("should properly link prerequisite buildings", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-building",
-      arguments: { 
-        Search: "BUILDING_UNIVERSITY" // A building with prerequisites
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      expect(parsed.Count).toBe(1);
-      
-      const building = parsed.Items[0];
-      expect(building.PrereqBuildings).toBeDefined();
-      expect(Array.isArray(building.PrereqBuildings)).toBe(true);
-      // University typically requires Library
-      if (building.PrereqBuildings.length > 0) {
-        expect(building.PrereqBuildings[0]).toContain("Library");
-      }
-    }
+  it('links prerequisite building names', async () => {
+    const report = await query({ Search: 'BUILDING_UNIVERSITY' });
+    expect(report.Items).toMatchObject([{ Type: 'BUILDING_UNIVERSITY', PrereqBuildings: ['Library'] }]);
   });
 
-  /**
-   * Test a known unique building
-   */
-  it("should properly show UniqueOf for unique buildings", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-building",
-      arguments: { 
-        Search: "BUILDING_PAPER_MAKER" // Chinese unique Library
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      
-      // If Paper Maker exists in the database
-      if (parsed.Count > 0) {
-        const building = parsed.Items[0];
-        expect(building.UniqueOf).toBeDefined();
-        expect(Array.isArray(building.UniqueOf)).toBe(true);
-        // Paper Maker is Chinese unique
-        if (building.UniqueOf.length > 0) {
-          expect(building.UniqueOf).toContain("Chinese");
-        }
-      }
-    }
+  it('identifies a unique building and the standard building it replaces', async () => {
+    const report = await query({ Search: 'BUILDING_PAPER_MAKER' });
+    expect(report.Items).toMatchObject([{ Type: 'BUILDING_PAPER_MAKER', UniqueOf: 'China', Replaces: 'Library' }]);
   });
 });

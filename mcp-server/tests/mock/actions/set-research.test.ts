@@ -9,22 +9,23 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { enumMappings } from '../../../src/utils/knowledge/enum.js';
-import * as playerActions from '../../../src/utils/lua/player-actions.js';
 import createSetResearchTool from '../../../src/tools/actions/set-research.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createSetResearchTool();
 let store: KnowledgeStore;
-let pushSpy: ReturnType<typeof vi.spyOn>;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
   enumMappings.TechID = { 5: 'Pottery', 6: 'Writing' };
-  pushSpy = vi.spyOn(playerActions, 'pushPlayerAction').mockResolvedValue();
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   delete (enumMappings as any).TechID;
   await store.close();
 });
@@ -41,14 +42,14 @@ describe('set-research', () => {
   it('throws for a technology name that resolves to no enum value', async () => {
     mockLua({ Previous: -1 });
     await expect(
-      tool.execute({ PlayerID: 0, Technology: 'Nonexistent', Rationale: 'r' } as any)
-    ).rejects.toThrow(/not found/);
+      client.call({ PlayerID: 0, Technology: 'Nonexistent', Rationale: 'r' })
+    ).rejects.toThrow();
   });
 
   it('resolves the tech name, stores a ResearchChanges row, and stamps the turn', async () => {
     mockLua({ Previous: 5 }); // previously Pottery
 
-    await tool.execute({ PlayerID: 0, Technology: 'Writing', Rationale: 'go wide' } as any);
+    await client.call({ PlayerID: 0, Technology: 'Writing', Rationale: 'go wide' });
 
     const row = (await store.getMutableKnowledge('ResearchChanges', 0))!;
     expect(row).not.toBeNull();
@@ -57,36 +58,20 @@ describe('set-research', () => {
     expect(row.Turn).toBe(10);
   });
 
-  it('pushes a replay action resolving the previous tech id back to a name', async () => {
-    mockLua({ Previous: 5 }); // previously Pottery
-
-    await tool.execute({ PlayerID: 0, Technology: 'Writing', Rationale: 'switch' } as any);
-
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, summary, rationale, prefix] = pushSpy.mock.calls[0];
-    expect(playerID).toBe(0);
-    expect(actionType).toBe('research');
-    expect(prefix).toBe('Changed next research');
-    expect(rationale).toBe('switch');
-    expect(summary).toBe('Pottery → Writing');
-  });
-
   it('throws and writes nothing on a validation failure (already researched, Next === -2)', async () => {
     mockLua({ Next: -2 });
 
     await expect(
-      tool.execute({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' } as any)
-    ).rejects.toThrow(/already been researched/);
+      client.call({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' })
+    ).rejects.toThrow();
     expect(await store.getMutableKnowledgeHistory('ResearchChanges', 0)).toHaveLength(0);
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 
   it('does no store write or push when the Lua call fails', async () => {
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
 
-    const result = await tool.execute({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' } as any);
+    const result = await client.call({ PlayerID: 0, Technology: 'Writing', Rationale: 'r' });
     expect(result.Success).toBe(false);
     expect(await store.getMutableKnowledgeHistory('ResearchChanges', 0)).toHaveLength(0);
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 });

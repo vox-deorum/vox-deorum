@@ -10,11 +10,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Agent, createServer, get } from 'node:http';
-import { once } from 'node:events';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
+import { readPublishedUrl } from '../../fixtures/server-process.js';
 
 /** Create a promise whose completion is controlled by the test. */
 function createDeferred(): { promise: Promise<void>; resolve: () => void } {
@@ -35,20 +34,7 @@ async function stopStartedServer(
   await shutdown();
 }
 
-/** Read the shutdown URL after the listener has published its dynamic port. */
-async function readPublishedShutdownUrl(filePath: string): Promise<string> {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    try {
-      return (await readFile(filePath, 'utf8')).trim();
-    } catch {
-      await setTimeout(10);
-    }
-  }
-
-  throw new Error('MCP server did not publish its shutdown URL');
-}
-
-/** Fetch an endpoint and retain its keep-alive socket for shutdown assertions. */
+/** Fetch an endpoint and keep its keep-alive socket open for shutdown assertions. */
 async function openKeepAliveHealthConnection(url: string): Promise<import('node:net').Socket> {
   return new Promise((resolve, reject) => {
     const request = get(url, { agent: new Agent({ keepAlive: true }) }, (response) => {
@@ -90,7 +76,7 @@ describe('HTTP startup lifecycle', () => {
 
     const startPromise = startHttpServer(false);
     try {
-      const shutdownUrl = await readPublishedShutdownUrl(shutdownFile);
+      const shutdownUrl = await readPublishedUrl(shutdownFile);
       const baseUrl = shutdownUrl.replace('/shutdown', '');
 
       const healthResponse = await fetch(`${baseUrl}/health`);
@@ -139,7 +125,7 @@ describe('HTTP startup lifecycle', () => {
     let client: Client | undefined;
 
     try {
-      const shutdownUrl = await readPublishedShutdownUrl(shutdownFile);
+      const shutdownUrl = await readPublishedUrl(shutdownFile);
       deferred.resolve();
       await startPromise;
       client = new Client({ name: 'startup-test-client', version: '1.0.0' });
@@ -160,8 +146,8 @@ describe('HTTP startup lifecycle', () => {
     }
   });
 
-  it('lets a Vox Agents connection started during initialization complete after readiness', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'mcp-http-vox-agent-startup-'));
+  it('serves MCP clients after a request during initialization receives not-ready', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'mcp-http-client-startup-'));
     const shutdownFile = join(directory, 'shutdown-url.txt');
     process.env.MCP_SHUTDOWN_URL_FILE = shutdownFile;
     vi.resetModules();
@@ -174,66 +160,27 @@ describe('HTTP startup lifecycle', () => {
     vi.spyOn(MCPServer.prototype, 'initialize').mockImplementation(() => deferred.promise);
     vi.spyOn(MCPServer.prototype, 'close').mockResolvedValue();
     const { startHttpServer } = await import('../../../src/http.js');
-    const { config: agentsConfig } = await import('../../../../vox-agents/src/utils/config.js');
-    const originalTransport = { ...agentsConfig.mcpServer.transport };
-
     const startPromise = startHttpServer(false);
-    let client: import('../../../../vox-agents/src/utils/models/mcp-client.js').MCPClient | undefined;
-    let singletonClient: import('../../../../vox-agents/src/utils/models/mcp-client.js').MCPClient | undefined;
+    let client: Client | undefined;
 
     try {
-      const shutdownUrl = await readPublishedShutdownUrl(shutdownFile);
-      agentsConfig.mcpServer.transport = {
-        type: 'http',
-        endpoint: shutdownUrl.replace('/shutdown', '/mcp'),
-      };
-      const { MCPClient, mcpClient } = await import('../../../../vox-agents/src/utils/models/mcp-client.js');
-      singletonClient = mcpClient;
-      client = new MCPClient();
-      const internals = client as unknown as {
-        connectionPool: { dispatch: (...args: never[]) => unknown };
-        dispatcher: { dispatch: (...args: never[]) => unknown };
-        transport: { _fetch: (url: URL, init: RequestInit) => Promise<Response> };
-      };
-      const poolDispatch = vi.spyOn(
-        internals.connectionPool,
-        'dispatch',
-      );
-      const retryDispatch = vi.spyOn(internals.dispatcher, 'dispatch');
-      const postResponse = await internals.transport._fetch(new URL(agentsConfig.mcpServer.transport.endpoint!), {
-        method: 'POST',
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', id: 1 }),
-      });
-      await postResponse.body?.cancel();
-      expect(postResponse.status).toBe(503);
-      expect(poolDispatch).toHaveBeenCalledOnce();
-      expect(retryDispatch).not.toHaveBeenCalled();
-
-      poolDispatch.mockClear();
-      const connection = client.connect();
-      let connectionState = 'pending';
-      void connection.then(
-        () => { connectionState = 'fulfilled'; },
-        () => { connectionState = 'rejected'; },
-      );
-
-      await vi.waitFor(() => expect(poolDispatch).toHaveBeenCalled());
-      await setTimeout(300);
-      expect(connectionState).toBe('pending');
+      const shutdownUrl = await readPublishedUrl(shutdownFile);
+      const health = await fetch(shutdownUrl.replace('/shutdown', '/health'));
+      expect(health.status).toBe(200);
+      await expect(health.json()).resolves.toMatchObject({ status: 'initializing' });
+      const unavailable = await fetch(shutdownUrl.replace('/shutdown', '/mcp'));
+      expect(unavailable.status).toBe(503);
 
       deferred.resolve();
       await startPromise;
-      await connection;
-      expect(client.connected).toBe(true);
+      client = new Client({ name: 'ready-client', version: '1.0.0' });
+      await client.connect(new StreamableHTTPClientTransport(
+        new URL(shutdownUrl.replace('/shutdown', '/mcp'))
+      ));
+      expect((await client.listTools()).tools.map(tool => tool.name)).toContain('calculator');
     } finally {
       try {
-        agentsConfig.mcpServer.transport = originalTransport;
-        if (client) {
-          await client.disconnect();
-          await (client as unknown as { connectionPool?: { close: () => Promise<void> } }).connectionPool?.close();
-        }
-        await (singletonClient as unknown as { connectionPool?: { close: () => Promise<void> } } | undefined)
-          ?.connectionPool?.close();
+        await client?.close();
       } finally {
         try {
           await stopStartedServer(deferred, startPromise);
@@ -244,7 +191,7 @@ describe('HTTP startup lifecycle', () => {
     }
   });
 
-  it('closes keep-alive connections when shutdown arrives during initialization', async () => {
+  it('closes keep-alive connections, the listener, and the MCP server on shutdown during initialization', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'mcp-http-shutdown-'));
     const shutdownFile = join(directory, 'shutdown-url.txt');
     process.env.MCP_SHUTDOWN_URL_FILE = shutdownFile;
@@ -261,21 +208,17 @@ describe('HTTP startup lifecycle', () => {
 
     const startPromise = startHttpServer(false);
     let socket: import('node:net').Socket | undefined;
-
     try {
-      const shutdownUrl = await readPublishedShutdownUrl(shutdownFile);
+      const shutdownUrl = await readPublishedUrl(shutdownFile);
       socket = await openKeepAliveHealthConnection(shutdownUrl.replace('/shutdown', '/health'));
       expect(socket.destroyed).toBe(false);
 
-      const socketClosed = once(socket, 'close');
       const response = await fetch(shutdownUrl, { method: 'POST' });
       expect(response.status).toBe(202);
-      await Promise.race([
-        socketClosed,
-        setTimeout(1_000).then(() => {
-          throw new Error('Shutdown left a keep-alive connection open');
-        }),
-      ]);
+      await vi.waitFor(() => expect(socket!.destroyed).toBe(true));
+      await vi.waitFor(async () => {
+        await expect(fetch(shutdownUrl.replace('/shutdown', '/health'))).rejects.toThrow();
+      });
       await vi.waitFor(() => expect(closeSpy).toHaveBeenCalledOnce());
     } finally {
       try {
@@ -287,7 +230,7 @@ describe('HTTP startup lifecycle', () => {
     }
   });
 
-  it('reports an orphaned mcp-server when the address is already in use', async () => {
+  it('rejects startup when the configured address is already in use', async () => {
     const holder = createServer();
     await new Promise<void>((resolve) => holder.listen(0, '127.0.0.1', resolve));
     const address = holder.address();
@@ -302,7 +245,7 @@ describe('HTTP startup lifecycle', () => {
     const { startHttpServer } = await import('../../../src/http.js');
 
     try {
-      await expect(startHttpServer(false)).rejects.toThrow('likely an orphaned mcp-server');
+      await expect(startHttpServer(false)).rejects.toMatchObject({ cause: { code: 'EADDRINUSE' } });
     } finally {
       await new Promise<void>((resolve, reject) => holder.close((error) => error ? reject(error) : resolve()));
     }

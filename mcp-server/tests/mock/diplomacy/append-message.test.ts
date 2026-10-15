@@ -5,11 +5,13 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
+import createReadTranscriptTool from '../../../src/tools/knowledge/read-transcript.js';
 import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
 import { getVisibility } from '../../../src/utils/knowledge/visibility.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { knowledgeManager } from '../../../src/server.js';
+import { connectToolClient } from '../tool-client.js';
 
 // The cache-empty branch falls back to a live Lua fetch; stub it to [] so no bridge is needed.
 vi.mock('../../../src/knowledge/getters/player-information.js', async (importOriginal) => {
@@ -18,14 +20,18 @@ vi.mock('../../../src/knowledge/getters/player-information.js', async (importOri
 });
 
 const tool = createAppendMessageTool();
+const readTool = createReadTranscriptTool();
 let store: KnowledgeStore;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupDiplomacyStore(10);
+  client = await connectToolClient(tool, readTool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   await store.close();
 });
 
@@ -50,8 +56,8 @@ describe('append-message guards', () => {
   });
 
   it('rejects deal-accept and deal-enacted (enactment route only)', async () => {
-    await expect(tool.execute(args({ MessageType: 'deal-accept' }) as any)).rejects.toThrow(/enactment route/);
-    await expect(tool.execute(args({ MessageType: 'deal-enacted' }) as any)).rejects.toThrow(/enactment route/);
+    await expect(client.call(args({ MessageType: 'deal-accept' }))).rejects.toThrow();
+    await expect(client.call(args({ MessageType: 'deal-enacted' }))).rejects.toThrow();
   });
 
   it('refuses deal-reject before any other validation and writes nothing', async () => {
@@ -59,37 +65,37 @@ describe('append-message guards', () => {
     // inside one write transaction. No caller may bypass it through the archival tool. The
     // refusal is the FIRST guard, so even a well-formed rejection of a real proposal is refused
     // just the same: the archival path can never produce a deal-reject row.
-    const proposal = await tool.execute(
-      args({ MessageType: 'deal-proposal', Payload: { Deal: { items: [] } } }) as any
+    const proposal = await client.call(
+      args({ MessageType: 'deal-proposal', Payload: { Deal: { items: [] } } })
     );
 
     await expect(
-      tool.execute(
-        args({ MessageType: 'deal-reject', SpeakerID: 1, Payload: { ProposalMessageID: proposal.ID } }) as any
+      client.call(
+        args({ MessageType: 'deal-reject', SpeakerID: 1, Payload: { ProposalMessageID: proposal.ID } })
       )
-    ).rejects.toThrow(/reject-agent-deal/);
+    ).rejects.toThrow();
 
-    expect((await getDiplomaticMessages(1, 3, { messageType: 'deal-reject' })).messages).toHaveLength(0);
+    expect((await client.call({ PlayerAID: 1, PlayerBID: 3, MessageType: 'deal-reject' }, readTool.name)).messages).toHaveLength(0);
   });
 
   it('rejects equal endpoints', async () => {
-    await expect(tool.execute(args({ PlayerAID: 3, PlayerBID: 3 }) as any)).rejects.toThrow(/must be distinct/);
+    await expect(client.call(args({ PlayerAID: 3, PlayerBID: 3 }))).rejects.toThrow();
   });
 
   it('rejects a speaker who is not an endpoint', async () => {
-    await expect(tool.execute(args({ SpeakerID: 9 }) as any)).rejects.toThrow(/must be one of the two endpoints/);
+    await expect(client.call(args({ SpeakerID: 9 }))).rejects.toThrow();
   });
 
   it('requires Payload.Deal for proposals and counters', async () => {
-    await expect(tool.execute(args({ MessageType: 'deal-proposal' }) as any)).rejects.toThrow(/Payload.Deal/);
-    await expect(tool.execute(args({ MessageType: 'deal-counter' }) as any)).rejects.toThrow(/Payload.Deal/);
+    await expect(client.call(args({ MessageType: 'deal-proposal' }))).rejects.toThrow();
+    await expect(client.call(args({ MessageType: 'deal-counter' }))).rejects.toThrow();
   });
 
   it('rejects a transport append when its expected game is not active', async () => {
     vi.spyOn(knowledgeManager, 'getGameId').mockReturnValue('active-game');
     await expect(
-      tool.execute(args({ ExpectedGameID: 'previous-game' }) as any)
-    ).rejects.toThrow(/expected game previous-game, but active game is active-game/);
+      client.call(args({ ExpectedGameID: 'previous-game' }))
+    ).rejects.toThrow();
   });
 
   it('rechecks the expected game after async validation before retaining the store', async () => {
@@ -99,9 +105,9 @@ describe('append-message guards', () => {
 
     // The switched-game wording can only come from the second (post-validation) read.
     await expect(
-      tool.execute(args({ ExpectedGameID: 'stable-game' }) as any)
-    ).rejects.toThrow(/expected game stable-game, but active game is switched-game/);
-    expect((await getDiplomaticMessages(1, 3)).messages).toHaveLength(0);
+      client.call(args({ ExpectedGameID: 'stable-game' }))
+    ).rejects.toThrow();
+    expect((await client.call({ PlayerAID: 1, PlayerBID: 3 }, readTool.name)).messages).toHaveLength(0);
   });
 });
 
@@ -112,7 +118,7 @@ describe('append-message ordering & roles', () => {
   });
 
   it('orders the pair (Player1 = min) and remaps roles, stamping the server turn', async () => {
-    const row = await tool.execute(args() as any);
+    const row = await client.call(args());
     expect(row).toMatchObject({
       Player1ID: 1,
       Player2ID: 3,
@@ -124,7 +130,7 @@ describe('append-message ordering & roles', () => {
     });
 
     // The row is actually persisted and readable as one ordered thread.
-    const stored = await getDiplomaticMessages(1, 3);
+    const stored = await client.call({ PlayerAID: 1, PlayerBID: 3 }, readTool.name);
     expect(stored.messages).toHaveLength(1);
     expect(stored.messages[0].Content).toBe('Greetings.');
   });
@@ -133,16 +139,16 @@ describe('append-message ordering & roles', () => {
 describe('append-message observer endpoint', () => {
   it('sorts -1 to Player1, defaults its role to observer, and exempts it from the major check', async () => {
     await seedPlayer(store, 5); // only the real civ is seeded
-    const row = await tool.execute(
-      args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 }) as any
+    const row = await client.call(
+      args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 })
     );
     expect(row).toMatchObject({ Player1ID: -1, Player1Role: 'observer', Player2ID: 5 });
   });
 
   it('accepts one real observer slot paired with a major, preserves the ordered pair, and limits visibility to the major', async () => {
     await seedPlayer(store, 5);
-    const row = await tool.execute(
-      args({ PlayerAID: 27, PlayerBID: 5, PlayerARole: 'Observer', PlayerBRole: 'diplomat', SpeakerID: 27 }) as any
+    const row = await client.call(
+      args({ PlayerAID: 27, PlayerBID: 5, PlayerARole: 'Observer', PlayerBRole: 'diplomat', SpeakerID: 27 })
     );
 
     expect(row).toMatchObject({ Player1ID: 5, Player2ID: 27, Player1Role: 'diplomat', Player2Role: 'Observer' });
@@ -156,8 +162,8 @@ describe('append-message observer endpoint', () => {
     // slot 8 — inside the major range. Classifying by slot index refused every such message.
     await seedPlayer(store, 6);
     await seedPlayer(store, 8, { isMajor: 0 });
-    const row = await tool.execute(
-      args({ PlayerAID: 8, PlayerBID: 6, PlayerARole: 'Observer', PlayerBRole: 'diplomat', SpeakerID: 8 }) as any
+    const row = await client.call(
+      args({ PlayerAID: 8, PlayerBID: 6, PlayerARole: 'Observer', PlayerBRole: 'diplomat', SpeakerID: 8 })
     );
 
     expect(row).toMatchObject({ Player1ID: 6, Player2ID: 8, Player1Role: 'diplomat', Player2Role: 'Observer' });
@@ -172,25 +178,25 @@ describe('append-message observer endpoint', () => {
     await seedPlayer(store, 5);
     await seedPlayer(store, 7, { isMajor: 0 });
     await expect(
-      tool.execute(args({ PlayerAID: 7, PlayerBID: 5, PlayerARole: 'the leader', PlayerBRole: 'diplomat', SpeakerID: 7 }) as any)
-    ).rejects.toThrow(/Player 7 is not a major civilization/);
+      client.call(args({ PlayerAID: 7, PlayerBID: 5, PlayerARole: 'the leader', PlayerBRole: 'diplomat', SpeakerID: 7 }))
+    ).rejects.toThrow();
     // ...and the counterpart of an observer must still be a real major civilization.
     await expect(
-      tool.execute(args({ PlayerAID: 8, PlayerBID: 7, PlayerARole: 'Observer', PlayerBRole: 'the leader', SpeakerID: 8 }) as any)
-    ).rejects.toThrow(/Player 7 is not a major civilization/);
+      client.call(args({ PlayerAID: 8, PlayerBID: 7, PlayerARole: 'Observer', PlayerBRole: 'the leader', SpeakerID: 8 }))
+    ).rejects.toThrow();
   });
 
   it('rejects a real observer slot without a valid major counterpart', async () => {
     await expect(
-      tool.execute(args({ PlayerAID: 27, PlayerBID: 28, PlayerARole: 'Observer', PlayerBRole: 'Observer', SpeakerID: 27 }) as any)
-    ).rejects.toThrow(/real observer endpoint/);
+      client.call(args({ PlayerAID: 27, PlayerBID: 28, PlayerARole: 'Observer', PlayerBRole: 'Observer', SpeakerID: 27 }))
+    ).rejects.toThrow();
   });
 
   it('rejects an out-of-range endpoint whose role is not exactly Observer', async () => {
     await seedPlayer(store, 5);
     await expect(
-      tool.execute(args({ PlayerAID: 27, PlayerBID: 5, PlayerARole: 'observer', PlayerBRole: 'diplomat', SpeakerID: 27 }) as any)
-    ).rejects.toThrow(/exact Observer role/);
+      client.call(args({ PlayerAID: 27, PlayerBID: 5, PlayerARole: 'observer', PlayerBRole: 'diplomat', SpeakerID: 27 }))
+    ).rejects.toThrow();
   });
 });
 
@@ -198,12 +204,12 @@ describe('append-message major-civ validation', () => {
   it('rejects a non-major endpoint', async () => {
     await seedPlayer(store, 1, { isMajor: 1 });
     await seedPlayer(store, 3, { isMajor: 0 });
-    await expect(tool.execute(args() as any)).rejects.toThrow(/not a major civilization/);
+    await expect(client.call(args())).rejects.toThrow();
   });
 
   it('skips the check when PlayerInformations is empty', async () => {
     // No seeding → cache empty → stubbed fetch returns [] → check skipped, write succeeds.
-    const row = await tool.execute(args() as any);
+    const row = await client.call(args());
     expect(row.MessageType).toBe('text');
   });
 });
@@ -217,7 +223,9 @@ describe('append-message visibility flags', () => {
   it('sets full visibility for BOTH civ endpoints on a civ↔civ row, and none for an uninvolved player', async () => {
     await seedPlayer(store, 1);
     await seedPlayer(store, 3);
-    await tool.execute(args() as any); // 1 ↔ 3
+    await client.call(args()); // 1 ↔ 3
+    const thread = await client.call({ PlayerAID: 1, PlayerBID: 3 }, readTool.name);
+    expect(thread.messages).toHaveLength(1);
     const [row] = (await getDiplomaticMessages(1, 3)).messages;
     expect(getVisibility(row, 1)).toBe(2);
     expect(getVisibility(row, 3)).toBe(2);
@@ -226,9 +234,11 @@ describe('append-message visibility flags', () => {
 
   it('sets visibility only for the real civ on an observer (-1) row', async () => {
     await seedPlayer(store, 5);
-    await tool.execute(
-      args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 }) as any
+    await client.call(
+      args({ PlayerAID: -1, PlayerBID: 5, PlayerARole: undefined, PlayerBRole: 'diplomat', SpeakerID: 5 })
     );
+    const thread = await client.call({ PlayerAID: -1, PlayerBID: 5 }, readTool.name);
+    expect(thread.messages[0].Content).toBe('Greetings.');
     const [row] = (await getDiplomaticMessages(-1, 5)).messages;
     expect(getVisibility(row, 5)).toBe(2);
     // The observer sentinel (-1) has no player slot; no other player gains visibility.

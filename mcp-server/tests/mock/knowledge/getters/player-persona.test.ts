@@ -46,7 +46,8 @@ describe('getPlayerPersona', () => {
     expect(await store.getMutableKnowledgeHistory('PersonaChanges', 1)).toHaveLength(0);
   });
 
-  it('persists the persona scoped to the player and wraps the rationale', async () => {
+  it('persists the persona scoped to the player and wraps the prior rationale', async () => {
+    await store.storeMutableKnowledge('PersonaChanges', 1, { ...fullPersona(5), Rationale: 'Bold plan' } as any);
     const persona = fullPersona(7);
     mockLua(persona);
 
@@ -55,8 +56,9 @@ describe('getPlayerPersona', () => {
 
     const stored = await store.getMutableKnowledge('PersonaChanges', 1, 1);
     expect(stored).toMatchObject({ Key: 1, Boldness: 7 });
-    // First write wraps the (unknown) prior rationale.
-    expect((stored as any).Rationale).toMatch(/^Tweaked by In-Game AI/);
+    // The in-game change keeps the strategist's prior rationale but marks it as changed.
+    expect((stored as any).Rationale).toContain('Bold plan');
+    expect((stored as any).Rationale).not.toBe('Bold plan');
     // Visible only to player 1.
     expect(await store.getMutableKnowledge('PersonaChanges', 1, 2)).toBeUndefined();
   });
@@ -72,8 +74,7 @@ describe('getPlayerPersona', () => {
     const history = await store.getMutableKnowledgeHistory('PersonaChanges', 1);
     expect(history.map((h) => h.Version)).toEqual([2, 1]);
     const latest = history.find((h) => h.Version === 2)! as any;
-    // Already prefixed → not wrapped again into "Tweaked by In-Game AI (Tweaked ...".
-    expect(latest.Rationale).toBe('Tweaked by In-Game AI (Unknown)');
+    expect(latest.Rationale).toBe(history[1].Rationale);
   });
 
   it.each([

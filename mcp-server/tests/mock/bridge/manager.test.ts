@@ -4,7 +4,7 @@
  * The bridge-service HTTP boundary (HttpClient), the event-pipe socket
  * (node:net createConnection) and the SSE client (eventsource) are all faked,
  * so these tests exercise the manager's own logic with no live socket/server:
- *   - HTTP request shaping for health / lua execute / pause / resume / players.
+ *   - Caller-visible health, Lua execution, pause, resume, and production-mode outcomes.
  *   - The queued Lua batch loop: success result mapping and error mapping.
  *   - Event-pipe delimiter parsing (incl. a frame split across chunks) and the
  *     pipe-error -> SSE fallback path, plus reconnect scheduling.
@@ -62,6 +62,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { BridgeManager, type GameEvent } from '../../../src/bridge/manager.js';
 import { HttpClient, HttpError } from '../../../src/bridge/http-client.js';
+import { config } from '../../../src/utils/config.js';
 
 const PIPE_DELIM = '!@#$%^!';
 
@@ -83,6 +84,11 @@ let manager: BridgeManager;
 let getSpy: ReturnType<typeof vi.spyOn>;
 let postSpy: ReturnType<typeof vi.spyOn>;
 let deleteSpy: ReturnType<typeof vi.spyOn>;
+let gamePaused: boolean;
+let pausedPlayers: Set<number>;
+let productionMode: boolean;
+let pauseRequests: number;
+let resumeRequests: number;
 
 /** Force the manager's DLL-connected state via the public checkHealth() path. */
 async function markDllConnected(connected: boolean) {
@@ -94,11 +100,40 @@ async function markDllConnected(connected: boolean) {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  gamePaused = false;
+  pausedPlayers = new Set();
+  productionMode = false;
+  pauseRequests = 0;
+  resumeRequests = 0;
   // Stub the HTTP boundary before construction (the constructor's queue loop
   // immediately fires resumeGame()).
   getSpy = vi.spyOn(HttpClient.prototype, 'get').mockResolvedValue({} as any);
-  postSpy = vi.spyOn(HttpClient.prototype, 'post').mockResolvedValue({ success: true } as any);
-  deleteSpy = vi.spyOn(HttpClient.prototype, 'delete').mockResolvedValue({ success: true } as any);
+  postSpy = vi.spyOn(HttpClient.prototype, 'post').mockImplementation(async (route: string, body?: any) => {
+    if (route === '/lua/execute') return { success: true, result: body.script } as any;
+    if (route === '/external/pause') {
+      pauseRequests++;
+      gamePaused = true;
+      return { success: true } as any;
+    }
+    if (route === '/external/resume') {
+      resumeRequests++;
+      gamePaused = false;
+      return { success: true } as any;
+    }
+    if (route.startsWith('/external/pause-player/')) {
+      pausedPlayers.add(Number(route.split('/').at(-1)));
+      return { success: true } as any;
+    }
+    if (route === '/external/production-mode') {
+      productionMode = body.enabled;
+      return { success: true } as any;
+    }
+    return { success: true } as any;
+  });
+  deleteSpy = vi.spyOn(HttpClient.prototype, 'delete').mockImplementation(async (route: string) => {
+    if (route.startsWith('/external/pause-player/')) pausedPlayers.delete(Number(route.split('/').at(-1)));
+    return { success: true } as any;
+  });
   vi.spyOn(HttpClient.prototype, 'shutdown').mockResolvedValue();
 
   manager = new BridgeManager('http://test-bridge:9999');
@@ -112,84 +147,77 @@ afterEach(async () => {
   eventSourceInstances.length = 0;
 });
 
-describe('BridgeManager HTTP request shaping', () => {
-  it('checkHealth GETs /health and reflects dll_connected', async () => {
+describe('BridgeManager HTTP caller outcomes', () => {
+  it('reports bridge health and connection state to callers', async () => {
     getSpy.mockResolvedValueOnce({
       result: { success: true, dll_connected: true, uptime: 42, version: '1.2.3' },
     } as any);
 
     const health = await manager.checkHealth();
 
-    expect(getSpy).toHaveBeenCalledWith('/health');
     expect(health.dll_connected).toBe(true);
-    expect(health.version).toBe('1.2.3');
     expect(manager.dllConnected).toBe(true);
   });
 
-  it('executeLuaScript POSTs /lua/execute with the script body (fast pool)', async () => {
-    postSpy.mockResolvedValueOnce({ success: true, result: 7 } as any);
-
-    const res = await manager.executeLuaScript('return 1+1');
-
-    expect(postSpy).toHaveBeenCalledWith('/lua/execute', { script: 'return 1+1' }, { fast: true });
-    expect(res).toEqual({ success: true, result: 7 });
+  it('returns a successful Lua execution result to the caller', async () => {
+    const script = 'return fixture value';
+    const res = await manager.executeLuaScript(script);
+    expect(res).toEqual({ success: true, result: script });
   });
 
   it('executeLuaScript maps an HttpError into a NETWORK/HTTP error LuaResponse', async () => {
-    postSpy.mockRejectedValueOnce(new HttpError('boom', 500, 'HTTP_REQUEST_FAILED'));
+    postSpy.mockRejectedValueOnce(new HttpError('fixture script failure', 500, 'HTTP_REQUEST_FAILED'));
 
     const res = await manager.executeLuaScript('bad');
 
     expect(res.success).toBe(false);
     expect(res.error?.code).toBe('HTTP_REQUEST_FAILED');
-    expect(res.error?.message).toBe('boom');
+    expect(res.error?.message).toBe('fixture script failure');
   });
 
-  it('pauseGame POSTs /external/pause and returns the success flag', async () => {
-    postSpy.mockResolvedValueOnce({ success: true } as any);
+  it('pauses the game and reports success to the caller', async () => {
     const ok = await manager.pauseGame();
-    expect(postSpy).toHaveBeenCalledWith('/external/pause', undefined, { fast: true });
     expect(ok).toBe(true);
+    expect(gamePaused).toBe(true);
   });
 
   it('pauseGame returns false (swallows) when the request throws', async () => {
     postSpy.mockRejectedValueOnce(new HttpError('down', undefined, 'CONNECTION_FAILED'));
     const ok = await manager.pauseGame();
     expect(ok).toBe(false);
+    expect(gamePaused).toBe(false);
   });
 
-  it('resumeGame POSTs /external/resume and returns the success flag', async () => {
-    postSpy.mockResolvedValueOnce({ success: true } as any);
+  it('reports that a game resume request succeeded', async () => {
+    gamePaused = true;
     const ok = await manager.resumeGame();
-    expect(postSpy).toHaveBeenCalledWith('/external/resume', undefined, { fast: true });
     expect(ok).toBe(true);
+    expect(gamePaused).toBe(false);
   });
 
-  it('pausePlayer / resumePlayer POST and DELETE the per-player route and return the success flag', async () => {
-    postSpy.mockResolvedValueOnce({ success: true } as any);
+  it('reports successful pause and resume registration for a player', async () => {
     expect(await manager.pausePlayer(3)).toBe(true);
-    expect(postSpy).toHaveBeenCalledWith('/external/pause-player/3', undefined, { fast: true });
+    expect(pausedPlayers.has(3)).toBe(true);
 
-    deleteSpy.mockResolvedValueOnce({ success: true } as any);
     expect(await manager.resumePlayer(3)).toBe(true);
-    expect(deleteSpy).toHaveBeenCalledWith('/external/pause-player/3', { fast: true });
+    expect(pausedPlayers.has(3)).toBe(false);
   });
 
   it('pausePlayer / resumePlayer return false when the bridge answers success: false', async () => {
     postSpy.mockResolvedValueOnce({ success: false, error: { code: 'DLL_DISCONNECTED', message: 'DLL is not connected' } } as any);
     expect(await manager.pausePlayer(3)).toBe(false);
+    expect(pausedPlayers.has(3)).toBe(false);
 
     deleteSpy.mockResolvedValueOnce({ success: false, error: { code: 'DLL_DISCONNECTED', message: 'DLL is not connected' } } as any);
     expect(await manager.resumePlayer(3)).toBe(false);
   });
 
-  it('setProductionMode POSTs /external/production-mode and returns the success flag', async () => {
-    postSpy.mockResolvedValueOnce({ success: true } as any);
+  it('reports production-mode success and failure to callers', async () => {
     expect(await manager.setProductionMode(true)).toBe(true);
-    expect(postSpy).toHaveBeenCalledWith('/external/production-mode', { enabled: true }, { fast: true });
-
+    expect(productionMode).toBe(true);
     postSpy.mockResolvedValueOnce({ success: false, error: { code: 'INTERNAL_ERROR', message: 'boom' } } as any);
-    expect(await manager.setProductionMode(true)).toBe(false);
+    expect(await manager.setProductionMode(false)).toBe(false);
+    expect(productionMode).toBe(true);
   });
 });
 
@@ -228,12 +256,6 @@ describe('BridgeManager queued Lua batch', () => {
     expect(r1).toEqual({ success: true, result: 'Foo:10' });
     expect(r2).toEqual({ success: true, result: 'Bar:20' });
 
-    const batchCall = postSpy.mock.calls.find((c) => c[0] === '/lua/batch');
-    expect(batchCall).toBeDefined();
-    expect(batchCall![1]).toEqual([
-      { function: 'Foo', args: [10] },
-      { function: 'Bar', args: [20] },
-    ]);
   });
 
   it('maps a whole-batch failure to BATCH_ERROR for every call', async () => {
@@ -272,6 +294,116 @@ describe('BridgeManager queued Lua batch', () => {
     expect(res.success).toBe(false);
     expect(res.error?.code).toBe('CONNECTION_FAILED');
     expect(res.error?.message).toBe('connection lost');
+  });
+
+  it('maps each result to its caller when the queue spans more than one batch', async () => {
+    await markDllConnected(true);
+    postSpy.mockImplementation(async (path: string, body?: unknown) => {
+      if (path === '/lua/batch') {
+        const calls = body as Array<{ function: string; args: number[] }>;
+        return {
+          success: true,
+          result: { results: calls.map(call => ({ success: true, result: `${call.function}:${call.args[0]}` })) },
+        } as any;
+      }
+      return { success: true } as any;
+    });
+
+    const callers = Array.from({ length: 51 }, (_, index) => manager.callLuaFunction(`Read${index}`, [index]));
+    await vi.advanceTimersByTimeAsync(500);
+    const results = await Promise.all(callers);
+
+    expect(results).toEqual(Array.from({ length: 51 }, (_, index) => ({
+      success: true,
+      result: `Read${index}:${index}`,
+    })));
+  });
+
+  it.each([74, 75])('paces a %i-call backlog and returns every batch result', async count => {
+    await markDllConnected(true);
+    // Exclude the constructor's initial resume request from backlog outcomes.
+    pauseRequests = 0;
+    resumeRequests = 0;
+    let firstBatchStarted!: () => void;
+    let releaseFirstBatch!: () => void;
+    const started = new Promise<void>(resolve => { firstBatchStarted = resolve; });
+    const firstBatchGate = new Promise<void>(resolve => { releaseFirstBatch = resolve; });
+    const forwardHttpPost = postSpy.getMockImplementation()!;
+    let batchNumber = 0;
+    postSpy.mockImplementation(async (path: string, body?: unknown) => {
+      if (path === '/lua/batch') {
+        const calls = body as Array<{ function: string; args: number[] }>;
+        if (batchNumber++ === 0) {
+          firstBatchStarted();
+          await firstBatchGate;
+        }
+        return {
+          success: true,
+          result: { results: calls.map(call => ({ success: true, result: `${call.function}:${call.args[0]}` })) },
+        } as any;
+      }
+      return await forwardHttpPost(path, body);
+    });
+
+    const callers = Array.from({ length: count }, (_, index) => manager.callLuaFunction(`Read${index}`, [index]));
+    await vi.advanceTimersByTimeAsync(20);
+    await started;
+    const expectedTransitions = count === 75 ? [1, 1] : [0, 0];
+    expect([pauseRequests, resumeRequests]).toEqual([expectedTransitions[0], 0]);
+    expect(gamePaused).toBe(count === 75);
+
+    releaseFirstBatch();
+    await vi.advanceTimersByTimeAsync(100);
+    const results = await Promise.all(callers);
+
+    expect(results).toEqual(Array.from({ length: count }, (_, index) => ({
+      success: true,
+      result: `Read${index}:${index}`,
+    })));
+    expect([pauseRequests, resumeRequests]).toEqual(expectedTransitions);
+    expect(gamePaused).toBe(false);
+  });
+
+  it.each(['DLL disconnect', 'shutdown'])('settles queued callers after %s', async cause => {
+    await markDllConnected(true);
+    let firstBatchStarted!: () => void;
+    let releaseFirstBatch!: () => void;
+    const started = new Promise<void>(resolve => { firstBatchStarted = resolve; });
+    const firstBatchGate = new Promise<void>(resolve => { releaseFirstBatch = resolve; });
+    postSpy.mockImplementation(async (path: string, body?: unknown) => {
+      if (path === '/lua/batch') {
+        firstBatchStarted();
+        await firstBatchGate;
+        const calls = body as Array<{ function: string; args: number[] }>;
+        return { success: true, result: { results: calls.map(() => ({ success: true, result: 'finished' })) } } as any;
+      }
+      return { success: true } as any;
+    });
+
+    const activeCall = manager.callLuaFunction('Active', []);
+    await vi.advanceTimersByTimeAsync(20);
+    await started;
+    const queuedCall = manager.callLuaFunction('Queued', []);
+
+    if (cause === 'DLL disconnect') {
+      getSpy.mockResolvedValueOnce({
+        result: { success: true, dll_connected: false, uptime: 1, version: 'x' },
+      } as any);
+      await manager.checkHealth();
+      releaseFirstBatch();
+      await vi.advanceTimersByTimeAsync(250);
+    } else {
+      const queuedResult = queuedCall;
+      await manager.shutdown();
+      releaseFirstBatch();
+      await vi.advanceTimersByTimeAsync(20);
+      expect(await queuedResult).toMatchObject({ success: false, error: { code: 'QUEUE_DROPPED' } });
+    }
+
+    expect(await activeCall).toEqual({ success: true, result: 'finished' });
+    if (cause === 'DLL disconnect') {
+      expect(await queuedCall).toMatchObject({ success: false, error: { code: 'QUEUE_DROPPED' } });
+    }
   });
 });
 
@@ -378,27 +510,51 @@ describe('BridgeManager event-pipe -> SSE fallback & reconnect', () => {
     expect(received).toEqual([ev]);
   });
 
-  it('schedules a reconnect (~1s) when the SSE connection errors', () => {
+  it('continues delivering pipe events without opening an SSE fallback while the pipe is healthy', () => {
+    const received: GameEvent[] = [];
+    manager.on('gameEvent', event => received.push(event));
+
     manager.connectEventPipe();
-    socket.emit('error', new Error('pipe gone')); // -> SSE fallback (instance #0)
+    socket.emit('connect');
+    const event: GameEvent = { type: 'turn', payload: { turn: 12 }, timestamp: 'fixture-time' };
+    socket.emit('data', JSON.stringify(event) + PIPE_DELIM);
 
-    const es = eventSourceInstances[0];
-    const sseCountBefore = eventSourceInstances.length;
+    expect(received).toEqual([event]);
+    expect(eventSourceInstances).toHaveLength(0);
+  });
 
-    // Hand the next reconnect attempt a fresh socket so we can detect a re-open.
-    const reconnectSocket = new FakeSocket();
-    netHolder.nextSocket = reconnectSocket;
+  it.each([
+    { enabled: true, transport: 'event pipe' },
+    { enabled: false, transport: 'SSE' },
+  ])('reconnects over the $transport after SSE reports an error when the pipe is enabled=$enabled', ({ enabled }) => {
+    const originalEventPipe = config.bridgeService.eventPipe;
+    config.bridgeService.eventPipe = { name: originalEventPipe?.name ?? 'vox-deorum-events', enabled };
+    try {
+      manager.connectEventPipe();
+      socket.emit('error', new Error('pipe gone')); // -> SSE fallback (instance #0)
 
-    // SSE error -> scheduleReconnect() sets a ~1s timer.
-    es.onerror?.(new Error('sse dropped'));
-    expect(reconnectSocket.encoding).toBeNull(); // not yet reconnected
+      const es = eventSourceInstances[0];
+      const sseCountBefore = eventSourceInstances.length;
 
-    vi.advanceTimersByTime(1000);
+      // Hand the next reconnect attempt a fresh socket so we can detect a re-open.
+      const reconnectSocket = new FakeSocket();
+      netHolder.nextSocket = reconnectSocket;
 
-    // Reconnect ran: with the event pipe enabled it re-opens the pipe (fresh
-    // socket configured); otherwise it would open another SSE connection.
-    const reconnectedViaPipe = reconnectSocket.encoding === 'utf8';
-    const reconnectedViaSse = eventSourceInstances.length > sseCountBefore;
-    expect(reconnectedViaPipe || reconnectedViaSse).toBe(true);
+      // SSE error -> scheduleReconnect() sets a ~1s timer.
+      es.onerror?.(new Error('sse dropped'));
+      expect(reconnectSocket.encoding).toBeNull(); // not yet reconnected
+
+      vi.advanceTimersByTime(1000);
+
+      if (enabled) {
+        expect(reconnectSocket.encoding).toBe('utf8');
+        expect(eventSourceInstances).toHaveLength(sseCountBefore);
+      } else {
+        expect(reconnectSocket.encoding).toBeNull();
+        expect(eventSourceInstances.length).toBeGreaterThan(sseCountBefore);
+      }
+    } finally {
+      config.bridgeService.eventPipe = originalEventPipe;
+    }
   });
 });

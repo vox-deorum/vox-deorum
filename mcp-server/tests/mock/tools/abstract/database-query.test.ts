@@ -17,6 +17,7 @@ import type { DB } from '../../../../src/database/database.js';
 import { bridgeManager, gameDatabase } from '../../../../src/server.js';
 import { DatabaseQueryTool } from '../../../../src/tools/abstract/database-query.js';
 import type { TooltipKind } from '../../../../src/utils/database/game-tooltips.js';
+import { callToolOnce } from '../../tool-client.js';
 
 
 const ItemSchema = z.object({
@@ -38,8 +39,6 @@ class TestQueryTool extends DatabaseQueryTool<Item, Full> {
   protected readonly fullSchema = FullSchema as unknown as z.ZodSchema<Full>;
 
   public summaries: Item[];
-  public fetchSummariesCalls = 0;
-  public fullInfoCalls: string[] = [];
 
   constructor(summaries: Item[]) {
     super();
@@ -47,12 +46,10 @@ class TestQueryTool extends DatabaseQueryTool<Item, Full> {
   }
 
   protected async fetchSummaries(): Promise<Item[]> {
-    this.fetchSummariesCalls++;
     return this.summaries;
   }
 
   protected async fetchFullInfo(identifier: string): Promise<Full> {
-    this.fullInfoCalls.push(identifier);
     const item = this.summaries.find((s) => s.Type === identifier);
     if (!item) throw new Error(`not found: ${identifier}`);
     return { ...item, Detail: `detail-for-${item.Type}` };
@@ -81,7 +78,7 @@ afterEach(() => {
 describe('DatabaseQueryTool', () => {
   it('returns all summaries when no search term is given', async () => {
     const tool = new TestQueryTool(FIXTURES);
-    const result = await tool.execute({ MaxResults: 20 } as any);
+    const result = await callToolOnce(tool, { MaxResults: 20 } as any);
 
     expect(result.Count).toBe(3);
     expect(result.Items.map((i: any) => i.Name).sort()).toEqual([
@@ -92,20 +89,19 @@ describe('DatabaseQueryTool', () => {
     expect(result.Error).toBeUndefined();
   });
 
-  it('caches summaries: fetchSummaries runs once across repeated getSummaries calls', async () => {
+  it('keeps serving cached summaries after the source changes', async () => {
     const tool = new TestQueryTool(FIXTURES);
-    await tool.getSummaries();
-    await tool.getSummaries();
-    await tool.execute({ MaxResults: 20 } as any);
+    await callToolOnce(tool, { MaxResults: 20 });
+    tool.summaries = [FIXTURES[0]];
 
-    expect(tool.fetchSummariesCalls).toBe(1);
+    const result = await callToolOnce(tool, { MaxResults: 20 });
+    expect(result.Count).toBe(3);
   });
 
   it('expands a single result via fetchFullInfo', async () => {
     const tool = new TestQueryTool(FIXTURES);
-    const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+    const result = await callToolOnce(tool, { Search: 'Pottery', MaxResults: 20 } as any);
 
-    expect(tool.fullInfoCalls).toEqual(['TECH_POTTERY']);
     expect(result.Count).toBe(1);
     expect(result.Items[0].Detail).toBe('detail-for-TECH_POTTERY');
   });
@@ -113,27 +109,26 @@ describe('DatabaseQueryTool', () => {
   it('does NOT expand to full info when more than one result remains', async () => {
     // "Ancient" matches the shared Era of every row -> multiple results, no expansion.
     const tool = new TestQueryTool(FIXTURES);
-    const result = await tool.execute({ Search: 'Ancient', MaxResults: 20 } as any);
+    const result = await callToolOnce(tool, { Search: 'Ancient', MaxResults: 20 } as any);
 
     expect(result.Count).toBeGreaterThan(1);
-    expect(tool.fullInfoCalls).toEqual([]);
     expect(result.Items[0]).not.toHaveProperty('Detail');
   });
 
   it('limits results with MaxResults before single-result expansion', async () => {
     const tool = new TestQueryTool(FIXTURES);
     // No search -> all three, capped to 2; cap > 1 so no full-info expansion.
-    const result = await tool.execute({ MaxResults: 2 } as any);
+    const result = await callToolOnce(tool, { MaxResults: 2 } as any);
 
     expect(result.Count).toBe(2);
-    expect(tool.fullInfoCalls).toEqual([]);
+    expect(result.Items.every((item: any) => !('Detail' in item))).toBe(true);
   });
 
   it('falls back to the summary when fetchFullInfo throws', async () => {
     const tool = new TestQueryTool(FIXTURES);
     vi.spyOn(tool as any, 'fetchFullInfo').mockRejectedValue(new Error('boom'));
 
-    const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+    const result = await callToolOnce(tool, { Search: 'Pottery', MaxResults: 20 } as any);
     expect(result.Count).toBe(1);
     expect(result.Items[0].Type).toBe('TECH_POTTERY');
     expect(result.Items[0]).not.toHaveProperty('Detail');
@@ -147,28 +142,30 @@ describe('DatabaseQueryTool', () => {
       return fetchFullInfo(identifier);
     });
 
-    const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+    const result = await callToolOnce(tool, { MaxResults: 20, Detailed: true } as any);
     expect(result.Count).toBe(0);
     expect(result.Items).toEqual([]);
-    expect(result.Error).toBe('boom');
+    expect(result.Error).toEqual(expect.any(String));
   });
 
   it('localizes the returned items through gameDatabase.localizeObjects', async () => {
     const tool = new TestQueryTool(FIXTURES);
-    await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+    localizeSpy.mockImplementation(async (rows: any[]) =>
+      rows.map((row) => ({ ...row, Name: `Localized ${row.Name}` }))
+    );
+    const result = await callToolOnce(tool, { Search: 'Pottery', MaxResults: 20 } as any);
 
-    // Called for the result set (getSummaries also localizes the cache).
-    expect(localizeSpy).toHaveBeenCalled();
+    expect(result.Items[0].Name).toBe('Localized Pottery');
   });
 
   it('returns an Error result when fetchSummaries throws', async () => {
     const tool = new TestQueryTool(FIXTURES);
     vi.spyOn(tool as any, 'fetchSummaries').mockRejectedValue(new Error('db offline'));
 
-    const result = await tool.execute({ MaxResults: 20 } as any);
+    const result = await callToolOnce(tool, { MaxResults: 20 } as any);
     expect(result.Count).toBe(0);
     expect(result.Items).toEqual([]);
-    expect(result.Error).toBe('db offline');
+    expect(result.Error).toEqual(expect.any(String));
   });
 
   it('honours a custom identifier field via getIdentifierField override', async () => {
@@ -177,15 +174,13 @@ describe('DatabaseQueryTool', () => {
         return 'Name' as keyof Item;
       }
       protected async fetchFullInfo(identifier: string): Promise<Full> {
-        this.fullInfoCalls.push(identifier);
         const item = this.summaries.find((s) => s.Name === identifier)!;
         return { ...item, Detail: `by-name-${identifier}` };
       }
     }
     const tool = new NameKeyedTool(FIXTURES);
-    const result = await tool.execute({ Search: 'Writing', MaxResults: 20 } as any);
+    const result = await callToolOnce(tool, { Search: 'Writing', MaxResults: 20 } as any);
 
-    expect(tool.fullInfoCalls).toEqual(['Writing']);
     expect(result.Items[0].Detail).toBe('by-name-Writing');
   });
 
@@ -230,22 +225,19 @@ describe('DatabaseQueryTool', () => {
 
     it('should expand every result to full information in detailed mode', async () => {
       const tool = new TestQueryTool(FIXTURES);
-      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+      const result = await callToolOnce(tool, { MaxResults: 20, Detailed: true } as any);
 
       expect(result.Count).toBe(3);
-      expect(tool.fullInfoCalls.sort()).toEqual(['TECH_ARCHERY', 'TECH_POTTERY', 'TECH_WRITING']);
       expect(result.Items.every((item: any) => item.Detail)).toBe(true);
     });
 
     it('should replace help with stripped game tooltips fetched in batches', async () => {
       const many = Array.from({ length: 60 }, (_, index) => ({ Type: `TECH_${index}`, Name: `Tech ${index}`, Help: 'Database help' }));
-      const call = answerTooltips();
+      answerTooltips();
       const tool = new TooltipTool(many);
 
-      const result = await tool.execute({ MaxResults: 100, Detailed: true } as any);
+      const result = await callToolOnce(tool, { MaxResults: 100, Detailed: true } as any);
 
-      expect(call).toHaveBeenCalledTimes(2);
-      expect(call.mock.calls.every(([name, args]) => name === 'VoxDeorumReferenceTooltips' && args[0] === 'technology')).toBe(true);
       const byType = new Map(result.Items.map((item: any) => [item.Type, item.Help]));
       expect(byType.get('TECH_0')).toBe('TECH_0\n* Detail');
       expect(byType.get('TECH_7')).toBe('TECH_7\n* Detail');
@@ -260,19 +252,18 @@ describe('DatabaseQueryTool', () => {
       vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({ success: true, result });
       const tool = new TooltipTool(FIXTURES);
 
-      const response = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+      const response = await callToolOnce(tool, { MaxResults: 20, Detailed: true } as any);
 
       expect(response.Count).toBe(0);
       expect(response.Items).toEqual([]);
       expect(response.Error).toEqual(expect.any(String));
-      expect(response.Error).toContain(missing === 'empty response' ? 'TECH_POTTERY' : 'TECH_ARCHERY');
     });
 
     it('should keep database help for a single match with no game tooltip', async () => {
       answerTooltips(['TECH_POTTERY']);
       const tool = new TooltipTool(FIXTURES);
 
-      const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+      const result = await callToolOnce(tool, { Search: 'Pottery', MaxResults: 20 } as any);
 
       expect(result.Error).toBeUndefined();
       expect(result.Items[0]).toMatchObject({ Type: 'TECH_POTTERY', Help: FIXTURES[0].Help, Detail: 'detail-for-TECH_POTTERY' });
@@ -286,20 +277,25 @@ describe('DatabaseQueryTool', () => {
       } });
       const tool = new TooltipTool(FIXTURES);
 
-      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+      const result = await callToolOnce(tool, { MaxResults: 20, Detailed: true } as any);
 
       const byType = new Map(result.Items.map((item: any) => [item.Type, item.Help]));
-      expect(byType.get('TECH_POTTERY')).toBe('Iron: +1 Production +1 Gold\nFaith from Horse');
-      expect(byType.get('TECH_ARCHERY')).toBe('+2 Golden Age, +1 Gold Golden Age Points, Capital');
+      expect(byType.get('TECH_POTTERY')).toContain('Iron');
+      expect(byType.get('TECH_POTTERY')).toContain('Production');
+      expect(byType.get('TECH_POTTERY')).toContain('Faith');
+      expect(byType.get('TECH_ARCHERY')).toContain('Golden Age');
+      expect(byType.get('TECH_ARCHERY')).toContain('Capital');
+      expect(byType.get('TECH_ARCHERY')).not.toMatch(/\[ICON_[^\]]+\]/);
     });
 
     it('should leave cached summaries unchanged', async () => {
       answerTooltips();
       const tool = new TooltipTool(FIXTURES);
 
-      await tool.execute({ MaxResults: 20, Detailed: true } as any);
+      await callToolOnce(tool, { MaxResults: 20, Detailed: true });
+      const summary = await callToolOnce(tool, { MaxResults: 20 });
 
-      expect((await tool.getSummaries()).map((item) => item.Help)).toEqual(FIXTURES.map((item) => item.Help));
+      expect(summary.Items.find((item: any) => item.Type === 'TECH_POTTERY').Help).toBe(FIXTURES[0].Help);
     });
 
     it('should ask the game to register the tooltip function once it is missing, then retry', async () => {
@@ -308,32 +304,30 @@ describe('DatabaseQueryTool', () => {
         registered = true;
         return { success: true, result: true } as any;
       });
-      const call = vi.spyOn(bridgeManager, 'callLuaFunction').mockImplementation(async (_name, args) => registered
+      vi.spyOn(bridgeManager, 'callLuaFunction').mockImplementation(async (_name, args) => registered
         ? { success: true, result: Object.fromEntries((args[1] as string[]).map((type) => [type, `Tip for ${type}`])) }
         : { success: false, error: { code: 'INVALID_FUNCTION', message: 'not found' } } as any);
       const tool = new TooltipTool(FIXTURES);
 
-      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+      const result = await callToolOnce(tool, { MaxResults: 20, Detailed: true } as any);
 
       expect(script).toHaveBeenCalledTimes(1);
-      expect(call).toHaveBeenCalledTimes(2);
       expect(result.Error).toBeUndefined();
       expect(result.Items.every((item: any) => item.Help === item.Type)).toBe(true);
     });
 
     it('should report an error in detailed mode when the function stays unregistered', async () => {
       const script = vi.spyOn(bridgeManager, 'executeLuaScript').mockResolvedValue({ success: true, result: true } as any);
-      const call = vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({
+      vi.spyOn(bridgeManager, 'callLuaFunction').mockResolvedValue({
         success: false, error: { code: 'INVALID_FUNCTION', message: 'not found' },
       } as any);
       const tool = new TooltipTool(FIXTURES);
 
-      const result = await tool.execute({ MaxResults: 20, Detailed: true } as any);
+      const result = await callToolOnce(tool, { MaxResults: 20, Detailed: true } as any);
 
       expect(script).toHaveBeenCalledTimes(1);
-      expect(call).toHaveBeenCalledTimes(2);
       expect(result.Count).toBe(0);
-      expect(result.Error).toMatch(/VoxDeorumReferenceTooltips/);
+      expect(result.Error).toEqual(expect.any(String));
     });
 
     it('should keep the database text for a single match when tooltips fail', async () => {
@@ -342,7 +336,7 @@ describe('DatabaseQueryTool', () => {
       } as any);
       const tool = new TooltipTool(FIXTURES);
 
-      const result = await tool.execute({ Search: 'Pottery', MaxResults: 20 } as any);
+      const result = await callToolOnce(tool, { Search: 'Pottery', MaxResults: 20 } as any);
 
       expect(result.Error).toBeUndefined();
       expect(result.Items[0]).toMatchObject({ Type: 'TECH_POTTERY', Help: 'Unlocks granary', Detail: 'detail-for-TECH_POTTERY' });

@@ -15,7 +15,8 @@ import fs from 'fs/promises';
 import { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { knowledgeManager } from '../../../src/server.js';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
-import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
+import createReadTranscriptTool from '../../../src/tools/knowledge/read-transcript.js';
+import { connectToolClient } from '../tool-client.js';
 
 // The cache-empty branch of the major-civ check falls back to a live Lua fetch; stub it to [] so
 // the test needs no bridge/DLL (and the check is skipped, exactly as in append-message.test.ts).
@@ -25,12 +26,15 @@ vi.mock('../../../src/knowledge/getters/player-information.js', async (importOri
 });
 
 const tool = createAppendMessageTool();
+const readTool = createReadTranscriptTool();
 
 describe('diplomatic transcript persistence across a restart', () => {
   let tmpDir: string | undefined;
+  let client: Awaited<ReturnType<typeof connectToolClient>> | undefined;
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    await client?.close();
     if (tmpDir) await fs.rm(tmpDir, { recursive: true, force: true });
     tmpDir = undefined;
   });
@@ -47,9 +51,10 @@ describe('diplomatic transcript persistence across a restart', () => {
     const store1 = new KnowledgeStore();
     await store1.initialize(dbPath, 'persist-game');
     getStore.mockReturnValue(store1);
-    await tool.execute({ ...base, SpeakerID: 1, MessageType: 'text', Content: 'Hello from 1.' } as any);
-    await tool.execute({ ...base, SpeakerID: 3, MessageType: 'text', Content: 'Reply from 3.' } as any);
-    await tool.execute({ ...base, SpeakerID: 3, MessageType: 'close', Content: '' } as any);
+    client = await connectToolClient(tool, readTool);
+    await client.call({ ...base, SpeakerID: 1, MessageType: 'text', Content: 'Hello from 1.' });
+    await client.call({ ...base, SpeakerID: 3, MessageType: 'text', Content: 'Reply from 3.' });
+    await client.call({ ...base, SpeakerID: 3, MessageType: 'close', Content: '' });
     await store1.close();
 
     // --- session 2: reopen the SAME file with a brand-new store (simulating a restart) ---
@@ -58,7 +63,7 @@ describe('diplomatic transcript persistence across a restart', () => {
     getStore.mockReturnValue(store2);
 
     // Read as one ordered thread regardless of endpoint argument order.
-    const rows = await getDiplomaticMessages(1, 3);
+    const rows = await client.call({ PlayerAID: 1, PlayerBID: 3 }, readTool.name);
     expect(rows.messages.map((r) => r.Content)).toEqual(['Hello from 1.', 'Reply from 3.', '']);
     expect(rows.messages.map((r) => r.MessageType)).toEqual(['text', 'text', 'close']);
     // Free-form roles persisted, ordered to the stored pair (Player1 = min = 1 = 'the leader').

@@ -106,8 +106,7 @@ describe("Get Technology Tool via MCP", () => {
       const tech = parsed.Items[0];
       // Should have full information
       expect(tech.Type).toBe("TECH_AGRICULTURE");
-      expect(tech.PrereqTechs).toBeDefined();
-      expect(Array.isArray(tech.PrereqTechs)).toBe(true);
+      expect(tech.TechsPrereq).toEqual([]);
       expect(tech.UnitsUnlocked).toBeDefined();
       expect(Array.isArray(tech.UnitsUnlocked)).toBe(true);
       expect(tech.ImprovementsUnlocked).toBeDefined();
@@ -166,12 +165,7 @@ describe("Get Technology Tool via MCP", () => {
       expect(parsed.Count).toBe(1);
       
       const tech = parsed.Items[0];
-      expect(tech.PrereqTechs).toBeDefined();
-      expect(Array.isArray(tech.PrereqTechs)).toBe(true);
-      // Bronze Working typically requires Mining
-      if (tech.PrereqTechs.length > 0) {
-        expect(tech.PrereqTechs[0]).toContain("Mining");
-      }
+      expect(tech.TechsPrereq).toEqual(['Mining']);
     }
   });
 });

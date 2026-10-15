@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { mcpClient } from "../../../setup.js";
 
-describe("Lua Executor Tool via MCP", () => {
+describe("Lua executor results through MCP", () => {
 
-  it("should execute basic Lua calculations", async () => {
+  it("passes controlled bridge script results to callers", async () => {
     const testCases = [
       { Script: "return 2 + 3", expected: 5 },
       { Script: "return 10 * 5", expected: 50 },
@@ -24,20 +24,19 @@ describe("Lua Executor Tool via MCP", () => {
     }
   });
 
-  it("should handle errors gracefully", async () => {
+  it("passes a controlled bridge script failure to callers", async () => {
     const result = await mcpClient.callTool({
       name: "lua-executor",
       arguments: { Script: "invalid lua code @#$" }
     });
 
-    expect(result.content).toBeDefined();
     const content = (result.content as any)[0];
     expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      // Should contain error message
-      const parsed = JSON.parse(content.text);
-      expect(parsed.Error || parsed.Success === false).toBeTruthy();
-    }
+    const parsed = JSON.parse(content.text);
+    expect(parsed.Success).toBe(false);
+    expect(parsed.Error).toMatchObject({
+      Code: 'SCRIPT_ERROR',
+      Message: 'script is not included in the deterministic test fixture',
+    });
   });
 });

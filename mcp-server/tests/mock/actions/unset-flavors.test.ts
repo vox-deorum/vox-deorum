@@ -8,21 +8,22 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { composeVisibility } from '../../../src/utils/knowledge/visibility.js';
-import * as playerActions from '../../../src/utils/lua/player-actions.js';
 import createUnsetFlavorsTool from '../../../src/tools/actions/unset-flavors.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createUnsetFlavorsTool();
 let store: KnowledgeStore;
-let pushSpy: ReturnType<typeof vi.spyOn>;
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
-  pushSpy = vi.spyOn(playerActions, 'pushPlayerAction').mockResolvedValue();
+  client = await connectToolClient(tool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  await client.close();
   await store.close();
 });
 
@@ -48,9 +49,8 @@ async function seedFlavorRow(playerId: number) {
 
 describe('unset-flavors', () => {
   describe('schema validation', () => {
-    it('rejects a PlayerID above the major-civ max', () => {
-      const parsed = tool.inputSchema.safeParse({ PlayerID: 999 });
-      expect(parsed.success).toBe(false);
+    it('rejects a PlayerID above the major-civ max', async () => {
+      await expect(client.call({ PlayerID: 999 })).rejects.toThrow();
     });
   });
 
@@ -59,7 +59,7 @@ describe('unset-flavors', () => {
     expect(await store.getMutableKnowledge('FlavorChanges', 0)).not.toBeUndefined();
 
     mockLua();
-    await tool.execute({ PlayerID: 0 } as any);
+    await client.call({ PlayerID: 0 });
 
     // No latest row remains, but the history still holds the now-historical version.
     expect(await store.getMutableKnowledge('FlavorChanges', 0)).toBeUndefined();
@@ -71,33 +71,19 @@ describe('unset-flavors', () => {
     await seedFlavorRow(1);
 
     mockLua();
-    await tool.execute({ PlayerID: 0 } as any);
+    await client.call({ PlayerID: 0 });
 
     expect(await store.getMutableKnowledge('FlavorChanges', 0)).toBeUndefined();
     expect(await store.getMutableKnowledge('FlavorChanges', 1)).not.toBeUndefined();
-  });
-
-  it('pushes an unset-flavors replay action with empty rationale/prefix', async () => {
-    mockLua();
-    await tool.execute({ PlayerID: 0, Turn: 7 } as any);
-
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, , rationale, prefix, turn] = pushSpy.mock.calls[0];
-    expect(playerID).toBe(0);
-    expect(actionType).toBe('unset-flavors');
-    expect(rationale).toBe('');
-    expect(prefix).toBe('');
-    expect(turn).toBe(7);
   });
 
   it('does not touch the store or push when the Lua call fails', async () => {
     await seedFlavorRow(0);
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
 
-    const result = await tool.execute({ PlayerID: 0 } as any);
+    const result = await client.call({ PlayerID: 0 });
     expect(result.Success).toBe(false);
     // The seeded latest row is untouched.
     expect(await store.getMutableKnowledge('FlavorChanges', 0)).not.toBeUndefined();
-    expect(pushSpy).not.toHaveBeenCalled();
   });
 });

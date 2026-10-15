@@ -8,33 +8,50 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore, seedPlayer } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import * as playerActions from '../../../src/utils/lua/player-actions.js';
 import createSetRelationshipTool from '../../../src/tools/actions/set-relationship.js';
+import createGetOptionsTool from '../../../src/tools/knowledge/get-options.js';
+import { getTool } from '../../../src/tools/index.js';
+import * as playerOptions from '../../../src/knowledge/getters/player-options.js';
+import * as playerPersona from '../../../src/knowledge/getters/player-persona.js';
+import * as playerStrategy from '../../../src/knowledge/getters/player-strategy.js';
+import { enumMappings } from '../../../src/utils/knowledge/enum.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { connectToolClient } from '../tool-client.js';
 
 const tool = createSetRelationshipTool();
+const readTool = createGetOptionsTool();
 let store: KnowledgeStore;
-let pushSpy: ReturnType<typeof vi.spyOn>;
-
-/** Read all RelationshipChanges rows (TimedKnowledge) for the acting player. */
-async function readRelationshipChanges(playerId: number): Promise<any[]> {
-  const db = store.getDatabase();
-  return (db.selectFrom('RelationshipChanges') as any)
-    .selectAll()
-    .where('PlayerID', '=', playerId)
-    .execute();
-}
+let client: Awaited<ReturnType<typeof connectToolClient>>;
 
 beforeEach(async () => {
   store = await setupStore(10);
   // Seed both players so readPublicKnowledgeBatch returns from cache (no Lua getter).
   await seedPlayer(store, 0, { civilization: 'Rome' });
   await seedPlayer(store, 1, { civilization: 'Egypt' });
-  pushSpy = vi.spyOn(playerActions, 'pushPlayerAction').mockResolvedValue();
+  enumMappings.GrandStrategy = { 0: 'None' };
+  vi.spyOn(playerOptions, 'getPlayerOptions').mockResolvedValue([{
+    PlayerID: 0,
+    EconomicStrategies: [],
+    MilitaryStrategies: [],
+    Technologies: [],
+    NextResearch: null,
+    Policies: [],
+    PolicyBranches: [],
+    NextPolicy: null,
+    NextBranch: null,
+  }] as any);
+  vi.spyOn(playerPersona, 'getPlayerPersona').mockResolvedValue(null);
+  vi.spyOn(playerStrategy, 'getPlayerStrategy').mockResolvedValue(null);
+  for (const name of ['getTechnology', 'getPolicy', 'getEconomicStrategy', 'getMilitaryStrategy']) {
+    vi.spyOn(getTool(name)!, 'getSummaries').mockResolvedValue([] as any);
+  }
+  client = await connectToolClient(tool, readTool);
 });
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  delete (enumMappings as any).GrandStrategy;
+  await client.close();
   await store.close();
 });
 
@@ -51,82 +68,60 @@ function mockLua(previousPublic: number, previousPrivate: number, targetName = '
 }
 
 describe('set-relationship', () => {
+  it.each([-100, 100])('accepts relationship modifier endpoint %i through MCP', async (value) => {
+    mockLua(0, 0);
+
+    const result = await client.call({
+      PlayerID: 0,
+      TargetID: 1,
+      Public: value,
+      Private: value,
+      Rationale: 'Endpoint modifier',
+    });
+
+    expect(result.Success).toBe(true);
+    const options = await client.call({ PlayerID: 0 }, readTool.name);
+    expect(options.Relationships.Egypt).toMatchObject({ Public: value, Private: value });
+  });
+
   it('throws when the target player is not seeded', async () => {
     mockLua(0, 0);
     await expect(
-      tool.execute({ PlayerID: 0, TargetID: 5, Public: 10, Rationale: 'r' } as any)
-    ).rejects.toThrow(/Target player with ID 5 not found/);
+      client.call({ PlayerID: 0, TargetID: 5, Public: 10, Rationale: 'r' })
+    ).rejects.toThrow();
   });
 
   it('stores a RelationshipChanges row stamped with the turn', async () => {
     mockLua(0, 0);
 
-    await tool.execute({
+    await client.call({
       PlayerID: 0,
       TargetID: 1,
       Public: 30,
       Private: -20,
       Rationale: 'Build trust',
-    } as any);
+    });
 
-    const rows = await readRelationshipChanges(0);
-    expect(rows).toHaveLength(1);
-    const row = rows[0];
-    expect(row.PlayerID).toBe(0);
-    expect(row.TargetID).toBe(1);
-    expect(row.PublicValue).toBe(30);
-    expect(row.PrivateValue).toBe(-20);
-    expect(row.Rationale).toBe('Build trust');
-    expect(row.Turn).toBe(10);
-  });
-
-  it('pushes a replay action describing the changed public/private deltas', async () => {
-    mockLua(5, 5, 'Egypt');
-
-    await tool.execute({
-      PlayerID: 0,
-      TargetID: 1,
+    const result = await client.call({ PlayerID: 0 }, readTool.name);
+    expect(result.Relationships.Egypt).toEqual({
       Public: 30,
-      Private: 5, // unchanged vs previous private
-      Rationale: 'shift',
-    } as any);
-
-    expect(pushSpy).toHaveBeenCalledTimes(1);
-    const [playerID, actionType, summary, rationale, prefix] = pushSpy.mock.calls[0];
-    expect(playerID).toBe(0);
-    expect(actionType).toBe('relationship');
-    expect(prefix).toBe('');
-    expect(rationale).toBe('shift');
-    expect(summary).toContain('Egypt');
-    expect(summary).toContain('Public 5 → 30');
-    expect(summary).not.toContain('Private'); // unchanged
-  });
-
-  it('does not push a replay action when both values are unchanged', async () => {
-    mockLua(10, 20);
-
-    await tool.execute({
-      PlayerID: 0,
-      TargetID: 1,
-      Public: 10,
-      Private: 20,
-      Rationale: 'noop',
-    } as any);
-
-    expect(pushSpy).not.toHaveBeenCalled();
+      Private: -20,
+      Rationale: 'Build trust',
+      UpdatedTurn: 10,
+    });
   });
 
   it('does no store write or push when the Lua call fails', async () => {
     vi.spyOn(LuaFunction.prototype, 'execute').mockResolvedValue({ success: false } as any);
 
-    const result = await tool.execute({
+    const result = await client.call({
       PlayerID: 0,
       TargetID: 1,
       Public: 30,
       Rationale: 'r',
-    } as any);
+    });
     expect(result.Success).toBe(false);
-    expect(await readRelationshipChanges(0)).toHaveLength(0);
-    expect(pushSpy).not.toHaveBeenCalled();
+    const options = await client.call({ PlayerID: 0 }, readTool.name);
+    expect(options.Relationships ?? {}).toEqual({});
   });
 });

@@ -69,7 +69,12 @@ describe('getPlayerFlavors', () => {
 
     const stored = await store.getMutableKnowledge('FlavorChanges', 1, 1) as any;
     expect(stored).toMatchObject({ Key: 1, Offense: 80, GrandStrategy: 'Culture' });
-    expect(stored.Rationale).toMatch(/^Tweaked by In-Game AI/);
+    const priorRationale = stored.Rationale;
+    mockLua({ Flavors: { FLAVOR_OFFENSE: 70, FLAVOR_GOLD: 30 }, GrandStrategy: 1 });
+    await getPlayerFlavors(1);
+    const updated = await store.getMutableKnowledge('FlavorChanges', 1, 1) as any;
+    expect(updated.Offense).toBe(70);
+    expect(updated.Rationale).toBe(priorRationale);
     // Visible only to player 1.
     expect(await store.getMutableKnowledge('FlavorChanges', 1, 2)).toBeUndefined();
   });

@@ -1,163 +1,50 @@
-/**
- * Tests for get-civilization tool
- * Tests civilization database querying functionality through MCP
- */
+/** Civilization relationships over HTTP or stdio with controlled SQLite rules. */
+import { describe, it, expect } from 'vitest';
+import { mcpClient } from '../../../setup.js';
 
-import { describe, it, expect } from "vitest";
-import { mcpClient } from "../../../setup.js";
+/** Decode a civilization report delivered by the server. */
+async function query(args: Record<string, unknown> = {}) {
+  const result = await mcpClient.callTool({ name: 'get-civilization', arguments: args });
+  expect(result.isError).not.toBe(true);
+  return result.structuredContent as any;
+}
 
-describe("Get Civilization Tool via MCP", () => {
-
-  /**
-   * Test listing all civilizations without search
-   */
-  it("should list all civilizations without search", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-civilization",
-      arguments: {}
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    const parsed = JSON.parse(content.text);
-    expect(parsed.Count).toBeGreaterThan(0);
-    expect(parsed.Items).toBeDefined();
-    expect(Array.isArray(parsed.Items)).toBe(true);
-    
-    // Check first civilization has expected fields
-    if (parsed.Items.length > 0) {
-      const civ = parsed.Items[0];
-      expect(civ.Type).toBeDefined();
-      expect(civ.Name).toBeDefined();
-      expect(civ.AbilitiesSummary).toBeDefined();
-      expect(Array.isArray(civ.AbilitiesSummary)).toBe(true);
-      expect(civ.Leader).toBeDefined();
-    }
+describe('get-civilization through MCP', () => {
+  it('lists playable civilizations with leader and ability information', async () => {
+    const report = await query();
+    expect(report.Count).toBe(4);
+    expect(report.Items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ Name: 'Rome', Leader: 'Augustus', Uniques: expect.arrayContaining([expect.stringContaining('Construct buildings faster')]) }),
+      expect.objectContaining({ Name: 'Japan', Leader: 'Oda', Uniques: expect.arrayContaining([expect.stringContaining('Samurai')]) })
+    ]));
   });
 
-  /**
-   * Test searching for a specific civilization
-   */
-  it("should search for specific civilization by name", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-civilization",
-      arguments: { 
-        Search: "Rome"
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    const parsed = JSON.parse(content.text);
-    expect(parsed.Count).toBeGreaterThan(0);
-    expect(parsed.Items).toBeDefined();
-    
-    // Should find Rome
-    const rome = parsed.Items.find((c: any) => c.Name === "Rome");
-    expect(rome).toBeDefined();
+  it('finds a civilization by its display name', async () => {
+    const report = await query({ Search: 'Rome' });
+    expect(report.Count).toBe(1);
+    expect(report.Items).toMatchObject([{ Type: 'CIVILIZATION_ROME', Name: 'Rome', Leader: 'Augustus' }]);
   });
 
-  /**
-   * Test fuzzy search functionality
-   */
-  it("should handle fuzzy search", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-civilization",
-      arguments: { 
-        Search: "grece" // Intentional typo for Greece
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      // Should find Greece despite typo
-      const greece = parsed.Items.find((c: any) => c.Name === "Greece");
-      expect(greece).toBeDefined();
-    }
+  it('finds a civilization despite a misspelled name', async () => {
+    const report = await query({ Search: 'grece' });
+    expect(report.Items).toEqual(expect.arrayContaining([expect.objectContaining({ Type: 'CIVILIZATION_GREECE' })]));
   });
 
-  /**
-   * Test searching for an exact match returns full details
-   */
-  it("should return full details for exact match", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-civilization",
-      arguments: { 
-        Search: "CIVILIZATION_ROME" // Exact Type match
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      expect(parsed.Count).toBe(1);
-      
-      const civ = parsed.Items[0];
-      // Should have full information
-      expect(civ.Type).toBe("CIVILIZATION_ROME");
-      expect(civ.Abilities).toBeDefined();
-      expect(Array.isArray(civ.Abilities)).toBe(true);
-      
-      // Check abilities structure
-      if (civ.Abilities.length > 0) {
-        const ability = civ.Abilities[0];
-        expect(ability.Type).toBeDefined();
-        expect(ability.Name).toBeDefined();
-        expect(ability.Help).toBeDefined();
-        // Replacing is optional
-      }
-      
-      expect(civ.Archetype).toBeDefined();
-      expect(civ.Traits).toBeDefined();
-      expect(Array.isArray(civ.Traits)).toBe(true);
-      expect(civ.PreferredVictory).toBeDefined();
-    }
+  it('returns the leader ability and preferred victory for an exact identifier', async () => {
+    const report = await query({ Search: 'CIVILIZATION_ROME' });
+    expect(report.Count).toBe(1);
+    expect(report.Items).toMatchObject([{
+      Type: 'CIVILIZATION_ROME', Leader: 'Augustus', PreferredVictory: 'Domination',
+      Abilities: [{ Type: 'Ability', Name: 'Glory of Rome', Help: 'Construct buildings faster' }]
+    }]);
   });
 
-  /**
-   * Test that unique units are properly linked
-   */
-  it("should properly link unique units", async () => {
-    const result = await mcpClient.callTool({
-      name: "get-civilization",
-      arguments: { 
-        Search: "CIVILIZATION_JAPAN" // Japan has unique units
-      }
-    });
-
-    expect(result.content).toBeDefined();
-    const content = (result.content as any)[0];
-    expect(content.type).toBe("text");
-    
-    if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
-      expect(parsed.Count).toBe(1);
-      
-      const civ = parsed.Items[0];
-      expect(civ.Abilities).toBeDefined();
-      
-      // Should have at least one unit ability
-      const unitAbilities = civ.Abilities.filter((a: any) => a.Type === 'Unit');
-      expect(unitAbilities.length).toBeGreaterThan(0);
-      
-      // Check unit has replacing field
-      if (unitAbilities.length > 0) {
-        const unit = unitAbilities[0];
-        expect(unit.Name).toBeDefined();
-        expect(unit.Replacing).toBeDefined();
-      }
-    }
+  it('links a unique unit to its replacement and prerequisite technology', async () => {
+    const report = await query({ Search: 'CIVILIZATION_JAPAN' });
+    expect(report.Items).toMatchObject([{
+      Type: 'CIVILIZATION_JAPAN', Abilities: expect.arrayContaining([
+        expect.objectContaining({ Type: 'Unit', Name: 'Samurai', Replacing: 'Swordsman', PrereqTech: 'Bronze Working' })
+      ])
+    }]);
   });
-
 });

@@ -19,7 +19,13 @@
  * ```
  */
 
-import { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { ToolBase } from "../tools/base.js";
+import type * as z from "zod";
+import { createLogger } from "./logger.js";
+
+const logger = createLogger('MCP');
 
 /**
  * Wraps tool execution results into the proper MCP CallToolResult format
@@ -124,4 +130,37 @@ export function wrapResults(result: unknown): CallToolResult {
       }
     ]
   };
+}
+/**
+ * Register a tool on one McpServer with its input and output schemas, so the SDK
+ * validates arguments and structured results exactly as clients will see them.
+ * Execution errors become MCP error results instead of protocol failures.
+ */
+export function registerToolOnServer(server: McpServer, tool: ToolBase): void {
+  server.registerTool(
+    tool.name,
+    {
+      title: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema.shape,
+      outputSchema: (tool.getOutputSchema() as z.ZodObject<z.ZodRawShape>).shape,
+      annotations: tool.annotations,
+      _meta: tool.metadata
+    },
+    (async (args: z.infer<typeof tool.inputSchema>) => {
+      logger.debug(`Handling tool request ${tool.name}`, args);
+      try {
+        const results = await tool.execute(args);
+        logger.debug(`Finishing tool request ${tool.name}`);
+        return wrapResults(results);
+      } catch (error: unknown) {
+        const message = `Error executing tool ${tool.name}: ${error instanceof Error ? error.message : "unknown"}`;
+        logger.error(message, error);
+        return {
+          isError: true,
+          content: [{ type: "text", text: message }]
+        };
+      }
+    }) as any
+  );
 }

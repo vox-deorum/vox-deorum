@@ -1,38 +1,65 @@
-/**
- * Tests for the enum mappings set up by DatabaseManager.initializeMappings (src/database/manager.ts):
- * the GreatPersonExpended event's GreatPersonType carries a unit type, so it decodes to the unit's
- * name rather than to the GreatPersons row with the same ID.
- */
+/** A numeric game enum is returned as its readable value by the public events tool. */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DatabaseManager } from '../../../src/database/manager.js';
-import { enumMappings, explainEnums } from '../../../src/utils/knowledge/enum.js';
+import { setupStore } from '../helpers.js';
+import { enumMappings } from '../../../src/utils/knowledge/enum.js';
+import createGetEventsTool from '../../../src/tools/knowledge/get-events.js';
+import { connectToolClient } from '../tool-client.js';
+import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import Database from 'better-sqlite3';
+import { Kysely, SqliteDialect } from 'kysely';
+import { gameDatabase } from '../../../src/server.js';
+import { enumMappingTables } from '../../../src/database/manager.js';
 
-describe('DatabaseManager enum mappings', () => {
-  let original: typeof enumMappings;
+describe('event enum output through MCP', () => {
+  let store: KnowledgeStore;
+  let client: Awaited<ReturnType<typeof connectToolClient>>;
+  let enumDatabase: Kysely<any>;
+  let previousMainDatabase: unknown;
+  let previousMappings: Record<string, Record<number, string>>;
 
-  beforeEach(() => {
-    // Snapshot existing mappings so overwritten values can be restored after each test.
-    original = { ...enumMappings };
-  });
-
-  afterEach(() => {
-    for (const name of Object.keys(enumMappings)) {
-      if (!(name in original)) delete enumMappings[name];
-    }
-    Object.assign(enumMappings, original);
-    vi.restoreAllMocks();
-  });
-
-  it('should decode a GreatPersonExpended GreatPersonType as a unit', async () => {
-    const manager = new DatabaseManager();
-    // Each table maps ID 5 to a different name, so the decoded value shows which table was used
-    vi.spyOn(manager, 'addEnumMappings').mockImplementation(async (tableName: string, mappedName: string) => {
-      enumMappings[mappedName] = { 5: `${tableName} 5` };
+  beforeEach(async () => {
+    store = await setupStore(10);
+    previousMappings = { ...enumMappings };
+    const sqlite = new Database(':memory:');
+    sqlite.exec(enumMappingTables.map(([table]) => table).map(table => `CREATE TABLE ${table} (ID INTEGER, Type TEXT, Description TEXT);`).join('\n'));
+    sqlite.exec(`
+      INSERT INTO Units VALUES (5, 'UNIT_GREAT_SCIENTIST', 'Great Scientist');
+      CREATE TABLE GreatPersons (ID INTEGER, Type TEXT, Description TEXT);
+      INSERT INTO GreatPersons VALUES (5, 'GREATPERSON_OTHER', 'Great Merchant');
+    `);
+    enumDatabase = new Kysely({ dialect: new SqliteDialect({ database: sqlite }) });
+    previousMainDatabase = (gameDatabase as any).mainDb;
+    Object.assign(gameDatabase, { mainDb: enumDatabase });
+    vi.spyOn(gameDatabase, 'localizeObject').mockImplementation(async value => value);
+    await gameDatabase.initializeMappings();
+    await store.storeGameEvent(1, 'GreatPersonExpended', {
+      PlayerID: 1,
+      UnitID: 8,
+      GreatPersonType: 5,
     });
+    client = await connectToolClient(createGetEventsTool());
+  });
 
-    await manager.initializeMappings();
+  afterEach(async () => {
+    await client.close();
+    vi.restoreAllMocks();
+    for (const key of Object.keys(enumMappings)) delete enumMappings[key];
+    Object.assign(enumMappings, previousMappings);
+    Object.assign(gameDatabase, { mainDb: previousMainDatabase });
+    await enumDatabase.destroy();
+    await store.close();
+  });
 
-    expect(explainEnums({ PlayerID: 1, UnitID: 9, GreatPersonType: 5 }).GreatPersonType).toBe('Units 5');
+  it('returns the mapped GreatPersonType alongside the original event data', async () => {
+    const report = await client.call({ Type: 'GreatPersonExpended', Original: true });
+    expect(report.events).toEqual([
+      expect.objectContaining({
+        ID: 1,
+        Type: 'GreatPersonExpended',
+        GreatPersonType: 'Great Scientist',
+        UnitID: 8,
+      }),
+    ]);
   });
 });

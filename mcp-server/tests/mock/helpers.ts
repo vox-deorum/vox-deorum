@@ -8,6 +8,7 @@
  */
 
 import { vi } from 'vitest';
+import { LuaFunction } from '../../src/bridge/lua-function.js';
 import { KnowledgeStore } from '../../src/knowledge/store.js';
 import { knowledgeManager } from '../../src/server.js';
 
@@ -43,4 +44,29 @@ export async function seedPlayer(store: KnowledgeStore, key: number, opts: SeedP
     IsHuman: opts.isHuman ?? 0,
     IsMajor: opts.isMajor ?? 1,
   } as any);
+}
+
+/** One player action push as the registerAction Lua function receives it. */
+export interface ActionPush {
+  playerID: number;
+  actionType: string;
+  summary: string;
+  rationale: string;
+  /** Undefined when the action adds no replay message. */
+  replayPrefix?: string;
+  turn: number;
+}
+
+/**
+ * Read the player action pushes sent through a mocked `LuaFunction.prototype.execute`.
+ * Pushes call the same Lua boundary as the tool itself, under the registerAction name.
+ */
+export function actionPushes(): ActionPush[] {
+  const execute = vi.mocked(LuaFunction.prototype.execute);
+  if (!vi.isMockFunction(execute)) throw new Error('Mock LuaFunction.prototype.execute before reading action pushes');
+  return execute.mock.calls.flatMap((args, index) => {
+    if ((execute.mock.contexts[index] as LuaFunction).name !== 'registerAction') return [];
+    const [playerID, actionType, summary, rationale, replayPrefix, turn] = args as [number, string, string, string, string | false, number];
+    return [{ playerID, actionType, summary, rationale, replayPrefix: replayPrefix === false ? undefined : replayPrefix, turn }];
+  });
 }
