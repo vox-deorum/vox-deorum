@@ -43,6 +43,14 @@ These sections are already in your prompt for the latest turn. Read their record
 
 Every recorded turn stays readable. You choose whether to read events, and which turns, categories, and portions of them to read.
 `/workspace/records/CATALOG.md` lists the recorded turns and the gaps between them, the full section index, any briefings, and file sizes. Open it when you need any of these, such as before reading an earlier turn.
+
+To read a recorded turn, set `turn` to its number in each script, then define `record="/workspace/records/turn-$turn"`. For example:
+- Read several files at once: `cat "$record/events-military.md" "$record/events-diplomatic.md"`
+- Find lines: `grep -n "Babylon" "$record/players.md"`, or search every turn with `grep -rn`
+- Read a slice: `head -n 60 "$record/cities.md"` or `sed -n '120,180p' "$record/military.md"`, after `wc -c "$record"/*.md` shows the sizes
+- Read one player: `cat "$record/players/player-3.md" "$record/cities/player-3.md"`, where 3 is the number in the `Player 3` heading of `players.md`
+  - All city-state cities are in `cities/city-states.md`, and barbarian cities are in `cities/barbarians.md`.
+  - Unmet, defeated, and barbarian players have no player file and are listed at the end of `players.md`.
 {{#guide}}
 
 ## Guide: `/workspace/game/AGENTS.md`

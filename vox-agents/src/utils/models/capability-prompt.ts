@@ -40,9 +40,11 @@ export interface CapabilityMiddlewareOptions {
 }
 
 /**
- * The workspace section from `prompts/workspace.md`: working rules for bash, the write rule when a
- * folder is writable, and how to read large files. Folders and recorded turns live in the records
- * directions, so this text depends only on the seat's settings and stays the same across turns.
+ * The workspace section from `prompts/workspace.md`: working rules for bash, and a write rule asking
+ * for game notes and general lessons, with lessons kept in a shared folder when one is writable and
+ * in the game folder's `lessons/` otherwise. Folders, recorded turns, and
+ * read examples live in the records directions, so this text depends only on the seat's settings
+ * and stays the same across turns.
  */
 function workspaceSection(
   files: ResolvedFilesConfig,
@@ -55,6 +57,7 @@ function workspaceSection(
     toolNoun: singular(terminalNoun),
     terminalNoun,
     writable: workspaceWritable(files),
+    sharedWritable: Object.values(files.shared).includes('write'),
     terminals: hasTerminals,
     outputLimit: workspaceOutputLimit.toLocaleString('en-US'),
   });

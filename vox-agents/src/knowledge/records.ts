@@ -11,6 +11,7 @@ import type { GameState, StrategistParameters } from "../strategist/strategy-par
 import { filterEventsByCategory, type EventCategory } from "../utils/prompts/event-filters.js";
 import { jsonToMarkdown, type JsonToMarkdownConfig } from "../utils/tools/json-to-markdown.js";
 import type { CommitID, Manifest, PathChange, WorkspaceStore } from "../utils/workspace/workspace-store.js";
+import { isRecord } from "../utils/guards.js";
 import { renderSection, sections, type SectionDefinition, type SectionKey, type SectionSplit } from "./sections.js";
 
 /** Briefing kinds archived under `records/turn-<N>/briefings/`. */
@@ -69,23 +70,52 @@ function partLabel(key: SectionKey, entryKey: string, value: unknown): string {
   return entryKey;
 }
 
+/**
+ * The player ID of each civilization name in a players report, for naming city parts. A name two
+ * players share maps to no ID, so their cities keep a name-based file.
+ */
+function playerIDsByCivilization(players: unknown): Map<string, string | undefined> {
+  const ids = new Map<string, string | undefined>();
+  if (!isRecord(players)) return ids;
+  for (const [id, value] of Object.entries(players)) {
+    if (id.startsWith('_') || !isRecord(value) || typeof value.Civilization !== 'string') continue;
+    ids.set(value.Civilization, ids.has(value.Civilization) ? undefined : id);
+  }
+  return ids;
+}
+
+/**
+ * The base file name of one split entry. Players and the cities of a known civilization use
+ * `player-<ID>`, so agents can name the file from a `Player <ID>` heading without listing the
+ * folder. Other city owners (city-states, barbarians) use a slug of their name.
+ */
+function partName(key: SectionKey, entry: string, label: string, ownerIDs: Map<string, string | undefined>): string {
+  if (key === 'players') return `player-${entry}`;
+  const id = ownerIDs.get(entry);
+  return id === undefined ? slug(label) : `player-${id}`;
+}
+
 /** One top-level entry of a report being split, with its label and file name (no extension). */
 interface SplitEntry { entry: string; value: unknown; label: string; name: string }
 
 /**
- * The top-level entries of a report being split (civilizations or city owners).
- * Each gets a readable slug, with a numeric suffix when two entries would share a name. Only
- * object entries are split: plain strings (unmet, defeated, and barbarian players) get no part.
+ * The top-level entries of a report being split (players or city owners).
+ * Each gets a file name from {@link partName}, with a numeric suffix when two entries would share
+ * one. Only object entries are split: plain strings (unmet, defeated, and barbarian players) get
+ * no part.
+ *
+ * @param players - The same turn's players report, which maps city owners to player IDs
  */
-export function splitEntries(key: SectionKey, data: unknown): SplitEntry[] {
+export function splitEntries(key: SectionKey, data: unknown, players?: unknown): SplitEntry[] {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+  const ownerIDs = key === 'cities' ? playerIDsByCivilization(players) : new Map<string, string | undefined>();
   const used = new Set<string>();
   const entries: SplitEntry[] = [];
   for (const [entry, value] of Object.entries(data as Record<string, unknown>)) {
     if (entry.startsWith('_')) continue;
     if (typeof value !== 'object' || value === null) continue;
     const label = partLabel(key, entry, value);
-    const base = slug(label);
+    const base = partName(key, entry, label, ownerIDs);
     let name = base;
     for (let index = 2; used.has(name); index++) name = `${base}-${index}`;
     used.add(name);
@@ -95,10 +125,10 @@ export function splitEntries(key: SectionKey, data: unknown): SplitEntry[] {
 }
 
 /** Split a report's Markdown by its top-level entries, each part keeping the report's heading configuration. */
-function splitParts(key: SectionKey, data: unknown): Array<{ name: string; content: string }> {
+function splitParts(key: SectionKey, data: unknown, players: unknown): Array<{ name: string; content: string }> {
   const report = data as Record<string, unknown>;
   const config = sections[key].markdown ?? (report?._markdownConfig as Partial<JsonToMarkdownConfig> | undefined) ?? {};
-  return splitEntries(key, data).map(({ entry, value, label, name }) => ({
+  return splitEntries(key, data, players).map(({ entry, value, label, name }) => ({
     name,
     content: `# ${sections[key].title}: ${label}\n\n${jsonToMarkdown({ [entry]: value }, config)}\n`,
   }));
@@ -120,14 +150,18 @@ function turnSectionData(state: GameState): Partial<Record<SectionKey, unknown>>
   return data;
 }
 
-/** The complete record files of one turn-scoped section: Markdown, JSON, and split parts. */
-function sectionChanges(folder: string, key: SectionKey, data: unknown): PathChange[] {
+/**
+ * The complete record files of one turn-scoped section: Markdown, JSON, and split parts.
+ *
+ * @param players - The same turn's players report, for naming city parts
+ */
+function sectionChanges(folder: string, key: SectionKey, data: unknown, players: unknown): PathChange[] {
   const changes: PathChange[] = [
     { path: `${folder}/${key}.md`, type: 'file', content: `${renderSection(key, data)}\n` },
     { path: `${folder}/${key}.json`, type: 'file', content: toJson(data) },
   ];
   if (sections[key].split) {
-    for (const part of splitParts(key, data)) {
+    for (const part of splitParts(key, data, players)) {
       changes.push({ path: `${folder}/${key}/${part.name}.md`, type: 'file', content: part.content });
     }
   }
@@ -187,10 +221,10 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-/** Readable names of the split groupings. */
-const splitLabels: Record<SectionSplit['by'], string> = {
-  civilization: 'civilization',
-  cityOwner: 'city owner',
+/** The split part files of each grouping, for the catalog's section index. */
+const splitFiles: Record<SectionSplit['by'], string> = {
+  civilization: 'one file per player in `turn-<N>/players/player-<ID>.md`',
+  cityOwner: 'one file per civilization in `turn-<N>/cities/player-<ID>.md`, plus `city-states.md` and `barbarians.md`',
 };
 
 /** Where one section's record files live, for the catalog's section index. */
@@ -200,7 +234,7 @@ export function sectionFiles(section: SectionDefinition): string {
     return `\`turn-<N>/events-all.md\`, and views by category: ${eventCategoryFiles.map(([suffix]) => `\`events-${suffix}.md\``).join(', ')}, each with system events as turn markers`;
   }
   if (section.key === 'briefings') return '`turn-<N>/briefings/<kind>.md`: combined, military, economy, diplomacy';
-  const split = section.split ? `, one file per ${splitLabels[section.split.by]} in \`turn-<N>/${section.key}/\`` : '';
+  const split = section.split ? `, ${splitFiles[section.split.by]}` : '';
   return `\`turn-<N>/${section.key}.md\`${split}`;
 }
 
@@ -221,8 +255,8 @@ export function recordedTurns(tree: Manifest): number[] {
 
 /**
  * Build the catalog for a records tree: the layout, a section index, recorded turn ranges, any
- * missing processed-turn folders, and the latest files' sizes. General advice on reading large
- * files is in the workspace section of the system prompt (prompts/workspace.md).
+ * missing processed-turn folders, and the latest files' sizes. Read examples for recorded turns
+ * are in the records directions (prompts/records-directions.md).
  *
  * @param tree - The store version the catalog describes
  */
@@ -310,7 +344,7 @@ export class SeatRecords {
     const changes: PathChange[] = [];
     const data = turnSectionData(state);
     for (const key of turnSectionKeys) {
-      if (data[key] !== undefined) changes.push(...sectionChanges(folder, key, data[key]));
+      if (data[key] !== undefined) changes.push(...sectionChanges(folder, key, data[key], data.players));
     }
     changes.push(...eventChanges(folder, (state.events ?? {}) as ConsolidatedEventsReport));
     changes.push(...this.gameChanges(parameters));

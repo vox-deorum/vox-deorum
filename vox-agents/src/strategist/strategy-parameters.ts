@@ -361,12 +361,13 @@ export function buildGameContextMessages(parameters: StrategistParameters): Mode
  * whole report stays inline.
  *
  * @param ownName - Our civilization's name, the key of our cities in the report
+ * @param players - The same turn's players report, which names the city files by player ID
  */
-function renderOwnCities(cities: CitiesReport | undefined, ownName: string | undefined, turn: number): string {
+function renderOwnCities(cities: CitiesReport | undefined, ownName: string | undefined, turn: number, players: PlayersReport | undefined): string {
   const report = cities as Record<string, unknown> | undefined;
   if (!report || !ownName || !(ownName in report)) return renderSection("cities", cities);
   const own = Object.fromEntries(Object.entries(report).filter(([key]) => key === ownName || key.startsWith("_")));
-  const others = splitEntries("cities", report).filter(({ entry }) => entry !== ownName);
+  const others = splitEntries("cities", report, players).filter(({ entry }) => entry !== ownName);
   const rendered = renderSection("cities", own);
   if (others.length === 0) return rendered;
   const files = others.map(({ name }) => `\`${workspaceRecordsPath}/turn-${turn}/cities/${name}.md\``).join(", ");
@@ -401,7 +402,7 @@ export function renderStrategistReports(
     ...sectionData
       .filter(([key]) => !fileMode || key !== "events")
       .map(([key, data]) => fileMode && key === "cities"
-        ? renderOwnCities(state.cities, parameters.metadata?.YouAre?.Name, state.turn)
+        ? renderOwnCities(state.cities, parameters.metadata?.YouAre?.Name, state.turn, state.players)
         : renderSection(key, data)),
     getDecisionTurnContext(parameters, fileMode),
   ];
