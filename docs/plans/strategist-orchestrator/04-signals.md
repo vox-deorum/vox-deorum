@@ -1,4 +1,4 @@
-# Stage 7 — Reference signals
+# Stage 4: Reference signals
 
 > Part of the strategist-orchestrator plan. Shared design and watch-items live in [README.md](README.md); requirements in [specs.md](specs.md).
 
@@ -6,6 +6,12 @@
 
 ## Objective
 
-Build the reference signals: per-component cost surfacing (from Stage 1); the **decision-coverage** negative signal (`get-options` inventory against sanctioned actions actually taken); and a **generic victory-trend interface with a score-ratio provider** (smoothed, phase-gated). Each signal is individually enable-able. Verified against a recent game's records.
+Build the reference signals:
 
-The civ-bench connector is deferred behind the victory-trend interface; the LLM decision-quality judge is deferred as a future orchestrator sub-agent. Both leave a clean seam (see _What v1 defers_ in [README.md](README.md)).
+- **Cost** per component, from the step counts on spans and the Stage 2 coefficients.
+- **Decision coverage**, a negative signal: the `get-options` inventory compared against the sanctioned actions actually taken.
+- **Victory trend**, a generic interface with a score-ratio provider (smoothed, phase-gated).
+
+Each signal is individually enable-able. Verified against a recent game's records.
+
+The civ-bench connector is deferred behind the victory-trend interface, and the LLM decision-quality judge is deferred as a future orchestrator sub-agent. Both leave a clean seam (see _What v1 defers_ in [README.md](README.md)).
