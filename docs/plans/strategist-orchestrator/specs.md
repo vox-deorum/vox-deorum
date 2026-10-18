@@ -1,16 +1,16 @@
 # Strategist Orchestrator
 
-> This plan adds a **strategist orchestrator** to Vox Deorum. A strategist workflow becomes editable data: a sandboxed script, per-subagent manifests, and templated prompt files, executed inside a per-run working folder. A non-blocking orchestrator then reviews recent runs in repeated cycles and iteratively improves those artifacts. This document is the specification: what we want to achieve and the constraints that keep it coherent. The staged build order lives in [README.md](README.md); individual stage plans are the numbered files beside it.
+> This plan adds a **strategist orchestrator** to Vox Deorum. A strategist workflow becomes editable data: a sandboxed script, per-subagent manifests, and templated prompt files, executed against the seat's file workspace. A non-blocking orchestrator then reviews recent runs in repeated cycles and iteratively improves those artifacts. This document is the specification: what we want to achieve and the constraints that keep it coherent. The staged build order lives in [README.md](README.md); individual stage plans are the numbered files beside it.
 
 ## Summary
 
 A strategist workflow stops being TypeScript compiled into the app and becomes three kinds of files: a small sandboxed **script** (control flow), a set of **sub-agents** each described by its own **manifest** JSON file, and a set of **templated markdown prompts**. The script expresses the per-turn decision logic similar to existing strategists: sequencing, conditionals on game state, parallel sub-agent calls, and plain computation. For example:
 
-> "if the player controls more than three cities, run the briefer sub-agent (a small-tier model) with `prompts/briefer.md`, writing its output into the run's artifacts; then run the strategist sub-agent with `prompts/strategist.md`, giving it all briefings and the selected status."
+> "if the player controls more than three cities, run the briefer sub-agent (a small-tier model) with `prompts/briefer.md`, writing its output into the turn's notes; then run the strategist sub-agent with `prompts/strategist.md`, giving it all briefings and the selected status."
 
-A **workflow runtime** in `vox-agents` executes this script on each decision turn inside a **per-run working folder**, where game state is laid out as files that prompts can embed. The turn machinery around it does not change: `VoxPlayer`'s loop, pacing, pause/resume, telemetry, and crash recovery keep working as they do today, and the workflow plugs in as a new `scripted-strategist` in the agent registry. Sub-agent LLM calls go through the existing model-agnostic layer, so a workflow is not tied to any provider.
+A **workflow runtime** in `vox-agents` executes this script on each decision turn inside the seat's **file workspace**, where game state is already laid out as files that prompts can embed. The turn machinery around it does not change: `VoxPlayer`'s loop, pacing, pause/resume, telemetry, and crash recovery keep working as they do today, and the workflow plugs in as a new `scripted-strategist` in the agent registry. Sub-agent LLM calls go through the existing model-agnostic layer, so a workflow works with any provider.
 
-Separately, a **strategist orchestrator** reviews one workflow on one seat, reading its recent working folders, run records, cost, decision quality and coverage, and victory trends in repeated non-blocking cycles, and rewrites the scripts, manifests, and prompts. Its aim is to grow the seed into plausibly good variants for later selection rather than to prove convergence within one game, and both its notes and the workflow's version line follow the workflow from game to game. It never touches mcp-server and never takes a game action; its edits land on later runs, never the one in flight.
+Separately, a **strategist orchestrator** reviews one workflow on one seat, reading its recent turns, run transcripts, cost, decision quality and coverage, and victory trends in repeated non-blocking cycles, and rewrites the scripts, manifests, and prompts. Its aim is to grow the seed into plausibly good variants for later selection rather than to prove convergence within one game, and both its notes and the workflow's version line follow the workflow from game to game. It never touches mcp-server and never takes a game action; its edits land on later runs, never the one in flight.
 
 ## The scripted workflow
 
@@ -18,23 +18,23 @@ A workflow is defined by three parts, all kept as editable files:
 
 - A **sandboxed TypeScript script** that expresses control flow: sequencing, conditionals on game state, parallel sub-agent calls, artifact passing, and plain computation (a workflow with no LLM at all, like `null`, is just a script).
 - A set of **sub-agents**, each with its own manifest JSON file.
-- A set of **templated markdown prompts**, one per sub-agent role, using a simple template syntax that interpolates named inputs, e.g., the entirety or parts of game-state files rendered to markdown through `jsonToMarkdown`.
+- A set of **templated markdown prompts**, one per sub-agent role, using a simple template syntax that interpolates named inputs, such as the entirety or parts of game-state files rendered to markdown through `jsonToMarkdown`.
 
 ### Sub-agent manifest
 
 - **Role name**: what the script refers to.
-- **Model**: a tier chosen from a configurable list (for example `tiny`/`small`/`medium`/`large`), which in turn maps to existing model registry (`config.llms`).
-- **Reasoning effort**: `minimal`/`low`/`medium`/`high` levels.
+- **Model**: one of the existing model tiers (`small`/`default`/`large`), which resolve through `selectModelReference` to the model registry (`config.llms`) and per-player overrides.
+- **Reasoning effort**: `minimal`/`low`/`medium`/`high`/`max`, applied through the existing `@effort` suffix.
 - **Prompt template**: which prompt file it uses.
 - **Actions allowlist**: which sanctioned game actions/tools it may call. A briefer calls none; a strategist calls `set-flavors`, `set-research`, `keep-status-quo`, and so on.
-- **Read allowlist**: whether and where it may read files (which inputs, how far back into past turns).
+- **Read allowlist**: whether and where it may read workspace files (which mounts, how far back into past turns).
 - **Write allowlist**: whether and where it may write files.
 - **Output file**: where its free-text response goes.
 - **Budget**: its per-invocation budget in cost units (below). The workflow script can also impose stop conditions on its own.
 
 Two defaults keep sub-agents simple:
 
-- A sub-agent's free-text response is **auto-written** by the runtime to its declared output file, so a briefer needs no file tools at all.
+- A sub-agent's free-text response is **auto-written** by the runtime to its declared output file, so a briefer needs no file tools at all. Briefings are also archived through `SeatRecords.recordBriefing`, so they land in `records/turn-N/briefings/` like the static strategists' briefings.
 - File read (or write) access is granted only when a sub-agent needs agency, for example to let it read the past-turn situation itself.
 
 ### One cost currency
@@ -43,32 +43,31 @@ Budgets, telemetry cost, and the orchestrator's cost signal all use a single uni
 
 > cost-weighted tokens = token counts * per-token cost coefficients (per tier, with separate weights for cache reads, reads, and writes)
 
-One currency means the orchestrator never juggles multiple budget kinds, and "reward cache usage" falls out of the arithmetic instead of being a special rule. Capturing cached-token counts is new telemetry work: today only raw input/reasoning/output counts are recorded. Cache-aware weighting applies where the provider reports a cached-token breakdown; providers that do not report one are estimated by comparing with adjacent calls in the same turn.
+One currency means the orchestrator never juggles multiple budget kinds, and "reward cache usage" falls out of the arithmetic instead of being a special rule. The token counts come from telemetry spans, which already record input, cached-input, reasoning, and output tokens. Cached tokens count wherever the provider reports them; calls to providers that report no breakdown are weighted as plain reads. The coefficients live in config beside the tier list.
 
 ### Runtime and termination
 
-A workflow runtime in `vox-agents` executes the script on each decision turn. It plugs into the existing machinery rather than replacing it: a new `scripted-strategist` agent joins the registry, selectable per player like any strategist, with the workflow name as its parameter; `VoxPlayer`'s turn loop, pacing, concurrent root runs, telemetry, and crash recovery keep working as they do today. The runtime:
+A workflow runtime in `vox-agents` executes the script on each decision turn. It plugs into the existing machinery: a new `scripted-strategist` agent joins the registry, selectable per player like any strategist, with the workflow name as its parameter; `VoxPlayer`'s turn loop, pacing, concurrent root runs, telemetry, and crash recovery keep working as they do today. The runtime:
 
 - Composes sub-agents with their tier-resolved models through the existing model-agnostic layer (Vercel AI SDK, any provider).
-- Branches on game state, reads and writes working-folder files, and calls only the sanctioned actions each sub-agent's manifest allows.
+- Branches on game state, reads and writes workspace files, and calls only the sanctioned actions each sub-agent's manifest allows.
 
 A run terminates in one of three ways:
 
 - **Script completion**: the normal path.
-- **Budget exhaustion**: per sub-agent or for the whole run, measured in cost units. Exhaustion degrades gracefully: the runtime asks the sub-agent to respond now and strips its action tools, so it finishes with a final text response rather than being hard-killed. A runaway loop of LLM calls can never stall the game.
-- **Script failure**: a script that fails validation, throws, or exceeds its compute bound is terminated safely. The runtime falls back to `keep-status-quo` so the seat never stalls, and the failure lands in the run record for the orchestrator to read, debug, and fix in a later cycle. Because the orchestrator authors these scripts, this path is a first-class requirement, not an afterthought; the commit gate (below) keeps most broken versions from ever being adopted.
+- **Budget exhaustion**: per sub-agent or for the whole run, measured in cost units. Exhaustion degrades gracefully through the existing step machinery: the runtime sends the continuation nudge and narrows the sub-agent's active tools to none, so it finishes with a final text response instead of being hard-killed. A runaway loop of LLM calls can never stall the game.
+- **Script failure**: a script that fails validation, throws, or exceeds its compute bound is terminated safely. The runtime falls back to `keep-status-quo` so the seat never stalls, and the failure lands in telemetry for the orchestrator to read, debug, and fix in a later cycle. Because the orchestrator authors these scripts, this path is a first-class requirement; the commit gate (below) keeps most broken versions from ever being adopted.
 
 ### Working folder
 
-Each seat (game, player) gets a working folder, fully inspectable by the orchestrator; each run (one decision turn) gets a subfolder inside it:
+Each seat (game, player) already has a versioned file workspace: a `WorkspaceStore` in SQLite with git-like commits, mounted into a just-bash shell by `PlayerWorkspace`. The workflow runs against the same mounts, and the orchestrator inspects the same store:
 
-- **Game state as files**: per-component snapshots (`players.json`, `cities.json`, `military.json`, `options.json`, `victory.json`, `events.json`) drawn from the same reports the strategists consume today. They are read-only inputs, embeddable in prompts via the template.
-- **Shared cross-turn artifacts**: a `shared/` area beside the turn folders carries state between turns, the scripted counterpart of today's working memory (`focus-briefer` requests, pending `find-episodes` queries). Deliberately _not_ called memory: memory is a separate expansion below.
-- **Artifacts**: intermediate outputs of the run's sub-agents, auto-written or script-written.
-- **Run record**: the SQLite telemetry pipeline is unchanged and remains the source of truth. A **single renderer** produces both the `state/*.json` snapshots and the markdown records — a master record (which sub-agents fired, the call hierarchy, tokens and cost per component, the workflow version the run pinned) plus one markdown transcript per sub-agent conversation — from **either** source: the live knowledge reports while a run is in progress (online), or the telemetry spans replayed afterward (offline, when the orchestrator reconstructs a past run). One code path, two sources, so the online and offline outputs are identical. The record is rendered on every terminal path (completion, budget exhaustion, abandonment, script failure) from whatever spans were flushed; a partial record for a broken run is expected and is exactly what the orchestrator wants to read.
-- **Retention**: working folders are retained over a configurable window that covers the orchestrator's review horizon and pruned beyond it.
+- **Game state as files**: `SeatRecords.recordTurn` writes each processed turn to `records/turn-N/` as Markdown plus JSON (players, cities, military, options, victory progress, events, and briefings), drawn from the same reports the strategists consume today. They are read-only inputs, embeddable in prompts via the template.
+- **Turn notes and the cross-turn area**: the writable `game/` notes folder holds the run's intermediate outputs (auto-written or script-written) under `game/turn-N/`, and carries state between turns elsewhere in `game/`. This is the scripted counterpart of today's working memory (`focus-briefer` requests, pending `find-episodes` queries). It is deliberately not called memory: memory is a separate expansion below.
+- **Shared folders**: `shared/<name>/` folders live on disk and outlive a game, granted per seat by the files setting.
+- **Run transcripts**: the SQLite telemetry pipeline is unchanged and remains the source of truth. The orchestrator reads each run as a master record (which sub-agents fired, the call hierarchy, tokens and cost per component, the workflow version the run pinned) plus one markdown transcript per sub-agent conversation, rendered from telemetry spans the way the oracle retriever reads them. Spans flush on every terminal path (completion, budget exhaustion, abandonment, script failure), so a broken run still yields a partial transcript, which is exactly what the orchestrator wants to read. Transcripts are never mounted for the workflow itself.
 
-Proposed layout, to be confirmed in design:
+Layout:
 
 ```
 # Workflow definition (seeds versioned in-repo; resolution path configurable, like configs/):
@@ -81,37 +80,36 @@ workflows/<workflow-name>/
     briefer.md                 # templated markdown prompts
     strategist.md
 
-# Per-seat working folder (produced by the runtime):
-<gameId-playerId>/
-  shared/                      # cross-turn artifacts (focus requests, episode queries, ...)
-  turn-{N}/                    # one run = one decision turn
-    state/                     # read-only per-component game-state snapshots, readable by workflows when granted permission
-      players.json
-      cities.json
+# Seat workspace as a run sees it (existing mounts plus the pinned workflow):
+/workspace/
+  workflow/                    # pinned workflow definition, read-only
+  records/                     # read-only, written by SeatRecords
+    turn-{N}/
+      players.md, players.json
+      cities.md, cities.json
       ...
-    artifacts/                 # sub-agent outputs, readable/writable by workflows when granted permission
-      briefing.md
-      ...
-    record/                    # derived from telemetry spans, hidden from workflows
-      run.md                   # master record: sub-agents fired, hierarchy, tokens + cost, version
-      briefer.md               # one transcript per sub-agent conversation
-      ...
+      briefings/
+  reference/                   # read-only reference material
+  game/                        # writable notes for this game
+    turn-{N}/                  # run outputs (briefing.md, ...)
+    ...                        # cross-turn state
+  shared/<name>/               # disk folders that outlive a game, per the files setting
+/tmp/                          # scratch
 ```
 
 ### Sandbox
 
-The script substrate is sandboxed JavaScript, run under **`ses`** (Endo's SES lockdown) inside a `worker_thread`. Scripts are LLM-authored code, and the allowlists are the trust boundary:
+Workflow scripts run in just-bash's **`js-exec`**, the QuickJS (WebAssembly) sandbox the player workspace already enables. Scripts are LLM-authored code, and the allowlists are the trust boundary:
 
-- The sandbox root is the **seat working folder**:
-  - `artifacts/` and the seat's `shared/` area are readable and writable;
-  - `state/` and prior turns' folders are read-only;
-  - Everything outside the seat folder is denied, while manifest visibility windows are enforced as read filters within this root.
+- The sandbox root is the **seat workspace**:
+  - `game/`, `/tmp`, and any writable shared folder are readable and writable;
+  - `records/`, `reference/`, and the workflow definition are read-only;
+  - Everything outside the mounts is denied, and manifest visibility windows are enforced as read filters within this root.
 - The **workflow definition is read-only inside a run**: a script cannot edit its own script, manifests, or prompts, and cannot alter what a manifest grants. Permissions come only from the manifests as committed; only the orchestrator (or a human editing the seeds) changes the workflow.
-- It enforces the per-sub-agent action and file-access allowlists.
-- It enforces token cost budgets, and bounds the script's own computation (wall-clock/CPU): a `while(true)` in plain code must die as surely as a runaway LLM loop.
-- It must be **model-agnostic**: a simple host interface is injected for the script to operate on. No external packages allowed.
-- It supports **parallel sub-agent calls** (the staffed strategist runs three briefers concurrently) and **deterministic computation** (a seeded RNG, for the `null` recreation).
-- Host-side primitives (LLM calls, action tools) are awaited across the sandbox boundary.
+- Host primitives (sub-agent calls, action tools) reach the script only through `js-exec`'s **`invokeTool`** hook, which exposes them as `tools.*`. The runtime enforces the per-sub-agent action and file-access allowlists at that boundary.
+- It enforces token cost budgets, and bounds the script's own computation through the QuickJS memory cap and a wall-clock limit: a `while(true)` in plain code must die as surely as a runaway LLM loop. The limit is raised above the shell default for workflow runs, since a script waits on LLM calls.
+- It must be **model-agnostic**: the script sees only the injected host interface. No external packages are allowed.
+- It supports **parallel sub-agent calls** (the staffed strategist runs three briefers concurrently) and **deterministic computation** (a seeded RNG, installed through `js-exec`'s `bootstrap` option, for the `null` recreation). `invokeTool` calls look synchronous inside QuickJS, so parallel calls go through one host primitive that takes a batch of sub-agent calls and runs them concurrently.
 
 ### Recreating the roster
 
@@ -119,20 +117,20 @@ We keep the static strategists and recreate them as scripted workflows, except f
 
 Verification is by **static unit tests** in the existing mock test tier, with the static strategist as the reference oracle:
 
-- **LLM strategists**: prompt equivalence. Given the same fixture `GameState`, the workflow assembles the same system and user prompts as the original's `getSystem`/`getInitialMessages`. The originals' prompt text is canonical; comparison normalizes only incidental whitespace and formatting, not content.
+- **LLM strategists**: prompt equivalence. Given the same fixture `GameState`, the workflow assembles the same system and user prompts as the original's `getSystem`/`getInitialMessages`. The originals' prompt text is canonical; comparison normalizes only incidental whitespace and formatting.
 - **`null`/`none`**: identical action tool-call sequences under a fixed seed.
 
-These tests are a **one-time bootstrap**: they verify the in-repo seed recreations and stay as regression tests for the seeds alone. Orchestrator-adopted versions are expected to diverge and are never held to equivalence. Prompt equivalence also doubles as a requirement on the snapshot writer: the per-component `state/` files must carry everything the original prompts consume, so a workflow can rebuild the same prompt structure from files alone.
+These tests are a **one-time bootstrap**: they verify the in-repo seed recreations and stay as regression tests for the seeds alone. Orchestrator-adopted versions are expected to diverge and are never held to equivalence. Prompt equivalence also checks the records: the `records/turn-N` JSON must carry everything the original prompts consume, so a workflow can rebuild the same prompt structure from files alone.
 
 ### Expansion: workflow memory
 
-The `shared/` folder is plain files, good enough for the current roster's cross-turn needs. A later expansion gives workflows real **memory**: a RAG-backed store/retrieve tool (in the spirit of `find-episodes` over the episode database) that a manifest can grant to a sub-agent like any other tool. It is out of the core stages; it is specified here so the manifest and allowlist design leave room for it, and so "memory" stays reserved for this facility rather than the shared folder.
+The `game/` notes are plain files, good enough for the current roster's cross-turn needs. A later expansion gives workflows real **memory**: a RAG-backed store/retrieve tool (in the spirit of `find-episodes` over the episode database) that a manifest can grant to a sub-agent like any other tool. It is out of the core stages; it is specified here so the manifest and allowlist design leave room for it, and so "memory" stays reserved for this facility.
 
 ## The orchestrator
 
 ### Definition and objectives
 
-The orchestrator is itself a **type of agent**, in the same sense a strategist is: a registered agent with its own sub-agents and scoped file and git tools, not a bespoke pipeline. It runs as a **non-blocking revision loop** in the family of the existing offline tools (oracle, telepathist): each **cycle** is a one-shot review, propose, commit pass that runs to completion and exits, matching how those tools run. The _loop_ is the sequence of cycles over a **persistent conversation**: the orchestrator keeps its conversation thread and resumes it on the next cycle, with stable prompt prefixes so provider prompt caching keeps resumption cheap. Compaction of a long conversation, in the manner of agentic coding tools, happens whenever necessary.
+The orchestrator is itself a **type of agent**, in the same sense a strategist is: a registered agent with its own sub-agents and scoped file and git tools. It runs as a **non-blocking revision loop** in the family of the existing offline tools (oracle, telepathist): each **cycle** is a one-shot review, propose, commit pass that runs to completion and exits, matching how those tools run. The _loop_ is the sequence of cycles over a **persistent conversation**: the orchestrator keeps its conversation thread and resumes it on the next cycle, with stable prompt prefixes so provider prompt caching keeps resumption cheap. A long conversation is compacted whenever necessary, reusing the compaction the agent loop already performs.
 
 One orchestrator instance owns **one workflow line on one seat**. It reviews one game at a time, because a single game already spans millions of tokens of runs and records. The line, however, outlives any single game: when the workflow moves on to its next game, the next orchestrator run inherits both the version line and the accumulated notes, so artifacts and lessons carry forward together even though each game is reviewed on its own.
 
@@ -144,22 +142,20 @@ Its job is to review the seat's recent runs and rewrite the workflow's scripts, 
 
 The orchestrator-managed workflow folder is a **git repository** the orchestrator has scoped access to. The runtime resolves a workflow through a configurable path, either the in-repo seeds by default or this repository, whose **per-seat branch/ref** names the seat's adopted version. **Commit** is the orchestrator's adoption step, and it is gated:
 
-- **Static checks** over the script, manifests, and prompt references
-
-- **Dry-run** of the workflow against a recent `state/` snapshot with stubbed models and stubbed actions.It proves control flow, template rendering, and budget wiring without spending tokens or touching a game; the same harness doubles as a testbed for developing workflows by hand.
-
-- The **real test** is the next live run, whose record feeds back into the next cycle.
+- **Static checks** over the script, manifests, and prompt references.
+- **Dry-run** of the workflow against a recent `records/turn-N` snapshot from the seat's store, with stubbed models and stubbed actions. It proves control flow, template rendering, and budget wiring without spending tokens or touching a game; the same harness doubles as a testbed for developing workflows by hand.
+- The **real test** is the next live run, whose transcript feeds back into the next cycle.
 
 A commit that passes advances the seat ref atomically, and each run reads that ref once at start to pin its version. A git commit _is_ the version snapshot, its message _is_ the changelog, and `git log` _is_ the history.
 
-If a committed version still fails in a live run, the failure lands in the run record and the orchestrator debugs and iterates next cycle; a `git revert` stays available to it as a deliberate edit. The version history is itself input to later cycles, so the orchestrator learns from its own changes, and because run records carry the version (the commit) that produced them, evidence groups by version instead of a mixed set.
+If a committed version still fails in a live run, the failure lands in telemetry and the orchestrator debugs and iterates next cycle; a `git revert` stays available to it as a deliberate edit. The version history is itself input to later cycles, so the orchestrator learns from its own changes, and because run transcripts carry the version (the commit) that produced them, evidence groups by version instead of a mixed set.
 
 ### Reference signals
 
-The orchestrator reads a defined evaluation surface, not raw win/loss (too sparse). These signals are **reference material for its own judgment**: it eyeballs them and makes intuitive improvements, and no attribution protocol or automated optimization is prescribed. Nor do they form an objective function: selecting among workflows by outcome (evolutionary pressure) is a separate external mechanism, out of scope here, so a variant that drifts toward cheap and shallow is a survivable outcome that downstream selection, not the orchestrator, will punish. Each signal is individually enable-able so experiments can isolate one at a time:
+The orchestrator reads a defined evaluation surface instead of raw win/loss, which is too sparse. These signals are **reference material for its own judgment**: it eyeballs them and makes intuitive improvements, and no attribution protocol or automated optimization is prescribed. They do not form an objective function either: selecting among workflows by outcome (evolutionary pressure) is a separate external mechanism, out of scope here, so a variant that drifts toward cheap and shallow is a survivable outcome that downstream selection will punish. Each signal is individually enable-able so experiments can isolate one at a time:
 
 - **Decision coverage**: a negative signal when a run leaves an available decision unaddressed, for example an empty next-research or policy slot that no sanctioned action filled. mcp-server defines the inventory: its sanctioned tools and game-state reports determine which decision slots exist on a turn. This keeps do-nothing workflows visibly bad even when they are cheap.
-- **Cost**: cost-weighted tokens per workflow component (briefer vs strategist), sourced from telemetry, cache-aware as defined above. Latency is excluded: it is not a stable measurement, and compute is already accounted for through cost.
+- **Cost**: cost-weighted tokens per workflow component (briefer vs strategist), sourced from telemetry spans as defined above. Latency is excluded: it is not a stable measurement, and compute is already accounted for through cost.
 - **Victory trend**: a **single generic victory-trend interface** with pluggable providers. v1 ships the in-game **score ratio** provider (the seat's score divided by the current maximum, a 0-to-1 value in the same units as a victory probability); the external civ-bench connector is a later provider behind the same interface. Either way, the signal is consumed as a smoothed trend over a window and gated by game phase (see the calling convention below).
 
 ### What it reads and writes
@@ -167,36 +163,36 @@ The orchestrator reads a defined evaluation surface, not raw win/loss (too spars
 The orchestrator's context is a dedicated, recorded set of inputs in its own working folder:
 
 - The **workflow definition** it is improving: script, manifests, prompts, its version history and changelogs, and its prior notes.
-- The seat's **recent working folders**: state snapshots, artifacts, the shared cross-turn area, and the derived run records and sub-agent transcripts, grouped by the version that produced them.
+- The seat's **recent turns**: the seat workspace materialized from its store (records, briefings, and `game/` notes), plus the run transcripts rendered from telemetry, grouped by the version that produced them.
 - **Per-component cost** (cost-weighted tokens), grounded in real telemetry.
 - The **decision-quality judge** as an on-demand capability, and the **victory trend** (civ-bench or score ratio).
-- The **full tool and game-state schema**: a snapshot built from the cached MCP tool definitions the oracle already uses, extended with the game-state report schemas, produced by the runtime or a build step, never fetched live.
-- The **workflow substrate reference**: the script API surface and the template syntax, so it can author valid scripts and prompts without guessing.
-- An **example game state**: a representative `state/` snapshot fixture checked in beside the workflow seeds.
+- The **full tool and game-state schema**: a snapshot built from the cached MCP tool definitions the oracle already loads, extended with the game-state report schemas, produced by the runtime or a build step, never fetched live.
+- The **workflow substrate reference**: the script API surface (the `tools.*` host primitives) and the template syntax, so it can author valid scripts and prompts without guessing.
+- An **example game state**: a representative `records/turn-N` fixture checked in beside the workflow seeds.
 - The **available model tiers and their descriptions** plus the reasoning-effort options, so it can pick a tier and effort per sub-agent without knowing concrete model names.
 
 Its writes are strictly bounded:
 
 - It writes **only** workflow scripts, sub-agent manifests, prompt files (as drafts and version snapshots in its own working folder), and its own **notes** (a scratch memory it keeps for itself, including the persistent conversation).
-- It has no mcp-server access, no action tools, and no live game control. The boundary is enforced, not merely conventional, and it is bounded from above: the universe of sanctioned actions is defined by Vox Deorum itself through mcp-server. The orchestrator's edits shape which of those actions later runs take (that is its purpose), but it can never grant an action that does not already exist there.
+- It has no mcp-server access, no action tools, and no live game control. The boundary is enforced, and it is bounded from above: the universe of sanctioned actions is defined by Vox Deorum itself through mcp-server. The orchestrator's edits shape which of those actions later runs take (that is its purpose), but it can never grant an action that does not already exist there.
 
 The orchestrator's own model is configured like any agent's, through the model registry. Its core stays provider-agnostic, with its file edits going through runtime-provided tools, but when its model is `claude-code`, it may use the Agent SDK's path-scoped file tools instead; that reuse is an option, never a requirement.
 
 ### civ-bench calling convention
 
-civ-bench is an external process, not part of this repository, and its connector is a **deferred provider** behind the generic victory-trend interface (the score ratio ships first). This spec defines only how we talk to it:
+civ-bench is an external process outside this repository, and its connector is a **deferred provider** behind the generic victory-trend interface (the score ratio ships first). This spec defines only how we talk to it:
 
 - **What it does**: reads a game-state snapshot and returns a per-player victory-probability estimate for that turn.
-- **How we call it**: vox-agents spawns the civ-bench CLI per evaluation, passing at least the game id, the current turn, and the path to the run's `state/` snapshot folder (the same per-component files the workflow consumed); it returns per-player estimates as JSON on stdout. Invocation cadence is configurable.
+- **How we call it**: vox-agents spawns the civ-bench CLI per evaluation, passing at least the game id, the current turn, and the path to a materialized `records/turn-N` folder (the same files the workflow consumed); it returns per-player estimates as JSON on stdout. Invocation cadence is configurable.
 - **How we read it**: it is a noisy probability model. Oscillation is normal and early-game estimates are near meaningless, so it is never read as per-turn ground truth. The system consumes it as a smoothed, phase-gated trend.
-- **When it is on**: the civ-bench connector is a deferred provider; until it ships, the smoothed **score ratio is the default** provider. When the connector is present it runs on the configured cadence, and disabling it falls back to the score ratio.
+- **When it is on**: until the connector ships, the smoothed **score ratio is the default** provider. When the connector is present it runs on the configured cadence, and disabling it falls back to the score ratio.
 - The estimator's internal model is out of scope.
 
 ## Component impact
 
-- **`vox-agents`**: the bulk of the work. The workflow format (sandboxed TypeScript script, per-subagent manifests, templated prompts), the working-folder model with the shared cross-turn area and retention, the workflow runtime with cost-unit budgets, graceful termination, and the script-failure fallback, the `scripted-strategist` agent, the recreated roster and its static unit tests, the run-record renderer over telemetry spans, cached-token telemetry capture, the tier-to-model and cost-coefficient configuration, the git-backed version resolution with per-seat ref pinning, the commit gate (static checks and the stubbed dry-run testbed), the orchestrator cycles with persistent conversation, the decision-quality judge sub-agent (deferred), the decision-coverage and score-ratio signals, and the civ-bench CLI client (deferred provider).
+- **`vox-agents`**: the bulk of the work. The workflow format (sandboxed TypeScript script, per-subagent manifests, templated prompts) and its read-only mount in the seat workspace, the workflow runtime on `js-exec` with its `invokeTool` host primitives, cost-unit budgets, graceful termination, and the script-failure fallback, the `scripted-strategist` agent, the recreated roster and its static unit tests, the run transcripts rendered from telemetry spans, the cost-coefficient configuration, the git-backed version resolution with per-seat ref pinning, the commit gate (static checks and the stubbed dry-run testbed), the orchestrator cycles with persistent conversation, the decision-quality judge sub-agent (deferred), the decision-coverage and score-ratio signals, and the civ-bench CLI client (deferred provider).
 - **`mcp-server`**: expected largely unchanged. The runtime uses existing tools; the schema snapshot builds on the existing cached tool-definition mechanism.
-- **civ-bench**: external, not in this repo. This plan defines only the calling convention.
+- **civ-bench**: external, outside this repo. This plan defines only the calling convention.
 - **`bridge-service`**, **`civ5-dll`**, **`civ5-mod`**: expected unchanged.
 
 ## Out of scope
@@ -212,11 +208,11 @@ civ-bench is an external process, not part of this repository, and its connector
 
 - A `scripted-strategist` runs a workflow through a full game, with pacing, actions, telemetry, budget-based termination, and crash recovery behaving as before.
 - Every roster member has a scripted recreation that passes its one-time bootstrap equivalence tests (prompt equivalence for the LLM strategists; tool-call equivalence for `null`/`none` under a fixed seed).
-- A malformed or crashing script never stalls a seat: the commit gate rejects broken versions before adoption, and a script that still fails in a live run falls back to `keep-status-quo` with the failure in the run record.
-- Run records show cache-aware, per-component cost in the single cost currency, derived from real telemetry, stamped with the workflow version.
-- An offline orchestrator cycle, given the seat's recent working folders and records, commits a versioned, changelogged edit that lands on a later run (mid-game included) without blocking any running strategist, and its changelog cites the reference signals it read.
+- A malformed or crashing script never stalls a seat: the commit gate rejects broken versions before adoption, and a script that still fails in a live run falls back to `keep-status-quo` with the failure in telemetry.
+- Run transcripts show cache-aware, per-component cost in the single cost currency, derived from real telemetry, stamped with the workflow version.
+- An offline orchestrator cycle, given the seat's recent turns and transcripts, commits a versioned, changelogged edit that lands on a later run (mid-game included) without blocking any running strategist, and its changelog cites the reference signals it read.
 - The orchestrator resumes its reasoning trail across cycles and across games: the persistent conversation is observable in its working folder, a cycle's proposals reference conclusions recorded by earlier cycles, and the first cycle on a new game inherits and references the prior game's notes and version history for the same workflow line.
-- Repeated cycles yield substantively distinct committed versions (changed control flow, sub-agent composition, tiers, or prompts, not cosmetic rewrites), giving downstream evaluation a version line of plausibly good variants to select from.
-- The orchestrator loop runs online, fires on a trigger condition, and its edit lands on a subsequent run rather than the one in flight.
+- Repeated cycles yield substantively distinct committed versions (changed control flow, sub-agent composition, tiers, or prompts, beyond cosmetic rewrites), giving downstream evaluation a version line of plausibly good variants to select from.
+- The orchestrator loop runs online, fires on a trigger condition, and its edit lands on a subsequent run instead of the one in flight.
 - The victory trend (civ-bench when available, the smoothed score ratio otherwise) is consumed as a smoothed, phase-gated trend, and runs that leave available decisions unaddressed surface as a negative coverage signal in the orchestrator's evidence.
 - A test proves the orchestrator cannot reach mcp-server or issue a game action: only script, manifest, prompt, and note writes in its working folder succeed.
