@@ -7,11 +7,11 @@ Envoys are the agents a person talks to. Each AI civilization can field two voic
 | **Spokesperson** | Answers questions in character about its nation's views. | No. The conversation stays between you and it. |
 | **Diplomat** | Talks and negotiates, and quietly files reports on what it learns. | Yes, to its leader through an analyst. |
 
-In short: **talk to a spokesperson to learn about a civilization; talk to a diplomat and the civilization may learn about you.** Keep this distinction in any UI text.
+Talk to a spokesperson to learn about a civilization; talk to a diplomat and the civilization may learn about you. Keep this distinction in UI text.
 
 A third agent, the **negotiator**, works behind the diplomat and makes the actual deal decisions.
 
-Strategists act once per turn. Envoys live in chat threads, and one conversation can span many turns. The in-game chat and the dashboard chat both use the same web routes, which run the envoy and stream its reply back (see [Web UI](../platform/ui.md)). The mod only displays the result (see the civ5-mod [ui.md](../../civ5-mod/ui.md)).
+Envoys work in chat threads that can span many turns. In-game and dashboard chats share the runner in `src/web/chat/turn.ts`. See [Web UI](../platform/ui.md) for the HTTP routes and [Diplomacy](../../diplomacy.md) for the in-game path.
 
 ## Threads
 
@@ -33,11 +33,11 @@ Live envoys never greet first. An empty live chat shows a fixed greeting line in
 
 `LiveEnvoy` (`src/envoy/live-envoy.ts`) connects an envoy to a running game.
 
-- **Its own run.** Each chat message runs in its own [run](../framework/runs.md) at the session's current turn. The envoy reasons about the current turn even if the strategist is still finishing an older one, and reuses the seat's cached game state without disturbing it.
+- **Its own run.** Each chat message has a separate [run](../framework/runs.md) at the session's current turn and reuses the seat's cached state.
 - **Opening context.** The civilization's identity, the players it knows, and its current strategy.
 - **Briefings on demand.** A `get-briefing` tool fetches fresh military, economic, or diplomatic [briefings](support-agents.md#briefers) instead of carrying the whole game state.
 - **A hint.** Each subclass supplies `getHint()`, a standing reminder of who it is and who it is talking to.
-- **Never silent.** A run that ends without speaking sends a short "could you say that again?" line instead, in both observer chats and diplomacy.
+- **Retry reply.** A run that neither speaks nor closes the conversation sends a shared retry line, in observer chats and diplomacy.
 - An observer chat cannot name the voiced civilization itself as the caller.
 
 ### What the prompts tell them
@@ -58,15 +58,9 @@ The diplomat and spokesperson prompts (`vox-agents/prompts/diplomat.md` and `spo
 
 ## Diplomat
 
-`Diplomat` (`src/envoy/agents/diplomat.ts`) has the spokesperson's tools plus one more: `call-diplomatic-analyst`. When a conversation produces something worth noting (a proposal, a threat, a rumor, an observation), the diplomat files a report with the content, the context, and its own memo.
+`Diplomat` (`src/envoy/agents/diplomat.ts`) adds analyst reporting, negotiator handoffs, and conversation closure to the shared live tools. It runs in civilization-to-civilization diplomacy threads. When a conversation produces useful information, it sends the content, context, and its memo through `call-diplomatic-analyst`.
 
-```
-person ──chat──► diplomat ──report──► diplomatic analyst ──(maybe)──► leader's strategist
-                    │   (returns at once)       (runs in the background)
-                    └──keeps talking
-```
-
-The report is [fire-and-forget](../framework/agent-framework.md#two-special-shapes). It starts a detached run that keeps the diplomat's turn and survives the chat being closed. The [analyst](support-agents.md#analysts) decides on its own whether to pass it on, while the diplomat keeps talking. The diplomat itself still cannot agree to anything.
+The report runs [detached](../framework/agent-framework.md#two-special-shapes), so the diplomat can keep talking while the [analyst](support-agents.md#analysts) decides whether to relay it. Closing the chat does not cancel that analysis. Deal decisions belong to the negotiator.
 
 The diplomat can pick its own model tier for each message with [triage](../models/tiers-and-triage.md#diplomat-triage).
 
@@ -76,7 +70,7 @@ Diplomats can see which deal items each side may currently offer, but only so th
 
 - **Deal history.** The negotiator's context includes its recent closed proposals (the Recent Deal History section), so it does not re-offer a package that was already turned down.
 - **Its message.** The negotiator's `Message` is one spoken line for the diplomat to say. The terms themselves are shown to the other side separately.
-- **Its model.** When the diplomat hands a deal over, it picks a `Tier` to match the deal's complexity and stakes. The negotiator runs on that tier's model (`negotiator.large` if set, otherwise the shared `large` alias) without its own triage.
+- **Its model.** The handoff may include a `Tier` to choose the negotiator's model without triage. Resolution follows the shared [tier rules](../models/tiers-and-triage.md).
 
 The full round trip, from the in-game panel through the MCP deal tools and back, is in [diplomacy.md](../../diplomacy.md).
 
@@ -85,7 +79,7 @@ The full round trip, from the in-game panel through the MCP deal tools and back,
 1. `POST /api/agents/chat` with a live context ID creates a thread attached to the player's existing context.
 2. `POST /api/agents/message` adds the user's message, runs the thread's agent, and streams text, reasoning, and tool events back over SSE.
 
-The handlers and the thread store are in `src/web/chat/` (see [Web UI](../platform/ui.md#agent-chat)). Each request runs in its own run, so a client disconnecting cancels only that request.
+The handlers and the thread store are in `src/web/chat/` (see [Web UI](../platform/ui.md#agent-chat)). Because each request runs in its own run, a client that disconnects cancels only that request.
 
 ### Diplomacy transcripts
 

@@ -54,4 +54,4 @@ The panel measures thinking time from when the dialog first opens to submission.
 
 ## Crash recovery
 
-On relaunch, the session cancels any pending bus request, recreates the players, and the human strategist calls `present-decision` again so the panel gets the options back. The observer view override is reapplied to be safe.
+A relaunch of the same game keeps the existing players and uses [reload handling](game-session.md#crash-recovery) to restart their timelines. Switching to a different game cancels pending decision requests and recreates the players; the next human decision presents its options again.

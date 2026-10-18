@@ -46,13 +46,11 @@ A model call that has `bash` or CLI web access gets one system reminder, built b
 
 | Part | Included when |
 | --- | --- |
-| Intro | Whenever the reminder is added. When the request declares completion tools, it names them and asks for every other call in the same response as the completion call. A successful completion ends the run once all calls in that response finish, with no further step to inspect results. |
-| Workspace | The request offers the `bash` tool (any provider). Covers keeping notes current, where to save game notes and general lessons when a folder is writable, the step budget with its two-step turn (one read script, then every decision, note, and terminal call together), and the output limit per stream. |
+| Intro | Whenever the reminder is added. When the request declares completion tools, it names them and asks for every other call in the same response, since a completion call ends the run with no step left to inspect results (see [Prompts and tool calling](../framework/prompts.md)). |
+| Workspace | The request offers the `bash` tool (any provider). Covers note keeping, where game notes and general lessons go, the step budget, and the output limit per stream, as described in [Seat files](../workspace/files.md). |
 | Web | Codex or Claude Code with `hostTools: ["Web"]`. |
 
-When any folder is writable, the Workspace part always asks for both kinds of notes: game observations, inferences, and plans in the game notes folder, and generalized lessons and reusable references in writable shared folders when one exists or in `lessons/` of the game notes folder otherwise. The records directions table stays the only folder listing.
-
-The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). The text depends only on the seat's files setting and on the agent's terminal tools and their noun. It is the same across turns and runs, which keeps the tools, the system text, and the cached game-context message a cache hit on every turn (see [Caching](../framework/caching.md)).
+The Workspace part is rendered from `vox-agents/prompts/workspace.md` through the run's prompt folder (see [Prompt files](../framework/prompt-files.md)). It depends on the files setting and terminal tools, keeping that part of the prompt stable for [caching](../framework/caching.md).
 
 Model-step spans record what was enabled in `host.capability`, comma-separated:
 
@@ -96,6 +94,6 @@ A text call to a removed tool is still recovered by name and then rejected like 
 Codex responses need extra handling, done in `codex-response.ts`:
 
 - Codex reports its own built-in activity as `tool_calls` and `tool_results`. The middleware turns these into provider-executed tool events, removes them from the history sent back next time, and leaves game tools for Vox Agents to run.
-- It passes the previous step's response id as `previous_response_id` between steps of one agent run. This lets the proxy continue the same Codex thread instead of starting over. The outcome is recorded as `host.thread_reuse` (see [Codex proxy](codex.md#thread-continuation)).
+- It sends the previous step's response id between steps of one agent run (see [Thread continuation](codex.md#thread-continuation)).
 
 How the proxy itself is started, restarted, and updated is on the [Codex proxy](codex.md) page.

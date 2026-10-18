@@ -27,6 +27,6 @@ A request can have at most four anchors (`MAX_CACHE_BREAKPOINTS`). `markBreakpoi
 
 ## Runs with files on
 
-A run with files on often takes many steps, so its whole initial prompt (instructions, game context, and game state) becomes an anchor. Step 1 writes it to the cache, and later steps within five minutes read it back. The steps-left countdown and all later traffic come after the anchor, and [compaction](compaction.md) only changes messages after it, so neither breaks the cache.
+A run with files on often takes many steps, so its whole initial prompt (instructions, game context, and game state) becomes an anchor. Step 1 writes it to the cache, and later steps read it back. The steps-left countdown and all later traffic come after the anchor, and [compaction](compaction.md) only changes messages after it, so neither breaks the cache.
 
 Step 1 pays the cache-write cost even when the run ends in one step.

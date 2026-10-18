@@ -1,125 +1,73 @@
-# Evaluator trimming
+﻿# Evaluator trimming
 
-Late in a game, the full game state can be too big for an evaluator model's input limit. Trimming shortens it by removing the least useful details first, one step at a time, until it fits. The model is then told what was left out.
-
-```
-full state ──► over budget? ──yes──► drop least useful detail ──► check again
-                   │
-                   no
-                   ▼
-            send it (with a note listing what was cut)
-```
-
-Two callers use it, through the shared `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts`:
-
-- The [evaluator strategist](evaluator-strategist.md), which answers a whole decision in one evaluation.
-- [Strategist triage](../../models/tiers-and-triage.md#strategist-triage), which reads the same state.
-
-The list of cuts is called the **trim ladder**. This page covers the budget, the ladder, what is never trimmed, how to change it, and what trimming reports.
-
-## Why it exists
-
-Late in a game, the state can stay over the limit even with every event dropped. The Players report (opinion lists and city-state relationships), the Cities report, and the Military report are large on their own. So the ladder mixes event tiers with report details, cutting low-value detail from each before the more important event tiers go.
+Evaluator models can receive more game state than their input limit allows, even after low-value events are removed. The trim ladder cuts event tiers and report details in order until the state fits. It is shared by the [evaluator strategist](evaluator-strategist.md) and [strategist triage](../../models/tiers-and-triage.md#strategist-triage) through `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts`.
 
 ## The budget
 
-The state may use a share of the model's input limit, set by `evaluatorTrimConfig.budgetShare` in `src/strategist/agents/evaluator-trim-config.ts` and checked against `inputTokenLimit` in `src/utils/models/models.ts`. A model with no input limit set gets the state untrimmed.
-
-The share leaves headroom below the limit because the token count is a local estimate (`countTokens` in `src/utils/models/token-counter.ts`) that counts fewer tokens than Jev does. The config comment records the measured gap.
+`evaluatorTrimConfig.budgetShare` in `src/strategist/agents/evaluator-trim-config.ts` sets the fraction of the model's input limit available to state. This leaves headroom for differences between the local token estimate and provider counting. Models without a configured input limit receive untrimmed state.
 
 ## How the ladder walks
 
-`trimToFit` in `src/strategist/agents/evaluator-trimming.ts` applies the ladder from `evaluator-trim-config.ts` to the trimmable reports (events, players, cities, military). Each step works on copies, so the cached `GameState` is never changed, and each size check re-renders the whole state, so the parts that are never trimmed still count against the budget.
-
-- Steps run in order and are cumulative: every applied step stays in place for the next check.
-- The walk stops at the first step after which the state fits.
-- A step that would change nothing (the tier holds no events left, the fields are not present, the opinion lists are already short) is skipped: it is not applied, not reported, and costs no size check.
-- If the whole ladder is not enough, the most trimmed state goes out as it is. A provider overflow error then falls into the event window fallback (`withEventWindowFallback`, see [Player loop](player-loop.md#event-windows)), which the player loop runs for the decision and triage runs for itself.
-
 ```mermaid
 flowchart TD
-  A["Estimate the whole state"] --> B{"Over budget?"}
-  B -->|no| Z["Send it<br/>(plus the closing note if any step ran)"]
-  B -->|yes| C["Next ladder step"]
-  C -->|ladder exhausted| Y["Send as is: a provider<br/>overflow falls to the<br/>event window fallback"]
-  C --> D{"The step changes anything?"}
+  A[Estimate the whole state] --> B{Fits the budget?}
+  B -->|yes| Z[Send state and any trim note]
+  B -->|no| C[Next ladder step]
+  C -->|none left| Y[Send the most trimmed state]
+  C --> D{Changes any report?}
   D -->|no| C
-  D -->|yes| E["Apply and record the step"] --> A
+  D -->|yes| E[Apply and record the step] --> A
 ```
+
+`trimToFit` in `src/strategist/agents/evaluator-trimming.ts` works on copies of events, players, cities, and military reports. Cuts are cumulative, no-op steps are skipped without another size check, and the walk stops at the first fit. Each check renders the whole state, including sections the ladder cannot trim.
+
+If every step is exhausted, the most trimmed state is sent anyway. A provider overflow then reaches the caller's [event-window fallback](player-loop.md#event-windows), which can retry with fewer events.
 
 ## The ladder
 
-The steps live in `evaluatorTrimConfig.ladder` in `src/strategist/agents/evaluator-trim-config.ts`, which is the source of truth for their order and contents; comments there explain why each group sits where it does. The general rule is to order steps by how much each cut matters to the evaluator's macro decisions (flavors, grand strategy, research, persona, and relationships), least first:
-
-- **Early:** detail that is useless without tools (such as IDs and coordinates) or purely tactical.
-- **Then:** detail the reports already sum up elsewhere, such as per-city yields that add up to civilization totals.
-- **Last:** the inputs closest to war, diplomacy, and victory decisions.
-
-The event tiers are defined by `eventImportanceTiers` in `src/utils/prompts/event-importance.ts`, shared with the player loop's event window fallback. The ladder drops them in the same order as that fallback does, from the least important up, so both paths agree on what matters.
+`evaluatorTrimConfig.ladder` defines the order and contents. Early cuts remove IDs, coordinates, tactical detail, and information summarized elsewhere. Later cuts affect inputs closer to war, diplomacy, and victory decisions. Event cuts follow the shared importance order defined in `src/utils/prompts/event-importance.ts`.
 
 ## Never trimmed
 
-Anything the ladder does not name stays in the state in full. Beyond that, the actions themselves set some limits no config can cross:
-
-| Report or section | What always stays |
+| Section | What stays |
 | --- | --- |
-| System prompt, Situation, Your Civilization, Options, Strategies, Victory Progress, turn context | These are not trimmable reports, so they are always sent whole. |
-| Players | Every civilization entry stays, and so does our own city-state relationship. Opinion lists can be compressed but never removed. |
-| Cities | Every city stays; steps only delete listed fields from each one. |
-| Military | Every tactical zone stays; steps only delete listed sections or zone fields. |
-| Events | The ladder stops before `diplomacy` and `turning-points`. The outer overflow fallback may drop diplomacy last, but always preserves turning points across the pending window. |
+| System prompt, Situation, Your Civilization, Options, Strategies, Victory Progress, turn context | Sent in full. These are outside the trimmable reports. |
+| Players | Every civilization and our own city-state relationship. Opinion lists may be compressed. |
+| Cities | Every city; actions remove fields. |
+| Military | Every tactical zone; actions remove sections or zone fields. |
+| Events | Diplomacy and turning points survive the ladder. The outer overflow fallback may drop diplomacy and, as a final attempt, retain only the current turn's turning points. |
 
 ## Opinion compression
 
-An `opinions` step shortens both opinion lists of every major civilization with one rule (`compressOpinions` in `src/strategist/agents/evaluator-trimming.ts`):
+`compressOpinions` keeps the configured number of factors with the largest absolute weights, in their original order, and combines the rest into one line with their summed weight. Unweighted summary lines always stay. Lists with no weights or too few factors to shorten are unchanged.
 
-- Factor lines end with a weight, such as `(-30)` or `(+12)`. The `keep` lines with the largest weight by absolute value stay, in their original order, and the rest merge into one line carrying their summed weight.
-- Lines without a weight are summaries, such as the leader's real approach, and always stay.
-- A list with no weights at all is left alone, since it cannot be ranked. Whether weights show depends on game settings, not on which list it is.
-- A list that is already short enough is left alone, and if no player has anything left to compress the whole step is skipped.
-
-For example, with `keep` at 3, a weighted list of one unweighted summary line plus factors at `(-51)`, `(-30)`, `(-12)`, `(-8)`, `(-6)`, and `(-4)` comes out as:
-
-- The summary line, kept.
-- The three largest factors (`-51`, `-30`, `-12`), kept in their original order.
-- One merged line: "3 smaller factors combined (-18)".
+For example, keeping three factors from weights -51, -30, -12, -8, -6, and -4 retains the first three and merges the remaining three as -18. Any unweighted summary is retained too.
 
 ## Editing the ladder
 
-`evaluator-trim-config.ts` is data only: each step is an id, a short note for the model, and exactly one action. You can reorder steps, retune what they target, or add new ones without touching `evaluator-trimming.ts`, which applies whatever the config lists.
+Each step has a telemetry ID, a short note for the model, and one action:
 
 | Action | Effect |
 | --- | --- |
-| `events` | Drops one event tier by name. Valid names in removal order are `noise`, `economy`, `combat`, `units`, `force-changes`, `progress`, `diplomacy`, and `turning-points`. Unlisted and malformed event types count as `noise`. |
-| `cityFields` | Deletes the listed fields from every city in # Cities. |
-| `militaryKeys` | Deletes the listed top-level sections from # Military. |
-| `militaryZoneFields` | Deletes the listed fields from every tactical zone in # Military. |
-| `cityStateRelationships` | Deletes city-states' relationship entries for other civilizations, keeping ours. |
-| `opinions` | Compresses major civilizations' weighted opinion lists to their `keep` largest factors plus one merged line. |
+| `events` | Drop one named event tier; see [event windows](player-loop.md#event-windows) for the order. Unlisted or malformed types count as noise. |
+| `cityFields` | Delete fields from every city. |
+| `militaryKeys` | Delete top-level military sections. |
+| `militaryZoneFields` | Delete fields from tactical zones. |
+| `cityStateRelationships` | Remove other civilizations' city-state relationships while retaining ours. |
+| `opinions` | Keep the largest weighted opinion factors plus a merged remainder. |
 
-When editing:
-
-- Step ids are kebab-case and appear in the `strategist.trim` telemetry, so prefer retuning a step's contents over renaming its id.
-- Step notes are joined into the closing note, so write them as short lowercase phrases that read well after "this state was shortened".
-- Adding steps is cheap: a step that matches nothing in the current state is skipped and not reported.
-- Keep event steps in the shared tier order, least important first; a test checks this.
-- Do not add steps for the `diplomacy` or `turning-points` tiers, so both survive every evaluator trim.
+Retune or add steps in `evaluator-trim-config.ts`; the action implementations live in `evaluator-trimming.ts`. Keep IDs stable for telemetry, write short notes, preserve the event tier order, and respect the retained sections above.
 
 ## The closing note
 
-When at least one step ran, the state ends with a note so the model knows it is reading a partial picture. The note says the state was shortened to fit the input limit, gives the number of dropped events when there were any, and lists the applied steps' notes. For example: "Note: To fit the input limit, this state was shortened (41 events left out): minor tile and movement events left out; city economy events left out." `buildStrategistEvaluationState` appends the note after the walk ends; the walk itself is what satisfies the budget.
+When any step runs, `buildStrategistEvaluationState` appends a note describing the cuts and, when applicable, the number of dropped events. The budget checks cover the rendered state before this note is appended.
 
 ## Telemetry
 
-- The active span gets `strategist.trim` (the agent span for the evaluator strategist, the turn span for triage): JSON with `steps` (the applied step ids, in order), `droppedEvents`, and `fits` (false when even the whole ladder was not enough). The shape is `StrategistTrim` in `src/types/evaluation.ts`.
-- `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts` sets the attribute before every evaluation call: JSON when trimming ran, an empty string when no trimming ran, so a retry cannot leave an earlier attempt's trim record behind.
-- Error logs: `sanitizeAIError` in `src/utils/logger.ts` redacts the state and question set carried in an evaluation request, alongside the existing message redaction, so a provider overflow error does not write the game state into the logs.
+`evaluateStrategistState` writes `strategist.trim` on the active agent span, or the turn span for triage. The JSON contains applied step IDs, `droppedEvents`, and `fits`. An untrimmed attempt writes an empty string so a retry clears an earlier trim record. `StrategistTrim` in `src/types/evaluation.ts` defines the shape.
+
+`sanitizeAIError` in `src/utils/logger.ts` redacts evaluation state and questions from error logs.
 
 ## Tests
 
-| File | Covers |
-| --- | --- |
-| `tests/mock/strategist/evaluator-trimming.test.ts` | The ladder walk: cumulative steps, skipped no-ops, stopping at the first fit, event steps in tier order, and the opinion compression rules |
-| `tests/mock/strategist/evaluator-questions.test.ts` | State building: the budget check, the closing note, and the trim record |
-| `tests/mock/utils/event-importance.test.ts` | Event tier grouping and dropping |
-| `tests/mock/utils/logger-sanitize.test.ts` | Redaction of the evaluation state and questions in error logs |
+`tests/mock/strategist/evaluator-trimming.test.ts` covers the ladder, no-op steps, retained reports, and opinion compression. `evaluator-questions.test.ts` covers state building and telemetry. The event-importance and logger-sanitize suites under `tests/mock/utils/` cover shared event tiers and redaction.

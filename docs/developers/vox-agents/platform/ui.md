@@ -11,7 +11,7 @@ Express backend (src/web/)  ── same Node process ──  agents, registries,
 
 The backend runs **in the same Node process as the agents**. It reads the same in-memory registries and telemetry exporter they use, so there is no network hop between the dashboard and the agents.
 
-The dashboard starts automatically with every console workflow (strategist, telepathist, and others), so there is always a window into a running session.
+The strategist, telepathist, Oracle, and Archivist consoles start the dashboard automatically.
 
 The player-facing tool for rewatching a finished game is a separate project, the Vox Deorum Replayer (`vox-deorum-replay`), covered in the players' documentation.
 
@@ -52,12 +52,12 @@ Live data flows over Server-Sent Events. `SSEManager` (`src/web/sse-manager.ts`)
 
 ## The dashboard
 
-The Vue app uses PrimeVue components, Pinia stores, and virtual scrolling for long lists.
+The Vue app uses PrimeVue components, reactive stores, and virtual scrolling for long lists.
 
 | View | Use |
 | --- | --- |
 | **Session** | Pick or edit a session config, start and stop the game, and watch the session state and player list. |
-| **Chat** | Start a chat with a running game or a telemetry database, resume a thread, and watch streamed text, reasoning, and tool calls. An empty live chat shows a fixed greeting, and the agent speaks once addressed. A database chat first streams the telepathist's preparation progress. |
+| **Chat** | Start a chat with a running game or a telemetry database, resume a thread, and watch streamed text, reasoning, and tool calls. An empty live chat shows a fixed greeting (see [Live envoys](../agents/envoys.md#live-envoys)). A database chat first streams the telepathist's preparation progress. |
 | **Telemetry** | Browse live contexts and stored databases, from database to trace to span tree, including each step's recorded messages. The main debugging tool for agent behavior. |
 | **Debug** | Logs from every service in one place. `/logs` redirects here. |
 | **Config** | Edit models, per-agent model assignments, and API keys. |
@@ -79,31 +79,16 @@ Opening a `strategist.turn.N` span in Telemetry shows a summary of that turn ins
 
 The Debug page gathers logs into one card:
 
-- **Live tab.** The process's Winston logs as they happen, filterable by level and source.
-- **File tabs.** Log folders for Vox Agents, the bridge, the MCP server, and Civ 5. Service tabs open the newest log first (rotated Winston files give the active one the highest number). The Civ 5 tab opens `Lua.log` first. Each tab has a file picker, search, a level filter for structured logs, and Refresh. Large files show only their last 512 KB.
-- **Download all.** Zips the latest logs for bug reports.
+- **Tabs.** Live Winston logs from the process, filterable by level and source, plus file tabs for Vox Agents, the bridge, the MCP server, and Civ 5. Service tabs open the newest log first (the Civ 5 tab opens `Lua.log`). Each tab has a file picker, search, a level filter for structured logs, and Refresh. Large files show only their last 512 KB.
+- **Download all.** Zips the latest logs for bug reports: the newest rotated `combined*.log` and `error*.log` per service, every Civ 5 log (the game rewrites them each launch), and a `setup.txt` manifest with the Vox Deorum version, platform, Civ 5 logging state, installed mod folder names, and which files were included or skipped. A file over 10 MB contributes only its newest 10 MB. Never API keys, `.env`, config JSON, or telemetry databases.
 - **Civ 5 logging switch.** Sets `LoggingEnabled` in the game's `config.ini`. Civ 5 reads it only at startup, so the page asks for a restart after a change.
 
-**What the bundle contains:**
-
-- The `.log` files under `vox-agents/`, `bridge-service/`, `mcp-server/`, and `civ5/`.
-- For the three services, only the newest file of each rotated log (`combined*.log` and `error*.log`). Every Civ 5 log, since the game rewrites them each launch.
-- Any file over 10 MB (such as the DLL's `connection-pipe.log` in a long game) contributes only its newest 10 MB.
-- `setup.txt` with the Vox Deorum version, platform, Civ 5 logging state, installed mod folder names, and which files were included or skipped.
-- Never API keys, `.env`, config JSON, or telemetry databases.
-
-**Code:**
-
-| Piece | Location |
-| --- | --- |
-| Routes (`GET /status`, `PUT /civ-logging`, `GET /logs/:source/:file`, `GET /bundle` under `/api/debug`) | `src/web/routes/debug.ts`. The file route only serves names from the folder listing, never arbitrary paths. |
-| Finding the four log folders | `src/utils/debug/log-sources.ts`. Sibling services are found next to the `vox-agents` folder. |
-| Building the zip (with yazl) | `src/utils/debug/log-bundle.ts` |
-| Reading and writing the ini setting | `readCivLoggingEnabledContent` and `updateCivLoggingEnabledContent` in `src/utils/game/civ5-ini.ts` |
-| The page | `ui/src/views/DebugView.vue`, built from `ui/src/components/logging/` (`LogViewer.vue`, `LogFileViewer.vue`, and the shared `LogTable.vue`) |
+The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accept only filenames from the folder listing. Discovery and zip creation live in `src/utils/debug/log-sources.ts` and `log-bundle.ts`, and ini updates in `src/utils/game/civ5-ini.ts`. `ui/src/views/DebugView.vue` uses the components in `ui/src/components/logging/`.
 
 ## Development
 
-- `cd ui && npm run dev` starts the UI dev server, which proxies to the backend.
+Install the service dependencies from the repository root with `npm install`. The UI has its own package and lockfile outside the npm workspaces; install it from the same root with `npm install --prefix vox-agents/ui --include=dev`.
+
+- From `vox-agents/`, `cd ui && npm run dev` starts the UI dev server, which proxies to the backend.
 - `npm run build` at the `vox-agents` root builds both.
 - To check that a UI change type-checks, run `npm run type-check` in `ui/`. It runs `vue-tsc --build`, which also checks `tests/`. A bare `vue-tsc --noEmit` can pass while the build fails, because it skips the test files.

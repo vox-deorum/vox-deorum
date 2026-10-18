@@ -59,7 +59,7 @@ Where each provider's list comes from:
 
 Agent names are not model references. An agent with no `llms` entry runs on `default`, so the preflight check verifies the agent's entry when it exists and `default` when it does not.
 
-The rules also scope prompt middleware to providers that serve open-weight models over an OpenAI-compatible API (openai-compatible, Chutes, Synthetic, OpenRouter).
+The rules scope automatic prompt middleware for open-weight models to `openai-compatible`, Chutes, and Synthetic.
 
 ## The Setup wizard
 
@@ -79,7 +79,7 @@ Agents can always use any tier when a caller asks for one. Automatic triage also
 
 Codex and Claude Code are full coding agents that could normally touch the host machine. The shared `hostTools` model option controls what they may do. It allows nothing by default and accepts only one value, `Web`.
 
-| | Claude Code | Codex |
+|  | Claude Code | Codex |
 | --- | --- | --- |
 | `Web` turns on | Web fetch and web search | Live search |
 | Always off | Working directory, file tools, shell. Any tool outside the allowed list is denied. | The sandbox stays disabled. |
@@ -92,9 +92,9 @@ The root `package.json` pins the Claude Agent SDK so model discovery and `ai-sdk
 
 To update it, stop Vox Agents and run from the repo root:
 
-| Command | Effect |
-| --- | --- |
-| `npm run update:claude-agent-sdk` | Move to the latest release. |
+| Command                                        | Effect                      |
+| ---------------------------------------------- | --------------------------- |
+| `npm run update:claude-agent-sdk`              | Move to the latest release. |
 | `npm run update:claude-agent-sdk -- <version>` | Move to a specific version. |
 
 The script (`scripts/utilities/update-claude-agent-sdk.mjs`) updates the dependency, reinstalls, and prints each Claude Code model alias with the model it maps to, such as `opus => claude-opus-5-5`. If Claude Code is missing or not signed in, it prints a warning instead of the mapping, and the update still succeeds. Restart Vox Agents afterward.

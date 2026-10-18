@@ -32,7 +32,7 @@ Successful responses report `x_codex.instructionSources`, the instruction-file p
 - Non-streaming responses carry it on the response.
 - Streaming responses carry it on the first SSE chunk only.
 
-Vox Agents stores the paths in plain text as `s.instruction_sources` telemetry. Treat this as disclosure of local file paths.
+Step spans record the returned paths in `host.instruction_sources`.
 
 ### Thread continuation
 
@@ -40,11 +40,11 @@ Within one agent run, Vox Agents sends the previous step's response id as `previ
 
 Each Codex model step records the outcome as `host.thread_reuse`:
 
-| Value | Meaning |
-| --- | --- |
-| `reused` | The proxy continued the thread. |
+| Value          | Meaning                                         |
+| -------------- | ----------------------------------------------- |
+| `reused`       | The proxy continued the thread.                 |
 | `tried_failed` | A previous id was sent, but a fresh thread ran. |
-| `fresh` | No previous id was sent. |
+| `fresh`        | No previous id was sent.                        |
 
 A step that was [compacted](../framework/compaction.md) sends the full compacted history instead of continuing the thread.
 

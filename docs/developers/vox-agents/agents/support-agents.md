@@ -18,15 +18,15 @@ The full set of reports (every player, city, unit category, and event since the 
 
 | Briefer | Output | Used by |
 | --- | --- | --- |
-| `simple-briefer` | One briefing covering military, economy, and diplomacy. | The briefed strategist |
-| `specialized-briefer` | A deep briefing on one area: Military, Economy, or Diplomacy. It filters both report fields and event types to that area. | The staffed strategist runs all three in parallel and joins them. |
+| `simple-briefer` | One briefing covering military, economy, and diplomacy. | The briefed strategist, and the staffed strategist for small event windows or turn 1 and earlier |
+| `specialized-briefer` | A deep briefing on one area: Military, Economy, or Diplomacy. It filters both report fields and event types to that area. | The staffed strategist otherwise, running all three in parallel and joining them |
 
 Two features make briefings work well together:
 
 - **Steering.** Briefers give the strategist a `focus-briefer` tool. When the strategist wants the next briefing to dig into something ("watch the northern border"), the instruction is saved in the player's working memory and the next briefing follows it.
 - **No duplicate work.** All briefing requests go through `requestBriefing()` (`src/briefer/briefing-utils.ts`). It caches finished briefings per turn and tracks ones in progress, so two requests for the same briefing on the same turn share one model call. Envoys reach it through `get-briefing`. Strategists call it before their first model step so the briefing is in the opening prompt.
 
-Each briefing is also [archived in the seat's records](../workspace/store.md#records) before anyone sees it.
+With files enabled, each briefing is [archived in the seat's records](../workspace/store.md#records) before it is published.
 
 ## Analysts
 
@@ -38,7 +38,7 @@ The only analyst today is `diplomatic-analyst` (`src/analyst/diplomatic-analyst.
 diplomat files a report
    │
    ├─ 1. resolve who it is from and about
-   ├─ 2. read 15 turns of diplomatic history with them
+   ├─ 2. read 30 turns of diplomatic history with them
    └─ 3. one evaluation: relay? what type? how important?
             │
             └─ relay ──► relay-message ──► strategist and briefers see it
@@ -55,7 +55,7 @@ The diplomat files the content, the context, and its memo. It may also name the 
 
 ### 2. Evidence
 
-The analyst reads the last 15 turns of diplomatic history with the source and each subject, as the receiving civilization saw it. An event involving several of them is listed once. History that cannot be read is marked unavailable.
+The analyst reads the last 30 turns of diplomatic history with the source and each subject, as the receiving civilization saw it. An event involving several of them is listed once. History that cannot be read is marked unavailable.
 
 ### 3. One evaluation
 

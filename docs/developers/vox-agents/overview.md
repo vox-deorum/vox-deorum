@@ -1,6 +1,6 @@
 # Vox Agents: Overview
 
-Vox Agents is the part of Vox Deorum where language models play Civilization V. It is a TypeScript framework that runs LLM agents, gives them the game as tools, and turns their answers into in-game decisions and conversations.
+Vox Agents is the part of Vox Deorum where language models play Civilization V. It is a TypeScript framework that runs LLM agents, gives them the game as tools, and turns their answers into in-game decisions and conversations. Each player occupies a **seat**: a player slot in one game.
 
 ```
 Vox Agents  ──(MCP tools)──►  MCP Server  ──►  Bridge  ──►  DLL  ──►  Civilization V
@@ -8,7 +8,7 @@ Vox Agents  ──(MCP tools)──►  MCP Server  ──►  Bridge  ──►
     └──►  LLM providers (OpenAI, Anthropic, Codex, Claude Code, ...)
 ```
 
-Vox Agents never talks to the game directly. It is an MCP client of the [MCP server](../mcp-server/overview.md): it calls tools to read the game and act on it, and it listens for notifications such as "a player finished a turn". The full message path is in [protocol.md](../protocol.md) and the component map is in [architecture.md](../architecture.md).
+Vox Agents never talks to the game directly. It is an MCP client of the [MCP server](../mcp-server/overview.md): it calls tools to read the game and act on it, and it listens for notifications such as "a player finished a turn". The full message path is in [protocol.md](../protocol.md) and the component map is in [architecture.md](../architecture.md). Paths in these pages are relative to `vox-agents/` unless they say otherwise.
 
 ## What it does
 
@@ -25,22 +25,20 @@ Vox Agents never talks to the game directly. It is an MCP client of the [MCP ser
 
 | Folder | What it covers |
 | --- | --- |
-| [framework/](framework/) | The core that every agent runs on: the agent base class, runs, sessions, how a model request is built, and context compaction. |
-| [models/](models/) | Choosing and configuring models: the model registry, tiers and triage, provider middleware, evaluators, and the Codex proxy. |
-| [workspace/](workspace/) | The optional per-seat file workspace: the `bash` tool, its folders, and the store that keeps records and notes. |
+| [framework/](framework/) | The core every agent runs on: agent base class, runs, sessions, request building, and compaction. |
+| [models/](models/) | Model registry, tiers and triage, provider middleware, evaluators, and the Codex proxy. |
+| [workspace/](workspace/) | The optional per-seat file workspace: the `bash` tool, its folders, and the record and note store. |
 | [agents/](agents/) | Each agent family. Strategists have their own subfolder. |
-| [platform/](platform/) | What surrounds the agents: the web dashboard, tracing and logs, and video capture. |
+| [platform/](platform/) | The web dashboard, tracing and logs, and video capture. |
 
-A good reading order for a new developer:
+Suggested reading order:
 
-1. [Agents](framework/agent-framework.md) and [Runs](framework/runs.md), to learn how one agent call works.
+1. [Agents](framework/agent-framework.md) and [Runs](framework/runs.md): how one agent call works.
 2. [Strategists](agents/strategists/overview.md), the agents that play the game.
 3. [Model configuration](models/configuration.md), to run with your own models.
-4. [Observability](platform/observability.md), to see what an agent actually did.
+4. [Observability](platform/observability.md), to see what an agent did.
 
 ## Source layout
-
-Paths in these pages are relative to `vox-agents/` unless they say otherwise.
 
 | Folder | Holds |
 | --- | --- |

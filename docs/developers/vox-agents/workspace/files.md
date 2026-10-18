@@ -50,10 +50,10 @@ Rules:
 
 ### Guide files
 
-Each folder an agent can write gets an `AGENTS.md` guide:
+Writable game and shared folders get an `AGENTS.md` guide:
 
 - **Shared folders.** The guide is created once on disk and never overwritten, so agents and players can edit it.
-- **Game notes.** The guide lives in the store and is seeded only when missing, so existing games keep their guide. If a command that can write finds it missing, the default is written back as part of that command, and the guide returns after an agent deletes it or a rewind drops it. The default (`workspaceGuide` in `src/utils/workspace/player-workspace.ts`) says when to write a note: a plan that spans several turns and its target turns, a promise to another civilization, a threat to watch, or a lesson from a decision that went wrong. It asks agents to keep one living file, such as `plan.md`, up to date instead of adding a new file every turn, and not to copy report data or decision rationale, which agents already see. It notes which notes they see at the start of each run. When the seat has no writable shared folder, it also asks agents to keep generalized lessons in a `lessons/` folder inside the game notes.
+- **Game notes.** The guide lives in the store and is seeded only when missing, so existing games keep their guide. A writing command that finds it missing restores the default, and the guide returns after an agent deletes it or a rewind drops it. The default text, `workspaceGuide` in `src/utils/workspace/player-workspace.ts`, covers when a note is worth keeping, how to maintain one living file instead of a new file each turn, and which notes an agent sees at the start of each run.
 
 Players read the game notes, including the guide, by exporting the store (see [Reading the store from outside](store.md#reading-the-store-from-outside)).
 
@@ -63,7 +63,7 @@ Players read the game notes, including the guide, by exporting the store (see [R
 
 The tool description covers only shell mechanics: where each call starts, which commands exist, how files are written, how to calculate, and what a result contains.
 
-**JavaScript** runs through `js-exec` in just-bash's QuickJS sandbox, with a 64 MB memory limit and a 30-second timeout. Agents use it for calculations because `$(( ))` handles only whole numbers. Scripts see the same mounts through the `fs` module, so read-only folders still reject writes and note changes are committed like any other command. They cannot reach the real disk or the network. It does not list folders. The records directions message names the mounted folders and which ones the agent can write, and the description is the same for every seat.
+**JavaScript** runs through `js-exec` in just-bash's QuickJS sandbox, with a 64 MB memory limit and a 30-second timeout. Agents use it for calculations because `$(( ))` handles only whole numbers. Scripts see the same mounts through the `fs` module, so read-only folders still reject writes and note changes are committed like any other command. They cannot reach the real disk or the network. The tool description is the same for every seat; the records directions message lists mounted folders and permissions.
 
 Each output stream is capped at 30,000 characters (`workspaceOutputLimit`), and a cut stream ends with a note on how to read the rest. The model receives the result as plain text: stdout first, then stderr and the exit code only when they are present. Telemetry keeps the full result object.
 
@@ -77,8 +77,6 @@ With files on, workspace work and the final decision share one budget of steps:
 
 Each step is a full model call, while commands are cheap, so the prompts ask agents to run bash calls in parallel or as one combined script.
 
-A briefer ignores text from a step that also calls bash, so a line like "checking notes" does not end the briefing.
-
 ## What else changes with files on
 
 | Feature | Page |
@@ -86,8 +84,6 @@ A briefer ignores text from a step that also calls bash, so a line like "checkin
 | The model gets a short reminder on keeping notes, the step budget, and reading large files. | [Capability reminder](../models/middleware.md#capability-reminder) |
 | The records directions list the folders and explain the turn folders. A separate message shows the latest note with the names of the five before it. | [File mode](../framework/prompts.md#file-mode) |
 | The run's last initial message becomes a cache anchor. | [Caching](../framework/caching.md) |
-| Old bash output is dropped when the request gets large. | [Compaction](../framework/compaction.md) |
-
-The compaction threshold is the model's `continuityThreshold` option: 300,000 tokens for Claude Code, Codex, OpenAI, and Anthropic models, and 100,000 otherwise. Runs without files never compact.
+| Old bash output is dropped when the request gets large, per the model's `continuityThreshold`. | [Compaction](../framework/compaction.md) |
 
 File access never comes from CLI host tools. `hostTools` accepts only `Web` (see [Model configuration](../models/configuration.md#host-tools-for-cli-models)).

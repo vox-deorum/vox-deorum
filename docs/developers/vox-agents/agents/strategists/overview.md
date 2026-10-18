@@ -2,7 +2,7 @@
 
 Strategists are the agents that play the game. Each turn (or as often as pacing allows), a strategist reads its civilization's situation and steers it: grand strategy, research, policies, diplomatic stances, and AI flavors. It does this through the [MCP server's action tools](../../../mcp-server/tools.md).
 
-Strategists do not move units or manage cities. The game's own AI keeps doing that. A strategist's choices act as *influence* on the in-game AI (see [influence.md](../../../mcp-server/influence.md)), like a leader setting priorities for their generals.
+Strategists do not move units or manage cities. The game's own AI keeps doing that. A strategist's choices act as _influence_ on the in-game AI (see [influence.md](../../../mcp-server/influence.md)), like a leader setting priorities for their generals.
 
 ```
 StrategistSession (one game)
@@ -30,8 +30,8 @@ All strategists extend `Strategist` (`src/strategist/strategist.ts`) and registe
 | `null-strategist` | Resets the in-game AI to a neutral baseline every decision: clears strategies or balances flavors, and sets persona values to the midpoint. This separates the effect of steering at all from the effect of good steering. |
 | `simple-strategist` | The main strategist. It reads the game state and decides directly. |
 | `simple-strategist-briefed` | Adds a [briefer](../support-agents.md#briefers) that condenses the reports first, so the strategist's context stays small when the event history is long. |
-| `simple-strategist-staffed` | Runs three specialized briefers (military, economy, diplomacy) in parallel and combines their reports. The most thorough option, and the most expensive. Uses the simple briefer when there is little to summarize. |
-| `simple-strategist-learned` | The staffed strategist plus memory: a `find-episodes` tool asks for similar situations from past games, answered from the [archivist's](../archivist.md) episode database and added to the next turn's context. |
+| `simple-strategist-staffed` | Uses the simple briefer for small event windows or turn 1 and earlier; otherwise combines three specialized briefings in parallel. See [Briefers](../support-agents.md#briefers). |
+| `simple-strategist-learned` | The staffed strategist plus memory: `find-episodes` requests similar situations from the [archivist's](../archivist.md) database for the next decision's context. |
 | `evaluator-strategist` | Decides with one evaluation call. Flavor mode only, and not offered in setup. See [Evaluator strategist](evaluator-strategist.md). |
 | `human-strategist` | Puts a person in the seat. See [Human control](human-control.md). |
 
@@ -41,16 +41,16 @@ All strategists extend `Strategist` (`src/strategist/strategist.ts`) and registe
 
 ### Briefings come first
 
-Briefings must be in the opening prompt, so the briefed and staffed strategists request them in code before the first model call, through `requestBriefing()` in `src/briefer/briefing-utils.ts`. They are not tool calls. Concurrent requests for the same briefing share one generation.
+Briefings must be in the opening prompt, so the briefed and staffed strategists request them in code before the first model call. They are not tool calls. Briefing generation, request sharing, and caching are covered on the [briefers](../support-agents.md#briefers) page.
 
 ## Decision modes
 
 The session config picks one of two modes:
 
-| Mode | Decisions set |
-| --- | --- |
-| `Strategy` | Explicit strategies. |
-| `Flavor` | The in-game AI's flavor weights. |
+| Mode       | Decisions set                    |
+| ---------- | -------------------------------- |
+| `Strategy` | Explicit strategies.             |
+| `Flavor`   | The in-game AI's flavor weights. |
 
 ## What a decision leaves behind
 

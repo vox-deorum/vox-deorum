@@ -59,7 +59,7 @@ Evaluators live in the same `llms` registry as chat models, with the same alias 
 | `evaluator` | Triage for every agent that has it on | Triage is skipped, never sent to `default`. A warning appears at session start if triage was turned on. |
 | `<agent>` | Agents that answer by evaluation (`diplomatic-analyst`, `evaluator-strategist`) | Runs on `default` through the chat adapter |
 
-In the dashboard, Settings has an Evaluator dropdown for the shared `evaluator` alias, and the Setup wizard saves its optional Judge AI there.
+Settings has an Evaluator dropdown for the shared alias. See [Setup wizard](configuration.md#the-setup-wizard) for the Judge AI mapping.
 
 **Input limit.** The `maxInputTokens` model option caps the state size in estimated tokens (`inputTokenLimit` in `src/utils/models/models.ts`).
 

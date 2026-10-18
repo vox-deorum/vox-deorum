@@ -1,6 +1,6 @@
 # Observability
 
-LLM agents fail in ways a debugger cannot show: a slightly wrong prompt, a misread tool result, a decision that made sense given what the model saw. So Vox Agents records everything. Every agent run is traced with OpenTelemetry, and every span lands in a SQLite database you can query.
+Vox Agents records agent requests, responses, tools, and decisions with OpenTelemetry. Spans are stored in SQLite for live debugging and post-game analysis.
 
 ```
 agent runs ──spans──► SQLite (one file per seat) ──► dashboard, telepathist, oracle, archivist
@@ -26,7 +26,7 @@ Each row stores the span's identifiers and hierarchy (trace, span, parent), name
 What the spans contain is the valuable part:
 
 - **Agent executions** record their starting tier, even when triage does not run or the system prompt is empty. As the run gets that far, they also record the system prompt, the messages, the active tools, and the model for each step.
-- **Agent triage** records the chosen tier and where it came from: an evaluator, a shortcut, a caller, or a failed hook. An optional note explains it. See [Tiers and triage](../models/tiers-and-triage.md#telemetry).
+- **Agent triage** records the chosen tier, where it came from, and an optional note (see [Tiers and triage](../models/tiers-and-triage.md#telemetry)).
 - **Evaluations** record their purpose (`triage` or `execution`), the requesting agent, the state, questions, answers, and token usage. A triage evaluation is nested under its agent span, so its cost and latency can be analyzed alongside the resulting tier.
 - **Tool calls** record their inputs and outputs.
 - **Turn-level spans** record pacing decisions, completion status, and token usage (input, reasoning, and output, counted per step and accumulated per context).
@@ -42,9 +42,9 @@ The hierarchy follows a few conventions worth knowing before writing queries. Th
 
 ## Logging
 
-Logging is Winston throughout (`src/utils/logger.ts`; `console.log` is banned in production code). Each module creates a named logger. Output goes to a color-coded console, to `logs/error.log` and `logs/combined.log`, and, when the web server is up, to every connected dashboard via the SSE log stream, where the Logs view filters by source and level in real time.
+Modules use named Winston loggers from `src/utils/logger.ts`; `console.log` is banned in production code. Output goes to the console, `logs/error.log`, and `logs/combined.log`. When the web server runs, an SSE stream feeds the dashboard's Debug page, with source and level filters.
 
-Startup version information comes from `version.json`. `src/utils/config/version.ts` only looks up a Git commit hash when the project root contains `.git` metadata, and silently skips it when Git is missing or the lookup fails. Installed builds need no Git.
+Startup version information comes from `version.json`. `src/utils/config/version.ts` adds a Git commit hash only when the project root has `.git` metadata, and skips it silently otherwise, so installed builds need no Git.
 
 ## Inspecting agent behavior
 
@@ -55,4 +55,4 @@ The usual workflow when an agent does something puzzling:
 3. For a conversational view of the same record, open a [telepathist](../agents/telepathist.md) chat on the database and ask. `get-conversation-log` reconstructs the full exchange per agent.
 4. To test a hypothesis ("would it have attacked with a different briefing?"), feed the turn to the [oracle](../agents/oracle.md) and replay it with the prompt changed.
 
-Telemetry databases are plain SQLite. Nothing stops ad-hoc analysis with any SQLite client, and the schema in `src/utils/telemetry/schema.ts` is small enough to read in one sitting.
+Use any SQLite client for ad-hoc analysis. The schema is in `src/utils/telemetry/schema.ts`.

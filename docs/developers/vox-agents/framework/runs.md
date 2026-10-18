@@ -61,14 +61,14 @@ Spans record `tokens.input` as the full input count. When the provider reports c
 
 Tools come from two places.
 
-1. **MCP tools.** `registerTools()` fetches the [MCP server's tools](../../mcp-server/tools.md) and wraps each one for the AI SDK. The wrapper fills in values like player ID and turn, and formats JSON results as Markdown. The definitions are cached on disk, so a context can start offline with `loadToolCache()`.
+1. **MCP tools.** `registerTools()` fetches the [MCP server's tools](../../mcp-server/tools.md) and wraps each for the AI SDK. The wrapper fills fields such as player ID and turn and attaches Markdown rendering hints to results. The output path converts those results for the model. Definitions are cached on disk, so a context can start offline with `loadToolCache()`.
 2. **Agent tools.** Every registered agent is also offered as a tool named `call-{name}` (see below).
 
 Code can also skip the model and call a tool directly with `callTool()`. It takes explicit parameters and does not need a run, so setup and shutdown code can use it.
 
 ## Agents calling agents
 
-The wrapping is in `src/utils/tools/agent-tools.ts`. Each `call-{name}` tool takes the agent's input schema plus an optional `Tier` (`small`, `default`, or `large`). A tier picks the called agent's model directly, without triage. The wrapper removes `Tier` before passing the input on.
+The wrapping is in `src/utils/tools/agent-tools.ts`. Each `call-{name}` tool uses `handoffSchema`, then `inputSchema`, then a generic `Prompt` schema as fallbacks, plus an optional `Tier` (`small`, `default`, or `large`). A tier picks the called agent's model directly, without triage. The wrapper removes `Tier` before passing the input on.
 
 - If the called agent is fire-and-forget, the tool checks the input, answers "submitted", and the agent continues in a detached run.
 - Otherwise the caller waits for the typed result.

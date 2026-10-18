@@ -5,10 +5,8 @@ The evaluator strategist plays a seat without a conversation. Each decision is o
 ```mermaid
 flowchart TD
   A["Game state<br/>(same reports as the simple strategist)"] --> B["Markdown state<br/>system prompt + reports"]
-  B --> C{"Over 90% of the<br/>input limit?"}
-  C -->|yes| D["Apply the next trim step"] --> C
-  D -.->|when a step ran| T["strategist.trim on the agent span"]
-  C -->|no| E["One evaluation<br/>(questions from get-options and tool schemas)"]
+  B --> C["Trim to the configured budget"]
+  C --> E["One evaluation<br/>(questions from get-options and tool schemas)"]
   E --> F["Compare answers with in-game values"]
   F --> G["Call only the tools that change something"]
   G --> H["strategist.decision on the agent span"]
@@ -29,7 +27,7 @@ The state is one Markdown text, built by `buildStrategistEvaluationState`:
 1. **System prompt.** Evaluation calls have no separate system slot, so the text starts with the agent's `getSystem` prompt. It reuses the simple strategist's explanation of the game, without the lines about calling tools, and adds a short section on what the answers decide.
 2. **Reports.** The same Markdown the simple strategist sees, from `renderStrategistReports` in `src/strategist/strategy-parameters.ts`: situation, your civilization, options, current strategies, victory progress, players, cities, military, events since the last decision, and the turn context.
 
-When the text is over 90% of the model's input limit, a trim ladder shortens it step by step until it fits, and a closing note tells the model what was left out. See [Evaluator trimming](evaluator-trimming.md).
+The shared [trim ladder](evaluator-trimming.md) shortens oversized state to the configured budget and adds a note describing the cuts.
 
 ## What it asks
 
@@ -83,7 +81,7 @@ The record shapes are in `src/types/evaluation.ts`. `labelEvaluation` in `src/ut
 
 ## Tests
 
-| Area | Files in `vox-agents/tests/mock/` |
-| --- | --- |
-| Questions and state building | `strategist/evaluator-questions.test.ts` |
-| Decisions and calls | `strategist/evaluator-strategist.test.ts` |
+| Area                         | Files in `vox-agents/tests/mock/`         |
+| ---------------------------- | ----------------------------------------- |
+| Questions and state building | `strategist/evaluator-questions.test.ts`  |
+| Decisions and calls          | `strategist/evaluator-strategist.test.ts` |

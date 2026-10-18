@@ -13,16 +13,20 @@ This page covers sessions, how a session launches the game, the global registrie
 
 ## Sessions
 
-`VoxSession` (`src/infra/vox-session.ts`) is the base class. Each session moves through four states, which the dashboard shows and controls:
+`VoxSession` (`src/infra/vox-session.ts`) is the base class. The dashboard reports these states, defined by `SessionState` in `src/types/api.ts`:
 
-| State | Meaning |
-| --- | --- |
-| starting | Launching the game and preparing players. |
-| running | Playing. |
-| recovering | Relaunching after a crash. |
-| stopping | Shutting down cleanly. |
+| State      | Meaning                                          |
+| ---------- | ------------------------------------------------ |
+| starting   | Launching the game and preparing players.        |
+| running    | Playing.                                         |
+| recovering | Relaunching after a crash.                       |
+| stopping   | Shutting down cleanly.                           |
+| stopped    | Inactive or finished. This is the initial state. |
+| error      | Failed, with an error message.                   |
 
-`StrategistSession` is the main implementation (see [Game session](../agents/strategists/game-session.md)). The stages of the [narrator pipeline](../platform/media.md#the-narrators-pipeline) are sessions too.
+Pausing is a separate flag: a paused session stays running, finishes work already in progress, and holds new work until resumed.
+
+`StrategistSession` is the main implementation (see [Game session](../agents/strategists/game-session.md)). The implemented assemble stage of the [narrator pipeline](../platform/media.md#the-narrators-pipeline) is a session too.
 
 ## Launching the game
 

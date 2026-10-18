@@ -4,25 +4,17 @@ The archivist turns finished games into experience. It batch-processes an archiv
 
 That database is what lets the retrieval-augmented strategist (`simple-strategist-learned`, see [Strategists](strategists/overview.md)) ask "have I been in a situation like this before, and how did it turn out?"
 
-The source lives in `src/archivist/`. The entry point is:
+The source lives in `src/archivist/`. From `vox-agents/`, run:
 
 ```bash
 npm run archivist -- -a <archive-path> -o <output.duckdb>
 ```
 
-The exact episode table schema is documented in [schema.md](../../../../vox-agents/docs/developers/vox-agents/schema.md).
+See the [episode database reference](archivist-schema.md) for tables, metric scales, and feature vectors. The SQL schema is defined in `src/archivist/pipeline/writer.ts`.
 
 ## What an episode is
 
-An **episode** is one player-turn. It records:
-
-- **Identity**: game, turn, player, civilization, and whether the player ultimately won.
-- **Raw state**: era, grand strategy, diplomatic standing, score, cities, yields, military.
-- **Computed features** that make episodes comparable across games: shares of tourism, military, and population normalized against the other players, per-population yield rates, gaps to the best rival, and victory-progress percentages.
-- **Two numeric vectors**, one describing the player's own game state and one describing its neighbors.
-- **Telepathist summaries** where available: the [telepathist's](telepathist.md) situation and decision summaries, plus a text embedding of the situation abstract.
-
-A companion `game_outcomes` table records each game's winner, victory type, and final turn, so retrieval can report how a situation resolved without running off the end of the game.
+An **episode** is one player-turn: its identity, raw state, comparable metrics, feature vectors, and available [telepathist summaries](telepathist.md). The companion `game_outcomes` table stores the game's winner, victory type, and final turn. The [database reference](archivist-schema.md) explains the fields and their scales.
 
 ## The pipeline
 
@@ -32,17 +24,17 @@ Processing runs in three phases (`src/archivist/pipeline/`). It is resumable: al
 
 **Phase B, landmark selection.** Retrieval doesn't search every episode. Per player, a greedy max-diversity selection marks roughly one episode in ten as a **landmark**: it seeds with the most atypical episode, then repeatedly adds the candidate least similar to those already chosen. This keeps the search space small while still spanning the variety of situations the player saw.
 
-**Phase C, summaries and embeddings** (LLM). For landmarks and the future turns used to measure their outcomes, the pipeline generates telepathist turn summaries where they don't already exist (reusing the telepathist's preparation machinery) and embeds each situation abstract with the configured embedding model. Both steps are cached and idempotent. `--skip-telepathist` and `--skip-embeddings` cut them off for quick validation runs.
+**Phase C, summaries and embeddings** (LLM). The pipeline generates missing telepathist summaries for landmarks and their future outcome turns, then embeds landmark situation abstracts with the configured embedding model. Existing summaries and embeddings are reused. `--skip-telepathist` and `--skip-embeddings` skip those steps for quick validation runs.
 
-After a run, the console opens the DuckDB UI for inspection (suppress with `--no-ui`). Other flags limit how many games to process, target a single game, or override the summarizer model.
+The console starts the DuckDB UI for inspection during and after processing (suppress with `--no-ui`). Other flags limit how many games to process, target a single game, or override the summarizer model.
 
 ## Retrieval
 
 `findEpisodes()` (`src/archivist/retrieval/reader.ts`) answers a query describing a current situation in three steps:
 
-1. **Score** landmark episodes by fuzzy attribute proximity (era, civilization, grand strategy, diplomatic posture) combined with vector similarity (game-state and neighbor vectors, plus the situation embedding when the query provides text).
-2. **Fetch outcomes** for each candidate: snapshots at horizons of roughly 5 to 30 turns later, capped at the game's final turn, with the deltas in shares and per-population rates and the eventual victory result.
-3. **Diversify** with a final pass, so the returned cases aren't five copies of the same story.
+1. **Score.** Pre-filter summarized landmarks by scalar attributes, then rank candidates by game-state and neighbor vector similarity, adding text similarity when the query provides a situation abstract. The scalar score only selects the initial pool.
+2. **Diversify.** Select a varied result set, three episodes by default.
+3. **Fetch outcomes.** Find summarized turns near horizons of 5, 10, 20, and 30 turns, allowing one turn either side. Missing horizons are omitted, each future turn is used once, and the furthest returned outcome hides its decision abstract. Results include metric deltas and the game's eventual victory result.
 
 Two consumers sit on top:
 

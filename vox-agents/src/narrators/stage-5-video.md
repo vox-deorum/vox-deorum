@@ -1,4 +1,6 @@
-# Stage 5: Video — Stitch Final Output
+# Stage 5 design: Build the final video
+
+This proposed stage combines footage and narration. Its types and configuration below describe the intended implementation. See the [pipeline status](overview.md) for the available stages.
 
 ## Contract
 

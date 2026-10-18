@@ -1,4 +1,6 @@
-# Stage 2: Select — Choose Episodes for the Video
+# Stage 2 design: Select episodes
+
+This proposed stage selects footage for narration. Its types, agents, and configuration below describe the intended implementation. See the [pipeline status](overview.md) for the available stages.
 
 ## Contract
 

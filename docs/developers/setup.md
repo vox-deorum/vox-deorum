@@ -28,7 +28,7 @@ cd vox-deorum
 npm install --include=dev
 ```
 
-Because of npm workspaces, **all dependencies for `bridge-service`, `mcp-server`, and `vox-agents` install together** from the root. Never run `npm install` inside a single workspace. The same rule applies when adding a package.
+Dependencies for `bridge-service`, `mcp-server`, and `vox-agents` install together from the root through npm workspaces. Run installs and package additions from the root. The dashboard is a separate package outside those workspaces, so also run `npm install --prefix vox-agents/ui --include=dev` before building it.
 
 Build all three TypeScript services at once:
 

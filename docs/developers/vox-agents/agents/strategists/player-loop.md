@@ -8,7 +8,7 @@ PlayerDoneTurn
    ├─ refresh game state (MCP knowledge tools), write seat records
    ├─ pacing: decide now?
    │     ├─ no  ──► keep-status-quo   (events roll into the next decision)
-   │     └─ yes ──► strategist run     (sees all events since the last decision)
+   │     └─ yes ──► strategist run     (inline event window or workspace records)
    └─ on success, move the event window forward
 ```
 
@@ -17,7 +17,7 @@ PlayerDoneTurn
 Pacing decides which turns get a full decision. It mixes two triggers:
 
 - **Schedule.** Every N turns (`everyTurns`, default 1).
-- **Interruptions.** Something important happened, such as a war declaration or a finished wonder.
+- **Interruptions.** War or peace, completed research, policy adoption, or an important relayed message can trigger a decision.
 
 On a skipped turn, the player still calls `keep-status-quo`, so the in-game AI knows the LLM is deliberately staying the course.
 
@@ -35,7 +35,7 @@ Each processed turn runs in its own [run](../../framework/runs.md), carrying tha
 
 ## Event windows
 
-The strategist sees all events since its last decision, not just this turn's. A rolling cursor tracks where the last decision ended, so events from skipped turns fold into the next decision instead of being lost.
+For inline strategists, a rolling cursor tracks the last completed decision so events from skipped turns fold into the next decision's report. [File-mode strategists](../../framework/prompts.md#file-mode) read events from workspace records and receive the last-decision turn to guide those reads.
 
 ```
 turn:      38    39    40    41
@@ -54,7 +54,7 @@ Each refresh's own per-turn `events` slice never changes. The merged report is b
 
 ### When the events do not fit
 
-When a decision spans several turns, `withEventWindowFallback` in `src/strategist/strategy-parameters.ts` builds a merged event report. If the model's context overflows, it removes events by importance across the whole window and tries again.
+For inline decisions, `withEventWindowFallback` in `src/strategist/strategy-parameters.ts` builds a merged event report. On overflow it removes events by importance across the whole window and retries. A file-mode decision runs once; overflow leaves it incomplete for retry on a later turn.
 
 Removal order, least important first:
 

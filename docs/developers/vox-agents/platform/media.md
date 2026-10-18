@@ -1,9 +1,6 @@
 # Media: capture and narration
 
-Vox Deorum can record or livestream its games and turn the recordings into narrated video. Two systems cooperate:
-
-- **OBS Studio capture**, driven automatically by the strategist session.
-- The **narrators pipeline**, which assembles recorded segments and game knowledge into finished video content.
+Vox Deorum records or livestreams games through OBS Studio, driven by the strategist session. The narrator pipeline currently assembles recordings into episode manifests; later stages for narrated video are planned.
 
 ## Production modes
 
@@ -11,7 +8,7 @@ A [game session's](../agents/strategists/game-session.md) config carries a `prod
 
 | Mode | Animations | OBS | Notes |
 | --- | --- | --- | --- |
-| `none` (default) | off | no | Stays in strategic view during autoplay for speed. |
+| `none` (default) | skipped in observe mode | no | Uses strategic view during autoplay for speed. |
 | `test` | on | no | Plays animations without capture. |
 | `livestream` | on | yes | Streams via OBS. |
 | `recording` | on | yes | Captures segment-based video via OBS. |
@@ -35,7 +32,7 @@ Capture details:
 
 Production then follows a simple lifecycle: start, pause, resume, stop. Pausing means different things by mode: recordings pause the file so there is no dead air, while livestreams switch to the pause scene.
 
-Recordings are organized per game. When the session learns its game ID, the manager redirects OBS output to a `{recordings}/{gameID}/` directory, restored on shutdown. A health monitor polls OBS every few seconds and, on connection loss, relaunches and reconnects with bounded retries, resuming production if it was active. The manager registers with the process manager, so Ctrl-C still stops production and restores OBS settings.
+Recordings are organized per game. When the session learns its game ID, the manager redirects OBS output to a `{recordings}/{gameID}/` directory, restored on shutdown. Healthy connections are checked every ten seconds. Failures trigger relaunch and reconnection attempts with a growing delay capped at sixty seconds, continuing until recovery or shutdown. The manager resumes active production after reconnecting and registers with the process manager for cleanup.
 
 Configuration lives under `obs` in `config.json` (executable path, WebSocket port and password, profile, scenes, output directory), with environment-variable overrides. This path needs a recent OBS Studio on Windows with the obs-websocket v5 server enabled.
 
@@ -45,9 +42,9 @@ Recording a whole game produces hours of dead time, so the strategist session ne
 
 The game's render events drive a small state machine:
 
-1. A segment starts when the in-game top panel switches to a player, the moment something noteworthy is being shown (see the civ5-mod [ui.md](../../civ5-mod/ui.md)).
-2. When animation activity suggests the action is ending, a grace timer arms.
-3. If nothing else happens before the timer expires, the segment stops.
+1. A major-player panel switch starts a segment (see the civ5-mod [ui.md](../../civ5-mod/ui.md)).
+2. Each major-player panel switch or animation-start event restarts a ten-second grace timer.
+3. When the timer expires, the segment stops. Minor-player switches are logged within active segments and do not extend the timer.
 
 In livestream mode the controller passes straight through to ObsManager.
 
@@ -55,22 +52,15 @@ Alongside the video files, the controller writes `segments.jsonl` in the recordi
 
 ### Archiving the DLL recording
 
-When the MCP server archives a finished game, it also packages the DLL's recording as `archive/<experiment>/<game-id>.zip`, then tries to remove the source folder.
+The MCP server packages the DLL recording as `archive/<experiment>/<game-id>.zip`, with one game-ID root folder, excluding `tactical-training/` and storing `stream.bin` without compression. `archiveRawCaptureRecording` in `mcp-server/src/utils/knowledge/archive.ts` calls `scripts/utilities/archive-raw.mjs` for packaging.
 
-- The zip has one `<game-id>/` root folder, leaves out `tactical-training/`, and stores `stream.bin` files without compression.
-- The archive script rebuilds the zip from the source recording every time it runs. It writes a hidden `.<game-id>.<pid>.partial` file next to the zip and renames it over the old zip only after writing finishes, so a failed or killed run leaves any earlier zip intact. On Windows it holds an exclusive handle on the partial file, blocking copies by tools such as robocopy.
-- If the old zip is open in another process when the rename happens (for example, a copy in progress on Windows), packaging fails and the source stays.
-- If packaging fails, the source folder stays. Cleanup errors are logged without failing the rest of the archive.
-- A failed run tries to remove its partial file. If that cleanup fails or the process is killed, delete the leftover `.partial` file by hand.
-- After a successful package, the MCP server renames the source folder to a hidden `.<game-id>.<timestamp>.removing` folder before deleting it. A deletion that stops partway therefore never leaves an incomplete recording under the game ID for a later run to package. A leftover `.removing` folder can be deleted by hand.
+The utility replaces the previous zip only after a temporary archive is complete. A packaging failure preserves the source and any earlier zip. After success, the source is renamed to a hidden `.removing` folder before deletion. Cleanup failures are logged; leftover `.partial` files or `.removing` folders can be removed by hand.
 
-To package a recording by hand, run `npm run archive:raw -- SOURCE_ROOT OUTPUT_DIRECTORY` from the repository root.
+To package manually, run `npm run archive:raw -- SOURCE_ROOT OUTPUT_DIRECTORY` from the repository root.
 
 ## The narrators pipeline
 
-The narrators system (`src/narrators/`) is a five-stage batch pipeline that turns a recorded game (the segments plus the game's knowledge database) into narrated video, from short clips to full-game documentaries. Unlike the [telepathist](../agents/telepathist.md), which speaks from one player's perspective, the narrator is omniscient: it sees all players and all events.
-
-Each stage is its own `VoxSession` subclass and is independently runnable. Stages communicate only through files in a shared workspace (managed by `NarratorWorkspace` in `src/narrators/workspace.ts`), so intermediate products can be inspected or hand-edited between stages.
+The narrator design in `src/narrators/` has five stages, using recordings and game knowledge from all players. Assemble is implemented; stages 2 through 5 are proposals. `NarratorWorkspace` in `src/narrators/workspace.ts` manages the intermediate files so they can be inspected or edited between stages.
 
 | # | Stage | LLM | What it does |
 | --- | --- | --- | --- |
@@ -80,4 +70,4 @@ Each stage is its own `VoxSession` subclass and is independently runnable. Stage
 | 4 | Voice | no | Synthesizes the narration through a pluggable text-to-speech provider. |
 | 5 | Video | no | Stitches the selected segments and audio into the final video with ffmpeg. |
 
-Stage 1 is implemented (`src/narrators/sessions/assemble-session.ts`); stages 2 through 5 are designed but not yet built. The stage-by-stage design docs live with the source, in `src/narrators/overview.md` and `stage-1-assemble.md` through `stage-5-video.md`, and are the reference when implementing or modifying a stage.
+Assembly runs as a `VoxSession` in `src/narrators/sessions/assemble-session.ts`. The [narrator guide](../../../../vox-agents/src/narrators/overview.md) covers running it and links to the later-stage designs.

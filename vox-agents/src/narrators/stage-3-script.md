@@ -1,4 +1,6 @@
-# Stage 3: Script — Generate Narration Scripts
+# Stage 3 design: Write narration scripts
+
+This proposed stage writes narration for selected footage. Its types, agents, and configuration below describe the intended implementation. See the [pipeline status](overview.md) for the available stages.
 
 ## Contract
 

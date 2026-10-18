@@ -1,4 +1,6 @@
-# Stage 4: Voice — Generate TTS Audio
+# Stage 4 design: Generate speech
+
+This proposed stage synthesizes narration audio. Its types, providers, and configuration below describe the intended implementation. See the [pipeline status](overview.md) for the available stages.
 
 ## Contract
 

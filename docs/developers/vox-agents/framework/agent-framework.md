@@ -2,7 +2,7 @@
 
 Every agent in Vox Agents extends one base class, `VoxAgent` (`src/infra/vox-agent.ts`). An agent is a set of hooks: small methods the framework calls while it runs a conversation with a model. The agent says what the prompt is, which tools it may use, and when it is done. The framework does the rest.
 
-An agent object does not stay alive between calls or hold game state of its own. State lives in the run that calls it (see [Runs](runs.md)).
+The registry shares agent instances across calls. Keep execution state in the context and its runs, so concurrent calls do not overwrite each other (see [Runs](runs.md)).
 
 ## One agent call, in short
 
@@ -18,7 +18,7 @@ Each loop pass is called a **step**: one model call plus the tool calls it asked
 
 | Hook | What it decides |
 | --- | --- |
-| `getSystem()` | The system prompt. Returning an empty string means "nothing to do" and ends the call before anything else runs. |
+| `getSystem()` | The system prompt. An empty string ends the call before initial messages or model selection. Run tools have already been resolved. |
 | `getInitialMessages()` | The opening messages. For a strategist, this is the formatted game state. |
 | `triage()` | Optional. Rates the prepared prompt to pick a model tier. The choice is readable as `context.currentTriage`. See [Tiers and triage](../models/tiers-and-triage.md). |
 | `getModel()` | The model to use, based on the tier and the agent's `modelSize`. |
@@ -34,7 +34,7 @@ The framework prepares the system prompt and initial messages once and shares th
 
 ## When an agent stops
 
-Most agents list `completionTools`. The loop ends once one of them succeeds. For example, a strategist stops after `set-strategy` or `keep-status-quo`. A maximum step count stops runaway loops.
+Most agents list `completionTools`. The loop ends once one succeeds. A simple strategist finishes through `set-strategy`, `set-flavors`, or `keep-status-quo`. A maximum step count stops runaway loops.
 
 Some providers (Anthropic and Codex) refuse a request that forces a tool call. For those, the middleware relaxes the request to "tools allowed", and the reminder at the end of every step states the requirement in words instead. That reminder is added for every provider, so the prompt reads the same everywhere.
 

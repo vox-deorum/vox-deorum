@@ -8,7 +8,7 @@ Given a CSV of real game turns, it re-runs each turn's original LLM call, extrac
 recorded telemetry ──retrieve──► original prompts (JSON) ──replay with changes──► new decisions (CSV, trails)
 ```
 
-The source lives in `src/oracle/`. Run experiments with:
+The source lives in `src/oracle/`. From `vox-agents/`, run:
 
 ```bash
 npm run oracle -- -c <experiment.js>
@@ -40,19 +40,23 @@ Only the last attempt at each turn is replayed:
 - **Reloads.** A reload also discards attempts. Say a seat played to turn 60, then the player loaded a turn-50 save and played to turn 55. Every turn recorded before the reload for turns 50 and later is discarded. Turns 56 to 60 are never replayed, and their rows come back as errors without the previous-turn fallback.
 - **One database.** The rule reads one telemetry database, and each database belongs to one strategist. A reload played under a different strategist is not visible to it.
 
-Retrieved JSON and replay trails made before this rule existed may still hold discarded turns. Run retrieval again and replay with `--forceReplay` to rebuild them.
+Retrieved JSON and replay trails are never pruned on their own, so an older file may still hold discarded turns. Run retrieval again and replay with `--forceReplay` to rebuild it under the current rules.
 
 ## Experiments
 
-An experiment is an ES module exporting an `OracleConfig`. See `src/oracle/types.ts` for the exact shape and `vox-agents/experiments/` for examples. Beyond the required CSV path and experiment name, the main controls are:
+An experiment is an ES module exporting an `OracleConfig`, defined in `src/oracle/types.ts`. See `experiments/` for examples. It requires a CSV path and experiment name, with these controls:
 
-- **`modifyPrompt`** is the heart of the experiment. It receives the original system prompts, messages, active tools, model, and CSV row, and returns whichever of those it wants to override: rewrite one sentence of the system prompt, drop a briefing, hide a tool. Omitted fields keep their originals. It also carries the original turn's recorded `framing` (see _Tool framing_ below).
-- **`modelOverride`** redirects the replay to a different model, or to an _array_ of models. With an array, each row is replayed once per entry for side-by-side comparison. Duplicating a model in the array repeats the sample, with results distinguished by a repetition index. For Claude models (direct Anthropic, Claude Code, or Claude on another provider), repetitions share one cached prompt: the end of the prompt carries a cache breakpoint, and later repetitions of a row start only after the first one finishes, so they read its cache instead of all writing it at once. Batch mode skips the wait. Its third argument exposes the original turn's `{ framing }`, so an experiment can return a model with `options.framing` set to reproduce the source framing.
-- **`rewriteToolSchemas`** rewrites the tool descriptions and schemas the model sees, useful for terminology experiments.
-- **`toolChoice`** controls whether the replay model may choose whether to call a tool (`auto`, the default), must call at least one tool (`required`), or cannot call tools (`none`). With `required`, each step's closing reminder says a call is required, as it does for any agent. Anthropic and Codex do not accept `required` directly, so they receive `auto` at the provider boundary. A recorded first step from a `required` agent already ends with that reminder, so the replayed messages keep it under any setting.
-- **`completionTools`** names the tools that complete a strategist replay, identifies which tool decisions carry an extracted rationale, and tells the Anthropic and Codex completion-tool instruction which calls finish the turn. On continuation steps, Oracle also reminds the model to finish with the configured completion tools that remain active. It defaults to `set-strategy`, `set-flavors`, and `keep-status-quo`.
-- **`filter`** narrows which CSV rows run.
-- **`extractColumns`** pulls experiment-specific values out of each replay into extra CSV columns.
+| Control | Effect |
+| --- | --- |
+| `modifyPrompt` | Receives original system prompts, messages, tools, model, CSV row, and recorded framing. Returns the fields to override; omitted fields keep their originals. |
+| `modelOverride` | Chooses a model or array of models. Every row runs once per entry. Its third argument exposes the original `{ framing }` for use in `options.framing`. |
+| `rewriteToolSchemas` | Rewrites the tool descriptions and schemas the model sees, useful for terminology experiments. |
+| `toolChoice` | `auto` (default), `required`, or `none`. Required steps get a closing reminder; `required` becomes `auto` on the wire for Anthropic and Codex. Reminders already in recorded messages remain under any setting. |
+| `completionTools` | Calls that end a strategist replay and supply decision rationales. Provider instructions and continuation reminders name them. Defaults to `set-strategy`, `set-flavors`, and `keep-status-quo`. |
+| `filter` | Narrows which CSV rows run. |
+| `extractColumns` | Pulls experiment-specific values out of each replay into extra CSV columns. |
+
+Duplicate entries in `modelOverride` repeat the sample, identified by a repetition index. Claude models share a cache anchor at the end of the prompt. Later repetitions wait for the first to finish so they can reuse its cache; batch mode skips that wait.
 
 Replays run with limited concurrency and reuse existing trail files to skip rows already done.
 
@@ -60,13 +64,13 @@ Replays run with limited concurrency and reuse existing trail files to skip rows
 
 ### Tool framing
 
-Prompt-mode models don't call tools natively; the tool-rescue middleware strips native tools and injects a JSON tool-call protocol as a system message. For claude-code models, that protocol and the agent's own system prose are reframed from "tool" to "action": the CLI persona reasons in terms of actions, and the reframing keeps the game tools from reading as the CLI's native tools. Each replayed turn records the resolved framing as telemetry: `step.tool_framing`, either `'tool'` or `'action'`. The injected protocol block itself is deliberately **not** recorded; replay reconstructs it from the replay model's own framing, so there is nothing stored to drift out of sync.
+The [tool-rescue middleware](../models/middleware.md#prompt-mode-tool-calling) uses `tool` framing, or `action` for Claude Code. Telemetry records this as `step.tool_framing`. The injected protocol is rebuilt from the replay model's framing.
 
 Retrieve surfaces this on every row as `framing`. It is **informational**, because replay framing derives solely from the replay model: a prompt-mode model replaying a claude-code turn is told "tools", not "actions". To reproduce the original view deliberately, either return a model with `options.framing` set from `modelOverride`, or apply the exported `reframeToolWording` helper to the system prompt inside `modifyPrompt`. `framing` is `undefined` for turns that predate the telemetry, ran a native tool path, had no tools, or failed before recording.
 
 ### Workspace fields
 
-Every agent span records three workspace facts, and Retrieve carries them onto each row:
+Retrieve carries workspace metadata from the agent span onto each row:
 
 | Row field | Span attribute | Meaning |
 | --- | --- | --- |
@@ -74,13 +78,13 @@ Every agent span records three workspace facts, and Retrieve carries them onto e
 | `workspace` | `context.workspace` | The seat store's head commit just before the run's first model step, when files are on |
 | `prompts` | `context.prompts` | The custom prompt folder behind the recorded system text, or `false` |
 
-The execution loop (`src/infra/vox-execute.ts`) captures the commit after all preparation, so a staffed strategist's snapshot includes the briefings archived while its briefers ran. Every store starts with an empty commit, so even an early chat pins a version. A run that ends during preparation records no commit, and neither does an evaluation run, which reads no files. Whether a run used file mode follows from `files` and the recorded step tools. Rows from older telemetry, and retrieved files saved before these fields existed, default to files off and built-in prompts. `prompts` is for grouping results; replay ignores it, since the recorded system text already contains the custom prompt.
+The loop captures the commit after preparation, including archived briefings. Every store starts with an empty commit, so an early chat can still pin a version. Preparation failures and evaluation runs record no commit. File mode follows from `files` and the recorded tools. Missing metadata defaults to files off and built-in prompts. The `prompts` field groups results; replay uses the recorded system text.
 
 ## Where things land
 
-Outputs default under `temp/oracle/`: the per-experiment results CSV next to a directory of retrieved JSONs and replay trails. The replay's own OpenTelemetry database lands under `telemetry/oracle/`, which means a replayed experiment can itself be inspected with the telemetry browser like any live run.
+Outputs default under `temp/oracle/`: the per-experiment results CSV next to a directory of retrieved JSONs and replay trails. Replay telemetry goes under the app's telemetry root, in `oracle/` (`telemetry/oracle/` by default), and can be inspected in the telemetry browser.
 
-CLI flags override the output and telemetry directories and the target agent. Bare experiment filenames resolve to `experiments/`.
+CLI flags override the output directory, retrieval source directory (`--telemetryDir`), and target agent. Bare experiment filenames resolve to `experiments/`.
 
 ### Stopping a run
 
@@ -95,5 +99,3 @@ What survives a stop:
 - After a graceful stop, the results CSV is left untouched if any queued task was held back. If every task had already started, the CSV is written normally.
 
 The Oracle shuts down through its process manager when the run ends, whether it stopped early or finished.
-
-The Oracle reads the same telemetry the [telepathist](telepathist.md) reads. One explains what happened; the other explores what could have happened instead.

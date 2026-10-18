@@ -6,8 +6,8 @@ A game session runs one game of Civilization V from launch to victory. It starts
 
 ## Lifecycle
 
-1. **Launch.** `VoxCivilization` starts Civilization V and waits up to 30 seconds for the game process to appear, then attaches to it (see [Sessions](../../framework/sessions.md#launching-the-game)). Launcher errors or a missing process fail startup.
-2. **Prepare.** The session connects the MCP client, writes the per-game [reference files](../../workspace/store.md#game-reference), and creates one `VoxPlayer` per AI seat. A setup failure stops the session before any player loop starts.
+1. **Launch.** The session validates model references and prompt folders before `VoxCivilization` starts the game. It waits up to 30 seconds for the process, then attaches (see [Sessions](../../framework/sessions.md#launching-the-game)). Launcher errors or a missing process fail startup.
+2. **Prepare.** The session connects the MCP client and, when the game is bound, creates one `VoxPlayer` per AI seat. It writes the per-game [reference files](../../workspace/store.md#game-reference) into their stores before starting player loops. A setup failure stops the session before any loop starts.
 3. **Play.** The session reacts to MCP notifications:
 
    | Notification | Effect |
@@ -52,10 +52,10 @@ Per-seat settings such as `files`, `triage`, and `prompts` can also go on a seat
 
 How the game starts is chosen at launch and is not saved in a config:
 
-| Flag | Effect |
-| --- | --- |
-| (none) | Start a new game. |
-| `--load`, `-l` | Load a save. |
+| Flag           | Effect                   |
+| -------------- | ------------------------ |
+| (none)         | Start a new game.        |
+| `--load`, `-l` | Load a save.             |
 | `--wait`, `-w` | Wait for a manual start. |
 
 Other flags: `--config`/`-c`, `--players`/`-p`, `--strategist`/`-s`, `--autoPlay`/`-a`, `--repetition`/`-r`, and `--seed`.

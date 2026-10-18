@@ -16,7 +16,7 @@ This page covers the built-in files, custom folders, and the game-state section 
 | `records-directions.md` | The records directions an agent adds to its opening messages in [file mode](prompts.md#file-mode). It is not an agent. |
 | `records-notes.md` | The latest game notes an agent adds to its opening messages in file mode. It is not an agent. |
 | `workspace.md` | The Workspace section of the [capability reminder](../models/middleware.md#capability-reminder) in the system prompt. It is not an agent. |
-| `shared/*.md` | Passages several agents include, such as resource descriptions and decision instructions. |
+| `shared/*.md` | Shared game context, decision instructions, and historian guidelines. |
 
 A template's name is its path without `.md`, such as `shared/goals`. The folder is found relative to the module, so both `src` and `dist` builds read it, and the installer ships it.
 
@@ -59,9 +59,9 @@ Each folder is read and checked once. An invalid folder fails with an error nami
 
 - Every `.md` file must match a built-in path.
 - Every partial must exist, and no partial may include itself. A missing partial is reported with the file that includes it. The built-ins get these checks too, because Mustache would quietly render a missing partial as nothing.
-- A template may use only the names its built-in counterpart uses, including through partials. Each name keeps its kind (variable or section) and its scope. For example, a field the built-in reads inside `{{#teammate}}` is rejected outside it. A name the built-in reads outside a section is still allowed inside one, since Mustache looks names up through enclosing sections. Names a built-in has dropped but its caller still supplies stay allowed, so an older custom file keeps working. The records directions keep `hasTurns`, `turnRanges`, and `latestTurn` this way, along with the `notes` section that moved to `records-notes`.
+- A template may use only the names its built-in counterpart uses, including through partials. Each name keeps its kind (variable or section) and its scope. For example, a field the built-in reads inside `{{#teammate}}` is rejected outside it. A name the built-in reads outside a section is still allowed inside one, since Mustache looks names up through enclosing sections. Names a built-in has dropped stay allowed while its caller still supplies them, so an older custom file keeps working.
 
-Errors for a seat name the setting's path, such as `llmPlayers.2.prompts`.
+Invalid setting values name the config path, such as `llmPlayers.2.prompts`. Template-content errors name the folder and affected file.
 
 **Reloading.** A failed reload keeps the previous sets. A reload leaves other folders alone, so a second session in the same process changes a running session's text only for folders both use. Edits take effect in the next session. Each agent span records the folder in use as `context.prompts`, or `false` for built-ins only.
 
