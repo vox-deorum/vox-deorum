@@ -65,6 +65,27 @@ describe('OracleAgent.prepareStep', () => {
   });
 });
 
+describe('OracleAgent.getRunTools', () => {
+  const agent = new OracleAgent();
+  // A files seat's context: bash is registered, so the base class would add it to any list.
+  const filesContext = { tools: { bash: {}, 'set-strategy': {} }, modelOverrides: {} } as any;
+
+  it('should declare exactly the replay tools even when the context has bash', async () => {
+    const tools = await agent.getRunTools(params(['set-strategy'], []), {} as any, filesContext);
+    expect(tools).toEqual(['set-strategy']);
+  });
+
+  it('should keep bash when the recorded run declared it', async () => {
+    const tools = await agent.getRunTools(params(['set-strategy', 'bash'], []), {} as any, filesContext);
+    expect(tools).toEqual(['set-strategy', 'bash']);
+  });
+
+  it('should declare no tools, not even bash, when modifyPrompt empties the list', async () => {
+    const tools = await agent.getRunTools({ ...params([], []), toolsOverridden: true }, {} as any, filesContext);
+    expect(tools).toEqual([]);
+  });
+});
+
 describe('OracleAgent.getInitialMessages', () => {
   const agent = new OracleAgent();
   const input = (messages: ModelMessage[]) => ({ system: [], messages, row: {} as any });

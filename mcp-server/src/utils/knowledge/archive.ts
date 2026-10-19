@@ -7,6 +7,7 @@ import path from 'path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import Database from 'better-sqlite3';
 import { getDocumentsPath } from '../config.js';
 import { createLogger } from '../logger.js';
 import { knowledgeManager } from '../../server.js';
@@ -104,6 +105,27 @@ async function pathExists(target: string): Promise<boolean> {
 }
 
 /**
+ * Copy a SQLite database into one closed, self-contained file. The copy goes through SQLite's
+ * backup, so rows still in the source's write-ahead log are included, and a process still writing
+ * the source cannot leave a torn copy. The copy is then switched out of WAL mode and closed, so it
+ * has no -wal or -shm companion files.
+ */
+export async function snapshotDatabase(source: string, dest: string): Promise<void> {
+  const db = new Database(source, { fileMustExist: true });
+  try {
+    await db.backup(dest);
+  } finally {
+    db.close();
+  }
+  const copy = new Database(dest);
+  try {
+    copy.pragma('journal_mode = DELETE');
+  } finally {
+    copy.close();
+  }
+}
+
+/**
  * Publish one finalized DLL recording through the recording archive script.
  * On success the published package is the canonical copy, so the game's
  * source capture folder is deleted. Absent or failed archives leave the
@@ -190,7 +212,7 @@ export async function archiveGameData(
 
     try {
       await fs.access(dbSource);
-      await fs.copyFile(dbSource, dbDest);
+      await snapshotDatabase(dbSource, dbDest);
       logger.info(`Archived database file: ${dbFileName}`);
     } catch (error) {
       logger.warn(`Database file not found or could not be copied: ${dbSource}`);
@@ -207,7 +229,7 @@ export async function archiveGameData(
 
       // Filter for telemetry database files matching the game ID pattern
       const gameIdTelemetryFiles = telemetryFiles.filter(file => {
-        // Match files like: {gameId}-player-{playerId}.db (and their WAL/SHM files)
+        // Match files like: {gameId}-player-{playerId}.db. The snapshot folds in their WAL files.
         return path.basename(file).startsWith(gameId) && file.endsWith('.db');
       });
 
@@ -217,7 +239,7 @@ export async function archiveGameData(
         const destPath = path.join(archivePath, path.basename(telemetryFile));
 
         try {
-          await fs.copyFile(sourcePath, destPath);
+          await snapshotDatabase(sourcePath, destPath);
           telemetryPaths.push(destPath);
           logger.info(`Archived telemetry file: ${telemetryFile}`);
         } catch (error) {

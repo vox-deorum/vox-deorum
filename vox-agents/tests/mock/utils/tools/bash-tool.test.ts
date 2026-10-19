@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VoxContext } from '../../../../src/infra/vox-context.js';
 import type { AgentParameters } from '../../../../src/infra/vox-agent.js';
 import { config } from '../../../../src/utils/config.js';
@@ -88,6 +88,25 @@ describe('bash tool', () => {
       tool.execute({ Command: 'echo hi' }, { toolCallId: 'c1', messages: [] }),
     );
     expect(result).toMatchObject({ stdout: '', exitCode: 1 });
+  });
+
+  it('should run in the workspace a root brings instead of the seat workspace', async () => {
+    const seat = new VoxContext<AgentParameters>({}, 'bash-run-workspace');
+    seat.files = files;
+    seat.store = openStore('preferred');
+    seat.registerAgentTools();
+    const tool = seat.tools[bashToolName] as any;
+    const runWorkspace = { exec: vi.fn(async () => ({ stdout: 'from-run', stderr: '', exitCode: 0 })) };
+
+    const result = await seat.withRun({ parameters: { playerID: 2, gameID: 'g7', turn: 4 }, workspace: runWorkspace }, () =>
+      tool.execute({ Command: 'echo noted > game/x.md' }, { toolCallId: 'c1', messages: [] }),
+    );
+
+    expect(result).toEqual({ stdout: 'from-run', stderr: '', exitCode: 0 });
+    expect(runWorkspace.exec).toHaveBeenCalledWith('echo noted > game/x.md', expect.any(AbortSignal), { turn: 4, author: 'host' });
+    // The seat workspace never ran, so its store holds nothing.
+    expect(seat.store.history()).toHaveLength(1);
+    expect(seat.store.readFile('game/x.md')).toBeUndefined();
   });
 
   it('should hand the model plain text that shows stderr and the exit code only when present', async () => {

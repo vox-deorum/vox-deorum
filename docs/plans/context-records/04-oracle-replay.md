@@ -1,6 +1,6 @@
 # Stage 4: Pinned and isolated oracle workspaces
 
-Part of the [context-records plan](../context-records.md). **Status: planned.**
+Part of the [context-records plan](../context-records.md). **Status: implemented.**
 
 ## Objective
 
@@ -14,29 +14,39 @@ Stage 2 provides the store and `StoreFs`. Stage 3 supplies the retrieved files s
 
 | Area | Existing behavior and source |
 | --- | --- |
-| Oracle | `oracle/utils/prompt-extractor.ts` extracts the first step's prompt and tools from telemetry. It uses only the last attempt at each turn: earlier attempts at the same turn are botched retries, and a later attempt at an earlier turn means a reload discarded the turn. `oracle/replayer.ts` runs rows, models, and repetitions concurrently, each inside its own root run, using schema-only tools, so a recorded bash call currently performs no file operation. |
+| Oracle | `oracle/utils/prompt-extractor.ts` extracts the first step's prompt and tools from telemetry. It uses only the last attempt at each turn: earlier attempts at the same turn are botched retries, and a later attempt at an earlier turn means a reload discarded the turn. `oracle/replayer.ts` runs rows, models, and repetitions concurrently, each inside its own root run, with schema-only tools, so a recorded bash call performed no file operation. |
 
 Because discarded turns never reach replay, replay never pins a commit from a turn that a later reload discarded. After an undetected forward load (see the main plan's limitations), a pinned commit can still include notes from an abandoned branch, as the live run saw them.
 
 ## Approach
 
-Add a shared `Workspace` interface with `exec(command, signal)`. `PlayerWorkspace` implements it. A root run can carry its own workspace; the bash tool uses the active root run's workspace when one is set and the seat's normal workspace otherwise.
+`utils/workspace/player-workspace.ts` defines a shared `Workspace` interface with `exec`, and `PlayerWorkspace` implements it. A root run can carry its own workspace through the `workspace` option of `withRun` (`infra/vox-run.ts`), and the bash tool in `utils/tools/bash-tool.ts` prefers it over the seat's workspace. Forked runs do not inherit it.
 
-`ReplayWorkspace` rebuilds the original seat's mounts:
+`ReplayWorkspace` (`utils/workspace/replay-workspace.ts`) rebuilds the original seat's mounts from pinned sources. The store comes from the row's own telemetry database, where Stage 2 keeps it: the file is located with the same `discoverDbPath` lookup the retrieve phase used (`oracle/utils/db-resolver.ts`), under `OracleConfig.telemetryDir`, and opened read-only at the commit recorded in `context.workspace`.
 
 | Mount | Replay source |
 | --- | --- |
-| `/workspace/records`, `/workspace/game`, `/workspace/reference` | One `StoreFs` view per mount at the commit in `context.workspace`, with committing disabled. Each view is kept for the whole execution, so writes persist across that execution's bash calls. Game notes are writable when the recorded files setting grants it; records and the reference are read-only. |
-| `/workspace/shared/<name>` | An `OverlayFs` over the shared folder's current contents, with writes kept in memory |
+| `/workspace/records`, `/workspace/reference` | Read-only `StoreFs` views of the pinned commit |
+| `/workspace/game` | A `StoreFs` view with the recorded access. When access is writable and the pinned tree has no `AGENTS.md`, the default game guide is added in memory, as `PlayerWorkspace.open` seeds it for a live command |
+| `/workspace/shared/<name>` | An in-memory overlay of the shared folder's current contents under `<telemetryDir>/workspaces/shared`, read-only unless the run recorded write access. A writable folder gets the shared guide in memory, and a missing folder appears empty |
 | `/tmp` | In memory |
 
-A replay workspace is created for each replay execution, including each model variant and repetition, passed to that task's `withRun`, and discarded when the execution ends. Concurrent variants of one source row cannot see each other's writes, and nothing on disk or in the store changes. A row fails without running if its seat store or its recorded commit is missing.
+One workspace is opened for each replay execution, including each model variant and repetition, passed to that task's `withRun`, and closed when the execution ends. Concurrent variants of one source row cannot see each other's writes. Writes persist across the bash commands of one execution, but nothing reaches disk or the store and nothing is committed. The store's initial commit is a valid recorded version with empty records and notes trees, an existing guide is preserved, and replay requires the recorded mount access. A files row with no recorded commit, no telemetry database, no store, or an unknown commit fails without calling the model.
 
-The store's initial commit is a valid recorded version. Its records and notes trees start empty. Before the first command, replay applies the same game-guide initialization as `PlayerWorkspace.open`: seed the default `game/AGENTS.md` when game access is writable and the guide is missing. This is a disposable addition to the pinned tree, including after a rewind to before the guide existed; an existing guide is preserved. All writable game notes persist only within that replay execution. Replay still requires the recorded mount access.
+Rows with files off use the existing oracle context, so each bash tool description matches the original. Rows with files on share a context per distinct recorded files setting and effective prompt folder: id `<experimentName>-files-<n>`, the base context's schema-only tools plus a real bash tool registered after schema replacement, the recorded quota, and telemetry at `oracle/<id>.db` under the oracle experiment. All contexts close during shutdown and their telemetry paths are logged. The effective prompt folder for workspace guidance is the row's recorded folder when it still passes validation, otherwise the built-ins with one warning per folder; the replay machine's own `prompts` setting never applies, so a replay keeps the original run's guidance wherever it runs.
 
-Use the existing oracle context for rows with files disabled and one file-enabled context for each distinct recorded files setting, so each bash tool description matches the original. Each file-enabled context uses the recorded quota, schema-only tools, and a real bash tool registered after schema replacement. Keep the original run's declared tool list, so restricted runs do not gain bash just because the replay context has it. Give the contexts distinct identities, register their telemetry outputs under the oracle experiment, close them all during shutdown, and report their output locations.
+`OracleAgent.getRunTools` returns the replay's declared tool list exactly, so a restricted run does not gain bash just because the replay context has it: bash is present only when the original run (or a `modifyPrompt` override) declared it.
 
 This stage keeps the oracle's first-step replay. A future full-history replay, which sends the complete recorded conversation so the model makes only the final decision, needs its own design.
+
+## Decisions
+
+| Decision | Reason |
+| --- | --- |
+| Store inside the telemetry database | Replay opens the same file the retrieve phase read, so one copied file pins both the spans and the seat's files. |
+| Shared folders read from the source telemetry folder | They live outside the store, so replay shows them as they are now. The recorded access decides read or write, and writes stay in memory. |
+| Prompt folder fallback | The row's recorded folder is used when it still validates; otherwise built-ins apply, with one warning per folder, and the replay machine's own setting stays out of it. |
+| Portability | To replay file-enabled rows on another machine, copy the seat's telemetry database plus any shared folders the seat used. |
 
 ## Work items
 

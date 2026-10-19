@@ -71,15 +71,9 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
    */
   public getDatabase(contextId: string): Kysely<TelemetryDatabase> {
     if (!databases.has(contextId)) {
-      // Use custom folder if specified, otherwise use default structure
-      const contextDir = path.join(this.dataDir, customFolders.has(contextId)
-        ? customFolders.get(contextId)! : contextId.split("-")[0]);
+      const filename = this.getDatabasePath(contextId);
+      fs.mkdirSync(path.dirname(filename), { recursive: true });
 
-      if (!fs.existsSync(contextDir)) {
-        fs.mkdirSync(contextDir, { recursive: true });
-      }
-
-      const filename = path.join(contextDir, `${contextId}.db`);
       const { db: kyselyDb, sqlite: sqliteDb } = openSqliteKysely<TelemetryDatabase>(filename);
 
       sqliteDb.exec(spansTableSql);
@@ -90,6 +84,16 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
     }
 
     return databases.get(contextId)!.kysely;
+  }
+
+  /**
+   * The database file for a context: `<dataDir>/<folder>/<contextId>.db`, where the folder is the
+   * one registered by {@link createContext}, or the context ID's first dash-separated part.
+   * Other stores, such as a seat's workspace store, keep their tables in the same file.
+   */
+  public getDatabasePath(contextId: string): string {
+    const folder = customFolders.get(contextId) ?? contextId.split("-")[0];
+    return path.join(this.dataDir, folder, `${contextId}.db`);
   }
 
   /**
@@ -306,15 +310,32 @@ export class SQLiteSpanExporter extends VoxSpanExporter {
     return Array.from(databases.keys());
   }
   
+  /** The absolute telemetry folder that database files are listed from and resolved against. */
+  get rootDir(): string {
+    return path.resolve(this.dataDir);
+  }
+
+  /**
+   * The absolute path of a database file named relative to the telemetry folder, or undefined when
+   * the path leaves the folder or does not name a `.db` file.
+   */
+  resolveDatabaseFile(relativePath: string): string | undefined {
+    const root = this.rootDir;
+    const fullPath = path.resolve(root, relativePath);
+    const relative = path.relative(root, fullPath);
+    if (!fullPath.endsWith('.db') || relative.startsWith('..') || path.isAbsolute(relative)) return undefined;
+    return fullPath;
+  }
+
   /**
    * Open a specific database file for querying (read-only)
    */
   openDatabaseFile(relativePath: string): Kysely<TelemetryDatabase> | null {
     try {
-      const fullPath = path.join(this.dataDir, relativePath);
+      const fullPath = this.resolveDatabaseFile(relativePath);
 
-      if (!fs.existsSync(fullPath)) {
-        logger.warn(`Database file not found: ${fullPath}`);
+      if (!fullPath || !fs.existsSync(fullPath)) {
+        logger.warn(`Database file not found: ${relativePath}`);
         return null;
       }
 

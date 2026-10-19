@@ -5,6 +5,9 @@
  * file contents are stored once by SHA-256 hash, each change is a commit that points to its parent,
  * and the `head` reference names the current version. A version is read by replaying the path
  * changes of its ancestors in order, so each path resolves to its latest change.
+ *
+ * The store's tables live in the seat's telemetry database next to its spans, so one file holds a
+ * seat's whole game.
  */
 
 import { createHash } from 'node:crypto';
@@ -14,7 +17,7 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import Database from 'better-sqlite3';
 import { isSpanContextValid, trace } from '@opentelemetry/api';
 import { createLogger } from '../logger.js';
-import { workspaceRoot, workspaceSeatName } from './player-workspace.js';
+import { errorMessage } from '../errors.js';
 
 const logger = createLogger('WorkspaceStore');
 
@@ -123,6 +126,61 @@ interface ChangeRow { path: string; type: 'file' | 'dir' | 'delete'; hash: strin
 /** A `ws_commits` row as SQLite returns it. */
 interface CommitRow { id: number; parent: number | null; turn: number | null; kind: CommitKind; author: string; trace_id: string | null; span_id: string | null; time: number }
 
+/** The store's tables, in an order that copies referenced rows first. */
+const storeTables = ['ws_blobs', 'ws_commits', 'ws_changes', 'ws_refs'] as const;
+
+/** Whether a connection's main database has the store's `ws_refs` table. */
+function hasRefsTable(db: Database.Database): boolean {
+  return db.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ws_refs'`).get() !== undefined;
+}
+
+/**
+ * Append the attached `seed` store's newer commits to the main store and take its refs, when the main
+ * store is an earlier copy of the seed: the seed has commits past the main store's last one, and every
+ * main commit matches a seed commit by ID, parent, kind, and time. Existing commits keep their IDs, so
+ * commits named in telemetry still read the same versions. Diverged histories are left alone.
+ *
+ * @returns Whether commits were copied
+ */
+function catchUpFromSeed(db: Database.Database): boolean {
+  const last = (db.prepare('SELECT MAX(id) AS id FROM main.ws_commits').get() as { id: number | null }).id ?? 0;
+  const seedLast = (db.prepare('SELECT MAX(id) AS id FROM seed.ws_commits').get() as { id: number | null }).id ?? 0;
+  if (seedLast <= last) return false;
+  const unmatched = db.prepare(`SELECT COUNT(*) AS count FROM main.ws_commits m LEFT JOIN seed.ws_commits s
+    ON s.id = m.id AND s.parent IS m.parent AND s.kind = m.kind AND s.time = m.time WHERE s.id IS NULL`)
+    .get() as { count: number };
+  if (unmatched.count > 0) {
+    logger.warn('Workspace store history differs from the newer seed store, so the newer commits were not copied');
+    return false;
+  }
+  db.prepare(`INSERT OR IGNORE INTO main.ws_blobs SELECT * FROM seed.ws_blobs
+    WHERE hash IN (SELECT hash FROM seed.ws_changes WHERE commit_id > ? AND hash IS NOT NULL)`).run(last);
+  db.prepare('INSERT INTO main.ws_commits SELECT * FROM seed.ws_commits WHERE id > ?').run(last);
+  db.prepare('INSERT INTO main.ws_changes SELECT * FROM seed.ws_changes WHERE commit_id > ?').run(last);
+  db.exec('INSERT OR REPLACE INTO main.ws_refs SELECT * FROM seed.ws_refs');
+  return true;
+}
+
+/**
+ * The time of a database's newest store commit through a short read-only connection, or undefined
+ * when the file is missing, unreadable, or has no store.
+ */
+function storeTime(dbPath: string): number | undefined {
+  if (!fs.existsSync(dbPath)) return undefined;
+  let db: Database.Database | undefined;
+  try {
+    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    if (!hasRefsTable(db)) return undefined;
+    const row = db.prepare('SELECT MAX(time) AS time FROM ws_commits').get() as { time: number | null };
+    return row.time ?? 0;
+  } catch (error) {
+    logger.warn(`Could not read workspace store in ${dbPath}: ${errorMessage(error)}`);
+    return undefined;
+  } finally {
+    db?.close();
+  }
+}
+
 /** Require a relative path in a store folder, allowing the folder itself only for deletion. */
 function checkStorePath({ path: storePath, type }: PathChange): void {
   const parts = storePath.split('/');
@@ -190,40 +248,89 @@ export class WorkspaceStore {
   private constructor(private readonly db: Database.Database) {}
 
   /**
-   * The store path for one seat, `<workspaceRoot()>/games/<gameID>-player-<playerID>.db`. It does
-   * not depend on the strategist, so a seat keeps one store across sessions.
-   *
-   * @throws if the game ID cannot name a workspace folder
+   * Whether a database file holds a store. The file may exist with only telemetry tables.
    */
-  static pathFor(gameID: string, playerID: number): string {
-    return path.join(workspaceRoot(), 'games', `${workspaceSeatName(gameID, playerID)}.db`);
+  static hasStore(dbPath: string): boolean {
+    return storeTime(dbPath) !== undefined;
   }
 
   /**
-   * Open a store. A writable open creates the folder, the schema, and the empty `init` commit with
-   * `head` in one transaction when the store is new, and keeps them on reopening. A read-only open
-   * requires an existing store and never writes.
+   * The seat's store to copy from. Telemetry files sit at `<root>/<folder>/<seat>.db` with one
+   * folder per strategist, so a seat that changes strategist writes to another file. This returns
+   * the same file name in another folder of the same root, except `workspaces`, with the newest
+   * commit, so the seat's records and notes follow it.
+   *
+   * @param dbPath - The database being opened
+   * @returns The seed database, or undefined when no sibling holds a store
    */
-  static open(dbPath: string, options: { readonly?: boolean } = {}): WorkspaceStore {
+  static findSeed(dbPath: string): string | undefined {
+    const name = path.basename(dbPath);
+    const target = path.resolve(dbPath);
+    const root = path.dirname(path.dirname(target));
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(root, { withFileTypes: true });
+    } catch {
+      return undefined;
+    }
+    let best: { file: string; time: number } | undefined;
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name === 'workspaces') continue;
+      const file = path.resolve(root, entry.name, name);
+      if (file === target) continue;
+      const time = storeTime(file);
+      if (time !== undefined && (!best || time > best.time)) best = { file, time };
+    }
+    return best?.file;
+  }
+
+  /**
+   * Open a store. A writable open creates the folder, the schema, and the first commit with `head`
+   * in one transaction when the file has no store, and keeps them on reopening. The first commit is
+   * an empty `init`, or, with `seedFrom`, a copy of that store's whole history with the same commit
+   * IDs. An existing store opened with `seedFrom` takes the seed's newer commits when it is an
+   * earlier copy of the seed. A read-only open requires an existing store and never writes.
+   */
+  static open(dbPath: string, options: { readonly?: boolean; seedFrom?: string } = {}): WorkspaceStore {
     if (options.readonly) {
       return new WorkspaceStore(new Database(dbPath, { readonly: true, fileMustExist: true }));
     }
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     const db = new Database(dbPath);
+    let copied: 'whole' | 'newer' | undefined;
     try {
       db.pragma('journal_mode = WAL');
       db.pragma('synchronous = NORMAL');
-      db.transaction(() => {
-        db.exec(schema);
-        if (db.prepare(`SELECT 1 FROM ws_refs WHERE name = 'head'`).get()) return;
-        const init = db.prepare(`INSERT INTO ws_commits (parent, turn, kind, author, time) VALUES (NULL, NULL, 'init', 'host', ?)`)
-          .run(Date.now());
-        db.prepare(`INSERT INTO ws_refs (name, commit_id) VALUES ('head', ?)`).run(init.lastInsertRowid);
-      }).immediate();
+      // SQLite cannot attach inside a transaction, so the seed is attached before checking for head.
+      const seed = options.seedFrom !== undefined;
+      if (seed) db.prepare('ATTACH DATABASE ? AS seed').run(options.seedFrom);
+      try {
+        db.transaction(() => {
+          db.exec(schema);
+          if (db.prepare(`SELECT 1 FROM ws_refs WHERE name = 'head'`).get()) {
+            if (seed && catchUpFromSeed(db)) copied = 'newer';
+            return;
+          }
+          if (seed) {
+            for (const table of storeTables) db.exec(`INSERT INTO main.${table} SELECT * FROM seed.${table}`);
+            if (db.prepare(`SELECT 1 FROM ws_refs WHERE name = 'head'`).get()) {
+              copied = 'whole';
+              return;
+            }
+          }
+          const init = db.prepare(`INSERT INTO ws_commits (parent, turn, kind, author, time) VALUES (NULL, NULL, 'init', 'host', ?)`)
+            .run(Date.now());
+          db.prepare(`INSERT INTO ws_refs (name, commit_id) VALUES ('head', ?)`).run(init.lastInsertRowid);
+        }).immediate();
+      } finally {
+        if (seed) db.exec('DETACH DATABASE seed');
+      }
     } catch (error) {
       db.close();
       throw error;
     }
+    if (copied === 'whole') logger.info(`Copied workspace store from ${options.seedFrom} into ${dbPath}`);
+    if (copied === 'newer') logger.info(`Copied newer workspace commits from ${options.seedFrom} into ${dbPath}`);
     return new WorkspaceStore(db);
   }
 

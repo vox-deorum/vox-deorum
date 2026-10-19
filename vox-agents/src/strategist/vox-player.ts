@@ -55,6 +55,18 @@ export interface VoxPlayerOptions {
 }
 
 /**
+ * Open a seat's workspace store inside its telemetry file, bringing it to the seat's newest store in
+ * a sibling telemetry file: a file without a store copies it whole, and an earlier copy takes its
+ * newer commits.
+ *
+ * @throws when the exporter gives no file path or the store cannot open
+ */
+function openSeatStore(dbPath: string | undefined): WorkspaceStore {
+  if (!dbPath) throw new Error('The telemetry exporter has no database file for the workspace store.');
+  return WorkspaceStore.open(dbPath, { seedFrom: WorkspaceStore.findSeed(dbPath) });
+}
+
+/**
  * Manages a single player's strategist execution within a game session.
  * Each player gets its own VoxContext, observation span, and execution loop.
  * Tracks token usage and reports telemetry via OpenTelemetry.
@@ -99,14 +111,15 @@ export class VoxPlayer {
     const seatTriage = resolveSeatTriage(playerConfig, triage, slot);
     const seatFiles = resolveSeatFiles(playerConfig, files, slot);
     const seatPrompts = resolveSeatPrompts(playerConfig, prompts, slot);
-    // A file-enabled seat opens its store now, because its first timeline start may rewind it.
-    // An open failure throws, which the session treats as a setup failure.
-    const store = seatFiles ? WorkspaceStore.open(WorkspaceStore.pathFor(gameID, playerID)) : undefined;
+    const id = `${gameID}-player-${playerID}`;
+    const exporter = VoxSpanExporter.getInstance();
+    exporter.createContext(id, this.playerConfig.strategist);
+    // A file-enabled seat opens its store now, because its first timeline start may rewind it. The
+    // store lives in the seat's telemetry file and follows the seat's newest store in another
+    // strategist's folder. An open failure throws, which the session treats as a setup failure.
+    const store = seatFiles ? openSeatStore(exporter.getDatabasePath?.(id)) : undefined;
 
     try {
-      const id = `${gameID}-player-${playerID}`
-      VoxSpanExporter.getInstance().createContext(id, this.playerConfig.strategist);
-
       // Pass model overrides to VoxContext
       // Agents are now registered globally in agent-registry.ts
       this.context = new VoxContext(playerConfig.llms || {}, id);

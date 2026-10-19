@@ -78,9 +78,21 @@ export class OracleAgent extends VoxAgent<OracleParameters, OracleInput, ReplayR
     return messages;
   }
 
-  /** Return the active tool set from the original span */
+  /**
+   * Return the replay's tool list. An empty recorded list means the span had none to parse and
+   * replays with all registered tools; an empty list from modifyPrompt declares no tools.
+   */
   public override getActiveTools(parameters: OracleParameters): string[] | undefined {
-    return parameters.activeTools.length > 0 ? parameters.activeTools : undefined;
+    return parameters.activeTools.length > 0 || parameters.toolsOverridden ? parameters.activeTools : undefined;
+  }
+
+  /**
+   * Declares exactly the replay's tool list. The base class adds bash on a context with files on,
+   * but a replay keeps the original run's declarations, so bash is present only when the original
+   * run (or a modifyPrompt override) declared it.
+   */
+  public override async getRunTools(parameters: OracleParameters): Promise<string[] | undefined> {
+    return this.getActiveTools(parameters);
   }
 
   /**

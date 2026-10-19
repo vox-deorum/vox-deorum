@@ -16,7 +16,6 @@ import { unzipSync } from 'fflate';
 
 import telemetryRoutes from '../../../../src/web/routes/telemetry.js';
 import { sqliteExporter } from '../../../../src/instrumentation.js';
-import { config } from '../../../../src/utils/config.js';
 import { WorkspaceStore } from '../../../../src/utils/workspace/workspace-store.js';
 import { createTelemetryDb } from '../../../helpers/telemetry-db.js';
 
@@ -153,8 +152,9 @@ describe('telemetry routes', () => {
 
   describe('workspace files', () => {
     const binary = new Uint8Array([0, 1, 2, 250, 255, 0]);
+    /** The seat's telemetry database, relative to the telemetry root. */
+    const seatDb = 'strat/g1-player-2.db';
     let dir: string;
-    let savedDir: string;
     let first: number;
     let head: number;
 
@@ -167,9 +167,7 @@ describe('telemetry routes', () => {
 
     beforeEach(() => {
       dir = fsSync.mkdtempSync(path.join(os.tmpdir(), 'vox-telemetry-ws-'));
-      savedDir = config.telemetryDir;
-      config.telemetryDir = dir;
-      const store = WorkspaceStore.open(WorkspaceStore.pathFor('g1', 2));
+      const store = WorkspaceStore.open(path.join(dir, seatDb));
       first = store.commit({
         kind: 'turn', turn: 1, author: 'host', changes: [
           { path: 'records/turn-1/state.md', type: 'file', content: 'v1', mode: 0o644, mtime: 1_000_000 },
@@ -183,10 +181,10 @@ describe('telemetry routes', () => {
         ],
       });
       store.close();
+      vi.spyOn(sqliteExporter, 'resolveDatabaseFile').mockImplementation((rel: string) => (rel.endsWith('.db') ? path.join(dir, rel) : undefined));
     });
 
     afterEach(() => {
-      config.telemetryDir = savedDir;
       fsSync.rmSync(dir, { recursive: true, force: true });
     });
 
@@ -196,6 +194,12 @@ describe('telemetry routes', () => {
       return { res, files: res.status === 200 ? unzipSync(new Uint8Array(res.body)) : {} };
     }
 
+    /** Workspace download URL for the seat file, optionally pinned to a commit. */
+    function workspaceUrl(commit?: number | string): string {
+      const base = `/api/telemetry/db/${encodeURIComponent(seatDb)}/workspace`;
+      return commit === undefined ? base : `${base}?commit=${commit}`;
+    }
+
     it('flags databases whose seat has a store', async () => {
       vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined as never);
       vi.spyOn(fs, 'readdir').mockResolvedValue([
@@ -203,6 +207,7 @@ describe('telemetry routes', () => {
         { name: 'g1-player-3.db', isDirectory: () => false, isFile: () => true },
       ] as never);
       vi.spyOn(fs, 'stat').mockResolvedValue({ size: 1, mtime: new Date(0) } as never);
+      vi.spyOn(WorkspaceStore, 'hasStore').mockImplementation((p: string) => p.endsWith('g1-player-2.db'));
 
       const res = await request(app).get('/api/telemetry/databases');
 
@@ -210,8 +215,25 @@ describe('telemetry routes', () => {
       expect(flags).toEqual({ '2': true, '3': false });
     });
 
+    it('lists from the configured telemetry folder and downloads a file listed at its top', async () => {
+      const topFile = 'g1-player-4.db';
+      WorkspaceStore.open(path.join(dir, topFile)).close();
+      vi.mocked(sqliteExporter.resolveDatabaseFile).mockRestore();
+      vi.spyOn(sqliteExporter, 'rootDir', 'get').mockReturnValue(dir);
+
+      const list = await request(app).get('/api/telemetry/databases');
+      const listed = list.body.databases.map((db: any) => ({ folder: db.folder, filename: db.filename, hasWorkspace: db.hasWorkspace }));
+      expect(listed).toEqual(expect.arrayContaining([
+        { folder: '', filename: topFile, hasWorkspace: true },
+        { folder: 'strat', filename: 'g1-player-2.db', hasWorkspace: true },
+      ]));
+
+      const { res } = await download(`/api/telemetry/db/${encodeURIComponent(topFile)}/workspace`);
+      expect(res.status).toBe(200);
+    });
+
     it('downloads head as a zip named after the seat and commit', async () => {
-      const { res, files } = await download('/api/telemetry/workspace/g1/2/download');
+      const { res, files } = await download(workspaceUrl());
 
       expect(res.status).toBe(200);
       expect(res.headers['content-disposition']).toContain(`g1-player-2-${head}.zip`);
@@ -221,7 +243,7 @@ describe('telemetry routes', () => {
     });
 
     it('downloads an older commit as it was', async () => {
-      const { res, files } = await download(`/api/telemetry/workspace/g1/2/download?commit=${first}`);
+      const { res, files } = await download(workspaceUrl(first));
 
       expect(res.status).toBe(200);
       expect(res.headers['content-disposition']).toContain(`g1-player-2-${first}.zip`);
@@ -229,22 +251,22 @@ describe('telemetry routes', () => {
     });
 
     it('reports a missing store, an unknown commit, and a bad commit as errors', async () => {
-      const missing = await request(app).get('/api/telemetry/workspace/g1/9/download');
+      const missing = await request(app).get(`/api/telemetry/db/${encodeURIComponent('strat/g1-player-9.db')}/workspace`);
       expect(missing.status).toBe(404);
       expect(missing.body).toHaveProperty('error');
 
-      const unknown = await request(app).get('/api/telemetry/workspace/g1/2/download?commit=9999');
+      const unknown = await request(app).get(workspaceUrl(9999));
       expect(unknown.status).toBe(404);
       expect(unknown.body).toHaveProperty('error');
 
-      const bad = await request(app).get('/api/telemetry/workspace/g1/2/download?commit=abc');
+      const bad = await request(app).get(workspaceUrl('abc'));
       expect(bad.status).toBe(400);
     });
 
     it('leaves the store unchanged', async () => {
-      const dbPath = WorkspaceStore.pathFor('g1', 2);
+      const dbPath = path.join(dir, seatDb);
       const before = fsSync.readFileSync(dbPath);
-      await download('/api/telemetry/workspace/g1/2/download');
+      await download(workspaceUrl());
       const store = WorkspaceStore.open(dbPath, { readonly: true });
       expect(store.head()).toBe(head);
       store.close();

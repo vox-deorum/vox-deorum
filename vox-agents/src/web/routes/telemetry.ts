@@ -7,7 +7,6 @@
 
 import { Router, Request, Response } from 'express';
 import fs from 'fs/promises';
-import { existsSync } from 'fs';
 import path from 'path';
 import multer from 'multer';
 import { createLogger } from '../../utils/logger.js';
@@ -34,30 +33,14 @@ import type {
 const logger = createLogger('telemetry', 'webui');
 const router = Router();
 
-/** The seat store path for a game and player, or undefined when the identifiers cannot name one. */
-function seatStorePath(gameID: string, playerID: string): string | undefined {
-  try {
-    if (!/^\d+$/.test(playerID)) return undefined;
-    return WorkspaceStore.pathFor(gameID, Number(playerID));
-  } catch {
-    return undefined;
-  }
-}
-
-/** Whether an existing seat workspace store holds a commit, checked through a read-only connection. */
-function seatStoreHasCommit(dbPath: string, commit: number): boolean {
+/** Whether a workspace store holds a commit, checked through a read-only connection. */
+function storeHasCommit(dbPath: string, commit: number): boolean {
   const store = WorkspaceStore.open(dbPath, { readonly: true });
   try {
     return store.hasCommit(commit);
   } finally {
     store.close();
   }
-}
-
-/** Whether a seat workspace store exists on disk. */
-function hasWorkspaceStore(gameID: string, playerID: string): boolean {
-  const dbPath = seatStorePath(gameID, playerID);
-  return dbPath !== undefined && existsSync(dbPath);
 }
 
 // Configure multer for file uploads
@@ -80,8 +63,8 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
   try {
     const databases: TelemetryMetadata[] = [];
 
-    // Check main telemetry folder
-    const telemetryDir = path.join(process.cwd(), 'telemetry');
+    // List the folder the database routes resolve against
+    const telemetryDir = sqliteExporter.rootDir;
 
     // Ensure directories exist
     await fs.mkdir(telemetryDir, { recursive: true });
@@ -94,7 +77,7 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
         const fullPath = path.join(dir, entry.name);
 
         if (entry.isDirectory()) {
-          // Agent workspaces may hold their own .db files, which are not game telemetry
+          // Shared agent folders may hold their own .db files, which are not game telemetry
           if (dir === baseDir && entry.name === 'workspaces') continue;
           // Recursively scan subdirectories
           await scanDirectory(fullPath, baseDir);
@@ -111,7 +94,7 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
             playerID: identifierInfo.playerID.toString(),
             size: stats.size,
             lastModified: stats.mtime.toISOString(),
-            hasWorkspace: hasWorkspaceStore(identifierInfo.gameID, identifierInfo.playerID.toString())
+            hasWorkspace: WorkspaceStore.hasStore(fullPath)
           });
         }
       }
@@ -128,14 +111,14 @@ router.get('/databases', async (_req: Request, res: Response<TelemetryDatabasesR
 });
 
 /**
- * Download one version of a seat workspace store, head by default, as a zip of ordinary files.
- * The store is only read.
+ * Download one version of the workspace store inside a telemetry database, head by default, as a
+ * zip of ordinary files. The database is only read. Accepts the same relative path as the trace routes.
  */
-router.get('/workspace/:gameID/:playerID/download', (req: Request, res: Response) => {
-  const { gameID, playerID } = req.params;
-  const dbPath = seatStorePath(gameID, playerID);
-  if (!dbPath || !existsSync(dbPath)) {
-    return sendError(res, 404, `No workspace files for game ${gameID} player ${playerID}`);
+router.get('/db/:filename(*)/workspace', (req: Request<{ filename: string }>, res: Response) => {
+  const { filename } = req.params;
+  const dbPath = sqliteExporter.resolveDatabaseFile(filename);
+  if (!dbPath || !WorkspaceStore.hasStore(dbPath)) {
+    return sendError(res, 404, `No workspace files in ${filename}`);
   }
   const commitParam = req.query.commit;
   if (commitParam !== undefined && !/^\d+$/.test(String(commitParam))) {
@@ -143,13 +126,13 @@ router.get('/workspace/:gameID/:playerID/download', (req: Request, res: Response
   }
   const requested = commitParam === undefined ? undefined : Number(commitParam);
   try {
-    if (requested !== undefined && !seatStoreHasCommit(dbPath, requested)) {
+    if (requested !== undefined && !storeHasCommit(dbPath, requested)) {
       return sendError(res, 404, `Workspace store has no commit ${requested}`);
     }
     const zip = zipSink();
     const commit = materialize(dbPath, zip.sink, requested);
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${gameID}-player-${playerID}-${commit}.zip"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(dbPath, '.db')}-${commit}.zip"`);
     zip.stream.on('error', (error) => {
       logger.error('Workspace zip stream failed', { error });
       res.destroy(error);
@@ -175,7 +158,7 @@ router.post('/upload', upload.single('database'), async (req: Request, res: Resp
       return sendError(res, 400, 'No file uploaded');
     }
 
-    const uploadedDir = path.join(process.cwd(), 'telemetry', 'uploaded');
+    const uploadedDir = path.join(sqliteExporter.rootDir, 'uploaded');
     await fs.mkdir(uploadedDir, { recursive: true });
 
     // Use original filename if valid, otherwise generate one

@@ -6,7 +6,8 @@
  * schema-tools.test.ts; this file stays disjoint from both. Covers:
  * model-override expansion (incl. duplicate-model repetitions), the configured
  * concurrency cap, modifyPrompt merge behavior, extractColumns context,
- * per-row error mapping, and CSV/trail writes. System/message arrays are opaque
+ * per-row error mapping, CSV/trail writes, and the files-setting replay
+ * contexts with their workspace copies. System/message arrays are opaque
  * placeholders; assertions cover structural facts only.
  */
 
@@ -26,9 +27,14 @@ const mocks = vi.hoisted(() => {
   // Stands in for the process manager's shutdown flag. runReplay reads it per call rather than
   // capturing it at import, so flipping this mid-run is enough to simulate Ctrl+C.
   const shuttingDown = { value: false };
+  // Every VoxContext the replayer constructs, in order, so tests can read each one's id and the
+  // files, prompts, and tools the replayer attached to it.
+  const contexts: any[] = [];
+  const fakeDbPath = '/fake/telemetry/game-1-player-2.db';
   return {
     connect: vi.fn(),
     shuttingDown,
+    contexts,
     createContext: vi.fn(),
     disconnect: vi.fn(),
     execute: vi.fn(),
@@ -52,17 +58,28 @@ const mocks = vi.hoisted(() => {
     shutdown: vi.fn(),
     shutdownBatchManager: vi.fn(),
     startBatchManager: vi.fn(),
+    // The seat store is never real here: replays open stub workspaces on a stub database.
+    openReplayWorkspace: vi.fn(async () => ({ close: vi.fn() })),
+    fakeDbPath,
+    discoverDbPath: vi.fn(() => fakeDbPath),
+    createBashTool: vi.fn(() => ({ name: 'bash' })),
+    validatePromptsSetting: vi.fn(),
   };
 });
 
 vi.mock('../../../src/infra/vox-context.js', () => ({
-  VoxContext: vi.fn().mockImplementation(() => ({
-    execute: mocks.execute,
-    withRun: mocks.withRun,
-    registerTools: mocks.registerTools,
-    shutdown: mocks.shutdown,
-    tools: {},
-  })),
+  VoxContext: vi.fn().mockImplementation((_overrides: unknown, id?: string) => {
+    const context = {
+      id,
+      execute: mocks.execute,
+      withRun: mocks.withRun,
+      registerTools: mocks.registerTools,
+      shutdown: mocks.shutdown,
+      tools: {},
+    };
+    mocks.contexts.push(context);
+    return context;
+  }),
 }));
 
 vi.mock('../../../src/infra/process-manager.js', () => ({
@@ -103,6 +120,23 @@ vi.mock('../../../src/oracle/batch/batch-manager.js', () => ({
   startBatchManager: mocks.startBatchManager,
 }));
 
+vi.mock('../../../src/utils/workspace/replay-workspace.js', () => ({
+  ReplayWorkspace: { open: mocks.openReplayWorkspace },
+}));
+
+vi.mock('../../../src/oracle/utils/db-resolver.js', () => ({
+  discoverDbPath: mocks.discoverDbPath,
+}));
+
+vi.mock('../../../src/utils/tools/bash-tool.js', () => ({
+  bashToolName: 'bash',
+  createBashTool: mocks.createBashTool,
+}));
+
+vi.mock('../../../src/utils/prompts/prompt-files.js', () => ({
+  validatePromptsSetting: mocks.validatePromptsSetting,
+}));
+
 import { loadRetrievedRows, runReplay } from '../../../src/oracle/replayer.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import type { OracleAgent } from '../../../src/oracle/oracle-agent.js';
@@ -111,6 +145,7 @@ const tempDirs: string[] = [];
 
 afterEach(() => {
   vi.clearAllMocks();
+  mocks.contexts.splice(0);
   mocks.shuttingDown.value = false;
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -900,5 +935,133 @@ describe('oracle replayer (non-cache paths)', () => {
       // completionTools was omitted, so the declared default survives.
       expect(agent().completionTools).toEqual(['set-strategy', 'set-flavors', 'keep-status-quo']);
     });
+  });
+});
+
+describe('oracle files replay contexts', () => {
+  const filesWrite = { game: 'write' as const, shared: {}, quota: 20 };
+  const filesRead = { game: 'read' as const, shared: { lessons: 'write' as const }, quota: 10 };
+
+  it('should replay a files-off row on the base context and open no workspace', async () => {
+    const outputDir = makeTempDir();
+    mockFreshExecution();
+
+    await runReplay(baseConfig(outputDir, 'files-off', () => ({})), [retrieved()]);
+
+    expect(mocks.contexts).toHaveLength(1);
+    expect(mocks.contexts[0].id).toBe('files-off');
+    expect(mocks.openReplayWorkspace).not.toHaveBeenCalled();
+    expect(mocks.withRun.mock.calls[0][0].workspace).toBeUndefined();
+  });
+
+  it('should share one extra context per distinct files setting', async () => {
+    const outputDir = makeTempDir();
+    mockFreshExecution();
+    const rows = [
+      retrieved({ files: filesWrite, workspace: 3, row: { ...baseRow, turn: '3' } }),
+      retrieved({ files: filesWrite, workspace: 3, row: { ...baseRow, turn: '4' } }),
+      retrieved({ files: filesRead, workspace: 3, row: { ...baseRow, turn: '5' } }),
+    ];
+
+    const results = await runReplay(baseConfig(outputDir, 'files-contexts', () => ({})), rows);
+
+    expect(results).toHaveLength(3);
+    expect(mocks.execute).toHaveBeenCalledTimes(3);
+    // The base context plus one extra per distinct setting, numbered in creation order.
+    const ids = mocks.contexts.map(context => context.id);
+    expect(ids).toEqual(['files-contexts', 'files-contexts-files-1', 'files-contexts-files-2']);
+    expect(mocks.contexts[1].files).toEqual(filesWrite);
+    expect(mocks.contexts[2].files).toEqual(filesRead);
+    // One bash tool per extra context, created with that context and registered on it alone.
+    expect(mocks.createBashTool).toHaveBeenCalledTimes(2);
+    expect(mocks.createBashTool.mock.calls[0][0]).toBe(mocks.contexts[1]);
+    expect(mocks.createBashTool.mock.calls[1][0]).toBe(mocks.contexts[2]);
+    expect(mocks.contexts[1].tools.bash).toBeDefined();
+    expect(mocks.contexts[2].tools.bash).toBeDefined();
+    expect(mocks.contexts[0].tools.bash).toBeUndefined();
+    // Every context was created for the oracle folder and shut down once when the run ended.
+    expect(mocks.createContext.mock.calls).toEqual([
+      ['files-contexts', 'oracle'],
+      ['files-contexts-files-1', 'oracle'],
+      ['files-contexts-files-2', 'oracle'],
+    ]);
+    expect(mocks.shutdown).toHaveBeenCalledTimes(3);
+  });
+
+  it('should replay with built-in prompts when the recorded folder fails validation', async () => {
+    const outputDir = makeTempDir();
+    mockFreshExecution();
+    mocks.validatePromptsSetting.mockImplementationOnce((setting: unknown) => {
+      if (setting === 'gone-folder') throw new Error('folder gone');
+    });
+
+    const results = await runReplay(baseConfig(outputDir, 'prompts-fallback', () => ({})),
+      [retrieved({ files: filesWrite, workspace: 3, prompts: 'gone-folder' })]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].error).toBeUndefined();
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+    expect(mocks.validatePromptsSetting).toHaveBeenCalledWith('gone-folder', expect.any(String));
+    expect(mocks.contexts[1].prompts).toBe(false);
+  });
+
+  it('should give a files run its workspace copy and close it when the run ends', async () => {
+    const outputDir = makeTempDir();
+    const workspace = { close: vi.fn() };
+    mocks.openReplayWorkspace.mockResolvedValueOnce(workspace);
+    mocks.execute.mockImplementation(async (_agentName, input, _cb, tokenOutput) => {
+      const parameters = mocks.runState.parameters;
+      // The copy stays open for the whole execution.
+      expect(workspace.close).not.toHaveBeenCalled();
+      tokenOutput.inputTokens = 1;
+      return {
+        row: input.row,
+        model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
+        decisions: [],
+        tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+        messages: [],
+      };
+    });
+
+    const results = await runReplay(baseConfig(outputDir, 'files-workspace', () => ({})),
+      [retrieved({ files: filesWrite, workspace: 3 })]);
+
+    expect(results[0].error).toBeUndefined();
+    expect(mocks.discoverDbPath).toHaveBeenCalledWith('game-1', '2', expect.any(String));
+    expect(mocks.openReplayWorkspace).toHaveBeenCalledWith(expect.objectContaining({
+      dbPath: mocks.fakeDbPath,
+      files: filesWrite,
+      gameID: 'game-1',
+      playerID: 2,
+      commit: 3,
+    }));
+    expect(mocks.withRun.mock.calls[0][0].workspace).toBe(workspace);
+    expect(workspace.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('should fail a files row that recorded no workspace commit without executing', async () => {
+    const outputDir = makeTempDir();
+    mockFreshExecution();
+
+    const results = await runReplay(baseConfig(outputDir, 'files-no-commit', () => ({})),
+      [retrieved({ files: filesWrite })]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].error).toBeTruthy();
+    expect(mocks.openReplayWorkspace).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('should fail a files row whose workspace copy cannot be opened without executing', async () => {
+    const outputDir = makeTempDir();
+    mockFreshExecution();
+    mocks.openReplayWorkspace.mockRejectedValueOnce(new Error('no store in this database'));
+
+    const results = await runReplay(baseConfig(outputDir, 'files-open-fails', () => ({})),
+      [retrieved({ files: filesWrite, workspace: 3 })]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].error).toBeTruthy();
+    expect(mocks.execute).not.toHaveBeenCalled();
   });
 });

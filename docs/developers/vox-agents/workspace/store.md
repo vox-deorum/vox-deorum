@@ -2,7 +2,15 @@
 
 A seat with [files](files.md) enabled keeps records, notes, and the game reference in a versioned SQLite store. `WorkspaceStore` in `src/utils/workspace/workspace-store.ts` stores contents by hash and links each commit to its parent. Reloading an older save changes the visible history while retaining discarded commits.
 
-The store is `<telemetryDir>/workspaces/games/<gameID>-player-<playerID>.db`. Switching strategists on the same seat keeps it. Older notes folders are not imported.
+The store's tables sit inside the seat's telemetry database, `<telemetryDir>/<strategist>/<gameID>-player-<playerID>.db`, next to the `spans` table. One file holds a seat's whole game, so archiving or copying the telemetry file carries the notes and records with it. Telemetry files sit one folder per strategist, so a seat played under one strategist and resumed under another writes to another file. `openSeatStore` in `src/strategist/vox-player.ts` brings the file up to the same-named file with the newest commit in another strategist folder (`WorkspaceStore.findSeed` in `src/utils/workspace/workspace-store.ts`, which skips the `workspaces` folder):
+
+| The opened file | What happens |
+| --- | --- |
+| Has no store | The whole store is copied, with the same commit IDs and history. |
+| Holds an earlier copy of the newer store, as when a seat switches back to a strategist it used before | The newer commits are appended and head moves to the newer store's head. Its own commits keep their IDs, so replays of its spans still read the versions they recorded. |
+| Has a history that differs from the newer store | It is left as it is, with a warning. |
+
+Notes, records, and reload history follow the seat, and each telemetry file stays self-contained. Stores left over in the old `workspaces/games/` folder are ignored: nothing imports or deletes them. Shared folders stay on disk at `<telemetryDir>/workspaces/shared/<name>` and scratch at `workspaces/scratch/`.
 
 ## Writers
 
@@ -63,7 +71,7 @@ Export through the CLI or dashboard:
 
 | Tool | Use |
 | --- | --- |
-| `npm run workspace -- materialize <gameID> <playerID> <outDir> [commit]`, from `vox-agents/` | Export the head or a specified commit into a new or empty folder. |
-| Download files in the telemetry page's past-games table | Export a zip through `GET /api/telemetry/workspace/:gameID/:playerID/download`, with an optional `commit` query. |
+| `npm run workspace -- materialize <telemetryDb> <outDir> [commit]`, from `vox-agents/` | Export the head or a specified commit of a seat telemetry database into a new or empty folder. |
+| Download files in the telemetry page's past-games table | Export a zip through `GET /api/telemetry/db/<path relative to the telemetry folder>/workspace`, with an optional `commit` query. The button shows for databases that hold a store (`hasWorkspace` is read from the file itself), and the zip is named `<gameID>-player-<playerID>-<commit>.zip`. |
 
 Both use `src/utils/workspace/materialize.ts` to read a complete commit through a separate read-only connection in one transaction. Exports work during a session and include `records/`, `game/`, and `reference/`. Editing an export does not change the store.

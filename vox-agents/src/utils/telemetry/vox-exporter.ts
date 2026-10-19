@@ -82,4 +82,13 @@ export abstract class VoxSpanExporter implements SpanExporter {
    * @returns The storage handle, or undefined if not applicable
    */
   abstract getDatabase?(contextId: string): unknown;
+
+  /**
+   * The file that holds a context's telemetry, for exporters that write one file per context.
+   * Seat stores share this file so a game's records travel with its spans.
+   *
+   * @param contextId - The ID of the context
+   * @returns The file path, or undefined if not applicable
+   */
+  abstract getDatabasePath?(contextId: string): string | undefined;
 }

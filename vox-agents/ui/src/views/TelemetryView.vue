@@ -24,14 +24,19 @@ function viewActiveSession(sessionId: string) {
 }
 
 /**
+ * A database's path relative to the telemetry folder, as the database routes take it
+ */
+function databasePath(db: TelemetryMetadata): string {
+  return db.folder ? `${db.folder}/${db.filename}` : db.filename;
+}
+
+/**
  * Navigate to database view
  */
 function viewDatabase(db: TelemetryMetadata) {
-  // Encode the full path (folder/filename) for the route
-  const fullPath = db.folder === 'telemetry' ? db.filename : `${db.folder}/${db.filename}`;
   router.push({
     name: 'telemetry-database',
-    params: { filename: fullPath }
+    params: { filename: databasePath(db) }
   });
 }
 
@@ -159,7 +164,7 @@ onUnmounted(() => {
                 <div class="col-fixed-200 flex flex-nowrap align-items-center">
                   <Button label="View" icon="pi pi-chart-line" text size="small"
                           @click.stop="viewDatabase(db)" />
-                  <Button v-if="db.hasWorkspace" as="a" :href="api.workspaceDownloadUrl(db.gameID, db.playerID)"
+                  <Button v-if="db.hasWorkspace" as="a" :href="api.workspaceDownloadUrl(databasePath(db))"
                           download label="Files" icon="pi pi-download" text size="small"
                           severity="secondary" class="no-underline" @click.stop
                           v-tooltip.bottom="'Notes and records of this seat as a zip'" />

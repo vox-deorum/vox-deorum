@@ -8,14 +8,7 @@ import Database from 'better-sqlite3';
 import { trace } from '@opentelemetry/api';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
-  config: { telemetryDir: '' },
-}));
-
-vi.mock('../../../../src/utils/config.js', () => ({ config: mocks.config }));
-
 import { WorkspaceStore, type PathChange } from '../../../../src/utils/workspace/workspace-store.js';
-import { workspaceRoot } from '../../../../src/utils/workspace/player-workspace.js';
 
 /** Decode stored bytes as UTF-8 text. */
 function text(bytes: Uint8Array | undefined): string | undefined {
@@ -39,7 +32,6 @@ describe('WorkspaceStore', () => {
 
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-store-'));
-    mocks.config.telemetryDir = dir;
     dbPath = path.join(dir, 'nested', 'seat.db');
     store = WorkspaceStore.open(dbPath);
   });
@@ -81,14 +73,128 @@ describe('WorkspaceStore', () => {
     });
   });
 
-  describe('pathFor', () => {
-    it('should give one path per game and player under the workspace root', () => {
-      expect(WorkspaceStore.pathFor('game-1', 3)).toBe(path.join(workspaceRoot(), 'games', 'game-1-player-3.db'));
+  describe('seat telemetry file', () => {
+    /** Open a store with one commit and stamp every commit's time so newest comparisons are deterministic. */
+    function makeStampedStore(file: string, time: number): void {
+      const seat = WorkspaceStore.open(file);
+      seat.commit({ kind: 'notes', turn: 1, author: 'host', changes: [{ path: 'game/note.md', type: 'file', content: `note ${time}` }] });
+      seat.close();
+      const db = new Database(file);
+      db.prepare('UPDATE ws_commits SET time = ?').run(time);
+      db.close();
+    }
+
+    it('should coexist with a spans table in one file', () => {
+      const file = path.join(dir, 'telemetry', 'g1-player-1.db');
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      const telemetry = new Database(file);
+      telemetry.exec('CREATE TABLE spans (contextId TEXT, name TEXT)');
+      telemetry.prepare('INSERT INTO spans VALUES (?, ?)').run('g1-player-1', 'turn');
+      telemetry.close();
+
+      const seat = WorkspaceStore.open(file);
+      seat.commit({ kind: 'notes', turn: 1, author: 'host', changes: [{ path: 'game/note.md', type: 'file', content: 'note' }] });
+      seat.close();
+
+      const reopened = WorkspaceStore.open(file);
+      expect(text(reopened.readFile('game/note.md'))).toBe('note');
+      reopened.close();
+      const check = new Database(file, { readonly: true });
+      expect(check.prepare('SELECT name FROM spans').all()).toEqual([{ name: 'turn' }]);
+      check.close();
     });
 
-    it('should reject game IDs that escape the games folder', () => {
-      expect(() => WorkspaceStore.pathFor('../evil', 1)).toThrow();
-      expect(() => WorkspaceStore.pathFor('a/b', 1)).toThrow();
+    it('should report hasStore only for a file that holds a store', () => {
+      expect(WorkspaceStore.hasStore(path.join(dir, 'missing', 'seat.db'))).toBe(false);
+
+      const spansOnly = path.join(dir, 'spans-only.db');
+      const telemetry = new Database(spansOnly);
+      telemetry.exec('CREATE TABLE spans (contextId TEXT, name TEXT)');
+      telemetry.close();
+      expect(WorkspaceStore.hasStore(spansOnly)).toBe(false);
+
+      const file = path.join(dir, 'flag.db');
+      expect(WorkspaceStore.hasStore(file)).toBe(false);
+      const seat = WorkspaceStore.open(file);
+      expect(WorkspaceStore.hasStore(file)).toBe(true);
+      seat.close();
+    });
+
+    it('should find the sibling store with the newest commit and skip the workspaces folder', () => {
+      const base = Date.now();
+      const inA = path.join(dir, 'a', 'seat.db');
+      const inB = path.join(dir, 'b', 'seat.db');
+      makeStampedStore(inA, base + 1_000);
+      makeStampedStore(inB, base + 2_000);
+      makeStampedStore(path.join(dir, 'workspaces', 'seat.db'), base + 3_000);
+
+      // The folder being opened into (c) and the always-present nested store are both older or absent.
+      expect(WorkspaceStore.findSeed(path.join(dir, 'c', 'seat.db'))).toBe(path.resolve(inB));
+      expect(WorkspaceStore.findSeed(inA)).toBe(path.resolve(inB));
+    });
+
+    it('should find no seed when no sibling holds a store', () => {
+      expect(WorkspaceStore.findSeed(path.join(dir, 'c', 'lonely.db'))).toBeUndefined();
+    });
+
+    it('should copy the seed store whole into a file that has no store', () => {
+      const seedFile = path.join(dir, 'seed', 'seat.db');
+      const seed = WorkspaceStore.open(seedFile);
+      seed.commit({ kind: 'notes', turn: 1, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'plan' }] });
+      const head = seed.commit({ kind: 'turn', turn: 2, author: 'host', changes: [{ path: 'records/turn-2/state.md', type: 'file', content: 'turn 2' }] });
+      const history = seed.history();
+      const plan = seed.readFile('game/plan.md')!;
+      seed.close();
+
+      const copy = WorkspaceStore.open(path.join(dir, 'new-strategist', 'seat.db'), { seedFrom: seedFile });
+      expect(copy.head()).toBe(head);
+      expect(copy.history()).toEqual(history);
+      expect(copy.readFile('game/plan.md')).toEqual(plan);
+      expect(text(copy.readFile('records/turn-2/state.md'))).toBe('turn 2');
+      copy.close();
+    });
+
+    it('should bring an earlier copy up to the seed, keeping its own commit IDs', () => {
+      const originalFile = path.join(dir, 'catch-up-a', 'seat.db');
+      const original = WorkspaceStore.open(originalFile);
+      const early = original.commit({ kind: 'notes', turn: 1, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'old plan' }] });
+      original.close();
+
+      // Strategist B copies A's store and moves on; A's file stays at the earlier commit.
+      const seedFile = path.join(dir, 'catch-up-b', 'seat.db');
+      const seed = WorkspaceStore.open(seedFile, { seedFrom: originalFile });
+      seed.commit({ kind: 'turn', turn: 2, author: 'host', changes: [{ path: 'records/turn-2/state.md', type: 'file', content: 'turn 2' }] });
+      const seedHead = seed.commit({ kind: 'notes', turn: 2, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'new plan' }] });
+      const history = seed.history();
+      seed.close();
+
+      const resumed = WorkspaceStore.open(originalFile, { seedFrom: seedFile });
+      expect(resumed.head()).toBe(seedHead);
+      expect(resumed.history()).toEqual(history);
+      expect(text(resumed.readFile('game/plan.md'))).toBe('new plan');
+      expect(text(resumed.readFile('game/plan.md', early))).toBe('old plan');
+      expect(text(resumed.readFile('records/turn-2/state.md'))).toBe('turn 2');
+      resumed.close();
+    });
+
+    it('should leave a store whose history differs from the seed', () => {
+      const targetPath = path.join(dir, 'reseed-target', 'seat.db');
+      const own = WorkspaceStore.open(targetPath);
+      const head = own.commit({ kind: 'notes', turn: 1, author: 'host', changes: [{ path: 'game/own.md', type: 'file', content: 'own' }] });
+      own.close();
+
+      // An unrelated store with more commits than the target.
+      const seedFile = path.join(dir, 'reseed-seed', 'seat.db');
+      const seed = WorkspaceStore.open(seedFile);
+      seed.commit({ kind: 'notes', turn: 5, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'seeded' }] });
+      seed.commit({ kind: 'notes', turn: 6, author: 'host', changes: [{ path: 'game/more.md', type: 'file', content: 'more' }] });
+      seed.close();
+
+      const reopened = WorkspaceStore.open(targetPath, { seedFrom: seedFile });
+      expect(reopened.head()).toBe(head);
+      expect(text(reopened.readFile('game/own.md'))).toBe('own');
+      expect(reopened.readFile('game/plan.md')).toBeUndefined();
+      reopened.close();
     });
   });
 

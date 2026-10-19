@@ -23,10 +23,10 @@ export interface MaterializeSink {
  * explicit directories deepest first, so a sink can set directory times after filling them.
  *
  * @returns the commit that was materialized
- * @throws when the store file is missing or the commit is unknown
+ * @throws when the database has no store or the commit is unknown
  */
 export function materialize(dbPath: string, sink: MaterializeSink, commit?: CommitID): CommitID {
-  if (!fs.existsSync(dbPath)) throw new Error(`No workspace store at ${dbPath}`);
+  if (!WorkspaceStore.hasStore(dbPath)) throw new Error(`No workspace store in ${dbPath}`);
   const store = WorkspaceStore.open(dbPath, { readonly: true });
   try {
     return store.readTransaction(() => {

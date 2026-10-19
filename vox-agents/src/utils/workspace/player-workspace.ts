@@ -36,6 +36,18 @@ export interface WorkspaceExecResult {
   exitCode: number;
 }
 
+/** Something the bash tool can run commands in: a seat's live workspace or a replay copy. */
+export interface Workspace {
+  /**
+   * Run one bash script. Failures come back as stderr with exit code 1.
+   *
+   * @param command - The script to run
+   * @param signal - The command's run signal
+   * @param info - The turn and author for any commit the workspace makes
+   */
+  exec(command: string, signal?: AbortSignal, info?: WorkspaceCommandInfo): Promise<WorkspaceExecResult>;
+}
+
 /** A mount backed by the seat's workspace store. */
 export interface WorkspaceStoreMount {
   /** Where the agent sees the folder, for example `/workspace/game`. */
@@ -109,10 +121,10 @@ export function workspaceSeatName(gameID: string, playerID: number): string {
  * @param files - The seat's resolved files setting
  * @param gameID - The game the folder belongs to
  * @param playerID - The player the folder belongs to
+ * @param root - The folder holding `shared/` and `scratch/`; defaults to {@link workspaceRoot}
  * @throws if the game ID or a shared name would place a folder outside its directory
  */
-export function workspaceMounts(files: ResolvedFilesConfig, gameID: string, playerID: number): WorkspaceMount[] {
-  const root = workspaceRoot();
+export function workspaceMounts(files: ResolvedFilesConfig, gameID: string, playerID: number, root: string = workspaceRoot()): WorkspaceMount[] {
   const folder = workspaceSeatName(gameID, playerID);
   const mounts: WorkspaceMount[] = [
     { virtualPath: workspaceScratchPath, realPath: path.join(root, 'scratch', folder), access: 'write', scope: 'scratch' },
@@ -208,7 +220,7 @@ interface OpenWorkspace {
 }
 
 /** Error text for a command whose run was cancelled. */
-const cancelledMessage = 'The command was cancelled, so its file changes were discarded.';
+export const cancelledMessage = 'The command was cancelled, so its file changes were discarded.';
 
 /**
  * A player's workspace in one game. Disk folders and shared guides are created on the first
@@ -218,7 +230,7 @@ const cancelledMessage = 'The command was cancelled, so its file changes were di
  * along with any host commits made in between. Concurrent commands from the seat's agents share
  * the disk mounts, including `/tmp`, but nothing else.
  */
-export class PlayerWorkspace {
+export class PlayerWorkspace implements Workspace {
   /** The folders this workspace mounts. */
   public readonly mounts: WorkspaceMount[];
   private readonly files: ResolvedFilesConfig;
@@ -309,11 +321,11 @@ export class PlayerWorkspace {
 }
 
 /** A just-bash filesystem over a real folder: writable, or read-only like the store's read views. */
-function diskFilesystem(root: string, access: FileAccess): MountConfig['filesystem'] {
+export function diskFilesystem(root: string, access: FileAccess): MountConfig['filesystem'] {
   return access === 'write' ? new ReadWriteFs({ root }) : new OverlayFs({ root, readOnly: true, mountPoint: '/' });
 }
 
 /** A failed command result carrying only an error message. */
-function failure(message: string): WorkspaceExecResult {
+export function failure(message: string): WorkspaceExecResult {
   return { stdout: '', stderr: capOutput(message), exitCode: 1 };
 }

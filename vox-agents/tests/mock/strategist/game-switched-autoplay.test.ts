@@ -57,6 +57,7 @@ import { voxCivilization } from '../../../src/infra/vox-civilization.js';
 import { VoxPlayer } from '../../../src/strategist/vox-player.js';
 import { VoxContext } from '../../../src/infra/vox-context.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { sqliteExporter } from '../../../src/instrumentation.js';
 import { contextRegistry } from '../../../src/infra/context-registry.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 import { hasGameReference, writeGameReference } from '../../../src/knowledge/reference.js';
@@ -468,12 +469,16 @@ describe('handleGameSwitched player preparation', () => {
   const preparedPlayers: VoxPlayer[] = [];
   /** IDs of every context registered during a test. */
   let registeredContexts: string[];
+  /** The folder each context ID registered through the spied `createContext`. */
+  const folders = new Map<string, string>();
 
   beforeEach(() => {
     savedTelemetryDir = rootConfig.telemetryDir;
     telemetryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-prepare-'));
     rootConfig.telemetryDir = telemetryDir;
-    vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockResolvedValue(undefined);
+    folders.clear();
+    vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockImplementation(async (id, folder) => { folders.set(id, folder); });
+    vi.spyOn(sqliteExporter, 'getDatabasePath').mockImplementation((id: string) => path.join(telemetryDir, folders.get(id) ?? 'unknown', `${id}.db`));
     vi.spyOn(VoxSpanExporter.getInstance(), 'closeContext').mockResolvedValue(undefined);
     vi.spyOn(VoxContext.prototype, 'registerTools').mockResolvedValue(undefined);
     registeredContexts = [];
@@ -520,6 +525,11 @@ describe('handleGameSwitched player preparation', () => {
     return s;
   }
 
+  /** The seat's telemetry database path under its strategist folder. */
+  function seatDbPath(gameID: string, playerID: number, strategist: string): string {
+    return path.join(telemetryDir, strategist, `${gameID}-player-${playerID}.db`);
+  }
+
   /** The registered contexts still in the registry. */
   function liveContexts(): string[] {
     return registeredContexts.filter((id) => contextRegistry.get(id) !== undefined);
@@ -556,7 +566,7 @@ describe('handleGameSwitched player preparation', () => {
 
   it('should skip the reference calls when an earlier session already wrote it to every seat', async () => {
     for (const playerID of [0, 1]) {
-      const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID));
+      const store = WorkspaceStore.open(seatDbPath('G-prep', playerID, 'simple-strategist'));
       await writeGameReference([store]);
       store.close();
     }
@@ -572,7 +582,7 @@ describe('handleGameSwitched player preparation', () => {
 
   it('should replace stale references before starting any player loop', async () => {
     for (const playerID of [0, 1]) {
-      const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID));
+      const store = WorkspaceStore.open(seatDbPath('G-prep', playerID, 'simple-strategist'));
       store.commit({ kind: 'reference', turn: null, author: 'host', changes: [{ path: 'reference/units.md', type: 'file', content: 'stale' }] });
       store.close();
     }
@@ -605,7 +615,7 @@ describe('handleGameSwitched player preparation', () => {
     expect(registeredContexts).toHaveLength(2);
     expect(liveContexts()).toEqual([]);
     for (const playerID of [0, 1]) {
-      const store = WorkspaceStore.open(WorkspaceStore.pathFor('G-prep', playerID), { readonly: true });
+      const store = WorkspaceStore.open(seatDbPath('G-prep', playerID, 'simple-strategist'), { readonly: true });
       expect(hasGameReference(store)).toBe(false);
       store.close();
     }

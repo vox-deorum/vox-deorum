@@ -35,7 +35,8 @@ export function bashResultText({ stdout, stderr, exitCode }: WorkspaceExecResult
  * Create the bash tool for a context. The description covers only shell mechanics and leaves the
  * folders to the records directions, so it is the same for every seat, turn, and call. Each call
  * runs in the workspace of the player and game in the active parameters, stops with the active
- * run, and commits its note changes under the parameters' turn and the running agent's name.
+ * run, and commits its note changes under the parameters' turn and the running agent's name. A run
+ * that brings its own workspace, such as an oracle replay, uses that one instead.
  *
  * @param context - A context whose `files` setting is on
  */
@@ -56,7 +57,7 @@ export function createBashTool<TParameters extends AgentParameters>(context: Vox
     execute: async (input, parameters) => {
       let workspace;
       try {
-        workspace = context.workspace(parameters.gameID, parameters.playerID);
+        workspace = context.currentWorkspace ?? context.workspace(parameters.gameID, parameters.playerID);
       } catch (error) {
         return failure(`Could not open the workspace: ${errorMessage(error)}`);
       }

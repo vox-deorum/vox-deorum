@@ -151,6 +151,8 @@ export interface OracleConfig {
 export interface OracleParameters extends AgentParameters {
   /** Tool names declared for the replay (the original run's, unless modifyPrompt overrides them) */
   activeTools: string[];
+  /** Set when modifyPrompt chose `activeTools`, so an empty list declares no tools rather than all of them */
+  toolsOverridden?: boolean;
   /** The original run's per-step tool lists; tools it removed by a step are removed on that replay step */
   stepTools: string[][];
   /** Model to use (original or overridden) */

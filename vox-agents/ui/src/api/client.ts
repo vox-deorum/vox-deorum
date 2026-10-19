@@ -751,10 +751,13 @@ class ApiClient {
     );
   }
 
-  /** Link that downloads a seat's workspace files, head by default, as one zip. */
-  workspaceDownloadUrl(gameID: string, playerID: string, commit?: number): string {
+  /**
+   * Link that downloads the workspace files inside a seat's telemetry database, head by default,
+   * as one zip. Takes the same database path as the trace links.
+   */
+  workspaceDownloadUrl(filename: string, commit?: number): string {
     const query = commit === undefined ? '' : `?commit=${commit}`;
-    return `${this.baseUrl}/api/telemetry/workspace/${encodeURIComponent(gameID)}/${encodeURIComponent(playerID)}/download${query}`;
+    return `${this.baseUrl}/api/telemetry/db/${encodeURIComponent(filename)}/workspace${query}`;
   }
 
   /** Link that downloads every log plus a setup summary as one zip. */

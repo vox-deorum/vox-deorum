@@ -40,7 +40,7 @@ import type { VoxSession } from "./vox-session.js";
 import { createAgentTool } from "../utils/tools/agent-tools.js";
 import { wrapMCPTools } from "../utils/tools/mcp-tools.js";
 import { bashToolName, createBashTool } from "../utils/tools/bash-tool.js";
-import { PlayerWorkspace } from "../utils/workspace/player-workspace.js";
+import { PlayerWorkspace, type Workspace } from "../utils/workspace/player-workspace.js";
 import type { WorkspaceStore } from "../utils/workspace/workspace-store.js";
 import { SeatRecords } from "../knowledge/records.js";
 import { executeAgent } from "./vox-execute.js";
@@ -194,6 +194,11 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
   /** Name of the agent currently executing, if this run is inside an agent frame. */
   public get currentAgentName(): string | undefined {
     return this.als.getStore()?.agentName;
+  }
+
+  /** The active root run's own workspace, which the bash tool prefers over the seat's. Undefined outside a run. */
+  public get currentWorkspace(): Workspace | undefined {
+    return this.als.getStore()?.root.workspace;
   }
 
   /**

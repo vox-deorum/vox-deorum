@@ -4,6 +4,8 @@
  * Replay phase: loads RetrievedRows (from memory or disk), applies modifyPrompt,
  * runs each through the LLM via VoxContext, and writes result CSV + trails.
  * Supports multiple models per source row when modelOverride returns an array.
+ * Rows that ran with files get a bash tool over a disposable copy of the seat's workspace,
+ * pinned to the commit the original run started from.
  */
 
 import fs from 'node:fs';
@@ -25,6 +27,11 @@ import { loadToolSchemaCache, replaceToolsWithSchemaOnly } from './utils/schema-
 import { getTrailBase, getTrailPaths, readReplayCache, resolvePath, writeCsv, writeTrail } from './utils/output.js';
 import { startBatchManager, shutdownBatchManager } from './batch/batch-manager.js';
 import { unrecordedRunContext } from './types.js';
+import { discoverDbPath } from './utils/db-resolver.js';
+import { createBashTool, bashToolName } from '../utils/tools/bash-tool.js';
+import { validatePromptsSetting } from '../utils/prompts/prompt-files.js';
+import { ReplayWorkspace } from '../utils/workspace/replay-workspace.js';
+import type { PromptsSetting, ResolvedFilesConfig } from '../types/config.js';
 import type {
   OracleConfig,
   OracleParameters,
@@ -90,6 +97,59 @@ function afterGate<T>(waitFor: Promise<void> | undefined, primes: PromptGate | u
       primes?.open();
     }
   };
+}
+
+/** The key of a replay context: one per distinct recorded files setting and effective prompt folder. */
+function filesContextKey(files: ResolvedFilesConfig, prompts: PromptsSetting): string {
+  const shared = Object.keys(files.shared).sort().map(name => [name, files.shared[name]]);
+  return JSON.stringify([files.game, shared, files.quota, prompts]);
+}
+
+/**
+ * The prompt folder a replay uses for its workspace guidance: the row's recorded folder when it
+ * still loads, otherwise the built-ins with one warning per folder. The replay machine's own
+ * prompts setting never applies, so a replay keeps the original run's guidance.
+ *
+ * @param recorded - The row's recorded prompt folder, or false for built-ins
+ * @param checked - Results of earlier checks by folder, filled in by this call
+ */
+export function replayPrompts(recorded: PromptsSetting, checked: Map<string, PromptsSetting>): PromptsSetting {
+  if (recorded === false) return false;
+  let prompts = checked.get(recorded);
+  if (prompts === undefined) {
+    try {
+      validatePromptsSetting(recorded, 'recorded prompts');
+      prompts = recorded;
+    } catch (error) {
+      logger.warn(`Recorded prompt folder ${recorded} cannot be used, so replays use the built-in prompts: ${errorMessage(error)}`);
+      prompts = false;
+    }
+    checked.set(recorded, prompts);
+  }
+  return prompts;
+}
+
+/**
+ * Open the workspace copy a files row replays against: the seat's store in the row's source
+ * telemetry database at the recorded commit, with shared folders from the same telemetry folder.
+ *
+ * @throws when the row recorded no commit, or its database, store, or commit is missing
+ */
+async function openReplayWorkspace(retrieved: RetrievedRow, files: ResolvedFilesConfig, telemetryDir: string): Promise<ReplayWorkspace> {
+  const { game_id: gameId, player_id: playerId } = retrieved.row;
+  if (retrieved.workspace === undefined) {
+    throw new Error('The original run had files turned on but recorded no workspace commit');
+  }
+  const dbPath = discoverDbPath(gameId, playerId, telemetryDir);
+  if (!dbPath) throw new Error(`No telemetry database for game ${gameId} player ${playerId} in ${telemetryDir}`);
+  return ReplayWorkspace.open({
+    dbPath,
+    files,
+    gameID: gameId,
+    playerID: parseInt(playerId, 10),
+    commit: retrieved.workspace,
+    sharedRoot: path.join(telemetryDir, 'workspaces', 'shared'),
+  });
 }
 
 /**
@@ -204,6 +264,10 @@ export async function runReplay(
 
   // Initialize VoxContext with MCP for schema-only tools
   const voxContext = new VoxContext<OracleParameters>({}, config.experimentName);
+  const filesContexts = new Map<string, VoxContext<OracleParameters>>();
+  const taskContexts = new Map<RetrievedRow, VoxContext<OracleParameters>>();
+  // The seat stores live in the source telemetry databases the retrieve phase read.
+  const sourceTelemetryDir = resolvePath(config.telemetryDir || 'telemetry');
   let connectedToMcp = false;
 
   try {
@@ -227,6 +291,29 @@ export async function runReplay(
     logger.info(`Tool policy: choice=${oracleAgent.toolChoice}, completion tools=${oracleAgent.completionTools.join(', ')}`);
 
     await VoxSpanExporter.getInstance().createContext(config.experimentName, 'oracle');
+
+    // Rows that ran with files replay on a context per recorded setting, whose bash tool works on
+    // each task's own workspace copy. Every context exists before any task starts.
+    const checkedPrompts = new Map<string, PromptsSetting>();
+    for (const { retrieved } of tasks) {
+      if (!retrieved.files || taskContexts.has(retrieved)) continue;
+      const prompts = replayPrompts(retrieved.prompts, checkedPrompts);
+      const key = filesContextKey(retrieved.files, prompts);
+      let context = filesContexts.get(key);
+      if (!context) {
+        const id = `${config.experimentName}-files-${filesContexts.size + 1}`;
+        context = new VoxContext<OracleParameters>({}, id);
+        filesContexts.set(key, context);
+        await VoxSpanExporter.getInstance().createContext(id, 'oracle');
+        context.files = retrieved.files;
+        context.prompts = prompts;
+        context.mcpToolMap = voxContext.mcpToolMap;
+        context.tools = { ...voxContext.tools };
+        context.tools[bashToolName] = createBashTool(context);
+        logger.info(`Replay context ${id}: files=${JSON.stringify(retrieved.files)}, prompts=${prompts || 'built-in'}`);
+      }
+      taskContexts.set(retrieved, context);
+    }
 
     // Start batch manager if batch mode is enabled.
     // The batch manager is transparent infrastructure. streamTextWithConcurrency
@@ -261,7 +348,8 @@ export async function runReplay(
           const { game_id: gameId, player_id: playerId, turn } = retrieved.row;
           logger.info(`Replaying task ${i + 1}/${tasks.length}: game=${gameId}, player=${playerId}, turn=${turn}${suffix}`);
           try {
-            const result = await replaySingleRow(retrieved, resolvedModel, config, voxContext, experimentDir, suffix, cachePrompt);
+            const runContext = taskContexts.get(retrieved) ?? voxContext;
+            const result = await replaySingleRow(retrieved, resolvedModel, config, runContext, sourceTelemetryDir, experimentDir, suffix, cachePrompt);
             if (repetition !== undefined) result.repetition = repetition;
             return result;
           } catch (error) {
@@ -313,7 +401,9 @@ export async function runReplay(
       // The oracle span DB lives under the exporter's telemetry root (see instrumentation.ts),
       // which is the app-level directory; OracleConfig.telemetryDir is the retrieve phase's input.
       const telemetryRoot = appConfig.telemetryDir || 'telemetry';
-      logger.info(`Telemetry flushed to: ${resolvePath(path.join(telemetryRoot, 'oracle', `${config.experimentName}.db`))}`);
+      for (const id of [config.experimentName, ...[...filesContexts.values()].map(context => context.id)]) {
+        logger.info(`Telemetry flushed to: ${resolvePath(path.join(telemetryRoot, 'oracle', `${id}.db`))}`);
+      }
     } catch (flushError) {
       logger.error('Failed to flush replay telemetry:', flushError);
     } finally {
@@ -322,6 +412,9 @@ export async function runReplay(
         await shutdownBatchManager();
       }
       await voxContext.shutdown();
+      for (const context of filesContexts.values()) {
+        await context.shutdown();
+      }
       if (connectedToMcp) {
         await mcpClient.disconnect();
       }
@@ -331,13 +424,15 @@ export async function runReplay(
 
 /**
  * Replay a single RetrievedRow for one resolved model.
- * Applies modifyPrompt, executes through VoxContext, writes trails.
+ * Applies modifyPrompt, executes through VoxContext, writes trails. A row that ran with files
+ * gets its own workspace copy for this execution, closed when it ends.
  */
 async function replaySingleRow(
   retrieved: RetrievedRow,
   resolvedModel: Model,
   config: OracleConfig,
   voxContext: VoxContext<OracleParameters>,
+  telemetryDir: string,
   experimentDir: string,
   trailSuffix: string,
   cachePrompt?: boolean
@@ -391,6 +486,7 @@ async function replaySingleRow(
     gameID: gameId,
     turn,
     activeTools: finalActiveTools,
+    toolsOverridden: modifications.activeTools !== undefined,
     stepTools: retrieved.stepTools ?? [],
     resolvedModel,
     agentType: retrieved.agentType,
@@ -413,9 +509,15 @@ async function replaySingleRow(
   // shared Oracle context, so concurrent tasks never share cancellation or token accounting.
   // OracleParameters carry their own turn, so no overrides are needed.
   const tokenOutput: ExecuteTokenOutput = { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 };
-  const result = await voxContext.withRun({ parameters }, () =>
-    voxContext.execute('oracle', input, undefined, tokenOutput)
-  ) as ReplayResult | undefined;
+  const workspace = retrieved.files ? await openReplayWorkspace(retrieved, retrieved.files, telemetryDir) : undefined;
+  let result: ReplayResult | undefined;
+  try {
+    result = await voxContext.withRun({ parameters, workspace }, () =>
+      voxContext.execute('oracle', input, undefined, tokenOutput)
+    ) as ReplayResult | undefined;
+  } finally {
+    workspace?.close();
+  }
 
   if (!result) {
     throw new Error('Oracle agent returned no result');

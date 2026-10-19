@@ -2,7 +2,7 @@
 
 The Oracle answers counterfactual questions: _what would the AI have decided on that turn if the prompt had been different, or the model had been someone else?_
 
-Given a CSV of real game turns, it re-runs each turn's original LLM call, extracted verbatim from recorded telemetry, with whatever modifications an experiment specifies, then records what the model decides this time. Nothing touches a live game. The replayed model is given **schema-only tools**, so it produces tool-call intents that are captured as decisions but never executed.
+Given a CSV of real game turns, it re-runs each turn's original LLM call, extracted verbatim from recorded telemetry, with whatever modifications an experiment specifies, then records what the model decides this time. Nothing touches a live game. The replayed model is given **schema-only tools**, so it produces tool-call intents that are captured as decisions but never executed. A replay of a run recorded with [files](../workspace/files.md) on is the exception: it gets a real `bash` tool over a disposable copy of the seat's workspace, described under _Replay workspaces_.
 
 ```
 recorded telemetry ──retrieve──► original prompts (JSON) ──replay with changes──► new decisions (CSV, trails)
@@ -78,7 +78,26 @@ Retrieve carries workspace metadata from the agent span onto each row:
 | `workspace` | `context.workspace` | The seat store's head commit just before the run's first model step, when files are on |
 | `prompts` | `context.prompts` | The custom prompt folder behind the recorded system text, or `false` |
 
-The loop captures the commit after preparation, including archived briefings. Every store starts with an empty commit, so an early chat can still pin a version. Preparation failures and evaluation runs record no commit. File mode follows from `files` and the recorded tools. Missing metadata defaults to files off and built-in prompts. The `prompts` field groups results; replay uses the recorded system text.
+The loop captures the commit after preparation, including archived briefings. Every store starts with an empty commit, so an early chat can still pin a version. Preparation failures and evaluation runs record no commit. File mode follows from `files` and the recorded tools. Missing metadata defaults to files off and built-in prompts. The `prompts` field groups results and picks the workspace guidance folder (see _Replay workspaces_). Replay always uses the recorded system text.
+
+### Replay workspaces
+
+Rows that ran with files on replay against a pinned, disposable copy of their seat workspace; rows with files off replay on the base schema-only context. `ReplayWorkspace` in `src/utils/workspace/replay-workspace.ts` opens the seat's store read-only inside the row's source telemetry database, the same file the retrieve phase read (located with the `discoverDbPath` lookup in `src/oracle/utils/db-resolver.ts` under the experiment's `telemetryDir`), at the commit recorded in the row's `workspace` field. The copy mirrors the original mounts:
+
+| Folder | Replay behavior |
+| --- | --- |
+| `/workspace/records`, `/workspace/reference` | Read-only store views of the pinned commit |
+| `/workspace/game` | The recorded access. When game access is writable and the pinned tree has no `AGENTS.md`, the default guide is added in memory |
+| `/workspace/shared/<name>` | An in-memory overlay of the folder's current contents under `<telemetryDir>/workspaces/shared`, read-only unless the run recorded write access. A writable folder gets the shared guide in memory; a missing folder appears empty |
+| `/tmp` | In memory |
+
+Writes persist across commands within one execution but never reach disk or the store, and nothing is committed. Each execution, meaning every model variant and repetition, gets its own workspace, closed when the execution ends. A files row with no recorded commit, no telemetry database, no store, or an unknown commit fails before the model is called.
+
+The bash tool normally runs in the seat's live workspace. A root run can instead carry its own workspace, through the `workspace` option of `withRun` (`src/infra/vox-run.ts`), and the bash tool prefers it; forked runs do not inherit it.
+
+File-enabled rows share replay contexts: each distinct combination of recorded files setting and effective prompt folder gets its own context, with id `<experimentName>-files-<n>`, the base experiment context's schema-only tools plus a real bash tool, and telemetry at `oracle/<id>.db` under the oracle experiment. All contexts close at shutdown and their telemetry paths are logged. The effective prompt folder for workspace guidance is the row's recorded folder when it still passes validation, otherwise the built-ins with one warning per folder. The replay machine's own `prompts` setting never applies, so replays keep the original run's guidance. `OracleAgent.getRunTools` returns the replay's declared tool list exactly, so bash is present only when the original run (or a `modifyPrompt` override) declared it.
+
+Portability: to replay file-enabled rows on another machine, copy the seat's telemetry database plus any shared folders the seat used.
 
 ## Where things land
 

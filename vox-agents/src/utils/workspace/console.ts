@@ -1,16 +1,15 @@
 /**
  * @module utils/workspace/console
  *
- * CLI entry point for seat workspace stores.
+ * CLI entry point for seat workspace stores, which live inside seat telemetry databases.
  *
  * Usage:
- *   npm run workspace -- materialize <gameID> <playerID> <outDir> [commit]
+ *   npm run workspace -- materialize <telemetryDb> <outDir> [commit]
  *
  * `materialize` copies one version of a seat store, head by default, out as ordinary files. The
- * output folder must be new or empty. The store is only read.
+ * output folder must be new or empty. The database is only read.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { createLogger } from '../logger.js';
 import { errorMessage } from '../errors.js';
@@ -23,12 +22,11 @@ const logger = createLogger('WorkspaceCLI');
 /** Print usage through the application logger. */
 function printUsage(): void {
   logger.info([
-    'Usage: npm run workspace -- materialize <gameID> <playerID> <outDir> [commit]',
+    'Usage: npm run workspace -- materialize <telemetryDb> <outDir> [commit]',
     '',
-    '  gameID     Game the seat belongs to',
-    '  playerID   Player ID of the seat',
-    '  outDir     New or empty folder to write the files into',
-    '  commit     Commit ID to copy (default: the current head)',
+    '  telemetryDb  Seat telemetry database, such as telemetry/<strategist>/<gameID>-player-<playerID>.db',
+    '  outDir       New or empty folder to write the files into',
+    '  commit       Commit ID to copy (default: the current head)',
   ].join('\n'));
 }
 
@@ -39,17 +37,17 @@ function parseNumber(value: string, name: string): number {
 }
 
 /**
- * Run the `materialize` command: resolve the seat store, check it exists before creating the output
+ * Run the `materialize` command: check the database holds a store before creating the output
  * folder, and write the chosen version there.
  */
 function runMaterialize(args: string[]): void {
-  if (args.length < 3 || args.length > 4) {
+  if (args.length < 2 || args.length > 3) {
     printUsage();
-    throw new Error('materialize takes <gameID> <playerID> <outDir> [commit]');
+    throw new Error('materialize takes <telemetryDb> <outDir> [commit]');
   }
-  const [gameID, player, outDir, commitArg] = args;
-  const dbPath = WorkspaceStore.pathFor(gameID, parseNumber(player, 'playerID'));
-  if (!fs.existsSync(dbPath)) throw new Error(`No workspace store for game ${gameID} player ${player} at ${dbPath}`);
+  const [dbArg, outDir, commitArg] = args;
+  const dbPath = path.resolve(dbArg);
+  if (!WorkspaceStore.hasStore(dbPath)) throw new Error(`No workspace store in ${dbPath}`);
   const commit = commitArg === undefined ? undefined : parseNumber(commitArg, 'commit');
   const id = materialize(dbPath, diskSink(outDir), commit);
   logger.info(`Materialized commit ${id} of ${dbPath} into ${path.resolve(outDir)}`);

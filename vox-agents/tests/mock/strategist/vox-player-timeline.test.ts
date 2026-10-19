@@ -46,13 +46,17 @@ interface Decision {
 
 let telemetryDir: string;
 let savedTelemetryDir: string | undefined;
+/** The folder each context ID registered through the spied `createContext`. */
+const folders = new Map<string, string>();
 
 beforeEach(() => {
   sleepHook.onSleep = undefined;
   savedTelemetryDir = config.telemetryDir;
   telemetryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vox-timeline-'));
   config.telemetryDir = telemetryDir;
-  vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockResolvedValue(undefined);
+  folders.clear();
+  vi.spyOn(VoxSpanExporter.getInstance(), 'createContext').mockImplementation(async (id, folder) => { folders.set(id, folder); });
+  vi.spyOn(sqliteExporter, 'getDatabasePath').mockImplementation((id: string) => path.join(telemetryDir, folders.get(id) ?? 'unknown', `${id}.db`));
   vi.spyOn(VoxSpanExporter.getInstance(), 'closeContext').mockResolvedValue(undefined);
   vi.spyOn(spanProcessor, 'forceFlush').mockResolvedValue(undefined as never);
   vi.spyOn(sqliteExporter, 'forceFlush').mockResolvedValue(undefined as never);
@@ -69,9 +73,9 @@ afterEach(() => {
 });
 
 /** Build a seat. `files` turns on the seat store and the stand-in recorder. */
-function makeSeat(options: { gameID: string; initialTurn: number; files?: boolean; everyTurns?: number; failRecord?: (turn: number) => boolean }) {
+function makeSeat(options: { gameID: string; initialTurn: number; files?: boolean; everyTurns?: number; strategist?: string; failRecord?: (turn: number) => boolean }) {
   const playerConfig = {
-    strategist: 'simple-strategist',
+    strategist: options.strategist ?? 'simple-strategist',
     llms: {},
     files: options.files ? 'write' : false,
     pacing: { everyTurns: options.everyTurns ?? 1 },
@@ -135,9 +139,14 @@ async function drive(player: VoxPlayer, steps: Array<() => void>): Promise<void>
   await player.execute();
 }
 
+/** The seat's telemetry database path under its strategist folder. */
+function seatDbPath(gameID: string, playerID: number, strategist: string): string {
+  return path.join(telemetryDir, strategist, `${gameID}-player-${playerID}.db`);
+}
+
 /** Open the seat's store again after its loop closed it. */
 function reopenStore(gameID: string): WorkspaceStore {
-  return WorkspaceStore.open(WorkspaceStore.pathFor(gameID, 1));
+  return WorkspaceStore.open(seatDbPath(gameID, 1, 'simple-strategist'));
 }
 
 /** The turns `fetch` was called for, in order. */
@@ -298,6 +307,39 @@ describe('VoxPlayer timeline', () => {
       expect(rewind).not.toHaveBeenCalled();
       expect(seat.records).not.toHaveBeenCalled();
       expect(seat.player.context.store).toBeUndefined();
+    });
+  });
+
+  describe('store seeding', () => {
+    it('should seed a switched strategist store from the seat file under the old strategist', () => {
+      const gameID = 'seeded-store';
+      const seatA = makeSeat({ gameID, initialTurn: 1, files: true });
+      seatA.player.context.store!.commit({ kind: 'notes', turn: null, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'keep me' }] });
+      const head = seatA.player.context.store!.head();
+      seatA.player.closeStore();
+
+      const seatB = makeSeat({ gameID, initialTurn: 1, files: true, strategist: 'null-strategist' });
+      const seeded = seatB.player.context.store!;
+      expect(seeded.head()).toBe(head);
+      expect(Buffer.from(seeded.readFile('game/plan.md')!).toString('utf8')).toBe('keep me');
+      seatB.player.closeStore();
+    });
+
+    it('should bring the old strategist store up to date when the seat switches back', () => {
+      const gameID = 'switched-back';
+      const seatA = makeSeat({ gameID, initialTurn: 1, files: true });
+      seatA.player.context.store!.commit({ kind: 'notes', turn: null, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'first plan' }] });
+      seatA.player.closeStore();
+
+      const seatB = makeSeat({ gameID, initialTurn: 1, files: true, strategist: 'null-strategist' });
+      const head = seatB.player.context.store!.commit({ kind: 'notes', turn: null, author: 'host', changes: [{ path: 'game/plan.md', type: 'file', content: 'revised plan' }] });
+      seatB.player.closeStore();
+
+      const resumed = makeSeat({ gameID, initialTurn: 1, files: true });
+      const store = resumed.player.context.store!;
+      expect(store.head()).toBe(head);
+      expect(Buffer.from(store.readFile('game/plan.md')!).toString('utf8')).toBe('revised plan');
+      resumed.player.closeStore();
     });
   });
 

@@ -8,6 +8,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { AgentParameters, TriageDecision } from "./vox-agent.js";
+import type { Workspace } from "../utils/workspace/player-workspace.js";
 
 /** Mutable object populated by execute() with per-execution token counts. */
 export interface ExecuteTokenOutput {
@@ -39,6 +40,11 @@ export interface VoxRunOptions<TParameters> {
   overrides?: Partial<TParameters>;
   /** Run-local progress callback (e.g. an SSE writer). */
   streamProgress?: (message: string) => void;
+  /**
+   * Workspace the bash tool uses for this run instead of the seat's, such as an oracle replay's
+   * pinned copy. The caller owns and closes it.
+   */
+  workspace?: Workspace;
 }
 
 /** Handle to a single root run, passed to the run callback so HTTP/SSE code can cancel it. */
@@ -70,6 +76,8 @@ export interface RootRun<TParameters extends AgentParameters> {
   streamProgress?: (message: string) => void;
   /** Cumulative tokens for all executions nested in this run. */
   readonly tokens: ExecuteTokenOutput;
+  /** Run-local workspace for the bash tool; forks never inherit it. */
+  readonly workspace?: Workspace;
   /** Set once the run callback settles; makes abort/cleanup idempotent. */
   settled: boolean;
 }
@@ -178,6 +186,7 @@ export function createRootRun<TParameters extends AgentParameters>(
     abortController: new AbortController(),
     streamProgress: options.streamProgress,
     tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+    workspace: options.workspace,
     settled: false,
   };
 }
