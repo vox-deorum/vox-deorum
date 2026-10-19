@@ -9,12 +9,8 @@
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
-import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { insertRecordsDirections, fileMode } from "../../knowledge/directions.js";
-import { renderSection, strategistInlineSections } from "../../knowledge/sections.js";
+import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { requestBriefing, assembleBriefings, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
-import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
-import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
 /**
@@ -59,38 +55,7 @@ export class SimpleStrategistBriefed extends SimpleStrategistBase {
     clearBrieferInstructions(parameters);
     if (!briefing) throw new Error("Failed to generate strategic briefings.");
 
-    const { YouAre, ...SituationData } = parameters.metadata || {};
-    const { Options, ...Strategy } = state.options || {};
-    const filteredPlayers = getStrategicPlayersReport(state.players!);
-
-    // Return the messages with briefing instead of full state
-    const messages: ModelMessage[] = [{
-      role: "system",
-      content: `
-You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
-
-${renderSection("situation", SituationData)}
-
-${renderSection("civilization", YouAre)}
-
-${renderSection("options", Options)}`.trim(),
-      providerOptions: { ...cacheBreakpoint }
-    }, {
-      role: "user",
-      content: `
-${renderSection("strategies", Strategy)}
-
-${renderSection("players", filteredPlayers)}
-
-${renderSection("victory", state.victory)}
-
-${renderSection("briefings", assembleBriefings(briefing, instruction), { rendered: true })}
-
-${getDecisionTurnContext(parameters, fileMode(context))}
-`.trim()
-    }];
-    insertRecordsDirections(messages, context, strategistInlineSections);
-    return messages;
+    return this.buildBriefingMessages(parameters, state, context, assembleBriefings(briefing, instruction));
   }
   
   /**

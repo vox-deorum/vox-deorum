@@ -9,8 +9,8 @@ import pLimit from 'p-limit';
 import { TelepathistParameters } from '../telepathist-parameters.js';
 import { VoxContext } from '../../infra/vox-context.js';
 import { SummarizerInput, summarizerModelName } from '../summarizer.js';
-import { phaseSummarySchema, buildPhaseSummaryInstruction, parseSummaryMarkdown } from './instructions.js';
-import { exponentialRetry } from '../../utils/retry.js';
+import { phaseSummarySchema, buildPhaseSummaryInstruction } from './instructions.js';
+import { generateSummary } from './summary-generation.js';
 
 /** Size of each phase in turns for summarization */
 const phaseSize = 10;
@@ -79,39 +79,27 @@ export async function preparePhaseSummaries(
             instruction,
             reminder
           };
-          let formatFailures = 0;
-          const parsed = await exponentialRetry(async () => {
-            const rawPhaseSummary = await context.callAgent<string>(
-              'summarizer',
-              input
-            );
-            const result = rawPhaseSummary ? parseSummaryMarkdown(rawPhaseSummary, phaseSummarySchema) : undefined;
-            if (!result) {
-              formatFailures++;
-              const error = new Error(`Summarizer returned no usable result for phase ${phase.fromTurn}-${phase.toTurn} (format failure ${formatFailures}/10): ${rawPhaseSummary}`);
-              if (formatFailures >= 10) (error as Error & { isRetryable: boolean }).isRetryable = false;
-              throw error;
-            }
-            return result;
-          }, logger, { source: `phase-${phase.fromTurn}-${phase.toTurn}` });
-
-          if (parsed) {
-            context.streamProgress?.(`Phase ${phase.fromTurn}–${phase.toTurn}: ${parsed.narrative}`);
-            await parameters.telepathistDb
-              .insertInto('phase_summaries')
-              .values({
-                fromTurn: phase.fromTurn,
-                toTurn: phase.toTurn,
-                situation: parsed.situation,
-                situationAbstract: parsed.situationabstract,
-                decisions: parsed.decisions,
-                decisionAbstract: parsed.decisionabstract,
-                narrative: parsed.narrative,
-                model,
-                createdAt: Date.now()
-              })
-              .execute();
+          const summary = await generateSummary(context, input, phaseSummarySchema, logger, `phase-${phase.fromTurn}-${phase.toTurn}`);
+          if (!summary) {
+            logger.warn(`Phase ${phase.fromTurn}-${phase.toTurn} exceeded the summarizer context window, skipping`);
+            return;
           }
+
+          context.streamProgress?.(`Phase ${phase.fromTurn}–${phase.toTurn}: ${summary.narrative}`);
+          await parameters.telepathistDb
+            .insertInto('phase_summaries')
+            .values({
+              fromTurn: phase.fromTurn,
+              toTurn: phase.toTurn,
+              situation: summary.situation,
+              situationAbstract: summary.situationabstract,
+              decisions: summary.decisions,
+              decisionAbstract: summary.decisionabstract,
+              narrative: summary.narrative,
+              model,
+              createdAt: Date.now()
+            })
+            .execute();
         } catch (e) {
           logger.error(`Failed to summarize phase ${phase.fromTurn}-${phase.toTurn}`, { error: e });
         }

@@ -9,12 +9,8 @@
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
 import { VoxContext } from "../../infra/vox-context.js";
-import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { insertRecordsDirections, fileMode } from "../../knowledge/directions.js";
-import { renderSection, strategistInlineSections } from "../../knowledge/sections.js";
+import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
-import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
-import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
 import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
 
 /**
@@ -100,46 +96,10 @@ export class SimpleStrategistStaffed extends SimpleStrategistBase {
     // Clear the instructions from working memory
     clearBrieferInstructions(parameters);
 
-    const { YouAre, ...SituationData } = parameters.metadata || {};
-    const { Options, ...Strategy } = state.options || {};
-
     // Save the assembled briefings for spokesperson use
     state.reports["briefing"] = briefingsContent;
 
-    // Build the user reports content, appending any additional reports after the game state
-    let reportsContent = `
-${renderSection("strategies", Strategy)}
-
-${renderSection("players", getStrategicPlayersReport(state.players!))}
-
-${renderSection("victory", state.victory)}
-
-${renderSection("briefings", briefingsContent, { rendered: true })}
-
-${getDecisionTurnContext(parameters, fileMode(context))}
-`.trim();
-    if (additionalReports) {
-      reportsContent += `\n\n${additionalReports}`;
-    }
-
-    // Return the messages with all briefings
-    const messages: ModelMessage[] = [{
-      role: "system",
-      content: `
-You are ${parameters.metadata?.YouAre!.Leader}, leader of ${parameters.metadata?.YouAre!.Name} (Player ${parameters.playerID ?? 0}).
-
-${renderSection("situation", SituationData)}
-
-${renderSection("civilization", YouAre)}
-
-${renderSection("options", Options)}`.trim(),
-      providerOptions: { ...cacheBreakpoint }
-    }, {
-      role: "user",
-      content: reportsContent
-    }];
-    insertRecordsDirections(messages, context, strategistInlineSections);
-    return messages;
+    return this.buildBriefingMessages(parameters, state, context, briefingsContent, additionalReports);
   }
 
   /**

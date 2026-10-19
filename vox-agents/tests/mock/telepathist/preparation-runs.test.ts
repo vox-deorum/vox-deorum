@@ -191,18 +191,24 @@ describe('prepareTurnSummaries run model', () => {
     const ctx = createFakeVoxContext();
     ctx.setBaseParameters(parameters);
 
+    const seenTurns: number[] = [];
     ctx.callAgent.mockImplementation(async (...args: unknown[]) => {
       const turn = (ctx.currentParameters as { turn: number }).turn;
-      // callAgent(name, input, onContextLengthError) — the callback is now the 3rd positional arg.
+      seenTurns.push(turn);
+      // Like the real callAgent, an overflow fires the 3rd-argument callback and returns undefined.
       const onContextLengthError = args[2] as (() => void) | undefined;
-      if (turn === 3) onContextLengthError?.();
+      if (turn === 3) {
+        onContextLengthError?.();
+        return undefined;
+      }
       return 'RAW_SUMMARY';
     });
 
     const exceeded = await prepareTurnSummaries(parameters, ctx.asContext() as any);
 
-    // Turn 3 flagged as context-exceeded and skipped (no insert); siblings persisted.
+    // Turn 3 flagged as context-exceeded and skipped (no insert, no retry); siblings persisted.
     expect([...exceeded]).toEqual([3]);
+    expect(seenTurns.filter((turn) => turn === 3)).toHaveLength(1);
     expect((inserted.turn_summaries ?? []).map((r: any) => r.turn).sort((a, b) => a - b)).toEqual([
       1, 2,
     ]);
@@ -243,6 +249,42 @@ describe('preparePhaseSummaries run model', () => {
     expect([...seenTurns].sort((a, b) => a - b)).toEqual([10, 20, 25]);
     expect((inserted.phase_summaries as any[]).map((r) => r.toTurn).sort((a, b) => a - b)).toEqual([
       10, 20, 25,
+    ]);
+  });
+
+  it('should skip an overflowing phase without retrying while siblings persist', async () => {
+    const turnRows = Array.from({ length: 25 }, (_, i) => ({
+      turn: i + 1,
+      situation: 's',
+      decisions: 'd',
+    }));
+    const { db, inserted } = makeDb({ phase_summaries: [], turn_summaries: turnRows });
+    const parameters: any = {
+      gameID: 'g',
+      playerID: 2,
+      civilizationName: 'Rome',
+      telepathistDb: db,
+    };
+
+    const ctx = createFakeVoxContext();
+    ctx.setBaseParameters(parameters);
+
+    const seenTurns: number[] = [];
+    ctx.callAgent.mockImplementation(async (...args: unknown[]) => {
+      const turn = (ctx.currentParameters as { turn: number }).turn;
+      seenTurns.push(turn);
+      if (turn === 20) {
+        (args[2] as (() => void) | undefined)?.();
+        return undefined;
+      }
+      return 'RAW_PHASE_SUMMARY';
+    });
+
+    await preparePhaseSummaries(parameters, ctx.asContext() as any);
+
+    expect(seenTurns.filter((turn) => turn === 20)).toHaveLength(1);
+    expect((inserted.phase_summaries as any[]).map((r) => r.toTurn).sort((a, b) => a - b)).toEqual([
+      10, 25,
     ]);
   });
 });

@@ -23,7 +23,7 @@ import { createLogger } from '../utils/logger.js';
 import { errorMessage } from '../utils/errors.js';
 import { resolveModel } from './utils/model-resolver.js';
 import { runOracleTasks } from './run-control.js';
-import { loadToolSchemaCache, replaceToolsWithSchemaOnly } from './utils/schema-tools.js';
+import { replaceToolsWithSchemaOnly } from './utils/schema-tools.js';
 import { getTrailBase, getTrailPaths, readReplayCache, resolvePath, writeCsv, writeTrail } from './utils/output.js';
 import { startBatchManager, shutdownBatchManager } from './batch/batch-manager.js';
 import { unrecordedRunContext } from './types.js';
@@ -271,8 +271,7 @@ export async function runReplay(
   let connectedToMcp = false;
 
   try {
-    const loadedCachedSchemas = loadToolSchemaCache(voxContext);
-    if (loadedCachedSchemas) {
+    if (voxContext.loadToolCache({ requireSchemas: true })) {
       logger.info('Using cached MCP tool schemas for replay');
     } else {
       logger.info('Connecting to MCP server for tool schemas...');

@@ -3,26 +3,14 @@
  *
  * Covers the schema-only tool wrappers (autoComplete field stripping, optional
  * schema rewriter), in-place replacement of every `mcpToolMap` entry with a
- * non-executing schema-only tool, and loading the on-disk tool-definition cache
- * (success, missing-file, and malformed-JSON fallback to `false`).
+ * non-executing schema-only tool, and non-mutating autoComplete filtering.
  *
- * The cache lives at `cache/mcp-tools.json` relative to cwd, so cache tests run
- * inside a temp dir via `process.chdir`, restored in afterEach.
- *
- * Assertions target schema fields, non-execution behavior, and boolean returns —
- * never whole-string equality.
+ * Assertions target schema fields and non-execution behavior, never whole-string equality.
  */
 
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
-import {
-  schemaOnlyTool,
-  replaceToolsWithSchemaOnly,
-  loadToolSchemaCache,
-} from '../../../src/oracle/utils/schema-tools.js';
+import { replaceToolsWithSchemaOnly } from '../../../src/oracle/utils/schema-tools.js';
 import { createFakeVoxContext } from '../../helpers/fake-vox-context.js';
 
 /** Pull the underlying JSON Schema back out of an `ai` jsonSchema wrapper. */
@@ -30,6 +18,7 @@ function innerSchema(tool: any): any {
   return tool.inputSchema.jsonSchema;
 }
 
+/** Build an MCP definition with a visible argument and an optional auto-filled field. */
 function baseMcpTool(overrides: Partial<MCPTool> & { _meta?: any } = {}): any {
   return {
     name: 'set-flavors',
@@ -46,63 +35,60 @@ function baseMcpTool(overrides: Partial<MCPTool> & { _meta?: any } = {}): any {
   };
 }
 
+/** Install one MCP definition through the Oracle replacement path and return its generated tool. */
+function replaceOneTool(mcpTool: MCPTool, rewriter?: (json: string) => string): any {
+  const ctx = createFakeVoxContext();
+  ctx.setMcpTools([mcpTool]);
+  replaceToolsWithSchemaOnly(ctx.asContext() as any, rewriter);
+  return ctx.tools[mcpTool.name];
+}
+
 describe('oracle schema-tools', () => {
-  describe('schemaOnlyTool', () => {
-    it('uses the tool description', () => {
-      const tool = schemaOnlyTool('set-flavors', baseMcpTool());
-      expect(tool.description).toBe('Set strategic flavors');
-    });
+  it('preserves a tool description and schema when there is no autoComplete metadata', () => {
+    const tool = replaceOneTool(baseMcpTool());
+    const schema = innerSchema(tool);
+    expect(tool.description).toBe('Set strategic flavors');
+    expect(Object.keys(schema.properties)).toEqual(['GrandStrategy', 'secret']);
+    expect(schema.required).toEqual(['GrandStrategy', 'secret']);
+  });
 
-    it('falls back to a generated description when none is provided', () => {
-      const tool = schemaOnlyTool('nameless', baseMcpTool({ description: undefined }));
-      expect(tool.description).toContain('nameless');
-    });
+  it('generates a description when none is provided', () => {
+    const tool = replaceOneTool(baseMcpTool({ name: 'nameless', description: undefined }));
+    expect(tool.description).toContain('nameless');
+  });
 
-    it('strips _meta.autoComplete fields from properties and required', () => {
-      const tool = schemaOnlyTool(
-        'set-flavors',
-        baseMcpTool({ _meta: { autoComplete: ['secret'] } })
-      );
-      const schema = innerSchema(tool);
-      expect(schema.properties).toHaveProperty('GrandStrategy');
-      expect(schema.properties).not.toHaveProperty('secret');
-      expect(schema.required).toEqual(['GrandStrategy']);
-    });
+  it('filters autoComplete fields without mutating the MCP definition', () => {
+    const mcpTool = baseMcpTool({ _meta: { autoComplete: ['secret'] } });
+    const originalSchema = structuredClone(mcpTool.inputSchema);
+    const schema = innerSchema(replaceOneTool(mcpTool));
+    expect(schema.properties).toHaveProperty('GrandStrategy');
+    expect(schema.properties).not.toHaveProperty('secret');
+    expect(schema.required).toEqual(['GrandStrategy']);
+    expect(mcpTool.inputSchema).toEqual(originalSchema);
+  });
 
-    it('leaves the schema intact when there is no autoComplete metadata', () => {
-      const tool = schemaOnlyTool('set-flavors', baseMcpTool());
-      const schema = innerSchema(tool);
-      expect(Object.keys(schema.properties)).toEqual(['GrandStrategy', 'secret']);
-      expect(schema.required).toEqual(['GrandStrategy', 'secret']);
-    });
+  it('rewrites the filtered description and schema', () => {
+    const rewriter = (json: string) => {
+      const parsed = JSON.parse(json);
+      return JSON.stringify({
+        description: 'rewritten description',
+        inputSchema: { ...parsed.inputSchema, title: 'Rewritten' },
+      });
+    };
+    const tool = replaceOneTool(baseMcpTool(), rewriter);
+    expect(tool.description).toBe('rewritten description');
+    expect(innerSchema(tool).title).toBe('Rewritten');
+  });
 
-    it('applies an optional schema rewriter to description and inputSchema', () => {
-      const rewriter = (json: string) => {
-        const parsed = JSON.parse(json);
-        return JSON.stringify({
-          description: 'rewritten description',
-          inputSchema: { ...parsed.inputSchema, title: 'Rewritten' },
-        });
-      };
-      const tool = schemaOnlyTool('set-flavors', baseMcpTool(), rewriter);
-      expect(tool.description).toBe('rewritten description');
-      expect(innerSchema(tool).title).toBe('Rewritten');
-    });
-
-    it('applies autoComplete stripping before the rewriter sees the schema', () => {
-      let seenProps: string[] = [];
-      const rewriter = (json: string) => {
-        const parsed = JSON.parse(json);
-        seenProps = Object.keys(parsed.inputSchema.properties);
-        return json;
-      };
-      schemaOnlyTool(
-        'set-flavors',
-        baseMcpTool({ _meta: { autoComplete: ['secret'] } }),
-        rewriter
-      );
-      expect(seenProps).toEqual(['GrandStrategy']);
-    });
+  it('filters autoComplete fields before the rewriter sees the schema', () => {
+    let seenProps: string[] = [];
+    const rewriter = (json: string) => {
+      const parsed = JSON.parse(json);
+      seenProps = Object.keys(parsed.inputSchema.properties);
+      return json;
+    };
+    replaceOneTool(baseMcpTool({ _meta: { autoComplete: ['secret'] } }), rewriter);
+    expect(seenProps).toEqual(['GrandStrategy']);
   });
 
   describe('replaceToolsWithSchemaOnly', () => {
@@ -160,53 +146,4 @@ describe('oracle schema-tools', () => {
     });
   });
 
-  describe('loadToolSchemaCache', () => {
-    let originalCwd: string;
-    let tempDir: string;
-
-    beforeEach(() => {
-      originalCwd = process.cwd();
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'schema-tools-'));
-      process.chdir(tempDir);
-    });
-
-    afterEach(() => {
-      process.chdir(originalCwd);
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    });
-
-    function writeCache(content: string): void {
-      fs.mkdirSync(path.join(tempDir, 'cache'), { recursive: true });
-      fs.writeFileSync(path.join(tempDir, 'cache', 'mcp-tools.json'), content);
-    }
-
-    it('loads cached tool definitions into mcpToolMap and returns true', () => {
-      const cached: MCPTool[] = [
-        baseMcpTool({ name: 'cached-a' }),
-        baseMcpTool({ name: 'cached-b' }),
-      ];
-      writeCache(JSON.stringify(cached));
-      const ctx = createFakeVoxContext();
-
-      const ok = loadToolSchemaCache(ctx.asContext() as any);
-
-      expect(ok).toBe(true);
-      expect(ctx.mcpToolMap.size).toBe(2);
-      expect(ctx.mcpToolMap.has('cached-a')).toBe(true);
-      expect(ctx.mcpToolMap.get('cached-b')?.description).toBe('Set strategic flavors');
-    });
-
-    it('returns false when no cache file exists', () => {
-      const ctx = createFakeVoxContext();
-      const ok = loadToolSchemaCache(ctx.asContext() as any);
-      expect(ok).toBe(false);
-    });
-
-    it('returns false when the cache file is malformed JSON', () => {
-      writeCache('{ not valid json');
-      const ctx = createFakeVoxContext();
-      const ok = loadToolSchemaCache(ctx.asContext() as any);
-      expect(ok).toBe(false);
-    });
-  });
 });

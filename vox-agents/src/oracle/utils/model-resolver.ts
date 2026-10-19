@@ -10,27 +10,11 @@ import { config } from '../../utils/config.js';
 import { getModelConfig } from '../../utils/models/models.js';
 import { createLogger } from '../../utils/logger.js';
 import type { Model } from '../../types/index.js';
-import { formatModelReference, parseModelReference } from '../../utils/models/model-reference.js';
+import { parseModelReference } from '../../utils/models/model-reference.js';
 import { synthesizeModelConfig } from '../../utils/models/rules.js';
 import { getRuntimeModel } from '../../utils/models/resolution.js';
 
 const logger = createLogger('OracleModelResolver');
-
-/**
- * Render a resolved Model back into the telemetry model string
- * (`{provider}/{name}@{reasoningEffort}`), the same shape {@link resolveModel} parses.
- *
- * The effort recorded is the one the replay actually ran with — an explicit `@effort` from
- * the experiment's model override, or the default carried by the config.llms entry. It is
- * omitted entirely when the model has none, so the provider's own default is not misreported
- * as a chosen effort.
- *
- * @param model - Resolved model configuration
- * @returns Model string, e.g. `google/gemini-3.5-flash@high`
- */
-export function formatModelString(model: Model): string {
-  return formatModelReference(model);
-}
 
 /**
  * Resolve a model input into a full Model configuration.

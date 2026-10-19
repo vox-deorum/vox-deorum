@@ -114,16 +114,16 @@ describe('VoxContext.registerTools', () => {
 });
 
 describe('VoxContext.loadToolCache', () => {
-  it('rebuilds mcpToolMap from the cached metadata when the file exists', () => {
-    const cached = TOOLS.map((t) => ({ name: t.name, _meta: t._meta }));
+  it('rebuilds mcpToolMap from the cached definitions when the file exists', () => {
+    const cached = TOOLS;
     vi.spyOn(fs, 'existsSync').mockReturnValue(true);
     vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cached));
 
     const ctx = new VoxContext<AgentParameters>();
-    ctx.loadToolCache();
+    expect(ctx.loadToolCache()).toBe(true);
 
-    expect(ctx.mcpToolMap.get('get-cities')?._meta).toEqual({ markdownConfig: ['h1', 'h2'] });
-    expect(ctx.mcpToolMap.has('get-players')).toBe(true);
+    expect(ctx.mcpToolMap.get('get-cities')).toEqual(TOOLS[0]);
+    expect(ctx.mcpToolMap.get('get-players')).toEqual(TOOLS[1]);
     // Offline path must not hit the MCP server.
     expect(mcp.getTools).not.toHaveBeenCalled();
   });
@@ -132,8 +132,50 @@ describe('VoxContext.loadToolCache', () => {
     vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 
     const ctx = new VoxContext<AgentParameters>();
-    ctx.loadToolCache();
+    expect(ctx.loadToolCache()).toBe(false);
 
     expect(ctx.mcpToolMap.size).toBe(0);
+  });
+
+  it('returns false when the cache cannot be parsed', () => {
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'readFileSync').mockReturnValue('{ invalid json');
+
+    const ctx = new VoxContext<AgentParameters>();
+
+    expect(ctx.loadToolCache()).toBe(false);
+    expect(ctx.mcpToolMap.size).toBe(0);
+  });
+
+  it('continues to load older metadata-only cache entries', () => {
+    const cached = [{ name: 'get-cities', _meta: TOOLS[0]._meta }];
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cached));
+
+    const ctx = new VoxContext<AgentParameters>();
+
+    expect(ctx.loadToolCache()).toBe(true);
+    expect(ctx.mcpToolMap.get('get-cities')?._meta).toEqual(TOOLS[0]._meta);
+  });
+
+  it('treats metadata-only entries as a miss when schemas are required', () => {
+    const cached = [TOOLS[0], { name: 'get-players', _meta: TOOLS[1]._meta }];
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(cached));
+
+    const ctx = new VoxContext<AgentParameters>();
+
+    expect(ctx.loadToolCache({ requireSchemas: true })).toBe(false);
+    expect(ctx.mcpToolMap.size).toBe(0);
+  });
+
+  it('loads full definitions when schemas are required', () => {
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(TOOLS));
+
+    const ctx = new VoxContext<AgentParameters>();
+
+    expect(ctx.loadToolCache({ requireSchemas: true })).toBe(true);
+    expect(ctx.mcpToolMap.get('get-players')).toEqual(TOOLS[1]);
   });
 });

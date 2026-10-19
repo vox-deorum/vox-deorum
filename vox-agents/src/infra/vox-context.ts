@@ -321,10 +321,10 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
    * (e.g. telepathist post-game analysis).
    */
   public registerAgentTools(): void {
-    const allAgents = agentRegistry.getAllAsRecord();
-    for (const [agentName, agent] of Object.entries(allAgents)) {
+    const allAgents = agentRegistry.getAll();
+    for (const agent of allAgents) {
       // Agent as a tool
-      this.tools[`call-${agentName}`] = createAgentTool(
+      this.tools[`call-${agent.name}`] = createAgentTool(
         agent as VoxAgent<TParameters>,
         this
       );
@@ -371,8 +371,7 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
 
   /**
    * Save MCP tool definitions to a JSON cache file.
-   * The full schema is needed by offline Oracle replay; metadata-only readers below
-   * remain tolerant of older cache files.
+   * The full schema is needed by offline Oracle replay; see {@link loadToolCache}.
    */
   private saveToolCache(tools: MCPTool[]): void {
     try {
@@ -394,21 +393,29 @@ export class VoxContext<TParameters extends AgentParameters> implements Executio
   }
 
   /**
-   * Load MCP tool metadata from cache. Used when MCP server is offline (e.g. -p mode).
-   * Populates mcpToolMap so formatToolOutput can find markdownConfig.
+   * Load MCP tool definitions from cache. Metadata-only consumers accept older cache files that
+   * hold only names and `_meta`; pass `requireSchemas` (Oracle replay) to treat such a file as a
+   * miss. Returns false when the cache is missing, unreadable, or lacks required schemas, so
+   * callers can connect to MCP instead.
    */
-  public loadToolCache(): void {
+  public loadToolCache({ requireSchemas = false }: { requireSchemas?: boolean } = {}): boolean {
     try {
       if (!fs.existsSync(VoxContext.toolCachePath)) {
         this.logger.warn('No MCP tool cache found — formatToolOutput will use default formatting');
-        return;
+        return false;
       }
       const raw = fs.readFileSync(VoxContext.toolCachePath, 'utf-8');
-      const tools: Pick<MCPTool, 'name' | '_meta'>[] = JSON.parse(raw);
-      this.mcpToolMap = new Map(tools.map(t => [t.name, t as MCPTool]));
+      const tools = JSON.parse(raw) as MCPTool[];
+      if (requireSchemas && tools.some(t => !t.inputSchema)) {
+        this.logger.warn('MCP tool cache has no input schemas; ignoring it');
+        return false;
+      }
+      this.mcpToolMap = new Map(tools.map(t => [t.name, t]));
       this.logger.info(`Loaded MCP tool cache (${tools.length} tools)`);
+      return true;
     } catch (error) {
       this.logger.warn('Failed to load MCP tool cache', { error });
+      return false;
     }
   }
 

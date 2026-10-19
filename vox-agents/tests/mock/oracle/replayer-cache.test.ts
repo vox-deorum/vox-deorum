@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
     })
   ),
   forceFlush: vi.fn(),
-  loadToolSchemaCache: vi.fn(() => true),
+  loadToolCache: vi.fn(() => true),
   registerTools: vi.fn(),
   replaceToolsWithSchemaOnly: vi.fn(),
   shutdown: vi.fn(),
@@ -32,13 +32,13 @@ vi.mock('../../../src/infra/vox-context.js', () => ({
     execute: mocks.execute,
     withRun: mocks.withRun,
     registerTools: mocks.registerTools,
+    loadToolCache: mocks.loadToolCache,
     shutdown: mocks.shutdown,
     tools: {},
   })),
 }));
 
 vi.mock('../../../src/oracle/utils/schema-tools.js', () => ({
-  loadToolSchemaCache: mocks.loadToolSchemaCache,
   replaceToolsWithSchemaOnly: mocks.replaceToolsWithSchemaOnly,
 }));
 

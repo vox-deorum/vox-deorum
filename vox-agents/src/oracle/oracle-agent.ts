@@ -11,7 +11,7 @@ import { VoxAgent } from '../infra/vox-agent.js';
 import type { VoxContext } from '../infra/vox-context.js';
 import type { Model } from '../types/index.js';
 import { countCacheBreakpoints, hasCacheBreakpoint, markBreakpointOnLast, MAX_CACHE_BREAKPOINTS } from '../utils/models/cache-breakpoint.js';
-import { formatModelString } from './utils/model-resolver.js';
+import { formatModelReference } from '../utils/models/model-reference.js';
 import type { OracleConfig, OracleParameters, OracleInput, ReplayResult, ReplayDecision } from './types.js';
 
 /**
@@ -171,7 +171,7 @@ export class OracleAgent extends VoxAgent<OracleParameters, OracleInput, ReplayR
       row: input.row,
       // Carries the reasoning effort the replay actually ran with, matching the shape of the
       // recorded `originalModel` so the two are directly comparable in the trail and CSV.
-      model: formatModelString(parameters.resolvedModel),
+      model: formatModelReference(parameters.resolvedModel),
       decisions,
       // Placeholder — replayRow() overrides with VoxContext's nuanced token counts
       tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },

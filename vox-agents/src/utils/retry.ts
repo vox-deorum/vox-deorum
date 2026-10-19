@@ -17,7 +17,6 @@ const contextLengthPattern = /input.*tokens.*is longer than.*context.length|toke
 
 /** Named retry policy and cancellation settings. */
 export interface ExponentialRetryOptions {
-  handleReject?: () => boolean;
   source?: string;
   maxRetries?: number;
   initialDelay?: number;
@@ -49,7 +48,6 @@ export async function exponentialRetry<T>(
   options: ExponentialRetryOptions = {},
 ): Promise<T> {
   const {
-    handleReject,
     source = 'unknown',
     maxRetries = 100,
     initialDelay = 5000,
@@ -88,19 +86,13 @@ export async function exponentialRetry<T>(
           timeoutHandle = globalThis.setTimeout(() => {
             if (isTimedOut || hasCompleted) return;
             isTimedOut = true;
-            // Build the message
             const message = `[${source}] Function execution timed out after ${executionTimeout}ms (${executionTimeout / 60000} minutes). Last known activity: ${lastKnown.toLocaleTimeString('en-US', {
               hour12: false,
               hour: '2-digit',
               minute: '2-digit',
               second: '2-digit'
             })}`;
-            // If a custom reject handler doesn't want to throw, log as a warning
-            if (handleReject && handleReject()) {
-              logger.warn(message + ", rescued");
-            } else {
-              timeoutReject(new Error(message));
-            }
+            timeoutReject(new Error(message));
           }, executionTimeout);
         }
       };

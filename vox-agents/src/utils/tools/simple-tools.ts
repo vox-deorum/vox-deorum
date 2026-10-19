@@ -9,7 +9,7 @@
 import { z, ZodType } from "zod";
 import { AgentParameters } from "../../infra/vox-agent.js";
 import { createLogger } from "../logger.js";
-import { errorMessage } from "../errors.js";
+import { recordSpanError } from "../../infra/vox-telemetry.js";
 import { Tool as VercelTool, dynamicTool } from 'ai';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { VoxContext } from "../../infra/vox-context.js";
@@ -146,11 +146,7 @@ export function createSimpleTool<TParameters extends AgentParameters, TInput = a
         return result;
       } catch (error) {
         logger.error(`Error in simple tool ${config.name}:`, error);
-        span.recordException(error as Error);
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: errorMessage(error)
-        });
+        recordSpanError(span, error);
         throw error;
       } finally {
         span.end();

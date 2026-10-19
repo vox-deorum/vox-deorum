@@ -84,20 +84,6 @@ class AgentRegistry {
   }
 
   /**
-   * Get all registered agents as a record/object.
-   * Maintains backward compatibility with existing code.
-   *
-   * @returns Record of all registered agents indexed by name
-   */
-  public getAllAsRecord(): Record<string, VoxAgent<any>> {
-    const record: Record<string, VoxAgent<any>> = {};
-    for (const [name, agent] of this.agents) {
-      record[name] = agent;
-    }
-    return record;
-  }
-
-  /**
    * Check if an agent is currently registered.
    *
    * @param name - The name of the agent to check

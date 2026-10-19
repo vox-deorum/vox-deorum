@@ -11,8 +11,8 @@ import { VoxContext } from '../../infra/vox-context.js';
 import { GetSituationTool } from '../tools/get-situation.js';
 import { GetDecisionTool } from '../tools/get-decision.js';
 import { SummarizerInput, summarizerModelName } from '../summarizer.js';
-import { turnSummarySchema, buildTurnSummaryInstruction, parseSummaryMarkdown } from './instructions.js';
-import { exponentialRetry } from '../../utils/retry.js';
+import { turnSummarySchema, buildTurnSummaryInstruction } from './instructions.js';
+import { generateSummary } from './summary-generation.js';
 
 /**
  * Generates turn summaries for all turns that don't already have them.
@@ -95,45 +95,26 @@ export async function prepareTurnSummaries(
             reminder
           };
 
-          let formatFailures = 0;
-          let contextExceeded = false;
-          const summary = await exponentialRetry(async () => {
-            const rawSummary = await context.callAgent<string>(
-              'summarizer',
-              summaryInput,
-              () => { contextExceeded = true; }
-            );
-            const parsed = rawSummary ? parseSummaryMarkdown(rawSummary, turnSummarySchema) : undefined;
-            if (!parsed) {
-              formatFailures++;
-              const error = new Error(`Summarizer returned no usable result for turn ${turn} (format failure ${formatFailures}/10): ${rawSummary}`);
-              if (formatFailures >= 10) (error as Error & { isRetryable: boolean }).isRetryable = false;
-              throw error;
-            }
-            return parsed;
-          }, logger, { source: `turn-${turn}` });
-
-          if (contextExceeded) {
+          const summary = await generateSummary(context, summaryInput, turnSummarySchema, logger, `turn-${turn}`);
+          if (!summary) {
             contextExceededTurns.add(turn);
             return;
           }
 
-          if (summary) {
-            context.streamProgress?.(`Turn ${turn}: ${summary.narrative}`);
-            await parameters.telepathistDb
-              .insertInto('turn_summaries')
-              .values({
-                turn,
-                situation: summary.situation,
-                situationAbstract: summary.situationabstract,
-                decisions: summary.decisions,
-                decisionAbstract: summary.decisionabstract,
-                narrative: summary.narrative,
-                model,
-                createdAt: Date.now()
-              })
-              .execute();
-          }
+          context.streamProgress?.(`Turn ${turn}: ${summary.narrative}`);
+          await parameters.telepathistDb
+            .insertInto('turn_summaries')
+            .values({
+              turn,
+              situation: summary.situation,
+              situationAbstract: summary.situationabstract,
+              decisions: summary.decisions,
+              decisionAbstract: summary.decisionabstract,
+              narrative: summary.narrative,
+              model,
+              createdAt: Date.now()
+            })
+            .execute();
         } catch (e) {
           logger.error(`Failed to summarize turn ${turn}`, { error: e });
         }

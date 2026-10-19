@@ -12,7 +12,7 @@
  * narrower host surface of its own.
  */
 
-import { Output, StepResult, ToolSet, ModelMessage } from "ai";
+import { StepResult, ToolSet, ModelMessage } from "ai";
 import { trace, SpanStatusCode, context } from '@opentelemetry/api';
 import type { AgentParameters, PreparedAgentState, TriageDecision, VoxAgent } from "./vox-agent.js";
 import type { VoxContext } from "./vox-context.js";
@@ -437,7 +437,6 @@ async function executeAgentStep<TParameters extends AgentParameters>(
       const narrowed = rejections !== undefined;
       // Derived from the executable list, so a step that may run nothing is never forced to call.
       const stepToolChoice = executableTools && executableTools.length > 0 ? agent.toolChoice : "auto";
-      const stepOutputSchema = stepConfig.outputSchema;
 
       // Append the closing reminder (the requirement when the choice is required, tool policy when
       // narrowed, finalize nudge after the first step). Provider middleware keeps its system text the
@@ -517,8 +516,6 @@ async function executeAgentStep<TParameters extends AgentParameters>(
           toolsContext: Object.fromEntries(
             Object.keys(host.tools).map(toolName => [toolName, parameters]),
           ) as any,
-          // Output schema for tool as agent
-          output: stepOutputSchema ? Output.object({ schema: stepOutputSchema }) : undefined,
           // Stop after one step
           stopWhen: () => true,
           // Events
@@ -579,32 +576,25 @@ async function executeAgentStep<TParameters extends AgentParameters>(
       stepResponse.response.messages.forEach((response: any) => delete response.providerOptions);
 
       // Add the step to our collection
-      let shouldStop = false;
-      let finalText: string | undefined;
       const responseStart = messages.length;
 
-      if (stepResults.length > 0) {
-        allSteps.push(...stepResults);
-        finalText = stepResponse.text;
+      allSteps.push(...stepResults);
+      const finalText = stepResponse.text;
 
-        // Clean tool rescue artifacts from response messages
-        stripToolArtifacts(stepResponse.response.messages);
+      // Clean tool rescue artifacts from response messages
+      stripToolArtifacts(stepResponse.response.messages);
 
-        // Update messages with the response
-        messages = messages.concat(stepResponse.response.messages);
+      // Update messages with the response
+      messages = messages.concat(stepResponse.response.messages);
 
-        // Check stop condition
-        shouldStop = host.currentSignal().aborted ||
-          agent.stopCheck(parameters, input, stepResponse, allSteps, host);
+      // Check stop condition
+      const shouldStop = host.currentSignal().aborted ||
+        agent.stopCheck(parameters, input, stepResponse, allSteps, host);
 
-        host.logger.debug(`Stop check for ${agent.name}: ${shouldStop}`, {
-          stepNumber: stepCount + 1,
-          totalSteps: allSteps.length
-        });
-      } else {
-        host.logger.warn(`Agent execution produced no steps: ${agent.name} at step ${stepCount + 1}.`);
-        shouldStop = host.currentSignal().aborted;
-      }
+      host.logger.debug(`Stop check for ${agent.name}: ${shouldStop}`, {
+        stepNumber: stepCount + 1,
+        totalSteps: allSteps.length
+      });
 
       stepSpan.setAttributes({
         'model': formatModelReference(stepModel),

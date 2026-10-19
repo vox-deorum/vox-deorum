@@ -26,7 +26,7 @@ export function getValidCalls<TCall extends { invalid?: boolean }>(
 }
 
 /** Checks if a single tool call is terminal based on its name and metadata */
-export function isTerminalTool(toolName: string, mcpToolMap: Map<string, MCPTool>): boolean {
+function isTerminalTool(toolName: string, mcpToolMap: Map<string, MCPTool>): boolean {
   // Agent tools: terminal if the agent is fire-and-forget
   if (toolName.startsWith("call-")) {
     const agentName = toolName.slice("call-".length);

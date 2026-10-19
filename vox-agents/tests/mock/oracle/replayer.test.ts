@@ -52,7 +52,7 @@ const mocks = vi.hoisted(() => {
       });
     }),
     forceFlush: vi.fn(),
-    loadToolSchemaCache: vi.fn(() => true),
+    loadToolCache: vi.fn((_options?: { requireSchemas?: boolean }) => true),
     registerTools: vi.fn(),
     replaceToolsWithSchemaOnly: vi.fn(),
     shutdown: vi.fn(),
@@ -74,6 +74,7 @@ vi.mock('../../../src/infra/vox-context.js', () => ({
       execute: mocks.execute,
       withRun: mocks.withRun,
       registerTools: mocks.registerTools,
+      loadToolCache: mocks.loadToolCache,
       shutdown: mocks.shutdown,
       tools: {},
     };
@@ -90,7 +91,6 @@ vi.mock('../../../src/infra/process-manager.js', () => ({
 }));
 
 vi.mock('../../../src/oracle/utils/schema-tools.js', () => ({
-  loadToolSchemaCache: mocks.loadToolSchemaCache,
   replaceToolsWithSchemaOnly: mocks.replaceToolsWithSchemaOnly,
 }));
 
@@ -712,6 +712,20 @@ describe('oracle replayer (non-cache paths)', () => {
       // Cached schemas loaded -> never touches MCP connect/disconnect.
       expect(mocks.connect).not.toHaveBeenCalled();
       expect(mocks.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('should fetch schemas from MCP when the cache has none usable', async () => {
+      const outputDir = makeTempDir();
+      mocks.loadToolCache.mockReturnValueOnce(false);
+      mockFreshExecution();
+
+      await runReplay(baseConfig(outputDir, 'cache-miss', () => ({})), [retrieved()]);
+
+      expect(mocks.loadToolCache).toHaveBeenCalledWith({ requireSchemas: true });
+      expect(mocks.connect).toHaveBeenCalledTimes(1);
+      expect(mocks.registerTools).toHaveBeenCalledTimes(1);
+      expect(mocks.replaceToolsWithSchemaOnly).toHaveBeenCalledTimes(1);
+      expect(mocks.disconnect).toHaveBeenCalledTimes(1);
     });
 
     it('flushes telemetry before teardown when replay setup throws', async () => {

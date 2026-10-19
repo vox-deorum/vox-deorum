@@ -45,6 +45,19 @@ function exec(tool: Tool, args: Record<string, unknown>, toolContext: Record<str
 }
 
 describe('wrapMCPTool execute', () => {
+  it('filters autoComplete fields from the exposed schema without mutating the MCP definition', () => {
+    const tool = mcpTool({ autoComplete: ['PlayerID'] });
+    const originalSchema = structuredClone(tool.inputSchema);
+
+    const wrapped = wrapMCPTool(tool, context) as any;
+    const schema = wrapped.inputSchema.jsonSchema;
+
+    expect(schema.properties).not.toHaveProperty('PlayerID');
+    expect(schema.properties).toHaveProperty('Filter');
+    expect(schema.required).toEqual([]);
+    expect(tool.inputSchema).toEqual(originalSchema);
+  });
+
   it('injects autoComplete fields from the context and normalizes the result', async () => {
     mcp.respondWith('get-cities', structuredResult({ Name: 'Rome' }));
 

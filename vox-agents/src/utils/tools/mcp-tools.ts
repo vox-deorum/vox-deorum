@@ -13,10 +13,11 @@ import { trace, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { camelCase } from "change-case";
 import { createLogger } from "../logger.js";
 import { isRecord } from "../guards.js";
-import { errorMessage } from "../errors.js";
+import { recordSpanError } from "../../infra/vox-telemetry.js";
 import { VoxContext } from "../../infra/vox-context.js";
 import { AgentParameters } from "../../infra/vox-agent.js";
 import { HeadingConfig } from './json-to-markdown.js';
+import { filterAutoCompleteSchema } from './mcp-schema.js';
 
 const tracer = trace.getTracer('vox-tools');
 
@@ -89,26 +90,10 @@ export function normalizeMCPToolResult(rawResult: unknown): unknown {
 export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): VercelTool {
   const logger = createLogger(`tool-${tool.name}`);
 
-  // Remove autoComplete fields from input schema
-  const filteredSchema = { ...tool.inputSchema };
-  if (filteredSchema.properties && (tool._meta as any)?.autoComplete) {
-    const autoCompleteFields = (tool._meta as any).autoComplete as string[];
-    const filteredProperties = { ...filteredSchema.properties };
-
-    // Remove autoComplete fields from properties
-    autoCompleteFields.forEach(field => {
-      delete filteredProperties[field];
-    });
-
-    // Remove autoComplete fields from required array if present
-    if (filteredSchema.required) {
-      filteredSchema.required = filteredSchema.required.filter(
-        (field: string) => !autoCompleteFields.includes(field)
-      );
-    }
-
-    filteredSchema.properties = filteredProperties;
-  }
+  const filteredSchema = filterAutoCompleteSchema(
+    tool.inputSchema as Record<string, any>,
+    (tool._meta as any)?.autoComplete as string[] | undefined
+  );
 
   return dynamicTool({
     description: tool.description || `MCP tool: ${tool.name}`,
@@ -175,11 +160,7 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
         } return result;
       } catch (error) {
         logger.error(`Error calling MCP tool ${tool.name}:`, error);
-        span.recordException(error as Error);
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: errorMessage(error)
-        });
+        recordSpanError(span, error);
         throw error;
       } finally {
         span.end();

@@ -57,13 +57,6 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
   public override toolChoice: string = "required";
 
   /**
-   * A malformed terminal/completion call (invalid input that never executed) is "no action taken" for a
-   * live envoy — the model's terminal intent didn't happen, so the turn keeps going (below the ceiling)
-   * to let it redo the call, rather than ending on a handoff/closure that never ran. See {@link stopCheck}.
-   */
-  public override retryMalformedTerminalCalls = true;
-
-  /**
    * A live envoy speaks ONLY via the `send-message` tool, so raw model free text is never a real
    * spoken reply: it is the Anthropic tool-force fallback (which the tool-rescue middleware may leave
    * as malformed tool-call text). The chat route swallows it from the live stream and the commit path
@@ -212,10 +205,8 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     // A malformed completion call this step means the model's terminal intent never ran. Keep working
     // (below the ceiling) so it can redo the call — even if a VALID completion also fired in the same
     // step (that line was already spoken; the model sees it plus the tool-error and rarely re-speaks).
-    // The shared root rule ({@link VoxAgent.retriesMalformedTerminal}) is applied here with the live
-    // envoy's completion-tool set; a single malformed call already retries below (getValidCalls excludes
-    // it, so hasCompletionTool is false and the final predicate returns false) — this covers the mixed step.
-    if (this.retriesMalformedTerminal(lastStep, allSteps, context, (name) => completionTools.has(name))) {
+    if (allSteps.length < this.stepLimit(context) &&
+      lastStep.toolCalls.some(call => call.invalid && completionTools.has(call.toolName))) {
       return false;
     }
     // A completion tool (send-message / negotiator handoff / closure) ends the turn wherever it

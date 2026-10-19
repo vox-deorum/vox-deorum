@@ -12,7 +12,7 @@ import { VoxContext } from "../../infra/vox-context.js";
 import type { ModelSize } from "../models/models.js";
 import { modelTiers } from '../../types/config.js';
 import { createLogger } from "../logger.js";
-import { errorMessage } from "../errors.js";
+import { recordSpanError } from "../../infra/vox-telemetry.js";
 import { Tool as VercelTool, dynamicTool, jsonSchema, zodSchema } from 'ai';
 import { trace, SpanStatusCode, ROOT_CONTEXT, context as otelContext } from '@opentelemetry/api';
 
@@ -108,7 +108,6 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
             context.forkRun(run);
           });
           span.setStatus({ code: SpanStatusCode.OK });
-          span.end();
           return { result: "Submitted for asynchronous processing." };
         }
 
@@ -129,11 +128,7 @@ export function createAgentTool<TParameters extends AgentParameters, TInput = un
         return { result };
       } catch (error) {
         logger.error(`Error in agent-tool ${agent.name}:`, error);
-        span.recordException(error as Error);
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: errorMessage(error)
-        });
+        recordSpanError(span, error);
         throw error;
       } finally {
         span.end();

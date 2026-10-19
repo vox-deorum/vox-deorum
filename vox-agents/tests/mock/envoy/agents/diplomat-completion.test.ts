@@ -151,7 +151,7 @@ describe('Diplomat.stopCheck', () => {
   });
 });
 
-describe('Diplomat.stopCheck malformed terminal retry (retryMalformedTerminalCalls)', () => {
+describe('Diplomat.stopCheck malformed terminal retry', () => {
   /** A step whose named calls can be individually marked invalid (malformed input that never ran). */
   function invalidStep(calls: Array<{ toolName: string; invalid?: boolean }>, text = '') {
     return {

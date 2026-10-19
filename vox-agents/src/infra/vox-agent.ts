@@ -8,12 +8,12 @@
 
 import { Tool, StepResult, ModelMessage } from "ai";
 import { createLogger } from "../utils/logger.js";
-import { z, ZodObject } from "zod";
+import { z } from "zod";
 import { Model, ReasoningEffort } from "../types/index.js";
 import type { VoxContext } from "./vox-context.js";
 import type { ExecuteTokenOutput } from "./vox-run.js";
 import { getModelConfig, type ModelSize, resolveToolFraming, selectModelReference } from "../utils/models/models.js";
-import { getValidCalls, hasOnlyTerminalCalls, isTerminalTool } from "../utils/tools/terminal-tools.js";
+import { getValidCalls, hasOnlyTerminalCalls } from "../utils/tools/terminal-tools.js";
 import { buildClosingReminder } from "../utils/prompts/closing-reminder.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
 import { buildRescuePrompt, stripJsonFence } from "../utils/models/text-cleaning.js";
@@ -143,15 +143,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
    * Whether we want to force the LLM to call tools (only works when activeTools exist)
    */
   public toolChoice: string = "required";
-
-  /**
-   * When true, a step whose terminal/completion intent was MALFORMED (an invalid tool call that never
-   * executed) does NOT end the turn — the agent keeps working (below {@link stepLimit}) so the model can
-   * redo the call. Default false: non-live agents keep the "a terminal call ends the turn" rule. The
-   * keep-working logic lives once on the base ({@link retriesMalformedTerminal}) and is applied by
-   * {@link stopCheck} here (and by `LiveEnvoy.stopCheck`, which supplies its completion-tool set).
-   */
-  public retryMalformedTerminalCalls: boolean = false;
 
   /**
    * When true, agent-tool invocations return immediately without waiting for completion.
@@ -339,28 +330,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
   }
   
   /**
-   * The shared keep-working rule for {@link retryMalformedTerminalCalls}. When the flag is on and the
-   * turn is still below {@link stepLimit}, a last step whose terminal/completion intent was MALFORMED —
-   * an invalid tool call that never executed, with `isCompletion` deciding which tool names are
-   * terminal for THIS agent — must NOT end the turn, so the model can redo the call on the next step
-   * (the SDK feeds the tool-error back). Returns true only when the caller should force another step;
-   * each `stopCheck` ORs it into its own decision — the base below with its terminal-tool notion, and
-   * `LiveEnvoy` with its completion-tool set. Default flag is false, so this is a no-op unless opted in.
-   */
-  protected retriesMalformedTerminal(
-    lastStep: StepResult<Record<string, Tool>>,
-    allSteps: StepResult<Record<string, Tool>>[],
-    context: VoxContext<TParameters>,
-    isCompletion: (toolName: string) => boolean
-  ): boolean {
-    return (
-      this.retryMalformedTerminalCalls &&
-      allSteps.length < this.stepLimit(context) &&
-      lastStep.toolCalls.some((call) => call.invalid && isCompletion(call.toolName))
-    );
-  }
-
-  /**
    * Determines whether the agent should stop execution.
    * Called after each step to check if the generation should continue.
    *
@@ -377,11 +346,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
     allSteps: StepResult<Record<string, Tool>>[],
     context: VoxContext<TParameters>
   ): boolean {
-    // A malformed terminal call keeps the turn open for agents that opt in (default off, so this is a
-    // no-op for existing agents). Checked first so a redo isn't lost to a same-step valid terminal call.
-    if (this.retriesMalformedTerminal(lastStep, allSteps, context, (name) => isTerminalTool(name, context.mcpToolMap))) {
-      return false;
-    }
     if (this.completionTools?.length) {
       // Completion-tools mode: stop when any completion tool succeeds
       if (allSteps.some(step =>
@@ -526,7 +490,6 @@ export abstract class VoxAgent<TParameters extends AgentParameters, TInput = unk
       model?: Model;
       activeTools?: string[];
       messages?: ModelMessage[];
-      outputSchema?: ZodObject;
     } = {};
 
     // Handle messages
