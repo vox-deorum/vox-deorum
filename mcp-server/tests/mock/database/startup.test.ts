@@ -1,4 +1,4 @@
-/** Exercise database startup retry against files that appear after initialization begins. */
+/** Database startup waits for files that appear after initialization begins, without building enum mappings. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import fs from 'node:fs/promises';
@@ -68,11 +68,7 @@ describe('DatabaseManager startup availability', () => {
     for (const table of enumTables) {
       main.exec(`CREATE TABLE ${table} (ID INTEGER, Type TEXT, Description TEXT, Help TEXT)`);
     }
-    main.exec(`
-      CREATE TABLE TriggerAnchor (ID INTEGER);
-      CREATE TRIGGER Unit_BuildingClassPurchaseRequireds AFTER INSERT ON TriggerAnchor BEGIN SELECT 1; END;
-      INSERT INTO Units (ID, Type, Description) VALUES (9, 'UNIT_FIXTURE', 'TXT_KEY_FIXTURE_UNIT');
-    `);
+    main.exec(`INSERT INTO Units (ID, Type, Description) VALUES (9, 'UNIT_FIXTURE', 'TXT_KEY_FIXTURE_UNIT');`);
     main.close();
 
     const localization = new Database(path.join(cacheDirectory, 'Localization-Merged.db'));
@@ -87,6 +83,8 @@ describe('DatabaseManager startup availability', () => {
     expect(manager.isInitialized()).toBe(true);
     const units = await manager.getDatabase().selectFrom('Units').select(['ID', 'Type']).execute();
     expect(units).toEqual([{ ID: 9, Type: 'UNIT_FIXTURE' }]);
+    // Mappings wait for a live game to check against, so startup leaves them unbuilt
+    expect(enumMappings['UnitType']).toBeUndefined();
   }, 15000);
 });
 

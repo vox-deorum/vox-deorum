@@ -14,7 +14,7 @@ import { callToolOnce } from '../tool-client.js';
 const callUnit = (args: Record<string, unknown>) => callToolOnce(createGetUnitTool(), args);
 
 vi.mock('../../../src/server.js', () => ({
-  gameDatabase: { getDatabase: vi.fn(), localizeObjects: vi.fn(), localize: vi.fn() },
+  gameDatabase: { getDatabase: vi.fn(), getGeneration: vi.fn(() => 0), localizeObjects: vi.fn(), localize: vi.fn() },
 }));
 
 describe('get-unit listing', () => {

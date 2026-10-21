@@ -282,9 +282,10 @@ export class MCPServer {
     }
     await server.connect(transport);
 
-    // Send GameSwitched notification to the newly connected client
+    // Send GameSwitched notification to the newly connected client, once the game's mappings are verified
+    const verified = this.bridgeManager.dllConnected && await this.knowledgeManager.isGameVerified();
     const gameId = this.knowledgeManager.getGameId();
-    if (this.bridgeManager.dllConnected && gameId !== "") {
+    if (verified && gameId !== "") {
       const lastId = parseInt(await this.knowledgeManager.getStore().getMetadata("lastID") ?? "-1");
       setTimeout(1000).then(() => {
         logger.info(`Sending GameSwitched notification to newly connected client for game ${gameId}`);

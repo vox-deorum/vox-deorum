@@ -127,7 +127,7 @@
   },
   {
     "name": "search-database",
-    "description": "Searches across all database tools (technologies, policies, buildings, civilizations, units, flavors) using fuzzy matching and returns reranked results",
+    "description": "Searches across all database tools (technologies, policies, buildings, projects, civilizations, units, flavors) using fuzzy matching and returns reranked results",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -212,6 +212,35 @@
   {
     "name": "get-building",
     "description": "Retrieves building information from the Civilization V game database with listing and fuzzy search capabilities",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "Search": {
+          "description": "Fuzzy-matching search term",
+          "type": "string"
+        },
+        "MaxResults": {
+          "default": 20,
+          "description": "Maximum number to return (default: 20)",
+          "type": "number"
+        },
+        "Detailed": {
+          "default": false,
+          "description": "Return full details for every result, not only a single match",
+          "type": "boolean"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "_meta": {
+      "markdownConfig": [
+        "{key}"
+      ]
+    }
+  },
+  {
+    "name": "get-project",
+    "description": "Retrieves buildable project information (such as the Manhattan Project, the Apollo Program, and Citizen Earth Protocol) from the Civilization V game database with listing and fuzzy search capabilities",
     "inputSchema": {
       "type": "object",
       "properties": {

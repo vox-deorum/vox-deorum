@@ -3,7 +3,7 @@
  * Provides structured access to game rules, units, buildings, technologies, and localized text
  */
 
-import { Kysely, SqliteDialect, sql } from 'kysely';
+import { Kysely, SqliteDialect } from 'kysely';
 import Database from 'better-sqlite3';
 import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../utils/logger.js';
@@ -18,16 +18,39 @@ import { stripTags } from '../utils/database/localized.js';
 
 const logger = createLogger('DatabaseManager');
 
-// First trigger in Vox Populi's Triggers.sql, which VP loads last; once it exists, all earlier VP database changes are in.
-// Use the first trigger rather than the last, since VP adds new triggers to the end of that file across versions.
-const voxPopuliTrigger = 'Unit_BuildingClassPurchaseRequireds';
-
-// Vox Populi renames Legalism to Ceremony in its en_US text changes. The localization DB is a separate file that can lag
-// behind the main DB, so this rename tells us VP's text changes are in before policy names are read.
+// Vox Populi renames Legalism to Ceremony in its en_US text changes. The localization DB is a separate file from the
+// main DB, so this rename tells us VP's text changes are in before names are read.
 const voxPopuliRenamedTextTag = 'TXT_KEY_POLICY_LEGALISM';
 const voxPopuliRenamedTextVanilla = 'Legalism';
 
-/** Game tables read into enumMappings at startup, paired with the enum name each fills. */
+// Modulus shared with lua/get-table-checksums.lua
+const checksumModulus = 2147483647;
+
+/** Row count and checksum of one game table, as computed by tableChecksum or lua/get-table-checksums.lua. */
+export interface TableChecksum {
+  Count: number;
+  Checksum: number;
+}
+
+/** Thrown when the cache database does not match the live game, so its ID-to-name mappings would be wrong. */
+export class MappingMismatchError extends Error {
+  name = 'MappingMismatchError';
+}
+
+/**
+ * Checksum the ID and Type of every row, matching lua/get-table-checksums.lua.
+ * Rows are folded in ID order as one sequence, so the input order does not matter but swapped IDs do.
+ */
+export function tableChecksum(rows: ReadonlyArray<{ ID: unknown; Type: unknown }>): TableChecksum {
+  const sorted = [...rows].sort((a, b) => Number(a.ID) - Number(b.ID));
+  let checksum = 0;
+  for (const byte of Buffer.from(sorted.map(row => `${row.ID}:${row.Type};`).join(''), 'utf8')) {
+    checksum = (checksum * 31 + byte) % checksumModulus;
+  }
+  return { Count: rows.length, Checksum: checksum };
+}
+
+/** Game tables read into enumMappings once a game connects, paired with the enum name each fills. */
 export const enumMappingTables: ReadonlyArray<readonly [tableName: string, mappedName: string]> = [
   ['AICityStrategies', 'CityStrategy'],
   ['AIEconomicStrategies', 'EconomicStrategy'],
@@ -63,6 +86,8 @@ export class DatabaseManager {
   private localizationDb?: Kysely<LocalizationDB>;
   private language: string;
   private initialized = false;
+  // Bumped whenever the mappings are rebuilt for a verified game, so caches of database reads know to refresh
+  private generation = 0;
 
   /**
    * Create a new DatabaseManager instance
@@ -87,54 +112,52 @@ export class DatabaseManager {
   }
 
   /**
-   * Load database with retry logic - keeps retrying every 5 seconds until successful
+   * Open the database files, retrying every 5 seconds until both exist.
+   * Enum mappings are built later, once a game connects (see initializeMappings).
    */
   private async loadDatabaseWithRetry(): Promise<void> {
     for (;;) {
       try {
-        const documentsPath = await getDocumentsPath();
-        const civ5Path = path.join(documentsPath, 'My Games', 'Sid Meier\'s Civilization 5', 'cache');
-
-        const mainDbPath = path.join(civ5Path, 'Civ5DebugDatabase.db');
-        const localizationDbPath = path.join(civ5Path, 'Localization-Merged.db');
-
-        // Check if database files exist
-        await fs.access(mainDbPath);
-        await fs.access(localizationDbPath);
-
-        // Create Kysely instance for main database
-        this.mainDb = new Kysely<MainDB>({
-          dialect: new SqliteDialect({
-            database: new Database(mainDbPath, { readonly: true }),
-          }),
-        });
-        logger.info('Connected to main database');
-
-        // Create Kysely instance for localization database
-        this.localizationDb = new Kysely<LocalizationDB>({
-          dialect: new SqliteDialect({
-            database: new Database(localizationDbPath, { readonly: true }),
-          }),
-        });
-        logger.info('Connected to localization database');
-
-        // Sanity check: Wait 10s for VD to load, then for Vox Populi to finish loading
-        await setTimeout(10000);
-        await this.waitForTrigger(voxPopuliTrigger);
-
-        // Wait for policy descriptions to be localized before reading mappings
-        await this.waitForPolicyDescriptions();
-
-        // Initialize enum mappings
-        await this.initializeMappings();
-
-        // Success - exit retry loop
+        await this.openConnections();
         return;
       } catch (error) {
         logger.error('Failed to load database, retrying in 5 seconds...', error);
         await setTimeout(5000);
       }
     }
+  }
+
+  /**
+   * Resolve the paths of the main and localization databases in the Civ V cache folder
+   */
+  private async getDatabasePaths(): Promise<{ mainDbPath: string; localizationDbPath: string }> {
+    const documentsPath = await getDocumentsPath();
+    const civ5Path = path.join(documentsPath, 'My Games', 'Sid Meier\'s Civilization 5', 'cache');
+    return {
+      mainDbPath: path.join(civ5Path, 'Civ5DebugDatabase.db'),
+      localizationDbPath: path.join(civ5Path, 'Localization-Merged.db'),
+    };
+  }
+
+  /**
+   * Open fresh read-only connections to both databases, then close any previous ones
+   */
+  private async openConnections(): Promise<void> {
+    const { mainDbPath, localizationDbPath } = await this.getDatabasePaths();
+    await fs.access(mainDbPath);
+    await fs.access(localizationDbPath);
+
+    // Kysely opens the files through these factories on first use, and only closes handles it opened itself
+    const previous = [this.mainDb, this.localizationDb];
+    this.mainDb = new Kysely<MainDB>({
+      dialect: new SqliteDialect({ database: async () => new Database(mainDbPath, { readonly: true }) }),
+    });
+    this.localizationDb = new Kysely<LocalizationDB>({
+      dialect: new SqliteDialect({ database: async () => new Database(localizationDbPath, { readonly: true }) }),
+    });
+    logger.info(`Connected to game databases at ${path.dirname(mainDbPath)}`);
+
+    for (const db of previous) await db?.destroy();
   }
 
   /**
@@ -331,143 +354,93 @@ export class DatabaseManager {
   }
 
   /**
-   * Wait for a trigger to exist in the main database, polling every 10 seconds
-   * @returns true if had to wait for the trigger, false if it existed immediately
+   * Reopen the databases and rebuild the enum mappings for the connected game.
+   * The cache files may have been rewritten since the connections were opened.
+   * @throws MappingMismatchError if the cache databases do not match the live game
    */
-  private async waitForTrigger(triggerName: string): Promise<boolean> {
-    if (!this.mainDb) {
-      throw new Error('Database not initialized');
-    }
-
-    let hadToWait = false;
-
-    for (;;) {
-      const result = await sql<{ name: string }>`
-        SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = ${triggerName}
-      `.execute(this.mainDb);
-
-      if (result.rows.length > 0) {
-        return hadToWait;
-      }
-
-      hadToWait = true;
-      logger.warn(`Trigger ${triggerName} not found yet, waiting for Vox Populi to finish loading...`);
-      await setTimeout(10000);
-    }
+  async reloadMappings(gameChecksums: Record<string, TableChecksum>): Promise<void> {
+    await this.openConnections();
+    await this.initializeMappings(gameChecksums);
   }
 
   /**
-   * Wait for policy localized descriptions to be available in the localization DB.
-   * Policies in the main DB use TXT_KEY_* references that must resolve in the localization DB,
-   * and Vox Populi's text changes must be applied so names match what tools read later.
-   * @returns true if had to wait, false if descriptions were ready immediately
+   * Build the enum mappings after checking every table against the live game's checksums.
+   * enumMappings is only replaced when every check passes, so a mismatch leaves the previous mappings in place.
+   * @throws MappingMismatchError if a table or the Vox Populi text does not match the live game
    */
-  private async waitForPolicyDescriptions(): Promise<boolean> {
-    let hadToWait = false;
+  async initializeMappings(gameChecksums: Record<string, TableChecksum>): Promise<void> {
+    const mappings: Record<string, Record<number, string>> = {};
+    const mismatches: string[] = [];
 
-    for (;;) {
-      // Get TXT_KEY_* description keys for policies that have Help text
-      const rows = await this.mainDb!
-        .selectFrom('Policies')
-        .select(['Description'])
-        .where('Help', '!=', 'NULL')
-        .execute() as { Description: string | null }[];
-
-      const txtKeys = rows
-        .map(r => r.Description)
-        .filter((d): d is string => !!d && d.startsWith('TXT_KEY_'));
-
-      if (txtKeys.length === 0) {
-        return hadToWait;
+    for (const [tableName, mappedName] of enumMappingTables) {
+      const rows = await this.getDatabase().selectFrom(tableName as any).selectAll().execute() as Record<string, unknown>[];
+      const local = tableChecksum(rows as { ID: unknown; Type: unknown }[]);
+      const game = gameChecksums[tableName];
+      if (local.Count !== game?.Count || local.Checksum !== game.Checksum) {
+        mismatches.push(`${tableName} (database ${local.Count} rows, game ${game?.Count ?? 'none'})`);
+        continue;
       }
-
-      // Check how many of those keys have localized text
-      const localized = await this.localizationDb!
-        .selectFrom('LocalizedText')
-        .select('Tag')
-        .where('Language', '=', this.language)
-        .where('Tag', 'in', txtKeys)
-        .where('Text', 'is not', null)
-        .execute();
-
-      const resolvedTags = new Set(localized.map(r => r.Tag));
-      const unresolved = txtKeys.filter(k => !resolvedTags.has(k));
-
-      if (unresolved.length === 0) {
-        // Keys can resolve to vanilla text before VP's changes land, so also wait for VP's rename
-        const renamed = await this.localizationDb!
-          .selectFrom('LocalizedText')
-          .select('Text')
-          .where('Language', '=', 'en_US')
-          .where('Tag', '=', voxPopuliRenamedTextTag)
-          .executeTakeFirst();
-
-        if (renamed?.Text && renamed.Text !== voxPopuliRenamedTextVanilla) {
-          return hadToWait;
-        }
-        logger.warn(`${voxPopuliRenamedTextTag} still has vanilla text, waiting for Vox Populi text changes...`);
-      } else {
-        logger.warn(`${unresolved.length} policy descriptions not yet in localization DB, waiting...`);
-      }
-
-      hadToWait = true;
-      await setTimeout(10000);
+      mappings[mappedName] = await this.buildEnumMapping(rows);
     }
+
+    if (mismatches.length > 0) {
+      throw new MappingMismatchError(`Game database does not match the live game: ${mismatches.join(', ')}. ${await this.describeMainDb()}`);
+    }
+
+    // The localization DB is a separate file, so also check that Vox Populi's text changes are in
+    const renamed = await this.localizationDb!
+      .selectFrom('LocalizedText')
+      .select('Text')
+      .where('Language', '=', 'en_US')
+      .where('Tag', '=', voxPopuliRenamedTextTag)
+      .executeTakeFirst();
+    if (!renamed?.Text || renamed.Text === voxPopuliRenamedTextVanilla) {
+      throw new MappingMismatchError(`Localization database does not have Vox Populi text yet (${voxPopuliRenamedTextTag} is "${renamed?.Text ?? 'missing'}").`);
+    }
+
+    // GreatPersonExpended sends the expended unit's type under this name
+    mappings["GreatPersonType"] = mappings["UnitType"];
+    Object.assign(enumMappings, mappings);
+    this.generation++;
+    logger.info(`Enum mappings verified against live game (${enumMappingTables.length} tables)`);
   }
 
   /**
-   * Initialize enum-like mappings
-   * Throws error to abort initialization if mappings cannot be loaded
+   * Get the database generation, which changes whenever the mappings are rebuilt for a verified game.
+   * Caches of database reads compare it to know when to refresh.
    */
-  async initializeMappings() {
+  public getGeneration(): number {
+    return this.generation;
+  }
+
+  /**
+   * Turn a table's rows into an ID-to-name mapping, using the localized Description or a readable Type
+   */
+  private async buildEnumMapping(rows: Record<string, unknown>[]): Promise<Record<number, string>> {
+    const tableMap: Record<number, string> = { "-1": "None" };
+    for (const row of rows) {
+      if (!('ID' in row)) continue;
+      const id = Number(row.ID);
+      if ('Description' in row) {
+        tableMap[id] = String(row.Description);
+      } else if ('Type' in row && !isNaN(id)) {
+        const type = String(row.Type);
+        tableMap[id] = changeCase.pascalCase(type.includes('_') ? type.split('_').slice(1).join('_') : type);
+      }
+    }
+    return await this.localizeObject(tableMap);
+  }
+
+  /**
+   * Describe the main database file for mismatch errors, so remote logs show which file was read
+   */
+  private async describeMainDb(): Promise<string> {
+    const { mainDbPath } = await this.getDatabasePaths();
     try {
-      for (const [tableName, mappedName] of enumMappingTables) {
-        await this.addEnumMappings(tableName, mappedName);
-      }
-      // GreatPersonExpended sends the expended unit's type under this name
-      enumMappings["GreatPersonType"] = enumMappings["UnitType"];
-    } catch (error) {
-      logger.error('Failed to initialize enum mappings:', error);
-      throw new Error(`Critical error: Failed to initialize enum mappings from the game database. Try to successfully start the game at least once. MCP server cannot start.`);
-    }
-  }
-
-  /**
-   * Read a named table and add int-number mappings to enumMappings
-   */
-  async addEnumMappings(tableName: string, mappedName: string, prefix: string = ""): Promise<void> {
-    if (!this.mainDb) {
-      throw new Error('Database not initialized. Call initialize() first.');
-    }
-
-    try {
-      // Query the specified table
-      const results = await this.mainDb
-        .selectFrom(tableName as any).selectAll()
-        .execute();
-
-      const tableMap: Record<number, string> = { "-1": "None" };
-
-      // Process each row in the results
-      for (const row of results) {
-        if (!('ID' in row)) continue;
-        const id = Number(row.ID);
-        if ('Description' in row) {
-          tableMap[id] = String(row.Description);
-        } else if ('Type' in row) {
-          let type = String(row.Type);
-          if (!isNaN(id)) {
-            type = type.includes('_') ? type.split('_').slice(1).join('_') : type;
-            tableMap[id] = prefix + changeCase.pascalCase(type);
-          }
-        }
-      }
-
-      enumMappings[mappedName] = await this.localizeObject(tableMap);
-      logger.info(`Added ${Object.keys(tableMap).length} enum mappings from table ${tableName}`);
-    } catch (error) {
-      logger.error(`Failed to read enum mappings from table ${tableName}:`, error);
-      throw new Error(`Failed to read enum mappings from table ${tableName}: ${error}`);
+      const stat = await fs.stat(mainDbPath);
+      return `Read ${mainDbPath} (modified ${stat.mtime.toISOString()}).`;
+    } catch {
+      return `Read ${mainDbPath}.`;
     }
   }
 }

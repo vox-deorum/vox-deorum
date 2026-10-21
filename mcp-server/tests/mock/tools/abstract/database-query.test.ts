@@ -98,6 +98,17 @@ describe('DatabaseQueryTool', () => {
     expect(result.Count).toBe(3);
   });
 
+  it('refreshes cached summaries after the game database is reloaded for a verified game', async () => {
+    const generation = vi.spyOn(gameDatabase, 'getGeneration').mockReturnValue(0);
+    const tool = new TestQueryTool(FIXTURES);
+    await callToolOnce(tool, { MaxResults: 20 });
+    tool.summaries = [FIXTURES[0]];
+
+    generation.mockReturnValue(1);
+    const result = await callToolOnce(tool, { MaxResults: 20 });
+    expect(result.Count).toBe(1);
+  });
+
   it('expands a single result via fetchFullInfo', async () => {
     const tool = new TestQueryTool(FIXTURES);
     const result = await callToolOnce(tool, { Search: 'Pottery', MaxResults: 20 } as any);

@@ -169,11 +169,7 @@ export abstract class AiStrategyTool extends DatabaseQueryTool<AiStrategy, AiStr
    */
   protected async fetchFullInfo(identifier: string): Promise<AiStrategy> {
     // Since full schema is the same as summary, just return the cached data
-    if (!this.cachedSummaries) {
-      this.cachedSummaries = await this.fetchSummaries();
-    }
-
-    const strategy = this.cachedSummaries.find(s => s.Type === identifier);
+    const strategy = (await this.getSummaries()).find(s => s.Type === identifier);
     if (!strategy) {
       throw new Error(`Strategy ${identifier} not found`);
     }

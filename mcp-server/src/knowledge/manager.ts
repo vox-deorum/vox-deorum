@@ -4,7 +4,8 @@
  */
 
 import { createLogger } from '../utils/logger.js';
-import { bridgeManager, MCPServer } from '../server.js';
+import { bridgeManager, gameDatabase, MCPServer } from '../server.js';
+import { enumMappingTables, type TableChecksum } from '../database/manager.js';
 import { GameIdentity, syncGameIdentity } from './getters/game-identity.js';
 import { KnowledgeStore } from './store.js';
 import path from 'path';
@@ -38,6 +39,8 @@ export class KnowledgeManager {
   private knowledgeStore?: KnowledgeStore;
   private autoSaveTimer: NodeJS.Timeout | null = null;
   private dllConnected: boolean = false;
+  private mappingsReady?: Promise<boolean>;
+  private tableChecksums?: LuaFunction;
 
   private config = {
     databasePath: 'data/',
@@ -59,6 +62,8 @@ export class KnowledgeManager {
           // Change the status
           this.dllConnected = true;
           await this.checkGameContext();
+          // Hold everything back when the mappings don't match the live game
+          if (!(await this.mappingsReady)) return;
           // Register analytical functions
           const eventVisibility = await LuaFunction.fromFile(
             'event-visibility.lua',
@@ -71,6 +76,8 @@ export class KnowledgeManager {
           MCPServer.getInstance().sendNotification("DLLConnected", -1, -1, -1);
         } else if (this.dllConnected) {
           this.dllConnected = false;
+          // A reload or a different game may change the tables, so rebuild the mappings on the next connection
+          this.mappingsReady = undefined;
           this.knowledgeStore?.setResyncing();
           MCPServer.getInstance().sendNotification("DLLDisconnected", -1, -1, -1);
         }
@@ -92,7 +99,9 @@ export class KnowledgeManager {
             renderEvent.payload
           );
         } else {
-          await this.knowledgeStore.handleGameEvent(data.id, data.type, data.payload, data.visibility, data.extraPayload);
+          // Stored events are named through the enum mappings: wait while they load, drop events after a mismatch
+          if (!(await this.mappingsReady)) return;
+          await this.knowledgeStore?.handleGameEvent(data.id, data.type, data.payload, data.visibility, data.extraPayload);
         }
       }
     });
@@ -103,6 +112,8 @@ export class KnowledgeManager {
    * Check game context and detect changes
    */
   private async checkGameContext(): Promise<boolean> {
+    // Never switch to a game (and start agents) before the mappings match it
+    if (!(await this.ensureEnumMappings())) return false;
     try {
       const gameIdentity = await syncGameIdentity();
       if (gameIdentity && gameIdentity.gameId !== this.gameIdentity?.gameId) {
@@ -117,17 +128,66 @@ export class KnowledgeManager {
   }
 
   /**
-   * Switch to a new game context
+   * Build the enum mappings once per DLL connection, now that a live game exists to check them against
+   * @returns true when the mappings match the live game
    */
-  private async switchGameContext(identity: GameIdentity): Promise<void> {
+  private ensureEnumMappings(): Promise<boolean> {
+    this.mappingsReady ??= this.loadEnumMappings();
+    return this.mappingsReady;
+  }
+
+  /**
+   * Reload the enum mappings and verify them with the live game's table checksums.
+   * Without a game to ask, it gives up quietly and retries on the next connection.
+   * A mismatch pauses the game and stays failed until the DLL reconnects.
+   */
+  private async loadEnumMappings(): Promise<boolean> {
+    this.tableChecksums ??= LuaFunction.fromFile('get-table-checksums.lua', 'getTableChecksums', ['tableNames']);
+    const response = await this.tableChecksums.execute(enumMappingTables.map(([tableName]) => tableName).join(','));
+    if (!response.success) {
+      logger.warn('Could not read table checksums from the game, retrying on the next connection', response.error);
+      this.mappingsReady = undefined;
+      return false;
+    }
+
+    try {
+      await gameDatabase.reloadMappings(response.result as Record<string, TableChecksum>);
+      return true;
+    } catch (error) {
+      logger.error(`Enum mappings do not match the live game, pausing the game: ${error instanceof Error ? error.message : String(error)}`);
+      // Stop advertising the previous game: its store would be read with mappings that don't fit the live game
+      await this.closeGameContext();
+      await bridgeManager.pauseGame();
+      return false;
+    }
+  }
+
+  /**
+   * Whether the enum mappings are verified for the current DLL connection, waiting if a check is in progress.
+   * Clients should only be pointed at a game when this is true.
+   */
+  async isGameVerified(): Promise<boolean> {
+    return (await this.mappingsReady) ?? false;
+  }
+
+  /**
+   * Save and close the current game's store, leaving no active game
+   */
+  private async closeGameContext(): Promise<void> {
     await this.saveKnowledge();
-    
-    // Close existing store if any
     if (this.knowledgeStore) {
       await this.knowledgeStore.close();
       this.knowledgeStore = undefined;
     }
-    
+    this.gameIdentity = undefined;
+  }
+
+  /**
+   * Switch to a new game context
+   */
+  private async switchGameContext(identity: GameIdentity): Promise<void> {
+    await this.closeGameContext();
+
     // Load knowledge store
     this.gameIdentity = identity;
     await this.loadKnowledge(identity.gameId);

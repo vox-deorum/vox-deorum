@@ -9,9 +9,12 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 import os from 'os';
 import path from 'path';
 import fs from 'fs/promises';
-import { bridgeManager } from '../../../src/server.js';
+import { bridgeManager, gameDatabase } from '../../../src/server.js';
 import { syncGameIdentity } from '../../../src/knowledge/getters/game-identity.js';
 import { KnowledgeManager, extractRenderEventForStorage } from '../../../src/knowledge/manager.js';
+import { LuaFunction } from '../../../src/bridge/lua-function.js';
+import { MappingMismatchError } from '../../../src/database/manager.js';
+import type { LuaResponse } from '../../../src/bridge/manager.js';
 
 vi.mock('../../../src/knowledge/getters/game-identity.js', async importOriginal => {
   const actual = await importOriginal<typeof import('../../../src/knowledge/getters/game-identity.js')>();
@@ -28,6 +31,8 @@ async function connectManagerToGame(manager: KnowledgeManager, gameId: string, t
     const connectedListeners = bridgeManager.rawListeners('connected');
     const gameEventListeners = bridgeManager.rawListeners('gameEvent');
     const checkGameContext = vi.spyOn(manager as any, 'checkGameContext');
+    // No live game to checksum against; treat the enum mappings as verified
+    vi.spyOn(manager as any, 'loadEnumMappings').mockResolvedValue(true);
     await manager.initialize();
     const handler = bridgeManager.rawListeners('connected').find(listener => !connectedListeners.includes(listener));
     if (!handler) throw new Error('KnowledgeManager did not register a connected handler');
@@ -166,5 +171,102 @@ describe('store lifecycle', () => {
 
     cleanups.push(await connectManagerToGame(manager, 'game-two', 10, 1));
     expect(await manager.getStore().getMetadata('marker')).toBe('two');
+  });
+});
+
+describe('enum mapping verification on DLL connection', () => {
+  let manager: KnowledgeManager;
+  let tmpDir: string;
+  let dllStatus: (connected: boolean) => Promise<unknown>;
+  let removeListeners: () => void;
+  let checksumResponse: LuaResponse;
+  let pauseGame: MockInstance;
+
+  beforeEach(async () => {
+    manager = new KnowledgeManager();
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'km-mapping-test-'));
+    (manager as any).config.databasePath = tmpDir;
+    mockSyncGameIdentity.mockResolvedValue({ gameId: 'mapping-game', turn: 0, activePlayerId: 0 });
+    checksumResponse = { success: true, result: { Units: { Count: 1, Checksum: 1 } } };
+    vi.spyOn(LuaFunction.prototype, 'execute').mockImplementation(async function (this: LuaFunction) {
+      return this.name === 'getTableChecksums' ? checksumResponse : { success: true, result: true };
+    });
+    vi.spyOn(bridgeManager, 'executeLuaScript').mockResolvedValue({ success: true, result: true });
+    pauseGame = vi.spyOn(bridgeManager, 'pauseGame').mockResolvedValue(true);
+
+    const connectedListeners = bridgeManager.rawListeners('connected');
+    const gameEventListeners = bridgeManager.rawListeners('gameEvent');
+    await manager.initialize();
+    const handler = bridgeManager.rawListeners('gameEvent').find(listener => !gameEventListeners.includes(listener))!;
+    dllStatus = connected => handler({ type: 'dll_status', payload: { connected } }) as Promise<unknown>;
+    removeListeners = () => {
+      for (const listener of bridgeManager.rawListeners('connected')) {
+        if (!connectedListeners.includes(listener)) bridgeManager.off('connected', listener);
+      }
+      for (const listener of bridgeManager.rawListeners('gameEvent')) {
+        if (!gameEventListeners.includes(listener)) bridgeManager.off('gameEvent', listener);
+      }
+    };
+  });
+
+  afterEach(async () => {
+    removeListeners();
+    vi.restoreAllMocks();
+    await manager.shutdown();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('switches to the game once the live checksums match', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    await dllStatus(true);
+    expect(reload).toHaveBeenCalledWith(checksumResponse.result);
+    expect(manager.getGameId()).toBe('mapping-game');
+    expect(pauseGame).not.toHaveBeenCalled();
+  });
+
+  it('pauses the game and never switches to it when the database does not match', async () => {
+    vi.spyOn(gameDatabase, 'reloadMappings').mockRejectedValue(new MappingMismatchError('Units differ'));
+    await dllStatus(true);
+    expect(pauseGame).toHaveBeenCalledOnce();
+    expect(mockSyncGameIdentity).not.toHaveBeenCalled();
+    expect(manager.getGameId()).toBe('');
+  });
+
+  it('stops advertising a verified game once a later connection does not match', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    await dllStatus(true);
+    expect(manager.getGameId()).toBe('mapping-game');
+    expect(await manager.isGameVerified()).toBe(true);
+
+    await dllStatus(false);
+    reload.mockRejectedValue(new MappingMismatchError('Units differ'));
+    await dllStatus(true);
+    expect(await manager.isGameVerified()).toBe(false);
+    expect(manager.getGameId()).toBe('');
+    expect(() => manager.getStore()).toThrow();
+  });
+
+  it('retries without pausing when the game cannot answer yet', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    checksumResponse = { success: false, error: { code: 'DLL_DISCONNECTED', message: 'not connected' } };
+    await dllStatus(true);
+    expect(reload).not.toHaveBeenCalled();
+    expect(pauseGame).not.toHaveBeenCalled();
+
+    checksumResponse = { success: true, result: { Units: { Count: 1, Checksum: 1 } } };
+    await dllStatus(true);
+    expect(reload).toHaveBeenCalledOnce();
+    expect(manager.getGameId()).toBe('mapping-game');
+  });
+
+  it('rebuilds the mappings after the DLL reconnects', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    await dllStatus(true);
+    await dllStatus(true);
+    expect(reload).toHaveBeenCalledOnce();
+
+    await dllStatus(false);
+    await dllStatus(true);
+    expect(reload).toHaveBeenCalledTimes(2);
   });
 });

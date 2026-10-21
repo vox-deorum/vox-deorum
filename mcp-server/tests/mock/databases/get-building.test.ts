@@ -11,7 +11,7 @@ import createGetBuildingTool, { getBuilding } from '../../../src/tools/databases
 import { wrapResults } from '../../../src/utils/mcp.js';
 
 vi.mock('../../../src/server.js', () => ({
-  gameDatabase: { getDatabase: vi.fn(), localizeObjects: vi.fn() },
+  gameDatabase: { getDatabase: vi.fn(), getGeneration: vi.fn(() => 0), localizeObjects: vi.fn() },
 }));
 
 describe('get-building reference listing via MCP', () => {

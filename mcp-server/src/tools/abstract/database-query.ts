@@ -21,6 +21,9 @@ export abstract class DatabaseQueryTool<
    */
   protected cachedSummaries: TSummary[] | null = null;
 
+  // Database generation the cached summaries were read from; a verified reload invalidates them
+  private cachedGeneration = -1;
+
   /**
    * Schema for summary information (used for listing)
    */
@@ -131,10 +134,12 @@ export abstract class DatabaseQueryTool<
    * Get cached summaries or fetch new ones
    */
   public async getSummaries(): Promise<TSummary[]> {
-    if (this.cachedSummaries) return this.cachedSummaries;
-    
+    const generation = gameDatabase.getGeneration();
+    if (this.cachedSummaries && this.cachedGeneration === generation) return this.cachedSummaries;
+
     const results = await this.fetchSummaries();
     this.cachedSummaries = await gameDatabase.localizeObjects(results);
+    this.cachedGeneration = generation;
     return this.cachedSummaries;
   }
 

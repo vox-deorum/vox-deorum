@@ -16,7 +16,7 @@ import { getPolicy } from '../../../src/tools/databases/get-policy.js';
 import { wrapResults } from '../../../src/utils/mcp.js';
 
 vi.mock('../../../src/server.js', () => ({
-  gameDatabase: { getDatabase: vi.fn(), localizeObjects: vi.fn() },
+  gameDatabase: { getDatabase: vi.fn(), getGeneration: vi.fn(() => 0), localizeObjects: vi.fn() },
 }));
 
 /** Tables and rows shared by the listing and full-report tests. */

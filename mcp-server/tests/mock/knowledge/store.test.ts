@@ -153,6 +153,8 @@ describe('handleGameEvent', () => {
     // A fresh game ID per test forces a context switch, so no identity leaks between tests.
     vi.spyOn(gameIdentity, 'syncGameIdentity').mockResolvedValue({ gameId: `event-test-${crypto.randomUUID()}`, turn: 10, activePlayerId: 1 });
     vi.spyOn(knowledgeManager, 'loadKnowledge').mockResolvedValue();
+    // No live game to checksum against; treat the enum mappings as verified
+    vi.spyOn(knowledgeManager as any, 'loadEnumMappings').mockResolvedValue(true);
     await knowledgeManager.initialize();
     const connectedHandler = bridgeManager.rawListeners('connected').find(listener => !priorConnectedListeners.includes(listener));
     if (!connectedHandler) throw new Error('KnowledgeManager did not register a connected handler');

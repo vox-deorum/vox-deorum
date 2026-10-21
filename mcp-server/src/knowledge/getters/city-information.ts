@@ -25,14 +25,17 @@ interface BuildingRelationship {
 let buildingRelationshipCache: Map<string, BuildingRelationship> | null = null;
 // Map from building description to building class
 let descriptionToClassCache: Map<string, string> | null = null;
+// Database generation both caches were built from; a verified reload rebuilds them
+let cacheGeneration = -1;
 
 /**
  * Build comprehensive building relationship cache
  * Creates a unified cache with all building prerequisites and unlock relationships
  */
 async function buildRelationshipCache(): Promise<void> {
-  // Return if already cached
-  if (buildingRelationshipCache !== null && descriptionToClassCache !== null) {
+  // Return if already cached from the current database
+  const generation = gameDatabase.getGeneration();
+  if (buildingRelationshipCache !== null && descriptionToClassCache !== null && cacheGeneration === generation) {
     return;
   }
 
@@ -104,6 +107,7 @@ async function buildRelationshipCache(): Promise<void> {
     }
   }
 
+  cacheGeneration = generation;
   logger.info(`Cached ${buildingRelationshipCache.size} building relationships and ${descriptionToClassCache.size} description mappings`);
 }
 
