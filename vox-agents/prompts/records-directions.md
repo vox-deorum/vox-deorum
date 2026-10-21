@@ -5,7 +5,7 @@ Your workspace holds the game's records and your civilization's notes accessible
 | Folder | Access | Holds |
 | --- | --- | --- |
 | `/workspace/records` | read-only | Complete reports, events, and any briefings for each processed turn, written by the host. |
-| `/workspace/reference` | read-only | Game technologies, policies, buildings, and units with their tooltips, in files by era (buildings also by corporation and belief), or by branch for policies. |
+| `/workspace/reference` | read-only | Game technologies, policies, buildings (including projects), and units with their tooltips, in files by era (buildings also by corporation and belief), or by branch for policies. |
 {{#game}}
 | `/workspace/game` | {{#writable}}writable{{/writable}}{{^writable}}read-only{{/writable}} | Notes shared by every agent of your civilization in this game. They persist across turns. |
 {{/game}}
@@ -20,6 +20,7 @@ Files written anywhere else disappear after each command.
 `/workspace/reference` has one folder per category. Every `.md` file has a `.json` twin.
 - `technologies/`, `buildings/`, `units/`: one file per era, such as `units/ancient.md` or `buildings/industrial.md`.
   - `buildings/` has `corporations.md` for corporation buildings, `religious.md` for religious buildings, and `other.md` for special buildings.
+  - `buildings/projects.md` holds every project, a special kind of building such as the Manhattan Project, the Apollo Program, or Citizen Earth Protocol.
   - `units/other.md` holds great people and faith units.
 - `policies/`: one file per branch, such as `policies/tradition.md` or `policies/fealty.md`.
 

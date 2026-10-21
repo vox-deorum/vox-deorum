@@ -1,6 +1,6 @@
 # MCP Server Tool Reference
 
-Concise reference for all 43 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
+Concise reference for all 44 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
 
 ## Architecture
 
@@ -16,17 +16,18 @@ Concise reference for all 43 tools exposed by the MCP Server. Tools are organize
 | `calculator` | Evaluates mathematical expressions using mathjs | `Expression`: string |
 | `lua-executor` | Executes raw Lua scripts in game context via Bridge Service | `Script`: string, `Description?`: string |
 | `call-lua-function` | Calls a Lua function registered by the game mod with structured arguments | `Name`: string, `Args`: array, `ExpectedGameID?` |
-| `search-database` | Fuzzy search across all database tools (techs, policies, buildings, civs, units, flavors) with reciprocal rank fusion reranking | `Keywords`: string[], `MaxResults?`: number (default: 10) |
+| `search-database` | Fuzzy search across all database tools (techs, policies, buildings, projects, civs, units, flavors) with reciprocal rank fusion reranking | `Keywords`: string[], `MaxResults?`: number (default: 10) |
 
-## Database Query Tools (8)
+## Database Query Tools (9)
 
 All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `MaxResults?`: number (default: 20). Returns full details automatically when search narrows to a single result.
 
 | Tool | Description |
 | --- | --- |
-| `get-technology` | Technology info with prerequisites, unlocks |
-| `get-policy` | Policy details and branch information |
+| `get-technology` | Technology info with prerequisites and unlocks, including projects |
+| `get-policy` | Policy details, branch information, and any projects the policy unlocks |
 | `get-building` | Building specifications and requirements |
+| `get-project` | Project cost, prerequisites (technology, policy, finished policy branches, and other projects), era, unique civilization, victory, repeatability, and instance limits |
 | `get-civilization` | Civilization traits and leader abilities |
 | `get-unit` | Unit statistics, promotions, upgrades |
 | `get-economic-strategies` | AI economic strategy info with production/overall flavors |

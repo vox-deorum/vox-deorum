@@ -5774,10 +5774,12 @@ export interface Project {
   InfluenceAllRequired: Generated<number | null>;
   IsRepeatable: Generated<number | null>;
   MaxGlobalInstances: Generated<number | null>;
+  MaxPlayerInstances: Generated<number | null>;
   MaxTeamInstances: Generated<number | null>;
   MovieDefineTag: Generated<string | null>;
   NukeInterception: Generated<number | null>;
   NumRequiredTier3Tenets: Generated<number | null>;
+  PolicyType: string | null;
   PortraitIndex: Generated<number | null>;
   PovertyFlatReduction: Generated<number | null>;
   Religious: Generated<number | null>;
@@ -8778,7 +8780,7 @@ export interface DB {
   // ProcessFlavors: ProcessFlavor;
   // ProcessProductionYields: ProcessProductionYield;
   // ProjectFlavors: ProjectFlavor;
-  // ProjectPrereqs: ProjectPrereq;
+  Project_Prereqs: ProjectPrereq;
   // ProjectResourceQuantityRequirements: ProjectResourceQuantityRequirement;
   Projects: Project;
   // ProjectUnitCombatProductionModifiersGlobal: ProjectUnitCombatProductionModifiersGlobal;
@@ -8995,7 +8997,7 @@ export interface DB {
   // UnitYieldFromBarbarianKills: UnitYieldFromBarbarianKill;
   // UnitYieldFromKills: UnitYieldFromKill;
   // UnitYieldOnCompletion: UnitYieldOnCompletion;
-  // Victories: Victory;
+  Victories: Victory;
   // VictoryPointAwards: VictoryPointAward;
   // VictoryPursuitTypes: VictoryPursuitType;
   // VoteDiploVotes: VoteDiploVote;

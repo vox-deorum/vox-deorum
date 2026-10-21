@@ -40,20 +40,21 @@ Each turn folder represents a processed refresh; events inside retain their actu
 
 ## Game reference
 
-Before player loops start, `StrategistSession` calls `writeGameReference` in `src/knowledge/reference.ts` for file-enabled seats. It fetches technologies, policies, buildings, and units through the MCP database tools in detailed mode and writes Markdown/JSON pairs.
+Before player loops start, `StrategistSession` calls `writeGameReference` in `src/knowledge/reference.ts` for file-enabled seats. It fetches technologies, policies, buildings, projects, and units through the MCP database tools in detailed mode and writes Markdown/JSON pairs.
 
 | Category | Buckets |
 | --- | --- |
 | Technologies | Era |
 | Units | Era; `other` for units with neither an unlocking technology nor a production cost |
 | Buildings | `corporations` for corporation buildings; era for technology unlocks; otherwise `religious` for belief unlocks or `other` |
+| Projects | a single `projects` file in the buildings folder, as a special kind of building |
 | Policies | Branch, or `other` without one |
 
-Missing eras default to ancient; unknown eras go to `other` with a warning. Empty buckets have no files. Technologies, buildings, and units sort by cost then name; policies sort by level then name.
+Missing eras default to ancient; unknown eras go to `other` with a warning. Empty buckets have no files. Technologies, buildings, projects, and units sort by cost then name; policies sort by level then name.
 
-Markdown uses the game's tooltips plus facts the tooltip lacks. JSON keeps the cleaned gameplay fields, excluding internal identifiers, advice, and fields already represented by the bucket or sorting. `src/knowledge/reference-format.ts` handles Markdown formatting. Unit, building, and technology help comes from the mod's [VoxDeorumReferenceTooltips](../../civ5-mod/lua-hooks.md); a missing tooltip fails the detailed listing and session setup. Policies use localized help and may omit it when empty.
+Markdown uses the game's tooltips plus facts the tooltip lacks, such as a project's required policy or the projects a policy unlocks. JSON keeps the cleaned gameplay fields, excluding internal identifiers, advice, and fields already represented by the bucket or sorting. `src/knowledge/reference-format.ts` handles Markdown formatting. Unit, building, technology, and project help comes from the mod's [VoxDeorumReferenceTooltips](../../civ5-mod/lua-hooks.md); a missing tooltip fails the detailed listing and session setup. Policies use localized help and may omit it when empty.
 
-A reference is reused when its format marker is current and every category has a Markdown file with a JSON twin. An outdated or incomplete reference is replaced in one commit per store. All fetches finish before any store is written, so fetch failures preserve existing references. If a store cannot open or reference preparation fails, setup stops before player loops start and prepared players are disposed.
+A reference is reused when its format marker is current and every listing has its files, each a Markdown file with a JSON twin. Projects must have `buildings/projects`, and every other listing needs at least one pair in its folder, not counting the projects pair. So a missing projects page, or a buildings folder with only the projects page, counts as incomplete. An outdated or incomplete reference is replaced in one commit per store. All fetches finish before any store is written, so fetch failures preserve existing references. If a store cannot open or reference preparation fails, setup stops before player loops start and prepared players are disposed.
 
 The reference is part of each recorded commit. Shared folders and `/tmp` remain outside the store.
 

@@ -21,7 +21,9 @@ const PolicySummarySchema = z.object({
  */
 const PolicyReportSchema = PolicySummarySchema.extend({
   Level: z.number().nullable(),
-  PrereqPolicies: z.array(z.string())
+  PrereqPolicies: z.array(z.string()),
+  // Buildable projects that require this policy, usually none
+  ProjectsUnlocked: z.array(z.string())
 });
 
 type PolicySummary = z.infer<typeof PolicySummarySchema>;
@@ -143,6 +145,14 @@ export async function getPolicy(policyType: string) {
     .where('pp.PolicyType', '=', policyType)
     .execute();
   
+  // Get buildable projects that require this policy; a cost of -1 means no player can build one
+  const projectsUnlocked = await db
+    .selectFrom('Projects')
+    .select('Description')
+    .where('PolicyType', '=', policyType)
+    .where('Cost', 'is not', -1)
+    .execute();
+
   // Construct the full policy object
   return {
     Type: policy.Type,
@@ -151,6 +161,7 @@ export async function getPolicy(policyType: string) {
     Era: getEraName(policy.Era ?? policy.Era2 ?? "ERA_ANCIENT"),
     Branch: policy.Branch ?? policy.Branch2,
     Level: policy.Level,
-    PrereqPolicies: prereqPolicies.map(p => p.Description!)
+    PrereqPolicies: prereqPolicies.map(p => p.Description!),
+    ProjectsUnlocked: projectsUnlocked.map(p => p.Description!)
   };
 }

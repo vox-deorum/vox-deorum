@@ -25,7 +25,8 @@ const TechnologyReportSchema = TechnologySummarySchema.extend({
   ImprovementsUnlocked: z.array(z.string()),
   WorldWondersUnlocked: z.array(z.string()),
   NationalWondersUnlocked: z.array(z.string()),
-  ResourcesRevealed: z.array(z.string())
+  ResourcesRevealed: z.array(z.string()),
+  ProjectsUnlocked: z.array(z.string())
 });
 
 type TechnologySummary = z.infer<typeof TechnologySummarySchema>;
@@ -155,6 +156,14 @@ export async function getTechnology(techType: string) {
     .where('TechReveal', '=', techType)
     .execute();
 
+  // Get buildable projects unlocked by this technology; a cost of -1 means no player can build one
+  const projectsUnlocked = await db
+    .selectFrom('Projects')
+    .select('Description')
+    .where('TechPrereq', '=', techType)
+    .where('Cost', 'is not', -1)
+    .execute();
+
   // Get technologies unlocked by this technology
   const techsUnlocked = await db
     .selectFrom('Technology_PrereqTechs')
@@ -179,5 +188,6 @@ export async function getTechnology(techType: string) {
     WorldWondersUnlocked: buildingsUnlocked.filter(b => b.MaxGlobalInstances == 1).map(b => b.Description!),
     ImprovementsUnlocked: improvementsUnlocked.map(i => i.Description!),
     ResourcesRevealed: resourcesRevealed.map(r => r.Description!),
+    ProjectsUnlocked: projectsUnlocked.map(p => p.Description!),
   };
 }

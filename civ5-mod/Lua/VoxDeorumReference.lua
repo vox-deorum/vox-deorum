@@ -1,4 +1,4 @@
--- Vox Deorum game reference: registers a bridge-callable function that returns the game's own player-agnostic tooltips for units, buildings, and technologies.
+-- Vox Deorum game reference: registers a bridge-callable function that returns the game's own player-agnostic tooltips for units, buildings, technologies, and projects.
 --
 -- The includes resolve to the Community Patch overrides, the same tooltip code EUI screens use.
 -- Registration waits for LuaEvents.VoxDeorumReferenceRegister, which the MCP server fires before
@@ -7,6 +7,12 @@
 
 include("InfoTooltipInclude")
 include("TechHelpInclude")
+
+-- Drop the leading name line that the project tooltip always includes, as the other kinds exclude their names.
+local function withoutNameLine(text)
+	if type(text) ~= "string" then return text end
+	return (text:gsub("^.-%[NEWLINE%]", "", 1))
+end
 
 -- Each kind's database table and its general-info tooltip builder.
 local TOOLTIP_KINDS = {
@@ -21,6 +27,10 @@ local TOOLTIP_KINDS = {
 	technology = {
 		table = "Technologies",
 		build = function(id) return GetHelpTextForTech(id, true) end,
+	},
+	project = {
+		table = "Projects",
+		build = function(id) return withoutNameLine(GetHelpTextForProject(id, nil, true)) end,
 	},
 }
 

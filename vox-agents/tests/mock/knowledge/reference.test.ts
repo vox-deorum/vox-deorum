@@ -3,8 +3,8 @@
  * calls for stores that need a refresh, one commit per store after every listing succeeds that
  * replaces the reference with a file pair for every filled bucket, entries trimmed and bucketed
  * (technologies and units by era, with untechnologied costless units and unknown eras as other;
- * buildings by corporation, religious, era, and other; policies by branch) without the bucketing
- * fields, per-bucket order, Markdown facts limited to what tooltips lack (buildings with a tooltip
+ * buildings by corporation, religious, era, and other; every project in buildings/projects;
+ * policies by branch) without the bucketing fields, per-bucket order, Markdown facts limited to what tooltips lack (buildings with a tooltip
  * list none) while JSON keeps every fact, and skipping complete current references.
  */
 
@@ -22,10 +22,9 @@ vi.mock('../../../src/utils/models/mcp-client.js', async () => {
 import { hasGameReference, writeGameReference } from '../../../src/knowledge/reference.js';
 import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
 
-const tools = ['get-technology', 'get-policy', 'get-building', 'get-unit'];
-const categories = ['technologies', 'policies', 'buildings', 'units'];
-/** The default listings fill one bucket per category: one file pair each plus the format marker. */
-const referenceFileCount = categories.length * 2 + 1;
+const tools = ['get-technology', 'get-policy', 'get-building', 'get-project', 'get-unit'];
+/** The default listings fill one bucket per listing: one file pair each plus the format marker. */
+const referenceFileCount = tools.length * 2 + 1;
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 let dir: string;
@@ -103,7 +102,10 @@ describe('writeGameReference', () => {
 
   describe('Markdown facts versus JSON twins', () => {
     it('should list only the tooltip-missing facts in Markdown while JSON keeps every fact', async () => {
-      mcp.respondWith('get-policy', structuredResult({ Count: 1, Items: [{ Type: 'POLICY_ONLY', Name: 'Only', Help: 'Grants culture.', Branch: 'Tradition', Era: 'Ancient', PrereqPolicies: ['Root'] }] }));
+      mcp.respondWith('get-policy', structuredResult({ Count: 2, Items: [
+        { Type: 'POLICY_ONLY', Name: 'Only', Help: 'Grants culture.', Branch: 'Tradition', Era: 'Ancient', PrereqPolicies: ['Root'], ProjectsUnlocked: [] },
+        { Type: 'POLICY_WORKS', Name: 'Works', Level: 1, Help: 'Builds faster.', Branch: 'Tradition', Era: 'Ancient', ProjectsUnlocked: ['Public Works'] },
+      ] }));
       mcp.respondWith('get-unit', structuredResult({ Count: 1, Items: [
         { Type: 'UNIT_SPEARMAN', Name: 'Spearman', Combat: 12, Cost: 70, Maintenance: 2, PrereqTech: 'Bronze Working', UpgradesTo: 'Pikeman', Help: 'Cost: 70 Production\nStrength: 12' },
       ] }));
@@ -116,6 +118,8 @@ describe('writeGameReference', () => {
       expect(section).toContain('Root');
       expect(section.indexOf('- Grants culture.')).toBeGreaterThan(section.indexOf('Root'));
       expect(section).not.toContain('###');
+      expect(section.slice(0, section.indexOf('## Works'))).not.toContain('Public Works');
+      expect(policy.slice(policy.indexOf('## Works'))).toContain('Public Works');
       expect(Object.keys(JSON.parse(read(store, 'reference/policies/tradition.json'))[0])).toEqual(['Name', 'PrereqPolicies', 'Help']);
 
       const unit = read(store, 'reference/units/ancient.md');
@@ -240,6 +244,34 @@ describe('writeGameReference', () => {
       expect(read(store, 'reference/buildings/religious.md').split('\n')[0]).toBe('# Buildings: Religious');
       expect(namesIn(store, 'reference/buildings/medieval.json')).toEqual(['Temple']);
       expect(store.readFile('reference/buildings/other.json')).toBeUndefined();
+    });
+
+    it('should file every project in one buildings page, listing the facts its tooltip lacks and keeping the era', async () => {
+      mcp.respondWith('get-project', structuredResult({ Items: [
+        { Type: 'P1', Name: 'Citizen Earth Protocol', Cost: 6000, Victory: 'Cultural Victory', MaxTeamInstances: 1, MaxGlobalInstances: -1, IsRepeatable: false, PrereqPolicy: null, PolicyBranchesRequired: null, Help: 'Cost: 6000 Production\nWin a Cultural Victory.' },
+        { Type: 'P2', Name: 'SS Booster', Cost: 1500, PrereqTech: 'Rocketry', Era: 'Modern', PrereqProjects: ['Apollo Program'], Victory: 'Science Victory', Help: 'Cost: 1500 Production' },
+        { Type: 'P3', Name: 'Public Works', Cost: 300, PrereqTech: 'Machinery', Era: 'Medieval', IsRepeatable: true, PrereqPolicy: 'Civil Engineers', Help: 'Cost: 300 Production' },
+      ] }));
+      const store = openStore('a');
+
+      await writeGameReference([store]);
+
+      expect(namesIn(store, 'reference/buildings/projects.json')).toEqual(['Public Works', 'SS Booster', 'Citizen Earth Protocol']);
+      const [, boosterJson, protocolJson] = JSON.parse(read(store, 'reference/buildings/projects.json'));
+      expect(boosterJson).toMatchObject({ Era: 'Modern', PrereqTech: 'Rocketry' });
+      expect(protocolJson).toMatchObject({ Victory: 'Cultural Victory', MaxTeamInstances: 1 });
+      expect(protocolJson).not.toHaveProperty('MaxGlobalInstances');
+      expect(protocolJson).not.toHaveProperty('IsRepeatable');
+      expect(protocolJson).not.toHaveProperty('PrereqPolicy');
+      expect(protocolJson).not.toHaveProperty('PolicyBranchesRequired');
+      const page = read(store, 'reference/buildings/projects.md');
+      expect(page.split('\n')[0]).toBe('# Buildings: Projects');
+      const booster = page.slice(page.indexOf('## SS Booster'), page.indexOf('## Citizen Earth Protocol'));
+      expect(booster).toContain('Apollo Program');
+      expect(booster).toContain('Science Victory');
+      expect(booster).toContain('Modern');
+      expect(page.slice(0, page.indexOf('## SS Booster'))).toContain('Civil Engineers');
+      expect(namesIn(store, 'reference/buildings/other.json')).toEqual(['Alpha', 'Beta']);
     });
 
     it('should file missing eras as ancient and unknown eras as other, keeping every entry', async () => {
@@ -402,12 +434,18 @@ describe('writeGameReference', () => {
       expect(tools.map((tool) => mcp.calls(tool).length)).toEqual(calls);
     });
 
-    it.each(['missing twin', 'old version'])('should replace a reference with %s', async (reason) => {
+    it.each([
+      ['missing twin', 'reference/policies/other.json'],
+      ['missing projects page', 'reference/buildings/projects.md'],
+      ['missing building pages beside the projects page', 'reference/buildings/other.md'],
+      ['old version', null],
+    ])('should replace a reference with %s', async (_reason, deleted) => {
       const store = openStore('a');
       await writeGameReference([store]);
-      store.commit({ kind: 'reference', turn: null, author: 'host', changes: reason === 'missing twin'
-        ? [{ path: 'reference/policies/other.json', type: 'delete' }]
+      store.commit({ kind: 'reference', turn: null, author: 'host', changes: deleted
+        ? [{ path: deleted, type: 'delete' }]
         : [{ path: 'reference/.format-version', type: 'file', content: 'old\n' }] });
+      expect(hasGameReference(store)).toBe(false);
       const head = store.head();
 
       await expect(writeGameReference([store])).resolves.toBe(1);

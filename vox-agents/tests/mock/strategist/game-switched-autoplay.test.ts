@@ -459,7 +459,7 @@ describe('handleDLLConnected', () => {
 });
 
 describe('handleGameSwitched player preparation', () => {
-  const referenceTools = ['get-technology', 'get-policy', 'get-building', 'get-unit'];
+  const referenceTools = ['get-technology', 'get-policy', 'get-building', 'get-project', 'get-unit'];
   let telemetryDir: string;
   let savedTelemetryDir: string | undefined;
   let execute: ReturnType<typeof vi.spyOn>;

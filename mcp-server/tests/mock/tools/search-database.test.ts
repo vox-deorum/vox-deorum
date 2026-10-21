@@ -129,6 +129,7 @@ describe('search-database', () => {
       getTechnology: 'Technology',
       getPolicy: 'Policy',
       getBuilding: 'Building',
+      getProject: 'Project',
       getCivilization: 'Civilization',
       getUnit: 'Unit',
       getFlavors: 'Flavor',
@@ -148,6 +149,7 @@ describe('search-database', () => {
       'Civilization: SharedSearchTerm',
       'Flavor: SharedSearchTerm',
       'Policy: SharedSearchTerm',
+      'Project: SharedSearchTerm',
       'Technology: SharedSearchTerm',
       'Unit: SharedSearchTerm',
     ]);
@@ -180,6 +182,16 @@ describe('search-database', () => {
     expect(typeof entry.Relevance).toBe('number');
     // Type is consumed to build the key and deleted from the payload.
     expect(entry).not.toHaveProperty('Type');
+  });
+
+  it('leaves the sub-tool cached summaries intact so later lookups still find their Type', async () => {
+    const cached = [row('Apollo Program', 'Apollo')];
+    wireTools({ getProject: { getSummaries: vi.fn().mockResolvedValue(cached) } as any });
+
+    const result = await client.call({ Keywords: ['Apollo Program'], MaxResults: 10 });
+
+    expect(result['Project: Apollo Program']).not.toHaveProperty('Type');
+    expect(cached[0].Type).toBe('TYPE_APOLLO PROGRAM');
   });
 
   it('returns an empty object when no keywords match anything', async () => {

@@ -4,6 +4,7 @@ import createCallLuaFunctionTool from "./general/call-lua-function.js";
 import createGetTechnologyTool from "./databases/get-technology.js";
 import createGetPolicyTool from "./databases/get-policy.js";
 import createGetBuildingTool from "./databases/get-building.js";
+import createGetProjectTool from "./databases/get-project.js";
 import createGetCivilizationTool from "./databases/get-civilization.js";
 import createGetUnitTool from "./databases/get-unit.js";
 import createGetEconomicStrategyTool from "./databases/get-economic-strategy.js";
@@ -55,6 +56,7 @@ const toolFactories = {
     getTechnology: createGetTechnologyTool,
     getPolicy: createGetPolicyTool,
     getBuilding: createGetBuildingTool,
+    getProject: createGetProjectTool,
     getCivilization: createGetCivilizationTool,
     getUnit: createGetUnitTool,
     getEconomicStrategy: createGetEconomicStrategyTool,

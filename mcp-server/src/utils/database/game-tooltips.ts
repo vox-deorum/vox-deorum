@@ -8,7 +8,7 @@ import { bridgeManager, gameDatabase } from '../../server.js';
 import { stripTags } from './localized.js';
 
 /** Entry kinds the game function can describe. */
-export type TooltipKind = 'unit' | 'building' | 'technology';
+export type TooltipKind = 'unit' | 'building' | 'technology' | 'project';
 
 /** Name of the function the mod registers with the DLL. */
 export const gameTooltipFunction = 'VoxDeorumReferenceTooltips';

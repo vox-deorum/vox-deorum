@@ -19,7 +19,7 @@ For an agent that cannot see the game directly, the server is a faithful mirror 
 
 | Subsystem | Job | Reference |
 | --- | --- | --- |
-| **Tools** | The agent-facing surface, and the only thing an agent sees. 43 tools, split into general utilities, game-database queries, knowledge queries, actions, and game control. | [tools.md](tools.md) |
+| **Tools** | The agent-facing surface, and the only thing an agent sees. 44 tools, split into general utilities, game-database queries, knowledge queries, actions, and game control. | [tools.md](tools.md) |
 | **Knowledge store** | The server's memory. Records events and periodically snapshots player and city state into a per-game SQLite database, filtered by what each player can see. | [knowledge.md](knowledge.md), [events.md](events.md) |
 | **Game database** | Civilization V's own rules data (every unit, building, technology, policy, and strategy) read from the game's SQLite files and localized into readable text. | [database.md](database.md) |
 | **Bridge integration** | How everything reaches the live game: a queue that batches Lua calls, paces the game when the queue backs up, and consumes the event stream. | [bridge.md](bridge.md) |

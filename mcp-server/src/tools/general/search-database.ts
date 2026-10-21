@@ -17,6 +17,7 @@ const searchableTools = [
   'getTechnology',
   'getPolicy',
   'getBuilding',
+  'getProject',
   'getCivilization',
   'getUnit',
   'getFlavors'
@@ -27,6 +28,7 @@ const toolTypeNames: Record<typeof searchableTools[number], string> = {
   getTechnology: 'Technology',
   getPolicy: 'Policy',
   getBuilding: 'Building',
+  getProject: 'Project',
   getCivilization: 'Civilization',
   getUnit: 'Unit',
   getFlavors: 'Flavor'
@@ -62,7 +64,7 @@ class SearchDatabaseTool extends ToolBase {
   /**
    * Human-readable description of the tool
    */
-  readonly description = "Searches across all database tools (technologies, policies, buildings, civilizations, units, flavors) using fuzzy matching and returns reranked results";
+  readonly description = "Searches across all database tools (technologies, policies, buildings, projects, civilizations, units, flavors) using fuzzy matching and returns reranked results";
 
   /**
    * Input schema for the tool
@@ -111,12 +113,12 @@ class SearchDatabaseTool extends ToolBase {
               const itemName = (item.Name || item.Type || 'Unknown') as string;
               const key = `${typeName}: ${itemName}`;
 
-              // Delete the item.
-              delete item.Type;
+              // Copy the result without Type, as the summaries are the tool's shared cache
+              const { Type: _type, ...data } = item;
 
               return {
                 key,
-                data: item
+                data
               };
             });
 

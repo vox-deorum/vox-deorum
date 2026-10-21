@@ -59,7 +59,7 @@ On top of message passing, the bridge also **paces** the game. It pauses specifi
 
 ### MCP Server: the game as tools
 
-The [mcp-server](mcp-server/overview.md) is the bridge's primary consumer and the point where the AI side meets the game. It exposes Civ V's state and controls as 43 [Model Context Protocol](https://modelcontextprotocol.io) tools registered in `mcp-server/src/tools/index.ts`, covering questions like "what can this player research?" and actions like "set this civ's grand strategy to conquest".
+The [mcp-server](mcp-server/overview.md) is the bridge's primary consumer and the point where the AI side meets the game. It exposes Civ V's state and controls as 44 [Model Context Protocol](https://modelcontextprotocol.io) tools registered in `mcp-server/src/tools/index.ts`, covering questions like "what can this player research?" and actions like "set this civ's grand strategy to conquest".
 
 The tools draw on three sources:
 

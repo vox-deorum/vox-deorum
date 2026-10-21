@@ -2,12 +2,13 @@
  * @module knowledge/reference
  *
  * Writes the game reference into each file-enabled seat's workspace store: the technologies,
- * policies, buildings, and units of the game database with their full details and the game's own
- * tooltips, trimmed and in game order, as Markdown and JSON. Each category gets a folder under
- * `reference/` with a `.md` and `.json` pair per bucket: one per era for technologies, buildings,
- * and units (plus `other` for entries no technology unlocks), `corporations` and `religious` for
- * buildings that corporations or beliefs provide, and one per branch for policies. The
- * file name carries the bucket, so entries keep no `Era` or `Branch` field. The Markdown lists only
+ * policies, buildings, projects, and units of the game database with their full details and the
+ * game's own tooltips, trimmed and in game order, as Markdown and JSON. Each category gets a folder
+ * under `reference/` with a `.md` and `.json` pair per bucket: one per era for technologies,
+ * buildings, and units (plus `other` for entries no technology unlocks), `corporations` and
+ * `religious` for buildings that corporations or beliefs provide, `projects` in the buildings
+ * folder for every project, and one per branch for policies. Era and branch files carry the
+ * bucket in their name, so their entries keep no `Era` or `Branch` field. The Markdown lists only
  * the facts a category's tooltips lack; the JSON keeps every fact. Each seat mounts it read-only,
  * and its commits keep it next to the records, so a recorded version holds everything the seat's
  * bash workspace showed.
@@ -27,7 +28,7 @@ type Item = Record<string, unknown>;
 /** Era file names, including `other` for entries with an unknown era or no unlocking technology. */
 const referenceEras = ["ancient", "classical", "medieval", "renaissance", "industrial", "modern", "atomic", "information", "other"];
 
-/** Sort key for one listing within its bucket: units, buildings, and technologies by cost; policies by level. */
+/** Sort key for one listing within its bucket: units, buildings, projects, and technologies by cost; policies by level. */
 type SortKey = (item: Item) => (string | number)[];
 
 /** Cost, the order the game unlocks most entries in. */
@@ -42,9 +43,15 @@ type Bucket = { file: string; label: string };
 /** Choose the bucket of one trimmed entry. */
 type BucketOf = (item: Item) => Bucket;
 
+/** Every project, filed as a special kind of building. */
+const projectsBucket: Bucket = { file: "projects", label: "Projects" };
+
 /**
  * One listing in the reference: its tool, folder name, title, bucketing, order, the fields its
- * Markdown lists as facts, and the fields used only for bucketing and sorting.
+ * Markdown lists as facts, and the fields used only for bucketing and sorting. A listing that
+ * always writes the same buckets names them in `requires`, and the reference is complete only
+ * when each of them has its file pair. Other listings need any file pair in their folder that no
+ * listing requires.
  */
 type ReferenceTool = {
   tool: string;
@@ -54,13 +61,15 @@ type ReferenceTool = {
   sortKey: SortKey;
   facts: string[];
   sortOnly: string[];
+  requires?: string[];
 };
 
 /** The database tools the reference lists. Facts are the fields the game's tooltips leave out. */
 const referenceTools: ReferenceTool[] = [
   { tool: "get-technology", file: "technologies", title: "Technologies", bucketOf: eraBucket, sortKey: byCost, facts: ["Cost", "TechsPrereq"], sortOnly: ["Era"] },
-  { tool: "get-policy", file: "policies", title: "Policies", bucketOf: branchBucket, sortKey: byLevel, facts: ["PrereqPolicies"], sortOnly: ["Era", "Branch", "Level"] },
+  { tool: "get-policy", file: "policies", title: "Policies", bucketOf: branchBucket, sortKey: byLevel, facts: ["PrereqPolicies", "ProjectsUnlocked"], sortOnly: ["Era", "Branch", "Level"] },
   { tool: "get-building", file: "buildings", title: "Buildings", bucketOf: buildingBucket, sortKey: byCost, facts: [], sortOnly: ["Era"] },
+  { tool: "get-project", file: "buildings", title: "Buildings", bucketOf: projectBucket, sortKey: byCost, facts: ["Era", "PrereqTech", "PrereqPolicy", "PolicyBranchesRequired", "PrereqProjects", "Victory", "IsRepeatable", "MaxGlobalInstances", "MaxTeamInstances", "MaxPlayerInstances"], sortOnly: [], requires: [projectsBucket.file] },
   { tool: "get-unit", file: "units", title: "Units", bucketOf: unlockBucket, sortKey: byCost, facts: ["UpgradedFrom", "UpgradesTo", "Maintenance"], sortOnly: ["Era"] },
 ];
 
@@ -68,7 +77,7 @@ const referenceTools: ReferenceTool[] = [
 const referenceMaxResults = 5000;
 
 /** Bump when generated reference files need to be refreshed in existing games. */
-const referenceFormatVersion = "4\n";
+const referenceFormatVersion = "5\n";
 /** Workspace path of the generated format marker. */
 const referenceVersionPath = `${referenceStorePrefix}.format-version`;
 
@@ -119,6 +128,11 @@ function buildingBucket(item: Item): Bucket {
   if (item.Corporation !== undefined) return corporationsBucket;
   if (item.PrereqTech !== undefined) return eraBucket(item);
   return Array.isArray(item.UnlockedByBeliefs) ? religiousBucket : otherBucket;
+}
+
+/** Choose a project's bucket: always `projects`, one file for all of them. */
+function projectBucket(): Bucket {
+  return projectsBucket;
 }
 
 /** Choose a policy's bucket: its branch, titled with the branch's era, or `other` without a branch. */
@@ -213,22 +227,25 @@ function compareKeys(a: (string | number)[], b: (string | number)[]): number {
 
 /**
  * Whether the store holds the reference in the current generated format: the format marker, and
- * in every category folder at least one Markdown file whose JSON twin is also there.
+ * for every listing its required buckets, or without any, at least one bucket in its folder that
+ * no listing requires. A bucket counts when both its Markdown file and JSON twin are there.
  */
 export function hasGameReference(store: WorkspaceStore): boolean {
   const marker = store.readFile(referenceVersionPath);
   if (!marker || Buffer.from(marker).toString("utf8") !== referenceFormatVersion) return false;
   const manifest = store.manifest();
-  return referenceTools.every(({ file }) => {
-    const folder = `${referenceStorePrefix}${file}/`;
-    return [...manifest.entries()].some(([storePath, entry]) => entry.type === "file"
-      && storePath.startsWith(folder) && storePath.endsWith(".md")
-      && manifest.get(`${storePath.slice(0, -".md".length)}.json`)?.type === "file");
-  });
+  const pairs = [...manifest.entries()]
+    .filter(([storePath, entry]) => entry.type === "file" && storePath.startsWith(referenceStorePrefix) && storePath.endsWith(".md")
+      && manifest.get(`${storePath.slice(0, -".md".length)}.json`)?.type === "file")
+    .map(([storePath]) => storePath.slice(referenceStorePrefix.length, -".md".length));
+  const required = new Set(referenceTools.flatMap(({ file, requires = [] }) => requires.map((bucket) => `${file}/${bucket}`)));
+  return referenceTools.every(({ file, requires }) => requires
+    ? requires.every((bucket) => pairs.includes(`${file}/${bucket}`))
+    : pairs.some((pair) => pair.startsWith(`${file}/`) && !required.has(pair)));
 }
 
 /**
- * Replace each outdated or incomplete store's reference in one commit. Fetch all four listings
+ * Replace each outdated or incomplete store's reference in one commit. Fetch every listing
  * once before writing any store, and share the generated changes across stores.
  *
  * @param stores - The file-enabled seats' stores
