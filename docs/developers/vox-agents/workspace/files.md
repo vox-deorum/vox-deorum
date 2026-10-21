@@ -65,7 +65,7 @@ The tool description covers only shell mechanics: where each call starts, which 
 
 **JavaScript** runs through `js-exec` in just-bash's QuickJS sandbox, with a 64 MB memory limit and a 30-second timeout. Agents use it for calculations because `$(( ))` handles only whole numbers. Scripts see the same mounts through the `fs` module, so read-only folders still reject writes and note changes are committed like any other command. They cannot reach the real disk or the network. The tool description is the same for every seat; the records directions message lists mounted folders and permissions.
 
-Each output stream is capped at 30,000 characters (`workspaceOutputLimit`), and a cut stream ends with a note on how to read the rest. The model receives the result as plain text: stdout first, then stderr and the exit code only when they are present. Telemetry keeps the full result object.
+Each output stream is capped at 60,000 characters (`workspaceOutputLimit`), and a cut stream ends with a note on how to read the rest. The model receives the result as plain text: stdout first, then stderr and the exit code only when they are present. Telemetry keeps the full result object.
 
 ## Step budget
 
