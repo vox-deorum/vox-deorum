@@ -35,7 +35,7 @@ Some events trigger work rather than only being stored, because they mark moment
 Two other event kinds matter:
 
 - **Turn-progression events** (`PlayerDoTurn`, and the `NextPlayerID` carried on `PlayerDoneTurn`) keep the manager's notion of the active player and current turn in sync.
-- **Victory events** mark the end of a game, prompting the server to save a replay and archive the game's data before it notifies clients. Vox Agents still has its telemetry databases open at that point, so `archiveGameData` copies the game database and the game's telemetry databases through SQLite's backup rather than as raw files. Each archived database is one closed file that includes rows still waiting in the source's write-ahead log.
+- **Victory events** mark the end of a game, prompting the server to archive the game's data before it notifies clients. The archive holds the save, the game database, the telemetry databases, and the capture recording. Vox Agents still has its telemetry databases open at that point, so `archiveGameData` copies the game database and the game's telemetry databases through SQLite's backup rather than as raw files. Each archived database is one closed file that includes rows still waiting in the source's write-ahead log.
 
 Doing the heavy work at these checkpoints, rather than on every event, is what keeps the snapshot cost bounded. The getters themselves are described in [knowledge.md](knowledge.md).
 

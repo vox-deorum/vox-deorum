@@ -119,7 +119,7 @@ Visibility is set when data is stored. Query helpers in expressions.ts:
 6. Event stored in GameEvents table
 7. Special event handling:
    - **PlayerDoneTurn**: Triggers Lua getters for player summaries, opinions, strategies, personas, city info
-   - **Victory events**: Archives game data, saves replay
+   - **Victory events**: Saves the replay in the game's own Replays folder, then archives game data
    - **PlayerDoTurn**: Updates active player
 
 ## Getter Pattern (knowledge/getters/)

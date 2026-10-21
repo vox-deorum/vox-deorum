@@ -75,15 +75,6 @@ async function findLatestFile(
 }
 
 /**
- * Find the latest replay file for Civilization V
- */
-export async function findLatestReplayFile(): Promise<SaveFileInfo | null> {
-  const documentsPath = await getDocumentsPath();
-  const replaysPath = path.join(documentsPath, 'My Games', 'Sid Meier\'s Civilization 5', 'Replays');
-  return findLatestFile(replaysPath, '.Civ5Replay', 'replay');
-}
-
-/**
  * Find the latest save file for Civilization V
  */
 export async function findLatestSaveFile(): Promise<SaveFileInfo | null> {
@@ -170,11 +161,11 @@ async function archiveRawCaptureRecording(
 }
 
 /**
- * Archive the latest game save, replay, database, telemetry, and capture recording to a strategist-specific folder
+ * Archive the latest game save, database, telemetry, and capture recording to a strategist-specific folder
  */
 export async function archiveGameData(
   experimentOverride?: string
-): Promise<{ savePath: string, dbPath: string, replayPath?: string, telemetryPaths?: string[] } | null> {
+): Promise<{ savePath: string, dbPath: string, telemetryPaths?: string[] } | null> {
   try {
     // Get the strategist name from metadata or use override/default
     const store = knowledgeManager.getStore();
@@ -257,23 +248,6 @@ export async function archiveGameData(
       // Continue even if telemetry doesn't exist
     }
 
-    // Copy the replay file if it exists
-    let replayDest: string | undefined;
-    const latestReplay = await findLatestReplayFile();
-    if (latestReplay) {
-      const replayFileName = `${gameId}_${Date.now()}.Civ5Replay`;
-      replayDest = path.join(archivePath, replayFileName);
-      try {
-        await fs.copyFile(latestReplay.path, replayDest);
-        logger.info(`Archived replay file: ${replayFileName}`);
-      } catch (error) {
-        logger.warn(`Replay file could not be copied: ${latestReplay.path}`, error);
-        replayDest = undefined;
-      }
-    } else {
-      logger.warn('No replay file found to archive');
-    }
-
     // Publish the finalized DLL recording through the recording archive script,
     // which also clears the game's capture folder once the package is published.
     try {
@@ -293,7 +267,6 @@ export async function archiveGameData(
     return {
       savePath: saveDest,
       dbPath: dbDest,
-      replayPath: replayDest,
       telemetryPaths: telemetryPaths.length > 0 ? telemetryPaths : undefined
     };
   } catch (error) {

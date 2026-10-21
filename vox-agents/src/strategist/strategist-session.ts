@@ -372,7 +372,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
     try {
       // For a clean autoplay victory, ask Civ to close itself first so the
-      // replay/save files are written before MCP copies them into the archive.
+      // save file is written before MCP copies it into the archive.
       if (wasVictory && this.config.autoPlay) {
         await this.requestVoluntaryGameShutdown();
       } else {
