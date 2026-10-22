@@ -10,8 +10,8 @@ import type { ModelMessage } from "ai";
 import type { VoxContext } from "../infra/vox-context.js";
 import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
-import { journalStorePath, journalTail, journalWindow, type JournalTail } from "../utils/workspace/journal.js";
-import { workspaceCwd, workspaceGuide, workspaceGuideFile, workspaceOutputLimit } from "../utils/workspace/player-workspace.js";
+import { journalStorePath, journalTail, type JournalTail } from "../utils/workspace/journal.js";
+import { workspaceCwd, workspaceGuide, workspaceGuideFile } from "../utils/workspace/player-workspace.js";
 import { formatTurnRanges, recordedTurns, sectionFiles } from "./records.js";
 import { fileModeOmittedSections, sections, type SectionKey } from "./sections.js";
 
@@ -93,7 +93,7 @@ function recentNotes<T extends AgentParameters>(context: VoxContext<T>): RecentN
   if (!context.files?.game || !store) return undefined;
   const manifest = store.manifest();
   const journal = manifest.has(journalStorePath)
-    ? journalTail(Buffer.from(store.readFile(journalStorePath) ?? new Uint8Array()).toString("utf8"), journalWindow, workspaceOutputLimit)
+    ? journalTail(Buffer.from(store.readFile(journalStorePath) ?? new Uint8Array()).toString("utf8"))
     : undefined;
   const others = [...manifest]
     .filter(([storePath, entry]) => entry.type === "file" && storePath.startsWith("game/")

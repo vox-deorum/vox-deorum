@@ -44,15 +44,9 @@ describe('journalTail', () => {
     expect(tail.older).toBe(2);
   });
 
-  it('should keep the newest entry even when it is over the budget', () => {
-    const tail = journalTail(`${entry(1, 'a')}\n\n${entry(2, 'b'.repeat(500))}`, 100)!;
-    expect(tail.content).toBe(entry(2, 'b'.repeat(500)));
-    expect(tail.older).toBe(1);
-  });
-
-  it('should keep the heading and newest text of a newest entry over the cap', () => {
+  it('should keep the heading and newest text of a newest entry over the budget', () => {
     const lines = Array.from({ length: 50 }, (_, index) => `line-${index} ${'z'.repeat(20)}`);
-    const tail = journalTail(`${entry(1, 'a')}\n\n${entry(2, lines.join('\n'))}`, 100, 200)!;
+    const tail = journalTail(`${entry(1, 'a')}\n\n${entry(2, lines.join('\n'))}`, 200)!;
     expect(tail.content.startsWith('### Turn 2\n\n')).toBe(true);
     expect(tail.content).toContain('line-49');
     expect(tail.content).not.toContain('line-0 ');
@@ -61,8 +55,8 @@ describe('journalTail', () => {
     expect(tail.older).toBe(1);
   });
 
-  it('should report no cut for an entry within the cap', () => {
-    expect(journalTail(entry(1, 'a'.repeat(500)), 100, 1000)!.cut).toBe(0);
+  it('should report no cut for a newest entry within the budget', () => {
+    expect(journalTail(entry(1, 'a'.repeat(500)), 1000)!.cut).toBe(0);
   });
 
   it('should count text before the first heading as one entry', () => {
@@ -74,6 +68,6 @@ describe('journalTail', () => {
   it('should not split at a turn heading inside a fenced block', () => {
     const text = `${entry(1, '```\n### Turn 9\n```')}\n\n${entry(2, 'b')}`;
     expect(journalTail(text, 10_000)!.older).toBe(0);
-    expect(journalTail(text, 1)!.content).toBe(entry(2, 'b'));
+    expect(journalTail(text, 20)!.content).toBe(entry(2, 'b'));
   });
 });

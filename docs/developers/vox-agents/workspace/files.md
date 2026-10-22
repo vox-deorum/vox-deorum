@@ -60,7 +60,7 @@ Writable game and shared folders get an `AGENTS.md` guide:
 `/workspace/game/journal.md` is an ordinary note file with two host behaviors, both in `src/utils/workspace/journal.ts`. Agents may use it or organize notes another way; the capability reminder suggests it as the simplest option.
 
 - **Turn headings.** When a command appends to the journal and its turn is known, `PlayerWorkspace` adds a `### Turn N` heading unless the journal's last entry is already for that turn, and demotes headings of level 1 to 3 in the appended text to level 4. Turn headings inside fenced code blocks do not count. Rewrites, deletions, and appends without a turn are committed as written.
-- **Journal window.** The notes message at the start of each run shows the newest whole entries that fit in 10,000 characters (`journalWindow`), always at least the newest one, followed by the number of older entries. A newest entry over the 60,000-character output limit keeps its heading and its newest text, marked as cut. Agents read older entries with `grep` or `sed`.
+- **Journal window.** The notes message at the start of each run shows the newest whole entries that fit in 20,000 characters (`journalWindow`), always at least the newest one, followed by the number of older entries. A newest entry that alone is over 20,000 characters is shown alone with its heading and its newest text, marked as cut, so one long entry gets no more room than several short ones. Agents read older entries with `grep` or `sed`.
 
 Players read the game notes, including the guide, by exporting the store (see [Reading the store from outside](store.md#reading-the-store-from-outside)).
 

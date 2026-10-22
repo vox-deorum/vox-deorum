@@ -9,8 +9,8 @@
 /** Store path of the journal. */
 export const journalStorePath = 'game/journal.md';
 
-/** Characters of journal entries the notes message shows; the newest entry is always shown. */
-export const journalWindow = 10000;
+/** Characters of journal entries the notes message shows, including a cut newest entry. */
+export const journalWindow = 20000;
 
 /** A turn heading line the workspace writes. */
 const turnHeading = /^### Turn (\d+)\s*$/;
@@ -78,17 +78,17 @@ export function stampJournal(before: string, after: string, turn: number | null 
 }
 
 /**
- * Cut an entry to its turn heading and its newest text when it is over the cap, starting at a line
+ * Cut an entry to its turn heading and its newest text when it is over the budget, starting at a line
  * break where one is near.
  *
  * @returns The kept text and how many characters of the body were left out
  */
-function capEntry(entry: string, cap: number): { text: string; cut: number } {
-  if (entry.length <= cap) return { text: entry, cut: 0 };
+function capEntry(entry: string, budget: number): { text: string; cut: number } {
+  if (entry.length <= budget) return { text: entry, cut: 0 };
   const [first, ...rest] = entry.split('\n');
   const heading = turnHeading.test(first) ? `${first}\n\n` : '';
   const body = heading ? rest.join('\n').trimStart() : entry;
-  let start = Math.max(0, body.length - Math.max(0, cap - heading.length));
+  let start = Math.max(0, body.length - Math.max(0, budget - heading.length));
   const lineStart = body.indexOf('\n', start);
   if (lineStart !== -1 && lineStart < body.length - 1) start = lineStart + 1;
   return { text: heading + body.slice(start), cut: start };
@@ -99,27 +99,26 @@ export interface JournalTail {
   content: string;
   /** How many older entries were left out. */
   older: number;
-  /** How many characters were cut from the start of the newest entry, which happens only over the cap. */
+  /** How many characters were cut from the start of the newest entry, which happens only when it alone is over the budget. */
   cut: number;
 }
 
 /**
  * The newest whole entries that fit in the budget, in file order, and the number of older entries.
- * The newest entry is always kept, even when it alone is over the budget; past the cap, only its
- * heading and newest text are kept.
+ * The newest entry is always kept; when it alone is over the budget, only its heading and newest
+ * text are kept, and it is shown alone.
  *
  * @param text - The journal text
  * @param budget - Characters of entries to keep
- * @param cap - Characters of the newest entry to keep when it alone is over the budget
  * @returns Undefined when the journal has no entries
  */
-export function journalTail(text: string, budget: number = journalWindow, cap: number = Infinity): JournalTail | undefined {
+export function journalTail(text: string, budget: number = journalWindow): JournalTail | undefined {
   const entries = journalEntries(text);
   if (entries.length === 0) return undefined;
-  const newest = capEntry(entries[entries.length - 1], cap);
+  const newest = capEntry(entries[entries.length - 1], budget);
   const kept = [newest.text];
   let size = newest.text.length;
-  for (let index = entries.length - 2; index >= 0; index--) {
+  for (let index = entries.length - 2; index >= 0 && newest.cut === 0; index--) {
     size += entries[index].length + 2;
     if (size > budget) break;
     kept.unshift(entries[index]);

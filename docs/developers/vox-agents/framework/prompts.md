@@ -38,7 +38,7 @@ A run is in file mode when files are enabled and its resolved tools include `bas
 | Message | Position | Contents |
 | --- | --- | --- |
 | Records directions | Before the overview or shared game context | Mounted folders and permissions, record paths, which sections remain inline, read examples, and the game notes guide. |
-| Notes, when present | After leading system messages, before the game-state user message | With a [game journal](../workspace/files.md#game-journal), its newest whole entries within 10,000 characters. Then the paths of the five most recent other notes. Other notes are listed by name only, ordered by stored modification time, and the guide is excluded. |
+| Notes, when present | After leading system messages, before the game-state user message | With a [game journal](../workspace/files.md#game-journal), its newest whole entries within 20,000 characters. Then the paths of the five most recent other notes. Other notes are listed by name only, ordered by stored modification time, and the guide is excluded. |
 
 Directions come from `records-directions.md` and notes from `records-notes.md`. Both are built once per run. Built-in directions depend on file access, inline sections, and the guide, so writing ordinary records or notes leaves them stable across turns. Editing the guide affects later runs. Neither message adds its own cache breakpoint.
 

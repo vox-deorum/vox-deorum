@@ -211,11 +211,12 @@ describe('recordsDirections', () => {
         expect(text.length).toBeLessThan(journalWindow + 2000);
       });
 
-      it('should always show the newest entry, even when it is over the window', () => {
+      it('should show a newest entry over the window alone, cut to the window', () => {
         writeNote(journalStorePath, journal([1, 2], journalWindow + 10), 1000);
         const text = recordsNotes(seat())!;
-        expect(text).toContain('body-2');
-        expect(text).not.toContain('body-1');
+        expect(text).toMatch(/^### Turn 2$/m);
+        expect(text).not.toMatch(/^### Turn 1$/m);
+        expect(text.length).toBeLessThan(journalWindow + 1000);
       });
 
       it('should show the journal and list the other notes by name', () => {
