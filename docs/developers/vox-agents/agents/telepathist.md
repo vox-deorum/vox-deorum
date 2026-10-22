@@ -39,7 +39,7 @@ Three tools answer conversation-time questions. They are designed as zoom levels
 | Tool | Zoom level | Returns |
 | --- | --- | --- |
 | `get-situation` | Wide | The world as the AI saw it (players, cities, military, resources), reconstructed from the recorded knowledge-tool outputs and formatted the way live agents saw it. The ground truth for judging a decision. |
-| `get-decision` | Medium | What the AI did and why: which agents ran, the options on the table, the reasoning, and each decision with its rationale. For turn ranges it serves cached turn summaries first and digs into the detailed record only where needed. |
+| `get-decision` | Medium | What the AI did and why: which agents ran, the options on the table, the reasoning, and each decision with its rationale. Calls the game rejected or that failed are left out, since they had no effect. For turn ranges it serves cached turn summaries first and digs into the detailed record only where needed. |
 | `get-conversation-log` | Close | The full LLM conversation for a specified turn and agent, from system prompt through responses. Both inputs are required. |
 
 ## The agents

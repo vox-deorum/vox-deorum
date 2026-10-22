@@ -13,6 +13,7 @@ import type { Span } from '../../utils/telemetry/schema.js';
 import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
 import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
 import { cleanToolArtifacts } from '../../utils/models/text-cleaning.js';
+import { isFailedToolResult } from '../../utils/tools/mcp-tools.js';
 import { agentRegistry } from '../../infra/agent-registry.js';
 
 /** Decision tools whose inputs contain the AI's strategic choices */
@@ -330,8 +331,11 @@ export class GetDecisionTool extends TelepathistTool<GetDecisionInput> {
       const toolName = span.name.replace(/^(mcp-tool\.|simple-tool\.)/, '');
 
       if (decisionTools.includes(toolName)) {
-        // Skip decisions that errored (no impact on game)
+        // Skip decisions that were rejected or errored (no impact on game). Older telemetry
+        // marks rejected calls as OK, so the recorded output is checked as well.
         if (span.statusCode === 2) continue;
+        const output = this.getToolOutput(span);
+        if (output !== undefined && isFailedToolResult(output)) continue;
 
         const input = this.getToolInput(span);
         if (input) {

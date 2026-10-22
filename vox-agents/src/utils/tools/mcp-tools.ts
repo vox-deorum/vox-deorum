@@ -145,7 +145,13 @@ export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): V
         span.setAttributes({
           'tool.output': JSON.stringify(result)
         });
-        span.setStatus({ code: SpanStatusCode.OK });
+        // Failures returned as data still reach the model, but the span records them as errors
+        if (isFailedToolResult(result)) {
+          logger.warn(`Tool ${tool.name} returned an error result`);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: `MCP tool ${tool.name} returned an error result` });
+        } else {
+          span.setStatus({ code: SpanStatusCode.OK });
+        }
 
         // Return results
         if (isRecord(result)) {
