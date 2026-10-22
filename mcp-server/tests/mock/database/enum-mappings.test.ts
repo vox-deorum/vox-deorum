@@ -17,6 +17,11 @@ describe('tableChecksum', () => {
     expect(tableChecksum([{ ID: 5, Type: 'A' }])).toEqual({ Count: 1, Checksum: 1636735 });
   });
 
+  it('treats a missing Type as empty text, like nil in Lua', () => {
+    // "5:;" folds as ((53 * 31 + 58) * 31 + 59) = 52790
+    expect(tableChecksum([{ ID: 5, Type: null }])).toEqual({ Count: 1, Checksum: 52790 });
+  });
+
   it('ignores the order rows are read in', () => {
     const rows = [{ ID: 0, Type: 'BUILDING_SHRINE' }, { ID: 1, Type: 'BUILDING_MONUMENT' }];
     expect(tableChecksum([...rows].reverse())).toEqual(tableChecksum(rows));
@@ -92,6 +97,19 @@ describe('enum mappings checked against the live game', () => {
 
     await expect(gameDatabase.initializeMappings(gameChecksums)).rejects.toBeInstanceOf(MappingMismatchError);
     expect(enumMappings['UnitType']).toEqual({ 5: 'Previous' });
+  });
+
+  it('clears the mapped tables when a reload still does not match, so no stale IDs are used', async () => {
+    enumMappings['UnitType'] = { 5: 'Previous' };
+    enumMappings['GreatPersonType'] = { 5: 'Previous' };
+    gameChecksums['Units'] = { Count: 1, Checksum: gameChecksums['Units'].Checksum + 1 };
+    // Reopening would look for the real cache files; keep the fixture connections instead
+    const reopen = vi.spyOn(gameDatabase as any, 'openConnections').mockResolvedValue(undefined);
+
+    await expect(gameDatabase.reloadMappings(gameChecksums)).rejects.toBeInstanceOf(MappingMismatchError);
+    expect(reopen).toHaveBeenCalledOnce();
+    expect(enumMappings['UnitType']).toBeUndefined();
+    expect(enumMappings['GreatPersonType']).toBeUndefined();
   });
 
   it('rejects a localization database without Vox Populi text', async () => {

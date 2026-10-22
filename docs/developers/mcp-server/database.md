@@ -15,7 +15,7 @@ Civilization V ships its rules as SQLite. When the game loads, it writes a debug
 
 The server never writes to either: this is the game's data, and the server is purely a consumer. Where it looks for that cache directory is configurable; see [configuration.md](configuration.md).
 
-The `DatabaseManager` (`database/manager.ts`) owns both connections, caches them for the life of the session, and is the single point through which database-query tools reach the data. Kysely gives those queries full type-safety against generated schema definitions: `database/database.d.ts` for the main database and `database/localization.d.ts` for the localization one. Both are produced by `kysely-codegen` (`npm run codegen` regenerates the localization schema).
+The `DatabaseManager` (`database/manager.ts`) owns both connections, opens them at startup and again when a connected game doesn't match them, and is the single point through which database-query tools reach the data. Kysely gives those queries full type-safety against generated schema definitions: `database/database.d.ts` for the main database and `database/localization.d.ts` for the localization one. Both are produced by `kysely-codegen` (`npm run codegen` regenerates the localization schema).
 
 ## Localization and TXT_KEY resolution
 
@@ -37,15 +37,15 @@ For each of a long list of tables (improvements, buildings, projects, beliefs, u
 A row ID is only meaningful for the exact database the game loaded. A cache file left over from an earlier session or a different mod set shifts the IDs, so a Shrine can read as the Mausoleum of Halicarnassus and a research choice can land on the wrong tech. The mappings are therefore built only once a game is connected, and only after checking them against it:
 
 1. When the DLL connects, `KnowledgeManager` runs `lua/get-table-checksums.lua`. For each mapped table, that script returns a row count and a checksum of the ID and Type of every row, taken in ID order, as the live game sees them in `GameInfo`. Because the order is part of the checksum, two rows that swap IDs are caught.
-2. `reloadMappings` reopens both database files and computes the same checksums from the cache database (`tableChecksum` in `database/manager.ts`). It also checks that the localization database has Vox Populi's text, which renames Legalism to Ceremony.
+2. `reloadMappings` computes the same checksums from the cache database (`tableChecksum` in `database/manager.ts`). It also checks that the localization database has Vox Populi's text, which renames Legalism to Ceremony. If anything differs, the cache may have been rewritten since the files were opened, so it reopens them and checks once more.
 3. If everything matches, the new mappings replace the old ones, and the server switches to the game and announces it to agents, including clients that connect later. Each verified rebuild also bumps a database generation, so summaries that database tools cached from an earlier file (see below) are read again.
-4. If anything differs, nothing is replaced. The server logs an error that names the mismatched tables, the database path and its modification time, closes the previous game's knowledge store, and pauses the game. It doesn't send `GameSwitched` to any client, so agents don't start, and incoming game events are dropped until the DLL reconnects.
+4. If it still differs, the server clears the mapped tables, so lookups fail rather than translate names with the wrong IDs. It logs an error that names the mismatched tables, the database path and its modification time, closes the previous game's knowledge store, and pauses the game. It sends neither `GameSwitched` nor `DLLConnected`, so agents don't start, and incoming game events are dropped until the DLL reconnects.
 
-If the game can't answer yet, for example because the DLL isn't connected, the server doesn't pause. It retries on the next connection. Every reconnection rebuilds the mappings, since a reload or a different game may change the tables.
+If the game can't answer yet, for example because the DLL isn't connected, the server doesn't pause. When the DLL connects, it checks again. Every reconnection rebuilds the mappings, since a reload or a different game may change the tables.
 
 ## Waiting for the database files
 
-The MCP server may start before Civilization V has created its cache. `loadDatabaseWithRetry` only waits for both database files to exist, retrying every five seconds with no attempt limit. The mappings are built later, when a game connects, so the server needs no guess about when the mod has finished loading.
+The MCP server may start before Civilization V has created its cache. `loadDatabaseWithRetry` only waits until both database files exist and can be read, retrying every five seconds with no attempt limit. The mappings are built later, when a game connects, so the server needs no guess about when the mod has finished loading.
 
 If the log shows the retry message repeating forever, the cache folder is missing: start Civilization V once with the mod enabled. If a game pauses right after connecting with a mapping error, the server is reading a different or outdated cache than the running game. Check the reported path against the game's Documents folder and the `database.documentsPath` setting.
 

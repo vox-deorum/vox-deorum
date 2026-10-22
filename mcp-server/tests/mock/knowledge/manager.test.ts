@@ -246,6 +246,22 @@ describe('enum mapping verification on DLL connection', () => {
     expect(() => manager.getStore()).toThrow();
   });
 
+  it('checks again when the DLL connects after a check that found no game', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    const answers: LuaResponse[] = [
+      { success: false, error: { code: 'DLL_DISCONNECTED', message: 'not connected' } },
+      checksumResponse,
+    ];
+    checksumResponse = answers[0];
+    vi.mocked(LuaFunction.prototype.execute).mockImplementation(async function (this: LuaFunction) {
+      return this.name === 'getTableChecksums' ? answers.shift()! : { success: true, result: true };
+    });
+
+    await dllStatus(true);
+    expect(reload).toHaveBeenCalledOnce();
+    expect(manager.getGameId()).toBe('mapping-game');
+  });
+
   it('retries without pausing when the game cannot answer yet', async () => {
     const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
     checksumResponse = { success: false, error: { code: 'DLL_DISCONNECTED', message: 'not connected' } };

@@ -62,6 +62,8 @@ export class KnowledgeManager {
           // Change the status
           this.dllConnected = true;
           await this.checkGameContext();
+          // A check started before the DLL was up may have failed for lack of a game; try once more now that it is
+          if (this.mappingsReady === undefined) await this.checkGameContext();
           // Hold everything back when the mappings don't match the live game
           if (!(await this.mappingsReady)) return;
           // Register analytical functions
@@ -142,15 +144,15 @@ export class KnowledgeManager {
    * A mismatch pauses the game and stays failed until the DLL reconnects.
    */
   private async loadEnumMappings(): Promise<boolean> {
-    this.tableChecksums ??= LuaFunction.fromFile('get-table-checksums.lua', 'getTableChecksums', ['tableNames']);
-    const response = await this.tableChecksums.execute(enumMappingTables.map(([tableName]) => tableName).join(','));
-    if (!response.success) {
-      logger.warn('Could not read table checksums from the game, retrying on the next connection', response.error);
-      this.mappingsReady = undefined;
-      return false;
-    }
-
     try {
+      this.tableChecksums ??= LuaFunction.fromFile('get-table-checksums.lua', 'getTableChecksums', ['tableNames']);
+      const response = await this.tableChecksums.execute(enumMappingTables.map(([tableName]) => tableName).join(','));
+      if (!response.success) {
+        logger.warn('Could not read table checksums from the game, retrying on the next connection', response.error);
+        this.mappingsReady = undefined;
+        return false;
+      }
+
       await gameDatabase.reloadMappings(response.result as Record<string, TableChecksum>);
       return true;
     } catch (error) {

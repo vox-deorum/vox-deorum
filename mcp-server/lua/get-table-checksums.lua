@@ -14,10 +14,11 @@ for tableName in string.gmatch(tableNames, "[^,]+") do
   end
 
   -- Fold the rows in ID order as one sequence, so swapped IDs change the checksum
-  table.sort(rows, function(a, b) return a.ID < b.ID end)
+  table.sort(rows, function(a, b) return (a.ID or -1) < (b.ID or -1) end)
   local checksum = 0
   for _, row in ipairs(rows) do
-    local text = tostring(row.ID) .. ":" .. tostring(row.Type) .. ";"
+    -- A missing ID or Type counts as empty text, as it does in TypeScript
+    local text = tostring(row.ID or "") .. ":" .. tostring(row.Type or "") .. ";"
     for i = 1, #text do
       checksum = (checksum * 31 + string.byte(text, i)) % modulus
     end

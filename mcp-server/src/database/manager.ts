@@ -3,7 +3,7 @@
  * Provides structured access to game rules, units, buildings, technologies, and localized text
  */
 
-import { Kysely, SqliteDialect } from 'kysely';
+import { Kysely, SqliteDialect, sql } from 'kysely';
 import Database from 'better-sqlite3';
 import { setTimeout } from 'node:timers/promises';
 import { createLogger } from '../utils/logger.js';
@@ -42,9 +42,10 @@ export class MappingMismatchError extends Error {
  * Rows are folded in ID order as one sequence, so the input order does not matter but swapped IDs do.
  */
 export function tableChecksum(rows: ReadonlyArray<{ ID: unknown; Type: unknown }>): TableChecksum {
-  const sorted = [...rows].sort((a, b) => Number(a.ID) - Number(b.ID));
+  const sorted = [...rows].sort((a, b) => Number(a.ID ?? -1) - Number(b.ID ?? -1));
   let checksum = 0;
-  for (const byte of Buffer.from(sorted.map(row => `${row.ID}:${row.Type};`).join(''), 'utf8')) {
+  // A missing ID or Type counts as empty text, as it does in Lua
+  for (const byte of Buffer.from(sorted.map(row => `${row.ID ?? ''}:${row.Type ?? ''};`).join(''), 'utf8')) {
     checksum = (checksum * 31 + byte) % checksumModulus;
   }
   return { Count: rows.length, Checksum: checksum };
@@ -148,13 +149,26 @@ export class DatabaseManager {
     await fs.access(localizationDbPath);
 
     // Kysely opens the files through these factories on first use, and only closes handles it opened itself
-    const previous = [this.mainDb, this.localizationDb];
-    this.mainDb = new Kysely<MainDB>({
+    const mainDb = new Kysely<MainDB>({
       dialect: new SqliteDialect({ database: async () => new Database(mainDbPath, { readonly: true }) }),
     });
-    this.localizationDb = new Kysely<LocalizationDB>({
+    const localizationDb = new Kysely<LocalizationDB>({
       dialect: new SqliteDialect({ database: async () => new Database(localizationDbPath, { readonly: true }) }),
     });
+
+    // Read from both files now, so a cache the game is still writing fails here instead of on first use
+    try {
+      await sql`SELECT count(*) FROM sqlite_master`.execute(mainDb);
+      await sql`SELECT count(*) FROM sqlite_master`.execute(localizationDb);
+    } catch (error) {
+      await mainDb.destroy();
+      await localizationDb.destroy();
+      throw error;
+    }
+
+    const previous = [this.mainDb, this.localizationDb];
+    this.mainDb = mainDb;
+    this.localizationDb = localizationDb;
     logger.info(`Connected to game databases at ${path.dirname(mainDbPath)}`);
 
     for (const db of previous) await db?.destroy();
@@ -354,13 +368,27 @@ export class DatabaseManager {
   }
 
   /**
-   * Reopen the databases and rebuild the enum mappings for the connected game.
-   * The cache files may have been rewritten since the connections were opened.
+   * Rebuild the enum mappings for the connected game.
+   * If the open connections don't match, the cache may have been rewritten since they were opened, so the files are
+   * reopened and checked once more. Reopening only on a mismatch keeps queries running on the current connections safe.
+   * When it still fails, the mapped tables are cleared, so nothing translates names with IDs from the wrong game.
    * @throws MappingMismatchError if the cache databases do not match the live game
    */
   async reloadMappings(gameChecksums: Record<string, TableChecksum>): Promise<void> {
-    await this.openConnections();
-    await this.initializeMappings(gameChecksums);
+    try {
+      try {
+        await this.initializeMappings(gameChecksums);
+      } catch (error) {
+        if (!(error instanceof MappingMismatchError)) throw error;
+        logger.warn('Game database does not match the live game, reopening the files to check again');
+        await this.openConnections();
+        await this.initializeMappings(gameChecksums);
+      }
+    } catch (error) {
+      for (const [, mappedName] of enumMappingTables) delete enumMappings[mappedName];
+      delete enumMappings["GreatPersonType"];
+      throw error;
+    }
   }
 
   /**

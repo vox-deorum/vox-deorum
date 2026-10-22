@@ -14,7 +14,7 @@ The transport details of that subscription are covered in [bridge.md](bridge.md)
 
 When an event arrives, the manager routes it down one of three paths.
 
-**DLL-status events** signal that the game connection itself came up or went down. On connect, the manager confirms the game context, registers the Lua function used for visibility analysis (see below), and notifies clients with `DLLConnected`. On disconnect it flips the store into resyncing mode and sends `DLLDisconnected`. These events are about the connection, not the game world, so they never become knowledge.
+**DLL-status events** signal that the game connection itself came up or went down. On connect, the manager first checks its ID-to-name mappings against the live game (see [database.md](database.md#enum-mappings)). Only when they match does it confirm the game context, register the Lua function used for visibility analysis (see below), and notify clients with `DLLConnected`. On a mismatch it skips all three, pauses the game, and drops game events until the DLL reconnects. On disconnect it flips the store into resyncing mode and sends `DLLDisconnected`. These events are about the connection, not the game world, so they never become knowledge.
 
 **Render events**, those whose type is prefixed with `Render:`, are presentation cues meant for downstream consumers such as session recording. The manager strips the prefix, records the event, and forwards it to MCP clients as a notification carrying the player, turn, and payload. A consumer like an OBS segment recorder can then react to it. See [replay.md](../../players/replay.md) for where these are used.
 
