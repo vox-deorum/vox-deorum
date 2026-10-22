@@ -120,6 +120,58 @@ describe('PlayerWorkspace', () => {
       expect(notes[0]).toMatchObject({ turn: 7, author: 'simple-strategist' });
     });
 
+    describe('journal', () => {
+      /** Append text to the journal in one command at a turn. */
+      async function append(shell: PlayerWorkspace, body: string, turn: number | null): Promise<void> {
+        const result = await shell.exec(`cat >> game/journal.md <<'EOF'\n${body}\nEOF`, undefined, { turn, author: 'simple-strategist' });
+        expect(result.exitCode).toBe(0);
+      }
+
+      /** The turn numbers of the journal's turn headings, in order. */
+      function headings(store: WorkspaceStore): number[] {
+        return [...(text(store.readFile('game/journal.md')) ?? '').matchAll(/^### Turn (\d+)$/gm)].map((match) => Number(match[1]));
+      }
+
+      it('should add one turn heading per turn to appends', async () => {
+        const store = openStore();
+        const shell = workspace(store);
+        await append(shell, 'first', 5);
+        await append(shell, 'second', 5);
+        await append(shell, 'third', 6);
+        expect(headings(store)).toEqual([5, 6]);
+        const journal = text(store.readFile('game/journal.md'))!;
+        expect(journal.indexOf('first')).toBeLessThan(journal.indexOf('second'));
+        expect(journal.indexOf('### Turn 6')).toBeLessThan(journal.indexOf('third'));
+      });
+
+      it('should demote shallow headings in appended text below the turn heading', async () => {
+        const store = openStore();
+        await append(workspace(store), '# Plan\n## Threats\n#### Detail\n```\n# comment\n```', 5);
+        const journal = text(store.readFile('game/journal.md'))!;
+        expect(journal).toMatch(/^#### Plan$/m);
+        expect(journal).toMatch(/^#### Threats$/m);
+        expect(journal).toMatch(/^#### Detail$/m);
+        expect(journal).toMatch(/^# comment$/m);
+      });
+
+      it('should commit rewrites, deletions, and appends without a turn as written', async () => {
+        const store = openStore();
+        const shell = workspace(store);
+        await append(shell, 'kept', null);
+        expect(text(store.readFile('game/journal.md'))).toBe('kept\n');
+        await shell.exec('echo rewritten > game/journal.md', undefined, { turn: 5 });
+        expect(text(store.readFile('game/journal.md'))).toBe('rewritten\n');
+        await shell.exec('rm game/journal.md', undefined, { turn: 5 });
+        expect(store.readFile('game/journal.md')).toBeUndefined();
+      });
+
+      it('should leave other note files unchanged', async () => {
+        const store = openStore();
+        await workspace(store).exec('echo "# Plan" >> game/plan.md', undefined, { turn: 5 });
+        expect(text(store.readFile('game/plan.md'))).toBe('# Plan\n');
+      });
+    });
+
     it('should make no commit for a command that changes nothing once the guide exists', async () => {
       const store = openStore();
       const shell = workspace(store);

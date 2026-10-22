@@ -42,9 +42,9 @@ export interface CapabilityMiddlewareOptions {
 /**
  * The workspace section from `prompts/workspace.md`: working rules for bash, and a write rule asking
  * for game notes and general lessons, with lessons kept in a shared folder when one is writable and
- * in the game folder's `lessons/` otherwise. Folders, recorded turns, and
- * read examples live in the records directions, so this text depends only on the seat's settings
- * and stays the same across turns.
+ * in the game folder's `lessons/` otherwise, with the journal suggested for game notes. Folders,
+ * recorded turns, and read examples live in the records directions, so this text depends only on
+ * the seat's settings and stays the same across turns.
  */
 function workspaceSection(
   files: ResolvedFilesConfig,

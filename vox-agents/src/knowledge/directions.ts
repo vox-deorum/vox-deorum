@@ -10,7 +10,8 @@ import type { ModelMessage } from "ai";
 import type { VoxContext } from "../infra/vox-context.js";
 import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
-import { capOutput, workspaceCwd, workspaceGuide, workspaceGuideFile } from "../utils/workspace/player-workspace.js";
+import { journalStorePath, journalTail, journalWindow, type JournalTail } from "../utils/workspace/journal.js";
+import { workspaceCwd, workspaceGuide, workspaceGuideFile, workspaceOutputLimit } from "../utils/workspace/player-workspace.js";
 import { formatTurnRanges, recordedTurns, sectionFiles } from "./records.js";
 import { fileModeOmittedSections, sections, type SectionKey } from "./sections.js";
 
@@ -38,7 +39,7 @@ export function fileMode<T extends AgentParameters>(context: VoxContext<T>): boo
 }
 
 /**
- * Insert the records directions and the latest notes as system messages, when this execution is
+ * Insert the records directions and the game notes as system messages, when this execution is
  * in file mode. The directions go first, right after the agent's system prompt and ahead of the
  * game context or overview, so the overview's cache breakpoint covers them. The notes change
  * whenever an agent writes one, so they go after the leading system messages (or at the end when
@@ -71,58 +72,69 @@ function notesGuide<T extends AgentParameters>(context: VoxContext<T>): { writab
   return { writable, empty: content === "", content };
 }
 
-/** How many earlier notes the records directions name after the latest one. */
-const earlierNotesShown = 5;
+/** How many notes other than the journal the notes message names. */
+const otherNotesShown = 5;
+
+/** The game notes a run starts with. */
+interface RecentNotes {
+  /** The newest journal entries, when the journal has any. */
+  journal?: JournalTail & { path: string };
+  /** Paths of the most recently written notes other than the journal, newest first. */
+  others: string[];
+}
 
 /**
- * The seat's game notes by recency: the text of the most recently written note and the paths of
- * the five before it. The guide and folders are not notes. Undefined when the seat has no game
- * folder or no notes yet.
+ * The seat's game notes: the newest journal entries that fit the journal window, and the paths
+ * of the five most recently written other notes. The guide and folders are not notes. Undefined
+ * when the seat has no game folder or nothing to show.
  */
-function recentNotes<T extends AgentParameters>(context: VoxContext<T>): { latest: { path: string; content: string }; earlier: string[] } | undefined {
+function recentNotes<T extends AgentParameters>(context: VoxContext<T>): RecentNotes | undefined {
   const store = context.store;
   if (!context.files?.game || !store) return undefined;
-  const notes = [...store.manifest()]
-    .filter(([storePath, entry]) => entry.type === "file" && storePath.startsWith("game/") && storePath !== `game/${workspaceGuideFile}`)
+  const manifest = store.manifest();
+  const journal = manifest.has(journalStorePath)
+    ? journalTail(Buffer.from(store.readFile(journalStorePath) ?? new Uint8Array()).toString("utf8"), journalWindow, workspaceOutputLimit)
+    : undefined;
+  const others = [...manifest]
+    .filter(([storePath, entry]) => entry.type === "file" && storePath.startsWith("game/")
+      && storePath !== `game/${workspaceGuideFile}` && storePath !== journalStorePath)
     .sort(([pathA, a], [pathB, b]) => b.mtime - a.mtime || pathB.localeCompare(pathA))
-    .map(([storePath]) => storePath);
-  if (notes.length === 0) return undefined;
-  const content = Buffer.from(store.readFile(notes[0]) ?? new Uint8Array()).toString("utf8").trim();
+    .slice(0, otherNotesShown)
+    .map(([storePath]) => `${workspaceCwd}/${storePath}`);
+  if (!journal && others.length === 0) return undefined;
   return {
-    latest: { path: `${workspaceCwd}/${notes[0]}`, content: capOutput(content) },
-    earlier: notes.slice(1, 1 + earlierNotesShown).map((storePath) => `${workspaceCwd}/${storePath}`),
+    journal: journal && { path: `${workspaceCwd}/${journalStorePath}`, ...journal },
+    others,
   };
 }
 
 /**
- * The latest game notes for the run, rendered from the `records-notes` prompt file: the text of the
- * most recent note and the paths of the ones before it. Undefined when the seat has no game folder
- * or no notes yet. Built once per run; a note written during the run shows in later runs.
+ * The game notes for the run, rendered from the `records-notes` prompt file: the newest journal
+ * entries, then the paths of other recent notes. Undefined when the seat has no game folder or
+ * nothing to show. Built once per run; a note written during the run shows in later runs.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
  */
 export function recordsNotes<T extends AgentParameters>(context: VoxContext<T>): string | undefined {
   const notes = recentNotes(context);
-  return notes ? renderSystemPrompt(context, "records-notes", notes) : undefined;
+  return notes ? renderSystemPrompt(context, "records-notes", { ...notes, journal: notes.journal ?? false }) : undefined;
 }
 
 /**
  * The records directions: which folders are read-only or writable, which sections to read from
  * files, which are already in the prompt, and the game notes guide. The built-in text names no
  * turn numbers and depends only on the files setting, `inPrompt`, and the guide, so recording a
- * turn, a briefing, or a note leaves it unchanged. The view still supplies the recorded turns and
- * the notes for custom files written for older built-ins (the notes now come from
- * {@link recordsNotes}). It is built once per run, so it stays fixed across the run's steps; an
- * agent editing the guide changes it for later runs. The message built from it carries no cache
- * breakpoint of its own and sits ahead of the caller's.
+ * turn, a briefing, or a note leaves it unchanged. The view still supplies the recorded turns for
+ * custom files written for older built-ins. It is built once per run, so it stays fixed across the
+ * run's steps; an agent editing the guide changes it for later runs. The message built from it
+ * carries no cache breakpoint of its own and sits ahead of the caller's.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
  * @param inPrompt - Sections already in the prompt for the latest turn, named so the run skips them
  */
 export function recordsDirections<T extends AgentParameters>(context: VoxContext<T>, inPrompt: SectionKey[] = []): string {
   const files = context.files;
-  // Retired names (turns and notes): the built-in text no longer reads them, but a custom file may
-  // (see prompt-files)
+  // Retired turn names: the built-in text no longer reads them, but a custom file may (see prompt-files)
   const turns = context.store ? recordedTurns(context.store.manifest()) : [];
   return renderSystemPrompt(context, "records-directions", {
     hasTurns: turns.length > 0,
@@ -135,6 +147,5 @@ export function recordsDirections<T extends AgentParameters>(context: VoxContext
       .map((key) => ({ title: sections[key].title, files: sectionFiles(sections[key]) })),
     inPrompt: inPrompt.map((key) => sections[key].title).join(", ") || false,
     guide: notesGuide(context) ?? false,
-    notes: recentNotes(context) ?? false,
   });
 }

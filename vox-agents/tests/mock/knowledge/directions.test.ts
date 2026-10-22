@@ -8,7 +8,8 @@ import { fileMode, insertRecordsDirections, recordsDirections, recordsNotes } fr
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
-import { workspaceGuideFile, workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
+import { journalStorePath, journalWindow } from '../../../src/utils/workspace/journal.js';
+import { workspaceGuideFile } from '../../../src/utils/workspace/player-workspace.js';
 import type { ModelMessage } from 'ai';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from './directions-fixtures.js';
@@ -172,36 +173,64 @@ describe('recordsDirections', () => {
       return enableFileMode(bareContext(), temp.store, undefined, { game, shared: {} });
     }
 
-    /** The bulleted paths after the earlier-notes line, in order. */
-    function earlierPaths(text: string): string[] {
+    /** The bulleted note paths, in order. */
+    function listedPaths(text: string): string[] {
       return [...text.matchAll(/^- `(\/workspace\/game\/[^`]+)`$/gm)].map((match) => match[1]);
     }
 
-    it('should show the newest note and name the five before it, newest first', () => {
+    it('should name the five most recent notes without their text, newest first', () => {
       for (let index = 0; index < 8; index++) writeNote(`game/notes/turn-${index}.md`, `Note body ${index}.`, 1000 + index);
       writeNote(`game/${workspaceGuideFile}`, '# Guide\nNewest write of all.\n', 5000);
 
       const text = recordsNotes(seat())!;
-      expect(text).toContain('/workspace/game/notes/turn-7.md');
-      expect(text).toContain('Note body 7.');
-      expect(text).not.toContain('Note body 6.');
-      expect(earlierPaths(text)).toEqual([6, 5, 4, 3, 2].map((index) => `/workspace/game/notes/turn-${index}.md`));
-      expect(text).not.toContain('turn-1.md');
+      expect(text).not.toContain('Note body');
+      expect(listedPaths(text)).toEqual([7, 6, 5, 4, 3].map((index) => `/workspace/game/notes/turn-${index}.md`));
     });
 
     it('should give no notes without notes or without a game folder', () => {
       expect(recordsNotes(seat())).toBeUndefined();
       writeNote('game/plan.md', 'Plan body.', 1000);
       expect(recordsNotes(seat(false))).toBeUndefined();
-      expect(recordsNotes(seat())).toContain('Plan body.');
-      expect(earlierPaths(recordsNotes(seat())!)).toEqual([]);
+      expect(listedPaths(recordsNotes(seat())!)).toEqual(['/workspace/game/plan.md']);
     });
 
-    it('should cap an oversized note', () => {
-      writeNote('game/plan.md', 'x'.repeat(workspaceOutputLimit + 500), 1000);
-      const text = recordsNotes(seat())!;
-      expect(text).toContain('[truncated 500 chars');
-      expect(text).not.toContain('x'.repeat(workspaceOutputLimit + 1));
+    describe('with a journal', () => {
+      /** A journal of turn entries, each a heading and a body of the given size. */
+      function journal(turns: number[], bodySize = 100): string {
+        return turns.map((turn) => `### Turn ${turn}\n\nbody-${turn} ${'y'.repeat(bodySize)}`).join('\n\n') + '\n';
+      }
+
+      it('should show the newest whole entries that fit, in file order, and count the older ones', () => {
+        const turns = Array.from({ length: 40 }, (_, index) => index + 1);
+        writeNote(journalStorePath, journal(turns, 1000), 1000);
+        const text = recordsNotes(seat())!;
+        const shown = [...text.matchAll(/^### Turn (\d+)$/gm)].map((match) => Number(match[1]));
+        expect(shown.length).toBeGreaterThan(1);
+        expect(shown).toEqual(turns.slice(-shown.length));
+        expect(text).toContain(String(40 - shown.length));
+        expect(text.length).toBeLessThan(journalWindow + 2000);
+      });
+
+      it('should always show the newest entry, even when it is over the window', () => {
+        writeNote(journalStorePath, journal([1, 2], journalWindow + 10), 1000);
+        const text = recordsNotes(seat())!;
+        expect(text).toContain('body-2');
+        expect(text).not.toContain('body-1');
+      });
+
+      it('should show the journal and list the other notes by name', () => {
+        writeNote(journalStorePath, journal([1, 2]), 1000);
+        writeNote('game/lessons.md', 'Lesson body.', 2000);
+        const text = recordsNotes(seat())!;
+        expect(text).toContain('body-2');
+        expect(text).not.toContain('Lesson body.');
+        expect(listedPaths(text)).toEqual(['/workspace/game/lessons.md']);
+      });
+
+      it('should give no notes for a blank journal alone', () => {
+        writeNote(journalStorePath, '\n', 1000);
+        expect(recordsNotes(seat())).toBeUndefined();
+      });
     });
 
     it('should leave the directions unchanged when a note is written', () => {
@@ -222,7 +251,7 @@ describe('recordsDirections', () => {
       ];
     }
 
-    it('should put the directions first and the latest note between the overview and the game state', () => {
+    it('should put the directions first and the notes between the overview and the game state', () => {
       temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: 'game/plan.md', type: 'file', content: 'Plan body.', mtime: 1000 }] });
       const context = enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} });
       const messages = opening();
@@ -287,15 +316,6 @@ describe('recordsDirections', () => {
       expect(recordsDirections(context).trim()).toBe('[none]');
       record(1, 2, 3);
       expect(recordsDirections(context).trim()).toBe('[1-3|3]');
-    });
-
-    it('should still load and fill a custom directions file that reads the retired notes names', () => {
-      fs.writeFileSync(path.join(dir, 'records-directions.md'),
-        '{{#notes}}[{{latest.path}}|{{latest.content}}{{#earlier.length}}|more{{/earlier.length}}{{#earlier}},{{.}}{{/earlier}}]{{/notes}}{{^notes}}[none]{{/notes}}\n');
-      const context = { ...enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} }), prompts: dir };
-      expect(recordsDirections(context).trim()).toBe('[none]');
-      temp.store.commit({ kind: 'notes', turn: 1, author: 'simple-strategist', changes: [{ path: 'game/plan.md', type: 'file', content: 'Plan body.', mtime: 1000 }] });
-      expect(recordsDirections(context).trim()).toBe('[/workspace/game/plan.md|Plan body.]');
     });
   });
 });

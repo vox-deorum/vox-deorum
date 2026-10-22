@@ -53,7 +53,14 @@ Rules:
 Writable game and shared folders get an `AGENTS.md` guide:
 
 - **Shared folders.** The guide is created once on disk and never overwritten, so agents and players can edit it.
-- **Game notes.** The guide lives in the store and is seeded only when missing, so existing games keep their guide. A writing command that finds it missing restores the default, and the guide returns after an agent deletes it or a rewind drops it. The default text, `workspaceGuide` in `src/utils/workspace/player-workspace.ts`, covers when a note is worth keeping, how to maintain one living file instead of a new file each turn, and which notes an agent sees at the start of each run.
+- **Game notes.** The guide lives in the store and is seeded only when missing, so existing games keep their guide. A writing command that finds it missing restores the default, and the guide returns after an agent deletes it or a rewind drops it. The default text, `workspaceGuide` in `src/utils/workspace/player-workspace.ts`, covers when a note is worth keeping and what to leave out. Since the guide is seeded only once, rules that may change, such as the journal and which notes load at the start of a run, live in the [capability reminder](../models/middleware.md#capability-reminder) instead.
+
+### Game journal
+
+`/workspace/game/journal.md` is an ordinary note file with two host behaviors, both in `src/utils/workspace/journal.ts`. Agents may use it or organize notes another way; the capability reminder suggests it as the simplest option.
+
+- **Turn headings.** When a command appends to the journal and its turn is known, `PlayerWorkspace` adds a `### Turn N` heading unless the journal's last entry is already for that turn, and demotes headings of level 1 to 3 in the appended text to level 4. Turn headings inside fenced code blocks do not count. Rewrites, deletions, and appends without a turn are committed as written.
+- **Journal window.** The notes message at the start of each run shows the newest whole entries that fit in 10,000 characters (`journalWindow`), always at least the newest one, followed by the number of older entries. A newest entry over the 60,000-character output limit keeps its heading and its newest text, marked as cut. Agents read older entries with `grep` or `sed`.
 
 Players read the game notes, including the guide, by exporting the store (see [Reading the store from outside](store.md#reading-the-store-from-outside)).
 
@@ -82,7 +89,7 @@ Each step is a full model call, while commands are cheap, so the prompts ask age
 | Feature | Page |
 | --- | --- |
 | The model gets a short reminder on keeping notes, the step budget, and reading large files. | [Capability reminder](../models/middleware.md#capability-reminder) |
-| The records directions list the folders and explain the turn folders. A separate message shows the latest note with the names of the five before it. | [File mode](../framework/prompts.md#file-mode) |
+| The records directions list the folders and explain the turn folders. A separate notes message shows the newest journal entries and the names of other recent notes. | [File mode](../framework/prompts.md#file-mode) |
 | The run's last initial message becomes a cache anchor. | [Caching](../framework/caching.md) |
 | Old bash output is dropped when the request gets large, per the model's `continuityThreshold`. | [Compaction](../framework/compaction.md) |
 

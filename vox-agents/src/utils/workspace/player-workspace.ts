@@ -15,8 +15,9 @@ import type { FileAccess, ResolvedFilesConfig } from '../../types/config.js';
 import { config } from '../config.js';
 import { createLogger } from '../logger.js';
 import { errorMessage } from '../errors.js';
+import { journalStorePath, stampJournal } from './journal.js';
 import { StoreFs } from './store-fs.js';
-import type { WorkspaceStore } from './workspace-store.js';
+import type { Manifest, PathChange, WorkspaceStore } from './workspace-store.js';
 
 const logger = createLogger('PlayerWorkspace');
 
@@ -183,7 +184,6 @@ This folder outlives the current game. Future games read it too.
 This folder is shared by every agent serving your civilization in this game, and it persists across turns.
 
 - Write a note when you learn or decide something later turns will need and the reports will not show, such as a plan that spans several turns and its target turns, a promise to another civilization, a threat to watch, or a lesson from a decision that went wrong.
-- Keep one living file, such as \`plan.md\`, up to date instead of adding a new file every turn. Every agent sees the most recently written note at the start of each run, and the names of the five before it.
 - Do not copy report data or decision rationale into notes, since agents already see them.
 ${lessons}- You may improve this guide and organize the folder when useful for ALL agents.
 - While you have access to the workspace, the goal is to complete the ongoing task.
@@ -213,10 +213,11 @@ export interface WorkspaceCommandInfo {
   author?: string;
 }
 
-/** One command's shell and its writable notes view, if any. */
+/** One command's shell, its writable notes view, if any, and the version it was built from. */
 interface OpenWorkspace {
   bash: Bash;
   notes?: StoreFs;
+  manifest: Manifest;
 }
 
 /** Error text for a command whose run was cancelled. */
@@ -276,7 +277,9 @@ export class PlayerWorkspace implements Workspace {
     try {
       const result = await opened.bash.exec(command, { signal });
       if (signal?.aborted) return failure(cancelledMessage);
-      const changes = opened.notes ? await opened.notes.touchedChanges() : [];
+      const changes = opened.notes
+        ? (await opened.notes.touchedChanges()).map((change) => this.stampJournalChange(change, opened.manifest, info.turn))
+        : [];
       if (changes.length > 0) {
         this.store.commit({ kind: 'notes', turn: info.turn ?? null, author: info.author ?? 'host', changes, signal });
       }
@@ -316,7 +319,22 @@ export class PlayerWorkspace implements Workspace {
     }
 
     const filesystem = new MountableFs({ base: new InMemoryFs(), mounts });
-    return { bash: new Bash({ fs: filesystem, cwd: workspaceCwd, python: false, javascript: true }), notes };
+    return { bash: new Bash({ fs: filesystem, cwd: workspaceCwd, python: false, javascript: true }), notes, manifest };
+  }
+
+  /**
+   * Add turn headings to a command's append to the journal (see {@link stampJournal}). Other
+   * changes pass through unchanged.
+   *
+   * @param manifest - The version the command started from
+   */
+  private stampJournalChange(change: PathChange, manifest: Manifest, turn: number | null | undefined): PathChange {
+    if (change.type !== 'file' || change.path !== journalStorePath) return change;
+    const entry = manifest.get(journalStorePath);
+    const before = entry?.type === 'file' ? Buffer.from(this.store.readBlob(entry.hash)).toString('utf8') : '';
+    const after = Buffer.from(change.content).toString('utf8');
+    const stamped = stampJournal(before, after, turn);
+    return stamped === after ? change : { ...change, content: stamped };
   }
 }
 

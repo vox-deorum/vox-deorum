@@ -38,7 +38,7 @@ A run is in file mode when files are enabled and its resolved tools include `bas
 | Message | Position | Contents |
 | --- | --- | --- |
 | Records directions | Before the overview or shared game context | Mounted folders and permissions, record paths, which sections remain inline, read examples, and the game notes guide. |
-| Latest notes, when present | After leading system messages, before the game-state user message | The newest game note and paths of the five preceding notes, ordered by stored modification time. The guide is excluded and note text is capped like bash output. |
+| Notes, when present | After leading system messages, before the game-state user message | With a [game journal](../workspace/files.md#game-journal), its newest whole entries within 10,000 characters. Then the paths of the five most recent other notes. Other notes are listed by name only, ordered by stored modification time, and the guide is excluded. |
 
 Directions come from `records-directions.md` and notes from `records-notes.md`. Both are built once per run. Built-in directions depend on file access, inline sections, and the guide, so writing ordinary records or notes leaves them stable across turns. Editing the guide affects later runs. Neither message adds its own cache breakpoint.
 
@@ -84,7 +84,7 @@ The closing reminder names narrowed permissions, states required tool use, count
 | --- | --- |
 | Main instructions and template data | Agent prompt file and its `getSystem()`; see [Prompt files](prompt-files.md) |
 | Opening context | Agent's `getInitialMessages()`; shared live context uses `buildGameContextMessages` in `src/strategist/strategy-parameters.ts` |
-| Records directions and latest notes | `prompts/records-directions.md`, `prompts/records-notes.md`, and `src/knowledge/directions.ts` |
+| Records directions and notes | `prompts/records-directions.md`, `prompts/records-notes.md`, and `src/knowledge/directions.ts` |
 | Game-state titles, descriptions, and Markdown defaults | Registry in `src/knowledge/sections.ts` |
 | Envoy identity hint or add-on | `getHint` in `src/envoy/live-envoy.ts` and `getDefaultAddon` in `src/envoy/envoy.ts`, plus subclass overrides |
 | Telepathist special messages | `getSpecialMessages` in `src/telepathist/talkative-telepathist.ts` |
