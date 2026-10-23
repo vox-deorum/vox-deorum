@@ -6,7 +6,7 @@ This page has two related jobs. Read [coordinated combat search](#coordinated-co
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTacticalAI.cpp`, `CvTacticalAI.h`, `CvAStar.cpp`, and `CvUnit.h`.
 
-The maintained VD 5.2 branch includes the tactical AI fixes through VP 5.4.6, including support coordination, score overflow protection, and tactical crash fixes. Naval garrison scoring uses the 5.2 combined city/canal attack option.
+The maintained VD 5.2 branch includes selected tactical and military fixes from VP 5.4.7, covering support coordination, score overflow protection, combat forecasts, and tactical crashes. Indirect-fire position queries use the requested distance ring, and known-visibility counts saturate to keep heavily observed plots visible to the AI. Naval garrison scoring uses the 5.2 combined city/canal attack option.
 
 ## Coordinated combat search
 
