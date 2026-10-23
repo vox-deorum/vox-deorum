@@ -39,6 +39,21 @@ The `llms` block maps a name to a provider and model, for example `openai/gpt-5-
 
 The built-in registry contains only an openai-compatible `default` and `embedder`.
 
+## Response timeouts
+
+Set these optional environment variables in `vox-agents/.env`, then restart Vox Agents. Both accept positive integer milliseconds; blank values keep the provider defaults. A malformed value stops Vox Agents at startup, and the settings page refuses to save one.
+
+| Variable | What it controls |
+| --- | --- |
+| `LLM_FIRST_TOKEN_TIMEOUT_MS` | Wait from the start of each live model attempt until its first text, reasoning, tool-input, or file output. Initial stream metadata does not end this wait. |
+| `LLM_STREAM_TIMEOUT_MS` | Inactivity limit during streaming. Stream chunks and tool activity refresh the deadline after output starts. |
+
+For example, `LLM_FIRST_TOKEN_TIMEOUT_MS=900000` allows 15 minutes for a model to start answering, while `LLM_STREAM_TIMEOUT_MS=120000` allows two minutes of inactivity afterward. A timeout cancels the attempt and enters the existing retry policy. Oracle batch requests bypass these settings.
+
+Without overrides, the shared inactivity limit is five minutes, or 15 minutes for OpenAI-compatible models and Google models using `USE_FLEX=true`. Codex derives its limit from its proxy startup and request deadlines. An unset first-token timeout uses the streaming inactivity limit and retains the existing behavior where initial stream activity refreshes it. Synthetic and OpenAI-compatible endpoints also have HTTP client deadlines. Their wait for response headers follows the same order (first-token, then streaming, then the endpoint default), because slow local servers often send headers only after loading the model and reading the prompt. Provider or proxy deadlines can still end a request earlier; Codex's separate proxy settings are described in [Codex proxy](codex.md).
+
+The settings are read and validated in `src/utils/models/timeouts.ts` and applied by `concurrency.ts` and `models.ts`. `src/utils/retry.ts` manages the initial and streaming deadlines and aborts each timed-out attempt through the signal it passes to the attempt.
+
 ## How a model reference is checked
 
 Before any agent work starts, every model a session will use is checked. This is done by `src/utils/models/resolution.ts`, with recommended settings from `src/utils/models/rules.ts`.

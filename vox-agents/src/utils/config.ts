@@ -15,6 +15,7 @@ import type { VoxAgentsConfig, TransportType } from '../types/index.js';
 import { defaultConfig } from './config/defaults.js';
 import { mergeConfigWithDefaults } from './config/diff.js';
 import { loadVersionInfo } from './config/version.js';
+import { validateModelTimeouts } from './models/timeouts.js';
 
 const logger = createLogger('Config');
 
@@ -87,6 +88,7 @@ export function loadConfigFromFile<T extends object>(
  */
 function loadConfig(): VoxAgentsConfig {
   dotenv.config();
+  validateModelTimeouts();
 
   // Load base config from file (deep-merges with defaults)
   const fileConfig = loadVoxConfig('config.json');

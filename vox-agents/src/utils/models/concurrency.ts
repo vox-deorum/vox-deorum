@@ -19,6 +19,7 @@ import { hasBatchManager, getBatchManager } from '../../oracle/batch/batch-manag
 import { convertToStepResult, type RefineToolInput } from '../../oracle/batch/format-converter.js';
 import { takePreservedModelError } from './preserved-model-error.js';
 import { getCodexExecutionTimeout } from './providers/codex-proxy.js';
+import { readModelTimeout } from './timeouts.js';
 
 const logger = createLogger('concurrency');
 
@@ -43,8 +44,18 @@ export interface ConcurrencyContext {
 /** Monotonic counter to ensure unique chunk IDs across streamText calls */
 let streamCallCounter = 0;
 
+/**
+ * Stream parts that count as model output and end the first-token wait. Metadata such as
+ * stream-start or text-start can arrive before the model produces anything.
+ */
+const firstOutputParts = new Set<string>([
+  'text-delta', 'reasoning-delta', 'tool-input-delta', 'tool-call', 'file', 'reasoning-file',
+]);
+
 /** Return the inactivity deadline appropriate for the configured provider. */
 export function getExecutionTimeout(modelConfig: Model | undefined): number {
+  const override = readModelTimeout('LLM_STREAM_TIMEOUT_MS');
+  if (override !== undefined) return override;
   if (modelConfig?.provider === 'codex') {
     return getCodexExecutionTimeout();
   }
@@ -160,6 +171,8 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
   const modelName = modelConfig
     ? `${modelConfig.provider}/${modelConfig.name}`
     : 'unknown-model';
+  const executionTimeout = getExecutionTimeout(modelConfig);
+  const firstTokenTimeout = readModelTimeout('LLM_FIRST_TOKEN_TIMEOUT_MS');
 
   // Wrap the streamText call with both concurrency limiting and exponential retry
   return limiter(async () => {
@@ -177,9 +190,10 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
     }
 
     // Retry with caveats
-    return exponentialRetry(async (update, iteration) => {
+    return exponentialRetry(async (update, iteration, abortSignal) => {
+      let waitingForFirstToken = firstTokenTimeout !== undefined;
       context.timeoutRefresh = () => {
-        update();
+        if (!waitingForFirstToken) update();
       }
       maxIteration = iteration;
 
@@ -194,6 +208,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       let streamError: unknown;
       const modifiedParams = {
         ...params,
+        abortSignal,
         allowSystemInMessages: true,
         onChunk: (args: any) => {
           if (maxIteration !== iteration) return;
@@ -238,15 +253,17 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       const reader = result.stream.getReader();
       try {
         for (;;) {
-          const { done } = await reader.read();
+          const { done, value } = await reader.read();
           if (done) break;
-          update(false);
+          if (waitingForFirstToken && firstOutputParts.has(value.type)) waitingForFirstToken = false;
+          if (!waitingForFirstToken) update(false);
         }
-        update(true);
 
         // And return the found steps
         const steps = await result.steps;
+        abortSignal.throwIfAborted();
         if (streamError !== undefined) throw streamError;
+        update(true);
 
         // Validate flex tier is effective when enabled
         if (process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google') {
@@ -278,7 +295,8 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       initialDelay: 5000,
       maxDelay: 180000,
       backoffFactor: 1.2,
-      executionTimeout: getExecutionTimeout(modelConfig),
+      executionTimeout,
+      initialExecutionTimeout: firstTokenTimeout ?? executionTimeout,
       abortSignal: params.abortSignal,
     })
   });

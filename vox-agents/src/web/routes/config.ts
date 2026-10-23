@@ -20,6 +20,7 @@ import { discoverModels, DiscoveryError } from '../../utils/models/discovery.js'
 import { getModelConfig } from '../../utils/models/models.js';
 import { recommendTierModels } from '../../utils/models/rules.js';
 import { codexProxyManager, ensureCodexProxy } from '../../utils/models/providers/codex-proxy.js';
+import { validateModelTimeouts } from '../../utils/models/timeouts.js';
 import { isEvaluationOnlyProvider, providerCredentials } from '../../types/constants.js';
 import { isAllowedDashboardRequest } from '../origin.js';
 import { sendError } from '../http-utils.js';
@@ -288,6 +289,16 @@ router.post('/', async (req: Request<object, object, Partial<ConfigResponse>>, r
     if (configDiff !== undefined) {
       try {
         validatePromptsSetting((config as VoxAgentsConfig).prompts ?? false, 'config.prompts');
+      } catch (error) {
+        sendError(res, 400, errorMessage(error));
+        return;
+      }
+    }
+
+    // The saved .env is reloaded into process.env below, so reject malformed timeouts first.
+    if (apiKeys) {
+      try {
+        validateModelTimeouts(apiKeys);
       } catch (error) {
         sendError(res, 400, errorMessage(error));
         return;

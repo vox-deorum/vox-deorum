@@ -84,6 +84,10 @@ The optional **Judge AI** is experimental. It sizes up each moment and passes it
 
 You can change all of these in Settings under **Agent-Model Assignments**, including models for individual jobs. **More** finds additional models, and nothing is kept until you choose **Save All**. To give each civilization its own model, edit the game configuration file by hand (see the [developer overview](../developers/vox-agents/models/configuration.md)). A mid-tier model is a sensible start; move up or down once you've seen it play.
 
+## Response timeouts
+
+For a slow provider or local model, set `LLM_FIRST_TOKEN_TIMEOUT_MS` and `LLM_STREAM_TIMEOUT_MS` in `vox-agents/.env`, then restart Vox Deorum. Values are positive integer milliseconds. For example, `LLM_FIRST_TOKEN_TIMEOUT_MS=900000` waits up to 15 minutes for the first text, reasoning, or tool output, and `LLM_STREAM_TIMEOUT_MS=120000` allows two minutes of inactivity afterward. A timeout cancels the attempt and retries it. Blank values keep the existing defaults. See the [developer configuration](../developers/vox-agents/models/configuration.md#response-timeouts) for defaults and provider limits.
+
 ## Controlling cost
 
 Each decision the AI makes and each spokesperson reply goes through the provider; a paid model costs money as you play. A few ways to keep it down:

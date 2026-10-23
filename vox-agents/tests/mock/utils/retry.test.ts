@@ -21,11 +21,67 @@ function logger() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   timerMocks.setTimeout.mockReset();
 });
 
 describe('exponentialRetry', () => {
+  it('should give each retry a fresh initial deadline after a completed stream fails', async () => {
+    vi.useFakeTimers();
+    timerMocks.setTimeout.mockResolvedValue(undefined);
+    const signals: AbortSignal[] = [];
+    const operation = vi.fn(async (update: (completed?: boolean) => void, attempt: number, signal: AbortSignal) => {
+      signals.push(signal);
+      if (attempt === 0) {
+        update(true);
+        throw new Error('invalid response');
+      }
+      return await new Promise<never>(() => {});
+    });
+    const pending = exponentialRetry(operation, logger(), {
+      maxRetries: 1,
+      initialExecutionTimeout: 100,
+      executionTimeout: 20,
+    });
+    const rejected = expect(pending).rejects.toBeInstanceOf(Error);
+
+    await vi.advanceTimersByTimeAsync(99);
+    expect(operation).toHaveBeenCalledTimes(2);
+    expect(signals[1].aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await rejected;
+    expect(signals.map((signal) => signal.aborted)).toEqual([false, true]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('should clear a rejected attempt deadline while waiting to retry', async () => {
+    vi.useFakeTimers();
+    let resumeRetry!: () => void;
+    let lateProgress!: () => void;
+    timerMocks.setTimeout.mockImplementation(() => new Promise<void>((resolve) => { resumeRetry = resolve; }));
+    let failedSignal!: AbortSignal;
+    const operation = vi.fn()
+      .mockImplementationOnce(async (update: () => void, _attempt: number, signal: AbortSignal) => {
+        lateProgress = update;
+        failedSignal = signal;
+        throw new Error('temporary failure');
+      })
+      .mockResolvedValueOnce('ok');
+    const pending = exponentialRetry(operation, logger(), {
+      maxRetries: 1,
+      executionTimeout: 20,
+    });
+
+    await vi.advanceTimersByTimeAsync(100);
+    lateProgress();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(failedSignal.aborted).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    resumeRetry();
+    await expect(pending).resolves.toBe('ok');
+  });
+
   it('should honor an absolute retry timestamp beyond the ordinary delay cap', async () => {
     const now = Date.UTC(2026, 6, 15, 15, 45);
     vi.spyOn(Date, 'now').mockReturnValue(now);

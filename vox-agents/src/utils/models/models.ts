@@ -32,6 +32,7 @@ import { createLogger } from '../logger.js';
 import { synthesizeModelConfig } from './rules.js';
 import { parseModelReference } from './model-reference.js';
 import { getRuntimeModel } from './resolution.js';
+import { httpTimeouts } from './timeouts.js';
 
 export type { ModelSize } from '../../types/config.js';
 export { selectModelReference } from './resolution.js';
@@ -237,8 +238,7 @@ export function getModel(config: Model, options?: {
           return fetch(url, {
             ...options,
             dispatcher: new Agent({
-              headersTimeout: 600_000,
-              bodyTimeout: 600_000,
+              ...httpTimeouts(600_000),
               connectTimeout: 600_000,
               keepAliveTimeout: 600_000,
             }),
@@ -309,8 +309,7 @@ export function getModel(config: Model, options?: {
           return fetch(url, {
             ...options,
             dispatcher: new Agent({
-              headersTimeout: 180_000,
-              bodyTimeout: 180_000,
+              ...httpTimeouts(180_000),
               connectTimeout: 180_000,
               keepAliveTimeout: 600_000,
             }),

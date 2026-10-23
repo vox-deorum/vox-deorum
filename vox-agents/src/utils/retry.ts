@@ -23,6 +23,8 @@ export interface ExponentialRetryOptions {
   maxDelay?: number;
   backoffFactor?: number;
   executionTimeout?: number;
+  /** Initial deadline before the first progress update. Defaults to executionTimeout. */
+  initialExecutionTimeout?: number;
   abortSignal?: AbortSignal;
 }
 
@@ -36,14 +38,15 @@ export function isContextLengthError(error: unknown): boolean {
 
 /**
  * Executes an async function with exponential backoff retry logic
- * @param fn - The async function to execute, receives a progress callback to prevent timeout
+ * @param fn - The async function to execute. It receives a progress callback to prevent timeout,
+ *   the attempt number, and an attempt signal that aborts with `abortSignal` or when the attempt times out
  * @param logger - Winston logger instance for logging retry attempts
  * @param options - Named retry policy and cancellation settings
  * @returns The result of the successful function execution
  * @throws The last error if all retries are exhausted
  */
 export async function exponentialRetry<T>(
-  fn: (updateProgress: (completed?: boolean) => void, iteration: number) => Promise<T>,
+  fn: (updateProgress: (completed?: boolean) => void, iteration: number, signal: AbortSignal) => Promise<T>,
   logger: Logger,
   options: ExponentialRetryOptions = {},
 ): Promise<T> {
@@ -54,17 +57,23 @@ export async function exponentialRetry<T>(
     maxDelay = 180000,
     backoffFactor = 1.2,
     executionTimeout = executionTimeoutDefault,
+    initialExecutionTimeout = executionTimeout,
     abortSignal,
   } = options;
   let lastError: Error;
   let delay = initialDelay;
-  let hasCompleted = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     abortSignal?.throwIfAborted();
+    let timeoutHandle: NodeJS.Timeout | null = null;
+    let hasCompleted = false;
+    // Cancels this attempt's work when it times out, so it cannot keep running beside the retry.
+    const attemptController = new AbortController();
+    const attemptSignal = abortSignal
+      ? AbortSignal.any([abortSignal, attemptController.signal])
+      : attemptController.signal;
     try {
       // Timeout support
-      let timeoutHandle: NodeJS.Timeout | null = null;
       let isTimedOut = false;
       let lastKnown = new Date();
       let timeoutReject: (reason: Error) => void;
@@ -73,10 +82,9 @@ export async function exponentialRetry<T>(
         timeoutReject = reject;
       });
 
-      const resetTimeout = (completed?: boolean) => {
+      const resetTimeout = (completed?: boolean, timeout = executionTimeout) => {
         lastKnown = new Date();
-        // Latch to true once completed; `?? completed` was a no-op since hasCompleted
-        // starts as `false` (non-nullish), so it never picked up the argument.
+        // Late progress cannot restart a completed attempt's timer.
         hasCompleted = hasCompleted || completed === true;
         if (timeoutHandle) {
           clearTimeout(timeoutHandle);
@@ -86,31 +94,32 @@ export async function exponentialRetry<T>(
           timeoutHandle = globalThis.setTimeout(() => {
             if (isTimedOut || hasCompleted) return;
             isTimedOut = true;
-            const message = `[${source}] Function execution timed out after ${executionTimeout}ms (${executionTimeout / 60000} minutes). Last known activity: ${lastKnown.toLocaleTimeString('en-US', {
+            const message = `[${source}] Function execution timed out after ${timeout}ms (${timeout / 60000} minutes). Last known activity: ${lastKnown.toLocaleTimeString('en-US', {
               hour12: false,
               hour: '2-digit',
               minute: '2-digit',
               second: '2-digit'
             })}`;
-            timeoutReject(new Error(message));
-          }, executionTimeout);
+            const timeoutError = new Error(message);
+            timeoutReject(timeoutError);
+            attemptController.abort(timeoutError);
+          }, timeout);
         }
       };
       
       // Start initial timeout
-      resetTimeout(false);
-      const request = fn(resetTimeout, attempt).then((value) => { hasCompleted = true; return value; });
+      resetTimeout(false, initialExecutionTimeout);
+      const request = fn(resetTimeout, attempt, attemptSignal).then((value) => { hasCompleted = true; return value; });
 
-      // Race between the function execution and timeout
-      const result = await Promise.race([
+      // Race between the function execution and timeout; finally clears the timer on success
+      return await Promise.race([
         request,
         timeoutPromise
       ]);
-
-      // Clear the timeout if execution completed successfully
-      if (timeoutHandle) clearTimeout(timeoutHandle);
-      return result;
     } catch (error) {
+      // Settle the attempt now, because finally runs only after the retry delay.
+      hasCompleted = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       abortSignal?.throwIfAborted();
       lastError = error as Error;
 
@@ -177,6 +186,8 @@ export async function exponentialRetry<T>(
 
       // Increase delay for next attempt
       delay *= backoffFactor;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     }
   }
 
