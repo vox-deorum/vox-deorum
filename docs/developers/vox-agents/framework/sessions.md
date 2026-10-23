@@ -33,7 +33,7 @@ Pausing is a separate flag: a paused session stays running, finishes work alread
 Sessions that start Civilization V do it through `VoxCivilization` (`src/infra/vox-civilization.ts`). It:
 
 1. Generates the launch Lua from templates.
-2. Prepares Civ's `config.ini`, including any fixed random seeds (see [Game session](../agents/strategists/game-session.md#repeating-games)).
+2. Prepares Civ's `config.ini` for a new game with any fixed random seeds and map script, and puts the old values back once the game is in (see [Game session](../agents/strategists/game-session.md#repeating-games)).
 3. Starts the game and attaches to its process.
 4. Kills the process on shutdown.
 

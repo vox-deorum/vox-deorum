@@ -33,7 +33,7 @@ vi.mock('../../../src/infra/vox-civilization.js', () => ({
     onGameExit: vi.fn(),
     onGameBound: vi.fn(),
     killGame: vi.fn(async () => {}),
-    restoreRandomSeeds: vi.fn(async () => {}),
+    restoreLaunchSettings: vi.fn(async () => {}),
     updateSkipAnimations: vi.fn(async () => {}),
     setAiObserver: vi.fn(),
     setUseDX11: vi.fn(),
@@ -396,6 +396,37 @@ describe('model preflight', () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('map script launch configuration', () => {
+  it.each([undefined, 'Assets/Maps/Continents.lua'])('should forward mapScript %j on initial launch', async mapScript => {
+    const s = session(false);
+    s.config.mapScript = mapScript;
+    vi.mocked(voxCivilization.startGame).mockClear().mockResolvedValue(false);
+
+    await expect(s.start()).rejects.toThrow();
+
+    expect(voxCivilization.startGame).toHaveBeenCalledWith('StartGame.lua', undefined, false, undefined, mapScript);
+  });
+
+  it('should restore the launch settings once the game is in', async () => {
+    const s = session(true);
+    vi.mocked(voxCivilization.restoreLaunchSettings).mockClear();
+
+    await gameSwitched(s, 0);
+
+    expect(voxCivilization.restoreLaunchSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('should retain the configured map when retrying a failed new-game startup', async () => {
+    const s = session(false);
+    s.config.mapScript = 'Assets/Maps/Continents.lua';
+    vi.mocked(voxCivilization.startGame).mockClear().mockResolvedValue(true);
+
+    await (s as any).handleGameExit(1);
+
+    expect(voxCivilization.startGame).toHaveBeenCalledWith('StartGame.lua', undefined, false, undefined, s.config.mapScript);
   });
 });
 

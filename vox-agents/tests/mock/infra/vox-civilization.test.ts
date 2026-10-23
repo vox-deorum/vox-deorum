@@ -14,12 +14,18 @@ import { EventEmitter } from 'node:events';
 
 // --- Mock the OS/process seams (paths relative to the SOURCE file) ---
 
-vi.mock('../../../src/utils/game/civ5-ini.js', () => ({
-  readCivConfigSeedsContent: vi.fn(),
-  updateCivConfigLegacyMapScriptContent: vi.fn((content: string) => content),
-  updateCivConfigSeedsContent: vi.fn(),
-  updateCivUserSettingsSkipAnimationsContent: vi.fn(),
-}));
+// The map script helpers stay real so tests can read back the written config.ini.
+vi.mock('../../../src/utils/game/civ5-ini.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../src/utils/game/civ5-ini.js')>();
+  return {
+    readCivConfigMapScriptContent: actual.readCivConfigMapScriptContent,
+    updateCivConfigMapScriptContent: actual.updateCivConfigMapScriptContent,
+    readCivConfigSeedsContent: vi.fn(),
+    updateCivConfigLegacyMapScriptContent: vi.fn((content: string) => content),
+    updateCivConfigSeedsContent: vi.fn(),
+    updateCivUserSettingsSkipAnimationsContent: vi.fn(),
+  };
+});
 
 vi.mock('../../../src/utils/game/civ5-user-files.js', () => ({
   getCiv5UserFilePath: vi.fn(),
@@ -60,6 +66,7 @@ vi.mock('child_process', () => ({
 
 import { VoxCivilization } from '../../../src/infra/vox-civilization.js';
 import {
+  readCivConfigMapScriptContent,
   readCivConfigSeedsContent,
   updateCivConfigSeedsContent,
 } from '../../../src/utils/game/civ5-ini.js';
@@ -106,8 +113,8 @@ describe('VoxCivilization (mock tier)', () => {
       mReadConfigSeeds.mockReturnValue({ sync: '777', map: '888', lastCiv: '29' });
       const civ = new VoxCivilization();
 
-      // Save: applyRandomSeeds reads config.ini, captures original, writes new.
-      await civ.applyRandomSeeds({ sync: 5, map: 9 });
+      // Save: applyLaunchSettings reads config.ini, captures original, writes new.
+      await civ.applyLaunchSettings({ sync: 5, map: 9 });
 
       expect(mGetUserFilePath).toHaveBeenCalledWith('config.ini');
       // Original values were read before overwriting.
@@ -120,7 +127,7 @@ describe('VoxCivilization (mock tier)', () => {
       mWriteFile.mockClear();
 
       // Restore: the captured original seed strings and LastCiv are written back.
-      await civ.restoreRandomSeeds();
+      await civ.restoreLaunchSettings();
 
       expect(mUpdateConfigSeeds).toHaveBeenCalledWith('[CONFIG]\n', { sync: '777', map: '888', lastCiv: '29' });
       expect(mWriteFile).toHaveBeenCalledWith(CONFIG_PATH, 'UPDATED', 'utf-8');
@@ -130,7 +137,7 @@ describe('VoxCivilization (mock tier)', () => {
       mReadConfigSeeds.mockReturnValue({}); // config had neither side set
       const civ = new VoxCivilization();
 
-      await civ.applyRandomSeeds(); // no seeds provided
+      await civ.applyLaunchSettings(); // no seeds provided
 
       // An unseeded run leaves LastCiv alone.
       const written = mUpdateConfigSeeds.mock.calls[0][1];
@@ -138,32 +145,32 @@ describe('VoxCivilization (mock tier)', () => {
       expect(written.lastCiv).toBeUndefined();
 
       mUpdateConfigSeeds.mockClear();
-      await civ.restoreRandomSeeds();
+      await civ.restoreLaunchSettings();
 
       // Captured fallbacks were '0'/'0'.
       expect(mUpdateConfigSeeds).toHaveBeenCalledWith('[CONFIG]\n', { sync: '0', map: '0' });
     });
 
-    it('restoreRandomSeeds is a no-op when no seeds were ever applied', async () => {
+    it('restoreLaunchSettings is a no-op when no seeds were ever applied', async () => {
       const civ = new VoxCivilization();
 
-      await civ.restoreRandomSeeds();
+      await civ.restoreLaunchSettings();
 
       expect(mUpdateConfigSeeds).not.toHaveBeenCalled();
       expect(mWriteFile).not.toHaveBeenCalled();
     });
 
-    it('only captures the original once across repeated applyRandomSeeds calls', async () => {
+    it('only captures the original once across repeated applyLaunchSettings calls', async () => {
       mReadConfigSeeds
         .mockReturnValueOnce({ sync: 'orig', map: 'origmap' })
         .mockReturnValue({ sync: '999', map: '999' });
       const civ = new VoxCivilization();
 
-      await civ.applyRandomSeeds({ sync: 1, map: 1 });
-      await civ.applyRandomSeeds({ sync: 2, map: 2 });
+      await civ.applyLaunchSettings({ sync: 1, map: 1 });
+      await civ.applyLaunchSettings({ sync: 2, map: 2 });
 
       mUpdateConfigSeeds.mockClear();
-      await civ.restoreRandomSeeds();
+      await civ.restoreLaunchSettings();
 
       // Restores the FIRST captured original, not the second read.
       expect(mUpdateConfigSeeds).toHaveBeenCalledWith('[CONFIG]\n', { sync: 'orig', map: 'origmap' });
@@ -175,8 +182,8 @@ describe('VoxCivilization (mock tier)', () => {
       mReadFile.mockRejectedValue(new Error('ENOENT'));
       const civ = new VoxCivilization();
 
-      await expect(civ.applyRandomSeeds()).resolves.toBeUndefined();
-      await civ.restoreRandomSeeds();
+      await expect(civ.applyLaunchSettings()).resolves.toBeUndefined();
+      await civ.restoreLaunchSettings();
 
       expect(mWriteFile).not.toHaveBeenCalled();
       expect(mMkdir).not.toHaveBeenCalled();
@@ -187,7 +194,7 @@ describe('VoxCivilization (mock tier)', () => {
       mReadConfigSeeds.mockReturnValue({});
       const civ = new VoxCivilization();
 
-      await civ.applyRandomSeeds({ sync: 5, map: 9 });
+      await civ.applyLaunchSettings({ sync: 5, map: 9 });
 
       expect(mMkdir).toHaveBeenCalledWith(expect.any(String), { recursive: true });
       expect(mUpdateConfigSeeds).toHaveBeenCalledWith('', { sync: 5, map: 9, lastCiv: -1 });
@@ -196,7 +203,7 @@ describe('VoxCivilization (mock tier)', () => {
       // Restore reads the file back, which exists by now.
       mReadFile.mockResolvedValue('[CONFIG]\n');
       mUpdateConfigSeeds.mockClear();
-      await civ.restoreRandomSeeds();
+      await civ.restoreLaunchSettings();
 
       expect(mUpdateConfigSeeds).toHaveBeenCalledWith('[CONFIG]\n', { sync: '0', map: '0' });
     });
@@ -399,6 +406,88 @@ describe('VoxCivilization (mock tier)', () => {
       expect(Object.keys(options?.env ?? {}).every((key) => allowed.includes(key))).toBe(true);
 
       civ.destroy();
+    });
+  });
+
+  describe('map script override', () => {
+    const savedMap = String.raw`C:\Mods\(5) Vox Deorum\Maps\Saved.lua`;
+    let civ: VoxCivilization;
+    let configText: string;
+
+    /** Read the map script selection currently stored in the fake config.ini. */
+    const savedSelection = () => readCivConfigMapScriptContent(configText);
+
+    beforeEach(() => {
+      civ = new VoxCivilization();
+      configText = `[UserSettings]\nLastMapScript = ${savedMap}\nLastMapScriptRandom = 1\n`;
+      mFindProcess.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValue(1234);
+      mSpawn.mockReturnValue(new FakeChild() as never);
+      // Keep config.ini in memory so writes can be read back; templates are irrelevant here.
+      mReadFile.mockImplementation(async file => String(file) === CONFIG_PATH ? configText : '');
+      mWriteFile.mockImplementation(async (file, data) => {
+        if (String(file) === CONFIG_PATH) configText = String(data);
+      });
+      mUpdateConfigSeeds.mockImplementation(content => content);
+    });
+
+    afterEach(() => civ.destroy());
+
+    it('should select the override for a new game and restore the saved selection afterwards', async () => {
+      const override = String.raw`Assets\Maps\Continents.lua`;
+
+      await expect(civ.startGame('StartGame.lua', 4, false, undefined, override)).resolves.toBe(true);
+      expect(savedSelection()).toEqual({ script: override, random: '0' });
+
+      await civ.restoreLaunchSettings();
+      expect(savedSelection()).toEqual({ script: savedMap, random: '1' });
+    });
+
+    it('should restore the original selection after a relaunch re-applies the override', async () => {
+      await civ.applyLaunchSettings(undefined, 'first.lua');
+      await civ.applyLaunchSettings(undefined, 'first.lua');
+
+      await civ.restoreLaunchSettings();
+      expect(savedSelection()).toEqual({ script: savedMap, random: '1' });
+    });
+
+    it('should remove map keys on restore that config.ini did not have', async () => {
+      configText = '[CONFIG]\nSyncRandSeed = 0\n';
+
+      await civ.applyLaunchSettings(undefined, 'override.lua');
+      await civ.restoreLaunchSettings();
+
+      expect(savedSelection()).toEqual({});
+    });
+
+    it('should create config.ini for an override when Civ V never started', async () => {
+      mReadFile.mockRejectedValueOnce(new Error('ENOENT'));
+
+      await civ.applyLaunchSettings(undefined, 'override.lua');
+
+      expect(mMkdir).toHaveBeenCalledWith(expect.any(String), { recursive: true });
+      expect(savedSelection()).toEqual({ script: 'override.lua', random: '0' });
+    });
+
+    it.each([undefined, ''])('should keep the saved selection when the override is %j', async mapScript => {
+      await civ.startGame('StartGame.lua', 4, false, undefined, mapScript);
+      await civ.restoreLaunchSettings();
+
+      expect(savedSelection()).toEqual({ script: savedMap, random: '1' });
+    });
+
+    it.each(['LoadGame.lua', 'LoadMods.lua'])('should ignore the override in %s mode', async luaName => {
+      await expect(civ.startGame(luaName, undefined, false, undefined, 'override.lua')).resolves.toBe(true);
+
+      expect(mWriteFile).not.toHaveBeenCalledWith(CONFIG_PATH, expect.anything(), expect.anything());
+    });
+
+    it('should leave a running game untouched when an override is supplied', async () => {
+      mFindProcess.mockReset().mockResolvedValue(9876);
+
+      await expect(civ.startGame('StartGame.lua', 4, false, undefined, 'override.lua')).resolves.toBe(true);
+
+      expect(mSpawn).not.toHaveBeenCalled();
+      expect(mWriteFile).not.toHaveBeenCalled();
     });
   });
 

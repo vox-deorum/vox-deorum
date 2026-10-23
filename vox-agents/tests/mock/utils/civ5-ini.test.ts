@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  readCivConfigMapScriptContent,
   readCivConfigSeedsContent,
   readCivLoggingEnabledContent,
   updateCivConfigLegacyMapScriptContent,
+  updateCivConfigMapScriptContent,
   updateCivConfigSeedsContent,
   updateCivLoggingEnabledContent,
   updateCivUserSettingsSkipAnimationsContent
@@ -128,6 +130,35 @@ describe('Civ config.ini legacy map script repair', () => {
 
     expect(updateCivConfigLegacyMapScriptContent(current)).toBe(current);
     expect(updateCivConfigLegacyMapScriptContent(builtIn)).toBe(builtIn);
+  });
+});
+
+describe('Civ config.ini map script selection', () => {
+  const modMap = String.raw`D:\Documents\My Games\Sid Meier's Civilization 5\MODS\(5) Vox Deorum\Mapscripts/Vox_Deorum.lua`;
+
+  it('should read Windows map script paths without losing backslashes', () => {
+    const content = `[UserSettings]\r\n; Last Map Type Played\r\nLastMapScript = ${modMap}\r\nLastMapScriptRandom = 1`;
+
+    expect(readCivConfigMapScriptContent(content)).toEqual({ script: modMap, random: '1' });
+  });
+
+  it('should replace the selection while keeping Windows paths and other settings', () => {
+    const content = `[CONFIG]\r\nSyncRandSeed = 0\r\n[UserSettings]\r\nLastMapScript = ${modMap}\r\nLastMapScriptRandom = 1\r\nLastCiv = 29`;
+    const override = String.raw`Assets\Maps\Continents.lua`;
+
+    const updated = updateCivConfigMapScriptContent(content, { script: override, random: '0' });
+
+    expect(readCivConfigMapScriptContent(updated)).toEqual({ script: override, random: '0' });
+    expect(readCivConfigSeedsContent(updated)).toEqual({ sync: '0', map: undefined, lastCiv: '29' });
+  });
+
+  it('should add missing keys and remove keys set to undefined', () => {
+    const added = updateCivConfigMapScriptContent('[CONFIG]\nSyncRandSeed = 0', { script: 'map.lua', random: '0' });
+    expect(readCivConfigMapScriptContent(added)).toEqual({ script: 'map.lua', random: '0' });
+
+    const removed = updateCivConfigMapScriptContent(added, {});
+    expect(readCivConfigMapScriptContent(removed)).toEqual({});
+    expect(readCivConfigSeedsContent(removed).sync).toBe('0');
   });
 });
 

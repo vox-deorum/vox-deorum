@@ -28,6 +28,7 @@ Sessions are configured by JSON files in `vox-agents/configs/` (type `Strategist
 | `autoPlay` | The usage mode. See below. |
 | `repetition` | Play several games in a row. See below. |
 | `production` | Animation and recording behavior. See [Media](../../platform/media.md). |
+| `mapScript` | Map script for new games, written as Civ V stores it in `config.ini` under `LastMapScript`, for example `"Assets\\Maps\\Continents.lua"` (backslashes doubled for JSON). If omitted or empty, Civ V uses its saved selection. The override is temporary, like the seeds under [Repeating games](#repeating-games). |
 
 Per-seat settings such as `files`, `triage`, and `prompts` can also go on a seat. They are described in [Files](../../workspace/files.md), [Tiers and triage](../../models/tiers-and-triage.md), and [Prompt files](../../framework/prompt-files.md).
 
@@ -43,7 +44,7 @@ Per-seat settings such as `files`, `triage`, and `prompts` can also go on a seat
 
 `repetition` plays several games in sequence. Combined with fixed seeds and seat rotation, this makes experiments repeatable.
 
-- **Seeds.** `VoxCivilization` (`src/infra/vox-civilization.ts`) writes the configured random seeds into Civ's `config.ini` before launch, and restores the old values afterward.
+- **Launch settings.** For a new game, `VoxCivilization` (`src/infra/vox-civilization.ts`) writes the configured random seeds and any `mapScript` into Civ's `config.ini` before launch. The session restores the old values as soon as the game is in, so a crash or a killed session after that point does not leave them behind.
 - **Checking seeds.** The session compares the seeds Civ reports with the ones requested, and records both.
 - **No stale seeds.** When a new-game config has no `randomSeeds`, the seeds are written as zero for that launch, so fixed seeds left in the user's `config.ini` do not carry over.
 - **Seating.** Player seats can rotate between runs.

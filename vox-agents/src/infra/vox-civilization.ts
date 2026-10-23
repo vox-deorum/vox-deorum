@@ -14,10 +14,13 @@ import { mkdir, readFile, writeFile } from 'fs/promises';
 import { createLogger } from '../utils/logger.js';
 import type { RandomSeedsConfig } from '../types/config.js';
 import {
+  readCivConfigMapScriptContent,
   readCivConfigSeedsContent,
   updateCivConfigLegacyMapScriptContent,
+  updateCivConfigMapScriptContent,
   updateCivConfigSeedsContent,
-  updateCivUserSettingsSkipAnimationsContent
+  updateCivUserSettingsSkipAnimationsContent,
+  type CivConfigMapScript
 } from '../utils/game/civ5-ini.js';
 import { getCiv5UserFilePath } from '../utils/game/civ5-user-files.js';
 import {
@@ -40,11 +43,13 @@ const systemEnvNames = ['COMSPEC', 'PATHEXT', 'PATH', 'SystemDrive', 'SystemRoot
 type ExitCallback = (code: number | null) => void;
 type BoundCallback = (imageName: string) => void;
 
-interface SeedRestoreState {
+interface LaunchRestoreState {
   path: string;
   sync: string;
   map: string;
   lastCiv?: string;
+  // Present only when a launch overrode the saved map script selection.
+  mapScript?: CivConfigMapScript;
 }
 
 
@@ -77,9 +82,9 @@ export class VoxCivilization {
   // fall back to the default binary, so this is the only reliable answer once
   // a game is running.
   private boundImageName: string | null = null;
-  // Previous config.ini seed values are captured so each launch can restore the
-  // user's normal Civ behavior after the game has read the startup settings.
-  private seedRestoreState?: SeedRestoreState;
+  // Previous config.ini launch values are captured so each launch can restore
+  // the user's normal Civ behavior after the game has read the startup settings.
+  private launchRestoreState?: LaunchRestoreState;
 
   /**
    * Looks for a running Civilization V process, preferred build first.
@@ -269,7 +274,7 @@ export class VoxCivilization {
     try {
       let content = await readFile(templatePath, 'utf-8');
       for (const [key, value] of Object.entries(replacements)) {
-        content = content.replace(`{{${key}}}`, value);
+        content = content.replace(`{{${key}}}`, () => value);
       }
       await writeFile(outputPath, content, 'utf-8');
       logger.debug(`Generated ${outputPath} from ${templateName}`);
@@ -329,7 +334,7 @@ export class VoxCivilization {
   }
 
   /**
-   * Prepare Civ's config.ini random seed settings before launching a game.
+   * Prepare Civ's config.ini new-game settings before launching a game.
    *
    * Civ reads `SyncRandSeed` and `MapRandSeed` during pregame initialization.
    * If the config omits one or both sides, write `0` for those sides so stale
@@ -341,66 +346,78 @@ export class VoxCivilization {
    * keeps the civ last picked in the setup screen, which shifts every later
    * random civ pick and gives a different lineup for the same seed.
    *
-   * A player who never started Civ V has no config.ini. An unseeded run then
-   * leaves it alone; a seeded run creates it with just the seed settings.
+   * A map script override replaces `LastMapScript` and turns off
+   * `LastMapScriptRandom`, since the automated start uses the saved selection.
+   *
+   * A player who never started Civ V has no config.ini. A run with neither
+   * seeds nor a map script then leaves it alone; otherwise it creates the file
+   * with just the launch settings.
    */
-  async applyRandomSeeds(seeds?: RandomSeedsConfig): Promise<void> {
+  async applyLaunchSettings(seeds?: RandomSeedsConfig, mapScript?: string): Promise<void> {
     const configPath = await getCiv5UserFilePath('config.ini');
+    const seeded = seeds?.sync !== undefined || seeds?.map !== undefined;
     let content: string;
     try {
       content = await readFile(configPath, 'utf-8');
     } catch {
-      if (seeds?.sync === undefined && seeds?.map === undefined) {
-        logger.warn(`config.ini not found at ${configPath}, skipping seed config`);
+      if (!seeded && !mapScript) {
+        logger.warn(`config.ini not found at ${configPath}, skipping launch settings`);
         return;
       }
       content = '';
       await mkdir(dirname(configPath), { recursive: true });
     }
 
-    const original = readCivConfigSeedsContent(content);
-    if (!this.seedRestoreState) {
-      this.seedRestoreState = {
-        path: configPath,
-        sync: original.sync ?? '0',
-        map: original.map ?? '0',
-        lastCiv: original.lastCiv
-      };
-    }
+    // Repair first so a restore never brings back the legacy map script path.
+    content = updateCivConfigLegacyMapScriptContent(content);
 
-    const seeded = seeds?.sync !== undefined || seeds?.map !== undefined;
-    const updated = updateCivConfigLegacyMapScriptContent(updateCivConfigSeedsContent(content, {
+    const original = readCivConfigSeedsContent(content);
+    this.launchRestoreState ??= {
+      path: configPath,
+      sync: original.sync ?? '0',
+      map: original.map ?? '0',
+      lastCiv: original.lastCiv
+    };
+
+    let updated = updateCivConfigSeedsContent(content, {
       sync: seeds?.sync ?? 0,
       map: seeds?.map ?? 0,
       lastCiv: seeded ? -1 : undefined
-    }));
+    });
+    if (mapScript) {
+      this.launchRestoreState.mapScript ??= readCivConfigMapScriptContent(content);
+      updated = updateCivConfigMapScriptContent(updated, { script: mapScript, random: '0' });
+    }
     await writeFile(configPath, updated, 'utf-8');
-    logger.info(`Set Civ V random seeds in config.ini (sync=${seeds?.sync ?? 0}, map=${seeds?.map ?? 0})`);
+    logger.info(`Set Civ V launch settings in config.ini (sync=${seeds?.sync ?? 0}, map=${seeds?.map ?? 0}${mapScript ? `, mapScript=${mapScript}` : ''})`);
   }
 
   /**
-   * Restore config.ini seed values captured before `applyRandomSeeds`.
+   * Restore config.ini values captured before `applyLaunchSettings`.
    *
-   * Restoration happens after Civ has launched/read config.ini, so repeated Vox
-   * runs can be reproducible without permanently changing the user's Civ setup.
+   * Call this once Civ has read config.ini, so repeated Vox runs can be
+   * reproducible without permanently changing the user's Civ setup.
    */
-  async restoreRandomSeeds(): Promise<void> {
-    if (!this.seedRestoreState) return;
+  async restoreLaunchSettings(): Promise<void> {
+    if (!this.launchRestoreState) return;
 
-    const restoreState = this.seedRestoreState;
-    this.seedRestoreState = undefined;
+    const restoreState = this.launchRestoreState;
+    this.launchRestoreState = undefined;
 
     try {
       const content = await readFile(restoreState.path, 'utf-8');
-      const restored = updateCivConfigSeedsContent(content, {
+      let restored = updateCivConfigSeedsContent(content, {
         sync: restoreState.sync,
         map: restoreState.map,
         lastCiv: restoreState.lastCiv
       });
+      if (restoreState.mapScript) {
+        restored = updateCivConfigMapScriptContent(restored, restoreState.mapScript);
+      }
       await writeFile(restoreState.path, restored, 'utf-8');
-      logger.info('Restored Civ V random seeds in config.ini');
+      logger.info('Restored Civ V launch settings in config.ini');
     } catch (error) {
-      logger.warn('Failed to restore Civ V random seeds in config.ini:', error);
+      logger.warn('Failed to restore Civ V launch settings in config.ini:', error);
     }
   }
 
@@ -438,9 +455,10 @@ export class VoxCivilization {
    *
    * @param luaName - Name of the Lua script to run (default: 'LoadMods.lua')
    * @param playerCount - Optional number of players for StartGame.lua (generates from template)
+   * @param mapScript - Optional map script for a new game
    * @returns True when a Civilization V process is bound, false when launch fails
    */
-  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, visualMode?: boolean, randomSeeds?: RandomSeedsConfig): Promise<boolean> {
+  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, visualMode?: boolean, randomSeeds?: RandomSeedsConfig, mapScript?: string): Promise<boolean> {
     // Check if game is already running
     if (await this.bindToExistingProcess() || this.isGameRunning()) {
       logger.info('Game instance already exists, monitoring it...');
@@ -448,10 +466,11 @@ export class VoxCivilization {
     }
 
     try {
-      // Only a brand-new game reads pregame seeds from config.ini. Wait/load
-      // modes bind to an existing setup and should not rewrite user settings.
+      // Only a brand-new game reads pregame seeds and the map script from
+      // config.ini. Wait/load modes bind to an existing setup and should not
+      // rewrite user settings.
       if (luaName === 'StartGame.lua') {
-        await this.applyRandomSeeds(randomSeeds);
+        await this.applyLaunchSettings(randomSeeds, mapScript);
       }
 
       // Generate temp Lua scripts from templates with required mods
@@ -515,7 +534,7 @@ export class VoxCivilization {
       return await this.waitForLaunchedProcess(cmdProcess);
     } catch (error) {
       logger.error('Failed to launch game:', error);
-      await this.restoreRandomSeeds();
+      await this.restoreLaunchSettings();
       return false;
     }
   }

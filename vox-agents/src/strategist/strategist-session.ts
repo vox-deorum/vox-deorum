@@ -214,7 +214,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
 
       // The seed set comes from the (always-present) seating claim; trivial
       // mode supplies seedSets[0] directly, cycle mode picks per cell.
-      const started = await voxCivilization.startGame(luaScript, playerCount, isVisualMode(this.config.production), this.seatingClaim?.seeds);
+      const started = await voxCivilization.startGame(luaScript, playerCount, isVisualMode(this.config.production), this.seatingClaim?.seeds, this.config.mapScript);
       if (!started) {
         throw new Error('Failed to start Civilization V');
       }
@@ -296,7 +296,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
       this.detachMcpListeners();
       logger.error('Session failed with error:', error);
       this.onStateChange('error', errorMessage(error));
-      await voxCivilization.restoreRandomSeeds();
+      await voxCivilization.restoreLaunchSettings();
       sessionRegistry.unregister(this.id);
       throw error;
     }
@@ -386,7 +386,7 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
         logger.warn(`mcpClient.disconnect failed (non-fatal): ${errorMessage(err)}`);
       });
 
-      await voxCivilization.restoreRandomSeeds().catch(() => { });
+      await voxCivilization.restoreLaunchSettings().catch(() => { });
       voxCivilization.destroy();
 
       // Single source of truth for "did this run succeed" — the seating
@@ -529,6 +529,11 @@ export class StrategistSession extends VoxSession<StrategistSessionConfig> {
     this.gameID = params.gameID;  // Update current game ID
     this.turn = params.turn;  // Update current turn
     logger.warn(`Game context switching to ${params.gameID} at turn ${params.turn}`);
+
+    // Civ has read config.ini by the time a game is in, so put the user's
+    // settings back now rather than at session end. A later crash or a killed
+    // session then cannot leave the launch overrides behind.
+    await voxCivilization.restoreLaunchSettings();
 
     // Load/wait mode binds to a game launched outside our control (typically a
     // resumed controlled save). Its seeds + seating are already baked in, so
@@ -1125,7 +1130,7 @@ ${overrideLine}Game.SetAIAutoPlay(${autoPlayTurnLimit}, -1);`
     }
     // The active claim's seeds stay valid across the crash/recovery boundary,
     // so the recovered run stays on the same cycle cell.
-    const started = await voxCivilization.startGame(luaScript, playerCount, isVisualMode(this.config.production), this.seatingClaim?.seeds);
+    const started = await voxCivilization.startGame(luaScript, playerCount, isVisualMode(this.config.production), this.seatingClaim?.seeds, this.config.mapScript);
 
     if (!started) {
       logger.error('Failed to restart the game');

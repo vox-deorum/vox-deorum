@@ -21,7 +21,7 @@ vi.mock('../../../src/infra/vox-civilization.js', () => ({
     onGameExit: vi.fn(),
     onGameBound: vi.fn(),
     killGame: vi.fn(async () => {}),
-    restoreRandomSeeds: vi.fn(async () => {}),
+    restoreLaunchSettings: vi.fn(async () => {}),
   },
 }));
 

@@ -9,6 +9,8 @@ const MAP_SEED_KEY = 'MapRandSeed';
 const USER_SETTINGS_SECTION = 'UserSettings';
 // The human slot's last chosen civilization. -1 means random.
 const LAST_CIV_KEY = 'LastCiv';
+const LAST_MAP_SCRIPT_KEY = 'LastMapScript';
+const LAST_MAP_SCRIPT_RANDOM_KEY = 'LastMapScriptRandom';
 const QUICK_COMBAT_KEY = 'SinglePlayerQuickCombatEnabled';
 const QUICK_MOVEMENT_KEY = 'SinglePlayerQuickMovementEnabled';
 const DEBUG_SECTION = 'DEBUG';
@@ -27,6 +29,33 @@ export interface CivConfigSeeds {
   sync: number | string;
   map: number | string;
   lastCiv?: number | string;
+}
+
+/**
+ * Civ's saved map script selection in config.ini, as raw text. An undefined
+ * field stands for a missing key.
+ */
+export interface CivConfigMapScript {
+  script?: string;
+  random?: string;
+}
+
+/** Read Civ's saved map script selection from raw config.ini content. */
+export function readCivConfigMapScriptContent(content: string): CivConfigMapScript {
+  const userSettings = getSectionIgnoreCase(new Ini(content), USER_SETTINGS_SECTION);
+  return {
+    script: getRawValueIgnoreCase(userSettings, LAST_MAP_SCRIPT_KEY),
+    random: getRawValueIgnoreCase(userSettings, LAST_MAP_SCRIPT_RANDOM_KEY)
+  };
+}
+
+/** Write Civ's saved map script selection; an undefined field removes that key. */
+export function updateCivConfigMapScriptContent(content: string, selection: CivConfigMapScript): string {
+  const ini = new Ini(content);
+  const userSettings = getOrAddSection(ini, USER_SETTINGS_SECTION);
+  setRawValueIgnoreCase(userSettings, LAST_MAP_SCRIPT_KEY, selection.script);
+  setRawValueIgnoreCase(userSettings, LAST_MAP_SCRIPT_RANDOM_KEY, selection.random);
+  return ini.stringify();
 }
 
 /** Read Civ's pregame seed settings and the human slot's last civ from raw config.ini content. */
@@ -117,6 +146,34 @@ function setValueIgnoreCase(section: IniSection, key: string, value: number | st
   section.setValue(key, String(value));
 }
 
+// ini-api treats backslashes in values as escapes, so Windows paths are read
+// and written as raw line text instead of through its value accessors.
+
+/** Read the raw text after `=` on a key's line. */
+function getRawValueIgnoreCase(section: IniSection | undefined, key: string): string | undefined {
+  const text = getLineIgnoreCase(section, key)?.text;
+  if (text === undefined) return undefined;
+  const separator = text.indexOf('=');
+  return separator === -1 ? '' : text.slice(separator + 1).trim();
+}
+
+/** Write a key's line with a raw value, or remove the line when the value is undefined. */
+function setRawValueIgnoreCase(section: IniSection, key: string, value: string | undefined): void {
+  const line = getLineIgnoreCase(section, key);
+  if (value === undefined) {
+    if (line) section.lines.splice(section.lines.indexOf(line), 1);
+    return;
+  }
+
+  const text = `${line?.key ?? key} = ${value}`;
+  if (line) {
+    line.text = text;
+  } else {
+    section.addLine(text);
+  }
+}
+
+/** Find a key's line in a section, ignoring case. */
 function getLineIgnoreCase(section: IniSection | undefined, key: string): IniLine | undefined {
   if (!section) return undefined;
   const target = key.toLowerCase();

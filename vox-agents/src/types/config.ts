@@ -365,6 +365,9 @@ export interface StrategistSessionConfig extends SessionConfig {
   /** Custom prompt folder for every seat that doesn't set its own; replaces the root setting when present. */
   prompts?: PromptsSetting;
 
+  /** Map script to use when starting a new game; omitted or empty uses Civ V's saved selection. */
+  mapScript?: string;
+
   /**
    * Controls randomization of the mapping between config slots and actual game
    * player indices.
