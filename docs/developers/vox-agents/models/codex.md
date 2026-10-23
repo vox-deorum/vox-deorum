@@ -2,7 +2,7 @@
 
 Codex models run through `codex-openai-proxy`, a small local server that signs in with the player's ChatGPT account and speaks an OpenAI-style API. Vox Agents starts a pinned version of it with `npx` the first time a Codex model is used. It is not a workspace dependency.
 
-The current pin is `codex-openai-proxy@0.1.0-rc.35`, which bundles `@openai/codex@0.163.0`.
+The current pin is `codex-openai-proxy@0.1.0-rc.36`, which bundles `@openai/codex@0.163.0`.
 
 This page covers how the proxy runs, the contracts Vox Agents relies on, and how to update the pin. The code is in `src/utils/models/providers/codex-proxy.ts`, `codex.ts`, and `codex-response.ts`.
 
