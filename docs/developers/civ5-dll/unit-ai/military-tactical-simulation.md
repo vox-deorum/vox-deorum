@@ -138,7 +138,7 @@ A failed check, interrupted move, or restart triggers a new search from the curr
 
 Great Generals, Great Admirals, and siege towers have a separate search after the combat plan is selected. `AddSupportMoves` follows the selected combat tree and inserts support moves before attacks so the relevant aura is present.
 
-Attack recruitment admits civilian support that can reach within two plots of the target. Army contact searches retain it even without an attack target of its own. During support planning, a move must add useful coverage: generals help land attackers, admirals help naval attackers, and siege towers help city attacks. Waiting needs no new coverage. Support units still face final safety checks; a friendly defender's projected damage adds a support danger penalty only above two-thirds of its maximum HP.
+Attack recruitment admits civilian support that can reach within two plots of the target. Army contact searches retain it even without an attack target of its own. During support planning, a move must add useful coverage: generals help land attackers, admirals help naval attackers, and siege towers help city attacks. None of these bonuses apply to aircraft, so air strikes neither trigger support moves nor receive the hypothetical bonus. Waiting needs no new coverage. Support units still face final safety checks; a friendly defender's projected damage adds a support danger penalty only above two-thirds of its maximum HP.
 
 The search uses attack **checkpoints** to decide when coverage matters. Each checkpoint retains the combat position's last attack, its plots, and attacker domain, even when finish or stay-put assignments follow it. The available support-unit count determines how waits are grouped before the next attack, and duplicate pruning compares combat states too.
 
@@ -177,7 +177,7 @@ Sinking a ship or capturing a city removes its aircraft from the interceptor sta
 
 #### Why a sweep can be worth choosing
 
-A sweep earns a plan score for the damage it trades with its interceptor. Its main benefit may come from helping later strikes, so it also gets a separate **ranking bonus**: the best improvement in strike value available to each remaining aircraft, including the sweeper's interchangeable group mates. That improvement includes both a better landing chance and lower interception losses. Strike value comes from the strike scorer itself, so a missile gains nothing against a city with no unit in it.
+A sweep earns a plan score for the damage it trades with its interceptor. Its main benefit may come from helping later strikes, so it also gets a separate **ranking bonus**: the best improvement in strike value available to each remaining aircraft, including the sweeper's interchangeable group mates and the sweeper's own remaining attack, scored from its state after the sweep. Sweep damage is calculated from the assumed launch plot, so a planned carrier move changes it. That improvement includes both a better landing chance and lower interception losses. Strike value comes from the strike scorer itself, so a missile gains nothing against a city with no unit in it.
 
 `RankScore()` uses this bonus when pruning and ordering choices. The bonus never enters the final plan score, so the search must actually follow the sweep with useful actions to realize that value. `GetAirSweepPlots` offers one sweep per distinct interceptor covering an enemy plot in range, using the covered plot nearest the tactical target.
 
@@ -195,7 +195,20 @@ Aircraft with the same owner, type, base, promotions, HP, moves, and attacks mad
 
 `getPreferredAssignmentsForAirUnit` scores each candidate once into reusable scratch rows outside the pool, then copies only the retained choices into the pool. `getUnitsToDropWithAircraft` enforces the participant cap. Carrier danger includes all aircraft aboard, even those outside the search, except cargo the plan has already spent.
 
-Equivalent-position pruning compares interceptor state and damage records as well as the normal combat state (`airStateEquals`). These records survive expansion so later comparisons can still use them. Target and interceptor candidates are cached during search; carrier reach is cached only for one recruitment or search because executed moves can change routes.
+Equivalent-position pruning compares interceptor state and damage records as well as the normal combat state (`airStateEquals`). These records survive expansion so later comparisons can still use them.
+
+Ranking a sweep rescores the strikes of the other aircraft groups, so the search keeps several air values that cannot change while they are kept. None of these caches changes a plan.
+
+| Cached value | Kept for | Notes |
+| --- | --- | --- |
+| Strike damage | One search | Stored in the attack cache that land ranged attacks use. Damage never depends on interceptors, so the landing chance is still computed on every call against the interceptors the position has left. |
+| Interception damage | One search tree | Keyed by interceptor, attacker, target plot and the damage the position assumes for each. Expanding a root position clears it. |
+| Interceptor value over a plot | One search tree | Keyed by interceptor, target plot, and the damage and interceptions the position assumes for the interceptor. Expanding a root position clears it. |
+| Strike value and best interceptor per aircraft and target | One expansion | The position's own strike values, which every sweep it ranks compares against. Leaders fill it as they score their strike options. |
+| Target and interceptor candidates | One search | Which plots an aircraft can reach and which units could intercept there. The best interceptor is still chosen per position. |
+| Carrier reach | One recruitment or search | Executed moves can change routes. |
+
+`makeNextAssignments` marks each expansion with `BeginAirExpansion` and `EndAirExpansion`, and only marked expansions use the interception and strike-value caches. Callers outside a search, such as the simulator's command checks, compute these values directly because executed moves change the real units.
 
 #### Support and execution
 
