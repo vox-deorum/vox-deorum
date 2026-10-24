@@ -189,11 +189,15 @@ Aircraft with the same owner, type, base, promotions, HP, moves, and attacks mad
 
 | Limit | With air search enabled |
 | --- | --- |
-| Participants | 19 land units, sea units, and aircraft groups combined; each aircraft group counts once. A group that depends on carrier movement must fit together with its carrier. |
+| Participants | 19 land units, sea units, and aircraft groups combined; each aircraft group counts once. A group that depends on carrier movement must fit together with its carrier. An idle group (below) counts like any other. |
 | Positions | Up to 10,000 positions per search. |
 | Assignments | The shared pool has 3,000 rows per expansion. Each aircraft leader keeps at most the per-unit choice limit plus a stand-down action, regardless of how many targets it can reach. |
 
-`getPreferredAssignmentsForAirUnit` scores each candidate once into reusable scratch rows outside the pool, then copies only the retained choices into the pool. `getUnitsToDropWithAircraft` enforces the participant cap. Carrier danger includes all aircraft aboard, even those outside the search, except cargo the plan has already spent.
+`getPreferredAssignmentsForAirUnit` scores each candidate once into reusable scratch rows outside the pool, then copies only the retained choices into the pool. `getUnitsToDropWithAircraft` enforces the participant cap.
+
+An **idle group** is an aircraft group whose leader has nothing worth searching when the search starts. It has no positive strike or sweep in the importance pass of `dropSuperfluousUnits`, and `isAirGroupHopeless` finds no strike better than a net loss of 10 damage points (`TACTSIM_AIR_HOPELESS_RANK`) under the interceptors the root has left. This usually means every target sits under several full-strength interceptors. `getUnitsToDropWithAircraft` records each idle group with the visible interceptors near its targets. In any position where none of those interceptors has spent an interception, lost its base or taken damage, the idle leader only stands down, since its options score as they did at the root. Once a sweep, a strike or a capture changes one of them, the group is scored in full again, so a sweep or an earlier strike can still clear the way for it. The margin covers targets that ground attacks soften first. Aircraft on a ship are never idle, since the ship's moves can bring new targets in range.
+
+Carrier danger includes all aircraft aboard, even those outside the search, except cargo the plan has already spent.
 
 Equivalent-position pruning compares interceptor state and damage records as well as the normal combat state (`airStateEquals`). These records survive expansion so later comparisons can still use them.
 
