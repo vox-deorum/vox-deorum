@@ -16,7 +16,8 @@ The source files are under `civ5-dll/CvGameCoreDLL_Expansion2`:
 | File | Responsibility |
 | --- | --- |
 | `CvTacticalAI.cpp` and `CvTacticalAI.h` | Search state, action scoring, plan acceptance, support placement, and replay. |
-| `CvTacticalAirSearch.cpp` | Air targets, launch plots, interception, and aircraft and carrier state. Air scoring remains in `CvTacticalAI.cpp`. |
+| `CvTacticalAirSearch.cpp` and `CvTacticalAirSearch.h` | The air search: air targets, launch plots, interception, air scoring and the option cut, and aircraft and carrier state. `CvTacticalAI.h` includes the header. |
+| `CvTacticalSearchShared.h` | The search internals of `CvTacticalAI.cpp` that the air scorers use. Only the two tactical source files include it. |
 | `CvAStar.cpp` and `CvUnit.h` | Pathfinding policy and movement flags. |
 
 ## Coordinated combat search
@@ -147,7 +148,7 @@ A final attack bundled with another unit's stay-put action can score differently
 
 The default-off `VOX_TACTICAL_AIR_SEARCH` mod option lets bombers, fighters, and missiles join the coordinated search. This allows a plan to move a carrier, sweep an interceptor, and strike with aircraft in sequence with ground and naval attacks. With the option off, `ExecuteAttackWithUnits` uses the greedy `ExecuteAirSweep` and `ExecuteAirAttack` passes before combat search.
 
-The option is declared in `NewCustomModOptions.xml`, `CustomMods.h`, and `CustomMods.cpp`. Air helpers and state updates live in `CvTacticalAirSearch.cpp`; scoring and integration with the main search live in `CvTacticalAI.cpp`.
+The option is declared in `NewCustomModOptions.xml`, `CustomMods.h`, and `CustomMods.cpp`. The air code lives in `CvTacticalAirSearch.cpp`: helpers, scorers, the option cut, and the position's air state. `CvTacticalAirSearch.h` declares the helpers and the interceptor state a position keeps, and the position's air members stay in `CvTacticalAI.h` with the rest of the class. `CvTacticalAI.cpp` keeps short calls into the air code where the main search adds units, expands positions, and applies assignments. It shares the search internals the scorers need through `CvTacticalSearchShared.h`. `CvPlot::GetInterceptorValue`, the interceptor eligibility and ranking rule that live combat and the search share, stays in `CvPlot.cpp` beside `GetBestInterceptor`.
 
 #### Recruitment and actions
 
@@ -159,7 +160,7 @@ Recruitment considers both the current base and eligible plots the carrying ship
 
 #### Interception and uncertain damage
 
-Each position tracks used interceptions, damage, and lost air bases. `GetBestInterceptorInPosition` selects among visible interceptors using the game's ranking rule, adjusted for what the plan has already done. Strike and sweep damage use both sides' projected HP. Every engagement spends an interception, even if interception fails.
+Each position tracks used interceptions, damage, and lost air bases, keyed by unit ID, which is unique across players. `GetBestInterceptorInPosition` selects among visible interceptors using the game's ranking rule, adjusted for what the plan has already done. Strike and sweep damage use both sides' projected HP. Every engagement spends an interception, even if interception fails.
 
 The search keeps two damage records:
 
@@ -172,11 +173,11 @@ The search keeps two damage records:
 
 For example, a strike that would deal 40 damage to a unit with 30 HP, but has a 50% landing chance, receives credit for 15 expected damage. The search keeps the target alive so later actions cannot rely on that kill.
 
-Sinking a ship or capturing a city removes its aircraft from the interceptor state. Sinking an enemy ship also scores its visible aircraft cargo. Killing a city's garrison by air leaves the city hostile, targetable, and exerting zone of control. A later capture does not count that garrison again.
+Sinking a ship or capturing a city removes its aircraft from the interceptor state. A ship sunk inside a city that holds still takes its cargo down, as the game kills a transport's cargo wherever it dies. Sinking an enemy ship also scores its visible aircraft cargo. Killing a city's garrison by air leaves the city hostile, targetable, and exerting zone of control. A later capture does not count that garrison again.
 
 #### Why a sweep can be worth choosing
 
-A sweep earns a plan score for the damage it trades with its interceptor. Its main benefit may come from helping later strikes, so it also gets a separate **ranking bonus**: the best improvement in strike value available to each remaining aircraft, including the sweeper's interchangeable group mates. That improvement includes both a better landing chance and lower interception losses.
+A sweep earns a plan score for the damage it trades with its interceptor. Its main benefit may come from helping later strikes, so it also gets a separate **ranking bonus**: the best improvement in strike value available to each remaining aircraft, including the sweeper's interchangeable group mates. That improvement includes both a better landing chance and lower interception losses. Strike value comes from the strike scorer itself, so a missile gains nothing against a city with no unit in it.
 
 `RankScore()` uses this bonus when pruning and ordering choices. The bonus never enters the final plan score, so the search must actually follow the sweep with useful actions to realize that value. `GetAirSweepPlots` offers one sweep per distinct interceptor covering an enemy plot in range, using the covered plot nearest the tactical target.
 
@@ -184,7 +185,7 @@ A missile at a base likely to be lost gets a strike bonus under the same danger 
 
 #### Keeping the search bounded
 
-Aircraft with the same owner, type, base, promotions, HP, moves, and attacks made are interchangeable. Only the lowest-ID available member proposes actions. Standing that member down also stands down the rest of the group in ID order.
+Aircraft with the same owner, type, base, promotions, HP, moves, and attacks made are interchangeable. Only the lowest-ID available member proposes actions. Standing that member down also stands down the rest of the group in ID order. The expansion loop adds each combo move through `addAssignmentsWithAirGroups`, which applies the one or two rows and then this group rule, so the rule lives in one place.
 
 | Limit | With air search enabled |
 | --- | --- |
@@ -192,7 +193,7 @@ Aircraft with the same owner, type, base, promotions, HP, moves, and attacks mad
 | Positions | Up to 10,000 positions per search. |
 | Assignments | The shared pool has 3,000 rows per expansion. Each aircraft leader keeps at most the per-unit choice limit plus a stand-down action, regardless of how many targets it can reach. |
 
-`getPreferredAssignmentsForAirUnit` scores candidates in a reusable scratch row and allocates rows only for retained choices. `getUnitsToDropWithAircraft` enforces the participant cap. Carrier danger includes all aircraft aboard, even those outside the search, except cargo the plan has already spent.
+`getPreferredAssignmentsForAirUnit` scores each candidate once into reusable scratch rows outside the pool, then copies only the retained choices into the pool. `getUnitsToDropWithAircraft` enforces the participant cap. Carrier danger includes all aircraft aboard, even those outside the search, except cargo the plan has already spent.
 
 Equivalent-position pruning compares interceptor state and damage records as well as the normal combat state (`airStateEquals`). These records survive expansion so later comparisons can still use them. Target and interceptor candidates are cached during search; carrier reach is cached only for one recruitment or search because executed moves can change routes.
 
