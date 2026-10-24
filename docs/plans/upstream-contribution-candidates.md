@@ -154,6 +154,12 @@ Consider a generalized option for scenarios to construct and finalize deals usin
 
 **Related files:** core `CvDealAI.cpp`, `CvDealAI.h`, `CvDealClasses.cpp`, `CvDealClasses.h`; Lua `CvLuaDeal.cpp`, `CvLuaDeal.h`, `CvLuaPlayer.cpp`; `(3a) VP - EUI Compatibility Files/LUA/TradeLogic.lua` as the current consumer. **Patches:** `0027`–`0030`, `0069`, `0070`, `0073`, `0008`.
 
+### 24. Plan air strikes, sweeps, and carrier launches in tactical search
+
+Add aircraft and missiles to native tactical search behind a default-off option (`VOX_TACTICAL_AIR_SEARCH`), with a shared cap of 19 participants, interceptor state, certain and uncertain damage records, air sweeps, interchangeable-aircraft groups, and carrier moves before launch. [Air search](../developers/civ5-dll/unit-ai/military-tactical-simulation.md#air-search) lists every native change. Submit it only if the full-game evaluation shows a clearly positive grade change at an acceptable search time cost.
+
+**Related files:** core `CvTacticalAI.cpp`, `CvTacticalAI.h`, `CvUnit.cpp`, `CvUnit.h`, `CustomMods.cpp`, `CustomMods.h`; `(1) Community Patch/Database Changes/NewCustomModOptions.xml`.
+
 ## Already covered or held out
 
 | Change | Disposition |
@@ -168,7 +174,7 @@ Consider a generalized option for scenarios to construct and finalize deals usin
 
 1. Start with **1–4**; reproduce **5–6** before promoting them to the same batch. Each should be a separate small PR.
 2. Select the useful API candidates from **7–16**. Keep independent interfaces separate; merge only shared prerequisites that make the review smaller.
-3. Discuss **17–23** before implementation. They include behavior changes or API redesign rather than simple patch extraction.
+3. Discuss **17–24** before implementation. They include behavior changes or API redesign rather than simple patch extraction.
 4. For each selected candidate, refresh upstream, check for equivalent code and open PRs, extract only the named behavior, and follow the [upstream contribution workflow](../developers/civ5-dll/upstream-contributions.md). Preserve existing defaults and save layout.
 
 Verification should match the candidate: cache-key comparisons for 1, UI and event reproductions for 2–6 and 12–14, Lua smoke checks and unchanged game state for query APIs, observer perspective checks for 17, and representative AI games for 20–21. Build the extracted DLL and check both compiler paths before publishing. This draft records candidates; it does not claim that the exported implementations are ready to submit.
