@@ -209,6 +209,7 @@ Ranking a sweep rescores the strikes of the other aircraft groups, so the search
 | Interception damage | One search tree | Keyed by interceptor, attacker, target plot and the damage the position assumes for each. Expanding a root position clears it. |
 | Interceptor value over a plot | One search tree | Keyed by interceptor, target plot, and the damage and interceptions the position assumes for the interceptor. Expanding a root position clears it. |
 | Strike value and best interceptor per aircraft and target | One expansion | The position's own strike values, which every sweep it ranks compares against. Leaders fill it as they score their strike options. |
+| Strike gain per aircraft and swept interceptor | One expansion | The targets the swept interceptor guards against the aircraft, with their strike values, and the aircraft's best gain for each amount of sweep damage. A sure sweep that damages only the interceptor leaves every other aircraft as it was, so sweeps that deal the same damage give the same gain. The sweeper's own gain, which depends on its state after the sweep, is always scored. |
 | Target and interceptor candidates | One search | Which plots an aircraft can reach and which units could intercept there. The best interceptor is still chosen per position. |
 | Carrier reach | One recruitment or search | Executed moves can change routes. |
 
