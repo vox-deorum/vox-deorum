@@ -48,12 +48,6 @@ const logger = createLogger('OracleReplayer');
 /** Marker on a task that shutdown dropped before it ran, rather than a real replay failure. */
 const INTERRUPTED_ERROR = 'Interrupted by shutdown';
 
-/** Opens once the first repetition of a prompt is done, so the later ones can read its cache. */
-interface PromptGate {
-  opened: Promise<void>;
-  open: () => void;
-}
-
 /** One replay of a retrieved row with one model. */
 interface ReplayTask {
   retrieved: RetrievedRow;
@@ -63,17 +57,6 @@ interface ReplayTask {
   repetition?: number;
   /** Mark the end of the prompt for prompt caching */
   cachePrompt?: boolean;
-  /** Opened when this task, the first of its repetitions, is done */
-  primes?: PromptGate;
-  /** Resolves when the first of this task's repetitions is done */
-  waitFor?: Promise<void>;
-}
-
-/** Creates a closed {@link PromptGate}. */
-function createPromptGate(): PromptGate {
-  let open!: () => void;
-  const opened = new Promise<void>(resolve => { open = resolve; });
-  return { opened, open };
 }
 
 /**
@@ -82,21 +65,6 @@ function createPromptGate(): PromptGate {
  */
 function cachesLikeAnthropic(model: Model): boolean {
   return model.provider === 'anthropic' || model.provider === 'claude-code' || model.name.includes('claude');
-}
-
-/**
- * Wraps a task so it starts only after `waitFor` resolves and opens `primes` when it settles,
- * whatever the outcome, so later repetitions never wait forever.
- */
-function afterGate<T>(waitFor: Promise<void> | undefined, primes: PromptGate | undefined, task: () => Promise<T>): () => Promise<T> {
-  return async () => {
-    try {
-      if (waitFor) await waitFor;
-      return await task();
-    } finally {
-      primes?.open();
-    }
-  };
 }
 
 /** The key of a replay context: one per distinct recorded files setting and effective prompt folder. */
@@ -231,7 +199,6 @@ export async function runReplay(
       nameCounts.set(r.name, (nameCounts.get(r.name) ?? 0) + 1);
     }
     const nameIndexes = new Map<string, number>();
-    const firstRepetitions = new Map<string, PromptGate>();
 
     return resolved.map((resolvedModel): ReplayTask => {
       const baseSuffix = resolvedModel.name.split('/').pop()!.replace(/[^a-zA-Z0-9._-]/g, '-');
@@ -243,22 +210,16 @@ export async function runReplay(
       nameIndexes.set(resolvedModel.name, index);
       const task: ReplayTask = { retrieved, resolvedModel, suffix: `-${baseSuffix}-${index}`, repetition: index };
 
-      // Repeated Claude replays share one cached prompt: the first repetition writes it and the
-      // rest wait for it, since requests sent at the same moment would all miss the cache.
-      // Batch mode is left alone, where waiting would hold the rest back for a whole batch.
+      // Mark the full prompt for repeated Claude replays; scheduling is shared by every provider.
       if (cachesLikeAnthropic(resolvedModel) && !config.batch) {
         task.cachePrompt = true;
-        const first = firstRepetitions.get(resolvedModel.name);
-        if (first) {
-          task.waitFor = first.opened;
-        } else {
-          task.primes = createPromptGate();
-          firstRepetitions.set(resolvedModel.name, task.primes);
-        }
       }
       return task;
     });
   });
+
+  // Start each repetition across all rows before the next; stable sorting keeps the original task order within each repetition.
+  tasks.sort((a, b) => (a.repetition ?? 1) - (b.repetition ?? 1));
 
   logger.info(`Replaying ${tasks.length} tasks (${rows.length} rows × models)`);
 
@@ -328,8 +289,8 @@ export async function runReplay(
     }
 
     const { results, stopped } = await runOracleTasks(
-      tasks.map(({ retrieved, resolvedModel, suffix, repetition, cachePrompt, primes, waitFor }, i) =>
-        afterGate(waitFor, primes, async (): Promise<ReplayResult> => {
+      tasks.map(({ retrieved, resolvedModel, suffix, repetition, cachePrompt }, i) =>
+        async (): Promise<ReplayResult> => {
           const failed = (error: string): ReplayResult => ({
             row: retrieved.row,
             model: `${resolvedModel.provider}/${resolvedModel.name}`,
@@ -356,7 +317,7 @@ export async function runReplay(
             logger.error(`Error replaying task ${i + 1}: ${errorMsg}`);
             return failed(errorMsg);
           }
-        })
+        }
       ),
       config.concurrency ?? 5,
       shouldStop

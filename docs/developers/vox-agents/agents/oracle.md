@@ -56,7 +56,7 @@ An experiment is an ES module exporting an `OracleConfig`, defined in `src/oracl
 | `filter` | Narrows which CSV rows run. |
 | `extractColumns` | Pulls experiment-specific values out of each replay into extra CSV columns. |
 
-Duplicate entries in `modelOverride` repeat the sample, identified by a repetition index. Claude models share a cache anchor at the end of the prompt. Later repetitions wait for the first to finish so they can reuse its cache; batch mode skips that wait.
+Duplicate entries in `modelOverride` repeat the sample, identified by a repetition index. Every provider uses the same execution order: all first repetitions and single-model tasks, then all second repetitions, and so on, preserving original task order within each repetition. This gives prompt caches time to warm, but rounds can overlap as concurrency slots become available, so cache hits are not guaranteed. Repeated Claude streaming replays also mark the end of the prompt for caching.
 
 Replays run with limited concurrency and reuse existing trail files to skip rows already done.
 

@@ -303,6 +303,29 @@ describe('oracle replayer (non-cache paths)', () => {
       ]);
     });
 
+    it('should execute repetitions across rows before starting the next repetition', async () => {
+      const outputDir = makeTempDir();
+      mockFreshExecution();
+      const rows = ['9', '3'].map(turn => retrieved({ row: { ...baseRow, turn } }));
+
+      const results = await runReplay(
+        baseConfig(outputDir, 'repetition-order', () => ({}), {
+          modelOverride: () => ['google/gemini-test', 'google/gemini-test', 'oracle-test/solo'],
+        }),
+        rows
+      );
+
+      expect(mocks.execute.mock.calls.map(([, input]) => input.row.turn)).toEqual(['9', '9', '3', '3', '9', '3']);
+      expect(results.map(result => [result.row.turn, result.model, result.repetition])).toEqual([
+        ['9', 'google/gemini-test', 1],
+        ['9', 'oracle-test/solo', undefined],
+        ['3', 'google/gemini-test', 1],
+        ['3', 'oracle-test/solo', undefined],
+        ['9', 'google/gemini-test', 2],
+        ['3', 'google/gemini-test', 2],
+      ]);
+    });
+
     it('treats a single-element override array as a single un-suffixed task', async () => {
       const outputDir = makeTempDir();
       mockFreshExecution();
@@ -430,11 +453,12 @@ describe('oracle replayer (non-cache paths)', () => {
     function mockLoggedExecution(log: string[], cacheFlags: (boolean | undefined)[], fail = false): void {
       mocks.execute.mockImplementation(async (_agentName, input) => {
         const parameters = mocks.runState.parameters;
+        const isFirst = log.length === 0;
         cacheFlags.push(parameters.cachePrompt);
         log.push('start');
         await new Promise(resolve => setTimeout(resolve, 10));
         log.push('end');
-        if (fail && log.length === 2) throw new Error('first repetition failed');
+        if (fail && isFirst) throw new Error('first repetition failed');
         return {
           row: input.row,
           model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
@@ -445,7 +469,7 @@ describe('oracle replayer (non-cache paths)', () => {
       });
     }
 
-    it('should cache the prompt and start later Claude repetitions only after the first is done', async () => {
+    it('should mark repeated Claude prompts without waiting for the first execution to finish', async () => {
       const log: string[] = [];
       const cacheFlags: (boolean | undefined)[] = [];
       mockLoggedExecution(log, cacheFlags);
@@ -456,7 +480,7 @@ describe('oracle replayer (non-cache paths)', () => {
       );
 
       expect(results).toHaveLength(3);
-      expect(log.slice(0, 2)).toEqual(['start', 'end']);
+      expect(log.slice(0, 3)).toEqual(['start', 'start', 'start']);
       expect(cacheFlags).toEqual([true, true, true]);
     });
 
