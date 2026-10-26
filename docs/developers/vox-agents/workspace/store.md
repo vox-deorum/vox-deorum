@@ -76,3 +76,7 @@ Export through the CLI or dashboard:
 | Download files in the telemetry page's past-games table | Export a zip through `GET /api/telemetry/db/<path relative to the telemetry folder>/workspace`, with an optional `commit` query. The button shows for databases that hold a store (`hasWorkspace` is read from the file itself), and the zip is named `<gameID>-player-<playerID>-<commit>.zip`. |
 
 Both use `src/utils/workspace/materialize.ts` to read a complete commit through a separate read-only connection in one transaction. Exports work during a session and include `records/`, `game/`, and `reference/`. Editing an export does not change the store.
+
+For a batch export of agent notes, run `node --import tsx scripts/utilities/extract-agent-notes.ts <input-folder> <output-folder>` from the repository root. The output folder must be new or empty. The script searches for `.db` files recursively and exports each store's current `game/` folder, including its guide and journal, under a folder named after the source database. Source subfolders are preserved. It reads databases without changing them and follows the current head, including reloads and deletions. Older note versions, records, reference files, and shared folders are outside this export.
+
+The output's `index.json` lists each database, exported commit and file paths, skipped databases without a readable workspace store, and export errors. An export error is recorded while the remaining databases continue; any recorded error makes the command exit with a nonzero status.
