@@ -266,7 +266,11 @@ export function getModel(config: Model, options?: {
       } else {
         const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
         result = useVertex
-          ? createVertex({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY, headers: flexHeaders })(config.name)
+          ? createVertex({
+            apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+            headers: flexHeaders,
+            baseURL: process.env.GOOGLE_VERTEX_BASE_URL?.trim() || undefined,
+          })(config.name)
           : createGoogle({ headers: flexHeaders })(config.name);
       }
       break;
@@ -524,7 +528,10 @@ export function getEmbeddingModel(config: Model): EmbeddingModel {
       return createOpenAI().textEmbeddingModel(config.name);
     case "google":
       return (process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true'
-        ? createVertex({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
+        ? createVertex({
+          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+          baseURL: process.env.GOOGLE_VERTEX_BASE_URL?.trim() || undefined,
+        })
         : createGoogle()
       ).textEmbeddingModel(config.name);
     case "openai-compatible": {

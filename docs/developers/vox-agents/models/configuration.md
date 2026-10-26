@@ -18,6 +18,12 @@ config.json "llms"           checked at session start            agent asks for 
 
 Provider-specific code lives in `src/utils/models/providers/`. Those files import shared types and each other, but never `models.ts`.
 
+### Google Vertex AI
+
+Set `GOOGLE_GENAI_USE_VERTEXAI=true` in `vox-agents/.env` to send Gemini chat, Oracle streaming replays, and embeddings through Vertex AI. It uses the existing `GOOGLE_GENERATIVE_AI_API_KEY`. An API key selects Express Mode, so the location does not change the default URL.
+
+The optional `GOOGLE_VERTEX_BASE_URL` overrides the publisher base URL and must be the full base URL without the model path, for example `GOOGLE_VERTEX_BASE_URL=https://aiplatform.googleapis.com/v1beta1/projects/YOUR_PROJECT_ID/locations/global/publishers/google`. Surrounding whitespace is trimmed; a blank or unset value keeps the SDK default. Restart Vox Agents after changing `.env`. The base URL applies only to Gemini chat and embeddings through Vertex AI.
+
 ## The config file
 
 `vox-agents/config.json` holds the runtime settings. It is gitignored, so a fresh checkout has none. The effective config is the built-in defaults in `src/utils/config/defaults.ts` with the local file layered on top.
