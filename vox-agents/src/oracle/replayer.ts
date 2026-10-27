@@ -10,6 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { VoxContext } from '../infra/vox-context.js';
 import { agentRegistry } from '../infra/agent-registry.js';
 import { processManager } from '../infra/process-manager.js';
@@ -22,7 +23,7 @@ import { config as appConfig } from '../utils/config.js';
 import { createLogger } from '../utils/logger.js';
 import { errorMessage } from '../utils/errors.js';
 import { resolveModel } from './utils/model-resolver.js';
-import { runOracleTasks } from './run-control.js';
+import { runOracleTaskChains, type OracleTaskFactory } from './run-control.js';
 import { replaceToolsWithSchemaOnly } from './utils/schema-tools.js';
 import { getTrailBase, getTrailPaths, readReplayCache, resolvePath, writeCsv, writeTrail } from './utils/output.js';
 import { startBatchManager, shutdownBatchManager } from './batch/batch-manager.js';
@@ -65,6 +66,39 @@ interface ReplayTask {
  */
 function cachesLikeAnthropic(model: Model): boolean {
   return model.provider === 'anthropic' || model.provider === 'claude-code' || model.name.includes('claude');
+}
+
+/**
+ * Groups one row's tasks into a chain per full resolved model configuration, keeping the order
+ * each model first appears. Name-based repetition numbers stay separate from identity: same-name
+ * models with different providers or options belong to different chains.
+ */
+function groupModelChains(rowTasks: readonly ReplayTask[]): ReplayTask[][] {
+  const chains: ReplayTask[][] = [];
+  for (const task of rowTasks) {
+    const chain = chains.find(candidate => isDeepStrictEqual(candidate[0].resolvedModel, task.resolvedModel));
+    if (chain) chain.push(task);
+    else chains.push([task]);
+  }
+  return chains;
+}
+
+/** Reads a task's existing trail as a cached result, or returns nothing when it is absent or unusable. */
+function readCachedResult(task: ReplayTask, experimentDir: string): ReplayResult | undefined {
+  const trailBase = getTrailBase(task.retrieved.row, task.suffix);
+  const { jsonPath } = getTrailPaths(experimentDir, trailBase);
+  if (!fs.existsSync(jsonPath)) return undefined;
+
+  try {
+    const result = readReplayCache(jsonPath);
+    // The trail reader returns only the replay payload, so restore the task's repetition label.
+    if (task.repetition !== undefined) result.repetition = task.repetition;
+    logger.info(`Using cached oracle replay: ${jsonPath}`);
+    return result;
+  } catch (error) {
+    logger.warn(`Failed to read cached oracle replay at ${jsonPath}; rerunning task: ${errorMessage(error)}`);
+    return undefined;
+  }
 }
 
 /** The key of a replay context: one per distinct recorded files setting and effective prompt folder. */
@@ -174,8 +208,8 @@ export async function runReplay(
   // Ensure output directory exists for trails
   fs.mkdirSync(experimentDir, { recursive: true });
 
-  // Expand rows into (retrieved, resolvedModel, suffix, repetition) tasks for multi-model support
-  const tasks = rows.flatMap((retrieved): ReplayTask[] => {
+  // Expand each row into (retrieved, resolvedModel, suffix, repetition) tasks for multi-model support
+  const rowTasks = rows.map((retrieved): ReplayTask[] => {
     if (retrieved.error) {
       logger.warn(`Skipping row with error: game=${retrieved.row.game_id}, player=${retrieved.row.player_id}, turn=${retrieved.row.turn}: ${retrieved.error}`);
       return [];
@@ -218,8 +252,12 @@ export async function runReplay(
     });
   });
 
-  // Start each repetition across all rows before the next; stable sorting keeps the original task order within each repetition.
-  tasks.sort((a, b) => (a.repetition ?? 1) - (b.repetition ?? 1));
+  // A task's position in this repetition-major list is its stable result index for the CSV.
+  // Node sorts stably, so ties keep the row and model order.
+  const tasks = rowTasks.flat().sort((a, b) => (a.repetition ?? 1) - (b.repetition ?? 1));
+  const taskIndexes = new Map(tasks.map((task, index) => [task, index]));
+  // Each row's samples of one model form a chain of task indexes, in source order.
+  const chainIndexes = rowTasks.flatMap(groupModelChains).map(chain => chain.map(task => taskIndexes.get(task)!));
 
   logger.info(`Replaying ${tasks.length} tasks (${rows.length} rows × models)`);
 
@@ -288,40 +326,69 @@ export async function runReplay(
       logger.info('Batch mode enabled');
     }
 
-    const { results, stopped } = await runOracleTasks(
-      tasks.map(({ retrieved, resolvedModel, suffix, repetition, cachePrompt }, i) =>
-        async (): Promise<ReplayResult> => {
-          const failed = (error: string): ReplayResult => ({
-            row: retrieved.row,
-            model: `${resolvedModel.provider}/${resolvedModel.name}`,
-            decisions: [],
-            tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
-            messages: [],
-            error,
-            ...(repetition !== undefined ? { repetition } : {}),
-          });
+    // Read every task's trail once before admission. Cache hits become settled results and never
+    // enter a queue, so a restarted or stopped run resumes with only the remaining samples.
+    const cachedResults = new Map<number, ReplayResult>();
+    if (config.readCache !== false) {
+      tasks.forEach((task, index) => {
+        const cached = readCachedResult(task, experimentDir);
+        if (cached) cachedResults.set(index, cached);
+      });
+    }
 
-          // Ctrl+C: drop tasks still queued rather than starting work against telemetry and
-          // MCP state the shutdown hooks are concurrently tearing down.
-          if (processManager.isShuttingDown) return failed(INTERRUPTED_ERROR);
+    /** Replays one task, mapping failures to error results and shutdown to an interruption marker. */
+    const replayTask = (index: number): OracleTaskFactory<ReplayResult> => async () => {
+      const { retrieved, resolvedModel, suffix, repetition, cachePrompt } = tasks[index];
+      const failed = (error: string): ReplayResult => ({
+        row: retrieved.row,
+        model: `${resolvedModel.provider}/${resolvedModel.name}`,
+        decisions: [],
+        tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+        messages: [],
+        error,
+        ...(repetition !== undefined ? { repetition } : {}),
+      });
 
-          const { game_id: gameId, player_id: playerId, turn } = retrieved.row;
-          logger.info(`Replaying task ${i + 1}/${tasks.length}: game=${gameId}, player=${playerId}, turn=${turn}${suffix}`);
-          try {
-            const runContext = taskContexts.get(retrieved) ?? voxContext;
-            const result = await replaySingleRow(retrieved, resolvedModel, config, runContext, sourceTelemetryDir, experimentDir, suffix, cachePrompt);
-            if (repetition !== undefined) result.repetition = repetition;
-            return result;
-          } catch (error) {
-            const errorMsg = errorMessage(error);
-            logger.error(`Error replaying task ${i + 1}: ${errorMsg}`);
-            return failed(errorMsg);
-          }
-        }
-      ),
+      // Ctrl+C: drop tasks still queued rather than starting work against telemetry and
+      // MCP state the shutdown hooks are concurrently tearing down.
+      if (processManager.isShuttingDown) return failed(INTERRUPTED_ERROR);
+
+      const { game_id: gameId, player_id: playerId, turn } = retrieved.row;
+      logger.info(`Replaying task ${index + 1}/${tasks.length}: game=${gameId}, player=${playerId}, turn=${turn}${suffix}`);
+      try {
+        const runContext = taskContexts.get(retrieved) ?? voxContext;
+        const result = await replaySingleRow(retrieved, resolvedModel, config, runContext, sourceTelemetryDir, experimentDir, suffix, cachePrompt);
+        if (repetition !== undefined) result.repetition = repetition;
+        return result;
+      } catch (error) {
+        const errorMsg = errorMessage(error);
+        logger.error(`Error replaying task ${index + 1}: ${errorMsg}`);
+        return failed(errorMsg);
+      }
+    };
+
+    // Misses stay in their row and model chains, including holes left by cache hits. Each chain's
+    // first actual miss starts in the episode queue; its later misses take replay priority.
+    const chains = chainIndexes
+      .map(chain => chain
+        .filter(index => !cachedResults.has(index))
+        .map(index => ({ index, run: replayTask(index) })))
+      .filter(chain => chain.length > 0);
+
+    const { results: settled, stopped } = await runOracleTaskChains(
+      chains,
       config.concurrency ?? 5,
       shouldStop
     );
+
+    // Cached and fresh results merge by their stable indexes and compact into a gap-free list,
+    // so a partial run may be nonprefix but is still ordered by the original task indexes.
+    const results = [
+      ...[...cachedResults].map(([index, result]) => ({ index, result })),
+      ...settled,
+    ]
+      .sort((a, b) => a.index - b.index)
+      .map(entry => entry.result);
 
     // Tasks Ctrl+C dropped carry the interrupted marker rather than a real failure, and a
     // graceful stop leaves its withheld tasks out of the results entirely.
@@ -400,18 +467,6 @@ async function replaySingleRow(
   const { game_id: gameId, player_id: playerId, turn: turnStr } = retrieved.row;
   const turn = parseInt(turnStr, 10);
   const trailBase = getTrailBase(retrieved.row, trailSuffix);
-  const { jsonPath: trailJsonPath } = getTrailPaths(experimentDir, trailBase);
-
-  if (config.readCache !== false && fs.existsSync(trailJsonPath)) {
-    try {
-      const cachedResult = readReplayCache(trailJsonPath);
-      logger.info(`Using cached oracle replay: ${trailJsonPath}`);
-      return cachedResult;
-    } catch (error) {
-      const errorMsg = errorMessage(error);
-      logger.warn(`Failed to read cached oracle replay at ${trailJsonPath}; rerunning task: ${errorMsg}`);
-    }
-  }
 
   // Build callback context from raw retrieved data. framing is the original turn's recorded
   // fact, exposed for experiments; it does NOT drive replay framing.

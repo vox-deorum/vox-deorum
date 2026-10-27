@@ -4,11 +4,12 @@
  * Scope: the non-cache replay paths. Schema-cache behavior lives in
  * replayer-cache.test.ts and schema-only field stripping lives in
  * schema-tools.test.ts; this file stays disjoint from both. Covers:
- * model-override expansion (incl. duplicate-model repetitions), the configured
- * concurrency cap, modifyPrompt merge behavior, extractColumns context,
- * per-row error mapping, CSV/trail writes, and the files-setting replay
- * contexts with their workspace copies. System/message arrays are opaque
- * placeholders; assertions cover structural facts only.
+ * model-override expansion (incl. serial duplicate-model chains), the
+ * configured concurrency cap, concurrent independent episodes, modifyPrompt
+ * merge behavior, extractColumns context, per-row error mapping, CSV/trail
+ * writes, and the files-setting replay contexts with their workspace copies.
+ * System/message arrays are opaque placeholders; assertions cover structural
+ * facts only.
  */
 
 import fs from 'node:fs';
@@ -17,6 +18,8 @@ import path from 'node:path';
 import Papa from 'papaparse';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OracleConfig, RetrievedRow } from '../../../src/oracle/types.js';
+import type { Model } from '../../../src/types/index.js';
+import { deferred, type Deferred } from '../../helpers/deferred.js';
 
 const mocks = vi.hoisted(() => {
   // Holds the parameters of the run currently being opened. execute() no longer receives a
@@ -303,7 +306,7 @@ describe('oracle replayer (non-cache paths)', () => {
       ]);
     });
 
-    it('should execute repetitions across rows before starting the next repetition', async () => {
+    it('should run each repeated chain serially in stable source order', async () => {
       const outputDir = makeTempDir();
       mockFreshExecution();
       const rows = ['9', '3'].map(turn => retrieved({ row: { ...baseRow, turn } }));
@@ -315,7 +318,9 @@ describe('oracle replayer (non-cache paths)', () => {
         rows
       );
 
-      expect(mocks.execute.mock.calls.map(([, input]) => input.row.turn)).toEqual(['9', '9', '3', '3', '9', '3']);
+      // The first row's repeat runs to completion before the next row starts.
+      expect(mocks.execute.mock.calls.map(([, input]) => input.row.turn)).toEqual(['9', '9', '9', '3', '3', '3']);
+      // Result order stays repetition-major and stable, matching the CSV.
       expect(results.map(result => [result.row.turn, result.model, result.repetition])).toEqual([
         ['9', 'google/gemini-test', 1],
         ['9', 'oracle-test/solo', undefined],
@@ -323,6 +328,110 @@ describe('oracle replayer (non-cache paths)', () => {
         ['3', 'oracle-test/solo', undefined],
         ['9', 'google/gemini-test', 2],
         ['3', 'google/gemini-test', 2],
+      ]);
+      expect(readCsvRows(outputDir, 'repetition-order').map(row => [row.turn, row.model, row.repetition])).toEqual([
+        ['9', 'google/gemini-test', '1'],
+        ['9', 'oracle-test/solo', ''],
+        ['3', 'google/gemini-test', '1'],
+        ['3', 'oracle-test/solo', ''],
+        ['9', 'google/gemini-test', '2'],
+        ['3', 'google/gemini-test', '2'],
+      ]);
+    });
+
+    it('should keep independent row chains concurrent while a repeated row stays serial', async () => {
+      const outputDir = makeTempDir();
+      const gates: Deferred<unknown>[] = [];
+      const started: string[] = [];
+      mocks.execute.mockImplementation(async (_agentName, input, _callback, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
+        started.push(`${input.row.turn}:${parameters.resolvedModel.name}`);
+        const gate = deferred<unknown>();
+        gates.push(gate);
+        await gate.promise;
+        tokenOutput.inputTokens = 1;
+        return {
+          row: input.row,
+          model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
+          decisions: [],
+          tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+          messages: [],
+        };
+      });
+
+      const results = runReplay(
+        baseConfig(outputDir, 'chain-concurrency', () => ({}), {
+          concurrency: 2,
+          modelOverride: (_original, row) => row.turn === '9'
+            ? ['oracle-test/rep@low', 'oracle-test/rep@low']
+            : ['oracle-test/solo@low'],
+        }),
+        ['9', '3'].map(turn => retrieved({ row: { ...baseRow, turn } }))
+      );
+
+      await vi.waitFor(() => expect(started).toEqual(['9:rep', '3:solo']));
+      gates[1].resolve(undefined);
+      await vi.waitFor(() => expect(started).toEqual(['9:rep', '3:solo']));
+      gates[0].resolve(undefined);
+      await vi.waitFor(() => expect(started).toEqual(['9:rep', '3:solo', '9:rep']));
+      gates[2].resolve(undefined);
+
+      const settled = await results;
+      expect(settled.map(result => [result.row.turn, result.repetition])).toEqual([
+        ['9', 1],
+        ['3', undefined],
+        ['9', 2],
+      ]);
+    });
+
+    it('should separate same-name models by full configuration and keep noncontiguous repetitions', async () => {
+      const outputDir = makeTempDir();
+      const executed: Array<{ provider: string; effort?: string }> = [];
+      mocks.execute.mockImplementation(async (_agentName, input, _callback, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
+        executed.push({
+          provider: parameters.resolvedModel.provider,
+          effort: parameters.resolvedModel.options?.reasoningEffort,
+        });
+        tokenOutput.inputTokens = 1;
+        return {
+          row: input.row,
+          model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
+          decisions: [],
+          tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+          messages: [],
+        };
+      });
+      const sharedLowA: Model = { provider: 'provider-a', name: 'shared', options: { reasoningEffort: 'low' } };
+      const sharedLowB: Model = { provider: 'provider-b', name: 'shared', options: { reasoningEffort: 'low' } };
+      const sharedHighA: Model = { provider: 'provider-a', name: 'shared', options: { reasoningEffort: 'high' } };
+
+      const results = await runReplay(
+        baseConfig(outputDir, 'config-identity', () => ({}), {
+          modelOverride: () => [sharedLowA, sharedLowB, sharedHighA, sharedLowA],
+        }),
+        [retrieved()]
+      );
+
+      // provider-a/low repeats 1 and 4 form one chain, so its second sample runs before the other
+      // later models in the episode queue. A name-only identity would order them 1, 2, 3, 4.
+      expect(executed).toEqual([
+        { provider: 'provider-a', effort: 'low' },
+        { provider: 'provider-a', effort: 'low' },
+        { provider: 'provider-b', effort: 'low' },
+        { provider: 'provider-a', effort: 'high' },
+      ]);
+      expect(results.map(result => [result.model, result.repetition])).toEqual([
+        ['provider-a/shared', 1],
+        ['provider-b/shared', 2],
+        ['provider-a/shared', 3],
+        ['provider-a/shared', 4],
+      ]);
+      expect(fs.readdirSync(path.join(outputDir, 'config-identity')).filter(f => f.endsWith('.json')).sort()).toEqual([
+        'game-1-p2-t3-shared-1.json',
+        'game-1-p2-t3-shared-2.json',
+        'game-1-p2-t3-shared-3.json',
+        'game-1-p2-t3-shared-4.json',
       ]);
     });
 
@@ -449,66 +558,104 @@ describe('oracle replayer (non-cache paths)', () => {
     const claude = { provider: 'anthropic', name: 'claude-test' } as any;
     const other = { provider: 'oracle-test', name: 'other-test' } as any;
 
-    /** Records each execution's start and end, plus whether it asked for prompt caching. */
-    function mockLoggedExecution(log: string[], cacheFlags: (boolean | undefined)[], fail = false): void {
-      mocks.execute.mockImplementation(async (_agentName, input) => {
+    it('should mark repeated Claude prompts and run the repetitions serially', async () => {
+      const gates: Deferred<unknown>[] = [];
+      const cacheFlags: (boolean | undefined)[] = [];
+      mocks.execute.mockImplementation(async (_agentName, _input, _callback, tokenOutput) => {
         const parameters = mocks.runState.parameters;
-        const isFirst = log.length === 0;
         cacheFlags.push(parameters.cachePrompt);
-        log.push('start');
-        await new Promise(resolve => setTimeout(resolve, 10));
-        log.push('end');
-        if (fail && isFirst) throw new Error('first repetition failed');
+        const gate = deferred<unknown>();
+        gates.push(gate);
+        await gate.promise;
+        tokenOutput.inputTokens = 1;
         return {
-          row: input.row,
+          row: baseRow,
+          model: 'anthropic/claude-test',
+          decisions: [],
+          tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+          messages: [],
+        };
+      });
+
+      const run = runReplay(
+        baseConfig(makeTempDir(), 'claude-reps', () => ({}), { concurrency: 3, modelOverride: () => [claude, claude, claude] }),
+        [retrieved()]
+      );
+
+      await vi.waitFor(() => expect(cacheFlags).toHaveLength(1));
+      gates[0].resolve(undefined);
+      await vi.waitFor(() => expect(cacheFlags).toHaveLength(2));
+      // The next repetition waited for the first one: one chain runs one sample at a time.
+      expect(gates).toHaveLength(2);
+      gates[1].resolve(undefined);
+      await vi.waitFor(() => expect(cacheFlags).toHaveLength(3));
+      gates[2].resolve(undefined);
+
+      const results = await run;
+      expect(cacheFlags).toEqual([true, true, true]);
+      expect(results.map(result => result.repetition)).toEqual([1, 2, 3]);
+    });
+
+    it('should still run later repetitions when the first one fails', async () => {
+      let calls = 0;
+      mocks.execute.mockImplementation(async (_agentName, _input, _callback, tokenOutput) => {
+        calls += 1;
+        if (calls === 1) throw new Error('first repetition failed');
+        tokenOutput.inputTokens = 1;
+        return {
+          row: baseRow,
+          model: 'oracle-test/other-test',
+          decisions: [],
+          tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
+          messages: [],
+        };
+      });
+
+      const results = await runReplay(
+        baseConfig(makeTempDir(), 'claude-reps-fail', () => ({}), { concurrency: 3, modelOverride: () => [other, other] }),
+        [retrieved()]
+      );
+
+      expect(results.map(result => result.repetition)).toEqual([1, 2]);
+      expect(results.filter(result => result.error)).toHaveLength(1);
+      expect(results.filter(result => !result.error)).toHaveLength(1);
+    });
+
+    it('should run one chain per distinct model and leave non-Claude repetitions uncached', async () => {
+      const gates: Deferred<unknown>[] = [];
+      const started: Array<{ name: string; cache?: boolean }> = [];
+      mocks.execute.mockImplementation(async (_agentName, _input, _callback, tokenOutput) => {
+        const parameters = mocks.runState.parameters;
+        started.push({ name: parameters.resolvedModel.name, cache: parameters.cachePrompt });
+        const gate = deferred<unknown>();
+        gates.push(gate);
+        await gate.promise;
+        tokenOutput.inputTokens = 1;
+        return {
+          row: baseRow,
           model: `${parameters.resolvedModel.provider}/${parameters.resolvedModel.name}`,
           decisions: [],
           tokens: { inputTokens: 0, reasoningTokens: 0, outputTokens: 0 },
           messages: [],
         };
       });
-    }
 
-    it('should mark repeated Claude prompts without waiting for the first execution to finish', async () => {
-      const log: string[] = [];
-      const cacheFlags: (boolean | undefined)[] = [];
-      mockLoggedExecution(log, cacheFlags);
-
-      const results = await runReplay(
-        baseConfig(makeTempDir(), 'claude-reps', () => ({}), { concurrency: 3, modelOverride: () => [claude, claude, claude] }),
-        [retrieved()]
-      );
-
-      expect(results).toHaveLength(3);
-      expect(log.slice(0, 3)).toEqual(['start', 'start', 'start']);
-      expect(cacheFlags).toEqual([true, true, true]);
-    });
-
-    it('should still run later repetitions when the first one fails', async () => {
-      const log: string[] = [];
-      mockLoggedExecution(log, [], true);
-
-      const results = await runReplay(
-        baseConfig(makeTempDir(), 'claude-reps-fail', () => ({}), { concurrency: 3, modelOverride: () => [claude, claude] }),
-        [retrieved()]
-      );
-
-      expect(results.filter(r => r.error)).toHaveLength(1);
-      expect(results.filter(r => !r.error)).toHaveLength(1);
-    });
-
-    it('should leave single replays and non-Claude repetitions uncached and concurrent', async () => {
-      const log: string[] = [];
-      const cacheFlags: (boolean | undefined)[] = [];
-      mockLoggedExecution(log, cacheFlags);
-
-      await runReplay(
+      const run = runReplay(
         baseConfig(makeTempDir(), 'other-reps', () => ({}), { concurrency: 3, modelOverride: () => [other, other, claude] }),
         [retrieved()]
       );
 
-      expect(log.slice(0, 3)).toEqual(['start', 'start', 'start']);
-      expect(cacheFlags.every(flag => !flag)).toBe(true);
+      // The two chains start independently; only the repeated other chain stays serial.
+      await vi.waitFor(() => expect(started).toHaveLength(2));
+      expect(started.map(entry => entry.name).sort()).toEqual(['claude-test', 'other-test']);
+      expect(started.every(entry => !entry.cache)).toBe(true);
+      gates[0].resolve(undefined);
+      await vi.waitFor(() => expect(started).toHaveLength(3));
+      expect(started[2]).toEqual({ name: 'other-test', cache: undefined });
+      gates[1].resolve(undefined);
+      gates[2].resolve(undefined);
+
+      await expect(run).resolves.toHaveLength(3);
     });
   });
 
@@ -846,6 +993,33 @@ describe('oracle replayer (non-cache paths)', () => {
       const trails = fs.readdirSync(path.join(outputDir, 'interrupt-csv')).filter(f => f.endsWith('.json'));
       expect(trails).toEqual(['game-1-p2-t3-m-a.json']);
       expect(mocks.forceFlush).toHaveBeenCalledTimes(1);
+    });
+
+    it('should interrupt a repeated chain continuation and clean up batch mode after shutdown', async () => {
+      const outputDir = makeTempDir();
+      const csvPath = path.join(outputDir, 'interrupt-repeat-results.csv');
+      fs.writeFileSync(csvPath, 'PREVIOUS_COMPLETE_RUN', 'utf-8');
+      mockShutdownDuringFirstTask();
+
+      const results = await runReplay(
+        baseConfig(outputDir, 'interrupt-repeat', () => ({}), {
+          batch: true,
+          modelOverride: () => ['oracle-test/rep@low', 'oracle-test/rep@low', 'oracle-test/solo@low'],
+        }),
+        [retrieved()]
+      );
+
+      // The first sample ran. Its repeated continuation and the untouched episode both became
+      // interruption markers without calling the model again.
+      expect(mocks.execute).toHaveBeenCalledTimes(1);
+      expect(results.map(result => [result.model, result.repetition, result.error])).toEqual([
+        ['oracle-test/rep', 1, undefined],
+        ['oracle-test/solo', undefined, 'Interrupted by shutdown'],
+        ['oracle-test/rep', 2, 'Interrupted by shutdown'],
+      ]);
+      expect(fs.readFileSync(csvPath, 'utf-8')).toBe('PREVIOUS_COMPLETE_RUN');
+      expect(mocks.startBatchManager).toHaveBeenCalledTimes(1);
+      expect(mocks.shutdownBatchManager).toHaveBeenCalledTimes(1);
     });
 
     it('drains active work without publishing a CSV after a graceful stop', async () => {
