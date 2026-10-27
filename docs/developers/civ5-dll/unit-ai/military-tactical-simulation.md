@@ -77,6 +77,8 @@ The corresponding functions are:
 - `CheckForEnemiesNearArmy` for army contact.
 - `PerformRangedOpportunityAttack` for ranged opportunities. It uses simulation when movement or post-attack repositioning is possible; otherwise it chooses a direct ranged attack.
 
+[Search engagements](military-tactics.md#search-engagements) describes when each caller runs a search, which units it recruits, and which units it leaves out.
+
 An enemy-unit target records the last aggression used against it. A later pass retries it only at a higher level.
 
 Aggression changes provisional danger tolerance and a **melee trade veto**. When a melee attack takes counter-damage and the unit has a safe reachable alternative, the veto compares damage dealt with damage received. It scales damage dealt by the friendly-to-enemy force balance, the database damage weight, and the multiplier below. An unfavorable non-killing trade is rejected when either threshold is crossed:
