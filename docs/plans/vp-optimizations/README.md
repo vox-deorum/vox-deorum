@@ -1,6 +1,6 @@
 # VP optimization plans
 
-These items cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 come from the pathfinding review and plans 7–14 from the October 27 native rollout review. Their source claims were rechecked on October 28. Items 7 and 10 are implemented as one exploration change, with a [combined measurement and validation report](7-10-exploration-results.md). Item 11 is implemented for final scoring, and item 12 has direct empty and singleton air-state comparisons. The other items remain plans. The [three-recording Puma baseline](puma-full-rollout-baseline.md) completed on eight CPUs in 28 min 48.86 s and fixes the full rollout workload for later comparisons. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
+These items cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 come from the pathfinding review and plans 7–14 from the October 27 native rollout review. Their source claims were rechecked on October 28. Items 7 and 10 are implemented as one exploration change, with a [combined measurement and validation report](7-10-exploration-results.md). Item 11 is implemented for final scoring, and item 12 has direct empty and singleton air-state comparisons. Items 1, 2, 6, 8 and the plan 9 drive-by are implemented, with [batch validation and remaining gameplay checks](1-2-6-8-results.md). The other items remain plans. The [three-recording Puma baseline](puma-full-rollout-baseline.md) completed on eight CPUs in 28 min 48.86 s and fixes the full rollout workload for later comparisons. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
 
 ## Priorities
 
@@ -15,15 +15,15 @@ Each plan carries a **Status** line with its tier. The tiers mean:
 
 | Plan | Tier | Why |
 | --- | --- | --- |
-| [1. Canal planning refresh](1-canal-planning-refresh.md) | Do now | The guard refreshes six turns in seven against its own "not needed every turn" intent. Each refresh is one water flood per owned city. Community Patch games without passable forts search for nothing. |
+| [1. Canal planning refresh](1-canal-planning-refresh.md) | Implemented | Refreshes once per seven turns and skips disabled passable forts. Live coastal-save acceptance remains. |
 | [7. Exploration range copies](7-exploration-range-copies.md) | Implemented | Both exploration scoring loops borrow range vectors. Combined with item 10, no whole-rollout gain was demonstrated. DLL incremental-reveal gameplay checks remain. |
-| [8. Path extra children](8-path-extra-children.md) | Do now | One plot lookup and one hashed unit lookup per expanded node, skipped when all capability flags are false. Exact. |
-| [2. Lazy worker reachability](2-lazy-worker-reachability.md) | Next | Every worker gets a seven-turn reach flood before the assigned and region stages remove many of them. The source already carries a comment suggesting this postponement. |
-| [6. Bounded unit selection](6-approximate-candidate-ranking.md) | Next | `GetBestUnitToReachTarget` never bounds later searches by its best result. An exact bound helps garrison, sentry, and 42-turn engineer searches. The approximate recruitment shortlist is parked. |
+| [8. Path extra children](8-path-extra-children.md) | Implemented | All-disabled nodes return before plot/unit lookups; includes plan 9. Live transport-path checks and lookup counters remain. |
+| [2. Lazy worker reachability](2-lazy-worker-reachability.md) | Implemented | Invocation-local maps are built on demand and refreshed after the worker moves. Native worker-assignment and performance acceptance remains. |
+| [6. Bounded unit selection](6-approximate-candidate-ranking.md) | Implemented | Original cheap distance checks precede bounded probes; possible winners use the original query. Exclusive-bound, road-route, and distant-candidate regressions pass. Combined timing and live limits are in the batch report. |
 | [10. Exploration set reuse](10-exploration-set-reuse.md) | Implemented | One snapshot per unchanged selection attempt and a domain emptiness check without merging. Combined results are linked above. |
 | [12. Air-state equality](12-air-state-equality.md) | Implemented | Empty and singleton records compare directly; multiple entries retain exact sorted comparison. No performance measurement or timing was requested. |
 | [5. Lightweight path queries](5-lightweight-path-queries.md) | Low payoff | Path materialization is small next to the search. The squad memo was removed because squads are off by default. |
-| [9. Neutral unit query](9-neutral-unit-query.md) | Deprioritized | The duplicate query runs only for civilian moves with the do-not-stack flag. Fine as a one-line drive-by with plan 8. |
+| [9. Neutral unit query](9-neutral-unit-query.md) | Implemented | Reuses the cached visible-neutral result alongside plan 8. Its isolated runtime saving is unmeasured. |
 | [3. Target-aware batch search](3-target-aware-batch-search.md) | Deprioritized | Trade and canal lists include every city and are never empty, and unreachable targets keep nonempty batches from stopping early. Only the empty-list guard for military calls is worth a drive-by. |
 | [4. City connection search](4-city-connection-search.md) | Measure first | Runs every turn with O(n²) pair searches, but the FIFO stage removes only heap overhead and the tree stage is research. |
 | [11. Carrier cargo counts](11-carrier-cargo-counts.md) | Implemented | Final scoring lazily counts tracked cargo once per pass. Applies only with air search (VDRL); runtime savings are unmeasured. |
@@ -32,15 +32,15 @@ Each plan carries a **Status** line with its tier. The tiers mean:
 
 ## Suggested order
 
-1. Implement plans 1 and 8, with plan 9 as a drive-by beside plan 8. Items 7 and 10 are implemented together.
-2. Implement plan 6's bound. Plan 12 is implemented for air-search workloads with exact equality preserved.
-3. Implement plan 2 with its worker-assignment comparisons, since it moves when reach maps observe the world.
+1. Complete the live-game acceptance checks for implemented plans 1, 2, 6, 8 and 9. Their [batch report](1-2-6-8-results.md) separates controlled tests, simulator evidence, and remaining DLL gameplay coverage.
+2. Items 7 and 10 are implemented together. Plan 12 is implemented for air-search workloads with exact equality preserved.
+3. For plan 2, compare native worker assignments and danger-cache timing, since lazy maps observe the world later.
 4. Profile city connections (plan 4) before designing anything further. Plan 11 is implemented for final scoring. Add plan 5's scalar reads and plan 3's empty-list guard when touching the same code.
 5. Leave plans 13 and 14 parked unless new evidence changes their cost.
 
 ## Evidence and runtime scope
 
-The [items 7 and 10 report](7-10-exploration-results.md) contains current measurements for that combined change. Figures in the remaining plans are analytical operation counts, hypothetical time reductions, or archived affected-cost envelopes. Overhead can make gains zero or negative. Plans 1 and 3 share canal searches, plans 5 and 6 share arrival queries, and plans 8 and 9 remove work inside searches that other plans can eliminate. Measure combinations rather than adding their percentages.
+The [items 7 and 10 report](7-10-exploration-results.md) contains current measurements for that combined change. The [items 1, 2, 6, 8 and 9 report](1-2-6-8-results.md) records their combined simulator comparison and controlled work counts. Other figures are analytical operation counts, hypothetical time reductions, or archived affected-cost envelopes. Overhead can make gains zero or negative. Plans 1 and 3 share canal searches, plans 5 and 6 share arrival queries, and plans 8 and 9 remove work inside searches that other plans can eliminate. Measure combinations rather than adding their percentages.
 
 Runtime scope limits rollout evidence:
 

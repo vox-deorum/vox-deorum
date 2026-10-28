@@ -1,28 +1,21 @@
-# 8. Skip extra-child lookups for ordinary path nodes
+# Skip extra-child lookups for ordinary path nodes
 
-**Status:** Do now. Every expanded unit-path node pays a plot lookup and a hashed unit lookup before the capability test; the guard is exact.
+**Status:** Implemented together with plan 9's one-line neutral-query reuse. Initialization audit, simulator checks, and release DLL builds pass. See the [batch validation](1-2-6-8-results.md).
 
-## Goal and evidence
+## Implementation
 
-Return an empty extra-child result before resolving a plot or unit when the node has none of the cached airlift or admiral-port capabilities. Success means the same ordered extra children and path results, with those lookups eliminated for the ordinary case.
+`UnitPathGetExtraChildren` clears its output, then returns zero when the cached city-airlift, improvement-airlift, and admiral-port flags are all false. Ordinary nodes avoid both plot resolution and the hashed unit lookup.
 
-`UnitPathGetExtraChildren` in [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp) clears `out`, resolves the plot, resolves the owner's unit, and only then tests `bCanAirliftFromPlotCity`, `bCanAirliftFromPlotImprovement` and `bCanChangePortFromPlot`. Its existing control flow emits no children when all three are false. `UpdateNodeCacheData` populates these fields; path initialization and neighbor processing must have established their current generation before the callback executes.
+Enabled branches keep their existing order, null handling, full-moves-or-zero rule, once-per-search checks, allied-minor iteration, and insertion order. Improvement airlift retains its existing unfinished branch. The header declaration now matches the definition's const finder parameter, allowing direct callback checks without an undefined overload.
 
-The callback accounted for 0.53% of the archived October 24 profile's 2,830 game-thread samples. That whole-function share includes enabled-capability work and is an old workload envelope. The avoided lookup fraction and current callback frequency have not been measured.
+Current upstream also supports sealift, so its port includes `bCanSealiftFromPlotCity` in the guard. The maintained VD line has three capability flags; the port preserves upstream's fourth transport branch.
 
-## Chosen change
+`UpdateNodeCacheData` also reuses `bIsVisibleNeutralCombatUnit` for the `MOVEFLAG_DONT_STACK_WITH_NEUTRAL` override. That field comes from the same visibility-aware query, remains false for invisible plots, and is populated even under selective ZOC. See [plan 9](9-neutral-unit-query.md).
 
-1. Audit the ordinary and two-layer finder call sites, including start and synthetic stop nodes, to confirm that their capability fields are initialized before extra-child enumeration. If any supported caller cannot provide this invariant, repair initialization or retain its old path.
-2. Immediately after `out.clear()`, return zero when all three cached booleans are false. Use explicit boolean tests compatible with VC2008 C++03 and mark the change with `// Vox Deorum:`.
-3. Leave the plot/unit null handling and every enabled branch in their current order. In particular preserve airlift precedence over port changes, the full-moves-or-zero rule, the once-per-search city checks, minor-ally iteration and child insertion order. Improvement airlift remains its existing unfinished branch.
-4. Regenerate the native extraction. Review [movement/unit-paths.json](../../../../vox-deorum-rl/simulator/extract/manifest/movement/unit-paths.json) and [movement/pathfinder.json](../../../../vox-deorum-rl/simulator/extract/manifest/movement/pathfinder.json) for affected selections. No signature or facade change is expected; use the [extractor convention](../../../../vox-deorum-rl/docs/development/extractor.md).
+## Initialization and verification
 
-For a concrete example, a search makes 10,000 disabled callback invocations and 20 enabled invocations. The guard skips one plot and one unit resolution for each disabled call. The 20 enabled calls execute the existing checks and return exactly the same children. Passing a previously populated output vector must still yield an empty vector for a disabled node, so the clear stays first.
+The two-layer finder initializes the start node before extra-child enumeration, refreshes ordinary and nonlocal neighbor caches before insertion, and copies the current node's cache into synthetic stop nodes. The generation guard refreshes capabilities for subsequent searches. Step finders use other callbacks. OpenCode independently checked these paths.
 
-## Estimate and verification
+Existing extraction selectors regenerate the callback unchanged. Transport fixtures cover city-airlift full/partial/zero moves, output clearing on rejection, once-only checks, and admiral port destinations. Repeated recording comparisons cover ordinary paths; the batch report states their output and timing results.
 
-Allow 0.5 to 1 engineer-day for initialization audit, implementation and comparison. If 80% of the historical callback time were disabled-node lookups, its historical-workload overall reduction would be about `0.53% * 0.8 = 0.42%`. The 80% is hypothetical; the measured callback envelope supplies no present speedup claim. The callback is extracted into the simulator, so the scope applies to both runtimes. Count invocations during insertion and expansion, rather than equating visited nodes with calls. Broader query/node reductions remove some of the same work.
-
-Follow [shared verification](README.md), including `python build_vp_clang_sdk.py --config release` from `civ5-dll/` and the native extraction/build checks. Compare old/new callback outputs and final path sequences on ordinary land/sea paths, airports owned by the player and allied minors, insufficient and zero moves, invalid plot/unit lookups, and admiral port changes. Exercise repeated searches to detect stale generation flags. Record disabled versus enabled callback counts separately from timing.
-
-Out of scope: new transport links, airlift legality changes, removing enabled-path lookups, changing once-only flags, or altering path budgets.
+Live airport/allied-minor and port path-sequence comparisons remain, along with direct enabled/disabled invocation and avoided-lookup counters. The archived 0.53% callback sample share is not a measured saving from this change. No new links, transport legality changes, or capability-generation policy were added.
