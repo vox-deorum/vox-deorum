@@ -1,6 +1,6 @@
 # VP optimization plans
 
-These drafts cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 come from the pathfinding review and plans 7–14 from the October 27 native rollout review. Each plan's claims were rechecked against the DLL source on October 28, and the set is now ordered by priority. Plan 11 now has an implementation for final scoring. The other items remain plans. The [three-recording Puma baseline](puma-full-rollout-baseline.md) completed on eight CPUs in 28 min 48.86 s and fixes the full rollout workload for later comparisons. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
+These drafts cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 come from the pathfinding review and plans 7–14 from the October 27 native rollout review. Each plan's claims were rechecked against the DLL source on October 28, and the set is now ordered by priority. Plan 11 is implemented for final scoring, and plan 12 has direct empty and singleton air-state comparisons. The other items remain plans. The [three-recording Puma baseline](puma-full-rollout-baseline.md) completed on eight CPUs in 28 min 48.86 s and fixes the full rollout workload for later comparisons. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
 
 ## Priorities
 
@@ -21,7 +21,7 @@ Each plan carries a **Status** line with its tier. The tiers mean:
 | [2. Lazy worker reachability](2-lazy-worker-reachability.md) | Next | Every worker gets a seven-turn reach flood before the assigned and region stages remove many of them. The source already carries a comment suggesting this postponement. |
 | [6. Bounded unit selection](6-approximate-candidate-ranking.md) | Next | `GetBestUnitToReachTarget` never bounds later searches by its best result. An exact bound helps garrison, sentry, and 42-turn engineer searches. The approximate recruitment shortlist is parked. |
 | [10. Exploration set reuse](10-exploration-set-reuse.md) | Next | Two to five full hash-map copies per explorer attempt, plus a whole-set copy just to test emptiness. |
-| [12. Air-state equality](12-air-state-equality.md) | Next | Up to six vector allocations and sorts per state comparison. Air search is on in VDRL. |
+| [12. Air-state equality](12-air-state-equality.md) | Implemented | Empty and singleton records compare directly; multiple entries retain exact sorted comparison. No performance measurement or timing was requested. |
 | [5. Lightweight path queries](5-lightweight-path-queries.md) | Low payoff | Path materialization is small next to the search. The squad memo was removed because squads are off by default. |
 | [9. Neutral unit query](9-neutral-unit-query.md) | Deprioritized | The duplicate query runs only for civilian moves with the do-not-stack flag. Fine as a one-line drive-by with plan 8. |
 | [3. Target-aware batch search](3-target-aware-batch-search.md) | Deprioritized | Trade and canal lists include every city and are never empty, and unreachable targets keep nonempty batches from stopping early. Only the empty-list guard for military calls is worth a drive-by. |
@@ -33,7 +33,7 @@ Each plan carries a **Status** line with its tier. The tiers mean:
 ## Suggested order
 
 1. Implement plans 1, 7 and 8 together, with plan 9 as a drive-by beside plan 8. They are small and need only before-and-after comparisons.
-2. Implement plan 6's bound and plan 10, then plan 12 for air-search workloads. Each has a narrow contract and a clear differential check.
+2. Implement plan 6's bound and plan 10. Plan 12 is implemented for air-search workloads with exact equality preserved.
 3. Implement plan 2 with its worker-assignment comparisons, since it moves when reach maps observe the world.
 4. Profile city connections (plan 4) before designing anything further. Plan 11 is implemented for final scoring. Add plan 5's scalar reads and plan 3's empty-list guard when touching the same code.
 5. Leave plans 13 and 14 parked unless new evidence changes their cost.

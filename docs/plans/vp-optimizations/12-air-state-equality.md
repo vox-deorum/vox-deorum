@@ -1,32 +1,29 @@
 # 12. Fast equality for empty and singleton air damage records
 
-**Status:** Next. The change is contained and exact, and the air search is enabled for VDRL.
+**Status:** Implemented without performance measurement or timing, as requested.
 
-## Goal and exact contract
+## Scope and exact contract
 
-Give `DamageRecordsEqual` direct effective-empty and singleton comparisons while preserving its existing exact equality for every input. Empty records already avoid backing allocations; singleton records can avoid allocating temporary vectors. Success means unchanged air-state deduplication and search decisions with less temporary-container work.
+`DamageRecordsEqual` directly compares effective-empty and singleton records. Effective entries are rows with a nonzero value. Equality ignores zero rows and row order, and preserves duplicate nonzero rows as a multiset, including signed values and duplicate multiplicity.
 
-In [CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp), `DamageRecordsEqual` currently copies every nonzero `(unitID, value)` pair into two vectors, sorts them and compares. `airStateEquals` first checks interceptor states, then compares unit damage, uncertain damage and uncertain kill chance through this helper, so a fully equal comparison can call it three times. Each call builds and sorts two vectors, which means up to six vector allocations per equal comparison.
+In [CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp), `airStateEquals` first checks interceptor states, then compares unit damage, uncertain damage and uncertain kill chance through this helper. Its call order and short-circuit behavior are unchanged.
 
-The air-state comparison runs only with `VOX_TACTICAL_AIR_SEARCH`, which is off in default VP but enabled for VDRL, so this plan targets VDRL rollouts and air-search games.
+The air-state comparison runs with `VOX_TACTICAL_AIR_SEARCH`, which is off in default VP and enabled for VDRL. The local upstream tree has no `CvTacticalAirSearch.cpp`, so this fix stays on the maintained VD DLL branch.
 
-[CvUnit.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvUnit.h) defines `SUnitIDValueContainer` with inline single-entry storage and optional vector storage. Its iterator determines which storage is logically active. Equality currently ignores zero rows and row order, but preserves duplicate nonzero rows as a multiset. Public storage and constructed fixtures can contain duplicates even if normal mutators tend to update existing IDs. `GetValue` and approximate damage hashes cannot substitute for this exact multiset contract.
+## Implementation
 
-## Chosen implementation
+The helper reads each operand through the existing [SUnitIDValueContainer](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvUnit.h) iterators, which determine the logically active storage. `CountNonzeroDamageRows` scans one record, skips zeros, saves the first nonzero pair and stops when it finds a second.
 
-1. Read through the existing iterators, skipping zeros. For each operand find the first nonzero pair, if any, and whether a second nonzero pair exists. Stop scanning once the second is found.
-2. If both have no nonzero pair, return true. If only one is empty, return false. If exactly one is a singleton and the other has at least two nonzero rows, return false. If both are singletons, compare the exact pair and return.
-3. If both have at least two nonzero rows, run the existing vector-copy, sort and comparison fallback unchanged. This keeps duplicate multiplicity, signed values and arbitrary ordering correct. Avoid a new normalization cache or replacing the container.
-4. Add a `// Vox Deorum:` purpose comment to the helper and explain effective entries. Preserve its signature and VC2008 C++03 compatibility. Regenerate the existing [tactical state selection](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/state.json) using the [extractor convention](../../../../vox-deorum-rl/docs/development/extractor.md); no new facade method is needed.
+Different counts return false, empty records compare equal, and two singletons compare their exact pair. These paths return before temporary vectors are created. When both operands have multiple effective entries, `GetSortedNonzeroDamageRows` copies and sorts each side's nonzero rows for the same multiset comparison as before. No stored normalization, hash comparison or container change is involved. The helper retains its signature and C++03 compatibility.
 
-For a worked example, `[(7,0),(9,12)]` and `[(9,12)]` compare equal without allocating. `[(9,12),(9,12)]` and `[(9,24)]` remain unequal: adding values would incorrectly merge distinct multiset rows. `[(2,5),(1,8)]` and its reversal still compare equal through the sorted fallback. An all-zero vector and an empty inline container are equal.
+For example, `[(7,0),(9,12)]` equals `[(9,12)]`. Two copies of `(9,12)` remain unequal to one `(9,24)` row. Reordering multiple nonzero rows preserves equality, and an all-zero vector equals an empty inline container.
 
-## Estimate and verification
+The existing [tactical state selection](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/state.json) extracts the two row helpers, `DamageRecordsEqual` and `airStateEquals` as plain function and method selectors; no facade is needed. Generated sources are rebuilt through the [extractor](../../../../vox-deorum-rl/docs/development/extractor.md).
 
-Allow 1 to 2 engineer-days for implementation, behavioral tests and benchmark comparison. Singleton-versus-singleton removes two backing allocations per helper call; three successful singleton record comparisons can remove six per `airStateEquals`. Empty inputs already allocate no backing storage, and sorting zero or one row performs no pair comparisons. Cardinality mismatches can also skip fallback allocations. Multi-entry pairs pay a preliminary scan before the unchanged fallback, potentially almost a full extra scan when leading rows are zero.
+## Verification
 
-There is no isolated timing in either DLL or simulator evidence. If this helper hypothetically consumes 2% of a search and falls 50%, search time falls about 1%; both inputs are assumptions. Measure empty, singleton and fallback frequencies separately, after interceptor and assignment-equivalence gates, before predicting a workload saving.
+The native air-state regression checks the extracted equality against an explicit expected result for each of the three damage fields, in both operand orders. Fixtures build records through `SetValue`, as the search does, and cover empty records, zeroed rows, a single row left among zeros, a stale inline value after promotion, row-count mismatches, row order and differing multi-row values. Interceptor usage and base-loss differences must still reject equality.
 
-Follow [shared verification](README.md), the DLL command `python build_vp_clang_sdk.py --config release`, and native extraction/build checks. Use focused native harness cases comparing the helper with its old sort-based result across empty, inline zero/nonzero, vector zeros, reordered rows, negative values, duplicate IDs with equal/different values and duplicate multiplicity. Verify that interceptor differences still reject equality before damage comparisons. Compare full assignments on air-heavy recordings with sweeps, uncertain strikes and missiles; use exact outputs, not approximate danger hashes.
+Build checks use `python build_vp_clang_sdk.py --config release` and the simulator's extraction/build workflow. Validation results and any unavailable checks are recorded in the implementation handoff. No profiling counters, timing comparisons or speedup claims are part of this change.
 
-Out of scope: changing equality semantics, quantizing values, altering danger hashes, canonicalizing stored records or changing search pruning policy.
+Equality semantics, danger hashes, stored records and search pruning policy remain unchanged.
