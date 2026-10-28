@@ -6,7 +6,7 @@ Determine whether repeated horizon searches at 3, 5, 12 and 23 turns can share t
 
 `GetBestExploreTarget` and `ExecuteExplorerMoves` in [CvHomelandAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp) retry larger bounds only when the preceding search has no target. Each invocation calls `GetPlotsInReach` with `MOVEFLAG_NO_ENEMY_TERRITORY | MOVEFLAG_MAXIMIZE_EXPLORE`. Existing code reuses the chosen horizon-three target later; it does not unconditionally search all four horizons. Non-recon land units can reject horizons above five before searching.
 
-`GetPlotsInReach` in [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp) emits one final label per closed node in traversal order. `LinkChild` enforces the turn bound, but replaces a node whenever the new accumulated cost is lower, without comparing turns. `CvTwoLayerPathFinder::NodeAddedToPath` overwrites its turns and moves. A larger flood can erase a shorter-horizon label, changing membership as well as scores. Equal costs retain the earlier arrival; stable target sorting also makes encounter order observable.
+`GetPlotsInReach` in [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp) emits one final label per closed node in traversal order. `LinkChild` enforces the turn bound, but replaces a node whenever the new accumulated cost is lower, without comparing turns. `CvTwoLayerPathFinder::NodeAddedToPath` overwrites its turns and moves. A larger flood can erase a shorter-horizon label, changing membership as well as scores. Equal costs retain the first encountered label, which can have a later turn count; stable target sorting also makes encounter order observable.
 
 For example, suppose plot P has a legal cost-100 arrival at turn 2 and a cost-90 arrival at turn 4, because movement/exploration penalties favor the slower route. A horizon-three search can retain the turn-2 label. A longer flood can replace it with turn 4; filtering that final label at horizon three then omits P. These illustrative labels expose the contract that requires proof; construct a legal native fixture rather than assuming these particular costs occur.
 
@@ -22,7 +22,9 @@ Suppose independent retries expand 100, 250, 900 and 2,000 nodes. Perfect contin
 
 ## Estimate and verification
 
-Allow 2 to 4 engineer-days for measurement and semantic investigation, then 4 to 8 more only if a small exact approach survives. There is no measured current reach-time share or speedup. If repeated reach work hypothetically consumes 10% of homeland selection and falls 30%, selection saves about 3% before overhead.
+Allow 2 to 4 engineer-days for measurement and semantic investigation, then 4 to 8 more only if a small exact approach survives. The archived profile attributes 92 of 2,830 samples, about 3.25%, to all reach work under this selector. Removing an assumed 30% of that entire historical envelope would save about 0.98% of that workload before overhead. Only eligible repeated work is removable, and exact continuation adds label/snapshot costs; present savings remain unmeasured in both runtimes.
+
+Ordinary AI attempts run a harassment reach flood through the same singleton finder between the horizon-three query and later retries. That invalidates a context borrowing the finder's scratch under the stated lifetime rule. Consecutive 5/12/23 retries are the clearer sharing opportunity. Measure them separately from three-turn successes and interrupted attempts; retain independent floods if exact reuse does not pay.
 
 Use [shared verification](README.md), `python build_vp_clang_sdk.py --config release`, and native extraction/build checks for a prototype. Compare ordered rows and targets at each horizon on roads, embarkation, ocean access, ZOC, zero/partial moves, healing, danger thresholds, ruins, equal-score ties and no-target maps. Record short-success regressions separately.
 

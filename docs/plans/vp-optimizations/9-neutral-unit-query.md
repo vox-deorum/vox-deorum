@@ -20,7 +20,7 @@ For example, 1,000 newly cached visible nodes under the flag currently make 2,00
 
 ## Estimate and checks
 
-Allow 0.5 to 1 engineer-day. In a hypothetical equivalent workload where the redundant queries represent 10% of `UpdateNodeCacheData` time, removing them would reduce total time by approximately `4.49% * 0.1 = 0.45%`. The 10% is an assumption; current visibility/flag prevalence and neutral-query cost require measurement.
+Allow 0.5 to 1 engineer-day. In a hypothetical equivalent workload where the redundant queries represent 10% of `UpdateNodeCacheData` time, removing them would reduce total time by approximately `4.49% * 0.1 = 0.45%`. The 10% is an assumption. Flag-disabled searches save nothing, and invisible calls save only an early visibility check. Measure flag prevalence and query cost in escort/civilian movement in both DLL and extracted simulator paths before predicting a current saving.
 
 Follow [shared verification](README.md). Run `python build_vp_clang_sdk.py --config release` from `civ5-dll/` and the native extraction/build workflow during implementation. Compare all cache fields and selected paths with visibility on/off, flag on/off, no units, neutral combat units, neutral civilians, invisible units, enemies and stacking-limit saturation. Cover selective ZOC, pretend-all-revealed without actual visibility, and repeated queries in one generation. Counters should confirm one eliminated call per newly cached flag-enabled node, visible or invisible.
 

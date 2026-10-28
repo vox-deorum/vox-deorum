@@ -19,7 +19,7 @@ For a concrete example, a search visits 10,000 ordinary tiles and 20 airport-ori
 
 ## Estimate and verification
 
-Allow 0.5 to 1 engineer-day for initialization audit, implementation and comparison. If 80% of the historical callback time were disabled-node lookups, its historical-workload overall reduction would be about `0.53% * 0.8 = 0.42%`. The 80% is hypothetical; the measured callback envelope supplies no present speedup claim.
+Allow 0.5 to 1 engineer-day for initialization audit, implementation and comparison. If 80% of the historical callback time were disabled-node lookups, its historical-workload overall reduction would be about `0.53% * 0.8 = 0.42%`. The 80% is hypothetical; the measured callback envelope supplies no present speedup claim. The callback is extracted into the simulator, so the scope applies to both runtimes. Count invocations during insertion and expansion, rather than equating visited nodes with calls. Broader query/node reductions remove some of the same work.
 
 Follow [shared verification](README.md), including `python build_vp_clang_sdk.py --config release` from `civ5-dll/` and the native extraction/build checks. Compare old/new callback outputs and final path sequences on ordinary land/sea paths, airports owned by the player and allied minors, insufficient and zero moves, invalid plot/unit lookups, and admiral port changes. Exercise repeated searches to detect stale generation flags. Record disabled versus enabled callback counts separately from timing.
 

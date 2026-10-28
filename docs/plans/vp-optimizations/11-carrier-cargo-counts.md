@@ -20,7 +20,9 @@ For example, a final pass scores four ships against 80 total roster rows. Direct
 
 ## Estimate and verification
 
-Allow 0.5 to 1 day for measurement, then 2 to 4 engineer-days if justified. The example removes 75% of roster scanning, excluding map overhead. If scanning hypothetically accounts for 1% of final validation, its reduction is at most about 0.75% there. Current whole-turn benefit is unknown; a pass with one scored ship may regress.
+Allow 0.5 to 1 day for measurement, then 2 to 4 engineer-days if justified. For `S` eligible scores over `N` roster rows, direct counting visits `S * N` rows; the snapshot visits `N` plus map construction and lookups. Four scores remove 75% of roster visits. If those scans hypothetically consume 1% of final-validation time, a 75% time reduction there would save 0.75% of final validation before map overhead; multiply by final validation's workload share for an overall estimate. One score, short rosters or early rejection may regress. Neither scan time nor a whole-turn saving is measured.
+
+The simulator uses this final pass for native search and bundled validation. Individual command/row final scores remain on direct counting under the proposed scope. Measure eligible-score counts per pass rather than assigning all sea-scoring time to this change.
 
 Use [shared verification](README.md), `python build_vp_clang_sdk.py --config release`, and native extraction/build checks. Compare pre-cap initial and post-cap final counts/scores, including aircraft moved from tracked to untracked by capping. Cover finished aircraft, no cargo, spent missiles, predicted aircraft/carrier deaths, moved carriers, siblings and parent mutation. Compare accepted finishes and assignment order with air search enabled/disabled. Instrument scanning separately from release timing.
 

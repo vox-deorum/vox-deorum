@@ -109,12 +109,14 @@ Use code compatible with the DLL's supported compilers. Give added functions pur
 All figures below are analytic examples, not benchmark results.
 
 - For 2,000 scalar queries with 18 reconstructed nodes each, the existing code emits 36,000 `SPathNode` elements and reverses 2,000 vectors. The new scalar arrival/existence paths emit zero elements. Plot-count queries still traverse those nodes.
-- If reconstruction accounts for 5% of a batch's time and scalar extraction removes 80% of that portion, the batch improves by about 4%. This does not imply a 4% whole-turn improvement.
+- If reconstruction accounts for 5% of a batch's time and scalar extraction removes 80% of that portion, batch time falls about 4%. Multiply by the batch's measured share of the whole workload for an overall estimate. The rollout evidence's recorded-state reconstruction category does not measure this path reconstruction.
 - If a squad reroute evaluates 10 alternatives and then re-searches its winner, memo reuse removes one of those 11 searches, about 9% for that portion. The initial squad search is additional work. When no reroute runs, the memo saves no searches.
 - A first failure to the original target can also avoid a matching retry, but only with identical scope and bounds. Do not assume repeated failures occur often.
 - A tiny vector costs one result per evaluated destination and disappears on return. Measure whether allocation overhead outweighs reuse in small rings; reserve modest ring capacity if justified.
 
-Estimated effort: 2 to 4 engineer-days for result extraction and wrappers, 2 to 3 for unit/squad integration and regression checking, plus 1 to 2 for in-game comparisons. Expected payoff is modest unless profiling shows reconstruction or squad reroutes are frequent.
+Scalar extraction applies to maintained simulator queries, but simulator squads are disabled and locking is stubbed. Squad memoization therefore has no direct current rollout saving and needs DLL validation. Expected payoff is modest unless materialization or reroutes are frequent; broad or failed searches retain nearly all search cost. Measure elapsed time saved separately from eliminated calls, whose costs can differ.
+
+Estimated effort: 2 to 4 engineer-days for result extraction and wrappers, 2 to 3 for unit/squad integration and regression checking, plus 1 to 2 for in-game comparisons, including maintained native declarations and selectors where applicable.
 
 ## Risks and open questions
 

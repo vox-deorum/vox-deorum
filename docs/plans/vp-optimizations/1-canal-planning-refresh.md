@@ -59,7 +59,7 @@ Alternatives:
 ## Ordered implementation steps
 
 1. **Define transient scheduling state in `CvBuilderTaskingAI.h`.**
-   Add `bool m_bCanalPlanValid` and `int m_iLastCanalRefreshTurn`, initialized to false and -1. Add a private `CanalRefreshInputs` value type containing the sorted vectors and scalar values above, plus `m_lastCanalRefreshInputs`. Use existing C++/STL conventions compatible with the DLL toolchain.
+   Add `bool m_bCanalPlanValid`, `int m_iLastCanalRefreshTurn` and `int m_iLastCanalUpdateTurn`, initialized to false, -1 and -1. The update turn records skipped updates as well as refreshes. Add a private `CanalRefreshInputs` value type containing the sorted vectors and scalar values above, plus `m_lastCanalRefreshInputs`. Use existing C++/STL conventions compatible with the DLL toolchain.
 
 2. **Make lifecycle behavior explicit in `CvBuilderTaskingAI.cpp`.**
    Reset the new validity, turn, and snapshot state in `Uninit` and `Init`. Clear `m_canalWantedPlots` in `Init` before snapshot collection can read prior-game plot indices. After `Read` restores existing serialized fields, invalidate the transient schedule while retaining the restored wanted set until its replacement is ready. Keep `Serialize` and save-stream field order unchanged. A backward game-turn jump also forces refresh.
@@ -69,7 +69,7 @@ Alternatives:
 
 4. **Define the refresh decision.**
    Add `bool ShouldRefreshCanalPlots(int gameTurn, const CanalRefreshInputs& inputs) const`.
-   Refresh when invalid, the turn moves backward, or inputs differ. Otherwise refresh when `(gameTurn + playerID) % 7 == 0` and this turn has not already been refreshed. Include an elapsed-seven-turn fallback if updates missed the phased turn. Initial and forced refreshes do not reset this fixed phase, so another scheduled refresh can follow one to six turns later. Repeated calls within a stable turn reuse the result; an input change may force another refresh in that turn.
+   Compare the current turn with `m_iLastCanalUpdateTurn` before recording this update. Refresh when invalid, the turn moves backward, or inputs differ. Record the update turn even when skipping a refresh. Otherwise refresh when `(gameTurn + playerID) % 7 == 0` and this turn has not already been refreshed. Include an elapsed-seven-turn fallback if updates missed the phased turn. Initial and forced refreshes do not reset this fixed phase, so another scheduled refresh can follow one to six turns later. Repeated calls within a stable turn reuse the result; an input change may force another refresh in that turn.
 
 5. **Rebuild only after the decision.**
    Run the existing origin searches into a local `set<int> newWantedPlots`; preserve the original path type, flags, range, and destination membership. Swap it into `m_canalWantedPlots` when complete. Refresh the snapshot's wanted-plot component to describe the new set, store the inputs and turn, then mark valid. Empty results are valid cached results.
@@ -95,7 +95,7 @@ All figures below are analytic illustrations, not measurements.
 
 In a stable interval excluding startup and forced refreshes, path-search count falls by about 83%: one refresh instead of six per seven turns. If one refresh costs `C` and each cheap input collection costs `S`, current seven-turn cost is approximately `6C`; proposed cost is `C + 7S`. With `F` additional initial or forced refreshes, it becomes `C * (1 + F) + 7S`. A forced refresh leaves the scheduled phase intact and can be followed soon by another refresh.
 
-No end-turn speedup follows directly from this ratio. Profile canal planning's fraction of total turn time, cost per origin, snapshot overhead, forced-refresh frequency, and actual plan age. A game with frequent structural changes can gain much less.
+Net seven-turn savings are approximately `(5 - F) * C - 7S`. Frequent forced refreshes or expensive snapshots can erase the gain. Measure canal planning's share of DLL turn time before converting the local reduction into a whole-turn estimate. Current simulator rollouts omit builder planning, so this plan has no direct saving in that workload.
 
 Estimated implementation effort: 1 to 2 developer days for localized scheduling, lifecycle handling, and diagnostics; 1 to 2 more days for DLL builds, representative save comparisons, and policy tuning. Exact event-driven invalidation would be a separate, larger task.
 
@@ -112,7 +112,7 @@ Estimated implementation effort: 1 to 2 developer days for localized scheduling,
 
 1. Review the diff for unchanged serialized field order, path inputs, and scoring constants. Verify all new members initialize before use.
 2. Build the DLL with the repository's Windows toolchain. A build-only release check can use `python build_vp_clang_sdk.py --config release` from `civ5-dll`; inspect its current prerequisites before running. When explicitly asked to build and deploy, use the documented `build-and-copy.bat` workflow.
-3. Use recorded or controlled saves to check first-update refresh, all seven phase values, forced refresh immediately before a fixed phase, repeated same-turn updates, missed update turns, empty results, minors, save/load, city founding/capture/razing, sea-range changes, and ocean access changes. Start a new game after another game in the same process, including a smaller map, and confirm that prior wanted indices cannot reach snapshot collection.
+3. Use recorded or controlled saves to check first-update refresh, all seven phase values, forced refresh immediately before a fixed phase, repeated same-turn updates, missed update turns, empty results, minors, save/load, city founding/capture/razing, sea-range changes, and ocean access changes. Include a refresh at turn seven, skipped updates through turn eleven, then a rewind to ten; the last-observed update must force refresh. Start a new game after another game in the same process, including a smaller map, and confirm that prior wanted indices cannot reach snapshot collection.
 4. Inspect a remembered operational canal across skipped turns and after a structural refresh. Compare its score preference and whether workers replace it. Check a lost owned tile and a freshly discovered alternative sea path.
 5. Run matching multi-turn coastal saves with diagnostics. Report median and slow-turn timings together with canal-plan differences and forced refresh counts. There is no identified DLL unit-test harness for these scenarios; a successful TypeScript test run would not validate this change.
 

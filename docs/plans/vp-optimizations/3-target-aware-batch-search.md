@@ -81,7 +81,7 @@ The following are analytical examples, not measured results or whole-turn speedu
 
 For a roughly uniform unobstructed hex region, radius 30 contains `1 + 3r(r+1) = 2,791` plots, while radius 10 contains 331. Targets contained in the smaller settled region could remove about 88% of pops. Weighted terrain, range limits, coasts, and unavailable targets change this substantially.
 
-Trade and canal callers request cities across the map. A distant or unreachable city can prevent early completion, so their practical benefit may be small. Military calls with an empty target list have a certain reduction in search work; report its frequency separately. Do not claim that smaller target lists alone imply smaller searches.
+Trade, canal and military callers can request unreachable cities. Military land and water searches share the same candidate list without coastal filtering; one ordinary inland target prevents a water batch from completing early. Record completion rates separately for every caller and movement mode. Empty military lists avoid both domain floods per muster city; nonempty failures retain the flood plus target bookkeeping. The 92% example describes successful-batch node reduction, with no measured whole-turn estimate. Simulator extraction excludes trade modes, so its timings cannot establish trade/canal savings.
 
 Expected engineering effort: 2 to 4 developer days for the guard, local target-state plumbing, callback audit assertions, and a differential probe; another 1 to 2 days for representative save runs and profiling. New generic shortest-path infrastructure is unnecessary.
 

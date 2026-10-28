@@ -61,7 +61,7 @@ Alternatives:
 - Fresh maps after every mission: more current estimates, but can expand from `W` searches to `W(W+1)/2` when one worker acts between each rescoring. Reject as the default optimization.
 - Eager maps only for workers remaining after preliminary stages: a smaller first stage with a common post-preliminary snapshot. It skips processed workers but misses savings from later filters and same-plot shortcuts.
 - Global navigation revisions: permits narrower invalidation when all dependencies are tracked, but expands this localized change substantially.
-- Selective eager maps at the original snapshot point: use a read-only eligibility prepass to identify needed workers before any mission. This preserves original observation timing and can be a fallback if exact legacy behavior is required; it adds duplicate scoring work and is not the lazy design.
+- Selective eager maps at the original snapshot point: use a read-only prepass to conservatively include every worker that can become relevant during later rescoring, before any mission. Exact legacy behavior also requires retaining its stale-origin estimates. This preserves original observation timing but adds duplicate scoring work; current eligibility alone is insufficient to establish the needed set.
 - `GetMultiplePaths` for selected targets: may reduce search scope, but changes the query strategy and needs separate profiling. Defer it.
 
 ## Ordered implementation steps
@@ -107,7 +107,9 @@ Eager map count is gathered workers `W`; lazy count is queried workers `Q` plus 
 
 An unreachable target does not imply an empty map: the start and other reachable plots can still be present. Independently, if the pathfinder returns an empty result, that is a computed cache entry and must not trigger a repeated search.
 
-If a workload avoids 10 maps and an average map costs `P`, gross savings are about `10P`, minus cache lookup overhead and any later rebuilding. Reachable-map sizes and cost vary strongly with terrain, roads, visibility, unit movement, and game stage. Do not translate map-count reduction directly into an end-turn percentage.
+If map costs average `P`, gross savings are approximately `(W - Q - R) * P`, before cache checks and any retained danger warmup. The first viable directive can still query nearly every remaining worker, so filter count alone does not establish a low `Q`. Preliminary processed workers and recommendation-only cases are the strongest candidates for savings. Measure map time and full worker-update time; no current whole-turn percentage is supported.
+
+The simulator replays captured worker/directive pairings through its `GetWeightedDirectives` facade. Its map-count and timing results cannot establish DLL scoring hit rates, assignment quality or danger-cache timing. Retain DLL save comparisons for those gates.
 
 Estimated effort: 1 to 2 developer days for localized helper/signature changes and instrumentation; 2 to 3 more days for DLL validation, save comparisons, and checking the observation-time approximation. Precise world-state invalidation would require additional investigation outside this estimate.
 

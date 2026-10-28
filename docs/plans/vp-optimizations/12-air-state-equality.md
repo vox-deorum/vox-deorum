@@ -1,8 +1,8 @@
-# 12. Avoid allocations for empty and singleton air damage records
+# 12. Fast equality for empty and singleton air damage records
 
 ## Goal and exact contract
 
-Give `DamageRecordsEqual` allocation-free effective-empty and singleton cases while preserving its existing exact equality for every input. Success means unchanged air-state deduplication and search decisions, with fewer temporary vectors in the common small cases.
+Give `DamageRecordsEqual` direct effective-empty and singleton comparisons while preserving its existing exact equality for every input. Empty records already avoid backing allocations; singleton records can avoid allocating temporary vectors. Success means unchanged air-state deduplication and search decisions with less temporary-container work.
 
 In [CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp), `DamageRecordsEqual` currently copies every nonzero `(unitID, value)` pair into two vectors, sorts them and compares. `airStateEquals` first checks interceptor states, then compares unit damage, uncertain damage and uncertain kill chance through this helper.
 
@@ -19,7 +19,9 @@ For a worked example, `[(7,0),(9,12)]` and `[(9,12)]` compare equal without allo
 
 ## Estimate and verification
 
-This is a code-based opportunity with no isolated measured timing. Allow 1 to 2 engineer-days for implementation, behavioral tests and benchmark comparison. If 90% of comparisons hypothetically contain at most one effective row on both sides, those comparisons avoid both temporary vectors and sorting. If this helper consumes 2% of a search and the change removes half its time, the search saves about 1%. Both percentages are assumptions; measure case distribution, allocation count and fallback overhead before claiming improvement.
+Allow 1 to 2 engineer-days for implementation, behavioral tests and benchmark comparison. Singleton-versus-singleton removes two backing allocations per helper call; three successful singleton record comparisons can remove six per `airStateEquals`. Empty inputs already allocate no backing storage, and sorting zero or one row performs no pair comparisons. Cardinality mismatches can also skip fallback allocations. Multi-entry pairs pay a preliminary scan before the unchanged fallback, potentially almost a full extra scan when leading rows are zero.
+
+There is no isolated timing in either DLL or simulator evidence. If this helper hypothetically consumes 2% of a search and falls 50%, search time falls about 1%; both inputs are assumptions. Measure empty, singleton and fallback frequencies separately, after interceptor and assignment-equivalence gates, before predicting a workload saving.
 
 Follow [shared verification](README.md), the DLL command `python build_vp_clang_sdk.py --config release`, and native extraction/build checks. Use focused native harness cases comparing the helper with its old sort-based result across empty, inline zero/nonzero, vector zeros, reordered rows, negative values, duplicate IDs with equal/different values and duplicate multiplicity. Verify that interceptor differences still reject equality before damage comparisons. Compare full assignments on air-heavy recordings with sweeps, uncertain strikes and missiles; use exact outputs, not approximate danger hashes.
 

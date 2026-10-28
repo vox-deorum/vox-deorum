@@ -83,7 +83,9 @@ For example, a railroad search that reaches only its start on a 20,000-plot map 
 
 On a tree-shaped road network, shortest paths are unique and the hybrid can replace most pair searches. On a city grid, equal-length alternatives are common. For 19 useful origins and a 3,000-plot graph, a 9-byte-per-plot logical tree payload is about 27 KB before vector/alignment overhead when processed one origin at a time. A second no-river route tree can reuse the same allocation. Reconstruction remains proportional to emitted path lengths.
 
-Search count alone can mislead: 19 complete trees of 3,000 plots visit 57,000 plots, matching 190 pair searches that average 300 expansions. If pair searches average only 100 expansions, they visit 19,000 plots and full trees can cost more even with FIFO. Include this crossover, ties, and river fallback in the Stage B go/no-go measurement.
+Search count alone can mislead: reducing 190 pair searches to 19 trees is 90% fewer search invocations. Yet 19 complete trees of 3,000 plots visit 57,000 plots, matching 190 pair searches that average 300 expansions. If pair searches average only 100 expansions, they visit 19,000 plots and full trees can cost more even with FIFO. Include this crossover, ties, and river fallback in the Stage B go/no-go measurement.
+
+No measured share supports a whole-turn saving for either stage. Current simulator rollouts consume captured connection plots and omit these city-connection searches, giving this plan no direct rollout saving. The simulator's separately measured city-distance work uses `PT_ARMY_MIXED` and is outside this scope.
 
 Expected effort: 3 to 5 developer days for Stage A implementation, ordering/lifecycle comparisons, and saves; 3 to 6 additional days for the conditional tree/uniqueness stage and river/tie verification. Stop after Stage A if profiling shows limited pair-search value or no useful unique-path subset.
 

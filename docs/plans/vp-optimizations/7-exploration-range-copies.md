@@ -6,7 +6,7 @@ Remove vector copies from `CvEconomicAI::InitiateExplorePlot` while preserving e
 
 [CvEconomicAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvEconomicAI.cpp) currently declares a vector before its radius loop and assigns `GetPlotsAtRangeX(pPlot, iRange, true, true)` to it for radii one through three. [CvMap.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvMap.cpp) already returns `const vector<CvPlot*>&`. Radius one uses `m_vPlotsShared`; larger radii use cached line-of-sight vectors. Null entries are legal, including the empty-cache sentinel.
 
-The archived October 24 combat profile pooled exploration range vector assignment and destruction: 43 of 2,830 game-thread samples, approximately 1.5%. It does not separate `InitiateExplorePlot` from `UpdateNearbyExplorePlots`, which also copies the returned vector. This plan retains the narrower initiation scope. The pooled share describes an older workload and cannot establish this function's affected-cost envelope or present runtime share.
+The archived October 24 combat profile attributes 36 vector-assignment samples and seven destruction samples to inline frames under `InitiateExplorePlot`: 43 of 2,830 main-thread samples, approximately 1.52%. The [evidence baseline](../../../../vox-deorum-rl/plans/optimizations/evidence.md) records the attribution method. This is the historical affected-cost envelope for this caller's copy/destruction work; present savings still require measurement.
 
 ## Minimal implementation
 
@@ -19,7 +19,7 @@ For example, assume the three returned rings contain 6, 9 and 14 pointers. The c
 
 ## Estimate, risks and verification
 
-Expected effort is 0.25 to 0.75 engineer-day, including source audit and parity checks. First separate the two callers with symbol-level counters or a fresh profile. If initiation copying hypothetically consumes 0.4% of a workload and the change removes half that cost, the reduction is about 0.2% overall. Both inputs are assumptions; the historical pooled 1.5% does not supply either one. Query cache filling and radius-one scratch assignment remain.
+Expected effort is 0.25 to 0.75 engineer-day, including source audit and parity checks. Removing an assumed 50% of the historically attributed copy/destruction time would reduce that workload by about `1.52% * 0.5 = 0.76%`. This is a sensitivity estimate, with no measured removable fraction or current speedup. Query cache filling and radius-one scratch assignment remain. The maintained simulator exploration rebuild invokes initiation for revealed plots, so the change can benefit current native workloads as well as DLL gameplay. Measure both warm/cold allocation counts and elapsed time before assigning a present percentage.
 
 Use the [shared verification workflow](README.md). During implementation run `python build_vp_clang_sdk.py --config release` from `civ5-dll/`, then the shared native extraction/build and interleaved timing checks. Compare all three exploration sets before and after revealing a plot, with cold and warm range caches. Include wrapped edges, null neighbors, blocked line of sight and embarked scouting. Check that the comparison probe copies any borrowed results before another query overwrites scratch.
 

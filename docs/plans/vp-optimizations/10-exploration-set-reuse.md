@@ -20,7 +20,7 @@ For example, a scout with no valid target at horizons 3 and 5 proceeds through 1
 
 ## Estimate, risks and verification
 
-Allow 1 to 2 engineer-days. With five builds, four builds disappear, an 80% reduction in this construction work. If construction hypothetically consumes 0.5% of selection time, that saves about 0.4% of selection time before overhead. There is no measured current construction fraction or whole-turn forecast.
+Allow 1 to 2 engineer-days. An attempt with one construction saves none; two constructions become one, saving 50%; five become one, saving 80% of construction work. Reach searches and scoring remain. If construction hypothetically consumes 0.5% of selection time and falls 80%, selection time falls about 0.4% before overhead. The single archived merge sample cannot establish either input. This applies to DLL and maintained simulator selection, with no measured current whole-workload forecast. Measure attempt/retry and allocation counts, including upgrade-home mission fallthrough, before deciding priority.
 
 Use [shared verification](README.md), the DLL release build command `python build_vp_clang_sdk.py --config release`, and native extraction/build checks. Confirm generated `ExecuteExplorerMoves` resolves the three-argument overload. Compare targets and missions at each horizon for land scouts, embarked units, coastal ships and ocean-capable ships. Include overlapping keys, empty sets, healing at the origin, high-value ruins, other explorers' mission targets, rejected long-range non-recon searches, and a mission revealing new terrain followed by another attempt. Confirm each new attempt observes updated scores.
 
