@@ -1,5 +1,7 @@
 # Build worker reachability maps on demand
 
+**Status:** Next. Every worker gets a seven-turn reach flood before the assigned and region stages remove many of them; the change is localized but moves when maps observe the world.
+
 For DLL developers changing worker assignment. A **reachability map** records the plots a worker can reach within the configured horizon and its arrival movement state.
 
 ## Goal and success criteria
@@ -26,7 +28,7 @@ Relevant sources:
 
 `ExecuteWorkerMoves` gathers automated/AI workers and immediately builds a `map<CvUnit*, ReachablePlots>` with `BUILDER_MAX_TURNS = 7`. A human-player pass also includes eligible nonautomated workers and several great-person types for recommendations. Each map uses `MOVEFLAG_AI_ABORT_IN_DANGER | MOVEFLAG_VISIBLE_ONLY`.
 
-Only afterward does the function execute already assigned directives and move workers toward allocated regions. Workers processed there do not participate in subsequent weighted selection, but their maps have already been built.
+Only afterward does the function execute already assigned directives and move workers toward allocated regions. Workers processed there do not participate in subsequent weighted selection, but their maps have already been built. A comment beside the eager construction already suggests postponing it.
 
 `GetWeightedDirectives` filters worked plots, missing builds, directive upper bounds, inferior same-plot alternatives, processed workers, regions, build capability, danger, build time, and worker-specific score bounds before calling `GetBuilderNumTurnsAway`. Many worker maps can therefore remain unused.
 

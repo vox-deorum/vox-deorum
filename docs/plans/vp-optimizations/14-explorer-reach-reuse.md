@@ -1,5 +1,7 @@
 # 14. Research exact reuse of expanding explorer reach searches
 
+**Status:** Deprioritized. This is research: exact continuation is unproven, and the harassment reach between horizon three and later retries breaks borrowed finder state.
+
 ## Goal and research gate
 
 Determine whether repeated horizon searches at 3, 5, 12 and 23 turns can share traversal work while preserving each bounded result and selected target exactly. Implementation is gated on a parity proof and useful measurements. A valid result of this investigation is to retain independent floods.

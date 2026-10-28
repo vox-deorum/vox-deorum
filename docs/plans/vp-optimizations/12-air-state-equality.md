@@ -1,10 +1,14 @@
 # 12. Fast equality for empty and singleton air damage records
 
+**Status:** Next. The change is contained and exact, and the air search is enabled for VDRL.
+
 ## Goal and exact contract
 
 Give `DamageRecordsEqual` direct effective-empty and singleton comparisons while preserving its existing exact equality for every input. Empty records already avoid backing allocations; singleton records can avoid allocating temporary vectors. Success means unchanged air-state deduplication and search decisions with less temporary-container work.
 
-In [CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp), `DamageRecordsEqual` currently copies every nonzero `(unitID, value)` pair into two vectors, sorts them and compares. `airStateEquals` first checks interceptor states, then compares unit damage, uncertain damage and uncertain kill chance through this helper.
+In [CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp), `DamageRecordsEqual` currently copies every nonzero `(unitID, value)` pair into two vectors, sorts them and compares. `airStateEquals` first checks interceptor states, then compares unit damage, uncertain damage and uncertain kill chance through this helper, so a fully equal comparison can call it three times. Each call builds and sorts two vectors, which means up to six vector allocations per equal comparison.
+
+The air-state comparison runs only with `VOX_TACTICAL_AIR_SEARCH`, which is off in default VP but enabled for VDRL, so this plan targets VDRL rollouts and air-search games.
 
 [CvUnit.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvUnit.h) defines `SUnitIDValueContainer` with inline single-entry storage and optional vector storage. Its iterator determines which storage is logically active. Equality currently ignores zero rows and row order, but preserves duplicate nonzero rows as a multiset. Public storage and constructed fixtures can contain duplicates even if normal mutators tend to update existing IDs. `GetValue` and approximate damage hashes cannot substitute for this exact multiset contract.
 

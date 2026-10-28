@@ -1,5 +1,7 @@
 # 8. Skip extra-child lookups for ordinary path nodes
 
+**Status:** Do now. Every expanded unit-path node pays a plot lookup and a hashed unit lookup before the capability test; the guard is exact.
+
 ## Goal and evidence
 
 Return an empty extra-child result before resolving a plot or unit when the node has none of the cached airlift or admiral-port capabilities. Success means the same ordered extra children and path results, with those lookups eliminated for the ordinary case.
@@ -15,7 +17,7 @@ The callback accounted for 0.53% of the archived October 24 profile's 2,830 game
 3. Leave the plot/unit null handling and every enabled branch in their current order. In particular preserve airlift precedence over port changes, the full-moves-or-zero rule, the once-per-search city checks, minor-ally iteration and child insertion order. Improvement airlift remains its existing unfinished branch.
 4. Regenerate the native extraction. Review [movement/unit-paths.json](../../../../vox-deorum-rl/simulator/extract/manifest/movement/unit-paths.json) and [movement/pathfinder.json](../../../../vox-deorum-rl/simulator/extract/manifest/movement/pathfinder.json) for affected selections. No signature or facade change is expected; use the [extractor convention](../../../../vox-deorum-rl/docs/development/extractor.md).
 
-For a concrete example, a search visits 10,000 ordinary tiles and 20 airport-origin nodes. Assuming the ordinary nodes have all three flags false, the guard skips 10,000 plot and unit resolutions. The 20 enabled nodes execute the existing checks and return exactly the same children. Passing a previously populated output vector must still yield an empty vector for a disabled node, so the clear stays first.
+For a concrete example, a search makes 10,000 disabled callback invocations and 20 enabled invocations. The guard skips one plot and one unit resolution for each disabled call. The 20 enabled calls execute the existing checks and return exactly the same children. Passing a previously populated output vector must still yield an empty vector for a disabled node, so the clear stays first.
 
 ## Estimate and verification
 

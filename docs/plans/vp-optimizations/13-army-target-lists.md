@@ -1,12 +1,14 @@
 # 13. Share the revealed city list during attack-target updates
 
+**Status:** Deprioritized. The collection loop is a cheap player-by-city scan, and each of its results feeds a full `GetMultiplePaths` flood that also copies and sorts the vector, so removing the redundant collections cannot measurably change `UpdateAttackTargets` time.
+
 ## Goal and current behavior
 
 Collect potential city targets once per `CvMilitaryAI::UpdateAttackTargets`, then reuse the same ordered vector for every muster city and both movement domains. Success means unchanged army paths and attack/defense rankings, with one candidate-city scan per update.
 
 `UpdateAttackTargets` in [CvMilitaryAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvMilitaryAI.cpp) calls `GetArmyPathsFromCity(pMusterCity, false)` and its water variant for each owned city. Each call reconstructs an identical `vector<CvPlot*>` by scanning players and their cities. It excludes the player's team and allied city states, then accepts plots that are still cities and are adjacent-revealed to the player's team. It deliberately leaves coastal filtering to the pathfinder. Later `IsPlayerValid` checks filter results after paths exist.
 
-This opportunity is supported by current source, with no isolated profile attribution or runtime measurement. Path generation is likely much more expensive than collecting targets, so do not equate scan reduction with update-time reduction.
+That collection loop is cheap next to the path work it feeds. Each collected city becomes a destination in a full `GetMultiplePaths` flood, and the batch method receives its destination vector by value, copying and sorting it on every call. The flood and its per-call copy each cost more than the repeated scans this plan would remove. `UpdateAttackTargets` runs once per turn per player from `CvMilitaryAI::DoTurn`, which limits how often any of this work happens. The plan stays parked as a small cleanup.
 
 ## Minimal change
 
@@ -20,7 +22,7 @@ For example, with 12 owned muster cities and 40 candidate enemy/neutral cities, 
 
 ## Estimate and verification
 
-Allow 1 to 2 engineer-days. For `M > 0` muster cities, collection passes fall from `2M` to one, removing `1 - 1/(2M)` of collection work. The example removes about 96%. If collection hypothetically consumes 2% of update time, update time falls about 1.9% before overhead; path batches and their private copies remain. There is no measured collection share or whole-turn estimate. Current simulator rollouts use captured target lists and omit these methods, so there is no direct saving there. Collect lazily on the first muster iteration to preserve zero scans for a player with no cities.
+Allow 1 to 2 engineer-days if it is ever picked up. For `M > 0` muster cities, collection passes fall from `2M` to one, removing `1 - 1/(2M)` of collection work. The example removes about 96% of the scans, while all 24 path batches and their private copies remain. That is why the effect on update time stays negligible. Current simulator rollouts use captured target lists and omit these methods, so there is no direct saving there. Collect lazily on the first muster iteration to preserve zero scans for a player with no cities.
 
 Follow [shared verification](README.md), `python build_vp_clang_sdk.py --config release` from `civ5-dll/`, and native extraction/build validation where applicable. Compare candidate order, destination keys, full path sequences, approach scores, exposed cities and final target rankings. Cover zero/one/many muster cities, no candidates, same-team cities, allied minors, unrevealed versus adjacent-revealed cities, coastal/noncoastal destinations and distinct muster trade ranges. Check tie ordering and wrapper behavior.
 

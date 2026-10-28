@@ -1,29 +1,27 @@
 # 11. Build carrier cargo counts once per stable scoring pass
 
-## Goal and applicability gate
+**Status:** Implemented for final scoring, without performance measurement as requested.
 
-Reduce repeated roster scans when several ships receive turn-end scores from the same tactical state. Preserve the exact aircraft-loss penalty. First measure whether these scans matter; ship destination enumeration is not the demonstrated multiplier in current source.
+## Scope
 
-`countCargoAircraft` in [CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp) scans available, not-quite-finished and finished units, counting `MS_AIR` rows with the carrier ID. It optionally adds `gUntrackedCargo`. `FindBestUnitAssignments` in [CvTacticalAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.cpp) records that map before `addInitialAssignments`, then clears/rebuilds it after `dropSuperfluousUnits`. Initial scoring sees pre-cap untracked cargo; final scoring sees post-cap cargo. `ScoreCombatUnitTurnEnd` requests counts only for positive danger, sea units, enabled air search and full scoring.
+`addFinishMovesIfAcceptable` now shares a local, lazy `SCargoCountSnapshot` across its `EM_FINAL` scoring loop. The first eligible sea-unit score counts tracked aircraft across available, not-quite-finished and finished units. Later ship scores reuse the table. Passes that never reach the cargo penalty do not scan the rosters.
 
-Actual full-score sites include `addInitialAssignments`' two `EM_INITIAL` passes and `addFinishMovesIfAcceptable`'s `EM_FINAL` loop. Ordinary preferred movement uses `EM_INTERMEDIATE`, and `canProbablyEndTurnAfterAssignment` requests only the impossibility check. Neither reaches this cargo penalty. There is no isolated timing or archived sample attribution for cargo counting.
+The three lists remain unchanged throughout this loop. The snapshot expires when the call returns, before any later scoring pass or branch mutation can reuse it. There is no cache on a position or its parent.
 
-## Minimal measured implementation
+The aircraft-loss penalty still requires positive danger, sea units, full scoring and `VOX_TACTICAL_AIR_SEARCH`. Air search is off in default VP and enabled for VDRL. Initial scoring and individual simulator command/row scoring retain direct counting.
 
-1. Count full cargo scans, roster rows visited and eligible sea scores in initial/final passes. Stop if their runtime share is negligible.
-2. Start with `addFinishMovesIfAcceptable`. Its scoring loop reads the three unit lists and appends assignment rows; the transfer from not-quite-finished to finished happens after scoring. Use a local `SCargoCountSnapshot` containing `bool bBuilt` and `map<int, int> trackedCounts`. A const position helper `void getTrackedCargoCounts(map<int, int>& out) const` fills it from all three lists on the first eligible request. A missing carrier key means zero.
-3. Pass an optional pointer to this local snapshot through `ScorePlotForMove`, `ScorePlotForCombatUnitMove` and `ScoreCombatUnitTurnEnd`, with `NULL` retaining direct counting. Keep existing callers on the direct path. Add `gUntrackedCargo` separately using the existing lookup, preserving `bTrackedOnly` behavior in root cargo recording.
-4. Extend to initial scoring only after auditing `addAssignment(A_INITIAL)` and proving counted membership/carrier fields stay fixed. Its untracked lookup must observe the pre-cap map. Rebuild all tracked snapshots after capping; any future snapshot of untracked cargo must also be discarded at the second `recordCarrierCargo`. Parents remain mutable despite inherited COW lists. Never retain tables across mutations, child initialization or pool reuse.
-5. Use C++03, purpose comments and `// Vox Deorum:`. Update native declarations and all affected maintained selections: [state.json](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/state.json) owns `countCargoAircraft` and generated scoring declarations, [search.json](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/search.json) owns finish validation, and [scoring.json](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/scoring.json) owns scoring helpers and root cargo recording. Select the new helper/type and update `ScorePlotForMove`'s signature transform and exposed declaration together. Regenerate under the [extractor convention](../../../../vox-deorum-rl/docs/development/extractor.md).
+## Implementation
 
-For example, a final pass scores four ships against 80 total roster rows. Direct counting visits 320 rows. One lazily built snapshot visits 80 rows plus four map lookups. A ship carrying one available and one finished aircraft, plus one untracked root aircraft, must still count three. A fired missile removed in a child must be absent from that child's independently built table.
+[CvTacticalAirSearch.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAirSearch.cpp) owns `getTrackedCargoCounts` and the optional snapshot path in `countCargoAircraft`. Both counting paths add the current `gUntrackedCargo` lookup separately, and `bTrackedOnly` still excludes it. Root recording before and after participant capping is unchanged.
 
-## Estimate and verification
+[CvTacticalAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.cpp) passes the optional snapshot through the move scorers into `ScoreCombatUnitTurnEnd`. Only final-pass validation supplies a snapshot. [CvTacticalAI.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.h) declares the type and helper with C++03-compatible storage.
 
-Allow 0.5 to 1 day for measurement, then 2 to 4 engineer-days if justified. For `S` eligible scores over `N` roster rows, direct counting visits `S * N` rows; the snapshot visits `N` plus map construction and lookups. Four scores remove 75% of roster visits. If those scans hypothetically consume 1% of final-validation time, a 75% time reduction there would save 0.75% of final validation before map overhead; multiply by final validation's workload share for an overall estimate. One score, short rosters or early rejection may regress. Neither scan time nor a whole-turn saving is measured.
+The simulator's maintained [state.json](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/state.json) selects the new type and helper and exposes the updated scorer declaration. [scoring.json](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/scoring.json) updates the existing scorer linkage transform. The existing whole-function selection in [search.json](../../../../vox-deorum-rl/simulator/extract/manifest/tactical/search.json) includes final-pass reuse automatically. Generated files are rebuilt through the [extractor](../../../../vox-deorum-rl/docs/development/extractor.md).
 
-The simulator uses this final pass for native search and bundled validation. Individual command/row final scores remain on direct counting under the proposed scope. Measure eligible-score counts per pass rather than assigning all sea-scoring time to this change.
+## Verification
 
-Use [shared verification](README.md), `python build_vp_clang_sdk.py --config release`, and native extraction/build checks. Compare pre-cap initial and post-cap final counts/scores, including aircraft moved from tracked to untracked by capping. Cover finished aircraft, no cargo, spent missiles, predicted aircraft/carrier deaths, moved carriers, siblings and parent mutation. Compare accepted finishes and assignment order with air search enabled/disabled. Instrument scanning separately from release timing.
+The native cargo-count regression compares direct and snapshot counts across all three unit lists, other carriers, city-based aircraft, empty carriers, and untracked cargo. It checks fresh passes after aircraft removal, carrier loss, carrier movement, sibling creation, parent mutation and position reuse. Existing air-search tests cover predicted aircraft deaths and cargo lost with a sunk carrier.
 
-Out of scope: cargo gameplay rules, persistent/global count caches, participant caps, carrier movement semantics or changes to the penalty formula.
+Build checks use `python build_vp_clang_sdk.py --config release` and the simulator's native extraction/build workflow. No profiling counters, timings or measured speedup claims are part of this change.
+
+For `S` eligible ship scores and `N` roster rows, direct counting visits `S * N` rows; the snapshot visits `N` rows plus map construction and lookups. Actual runtime savings are unmeasured.

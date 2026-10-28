@@ -1,10 +1,14 @@
 # Target-aware batch path searches
 
+**Status:** Deprioritized for nonempty early stopping. The empty-list guard is a low-payoff drive-by.
+
 For DLL developers: a **batch path search** finds paths from one origin to several requested plots. This plan changes when that search stops in `civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp`, with exact path compatibility as a prerequisite.
 
 ## Goal and success criteria
 
-Reduce work in `CvPathFinder::GetMultiplePaths` when every requested target is settled before the bounded search region is exhausted. An empty target list must perform no search.
+Reduce work in `CvPathFinder::GetMultiplePaths` when every requested target is settled before the bounded search region is exhausted, and skip the search for an empty target list.
+
+The early-stop case is rare in current callers. Trade and canal destinations are built from every city in the game, including the origin's own city, so those lists are never empty and almost always contain an inland or unreachable city that keeps the batch from settling early. Only `GetArmyPathsFromCity` can pass an empty list, when the player has no revealed foreign city. The design below therefore stays parked, and the empty-list guard is worth taking only as a small drive-by.
 
 For enabled modes, preserve the returned map keys and every `SPath` field, including the exact plot sequence, cost, normalized distance, turns, configuration, and generation slice. Unsupported requests retain the existing flood behavior. Measure improvements in expanded nodes and elapsed DLL time separately.
 
@@ -24,6 +28,8 @@ Current callers are:
 | [CvGameTrade::UpdateTradePathCache](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTradeClasses.cpp) | Trade land/water, trade-range normalized-distance bound, unlimited turns | Cached paths used by trade and military selection |
 | [CvMilitaryAI::GetArmyPathsFromCity](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvMilitaryAI.cpp) | Army land/water, unlimited turns, normalized-distance bound, ignore passage/enemies | Potential target paths |
 | [CvBuilderTaskingAI::UpdateCanalPlots](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvBuilderTaskingAI.cpp) | Trade water with `MOVEFLAG_PRETEND_CANALS`, unlimited turns | Exact plots selected for canal interest |
+
+Army destinations apply a team and alliance skip plus an adjacent-revealed filter. The same list feeds the water batch, which therefore receives inland targets too.
 
 Trade land discounts still leave positive costs: the largest road discount is 70 plus at most 20 out of 120. Water costs start at `PATH_BASE_COST` and add penalties. Army costs use positive terrain scales. These callbacks depend on adjacent plots, player state, flags, or cached player capabilities, and remain fixed within a locked search.
 
@@ -74,14 +80,14 @@ The following are analytical examples, not measured results or whole-turn speedu
 
 | Scenario | Existing work | Expected target-aware work |
 | --- | --- | --- |
-| No potential enemy-city targets | One bounded army flood per origin | Zero expansions |
+| Army origin with no revealed foreign city | One bounded land flood and one bounded water flood per origin | Zero expansions |
 | Three nearby targets, all settled within 400 of 5,000 reachable nodes | About 5,000 pops plus extraction scan | About 400 pops plus the smaller scan, approximately 92% fewer pops |
 | Nine nearby targets and one unreachable city | Entire bounded flood | Entire bounded flood plus target bookkeeping |
 | Every requested target is the start plot | Entire bounded flood | One pop and a one-node result |
 
 For a roughly uniform unobstructed hex region, radius 30 contains `1 + 3r(r+1) = 2,791` plots, while radius 10 contains 331. Targets contained in the smaller settled region could remove about 88% of pops. Weighted terrain, range limits, coasts, and unavailable targets change this substantially.
 
-Trade, canal and military callers can request unreachable cities. Military land and water searches share the same candidate list without coastal filtering; one ordinary inland target prevents a water batch from completing early. Record completion rates separately for every caller and movement mode. Empty military lists avoid both domain floods per muster city; nonempty failures retain the flood plus target bookkeeping. The 92% example describes successful-batch node reduction, with no measured whole-turn estimate. Simulator extraction excludes trade modes, so its timings cannot establish trade/canal savings.
+The second and fourth rows are hypothetical shapes rather than caller behavior. In practice, trade and canal batches always carry every city on the map, including the origin city itself, and the army water batch carries the same inland list as the land batch. A single unreachable or inland target keeps such a batch running to exhaustion, so the realistic early-stop rate is low. The empty-list guard applies only to the army caller and saves both domain floods for an origin. Record completion rates separately for every caller and movement mode. The 92% example describes successful-batch node reduction, with no measured whole-turn estimate. Simulator extraction excludes trade modes, so its timings cannot establish trade/canal savings.
 
 Expected engineering effort: 2 to 4 developer days for the guard, local target-state plumbing, callback audit assertions, and a differential probe; another 1 to 2 days for representative save runs and profiling. New generic shortest-path infrastructure is unnecessary.
 

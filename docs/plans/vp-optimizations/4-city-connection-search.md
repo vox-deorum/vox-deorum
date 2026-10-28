@@ -1,5 +1,7 @@
 # City connection reachability and path reuse
 
+**Status:** Measure first. The searches run every turn and pair marking scales quadratically, but the stages below need a profile showing they take a meaningful share of turn time.
+
 For DLL developers: **city connection searches** determine which cities connect to the capital and which route plots receive connection yields. This plan changes their traversal in `civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp` and their use in `CvCityConnections.cpp`.
 
 ## Goal and success criteria
@@ -10,9 +12,10 @@ Ship constant-cost connectivity floods independently. Treat replacing pair-speci
 
 ## Current state
 
+- [CvPlayer.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvPlayer.cpp): turn processing calls `GetCityConnections()->Update()` unconditionally for every player each turn. The dirty flag drives lazy refreshes in the accessors, and building roads does not set it, so `UpdateRouteInfo` runs every turn regardless.
 - [CvCityConnections.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvCityConnections.cpp): `UpdateRouteInfo` performs road and railroad reachability searches from each city in `m_plotIdsToConnect`, plus water reachability when buildings and blockade state permit it.
 - It first populates `m_connectionState`, supplements missing connections through Lua events, then floods mixed road and mixed industrial connections from the capital. Mixed searches depend on the completed direct-connection table.
-- It stores connected cities in reachability iteration order, then calls `GetPath` for every `i < j` pair to mark road-connected plots. Each failed no-river road search retries with rivers. Industrial pairs use railroad paths without river fallback.
+- It stores connected cities in reachability iteration order, then calls `GetPath` for every `i < j` pair to mark road-connected plots, so the pair loop is quadratic in connected cities. Each failed no-river road search retries with rivers. Industrial pairs use railroad paths without river fallback.
 - `CheckPlotRouteStateChanges` sorts and deduplicates the unions, computes additions/removals, and calls `CvPlot::SetCityConnection`.
 - [CvPlot.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvPlot.cpp): `SetCityConnection` updates yields and visible layout when a plot flag changes. Equal-cost alternative paths can therefore affect gameplay.
 - [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `CvStepFinder::Configure` uses a null cost callback for `PT_CITY_CONNECTION_LAND`, `WATER`, and `MIXED`. `udFunc` supplies the constant `PATH_BASE_COST` for every accepted edge, including nonlocal extra children.
@@ -25,13 +28,15 @@ Land extra children can jump along rivers for `ROUTE_ROAD` and `ROUTE_ANY` only.
 
 ## Approach and alternatives
 
+Measure before implementing either stage. Stage A only removes heap overhead from the constant-cost floods, and Stage B remains research into whether predecessor trees can preserve exact marked plots. Start only when a profile shows that pair marking or the direct floods take a meaningful share of turn time; a wide empire makes that plausible, but the share is unmeasured.
+
 Stage A introduces a dedicated **FIFO reachability helper**, which explores plots in first-in, first-out order, on `CvStepFinder`, called only by the five reachability sites in `UpdateRouteInfo`. It reuses current validity/extra-child callbacks and changes the queue for these constant-cost searches. It does not replace `GetPath` or globally dispatch all step modes through BFS.
 
 Return reachable plots in legacy order `(hop distance, Y, X)`, rather than FIFO discovery order. Require `giKnownCostWeight > 0` for this ordering argument; other weights retain the legacy search. This preserves connected-city vector order and therefore the orientation of existing `i < j` pair searches. A reversed path request can select a different route on a tied or directed graph.
 
 Stage B evaluates per-origin no-river road/railroad predecessor trees. A single tree gives shortest paths to many targets, but the current pair searches use destination-oriented `StepHeuristic` and heuristic tie-breaking. Identical shortest distance does not imply identical plot sequence. River jumps also make geographical distance an inadmissible heuristic, so replacing legacy river searches can change even their returned costs.
 
-Consequently, the default deliverable is Stage A. Stage B may ship only for a proven compatible subset, with legacy pair searches for ambiguous targets. If a useful compatible subset cannot be identified cheaply, leave all pair searches unchanged and report the measured Stage A benefit.
+Consequently, Stage A is the smaller candidate and Stage B may ship only for a proven compatible subset, with legacy pair searches for ambiguous targets. If a useful compatible subset cannot be identified cheaply, leave all pair searches unchanged and report the measured Stage A benefit.
 
 Alternatives:
 
