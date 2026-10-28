@@ -71,7 +71,7 @@ Unit selection still needs live garrison, sentry and engineer comparisons coveri
 
 ## Upstream handoffs
 
-All four branches are based on `upstream/master` at `2bc6d34a16c5d4fb8cfb824170b9940cff88d7be`, with push destination `origin` and no upstream tracking. Each lives in `temp/upstream-review/<slug>-review/civ5-dll/`; the maintained development checkout and its existing workflow state are preserved.
+All four branches are based on `upstream/master` at `2bc6d34a16c5d4fb8cfb824170b9940cff88d7be`, with push destination `origin`. Bounded unit selection tracks `origin/pr/bounded-unit-selection`; the other three have no upstream tracking. Each lives in `temp/upstream-review/<slug>-review/civ5-dll/`; the maintained development checkout and its existing workflow state are preserved.
 
 | Branch | Changed native files | Draft |
 | --- | --- | --- |
@@ -80,9 +80,9 @@ All four branches are based on `upstream/master` at `2bc6d34a16c5d4fb8cfb824170b
 | `pr/bounded-unit-selection` | `CvHomelandAI.cpp`, `CvUnit.cpp`, `CvUnit.h` | `temp/upstream-review/bounded-unit-selection-pr.md` |
 | `pr/lazy-worker-reachability` | `CvHomelandAI.cpp`, `CvHomelandAI.h` | `temp/upstream-review/lazy-worker-reachability-pr.md` |
 
-Separate validation handoffs use the same slugs with `-validation.md`. The patches add no VD attribution or IPC dependencies. Each upstream worktree remains unstaged and uncommitted; nothing was pushed or published. Human staging added during this task in the maintained checkouts was preserved. No staging was performed by the agent.
+Separate validation handoffs use the same slugs with `-validation.md`. The patches add no VD attribution or IPC dependencies. Bounded unit selection is committed as `cfe9a915ec7e842c0605bcfbfde698fb31203eaf` and pushed to `origin/pr/bounded-unit-selection`, with a clean PR checkout. The other three upstream changes remain unstaged and uncommitted. Human staging in the maintained checkouts is preserved; only the three files authorized for the bounded-selection PR commit were staged by the agent.
 
-The upstream extra-child guard includes its existing sealift flag. That branch is absent from the maintained VD line, whose guard has three flags. Verification applies to the complete working tree. Human staging is preserved; the final shared-precheck changes remain unstaged for review.
+The upstream extra-child guard includes its existing sealift flag. That branch is absent from the maintained VD line, whose guard has three flags. Verification applies to the complete working tree. The committed bounded-selection methods and declaration match the maintained VD 5.2 implementation exactly; its source hashes are unchanged since validation. The maintained checkout's staging and prior workflow state were preserved during the PR commit and push.
 
 Refreshed upstream source and all 65 open PR file lists were checked on October 28, 2026. OpenCode reviewed the seven relevant patches and found no equivalent change. The four PRs touching `CvUnit.cpp` or `CvUnit.h` are included in that audit. PRs 12997 and 13428 overlap worker and builder code and may need reconciliation if merged first. OpenCode handled bounded implementation, initialization/overlap audits, tests, and independent review; its model was not reported.
 
