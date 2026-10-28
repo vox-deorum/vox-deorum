@@ -1,5 +1,7 @@
 # Build worker reachability maps on demand
 
+For DLL developers changing worker assignment. A **reachability map** records the plots a worker can reach within the configured horizon and its arrival movement state.
+
 ## Goal and success criteria
 
 Avoid seven-turn reachability searches for workers whose movement estimates are never used by directive scoring.
@@ -16,10 +18,11 @@ Moving searches across unit missions changes which world state they observe. The
 
 Relevant sources:
 
-- [CvHomelandAI.cpp](../../civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp): `ExecuteWorkerMoves`, `GetWeightedDirectives`, `GetBuilderNumTurnsAway`, and `ExecuteMoveToTarget`.
-- [CvHomelandAI.h](../../civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.h): scoring and movement helper declarations.
-- [CvBuilderTaskingAI.cpp](../../civ5-dll/CvGameCoreDLL_Expansion2/CvBuilderTaskingAI.cpp): `ExecuteWorkerMove` and `CanUnitPerformDirective`.
-- [CvAStar.cpp](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `CvPathFinder::GetPlotsInReach`, `PathValid`, and `PathEndTurnCost`.
+- [CvHomelandAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp): `ExecuteWorkerMoves`, `GetWeightedDirectives`, `GetBuilderNumTurnsAway`, and `ExecuteMoveToTarget`.
+- [CvHomelandAI.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.h): scoring and movement helper declarations.
+- [CvBuilderTaskingAI.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvBuilderTaskingAI.cpp): `ExecuteWorkerMove` and `CanUnitPerformDirective`.
+- [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `CvPathFinder::GetPlotsInReach`, `CvTwoLayerPathFinder::Configure`, `PathValid`, and `PathEndTurnCost`.
+- [CvPlayer.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvPlayer.cpp): `GetPlotDanger` and its player danger-cache update.
 
 `ExecuteWorkerMoves` gathers automated/AI workers and immediately builds a `map<CvUnit*, ReachablePlots>` with `BUILDER_MAX_TURNS = 7`. A human-player pass also includes eligible nonautomated workers and several great-person types for recommendations. Each map uses `MOVEFLAG_AI_ABORT_IN_DANGER | MOVEFLAG_VISIBLE_ONLY`.
 
@@ -31,9 +34,13 @@ Only afterward does the function execute already assigned directives and move wo
 
 Weighted scoring runs again after assignments and planned-state updates. Today all those passes reuse the original eager maps. Those maps can be stale: worker movement changes visibility and stacking; completed builds can change roads, features, or passability. A failed `ExecuteWorkerMove` can also leave the worker moved with fewer moves after an aborted mission. A cache keyed only by that worker's position cannot detect changes caused by other workers.
 
+The path query has a player-level side effect: `GetPlotsInReach` calls `Configure`, which requests `GetPlotDanger` for the origin and can trigger `UpdateDanger`. Delaying or omitting queries changes when that shared danger cache is warmed, potentially affecting danger filters and mission checks for other workers.
+
+`ExecuteWorkerMove` can return true after movement uses all remaining moves even when the directive plot has not been reached. This normal partial travel marks the worker processed for this invocation. A true return therefore does not prove that construction started or that useful work completed.
+
 ## Approach and alternatives
 
-Replace eager construction with a local mutable map cache keyed by unit ID. The cache belongs to one `ExecuteWorkerMoves` call. Scoring inserts only on the first actual distance query for that worker. Each entry stores the worker's origin plot, remaining moves, and embarkation state alongside its result.
+Replace eager construction with a **worker reachability cache**, a local mutable map keyed by unit ID that belongs to one `ExecuteWorkerMoves` call. Scoring inserts only on the first actual distance query for that worker. Each entry stores the worker's origin plot, remaining moves, and embarkation state alongside its result.
 
 Begin with an empty cache after the assigned-directive and region-movement stages. Reuse entries across weighted-scoring passes. Before using an entry, compare the worker's current plot, moves, and embarkation state; rebuild only that entry when they differ. This handles workers that move during an aborted mission and remain eligible. Processed workers are filtered before lookup, so successfully assigned workers generally need no rebuild.
 
@@ -44,6 +51,8 @@ The result has three distinct properties:
 - Lazy construction in an unchanged world preserves distance-query behavior, including empty maps and the current-plot shortcut.
 - Each worker's first query now observes the world at that query, often after preliminary missions. Different workers can therefore have different observation times. This is an explicit policy approximation and can change assignments.
 - Per-worker movement-state checks remove one stale-origin case from current behavior, while changes caused by other workers can remain stale until the next invocation.
+
+The same timing change applies to danger-cache warming. Include that shared side effect in diagnostic comparisons. Preserve an explicit `GetPlotDanger` warmup at the old collection point only if evidence shows that it is needed for acceptable behavior, and measure its remaining cost. Do not introduce global danger invalidation as part of this cache change.
 
 The cache estimates directive travel time; it does not prove that a later mission can complete. Preserve the normal execution checks and failure handling. Do not claim full world-state validity or strict legacy assignment parity.
 
@@ -79,7 +88,7 @@ Alternatives:
    Do not retain a `ReachablePlots` reference, iterator, or `CvUnit*` lookup result across mission execution or entry replacement. Resolve worker IDs using the existing live-unit lookup. No cached map is reused for a consumed great person. Preserve stable sorting and worker traversal order. Keep actual mission path checks and failed-mission handling unchanged.
 
 8. **Instrument and apply a performance acceptance gate.**
-   Count candidate workers, maps constructed, movement-state rebuilds, empty maps, cache hits, current-plot shortcuts, mission failures, and elapsed path/scoring time. Compare with the current eager implementation. Use fresh maps diagnostically to explain assignment differences, without replacing the production reuse policy. Investigate any total path or turn-time regression. Use existing DLL logging/profiling and `// Vox Deorum:` modification markers.
+   Count candidate workers, maps constructed, movement-state rebuilds, empty maps, cache hits, current-plot shortcuts, mission failures, and elapsed path/scoring time. Record whether movement reached its target, started a build, or consumed moves while still traveling; do not interpret a true mission return as completed work. Compare danger-filter decisions and danger-cache updates at collection, scoring, and execution points. Use fresh maps diagnostically to explain differences without replacing the production reuse policy. Compare multi-turn progress against the current eager implementation and investigate time regressions. Use existing DLL logging/profiling and `// Vox Deorum:` modification markers.
 
 ## Concrete examples and estimates
 
@@ -90,11 +99,13 @@ These examples are analytic illustrations, not measured savings.
 | 12 workers; 7 finish assigned directives, 2 move regions; only 2 remaining workers survive scoring filters | 12 | 2, absent movement-state changes |
 | Human recommendations for 20 workers/eligible great people; only 4 need nonlocal distance queries; no actual missions | 20 | 4, reused across recommendation passes |
 | Every surviving pair targets its worker's current plot | One map per gathered worker | 0 |
-| One queried worker has no reachable target; queried repeatedly without moving | 1 | 1, because an empty map is cached |
+| A queried worker's map lacks a requested target; queried repeatedly without moving | 1 | 1, because the computed map is cached |
 | 10 workers all need maps, with one successful mission between each complete rescoring | 10 total | 10 total; other workers' maps are retained |
 | A queried worker aborts a move, changes origin, and is queried again | 1 stale original map | 1 initial map plus 1 rebuild |
 
 Eager map count is gathered workers `W`; lazy count is queried workers `Q` plus movement-state rebuilds `R`, where `0 <= Q <= W`. With no retries, a 20-worker invocation querying 8 workers saves 12 of 20 searches, or 60%. Failed movement can increase `R`, so the bound is not an unconditional one-search-per-worker guarantee.
+
+An unreachable target does not imply an empty map: the start and other reachable plots can still be present. Independently, if the pathfinder returns an empty result, that is a computed cache entry and must not trigger a repeated search.
 
 If a workload avoids 10 maps and an average map costs `P`, gross savings are about `10P`, minus cache lookup overhead and any later rebuilding. Reachable-map sizes and cost vary strongly with terrain, roads, visibility, unit movement, and game stage. Do not translate map-count reduction directly into an end-turn percentage.
 
@@ -103,9 +114,11 @@ Estimated effort: 1 to 2 developer days for localized helper/signature changes a
 ## Risks and open questions
 
 - First-observation timing can change assignments even when all candidates and weight formulas match. Evaluate recommendation quality, mission failures, and retries against the current world.
+- Moving `Configure` also moves possible player danger-cache warming. Compare danger-driven choices and other workers' mission checks; add the old-point warmup only if evidence warrants it.
 - Visibility and civilian stacking can change without modifying the queried worker. Its movement-state key is sufficient for detecting its own movement, not for full path validity. This approximation must remain explicit.
 - A hypothetical planned build changes scoring state without necessarily changing the actual map. Keep those two states separate when explaining cache freshness.
 - Normal mission execution rechecks movement, but an approximate estimate can still choose a less useful directive. Check completed work and wasted movement, not merely crashes or legal moves.
+- A successful return with zero moves can represent expected partial travel. Compare target arrival, build starts, and multi-turn progress before labeling it a regression or a completed assignment.
 - If strict legacy assignment parity is required, lazy first-observation timing is unsuitable. Reconsider the selective-eager alternative before implementation.
 - There is no required save-format migration because all cache state is invocation-local.
 
@@ -114,8 +127,9 @@ Estimated effort: 1 to 2 developer days for localized helper/signature changes a
 1. Build the DLL with the existing Windows toolchain. Use a build-only release invocation such as `python build_vp_clang_sdk.py --config release` from `civ5-dll` after checking prerequisites. Use the documented `build-and-copy.bat` deployment workflow when deployment is requested.
 2. On an unchanged scoring snapshot, compare lazy queries against eager maps generated at that same snapshot: reachable membership, arrival turns, chosen worker, directive order, and ties must agree. Use temporary diagnostics or a focused native harness if available; no existing DLL unit-test harness has been identified.
 3. Exercise assigned directives, wrong-region workers, same-plot builds, no valid directives, empty reach maps, unreachable targets, seven-turn boundaries, exhausted movement, land/sea workers, and human nonautomated/great-person recommendations.
-4. Exercise an aborted move that changes position but returns false and confirm that worker's map rebuilds. Exercise a completed road or feature removal, a worker revealing terrain, a civilian vacating a choke point, and a consumed great person. Confirm retained estimates remain invocation-local and actual missions still validate movement. Use fresh diagnostic maps to explain differences rather than asserting parity after world changes.
-5. Profile full `ExecuteWorkerMoves`, path time, map count, and peak cached entries on early, late, coastal, wartime, human, and worker-heavy turns. Include repeated rescoring cases. Accept only a workload-supported net improvement with understood assignment differences.
+4. Exercise an aborted move that changes position but returns false and confirm that worker's map rebuilds. Also exercise zero-moves partial travel that returns true: record actual target arrival and build start, and compare progress across turns. Exercise a completed road or feature removal, a worker revealing terrain, a civilian vacating a choke point, and a consumed great person. Confirm retained estimates remain invocation-local and actual missions still validate movement. Use fresh diagnostic maps to explain differences rather than asserting parity after world changes.
+5. Compare danger-cache update timing, danger-filter exclusions, and later mission decisions before and after preliminary worker moves. Include a cold player danger cache and a turn where preliminary movement reveals threats. If differences warrant retaining old-point warming, verify that variant separately and profile its cost.
+6. Profile full `ExecuteWorkerMoves`, path time, map count, and peak cached entries on early, late, coastal, wartime, human, and worker-heavy turns. Include repeated rescoring cases. Accept only a workload-supported net improvement with understood assignment differences.
 
 ## Out of scope
 

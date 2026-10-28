@@ -1,6 +1,6 @@
 # VP optimization plans
 
-These drafts cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 cover the pathfinding review; plans 7–14 cover the October 27 native rollout review. No production changes or new runtime benchmarks accompany these plans. Simulator-owned work has separate [VD RL optimization plans](../../../vox-deorum-rl/plans/optimizations/README.md).
+These drafts cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 cover the pathfinding review; plans 7–14 cover the October 27 native rollout review. No production changes or new runtime benchmarks accompany these plans. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
 
 | Plan | Main opportunity | Behavior to evaluate |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ These drafts cover pathfinding and native rollout opportunities in the current V
 | [6. Approximate candidate ranking](6-approximate-candidate-ranking.md) | Spend detailed unit searches on promising assignment candidates. | Selected units, travel time, and fallback behavior. |
 | [7. Exploration range copies](7-exploration-range-copies.md) | Read cached plot ranges without copying vectors. | Range-buffer lifetime and unchanged exploration scores. |
 | [8. Path extra children](8-path-extra-children.md) | Skip plot/unit lookup when no extra movement capability applies. | Cleared outputs and actual airlift/port behavior. |
-| [9. Neutral unit query](9-neutral-unit-query.md) | Reuse the visible-plot query already computed. | Preserve the separate invisible-plot query. |
+| [9. Neutral unit query](9-neutral-unit-query.md) | Reuse the cached visibility-gated neutral-unit result. | Invisible plots already produce false under the existing predicate. |
 | [10. Exploration set reuse](10-exploration-set-reuse.md) | Reuse merged exploration candidates within an unchanged attempt. | Domain merge precedence and sight-changing missions. |
 | [11. Carrier cargo counts](11-carrier-cargo-counts.md) | Avoid repeated aircraft-list scans where measurement justifies caching. | Mutable tactical positions, carrier identity and untracked cargo. |
 | [12. Air-state equality](12-air-state-equality.md) | Avoid allocations for common damage-record shapes. | Exact equality, ignored zeros and duplicate entries. |
@@ -37,7 +37,7 @@ Measure the relevant caller's total elapsed time and search count, expanded node
 
 Add only the diagnostic counters needed for the selected plan, behind the existing debugging mechanism, and keep them out of saved game state. Use aggregate records rather than logging every expanded node. Capture result equivalence or decision differences as well as timing. Preserve deterministic ordering and record any intentional change to it.
 
-Numerical examples in plans 1–6 are analytical scenarios. Plans 7–14 also cite the [rollout evidence baseline](../../../vox-deorum-rl/plans/optimizations/evidence.md), including an October 24 archived profile with 2,830 samples. Its sample shares describe that workload, and an inclusive function share is only an affected-cost envelope. Every proposed saving remains conditional. Replace assumed costs, counts and hit rates with measurements before making a speedup claim. If a subsystem consumes a fraction `f` of total turn time and its time falls by a fraction `r`, the total turn-time reduction is approximately `f * r`, before new overhead. For example, removing half the work from a subsystem that consumes 8% of the turn saves approximately 4% of turn time. Savings from plans that affect the same calls must not be added independently.
+Numerical examples in plans 1–6 are analytical scenarios. Plans 7–14 also cite the [rollout evidence baseline](../../../../vox-deorum-rl/plans/optimizations/evidence.md), including an October 24 archived profile with 2,830 samples. Its sample shares describe that workload, and an inclusive function share is only an affected-cost envelope. Every proposed saving remains conditional. Replace assumed costs, counts and hit rates with measurements before making a speedup claim. If a subsystem consumes a fraction `f` of total turn time and its time falls by a fraction `r`, the total turn-time reduction is approximately `f * r`, before new overhead. For example, removing half the work from a subsystem that consumes 8% of the turn saves approximately 4% of turn time. Savings from plans that affect the same calls must not be added independently.
 
 Engineering estimates assume one developer familiar with the DLL and a working toolchain. Extended gameplay evaluation and unrelated build repairs can add time. Each plan gives its own scope and uncertainty.
 
@@ -47,4 +47,4 @@ Follow the root `AGENTS.md`. New or changed functions need purpose comments; VP 
 
 Build and gameplay verification belong to implementation. The plans describe future checks; no build or deployment is required to review these Markdown drafts. The repository's DLL build-and-copy command also deploys the DLL, while the build-only alternative is documented in each plan where needed.
 
-For extracted functions, use the simulator's [interleaved build comparison](../../../vox-deorum-rl/docs/validation/native-profiling.md) and [shared verification workflow](../../../vox-deorum-rl/plans/optimizations/README.md) as additional evidence. Keep maintained native code compatible with the DLL and regenerate extracted outputs normally. Runtime declarations and extraction selectors may need updates when a signature changes. Never implement a VP optimization by editing generated simulator code.
+For extracted functions, use the simulator's [interleaved build comparison](../../../../vox-deorum-rl/docs/validation/native-profiling.md) and [shared verification workflow](../../../../vox-deorum-rl/plans/optimizations/README.md) as additional evidence. Keep maintained native code compatible with the DLL and regenerate extracted outputs normally. Runtime declarations and extraction selectors may need updates when a signature changes. Never implement a VP optimization by editing generated simulator code.

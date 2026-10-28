@@ -13,11 +13,11 @@ Answer existence, length, and unit arrival queries without constructing a route 
 
 Source links are relative to this plan directory:
 
-- [CvAStar.cpp](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `CvPathFinder::DoesPathExist`, `GetPathLengthInPlots`, and `GetPathLengthInTurns` call `GetPath`, construct `SPath`, and discard its plot vector.
+- [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `CvPathFinder::DoesPathExist`, `GetPathLengthInPlots`, and `GetPathLengthInTurns` call `GetPath`, construct `SPath`, and discard its plot vector.
 - In the same file, `GetPath` holds the game-core lock around `Configure`, `FindPathWithCurrentConfiguration`, and `GetCurrentPath`. `GetCurrentPath` copies configuration, walks parents, appends `SPathNode` values, and reverses the vector.
-- [CvAStar.h](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.h): `TurnCountMode` distinguishes game-core, UI, and debug node conventions. Public length wrappers use the default game-core route.
-- [CvAStarNode.h](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStarNode.h): `SPath::iTotalTurns` includes an extra turn when terminal moves are zero. `SPathNode` stores narrowed `short` turns and moves. `SPathFinderUserData::operator==` deliberately ignores several bounds and other fields.
-- [CvUnit.cpp](../../civ5-dll/CvGameCoreDLL_Expansion2/CvUnit.cpp): both `TurnsToReachTarget` overloads eventually call `ComputePath(..., false)`. They do not populate the execution route cache.
+- [CvAStar.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.h): `TurnCountMode` distinguishes game-core, UI, and debug node conventions. Public length wrappers use the default game-core route.
+- [CvAStarNode.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStarNode.h): `SPath::iTotalTurns` includes an extra turn when terminal moves are zero. `SPathNode` stores narrowed `short` turns and moves. `SPathFinderUserData::operator==` deliberately ignores several bounds and other fields.
+- [CvUnit.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvUnit.cpp): both `TurnsToReachTarget` overloads eventually call `ComputePath(..., false)`. They do not populate the execution route cache.
 - `TurnsToReachTarget` already handles null targets, a normalized minimum turn bound of one, a route-aware range check, approximate target rings, and the current-plot shortcut. Preserve these checks and their order.
 - `ComputePath` constructs a full path even when `bCacheResult` is false. Its return uses the last node's game-core turns, adding one only for `MOVEFLAG_TURN_END_IS_NEXT_TURN` with no moves remaining.
 - `ComputePath` can redirect `MOVEFLAG_CONTINUE_TO_CLOSEST_PLOT` through the previous route. With squads, it searches the original destination, scores alternate ring plots by full-path cost, then searches the chosen alternative again.
@@ -42,7 +42,7 @@ In `CvAStarNode.h`, add `SPathQueryResult` with:
 
 | Field | Meaning |
 | --- | --- |
-| `bool bFound` | Search succeeded and the old reconstruction would contain at least one node |
+| `bool bFound` | Successful search with a non-null selected node that is not its own parent |
 | `SPathNode terminal` | Actual selected endpoint, game-core turns, moves, and stop-node status |
 | `int iTotalCost` | Same known cost as `SPath::iTotalCost` |
 | `int iTotalTurns` | Same raw-node calculation as `SPath::iTotalTurns` |
@@ -61,7 +61,7 @@ In `CvAStar.h/.cpp`, add:
 
 `GetPathResult` mirrors the existing `GetPath` lock/configure/search sequence. Read the result before releasing the lock, and do not inspect a stale `m_pBest` when configure or search fails.
 
-For existence, cost, and terminal turns, read the selected node directly. Preserve the existing empty-path behavior for an invalid self-parent terminal. For requested plot counts, walk parents with the same self-parent and increasing-turn failsafes as `GetCurrentPath`.
+For existence, define `bFound = successfulSearch && m_pBest != NULL && m_pBest->m_pParent != m_pBest`. This is an O(1) selected-node check, with no parent-chain walk. The normal start node has a null parent, so start equals destination remains a found one-node path. Read cost and terminal turns directly when found. For requested plot counts, walk parents with the same self-parent and increasing-turn failsafes as `GetCurrentPath`.
 
 The count is the number of reconstructed nodes, including the origin and any stop nodes. It is not hex distance, number of edges, or terminal turn count. A normal start-equals-destination path has one node.
 
@@ -80,7 +80,7 @@ These changes immediately benefit the existing strategy, operation-distance, Lua
 
 In `CvUnit::ComputePath`, route each search through a small private evaluator that can return `SPathQueryResult` and optionally fill an `SPath` when `bCacheResult` is true.
 
-Preserve one destination-resolution and squad-selection control flow. In full-route mode, keep the existing cache replacement and `m_kLastPath` copying. In scalar mode, avoid `SPath` construction and leave all unit execution-cache members unchanged.
+Preserve one destination-resolution and squad-selection control flow. In full-route mode, keep the existing cache replacement and `m_kLastPath` copying, including the final full-route search of a selected squad alternate. That search replaces the last ring candidate's path with the winner's path before publication. In scalar mode, avoid `SPath` construction and leave all unit execution-cache members unchanged.
 
 Keep these distinct quantities explicit:
 
@@ -92,13 +92,13 @@ Snapshot the resolved previous-route endpoint before evaluation when `MOVEFLAG_C
 
 ### 5. Reuse only the local squad evaluations
 
-For scalar squad rerouting, create a local vector of `{ requestedDestinationIndex, result }`. The evaluator first checks this vector and inserts every answer, including `bFound == false`.
+Guard all local memo construction, lookup, insertion, and final-result reuse with `if (!bCacheResult)`, and activate it only for squad rerouting. Create a local vector of `{ requestedDestinationIndex, result }`. The scalar evaluator first checks this vector and inserts every answer, including `bFound == false`. Full-route mode never consults this memo.
 
 Within this call, unit identity, origin, current moves, embarkation, promotions, squad membership/destination, prior route, flags, player/enemy context, ZOC exclusions, and every search bound remain fixed. Destination is therefore the only varying key field. Document this invariant beside the vector. Hold the game-core lock across this complete scalar squad evaluation, acquiring and releasing it only if the caller did not already hold it, so another game-core entry cannot mutate the state between lookups.
 
 Do not use `SPathFinderUserData::operator==` as a cache key. If the helper is later allowed to change flags, origin, start moves, or bounds, split the cache scope or include those full values explicitly. A failure under a short bound must never answer a longer-bound query.
 
-The final lookup of the selected alternate uses its requested destination key and returns its stored scalar result. Existing initial failure/ring retries can reuse negative results where their requested endpoints match.
+Only inside `if (!bCacheResult)`, the final lookup of the selected alternate uses its requested destination key and returns its stored scalar result. Existing initial failure/ring retries can reuse negative results where their requested endpoints match. When `bCacheResult` is true, preserve the final winning-destination search and cache the resulting full route, even when that destination was already evaluated during ranking.
 
 Construct and destroy the vector within `ComputePath`; retain it only when squad rerouting actually runs. There are no missions, unit movement, or map mutation between these lookups. Search scratch state and diagnostic search counts can change, but no execution route is published.
 
@@ -127,11 +127,11 @@ Estimated effort: 2 to 4 engineer-days for result extraction and wrappers, 2 to 
 
 ## Verification
 
-1. Build the DLL with `python build_vp_clang_sdk.py --config release` from `civ5-dll/`. Follow [DEVELOPMENT.md](../../civ5-dll/DEVELOPMENT.md) and the supported MSVC build before upstream submission; check both compilers for new warnings.
+1. Build the DLL with `python build_vp_clang_sdk.py --config release` from `civ5-dll/`. Follow [DEVELOPMENT.md](../../../civ5-dll/DEVELOPMENT.md) and the supported MSVC build before upstream submission; check both compilers for new warnings.
 2. Use a temporary debug comparison mode to run old full-route and new scalar queries consecutively in a locked, unchanged game state. Compare found status, plot count where requested, total cost/turns, terminal coordinates/moves, and `ComputePath(false)` return values.
-3. Cover start equals destination, null plot wrappers, unreachable islands, invalid destinations, zero movement at arrival, current moves partly spent, roads/railroads, embark/disembark, danger/ZOC/stacking flags, approximate rings, and finite versus unlimited bounds.
+3. Cover start equals destination, null plot wrappers, unreachable islands, invalid destinations, stop nodes, zero movement at arrival, current moves partly spent, roads/railroads, embark/disembark, danger/ZOC/stacking flags, approximate rings, and finite versus unlimited bounds. Include a debug-triggered `m_iDestHitCount > 2` fallback-node case and compare scalar status/count/terminal values with full reconstruction.
 4. Exercise squads with a blocked target, a valid original target, a selected alternate, no valid alternate, a squad destination different from the mission target, and a previous cached route used by `CONTINUE_TO_CLOSEST_PLOT`.
-5. Assert that scalar calls leave all execution-cache fields and path nodes unchanged. Then issue real movement and verify `GeneratePath`, civilian route safety, first-turn endpoints, and mission continuation still receive full routes.
+5. Assert that scalar calls leave all execution-cache fields and path nodes unchanged. Run `GeneratePath` for a squad with `CONTINUE_TO_CLOSEST_PLOT` where the selected alternate differs from the last tested ring candidate; verify the published route and first-turn endpoint belong to the selected winner. Then verify civilian route safety and mission continuation still receive full routes.
 6. Record scalar query counts, reconstructed nodes, local positive/negative hits, A* calls, and time on identical saves. Compare several crowded mid/late-game AI turns with squads enabled and disabled. Turn summaries can use existing DLL logging; avoid per-node release logging.
 
 There is no identified standalone C++ unit-test harness for these paths. npm tests do not validate DLL path semantics. For in-game deployment, use the repository's `powershell -Command "& .\build-and-copy.bat"` from `civ5-dll/`; this builds and copies the DLL. Run comparison instrumentation separately from release timing.

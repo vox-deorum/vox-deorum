@@ -1,5 +1,7 @@
 # Target-aware batch path searches
 
+For DLL developers: a **batch path search** finds paths from one origin to several requested plots. This plan changes when that search stops in `civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp`, with exact path compatibility as a prerequisite.
+
 ## Goal and success criteria
 
 Reduce work in `CvPathFinder::GetMultiplePaths` when every requested target is settled before the bounded search region is exhausted. An empty target list must perform no search.
@@ -8,20 +10,20 @@ For enabled modes, preserve the returned map keys and every `SPath` field, inclu
 
 ## Current state
 
-- [CvAStar.cpp](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `GetMultiplePaths` configures the finder, copies and sorts destination pointers, then calls `FindPathWithCurrentConfiguration(start, -1, -1)`. It scans `m_closedNodes` for requested plots only after the complete bounded flood. Empty lists still trigger that flood.
-- [CvAStar.h](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.h): the batch method belongs to `CvPathFinder`, also the base for unit movement. The API itself does not promise that all path modes have ordinary shortest-path semantics.
+- [CvAStar.cpp](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.cpp): `GetMultiplePaths` configures the finder, copies and sorts destination pointers, then calls `FindPathWithCurrentConfiguration(start, -1, -1)`. It scans `m_closedNodes` for requested plots only after the complete bounded flood. Empty lists still trigger that flood.
+- [CvAStar.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStar.h): the batch method belongs to `CvPathFinder`, also the base for unit movement. The API itself does not promise that all path modes have ordinary shortest-path semantics.
 - `CvStepFinder::NodeAddedToPath` computes a heuristic only for a valid destination. Batch searches therefore use `h = 0`, even where `Configure` installs `StepHeuristic`.
 - `GetBest` pops the minimum heap node and puts it in `m_closedNodes`. `LinkChild` rejects negative edge costs, checks turn and normalized-distance limits, rejects equal-cost updates, and can propagate improvements through closed nodes with `UpdateDownstreamNodes`.
-- [CvAStarNode.h](../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStarNode.h): `PrNodeIsBetter` orders by total cost, heuristic, Y, X, then layer. Existing heap and neighbor ordering determine which equal-cost predecessor wins.
+- [CvAStarNode.h](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvAStarNode.h): `PrNodeIsBetter` orders by total cost, heuristic, Y, X, then the stop-node flag `m_bIsStopNode`. Existing heap and neighbor ordering determine which equal-cost predecessor wins.
 - `GetMultiplePaths` additionally filters turns, minimum remaining moves, and `CanEndTurnAtNode` before constructing paths. `CvStepFinder` always permits ending at a node and assigns zero remaining moves.
 
 Current callers are:
 
 | Caller | Mode and constraints | Observable result |
 | --- | --- | --- |
-| [CvGameTrade::UpdateTradePathCache](../../civ5-dll/CvGameCoreDLL_Expansion2/CvTradeClasses.cpp) | Trade land/water, trade-range normalized-distance bound, unlimited turns | Cached paths used by trade and military selection |
-| [CvMilitaryAI::GetArmyPathsFromCity](../../civ5-dll/CvGameCoreDLL_Expansion2/CvMilitaryAI.cpp) | Army land/water, unlimited turns, normalized-distance bound, ignore passage/enemies | Potential target paths |
-| [CvBuilderTaskingAI::UpdateCanalPlots](../../civ5-dll/CvGameCoreDLL_Expansion2/CvBuilderTaskingAI.cpp) | Trade water with `MOVEFLAG_PRETEND_CANALS`, unlimited turns | Exact plots selected for canal interest |
+| [CvGameTrade::UpdateTradePathCache](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvTradeClasses.cpp) | Trade land/water, trade-range normalized-distance bound, unlimited turns | Cached paths used by trade and military selection |
+| [CvMilitaryAI::GetArmyPathsFromCity](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvMilitaryAI.cpp) | Army land/water, unlimited turns, normalized-distance bound, ignore passage/enemies | Potential target paths |
+| [CvBuilderTaskingAI::UpdateCanalPlots](../../../civ5-dll/CvGameCoreDLL_Expansion2/CvBuilderTaskingAI.cpp) | Trade water with `MOVEFLAG_PRETEND_CANALS`, unlimited turns | Exact plots selected for canal interest |
 
 Trade land discounts still leave positive costs: the largest road discount is 70 plus at most 20 out of 120. Water costs start at `PATH_BASE_COST` and add penalties. Army costs use positive terrain scales. These callbacks depend on adjacent plots, player state, flags, or cached player capabilities, and remain fixed within a locked search.
 
@@ -31,9 +33,9 @@ Trade land discounts still leave positive costs: the largest road discount is 70
 
 Add an optional, call-local target set to the existing search loop. Continue using the existing heap, callbacks, absent destination, and extraction code. Stop after the final requested plot is popped, before expanding its children.
 
-The initial allowlist is exactly `PT_TRADE_LAND`, `PT_TRADE_WATER`, `PT_ARMY_LAND`, and `PT_ARMY_WATER` on `CvStepFinder`, with `iUnitID == 0`, `iMaxTurns == INT_MAX`, `iMinMovesLeft == 0`, and no approximate-target flags. All other requests use the old flood. Include canal flags because the audited water callbacks support them with positive costs.
+The initial allowlist is exactly `PT_TRADE_LAND`, `PT_TRADE_WATER`, `PT_ARMY_LAND`, and `PT_ARMY_WATER` on `CvStepFinder`, with `iUnitID == 0`, `iMaxTurns == INT_MAX`, `iMinMovesLeft == 0`, no approximate-target flags, and `giKnownCostWeight > 0`. All other requests use the old flood. Include canal flags because the audited water callbacks support them with positive costs.
 
-With positive edge costs and `h = 0`, a popped node cannot receive a cheaper predecessor later. Retaining the heap order also preserves its existing equal-cost predecessor. A normalized-distance cutoff only removes over-budget edges and does not invalidate this argument.
+With positive edge costs, positive known-cost weight, and `h = 0`, a popped node cannot receive a cheaper predecessor later. Retaining the heap order also preserves its existing equal-cost predecessor. A normalized-distance cutoff only removes over-budget edges and does not invalidate this argument.
 
 Finite turn limits are excluded even for step modes. Weighted cost and turn count share one label per plot; a cheaper prefix can consume more turns, so ordinary Dijkstra finalization is insufficient to justify changing bounded-search behavior. Zero-cost callbacks are also outside this first scope because they require a separate tie and parent-finalization audit.
 
@@ -46,7 +48,7 @@ Alternatives:
 
 ## Ordered implementation steps
 
-1. Add the empty-list return at the beginning of `GetMultiplePaths`, before locking, configuration, sorting, or searching. Preserve the current null-start empty result. This independent change requires no search-mode allowlist.
+1. Add the empty-list return at the beginning of `GetMultiplePaths`, before locking, configuration, sorting, or searching. Return an empty result for `!pStartPlot` before target preparation and before accessing any start coordinates. These independent guards require no search-mode allowlist.
 
 2. In `CvAStar.h`, add a small protected data shape such as `BatchPathTargets { std::set<int> remaining; }`. Extend the internal entry point to `FindPathWithCurrentConfiguration(int startX, int startY, int destX, int destY, BatchPathTargets* targets = NULL)`. Existing calls use the default argument. The structure lives on the batch wrapper's stack and is never saved on the finder.
 
@@ -60,7 +62,7 @@ Alternatives:
 
 7. Continue extracting from closed nodes using the existing checks and path reconstruction. Initial implementation may retain the sorted vector lookup and erase behavior. Deduplication applies to completion counting, so duplicate requests cannot prevent termination. Include the start plot as a real target and preserve its one-node path.
 
-8. Assert in debug builds that eligible popped nodes have zero heuristic and that relaxed valid edges have positive costs. Record requested/settled target counts, expansions, tested edges, and completion-versus-exhaustion. These checks should explain contract violations during development rather than silently alter production paths.
+8. Assert in debug builds that eligible searches have `giKnownCostWeight > 0`, popped nodes have zero heuristic, and relaxed valid edges have positive costs. Record requested/settled target counts, expansions, tested edges, and completion-versus-exhaustion. These checks should explain contract violations during development rather than silently alter production paths.
 
 9. Verify lifecycle behavior with an immediate subsequent normal search and a subsequent batch. Early termination leaves open nodes, and `Reset` already clears both open and closed lists. Keep that cleanup contract intact and keep all target state local.
 
@@ -87,7 +89,7 @@ Expected engineering effort: 2 to 4 developer days for the guard, local target-s
 
 - Preserve equal-cost plot choices exactly. Canal marking and trade paths consume plot sequences, so matching only cost or reachability is inadequate.
 - Unreachable targets can erase the performance benefit. Measure completion frequency before considering target pruning as a separate change.
-- Global cost weights currently default to one. Confirm no runtime mutation reverses cost order in the final implementation; the safe path requires positive known-cost weight and zero heuristic.
+- Global cost weights currently default to one. The explicit positive known-cost-weight gate preserves cost order; zero heuristic makes the heuristic weight irrelevant for enabled batches.
 - The existing narrow turn fields and integer cost arithmetic are inherited constraints. Do not use this optimization to change their overflow behavior or claim correctness beyond supported game sizes.
 - Filtering null destinations is an explicit harmless extension for the new preparation step; invalid non-null pointers remain outside the API contract.
 
@@ -97,7 +99,7 @@ No established C++ unit-test runner is assumed. Add a temporary debug-only compa
 
 Compare map keys, complete `SPathNode` sequences, costs, normalized distance, turns, and configuration fields explicitly. `SPathFinderUserData::operator==` omits several fields and cannot serve as the sole comparison. Generated slice must match when probes run within the same slice.
 
-Cover empty, duplicate, null-filtered, start-only, equal-cost diamond, disconnected, out-of-range, and all-reachable targets; trade road/railroad discounts; coastal and ocean restrictions; enemy-city entry versus transit; existing and pretend canals; and army flags. Confirm finite-turn, unit, approximate, generic, and mixed-army requests stay on the legacy path. Run another search after early exit to detect stale nodes or target state.
+Cover empty, null-start, duplicate, null-filtered, start-only, equal-cost diamond, disconnected, out-of-range, and all-reachable targets; trade road/railroad discounts; coastal and ocean restrictions; enemy-city entry versus transit; existing and pretend canals; and army flags. Confirm finite-turn, unit, approximate, generic, mixed-army, and nonpositive-known-cost-weight requests stay on the legacy path. Run another search after early exit to detect stale nodes or target state.
 
 Build from `civ5-dll/` using `python build_vp_clang_sdk.py --config release` for compile-only verification. When deployment is requested, use `powershell -Command "& .\build-and-copy.bat"` and run representative Civ V saves. Capture per-mode call counts, empty batches, early completion rate, nodes, and elapsed time with probes disabled for timings. Repeat identical saves/settings and compare trade cache paths, target choices, and canal plot sets.
 
