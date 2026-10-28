@@ -1,6 +1,6 @@
 # VP optimization plans
 
-These drafts cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 come from the pathfinding review and plans 7–14 from the October 27 native rollout review. Each plan's claims were rechecked against the DLL source on October 28, and the set is now ordered by priority. Plan 11 now has an implementation for final scoring. The other items remain plans, and no new runtime benchmarks accompany this set. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
+These drafts cover pathfinding and native rollout opportunities in the current VD checkout of VP. Plans 1–6 come from the pathfinding review and plans 7–14 from the October 27 native rollout review. Each plan's claims were rechecked against the DLL source on October 28, and the set is now ordered by priority. Plan 11 now has an implementation for final scoring. The other items remain plans. The [three-recording Puma baseline](puma-full-rollout-baseline.md) completed on eight CPUs in 28 min 48.86 s and fixes the full rollout workload for later comparisons. Simulator-owned work has separate [VD RL optimization plans](../../../../vox-deorum-rl/plans/optimizations/README.md).
 
 ## Priorities
 
