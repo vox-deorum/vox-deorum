@@ -22,3 +22,4 @@ scripts/.dll-cache
 # Source of truth is .agents/skills/; this link is machine-local (recreate with
 # `mklink /J .claude\skills .agents\skills`).
 .claude/skills/
+scripts/utilities/refresh-git-bash.ps1
