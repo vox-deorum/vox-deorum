@@ -168,6 +168,42 @@ describe('ClaudeCodeSession', () => {
     await session.close();
   });
 
+  it('names the session tools by their CLI names in everything the CLI reads', async () => {
+    const cli = fakeCli();
+    const session = new ClaudeCodeSession();
+    const prompt = [
+      { role: 'system', content: 'Call `act` each turn. Use `other` never.' },
+      { role: 'user', content: [{ type: 'text', text: 'Read with `bash`:\n```bash\nls\n```\n```js\nrun(`act`)\n```\n```\nunclosed `bash`' }] },
+      { role: 'assistant', content: [
+        { type: 'tool-call', toolCallId: 'old', toolName: 'bash', input: {} },
+        { type: 'tool-call', toolCallId: 'web', toolName: 'WebSearch', input: {}, providerExecuted: true },
+      ] },
+      { role: 'tool', content: [{ type: 'tool-result', toolCallId: 'old', toolName: 'bash', output: { type: 'text', value: '`act`' } }] },
+    ];
+    const step1 = await session.stream({ tools, prompt } as any, { key: 'k', open: cli.open });
+    const q = cli.queries[0];
+    const sent = q.params.prompt;
+    expect(sent[0].content).toContain(`\`${prefix}act\``);
+    expect(sent[0].content).toContain('`other`');
+    expect(sent[1].content[0].text).toContain(`\`${prefix}bash\``);
+    expect(sent[1].content[0].text).toContain('```bash\n');
+    // Fenced code, closed or not, keeps its contents.
+    expect(sent[1].content[0].text).toContain('run(`act`)');
+    expect(sent[1].content[0].text).toContain('unclosed `bash`');
+    expect(sent[2].content.map((part: any) => part.toolName)).toEqual([`${prefix}bash`, 'WebSearch']);
+    expect(sent[3].content[0]).toMatchObject({ toolName: `${prefix}bash`, output: { value: '`act`' } });
+    // VD's own prompt keeps the plain names.
+    expect(prompt[2].content[0]).toMatchObject({ toolName: 'bash' });
+
+    // Trailing user text delivered to a live query is rewritten too.
+    message(q, [{ id: 't1', name: `${prefix}act` }]);
+    const pending = callTool(q, 't1', 'act');
+    await drain(step1.stream);
+    await session.stream(next([{ id: 't1', name: 'act' }], [{ type: 'text', value: 'ok' }], 'Now call `bash`.'), { key: 'k', open: cli.open });
+    expect((await pending).content.at(-1).text).toContain(`\`${prefix}bash\``);
+    await session.close();
+  });
+
   it('serves only the tool a tool choice names', async () => {
     const cli = fakeCli();
     const session = new ClaudeCodeSession();

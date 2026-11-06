@@ -10,7 +10,8 @@
  * when the assistant message stops. The AI SDK and VD then execute the tools as for any provider.
  * The next step's prompt ends with those tool results; the session hands them to the parked
  * handlers and keeps streaming the same query, so the CLI sees real tool results in its own
- * context.
+ * context. Text the CLI reads names the tools by their CLI names, so the model does not call a
+ * bare `bash` that the CLI cannot find.
  *
  * Anything the session cannot continue (a changed model or tool list, a prompt that does not
  * answer the calls handed out, a finished or failed query) closes the live query and starts a
@@ -99,6 +100,8 @@ interface LiveQuery {
   key: string;
   toolNames: string;
   hostTools: readonly string[];
+  /** Rewrites tool mentions in text the CLI reads to the CLI tool names. */
+  qualify: (text: string) => string;
   /** Set when the CLI exposes tools beyond the session's and the host tools. */
   failure?: Error;
   /** Parked MCP handlers, keyed by tool use id. */
@@ -137,6 +140,61 @@ function functionTools(params: LanguageModelV4CallOptions): LanguageModelV4Funct
   const tools = (params.tools ?? []).filter((tool): tool is LanguageModelV4FunctionTool => tool.type === 'function');
   const choice = params.toolChoice;
   return choice?.type === 'tool' ? tools.filter((tool) => tool.name === choice.toolName) : tools;
+}
+
+/** Escape a string for literal use inside a regular expression. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Build a function that rewrites backtick-quoted tool mentions, such as `bash`, into the names the
+ * CLI calls them by, such as `mcp__vox__bash`. Prompts name tools without the prefix, and the
+ * model sometimes copies that name into a call the CLI cannot find. Fenced code blocks, including
+ * an unclosed one, stay untouched.
+ */
+export function toolNameQualifier(names: readonly string[]): (text: string) => string {
+  if (names.length === 0) return (text) => text;
+  // A fenced block matches first and is kept whole, so mentions inside it are skipped.
+  const pattern = new RegExp(`(\`\`\`[\\s\\S]*?(?:\`\`\`|$))|(?<!\`)\`(${names.map(escapeRegExp).join('|')})\`(?!\`)`, 'g');
+  return (text) => text.replace(pattern, (match, fenced: string | undefined, name: string | undefined) =>
+    fenced !== undefined ? match : `\`${claudeCodeSessionToolPrefix}${name}\``);
+}
+
+/**
+ * Return the prompt as the CLI should read it. Tool mentions in system, user, and assistant text
+ * use the CLI names, and so do earlier calls and results of session tools, which the provider
+ * writes into the prompt as text. Tool outputs stay as they are.
+ */
+export function qualifyPromptToolNames(prompt: LanguageModelV4Prompt, names: readonly string[]): LanguageModelV4Prompt {
+  const qualify = toolNameQualifier(names);
+  const sessionNames = new Set(names);
+  const cliName = (name: string): string => sessionNames.has(name) ? claudeCodeSessionToolPrefix + name : name;
+  return prompt.map((message): LanguageModelV4Prompt[number] => {
+    switch (message.role) {
+      case 'system':
+        return { ...message, content: qualify(message.content) };
+      case 'user':
+        return {
+          ...message,
+          content: message.content.map((part) => part.type === 'text' ? { ...part, text: qualify(part.text) } : part),
+        };
+      case 'assistant':
+        return {
+          ...message,
+          content: message.content.map((part) => {
+            if (part.type === 'text') return { ...part, text: qualify(part.text) };
+            if (part.type === 'tool-call' || part.type === 'tool-result') return { ...part, toolName: cliName(part.toolName) };
+            return part;
+          }),
+        };
+      case 'tool':
+        return {
+          ...message,
+          content: message.content.map((part) => part.type === 'tool-result' ? { ...part, toolName: cliName(part.toolName) } : part),
+        };
+    }
+  });
 }
 
 /** Serialize a tool result value as text for the CLI. */
@@ -338,6 +396,7 @@ export class ClaudeCodeSession {
       key: options.key,
       toolNames,
       hostTools: options.hostTools ?? [],
+      qualify: toolNameQualifier(tools.map((tool) => tool.name)),
       parked: new Map(),
       ready: new Map(),
       handedOut: [],
@@ -354,7 +413,7 @@ export class ClaudeCodeSession {
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: tools.map((tool) => ({
         name: tool.name,
-        description: tool.description,
+        description: tool.description === undefined ? undefined : live.qualify(tool.description),
         inputSchema: tool.inputSchema as { type: 'object' },
       })),
     }));
@@ -392,6 +451,7 @@ export class ClaudeCodeSession {
     try {
       const { stream, ...response } = await options.open(patch).doStream({
         ...params,
+        prompt: qualifyPromptToolNames(params.prompt, tools.map((tool) => tool.name)),
         tools: undefined,
         toolChoice: undefined,
         // The session handles aborts itself, so one step's signal never ends the query.
@@ -454,7 +514,7 @@ export class ClaudeCodeSession {
       const result = toCallToolResult(byId.get(id)!.output);
       // Trailing user text, such as the closing reminder, rides on the last result.
       if (index === live.handedOut.length - 1 && continuation.userText.length > 0) {
-        result.content = [...result.content, { type: 'text', text: continuation.userText.join('\n\n') }];
+        result.content = [...result.content, { type: 'text', text: live.qualify(continuation.userText.join('\n\n')) }];
       }
       const resolve = live.parked.get(id);
       if (resolve) {
