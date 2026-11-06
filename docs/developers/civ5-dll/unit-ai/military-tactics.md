@@ -88,7 +88,7 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 | Surgical city strike | `PlotSurgicalCityStrikeMoves` | Try city capture first, then search around each enemy unit target with the units still available. | City capture: melee-count rule. Unit attacks: Medium. |
 | Steamroll | `PlotSteamrollMoves` | Search around each enemy unit target, then try city capture with the units still available. | Unit attacks: High. City capture: melee-count rule. |
 
-Each step is a separate search around its own target plot, taken in [target order](#zone-targets), and units that act in an earlier step are unavailable to later ones. A unit target can also be settled by city fire alone before any search runs. The search can attack any enemy in its area, cities included, so the order decides which target gets first claim on units, not which damage is valued. The city-capture rule is independent of posture: `ExecuteCaptureCityMoves` uses Medium with up to two non-ranged recruits and High with more than two. Civilian support units, such as Great Generals on field command, count toward that number.
+Each step is a separate search around its own target plot, taken in [target order](#zone-targets). Units that remain movable and unprocessed can join later steps, including after partial use. A unit target can also be settled by city fire alone before any search runs. The search can attack any enemy in its area, cities included, so the order decides which target gets first claim on units, not which damage is valued. The city-capture rule is independent of posture: `ExecuteCaptureCityMoves` uses Medium with up to two non-ranged recruits and High with more. Civilian support units, such as Great Generals on field command, count toward that number.
 
 Nearby army members affect the friendly strength used to calculate a zone's posture, and the zone attack and city capture paths never recruit them. Reinforcement positioning, including Hedgehog's early call, does not check Army IDs, so it can move an army member that operation movement left unprocessed. Otherwise the operation's goal controls army movement, and zone dominance affects an army only through the [army contact](#army-contact) veto.
 
@@ -117,14 +117,32 @@ Routine Tactical recruitment accepts movable, unprocessed combat, ranged, air, a
 | --- | --- |
 | Global high | In order: heal frontline units, move operation armies, then [garrison work](#garrisons) in threatened cities. |
 | Zone combat | Emergency purchase, then posture-directed local work. |
-| Reinforcement | Move suitable independent units toward zones needing strength. |
+| Reinforcement | Hold deferred garrisons, then [reinforce eligible city zones](#tactical-reinforcement) with remaining units. |
 | Global middle | Air patrol, camps and goody huts, civilian attacks, bastions, safety, healing, pillage, trade plunder, and blockade. |
 | Global low | Guard improvements, escort embarked units, and move exposed remaining units. |
 | Review | Final safety move, then pass eligible units to Homeland AI. |
 
+## Tactical reinforcement
+
+`PlotReinforcementMoves` redistributes available units around a zone's city. `ProcessDominanceZones` calls it for every zone after all posture attacks and deferred garrison work, before global middle-priority moves. Hedgehog also calls it immediately after its own attacks, so it can claim units before later zones fight and before deferred garrisons are held. That zone is considered again in the regular reinforcement pass. Coastal cities have separate land and water zone calls.
+
+The destination must have a city and must not be withdrawing. A city belonging to another team needs enemies in its zone. A zone already dominant in both overall and ranged strength is skipped unless it lacks melee strength, in which case ranged recruits are excluded. An enemy-dominated zone also needs a neighboring zone owned by the player.
+
+Recruitment scans plots using the city's mixed-army pathfinder and `GetRecruitRange` limit, including units already in the destination zone. This scan permits unrevealed plots and foreign territory; individual movement paths are checked later. Recruits must pass the normal Tactical eligibility checks and match the zone's land or sea domain. It generally leaves units in other contested zones, with exceptions for withdrawing zones, embarked units, and land units in cities that are not in danger of falling. It also excludes units needing healing, Great Generals and Admirals, civilian sappers, siege units entering enemy-dominated zones, and units with attack targets more than four plots from the destination city. A unit covering a friendly civilian stays and is processed. Reinforcement proceeds only when the zone's existing units plus incoming recruits total at least two.
+
+This plot scan has no Army ID exclusion. An eligible army member left unprocessed by operation movement can participate. Tactical reinforcement preserves formation membership; [army reserve recruitment](military-organization.md#recruitment) fills formation slots at setup and during Recruiting. Ordinary operations stop reserve scans on entering Gathering; later losses can leave slots open or cause an abort, while direct assignment paths have their own rules.
+
+`PositionUnitsAroundTarget` executes the reinforcement:
+
+1. Try to reveal the destination with a spotter, then run coordinated search at Low aggression with the Reinforce intent. Nearby combat can therefore occur during reinforcement.
+2. Move remaining distant units toward the city, aiming within two plots, with ordinary combat units before siege and civilian support. Approach moves check paths, embarkation safety, and danger at the first-turn path endpoint. Attack-capable units other than city-bombard units tolerate danger up to half their current hit points; other units require zero danger. Units sent through the approach move are marked processed.
+3. Leave nearby unprocessed independent units available for later work after a successful search. Remaining army members receive safety handling and finish their turn.
+
+Army gathering and movement use this same positioning routine with the Gather intent. [Army contact](#army-contact) can first borrow nearby attackers for a fight without adding them to the army. These routines compete with other passes for available units and can search enemies already considered elsewhere that turn.
+
 ## Search engagements
 
-A **search engagement** is one call to the [coordinated combat search](military-tactical-simulation.md#coordinated-combat-search) with a list of units, a target plot, and an aggression level. Tactical AI never plans all of its units together. Each engagement starts from a target that one pass has already chosen, and only the units that pass collected for that target take part. A unit that acts in an engagement is processed and unavailable to every later pass that turn.
+A **search engagement** is one call to the [coordinated combat search](military-tactical-simulation.md#coordinated-combat-search) with a list of units, a target plot, and an aggression level. Tactical AI never plans all of its units together. Each engagement starts from a target that one pass has already chosen, and only the units that pass collected for that target take part. Later passes can reuse units that still have movement and remain unprocessed; processed or exhausted units are unavailable.
 
 ### When an engagement runs
 
@@ -161,7 +179,7 @@ The search keeps at most 13 of the recruits and blocks the rest. Blocked and unu
 3. **Trim and veto.** Units seven or more plots from the center of mass are dropped. The fight is skipped when the zone of the city nearest the target is enemy territory and enemy-dominated.
 4. **Search.** One search at Medium aggression with the `ArmyContact` search intent.
 
-Units that act in the fight are processed before any zone runs, so a passing army can use units a zone would have used.
+The fight runs before any zone, so a passing army can consume actions or process units a zone would have used. Helpers keep their existing formation membership.
 
 ### Units that engagements leave out
 
