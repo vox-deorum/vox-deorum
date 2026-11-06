@@ -55,25 +55,12 @@ If no acceptable complete plan exists, the wrapper can drop unusable units and r
 
 ### Entry points and aggression
 
-The caller chooses aggression. For independent units, the [dominance-zone posture](military-tactics.md#postures-and-local-combat) determines the order of work and aggression against enemy units:
-
-| Posture | Local combat work |
-| --- | --- |
-| None | No posture-specific zone action. |
-| Withdraw | Retreat; allow a ranged opportunity afterward. Do not move in to pillage or reinforce. |
-| Hedgehog | Attack units at Low; reinforce early. |
-| Attrition | Attack units at Low. |
-| Exploit flanks | Attack units at Medium, then try city capture. |
-| Counterattack | Attack units at Medium. |
-| Surgical city strike | Try city capture, then attack units at Medium. |
-| Steamroll | Attack units at High, then try city capture. |
-
-City capture uses Medium with up to two melee attackers and High with more than two. Nearby operation army members count toward zone friendly strength and can affect the posture. Their own work follows the operation target: positioning uses Low, and contact with nearby enemies uses Medium. Other positioning and mobile ranged opportunities use Low; barbarian attacks use Braveheart.
+The caller chooses aggression. For independent units, the [dominance-zone posture](military-tactics.md#postures-and-local-combat) sets the order of work and the aggression against enemy units, from Low for Attrition and Hedgehog to High for Steamroll. City capture uses Medium with up to two non-ranged recruits and High with more. Operation armies use Low for positioning and Medium for [army contact](military-tactics.md#army-contact). Other positioning and mobile ranged opportunities use Low, and barbarian unit attacks use Braveheart.
 
 The corresponding functions are:
 
-- `ExecuteAttackWithUnits` for zone and barbarian combat.
-- `PositionUnitsAroundTarget` for gathering, reinforcement, and defense.
+- `ExecuteAttackWithUnits` for zone and barbarian combat, reached through `ExecuteDestroyEnemyUnits` and `ExecuteCaptureCityMoves`.
+- `PositionUnitsAroundTarget` for army gathering, zone reinforcement, and barbarian camp clearing.
 - `CheckForEnemiesNearArmy` for army contact.
 - `PerformRangedOpportunityAttack` for ranged opportunities. It uses simulation when movement or post-attack repositioning is possible; otherwise it chooses a direct ranged attack.
 

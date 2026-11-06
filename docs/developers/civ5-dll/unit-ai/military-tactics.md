@@ -8,15 +8,37 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTactic
 
 ## Tactical turn order
 
-`CvTacticalAI::Update` refreshes visibility, tactical targets, and focus areas; recruits current-turn units; then processes army movement, zone combat, reinforcement, global priorities, and review. Eligible remaining units pass to Homeland AI.
+`CvTacticalAI::Update` refreshes visibility, focus areas, and [tactical targets](#tactical-targets); recruits current-turn units; then processes army movement, zone combat, reinforcement, global priorities, and review. Eligible remaining units pass to Homeland AI.
 
-A **tactical target** is a plot worth acting on this turn. Its recorded type and dominance zone let zone passes select local targets while global passes sweep a type across the map.
+## Tactical targets
 
-| Tactical-target type | Examples |
-| --- | --- |
-| Enemy | City, combat unit, civilian, trade unit, citadel, or blockade point. |
-| Opportunity | Barbarian camp, goody hut, improvement, or resource improvement to pillage. |
-| Friendly | City, defensive bastion, or improvement to hold or defend. |
+A **tactical target** is a plot worth acting on this turn. `FindTacticalTargets` rebuilds the list once per turn, before units are recruited, by scanning every plot the player has revealed. Each target records its type, its dominance zone, and a **target score** that sets its place in the list. Zone passes act on the targets near one zone, and global passes sweep one type across the whole map.
+
+| Target | When it is listed | Target score |
+| --- | --- | --- |
+| Enemy city | A city of a team we are at war with. | 100, or 20 for barbarians |
+| Enemy combat unit | The enemy defender on a plot without a city, visible now or remembered from last turn. Minor civs list barbarians only next to their territory. | 50, adjusted below |
+| Enemy civilian | An unprotected enemy civilian, classed as high or low priority. | 25 |
+| Barbarian camp, goody hut | A revealed, unowned camp (major civs and barbarians), or a revealed goody hut (not minor civs). | 100 if visible, otherwise 50, minus the path distance to our nearest city |
+| Citadel, improvement, resource | An unpillaged improvement on a plot of a team we are at war with, or a city-connection route there outside enemy-dominated zones. | 5 to 100 by kind |
+| Trade unit | A visible enemy trade unit. | 35 |
+| Blockade point | Enemy water within three plots of an enemy city, where no enemy can attack. Only the best ten are kept, plus any on improved plots. | Blockade score |
+| Friendly city | One of our cities with a positive land or sea border score. | Border score |
+| Bastion, improvement to defend | Strong or choke-point land on our border, and strategic resource improvements of our border cities. | Terrain defense (tripled at a choke point), or 1 |
+
+The list is then ordered:
+
+1. Each enemy unit target gains 1 for every friendly combat unit within three plots in its domain, and 5 minus its distance to our nearest city when that is positive.
+2. All targets are sorted by target score, highest first. Equal scores keep map scan order, which follows plot index.
+3. Walking the sorted list, an enemy unit target is dropped when an enemy unit target already kept in the same domain, with an equal or higher score, lies within two plots. Targets within three plots of one of our cities are never dropped. A search around the kept target already covers its neighbors.
+
+Enemy unit targets score only a little above 50, so map order often decides which of them comes first. The score does not consider a target's health, its value, or the damage our units could deal to it.
+
+### Zone targets
+
+Before a zone's posture routine runs, `ExtractTargetsForZone` keeps the targets valid for the zone's domain that lie in the zone or within five plots of its center, in list order. A target near a zone border can therefore belong to several zones. Global passes extract every target.
+
+Posture routines walk this list one target type at a time, so enemy units and cities never compete in one order: the posture decides which type goes first. Each attempt records an aggression level on the target, whether or not an attack happens, and the walk skips a target already tried at the requested level or higher. A unit attempt records the level it searched at, so a unit target shared by two zones is retried only at a higher level. A city attempt always records High, even when its search runs at Medium, so each city is tried once per turn.
 
 ## Operation army movement
 
@@ -27,8 +49,7 @@ Operation state and the current turn target control army behavior; zone posture 
 | Army phase or condition | C++ routine | Behavior | Simulation and aggression |
 | --- | --- | --- | --- |
 | No reachable step path | `PlotArmyMovesCombat` | Record `AI_ABORT_LOST_PATH` for the operation. | None |
-| Contact safety veto | `CheckForEnemiesNearArmy` | Skip the fight when the zone associated with the closest city to the selected enemy is enemy territory and enemy-dominated. Continue the operation without aborting it. | None |
-| Eligible enemy contact | `CheckForEnemiesNearArmy`, called by `PlotArmyMovesCombat` | Gather healthy army members and suitable nearby friendly attackers, including members of another army. A successful fight holds the army's movement target at its center of mass. | Medium |
+| Enemy units can attack the army | `CheckForEnemiesNearArmy`, called by `PlotArmyMovesCombat` | Fight with the army and nearby friendly attackers, as described in [army contact](#army-contact). A fight holds the army at its center of mass this turn; a vetoed fight lets the operation continue. | Medium |
 | Gather, advance, or hold formation | `ExecuteGatherMoves` → `PositionUnitsAroundTarget` | Move formation members toward the muster point, operation target, or current turn target, subject to reachable-plot and danger checks. | Initial simulation: Low. Subsequent positioning does not simulate. |
 | Unprocessed army member still in danger | `PositionUnitsAroundTarget` | Try to move the member to a safe healing plot or, failing that, the safest reachable plot. Finish its turn. | No new combat simulation |
 | Pre-move army maintenance | `CvArmyAI::UpdateCheckpointTurnsAndRemoveBadUnits` | Release members that are unfit to continue before moving the army. | None |
@@ -38,7 +59,7 @@ Operation state and the current turn target control army behavior; zone posture 
 
 ## Postures and local combat
 
-Tactical AI refreshes a **posture**, a current-turn strategy for each dominance zone, then processes zones from highest to lowest value. Territory, overall and ranged dominance, melee balance, and city danger choose the posture; water zones use naval strengths. After extracting the zone's targets, `ProcessDominanceZones` dispatches the posture routine that selects the local work and aggression passed to the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression).
+Tactical AI refreshes a **posture**, a current-turn strategy for each dominance zone, then processes zones in [zone order](#zone-order). Territory, overall and ranged dominance, melee balance, and city danger choose the posture; water zones use naval strengths. After extracting the [zone's targets](#zone-targets), `ProcessDominanceZones` dispatches the posture routine that selects the local work and aggression passed to the [tactical simulation](military-tactical-simulation.md#entry-points-and-aggression).
 
 | Territory | Dominance and local condition | Posture |
 | --- | --- | --- |
@@ -48,7 +69,8 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 | Enemy | Friendly dominant | Steamroll |
 | Enemy | Even, friendly ranged dominant, enemy melee stronger | Attrition |
 | Enemy | Even, friendly ranged dominant, enemy melee no stronger | Steamroll |
-| Enemy | Other | Attrition or exploit flanks according to ranged dominance |
+| Enemy | Even, without friendly ranged dominance | Exploit flanks |
+| Enemy | Other, such as no units visible | Attrition |
 | Neutral | Enemy dominant with friendly ranged dominance | Attrition or exploit flanks according to enemy melee strength |
 | Neutral | Enemy dominant without friendly ranged dominance | Withdraw |
 | Neutral | Other | Attrition with friendly ranged dominance, otherwise exploit flanks |
@@ -58,17 +80,34 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 | Zone posture | C++ routine | Behavior | Simulation and aggression |
 | --- | --- | --- | --- |
 | None | No routine | Do no posture-specific work. | None |
-| Withdraw | `PlotWithdrawMoves` → `ExecuteWithdrawMoves` | Retreat toward the safest neighboring zone or city. Take a ranged opportunity shot after a successful withdrawal when possible; if no safe route exists, pillage in place when worthwhile and move to the safest reachable plot. | No posture attack; the ranged opportunity exception uses Low when simulated. |
+| Withdraw | `PlotWithdrawMoves` → `ExecuteWithdrawMoves` | Retreat toward the neighboring zone with a city in the unit's domain that has the best hospitality score for the travel time, or else toward the nearest city by path (the capital for minor civs). Take a ranged opportunity shot after a successful withdrawal when possible; if no safe route exists, pillage in place when worthwhile and move to the safest reachable plot. | No posture attack; the ranged opportunity exception uses Low when simulated. |
 | Hedgehog | `PlotHedgehogMoves` | Attack enemy units, then call `PlotReinforcementMoves` for early reinforcement before attacks in other zones. | Low |
-| Attrition | `PlotAttritionAttacks` | Attack enemy units with lower-risk target ordering. | Low |
+| Attrition | `PlotAttritionAttacks` | Attack enemy unit targets in target order. No city capture. | Low |
 | Exploit flanks | `PlotExploitFlanksMoves` | Search around each enemy unit target, then try city capture with the units still available. | Unit attacks: Medium. City capture: melee-count rule. |
-| Counterattack | `PlotCounterattackMoves` | Attack priority enemy-unit targets. | Medium |
+| Counterattack | `PlotCounterattackMoves` | Attack enemy unit targets in target order. | Medium |
 | Surgical city strike | `PlotSurgicalCityStrikeMoves` | Try city capture first, then search around each enemy unit target with the units still available. | City capture: melee-count rule. Unit attacks: Medium. |
 | Steamroll | `PlotSteamrollMoves` | Search around each enemy unit target, then try city capture with the units still available. | Unit attacks: High. City capture: melee-count rule. |
 
-Each step is a separate simulation aimed at its own target plot, and units that act in an earlier step are unavailable to later ones. Scoring still counts both city and unit damage in every step, so the order decides which target gets first claim on units, not which damage is valued. The city-capture rule is independent of posture: `ExecuteCaptureCityMoves` uses Medium with up to two melee attackers and High with more than two.
+Each step is a separate search around its own target plot, taken in [target order](#zone-targets), and units that act in an earlier step are unavailable to later ones. A unit target can also be settled by city fire alone before any search runs. The search can attack any enemy in its area, cities included, so the order decides which target gets first claim on units, not which damage is valued. The city-capture rule is independent of posture: `ExecuteCaptureCityMoves` uses Medium with up to two non-ranged recruits and High with more than two. Civilian support units, such as Great Generals on field command, count toward that number.
 
-Nearby army members affect the friendly strength used to calculate a zone's posture, but army members do not enter these posture routines. Operation movement runs first and the operation's goal controls army movement; zone dominance affects an army only through the contact safety veto above. Neighboring zones can still refine a posture, including naval steamroll near a stronger enemy land zone and withdrawal outside friendly territory near an enemy-dominated zone in the same domain.
+Nearby army members affect the friendly strength used to calculate a zone's posture, and the zone attack and city capture paths never recruit them. Reinforcement positioning, including Hedgehog's early call, does not check Army IDs, so it can move an army member that operation movement left unprocessed. Otherwise the operation's goal controls army movement, and zone dominance affects an army only through the [army contact](#army-contact) veto.
+
+Neighboring zones can refine the posture of a zone with a city after it is chosen:
+
+- A naval Steamroll zone becomes Exploit flanks when a neighboring land zone is enemy-dominated and has more ranged strength than our ships.
+- A zone outside friendly territory becomes Withdraw when a neighbor in the same domain is our territory, is enemy-dominated, and has no city in danger of falling.
+
+### Zone order
+
+Zones run from highest to lowest **zone value**, which `PrioritizeZones` in `CvTacticalAnalysisMap.cpp` computes as a base value times a multiplier.
+
+| Part | Rule |
+| --- | --- |
+| Base | 1. When the zone has a city that can reach the zone's area, add the square root of that city's economic value as a percentage of the most valuable zone city, then apply the city factors. |
+| City factors | x3 in a focus area. x2 when visible. A visible city that has lost more than a tenth of its hit points multiplies again by ten times its damage share, rounded down, so half damage gives x5. x2 when it is an operation target or a [preferred attack target](military-campaign.md#attack-targets). A city-state whose ally we are at war with resets the base to 1. |
+| Land zone | x3 |
+| Multiplier | Enemy dominance: 8 in our territory, 1 in enemy territory. Even dominance with more than one enemy unit: 4 in our or enemy territory. Friendly dominance: 8 in enemy territory, 1 in ours. Otherwise 1. |
+| War state | For major civs, a further x4 in enemy territory while winning all wars, or in our territory while losing all wars. |
 
 ## Independent units and priorities
 
@@ -83,8 +122,6 @@ Routine Tactical recruitment accepts movable, unprocessed combat, ranged, air, a
 | Global low | Guard improvements, escort embarked units, and move exposed remaining units. |
 | Review | Final safety move, then pass eligible units to Homeland AI. |
 
-Zone value prioritizes city importance and urgency: focus-area cities, damaged visible cities, operation or [preferred attack targets](military-campaign.md#attack-targets), land zones, and dominance that threatens friendly or enemy territory raise the value. War state can further prioritize friendly territory while losing or enemy territory while winning. A city-state enemy resets city-based factors. Barbarians skip zone processing and use their own ladder.
-
 ## Search engagements
 
 A **search engagement** is one call to the [coordinated combat search](military-tactical-simulation.md#coordinated-combat-search) with a list of units, a target plot, and an aggression level. Tactical AI never plans all of its units together. Each engagement starts from a target that one pass has already chosen, and only the units that pass collected for that target take part. A unit that acts in an engagement is processed and unavailable to every later pass that turn.
@@ -93,9 +130,9 @@ A **search engagement** is one call to the [coordinated combat search](military-
 
 | Caller | When it runs | Participants | Aggression |
 | --- | --- | --- | --- |
-| Zone unit attack (`ExecuteDestroyEnemyUnits`) | A posture routine picks an enemy unit target in its zone that has not been attacked at this aggression yet. Cities in range fire first, and a kill ends the attack. The search runs only if [striking-distance recruitment](#who-a-zone-attack-recruits) finds a unit and the recruits are expected to deal damage. | Striking-distance recruits. | From the [posture](#postures-and-local-combat). |
-| City capture (`ExecuteCaptureCityMoves`) | A posture routine tries each enemy city target. It skips a city in an enemy-dominated zone unless the city is in danger of falling, a city the recruits cannot bring down within 13 turns of its healing, and a city down to its last hit point when no recruit is a melee unit to take it. | Striking-distance recruits for the city plot. | Medium with up to two melee attackers, High with more. |
-| Army contact (`CheckForEnemiesNearArmy`) | An operation army moving in `PlotArmyMovesCombat` finds enemies near it. | Army members and suitable nearby friendly attackers. | Medium |
+| Zone unit attack (`ExecuteDestroyEnemyUnits`) | A posture routine picks the next enemy unit from its [zone targets](#zone-targets) that has not been tried at this aggression yet. Cities in range fire first, and a kill ends the attack. The search runs only if [striking-distance recruitment](#who-a-zone-attack-recruits) finds a unit and the recruits are expected to deal damage. | Striking-distance recruits. | From the [posture](#postures-and-local-combat). |
+| City capture (`ExecuteCaptureCityMoves`) | A posture routine tries each enemy city target. It skips a city whose land and water zones are each missing or enemy-dominated, unless it is in danger of falling; a city the recruits cannot bring down within 13 turns of its healing; and a city down to its last hit point when no recruit is a melee unit to take it. | Striking-distance recruits for the city plot. | Medium with up to two non-ranged recruits, High with more. |
+| [Army contact](#army-contact) (`CheckForEnemiesNearArmy`) | Enemy units can attack an operation army moving in `PlotArmyMovesCombat`. | The contact group: army members and our units that can attack the threatening enemies. | Medium |
 | Positioning (`PositionUnitsAroundTarget`) | Army gathering, zone reinforcement, and barbarian camp clearing. Reinforcement runs only when the zone would hold at least two friendly units. | The caller's own unit list. | Low |
 | Barbarian attack | The [barbarian ladder](#barbarian-priorities) uses the zone unit attack and city capture paths. | Striking-distance recruits. | Braveheart for unit attacks. City capture keeps its melee-count rule. |
 | Ranged opportunity | Many passes, described in [ranged opportunity searches](#ranged-opportunity-searches). | One unit. | Low |
@@ -114,6 +151,17 @@ A **search engagement** is one call to the [coordinated combat search](military-
 - A melee or support unit within two plots of the target joins even when it cannot act, so the search can move it out of the way.
 
 The search keeps at most 13 of the recruits and blocks the rest. Blocked and unused units stay available to later passes.
+
+### Army contact
+
+**Army contact** is the search `CheckForEnemiesNearArmy` runs for a land, naval, or combined operation army. Escort armies never run it. It runs during [operation army movement](#operation-army-movement), before garrisons and every zone, once per army per turn. Armies go in the order their operations were created. It does not use the [tactical target](#tactical-targets) list.
+
+1. **Contact group.** An army member joins when it can act, has at least half its hit points, and either has a target in range or can be attacked where it stands. Civilian members only need to meet the first two conditions. For each enemy unit that can attack a member, every unit of ours that can attack that enemy joins too, whether it belongs to a zone, a garrison, or another army.
+2. **Trigger and target.** Only enemy units that can attack the group count, so an army that could attack but faces no threat does not fight. The target is the threatening enemy plot nearest the group's center of mass.
+3. **Trim and veto.** Units seven or more plots from the center of mass are dropped. The fight is skipped when the zone of the city nearest the target is enemy territory and enemy-dominated.
+4. **Search.** One search at Medium aggression with the `ArmyContact` search intent.
+
+Units that act in the fight are processed before any zone runs, so a passing army can use units a zone would have used.
 
 ### Units that engagements leave out
 
@@ -150,7 +198,7 @@ Garrisons are recruited into the current-turn pool like other independent units,
 
 From then on, every zone search that turn skips these garrisons: zone unit attacks, city capture, and reinforcement positioning all require a unit that is not yet processed. They fire alone, before the planned attacks of that turn, and the zone's searches treat them as part of the board, never as actors. Two exceptions remain:
 
-- **Army contact runs earlier.** Army moves come before the garrison pass, and army contact also takes nearby non-army units that can attack the enemy, so a garrison can join an army's fight before it is marked processed.
+- **Army contact runs earlier.** Army moves come before the garrison pass, and [army contact](#army-contact) also takes nearby non-army units that can attack the enemy, so a garrison can join an army's fight before it is marked processed.
 - **Interior cities.** Their garrisons skip this pass and stay in the pool for zone attacks. Two native comments, in `FindUnitsWithinStrikingDistance` and `PlotGarrisonMoves`, say garrisons are never recruited into the pool and are used in zone attacks. Neither matches the current code.
 
 ### Ranged opportunity searches
