@@ -6,17 +6,17 @@ This page explains how the tools are organized and how the framework behind them
 
 ## The categories
 
-The registry in `mcp-server/src/tools/index.ts` holds 44 tools. The reference groups them into five categories by what they touch, because each group answers a different kind of question and reaches a different subsystem.
+The registry in `mcp-server/src/tools/index.ts` holds 43 tools. The reference groups them into five categories by what they touch, because each group answers a different kind of question and reaches a different subsystem.
 
 | Category | Count | Answers | Reaches |
 | --- | --- | --- | --- |
-| **General** | 4 | utilities that don't fit elsewhere | varies |
+| **General** | 3 | utilities that don't fit elsewhere | varies |
 | **Database-query** | 9 | "what does this game thing do?" | the game database ([database.md](database.md)) |
 | **Knowledge-query** | 13 | "what is happening in _this_ game right now?" | the per-game knowledge store ([knowledge.md](knowledge.md)) |
 | **Action** | 15 | changes the game rather than reads it | the AI, the knowledge store, or the game itself |
 | **Game control** | 3 | paces the game | the bridge's pause controls ([bridge.md](bridge.md)) |
 
-**General tools** are the four utilities: `calculator` for arithmetic; `search-database`, which fuzzy-searches the game-database tools and reranks the combined results; `call-lua-function`, which calls a Lua function the game mod has registered, passing structured arguments; and `lua-executor`, which runs a raw Lua script in the game. `lua-executor` is the escape hatch when no purpose-built tool exists. Because it can run anything, it is a trust boundary, discussed in [influence.md](influence.md).
+**General tools** are the three utilities: `search-database`, which fuzzy-searches the game-database tools and reranks the combined results; `call-lua-function`, which calls a Lua function the game mod has registered, passing structured arguments; and `lua-executor`, which runs a raw Lua script in the game. `lua-executor` is the escape hatch when no purpose-built tool exists. Because it can run anything, it is a trust boundary, discussed in [influence.md](influence.md).
 
 `search-database` does not cover every database tool. It searches technologies, policies, buildings, projects, civilizations, units, and flavors: seven of the nine. The two AI-strategy tools (`get-economic-strategies` and `get-military-strategies`) are deliberately excluded from its list, so an agent looking for a strategy must call those tools directly.
 
@@ -41,7 +41,7 @@ Every tool extends the abstract class `ToolBase` (`mcp-server/src/tools/base.ts`
 
 The schemas are written with [Zod](https://zod.dev), so they serve double duty. They validate inputs and outputs at runtime, _and_ they generate the TypeScript types and the MCP protocol documentation the agent reads. Every schema field carries a `.describe()` string for exactly this reason.
 
-Extending `ToolBase` directly is the common case: 23 of the 44 tools do it, mostly the knowledge-query tools and the one-off actions whose work has no shared shape. The other 21 use one of four abstract bases in `mcp-server/src/tools/abstract/`, each capturing a recurring pattern:
+Extending `ToolBase` directly is the common case: 22 of the 43 tools do it, mostly the knowledge-query tools and the one-off actions whose work has no shared shape. The other 21 use one of four abstract bases in `mcp-server/src/tools/abstract/`, each capturing a recurring pattern:
 
 | Base class | Tools | What it provides |
 | --- | --- | --- |

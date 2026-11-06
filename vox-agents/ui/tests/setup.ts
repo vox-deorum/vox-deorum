@@ -22,7 +22,8 @@ beforeEach(() => {
 
 afterEach(() => {
   unmountWrappers()
-  vi.runOnlyPendingTimers()
+  // Some tests switch back to real timers themselves; flushing then would throw.
+  if (vi.isFakeTimers()) vi.runOnlyPendingTimers()
   vi.useRealTimers()
   vi.restoreAllMocks()
 })

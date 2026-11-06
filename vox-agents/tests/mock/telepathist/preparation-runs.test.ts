@@ -23,16 +23,17 @@ const modelMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../src/telepathist/tools/get-situation.js', () => ({
-  GetSituationTool: vi.fn().mockImplementation(() => ({
+  // Constructor mocks need a function implementation so `new` works.
+  GetSituationTool: vi.fn(function () {
     // Must contain '## ' so the "no meaningful data" skip does not trigger.
-    execute: vi.fn(async () => ['## Situation section']),
-  })),
+    return { execute: vi.fn(async () => ['## Situation section']) };
+  }),
 }));
 
 vi.mock('../../../src/telepathist/tools/get-decision.js', () => ({
-  GetDecisionTool: vi.fn().mockImplementation(() => ({
-    execute: vi.fn(async () => ['# Turn data']),
-  })),
+  GetDecisionTool: vi.fn(function () {
+    return { execute: vi.fn(async () => ['# Turn data']) };
+  }),
 }));
 
 vi.mock('../../../src/telepathist/preparation/instructions.js', () => ({

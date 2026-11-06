@@ -66,7 +66,6 @@
     "jaison": "~2.0.2",
     "kysely": "^0.28.5",
     "kysely-duckdb": "^0.2.0",
-    "mathjs": "^14.6.0",
     "multer": "^2.0.2",
     "node-ipc": "^9.2.1",
     "obs-websocket-js": "^5.0.8",
@@ -74,15 +73,14 @@
     "p-queue": "^9.0.0",
     "papaparse": "^5.5.3",
     "pluralize-esm": "^9.0.5",
-    "rerank": "^1.1.4",
     "seedrandom": "^3.0.5",
     "tiktoken": "^1.0.22",
-    "undici": "^7.16.0",
+    "undici": "^7.30.2",
     "uuid": "^13.0.0",
     "windows-mutex-prebuilt": "^0.5.0",
     "winston": "^3.17.0",
     "yazl": "^3.3.1",
-    "zod": "^4.1.13"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -97,28 +95,33 @@
     "@types/supertest": "^6.0.3",
     "@types/uuid": "^9.0.7",
     "@types/yazl": "^3.3.1",
-    "@typescript-eslint/eslint-plugin": "^6.13.1",
-    "@typescript-eslint/parser": "^6.13.1",
-    "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/ui": "^3.2.4",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
+    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/ui": "^5.1.0",
     "cross-env": "^10.1.0",
     "eslint": "^8.54.0",
     "jsdom": "^27.4.0",
-    "kysely-codegen": "^0.18.5",
+    "kysely-codegen": "^0.20.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.9.6",
-    "rimraf": "^5.0.5",
+    "rimraf": "^6.1.4",
     "supertest": "^7.1.4",
     "tsx": "^4.20.5",
-    "typedoc": "^0.28.15",
-    "typedoc-plugin-markdown": "^4.9.0",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.14.1",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vite": "^7.3.7",
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "@anthropic-ai/claude-agent-sdk": "$@anthropic-ai/claude-agent-sdk",
-    "kysely-codegen": {
-      "better-sqlite3": "^12.5.0"
+    "guarded-fetch": {
+      "undici": "$undici"
+    },
+    "minimatch@^10": "^11.0.5",
+    "typedoc": {
+      "minimatch": "10.2.6"
     }
   }
 }

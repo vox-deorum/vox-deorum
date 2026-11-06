@@ -78,7 +78,7 @@ beforeAll(async () => {
 
   // Both transports finish initialization before accepting the client, so tools are listed at once.
   const { tools } = await mcpClient.listTools();
-  if (!tools.some(tool => tool.name === 'calculator')) throw new Error('MCP server did not expose its tools');
+  if (!tools.some(tool => tool.name === 'search-database')) throw new Error('MCP server did not expose its tools');
 }, 30000);
 
 afterAll(async () => {

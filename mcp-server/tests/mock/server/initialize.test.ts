@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe('MCP server startup readiness', () => {
-  it('waits through bridge outages, rejects a terminal outage, then serves calculator calls', async () => {
+  it('waits through bridge outages, rejects a terminal outage, then serves tool calls', async () => {
     retrySleep.mockResolvedValue();
     const { DatabaseManager } = await import('../../../src/database/manager.js');
     const { KnowledgeManager } = await import('../../../src/knowledge/manager.js');
@@ -69,10 +69,10 @@ describe('MCP server startup readiness', () => {
       await client.connect(clientTransport);
       clientConnected = true;
       const listed = await client.listTools();
-      expect(listed.tools.map(tool => tool.name)).toContain('calculator');
-      const result = await client.callTool({ name: 'calculator', arguments: { Expression: '19 + 23' } });
+      expect(listed.tools.map(tool => tool.name)).toContain('search-database');
+      const result = await client.callTool({ name: 'search-database', arguments: { Keywords: [] } });
       expect(result.isError).not.toBe(true);
-      expect(result.structuredContent).toEqual({ Result: 42 });
+      expect(result.structuredContent).toEqual({});
     } finally {
       if (clientConnected) await client.close();
       await mcpServer?.close();

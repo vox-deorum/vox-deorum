@@ -1,23 +1,5 @@
 [
   {
-    "name": "calculator",
-    "description": "Evaluates mathematical expressions using mathjs library",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "Expression": {
-          "type": "string",
-          "description": "Mathematical expression to evaluate"
-        }
-      },
-      "required": [
-        "Expression"
-      ],
-      "$schema": "http://json-schema.org/draft-07/schema#"
-    },
-    "_meta": {}
-  },
-  {
     "name": "lua-executor",
     "description": "Executes raw Lua scripts in the Civilization V game context through the Bridge Service",
     "inputSchema": {

@@ -132,7 +132,7 @@ describe('HTTP startup lifecycle', () => {
 
       await client.connect(new StreamableHTTPClientTransport(new URL(shutdownUrl.replace('/shutdown', '/mcp'))));
       const tools = await client.listTools();
-      expect(tools.tools.map((tool) => tool.name)).toContain('calculator');
+      expect(tools.tools.map((tool) => tool.name)).toContain('search-database');
     } finally {
       try {
         try {
@@ -177,7 +177,7 @@ describe('HTTP startup lifecycle', () => {
       await client.connect(new StreamableHTTPClientTransport(
         new URL(shutdownUrl.replace('/shutdown', '/mcp'))
       ));
-      expect((await client.listTools()).tools.map(tool => tool.name)).toContain('calculator');
+      expect((await client.listTools()).tools.map(tool => tool.name)).toContain('search-database');
     } finally {
       try {
         await client?.close();

@@ -11,7 +11,7 @@ import { config } from '../../../src/utils/config.js';
 import { isolateExternalManagers, readPublishedUrl } from '../../fixtures/server-process.js';
 
 describe('source MCP transport contract', () => {
-  it('returns the same calculator result through HTTP and stdio clients', async () => {
+  it('returns the same tool result through HTTP and stdio clients', async () => {
     const previous = {
       type: config.transport.type,
       host: config.transport.host,
@@ -26,7 +26,7 @@ describe('source MCP transport contract', () => {
     let stdioClient: Client | undefined;
 
     // Isolate external services while preserving the production MCP server,
-    // transport implementations, registration graph, and calculator tool.
+    // transport implementations, and registration graph.
     const restoreManagers = await isolateExternalManagers();
 
     try {
@@ -57,19 +57,19 @@ describe('source MCP transport contract', () => {
       const [httpTools, stdioTools] = await Promise.all([httpClient.listTools(), stdioClient.listTools()]);
       const httpToolNames = httpTools.tools.map(tool => tool.name).sort();
       const stdioToolNames = stdioTools.tools.map(tool => tool.name).sort();
-      expect(httpToolNames).toContain('calculator');
+      expect(httpToolNames).toContain('search-database');
       expect(stdioToolNames).toEqual(httpToolNames);
       expect(httpClient.getServerCapabilities()?.resources).toBeUndefined();
       expect(stdioClient.getServerCapabilities()?.resources).toBeUndefined();
 
       const [httpResult, stdioResult] = await Promise.all([
-        httpClient.callTool({ name: 'calculator', arguments: { Expression: '19 + 23' } }),
-        stdioClient.callTool({ name: 'calculator', arguments: { Expression: '19 + 23' } }),
+        httpClient.callTool({ name: 'search-database', arguments: { Keywords: [] } }),
+        stdioClient.callTool({ name: 'search-database', arguments: { Keywords: [] } }),
       ]);
       expect(httpResult.isError).not.toBe(true);
       expect(stdioResult.isError).not.toBe(true);
-      expect(readToolValue(httpResult)).toEqual({ Result: 42 });
-      expect(readToolValue(stdioResult)).toEqual({ Result: 42 });
+      expect(readToolValue(httpResult)).toEqual({});
+      expect(readToolValue(stdioResult)).toEqual({});
       expect(readToolValue(httpResult)).toEqual(readToolValue(stdioResult));
     } finally {
       await stdioClient?.close();

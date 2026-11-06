@@ -38,11 +38,8 @@ export default defineConfig({
     retry: process.env.CI ? 1 : 0, // Retry once in CI for flaky IPC tests
     // Run tests sequentially when using mock DLLs to avoid parallel execution issues
     // Mock DLL server uses a single IPC connection that can't handle concurrent tests
+    // One worker runs test files sequentially; each file still gets fresh modules.
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true // While the server should handle parallel requests, the test has to be run sequentially since the DLL only hosts one connection at a time
-      }
-    }
+    maxWorkers: 1
   }
 })

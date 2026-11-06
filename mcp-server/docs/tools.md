@@ -1,6 +1,6 @@
 # MCP Server Tool Reference
 
-Concise reference for all 44 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
+Concise reference for all 43 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
 
 ## Architecture
 
@@ -9,11 +9,10 @@ Concise reference for all 44 tools exposed by the MCP Server. Tools are organize
 - Zod schemas for input/output validation with `.describe()` on each field
 - PlayerID range for major civs: 0-21 (`MaxMajorCivs - 1`). `post-notification` is the one exception: its recipient spans the full addressable player range 0-63 (`MaxPlayers - 1`) so a human watching from an observer slot can be notified.
 
-## General Tools (4)
+## General Tools (3)
 
 | Tool | Description | Key Input |
 | --- | --- | --- |
-| `calculator` | Evaluates mathematical expressions using mathjs | `Expression`: string |
 | `lua-executor` | Executes raw Lua scripts in game context via Bridge Service | `Script`: string, `Description?`: string |
 | `call-lua-function` | Calls a Lua function registered by the game mod with structured arguments | `Name`: string, `Args`: array, `ExpectedGameID?` |
 | `search-database` | Fuzzy search across all database tools (techs, policies, buildings, projects, civs, units, flavors) with reciprocal rank fusion reranking | `Keywords`: string[], `MaxResults?`: number (default: 10) |

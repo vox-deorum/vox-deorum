@@ -15,7 +15,7 @@ describe('MCP Agents Connection', () => {
   it('should list available tools', async () => {
     const tools = await mcpClient.listTools();
     const names = tools.tools.map(tool => tool.name);
-    expect(names).toContain('calculator');
+    expect(names).toContain('search-database');
     expect(new Set(names).size).toBe(names.length);
   });
 });

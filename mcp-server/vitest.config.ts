@@ -23,11 +23,8 @@ export default defineConfig({
     testTimeout: 15000, // Extended timeout for IPC operations
     hookTimeout: 30000, // Bridge spawn (real tier) can take a while
     retry: process.env.CI ? 1 : 0,
+    // One worker runs test files sequentially; each file still gets fresh modules.
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true // Single IPC connection to the DLL; tests run sequentially
-      }
-    }
+    maxWorkers: 1
   }
 })

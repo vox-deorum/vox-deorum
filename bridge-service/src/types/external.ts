@@ -73,9 +73,7 @@ export interface ExternalResponseMessage<T = any> extends IPCMessage, ExternalCa
 /**
  * External function registration request
  */
-export interface ExternalFunctionRegistration extends ExternalFunctionMetadata {
-  // Inherits name, url, async, timeout, description from ExternalFunctionMetadata
-}
+export type ExternalFunctionRegistration = ExternalFunctionMetadata;
 
 /**
  * External function call request (from external service perspective)

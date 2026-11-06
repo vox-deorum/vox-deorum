@@ -42,14 +42,17 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('../../../src/infra/vox-context.js', () => ({
-  VoxContext: vi.fn().mockImplementation(() => ({
-    execute: mocks.execute,
-    withRun: mocks.withRun,
-    registerTools: mocks.registerTools,
-    loadToolCache: mocks.loadToolCache,
-    shutdown: mocks.shutdown,
-    tools: {},
-  })),
+  // Constructor mocks need a function implementation so `new` works.
+  VoxContext: vi.fn(function () {
+    return {
+      execute: mocks.execute,
+      withRun: mocks.withRun,
+      registerTools: mocks.registerTools,
+      loadToolCache: mocks.loadToolCache,
+      shutdown: mocks.shutdown,
+      tools: {},
+    };
+  }),
 }));
 
 vi.mock('../../../src/oracle/utils/schema-tools.js', () => ({

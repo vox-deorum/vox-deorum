@@ -71,7 +71,8 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('../../../src/infra/vox-context.js', () => ({
-  VoxContext: vi.fn().mockImplementation((_overrides: unknown, id?: string) => {
+  // Constructor mocks need a function implementation so `new` works.
+  VoxContext: vi.fn(function (_overrides: unknown, id?: string) {
     const context = {
       id,
       execute: mocks.execute,

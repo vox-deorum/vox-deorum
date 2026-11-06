@@ -82,7 +82,7 @@ class GetPolicyTool extends DatabaseQueryTool<PolicySummary, PolicyReport> {
       ])
       .execute();
     Summaries.forEach(p => {
-      p.Era = getEraName(p.Era ?? p.Era2) ?? null,
+      p.Era = getEraName(p.Era ?? p.Era2) ?? null;
       p.Branch = p.Branch ?? p.Branch2;
       p.Help = p.Help2 ?? p.Help;
       delete (p as Record<string, unknown>).Era2;

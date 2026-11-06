@@ -22,7 +22,7 @@ export default defineConfig({
     include: ['tests/mock/**/*.{test,spec}.ts'],
     setupFiles: ['./tests/setup.ts'],
     pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
+    maxWorkers: 1,
     testTimeout: 15000,
     hookTimeout: 15000,
   },

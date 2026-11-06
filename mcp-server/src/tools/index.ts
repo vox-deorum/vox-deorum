@@ -1,4 +1,3 @@
-import createCalculatorTool from "./general/calculator.js";
 import createLuaExecutorTool from "./general/lua-executor.js";
 import createCallLuaFunctionTool from "./general/call-lua-function.js";
 import createGetTechnologyTool from "./databases/get-technology.js";
@@ -46,7 +45,6 @@ import type { MCPServer } from "../server.js";
 
 // Tool factory configuration - one line per tool
 const toolFactories = {
-    calculator: createCalculatorTool,
     luaExecutor: createLuaExecutorTool,
     callLuaFunction: createCallLuaFunctionTool,
     getGameSettings: createGetGameSettingsTool,

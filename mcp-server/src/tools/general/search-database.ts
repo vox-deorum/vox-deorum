@@ -4,13 +4,26 @@
 
 import { ToolBase } from "../base.js";
 import * as z from "zod";
-import { reciprocalRankFusion } from "rerank";
 import { getTool } from "../index.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { createLogger } from "../../utils/logger.js";
 import { weightedFuzzySearch, defaultFieldWeights } from "../../utils/search-weights.js";
 
 const logger = createLogger('SearchDatabaseTool');
+
+/**
+ * Fuse ranked lists with Reciprocal Rank Fusion and return the keys, best first.
+ * Each list adds 1 / (60 + rank) to a key's score, with rank starting at 1.
+ */
+function reciprocalRankFusion(rankedLists: { key: string }[][]): string[] {
+  const scores = new Map<string, number>();
+  for (const list of rankedLists) {
+    list.forEach((item, index) => {
+      scores.set(item.key, (scores.get(item.key) ?? 0) + 1 / (60 + index + 1));
+    });
+  }
+  return Array.from(scores).sort((a, b) => b[1] - a[1]).map(([key]) => key);
+}
 
 // List of database tools to search (excluding strategy tools)
 const searchableTools = [
@@ -136,8 +149,7 @@ class SearchDatabaseTool extends ToolBase {
       }
 
       // Use Reciprocal Rank Fusion to combine all ranked lists
-      const fusedKeysResult = reciprocalRankFusion(rankedLists, 'key');
-      const fusedKeys = Array.from((fusedKeysResult as Map<string, number>).keys());
+      const fusedKeys = reciprocalRankFusion(rankedLists);
 
       // Build result record with relevance scores
       const results: Record<string, any> = {};

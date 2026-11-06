@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { ref, shallowRef, type Ref } from 'vue';
 
 // Mock the API client so the test drives the streaming callbacks directly.
@@ -21,9 +21,9 @@ describe('useThreadMessages', () => {
   let thread: Ref<EnvoyThread | null>;
   let isStreaming: Ref<boolean>;
   let sessionId: Ref<string>;
-  let onSendFailed: ReturnType<typeof vi.fn>;
-  let onGreetingFailed: ReturnType<typeof vi.fn>;
-  let onDealFailed: ReturnType<typeof vi.fn>;
+  let onSendFailed: Mock<(...args: any[]) => void>;
+  let onGreetingFailed: Mock<(...args: any[]) => void>;
+  let onDealFailed: Mock<(...args: any[]) => void>;
   // The streaming callbacks the composable handed to api.streamAgentMessage, captured for driving.
   let cb: {
     onMessage: (p: any) => void;

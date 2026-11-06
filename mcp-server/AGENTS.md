@@ -139,8 +139,8 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 
 ### Tool Testing Pattern
 
-- Use `calculator.ts` tool as template for new tools
-- Use `calculator.test.ts` as test template
+- Use `get-technology.ts` (in `src/tools/databases/`) tool as template for new tools
+- Use `tests/real/tools/databases/get-technology.test.ts` as test template
 - **Always test through MCP client calls**, not direct method invocation
 - Test input validation, error handling, and expected outputs
 - Tool/resource tests should use the mcpClient object exported by setup.ts
