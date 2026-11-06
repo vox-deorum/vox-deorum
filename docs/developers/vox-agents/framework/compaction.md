@@ -63,7 +63,7 @@ Step 4 then runs on the compacted history and its span records `step.compacted =
 - It never rewrites the initial prompt, so the cached prefix stays valid (see [Caching](caching.md)). With files on, the run marks its last initial message as a cache anchor, and everything compaction changes comes after it.
 - It does not carry anything across runs. Each agent run starts with a fresh history; the workspace is what persists.
 
-On Codex, a step that compacted sends the full compacted history instead of continuing the previous step's native thread.
+On Codex and Claude Code, a step that compacted sends the full compacted history instead of continuing the previous step's native thread or live CLI query.
 
 ## Where the code lives
 

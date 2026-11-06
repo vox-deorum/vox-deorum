@@ -7,9 +7,10 @@ Providers differ. Some cannot call tools reliably, some refuse a forced tool cal
 ```
 outermost
   │ capability text           (bash workspace, or Web on Codex or Claude Code)
-  │ tool middleware           prompt mode, Gemma, or default rescue
-  │ Claude Code demotion      (Claude Code only)
+  │ tool middleware           prompt mode (other models), Gemma, or default rescue
   │ think-tag extraction      (thinkMiddleware option)
+  │ Claude Code handling      system-message demotion, required tool choice,
+  │                           response handling, and the native tool session
   │ provider-specific         required tool choice (Anthropic, Vertex Claude, Codex),
   │                           Codex response handling
   ▼
@@ -26,7 +27,8 @@ This is layer 3 of [Prompts and tool calling](../framework/prompts.md).
 | Tool rescue, prompt mode | `src/utils/models/tool-rescue/` | Replaces native tools with text instructions. See [Prompt-mode tool calling](#prompt-mode-tool-calling). |
 | Tool rescue, default | `src/utils/models/tool-rescue/middleware.ts` | Changes no prompt text. It recovers tool calls a model wrote as JSON text instead of a real call. |
 | Gemma | `hermesToolMiddleware` from `@ai-sdk-tool/parser` | Hermes-style tool block for Gemma models. |
-| Claude Code demotion | `src/utils/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. |
+| Claude Code session | `src/utils/models/providers/claude-code-session.ts` | Runs one live CLI query per agent run and serves the run's tools through the `vox` MCP server. Requests without function tools bypass it. See [Claude Code native tools](#claude-code-native-tools). |
+| Claude Code demotion | `src/utils/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. Installed by `buildClaudeCodeModel`. |
 | Required tool choice | `src/utils/models/providers/required-tool-choice.ts` | For providers that refuse a forced tool call, relaxes it to "tools allowed". Always adds a sentence naming the tools that end the turn, unless no offered tool does. |
 | Codex response | `src/utils/models/providers/codex-response.ts` | See [Codex](#codex). |
 
@@ -61,7 +63,7 @@ For example, a Codex seat with `files: "write"` and `Web` records `write,web`. S
 
 ## Prompt-mode tool calling
 
-Some models do not call tools reliably. They run in **prompt mode**, set with `options.toolMiddleware: 'prompt'` in the model config. Claude Code always uses prompt mode. The model is taught to write tool calls as JSON text, and the middleware turns that text back into real tool calls.
+Some models do not call tools reliably. They run in **prompt mode**, set with `options.toolMiddleware: 'prompt'` in the model config. The model is taught to write tool calls as JSON text, and the middleware turns that text back into real tool calls. Claude Code calls tools natively instead (see [Claude Code native tools](#claude-code-native-tools)), and `buildClaudeCodeModel` rejects the `prompt` and `gemma` tool middleware for it.
 
 ```
 inbound                                        outbound
@@ -77,17 +79,26 @@ inbound                                        outbound
 | Piece | File | Notes |
 | --- | --- | --- |
 | Assembly | `src/utils/models/tool-rescue/middleware.ts` | Connects the inbound and outbound halves. |
-| Inbound transform | `src/utils/models/tool-rescue/transform-params.ts` | Places the instructions: before the first user message for Claude Code, inside the first system message for `systemPromptFirst` models, otherwise as a new first system message. |
+| Inbound transform | `src/utils/models/tool-rescue/transform-params.ts` | Places the instructions: before the first user message under action framing, inside the first system message for `systemPromptFirst` models, otherwise as a new first system message. |
 | Instruction text | `createToolPrompts` in `src/utils/models/tool-rescue/prompt.ts` | Lists every offered tool with its JSON schema. Required and optional steps share one wording, since the closing reminder carries the requirement. |
 | History as text | `convertPromptToolMessagesToText` in the same file | Rewrites earlier calls and results in the format the model is taught. |
 | Reading replies | `generate.ts`, `stream.ts`, `extract.ts`, `recovery.ts` in `src/utils/models/tool-rescue/` | Pull tool calls out of the reply text. |
 | Call text format | `formatToolCallText`, `formatToolResultText` in `src/utils/models/text-cleaning.ts` | Shared by the history rewrite and the reply parser. |
-| Framing | `FRAMING_PRESETS` in `prompt.ts`; `resolveToolFraming` in `src/utils/models/models.ts` | Claude Code says "action" instead of "tool", so it does not confuse game tools with its own CLI tools. `reframeToolWording` rewrites the agent's system text to match. |
-| Pinned reply shape | `buildToolCallArraySchema` in `prompt.ts` | For Claude Code on a step that requires a call, forces the reply into the tool-call JSON shape. |
+| Framing | `FRAMING_PRESETS` in `prompt.ts`; `resolveToolFraming` in `src/utils/models/models.ts` | Termed "tool" by default. `options.framing` can select "action" instead, mainly for Oracle replay, and `reframeToolWording` rewrites the agent's system text to match. |
 
-Because the instructions are built from the offered tools, they do not change when a step allows fewer tools. The one exception is Claude Code: a required step pins the reply shape and an optional step does not. Claude Code gets no caching between steps anyway (see [Caching](../framework/caching.md)).
+Because the instructions are built from the offered tools, they do not change when a step allows fewer tools.
 
 A text call to a removed tool is still recovered by name and then rejected like a native call (`tests/mock/infra/narrowed-tool-rejection.test.ts`).
+
+## Claude Code native tools
+
+Claude Code calls the run's function tools itself. One live CLI query spans an agent run, and the run's game tools and `bash` are served to the CLI through a fresh in-process MCP server named `vox`. The CLI calls them as `mcp__vox__<name>`, and the session renames each call to `<name>`. It ends the Vox Deorum step when the assistant message stops, then the AI SDK and Vox Deorum execute the tools as they do for every provider.
+
+On the next step, the session hands the tool results to the parked MCP handlers and keeps streaming the same query, so the CLI sees real results in its own context. Any trailing user text, such as the closing reminder, rides on the last result. The session starts a fresh query with the full prompt when the model configuration or tool list changes, when the prompt does not answer the calls it handed out, or when the query has finished or failed. A message that contains only Web calls stays inside the same Vox Deorum step. A Web call still running when its step ends is reported, together with its result, in the step where the result arrives.
+
+The CLI must expose no built-in tools besides the configured host tools. The session checks the tool list from the CLI's init message and fails the query if anything else appears. Requests without function tools, such as evaluations with a JSON response format or plain chat, skip the session and go straight to the provider, and so does a request whose tool choice is `none`. A tool choice that names one tool narrows the `vox` server to that tool. `buildClaudeCodeModel` installs the required-tool-choice handling, system-message demotion, and response middleware.
+
+The session depends on how the CLI reports tool calls, so `npm run test:claude-code` (in `vox-agents`) checks it against the real CLI. Rerun it after upgrading the Agent SDK or the Claude Code provider.
 
 ## Codex
 

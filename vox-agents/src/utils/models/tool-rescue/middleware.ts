@@ -4,12 +4,7 @@
  * AI SDK middleware that wires the prompt-shaping and text-extraction halves together. In `prompt`
  * mode it injects a JSON-format instruction before the model runs; on the way out it inspects text
  * content and rescues any JSON tool calls the model emitted instead of using native tool-calling.
- *
- * Under `structuredToolCalls` (the claude-code constrained-decoding path) the CLI strictly validates
- * each forced-tool attempt and retries a rejected one within the same response, so separate text
- * blocks are competing ATTEMPTS at one output rather than independent calls. In that mode the rescue
- * is last-attempt-wins: only the final call-yielding attempt is committed. Free-text prompt mode
- * keeps its original semantics, where every text-authored call survives (repeats included).
+ * Every text-authored call survives, including identical repeats.
  *
  * This module is only the assembly. Each hook's work lives beside it:
  *

@@ -89,12 +89,9 @@ export interface ToolInputStreamer {
 /**
  * Build the per-response streamer.
  *
- * @param enabled Whether synthetic streaming applies at all to this call. Two conditions gate it,
- *   and both matter. Prompt mode, because this middleware wraps every model and its text-rescue
- *   path runs whenever tools exist — for a NATIVE tool-caller this would open a second, synthetic
- *   stream for a call whose real `tool-input-delta`s the provider is already sending. And NOT
- *   constrained decoding, where each text block is a competing attempt the CLI may reject and
- *   retry: speaking one would commit text that last-attempt-wins then supersedes.
+ * @param enabled Whether synthetic streaming applies at all to this call. Only prompt mode enables
+ *   it: for a NATIVE tool-caller this would open a second, synthetic stream for a call whose real
+ *   `tool-input-delta`s the provider is already sending.
  * @param availableTools The tool names this request actually offers
  */
 export function createToolInputStreamer(enabled: boolean, availableTools: Set<string>): ToolInputStreamer {

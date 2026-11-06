@@ -27,6 +27,7 @@ import { hostCapabilityTelemetryAttributes } from "../utils/telemetry/host-capab
 import { codexResponseTelemetryAttributes } from "../utils/telemetry/codex-response.js";
 import { stepTokenUsage } from "../utils/telemetry/model-usage.js";
 import { isHostCapabilityProvider } from "../utils/models/providers/host-tools.js";
+import { ClaudeCodeSession } from "../utils/models/providers/claude-code-session.js";
 import { rootPrompts } from "../utils/prompts/prompt-files.js";
 import { stripMarkdownConfig, stripToolArtifacts } from "../utils/models/text-cleaning.js";
 import { appendReminder } from "../utils/prompts/reminders.js";
@@ -131,6 +132,8 @@ export async function executeAgent<TParameters extends AgentParameters>(
       let messages: ModelMessage[] = [];
       let initialLength = 0;
       let step = 0;
+      // One live Claude Code CLI query serves every claude-code step of this run; inert otherwise.
+      const claudeCodeSession = new ClaudeCodeSession();
       try {
         // The run's tools come first, so prompt builders can tell whether this run reads records
         // through bash (see fileMode in knowledge/directions.ts).
@@ -242,6 +245,8 @@ export async function executeAgent<TParameters extends AgentParameters>(
             } else if (requestTokens >= threshold) {
               messages = compactHistory(messages, keepFrom, initialLength);
               compacted = 'threshold';
+              // A compacted history must reach the model in full, so Claude Code starts a fresh query.
+              await claudeCodeSession.close();
             }
             // The first context overflow compacts and retries the step once. A step that already
             // compacted would resend the same request, so it fails as before.
@@ -265,7 +270,8 @@ export async function executeAgent<TParameters extends AgentParameters>(
             compacted ? undefined : codexResponseId,
             callback,
             compacted,
-            compactOnOverflow
+            compactOnOverflow,
+            claudeCodeSession
           );
 
           // Update state from step results
@@ -332,6 +338,7 @@ export async function executeAgent<TParameters extends AgentParameters>(
         }
         return undefined;
       } finally {
+        await claudeCodeSession.close();
         span.end();
       }
     });
@@ -396,6 +403,7 @@ function compactHistory(messages: ModelMessage[], keepFrom: number, initialLengt
  * @param compacted - Why the history was compacted before this step, recorded as step.compacted
  * @param compactOnOverflow - When set, the first context-length error compacts the prepared request
  *   with it and retries once inside this step, so the rejected request is not another logical step
+ * @param claudeCodeSession - The run's live Claude Code session, continued by claude-code steps
  * @returns Updated messages, where this step's response starts in them, stop condition, optional
  *   final text, the response id that continues the thread, and why the step's history was compacted
  */
@@ -412,7 +420,8 @@ async function executeAgentStep<TParameters extends AgentParameters>(
   previousResponseId?: string,
   callback?: StreamingEventCallback,
   compacted?: StepCompaction,
-  compactOnOverflow?: (messages: ModelMessage[]) => ModelMessage[]
+  compactOnOverflow?: (messages: ModelMessage[]) => ModelMessage[],
+  claudeCodeSession?: ClaudeCodeSession
 ): Promise<{ messages: ModelMessage[], responseStart: number, shouldStop: boolean, finalText?: string, inputTokens: number, cachedInputTokens?: number, reasoningTokens: number, outputTokens: number, responseId?: string, compacted?: StepCompaction }> {
   const stepSpan = openStepSpan(host, agent.name, parameters.turn, stepCount + 1);
 
@@ -494,6 +503,7 @@ async function executeAgentStep<TParameters extends AgentParameters>(
             // middleware intersects them with the run's declared tools, so its text stays stable on
             // narrowed steps; the closing reminder names what may actually run.
             completionTools: agent.completionTools,
+            claudeCodeSession,
           }),
           providerOptions: buildProviderOptions(stepModel, responseId),
           // Disable Vercel AI SDK's internal retry to let our wrapper handle it

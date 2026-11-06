@@ -43,7 +43,7 @@ The default `npm test` and `npm run test:mock` run the in-process mock tier. Too
 
 `npm run test:real` runs `mcp-server/tests/real/`, booting the real MCP server against the real bridge service in mock-DLL mode through `tests/real.setup.ts`. That stack needs no copy of Civilization V, but the existing real-tier tests were written for a live game and still need adaptation before the tier passes reliably.
 
-### Vox agents: four tiers
+### Vox agents: five tiers
 
 `vox-agents/vitest.config.ts` picks a tier from `TEST_TIER` (or from `USE_MOCK=false`) and includes only `tests/<tier>/**`:
 
@@ -53,6 +53,7 @@ The default `npm test` and `npm run test:mock` run the in-process mock tier. Too
 | **Real** | `npm run test:real` | **Not wired yet.** `tests/real/` does not exist, and the script runs with `--passWithNoTests`, so it is a clean no-op. The tier is reserved for a future out-of-process run against a real MCP server over a mock-DLL bridge. |
 | **Game** | `npm run test:game` | The live Civilization V tier in `tests/live/game/**`. It needs Windows and Civ V, runs sequentially with long timeouts, and is excluded from the default suite. |
 | **OBS** | `npm run test:obs` | The live OBS tier in `tests/live/obs/**`. It needs OBS Studio with its WebSocket server, and is excluded from the default suite. |
+| **Claude Code** | `npm run test:claude-code` | The live Claude Code tier in `tests/live/claude-code/**`. A short run against the real CLI checks that tools are called natively, their results reach the model, and one query spans the run. It needs a logged-in Claude Code CLI, uses a little subscription usage, and is excluded from the default suite. Rerun it after upgrading the Agent SDK or the Claude Code provider. |
 
 Because the game and OBS suites are environment-heavy and slow, the convention is firm: **don't touch the OBS tests unless you're changing OBS code, and don't touch the game tests unless you're changing the game-launch or process code.**
 

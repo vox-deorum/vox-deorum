@@ -62,7 +62,8 @@ interface ReplayTask {
 
 /**
  * Whether a model reuses a repeated prompt through Anthropic prompt caching: the direct Anthropic
- * provider, the Claude Code CLI (which caches on its own), or a Claude model served elsewhere.
+ * provider, the Claude Code CLI (which caches within its live query), or a Claude model served
+ * elsewhere.
  */
 function cachesLikeAnthropic(model: Model): boolean {
   return model.provider === 'anthropic' || model.provider === 'claude-code' || model.name.includes('claude');
@@ -488,12 +489,11 @@ async function replaySingleRow(
   const finalMessages = modifications.messages ?? retrieved.messages;
   const finalActiveTools = modifications.activeTools ?? retrieved.activeTools;
 
-  // Replay framing derives solely from the replay model (via resolveToolFraming): a
-  // 'prompt'-mode model replaying a Claude-Code turn is told "tools", not "actions".
-  // Experiments that want to reproduce the original 'action' view opt in explicitly
-  // (e.g. modelOverride returning a model with options.framing, or applying
-  // reframeToolWording to ctx.system). The source turn's framing never silently
-  // overrides the replay model here.
+  // Replay framing derives solely from the replay model (via resolveToolFraming): prompt
+  // mode defaults to "tools", and Claude Code calls tools natively instead of replaying
+  // in prompt mode. Experiments that want an 'action' view opt in explicitly (e.g.
+  // modelOverride returning a model with options.framing, or applying reframeToolWording
+  // to ctx.system). The source turn's framing never silently overrides the replay model.
 
   // Build parameters and input
   const parameters: OracleParameters = {

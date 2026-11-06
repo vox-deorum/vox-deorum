@@ -12,7 +12,7 @@ The cache matches from the start of the request. Tools come first, then system t
 
 The marker is `cacheBreakpoint` in `src/utils/models/cache-breakpoint.ts`, added to a message's `providerOptions`. Direct Anthropic, Claude on Vertex, and OpenRouter use it. Other providers ignore it.
 
-Claude Code is an exception. It flattens the whole prompt into one CLI user message per step, so it reuses nothing past the CLI's own system prompt between steps.
+Claude Code is an exception. One live CLI query spans an agent run, and the session hands each step's tool results back to that query, so the CLI caches within its own query. Cache breakpoints have no effect there.
 
 ## Where agents place anchors
 

@@ -21,7 +21,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { toolRescueMiddleware } from './tool-rescue/middleware.js';
 import { buildClaudeCodeModel } from './providers/claude-code.js';
-import { claudeCodeSystemMiddleware } from './providers/claude-code-prompt.js';
+import type { ClaudeCodeSession } from './providers/claude-code-session.js';
 import { buildCodexModel, buildCodexProviderOptions } from './providers/codex.js';
 import { capabilityMiddleware } from './capability-prompt.js';
 import { requiredToolChoiceMiddleware } from './providers/required-tool-choice.js';
@@ -171,19 +171,13 @@ export function getModelConfig(
 
 
 /**
- * Resolves the tool-call terminology preset for a model. claude-code always uses 'action'
- * framing: its CLI persona reasons in terms of actions, and keeping the terminology uniform
- * across every claude-code turn (whether or not built-in CLI tools are enabled) also avoids
- * the JSON-invoked game tools and the CLI's native tools both reading as "tools". Every other
- * model uses the default 'tool'. An explicit options.framing override wins (Oracle replay).
- * Exported so callers outside getModel (e.g. the empty-response rescue prompt in vox-agent)
- * can match the model's framing.
+ * Resolves the tool-call terminology preset for a model: 'tool' by default, or an explicit
+ * options.framing override (Oracle replay sets it to reproduce the original turn's framing on
+ * any replay model). Exported so callers outside getModel (e.g. the empty-response rescue
+ * prompt in vox-agent) can match the model's framing.
  */
 export function resolveToolFraming(config: Model): ToolCallFraming {
-  // Explicit override wins: Oracle replay sets this to reproduce the original turn's
-  // framing on any replay model, regardless of provider.
-  if (config.options?.framing) return config.options.framing;
-  return config.provider === 'claude-code' ? 'action' : 'tool';
+  return config.options?.framing ?? 'tool';
 }
 
 /**
@@ -212,10 +206,11 @@ export function getModel(config: Model, options?: {
   onToolFraming?: (info: { framing: ToolCallFraming }) => void;
   /** The calling agent's completion tools, named by provider prompt guidance. */
   completionTools?: string[];
+  /** The run's live Claude Code session, so claude-code steps continue one CLI query. */
+  claudeCodeSession?: ClaudeCodeSession;
 }): LanguageModel {
   let result: LanguageModelV4;
-  // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming):
-  // 'action' for claude-code, 'tool' for everything else.
+  // Terminology preset for the prompt-mode tool instructions (see resolveToolFraming).
   const toolFraming: ToolCallFraming = resolveToolFraming(config);
   // Find providers
   switch (config.provider) {
@@ -284,14 +279,14 @@ export function getModel(config: Model, options?: {
         middleware: requiredToolChoiceMiddleware({ completionTools: options?.completionTools })
       });
       break;
-    case "claude-code": {
-      // The provider builder rebinds configuration to forced prompt mode. The
-      // middleware tail below must use that rebound value to preserve tool behavior.
-      const claudeCode = buildClaudeCodeModel(config);
-      result = claudeCode.model;
-      config = claudeCode.config;
+    case "claude-code":
+      // Native tools through a live CLI session; the builder installs its own
+      // system-message and required-tool-choice handling.
+      result = buildClaudeCodeModel(config, {
+        completionTools: options?.completionTools,
+        session: options?.claudeCodeSession,
+      });
       break;
-    }
     case "codex":
       result = buildCodexModel(config, { completionTools: options?.completionTools });
       break;
@@ -329,17 +324,6 @@ export function getModel(config: Model, options?: {
       middleware: extractReasoningMiddleware({ tagName: config.options.thinkMiddleware })
     });
   }
-  // For claude-code, turn every system message into a user message BEFORE it reaches the provider,
-  // which sends the whole prompt as one CLI user turn and never as the CLI system prompt. Wrapped
-  // here so it lands INNER to the tool middleware below (AI-SDK middleware transformParams runs
-  // outermost-first), letting it run AFTER tool-rescue injects its instructions so the injected
-  // schema block is demoted too.
-  if (config.provider === 'claude-code') {
-    result = wrapLanguageModel({
-      model: result,
-      middleware: claudeCodeSystemMiddleware()
-    });
-  }
   // Wrap it for tool calling
   switch (config.options?.toolMiddleware) {
     case "gemma":
@@ -351,7 +335,7 @@ export function getModel(config: Model, options?: {
     case "prompt":
       result = wrapLanguageModel({
         model: result,
-        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming, onToolFraming: options?.onToolFraming, structuredToolCalls: config.provider === 'claude-code' })
+        middleware: toolRescueMiddleware({ prompt: true, systemPromptFirst: config.options?.systemPromptFirst, framing: toolFraming, onToolFraming: options?.onToolFraming })
       });
       break;
     default:

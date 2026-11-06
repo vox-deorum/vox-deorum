@@ -33,6 +33,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 | `npm run test:real` | Future real MCP Server and mock Bridge tier; currently passes with no tests |
 | `npm run test:game` | Live Civilization V tests |
 | `npm run test:obs` | Live OBS tests |
+| `npm run test:claude-code` | Live check of Claude Code native tools against the real CLI |
 | `npm run test:coverage` | Coverage report for the mock tier |
 | `npm run test:ui` | Vitest browser UI |
 
@@ -42,6 +43,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **Real** (`tests/real/**`): Reserved for a future out-of-process real MCP Server and mock Bridge bottom. `npm run test:real` currently passes with no tests.
 - **Game** (`tests/live/game/**`): Live Civilization V tier. Launches Civilization V with long timeouts and sequential execution through `singleFork: true`.
 - **OBS** (`tests/live/obs/**`): Live OBS tier. Requires OBS Studio with its WebSocket server and skips gracefully when OBS is unreachable.
+- **Claude Code** (`tests/live/claude-code/**`): Live Claude Code tier. Requires a logged-in Claude Code CLI and uses a little subscription usage. Rerun it after upgrading the Agent SDK or the Claude Code provider.
 
 ### Test Rules
 

@@ -27,6 +27,7 @@ import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency
 import { countRequestTokens } from '../../../src/utils/models/token-counter.js';
 import { compactionReminder, droppedOutputStub } from '../../../src/utils/prompts/message-history.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { ClaudeCodeSession } from '../../../src/utils/models/providers/claude-code-session.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import type { Model } from '../../../src/types/index.js';
@@ -197,6 +198,21 @@ describe('workspace traffic compaction in the step loop', () => {
       expect(hasToolCall(compacted, 'call-1')).toBe(true);
       // Bash traffic in the initial prompt is never compacted.
       expect(resultOf(compacted, 'call-0').output.value).toBe(initialOutput);
+    });
+
+    it('should end the live Claude Code query before the compacted step, so the full compacted history is sent', async () => {
+      const close = vi.spyOn(ClaudeCodeSession.prototype, 'close');
+      try {
+        recordBashSteps();
+        await run(seat('compact-threshold', atThreshold.maxSteps), atThreshold.name);
+        const steps = stc.mock.invocationCallOrder;
+        // The session closes once between the last uncompacted step and the compacted one, and not earlier.
+        const closedBetween = close.mock.invocationCallOrder.filter((order) => order > steps.at(-2)! && order < steps.at(-1)!);
+        expect(closedBetween).toHaveLength(1);
+        expect(close.mock.invocationCallOrder.filter((order) => order < steps.at(-2)!)).toHaveLength(0);
+      } finally {
+        close.mockRestore();
+      }
     });
 
     it('should compact and retry once on the first overflow within the same step', async () => {

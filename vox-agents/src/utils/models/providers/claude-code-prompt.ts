@@ -8,8 +8,9 @@
  * provider actually sends. Nothing is merged: each system message keeps its own position, so the
  * shape `system, system, user, system` becomes `user, user, user, user`.
  *
- * Wired only for the claude-code provider, inner to the tool-rescue middleware; see the wiring
- * comment in `getModel` (models.ts) for the ordering rationale. It never touches user/assistant
+ * Installed by `buildClaudeCodeModel` (`providers/claude-code.ts`) for every Claude Code model,
+ * including requests without function tools. It runs inside the provider's own middleware stack,
+ * and there is no tool-rescue schema or prompt for it to demote. It never touches user/assistant
  * message bodies, so it cannot corrupt tool argument schemas.
  */
 
@@ -30,8 +31,8 @@ export function demoteClaudeCodeSystemMessages(prompt: LanguageModelV4Prompt): L
 
 /**
  * Middleware that applies {@link demoteClaudeCodeSystemMessages} to the outgoing prompt. Only
- * transformParams is implemented; response handling is left entirely to the other middleware in the
- * chain (tool-rescue). Returns the params object untouched when there is nothing to demote.
+ * transformParams is implemented; response handling is left to `claudeCodeResponseMiddleware`.
+ * Returns the params object untouched when there is nothing to demote.
  */
 export function claudeCodeSystemMiddleware(): LanguageModelMiddleware {
   return {

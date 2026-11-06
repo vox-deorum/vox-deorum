@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest';
 import {
   findStreamableToolCallStart,
   rescueToolCallsFromText,
-  isStructuredOutputToolName,
 } from '../../../src/utils/models/tool-rescue/extract.js';
 
 const tools = new Set(['get-data', 'set-strategy', 'end-turn']);
@@ -141,7 +140,7 @@ describe('findStreamableToolCallStart', () => {
       expect(expectArgsAt(buffer, '{"Message":"Hi').ordinal).toBe(0);
     });
 
-    it('counts siblings inside a constrained-decoding wrapper the same way', () => {
+    it('counts siblings inside an object-wrapped call list the same way', () => {
       const buffer = '{"actions":[{"action":"send-message","Message":"first"},'
         + '{"action":"send-message","arguments":{"Message":"second"';
       expect(expectArgsAt(buffer, '{"Message":"second"').ordinal).toBe(1);
@@ -151,21 +150,6 @@ describe('findStreamableToolCallStart', () => {
       const buffer = '<|tool_call_begin|> functions.send-message:0 <|tool_call_argument_begin|> {"Message":"Hi';
       expect(expectArgsAt(buffer, '{"Message":"Hi').ordinal).toBe(0);
     });
-  });
-});
-
-describe('isStructuredOutputToolName', () => {
-  it('matches the claude-code constrained-decoding carrier (any prefix)', () => {
-    expect(isStructuredOutputToolName('claude-code-tool.StructuredOutput')).toBe(true);
-    expect(isStructuredOutputToolName('StructuredOutput')).toBe(true);
-    expect(isStructuredOutputToolName('mcp__x__StructuredOutput')).toBe(true);
-    expect(isStructuredOutputToolName('structuredoutput')).toBe(true); // case-insensitive
-  });
-
-  it('does not match game tools or provider built-ins', () => {
-    expect(isStructuredOutputToolName('send-message')).toBe(false);
-    expect(isStructuredOutputToolName('Read')).toBe(false);
-    expect(isStructuredOutputToolName('mcp__game__end-turn')).toBe(false);
   });
 });
 
@@ -253,7 +237,7 @@ describe('rescueToolCallsFromText', () => {
     });
   });
 
-  describe('object-wrapped array (constrained-output shape)', () => {
+  describe('object-wrapped array', () => {
     it('unwraps a single array property so { actions: [...] } parses like a bare array', () => {
       const text = '{"actions": [{"action": "get-data", "arguments": {"x": 1}}, {"action": "end-turn", "arguments": {}}]}';
       const result = rescueToolCallsFromText(text, tools);
@@ -292,9 +276,9 @@ describe('rescueToolCallsFromText', () => {
     });
 
     it('strips a bare wrapper remnant instead of leaving it as free text', () => {
-      // `{"actions":}` is the leftover shell of the constrained-decoding envelope after the
-      // real calls were extracted natively. It carries no tool call, must not warn, and must
-      // be consumed rather than leaked downstream as free text.
+      // `{"actions":}` is a leftover wrapper shell after the real calls were extracted. It
+      // carries no tool call, must not warn, and must be consumed rather than leaked
+      // downstream as free text.
       const text = '{"actions":}';
       const result = rescueToolCallsFromText(text, tools);
       expect(result.toolCalls).toEqual([]);
@@ -343,7 +327,7 @@ describe('rescueToolCallsFromText', () => {
       expect(result.remainingText).toBeUndefined();
     });
 
-    it('should rescue an array of action-key objects (claude-code framing)', () => {
+    it("should rescue an array of action-key objects ('action' framing)", () => {
       // The exact shape the 'action' framing prompt instructs the model to emit.
       const text = '```json\n[\n  { "action": "get-data", "arguments": { "a": 1 } },\n  { "action": "end-turn", "arguments": {} }\n]\n```';
       const result = rescueToolCallsFromText(text, tools);
@@ -374,7 +358,7 @@ describe('rescueToolCallsFromText', () => {
       expect(result.toolCalls[0].toolName).toBe('end-turn');
     });
 
-    it('should support the action/arguments field pattern (claude-code framing)', () => {
+    it("should support the action/arguments field pattern ('action' framing)", () => {
       const text = '{"action": "end-turn", "arguments": {"confirm": true}}';
       const result = rescueToolCallsFromText(text, tools);
       expect(result.toolCalls).toHaveLength(1);
@@ -421,7 +405,7 @@ describe('rescueToolCallsFromText', () => {
       ['keep-status-quo', { type: 'object', properties: { PlayerID: { type: 'number' }, Rationale: { type: 'string' } } }],
     ]);
 
-    it('rescues the claude-code payload: array item with action + flattened Rationale', () => {
+    it('rescues a flattened action payload inside an array item', () => {
       const text = '[\n  {\n    "action": "keep-status-quo",\n    "Rationale": "Current strategy is on track."\n  }\n]';
       const result = rescueToolCallsFromText(text, ksqTools, true, ksqSchemas);
       expect(result.toolCalls).toHaveLength(1);

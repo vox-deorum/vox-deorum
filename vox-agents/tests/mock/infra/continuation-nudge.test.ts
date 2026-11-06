@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest';
 import '../../../src/infra/agent-registry.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { formatToolChoiceList } from '../../../src/utils/tools/tool-names.js';
+import { buildClosingReminder } from '../../../src/utils/prompts/closing-reminder.js';
 
 /** A later, unnarrowed step with an auto tool choice that may run `executable`. */
 function later(executable: string[]) {
@@ -138,6 +139,20 @@ describe('continuationNudge', () => {
       expect(remind({ executable: [], narrowed: true, notes: true })).toBe(remind({ executable: [], narrowed: true }));
       const required: string = remind({ required: true, notes: true });
       expect(required.startsWith(remind({ required: true })!)).toBe(true);
+    });
+
+    it('offers a separate reading step on the first step only when more than one step is left', () => {
+      /** The first-step reminder with or without notes, for a given step budget. */
+      const first = (stepsLeft: number | undefined, notes: boolean) =>
+        buildClosingReminder(gated, ['send-message'], { narrowed: false, step: 0, required: false, notes, stepsLeft }) ?? '';
+      // The bash guidance is whatever notes add after the steps-left line.
+      const guidance = (stepsLeft: number | undefined) => first(stepsLeft, true).slice(first(stepsLeft, false).length).trim();
+      const open = guidance(5);
+      const last = guidance(1);
+      // Both keep the notes clause; only a budget with steps to spare adds reading guidance before it.
+      expect(open.length).toBeGreaterThan(last.length);
+      expect(open.endsWith(last)).toBe(true);
+      expect(guidance(undefined)).toBe(open);
     });
   });
 });

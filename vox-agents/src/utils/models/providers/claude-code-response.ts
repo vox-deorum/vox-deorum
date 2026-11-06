@@ -25,6 +25,14 @@ export interface ClaudeCodeUsageLimitError extends Error {
 /** Receive the raw usage-limit error before the provider replaces it. */
 export type PreserveClaudeCodeUsageLimitError = (error: ClaudeCodeUsageLimitError) => void;
 
+/**
+ * Return the current step's receiver for raw usage-limit errors. A live session's query outlives
+ * the step that started it, so the session forwards errors to whichever step is streaming.
+ */
+export function currentUsageLimitErrorReceiver(): PreserveClaudeCodeUsageLimitError | undefined {
+  return rawUsageLimitErrorStorage.getStore();
+}
+
 /** Return whether text begins with a Claude Code usage-limit introduction. */
 export function isClaudeCodeUsageLimitNotice(text: string): boolean {
   return noticeIntroductions.some((introduction) => text.startsWith(introduction));
@@ -140,9 +148,10 @@ function getStructuredOutputToolIds(message: any): string[] {
 }
 
 /**
- * Drop tool results answering the internal StructuredOutput tool. The provider hides that
- * tool's call but not its result, so the orphaned result would otherwise surface as a
- * provider-executed `unknown-tool` call with empty input (ai-sdk-provider-claude-code 4.3.3).
+ * Drop tool results answering the internal StructuredOutput tool, which carries a JSON
+ * responseFormat (evaluations). The provider hides that tool's call but not its result, so the
+ * orphaned result would otherwise surface as a provider-executed `unknown-tool` call with empty
+ * input (ai-sdk-provider-claude-code 4.3.3).
  */
 export function hideClaudeCodeStructuredOutputResults(query: Query): void {
   const originalIterator = query[Symbol.asyncIterator].bind(query);

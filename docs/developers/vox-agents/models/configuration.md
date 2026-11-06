@@ -105,6 +105,8 @@ Codex and Claude Code are full coding agents that could normally touch the host 
 | `Web` turns on | Web fetch and web search | Live search |
 | Always off | Working directory, file tools, shell. Any tool outside the allowed list is denied. | The sandbox stays disabled. |
 
+`hostTools` is the only way the Claude Code CLI gets built-in tools. The game's tools reach it through an in-process MCP server named `vox`, so `toolMiddleware` is not supported for that provider: the prompt and Gemma modes fail when the model is built.
+
 `src/utils/models/providers/host-tools.ts` checks the option once. Any other entry, including the retired `Read`, `Write`, and `everything`, fails with an error naming `Web`. File access comes only from the per-seat [files setting](../workspace/files.md), which works the same on every provider.
 
 ## Updating the Claude Agent SDK

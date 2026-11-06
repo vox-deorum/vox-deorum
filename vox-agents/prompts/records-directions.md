@@ -1,5 +1,5 @@
 # Records
-Your workspace holds the game's records and your civilization's notes accessible through `Bash`.
+Your workspace holds the game's records and your civilization's notes accessible through `bash`.
 
 ## Folders
 | Folder | Access | Holds |

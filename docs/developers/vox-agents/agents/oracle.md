@@ -64,9 +64,9 @@ Replays reuse existing trail files to skip samples already done. A cached sample
 
 ### Tool framing
 
-The [tool-rescue middleware](../models/middleware.md#prompt-mode-tool-calling) uses `tool` framing, or `action` for Claude Code. Telemetry records this as `step.tool_framing`. The injected protocol is rebuilt from the replay model's framing.
+The [tool-rescue middleware](../models/middleware.md#prompt-mode-tool-calling) uses `tool` framing by default. Telemetry records it as `step.tool_framing` when prompt mode ran; native tool calls, including Claude Code turns, leave it unset. The injected protocol is rebuilt from the replay model's framing.
 
-Retrieve surfaces this on every row as `framing`. It is **informational**, because replay framing derives solely from the replay model: a prompt-mode model replaying a claude-code turn is told "tools", not "actions". To reproduce the original view deliberately, either return a model with `options.framing` set from `modelOverride`, or apply the exported `reframeToolWording` helper to the system prompt inside `modifyPrompt`. `framing` is `undefined` for turns that predate the telemetry, ran a native tool path, had no tools, or failed before recording.
+Retrieve surfaces the recorded framing on every row as `framing`. It is **informational**, because replay framing derives solely from the replay model. To reproduce an action view deliberately, either return a model with `options.framing` set from `modelOverride`, or apply the exported `reframeToolWording` helper to the system prompt inside `modifyPrompt`. Claude Code calls tools natively and cannot replay in prompt mode, so `action` framing is available only to prompt-mode replay models. `framing` is `undefined` for turns that predate the telemetry, ran a native tool path, had no tools, or failed before recording.
 
 ### Workspace fields
 

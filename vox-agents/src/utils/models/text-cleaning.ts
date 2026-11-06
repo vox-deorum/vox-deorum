@@ -100,23 +100,6 @@ export function formatToolCallText(toolName: string, args: unknown, framing: Too
 }
 
 /**
- * Formats one or more tool calls as a single wrapper-object JSON code block
- * (`{ "<wrapKey>": [ { "<framing>": name, arguments }, ... ] }`). Used in prompt mode when
- * constrained decoding forces the wrapper object, so the echoed history matches the wrapper-object
- * shape `createToolPrompts(..., wrapped = true)` teaches instead of the bare-array `formatToolCallText`.
- * `wrapKey` (the `listKey` from FRAMING_PRESETS: `actions`/`tools`) is passed in rather than derived
- * here to keep this module free of a back-import from `prompt.ts` (which imports from this one).
- */
-export function formatWrappedToolCallText(
-  calls: Array<{ toolName: string; args: unknown }>,
-  framing: ToolCallFraming,
-  wrapKey: string,
-): string {
-  const objs = calls.map(call => toToolCallObject(call.toolName, call.args, framing));
-  return '```json\n' + JSON.stringify({ [wrapKey]: objs }, null, 2) + '\n```';
-}
-
-/**
  * Formats a tool result with a markdown heading and content.
  */
 export function formatToolResultText(toolName: string, resultText: string, framing: ToolCallFraming = 'tool'): string {
@@ -166,8 +149,7 @@ export function formatToolResultOutput(part: ToolResultLike, maxLength: number =
  * The prompt varies based on the effective toolChoice to guide the model appropriately:
  * a forced tool choice may follow a reply that had text, so that branch does not call it empty.
  * `framing` keeps the terminology ("tool" vs "action") consistent with the injected
- * instructions so the retry does not point a claude-code model at its built-in tools.
- * Defaults to `'tool'`.
+ * prompt-mode instructions. Defaults to `'tool'`.
  */
 export function buildRescuePrompt(toolChoice: string, framing: ToolCallFraming = 'tool'): string {
   const noun = framing === 'action' ? 'action' : 'tool';

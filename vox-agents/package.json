@@ -23,6 +23,7 @@
     "test:coverage": "cross-env USE_MOCK=true vitest run --coverage",
     "test:game": "cross-env TEST_TIER=live/game vitest run",
     "test:obs": "cross-env TEST_TIER=live/obs vitest run",
+    "test:claude-code": "cross-env TEST_TIER=live/claude-code vitest run",
     "archivist": "npm run build && npm run archivist:dist --",
     "archivist:dist": "node --import ./dist/instrumentation.js dist/archivist/console.js",
     "workspace": "npm run build && npm run workspace:dist --",

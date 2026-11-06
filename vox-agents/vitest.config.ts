@@ -10,8 +10,9 @@ import { TEST_TELEMETRY_DIR } from './tests/helpers/telemetry-test-dir'
 //                    web server coverage lives in tests/mock/web/server.test.ts.
 //   live/game      — real Civilization V via VoxCivilization (run by test:game).
 //   live/obs       — real OBS Studio (run by test:obs).
+//   live/claude-code — the real Claude Code CLI (run by test:claude-code).
 // The live tiers are gated inside their own spec files on TEST_TIER, so they only run
-// under their dedicated scripts and can never touch a live game/OBS by accident.
+// under their dedicated scripts and can never touch a live game, OBS, or CLI by accident.
 // USE_MOCK toggles mock<->real for parity with the other packages; TEST_TIER lets the
 // live scripts target their directory explicitly.
 const tier = process.env.TEST_TIER || (process.env.USE_MOCK === 'false' ? 'real' : 'mock')

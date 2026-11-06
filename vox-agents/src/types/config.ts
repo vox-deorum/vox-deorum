@@ -44,6 +44,10 @@ export interface LLMConfig {
   provider: string;
   name: string;
   options?: {
+    /**
+     * Prompt-mode or Gemma tool handling. Claude Code calls tools natively and rejects
+     * `'prompt'` and `'gemma'`.
+     */
     toolMiddleware?: ToolMiddlewareType;
     thinkMiddleware?: string;
     concurrencyLimit?: number;
@@ -57,9 +61,10 @@ export interface LLMConfig {
      */
     hostTools?: HostTools;
     /**
-     * Explicit prompt-mode terminology override. Normally resolved automatically
-     * (`'action'` for claude-code, else `'tool'`); set here mainly by Oracle replay
-     * to reproduce a recorded turn's framing on any replay model. See `resolveToolFraming`.
+     * Explicit prompt-mode terminology override. Prompt-mode tools use `'tool'` by
+     * default; set this mainly by Oracle replay to reproduce an `'action'` view on a
+     * replay model. Claude Code calls tools natively and does not use this option.
+     * See `resolveToolFraming`.
      */
     framing?: ToolCallFraming;
     /**

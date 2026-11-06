@@ -25,7 +25,8 @@ import { VoxContext } from '../../../src/infra/vox-context.js';
 import { VoxAgent } from '../../../src/infra/vox-agent.js';
 import { agentRegistry } from '../../../src/infra/agent-registry.js';
 import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
-import { buildProviderOptions } from '../../../src/utils/models/models.js';
+import { buildProviderOptions, getModel } from '../../../src/utils/models/models.js';
+import { ClaudeCodeSession } from '../../../src/utils/models/providers/claude-code-session.js';
 import { spanProcessor } from '../../../src/instrumentation.js';
 import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
@@ -422,6 +423,47 @@ describe('VoxContext continuation nudges', () => {
     const nudge = buildClosingReminder(['finish-a'], ['finish-a'], { narrowed: false, step: 1, required: true });
     const third = stc.mock.calls[2]![0] as any;
     expect(third.messages.filter((m: any) => m.content === nudge)).toHaveLength(1);
+  });
+});
+
+describe('VoxContext Claude Code session lifetime', () => {
+  it('shares one session across the steps of a run and closes it when the run ends', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-claude-session');
+    const close = vi.spyOn(ClaudeCodeSession.prototype, 'close');
+    const models = vi.mocked(getModel);
+    models.mockClear();
+    try {
+      await ctx.withRun({ parameters: makeStrategistParameters(), overrides: { turn: 1 } }, async () => {
+        await ctx.execute('test-two-step', {});
+      });
+      const sessions = models.mock.calls.map((call) => call[1]?.claudeCodeSession);
+      expect(sessions).toHaveLength(2);
+      expect(sessions[0]).toBeInstanceOf(ClaudeCodeSession);
+      expect(sessions[1]).toBe(sessions[0]);
+      expect(close.mock.contexts).toContain(sessions[0]);
+    } finally {
+      close.mockRestore();
+      await ctx.shutdown();
+    }
+  });
+
+  it('closes the session when a step fails', async () => {
+    const ctx = new VoxContext<StrategistParameters>({}, 'exec-claude-session-error');
+    const close = vi.spyOn(ClaudeCodeSession.prototype, 'close');
+    const models = vi.mocked(getModel);
+    models.mockClear();
+    stc.mockRejectedValue(new Error('provider failed'));
+    try {
+      await ctx.withRun({ parameters: makeStrategistParameters(), overrides: { turn: 1 } }, async () => {
+        await ctx.execute('test-two-step', {});
+      });
+      const session = models.mock.calls[0]?.[1]?.claudeCodeSession;
+      expect(session).toBeInstanceOf(ClaudeCodeSession);
+      expect(close.mock.contexts).toContain(session);
+    } finally {
+      close.mockRestore();
+      await ctx.shutdown();
+    }
   });
 });
 

@@ -8,33 +8,30 @@
  */
 
 import {
-  JSONSchema7,
   LanguageModelV4FunctionTool,
   LanguageModelV4Message,
   LanguageModelV4Prompt,
   LanguageModelV4ProviderTool,
   LanguageModelV4ToolChoice,
 } from '@ai-sdk/provider';
-import { formatToolCallText, formatWrappedToolCallText, formatToolResultOutput } from '../text-cleaning.js';
+import { formatToolCallText, formatToolResultOutput } from '../text-cleaning.js';
 import type { ToolCallFraming } from './types.js';
 
 /**
  * Terminology presets for the tool-call instructions. `noun` doubles as the JSON
  * name field (`{ "<noun>": "<noun>_name", ... }`), keeping the instructed key in
- * lockstep with `formatToolCallText`. `listKey` is the pluralized wrapper key used by
- * {@link buildToolCallArraySchema}, defined here so the pluralization convention lives in
- * one place. `'tool'` reproduces the historical strings byte-for-byte, which the ~15
- * prompt-mode models depend on.
+ * lockstep with `formatToolCallText`. `'tool'` reproduces the historical strings
+ * byte-for-byte, which the ~15 prompt-mode models depend on.
  */
 const FRAMING_PRESETS = {
-  tool:   { heading: '## Tool Calling',   listHeading: '## Available Tools',   noun: 'tool',   listKey: 'tools'   },
-  action: { heading: '## Action Calling', listHeading: '## Available Actions', noun: 'action', listKey: 'actions' },
+  tool:   { heading: '## Tool Calling',   listHeading: '## Available Tools',   noun: 'tool'   },
+  action: { heading: '## Action Calling', listHeading: '## Available Actions', noun: 'action' },
 } as const;
 
 /**
- * The tools we emulate via prompt/JSON. Provider tools belong to the host CLI (e.g. claude-code's
- * `Read`) and are never taught or constrained here; centralizing the filter keeps the instruction
- * prompt and {@link buildToolCallArraySchema} from ever disagreeing about which tools are in play.
+ * The tools we emulate via prompt/JSON. Provider tools belong to the host CLI and are never
+ * taught here; centralizing the filter keeps the instruction prompt from ever offering a tool
+ * the rescue cannot parse.
  */
 function functionTools(
   tools: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)[]
@@ -85,34 +82,16 @@ export function createToolPrompt(tool: (LanguageModelV4FunctionTool | LanguageMo
  */
 export function createToolPrompts(tools: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)[],
   choice: LanguageModelV4ToolChoice,
-  framing: ToolCallFraming = 'tool',
-  wrapped: boolean = false): string | undefined {
+  framing: ToolCallFraming = 'tool'): string | undefined {
   // Format tools with their schemas (provider tools are excluded via functionTools)
   const descriptions = functionTools(tools).map(createToolPrompt).join('\n\n');
-  const { heading, listHeading, noun, listKey } = FRAMING_PRESETS[framing];
+  const { heading, listHeading, noun } = FRAMING_PRESETS[framing];
 
   // Format the prompt
   switch (choice.type) {
     case "required":
-      // When constrained decoding will FORCE the wrapper object (see buildToolCallArraySchema),
-      // teach that exact shape so a weak model's instruction and grammar agree. This only fires
-      // for the wrapped `required` path; every other branch keeps the historical bare contour.
-      if (wrapped) {
-        return `${heading}
-You must use one or more ${noun}s from the list below. Respond ONLY with a JSON object in this exact format. MUST follow each ${noun}'s JSON schema to fill in the **arguments** object:
-\`\`\`json
-{
-  "${listKey}": [
-    { "${noun}": "<${noun}_name>", "arguments": { <parameters> } }
-  ]
-}
-\`\`\`
-
-${listHeading}
-${descriptions}`;
-      }
-      // Otherwise the same text as auto: whether the step must call is said by the agent loop's
-      // closing reminder, so dropping to auto (all tools removed) keeps this prompt and its cache.
+      // Same text as auto: whether the step must call is said by the agent loop's closing
+      // reminder, so dropping to auto (all tools removed) keeps this prompt and its cache.
       return createAutoToolPrompt(heading, listHeading, noun, descriptions);
     case "tool":
       return `${heading}
@@ -146,109 +125,39 @@ ${descriptions}`;
 }
 
 /**
- * Builds a shape-only JSON Schema used as the `responseFormat.schema` so a
- * constrained-decoding provider (claude-code) is forced to emit the tool-call array in our
- * contour. The **root is an object** wrapping the array under `"<noun>s"`: a constrained-
- * decoding provider realizes `responseFormat` as a forced tool call, and the Anthropic API
- * rejects any tool whose `input_schema.type` is not `'object'` (400
- * `tools.0.custom.input_schema.type`), so an array root is illegal. The rescue unwraps the
- * array property (keyed `listKey`) transparently downstream, and the injected prompt is kept in
- * lockstep: whenever this schema is installed, `createToolPrompts(..., wrapped = true)` teaches the
- * SAME wrapper object, so a weak model sees one consistent contract instead of a bare-array
- * instruction contradicted by an object-shaped constraint. The item `noun` key and the `listKey`
- * both come from {@link FRAMING_PRESETS} (and therefore stay in lockstep with `formatToolCallText`),
- * and provider tools are excluded via the shared {@link functionTools} filter. Only the array and
- * the action name (an enum of the active tool names) are constrained; `arguments` stays an open
- * object, so per-argument validity remains with each tool's `execute`. If the CLI cannot enforce
- * the open object it silently falls back to prose, which the existing rescue still parses, so this
- * is never worse than prompt-only mode.
- */
-export function buildToolCallArraySchema(
-  tools: (LanguageModelV4FunctionTool | LanguageModelV4ProviderTool)[],
-  framing: ToolCallFraming = 'tool'
-): JSONSchema7 {
-  const { noun, listKey } = FRAMING_PRESETS[framing];
-  const names = functionTools(tools).map(tool => tool.name);
-  return {
-    type: 'object',
-    properties: {
-      [listKey]: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            [noun]: { type: 'string', enum: names },
-            arguments: { type: 'object' },
-          },
-          required: [noun, 'arguments'],
-          additionalProperties: false,
-        },
-        minItems: 1
-      },
-    },
-    required: [listKey],
-    additionalProperties: false,
-  };
-}
-
-/**
  * Converts tool-call and tool-result messages in a prompt to text-based equivalents.
  * Used in prompt mode so the model sees a consistent text-based conversation history
  * instead of native tool-call/tool-result parts it never produced.
  */
-export function convertPromptToolMessagesToText(prompt: LanguageModelV4Prompt, framing: ToolCallFraming = 'tool', wrapped: boolean = false): LanguageModelV4Prompt {
+export function convertPromptToolMessagesToText(prompt: LanguageModelV4Prompt, framing: ToolCallFraming = 'tool'): LanguageModelV4Prompt {
   const converted: LanguageModelV4Message[] = [];
-  // The pluralized wrapper key (`actions`/`tools`) the wrapped echo groups calls under, kept in
-  // lockstep with the injected instruction and responseFormat schema via the shared preset.
-  const { listKey } = FRAMING_PRESETS[framing];
 
   for (const message of prompt) {
     if (message.role === 'assistant') {
       // Convert tool-call/tool-result parts to text in a single pass
       const newContent: typeof message.content = [];
-      // When constrained decoding forces the wrapper object (`wrapped`), emulated tool calls are
-      // echoed as ONE `{ "<listKey>": [...] }` block per assistant message so the history matches
-      // the wrapper-object shape the instruction teaches (createToolPrompts wrapped=true) instead of
-      // a bare array. Buffer consecutive emulated calls and flush them before any non-emulated part
-      // and at message end. In the bare (non-wrapped) path this buffer stays empty — flushWrapped is
-      // a no-op and each call is emitted inline as its own bare-array block, byte-for-byte as before.
-      const pendingCalls: Array<{ toolName: string; args: unknown }> = [];
-      const flushWrapped = () => {
-        if (pendingCalls.length === 0) return;
-        newContent.push({ type: 'text', text: formatWrappedToolCallText(pendingCalls, framing, listKey) });
-        pendingCalls.length = 0;
-      };
       for (const part of message.content) {
-        // Provider-executed parts belong to the host CLI's own tools (e.g. claude-code's
-        // Read), not the prompt-emulated game tools. Leave them native so the provider
-        // serializes them itself; reframing them as game "actions" would misattribute
-        // built-in tool use to the game and corrupt the history the model sees next turn.
-        // In assistant content a tool-result part exists only for a provider-executed
-        // tool (client results arrive as a separate `tool` role message, handled below),
-        // so it is left native as well.
+        // Provider-executed parts belong to the host CLI's own tools, not the prompt-emulated
+        // game tools. Leave them native so the provider serializes them itself; reframing them
+        // as game "actions" would misattribute built-in tool use to the game and corrupt the
+        // history the model sees next turn. In assistant content a tool-result part exists only
+        // for a provider-executed tool (client results arrive as a separate `tool` role message,
+        // handled below), so it is left native as well.
         if (part.type === 'tool-result') {
-          flushWrapped();
           newContent.push(part);
           continue;
         }
         if (part.type === 'tool-call') {
           if (part.providerExecuted) {
-            flushWrapped();
             newContent.push(part);
             continue;
           }
-          // toToolCallObject (inside both formatters) parses a JSON-string input, so pass it raw.
-          if (wrapped) {
-            pendingCalls.push({ toolName: part.toolName, args: part.input });
-          } else {
-            newContent.push({ type: 'text', text: formatToolCallText(part.toolName, part.input, framing) });
-          }
+          // toToolCallObject (inside the formatter) parses a JSON-string input, so pass it raw.
+          newContent.push({ type: 'text', text: formatToolCallText(part.toolName, part.input, framing) });
           continue;
         }
-        flushWrapped();
         newContent.push(part);
       }
-      flushWrapped();
 
       converted.push({ ...message, content: newContent });
 
