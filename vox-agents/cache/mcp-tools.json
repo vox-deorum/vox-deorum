@@ -783,9 +783,7 @@
             }
           },
           "required": [
-            "version",
-            "items",
-            "promises"
+            "version"
           ]
         }
       },
@@ -1815,9 +1813,7 @@
             }
           },
           "required": [
-            "version",
-            "items",
-            "promises"
+            "version"
           ]
         },
         "AccepterID": {
