@@ -156,7 +156,7 @@ Consider a generalized option for scenarios to construct and finalize deals usin
 
 ### 24. Plan air strikes, sweeps, and carrier launches in tactical search
 
-Add aircraft and missiles to native tactical search behind a default-off option (`VOX_TACTICAL_AIR_SEARCH`), with a shared cap of 19 participants, interceptor state, certain and uncertain damage records, air sweeps, interchangeable-aircraft groups, and carrier moves before launch. [Air search](../developers/civ5-dll/unit-ai/military-tactical-simulation.md#air-search) lists every native change. Submit it only if the full-game evaluation shows a clearly positive grade change at an acceptable search time cost.
+Add aircraft and missiles to native tactical search behind a default-off option (`VOX_TACTICAL_AIR_SEARCH`), with a shared cap of 19 participants, interceptor state, certain and uncertain damage records, air sweeps, interchangeable-aircraft groups, and carrier moves before launch. [Air search](../developers/civ5-dll/unit-ai/simulation/air.md) lists every native change. Submit it only if the full-game evaluation shows a clearly positive grade change at an acceptable search time cost.
 
 **Related files:** core `CvTacticalAI.cpp`, `CvTacticalAI.h`, `CvUnit.cpp`, `CvUnit.h`, `CustomMods.cpp`, `CustomMods.h`; `(1) Community Patch/Database Changes/NewCustomModOptions.xml`.
 

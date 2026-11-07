@@ -1,8 +1,8 @@
-# Unit AI: Production
+# Unit AI: Production Overview
 
 **City production** selects the next order for one city. In the **Vox Populi 5.2.7** baseline, `CvCityStrategyAI::ChooseProduction` compares legal units, buildings, projects, and processes using flavor preferences and current demand. The result becomes a train, construct, create, or maintain order.
 
-This page defines the shared comparison. [Military production](military-production.md) and [civilian production](civilian-production.md) define the demand and suitability rules that supply unit candidates.
+This page defines the shared comparison. [Military production](military.md) and [civilian production](civilian.md) define the demand and suitability rules that supply unit candidates. The parent [Unit AI overview](../overview.md) places production among the other unit AI responsibilities.
 
 ## Candidate lifecycle
 
@@ -29,7 +29,7 @@ flowchart LR
 
 ## Shared candidate gates
 
-**Common city gates** decide whether unit candidates can enter or proceed through the shared comparison. Role-specific gates and score effects belong to the [military](military-production.md) and [civilian](civilian-production.md) guides.
+**Common city gates** decide whether unit candidates can enter or proceed through the shared comparison. Role-specific gates and score effects belong to the [military](military.md) and [civilian](civilian.md) guides.
 
 | Gate | Effect |
 | --- | --- |
@@ -37,7 +37,7 @@ flowchart LR
 | Puppet city | Every non-purchase unit candidate is rejected. |
 | Developing city | A city with fewer than two buildings rejects non-purchase unit candidates, except while under siege. |
 | Siege | During siege, ordinary noncombat candidates are rejected. Combat-capable explorers can remain eligible. |
-| Request muster city | An operation-request or army-request candidate reaches `CheckUnitBuildSanity` only when the next operation request names this city as its muster city. [Military production](military-production.md#formation-requests-and-commitments) explains the army-request consequence. |
+| Request muster city | An operation-request or army-request candidate reaches `CheckUnitBuildSanity` only when the next operation request names this city as its muster city. [Military production](military.md#formation-requests-and-commitments) explains the army-request consequence. |
 
 An operation request and an army request can identify the same concrete unit as an ordinary candidate. Each form remains a separate candidate with its own weight.
 
@@ -52,7 +52,7 @@ An operation request and an army request can identify the same concrete unit as 
 | Project | A legal project's XML flavor affinities. | Flavor-derived project weight. |
 | Process | A legal process's XML flavor affinities. | Flavor-derived process weight, or 100 for a defense process. |
 
-**Effective flavors** are city preference values. Each production AI combines them with an entry's XML flavor affinities to form its base weight. For each unit flavor, `CvUnitProductionAI::AddFlavorWeights` multiplies the unit's XML affinity by the signed square root of ten times the city flavor value, then sums the products. The square root compresses large swings in city flavors, keeping XML differences between unit types decisive. Vox Deorum custom flavors add signed adjustments to the normal flavor state. [Flavors](concepts.md#flavors) explains their inputs and duration.
+**Effective flavors** are city preference values. Each production AI combines them with an entry's XML flavor affinities to form its base weight. For each unit flavor, `CvUnitProductionAI::AddFlavorWeights` multiplies the unit's XML affinity by the signed square root of ten times the city flavor value, then sums the products. The square root compresses large swings in city flavors, keeping XML differences between unit types decisive. Vox Deorum custom flavors add signed adjustments to the normal flavor state. [Flavors](../concepts.md#flavors) explains their inputs and duration.
 
 ## Timing and feedback
 

@@ -2,7 +2,7 @@
 
 This is the vocabulary guide for contributors working on the unit AI in the **Vox Populi 5.2.7** baseline. It defines terms used across the other guides, so they can focus on the decisions they own. The implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvFlavorManager.cpp`, `CvEconomicAI.cpp`, `CvMilitaryAI.cpp`, `CvDiplomacyAI.cpp`, `CvPlayer.cpp`, `CvUnit.cpp`, `CvDangerPlots.cpp`, and `CvTacticalAnalysisMap.cpp`.
 
-Use this page to understand a shared input before following it into production, a persistent operation, or the operation lifecycle.
+Use this page to understand a shared input, then follow the [unit AI overview](overview.md) to production, persistent operations, or per-turn control.
 
 ## Flavors
 
@@ -15,9 +15,9 @@ Use this page to understand a shared input before following it into production, 
 
 Custom values use a 0 to 100 scale, with 50 as neutral. The game converts them to signed adjustments, applies them to the active personality and city recipients, and expires them after ten turns unless they are replaced. The conversion is a fixed exponential table in `CvFlavorManager` (`FlavorToGameScale` and its inverse `FlavorFromGameScale`): 50 becomes 0, and 0 and 100 become -300 and +300, so steps near neutral are fine and steps near the ends are coarse. `CvLuaPlayer::lSetCustomFlavors` also uses thresholds to rewrite selected Economic and Military AI [strategy flags](#strategy-flags). These flags still affect gates and bonuses, but do not apply their normal XML flavor adjustments. A strategy disabled through Lua cannot be adopted again for ten turns.
 
-Vox Deorum adds five military tactical flavors, `FLAVOR_RISK`, `FLAVOR_OCCUPATION`, `FLAVOR_ATTRITION`, `FLAVOR_HOLD_CITY`, and `FLAVOR_HOLD_GROUND`. Tactical search reads them as a vector that combines the leader's personality, strategy changes, and custom flavors, then adds per-civ, per-operation, and per-zone modifiers. [Military tactical flavors](military-tactical-flavors.md) explains how.
+Vox Deorum adds five military tactical flavors, `FLAVOR_RISK`, `FLAVOR_OCCUPATION`, `FLAVOR_ATTRITION`, `FLAVOR_HOLD_CITY`, and `FLAVOR_HOLD_GROUND`. Tactical search reads them as a vector that combines the leader's personality, strategy changes, and custom flavors, then adds per-civ, per-operation, and per-zone modifiers. [Military tactical flavors](flavors/overview.md) explains how.
 
-Read the owning guide for a decision's specific flavor effect: [production weights](production.md#candidate-sources-and-base-weights), [force sizing](military-production.md), [civilian demand](civilian-production.md), or [Tactical AI risk and scoring](military-tactical-flavors.md).
+Read the owning guide for a decision's specific flavor effect: [production weights](production/overview.md#candidate-sources-and-base-weights), [force sizing](production/military.md), [civilian demand](production/civilian.md), or [Tactical AI risk and scoring](flavors/scoring.md).
 
 ## Strategy flags
 
@@ -31,9 +31,9 @@ A **UnitAI role** (`UnitAITypes`) is the job a unit performs, such as attack, de
 
 | Reader | Use of the role |
 | --- | --- |
-| Army recruitment | Matches a formation slot against the unit's live role or its type's eligible role set. [Military organization](military-organization.md) owns the matching rules. |
+| Army recruitment | Matches a formation slot against the unit's live role or its type's eligible role set. [Military organization](operations/organization.md) owns the matching rules. |
 | Tactical recruitment | Excludes land and naval explorers, which Homeland handles, and carrier and nuclear roles, which persistent operations reserve. |
-| Homeland role passes | Recruits civilian units by live role. [Civilian operation](civilian-operation.md) lists the passes. |
+| Homeland role passes | Recruits civilian units by live role. [Civilian operation](operations/civilian.md) lists the passes. |
 | Demand and force sizing | Counts roles such as explorers and settlers. |
 
 `CvEconomicAI::DoReconState` promotes suitable explorers and demotes surplus ones. Its target scales with the frontier, `FLAVOR_RECON`, and war state. Native explorers are preferred, and hysteresis limits rapid role changes. It runs once per turn, just after the player's danger refresh and before any tactical work, and it moves at most one unit each way. Because tactical recruitment excludes explorers, a promotion made here removes an ordinary combat unit from the tactical pool for the rest of that turn, so the recon flavors reach tactical behaviour and not only unit production. Homeland can assign a city-founding unit the settler role for opportunistic settlement. Leaving an army restores the XML default role, rather than the role held before recruitment. An [upgrade](upgrade.md) creates a replacement with its target type's default role.
@@ -82,7 +82,7 @@ The **danger map** (`CvDangerPlots`, one per player) records which enemies could
 
 The map simulates known hostile movement and range, city bombardment, nearby hidden threats, and adjacent citadel damage. A unit last seen entering fog remains for one turn. It refreshes in `CvPlayer::doTurnPostDiplomacy`, and a dirty map rebuilds on the next query. Queries account for special cases: air units take interception damage only; any reachable or capturable civilian reports maximum danger; and a garrisoned combat unit shares city damage. The optional `MOD_COMBATAI_TWO_PASS_DANGER` mode is off by default and rebuilds without friendly zone of control from units expected to die.
 
-Danger steers civilian safety, Homeland positioning, and movement costs. [Military tactical simulation](military-tactical-simulation.md) explains its pathfinding use.
+Danger steers civilian safety, Homeland positioning, and movement costs. [Pathfinding](pathfinding.md#danger-in-path-cost) explains how danger affects movement costs.
 
 ## Dominance zones
 
@@ -111,4 +111,4 @@ Zones collect melee, ranged, naval, and naval-ranged strength.
 
 Combat units, army members, and cities contribute strength; civilians do not. Visibility, embarked or wrong-domain status, mobility, proximity to the zone city, and citadels modify that contribution. A side is dominant only with a large enough strength advantage, with extra caution in enemy territory; otherwise the zone is even. A zone with no strength has no visible units.
 
-Tactical AI uses dominance zones to choose a **posture** and order local combat. See [postures and local combat](military-tactics.md#postures-and-local-combat).
+Tactical AI uses dominance zones to choose a **posture** and order local combat. See [postures and local combat](tactics/targets-and-postures.md#postures-and-local-combat).

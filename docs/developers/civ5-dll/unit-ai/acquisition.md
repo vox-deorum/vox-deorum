@@ -1,8 +1,8 @@
 # Unit AI: Acquisition
 
-**Acquisition** spends gold or faith to obtain a unit immediately. A caller establishes the need, concrete candidate, and city. The city then checks legality and executes the purchase. [Production](production.md) covers queue selection. For military formation demand, first read [formation requests and commitments](military-production.md#formation-requests-and-commitments): a weighted request can select a queue order without committing a formation slot, while city commitment and direct purchases have separate effects.
+**Acquisition** spends gold or faith to obtain a unit immediately. A caller establishes the need, concrete candidate, and city. The city then checks legality and executes the purchase. [Production](production/overview.md) covers queue selection. For military formation demand, first read [formation requests and commitments](production/military.md#formation-requests-and-commitments): a weighted request can select a queue order without committing a formation slot, while city commitment and direct purchases have separate effects.
 
-The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvEconomicAI.cpp`, `CvCityStrategyAI.cpp`, `CvReligionClasses.cpp`, `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvTacticalAI.cpp`, `CvCity.cpp`, and `CvUnitProductionAI.cpp`.
+The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvEconomicAI.cpp`, `CvCityStrategyAI.cpp`, `CvReligionClasses.cpp`, `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvTacticalAI.cpp`, `CvCity.cpp`, and `CvUnitProductionAI.cpp`. See the [unit AI overview](overview.md) for related responsibilities.
 
 ## Common purchase path
 
@@ -42,7 +42,7 @@ Routes run in this order: Economic AI, Military AI, Religion AI, City AI, then T
 
 Final-slot purchases require a player outside the at-war strategy or [winning every active war](concepts.md#war-states). Tactical emergencies exclude water zones and cities likely to fall. City operation purchases exclude razing, automated, minor-civilization, barbarian, and ordinary puppet cities; they wait when average income is negative or a military unit is already queued.
 
-Direct military paths start from a required [UnitAI role](concepts.md#unitai-roles), resolve a trainable type with `RecommendUnit`, then apply suitability and city execution. `CvAIOperation::BuyFinalUnit` assigns a successful final-slot purchase to its formation slot. `CvMilitaryAI::BuyEmergencyUnit` requests gold permission and tries faith if gold execution yields no unit. Its purchase-mode suitability still uses the gold purchase precheck. See [formation requests and commitments](military-production.md#formation-requests-and-commitments) for when `CheckForOperationUnits` commits a slot, queues production, or assigns a purchase directly.
+Direct military paths start from a required [UnitAI role](concepts.md#unitai-roles), resolve a trainable type with `RecommendUnit`, then apply suitability and city execution. `CvAIOperation::BuyFinalUnit` assigns a successful final-slot purchase to its formation slot. `CvMilitaryAI::BuyEmergencyUnit` requests gold permission and tries faith if gold execution yields no unit. Its purchase-mode suitability still uses the gold purchase precheck. See [formation requests and commitments](production/military.md#formation-requests-and-commitments) for when `CheckForOperationUnits` commits a slot, queues production, or assigns a purchase directly.
 
 ## Savings and investment
 

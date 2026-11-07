@@ -235,7 +235,7 @@ The ratio between offensive and defensive unit production becomes increasingly s
 
 **Location:** `CvGameCoreDLL_Expansion2/CvTacticalAI.cpp`, through the RISK tactical flavor
 
-FLAVOR_OFFENSE sets the AI's tactical risk tolerance through `FLAVOR_RISK`. A leader without its own `FLAVOR_RISK`, which is every leader by default, starts RISK from its offense with the grand strategy applied, read at runtime so it matches the randomized offense the game uses. Tactical search reads RISK as 10 x that value and sets the loss allowance and the minimum HP from it, which matches the stock offense rule below. A strategy, custom flavor, or modifier that moves RISK changes these thresholds without changing offense. See [Military Tactical Flavors](../../../docs/developers/civ5-dll/unit-ai/military-tactical-flavors.md).
+FLAVOR_OFFENSE sets the AI's tactical risk tolerance through `FLAVOR_RISK`. A leader without its own `FLAVOR_RISK`, which is every leader by default, starts RISK from its offense with the grand strategy applied, read at runtime so it matches the randomized offense the game uses. Tactical search reads RISK as 10 x that value and sets the loss allowance and the minimum HP from it, which matches the stock offense rule below. A strategy, custom flavor, or modifier that moves RISK changes these thresholds without changing offense. See [Military Tactical Flavors](../../../docs/developers/civ5-dll/unit-ai/flavors/scoring.md#risk-thresholds).
 
 **Interpretation:**
 

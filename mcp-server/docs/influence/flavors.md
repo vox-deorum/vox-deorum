@@ -100,7 +100,7 @@ Tactical search reads five Vox Deorum flavors: `FLAVOR_RISK`, `FLAVOR_OCCUPATION
 - **Minimum HP for combat:** 50 HP at Offense 0, down to 30 HP at Offense 10.
 - **Unit-loss acceptance:** above Offense 6, a search with more than six units accepts losing one of them.
 
-The other four default to balanced. Strategy changes and custom flavors move all five, and higher RISK takes more risk. The game also keeps a per-civ modifier for searches against one enemy, set from Lua with `Player:SetTacticalFlavorModifiers(otherPlayer, { FLAVOR_RISK = 40 })` in game-range units and read back with `Player:GetTacticalFlavorModifiers(otherPlayer)`. `set-flavors` does not list the five tactical flavors yet, and no MCP tool sets the per-civ modifier. See the developer guide [Military Tactical Flavors](../../../docs/developers/civ5-dll/unit-ai/military-tactical-flavors.md) and [flavors/offense.md](../flavors/offense.md).
+The other four default to balanced. Strategy changes and custom flavors move all five, and higher RISK takes more risk. The game also keeps a per-civ modifier for searches against one enemy, set from Lua with `Player:SetTacticalFlavorModifiers(otherPlayer, { FLAVOR_RISK = 40 })` in game-range units and read back with `Player:GetTacticalFlavorModifiers(otherPlayer)`. `set-flavors` does not list the five tactical flavors yet, and no MCP tool sets the per-civ modifier. See [flavor resolution](../../../docs/developers/civ5-dll/unit-ai/flavors/overview.md), [RISK thresholds](../../../docs/developers/civ5-dll/unit-ai/flavors/scoring.md#risk-thresholds), and [flavors/offense.md](../flavors/offense.md).
 
 ### Builder/worker tasking
 

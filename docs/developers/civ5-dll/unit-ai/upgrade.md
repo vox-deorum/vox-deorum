@@ -4,7 +4,7 @@ An **upgrade** replaces an existing unit with a newer civilization-specific type
 
 This page also covers **promotion selection**, the separate process that spends earned promotions. Read [Promotion AI](#promotion-ai) if that is your task; promotion selection does not use the upgrade ranking or replacement path.
 
-The main code is in `civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp`, `CvUnit.cpp`, `CvTacticalAI.cpp`, `CvArmyAI.cpp`, `CvEconomicAI.cpp`, and `CvPlayerAI.cpp`.
+The main code is in `civ5-dll/CvGameCoreDLL_Expansion2/CvHomelandAI.cpp`, `CvUnit.cpp`, `CvTacticalAI.cpp`, `CvArmyAI.cpp`, `CvEconomicAI.cpp`, and `CvPlayerAI.cpp`. See the [unit AI overview](overview.md) for related responsibilities.
 
 ## Homeland upgrade pass
 
@@ -63,7 +63,7 @@ flowchart LR
 | Combat progress | Carries compatible promotions, experience, damage, movement state, origin, transport relationships, and ownership history. Incompatible promotions can become replacement experience. |
 | Commands and missions | Starts with no mission queue. A target that can move after upgrading copies the old unit's activity and related movement state; otherwise `finishMoves` ends movement without explicitly clearing activity. |
 | Movement | The target's upgrade rule decides whether movement ends. |
-| Army membership | Homeland removes the old unit from its formation slot before upgrade and restores the replacement when the army still exists. [Membership and release](military-organization.md#membership-and-release) covers the mechanics. |
+| Army membership | Homeland removes the old unit from its formation slot before upgrade and restores the replacement when the army still exists. [Membership and release](operations/organization.md#membership-and-release) covers the mechanics. |
 | Turn ownership | Homeland processes the old unit ID and marks the replacement `TurnProcessed`, stopping another controller from claiming it that turn. |
 
 `CvUnit::upgradePrice` accounts for base cost, positive production difference, era, handicap, AI and player modifiers, discounts, exponent, and display rounding.

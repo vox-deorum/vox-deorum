@@ -163,7 +163,8 @@ The learning flavor projection is independent and needs nothing.
 - **Rollouts on the new recording.** Run the native baseline and the flavorful variant to confirm the gain holds with real rows.
 - **Docs.** Update these pages with the switch and the strategy rows:
   - `docs/developers/civ5-dll/unit-ai/concepts.md`
-  - `docs/developers/civ5-dll/unit-ai/military-tactical-flavors.md`
+  - `docs/developers/civ5-dll/unit-ai/flavors/overview.md`
+  - `docs/developers/civ5-dll/unit-ai/flavors/scoring.md`
   - `mcp-server/docs/influence/flavors.md`
 
 Stage 5 starts only once all of these pass.

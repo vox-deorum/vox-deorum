@@ -2,7 +2,7 @@
 
 **Cleanup** removes or gifts units the empire no longer needs. It is the final lifecycle stage: [upgrade](upgrade.md) replaces a useful unit, while cleanup releases the gold, [supply](concepts.md#supply), and strategic resources tied to an unneeded unit. Military AI handles combat units, Economic AI runs civilian passes, and Homeland AI handles city-state gifts.
 
-The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2/CvMilitaryAI.cpp`, `CvEconomicAI.cpp`, `CvHomelandAI.cpp`, `CvPlayer.cpp`, and `CvMinorCivAI.cpp`.
+The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2/CvMilitaryAI.cpp`, `CvEconomicAI.cpp`, `CvHomelandAI.cpp`, `CvPlayer.cpp`, and `CvMinorCivAI.cpp`. See the [unit AI overview](overview.md) for related responsibilities.
 
 ## Runtime order
 
@@ -77,6 +77,6 @@ Military disband and bankruptcy reuse this target scoring and send their chosen 
 
 ## Interactions and diagnostics
 
-Every scrap or gift lowers supply. This can reopen hard-cap training and increase [military demand](military-production.md#military-demand) on the next turn. Upgrade and military disband split obsolete units: a failed replacement-resource check or an upgrade path left untaken for more than two eras can lead to cleanup. Losing all wars suspends later military selection and influence gifts, but never the low-health sweep. On the military path, a qualifying city-state gift takes precedence over scrapping.
+Every scrap or gift lowers supply. This can reopen hard-cap training and increase [military demand](production/military.md#military-demand) on the next turn. Upgrade and military disband split obsolete units: a failed replacement-resource check or an upgrade path left untaken for more than two eras can lead to cleanup. Losing all wars suspends later military selection and influence gifts, but never the low-health sweep. On the military path, a qualifying city-state gift takes precedence over scrapping.
 
 With AI logging enabled, `MilitaryAILog.csv` records military scraps and gifts with the applicable deficit or supply pressure. Civilian passes log their worker, city, and plot counts to the Homeland AI log. For an unexpected disappearance, inspect treasury balance, the losing-money flag, units out of supply, and the unit's upgrade target and resource state.

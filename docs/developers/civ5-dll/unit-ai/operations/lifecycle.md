@@ -1,6 +1,6 @@
 # Unit AI: Operation Lifecycle
 
-The **operation lifecycle** is the shared per-turn process that turns persistent-operation state, Tactical targets, role objectives, and available movement into unit missions. A **persistent operation** is a `CvAIOperation` plan that retains an army, formation, muster point, target, and state across turns. Military and civilian pages describe their own operation behavior. This page is the authority for shared lifecycle, control state, Tactical-to-Homeland handoff, and diagnostics.
+The **operation lifecycle** is the shared per-turn process that turns persistent-operation state, Tactical targets, role objectives, and available movement into unit missions. A **persistent operation** is a `CvAIOperation` plan that retains an army, formation, muster point, target, and state across turns. This page covers shared completion and abort rules, control state, handoff, and diagnostics. See [operation stages](stages.md) for the state sequences and the [operations overview](overview.md) for military and civilian behavior.
 
 The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvPlayerAI.cpp`, `CvTacticalAI.cpp`, `CvHomelandAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, and `CvUnit.cpp`.
 
@@ -25,7 +25,7 @@ flowchart TD
 
 For a normal AI player, `CvPlayerAI::AI_unitUpdate` runs Tactical AI before Homeland AI. Tactical AI refreshes targets, recruits combat and support units, heals urgent frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and completes its combat priorities. Homeland AI then rebuilds its candidate list from eligible units, refreshes role targets, and runs its ordered passes. The resulting missions change the state seen by later passes and by the next turn.
 
-`CvAIOperation::DoTurn` maintains reserve membership, target validity, movement progress, army and operation state, and abort reason. Cleanup releases Army IDs and removes obsolete armies or operations. See [military organization](military-organization.md) for formation stages and release, and [civilian operation](civilian-operation.md) for civilian-specific ownership.
+`CvAIOperation::DoTurn` maintains reserve membership, target validity, movement progress, army and operation state, and abort reason. Cleanup releases Army IDs and removes obsolete armies or operations. See [operation stages](stages.md) for stage sequences, [military organization](organization.md) for formation membership and release, and [civilian operation](civilian.md) for civilian-specific ownership.
 
 ## Completion, abort, and cleanup
 
@@ -56,13 +56,13 @@ After initialization, common abort triggers include:
 - Member loss removes a critical civilian or carrier, leaves no army, or violates the post-Recruiting formation-strength rule.
 - Military or Diplomacy AI cancels the operation because war state, target validity, threat, or diplomatic intent changed.
 
-Ordinary military operations finish when the army center is within 3 plots of its goal and the furthest member is strictly less than 6 plots away. While the owner is at peace with the designated enemy, more than two army members being visible to that enemy also counts as deployment. Completion requires deployment, not city capture or elimination of the threat. The operation's target and retarget rules are documented in [military target lifecycle](military-campaign.md#target-lifecycle).
+Ordinary military operations finish when the army center is within 3 plots of its goal and the furthest member is strictly less than 6 plots away. While the owner is at peace with the designated enemy, more than two army members being visible to that enemy also counts as deployment. Completion requires deployment, not city capture or elimination of the threat. The operation's target and retarget rules are documented in [military target lifecycle](campaign.md#target-lifecycle).
 
 Each family supplies its successful completion rule and additional abort checks:
 
 | Operation family | Finishes successfully when | Family-specific terminal behavior |
 | --- | --- | --- |
-| City attack (land, naval, combined), pillage, naval superiority, city defense, rapid response | The ordinary military deployment condition above is met. | Target ownership, threat, and retarget behavior differ by family. See [military target lifecycle](military-campaign.md#target-lifecycle). |
+| City attack (land, naval, combined), pillage, naval superiority, city defense, rapid response | The ordinary military deployment condition above is met. | Target ownership, threat, and retarget behavior differ by family. See [military target lifecycle](campaign.md#target-lifecycle). |
 | Found city | The settler is on the target plot, can found there, can move, and issues the founding mission. | Invalid founding legality or path retargets the settler; no valid replacement target aborts. |
 | Merchant delegation | The merchant reaches any plot owned by the target city-state owner and issues a legal city-state purchase or trade mission. | It can move to an adjacent trade-valid plot and retry; no valid mission plot aborts. |
 | Diplomat delegation | The diplomat reaches any plot owned by the target city-state owner and issues a legal trade mission. | It can move to an adjacent trade-valid plot and retry; no valid mission plot aborts. |
@@ -96,9 +96,11 @@ Move tags record work this turn. Persistent operations, Army IDs, directives, an
 | Intercept | AI units wake every turn so interception duty is reconsidered. |
 | Mission   | Wakes when its unfinished queue completes, fails, or clears.   |
 
-**Automation** is the human-side entry to Homeland work. `CvHomelandAI::FindAutomatedUnits` gathers automated human units instead of the AI recruitment list, and role passes accept a matching [UnitAI role](concepts.md#unitai-roles) or automate type. Automation ends when the unit enters combat, receives a manual order, or finds no work.
+**Automation** is the human-side entry to Homeland work. `CvHomelandAI::FindAutomatedUnits` gathers automated human units instead of the AI recruitment list, and role passes accept a matching [UnitAI role](../concepts.md#unitai-roles) or automate type. Automation ends when the unit enters combat, receives a manual order, or finds no work.
 
 ## Tactical-to-Homeland handoff
+
+Tactical AI retains a unit only while a later pass can use it. Routine Homeland recruitment accepts movable, unprocessed military units with no Army ID.
 
 | Unit kind | Owner this turn | Later handling |
 | --- | --- | --- |
@@ -110,7 +112,20 @@ Move tags record work this turn. Persistent operations, Army IDs, directives, an
 | Carrier or nuclear operation member | Persistent operation | Specialized operation logic provides target and formation behavior. |
 | Automated human unit | Homeland automation | Normal AI operations and ordinary Tactical recruitment leave it to automation. |
 
-Tactical AI claims persistent-operation armies and combat urgency first. Homeland AI then handles eligible upgrades, opportunity attacks, garrisoning, healing, sentry work, patrols, rebasing, civilian roles, and fallbacks. The final Homeland review continues a valid mission, moves an idle unit toward friendly territory where possible, skips it, or applies stranded naval-unit handling.
+Tactical AI claims persistent-operation armies and combat urgency first. Homeland then runs its ordered passes, including [civilian role work](civilian.md#homeland-role-order). Its remaining military work is:
+
+| Homeland pass | Remaining military work |
+| --- | --- |
+| Conservative heal | Preserve wounded units before routine positioning. |
+| Aircraft rebase | Move aircraft to a suitable city or carrier. |
+| Safety | Move exposed units from danger after civilian role passes. |
+| Upgrade and opportunity attack | Upgrade eligible units or take a safe local attack without leaving an essential garrison. |
+| Garrison, heal, sentry, and patrol | Fill city needs and position remaining land and naval units. |
+| Final review | Continue a valid mission or move idle units toward friendly cities or water. |
+
+The Army ID condition governs routine Homeland recruitment. The upgrade pass is the exception: it temporarily removes an army member, upgrades it, then restores the replacement to its formation slot. [Membership and release](organization.md#membership-and-release) documents the membership changes.
+
+The final Homeland review can also skip the unit or apply stranded naval-unit handling.
 
 ## Diagnostics
 

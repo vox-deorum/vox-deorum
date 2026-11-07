@@ -5,10 +5,11 @@ This guide orients contributors to the non-strategic unit AI in the **Vox Populi
 Choose a guide based on the task:
 
 - Need a shared definition, such as supply, danger, or a UnitAI role: read [Concepts](concepts.md).
-- Need a city to select, train, or buy a unit: read [Production](production.md), then [military production](military-production.md) or [civilian production](civilian-production.md).
-- Need to change unit control during a turn: read [Operation](operation.md), then the military or civilian guide for the owning controller.
+- Need a city to select, train, or buy a unit: read [Production](production/overview.md), then [military production](production/military.md), [civilian production](production/civilian.md), or [acquisition](acquisition.md).
+- Need to change unit control during a turn: read [Operations](operations/overview.md), then [Tactics](tactics/overview.md) for current-turn military decisions.
 - Need to remove, gift, replace, or promote a unit: read [Cleanup](cleanup.md) or [Upgrade](upgrade.md).
-- Need a durable military structure: read [Military organization](military-organization.md). A **persistent operation** is a `CvAIOperation`; its **formation slots** are the membership records it recruits and maintains.
+- Need a durable military structure: read [Military organization](operations/organization.md). A **persistent operation** is a `CvAIOperation`; its **formation slots** are the membership records it recruits and maintains.
+- Need to change coordinated combat plans or movement risk: read [Simulation](simulation/overview.md), [tactical flavors](flavors/overview.md), or [pathfinding](pathfinding.md).
 
 ## The seven responsibilities
 
@@ -77,22 +78,16 @@ Tactical and Homeland AI rebuild separate `m_CurrentTurnUnits` lists. Army membe
 
 ## Cross-cutting inputs
 
-**Flavors** steer production weights, force sizing, and combat risk. Vox Deorum can replace personality-derived values with custom Lua-supplied flavors. See [flavors](concepts.md#flavors) for the mode, expiration, and entry points, and [military tactical flavors](military-tactical-flavors.md) for how Tactical AI turns flavors into risk thresholds and score weights.
+**Flavors** steer production weights, force sizing, and combat risk. Vox Deorum can replace personality-derived values with custom Lua-supplied flavors. See [flavors](concepts.md#flavors) for the mode, expiration, and entry points, and [military tactical flavors](flavors/overview.md) for how Tactical AI turns flavors into risk thresholds and score weights.
 
 ## Guide index
 
-- [Concepts](concepts.md): shared vocabulary, including roles, flavors, strategy flags, supply, war states, danger, and dominance zones.
-- [Production](production.md): city comparison and candidate gates.
-- [Military production](military-production.md#military-demand): force targets, formation requests, and operation commitment paths.
-- [Civilian production](civilian-production.md#civilian-demand): civilian role demand and scoring.
-- [Acquisition](acquisition.md): gold and faith purchases, including operation and emergency purchases.
-- [Upgrade](upgrade.md): upgrade ranking, replacement, and promotion selection.
-- [Cleanup](cleanup.md): disbanding, civilian passes, and city-state gifting.
-- [Operation](operation.md): Tactical-to-Homeland handoff and per-turn control.
-- [Military operation](military-operation.md): campaign, organization, and tactical control.
-- [Military campaign](military-campaign.md): operation families, goals, retargeting, and abandonment.
-- [Military organization](military-organization.md): armies, formation slots, membership, and mustering.
-- [Military tactics](military-tactics.md): movement, postures, combat priorities, air and barbarian handling, and the Homeland handoff.
-- [Military tactical simulation](military-tactical-simulation.md): coordinated combat planning and pathfinding policy.
-- [Military tactical flavors](military-tactical-flavors.md): the five flavors that set risk thresholds and weight tactical scores.
-- [Civilian operation](civilian-operation.md): civilian persistent operations, Homeland role passes, and missions.
+| Responsibility | Guides |
+| --- | --- |
+| Shared concepts and movement | [Concepts](concepts.md) defines roles, flavors, strategy flags, supply, war states, danger, and dominance zones. [Pathfinding](pathfinding.md) covers movement policy, reachable plots, and danger costs. |
+| Producing and acquiring units | [Production](production/overview.md) explains city comparison and candidate gates; [military](production/military.md) and [civilian](production/civilian.md) production explain demand and scoring. [Acquisition](acquisition.md) covers gold and faith purchases, including operation and emergency purchases. |
+| Persistent operations and control | [Operations](operations/overview.md) routes shared lifecycle, campaign, organization, stage, and civilian behavior. [Lifecycle](operations/lifecycle.md) covers completion, control state, and the Tactical-to-Homeland handoff. |
+| Current-turn military decisions | [Tactics](tactics/overview.md) routes targets and postures, army movement and reinforcement, search engagements, and conventional air operations. It also covers turn order, independent-unit priorities, barbarians, and specialized execution. |
+| Coordinated combat planning | [Simulation](simulation/overview.md) covers search procedure, aggression, acceptance, support placement, and replay. [Scoring](simulation/scoring.md) explains action and plan scores; [air search](simulation/air.md) adds coordinated aircraft actions. |
+| Tactical steering | [Flavors](flavors/overview.md) defines the five tactical flavors and how they resolve for a search. [Flavor scoring](flavors/scoring.md) covers their score effects, RISK thresholds, and worked examples. |
+| Unit replacement and removal | [Upgrade](upgrade.md) covers ranking, replacement, and promotion selection. [Cleanup](cleanup.md) covers disbanding, civilian passes, and city-state gifting. |

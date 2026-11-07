@@ -9,7 +9,7 @@
 | **Muster point** | The plot where the army assembles before moving to its goal. |
 | **Muster city** | The associated city that supplies the muster point when the family uses a city source. |
 
-The target and muster point are separate persistent values. Retargeting replaces the target and usually the army goal; it does not relocate the muster point. [Military organization](military-organization.md) owns formation slots, recruitment, stages, and release. [Operation lifecycle](operation.md#completion-abort-and-cleanup) defines each family's finishing condition. [Military tactics](military-tactics.md) owns per-turn movement and combat.
+The target and muster point are separate persistent values. Retargeting replaces the target and usually the army goal; it does not relocate the muster point. [Military organization](organization.md) owns formation slots, recruitment, membership, and release; [operation stages](stages.md) owns stage sequences. [Operation lifecycle](lifecycle.md#completion-abort-and-cleanup) defines each family's finishing condition. [Military tactics](../tactics/overview.md) owns per-turn movement and combat. See the [operations overview](overview.md) for related control paths.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvDiplomacyAI.cpp`, and `CvTacticalAnalysisMap.cpp`.
 
@@ -48,7 +48,7 @@ The lists feed these decisions:
 | Query | Used by |
 | --- | --- |
 | `RequestCityAttack` | Creating [city attack operations](#city-attacks-and-muster). |
-| `HavePreferredAttackTarget`, `IsPreferredAttackTarget` | Diplomacy AI war, peace, and war-bribe decisions; the offensive weight in [army sizing](military-production.md#land-force-demand); [zone value](military-tactics.md#independent-units-and-priorities) in tactics; and whether units pillage an enemy city's tiles. |
+| `HavePreferredAttackTarget`, `IsPreferredAttackTarget` | Diplomacy AI war, peace, and war-bribe decisions; the offensive weight in [army sizing](../production/military.md#land-force-demand); [zone value](../tactics/targets-and-postures.md#zone-order) in tactics; and whether units pillage an enemy city's tiles. |
 | `IsExposedToEnemy` | Diplomacy AI war and peace decisions, Homeland AI patrol targets, and the defensive weight in army sizing. |
 
 ### City attacks and muster
@@ -57,19 +57,19 @@ Diplomacy can request a city attack while preparing for war, while war state gat
 
 City attacks therefore choose the muster city with the target. Every own city is tested as a path origin, so the muster city is the best launching point for that target, not necessarily the nearest city.
 
-Other families use the closest compatible friendly coastal city for naval work, the closest own city within target range for land work without a precomputed path, the target plot for rapid response, or the selected nuclear unit's plot. A naval city attack against a non-coastal target substitutes a compatible own-and-enemy coastal city pair. During recruitment and gathering, the muster point can move to the army's center of mass so late members head toward the assembled army. Only the city that owns the muster plot can accept the operation's production request. See [formation requests and commitments](military-production.md#formation-requests-and-commitments).
+Other families use the closest compatible friendly coastal city for naval work, the closest own city within target range for land work without a precomputed path, the target plot for rapid response, or the selected nuclear unit's plot. A naval city attack against a non-coastal target substitutes a compatible own-and-enemy coastal city pair. During recruitment and gathering, the muster point can move to the army's center of mass so late members head toward the assembled army. Only the city that owns the muster plot can accept the operation's production request. See [formation requests and commitments](../production/military.md#formation-requests-and-commitments).
 
 ## Nuclear campaigns
 
-Nuclear weapons use a specialized stockpile and launch decision. The `MILITARYAISTRATEGY_NEED_NUKE` [strategy flag](concepts.md#strategy-flags) keeps nuclear production attractive while stock is below the player's nuclear flavor target, except in no-nukes games. The Nuclear Gandhi override keeps the strategy active.
+Nuclear weapons use a specialized stockpile and launch decision. The `MILITARYAISTRATEGY_NEED_NUKE` [strategy flag](../concepts.md#strategy-flags) keeps nuclear production attractive while stock is below the player's nuclear flavor target, except in no-nukes games. The Nuclear Gandhi override keeps the strategy active.
 
 `CvMilitaryAI::DoNuke` considers war enemies. It can launch immediately when the AI is losing badly, and major civilizations can respond to a nuclear exchange. Otherwise a diplomacy flavor-based roll is available only when the enemy is threatening enough, relations are hostile, or victory pressure is high. City-states use only the losing-badly path.
 
-A nuclear attack pairs owned nuclear units with enemy cities in range. It avoids cities about to fall and cities originally owned by the attacker, rewards enemy military and economic value, penalizes friendly and neutral collateral damage, and avoids repeat fallout. The best positive target becomes the operation target. The operation fires directly from recruiting: it clears movable friendly units from the blast radius, issues the nuclear mission, and completes. Nuclear units bypass Tactical recruitment and the [tactical simulation](military-tactical-simulation.md).
+A nuclear attack pairs owned nuclear units with enemy cities in range. It avoids cities about to fall and cities originally owned by the attacker, rewards enemy military and economic value, penalizes friendly and neutral collateral damage, and avoids repeat fallout. The best positive target becomes the operation target. The operation fires directly from recruiting: it clears movable friendly units from the blast radius, issues the nuclear mission, and completes. Nuclear units bypass Tactical recruitment and the [tactical simulation](../simulation/overview.md).
 
 ## Target lifecycle
 
-Initialization stores the target and muster point, then sets the army goal. The army recruits and gathers at the muster point before moving toward its goal. [Military organization](military-organization.md#lifecycle-overview) defines the Recruiting, Gathering, and Moving lifecycles; [operation completion and abort](operation.md#completion-abort-and-cleanup) defines shared terminal-state handling.
+Initialization stores the target and muster point, then sets the army goal. The army recruits and gathers at the muster point before moving toward its goal. [Operation stages](stages.md#lifecycle-overview) defines the Recruiting, Gathering, and Moving lifecycles; [operation completion and abort](lifecycle.md#completion-abort-and-cleanup) defines shared terminal-state handling.
 
 ### Retargeting
 
@@ -89,7 +89,7 @@ Pillage and naval-superiority operations accept any valid replacement immediatel
 
 ## Abort and cleanup
 
-An operation can abort for an invalid target, strategic or diplomatic cancellation, army-strength loss, a lost path, or timeout. The normal timeout is more than 42 turns; carrier groups continue indefinitely. See [operation completion, abort, and cleanup](operation.md#completion-abort-and-cleanup) for shared terminal checks and cleanup timing.
+An operation can abort for an invalid target, strategic or diplomatic cancellation, army-strength loss, a lost path, or timeout. The normal timeout is more than 42 turns; carrier groups continue indefinitely. See [operation completion, abort, and cleanup](lifecycle.md#completion-abort-and-cleanup) for shared terminal checks and cleanup timing.
 
 | Event | Result |
 | --- | --- |
@@ -98,8 +98,8 @@ An operation can abort for an invalid target, strategic or diplomatic cancellati
 | No step path | Combat army movement records `AI_ABORT_LOST_PATH`. |
 | Strategic review | Cancels for forced peace, an unattacked opponent, a vanished threatened-city list for a domain, or a defensive war-state pullback. |
 
-An improving tactical zone alone does not cancel a city-defense operation. It still uses the shared deployment completion rule. Released members and their temporary reserve exclusion are covered by [membership and release](military-organization.md#membership-and-release).
+An improving tactical zone alone does not cancel a city-defense operation. It still uses the shared deployment completion rule. Released members and their temporary reserve exclusion are covered by [membership and release](organization.md#membership-and-release).
 
 ## Diagnostics
 
-`CvMilitaryAI::DoTurn` refreshes military state and runs `UpdateAttackTargets` and `UpdateOperations` before unit movement. `CvDiplomacyAI` supplies war intent and state, and `CvPlayer::UpdateCityThreatCriteria` ranks city threats. Use `OperationalAILog.csv` with the shared [operation diagnostics](operation.md#diagnostics) to follow a target, retarget, abort, and cleanup.
+`CvMilitaryAI::DoTurn` refreshes military state and runs `UpdateAttackTargets` and `UpdateOperations` before unit movement. `CvDiplomacyAI` supplies war intent and state, and `CvPlayer::UpdateCityThreatCriteria` ranks city threats. Use `OperationalAILog.csv` with the shared [operation diagnostics](lifecycle.md#diagnostics) to follow a target, retarget, abort, and cleanup.

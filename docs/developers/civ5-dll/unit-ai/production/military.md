@@ -1,6 +1,6 @@
 # Unit AI: Military Production
 
-**Force demand** is the empire's need for land, naval, and explorer strength. **Formation gaps** are unfilled required formation slots. **Military production** turns both into weighted unit candidates for one city. The [shared candidate lifecycle](production.md#candidate-lifecycle) then compares them with all other buildables, and the [shared candidate gates](production.md#shared-candidate-gates) apply before unit suitability.
+**Force demand** is the empire's need for land, naval, and explorer strength. **Formation gaps** are unfilled required formation slots. **Military production** turns both into weighted unit candidates for one city. The [shared candidate lifecycle](overview.md#candidate-lifecycle) then compares them with all other buildables, and the [shared candidate gates](overview.md#shared-candidate-gates) apply before unit suitability. The [production overview](overview.md) defines that shared comparison, and the parent [Unit AI overview](../overview.md) places production among the other responsibilities.
 
 The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvUnitProductionAI.cpp`, `CvCityStrategyAI.cpp`, `CvCity.cpp`, `CvPlayerAI.cpp`, `CvAIOperation.cpp`, and `CvArmyAI.cpp`.
 
@@ -16,7 +16,7 @@ Military demand gives city production a current reason to train a military unit.
 | [Operation formation demand](#operation-formation-demand) | Active operation | Adds a weighted candidate for its next required slot. |
 | [Army formation demand](#army-formation-demand) | Army formations | Adds a weighted candidate for a free required slot. |
 
-Ordinary unit candidacy is flavor-derived rather than a demand type. [Candidate sources and base weights](production.md#candidate-sources-and-base-weights) explains that base weight.
+Ordinary unit candidacy is flavor-derived rather than a demand type. [Candidate sources and base weights](overview.md#candidate-sources-and-base-weights) explains that base weight.
 
 Every demand follows the same path after its owner supplies the current need:
 
@@ -31,7 +31,7 @@ flowchart LR
 
 ### Land-force demand
 
-`CvMilitaryAI::SetRecommendedArmyNavySize` calculates the land target. For major civilizations, it starts from the [soft supply cap](concepts.md#supply), reserves explorer capacity, and rebalances domain overages after allocating capacity to land and naval forces. Cities, active settlers, [exposed cities and attack targets](military-campaign.md#attack-targets), and offense, defense, and naval signals shape the target; the defensive, offensive, and naval weights scale with `FLAVOR_DEFENSE`, `FLAVOR_OFFENSE`, and `FLAVOR_NAVAL`, so [custom flavors](concepts.md#flavors) steer force sizing directly. Minor civilizations use a simpler calculation.
+`CvMilitaryAI::SetRecommendedArmyNavySize` calculates the land target. For major civilizations, it starts from the [soft supply cap](../concepts.md#supply), reserves explorer capacity, and rebalances domain overages after allocating capacity to land and naval forces. Cities, active settlers, [exposed cities and attack targets](../operations/campaign.md#attack-targets), and offense, defense, and naval signals shape the target; the defensive, offensive, and naval weights scale with `FLAVOR_DEFENSE`, `FLAVOR_OFFENSE`, and `FLAVOR_NAVAL`, so [custom flavors](../concepts.md#flavors) steer force sizing directly. Minor civilizations use a simpler calculation.
 
 For the production gate, the current land count includes units in production except the city's current queue item under evaluation, and it excludes explorers. Supply-consuming land candidates stop entering normal selection once that count reaches the target. A shortfall, especially in war context, increases the score of combat land candidates.
 
@@ -43,7 +43,7 @@ Supply-consuming naval candidates stop entering normal selection at the target. 
 
 ### Explorer demand
 
-Economic AI estimates the explorer need, while Military AI converts it into a supply-aware recommendation. The target is the lower of one quarter of the soft supply cap and Economic AI's need, then falls further when supply is constrained. [Civilian land-explorer demand](civilian-production.md#land-explorer-demand) describes the candidate that consumes this recommendation.
+Economic AI estimates the explorer need, while Military AI converts it into a supply-aware recommendation. The target is the lower of one quarter of the soft supply cap and Economic AI's need, then falls further when supply is constrained. [Civilian land-explorer demand](civilian.md#land-explorer-demand) describes the candidate that consumes this recommendation.
 
 A shortfall increases the explorer score. The recommended-force gate applies to supply-consuming explorers, and this baseline has no active naval-explorer production adjustment.
 
@@ -61,7 +61,7 @@ Its initial weight combines the army base value and offense flavor. Suitability 
 
 ## Hard gates
 
-The shared [candidate gates](production.md#shared-candidate-gates) cover trainability, puppets, developing cities, siege, and the request muster-city gate. Military suitability adds these hard gates:
+The shared [candidate gates](overview.md#shared-candidate-gates) cover trainability, puppets, developing cities, siege, and the request muster-city gate. Military suitability adds these hard gates:
 
 | Gate | Result |
 | --- | --- |
@@ -73,7 +73,7 @@ The shared [candidate gates](production.md#shared-candidate-gates) cover trainab
 
 ## Score effects
 
-`CvUnitProductionAI::CheckUnitBuildSanity` applies these effects after a candidate reaches suitability. The `MILITARYAISTRATEGY_*` names identify Vox Populi [strategy flags](concepts.md#strategy-flags) that provide role gates and score signals. Vox Deorum custom flavors remain the main steering input, while the state flags continue to supply role-specific effects. With custom flavors active, `CvCitySpecializationAI.cpp` also shifts the empire's military-training specialization weight by `(FLAVOR_MOBILIZATION − 5) × 80`. This steers entire cities toward or away from the military specialization, whose flavor adjustments feed unit base weights.
+`CvUnitProductionAI::CheckUnitBuildSanity` applies these effects after a candidate reaches suitability. The `MILITARYAISTRATEGY_*` names identify Vox Populi [strategy flags](../concepts.md#strategy-flags) that provide role gates and score signals. Vox Deorum custom flavors remain the main steering input, while the state flags continue to supply role-specific effects. With custom flavors active, `CvCitySpecializationAI.cpp` also shifts the empire's military-training specialization weight by `(FLAVOR_MOBILIZATION − 5) × 80`. This steers entire cities toward or away from the military specialization, whose flavor adjustments feed unit base weights.
 
 | Effect | Military signal |
 | --- | --- |
@@ -86,7 +86,7 @@ Both request weights read offense flavor through `GetPersonalityAndGrandStrategy
 
 ## Formation requests and commitments
 
-A **muster point** is the assembly plot. Its **muster city** is the associated city, when the operation has one. [Military campaign](military-campaign.md#city-attacks-and-muster) explains how each family selects them.
+A **muster point** is the assembly plot. Its **muster city** is the associated city, when the operation has one. [Military campaign](../operations/campaign.md#city-attacks-and-muster) explains how each family selects them.
 
 | Path | Selection and membership effect |
 | --- | --- |
@@ -97,4 +97,4 @@ A **muster point** is the assembly plot. Its **muster city** is the associated c
 
 A training commitment reserves the need, not the finished unit. Completion returns the formation slot to the need list, and reserve recruitment may assign the new unit to any compatible operation. Direct purchase is the only path that immediately fills a formation slot.
 
-[Military organization](military-organization.md#stages-and-recruitment) explains how reserve recruitment and direct purchases become formation membership.
+[Military organization](../operations/organization.md#recruitment) explains how reserve recruitment and direct purchases become formation membership.

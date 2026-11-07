@@ -1,8 +1,8 @@
 # Unit AI: Civilian Production
 
-**Civilian production** turns **role-owned demand**, a need calculated by a specific civilian system, into weighted unit candidates for a city. The shared [candidate lifecycle](production.md#candidate-lifecycle) compares each candidate with all other buildables. The shared [candidate gates](production.md#shared-candidate-gates) apply to every unit candidate.
+**Civilian production** turns **role-owned demand**, a need calculated by a specific civilian system, into weighted unit candidates for a city. The shared [candidate lifecycle](overview.md#candidate-lifecycle) compares each candidate with all other buildables. The shared [candidate gates](overview.md#shared-candidate-gates) apply to every unit candidate. The [production overview](overview.md) defines that shared comparison, and the parent [Unit AI overview](../overview.md) places production among the other responsibilities.
 
-The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, chiefly `CvUnitProductionAI.cpp`, `CvCityStrategyAI.cpp`, `CvEconomicAI.cpp`, `CvTradeClasses.cpp`, and `CvMilitaryAI.cpp`. [Flavors](concepts.md#flavors) defines the effective city preferences used for each base weight. The `ECONOMICAISTRATEGY_*` and `AICITYSTRATEGY_*` gates named below are [strategy flags](concepts.md#strategy-flags).
+The main implementation is in `civ5-dll/CvGameCoreDLL_Expansion2`, chiefly `CvUnitProductionAI.cpp`, `CvCityStrategyAI.cpp`, `CvEconomicAI.cpp`, `CvTradeClasses.cpp`, and `CvMilitaryAI.cpp`. [Flavors](../concepts.md#flavors) defines the effective city preferences used for each base weight. The `ECONOMICAISTRATEGY_*` and `AICITYSTRATEGY_*` gates named below are [strategy flags](../concepts.md#strategy-flags).
 
 ## Civilian demand
 
@@ -43,13 +43,13 @@ A non-friendly tactical dominance zone, a worker on the city tile, or `AICITYSTR
 
 ### Work-boat demand
 
-City strategy maintains the local `AICITYSTRATEGY_NEED_NAVAL_TILE_IMPROVEMENT` signal, but work-boat production does not use it as a gate. Candidate evaluation uses [safe pathfinding](military-tactical-simulation.md#danger-in-path-cost) to find reachable owned resources that still need a boat, including resources beyond the city's workable plots. It then subtracts reachable boats and boats already in training from that work.
+City strategy maintains the local `AICITYSTRATEGY_NEED_NAVAL_TILE_IMPROVEMENT` signal, but work-boat production does not use it as a gate. Candidate evaluation uses [safe pathfinding](../pathfinding.md#danger-in-path-cost) to find reachable owned resources that still need a boat, including resources beyond the city's workable plots. It then subtracts reachable boats and boats already in training from that work.
 
 No remaining work or a non-friendly naval tactical dominance zone rejects the candidate. For queue production, the score rises with the remaining work, city population, and era. Purchase evaluation uses capital population and also favors nearer work. The demand does not use the empire-wide worker shortfall.
 
 ### Land-explorer demand
 
-Economic AI estimates land-exploration need from unrevealed terrain, recon flavor, war, and travel capability. The explorer headcount target scales with `FLAVOR_RECON`, and its naval counterpart with `FLAVOR_NAVAL_RECON`; the same target drives explorer promotion and retirement, described under [UnitAI roles](concepts.md#unitai-roles). Military AI turns that need into a supply-aware recommendation. See [military explorer demand](military-production.md#explorer-demand) for how that recommendation fits force demand.
+Economic AI estimates land-exploration need from unrevealed terrain, recon flavor, war, and travel capability. The explorer headcount target scales with `FLAVOR_RECON`, and its naval counterpart with `FLAVOR_NAVAL_RECON`; the same target drives explorer promotion and retirement, described under [UnitAI roles](../concepts.md#unitai-roles). Military AI turns that need into a supply-aware recommendation. See [military explorer demand](military.md#explorer-demand) for how that recommendation fits force demand.
 
 The shortfall below the recommendation adds score. The recommendation gate applies only to supply-consuming explorers, and units training count toward it. Dedicated naval-explorer production adjustment is inactive in this baseline because naval exploration normally reassigns eligible naval units. Combat-capable explorers can remain eligible during siege through the shared gate.
 
@@ -75,9 +75,9 @@ For major civilizations, the score favors having no archaeologist yet, pursuing 
 
 Several systems create civilian units through their own routes:
 
-- `CvReligionAI::DoFaithPurchases` selects and purchases missionaries, inquisitors, and most religious units through the [faith acquisition path](acquisition.md#faith-priority-and-legality).
+- `CvReligionAI::DoFaithPurchases` selects and purchases missionaries, inquisitors, and most religious units through the [faith acquisition path](../acquisition.md#faith-priority-and-legality).
 - Specialist progress, faith rules, and free grants create ordinary Great People.
 - Buildings, policies, and trade-route rules grant units directly.
 - Player-level spaceship planning coordinates spaceship-part units.
 
-When a city can train a unit from one of these routes, it may also become an ordinary production candidate. [Civilian operation](civilian-operation.md) explains how trained civilian units receive work.
+When a city can train a unit from one of these routes, it may also become an ordinary production candidate. [Civilian operation](../operations/civilian.md) explains how trained civilian units receive work.
