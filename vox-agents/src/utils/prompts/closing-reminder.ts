@@ -24,8 +24,6 @@ import { bashToolName, formatToolChoiceList } from '../tools/tool-names.js';
  *   response to writing notes.
  * - Notes on the first step: with `notes` and a completion tool allowed, the first step says bash
  *   may write notes in the same response that acts, since many runs finish on their first step.
- *   When more than this step is left, it first offers reading the records with bash on a step of
- *   its own, so the notes rule does not read as the only allowed use of bash.
  * Returns undefined when no part applies.
  *
  * @param executable - The tools that may run on this step
@@ -51,7 +49,7 @@ export function buildClosingReminder(
     step > 0 && finishing ? `Once you have the information you need, make all your decisions together in one response by calling ${finishing} following the EXACT provided format. Finishing ends the run.` : '',
     !finishing || !notes ? '' : step > 0
       ? `In that same response, use \`${bashToolName}\` only to write any notes you want to keep.`
-      : `${stepsLeft === undefined || stepsLeft > 1 ? `Before you act, you may call \`${bashToolName}\` on its own to read your records. ` : ''}When you act by calling ${finishing}, you may also call \`${bashToolName}\` in that same response, but only to write notes you want to keep.`,
+      : `When you act by calling ${finishing}, you may also call \`${bashToolName}\` in that same response, only to write any notes you want to keep.`,
   ];
   return [rules, decisions]
     .map((parts) => parts.filter(Boolean).join(' '))
