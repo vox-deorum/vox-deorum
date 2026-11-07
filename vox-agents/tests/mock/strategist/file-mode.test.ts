@@ -16,7 +16,7 @@ import { simpleStrategistInlineSections, strategistInlineSections } from '../../
 import { sections, type SectionKey } from '../../../src/knowledge/sections.js';
 import { renderStrategistReports } from '../../../src/strategist/strategy-parameters.js';
 import { splitEntries } from '../../../src/knowledge/records.js';
-import { countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
+import { cacheBreakpoint, countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { createFakeVoxContext, type FakeVoxContext } from '../../helpers/fake-vox-context.js';
 import { makeFixtureGameState, makeFixtureParameters } from '../../fixtures/game-state/index.js';
@@ -64,15 +64,14 @@ function messageWith(messages: ModelMessage[], marker: string): number {
 }
 
 /**
- * Assert the run holds exactly one breakpoint-free system message with the records directions,
- * first in the run, followed by the inline build's leading system messages (which carry the cache
- * breakpoint that now covers the directions) and then the game-state user message.
+ * Assert the run holds exactly one system message with the records directions, first in the run
+ * and carrying its own cache breakpoint, followed by the inline build's leading system messages
+ * (with their own breakpoint) and then the game-state user message.
  */
 function expectDirectionsFirst(messages: ModelMessage[], inline: ModelMessage[], directions: string): void {
   const boundary = inline.findIndex((m) => m.role !== 'system');
   expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
-  expect(messages[0]).toEqual({ role: 'system', content: directions });
-  expect(hasCacheBreakpoint(messages[0])).toBe(false);
+  expect(messages[0]).toEqual({ role: 'system', content: directions, providerOptions: cacheBreakpoint });
   expect(messages.slice(1, 1 + boundary)).toEqual(inline.slice(0, boundary));
   expect(messages.slice(1, 1 + boundary).some(hasCacheBreakpoint)).toBe(true);
   expect(messages[1 + boundary].role).toBe('user');
@@ -155,7 +154,7 @@ describe('strategist prompt builders in file mode', () => {
       expect(core).not.toBe(inlineReports);
 
       expectDirectionsFirst(messages, inline, directions);
-      expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+      expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline) + 1);
     });
 
     it("should keep only our cities inline and name the other owners' city files", async () => {
@@ -204,7 +203,7 @@ describe('strategist prompt builders in file mode', () => {
         expect(withoutDirections(messages, directions)).toEqual(inline);
 
         expectDirectionsFirst(messages, inline, directions);
-        expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+        expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline) + 1);
       });
     });
   }
@@ -217,7 +216,7 @@ describe('strategist prompt builders in file mode', () => {
       expectDirectionsFirst(messages, inline, directions);
       expect(messageWith(messages, episodeMarker)).toBe(messages.length - 1);
       expect(messages[messages.length - 1].role).toBe('user');
-      expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline));
+      expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(inline) + 1);
     });
 
     it('should put the episodes in the last message without file mode', async () => {

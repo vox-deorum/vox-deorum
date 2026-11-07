@@ -90,7 +90,7 @@ Each step is a full model call, while commands are cheap, so the prompts ask age
 | --- | --- |
 | The model gets a short reminder on keeping notes, the step budget, and reading large files. | [Capability reminder](../models/middleware.md#capability-reminder) |
 | The records directions list the folders and explain the turn folders. A separate notes message shows the newest journal entries and the names of other recent notes. | [File mode](../framework/prompts.md#file-mode) |
-| The run's last initial message becomes a cache anchor. | [Caching](../framework/caching.md) |
+| The records directions and the run's last initial message become cache anchors while the request has room for them. | [Caching](../framework/caching.md) |
 | Old bash output is dropped when the request gets large, per the model's `continuityThreshold`. | [Compaction](../framework/compaction.md) |
 
 File access never comes from CLI host tools. `hostTools` accepts only `Web` (see [Model configuration](../models/configuration.md#host-tools-for-cli-models)).

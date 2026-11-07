@@ -61,6 +61,7 @@ import { getModel, getModelConfig, inputTokenLimit, resolveToolFraming } from '.
 import { toolRescueMiddleware } from '../../../src/utils/models/tool-rescue/middleware.js';
 import { capabilityHeading, capabilityInstruction } from '../../../src/utils/models/capability-prompt.js';
 import { workspaceOutputLimit } from '../../../src/utils/workspace/player-workspace.js';
+import { claudeCodeCacheMarkers } from '../../../src/utils/models/providers/claude-code-prompt.js';
 
 // The web section is the last section of a web-only capability reminder.
 const webGuidance = capabilityInstruction({ web: true })!.split('\n\n').at(-1)!;
@@ -162,6 +163,11 @@ describe('claude-code provider', () => {
     it('should unset ANTHROPIC_API_KEY so the CLI uses the subscription login', () => {
       getModel({ provider: 'claude-code', name: 'sonnet' });
       expect(mocks.captured.env).toHaveProperty('ANTHROPIC_API_KEY', undefined);
+    });
+
+    it("should pin the CLI's cache lifetime to the lifetime of VD's cache markers", () => {
+      getModel({ provider: 'claude-code', name: 'sonnet' });
+      expect(mocks.captured.env.CLAUDE_CODE_PROMPT_CACHE_TTL).toBe(claudeCodeCacheMarkers.cacheControl.ttl);
     });
 
     it('should map a non-minimal reasoningEffort to effort with summarized adaptive thinking', () => {

@@ -9,7 +9,8 @@ import type { ModelMessage } from "ai";
 
 /**
  * The breakpoint marker itself. Honored by the direct Anthropic provider, OpenRouter (whose
- * provider falls back to the `anthropic` key) and Vertex Anthropic; ignored by other providers.
+ * provider falls back to the `anthropic` key) and Vertex Anthropic. Claude Code turns the first
+ * two into its own markers (`providers/claude-code-prompt.ts`). Other providers ignore it.
  * Spread into a message's `providerOptions` to mark the end of a cacheable prefix. Entries live for
  * five minutes, refreshed on every read, so a prefix survives the steps of one run and back-to-back
  * runs that share it.
@@ -24,8 +25,8 @@ export const cacheBreakpoint = { anthropic: { cacheControl: { type: "ephemeral" 
  */
 export const MAX_CACHE_BREAKPOINTS = 4;
 
-/** Whether a message carries a cache breakpoint. */
-export function hasCacheBreakpoint(message: ModelMessage): boolean {
+/** Whether a message (a model message or a provider prompt message) carries a cache breakpoint. */
+export function hasCacheBreakpoint(message: Pick<ModelMessage, "providerOptions">): boolean {
   return message.providerOptions?.anthropic?.cacheControl !== undefined;
 }
 

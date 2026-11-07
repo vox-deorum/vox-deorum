@@ -40,7 +40,7 @@ A run is in file mode when files are enabled and its resolved tools include `bas
 | Records directions | Before the overview or shared game context | Mounted folders and permissions, record paths, which sections remain inline, read examples, and the game notes guide. |
 | Notes, when present | After leading system messages, before the game-state user message | With a [game journal](../workspace/files.md#game-journal), its newest whole entries within 20,000 characters. Then the paths of the five most recent other notes. Other notes are listed by name only, ordered by stored modification time, and the guide is excluded. |
 
-Directions come from `records-directions.md` and notes from `records-notes.md`. Both are built once per run. Built-in directions depend on file access, inline sections, and the guide, so writing ordinary records or notes leaves them stable across turns. Editing the guide affects later runs. Neither message adds its own cache breakpoint.
+Directions come from `records-directions.md` and notes from `records-notes.md`. Both are built once per run. Built-in directions depend on file access, inline sections, and the guide, so writing ordinary records or notes leaves them stable across turns. Editing the guide affects later runs. The directions carry their own cache anchor while the request has room for one, so the instructions and directions are reused across a seat's runs (see [Caching](caching.md)). The notes message has no anchor.
 
 The [workspace store](../workspace/store.md#records) documents turn folders, split reports, event views, and the catalog. The guide is `/workspace/game/AGENTS.md`; when a writable game folder has no guide yet, directions show the default text that bash will seed.
 

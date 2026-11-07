@@ -16,7 +16,7 @@ import {
   guardClaudeCodeQueryUsageLimits,
   hideClaudeCodeStructuredOutputResults,
 } from './claude-code-response.js';
-import { claudeCodeSystemMiddleware } from './claude-code-prompt.js';
+import { claudeCodeCacheMarkers, claudeCodeSystemMiddleware } from './claude-code-prompt.js';
 import { ClaudeCodeSession, type ClaudeCodeSessionPatch } from './claude-code-session.js';
 import { requiredToolChoiceMiddleware } from './required-tool-choice.js';
 import { resolveHostToolCapabilities } from './host-tools.js';
@@ -60,7 +60,10 @@ function buildBaseSettings(options: NonNullable<Model['options']>): { settings: 
     // which then bills the API key instead of the subscription login. Unset the
     // key so the CLI falls back to its own credentials; Node drops undefined
     // entries from a child's environment.
-    env: { ANTHROPIC_API_KEY: undefined },
+    // The CLI picks its own cache lifetime (one hour on a subscription within its limits, five
+    // minutes otherwise), and the API rejects VD's markers when they are longer than the CLI's.
+    // Pin the CLI to the lifetime VD's markers use.
+    env: { ANTHROPIC_API_KEY: undefined, CLAUDE_CODE_PROMPT_CACHE_TTL: claudeCodeCacheMarkers.cacheControl.ttl },
   };
   const hostTools = expandClaudeCodeTools(resolveHostToolCapabilities(options.hostTools));
 

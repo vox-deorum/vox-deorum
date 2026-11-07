@@ -8,6 +8,7 @@
 import type { AgentParameters } from "../infra/vox-agent.js";
 import type { ModelMessage } from "ai";
 import type { VoxContext } from "../infra/vox-context.js";
+import { cacheBreakpoint, countCacheBreakpoints, MAX_CACHE_BREAKPOINTS } from "../utils/models/cache-breakpoint.js";
 import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
 import { bashToolName } from "../utils/tools/tool-names.js";
 import { journalStorePath, journalTail, type JournalTail } from "../utils/workspace/journal.js";
@@ -41,9 +42,10 @@ export function fileMode<T extends AgentParameters>(context: VoxContext<T>): boo
 /**
  * Insert the records directions and the game notes as system messages, when this execution is
  * in file mode. The directions go first, right after the agent's system prompt and ahead of the
- * game context or overview, so the overview's cache breakpoint covers them. The notes change
- * whenever an agent writes one, so they go after the leading system messages (or at the end when
- * every message is a system message), before the game state.
+ * game context or overview. With the system prompt they stay the same in every run of a seat, so
+ * the directions carry a cache breakpoint of their own while the request has room for one. The
+ * notes change whenever an agent writes one, so they go after the leading system messages (or at
+ * the end when every message is a system message), before the game state.
  *
  * @param inPrompt - Sections the caller already put in the prompt for the latest turn
  */
@@ -54,7 +56,9 @@ export function insertRecordsDirections<T extends AgentParameters>(messages: Mod
     const at = messages.findIndex((message) => message.role !== "system");
     messages.splice(at === -1 ? messages.length : at, 0, { role: "system", content: notes });
   }
-  messages.unshift({ role: "system", content: recordsDirections(context, inPrompt) });
+  const directions: ModelMessage = { role: "system", content: recordsDirections(context, inPrompt) };
+  if (countCacheBreakpoints(messages) < MAX_CACHE_BREAKPOINTS) directions.providerOptions = { ...cacheBreakpoint };
+  messages.unshift(directions);
 }
 
 /**
@@ -126,8 +130,8 @@ export function recordsNotes<T extends AgentParameters>(context: VoxContext<T>):
  * turn numbers and depends only on the files setting, `inPrompt`, and the guide, so recording a
  * turn, a briefing, or a note leaves it unchanged. The view still supplies the recorded turns for
  * custom files written for older built-ins. It is built once per run, so it stays fixed across the
- * run's steps; an agent editing the guide changes it for later runs. The message built from it
- * carries no cache breakpoint of its own and sits ahead of the caller's.
+ * run's steps; an agent editing the guide changes it for later runs. `insertRecordsDirections`
+ * gives the message built from it a cache breakpoint of its own while the request has room.
  *
  * @param context - The run's context, for its files setting, store, and prompt folder
  * @param inPrompt - Sections already in the prompt for the latest turn, named so the run skips them

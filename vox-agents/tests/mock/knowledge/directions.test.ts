@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileMode, insertRecordsDirections, recordsDirections, recordsNotes } from '../../../src/knowledge/directions.js';
 import { eventCategoryFiles } from '../../../src/knowledge/records.js';
 import { sections } from '../../../src/knowledge/sections.js';
+import { cacheBreakpoint, countCacheBreakpoints, hasCacheBreakpoint, MAX_CACHE_BREAKPOINTS } from '../../../src/utils/models/cache-breakpoint.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import { journalStorePath, journalWindow } from '../../../src/utils/workspace/journal.js';
 import { workspaceGuideFile } from '../../../src/utils/workspace/player-workspace.js';
@@ -265,11 +266,23 @@ describe('recordsDirections', () => {
       const context = enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} });
       const messages = opening();
       insertRecordsDirections(messages, context);
-      expect(messages).toEqual([{ role: 'system', content: recordsDirections(context) }, ...opening()]);
+      expect(messages).toEqual([{ role: 'system', content: recordsDirections(context), providerOptions: cacheBreakpoint }, ...opening()]);
 
       const plain = opening();
       insertRecordsDirections(plain, bareContext());
       expect(plain).toEqual(opening());
+    });
+
+    it('should anchor the directions only while the request has room for another breakpoint', () => {
+      const context = enableFileMode(bareContext(), temp.store, undefined, { game: 'write', shared: {} });
+      const roomy = opening();
+      insertRecordsDirections(roomy, context);
+      expect(hasCacheBreakpoint(roomy[0])).toBe(true);
+
+      const full = Array.from({ length: MAX_CACHE_BREAKPOINTS }, opening).flat();
+      insertRecordsDirections(full, context);
+      expect(hasCacheBreakpoint(full[0])).toBe(false);
+      expect(countCacheBreakpoints(full)).toBe(MAX_CACHE_BREAKPOINTS);
     });
   });
 

@@ -85,8 +85,8 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
 
     // File mode: the records directions lead the stable prefix as a system message ahead of the
     // game context, and any game notes go between the game context and the game state, both
-    // ahead of the past-conversation anchor. Neither carries a breakpoint of its own, so the
-    // breakpoint count is unchanged.
+    // ahead of the past-conversation anchor. The directions carry a breakpoint of their own, which
+    // brings this assemble to the ceiling of four.
     insertRecordsDirections(messages, context);
 
     // Layer the agent's grounding around the chat record (see {@link LiveEnvoyContext}
@@ -116,7 +116,8 @@ export abstract class LiveEnvoy extends Envoy<StrategistParameters> {
     });
 
     // The Anthropic prompt cache rejects a request carrying more than MAX_CACHE_BREAKPOINTS
-    // cache-control anchors. This assemble sets three (game context, past block, last ongoing row);
+    // cache-control anchors. This assemble sets up to four (records directions in file mode, game
+    // context, past block, last ongoing row);
     // guard the ceiling so a future anchor added elsewhere surfaces as a warning here instead of a
     // provider error at request time.
     const breakpointCount = countCacheBreakpoints(messages);

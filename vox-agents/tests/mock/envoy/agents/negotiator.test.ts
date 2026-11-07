@@ -32,6 +32,7 @@ import {
 import { sessionRegistry } from '../../../../src/infra/session-registry.js';
 import { buildGameContextMessages } from '../../../../src/strategist/strategy-parameters.js';
 import { recordsDirections } from '../../../../src/knowledge/directions.js';
+import { cacheBreakpoint } from '../../../../src/utils/models/cache-breakpoint.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../../knowledge/directions-fixtures.js';
 import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/utils/deal-schema.js';
 
@@ -830,7 +831,7 @@ describe('getInitialMessages task determination', () => {
       expect(messages.filter((m) => m.content === directions)).toHaveLength(1);
       expect(plain.slice(0, boundary)).toEqual(contextMessages.slice(0, boundary));
       // The directions lead, ahead of the game-context system messages; nothing else moves.
-      expect(messages).toEqual([{ role: 'system', content: directions }, ...plain]);
+      expect(messages).toEqual([{ role: 'system', content: directions, providerOptions: cacheBreakpoint }, ...plain]);
     });
 
     it('should add no directions when files are off', async () => {

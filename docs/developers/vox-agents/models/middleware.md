@@ -9,7 +9,8 @@ outermost
   │ capability text           (bash workspace, or Web on Codex or Claude Code)
   │ tool middleware           prompt mode (other models), Gemma, or default rescue
   │ think-tag extraction      (thinkMiddleware option)
-  │ Claude Code handling      system-message demotion, required tool choice,
+  │ Claude Code handling      system-message demotion and cache markers,
+  │                           required tool choice,
   │                           response handling, and the native tool session
   │ provider-specific         required tool choice (Anthropic, Vertex Claude, Codex),
   │                           Codex response handling
@@ -28,7 +29,7 @@ This is layer 3 of [Prompts and tool calling](../framework/prompts.md).
 | Tool rescue, default | `src/utils/models/tool-rescue/middleware.ts` | Changes no prompt text. It recovers tool calls a model wrote as JSON text instead of a real call. |
 | Gemma | `hermesToolMiddleware` from `@ai-sdk-tool/parser` | Hermes-style tool block for Gemma models. |
 | Claude Code session | `src/utils/models/providers/claude-code-session.ts` | Runs one live CLI query per agent run and serves the run's tools through the `vox` MCP server. Requests without function tools bypass it. See [Claude Code native tools](#claude-code-native-tools). |
-| Claude Code demotion | `src/utils/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. Installed by `buildClaudeCodeModel`. |
+| Claude Code prompt | `src/utils/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. Message options are kept, and the first two cache anchors become Claude Code cache markers (see [Claude Code caching](../framework/caching.md#claude-code)). Installed by `buildClaudeCodeModel`. |
 | Required tool choice | `src/utils/models/providers/required-tool-choice.ts` | For providers that refuse a forced tool call, relaxes it to "tools allowed". Always adds a sentence naming the tools that end the turn, unless no offered tool does. |
 | Codex response | `src/utils/models/providers/codex-response.ts` | See [Codex](#codex). |
 
@@ -96,7 +97,7 @@ Claude Code calls the run's function tools itself. One live CLI query spans an a
 
 On the next step, the session hands the tool results to the parked MCP handlers and keeps streaming the same query, so the CLI sees real results in its own context. Any trailing user text, such as the closing reminder, rides on the last result. The session starts a fresh query with the full prompt when the model configuration or tool list changes, when the prompt does not answer the calls it handed out, or when the query has finished or failed. A message that contains only Web calls stays inside the same Vox Deorum step. A Web call still running when its step ends is reported, together with its result, in the step where the result arrives.
 
-The CLI must expose no built-in tools besides the configured host tools. The session checks the tool list from the CLI's init message and fails the query if anything else appears. Requests without function tools, such as evaluations with a JSON response format or plain chat, skip the session and go straight to the provider, and so does a request whose tool choice is `none`. A tool choice that names one tool narrows the `vox` server to that tool. `buildClaudeCodeModel` installs the required-tool-choice handling, system-message demotion, and response middleware.
+The CLI must expose no built-in tools besides the configured host tools. The session checks the tool list from the CLI's init message and fails the query if anything else appears. Requests without function tools, such as evaluations with a JSON response format or plain chat, skip the session and go straight to the provider, and so does a request whose tool choice is `none`. A tool choice that names one tool narrows the `vox` server to that tool. `buildClaudeCodeModel` installs the required-tool-choice handling, the prompt middleware (system-message demotion and cache markers), and response middleware.
 
 The session depends on how the CLI reports tool calls, so `npm run test:claude-code` (in `vox-agents`) checks it against the real CLI. Rerun it after upgrading the Agent SDK or the Claude Code provider.
 

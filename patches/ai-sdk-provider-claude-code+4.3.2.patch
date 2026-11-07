@@ -1,0 +1,120 @@
+diff --git a/node_modules/ai-sdk-provider-claude-code/dist/index.js b/node_modules/ai-sdk-provider-claude-code/dist/index.js
+index 72c0c37..30abfe4 100644
+--- a/node_modules/ai-sdk-provider-claude-code/dist/index.js
++++ b/node_modules/ai-sdk-provider-claude-code/dist/index.js
+@@ -257,10 +257,18 @@ function convertToClaudeCodeMessages(prompt) {
+   const streamingSegments = [];
+   const imageMap = /* @__PURE__ */ new Map();
+   let hasImageParts = false;
+-  const addSegment = (formatted) => {
+-    streamingSegments.push({ formatted });
++  let hasCacheControl = false;
++  const addSegment = (formatted, cacheControl) => {
++    streamingSegments.push({ formatted, cacheControl });
++    if (cacheControl) {
++      hasCacheControl = true;
++    }
+     return streamingSegments.length - 1;
+   };
++  const readCacheControl = (message) => {
++    const cacheControl = message.providerOptions?.["claude-code"]?.cacheControl;
++    return cacheControl && typeof cacheControl === "object" ? cacheControl : void 0;
++  };
+   const addImageForSegment = (segmentIndex, content) => {
+     hasImageParts = true;
+     if (!imageMap.has(segmentIndex)) {
+@@ -280,7 +288,7 @@ function convertToClaudeCodeMessages(prompt) {
+ 
+ ${message.content}`;
+         if (message.content.trim().length > 0) {
+-          addSegment(message.content);
++          addSegment(message.content, readCacheControl(message));
+         } else {
+           addSegment("");
+         }
+@@ -316,7 +324,10 @@ ${message.content}`;
+           }
+         }
+         const textContent = textParts.join("\n");
+-        const segmentIndex = addSegment(textContent ? `Human: ${textContent}` : "");
++        const segmentIndex = addSegment(
++          textContent ? `Human: ${textContent}` : "",
++          textContent ? readCacheControl(message) : void 0
++        );
+         if (textContent) {
+           messages.push(`Human: ${textContent}`);
+         }
+@@ -446,11 +457,13 @@ ${joinedMessages}` : finalPrompt;
+   if (streamingSegments.length > 0) {
+     let accumulatedText = "";
+     let emittedText = false;
+-    const flushText = () => {
++    const flushText = (cacheControl) => {
+       if (!accumulatedText) {
+         return;
+       }
+-      streamingParts.push({ type: "text", text: accumulatedText });
++      streamingParts.push(
++        cacheControl ? { type: "text", text: accumulatedText, cache_control: cacheControl } : { type: "text", text: accumulatedText }
++      );
+       accumulatedText = "";
+       emittedText = true;
+     };
+@@ -466,6 +479,9 @@ ${segmentText}` : segmentText;
+ 
+ ${segmentText}`;
+         }
++        if (segment.cacheControl) {
++          flushText(segment.cacheControl);
++        }
+       }
+       if (imageMap.has(index)) {
+         flushText();
+@@ -482,7 +498,8 @@ ${segmentText}`;
+       { type: "text", text: finalPrompt },
+       ...imagePartsInOrder
+     ],
+-    hasImageParts
++    hasImageParts,
++    hasCacheControl
+   };
+ }
+ 
+@@ -2936,7 +2953,8 @@ var ClaudeCodeLanguageModel = class _ClaudeCodeLanguageModel {
+       messagesPrompt,
+       warnings: messageWarnings,
+       streamingContentParts,
+-      hasImageParts
++      hasImageParts,
++      hasCacheControl
+     } = convertToClaudeCodeMessages(options.prompt);
+     this.logger.debug(
+       `[claude-code] Converted ${options.prompt.length} messages, hasImageParts: ${hasImageParts}`
+@@ -3049,7 +3067,7 @@ var ClaudeCodeLanguageModel = class _ClaudeCodeLanguageModel {
+     const modeSetting = this.settings.streamingInput ?? "auto";
+     const effectiveCanUseTool = sdkOptions?.canUseTool ?? this.settings.canUseTool;
+     const effectivePermissionPromptToolName = sdkOptions?.permissionPromptToolName ?? this.settings.permissionPromptToolName;
+-    const wantsStreamInput = modeSetting === "always" || modeSetting === "auto" && (!!effectiveCanUseTool || hasImageParts);
++    const wantsStreamInput = modeSetting === "always" || modeSetting === "auto" && (!!effectiveCanUseTool || hasImageParts || hasCacheControl);
+     if (!wantsStreamInput && hasImageParts) {
+       warnings.push({
+         type: "other",
+@@ -3438,7 +3456,8 @@ var ClaudeCodeLanguageModel = class _ClaudeCodeLanguageModel {
+       messagesPrompt,
+       warnings: messageWarnings,
+       streamingContentParts,
+-      hasImageParts
++      hasImageParts,
++      hasCacheControl
+     } = convertToClaudeCodeMessages(options.prompt);
+     this.logger.debug(
+       `[claude-code] Converted ${options.prompt.length} messages for streaming, hasImageParts: ${hasImageParts}`
+@@ -3485,7 +3504,7 @@ var ClaudeCodeLanguageModel = class _ClaudeCodeLanguageModel {
+     const modeSetting = this.settings.streamingInput ?? "auto";
+     const effectiveCanUseTool = sdkOptions?.canUseTool ?? this.settings.canUseTool;
+     const effectivePermissionPromptToolName = sdkOptions?.permissionPromptToolName ?? this.settings.permissionPromptToolName;
+-    const wantsStreamInput = modeSetting === "always" || modeSetting === "auto" && (!!effectiveCanUseTool || hasImageParts);
++    const wantsStreamInput = modeSetting === "always" || modeSetting === "auto" && (!!effectiveCanUseTool || hasImageParts || hasCacheControl);
+     if (!wantsStreamInput && hasImageParts) {
+       warnings.push({
+         type: "other",

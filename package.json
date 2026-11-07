@@ -21,7 +21,8 @@
     "update:dll": "node scripts/utilities/update-dll-pin.mjs",
     "update:claude-agent-sdk": "node scripts/utilities/update-claude-agent-sdk.mjs",
     "release": "node scripts/utilities/release.mjs",
-    "clean:all": "npm run clean -ws --if-present"
+    "clean:all": "npm run clean -ws --if-present",
+    "postinstall": "patch-package"
   },
   "author": "John Chen",
   "license": "CC-BY-NC-SA-4.0",
@@ -51,7 +52,7 @@
     "@opentelemetry/sdk-trace-node": "^2.1.0",
     "@opentelemetry/semantic-conventions": "^1.38.0",
     "ai": "^7.0.108",
-    "ai-sdk-provider-claude-code": "^4.3.2",
+    "ai-sdk-provider-claude-code": "4.3.2",
     "axios": "^1.6.2",
     "better-sqlite3": "^12.5.0",
     "better-sse": "^0.15.1",
@@ -72,6 +73,7 @@
     "p-limit": "^7.2.0",
     "p-queue": "^9.0.0",
     "papaparse": "^5.5.3",
+    "patch-package": "^8.0.1",
     "pluralize-esm": "^9.0.5",
     "seedrandom": "^3.0.5",
     "tiktoken": "^1.0.22",

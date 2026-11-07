@@ -17,7 +17,7 @@ import { speakerLabel } from '../../../src/utils/diplomacy/transcript/transcript
 import { buildGameContextMessages } from '../../../src/strategist/strategy-parameters.js';
 import { recordsDirections } from '../../../src/knowledge/directions.js';
 import { createFakeVoxContext } from '../../helpers/fake-vox-context.js';
-import { cacheBreakpoint, countCacheBreakpoints } from '../../../src/utils/models/cache-breakpoint.js';
+import { cacheBreakpoint, countCacheBreakpoints, MAX_CACHE_BREAKPOINTS } from '../../../src/utils/models/cache-breakpoint.js';
 import { bashToolName } from '../../../src/utils/tools/tool-names.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../knowledge/directions-fixtures.js';
 
@@ -186,14 +186,15 @@ describe('LiveEnvoy.getInitialMessages file mode', () => {
     const boundary = plain.findIndex((m: any) => m.role !== 'system');
 
     expect(messages.filter((m: any) => m.content === directions)).toHaveLength(1);
-    expect(messages[0]).toEqual({ role: 'system', content: directions });
+    expect(messages[0]).toEqual({ role: 'system', content: directions, providerOptions: cacheBreakpoint });
     // Everything else rides along unchanged: the game context with its breakpoint, the game state,
     // the compiled past block and its anchor, the ongoing rows, then the always-last hint.
     expect(messages.slice(1)).toEqual(plain);
     expect(messages.slice(1, 1 + boundary)).toEqual(contextMessages.slice(0, boundary));
     expect(messages[messages.length - 1].role).toBe('system');
-    // The directions carry no breakpoint of their own.
-    expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(plain));
+    // The directions carry a breakpoint of their own, and the request stays within the ceiling.
+    expect(countCacheBreakpoints(messages)).toBe(countCacheBreakpoints(plain) + 1);
+    expect(countCacheBreakpoints(messages)).toBeLessThanOrEqual(MAX_CACHE_BREAKPOINTS);
   });
 
   it('adds no directions when files are off', async () => {
@@ -201,7 +202,7 @@ describe('LiveEnvoy.getInitialMessages file mode', () => {
 
     expect(plain).toHaveLength(messages.length - 1);
     expect(plain.some((m: any) => m.content === directions)).toBe(false);
-    expect(countCacheBreakpoints(plain)).toBe(countCacheBreakpoints(messages));
+    expect(countCacheBreakpoints(plain)).toBe(countCacheBreakpoints(messages) - 1);
   });
 });
 
