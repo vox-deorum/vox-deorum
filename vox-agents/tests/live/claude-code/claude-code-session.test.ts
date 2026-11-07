@@ -133,6 +133,10 @@ describe.skipIf(!liveClaudeCodeEnabled)('Claude Code native tools (live CLI)', (
     expect(first.calls).toEqual(['keep-status-quo']);
     expect(second.calls).toEqual(['keep-status-quo']);
     // The second session reads the opening (several thousand tokens) on top of the CLI's own prefix.
-    expect(second.cacheRead - first.cacheRead).toBeGreaterThan(2000);
+    // Without the provider patch the opening and the turn go out as one block, so nothing extra is read.
+    expect(
+      second.cacheRead - first.cacheRead,
+      'The anchored opening was not cached. Is the patch in patches/ applied? Run npm install at the repository root.',
+    ).toBeGreaterThan(2000);
   }, 180_000);
 });
