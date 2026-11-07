@@ -108,14 +108,21 @@ Two implementation details matter when debugging rankings:
 - `CvBasePosition::UpdateScore` caches `10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores`. It sums the plot entries before replacing the acting unit's entry, so the total lags that update. Completion adds finish assignments and unused-unit plot bonuses without refreshing the total.
 - The queue's separate last-round heuristic uses unscaled damage and bonuses. It subtracts both the assignment's old plot score and any prior stored plot score, so it can subtract the previous plot value twice.
 
-**Trade routes.** With the default-off `VOX_TACTICAL_TRADE_SEARCH` mod option, `ScoreCombatUnitTurnEnd` adds two small terms from `GetTradeStepScore`. Both are about the size of the "stay together" term, so they choose between similar end plots and never override the danger checks.
+**Trade routes.** With the default-off `VOX_TACTICAL_TRADE_SEARCH` mod option, `GetTradeStepScore` adds two small terms for the plot a unit ends on. Both are about the size of the "stay together" term, so they choose between similar end plots and never override the danger checks.
 
 | Term | When it applies |
 | --- | --- |
-| Intercept | The unit ends on a plot a visible enemy trade unit steps onto in its owner's next trade movement, where native trade movement would let this unit plunder the route. It is worth 7 plus 1 per 200 plunder gold, up to 11. A route pays once, so it scores nothing when another of our units already ends on an earlier step of that route. |
+| Intercept | The unit ends on a plot a visible enemy trade unit steps onto in its owner's next trade movement, where native trade movement would let this unit plunder the route. It is worth 7 plus 1 per 200 plunder gold, up to 11. A route pays once, so it scores nothing when another of our units already claims an earlier or the same step of that route. |
 | Guard | The unit ends on an endangered next step of our own trade unit, where the ocean rule allows plunder. It is worth 7, because a unit standing there keeps an enemy off. |
 
-`TacticalAIHelpers::UpdateTradeSteps` rebuilds the step map for each search. A route scores nothing once the plan captures its origin or destination, or a city on a sea route's path, since that capture cancels it. A plunderer's invisibility is judged at the step plot.
+The final pass only accepts or rejects a plan, and plans are ranked by their move scores. So `ScorePlotForCombatUnitMove` adds the terms to each move's score, like the citadel bonus, and a unit keeps the score of its last move. `ScoreCombatUnitTurnEnd` adds them to the starting score of a unit that stays put.
+
+Two units on the same step cannot both claim it:
+
+- While moves are scored one at a time, the unit that reached the step first keeps the claim.
+- When every unit is scored where it stands, the lowest unit ID keeps it.
+
+`TacticalAIHelpers::UpdateTradeSteps` rebuilds the step map only when a trade route changed since the last search. A route scores nothing once the plan captures its origin or destination, or a city on a sea route's path, since that capture cancels it. A plunderer's invisibility is judged at the step plot.
 
 [Military tactical flavors](military-tactical-flavors.md) can scale selected damage, bonus, and end-of-turn terms, reduce the pull into enemy territory, reward guarding cities and holding friendly ground, and change the danger penalty through RISK. At neutral values of 50, with RISK unset, these adjustments leave the rules unchanged.
 
