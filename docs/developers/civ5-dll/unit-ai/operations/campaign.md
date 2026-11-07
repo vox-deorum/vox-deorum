@@ -1,6 +1,8 @@
 # Unit AI: Military Campaign
 
-**Military campaign** logic decides when an AI player creates and maintains a persistent military operation. This page is the authority for its destination state:
+**Military campaign** logic decides when an AI player creates and maintains a persistent military operation. The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvDiplomacyAI.cpp`, and `CvTacticalAnalysisMap.cpp`. See the [operations overview](overview.md) for related control paths.
+
+## Campaign destination state
 
 | Term | Meaning |
 | --- | --- |
@@ -9,9 +11,7 @@
 | **Muster point** | The plot where the army assembles before moving to its goal. |
 | **Muster city** | The associated city that supplies the muster point when the family uses a city source. |
 
-The target and muster point are separate persistent values. Retargeting replaces the target and usually the army goal; it does not relocate the muster point. [Military organization](organization.md) owns formation slots, recruitment, membership, and release; [operation stages](stages.md) owns stage sequences. [Operation lifecycle](lifecycle.md#completion-abort-and-cleanup) defines each family's finishing condition. [Military tactics](../tactics/overview.md) owns per-turn movement and combat. See the [operations overview](overview.md) for related control paths.
-
-The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvDiplomacyAI.cpp`, and `CvTacticalAnalysisMap.cpp`.
+Target and muster persist separately. [Organization](organization.md) owns membership; [stages](stages.md) tracks progress; [lifecycle](lifecycle.md#completion-abort-and-cleanup) defines finishing conditions; [tactics](../tactics/overview.md) issues this turn's missions.
 
 ## Campaign families
 
@@ -29,7 +29,7 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilita
 
 ### Attack targets
 
-Several systems ask the same questions: which enemy cities an army could actually reach, which own city is the best place to launch from, and which own cities an enemy army could reach. Pathing armies across the map is expensive, so Military AI answers these questions once per turn and caches the answers as two lists of `CvAttackTarget` records. Each record is one candidate army path between a pair of cities:
+Military AI caches two lists of `CvAttackTarget` records: routes to enemy cities and reversed routes exposing our own cities. This avoids repeating expensive army pathfinding for each consumer. Each record describes one candidate path between two cities:
 
 | Field | Meaning |
 | --- | --- |
@@ -69,11 +69,21 @@ A nuclear attack pairs owned nuclear units with enemy cities in range. It avoids
 
 ## Target lifecycle
 
-Initialization stores the target and muster point, then sets the army goal. The army recruits and gathers at the muster point before moving toward its goal. [Operation stages](stages.md#lifecycle-overview) defines the Recruiting, Gathering, and Moving lifecycles; [operation completion and abort](lifecycle.md#completion-abort-and-cleanup) defines shared terminal-state handling.
+Initialization stores target and muster, then sets the army goal. Recruiting and gathering use muster; movement follows the goal. See [operation stages](stages.md#lifecycle-overview) for the stage sequence and [completion and abort](lifecycle.md#completion-abort-and-cleanup) for terminal handling.
 
 ### Retargeting
 
-Target validation runs during operation checks, including before and after army movement. A valid replacement updates the target and army goal while preserving the muster point.
+Target checks run before and after army movement. Each family's validator can keep its destination, replace it, or abort:
+
+```mermaid
+flowchart TD
+    V[Family validates destination] --> K[Keep current target]
+    V --> R[Choose valid replacement]
+    V --> A[Abort operation]
+    R --> U[Update target and army goal<br/>preserve muster point]
+    K --> M[Continue operation]
+    U --> M
+```
 
 | Family | Validation and replacement |
 | --- | --- |

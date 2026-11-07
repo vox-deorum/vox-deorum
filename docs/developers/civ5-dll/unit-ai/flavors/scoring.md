@@ -24,7 +24,7 @@ The search turns each flavor into a weight once, at the root position, and every
 
 ```mermaid
 flowchart TD
-    S[Assignment score<br/>plot score change + 10 x bonus + damage delta]
+    S["Assignment score<br/>plot score change + 10 x (damage delta + bonus)"]
     S --> D[Damage delta]
     S --> B[Bonus]
     S --> P[Plot score]
@@ -35,7 +35,7 @@ flowchart TD
     P --> P1["Desirability<br/>outside friendly territory / w(HOLD_GROUND)"]
     P --> P2[End-of-turn score]
     P2 --> E1["Danger penalty / w(RISK), when RISK is set"]
-    P2 --> E4["Turn-end safety threshold / w(RISK), when RISK is set"]
+    P2 -. separate safety gate .-> E4["Turn-end safety threshold / w(RISK), when RISK is set"]
     P2 --> E2["Frontline bonus x city hold weight in a city<br/>or w(HOLD_GROUND) in a citadel"]
     P2 --> E3["Home ground: HOLD_GROUND bonus"]
 ```
@@ -46,14 +46,43 @@ Damage and bonuses count ten times as much as plot score in the [assignment scor
 
 | Part | Stock rule | Flavored rule |
 | --- | --- | --- |
-| City damage | As forecast | x w(OCCUPATION), change capped at 500, with the positive shift faded by trade quality and safety (see the fade rules after the tables) |
+| City damage | As forecast | x w(OCCUPATION), change capped at 500, with the positive shift faded by [trade quality and safety](#positive-attack-shifts) |
 | Unit damage | As forecast | x w(ATTRITION), change capped at 500, with the positive shift faded the same way. On an enemy land unit standing on a plot our team owns, ATTRITION is read as max(ATTRITION, 50 + (HOLD_GROUND - 50) / 2), so HOLD_GROUND 100 counts as ATTRITION 75, HOLD_GROUND 50 lifts a low ATTRITION to neutral, and the two never stack |
 | City capture bonus | +100 | x w(OCCUPATION), capped. The bonus keeps its full shift, but the city and garrison damage on a capture still fades |
 | Unit kill bonus | +15 | x w(ATTRITION), capped, with the same HOLD_GROUND rule on our land, and faded by safety alone |
 | Attacks on city threats | None | HOLD_CITY above 50 rewards damage to enemies that threaten friendly cities in the search area. Each enemy gets one credit budget; both that budget and the extra bonus per attack are capped at 500. |
 | Damage taken, focus fire, kill effects, melee trade veto | As stock | Same, unscaled |
 
-A flavor above 50 lifts a damage score only as far as the attack is worth. The positive part of each damage shift is faded by two factors, each between 0 and 1. **Trade quality** is the damage dealt minus the damage taken (taken floored at 0), over the damage dealt. **Safety** is 1 minus k x danger over HP squared after the attack, where k is the same RISK-adjusted threshold `ScoreCombatUnitTurnEnd` uses (see [Positions](#positions-scoreplotforcombatunitmove-and-scorecombatunitturnend)), and danger is measured at the plot the attacker ends on: the target plot for an advancing kill, otherwise its attack plot. City and unit damage shifts fade by both factors; the kill bonus shift fades by safety alone. Negative shifts, the subtraction of damage taken, and the native bonuses never fade, so an attack with neutral flavors scores exactly as stock, and the fade takes no exemptions, not BRAVEHEART and not a frontline city. One limitation: the fade reads immediate post-attack exposure with raw danger, without the turn-end cover halving or edge floor, so it can undervalue a hit-and-retreat attack by a mobile ranged unit. The single-enemy condition that lowers k to 12 is read before the attack in the fade and after it at turn end.
+#### Positive attack shifts
+
+A flavor above 50 lifts a damage score according to trade quality and post-attack safety:
+
+```mermaid
+flowchart LR
+    D[Positive city or unit damage shift] --> T[Multiply by trade quality]
+    T --> S[Multiply by safety]
+    K[Positive unit-kill bonus shift] --> S
+    S --> R[Final flavor shift]
+    U[Negative shifts, damage taken,<br/>and native bonuses] --> P[Keep unchanged]
+```
+
+| Factor | Rule, clamped to 0 to 1 |
+| --- | --- |
+| **Trade quality** | Damage dealt minus damage taken (taken floored at 0), divided by damage dealt. |
+| **Safety** | 1 minus k x danger / post-attack HP squared. Uses the same RISK-adjusted k as [turn-end safety](#positions-scoreplotforcombatunitmove-and-scorecombatunitturnend). Land and sea attacks measure danger on the target plot after an advancing kill, otherwise on the attack plot. Aircraft use zero turn-end danger, so their safety factor is 1. |
+
+Neutral attacks keep stock scores. The fade applies even with BRAVEHEART aggression or a frontline city. It reads immediate exposure with raw danger, without turn-end cover halving or the edge floor, so it can undervalue mobile ranged hit-and-retreat attacks. The single-enemy condition lowering k to 12 is read before the attack here and after it at turn end.
+
+#### Friendly-city threat budgets
+
+HOLD_CITY rewards damage to enemies that can threaten friendly cities:
+
+| Stage | Rule |
+| --- | --- |
+| Prepare | Only above neutral HOLD_CITY, with a friendly-team city and an enemy in the root tactical plots. Reuse possible-attacker lists and estimate each relevant enemy/city pair once, using native quick damage, current garrison, and no interception. |
+| Budget | Each enemy gets (weight - 1) times its strongest predicted city hit, capped at 500. There is no city-ring reward or extra kill premium. |
+| Credit an attack | Reward the fraction of search-root remaining HP removed. Subtract cumulative credit before the hit from credit after it, so split hits, kills, and overkill cannot claim the same budget twice. |
+| Reuse | Candidate scoring uses cached values and integer arithmetic. No actual threat means no bonus lookups. No city-distance map is needed; minor civs use the same rule. |
 
 ### Positions: `ScorePlotForCombatUnitMove` and `ScoreCombatUnitTurnEnd`
 
@@ -62,14 +91,21 @@ A flavor above 50 lifts a damage score only as far as the attack is worth. The p
 | Desirability with enemies present | Line-distance table, or a flat 12 in a friendly city or when HP is below the minimum HP | With HOLD_GROUND above 50, a land unit's positive desirability on a plot outside our territory is divided by w(HOLD_GROUND). The minimum HP comes from RISK. |
 | Danger penalty | Danger relative to HP, flattened, adjusted for experience, doubled when alone | Divided by w(RISK) when RISK is set |
 | Turn-end safety threshold | `ScoreCombatUnitTurnEnd` rejects an end-turn plot when HP squared is below k x danger, with k 42, 23 after a kill or when the unit has no safe plot to flee to, or 12 for a kill while one enemy is counted | When RISK is set, k becomes k x 1000 / w(RISK), so at strength 1 a RISK of 100 halves k and a RISK of 0 doubles it; unset RISK or a RISK of 50 keeps k exactly. The stock exemptions for a frontline city or citadel and BRAVEHEART aggression, and the other gates, are unchanged. `canProbablyEndTurnAfterAssignment` runs the same check, so the effect applies there too |
-| Frontline bonus | +67 in a city or our own citadel within two plots of an enemy, or +33 in the weaker case | In a friendly-team city, x w(HOLD_CITY) at 50 or above, and x HOLD_CITY / 50 below it, so the bonus fades linearly to nothing at 0. A city captured during the search keeps the stock bonus. In an own citadel, x w(HOLD_GROUND) |
+| Frontline bonus | Base +67 in a city or our own citadel within two plots of an enemy, or +33 in the weaker case; friendly-team cities also add garrison value below | In a friendly-team city, x w(HOLD_CITY) at 50 or above, and x HOLD_CITY / 50 below it, so the whole bonus fades linearly to nothing at 0. A city captured during the search keeps the stock bonus. In an own citadel, x w(HOLD_GROUND) |
 | Terrain defense | Defense modifier / 5 | Same, unscaled |
 | Home ground | None | A land unit ending on a plot our team owns gets a HOLD_GROUND bonus on 5 + defense / 5. Below 50 the base is just 5, so a low flavor never makes cover look worse. |
 | Other terms | Friendlies, air cover, hiding, enemy citadels, domain, city distance, moves left | Same, unscaled |
 
-There is no city-ring reward. City threat preparation runs only above neutral HOLD_CITY, with a friendly-team city and an enemy in the root tactical plots. It reuses existing possible-attacker lists and estimates each relevant enemy/city pair once with the native quick damage forecast, current garrison, and no interception. Each enemy's budget is (weight - 1) times its strongest predicted city hit, capped at 500.
+#### Friendly-city garrison value
 
-An attack earns credit for the fraction of the enemy's search-root remaining HP it removes. Scoring subtracts cumulative credit before the hit from credit after it, so split hits, kills, and overkill cannot claim the budget twice. There is no extra kill premium. Candidate scoring uses cached values and integer arithmetic. A search with no actual threat skips bonus lookups entirely. The rule needs no city-distance map and also works for minor civs.
+A land unit in a friendly-team frontline city adds two terms before HOLD_CITY scales the combined bonus:
+
+| Term | Value |
+| --- | --- |
+| City strength | `GetGarrisonStrengthScore` values the unit's added city strength relative to the city's strength without a garrison. |
+| Protection | The positive reduction in danger penalty compared with the unit's safest available plot outside cities, using the same danger curve. |
+
+A city projected to fall even with the unit inside loses the frontline bonus and its related safety exemptions. [Garrison timing](../tactics/engagements.md#garrisons) determines whether the unit joins a zone search.
 
 ## RISK thresholds
 
@@ -99,7 +135,7 @@ At strength 1. "Bonus" terms are zero at 50.
 | OCCUPATION | City capture bonus | +100 | +50 | +200 |
 | ATTRITION | Unit damage | As forecast | Half | Double, change at most 500 |
 | ATTRITION | Unit kill bonus | +15 | +8 | +30 |
-| HOLD_CITY | Frontline bonus in our own city | +67, or +33 | None | +134 or +66 |
+| HOLD_CITY | Frontline base bonus in our own city, before garrison value | +67, or +33 | None | +134 or +66 |
 | HOLD_CITY | Friendly city threat, full budget earned | None | None | Up to +500 per enemy; total extra attack bonus up to +500 |
 | HOLD_GROUND | Frontline bonus in our own citadel | +67, or +33 | +34 or +17 | +134 or +66 |
 | HOLD_GROUND | Home ground, 25% hill | None | -3 | +10 |

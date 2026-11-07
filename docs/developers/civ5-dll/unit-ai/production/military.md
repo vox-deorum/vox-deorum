@@ -88,13 +88,34 @@ Both request weights read offense flavor through `GetPersonalityAndGrandStrategy
 
 A **muster point** is the assembly plot. Its **muster city** is the associated city, when the operation has one. [Military campaign](../operations/campaign.md#city-attacks-and-muster) explains how each family selects them.
 
-| Path | Selection and membership effect |
+### Request paths
+
+Formation demand reaches production or purchase through three paths:
+
+```mermaid
+flowchart TD
+    N[Formation need] --> W[Weighted request]
+    W --> S[Shared selection]
+    S --> O[Ordinary production]
+    O --> T[Trained unit<br/>unattached]
+    N -->|eligible city training fallback| C{Wartime?}
+    C -->|yes| H[Queue head<br/>commits slot]
+    C -->|no| A[Appended order<br/>no commitment]
+    N -->|successful direct purchase| F[Slot filled immediately]
+```
+
+Operation requests start with a large initial weight and gain pressure when skipped. Army requests receive less priority. Both remain ordinary candidates and can lose shared selection.
+
+### Selection and commitment exceptions
+
+| Path | Condition or exception |
 | --- | --- |
-| Normal queue | Operation requests receive a large initial weight and gain pressure when skipped. Army requests receive less priority. Both remain ordinary production candidates and can lose shared selection. A trained unit enters play unattached. |
 | Muster-city gate | During normal queue selection, a request proceeds only in the city associated with the next operation request's muster point and with suitable landmass or ocean access. This shared check can also prevent an army request from reaching suitability. |
-| Operation commitment | `CvCity::CheckForOperationUnits` can add a training order when purchase-mode sanity rejects a unit but production sanity accepts it. Wartime orders go to the queue head and commit the formation slot; peacetime orders are only appended. Insufficient funds after a successful purchase-mode check do not trigger this fallback. |
+| City request gates | `CvCity::CheckForOperationUnits` waits while average income is negative or any `ORDER_TRAIN` is already queued. |
+| Training fallback | Purchase-mode sanity must reject the unit, production sanity must accept it, and training must take fewer than seven turns. |
+| Purchase execution | Insufficient funds or failed purchase legality after a successful purchase-mode sanity check do not trigger training fallback. |
 | Direct purchase | A successful purchase assigns the unit directly to a committed formation slot or offers it to the recruiting operation closest to completion. Military AI can also buy the last uncommitted required slot for an eligible recruiting operation. |
 
-A training commitment reserves the need, not the finished unit. Completion returns the formation slot to the need list, and reserve recruitment may assign the new unit to any compatible operation. Direct purchase is the only path that immediately fills a formation slot.
+A training commitment reserves the need. Completion returns the slot to the need list and leaves the unit unattached; reserve recruitment may assign it to any compatible operation.
 
 [Military organization](../operations/organization.md#recruitment) explains how reserve recruitment and direct purchases become formation membership.

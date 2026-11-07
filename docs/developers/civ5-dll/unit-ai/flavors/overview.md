@@ -1,22 +1,10 @@
 # Unit AI: Military Tactical Flavors
 
-**Military tactical flavors** are five 0 to 100 dials that change how [tactical simulation](../simulation/overview.md) judges a plan. They don't add new moves or remove safety checks. They change how much the search cares about cities, enemy units, its own cities and territory, and danger. As a result, a different plan can win among the moves the search would already consider.
+**Military tactical flavors** are five 0 to 100 dials that weight cities, enemy units, friendly territory, and danger in [tactical simulation](../simulation/overview.md). They steer plan selection within the search's existing moves and safety gates.
 
-This page is part of the [Unit AI guide](../overview.md). It explains where a search's flavors come from and what they leave unchanged. [Scoring](scoring.md) explains how the flavors change search scores, with the weight curve, RISK thresholds, extreme values, and worked examples.
+This page covers flavor resolution. [Scoring](scoring.md) covers weights, RISK thresholds, and worked examples; the [Unit AI guide](../overview.md) shows the surrounding systems.
 
 Every flavor is neutral at 50. A search with all five at 50 and RISK unset keeps stock scoring.
-
-Each search gets its own flavors in three layers:
-
-1. The player's **general vector**, from the leader's personality, the active strategies, and Vox Deorum custom flavors.
-2. **Modifiers** set against the civ being fought, for the running operation, or for the target's dominance zone.
-3. An optional **intent default** for the kind of search, behind a mod option that is off by default.
-
-The code lives under `civ5-dll/CvGameCoreDLL_Expansion2`:
-
-- `CvTacticalAI.cpp` and `CvTacticalAI.h` hold the `STacticalFlavors` struct, the resolution helpers in `TacticalAIHelpers`, the scoring terms, and the intent table.
-- `CvFlavorManager` holds the conversion between the 0 to 100 scale and the game scale.
-- `CvMilitaryAI`, `CvAIOperation`, and `CvTacticalAnalysisMap` hold the civ, operation, and zone modifiers.
 
 ## The five flavors
 
@@ -57,7 +45,12 @@ Both search callers, the coordinated engagement and the ranged opportunity attac
 | Strategy change | The active strategies' change to the flavor, applied in game scale | Same |
 | Custom flavors | While active, the custom value replaces the default, and the strategy change still applies. A leader without `FLAVOR_RISK` keeps following its offense. | Same |
 
-Vox Deorum's options SQL only adds the five flavor types, and no leader gets a `FLAVOR_RISK` row. When a leader has no `FLAVOR_RISK` (or the database has no such type), the DLL starts RISK from 10 x the leader's offense, read with the grand strategy applied, which is the stock rule (see [RISK thresholds](scoring.md#risk-thresholds)). It reads offense at runtime because the game randomizes each leader's personality flavors at the start: a copy made in SQL would be randomized on its own and drift from the offense the game actually uses. Strategy rows on `FLAVOR_RISK` still move RISK from that start. Leader rows are detected by a nonzero base personality, since the game never randomizes a zero flavor.
+| RISK fallback detail | Rule |
+| --- | --- |
+| Shipped data | Vox Deorum's options SQL adds the five types but no leader `FLAVOR_RISK` rows. |
+| Missing type or leader row | Start from 10 x runtime offense, with grand strategy applied, preserving [stock thresholds](scoring.md#risk-thresholds). Strategy rows can still shift it. |
+| Why runtime offense | Personality randomizes at game start. An SQL copy would randomize independently and drift from the offense in use. |
+| Detecting a leader row | A nonzero base personality indicates a row; the game never randomizes a zero flavor. |
 
 A strategy or Vox Populi data row can name one of the five flavors to move it, the same way strategies move any other flavor.
 
@@ -72,7 +65,7 @@ Strategy rows, custom flavors, and modifiers all work in the **game scale**, the
 | Start | +40 in game scale | -40 in game scale |
 | ----- | ----------------- | ----------------- |
 | 50    | 71                | 29                |
-| 80    | 86                | 72                |
+| 80    | 86                | 71                |
 
 ### Modifiers
 
@@ -94,16 +87,29 @@ Which modifiers a search picks up:
 
 ### Intent defaults
 
-With the `VOX_TACTICAL_INTENT_FLAVORS` mod option on, each search also adds a default for its **search intent**, the purpose label each caller passes, such as a city assault or a reinforcement move. The defaults are in 0 to 100 points, added after the modifiers and clamped to 0 to 100. The default stands in for an operation or zone that has no say of its own, so in any slot where the operation or zone modifier is set (nonzero), that modifier wins and the slot's intent default is skipped. A civ modifier doesn't do this, since it describes the enemy rather than the kind of fight. The defaults live in one table, `TACTICAL_INTENT_FLAVOR_DEFAULTS` in `CvTacticalAI.cpp`, with one row per intent and one column per flavor. Edit the numbers there. The build fails if a search intent is added without a matching row.
+**Search intent** labels the caller's purpose, such as city assault or reinforcement. The default-off `VOX_TACTICAL_INTENT_FLAVORS` option adds intent defaults after modifiers, in 0 to 100 points, then clamps to 0 to 100.
+
+| Condition in a flavor slot | Intent default |
+| --- | --- |
+| Operation or zone modifier is nonzero | Skip it; the explicit modifier wins. |
+| Only a civ modifier is nonzero | Apply it; the civ modifier describes the enemy, not the kind of fight. |
+| No modifier is nonzero | Apply it. |
+
+Edit `TACTICAL_INTENT_FLAVOR_DEFAULTS` in `CvTacticalAI.cpp`, one row per intent and one column per flavor. Adding an intent without a row fails the build.
 
 ### When RISK counts as set
 
-RISK always sets the [thresholds](scoring.md#risk-thresholds). It also weighs the danger penalty and scales the turn-end safety threshold, but only when it is **set**, meaning something beyond the leader default moved it:
+RISK always sets the [loss allowance and minimum-HP thresholds](scoring.md#risk-thresholds). Its **set** flag controls the extra danger and safety scaling:
 
-- a strategy or custom flavor changed the general RISK,
-- a civ, operation, or zone modifier changes RISK,
-- the applied intent default changes RISK, or
-- a caller such as the simulator pins RISK.
+```mermaid
+flowchart TD
+    S[Strategy or custom flavor<br/>changed general RISK] --> Y[RISK is set]
+    M[Civ, operation, or zone modifier<br/>changes RISK] --> Y
+    I[Applied intent default<br/>changes RISK] --> Y
+    C[Caller pins RISK<br/>such as the simulator] --> Y
+    Y --> W[Also weight danger penalty<br/>and scale turn-end safety threshold]
+    N[Only the leader default] --> U[RISK is unset<br/>keep stock danger and safety scaling]
+```
 
 Without this rule, every leader whose offense isn't 5 would score danger differently from stock.
 
@@ -124,3 +130,13 @@ Flavors are on the search's hot path, so the neutral case stays close to free:
 ## The simulator
 
 The tactical simulator in `vox-deorum-rl` extracts this code from the DLL source instead of keeping copies: the conversion table and its helpers, the intent table, the resolution helpers, the RISK thresholds, and every scoring term. The capture records each search's final vector, whether RISK was set, the counterpart, and the modifiers in force, so simulated searches resolve the same way.
+
+## Source map
+
+The code lives under `civ5-dll/CvGameCoreDLL_Expansion2`:
+
+| Source | Owns |
+| --- | --- |
+| `CvTacticalAI.cpp` and `CvTacticalAI.h` | `STacticalFlavors`, `TacticalAIHelpers` resolution, scoring terms, intent table |
+| `CvFlavorManager` | Conversion between 0 to 100 and game scale |
+| `CvMilitaryAI`, `CvAIOperation`, `CvTacticalAnalysisMap` | Civ, operation, and zone modifiers |

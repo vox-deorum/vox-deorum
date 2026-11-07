@@ -2,7 +2,7 @@
 
 **Military tactics** turns the visible map into this turn's military missions. It moves persistent-operation armies first, assigns local combat and support to **independent units**, then leaves eligible units for Homeland AI. An independent unit is a movable, unprocessed combat-capable unit with no Army ID.
 
-This guide covers Tactical AI's turn order, priorities, and specialized moves. [Operation lifecycle](../operations/lifecycle.md) defines shared claims and the Tactical-to-Homeland handoff. [Campaigns](../operations/campaign.md) define targets, army goals, muster points, and muster cities; [organization](../operations/organization.md) defines formation slots, Army IDs, recruitment, and release; [stages](../operations/stages.md) describes each operation family's state sequence. [Shared concepts](../concepts.md#dominance-zones) defines dominance zones.
+For persistent state, see [campaign targets and muster](../operations/campaign.md), [army membership](../operations/organization.md), and [operation stages](../operations/stages.md). [Operation lifecycle](../operations/lifecycle.md) owns shared claims and the Tactical-to-Homeland handoff; [shared concepts](../concepts.md#dominance-zones) defines dominance zones.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTacticalAI.cpp`, `CvTacticalAnalysisMap.cpp`, `CvAIOperation.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`. Start at the [unit AI overview](../overview.md) for the surrounding systems.
 
@@ -17,7 +17,26 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTactic
 
 ## Tactical turn order
 
-`CvTacticalAI::Update` refreshes visibility, focus areas, and [tactical targets](targets-and-postures.md#tactical-targets); recruits current-turn units; then processes army movement, zone combat, reinforcement, global priorities, and review. Eligible remaining units pass to Homeland AI.
+`CvTacticalAI::Update` prepares the turn; `ProcessDominanceZones` dispatches the passes below. Earlier passes claim units before later ones.
+
+```mermaid
+sequenceDiagram
+    participant T as Tactical AI
+    participant H as Homeland AI
+    T->>T: Refresh visibility, focus areas, targets, then recruit
+    alt Barbarian
+        T->>T: One global target list and priority ladder
+    else Other AI player
+        T->>T: Global high: heal, move armies, garrisons
+        T->>T: Each zone: emergency purchase, then posture work
+        T->>T: Hold deferred garrisons, then reinforce zones
+        T->>T: Global middle, then global low priorities
+    end
+    T->>T: Review unassigned units and make final safety moves
+    Note over H: Rebuild eligible-unit list<br/>after Tactical AI
+```
+
+Hedgehog also reinforces during its own posture work, before the regular reinforcement pass. See [tactical reinforcement](movement.md#tactical-reinforcement).
 
 ## Independent units and priorities
 
@@ -51,12 +70,12 @@ A camp defender stays assigned. Ranged defenders fire from camp; melee defenders
 
 ## Specialized execution
 
-**Amphibious landings** run after city capture for embarked units still near the target. `ExecuteLandingOperation` greedily assigns units to reachable coastal plots, favoring survivable plots close to the target, ranged hills, legal landmass access, positive attacks, and clustered landings. This is not a simulated position search.
-
-**Paradrops** are opportunistic. During immediate pillage, paratroopers in range are tried before ground units against enemy citadels and improved resources. No other pass plans a drop, so drops never enter the tactical simulation.
-
-**Support units** are outside the main simulation. After combat planning succeeds, a second search can interleave Great General, Great Admiral, or siege-tower moves before each attack so the relevant aura is present. See [support placement](../simulation/overview.md#support-placement).
+| Move | Trigger and selection | Search |
+| --- | --- | --- |
+| **Amphibious landing** | After city capture, `ExecuteLandingOperation` assigns nearby embarked units to reachable coastal plots. It favors survival, target proximity, ranged hills, legal landmass access, positive attacks, and clustered landings. | Greedy assignment |
+| **Paradrop** | Immediate pillage tries in-range paratroopers before ground units against enemy citadels and improved resources. No other pass plans a drop. | Outside tactical simulation |
+| **Support move** | After a combat plan succeeds, Great Generals, Great Admirals, and siege towers can move before attacks to supply their aura. | Separate [support-placement search](../simulation/overview.md#support-placement) |
 
 ## Implementation trace
 
-`CvTacticalAI::Update` refreshes targets and recruits units. `ProcessDominanceZones` runs army movement, postures, reinforcement, global priorities, and review. Operation `DoTurn` and `Move` record progress and stage transitions; assignment helpers issue unit missions; `CvHomelandAI` claims eligible leftovers. For cross-system logs, see [operation diagnostics](../operations/lifecycle.md#diagnostics).
+Operation `DoTurn` and `Move` record progress and stage transitions; assignment helpers issue missions; `CvHomelandAI` claims eligible leftovers. For cross-system logs, see [operation diagnostics](../operations/lifecycle.md#diagnostics).

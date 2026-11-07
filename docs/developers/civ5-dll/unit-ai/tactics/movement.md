@@ -23,11 +23,39 @@ Operation state and the current turn target control army behavior; [zone posture
 
 `PlotReinforcementMoves` redistributes available units around a zone's city. `ProcessDominanceZones` calls it for every zone after all posture attacks and deferred garrison work, before global middle-priority moves. Hedgehog also calls it immediately after its own attacks, so it can claim units before later zones fight and before deferred garrisons are held. That zone is considered again in the regular reinforcement pass. Coastal cities have separate land and water zone calls.
 
-The destination must have a city and must not be withdrawing. A city belonging to another team needs enemies in its zone. A zone already dominant in both overall and ranged strength is skipped unless it lacks melee strength, in which case ranged recruits are excluded. An enemy-dominated zone also needs a neighboring zone owned by the player.
+### Destination and recruitment
 
-Recruitment scans plots using the city's mixed-army pathfinder and `GetRecruitRange` limit, including units already in the destination zone. This scan permits unrevealed plots and foreign territory; individual movement paths are checked later. Recruits must pass the normal Tactical eligibility checks and match the zone's land or sea domain. It generally leaves units in other contested zones, with exceptions for withdrawing zones, embarked units, and land units in cities that are not in danger of falling. It also excludes units needing healing, Great Generals and Admirals, civilian sappers, siege units entering enemy-dominated zones, and units with attack targets more than four plots from the destination city. A unit covering a friendly civilian stays and is processed. Reinforcement proceeds only when the zone's existing units plus incoming recruits total at least two.
+The destination and its recruits must clear these checks before positioning begins.
+
+```mermaid
+flowchart TD
+    A[Destination city and zone checks pass] --> B[Scan recruit range]
+    B --> C[Eligible recruits matching land or sea domain]
+    C --> D{At least one recruit,<br/>and total force at least two?}
+    D -->|no| X[No reinforcement]
+    D -->|yes| P[PositionUnitsAroundTarget]
+```
+
+| Destination check | Requirement |
+| --- | --- |
+| City and withdrawal | The destination must have a city and must not be withdrawing. |
+| Another team's city | The zone must contain enemies. |
+| Zone dominance | A zone dominant in both overall and ranged strength is skipped unless it lacks melee strength; in that case ranged recruits are excluded. |
+| Enemy-dominated zone | An enemy-dominated zone also needs a neighboring zone owned by the player. |
+
+| Recruitment rule | Effect |
+| --- | --- |
+| Scan | The city's mixed-army pathfinder scans within the `GetRecruitRange` limit, including units already in the destination zone. |
+| Visibility and territory | The scan permits unrevealed plots and foreign territory; individual movement paths are checked later. |
+| Eligibility and domain | A recruit must pass the normal Tactical eligibility checks and match the zone's land or sea domain. |
+| Units in other contested zones | They generally stay there. Exceptions are withdrawing zones, embarked units, and land units in cities that are not in danger of falling. |
+| Excluded units | Units needing healing, Great Generals and Admirals, civilian sappers, siege units entering enemy-dominated zones, and units with attack targets more than four plots from the destination city. |
+| Friendly-civilian cover | A unit covering a friendly civilian stays and is processed. |
+| Minimum force | At least one eligible recruit is required, and existing units plus incoming recruits must total at least two. Count recruits already in the zone only once. |
 
 This plot scan has no Army ID exclusion. An eligible army member left unprocessed by operation movement can participate. Tactical reinforcement preserves formation membership; [army reserve recruitment](../operations/organization.md#recruitment) fills formation slots at setup and during Recruiting. Ordinary operations stop reserve scans on entering Gathering; later losses can leave slots open or cause an abort, while direct assignment paths have their own rules.
+
+### Execution
 
 `PositionUnitsAroundTarget` executes the reinforcement:
 

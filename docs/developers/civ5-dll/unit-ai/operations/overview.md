@@ -1,12 +1,26 @@
 # Unit AI: Operations Overview
 
-**Operations** connect multi-turn plans to this turn's missions. This overview is the entry point for contributors and routes readers to the page that owns each rule. Military readers start with [military campaign](campaign.md) and [military organization](organization.md); civilian readers start with [civilian operation](civilian.md). Both then read [operation lifecycle](lifecycle.md) and [operation stages](stages.md). The parent [Unit AI overview](../overview.md) places operations among the other responsibilities.
+**Operations** connect multi-turn plans to this turn's missions. Start with [military campaign](campaign.md) and [military organization](organization.md) for armies, or [civilian operation](civilian.md) for civilians. The parent [Unit AI overview](../overview.md) shows the surrounding systems.
 
-A **military operation** is a persistent `CvAIOperation` that connects campaign decisions across turns to an army's formation and this turn's missions. The persistent record holds the campaign state while the army holds formation membership and the Unit AI issues missions. Homeland AI handles eligible units outside an army.
+A **military operation** is a persistent `CvAIOperation`: it stores campaign state across turns, while its army stores formation membership.
 
 The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilitaryAI.cpp`, `CvAIOperation.cpp`, `CvArmyAI.cpp`, `CvTacticalAI.cpp`, `CvTacticalAnalysisMap.cpp`, `CvHomelandAI.cpp`, and `CvUnit.cpp`.
 
-## Pages
+## From campaign to missions
+
+```mermaid
+flowchart TD
+    C[Campaign<br/>target, goal, muster] --> O[Persistent operation<br/>state and lifecycle]
+    O --> A[Army<br/>formation slots and members]
+    A --> T[Tactical AI<br/>movement and combat missions]
+    O -->|completion or abort releases members| U[Units outside an army]
+    U -->|if still eligible| T
+    T -. remaining eligible units .-> H[Homeland AI<br/>remaining missions]
+```
+
+The operation's [stages](stages.md) track progress; [tactics](../tactics/overview.md) chooses missions from the current map and operation state. Homeland then [rebuilds its own eligible-unit list](lifecycle.md#tactical-to-homeland-handoff).
+
+## Find the owning guide
 
 | Page | Responsibility |
 | --- | --- |
@@ -18,16 +32,6 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvMilita
 | [Military tactics](../tactics/overview.md) | Current-turn movement, postures, and combat priorities. |
 | [Tactical simulation](../simulation/overview.md) | Coordinated combat planning, scoring, acceptance, and replay. |
 | [Pathfinding](../pathfinding.md) | Movement policy, reachable plots, and danger costs. |
-
-## Military operation layers
-
-| Layer | Responsibility | Detailed guide |
-| --- | --- | --- |
-| **Campaign** | Creates the operation, defines and validates its target, goal, and muster. | [Military campaign](campaign.md) |
-| **Organization** | Creates the army, fills formation slots, gathers members, and releases them. | [Military organization](organization.md) |
-| **Stages** | Moves the operation through setup, Recruiting, Gathering, Moving, At Target, and terminal states. | [Operation stages](stages.md) |
-| **Lifecycle** | Runs the shared per-turn process and owns completion, control state, handoff, and diagnostics. | [Operation lifecycle](lifecycle.md) |
-| **Tactics** | Uses current map and operation state to assign movement and combat. | [Military tactics](../tactics/overview.md) |
 
 ## Implementation map
 

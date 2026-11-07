@@ -10,20 +10,25 @@ A **candidate** is a legal option with a positive base weight. **Suitability** a
 
 ```mermaid
 flowchart LR
-    F[Effective flavors] --> B[Precheck candidates]
-    L[Legal city options] --> B
-    D[Demand and current state] --> S[Suitability]
+    F[Flavors and legal options] --> B[Precheck list<br/>positive base weights]
     B --> S
-    S --> T[Duration-adjusted survivors]
-    T --> C[Selection]
+    D[Demand and current state] --> S[Suitability<br/>adjust weights or reject]
+    D --> B
+    S --> T[Duration penalty]
+    T --> E{Any survivors?}
+    E -->|yes| C[Selection]
+    E -->|no| R[Restore precheck list]
+    R --> C
     C --> O[[Queue-head order]]
 ```
 
-1. **Build the precheck list.** The city collects legal options with positive base weights. Processes normally require at least five production per turn, but can enter when no other option does.
-2. **Evaluate suitability.** Each production AI adjusts its candidates for current conditions. Nonpositive results leave normal selection and are logged as `SKIPPED`.
-3. **Adjust for duration.** A nonlinear penalty lowers the weight of slow builds. Normal production applies it after suitability; purchase evaluation applies it before suitability.
-4. **Recover from an empty result.** If every candidate fails suitability, the **all-failed fallback** restores the precheck list. It can therefore select an option that suitability rejected.
-5. **Select the order.** Current production receives some inertia, and valid victory projects or defense processes can win directly. Otherwise the city chooses randomly among candidates close enough to the leading weight. Processes receive no current-build inertia.
+| Step | Selection rule |
+| --- | --- |
+| Precheck | Processes normally need at least five production per turn, but can enter when no other option does. |
+| Suitability | Nonpositive results leave normal selection and are logged as `SKIPPED`. |
+| Duration | A nonlinear penalty reduces slow-build weights. Production applies it after suitability; purchase evaluation applies it before. |
+| All-failed fallback | Restoring precheck can select an option that suitability rejected. |
+| Selection | Current production gets inertia, except for processes. Valid victory projects or defense processes can win directly; otherwise selection is random among candidates close enough to the leading weight. |
 
 `PRE` records the sorted precheck list, and `POST` records the duration-adjusted survivors. Both lists contain only legal candidates with positive base weights.
 

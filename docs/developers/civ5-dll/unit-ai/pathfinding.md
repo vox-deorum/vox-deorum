@@ -33,4 +33,22 @@ When a simulated kill frees a plot, subsequent queries can ignore that dead unit
 
 For AI units, end-of-turn path cost penalizes risky water, foreign or unowned territory, poor terrain, and unknown plots. Its main cost is projected danger relative to current health. High-danger stops in the near future cost more; later stops matter less because they will be re-planned. Civilians and embarked units receive stronger penalties and can be rejected outright by the abort-in-danger policy.
 
-Danger evaluation itself uses pathfinding to estimate hostile reach. Those searches ignore danger, while ordinary pathfinding refreshes danger before searching. This prevents danger evaluation, pathfinding, and tactical simulation from recursing into each other. Within one search, the pathfinder computes each plot's end-turn danger once and reuses it for routes ending a turn there.
+### Recursion boundary
+
+A **hostile-reach query** estimates enemy movement with the ignore-danger policy, breaking the recursion between danger evaluation, pathfinding, and tactical simulation:
+
+```mermaid
+sequenceDiagram
+    participant P as Ordinary pathfinding
+    participant D as Danger evaluation
+    participant H as Hostile-reach pathfinding
+    P->>D: Refresh danger
+    D->>H: Query hostile reach
+    H->>H: Search with ignore-danger policy
+    Note over H: No danger refresh,<br/>so the chain stops
+    H-->>D: Reach estimate
+    D-->>P: Plot danger
+    P->>P: Search with danger costs
+```
+
+Within one search, each plot's end-turn danger is computed once and reused across routes.

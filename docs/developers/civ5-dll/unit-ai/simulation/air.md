@@ -4,7 +4,14 @@ The default-off `VOX_TACTICAL_AIR_SEARCH` mod option lets bombers, fighters, and
 
 See the [simulation overview](overview.md) for the shared combat search and [conventional air operations](../tactics/air.md) for aircraft ownership and the option-off path.
 
-The option is declared in `NewCustomModOptions.xml`, `CustomMods.h`, and `CustomMods.cpp`. The air code lives in `CvTacticalAirSearch.cpp`: helpers, scorers, the option cut, and the position's air state. `CvTacticalAirSearch.h` declares the helpers and the interceptor state a position keeps, and the position's air members stay in `CvTacticalAI.h` with the rest of the class. `CvTacticalAI.cpp` keeps short calls into the air code where the main search adds units, expands positions, and applies assignments. It shares the search internals the scorers need through `CvTacticalSearchShared.h`. `CvPlot::GetInterceptorValue`, the interceptor eligibility and ranking rule that live combat and the search share, stays in `CvPlot.cpp` beside `GetBestInterceptor`.
+| Source | Responsibility |
+| --- | --- |
+| `NewCustomModOptions.xml`, `CustomMods.h`, `CustomMods.cpp` | Declare the option. |
+| `CvTacticalAirSearch.cpp` and `.h` | Air helpers, scorers, option cut, and per-position air and interceptor state. |
+| `CvTacticalAI.h` | The position class's air members. |
+| `CvTacticalAI.cpp` | Calls into air code during recruitment, expansion, and assignment application. |
+| `CvTacticalSearchShared.h` | Search internals shared with air scorers. |
+| `CvPlot.cpp` | `GetInterceptorValue` and `GetBestInterceptor`: eligibility and ranking shared by live combat and search. |
 
 ## Recruitment and actions
 
@@ -41,6 +48,8 @@ A missile at a base likely to be lost gets a strike bonus under the same danger 
 
 ## Keeping the search bounded
 
+### Aircraft groups and limits
+
 Aircraft with the same owner, type, base, promotions, HP, moves, and attacks made are interchangeable. Only the lowest-ID available member proposes actions. Standing that member down also stands down the rest of the group in ID order. The expansion loop adds each combo move through `addAssignmentsWithAirGroups`, which applies the one or two rows and then this group rule, so the rule lives in one place.
 
 | Limit | With air search enabled |
@@ -51,13 +60,35 @@ Aircraft with the same owner, type, base, promotions, HP, moves, and attacks mad
 
 `getPreferredAssignmentsForAirUnit` scores each candidate once into reusable scratch rows outside the pool, then copies only the retained choices into the pool. `getUnitsToDropWithAircraft` enforces the participant cap.
 
-An **idle group** is an aircraft group whose leader has nothing worth searching when the search starts. In the importance pass of `dropSuperfluousUnits` it has no positive strike or sweep, and its best strike there, under the interceptors the root has left, is worse than a net loss of 10 damage points (`TACTSIM_AIR_HOPELESS_RANK`). The pass hands that best strike rank to `getUnitsToDropWithAircraft`, so the strikes are scored once. This usually means every target sits under several full-strength interceptors. `getUnitsToDropWithAircraft` records each idle group with the visible interceptors near its targets. In any position where none of those interceptors has spent an interception, lost its base or taken damage, the idle leader only stands down, since its options score as they did at the root. Once a sweep, a strike or a capture changes one of them, the group is scored in full again, so a sweep or an earlier strike can still clear the way for it. The margin covers targets that ground attacks soften first. Aircraft on a ship are never idle, since the ship's moves can bring new targets in range.
+### Idle groups
+
+An **idle group** has no worthwhile action at the root, usually because several full-strength interceptors cover every target. `dropSuperfluousUnits` classifies it during the importance pass:
+
+| Root condition | Required value |
+| --- | --- |
+| Positive strike or sweep | None |
+| Best strike under the root's remaining interceptors | Worse than a net loss of 10 damage points (`TACTSIM_AIR_HOPELESS_RANK`) |
+| Base | On land; ship-based groups are never idle because carrier movement can reveal new targets. |
+
+The pass gives its best strike rank to `getUnitsToDropWithAircraft`, avoiding duplicate scoring. That helper records the visible interceptors near each idle group's targets.
+
+```mermaid
+flowchart TD
+    I[Idle group at a later position] --> C{Any recorded interceptor changed?}
+    C -->|no| S[Only offer stand-down]
+    C -->|spent an interception,<br/>lost its base, or took damage| R[Score the group's full options again]
+    W[Sweep, strike, or capture] --> C
+```
+
+Earlier air actions can therefore clear the way for an idle group. The negative margin allows for targets that ground attacks soften first.
 
 Carrier danger includes all aircraft aboard, even those outside the search, except cargo the plan has already spent.
 
 Equivalent-position pruning compares interceptor state and damage records as well as the normal combat state (`airStateEquals`). These records survive expansion so later comparisons can still use them.
 
-Ranking a sweep rescores the strikes of the other aircraft groups, so the search keeps several air values that cannot change while they are kept. None of these caches changes a plan.
+### Air caches
+
+Ranking a sweep rescores other groups' strikes, so the search caches values for the lifetimes below.
 
 | Cached value | Kept for | Notes |
 | --- | --- | --- |

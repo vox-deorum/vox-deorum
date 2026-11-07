@@ -58,26 +58,57 @@ These units are in the pool but are skipped by [striking-distance recruitment](#
 | Unit | Why zone attacks skip it | Searches it can still enter |
 | --- | --- | --- |
 | Operation army member | It moves with its army. | Army contact and army gathering. |
-| Garrison of a border, blockaded, or exposed city | The [garrison pass](#garrisons) marks it processed before zone work. | Army contact earlier in the turn, and its own ranged opportunity search. |
+| Garrison already processed by the [early garrison pass](#garrisons) | It has taken its opportunity attack and holds the city. | Army contact earlier in the turn, or its own opportunity search before being processed. |
 | Unit processed by an earlier pass | Healing, an earlier engagement, or another move already used its turn. | Only the ones that ran before. |
 | Unit with nothing in reach | No target-driven pass selects it. | Reinforcement positioning, ranged opportunity searches, and Homeland AI's opportunity attacks. |
 | Ranged unit not expected to deal meaningful damage | The damage check leaves it out. | Positioning and ranged opportunity searches. |
 | Defense fighter: an aircraft whose unit type's default UnitAI role is air defense, such as a fighter | It is reserved for interception and sweeps, so it is never recruited as a striker. | Sweep recruitment picks sweep-capable fighters for the same attack. In stock play they sweep greedily before the search. Under the air search they join it. |
 | Unit covering a friendly civilian | It stays with the civilian. | None while it covers. |
 
+Land garrisons left unprocessed by the early pass can join zone attacks and city capture. [Garrison timing](#garrisons) controls that choice.
+
 ## Garrisons
 
-Garrisons are recruited into the current-turn pool like other independent units, and they stand inside their city's zone. What keeps a threatened city's garrison out of engagements is timing. `PlotGarrisonMoves` runs in the global high-priority pass, before any posture work:
+Garrisons enter the current-turn pool like other independent units. `PlotGarrisonMoves` runs after army movement and before zone combat, with a second hold pass before regular reinforcement.
 
-1. Every friendly city fires at its best target, as a safety net.
-2. Each city that is a border city, has a blockaded plot, or is exposed to an enemy then handles its garrison. The garrison takes an opportunity attack and is marked processed with a skip mission, whatever the threat. The threat only decides whether that attack may move: movement is allowed when fewer than two enemies threaten the city and the player has more than one city. A threatening enemy is one adjacent to the city, or two plots away and able to reach the city this turn. Without movement, a ranged garrison shoots from the city or steps out and back, and a melee garrison attacks an adjacent enemy only when the attack would not kill it, since a kill would carry it out of the city.
-3. When such a city needs a garrison and has none or a weak one, it moves in a better one, preferring ranged land units. The new garrison also takes an opportunity attack and is marked processed.
-4. After every city, naval units in those cities upgrade if they can, or take an opportunity attack with movement allowed. These units stay available to later passes.
+### Garrison pass order
 
-From then on, every zone search that turn skips these garrisons: zone unit attacks, city capture, and reinforcement positioning all require a unit that is not yet processed. They fire alone, before the planned attacks of that turn, and the zone's searches treat them as part of the board, never as actors. Two exceptions remain:
+```mermaid
+flowchart TD
+    A[Army movement and contact<br/>can borrow nearby garrisons] --> G[Early garrison pass]
+    G --> T{Eligible land garrison<br/>faces 2 or more enemies,<br/>or city falls even with it?}
+    T -->|yes| D[Leave available for zone searches]
+    T -->|no| H[Opportunity attack, then hold<br/>mark processed]
+    D --> N[Try a stronger garrison if needed<br/>unless the city is under siege]
+    H --> N
+    N --> Z[Zone posture work]
+    Z --> F[Deferred garrison pass<br/>hold units that pass its checks]
+    F --> R[Regular reinforcement]
+```
 
-- **Army contact runs earlier.** Army moves come before the garrison pass, and [army contact](#army-contact) also takes nearby non-army units that can attack the enemy, so a garrison can join an army's fight before it is marked processed.
-- **Interior cities.** Their garrisons skip this pass and stay in the pool for zone attacks. Two native comments, in `FindUnitsWithinStrikingDistance` and `PlotGarrisonMoves`, say garrisons are never recruited into the pool and are used in zone attacks. Neither matches the current code.
+The early pass handles border, blockaded, or exposed cities. Interior garrisons skip it and stay available. All searches still require usable, unprocessed units; upgraded, army-assigned, explorer, and dying units have their own gates.
+
+### Attacks, replacements, and holding
+
+| Work | Rule |
+| --- | --- |
+| City fire | Each friendly city target tries its best ranged shot first, as a safety net. |
+| Threat count | Count enemies adjacent to the city, plus enemies two plots away that can reach it this turn. A city falls only when projected damage is lethal and a surviving enemy can capture it. |
+| Early opportunity attack | For a garrison not deferred to zone work, allow movement only with fewer than two threats and more than one owned city. With movement off, ranged units shoot or step out and back; melee units avoid a killing advance out of the city. Then issue a skip mission and mark processed. |
+| Replacement | When the city needs a stronger garrison, prefer ranged land units. Avoid replacement during siege when a garrison is already present. A deferred old garrison can move to a free plot while remaining unprocessed; the incoming garrison takes an opportunity attack and is processed. |
+| Naval units in these cities | Upgrade when possible; otherwise take an opportunity attack with movement allowed. Those that do not upgrade remain available to later passes. |
+
+### Deferred hold
+
+`PlotDeferredGarrisonMoves` runs after zone work and before regular reinforcement:
+
+| Check or action | Rule |
+| --- | --- |
+| Unit | A valid land garrison, unprocessed, with no Army ID, neither an explorer nor delayed-death unit. |
+| City | A positive combined land and water border score, plus a border-city, blockaded, or exposed status. |
+| Hold | Issue a skip mission and call `UnitProcessed`, keeping regular reinforcement from claiming it. No extra shot or `finishMoves` is issued, preserving healing. |
+
+Hedgehog's immediate reinforcement runs during zone work, before the deferred hold. A garrison that its city needs is protected from ordinary withdrawal unless the city would fall anyway. See [tactical movement](movement.md#tactical-reinforcement) for the later reinforcement pass.
 
 ## Ranged opportunity searches
 
