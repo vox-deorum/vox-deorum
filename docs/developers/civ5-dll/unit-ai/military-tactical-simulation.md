@@ -115,12 +115,14 @@ Two implementation details matter when debugging rankings:
 | Intercept | The unit ends on a plot a visible enemy trade unit steps onto in its owner's next trade movement, where native trade movement would let this unit plunder the route. It is worth 7 plus 1 per 200 plunder gold, up to 11. A route pays once, so it scores nothing when another of our units already claims an earlier or the same step of that route. |
 | Guard | The unit ends on an endangered next step of our own trade unit, where the ocean rule allows plunder. It is worth 7, because a unit standing there keeps an enemy off. |
 
-The final pass only accepts or rejects a plan, and plans are ranked by their move scores. So `ScorePlotForCombatUnitMove` adds the terms to each move's score, like the citadel bonus, and a unit keeps the score of its last move. `ScoreCombatUnitTurnEnd` adds them to the starting score of a unit that stays put.
+The final pass only accepts or rejects a plan, and plans are ranked by their move scores. So `ScorePlotForCombatUnitMove` adds the terms to each move's score, like the citadel bonus, and a unit keeps the score of its last move. `ScoreCombatUnitTurnEnd` adds them to the starting score of a unit that stays put. `isKillOrImprovedPosition` counts a unit that ends with a higher trade score than it started with as progress, so a sideways move onto a step is not rejected for leaving the enemy distance unchanged.
 
 Two units on the same step cannot both claim it:
 
 - While moves are scored one at a time, the unit that reached the step first keeps the claim.
 - When every unit is scored where it stands, the lowest unit ID keeps it.
+
+Because claims are judged when each move is scored, a stored score is not revised by later moves. If a unit takes a later step of a route and another unit then takes an earlier step, both keep the bonus; a capture that cuts a route after a unit claimed it leaves that claim too. Each case overcounts by at most one intercept bonus.
 
 `TacticalAIHelpers::UpdateTradeSteps` rebuilds the step map only when a trade route changed since the last search. A route scores nothing once the plan captures its origin or destination, or a city on a sea route's path, since that capture cancels it. A plunderer's invisibility is judged at the step plot.
 
