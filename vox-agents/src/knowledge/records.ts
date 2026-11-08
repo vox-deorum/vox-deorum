@@ -268,7 +268,8 @@ export function buildCatalog(tree: Manifest): string {
     '| Section | Files |',
     '| --- | --- |',
     ...Object.values(sections)
-      .filter((section) => section.key !== 'briefings' || hasBriefings)
+      // Relayed reports are recorded inside the event files, so they have no row of their own.
+      .filter((section) => section.key !== 'relayed' && (section.key !== 'briefings' || hasBriefings))
       .map((section) => `| ${section.title} | ${sectionFiles(section)} |`),
     '',
     `Each complete report has Markdown and a JSON twin with the same name. ${

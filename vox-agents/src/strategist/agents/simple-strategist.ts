@@ -46,7 +46,8 @@ export class SimpleStrategist extends SimpleStrategistBase {
   
   /**
    * Gets the initial messages for the conversation. In file mode the reports keep only our own
-   * cities and leave out events, which the records directions point to; otherwise everything is
+   * cities and leave out events, which the records directions point to, except relayed reports
+   * from diplomats and analysts, which stay inline when there are any; otherwise everything is
    * inline.
    */
   public async getInitialMessages(parameters: StrategistParameters, _input: unknown, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {

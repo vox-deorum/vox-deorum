@@ -46,12 +46,12 @@ The [workspace store](../workspace/store.md#records) documents turn folders, spl
 
 | Agent | Opening context in file mode |
 | --- | --- |
-| Simple strategist | Overview, strategies, victory, full players report, own cities, full military, and last-decision context. Other owners' city files are named; without an own-city entry, all cities stay inline. |
+| Simple strategist | Overview, strategies, victory, full players report, own cities, full military, relayed reports when the decision window has any, and last-decision context. Other owners' city files are named; without an own-city entry, all cities stay inline. |
 | Briefed, staffed, and learned strategists | Overview, strategies, filtered players, victory, briefings, and last-decision context. The learned variant also adds retrieved episodes. |
 | Diplomat, spokesperson, negotiator | Directions and notes around the shared game context, followed by conversation messages. |
 | Briefers and diplomatic analyst | No file mode: they declare no bash tool. |
 
-File-mode strategists read events from records and choose their own reading order. Their decision context names the last completed decision turn, or says none has completed on the current timeline. A failed decision leaves that cursor unchanged.
+File-mode strategists read events from records and choose their own reading order. The simple strategist still gets the decision window's relayed diplomat and analyst reports inline under Relayed Reports, so it cannot skip them; with none, its prompt has no such section. Briefed variants get relayed reports through their briefings. When a large window splits the briefings by category, a report reaches only the briefers for its assessed categories, so one with no Military, Economy, or Diplomacy category reaches none. Every file-mode strategist's decision context names the last completed decision turn, or says none has completed on the current timeline. A failed decision leaves that cursor unchanged.
 
 `VoxPlayer` resolves tools once per decision and shares that declaration with prompt preparation and event handling. File-mode decisions run once and fail on overflow. Inline consumers use the merged event window and retry overflow with less important events removed; see [Player loop](../agents/strategists/player-loop.md#event-windows).
 

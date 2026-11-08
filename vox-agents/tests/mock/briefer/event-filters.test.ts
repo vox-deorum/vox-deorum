@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterEventsByCategory, reportCategories } from '../../../src/utils/prompts/event-filters.js';
+import { filterEventsByCategory, filterRelayedReports, reportCategories } from '../../../src/utils/prompts/event-filters.js';
 import { eventImportanceTiers } from '../../../src/utils/prompts/event-importance.js';
 
 describe('filterEventsByCategory', () => {
@@ -105,5 +105,22 @@ describe('filterEventsByCategory', () => {
       for (const event of filterEventsByCategory(events, category)['9'] ?? []) routed.add(event.Type);
     }
     expect(types.filter(type => !routed.has(type))).toEqual([]);
+  });
+});
+
+describe('filterRelayedReports', () => {
+  it('should keep every relayed report, the Markdown config, and only turns that hold one', () => {
+    const categorized = { Type: 'RelayedMessage', Categories: ['Military'], Content: 'Border build-up' };
+    const uncategorized = { Type: 'RelayedMessage', Categories: [], Content: 'Uncategorized' };
+    const config = { startLevel: 2 };
+    const events = {
+      '8': [{ Type: 'DeclareWar' }],
+      '9': [{ Type: 'PlayerDoTurn' }, categorized],
+      '10': [uncategorized],
+      _markdownConfig: config,
+    } as any;
+
+    expect(filterRelayedReports(events)).toEqual({ '9': [categorized], '10': [uncategorized], _markdownConfig: config });
+    expect(events['9']).toHaveLength(2);
   });
 });

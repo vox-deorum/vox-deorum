@@ -7,7 +7,7 @@ import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
 import { isRecord } from "../utils/guards.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
 import type { PlayersReport } from "../../../mcp-server/dist/tools/knowledge/get-players.js";
-import type { EventsReport } from "../../../mcp-server/dist/tools/knowledge/get-events.js";
+import type { ConsolidatedEventsReport, EventsReport } from "../../../mcp-server/dist/tools/knowledge/get-events.js";
 import type { MilitaryReport } from "../../../mcp-server/dist/tools/knowledge/get-military-report.js";
 import type { OptionsReport } from "../../../mcp-server/dist/tools/knowledge/get-options.js";
 import type { VictoryProgressReport } from "../../../mcp-server/dist/tools/knowledge/get-victory-progress.js";
@@ -16,6 +16,7 @@ import { StrategyDecisionType } from "../types/config.js";
 import type { HumanDecisionBus } from "./human-decision-bus.js";
 import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
 import { dropLeastImportantEvents, maxEventTrimLevel } from "../utils/prompts/event-importance.js";
+import { filterRelayedReports } from "../utils/prompts/event-filters.js";
 import { workspaceRecordsPath } from "../utils/workspace/player-workspace.js";
 
 /**
@@ -383,6 +384,8 @@ function renderOwnCities(cities: CitiesReport | undefined, ownName: string | und
  * @param options - `events` replaces the events report, by default the decision window's.
  *   `fileMode` keeps only our own cities, points to the other owners' city files, leaves out
  *   events, which the run reads from its records, and states the last decision turn explicitly.
+ *   Relayed reports from diplomats and analysts in the events stay inline under their own section,
+ *   so the run cannot miss them; without any, the file-mode reports gain nothing.
  */
 export function renderStrategistReports(
   parameters: StrategistParameters,
@@ -399,12 +402,14 @@ export function renderStrategistReports(
     ["military", state.military],
     ["events", events],
   ];
+  const relayed = fileMode && isRecord(events) ? filterRelayedReports(events as ConsolidatedEventsReport) : {};
   const reports = [
     ...sectionData
       .filter(([key]) => !fileMode || key !== "events")
       .map(([key, data]) => fileMode && key === "cities"
         ? renderOwnCities(state.cities, parameters.metadata?.YouAre?.Name, state.turn, state.players)
         : renderSection(key, data)),
+    ...(Object.keys(relayed).some((key) => key !== "_markdownConfig") ? [renderSection("relayed", relayed)] : []),
     getDecisionTurnContext(parameters, fileMode),
   ];
   return [`

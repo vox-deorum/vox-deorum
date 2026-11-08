@@ -4,7 +4,8 @@
  * When a run's resolved tools include bash and the seat has files on, a strategist reads what its
  * prompt leaves out from its seat's records, so each builder adds the records directions and leaves
  * its cache anchors where the inline build puts them. The plain simple strategist keeps Military and
- * its own cities inline and points to the other owners' city files. Briefings are
+ * its own cities inline, points to the other owners' city files, and keeps relayed diplomat and
+ * analyst reports inline when there are any. Briefings are
  * pre-filled and episode retrieval is mocked, so nothing reaches a model, MCP server, or network.
  */
 
@@ -184,6 +185,50 @@ describe('strategist prompt builders in file mode', () => {
       const [, core] = renderStrategistReports(parameters, state, { fileMode: true });
       for (const { entry } of splitEntries('cities', state.cities, state.players)) expect(core).toContain(`## Player: ${entry}`);
       expect(core).not.toContain('/cities/');
+    });
+
+    describe('relayed reports', () => {
+      /** The fixture state with relayed reports added to its events, one of them uncategorized. */
+      function stateWithRelayed() {
+        const state = makeFixtureGameState();
+        const events = structuredClone(state.events) as Record<string, any>;
+        events['99'].push({ Type: 'RelayedMessage', Categories: ['Diplomacy'], Message: 'Diplomatic', Content: 'Relay marker: Zulus plan a war' });
+        events['100'].push({ Type: 'RelayedMessage', Categories: [], Message: 'Intelligence', Content: 'Relay marker: uncategorized intel' });
+        return { state: { ...state, events } as typeof state, plain: state };
+      }
+
+      it('should keep relayed reports inline in file mode while other events stay in the records', () => {
+        const parameters = freshParameters();
+        const { state } = stateWithRelayed();
+        const [, core] = renderStrategistReports(parameters, state, { fileMode: true });
+
+        expect(core).toMatch(sectionHeading('relayed'));
+        expect(core).not.toMatch(sectionHeading('events'));
+        expect(core).toContain('Relay marker: Zulus plan a war');
+        expect(core).toContain('Relay marker: uncategorized intel');
+        // Ordinary events of the same window do not come back inline.
+        expect(core).not.toContain('UnitMoved');
+      });
+
+      it('should add nothing to the file-mode reports when the window holds no relayed report', () => {
+        const parameters = freshParameters();
+        const { plain } = stateWithRelayed();
+        const [, core] = renderStrategistReports(parameters, plain, { fileMode: true });
+        const [, withoutEvents] = renderStrategistReports(parameters, plain, { fileMode: true, events: {} });
+
+        expect(core).not.toMatch(sectionHeading('relayed'));
+        expect(core).toBe(withoutEvents);
+      });
+
+      it('should leave the inline reports to the Events section', () => {
+        const parameters = freshParameters();
+        const { state } = stateWithRelayed();
+        const [, inline] = renderStrategistReports(parameters, state);
+
+        expect(inline).toMatch(sectionHeading('events'));
+        expect(inline).not.toMatch(sectionHeading('relayed'));
+        expect(inline).toContain('Relay marker: Zulus plan a war');
+      });
     });
 
     it('should build exactly the inline messages when the resolved tools exclude bash', async () => {

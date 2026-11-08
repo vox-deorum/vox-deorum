@@ -98,3 +98,24 @@ export function filterEventsByCategory(
 
   return filtered;
 }
+
+/**
+ * Keeps only the relayed reports (`RelayedMessage` events from diplomats and analysts) of a
+ * consolidated events report. Every relayed report is kept, including one with no assessed
+ * Categories. `_markdownConfig` is preserved and turns without a relayed report are dropped.
+ *
+ * @param eventsByTurn - Consolidated events report (turn-keyed object)
+ * @returns A copy holding only the relayed reports
+ */
+export function filterRelayedReports(eventsByTurn: ConsolidatedEventsReport): ConsolidatedEventsReport {
+  const filtered: ConsolidatedEventsReport = {};
+  for (const [turn, events] of Object.entries(eventsByTurn)) {
+    if (turn === "_markdownConfig") {
+      filtered[turn] = events;
+      continue;
+    }
+    const relayed = events.filter(event => event.Type === 'RelayedMessage');
+    if (relayed.length > 0) filtered[turn] = relayed;
+  }
+  return filtered;
+}

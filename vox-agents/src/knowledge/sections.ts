@@ -2,7 +2,8 @@
  * @module knowledge/sections
  *
  * The section registry. Each section of the game knowledge an agent reads (situation, civilization,
- * options, strategies, victory progress, players, cities, military, events, briefings) is defined
+ * options, strategies, victory progress, players, cities, military, events, relayed reports,
+ * briefings) is defined
  * once here: its key, title, description, scope, and how a record file could split its report.
  * Prompt builders render sections through {@link renderSection} and keep their own structure,
  * message order, field filtering, and cache breakpoints.
@@ -14,7 +15,7 @@ import { jsonToMarkdown, type JsonToMarkdownConfig } from "../utils/tools/json-t
 /** Keys of the registered sections. */
 export type SectionKey =
   | "situation" | "civilization" | "options" | "strategies" | "victory"
-  | "players" | "cities" | "military" | "events" | "briefings";
+  | "players" | "cities" | "military" | "events" | "relayed" | "briefings";
 
 /** How a report's Markdown could be split into several record files. */
 export interface SectionSplit {
@@ -117,6 +118,13 @@ export const sections: Record<SectionKey, SectionDefinition> = {
     key: "events",
     title: "Events",
     description: "Events: events since you last made a decision.",
+    scope: "turn",
+  },
+  // Prompt only: a file-mode simple strategist keeps these events inline; records hold them in the event files.
+  relayed: {
+    key: "relayed",
+    title: "Relayed Reports",
+    description: "Relayed Reports: reports from your diplomats and analysts since you last made a decision. All other events are in your records.",
     scope: "turn",
   },
   briefings: { key: "briefings", title: "Briefings", scope: "turn" },
