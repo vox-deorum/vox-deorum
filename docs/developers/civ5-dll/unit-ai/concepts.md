@@ -8,12 +8,36 @@ Use this page to understand a shared input, then follow the [unit AI overview](o
 
 **Flavors** are numeric preferences. City production combines effective city flavors with a unit type's XML flavor affinities, then applies the current decision's rules. Other AI systems read personality flavors directly.
 
-| Mode | City flavor values | Direct personality reads |
-| --- | --- | --- |
-| Vox Deorum custom flavors active | `CvFlavorManager::SetCustomFlavors` adds signed custom adjustments to city flavor recipients. City AI and specialization adjustments remain additive. | Returns custom values. `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy modifier. |
-| Normal Vox Populi | Leader personality, active Economic and Military AI state, city state, and production specialization contribute to the city vector. Only state definitions with city-flavor rows change it. | Uses the normal Vox Populi personality and grand-strategy path. |
+In normal Vox Populi, leader personality, Economic and Military AI state, city state, and production specialization contribute to city flavors. A strategy changes city flavors only when its definition has city-flavor rows. Direct personality reads follow the normal personality and grand-strategy rules.
 
-Custom values use a 0 to 100 scale, with 50 as neutral. The game converts them to signed adjustments, applies them to the active personality and city recipients, and expires them after ten turns unless they are replaced. The conversion is a fixed exponential table in `CvFlavorManager` (`FlavorToGameScale` and its inverse `FlavorFromGameScale`): 50 becomes 0, and 0 and 100 become -300 and +300, so steps near neutral are fine and steps near the ends are coarse. `CvLuaPlayer::lSetCustomFlavors` also uses thresholds to rewrite selected Economic and Military AI [strategy flags](#strategy-flags). These flags still affect gates and bonuses, but do not apply their normal XML flavor adjustments. A strategy disabled through Lua cannot be adopted again for ten turns.
+### Scale and conversion
+
+Vox Deorum **custom flavors** use a 0 to 100 scale, with 50 as neutral. `CvFlavorManager::FlavorToGameScale` converts each value through the fixed exponential `FLAVOR_GAME_SCALE` table: 0 maps to -300, 50 to 0, and 100 to +300. Steps near neutral are small; steps near the ends are larger. `FlavorFromGameScale` provides the inverse conversion.
+
+### Recipients
+
+A **flavor recipient** is an AI object registered with `CvFlavorManager` to receive flavor values. `SetCustomFlavors` adds the converted adjustments to the active personality and both recipient groups:
+
+| Recipient group | Examples                                                |
+| --------------- | ------------------------------------------------------- |
+| City            | City strategy AI, which supplies production preferences |
+| Non-city        | Tech, policy, and wonder-production AI                  |
+
+City AI and specialization adjustments remain additive.
+
+### Lifetime
+
+Replacing custom values first removes the previous adjustments. The expiration check removes them when the current turn reaches the set turn plus ten.
+
+### Direct personality reads
+
+While custom flavors are active, `GetPersonalityIndividualFlavor` scales the custom value to the configured personality maximum, normally 10, and rounds it. `CvGrandStrategyAI::GetPersonalityAndGrandStrategy` omits the active grand-strategy modifier on this path.
+
+### Strategy flags under custom flavors
+
+`CvLuaPlayer::lSetCustomFlavors` uses thresholds to rewrite selected Economic and Military AI [strategy flags](#strategy-flags). This Lua rewrite changes flags without broadcasting their XML flavor adjustments; the flags still affect gates and bonuses. Later native strategy transitions apply their usual flavor adjustments. A strategy left disabled through Lua waits ten turns before native AI can adopt it again.
+
+### Tactical flavors
 
 Vox Deorum adds five military tactical flavors, `FLAVOR_RISK`, `FLAVOR_OCCUPATION`, `FLAVOR_ATTRITION`, `FLAVOR_HOLD_CITY`, and `FLAVOR_HOLD_GROUND`. Tactical search reads them as a vector that combines the leader's personality, strategy changes, and custom flavors, then adds per-civ, per-operation, and per-zone modifiers. [Military tactical flavors](flavors/overview.md) explains how.
 

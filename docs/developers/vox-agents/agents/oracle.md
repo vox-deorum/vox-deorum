@@ -2,7 +2,7 @@
 
 The Oracle answers counterfactual questions: _what would the AI have decided on that turn if the prompt had been different, or the model had been someone else?_
 
-Given a CSV of real game turns, it re-runs each turn's original LLM call, extracted verbatim from recorded telemetry, with whatever modifications an experiment specifies, then records what the model decides this time. Nothing touches a live game. The replayed model is given **schema-only tools**, so it produces tool-call intents that are captured as decisions but never executed. A replay of a run recorded with [files](../workspace/files.md) on is the exception: it gets a real `bash` tool over a disposable copy of the seat's workspace, described under _Replay workspaces_.
+Given a CSV of game turns, Oracle extracts the original LLM calls verbatim from telemetry, re-runs them with an experiment's changes, and records the new decisions. It leaves the live game untouched. The model gets **schema-only tools**: calls are captured as decision intents without executing them. Runs recorded with [files](../workspace/files.md) on also get a real `bash` tool over a disposable workspace copy; see [Replay workspaces](#replay-workspaces).
 
 ```
 recorded telemetry ──retrieve──► original prompts (JSON) ──replay with changes──► new decisions (CSV, trails)
@@ -16,7 +16,7 @@ npm run oracle -- -c <experiment.js>
 
 ## Two phases
 
-Oracle deliberately splits its work into a retrieve phase and a replay phase.
+Oracle splits its work into retrieve and replay phases.
 
 **Retrieve** (`src/oracle/retriever.ts`) reads the input CSV, locates each row's telemetry database (scanning the telemetry directory for `{gameId}-player-{playerId}.db`), and extracts the raw original prompt exactly as recorded: system messages, conversation history, active tool names, the original model, and the recorded tool framing (see _Tool framing_). No LLM is involved and nothing is modified. The extracted rows can be saved as JSON for inspection.
 
@@ -28,7 +28,7 @@ Oracle deliberately splits its work into a retrieve phase and a replay phase.
 
 Running without flags does both phases in sequence. `--retrieve` and `--replay` run one side alone.
 
-The split is what makes iteration cheap. Extract once, confirm the right turns were found, then replay the same retrieved data repeatedly under different prompts or models without re-reading telemetry. Experiments can even share a retrieval through a common `retrievalName`.
+Extract once, confirm the right turns were found, then reuse the data to compare prompts or models without re-reading telemetry. Experiments can share a retrieval through a common `retrievalName`.
 
 ### Finding the right turn
 
@@ -56,9 +56,20 @@ An experiment is an ES module exporting an `OracleConfig`, defined in `src/oracl
 | `filter` | Narrows which CSV rows run. |
 | `extractColumns` | Pulls experiment-specific values out of each replay into extra CSV columns. |
 
-Duplicate entries in `modelOverride` repeat the sample, identified by a repetition index. A row's samples that share a full model configuration form a **chain** and run one at a time; distinct models and rows are independent chains that run in parallel up to `concurrency`. Every chain starts with its first uncached sample in the source-ordered **episode queue**. When a sample finishes, that chain's next sample enters the **replay queue**, which always runs before untouched episodes. The strict order gives prompt caches the best chance to warm, but cache hits are not guaranteed. Repeated Claude streaming replays also mark the end of the prompt for caching.
+### Samples and scheduling
 
-Replays reuse existing trail files to skip samples already done. A cached sample fills its result slot without using a concurrency slot, so a chain can begin with a later sample. Results keep the stable repetition-major source order, with no gaps, no matter which samples came from cache or finished out of order. A replay that stopped early resumes from its remaining samples, because completed trails are reused as cache.
+A **sample** is one execution of a source row with a model. Duplicate `modelOverride` entries produce repetitions, identified by a repetition index. A **chain** groups one row's samples with the same full model configuration. Samples within a chain run one at a time; independent chains run in parallel up to `concurrency`.
+
+The scheduler admits work from two queues:
+
+| Queue | Contents | Priority |
+| --- | --- | --- |
+| Episode queue | Each chain's first uncached sample, in source order | Runs when the replay queue is empty |
+| Replay queue | A chain's next uncached sample, added when its previous sample finishes | Always first |
+
+For example, with concurrency one, a chain containing A1 and A2 runs both before the next independent sample B1: A1, A2, B1. If A1 is already cached, the order is A2, B1. This priority helps prompt caches warm; hits are not guaranteed. Repeated Claude streaming replays also mark the end of the prompt for caching.
+
+Completed trail files serve as a **replay cache**. A cached sample fills its result slot without using concurrency, so a chain may start at a later repetition. Results stay in repetition-major source order: all first repetitions in source order, then second repetitions, and so on. Cache hits and out-of-order completion leave no gaps. A stopped replay resumes from its remaining samples.
 
 **Batch mode.** Large experiments can go through provider batch APIs (`src/oracle/batch/`). Batch requests go straight to the provider without the [tool-rescue middleware](../models/middleware.md#prompt-mode-tool-calling), so batch mode does not work with prompt-mode models (`options.toolMiddleware: 'prompt'`). Replaying one in batch mode throws an error. Switch those rows to a native tool-calling model or turn batch mode off. Tools the original run removed mid-run are still rejected in batch mode, using the same rejection hooks as the normal path. Rejected calls never count as decisions in either mode.
 
@@ -82,7 +93,7 @@ The loop captures the commit after preparation, including archived briefings. Ev
 
 ### Replay workspaces
 
-Rows that ran with files on replay against a pinned, disposable copy of their seat workspace; rows with files off replay on the base schema-only context. `ReplayWorkspace` in `src/utils/workspace/replay-workspace.ts` opens the seat's store read-only inside the row's source telemetry database, the same file the retrieve phase read (located with the `discoverDbPath` lookup in `src/oracle/utils/db-resolver.ts` under the experiment's `telemetryDir`), at the commit recorded in the row's `workspace` field. The copy mirrors the original mounts:
+Rows recorded with files on replay against a pinned, disposable copy of their seat workspace; rows with files off use the base schema-only context. `ReplayWorkspace` in `src/utils/workspace/replay-workspace.ts` opens the source telemetry database's seat store read-only at the row's recorded `workspace` commit. It locates that database through `discoverDbPath` in `src/oracle/utils/db-resolver.ts` under the experiment's `telemetryDir`, just as retrieval does. The copy mirrors the original mounts:
 
 | Folder | Replay behavior |
 | --- | --- |
@@ -95,7 +106,20 @@ Writes persist across commands within one execution but never reach disk or the 
 
 The bash tool normally runs in the seat's live workspace. A root run can instead carry its own workspace, through the `workspace` option of `withRun` (`src/infra/vox-run.ts`), and the bash tool prefers it; forked runs do not inherit it.
 
-File-enabled rows share replay contexts: each distinct combination of recorded files setting and effective prompt folder gets its own context, with id `<experimentName>-files-<n>`, the base experiment context's schema-only tools plus a real bash tool, and telemetry at `oracle/<id>.db` under the oracle experiment. All contexts close at shutdown and their telemetry paths are logged. The effective prompt folder for workspace guidance is the row's recorded folder when it still passes validation, otherwise the built-ins with one warning per folder. The replay machine's own `prompts` setting never applies, so replays keep the original run's guidance. `OracleAgent.getRunTools` returns the replay's declared tool list exactly, so bash is present only when the original run (or a `modifyPrompt` override) declared it.
+#### Replay contexts
+
+A **replay context** supplies tools, prompt guidance, and telemetry. File-enabled rows share one for each distinct combination of recorded files setting and effective prompt folder. Each sample still gets its own disposable workspace.
+
+| Context property | Value                                              |
+| ---------------- | -------------------------------------------------- |
+| ID               | `<experimentName>-files-<n>`                       |
+| Tools            | Base experiment's schema-only tools plus real bash |
+| Telemetry        | `oracle/<id>.db` under the app's telemetry root    |
+| Lifetime         | Closes at shutdown; its telemetry path is logged   |
+
+For workspace guidance, the effective prompt folder is the recorded folder when it passes validation. Otherwise, replay uses the built-ins and warns once per folder. The replay machine's `prompts` setting never applies, and replay always uses the recorded system text.
+
+`OracleAgent.getRunTools` uses the replay's tool selection without adding bash. A nonempty recorded list or an explicit `modifyPrompt` tool override is used as given, so bash must be declared there. An empty recorded list with no override falls back to all registered tools.
 
 Portability: to replay file-enabled rows on another machine, copy the seat's telemetry database plus any shared folders the seat used.
 

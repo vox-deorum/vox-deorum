@@ -15,22 +15,39 @@ The scanner accepts a flat archive or experiment subfolders. Each eligible playe
 
 ## Metrics
 
-`src/archivist/pipeline/extractor.ts` reads the raw state. `transformer.ts` and the helpers under `src/archivist/utils/` compute the following values.
+`src/archivist/pipeline/extractor.ts` reads the raw state. `transformer.ts` and the helpers under `src/archivist/utils/` compute the derived values.
+
+### Shares
+
+**Known major players** are major civilizations with both a player summary and player information in the turn context, including the player being measured. Share fields divide the player's value by the known players' total, then multiply by the number of known majors. A stored value of **1** means an average share, values below 1 mean less, and values above 1 mean more. Shares can exceed 1.
+
+| Field                | Value used for the share                   |
+| -------------------- | ------------------------------------------ |
+| `tourism_share`      | Tourism per turn, adjusted for city count  |
+| `military_share`     | Military strength, adjusted for city count |
+| `cities_share`       | City count                                 |
+| `population_share`   | Population                                 |
+| `votes_share`        | Votes                                      |
+| `minor_allies_share` | Allied minor civilizations                 |
+
+For **city-adjusted shares**, each player's value is first divided by `max(1.05 × (cities − 1), 1)`. The share then uses those adjusted values and the same known-major scaling. Missing comparison values are omitted; missing inputs for the measured player or a nonpositive total yield null.
+
+### Other fields and scales
 
 | Fields | Interpretation |
 | --- | --- |
 | Identity and raw state | Game, player, civilization, turn, eventual winner, era, grand strategy, diplomatic counts, yields, cities, population, military, technologies, policies, and votes. |
-| `tourism_share`, `military_share` | City-adjusted shares, scaled by the number of known major players. |
-| `cities_share`, `population_share`, `votes_share`, `minor_allies_share` | Raw shares, scaled by the number of known major players. For all share fields, 1 means an average player's share. |
-| `*_per_pop` | The corresponding yield divided by population. Science and faith come from the player summary even though their raw yields have no episode column. |
+| `*_per_pop` | The corresponding yield divided by population, or null for missing inputs or zero population. Science and faith come from the player summary even though their raw yields have no episode column. |
 | `technologies_gap`, `policies_gap` | Best other major player's count minus this player's count. Negative means leading, positive means behind, and missing comparison data yields zero. |
 | `supply_utilization` | Military units divided by military supply, or null when the inputs are missing or supply is not positive. |
 | `religion_percentage` | Fraction of recorded cities following the player's founded religion, or zero without one. |
-| `ideology_allies`, `ideology_share` | Known major players sharing the player's ideology, including the player, and their fraction of known majors. Both are zero without an ideology. |
+| `ideology_allies` | Count of known major players sharing the player's ideology, including the player; zero without an ideology. |
+| `ideology_share` | Fraction of known majors sharing the player's ideology, on a 0 to 1 scale; zero without an ideology. |
 | `*_progress`, `*_leader_progress` | Victory progress on a 0 to 100 scale, or null when unavailable. |
+| `war_weariness` | War weariness as a percentage value. |
 | Summary fields | `situation_abstract`, `decision_abstract`, full `situation` and `decisions`, and an optional `situation_abstract_embedding`. |
 
-Shares can exceed 1. The religion and ideology fractions use a 0 to 1 scale; victory progress and war weariness use percentage values. Preserve those distinctions when building queries or displaying results.
+Keep the units distinct in queries and displays: religion and ideology use 0 to 1 fractions, victory progress and war weariness use percentages, and scaled shares use 1 for an average share.
 
 ## Feature vectors
 

@@ -31,18 +31,22 @@ The closing reminder comes after any empty-reply rescue. It asks for independent
 
 ## File mode
 
-A run is in file mode when files are enabled and its resolved tools include `bash`. `fileMode(context)` in `src/knowledge/directions.ts` reads the declaration stored on the execution frame. Tool-free agents stay inline even on file-enabled seats.
+A run is in **file mode** when files are enabled and its resolved tools include `bash`. `fileMode(context)` in `src/knowledge/directions.ts` reads the declaration stored on the execution frame. Tool-free agents stay inline even on file-enabled seats.
 
-`insertRecordsDirections` adds two system messages to a file-mode run:
+### Directions and notes
+
+`insertRecordsDirections` adds records directions and, when notes exist, a notes message:
 
 | Message | Position | Contents |
 | --- | --- | --- |
 | Records directions | Before the overview or shared game context | Mounted folders and permissions, record paths, which sections remain inline, read examples, and the game notes guide. |
-| Notes, when present | After leading system messages, before the game-state user message | With a [game journal](../workspace/files.md#game-journal), its newest whole entries within 20,000 characters. Then the paths of the five most recent other notes. Other notes are listed by name only, ordered by stored modification time, and the guide is excluded. |
+| Notes, when present | After leading system messages, before the game-state user message | The newest [game journal](../workspace/files.md#game-journal) entries, then paths of the five most recent other notes by stored modification time. The guide is excluded. |
 
-Directions come from `records-directions.md` and notes from `records-notes.md`. Both are built once per run. Built-in directions depend on file access, inline sections, and the guide, so writing ordinary records or notes leaves them stable across turns. Editing the guide affects later runs. The directions carry their own cache anchor while the request has room for one, so the instructions and directions are reused across a seat's runs (see [Caching](caching.md)). The notes message has no anchor.
+Directions come from `records-directions.md` and notes from `records-notes.md`. The journal window fits whole entries within 20,000 characters; an oversized newest entry is cut as described on the linked journal page. Other notes are listed by path only.
 
 The [workspace store](../workspace/store.md#records) documents turn folders, split reports, event views, and the catalog. The guide is `/workspace/game/AGENTS.md`; when a writable game folder has no guide yet, directions show the default text that bash will seed.
+
+### Opening context
 
 | Agent | Opening context in file mode |
 | --- | --- |
@@ -51,9 +55,20 @@ The [workspace store](../workspace/store.md#records) documents turn folders, spl
 | Diplomat, spokesperson, negotiator | Directions and notes around the shared game context, followed by conversation messages. |
 | Briefers and diplomatic analyst | No file mode: they declare no bash tool. |
 
-File-mode strategists read events from records and choose their own reading order. The simple strategist still gets the decision window's relayed diplomat and analyst reports inline under Relayed Reports, so it cannot skip them; with none, its prompt has no such section. Briefed variants get relayed reports through their briefings. When a large window splits the briefings by category, a report reaches only the briefers for its assessed categories, so one with no Military, Economy, or Diplomacy category reaches none. Every file-mode strategist's decision context names the last completed decision turn, or says none has completed on the current timeline. A failed decision leaves that cursor unchanged.
+### Events and decision windows
+
+File-mode strategists read events from records and choose their own reading order. Relayed diplomat and analyst reports reach them through these paths:
+
+- The simple strategist receives them inline under Relayed Reports whenever the decision window contains any.
+- Briefed variants receive them through briefings. When a large window splits briefings by category, each report reaches only briefers for its assessed categories. A report with no Military, Economy, or Diplomacy category reaches none.
+
+Every file-mode strategist's decision context names the last completed decision turn, or says none has completed on the current timeline. A failed decision leaves that cursor unchanged.
 
 `VoxPlayer` resolves tools once per decision and shares that declaration with prompt preparation and event handling. File-mode decisions run once and fail on overflow. Inline consumers use the merged event window and retry overflow with less important events removed; see [Player loop](../agents/strategists/player-loop.md#event-windows).
+
+### Cache stability
+
+Directions and notes are built once per run. Built-in directions depend on file access, inline sections, and the guide, so ordinary record or note writes leave them stable across turns. Guide edits affect later runs. Directions carry a cache anchor while the request has room for one; the notes message has none. See [Caching](caching.md) for how these anchors reuse the instructions and directions across a seat's runs.
 
 ## Offered and allowed tools
 

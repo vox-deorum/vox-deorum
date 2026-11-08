@@ -1,6 +1,6 @@
 # Model configuration
 
-Vox Agents works with many LLM providers. You name models in `vox-agents/config.json`, assign them to agents, and the framework checks before a game starts that every assigned model can actually be reached. Each agent asks for its model through its `getModel()` hook, so different agents, or different players in one game, can use different models.
+Vox Agents supports several LLM providers. You name models in `vox-agents/config.json` and assign them to agents. Before a game starts, the framework checks those model references. Each agent selects its model through `getModel()`, so agents and players can use different models.
 
 ```
 config.json "llms"           checked at session start            agent asks for a model
@@ -47,16 +47,35 @@ The built-in registry contains only an openai-compatible `default` and `embedder
 
 ## Response timeouts
 
-Set these optional environment variables in `vox-agents/.env`, then restart Vox Agents. Both accept positive integer milliseconds; blank values keep the provider defaults. A malformed value stops Vox Agents at startup, and the settings page refuses to save one.
+Set these optional environment variables in `vox-agents/.env`, then restart Vox Agents. Both accept positive integer milliseconds up to 2,147,483,647; blank values leave the override unset. A malformed value stops Vox Agents at startup, and the settings page refuses to save one.
 
 | Variable | What it controls |
 | --- | --- |
-| `LLM_FIRST_TOKEN_TIMEOUT_MS` | Wait from the start of each live model attempt until its first text, reasoning, tool-input, or file output. Initial stream metadata does not end this wait. |
+| `LLM_FIRST_TOKEN_TIMEOUT_MS` | Wait from the start of each live model attempt until its first text, reasoning, tool input or call, or file output. Initial stream metadata does not end this wait. |
 | `LLM_STREAM_TIMEOUT_MS` | Inactivity limit during streaming. Stream chunks and tool activity refresh the deadline after output starts. |
 
 For example, `LLM_FIRST_TOKEN_TIMEOUT_MS=900000` allows 15 minutes for a model to start answering, while `LLM_STREAM_TIMEOUT_MS=120000` allows two minutes of inactivity afterward. A timeout cancels the attempt and enters the existing retry policy. Oracle batch requests bypass these settings.
 
-Without overrides, the shared inactivity limit is five minutes, or 15 minutes for OpenAI-compatible models and Google models using `USE_FLEX=true`. Codex derives its limit from its proxy startup and request deadlines. An unset first-token timeout uses the streaming inactivity limit and retains the existing behavior where initial stream activity refreshes it. Synthetic and OpenAI-compatible endpoints also have HTTP client deadlines. Their wait for response headers follows the same order (first-token, then streaming, then the endpoint default), because slow local servers often send headers only after loading the model and reading the prompt. Provider or proxy deadlines can still end a request earlier; Codex's separate proxy settings are described in [Codex proxy](codex.md).
+### Defaults and precedence
+
+| Provider | Default streaming inactivity limit |
+| --- | --- |
+| `openai-compatible` | 15 minutes |
+| Google with `USE_FLEX=true` | 15 minutes |
+| Codex | Derived from proxy startup and request deadlines; see [Codex proxy](codex.md). |
+| All others | 5 minutes |
+
+The live-attempt deadlines follow these rules:
+
+1. `LLM_STREAM_TIMEOUT_MS` overrides the provider's inactivity limit.
+2. With `LLM_FIRST_TOKEN_TIMEOUT_MS` set, each attempt starts with a fixed wait for its first output. Metadata and progress notifications cannot extend that wait. After output starts, stream chunks and tool activity refresh the inactivity deadline.
+3. Without a first-token override, the inactivity limit applies from the start, and initial stream activity refreshes it.
+
+### HTTP client deadlines
+
+Synthetic and OpenAI-compatible endpoints also have HTTP deadlines. Slow servers may hold back response headers while loading a model or reading the prompt, so the header wait uses the first available value: first-token override, streaming override, then endpoint default. The body timeout takes the larger of the two overrides, substituting the endpoint default for each unset value.
+
+Provider or proxy deadlines can still end a request earlier.
 
 The settings are read and validated in `src/utils/models/timeouts.ts` and applied by `concurrency.ts` and `models.ts`. `src/utils/retry.ts` manages the initial and streaming deadlines and aborts each timed-out attempt through the signal it passes to the attempt.
 
@@ -68,7 +87,7 @@ Before any agent work starts, every model a session will use is checked. This is
 2. **A `provider/model` ID not in `llms`.** Looked up in that provider's live model list. A match is configured in memory for the rest of the process, using the recommended settings for that model family. Matching is exact first, then case-insensitive.
 3. **Anything else** is an error, so a typo fails right away instead of running on the default model.
 
-When the lookup itself fails, or the provider has only a static list that does not contain the model, Vox Agents logs a warning and builds the config from the rules anyway. A live list that confirms the model is missing is an error.
+When lookup fails, or a provider's static list lacks the model, Vox Agents warns and builds the config from the rules. A live list that confirms the model is missing normally causes an error. Claude Code also accepts unlisted aliases and full model IDs, so it warns and builds their config instead.
 
 Where each provider's list comes from:
 
@@ -78,7 +97,7 @@ Where each provider's list comes from:
 | Claude Code | The catalog the locally signed-in Claude Code runtime reports, through a small helper in `src/utils/models/providers/`. Cached for the life of the process, with one lookup at a time. |
 | Others | The provider's own model list. |
 
-Agent names are not model references. An agent with no `llms` entry runs on `default`, so the preflight check verifies the agent's entry when it exists and `default` when it does not.
+An agent with no `llms` entry runs on `default`. Preflight checks the agent's entry when present and `default` otherwise.
 
 The rules scope automatic prompt middleware for open-weight models to `openai-compatible`, Chutes, and Synthetic.
 

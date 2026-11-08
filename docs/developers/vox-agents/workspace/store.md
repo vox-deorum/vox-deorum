@@ -54,7 +54,15 @@ Missing eras default to ancient; unknown eras go to `other` with a warning. Empt
 
 Markdown uses the game's tooltips plus facts the tooltip lacks, such as a project's required policy or the projects a policy unlocks. JSON keeps the cleaned gameplay fields, excluding internal identifiers, advice, and fields already represented by the bucket or sorting. `src/knowledge/reference-format.ts` handles Markdown formatting. Unit, building, technology, and project help comes from the mod's [VoxDeorumReferenceTooltips](../../civ5-mod/lua-hooks.md); a missing tooltip fails the detailed listing and session setup. Policies use localized help and may omit it when empty.
 
-A reference is reused when its format marker is current and every listing has its files, each a Markdown file with a JSON twin. Projects must have `buildings/projects`, and every other listing needs at least one pair in its folder, not counting the projects pair. So a missing projects page, or a buildings folder with only the projects page, counts as incomplete. An outdated or incomplete reference is replaced in one commit per store. All fetches finish before any store is written, so fetch failures preserve existing references. If a store cannot open or reference preparation fails, setup stops before player loops start and prepared players are disposed.
+### Reuse or rebuild
+
+A stored reference is reused when it passes all three checks:
+
+1. Its format marker is current.
+2. `buildings/projects` has both a Markdown file and a JSON twin.
+3. Every other listing has at least one Markdown/JSON pair in its folder, excluding the projects pair. Buildings therefore need a pair of their own.
+
+An outdated or incomplete reference is replaced in one commit per store. All fetches finish before any store is written, so fetch failures preserve existing references. If a store cannot open or reference preparation fails, setup stops before player loops start and prepared players are disposed.
 
 The reference is part of each recorded commit. Shared folders and `/tmp` remain outside the store.
 
@@ -73,7 +81,7 @@ Export through the CLI or dashboard:
 | Tool | Use |
 | --- | --- |
 | `npm run workspace -- materialize <telemetryDb> <outDir> [commit]`, from `vox-agents/` | Export the head or a specified commit of a seat telemetry database into a new or empty folder. |
-| Download files in the telemetry page's past-games table | Export a zip through `GET /api/telemetry/db/<path relative to the telemetry folder>/workspace`, with an optional `commit` query. The button shows for databases that hold a store (`hasWorkspace` is read from the file itself), and the zip is named `<gameID>-player-<playerID>-<commit>.zip`. |
+| Files in the telemetry page's past-games table | Export a zip through `GET /api/telemetry/db/<path relative to the telemetry folder>/workspace`, with an optional `commit` query. The button shows for databases that hold a store (`hasWorkspace` is read from the file itself), and the zip is named `<gameID>-player-<playerID>-<commit>.zip`. |
 
 Both use `src/utils/workspace/materialize.ts` to read a complete commit through a separate read-only connection in one transaction. Exports work during a session and include `records/`, `game/`, and `reference/`. Editing an export does not change the store.
 

@@ -1,6 +1,6 @@
 # Diplomatic Influence
 
-How `set-persona` and `set-relationship` steer the in-game diplomatic AI.
+This reference explains how `set-persona` and `set-relationship` steer the in-game diplomatic AI, for developers tracing an action's effect through the DLL.
 
 For tool schemas and arguments, see [tools.md](../tools.md).
 
@@ -10,29 +10,29 @@ For tool schemas and arguments, see [tools.md](../tools.md).
 
 ### What it writes
 
-`set-persona` forwards a Lua table to `CvLuaPlayer::lSetPersona`, which mutates 26 fields directly on the caller's `CvDiplomacyAI`. These runtime values replace the leader's current personality values on that AI object until overwritten.
+`set-persona` exposes 26 optional personality fields and forwards the supplied values to `CvLuaPlayer::lSetPersona`. The tool clamps them to 1-10; the Lua setter replaces the recognized fields directly on the caller's `CvDiplomacyAI`. Values persist until overwritten. The balance-field naming mismatch below prevents that field from being set through the current tool.
 
 **Core competitiveness:**
 
-- `VictoryCompetitiveness` -- reaction intensity to others pursuing victories
-- `WonderCompetitiveness` -- reaction intensity to wonder competition
-- `MinorCivCompetitiveness` -- reaction intensity to city-state influence competition
-- `Boldness` -- military risk-taking and territorial claims
+- `VictoryCompetitiveness`: reaction intensity to others pursuing victories
+- `WonderCompetitiveness`: reaction intensity to wonder competition
+- `MinorCivCompetitiveness`: reaction intensity to city-state influence competition
+- `Boldness`: military risk-taking and territorial claims
 
 **War and peace tendencies:**
 
-- `WarBias` -- likelihood to plan or declare offensive war
-- `HostileBias` -- tendency toward hostile postures without direct war
-- `WarmongerHate` -- negative reaction to warlike behaviors
-- `NeutralBias`, `FriendlyBias`, `GuardedBias`, `AfraidBias` -- approach biases
+- `WarBias`: likelihood to plan or declare offensive war
+- `HostileBias`: tendency toward hostile postures without direct war
+- `WarmongerHate`: negative reaction to warlike behaviors
+- `NeutralBias`, `FriendlyBias`, `GuardedBias`, `AfraidBias`: approach biases
 
 **Diplomacy and cooperation:**
 
-- `DiplomaticBalance` -- increased relationship with non-competitive civs and peaceful resolution
-- `Friendliness` -- desire for friendship declarations, increases maximum DoFs
-- `WorkWithWillingness` -- tendency to collaborate with allies
-- `WorkAgainstWillingness` -- tendency to bond over shared enemies
-- `Loyalty` -- loyalty to allies; lower values enable backstabbing
+- `DiplomaticBalance`: increased relationship with non-competitive civs and peaceful resolution
+- `Friendliness`: desire for friendship declarations, increases maximum DoFs
+- `WorkWithWillingness`: tendency to collaborate with allies
+- `WorkAgainstWillingness`: tendency to bond over shared enemies
+- `Loyalty`: loyalty to allies; lower values enable backstabbing
 
 **Minor civ relations:**
 
@@ -40,36 +40,38 @@ For tool schemas and arguments, see [tools.md](../tools.md).
 
 **Personality traits:**
 
-- `DenounceWillingness` -- readiness to denounce
-- `Forgiveness` -- how quickly past transgressions are forgiven
-- `Meanness` -- general aggressiveness, demanding/bullying
-- `Neediness` -- desire for support from friends
-- `Chattiness` -- frequency of diplomatic contact initiation
-- `DeceptiveBias` -- tendency to be deceptively friendly
+- `DenounceWillingness`: readiness to denounce
+- `Forgiveness`: how quickly past transgressions are forgiven
+- `Meanness`: general aggressiveness, demanding/bullying
+- `Neediness`: desire for support from friends
+- `Chattiness`: frequency of diplomatic contact initiation
+- `DeceptiveBias`: tendency to be deceptively friendly
 
 ### Naming notes
 
 - `Friendliness` is the MCP/Lua-facing label for the DLL field `DoFWillingness` (`m_iDoFWillingness`, `GetDoFWillingness`).
 - The balance-of-power field in the DLL is `DiploBalance` (`m_iDiploBalance`, `GetDiploBalance`).
-- The current bindings are asymmetric: `GetPersona()` returns `DiplomaticBalance`, but `SetPersona()` currently reads the key `DiploBalance`. In other words, the action schema and the Lua setter do not use the same key for that field today.
+- `GetPersona()` and the action schema use `DiplomaticBalance`; `SetPersona()` reads `DiploBalance`. As a result, the current MCP field is ignored by the setter.
 
 ### AI subsystems and decisions
 
-`CvDiplomacyAI::CalculateApproachTowardsPlayer` is the main consumer: its approach score vector (WAR, HOSTILE, DECEPTIVE, GUARDED, AFRAID, FRIENDLY, NEUTRAL) is seeded from `m_aiMajorCivApproachBiases[]`, then further modified by fields such as `GetBoldness`, `GetMeanness`, `GetVictoryCompetitiveness`, `GetDiploBalance`, and `GetDoFWillingness`.
+`CvDiplomacyAI::SelectBestApproachTowardsMajorCiv` is the main consumer: its approach score vector (WAR, HOSTILE, DECEPTIVE, GUARDED, AFRAID, FRIENDLY, NEUTRAL) uses the major-civ approach biases and fields such as `GetBoldness`, `GetMeanness`, `GetVictoryCompetitiveness`, `GetDiploBalance`, and `GetDoFWillingness`.
 
 **Key mechanisms:**
 
 - **Boldness** reduces the AI's estimate of enemy military strength and target value by 3% per point (`MILITARY_STRENGTH_REDUCTION_PER_BOLDNESS = -3`, `TARGET_VALUE_REDUCTION_PER_BOLDNESS = -3`). At Boldness=10, the AI underestimates both by 30%.
 - **Meanness** lowers the negative war score threshold via `GetWarscoreThresholdNegative()`, making the AI more willing to stay in unfavorable wars and less likely to accept peace.
-- **VictoryCompetitiveness** + **Meanness** additively drive `VICTORY_PURSUIT_DOMINATION` scoring.
+- **Boldness** and **Meanness** contribute to default `VICTORY_PURSUIT_DOMINATION` scoring in `SelectDefaultVictoryPursuits`.
 - **WonderCompetitiveness** feeds wonder-dispute and culture-victory logic.
 - **DoFWillingness** (`Friendliness`), **DenounceWillingness**, **Loyalty**, and **Forgiveness** feed friendship, denouncement, and betrayal logic.
-- **MinorCivWarBias**, **HostileBias**, **FriendlyBias**, **NeutralBias** drive city-state approach selection and bully/attack likelihood.
+- **MinorCivWarBias**, **MinorCivHostileBias**, **MinorCivFriendlyBias**, and **MinorCivNeutralBias** drive city-state approach selection and bully/attack likelihood.
 - `CvDealAI`, `CvGrandStrategyAI`, `CvMilitaryAI`, `CvReligionAI`, and other owner-side subsystems also read these getters directly when pricing deals, weighting victory plans, evaluating combat posture, or picking religious behavior.
 
 ### Timing
 
 The write itself is immediate. There is no flavor broadcast, no opinion refresh, and no auto-recompute hook. Most observable behavior shifts on the next relevant diplomacy reevaluation, typically the next `CvDiplomacyAI::DoTurn`. The values persist until overwritten; there is no expiration timer.
+
+Default victory pursuits are selected during personality initialization and human/AI state changes. `set-persona` does not rerun `SelectDefaultVictoryPursuits`.
 
 ### Cross-civ scope
 
@@ -77,20 +79,21 @@ The live values are stored directly on the caller's `CvDiplomacyAI`, but foreign
 
 - For **teammates**, `EstimateVictoryCompetitiveness`, `EstimateBoldness`, `EstimateDiploBalance`, `EstimateDoFWillingness`, `EstimateMeanness`, `EstimateMajorCivApproachBias`, and related helpers return the live runtime values.
 - For **non-teammates**, those same helpers usually fall back to XML leader values, or to neutral/default estimates for human players and random-personality games.
-- Practical effect: `set-persona` strongly changes the caller's own diplomacy logic and teammate-visible personality estimates, but non-teammate AIs usually continue reasoning about that leader through estimated base personality, not the full custom runtime persona.
+
+The caller's own diplomacy and teammate-visible estimates therefore use the custom persona. Other civilizations usually continue using estimated base personality.
 
 ---
 
 ## Relationship modifiers (`set-relationship`)
 
-This is the one tool whose effect leaks to non-LLM civs that never touched any LLM machinery.
+Relationship changes can affect other civilizations through the caller's refreshed opinion of its target.
 
 ### What it writes
 
 `set-relationship` writes two modifier arrays on the **caller's** `CvDiplomacyAI`:
 
-- `m_aiScenarioModifier1[target]` -- "public" modifier
-- `m_aiScenarioModifier2[target]` -- "private" modifier
+- `m_aiScenarioModifier1[target]`: "public" modifier
+- `m_aiScenarioModifier2[target]`: "private" modifier
 
 The tool inverts the user-supplied values before storage:
 
@@ -101,67 +104,69 @@ This inversion exists because Civ V's opinion weight is signed in the opposite d
 
 The arrays themselves are local storage on the caller. Foreign AI code does not directly read another civ's raw scenario-modifier arrays.
 
-### Two propagation paths
+The MCP field descriptions give an intended range of -100 to 100, with positive values expressing friendliness. Both default to zero. The current tool accepts numeric values without enforcing that range.
 
-There are two distinct ways these modifiers matter:
+### How modifiers reach decisions
 
-1. **Raw modifier path** -- the stored `ScenarioModifier1/2` values are read directly in a small number of places. The confirmed gameplay consumers are:
-   - peace willingness in `CvDiplomacyAI`, where `GetScenarioModifier1(ePlayer) + GetScenarioModifier2(ePlayer)` directly shifts `iPeaceScore` when `MOD_IPC_CHANNEL` is active
-   - coop-war desire in `CvDiplomacyAI::GetCoopWarDesireScore`, where `GetCachedScenarioModifier1(eTargetPlayer) + GetCachedScenarioModifier2(eTargetPlayer)` is added directly to the score before target-value scaling
-2. **Cached opinion path** -- `CvDiplomacyAI::GetDiploModifiers` sums modifier1, modifier2, and modifier3 into an opinion delta, `CalculateCivOpinionWeight` includes that delta when `MOD_EVENTS_DIPLO_MODIFIERS` is active and the game is not network multiplayer, and `DoUpdateOpinions` then stores the result in `SetCachedOpinionWeight` and `SetCivOpinion`.
+The stored values reach gameplay through two paths:
 
-Most downstream effects come from the second path, not the first.
+| Path | Readers | Timing and effect |
+| --- | --- | --- |
+| **Direct modifier reads** | Peace scoring, approach scoring, and `GetCoopWarDesireScore` in `CvDiplomacyAI` | These calculations can use the newly stored values as soon as they next run, without an opinion refresh. The added hooks require `MOD_IPC_CHANNEL`. |
+| **Opinion cascade** | `GetDiploModifiers` → `CalculateCivOpinionWeight` → `DoUpdateOpinions` | The summed modifiers change the cached opinion weight and its opinion band. Most downstream consumers use these refreshed results. |
 
-### Opinion cascade mechanics
+`GetCachedScenarioModifier1/2` read the same arrays the setters just updated, without Lua callbacks.
 
-1. `CvDiplomacyAI::GetDiploModifiers` sums modifier1, modifier2, and modifier3 into an opinion delta. In Vox Deorum mode, modifier2's normal breakdown string is hidden behind the `MOD_IPC_CHANNEL` guard, but the numeric value still counts.
-2. `CalculateCivOpinionWeight` only adds `GetDiploModifiers` when `MOD_EVENTS_DIPLO_MODIFIERS` is active and the game is not network multiplayer.
-3. `DoUpdateOpinions` caches the refreshed weight through `SetCachedOpinionWeight`, then maps it to opinion bands using the normal thresholds: `160`, `80`, `30`, `-30`, `-80`, `-160`.
-4. `GetCachedOpinionWeight` and `GetCivOpinion` are then consumed across many DLL subsystems.
+`GetScenarioModifier1/2`, used by peace scoring and the opinion cascade, can refresh those arrays from the `GetScenarioDiploModifier1/2` Lua hooks. With no hook result, they keep the stored values.
 
-These modifiers therefore do not only change how A "feels about" B. Once opinions refresh, they also change how other systems score B as a partner, rival, target, founder, trade partner, or diplomatic threat.
+The opinion cascade requires `MOD_EVENTS_DIPLO_MODIFIERS` and a game that is not network multiplayer. `GetDiploModifiers` sums modifiers 1, 2, and 3; modifier2 still counts numerically when its normal breakdown string is hidden in VD mode. `DoUpdateOpinions` stores the resulting weight with `SetCachedOpinionWeight` and maps it to a band through `SetCivOpinion`.
 
-### What can change
+**Opinion bands** supply categorical decisions such as friend-versus-enemy branching. **Cached opinion weights** preserve the numeric score for ranking rivals, allies, and targets. With the default thresholds, the mapping is:
 
-| Subsystem | Representative symbols | Mechanism | What shifts |
-| --- | --- | --- | --- |
-| Core diplomacy | `CvDiplomacyAI::CalculateApproachTowardsPlayer`, `GetCoopWarDesireScore`, `RespondToCoopWarRequest`, `IsCoopWarRequestUnacceptable`, friendship / denouncement / warning / war logic | `GetCivOpinion`, some `GetCachedOpinionWeight`, plus direct cached `ScenarioModifier1/2` in coop-war desire | Approach selection, coop-war desire, coop-war request reactions, warn-target behavior, and "friend vs enemy" branching |
-| Peace willingness | `CvDiplomacyAI` peace scoring around `iPeaceScore` | **Direct `GetScenarioModifier1/2` read** | Immediate willingness to continue war or accept peace, without waiting for cached opinion recomputation |
-| Deals and treaty behavior | `CvDealAI` demand, gift, peace, vassalage, and treaty valuation paths | Mostly `GetCivOpinion` | Demand compliance, gift willingness, peace valuation, vassalage acceptability, and general deal scoring |
-| World Congress / voting | `CvVotingClasses` proposal evaluation and target scoring; `CvDiplomacyAI` league ally / competitor selection | Both `GetCivOpinion` and `GetCachedOpinionWeight` | Resolution support, sanctions and target preferences, ally/competitor ranking, and proposal priorities |
-| Trade and economic behavior | `CvTradeClasses`, `CvEconomicAI` | Mostly `GetCivOpinion` | International trade-route attractiveness, trade-partner friendliness handling, and hostile city-state-ally counting |
-| Settlement / territorial planning | `CvSiteEvaluationClasses`, `CvCultureClasses`, `CvBuilderTaskingAI` | Mostly `GetCivOpinion` | Borderland settlement pressure, archaeological landmark vs artifact choices, and tile-steal / build-task hostility weighting |
-| Military / tactical behavior | `CvMilitaryAI`, `CvTacticalAnalysisMap`, `CvDiplomacyAI` target / competitor logic | `GetCivOpinion` plus some `GetCachedOpinionWeight` comparisons | Nuclear launch willingness, tactical danger estimates, military threat framing, and rival/target ranking |
-| Religion / espionage / misc. systems | `CvReligionClasses`, `CvEspionageClasses`, `CvPlayer`, `CvGame` | Mostly `GetCivOpinion` | Religion founder preference weighting, coup / influence-penalty exceptions, grateful-settler defect chance, and high-level major-opinion summaries |
+| Cached weight                    | Band           |
+| -------------------------------- | -------------- |
+| Greater than or equal to 160     | `UNFORGIVABLE` |
+| 80 to less than 160              | `ENEMY`        |
+| 30 to less than 80               | `COMPETITOR`   |
+| Greater than -30 to less than 30 | `NEUTRAL`      |
+| Greater than -80 through -30     | `FAVORABLE`    |
+| Greater than -160 through -80    | `FRIEND`       |
+| -160 or lower                    | `ALLY`         |
 
-### Important examples by category
+The thresholds come from the `OPINION_THRESHOLD_*` defines. Crossing one can change several categorical branches at once; changing a weight within a band can still change a numeric ranking.
 
-- **Core diplomacy** -- opinion bands drive friendly/guarded/hostile branching throughout `CvDiplomacyAI`, including coop-war request acceptability, ally/friend checks, enemy checks, and many "warn, denounce, help, backstab, or cooperate" decisions. Separately, Vox Deorum adds the raw relationship modifiers directly into `GetCoopWarDesireScore`, so hostility toward the target can raise coop-war desire even before the next opinion refresh.
-- **Coop war specifics** -- `RespondToCoopWarRequest` accepts a request when `GetCoopWarDesireScore(...)` reaches the coop-war threshold; accepted or preparing requests then set `COOP_WAR_STATE_PREPARING` / `ONGOING` and update the target's approach to `CIV_APPROACH_WAR`. `IsCoopWarRequestUnacceptable` also branches on `GetCivOpinion` toward both asker and target, so the modifiers can affect coop war through both the direct desire hook and the later opinion-band path.
-- **Deals and treaty behavior** -- `CvDealAI` switches on `GetCivOpinion` for human-demand compliance, peace valuation, and vassalage-related deal scoring.
-- **World Congress / voting** -- `CvVotingClasses` uses both banded opinion and numeric cached-weight comparisons when scoring proposals, allies, competitors, sanctions, and targets.
-- **Trade and economy** -- `CvTradeClasses` discounts the downside of enriching civs that the AI likes, and `CvEconomicAI` tracks whether city-state allies belong to civs it sees as competitors, enemies, or hostiles.
-- **Settlement / planning** -- `CvSiteEvaluationClasses` pushes border settlement harder near disliked neighbors and backs off near friends; `CvCultureClasses` and `CvBuilderTaskingAI` also branch on major-civ opinion.
-- **Military / tactical** -- `CvMilitaryAI` is more willing to roll for nukes against hated civs, and `CvTacticalAnalysisMap` treats neighboring hostile/enemy civs as more dangerous.
-- **Religion / espionage / misc.** -- `CvReligionClasses` heavily scales some scores by founder opinion, `CvEspionageClasses` exempts some hated or untrustworthy prior allies from extra influence penalties, and `CvPlayer` / `CvGame` use opinion bands in broader world-state logic.
+### Direct effects and an example
 
-### Bands vs weights
+The VD hooks in `CvDiplomacyAI.cpp` apply the stored modifiers as follows:
 
-Two different downstream patterns matter:
+- **Peace willingness:** adds the negated sum of Public and Private storage values, divided by 10, to `iPeaceScore`.
+- **Approach selection:** friendly intent damps the WAR score using the stronger of Public or Private, and damps DECEPTIVE using Private alone. At MCP +100, the corresponding score is scaled to zero. Existing cooperative-war commitments are handled separately.
+- **Cooperative-war desire:** adds the stored Public-plus-Private sum divided by 20 before target-value scaling, after rejecting an objectively nonpositive base score.
 
-- **Opinion-band consumers** react to state changes like `ALLY`, `FRIEND`, `FAVORABLE`, `NEUTRAL`, `COMPETITOR`, `ENEMY`, or `UNFORGIVABLE`. These are the most common.
-- **Cached-weight consumers** compare the numeric `GetCachedOpinionWeight` values directly, usually to rank which civ is the bigger rival, preferred ally, or more acceptable diplomatic target.
+For example, MCP `Public = +40`, `Private = 0` stores `-40` and `0`. The peace hook adds 4 points; the WAR approach hook scales its score to 60%; the coop-war hook subtracts 2 raw points. These adjustments apply when each calculation runs. The later opinion refresh also includes the -40 opinion delta, subject to the cascade's mode guards.
 
-Crossing a threshold such as `30`, `80`, `160`, `-30`, `-80`, or `-160` can therefore cause a wider jump than the raw number alone suggests, because many branches trigger on the band, not only the underlying weight.
+`RespondToCoopWarRequest` compares desire with its acceptance threshold. Accepted or preparing requests set `COOP_WAR_STATE_PREPARING` / `ONGOING` and update the target's approach to `CIV_APPROACH_WAR`. `IsCoopWarRequestUnacceptable` also reads opinion bands toward both asker and target, so cooperation can depend on both paths.
+
+### Downstream consumers
+
+This map identifies where to investigate a changed decision after an opinion refresh. All named C++ files are under `civ5-dll/CvGameCoreDLL_Expansion2/`.
+
+| Category | Representative consumers | What the opinion input affects |
+| --- | --- | --- |
+| Core diplomacy | `CvDiplomacyAI::SelectBestApproachTowardsMajorCiv`, `IsCoopWarRequestUnacceptable`, friendship, denouncement, warning, and war logic | Approach and friend/enemy branches, cooperative-war reactions, and target selection |
+| Deals and treaties | `CvDealAI` demand, gift, peace, and vassalage paths | Compliance, willingness, valuation, and acceptability |
+| World Congress | `CvVotingClasses`; league ally/competitor selection in `CvDiplomacyAI` | Resolution support, sanctions, target preferences, and numeric ally/rival rankings |
+| Trade and economy | `CvTradeClasses`, `CvEconomicAI` | How much it matters to enrich a trade partner, and whether city-state allies belong to hostile or competing civs |
+| Settlement and territory | `CvSiteEvaluationClasses`, `CvCultureClasses`, `CvBuilderTaskingAI` | Border settlement pressure, landmark/artifact choices, and hostile tile-steal/build-task weighting |
+| Military and tactics | `CvMilitaryAI`, `CvTacticalAnalysisMap`, diplomacy target/competitor logic | Nuclear willingness, danger estimates, threat framing, and target ranking |
+| Religion and espionage | `CvReligionClasses`, `CvEspionageClasses` | Founder preference and influence-penalty exceptions |
+| World-state summaries | `CvPlayer`, `CvGame` | Grateful-settler defect chance and major-opinion summaries |
+
+Most of these consumers use `GetCivOpinion`. Congress and target-ranking code also use `GetCachedOpinionWeight` directly.
 
 ### Timing
 
-Two timings matter:
-
-- **Immediate** -- the raw scenario modifiers are stored immediately, raw getter/debug-style pathways can observe them immediately, and the direct peace-score and coop-war-desire consumers can react immediately.
-- **Next opinion refresh** -- cached opinion, opinion bands, and most foreign-AI side effects update on the next `CvDiplomacyAI::DoTurn` that runs `DoUpdateOpinions`.
-
-In network multiplayer, `CalculateCivOpinionWeight` skips the `GetDiploModifiers` path, so the normal cached-opinion cascade should not be described as unconditional there.
+The setters update the arrays immediately and do not trigger recomputation. Direct consumers can react on their next calculation. Cached opinion weights, bands, and their downstream effects update when `DoUpdateOpinions` next runs, normally through `CvDiplomacyAI::DoTurn`. The normal opinion cascade is skipped in network multiplayer.
 
 ### Three-audience visibility
 
@@ -173,4 +178,4 @@ In network multiplayer, `CalculateCivOpinionWeight` skips the `GetDiploModifiers
 
 ### Modifier3 note
 
-`SetScenarioModifier3` exists as a Lua binding and is summed by `GetDiploModifiers`, but **no current MCP tool writes to it**. It stays at its default value and contributes nothing to the cascade.
+`SetScenarioModifier3` exists as a Lua binding and is summed by `GetDiploModifiers`. **No current MCP tool writes to it**; its value can still come from other Lua code or the `GetScenarioDiploModifier3` callback.

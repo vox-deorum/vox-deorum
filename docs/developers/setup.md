@@ -30,13 +30,13 @@ npm install --include=dev
 
 Dependencies for `bridge-service`, `mcp-server`, and `vox-agents` install together from the root through npm workspaces. Run installs and package additions from the root. The dashboard is a separate package outside those workspaces, so also run `npm install --prefix vox-agents/ui --include=dev` before building it.
 
-Build all three TypeScript services at once:
+Build every workspace with:
 
 ```bash
 npm run build:all
 ```
 
-The vox-agents build recurses into `vox-agents/ui`, so the web UI is built too. The matching root scripts are `npm run test:all`, `npm run lint:all`, and `npm run clean:all`. Each service also has its own `build`, `dev`, `test`, `lint`, and `type-check` scripts if you want to work on just one.
+The command builds every npm workspace, and the vox-agents build also builds the web UI. The UI's dependencies install separately, as shown above. The matching root scripts are `npm run test:all`, `npm run lint:all`, and `npm run clean:all`; the clean script runs only in workspaces that define one. Each service has its own `build`, `dev`, `test`, `lint`, and `type-check` scripts if you want to work on just one.
 
 ## Building the DLL
 
@@ -53,13 +53,21 @@ Exact installer links, install order, common errors, the deploy step, and the de
 
 ## Configuring the services
 
-Agents need provider credentials and, optionally, a strategist configuration:
+Agents need provider credentials and, optionally, a model and strategist configuration:
 
-1. **Provider credentials.** In `vox-agents/`, copy the environment template (`.env.default` → `.env`) and configure the provider you will use. API-backed providers need a key. Codex downloads its pinned proxy on first use, opens ChatGPT device login in the browser, and prints the one-time code when no existing Codex session is available.
-2. **Models.** The registry in `vox-agents/src/utils/config/defaults.ts` ships only the openai-compatible default and embedder, with `default` and `embedder` aliases. Before work starts, Vox Agents verifies each unregistered `provider/model` reference against that provider's model list, then configures a match in memory for the run. If discovery is unavailable, it warns and uses rule-based configuration; a live catalog that confirms the model is absent produces an error, as does a reference that is neither a registered alias nor a supported `provider/model` ID — so a typo fails immediately instead of silently running on the default model. Exact entries in `vox-agents/config.json` remain explicit overrides and bypass discovery. Codex discovery starts the managed proxy and reads its authenticated live catalog. An unregistered reference such as `codex/GPT-5.6-Sol@high` matches the discovered model case-insensitively and applies high reasoning effort. The wizard or `config.json` is still the way to pin custom options. The framework resolves each agent's model through its `getModel()` hook, so you can assign different models to agents or players. See [vox-agents/models/configuration.md](vox-agents/models/configuration.md).
-3. **Players and strategist.** `vox-agents/configs/` holds a small set of curated starters. Copy one to control which civilizations the AI plays and how: `llmPlayers` (which player IDs the AI controls), `autoPlay`, and the chosen `strategist`. `vox-agents/configs/experiments/` holds research configurations, including model comparisons and recording runs. Start mode is supplied when launching: `--load` loads a save, `--wait` waits for manual start, and the default starts a new game. See [vox-agents/agents/strategists/game-session.md](vox-agents/agents/strategists/game-session.md).
+1. **Provider credentials.** In `vox-agents/`, copy `.env.default` to `.env` and configure the provider you will use. API-backed providers need a key. Codex starts its pinned proxy on first use, opens ChatGPT device login in the browser, and prints the one-time code when no existing Codex session is available. Claude Code uses its local sign-in.
+2. **Models.** Pick models in the Setup wizard, or add entries under `llms` in `vox-agents/config.json`. A seat can set its own model in the session config, and an individual agent assignment can override that. `vox-agents/src/utils/config/defaults.ts` ships only the `default` and `embedder` aliases; explicit entries are used as written. For provider options and reasoning settings, see [model configuration](vox-agents/models/configuration.md).
+3. **Players and strategist.** `vox-agents/configs/` holds a small set of curated starters. Copy one to control which civilizations the AI plays and how: `llmPlayers` (which player IDs the AI controls), `autoPlay`, and the chosen `strategist`. `vox-agents/configs/experiments/` holds research configurations, including model comparisons and recording runs. Start mode is supplied when launching: `--load` loads a save, `--wait` waits for manual start, and the default starts a new game. See [game session](vox-agents/agents/strategists/game-session.md).
 
 The bridge service and MCP server read their own settings from environment and config files; see [bridge-service/configuration.md](bridge-service/configuration.md) and [mcp-server/overview.md](mcp-server/overview.md). Both can start on a dynamically chosen port and publish their real shutdown URL to a temp file when given `BRIDGE_SHUTDOWN_URL_FILE` or `MCP_SHUTDOWN_URL_FILE`. This is how the launcher finds them.
+
+### How model references resolve
+
+- An explicit model definition under `llms` bypasses discovery. Aliases are followed to their destination; an unregistered destination still goes through discovery.
+- An unregistered `provider/model` reference is checked against that provider's model catalog before work starts. A match is configured in memory for the run, using the model family's recommended settings.
+- If discovery cannot run, Vox Agents warns and builds the configuration from its rules. A reachable catalog that confirms the model is absent is normally an error.
+- Claude Code accepts unlisted aliases and full model IDs, so those references warn and are synthesized instead of rejected.
+- An invalid alias, an unsupported provider, or a reference that names neither an alias nor a provider fails immediately with an error.
 
 ## Running the stack
 
@@ -68,9 +76,12 @@ For a full session you need the game, with the mod enabled, plus all three servi
 The launcher `scripts/vox-deorum.cmd` brings the services up in dependency order (bridge, then MCP server, then vox-agents) and waits for each to publish its port. Press Q or K, then confirm the action, to stop the services. K also kills Civilization V after the services stop, under either the DirectX 11 or the standard image name. If a service exits unexpectedly, the launcher stops the remaining services and shows the final 50 lines of that service's `logs/combined.log`. It shuts services down gracefully, falling back to a force-kill:
 
 ```bat
-scripts\vox-deorum.cmd            REM default: web UI
-scripts\vox-deorum.cmd strategist REM or any mode matching a vox-agents npm script
-scripts\vox-deorum.cmd --keep-open REM keep service windows open after their commands exit
+REM Default: web UI
+scripts\vox-deorum.cmd
+REM Or any mode matching a vox-agents npm script
+scripts\vox-deorum.cmd strategist
+REM Keep service windows open after their commands exit
+scripts\vox-deorum.cmd --keep-open
 ```
 
 `--keep-open` can appear anywhere in the argument list. The launcher continues to detect stopped services, but leaves each finished command prompt open for inspection. Close those command prompts manually when you no longer need them.
@@ -84,7 +95,7 @@ To run a single service by hand during development, use its own scripts in `brid
 
 The vox-agents module also exposes purpose-built entry points: `npm run strategist`, `npm run telepathist`, `npm run oracle`, `npm run archivist`, and `npm run narrator`. A running MCP server and bridge service are prerequisites for the agents to connect.
 
-`scripts/` holds more than the launcher: `bootstrap.cmd` clones the repository at a release tag from nothing, `install.cmd` performs the full player-style install, `manual-update.cmd` resets a checkout back to `main` and reinstalls, and there are cleanup scripts for logs and game data. Some of them discard local changes. [Operations](operations.md) documents what each one does, where the services write their logs, and how to attach a Node debugger.
+`scripts/` holds more than the launcher: `bootstrap.cmd` clones the repository at a release tag from nothing, `install.cmd` sets up a source checkout, `manual-update.cmd` resets a checkout back to `main` and reinstalls, and there are cleanup scripts for logs and game data. Some of them discard local changes. [Operations](operations.md) documents what each one does, where the services write their logs, and how to attach a Node debugger.
 
 ## Next steps
 

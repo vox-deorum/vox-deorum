@@ -74,12 +74,35 @@ Neighboring zones can refine the posture of a zone with a city after it is chose
 
 ### Zone order
 
-Zones run from highest to lowest **zone value**, which `PrioritizeZones` in `CvTacticalAnalysisMap.cpp` computes as a base value times a multiplier.
+Zones run from highest to lowest **zone value**, computed by `PrioritizeZones` in `CvTacticalAnalysisMap.cpp` as a base value times a multiplier.
 
-| Part | Rule |
+First find the largest city economic value across all dominance zones, using at least 1. Each zone starts with a base of 1. When it has a city with access to the zone's area, apply these city adjustments in order:
+
+1. Add `floor(sqrt(max(0, 100 * city economic value / largest city value)))`. The ratio uses floating-point division; negative economic value adds zero.
+2. Multiply by 3 when the city is in a focus area.
+3. Multiply by 2 when the city is visible. For a visible damaged city, also apply the damage factor below.
+4. Multiply by 2 once when the city is an operation target or a [preferred attack target](../operations/campaign.md#attack-targets).
+5. Reset the base to 1 for a city-state whose ally we are at war with.
+
+The **damage share** is the city's damage divided by its maximum HP. The exact damage factor includes an extra point before division: if `damage > floor(maxHP / 10)`, multiply by `floor((damage + 1) * 10 / maxHP)`. Both divisions here use integer arithmetic, so retain the addition and rounding order when reproducing the score.
+
+After the city adjustments, multiply every land zone's base by 3, including a base reset to 1. Then choose the dominance multiplier:
+
+| Dominance | Our territory | Enemy territory | Other territory |
+| --- | --- | --- | --- |
+| Enemy | 8 | 1 | 1 |
+| Even, with more than one enemy unit | 4 | 4 | 1 |
+| Friendly | 1 | 8 | 1 |
+| Other | 1 | 1 | 1 |
+
+For a major civilization, multiply that multiplier by 4 in enemy territory while [winning all wars](../concepts.md#war-states), or in our territory while losing all wars. The final zone value is the adjusted base times this multiplier.
+
+For example, consider a visible land city with economic value 25, a largest zone-city value of 100, and 100 damage out of 200 HP. It has area access and no focus, target, or city-state adjustment:
+
+| Stage | Running value |
 | --- | --- |
-| Base | 1. When the zone has a city that can reach the zone's area, add the square root of that city's economic value as a percentage of the most valuable zone city, then apply the city factors. |
-| City factors | x3 in a focus area. x2 when visible. A visible city that has lost more than a tenth of its hit points multiplies again by ten times its damage share, rounded down, so half damage gives x5. x2 when it is an operation target or a [preferred attack target](../operations/campaign.md#attack-targets). A city-state whose ally we are at war with resets the base to 1. |
-| Land zone | x3 |
-| Multiplier | Enemy dominance: 8 in our territory, 1 in enemy territory. Even dominance with more than one enemy unit: 4 in our or enemy territory. Friendly dominance: 8 in enemy territory, 1 in ours. Otherwise 1. |
-| War state | For major civs, a further x4 in enemy territory while winning all wars, or in our territory while losing all wars. |
+| Economic value | `1 + floor(sqrt(25)) = 6` |
+| Visible city | `6 * 2 = 12` |
+| Damage factor | `floor(101 * 10 / 200) = 5`, so `12 * 5 = 60` |
+| Land zone | `60 * 3 = 180` |
+| Enemy dominance in our territory, with neutral aggregate war state | `180 * 8 = 1,440` |

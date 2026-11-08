@@ -46,9 +46,28 @@ This is why the mod is required even though it is small: it is the in-game end o
 
 ## The reference tooltips addin
 
-`Lua/VoxDeorumReference.lua` is a second standalone Lua addin. It provides the function `VoxDeorumReferenceTooltips(kind, types)`, which the MCP server calls through the bridge when a database tool returns a full report (see [mcp-server/database.md](../mcp-server/database.md)). The addin does not register the function when it loads, because UI contexts load before the DLL's connection service starts and registering that early crashes the game. It registers when `LuaEvents.VoxDeorumReferenceRegister` fires, which the MCP server triggers the first time a call finds the function missing, including after a save is loaded. `kind` is `unit`, `building`, `technology`, or `project`, `types` is a list of type keys, and the function returns a map from each type to its in-game tooltip text.
+`Lua/VoxDeorumReference.lua` is a second standalone Lua addin. It provides the function `VoxDeorumReferenceTooltips(kind, types)`, which the MCP server calls through the bridge when a database tool returns a full report (see [mcp-server/database.md](../mcp-server/database.md)). It builds player-agnostic text with the same Community Patch tooltip code the in-game screens use.
 
-To match what a player reads on screen, the file includes the Community Patch tooltip code that EUI uses, `InfoTooltipInclude` and `TechHelpInclude`, and builds each tooltip in general-info mode: `GetHelpTextForUnit` and `GetHelpTextForBuilding` with the general-info flag set, the short form of `GetHelpTextForTech`, and `GetHelpTextForProject` with its always-present leading name line dropped so it reads like the other kinds. General-info mode leaves out anything specific to a player or city, so every seat gets the same text. Vox Deorum changes `GetHelpTextForBuilding` so that general-info mode also ignores the active player's civilization and trade modifier, and describes a unique building with its own civilization's abilities, such as the Candi's unique luxuries.
+### Registration
+
+The addin does not register the function when it loads. UI contexts load before the DLL's connection service starts, and registering that early crashes the game. It instead listens for `LuaEvents.VoxDeorumReferenceRegister` and calls `Game.RegisterFunction` when that event fires. The MCP server fires the event when a tooltip call fails with `INVALID_FUNCTION`, which can also happen after a save is loaded, and then retries the call once. A repeat call replaces the earlier registration.
+
+### Calling contract
+
+`kind` is `unit`, `building`, `technology`, or `project`. `types` is a list of type keys. The function returns a map from each requested type to its localized tooltip in game markup. Unknown types, failed builds, and empty builds are omitted from the map. An unknown `kind` or a non-table `types` argument returns an empty map.
+
+### Output builders
+
+The addin includes Community Patch's `InfoTooltipInclude` and `TechHelpInclude`, the tooltip code EUI uses:
+
+| Kind | Builder and output |
+| --- | --- |
+| `unit` | `GetHelpTextForUnit` in general-info mode, with the name excluded. |
+| `building` | `GetHelpTextForBuilding` in general-info mode, with the name excluded. |
+| `technology` | The short form of `GetHelpTextForTech`. |
+| `project` | `GetHelpTextForProject` in general-info mode, with its leading name line removed. |
+
+**General-info mode** leaves out player- and city-specific details so every seat gets the same reference text. Vox Deorum's building tooltip also ignores the active civilization and trade modifier in this mode. A unique building describes its own civilization's abilities, such as the Candi's unique luxuries.
 
 ## The map script
 

@@ -63,20 +63,42 @@ An **investment** spends gold and records city unit-class investment state inste
 
 ## Faith priority and legality
 
-Religion AI considers enhancement, a desired faith Great Person, domestic conversion, and foreign spread first. It then considers religious defense, founding savings, and city-ranked leftovers. An early-stop result on a priority path preserves faith for a later turn, while a successful priority purchase can continue into later checks. Leftover spending ranks cities by faith output, favors holy cities, penalizes puppets, and then considers faith-enabled buildings and eligible units. The generic unit branch requires conversion, positive gold income, and supply capacity. It excludes missionaries and inquisitors, which use dedicated demand, as well as special units and units without a positive base faith cost.
+Religion AI's **priority result** controls whether lower-priority faith spending runs. `DoFaithPurchases` returns true to stop that work. A purchase can either continue or stop the flow, depending on the branch.
+
+### Priority flow
+
+Eligible priority paths run in the order shown below. An ineligible path continues to the next check.
 
 ```mermaid
 flowchart TD
-    P[Priority religious goals] --> E{Path returns early-stop?}
-    E -->|yes| S[[Preserve faith and stop<br/>lower-priority work]]
-    E -->|no, including a purchase that continues| D{Religious defense purchase?}
+    P[Priority paths in order<br/>enhancement, desired Great Person,<br/>domestic conversion, foreign spread] --> R{DoFaithPurchases result}
+    R -->|Continue| D{Religious defense purchase attempt?}
+    R -->|Stop| S[[Stop lower-priority work]]
     D -->|yes| X[[Stop lower-priority purchases]]
     D -->|no| F{Saving to found?}
     F -->|yes| S
-    F -->|no| L[City-ranked leftovers]
-    L --> B[Faith-enabled buildings]
-    B --> U[Eligible generic units]
+    F -->|no| L[Ranked leftover cities]
 ```
+
+| Priority, in order | Purchase succeeds | Desired purchase fails or must wait |
+| --- | --- | --- |
+| 1. Enhance the religion | Continue | Stop |
+| 2. Buy a desired faith Great Person within its wait threshold | Continue | Stop |
+| 3. Convert domestic cities, including puppets | Continue | Stop |
+| 4. Spread abroad, personality religion flavor at least 10 | Stop | Stop |
+| 4. Spread abroad, other branch | Continue | Stop |
+
+Priority 2 reserves faith only once the projected wait is below its religion-flavor threshold. A longer wait continues to later priorities. Failed desired purchases can reflect availability as well as insufficient faith.
+
+A stop result skips religious defense and leftover spending for this turn. When all priority checks continue, `DoTurn` checks religious defense, then saving to found a religion, then city-ranked leftovers. The defense helper reports a purchase attempt, which also stops leftover spending.
+
+### Leftover cities
+
+Leftover spending skips cities in resistance or under siege. It ranks the others by faith output, halving puppet output and doubling holy-city output. Within each city, it considers faith-enabled buildings before generic units. The caller visits every ranked city, regardless of the previous city's return value.
+
+### Legality
+
+The generic unit branch requires positive player gold income and supply capacity. Every non-puppet city must share the purchase city's majority religion. It excludes missionaries and inquisitors, which use dedicated demand, as well as special units and units without a positive base faith cost.
 
 | Legality layer | Gold | Faith |
 | --- | --- | --- |
@@ -84,6 +106,6 @@ flowchart TD
 | Unlocks | Normal unit, resource, instance-limit, and required-building checks apply. | Religion, belief, policy, era, domain, and trait rules apply. Air units need their specific faith route; naval units need the applicable trait route. |
 | Currency and cooldown | Treasury gold and local combat or civilian cooldowns apply. | Faith and global or local faith cooldowns apply, including local combat and civilian tracking. |
 
-The generic faith unit path calls `ChooseHurry` in unit-only faith mode, but its purchase-mode sanity check uses the gold form of `IsCanPurchase`. This **generic-faith gold-legality quirk** can reject a faith-legal unit when the city cannot buy it with gold. Dedicated religious purchases use the faith gate directly.
+The generic faith unit path calls `ChooseHurry` in unit-only faith mode, but its purchase-mode sanity check uses the gold form of `IsCanPurchase`. This **gold legality check** can reject a faith-legal unit when the city cannot buy it with gold. Dedicated religious purchases use the faith gate directly.
 
 With AI logging enabled, city hurry logs show `PRE` candidates after entry and duration adjustment and `POST` candidates after suitability. `HurryCityPriorities.csv` records the empire `BUY` list; Homeland, Tactical, and Religion logs record direct purchases. For a candidate that disappears after `POST`, inspect earlier spending, savings reservations, strategic resources, and placement.

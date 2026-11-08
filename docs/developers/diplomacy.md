@@ -26,7 +26,7 @@ That registration is the inbound half of the transport. It uses the DLL's `Game.
 | `VoxDeorumDiploStatus` | The agent's activity state: composing, reasoning, using a tool, idle, or error. |
 | `VoxDeorumDiploDelta` | The reply text accumulated so far, throttled to about once a second. |
 
-`civ5-mod/UI/VoxDeorumDiploTransport.lua` makes the only `Game.RegisterFunction` calls in the mod. The deal screen has its own driver but registers nothing: it resolves a pending action by watching the rows that arrive through these same functions.
+`civ5-mod/UI/VoxDeorumDiploTransport.lua` publishes those four diplomacy callbacks. The deal screen has its own driver and resolves pending actions by watching the rows that arrive through them. The mod's reference tooltips addin registers its own function separately.
 
 From the dashboard, the same conversation opens through `POST /api/agents/chat` (`vox-agents/src/web/chat/factory.ts`). Threads are keyed by the ordered player pair, so both clients see one conversation.
 
@@ -90,26 +90,34 @@ The DLL also offers `Game.CallExternal`, which lets game Lua invoke a registered
 
 ## The data model
 
-**A transcript message** is one row in the `DiplomaticMessages` knowledge table (`mcp-server/src/knowledge/schema/timed.ts`). There is exactly one conversation per player pair, so a row is keyed by `Player1ID` and `Player2ID` (min and max, with `-1` reserved for an observer) rather than by a thread id. It carries a `SpeakerID`, a `MessageType`, free-text `Content`, a JSON `Payload`, and the game `Turn`.
+The **transcript** is an append-only record of a conversation. **Deal state is derived** from its rows; the store carries no status column.
 
-The wire projection lives in `mcp-server/src/utils/transcript-schema.ts`, which also pins the seven message types: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, and `deal-enacted`.
+| Concept | Lifetime | Relationship and content |
+| --- | --- | --- |
+| **Transcript message** | Durable | One stored row: speech, a proposal, or an outcome. |
+| **Deal** | Durable | Structured terms in a proposal or counter row's `Payload.Deal`. |
+| **Deal state** | Derived | The latest proposal and its status, computed from transcript rows. |
+| **Inspection** | Transient | A fresh read of live tradable terms, legality, and advisory values. |
+| **Ledger term** | Transient | A plain string the negotiator authors and the ledger resolves into structured terms. |
 
-The store is append-only and carries no status column, which leads to the rule that governs the rest of the subsystem: **deal state is derived, never stored**. `vox-agents/src/utils/diplomacy/deal/deal-reduce.ts` reduces the ordered rows into the active proposal (the latest proposal or counter) and its status (`open`, `rejected`, `accepted`, `enacted`, or `none`), reading which later rows reference that proposal through `Payload.ProposalMessageID`. The in-game panel carries a small Lua port of that same reducer, which has to stay in step with it.
+`deal-reduce.ts` in `vox-agents/src/utils/diplomacy/deal/` selects the latest proposal or counter, then follows outcome rows' `Payload.ProposalMessageID` references to derive `open`, `rejected`, `accepted`, or `enacted`; with no proposal, the status is `none`. The in-game panel's Lua reducer must follow the same rules.
 
-**A deal** is the `Payload.Deal` of a proposal or counter row, pinned by `mcp-server/src/utils/deal-schema.ts` and its zod-free vocabulary half `deal-metadata.ts` (the split exists so the browser bundle can import the tables without zod). A deal holds two kinds of terms:
+Transcript rows live in `DiplomaticMessages` (`mcp-server/src/knowledge/schema/timed.ts`) and are grouped by `Player1ID` and `Player2ID` (min and max, with `-1` reserved for an observer). There is one conversation per player pair. Each row carries `SpeakerID`, `MessageType`, free-text `Content`, JSON `Payload`, and the game `Turn`. The wire projection in `mcp-server/src/utils/transcript-schema.ts` pins seven message types: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, and `deal-enacted`.
+
+The deal contract lives in `mcp-server/src/utils/deal-schema.ts`; its vocabulary lives in `deal-metadata.ts` so the browser can import those tables without zod.
+
+A proposal or counter row's `Payload.Deal` holds two kinds of terms:
 
 - **Trade items** map onto the game's `TradeableItems` enum: gold, gold per turn, resources, cities, techs, maps, embassies, open borders, the pacts and treaties, third-party peace and war, vote commitments, and vassalage. Each item is directed, giving from `fromPlayerID` to `toPlayerID`.
 - **Promises** are a Vox Deorum addition with no enum entry, applied at enactment through `Player:SetPromise`. Only the five the tactical AI actually honors are authorable: military, expansion, border, no digging, and cooperative war.
 
-Durations and display names are never author-supplied. They are stamped server-side from a fresh inspection before the row is archived, so a stored deal renders correctly without a live game. `symmetrizeDeal` completes a mutual agreement listed on one side onto both.
+`appendDealProposal` (`vox-agents/src/utils/diplomacy/deal/deal.ts`) normalizes terms before archival: `symmetrizeDeal` completes a mutual agreement listed on one side onto both, and a fresh inspection supplies durations and display names. The stored deal can then render correctly without a live game. Callers using raw `append-message` must perform that normalization themselves.
 
-When the two civs are at war, every deal between them is a peace deal: `appendDealProposal` (`vox-agents/src/utils/diplomacy/deal/deal.ts`) adds a Peace Treaty on both sides when the author left one out, then re-inspects so the treaty's legality and value are real. While the game's war lock lasts, that inspection reports the treaty illegal with a locked-into-war reason, so the whole proposal is refused before anything is archived.
+When the two civs are at war, `appendDealProposal` adds a Peace Treaty on both sides when the author left one out, then re-inspects so the treaty's legality and value are real. While the game's war lock lasts, that inspection reports the treaty illegal with a locked-into-war reason, so the whole proposal is refused before anything is archived.
 
-A proposal row also carries `Value1` and `Value2`: per-item snapshots of what each item was worth to each ordered player at proposal time. These are advisory: the game's own trade valuation gates nothing on the agent path.
+A proposal's payload can also carry `Value1` and `Value2`: advisory per-item snapshots of what each item was worth to each ordered player at proposal time. The agent path accepts terms independently of the game's trade valuation.
 
-**An inspection** is the read-only view of live game state. `inspect-deal` (`mcp-server/src/tools/knowledge/inspect-deal.ts`) returns the full tradable range for each side, per-term legality with reasons, both-direction value estimates, and per-promise agreeability factors, all computed on a scratch deal that is never activated. Nothing about it is stored; it is fetched fresh wherever it is needed.
-
-**A ledger term** is the negotiator's plain-string view of all of the above. It exists only inside `vox-agents/src/envoy/ledger/`; nothing durable ever holds one.
+`inspect-deal` (`mcp-server/src/tools/knowledge/inspect-deal.ts`) returns each side's full tradable range, per-term legality and reasons, both-direction values, and per-promise agreeability factors. It uses a scratch deal that is never activated and stores no inspection state. Callers fetch it fresh when needed. Ledger terms exist only inside `vox-agents/src/envoy/ledger/` during authoring and resolution.
 
 ## Where the seams are
 

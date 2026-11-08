@@ -7,7 +7,7 @@ Concise reference for all 43 tools exposed by the MCP Server. Tools are organize
 - All tools extend abstract base classes (`DatabaseQueryTool`, `LuaFunctionTool`, `ActionTool`, `DynamicEventTool`) or `ToolBase` directly
 - Factory pattern with lazy loading -- tools instantiated on first server init, cached afterward
 - Zod schemas for input/output validation with `.describe()` on each field
-- PlayerID range for major civs: 0-21 (`MaxMajorCivs - 1`). `post-notification` is the one exception: its recipient spans the full addressable player range 0-63 (`MaxPlayers - 1`) so a human watching from an observer slot can be notified.
+- PlayerID constraints vary by tool. Most major-civ tools accept 0-21 (`MaxMajorCivs - 1`). Transcript IDs are integers at least `-1`, the observer sentinel; archival writes also validate major civilizations and real observer slots. `set-relationship` accepts nonnegative IDs with no schema upper bound. `post-notification` accepts recipients 0-63 (`MaxPlayers - 1`), including observer slots.
 
 ## General Tools (3)
 
@@ -19,7 +19,7 @@ Concise reference for all 43 tools exposed by the MCP Server. Tools are organize
 
 ## Database Query Tools (9)
 
-All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `MaxResults?`: number (default: 20). Returns full details automatically when search narrows to a single result.
+All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `MaxResults?`: number (default: 20), `Detailed?`: boolean (default: false; return full details for every result). Returns full details automatically when search narrows to a single result.
 
 | Tool | Description |
 | --- | --- |
@@ -55,23 +55,104 @@ For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw
 
 ## Action Tools (15)
 
-| Tool | Description | Key Input |
+Lua-backed steering tools and `post-notification` return `Success`, optional `Result`, and optional `Error` (`Code`, `Message`, optional `Details`). The eight steering tools share `Turn?`, defaulting to `-1` for the current turn. `set-metadata` and `present-decision` return plain booleans.
+
+| Tool | Purpose | Key inputs |
 | --- | --- | --- |
-| `set-strategy` | Set grand/economic/military strategies by name | `PlayerID`, `GrandStrategy?`, `EconomicStrategies?`, `MilitaryStrategies?`, `Rationale` |
-| `set-persona` | Set diplomatic personality values (1-10) across 26 personality fields | `PlayerID`, `[personality fields]`, `Rationale` |
-| `set-relationship` | Set additive diplomatic modifiers with another major civ; positive MCP values mean friendlier intent | `PlayerID`, `TargetID`, `Public?` (-100 to 100), `Private?` (-100 to 100), `Rationale` |
-| `set-flavors` | Set explicit flavor values (0-100) for tactical AI preferences and optionally set grand strategy as long-term victory direction / strategy state | `PlayerID`, `GrandStrategy?`, `Flavors?`: Record, `Rationale` |
-| `unset-flavors` | Clear all custom flavor values, revert to defaults | `PlayerID` |
-| `set-metadata` | Set a metadata key-value pair | `Key`, `Value` |
-| `set-research` | Set next research technology by name | `PlayerID`, `Technology`, `Rationale` |
-| `set-policy` | Set next policy or branch selection by name | `PlayerID`, `Policy`, `Rationale` |
-| `keep-status-quo` | Maintain current strategy/flavors with documented rationale | `PlayerID`, `Mode?`: "Flavor" or "Strategy", `Rationale` |
-| `relay-message` | Relay a report visible to the receiving leader; `Importance` 7+ interrupts important-event pacing. Subject IDs are stored separately and resolved to names when retrieving formatted diplomatic history | `PlayerID`, `FromPlayerID`, `AboutPlayerIDs?`, `Message`: "Diplomatic"/"Intelligence"/"Rumor", `Content` (1-4000 characters), `Confidence` (0-9), `Importance` (0-9), `Categories` (any of Diplomacy, Military, Economy, Others), `Memo` (1-500 characters), `MemoBy?`: "analyst" (default) or "diplomat", which sets the memo's attribution |
-| `append-message` | Append an archival message to a durable diplomatic transcript; returns the stored message's canonical fields. Refuses the three terminal deal answers (`deal-accept`, `deal-enacted`, `deal-reject`), which belong to the transactional routes below | `PlayerAID`, `PlayerBID`, `PlayerARole?`, `PlayerBRole?`, `SpeakerID`, `MessageType`, `Content`, `Payload?`, `Turn?`, `ExpectedGameID?` |
-| `enact-agent-deal` | Enact the deal stored on a proposal, then record acceptance and enactment; returns record IDs, the full `AcceptRow`/`EnactedRow` projections, and `AlreadyEnacted`/`Enacted` status — or a structured `Conflict` (`superseded`, `answered`, `wrong-recipient`) when proposal state moved on | `ProposalMessageID`, `Deal?`, `AccepterID?`, `Content?` |
-| `reject-agent-deal` | Reject or retract an open proposal transactionally and record the `deal-reject`; returns `rejected` / `already-rejected` (with the exact durable `Row` either way, never a second row) or a structured `conflict` (`not-found`, `not-a-proposal`, `superseded`, `rejected-by-other`, `answered`) | `PlayerAID`, `PlayerBID`, `ProposalMessageID`, `SpeakerID`, `Content?`, `ExpectedGameID?` |
-| `post-notification` | Post a native notification to a human player; returns `true` only when Civ V creates it and `false` when Civ V rejects it. The summary uses the game's highlighted headline style, and messages longer than 400 characters are truncated with `...`. A notification addressed to a seat that a pinned observer is currently playing is redirected to that observer, since Civ V only displays notifications for the active player | `PlayerID` (0-63, observer slots included), `CounterpartID?` (a major civ, different from `PlayerID`), nonblank `Summary` (1-200 characters), nonblank `Message` (1-2000 characters) |
-| `present-decision` | Present current Flavor-mode strategic options to the in-game human-control panel; returns whether delivery succeeded | `PlayerID`, `Turn?` (default: current turn) |
+| `set-strategy` | Set grand, economic, and military strategies by name | `PlayerID`, `GrandStrategy?`, `EconomicStrategies?`: string[], `MilitaryStrategies?`: string[], `Rationale` |
+| `set-persona` | Set any of 26 diplomatic personality fields, clamped to 1-10 | `PlayerID`, optional persona fields, `Rationale` |
+| `set-relationship` | Set additive modifiers toward another major civ; positive values mean friendlier intent | `PlayerID`, `TargetID`, `Public?`, `Private?`, `Rationale` |
+| `set-flavors` | Set tactical AI preferences, clamped to 0-100, and optional grand strategy | `PlayerID`, `GrandStrategy?`, `Flavors?`: record, `Rationale` |
+| `unset-flavors` | Clear custom flavors and revert to defaults | `PlayerID` |
+| `set-metadata` | Set a metadata key-value pair | `Key`, `Value`: strings |
+| `set-research` | Set the next technology by name; `None` clears it | `PlayerID`, `Technology`, `Rationale` |
+| `set-policy` | Set the next policy or branch by name; `None` clears it | `PlayerID`, `Policy`, `Rationale` |
+| `keep-status-quo` | Reapply strategy or flavors with a rationale | `PlayerID`, `Mode?`: "Flavor" or "Strategy" (default), `Rationale` |
+| [`relay-message`](#relay-message) | Store a report for a leader | Source, recipient, report, memo |
+| [`append-message`](#append-message) | Archive a transcript message | Endpoints, speaker, type, content |
+| [`enact-agent-deal`](#enact-agent-deal) | Enact a proposal and record its outcome | Proposal ID, optional acceptance details |
+| [`reject-agent-deal`](#reject-agent-deal) | Reject or retract a proposal | Endpoints, proposal ID, speaker |
+| [`post-notification`](#post-notification) | Post a native notification | Recipient, headline, body, optional counterpart |
+| [`present-decision`](#present-decision) | Deliver options to the human-control panel | Player, optional turn |
+
+`Public` and `Private` default to zero. Their documented range is -100 to 100; the tool accepts numbers without enforcing that range. See [diplomatic influence](influence/diplomacy.md) for persona fields and the current `DiplomaticBalance` setter mismatch.
+
+### relay-message
+
+Stores a report visible to the receiving leader. Returns `Success` with `EventID`, or an `Error`.
+
+| Input | Contract |
+| --- | --- |
+| `PlayerID`, `FromPlayerID` | Recipient and source, 0-21. |
+| `AboutPlayerIDs?` | Subject IDs, 0-21; omitted or empty means no subjects. |
+| `Message` | `Diplomatic`, `Intelligence`, or `Rumor`. |
+| `Content` | 1-4000 characters. |
+| `Confidence` | 0-9. |
+| `Importance` | 0-9; 7+ interrupts important-event pacing. |
+| `Categories` | Array containing any of `Diplomacy`, `Military`, `Economy`, `Others`; may be empty. |
+| `Memo` | 1-500 characters. |
+| `MemoBy?` | `analyst` (default) or `diplomat`; sets memo attribution. |
+
+Subject IDs are stored separately and resolved to names in formatted diplomatic history.
+
+### append-message
+
+Appends an archival transcript message and returns its canonical stored fields. Terminal answers (`deal-accept`, `deal-enacted`, `deal-reject`) must use the transactional tools below.
+
+| Input | Contract |
+| --- | --- |
+| `PlayerAID`, `PlayerBID`, `SpeakerID` | Endpoints must differ; the speaker belongs to the pair. Supports observer endpoints. |
+| `PlayerARole?`, `PlayerBRole?` | Endpoint roles; required except for the -1 observer sentinel. |
+| `MessageType`, `Content` | Message type and free-text body. |
+| `Payload?` | Metadata; proposals and counters require `Deal`. |
+| `Turn?`, `ExpectedGameID?` | Optional turn and active-game identity guard. |
+
+### enact-agent-deal
+
+Enacts a stored proposal and records acceptance and enactment in one serialized store transaction.
+
+| Input | Contract |
+| --- | --- |
+| `ProposalMessageID` | Proposal or counter to enact. |
+| `Deal?` | Optional complete deal; its terms must match the stored proposal. |
+| `AccepterID?` | Defaults to the proposal's recipient. |
+| `Content?` | Optional acceptance line. |
+
+Returns record IDs, full `AcceptRow`/`EnactedRow` projections, and `AlreadyEnacted`/`Enacted` status. A repeat returns the existing enactment without new writes. A moved proposal state returns `Conflict` with reason `superseded`, `answered`, or `wrong-recipient`; enactment does not run.
+
+### reject-agent-deal
+
+Rejects or retracts an open proposal transactionally. Either endpoint may reject; the proposer doing so retracts it.
+
+| Input | Contract |
+| --- | --- |
+| `PlayerAID`, `PlayerBID` | Expected conversation endpoints. |
+| `ProposalMessageID`, `SpeakerID` | Proposal to reject and the endpoint speaking. |
+| `Content?`, `ExpectedGameID?` | Optional rejection line and active-game identity guard. |
+
+Returns `rejected` or `already-rejected` with the exact durable `Row`; a repeated rejection by the same speaker creates no second row. A `conflict` has reason `not-found`, `not-a-proposal`, `superseded`, `rejected-by-other`, or `answered`.
+
+### post-notification
+
+Posts a native in-game notification. Its bridge envelope's `Result` is `true` when Civ V creates it and `false` when Civ V rejects it.
+
+| Input | Contract |
+| --- | --- |
+| `PlayerID` | Integer recipient, 0-63, including observer slots. |
+| `CounterpartID?` | Integer major civ, 0-21, different from `PlayerID`. |
+| `Summary` | Nonblank, 1-200 characters; uses the highlighted headline style. |
+| `Message` | Nonblank, 1-2000 characters; truncated to 400 including `...`. |
+
+With a counterpart, clicking opens the conversation; otherwise it shows the message in a dialog. Notifications for a seat currently controlled by a pinned observer are redirected to that observer, since Civ V displays notifications for the active player.
+
+### present-decision
+
+Presents current Flavor-mode options to the in-game human-control panel. Returns whether delivery succeeded.
+
+| Input      | Contract                         |
+| ---------- | -------------------------------- |
+| `PlayerID` | Human strategist's player, 0-21. |
+| `Turn?`    | Defaults to the current turn.    |
 
 ## Game Control Tools (3)
 

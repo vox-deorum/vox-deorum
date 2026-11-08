@@ -59,22 +59,32 @@ Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd
 
 ## Search order and final ranking
 
-```mermaid
-flowchart LR
-    A[Candidate assignments<br/>damage, bonuses, plot change] --> Q[Queue heuristic<br/>shallow early, deeper later]
-    Q --> C[Complete positions]
-    C --> G{Safety and progress pass?}
-    G -->|yes| R[Rank by cached total score]
-    G -->|no| X[Reject plan]
-    R --> T[Ties: fewer assignments,<br/>then lower position ID]
-```
+Search order and final ranking use different scores and checks:
 
-Within a generation, the queue uses a last-round heuristic based on damage, bonuses, and plot-score changes. Complete plans must pass [acceptance](overview.md#acceptance-and-replay) before final ranking.
+| Stage | Score or check | Role |
+| --- | --- | --- |
+| Candidate generation | Assignment score | Prunes and orders candidate assignments. Rank-only bonuses for trade routes and air search affect this order separately. |
+| Search queue | Generation (search depth), then last-round rank | Favors shallow generations early and deeper ones later. Within a generation, favors the last-round heuristic plus rank-only bonuses. |
+| Completed plans | [Acceptance](overview.md#acceptance-and-replay) checks | Rejects unsafe or non-progressing plans. |
+| Final ranking | Cached total score | Ranks accepted plans, highest first. Ties use fewer assignments, then lower position ID. |
 
-Two implementation details matter when debugging rankings:
+### Cached score updates
 
-- `CvBasePosition::UpdateScore` caches `10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores`, plus the plan's [trade gain](#how-plans-keep-the-score). It sums the plot entries before replacing the acting unit's entry, so the total lags that update. Completion adds finish assignments and unused-unit plot bonuses without refreshing the total.
-- The queue's separate last-round heuristic uses unscaled damage and bonuses. It subtracts both the assignment's old plot score and any prior stored plot score, so it can subtract the previous plot value twice.
+`CvBasePosition::UpdateScore` calculates the cached total in this order:
+
+1. Add the assignment's damage delta and bonus to their cumulative values.
+2. Cache `10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores`, plus the plan's [trade gain](#how-plans-keep-the-score).
+3. Replace the acting unit's stored plot score, or insert a new nonzero entry.
+
+The cache therefore includes the previous plot entry for the acting unit. Completion appends finish assignments and adds unused-unit plot bonuses without refreshing this total.
+
+For example, with one stored plot score of 20 and zero cumulative damage, bonuses, and trade gain, an assignment from plot score 20 to 30 caches a total of 20, then stores 30. A later `UpdateScore` sees the stored 30; completing the plan alone leaves the cached total at 20.
+
+### Last-round heuristic quirk
+
+The queue's last-round heuristic adds unscaled damage and bonus, plus new plot score minus old plot score. It also subtracts the acting unit's previous stored plot score when one exists. When the old score equals that stored entry, the previous value is subtracted twice.
+
+For the same 20-to-30 assignment, with zero damage and bonus, the last-round increment is `30 - 20 - 20 = -10`. This affects which branch the search explores next. Accepted completed plans use the cached total described above.
 
 ## Trade routes
 

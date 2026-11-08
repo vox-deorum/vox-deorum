@@ -1,6 +1,6 @@
 # Operations
 
-This page is for a checkout that already builds and runs ([Setup](setup.md) covers getting there). It documents the maintenance scripts under `scripts/` that setup.md doesn't cover, where each service's logs land, and how to attach a debugger. One of the scripts below discards local changes, so read its entry before running it.
+This page is for a checkout that already builds and runs ([Setup](setup.md) covers getting there). It documents the maintenance scripts under `scripts/`, where each service's logs land, and how to attach a debugger. One script below discards local changes, so read its entry before running it.
 
 ## Maintenance scripts
 
@@ -8,15 +8,60 @@ All paths are relative to the repository root.
 
 ### Getting a working checkout
 
-- **`scripts/bootstrap.cmd`** is a from-nothing installer: it installs Git for Windows (with LFS) if missing, shallow-clones the repository at a release tag (the latest one by default, or one passed as an argument), initializes submodules, pulls the LFS-tracked prebuilt DLL binaries, and hands off to `install.cmd`. After an optional tag, pass `--line X.Y` and `--debug` in either order to choose the DLL line and build mode. Use it for someone who has no clone and possibly no Git at all: one command gets them to a working checkout. If you already have a clone, run `install.cmd` directly instead.
-- **`scripts/install.cmd`** is the first-run setup a source contributor actually needs. It accepts `--line X.Y` and `--debug` in either order, using the default from `scripts/vp-lines.txt` when the line is omitted. It verifies the line and its committed `scripts/dll-release-info-<line>.txt` pin, then downloads the matching DLL without changing `civ5-dll`. When that checkout differs from the selected pin, the script prints repair commands for the matching `vox-deorum-<line>` branch. It also detects Civilization V through SteamCMD (checking the registry and the common Steam library paths), copies the mod folders into the game's `MODS` directory along with the prebuilt DLL, installs Node.js if it's missing (falling back to a portable copy under `node/` when there are no admin rights or the installer fails), runs `npm install` from the repository root, and creates `vox-agents/.env` from `.env.default` if it doesn't exist yet. This is a separate path from the packaged installer that [Getting Started](../players/getting-started.md) walks a player through: that one ships a compiled build, this one sets up a working Civ 5 install for someone building from source.
+#### `scripts/bootstrap.cmd`
+
+A from-nothing installer for someone who has no clone, and possibly no Git. It installs Git for Windows with LFS if missing, shallow-clones the repository at a release tag into a `vox-deorum` folder next to the script, initializes submodules, pulls the LFS-tracked prebuilt DLL binaries, and hands off to `install.cmd`.
+
+Pass an optional release tag first, then `--line X.Y` and `--debug` in either order. The latest release tag is used when none is given. With a clone already, run `install.cmd` directly instead.
+
+#### `scripts/install.cmd`
+
+First-run setup for a source checkout. It accepts `--line X.Y` and `--debug` in either order, using the default line from `scripts/vp-lines.txt` when none is given. It:
+
+1. Validates the selected line and its committed `scripts/dll-release-info-<line>.txt` pin.
+2. Downloads the matching prebuilt DLL without switching the `civ5-dll` submodule.
+3. Prints repair commands for the matching `vox-deorum-<line>` branch when the source checkout differs from the pin.
+4. Finds Steam and Civilization V, installing Steam first if needed, and uses SteamCMD to check the game installation.
+5. Replaces the installed Community Patch, Vox Populi, and Vox Deorum mod folders, the EUI compatibility folder, the VPUI and UI_bc1 DLC folders, and the DLL.
+6. Installs Node.js if it is missing, falling back to a portable copy under `node/` when there are no admin rights or the installer fails.
+7. Runs `npm install` from the root and in `vox-agents/ui`, then creates `vox-agents/.env` from `.env.default` if it does not exist.
+
+| Option | Effect |
+| --- | --- |
+| `--line X.Y` | Selects a Vox Populi line. The default comes from `scripts/vp-lines.txt`. |
+| `--debug` | Uses the debug DLL build instead of the release build. |
+
+The packaged installer that [Getting Started](../players/getting-started.md) walks a player through ships a compiled build. `install.cmd` sets up a working Civilization V install for someone building from source.
 
 ### Updating an existing checkout
 
-- **`scripts/manual-update.cmd`** runs `cleanup-data`, `cleanup-logs`, `git checkout main --force`, `git pull`, and `git submodule update`. It then checks Node.js against the minimum in the updated `package.json`, preferring the portable copy under `node/` like the launcher. If Node is missing or outdated, it downloads a compatible portable copy there without requiring administrator rights. A failed runtime update stops the script. Finally, it calls `install.cmd`, forwarding all arguments including the line and debug selection. **Warning: `git checkout main --force` discards uncommitted local changes and switches you onto `main`, whatever branch you were on.** Use this only when you want to throw away local edits and reset to a clean `main`, for example to reproduce an issue against upstream. For ordinary updates, use `git pull` plus `npm install` instead: it preserves your branch and any local changes.
-- **`scripts/cleanup-data.cmd`** clears `mcp-server/data` (the recorded game databases) and, recursively, `vox-agents/telemetry` (every recorded agent trace). When the external `recycle` command-line tool is on your `PATH`, both go to the Recycle Bin and stay recoverable. That tool is not bundled with this repository, so when it is missing the script says so and deletes the files permanently instead. Either way it reports failures rather than hiding them.
-- **`scripts/cleanup-logs.cmd`** deletes every file directly under `bridge-service/logs`, `mcp-server/logs`, and `vox-agents/logs` with `del`, so these are always gone rather than recycled.
-- **`scripts/uninstall-mods.cmd`** removes the installed Community Patch, Vox Populi, and Vox Deorum mod folders, plus the VPUI and UI_bc1 DLC folders, from your Civilization V install. The packaged installer's own uninstaller runs this automatically; run it by hand to get back to an unmodded game without touching your repository checkout.
+#### `scripts/manual-update.cmd`
+
+**Warning:** this script deletes recorded data, traces, and logs, and it runs `git checkout main --force` before updating. That discards uncommitted local changes and switches to `main`, whatever branch you were on. Use it only to reset to a clean `main`, for example to reproduce an issue against upstream.
+
+Run it from the `scripts/` directory so it can find its cleanup commands. It runs these steps in order:
+
+1. `cleanup-data` deletes recorded game data, telemetry, and workspace notes.
+2. `cleanup-logs` deletes the service logs.
+3. `git checkout main --force` resets the checkout onto `main`.
+4. `git pull` updates `main`.
+5. `git submodule update` updates the submodules.
+
+It then reads the Node.js minimum from the updated root `package.json`, preferring the portable copy under `node/`. If Node is missing or outdated, the script downloads a compatible portable copy there without requiring administrator rights. A failed runtime update stops the script. Finally, it calls `install.cmd`, forwarding all arguments including the line and debug selection.
+
+For routine updates, run `git pull` and `npm install` on your current branch.
+
+#### `scripts/cleanup-data.cmd`
+
+Deletes every direct file in `mcp-server/data` and clears `vox-agents/telemetry` recursively, including the notes and records stored inside telemetry databases. When the external `recycle` command-line tool is on your `PATH`, the files go to the Recycle Bin. That tool is not bundled with the repository, so when it is missing the script says so and deletes permanently instead.
+
+#### `scripts/cleanup-logs.cmd`
+
+Deletes every file directly under `bridge-service/logs`, `mcp-server/logs`, and `vox-agents/logs` with `del`. These are permanently removed.
+
+#### `scripts/uninstall-mods.cmd`
+
+Removes the installed Community Patch, Vox Populi, and Vox Deorum mod folders, plus the VPUI and UI_bc1 DLC folders, from your Civilization V install. It searches the common Steam library paths for the two DLC folders, so an install in an unusual location may keep them. Your repository checkout and other mods are not changed. The packaged installer's uninstaller runs this script automatically.
 
 Other scripts in `scripts/` are covered elsewhere: `vox-deorum.cmd` and building the three services in [Setup](setup.md), and `utilities/build-installer.cmd`, `install/download-dll.cmd`, and `utilities/generate-docs.cmd` in [Releasing](releasing.md).
 
@@ -30,31 +75,34 @@ All three services log through the same Winston setup (each service's own `src/u
 | MCP Server     | `mcp-server/logs/`     |
 | Vox Agents     | `vox-agents/logs/`     |
 
-Each writes two rotating files alongside its console output: `error.log` (errors only) and `combined.log` (everything down to `debug`). Both cap at 10 MB per file; `error.log` keeps up to 5 rotated files, `combined.log` keeps up to 10. Set the `LOG_LEVEL` environment variable (for example `debug` or `warn`) to change what reaches the console and `combined.log` for a given service; it defaults to `info` if unset.
+Each service writes `error.log` (errors only) and `combined.log` alongside its console output. Both rotate at 10 MB per file; `error.log` keeps up to 5 files and `combined.log` up to 10, including the active file.
 
-Vox Agents additionally streams every log line to its web dashboard over SSE. That live view, along with the rest of the tracing and dashboard story, is covered in [vox-agents/platform/observability.md](vox-agents/platform/observability.md) and isn't repeated here.
+`LOG_LEVEL` sets console verbosity for a service and defaults to `info`. The `combined.log` file transport is fixed at `debug`, so it records debug output regardless of `LOG_LEVEL`. Both logging settings live in the service's `src/utils/logger.ts`.
+
+Vox Agents also streams logs to its web dashboard over SSE. For tracing and the live log view, see [vox-agents/platform/observability.md](vox-agents/platform/observability.md).
 
 ## Running the Codex proxy in the foreground
 
-When Codex login or startup misbehaves, run the managed proxy by hand in a terminal so you can watch its structured stderr directly instead of digging through what Vox Deorum captures.
+When Codex login or startup misbehaves, run the managed proxy by hand in a terminal so you can watch its structured stderr directly.
 
 ```text
 npx --yes codex-openai-proxy@0.1.0-rc.36 serve --root C:\absolute\temporary\codex-root --port 8787 --log-level info --login device-code --request-timeout 300000ms --shutdown-timeout 10000ms
 ```
 
-This mirrors the invocation vox-agents builds. `--login device-code` forces the device-code sign-in flow, which the proxy would otherwise only pick when its stderr isn't a terminal; vox-agents relies on it so the one-time code always reaches the wizard and console. The proxy's log level follows the `LOG_LEVEL` environment variable (default `info`): set `LOG_LEVEL=debug` to see the proxy's redacted app-server diagnostics and its readiness-probe request logs. The version pin is kept current by `npm run update:codex-proxy`, so don't edit it by hand here. Do not configure an API key for the proxy: the adapter passes an inert `local` placeholder to satisfy the OpenAI-compatible client, it is not a credential. See [vox-agents/models/codex.md](vox-agents/models/codex.md) for the pin-update workflow.
+This mirrors the invocation Vox Agents builds. `--login device-code` forces device-code sign-in. For redacted app-server diagnostics and readiness-probe request logs, change the command's flag to `--log-level debug`. When Vox Agents manages the proxy, it selects this flag from `LOG_LEVEL`. The adapter supplies a `local` placeholder as the API key; authentication uses the ChatGPT sign-in. `npm run update:codex-proxy` updates the version pin. See [vox-agents/models/codex.md](vox-agents/models/codex.md) for the pin-update workflow.
 
 ## Attaching a debugger
 
-Two of the three services open a Node inspector port from certain npm scripts (check each `package.json` if this drifts):
+Some npm scripts open a Node inspector. The MCP Server and Vox Agents scripts pass `--inspect=0`, so Node chooses a free port at startup instead of using a fixed one.
 
-| Service | Script | Port |
-| --- | --- | --- |
-| MCP Server | `npm run start` (and `start:dist`) | `7000` |
-| Vox Agents | `npm run start`, `strategist`, `telepathist`, `oracle`, `narrator` (and their `:dist` variants) | `9229` (Node's default; the scripts pass a bare `--inspect`) |
+| Service | Scripts that open an inspector |
+| --- | --- |
+| MCP Server | `start`, `start:dist` |
+| Vox Agents | `start`, `strategist`, `telepathist`, `oracle`, `narrator`, and their `:dist` variants |
+| Bridge Service | none |
 
-Neither service's `npm run dev` opens an inspector port, and neither does Vox Agents' `archivist` entry point. Bridge Service doesn't open one in any of its scripts.
+The MCP Server's `npm run dev` and Vox Agents' `npm run dev` and `archivist` entry point do not open an inspector.
 
-To attach, open `chrome://inspect` in Chrome or Edge and add the target port, or use your editor's Node attach configuration (in VS Code, "Attach to Node Process," or an `attach` launch config pointing at the port). Only one process can hold a given port at a time, and the Vox Agents entry points all share one, so running two of them together needs care.
+Read the port from the process's startup line: `Debugger listening on ws://127.0.0.1:<port>/...`. In Chrome, open `chrome://inspect`, add the printed host and port as a Node target, and inspect it. In VS Code, use "Attach to Node Process" or a Node `attach` configuration with that port. Each process chooses its own port.
 
-The DLL is a different story: it's not a Node process, so none of this applies. See [civ5-dll/building.md](civ5-dll/building.md) for building a debug DLL and attaching Visual Studio, and the submodule's own [Minidump Guide](../../civ5-dll/docs/minidumps.md) for reading a crash dump.
+For DLL debugging, see [civ5-dll/building.md](civ5-dll/building.md) for building a debug DLL and attaching Visual Studio, and the submodule's [Minidump Guide](../../civ5-dll/docs/minidumps.md) for reading a crash dump.

@@ -22,7 +22,7 @@ With files on, a strategist can look back at earlier turns, keep its own notes b
 | An object | `game` (access to the game folder, or `false` to leave it out), `shared` (named shared folders, each with its access), and `quota` (the step budget, default 20). |
 | `false` | Off. |
 
-Where it can be set, checked in this order: the seat, the session config, then the root `vox-agents/config.json`. The first level that sets it wins and replaces lower levels completely, with no merging. Off is the default. `resolveSeatFiles` in `src/strategist/seat-config.ts` does this, the same way as `triage`.
+Set it on the seat, the session config, or the root `vox-agents/config.json`, checked in that order. The first value wins and replaces lower levels completely, with no merging. Off is the default. `resolveSeatFiles` in `src/strategist/seat-config.ts` resolves it the same way as `triage`.
 
 An invalid value fails session preflight before the game launches, and the error names the config path.
 
@@ -30,7 +30,7 @@ The workspace needs Node 22.17.0 or newer (the repo requires 22.23.3). On older 
 
 ## The folders
 
-`src/utils/workspace/player-workspace.ts` mounts the folders. Everything is stored under `<telemetryDir>/workspaces`.
+`src/utils/workspace/player-workspace.ts` mounts the folders. Records, game notes, and the reference live in the seat's telemetry database. Shared folders and scratch files live under `<telemetryDir>/workspaces`.
 
 | Folder | Access | Stored in | Lifetime |
 | --- | --- | --- | --- |
@@ -50,10 +50,18 @@ Rules:
 
 ### Guide files
 
-Writable game and shared folders get an `AGENTS.md` guide:
+Writable game and shared folders get an **`AGENTS.md` guide** for keeping useful notes. `workspaceGuide` in `src/utils/workspace/player-workspace.ts` supplies the default text.
 
-- **Shared folders.** The guide is created once on disk and never overwritten, so agents and players can edit it.
-- **Game notes.** The guide lives in the store and is seeded only when missing, so existing games keep their guide. A writing command that finds it missing restores the default, and the guide returns after an agent deletes it or a rewind drops it. The default text, `workspaceGuide` in `src/utils/workspace/player-workspace.ts`, covers when a note is worth keeping and what to leave out. Since the guide is seeded only once, rules that may change, such as the journal and which notes load at the start of a run, live in the [capability reminder](../models/middleware.md#capability-reminder) instead.
+| Lifecycle | Game guide | Shared guide |
+| --- | --- | --- |
+| Storage | Seat's workspace store | Shared folder on disk |
+| Creation | A bash command opening a writable game folder seeds the default when missing and commits it with the command, unless cancelled. | First use of the workspace's disk mounts seeds the default when missing. |
+| Editing | Agents edit it through bash. Players can export the store to read it. | Agents and players can edit it. |
+| Existing content | Preserved | Preserved; an existing path is never overwritten. |
+| Deletion | The next command restores the default if the folder is writable. | Seeding runs when disk mounts initialize, so deletion does not trigger restoration on every command. |
+| Reload rewind | Follows store history; if missing afterward, the next command restores it. | Lives outside the store and is unaffected. |
+
+Existing guides keep their text. Rules that may change, such as the journal and which notes load at run start, live in the [capability reminder](../models/middleware.md#capability-reminder).
 
 ### Game journal
 

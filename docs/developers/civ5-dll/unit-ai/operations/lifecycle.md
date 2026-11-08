@@ -29,24 +29,23 @@ For a normal AI player, `CvPlayerAI::AI_unitUpdate` runs Tactical AI before Home
 
 ## Completion, abort, and cleanup
 
-An active operation normally ends by entering **Successful Finish** or **Aborted**. A third path exists when `DoTurn` cannot continue without setting either state. Initialization failure is earlier: an invalid operation is rejected and deleted before it becomes active, so it has no abort reason.
+An active operation normally ends in **Successful Finish** or **Aborted**. It can also reach cleanup when `DoTurn` returns false without either state. **Cleanup** through `CvAIOperation::Kill` records the result, then calls `Reset`: the army releases its surviving members and is deleted, followed by the operation. Releasing a member clears its Army ID.
 
-```mermaid
-flowchart TD
-    I[Operation request] --> V{Initialization valid?}
-    V -->|No| X[Reject and delete<br/>no abort reason]
-    V -->|Yes| O[Active operation]
-    O -->|completion condition| F[Successful Finish]
-    O -->|abort condition| A[Aborted with reason]
-    O -->|DoTurn cannot continue| D[Direct cleanup]
-    F --> S[Mark surviving members<br/>as recently deployed]
-    S --> C[Release members and delete<br/>army and operation]
-    A --> C
-    D --> R[Use the existing reason or<br/>AI_ABORT_KILLED]
-    R --> C
-```
+Ordinary military deployment follows this sequence:
 
-`ShouldAbort` checks operations in the pre-unit terminal sweep and before and after army movement. A terminal state found during `Move` releases its members and is deleted in that Tactical operation-movement pass. An ordinary military operation instead sets Successful Finish after `Move`, so the next pre-unit terminal sweep deletes it. If `DoTurn` returns false without a terminal state, the same Tactical pass deletes it.
+1. `Move` succeeds, then `CheckTransitionToNextStage` sets Successful Finish. The army retains its members.
+2. The next **pre-unit sweep**, the cleanup pass before unit control, calls `ShouldAbort` and marks surviving members as recently deployed.
+3. The sweep calls `Kill`, releasing the members and deleting the army and operation.
+
+| Detection point | State | Member release | Object deletion |
+| --- | --- | --- | --- |
+| Request or initialization rejected | Preconditions fail, or initialization leaves Invalid or Aborted | Destruction releases any recruited members | Immediate direct deletion, bypassing `Kill` |
+| `ShouldAbort` before or after movement inside `Move` | Successful Finish or Aborted; `DoTurn` returns false | `ReleaseAllUnits` immediately | `Kill` later in the same Tactical operation-movement pass |
+| Deployment detected after successful `Move` | Successful Finish | At `Kill` in the next pre-unit sweep | During that sweep |
+| Pre-unit sweep finds a terminal state | Successful Finish or Aborted | At `Kill` in this sweep | During this sweep |
+| `DoTurn` returns false without a terminal state | Current state retained until cleanup | At `Kill` in the same Tactical pass | During that pass |
+
+Whenever `ShouldAbort` observes Successful Finish, it marks surviving members as recently deployed before release. A request rejected before initialization has no abort reason. Initialization itself can set a specific reason, such as `AI_ABORT_NO_UNITS`, before direct deletion.
 
 After initialization, common abort triggers include:
 
@@ -72,7 +71,7 @@ Each family supplies its successful completion rule and additional abort checks:
 
 Civilian missions require remaining movement. Arrival alone leaves the operation at At Target until it can perform its mission or an abort check ends it.
 
-`CvAIOperation::Kill` records `AI_ABORT_SUCCESS` for Successful Finish, preserves a specific abort reason, or uses `AI_ABORT_KILLED` when an active operation reaches cleanup without either one. Invalid operations discarded during initialization do not pass through `Kill`.
+`CvAIOperation::Kill` records `AI_ABORT_SUCCESS` for Successful Finish, preserves a specific abort reason, or uses `AI_ABORT_KILLED` when an active operation reaches cleanup without either one. Operations rejected during creation bypass `Kill`.
 
 ## Control state
 

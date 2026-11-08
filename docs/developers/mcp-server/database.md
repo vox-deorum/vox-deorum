@@ -51,9 +51,26 @@ If the log shows the retry message repeating forever, the cache folder is missin
 
 ## How tools use it
 
-The database-query tools (described in [tools.md](tools.md)) don't query Kysely directly in an ad-hoc way. They extend `DatabaseQueryTool`, which sits on top of the `DatabaseManager`. Each such tool provides a cached summary list of its items and a way to fetch one item's full detail; the base class adds fuzzy search and returns the full detail automatically when a search narrows to a single match. The manager's connection caching and localization caching mean repeated queries stay cheap. The cached summaries are refreshed whenever the mappings are rebuilt for a verified game, since a tool may have been queried against an older cache file before the game connected.
+### Query contract
 
-A `Detailed` input returns the full report for every result, not just for a single match. On the tools that declare a tooltip kind (`get-unit`, `get-building`, `get-technology`, `get-project`), a full report carries the game's own tooltip in `Help`. `fetchGameTooltips` (`src/utils/database/game-tooltips.ts`) gets that text by calling the mod's `VoxDeorumReferenceTooltips` function through the bridge in batches of 50, and stripping the game's markup with `stripTags`. Before stripping, it replaces each yield or resource icon with its localized name from the `Yields` and `Resources` tables, so a line like "+1 Production +1 Gold" keeps which amount is which. An icon whose next word already names it is dropped. When a call finds the function unregistered, it runs a short script that fires `LuaEvents.VoxDeorumReferenceRegister` so the mod registers it, then retries once. In Detailed mode, a failed full-report fetch or tooltip call comes back as the result's `Error` field, so a caller never stores a partial listing. When a search narrows to a single match, the tool falls back to the summary or the database text instead. After localization, a subclass's `formatItem` hook can clean the items, as `get-policy` does with `formatPolicyHelp`.
+The [database-query tools](tools.md) extend **DatabaseQueryTool** on top of `DatabaseManager`. Each supplies summaries and a full-detail fetch; the base class adds fuzzy search and chooses the report form:
+
+| Input | Report |
+| --- | --- |
+| `Detailed: false` (default) | Summaries, with automatic full-detail expansion when exactly one result remains. |
+| `Detailed: true` | Full details for every result. |
+
+Summaries are cached by database generation and fetched again on the next query after a verified mapping rebuild. This prevents results from an older cache file surviving a game connection. After localization and tooltips, a subclass's `formatItem` hook can clean the items, as `get-policy` does with `formatPolicyHelp`.
+
+### Game tooltips
+
+Full reports for `get-unit`, `get-building`, `get-technology`, and `get-project` carry the game's tooltip in `Help`. `fetchGameTooltips` (`src/utils/database/game-tooltips.ts`) calls the mod's `VoxDeorumReferenceTooltips` through the bridge in batches of 50. On `INVALID_FUNCTION`, it fires `LuaEvents.VoxDeorumReferenceRegister` to request registration, then retries once.
+
+Before `stripTags` removes game markup, yield and resource icons become localized names from `Yields` and `Resources`, so "+1 Production +1 Gold" retains the meaning of each amount. An icon whose next word already names it is omitted.
+
+### Failures
+
+With `Detailed: true`, a failed full-report fetch, failed tooltip call, or missing tooltip fails the whole result: `Count: 0`, `Items: []`, and `Error`. Automatic single-result expansion keeps the summary when a full fetch throws, and keeps the database `Help` text when a tooltip call fails or returns no tooltip for an entry.
 
 ## Where the details live
 

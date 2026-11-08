@@ -6,9 +6,7 @@ You only need to build the DLL when you change the C++ gamecore, which for Vox D
 
 ## What gets built
 
-The gamecore is a 32-bit (Win32/x86) C++ DLL built against the legacy **v90 platform toolset**, the Visual C++ 2008 compiler. A build produces `CvGameCore_Expansion2.dll` and a matching `.pdb`.
-
-The shared RL header `VoxRlTypes.h` sets `_SECURE_SCL=0` and `_HAS_ITERATOR_DEBUGGING=0` when compiling for the game DLL. RL sources built without the game precompiled header include it before system or STL headers so their STL object layouts match the game. The maintained source is in `vox-deorum-rl/simulator/schema/shared/`. Rebuild all objects after changing these settings; mixed layouts can crash mod loading even when RL capture is disabled.
+The gamecore is a 32-bit (Win32/x86) C++ DLL compatible with Visual C++ 2008 (VC9/v90). A build produces `CvGameCore_Expansion2.dll` and a matching `.pdb`. The normal build uses clang; the Visual Studio path uses the v90 compiler.
 
 ## The normal loop: build-and-copy.bat
 
@@ -35,6 +33,14 @@ Where things land:
 The script stops on a failed compile and prints the tail of `build.log` plus its last few `error:` lines, so start there when a build breaks. It also fails loudly if the built DLL is missing or the copy is refused; a missing `.pdb` is only a warning.
 
 `build_vp_clang_sdk.py` needs Windows SDK 7.0 with its VC9 components, plus `clang-cl` and `lld-link` on `PATH`. It takes one option of its own, `--config release|debug`, which is what the batch file sets.
+
+## RL capture and header compatibility
+
+**RL capture** is optional recording of game state and actions for reinforcement learning. The shared header for the recorded types is maintained in the sibling `vox-deorum-rl/simulator/schema/shared/VoxRlTypes.h`.
+
+The DLL must match the game's **application binary interface (ABI)**, including the memory layout of C++ standard-library (STL) objects. When compiling the game DLL (`CVGAMECOREDLL_EXPORTS`), the header supplies `_SECURE_SCL=0` and `_HAS_ITERATOR_DEBUGGING=0` if they are undefined. RL sources built without the game precompiled header must include it before system or STL headers so these settings take effect in time.
+
+Rebuild all objects after changing these settings. Mixed layouts can crash mod loading even when RL capture is disabled.
 
 ## Building from Visual Studio
 

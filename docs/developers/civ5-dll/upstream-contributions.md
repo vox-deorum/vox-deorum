@@ -4,11 +4,18 @@ The default handoff is a local `pr/<slug>` branch in `civ5-dll`, based on `upstr
 
 ## 1. Scope
 
-Inspect the outer repository and submodule status, current branch, remotes, and any existing `vp-pr` state. Preserve human edits, commits, and staging. Resume a matching existing PR branch instead of creating another one.
+Inspect the outer repository and submodule status, current branch, remotes, existing `vp-pr` state, and the **index**, Git's staged changes, before changing anything. Preserve human edits, commits, and staging. Continue work on a matching existing PR branch; `new` creates a fresh branch.
+
+| Worktree and index state | Action |
+| --- | --- |
+| Clean worktree | Create the branch with `vp-pr new <slug>`. |
+| Dirty, every edit belongs in the PR, and the user authorized moving the edits | Use `vp-pr new <slug> --carry` to move the uncommitted edits onto the new branch. |
+| Dirty, mixed selected and unrelated edits, and the user authorized stashing | Export first, then use `vp-pr new <slug> --stash` to set tracked and untracked edits aside until `restore`. Port selected hunks from the export. |
+| Dirty and the user has not authorized moving or stashing edits | Preserve the dirty checkout and obtain authorization before any move or stash. |
 
 For an existing Vox Deorum fix, reuse its candidate inventory or export and select only the requested hunks. Check the refreshed upstream tree and open pull request patches for an equivalent fix before porting it. For a new fix, author the behavior directly in the upstream-based branch.
 
-If the submodule is dirty, inspect the index before moving anything. `vp-pr new` requires a clean worktree by default. With authorization to move or stash edits, use `--carry` when all current edits belong in the PR. For mixed selected and unrelated edits, export them first, then use `--stash` and port the selected hunks from the saved export. Inspect the index afterward and preserve human staging.
+After carrying or restoring edits, inspect the index again and preserve human staging. Stash reapplication first tries `--index`, then falls back to a plain apply, so staging may need manual recovery. If a carry cannot reapply cleanly, its saved changes remain in the stash list.
 
 When no suitable inventory exists, export from the source checkout before changing branches. Run from the repository root, using `npm.cmd` in Windows PowerShell:
 

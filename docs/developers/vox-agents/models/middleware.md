@@ -1,6 +1,6 @@
 # Model middleware
 
-Providers differ. Some cannot call tools reliably, some refuse a forced tool call, some have rate limits that need waiting out. Vox Agents hides these differences behind **middleware**: wrappers around each model that adjust the request on the way in and the reply on the way out. Agents never deal with provider quirks themselves.
+Vox Agents handles provider differences through **middleware**: model wrappers that adjust requests and replies. They adapt tool calling, forced calls, and rate limits so agents can use the same interface.
 
 `getModel` (`src/utils/models/models.ts`) builds the wrapped model. The AI SDK runs the wrappers from the outside in, so the outermost one sees the prompt first:
 
@@ -28,7 +28,7 @@ This is layer 3 of [Prompts and tool calling](../framework/prompts.md).
 | Tool rescue, prompt mode | `src/utils/models/tool-rescue/` | Replaces native tools with text instructions. See [Prompt-mode tool calling](#prompt-mode-tool-calling). |
 | Tool rescue, default | `src/utils/models/tool-rescue/middleware.ts` | Changes no prompt text. It recovers tool calls a model wrote as JSON text instead of a real call. |
 | Gemma | `hermesToolMiddleware` from `@ai-sdk-tool/parser` | Hermes-style tool block for Gemma models. |
-| Claude Code session | `src/utils/models/providers/claude-code-session.ts` | Runs one live CLI query per agent run and serves the run's tools through the `vox` MCP server. Requests without function tools bypass it. See [Claude Code native tools](#claude-code-native-tools). |
+| Claude Code session | `src/utils/models/providers/claude-code-session.ts` | Keeps a live CLI query across an agent run's steps and serves its tools through the `vox` MCP server. Requests without function tools bypass it. See [Claude Code native tools](#claude-code-native-tools). |
 | Claude Code prompt | `src/utils/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. Message options are kept, and the first two cache anchors become Claude Code cache markers (see [Claude Code caching](../framework/caching.md#claude-code)). Installed by `buildClaudeCodeModel`. |
 | Required tool choice | `src/utils/models/providers/required-tool-choice.ts` | For providers that refuse a forced tool call, relaxes it to "tools allowed". Always adds a sentence naming the tools that end the turn, unless no offered tool does. |
 | Codex response | `src/utils/models/providers/codex-response.ts` | See [Codex](#codex). |
@@ -93,11 +93,39 @@ A text call to a removed tool is still recovered by name and then rejected like 
 
 ## Claude Code native tools
 
-Claude Code calls the run's function tools itself. One live CLI query spans an agent run, and the run's game tools and `bash` are served to the CLI through a fresh in-process MCP server named `vox`. The CLI calls them as `mcp__vox__<name>`, and the session renames each call to `<name>`. In the other direction, the text the CLI reads uses the CLI names: backtick-quoted tool mentions in the prompt (outside fenced code blocks), earlier tool calls, and tool descriptions all become `mcp__vox__<name>`, because the model otherwise sometimes calls a bare `bash` that the CLI rejects. It ends the Vox Deorum step when the assistant message stops, then the AI SDK and Vox Deorum execute the tools as they do for every provider.
+Claude Code calls an agent run's function tools through an in-process MCP server named `vox`. A **live query** is the CLI conversation that stays open across Vox Deorum steps. `src/utils/models/providers/claude-code-session.ts` manages its lifecycle:
 
-On the next step, the session hands the tool results to the parked MCP handlers and keeps streaming the same query, so the CLI sees real results in its own context. Any trailing user text, such as the closing reminder, rides on the last result. The session starts a fresh query with the full prompt when the model configuration or tool list changes, when the prompt does not answer the calls it handed out, or when the query has finished or failed. A message that contains only Web calls stays inside the same Vox Deorum step. A Web call still running when its step ends is reported, together with its result, in the step where the result arrives.
+1. Start a query with the full prompt and a fresh `vox` server exposing the run's game tools and `bash`.
+2. When the CLI calls those tools, park their MCP handlers until Vox Deorum supplies results.
+3. At the end of the assistant message, export the calls and end the Vox Deorum step. The AI SDK and Vox Deorum execute them.
+4. On the next step, hand the results to the parked handlers and resume the same query. Trailing user text, such as the closing reminder, accompanies the last result.
 
-The CLI must expose no built-in tools besides the configured host tools. The session checks the tool list from the CLI's init message and fails the query if anything else appears. Requests without function tools, such as evaluations with a JSON response format or plain chat, skip the session and go straight to the provider, and so does a request whose tool choice is `none`. A tool choice that names one tool narrows the `vox` server to that tool. `buildClaudeCodeModel` installs the required-tool-choice handling, the prompt middleware (system-message demotion and cache markers), and response middleware.
+### Tool names
+
+The CLI needs names qualified with its MCP server prefix:
+
+| Location | Name |
+| --- | --- |
+| Vox Deorum tool declaration and exported call | `<name>` |
+| CLI tool call | `mcp__vox__<name>` |
+| Backtick tool mentions in prompt text and tool descriptions, outside fenced code; earlier call/result names | Rewritten to `mcp__vox__<name>` |
+| Tool output contents | Kept as received |
+
+This translation keeps the model from copying a bare name such as `bash` into a call the CLI cannot find.
+
+### Query boundaries
+
+A fresh query receives the full prompt when any of these conditions holds:
+
+- The model configuration or tool names change.
+- The next prompt does not answer the calls handed out by the session.
+- The query has finished or failed.
+
+A message containing only Web calls stays within the current Vox Deorum step. A Web call still running when the step ends is reported with its result in the step where that result arrives.
+
+The session checks the CLI's init message and fails the query if it exposes built-in tools outside the configured host tools. Requests without function tools, including JSON evaluations and plain chat, go straight to the provider. A tool choice of `none` also bypasses the session; a choice naming one tool narrows the `vox` server to that tool.
+
+`buildClaudeCodeModel` installs required-tool-choice handling, prompt middleware (system-message demotion and cache markers), and response middleware.
 
 The session depends on how the CLI reports tool calls, so `npm run test:claude-code` (in `vox-agents`) checks it against the real CLI. Rerun it after upgrading the Agent SDK or the Claude Code provider.
 
