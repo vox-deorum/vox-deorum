@@ -9,7 +9,7 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTactic
 | Guide | Responsibility |
 | --- | --- |
 | [Targets and postures](targets-and-postures.md) | Target collection, local combat policy, and zone order. |
-| [Movement](movement.md) | Operation army movement and tactical reinforcement. |
+| [Movement](movement.md) | Operation army movement, tactical reinforcement, and withdrawal. |
 | [Engagements](engagements.md) | When combat searches run, who joins, and garrison and opportunity searches. |
 | [Air operations](air.md) | Aircraft ownership, conventional strikes, interception, patrol, and rebasing. |
 | [Simulation](../simulation/overview.md) | Coordinated plans, scoring, acceptance, and replay. |
@@ -49,7 +49,7 @@ Routine Tactical recruitment accepts movable, unprocessed combat, ranged, air, a
 | Reinforcement | Hold deferred garrisons, then [reinforce eligible city zones](movement.md#tactical-reinforcement) with remaining units. |
 | Global middle | Air patrol, camps and goody huts, civilian attacks, bastions, safety, healing, pillage, trade plunder, and blockade. |
 | Global low | Guard improvements, escort embarked units, and move exposed remaining units. |
-| Review | Final safety move, then pass eligible units to Homeland AI. |
+| Review | Final safety move. Every city that has not fired yet shoots at a target it picks itself. Then eligible units pass to Homeland AI. |
 
 ## Barbarian priorities
 

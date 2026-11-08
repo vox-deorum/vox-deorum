@@ -30,6 +30,18 @@ The callers and recruitment rules live in `civ5-dll/CvGameCoreDLL_Expansion2/CvT
 
 The search keeps at most 13 of the recruits and blocks the rest. Blocked and unused units stay available to later passes.
 
+### Expected damage
+
+`ComputeTotalExpectedDamage` estimates what the recruits can deal to the target this turn. Zone unit attacks run only when it is above 0, and city capture uses it for the siege check below.
+
+- One quick combat estimate per recruit from the plot it stands on. No pathfinding.
+- Suicidal attacks are skipped.
+- Against a unit, at most three melee units that cannot move after attacking count.
+- Against a city, each estimate follows the damage of the units before it and tracks the garrison, so one unit's share depends on the others.
+- The total is optimistic: it includes ranged units that can only fire next turn and units within two plots that cannot reach. City strikes are not part of it.
+
+**Siege check.** When the expected damage is below the city's remaining HP, `ExecuteCaptureCityMoves` attacks only if `(damage − heal) × 13` reaches the remaining HP. `heal` is `CITY_HIT_POINTS_HEALED_PER_TURN` (8 in Vox Populi), or 0 when the city is blockaded on land and water, plus the city's population under Vox Populi.
+
 ## Army contact
 
 **Army contact** is the search `CheckForEnemiesNearArmy` runs for a land, naval, or combined operation army. Escort armies never run it. It runs during [operation army movement](movement.md#operation-army-movement), before garrisons and every zone, once per army per turn. Armies go in the order their operations were created. It does not use the [tactical target](targets-and-postures.md#tactical-targets) list.

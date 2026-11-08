@@ -1,6 +1,6 @@
 # Unit AI: Tactical Movement
 
-Tactical AI moves operation armies and redistributes available units around city zones. Both paths use `PositionUnitsAroundTarget` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.cpp`. See the [tactics overview](overview.md) for their place in the turn and [operation stages](../operations/stages.md) for persistent army progress.
+Tactical AI moves operation armies, redistributes available units around city zones, and pulls units out of Withdraw zones. Army movement and reinforcement use `PositionUnitsAroundTarget` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.cpp`; withdrawal uses plain path moves. See the [tactics overview](overview.md) for their place in the turn and [operation stages](../operations/stages.md) for persistent army progress.
 
 ## Operation army movement
 
@@ -60,7 +60,20 @@ This plot scan has no Army ID exclusion. An eligible army member left unprocesse
 `PositionUnitsAroundTarget` executes the reinforcement:
 
 1. Try to reveal the destination with a spotter, then run coordinated search at Low aggression with the Reinforce intent. Nearby combat can therefore occur during reinforcement.
-2. Move remaining distant units toward the city, aiming within two plots, with ordinary combat units before siege and civilian support. Approach moves check paths, embarkation safety, and danger at the first-turn path endpoint. Attack-capable units other than city-bombard units tolerate danger up to half their current hit points; other units require zero danger. Units sent through the approach move are marked processed.
+2. Move remaining distant units toward the city, aiming within two plots, with ordinary combat units before siege and civilian support. Approach moves check paths, embarkation safety, and danger at the first-turn path endpoint. Attack-capable units other than city-bombard units tolerate danger up to half their current hit points; other units require zero danger. Units sent through the approach move are marked processed, even when the move fails.
 3. Leave nearby unprocessed independent units available for later work after a successful search. Remaining army members receive safety handling and finish their turn.
 
 Army gathering and movement use this same positioning routine with the Gather intent. [Army contact](engagements.md#army-contact) can first borrow nearby attackers for a fight without adding them to the army. These routines compete with other passes for available units and can search enemies already considered elsewhere that turn.
+
+## Tactical withdrawal
+
+`PlotWithdrawMoves` runs during the zone loop for each Withdraw zone that extracted a target. It does not search: each unit takes its own path move.
+
+| Step | Rule |
+| --- | --- |
+| Units | Our usable units standing in the zone. Skipped: healthy units just deployed from an operation, a held garrison unless its city falls anyway, and, outside our territory, land units on our citadels and units on our plots not next to enemy land. |
+| Order | Ranged and slow units first, melee last. |
+| Destination | Per unit, the center of the neighboring city zone of the unit's domain with the best hospitality per travel turn. Without one, our nearest city by path (the capital for minor civs). |
+| Move | `MoveToEmptySpaceNearTarget` on a safe path (`MOVEFLAG_AI_ABORT_IN_DANGER`). The path may not end a turn within the next two turns on a plot whose danger is above 1.5 times the unit's HP for a combat unit on its own terrain, or above half its HP for an embarked or civilian unit. |
+| After the move | A ranged opportunity shot with movement off, then the unit is processed. |
+| No safe route | Pillage in place when worthwhile, then move to the safest reachable plot. |

@@ -55,7 +55,7 @@ Tactical AI refreshes a **posture**, a current-turn strategy for each dominance 
 | Zone posture | C++ routine | Behavior | Simulation and aggression |
 | --- | --- | --- | --- |
 | None | No routine | Do no posture-specific work. | None |
-| Withdraw | `PlotWithdrawMoves` → `ExecuteWithdrawMoves` | Retreat toward the neighboring zone with a city in the unit's domain that has the best hospitality score for the travel time, or else toward the nearest city by path (the capital for minor civs). Take a ranged opportunity shot after a successful withdrawal when possible; if no safe route exists, pillage in place when worthwhile and move to the safest reachable plot. | No posture attack; the ranged opportunity exception uses Low when simulated. |
+| Withdraw | `PlotWithdrawMoves` → `ExecuteWithdrawMoves` | Retreat the zone's units toward a safer city zone, as described in [tactical withdrawal](movement.md#tactical-withdrawal). | No posture attack and no search; the ranged opportunity shot after a withdrawal uses Low when simulated. |
 | Hedgehog | `PlotHedgehogMoves` | Attack enemy units, then call `PlotReinforcementMoves` for early reinforcement before attacks in other zones. | Low |
 | Attrition | `PlotAttritionAttacks` | Attack enemy unit targets in target order. No city capture. | Low |
 | Exploit flanks | `PlotExploitFlanksMoves` | Search around each enemy unit target, then try city capture with the units still available. | Unit attacks: Medium. City capture: melee-count rule. |

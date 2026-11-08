@@ -98,6 +98,15 @@ Initial-state, temporary-finish, wait, and double-move bookkeeping rows issue no
 
 Replay ignores ordinary danger stopping because planning has already evaluated danger. Failed pre-mission checks also return to the wrapper, which tries up to four times and can drop unusable units when planning finds no complete position.
 
+What a replay leaves behind:
+
+| Rule | Effect |
+| --- | --- |
+| A plan gives each unit an attack, a move, a finish (end the turn in place), or nothing. | A unit with nothing stays free for later passes. |
+| Replay runs rows in order and stops at the first that fails, for example when a move reveals a hidden enemy. | Rows already run stay done. Rows after the failure never run. |
+| Finishing units are marked processed only after the whole replay succeeds, and not when they should heal and still have moves. | A unit that only moved, or finished in a replay that stopped, stays available. |
+| Each retry builds its positions from scratch on the current state. | A retry sees enemies the last attempt revealed. |
+
 ### Support placement
 
 Great Generals, Great Admirals, and siege towers have a separate search after the combat plan is selected. `AddSupportMoves` follows the selected combat tree and inserts support moves before attacks so the relevant aura is present.

@@ -53,7 +53,7 @@ With enemies present, the land desirability table peaks at 12:
 | Second line       | 2 plots                                            |
 | Third line        | 3 plots                                            |
 
-Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. City proximity and remaining movement add small preferences. Attacks include the score of the resulting location.
+Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. A unit more than four steps from the target earns 40 for each step closer and may not step away (`UpdatePlotDistanceToTarget` builds the distances). The target can be any plot, so positioning searches use the same pull toward their destination. City proximity and remaining movement add small preferences. Attacks include the score of the resulting location.
 
 Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd` checks final positions against remaining HP, adjusts for experience, and penalizes isolation more heavily. Nearby friendlies, terrain, air cover, and citadels can improve the result. Unsafe plots can be rejected outright.
 
