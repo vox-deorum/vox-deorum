@@ -127,6 +127,10 @@ Flavors are on the search's hot path, so the neutral case stays close to free:
 - **Aggression.** The caller's [aggression level](../simulation/overview.md#entry-points-and-aggression) still decides which attacks are allowed and how much provisional danger is tolerated.
 - **What the search explores.** Search bounds, the 13-unit limit, duplicate pruning, and replay don't change.
 
+## The operational loop
+
+Under `VOX_TACTICAL_OPERATIONAL_LOOP`, engagements resolve flavors differently: mapped VP flavors blended by the zones a search covers, plus a row for the kind of engagement, with aggression taken from RISK. See the [operational loop](../tactics/operational-loop.md#flavors-and-aggression).
+
 ## The simulator
 
 The tactical simulator in `vox-deorum-rl` extracts this code from the DLL source instead of keeping copies: the conversion table and its helpers, the intent table, the resolution helpers, the RISK thresholds, and every scoring term. The capture records each search's final vector, whether RISK was set, the counterpart, and the modifiers in force, so simulated searches resolve the same way.
