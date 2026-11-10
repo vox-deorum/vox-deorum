@@ -12,7 +12,7 @@ An **assignment** combines damage, bonuses, and the change in plot score:
 
 | Term | What it measures |
 | --- | --- |
-| Damage delta | `ScoreAttackDamage` credits damage dealt and subtracts damage received. Unit damage is capped at remaining HP; city damage permits limited overkill. Forecasts approximate flanking, support, splash, and repeat attacks. Healing, such as from pillaging, can also add value. |
+| Damage delta | `ScoreAttackDamage` credits damage dealt and subtracts damage received. Unit damage is capped at remaining HP; city damage permits limited overkill. Strengths read flanking, adjacency modifiers and auras from a neighborhood record of the planned board, where the plan has placed its units; general support, splash and repeat attacks are approximated. Healing, such as from pillaging, can also add value. |
 | Bonus | A direct unit kill adds 15 and city capture adds 100, before the 10× weight. Other bonuses cover focus fire, kill effects, civilian captures, pillaging, and barbarian camps. Ranged attacks also favor the requested target and movement left to disengage. |
 | Plot score | `ScorePlotForCombatUnitMove` combines ten times plot desirability, a danger adjustment, and small location and movement preferences. Only the change from the unit's previous plot score enters the assignment score. |
 
