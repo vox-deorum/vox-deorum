@@ -1,22 +1,59 @@
 @echo off
 setlocal
 
+set "CLEAR_CACHE=0"
+set "INSTALL_ARGS="
+
+:: Consume update options and keep the installer options in their original order.
+:parse_arguments
+if "%~1"=="" goto :arguments_parsed
+if /i "%~1"=="--clear-cache" (
+    set "CLEAR_CACHE=1"
+    shift
+    goto :parse_arguments
+)
+if /i "%~1"=="--debug" (
+    set "INSTALL_ARGS=%INSTALL_ARGS% --debug"
+    shift
+    goto :parse_arguments
+)
+if /i "%~1"=="--line" goto :parse_line
+goto :usage
+
+:parse_line
+set "LINE_VALUE=%~2"
+if not defined LINE_VALUE goto :usage
+if "%LINE_VALUE:~0,2%"=="--" goto :usage
+set "INSTALL_ARGS=%INSTALL_ARGS% --line "%LINE_VALUE%""
+shift
+shift
+goto :parse_arguments
+
+:arguments_parsed
+if "%CLEAR_CACHE%"=="1" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0utilities\clear-ai-cache.ps1"
+    if errorlevel 1 exit /b 1
+)
+
 call cleanup-data
 
 call cleanup-logs
 
-git checkout main --force
-
-git pull
-
-git submodule update
-
-cd scripts
-
-:: Use the same runtime as the launcher and enforce the updated checkout's minimum.
 set "VD_PROJECT_ROOT=%~dp0.."
 set "PATH=%VD_PROJECT_ROOT%\node;%PATH%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+
+:: Checkout and pull can rewrite this file, so cmd must parse every remaining step first.
+(
+    git checkout main --force
+
+    git pull
+
+    git submodule update
+
+    cd scripts
+
+    rem Use the same runtime as the launcher and enforce the updated checkout's minimum.
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$ErrorActionPreference = 'Stop';" ^
     "try {" ^
     "  $root = (Resolve-Path -LiteralPath $env:VD_PROJECT_ROOT).Path;" ^
@@ -47,7 +84,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "    Write-Host ('[OK] Portable Node.js ' + $installed + ' installed.');" ^
     "  } finally { Remove-Item -LiteralPath $tempDir -Recurse -Force };" ^
     "} catch { Write-Host ('Error: ' + $_.Exception.Message); exit 1 }"
-if errorlevel 1 exit /b 1
+    if errorlevel 1 exit /b 1
 
-call install %*
-exit /b %errorlevel%
+    call install %INSTALL_ARGS%
+    if errorlevel 1 exit /b 1
+    exit /b 0
+)
+
+:usage
+echo Usage: manual-update.cmd [--clear-cache] [--line X.Y] [--debug]
+exit /b 1

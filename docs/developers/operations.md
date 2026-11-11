@@ -39,7 +39,18 @@ The packaged installer that [Getting Started](../players/getting-started.md) wal
 
 **Warning:** this script deletes recorded data, traces, and logs, and it runs `git checkout main --force` before updating. That discards uncommitted local changes and switches to `main`, whatever branch you were on. Use it only to reset to a clean `main`, for example to reproduce an issue against upstream.
 
-Run it from the `scripts/` directory so it can find its cleanup commands. It runs these steps in order:
+Run it from the `scripts/` directory so it can find its cleanup commands. It accepts `--line X.Y` and `--debug` for the installer, plus `--clear-cache` for optional AI cache cleanup. For example, `manual-update.cmd --clear-cache --line 5.2` clears the caches before updating and installing VP 5.2.
+
+Stop Vox Agents, any standalone Codex proxies, and Claude Code before using `--clear-cache`. The option runs `scripts/utilities/clear-ai-cache.ps1`, which clears data across all projects:
+
+| Tool | What is cleared |
+| --- | --- |
+| Codex proxy | Continuation state, session transcripts, logs, shell snapshots, and model caches under `%USERPROFILE%\.codex-openai-proxy`. |
+| Claude Code | Caches, pasted text and images saved with prompt history, and debug logs under `%USERPROFILE%\.claude` (or `CLAUDE_CONFIG_DIR`), plus `%USERPROFILE%\.cache\claude` (or `XDG_CACHE_HOME\claude`) and `%LOCALAPPDATA%\claude-cli-nodejs\Cache`. |
+
+Credentials, configuration, and memory are kept. Proxy state or Codex homes stored elsewhere need separate cleanup. If a link (junction or symbolic link) sits inside one of these folders, the script stops and asks you to clear that path manually. A cleanup error stops the update.
+
+After optional cache cleanup, it runs these steps in order:
 
 1. `cleanup-data` deletes recorded game data, telemetry, and workspace notes.
 2. `cleanup-logs` deletes the service logs.
@@ -47,7 +58,7 @@ Run it from the `scripts/` directory so it can find its cleanup commands. It run
 4. `git pull` updates `main`.
 5. `git submodule update` updates the submodules.
 
-It then reads the Node.js minimum from the updated root `package.json`, preferring the portable copy under `node/`. If Node is missing or outdated, the script downloads a compatible portable copy there without requiring administrator rights. A failed runtime update stops the script. Finally, it calls `install.cmd`, forwarding all arguments including the line and debug selection.
+It then reads the Node.js minimum from the updated root `package.json`, preferring the portable copy under `node/`. If Node is missing or outdated, the script downloads a compatible portable copy there without requiring administrator rights. A failed runtime update stops the script. Finally, it calls `install.cmd` with the line and debug selection.
 
 For routine updates, run `git pull` and `npm install` on your current branch.
 
