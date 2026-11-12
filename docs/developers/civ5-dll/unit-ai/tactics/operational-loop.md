@@ -55,13 +55,13 @@ Fight priority is **theater × stake**. A **stake** adds prize, ground and expos
 | Exposure `E(u, d)` | The unit's entire current value if incoming damage `d` reaches its remaining HP; otherwise `F × 0.4 × d / max HP`. Nonpositive incoming damage gives 0. |
 | City value | `getEconomicValue` as seen by the acting player, or population when economic value is not positive. |
 | Ready-upgrade premium | `0.5 × max(0, upgrade base worth − current base worth)` when `CanUpgradeRightNow(true)` passes: the unit is ready to upgrade and the upgrade's tech and project prerequisites are met. Gold, territory, embarkation and unit class limits are not checked. Add this to worth before applying the HP share. |
-| Army scale `Z_U` | The greater of our living units' total current value and 3 times the mean base worth of military unit types any of our cities could buy with gold. A type counts when a non-puppet city can train it; gold on hand, the purchase cooldown and building purchase requirements are not checked. The total includes all our units; ground base counts military units separately. |
+| Army scale `Z_U` | The greater of our living units' total current value and 3 times the typical unit worth: the mean base worth of our **reference types**. For each unit class, our civilization's own type counts when it has combat strength, its prerequisite tech is known and its obsolete tech is not, it is neither a city-state gift nor policy-unlocked, and it has a production cost. Supply, gold, cities and resources do not matter, so the floor holds at the supply limit. The total includes all our units; ground base counts military units separately. |
 | City scale `Z_C` | The greater of our cities' total value and 3 times their mean value. With no city of our own, use the mean city value of living, non-barbarian players at war with us for the floor. |
 | Ground base `B` | One per living military unit of ours, plus the ground weights of all plots we own. |
 
-`OurUnitWorth`, `TypicalUnitBaseWorth` and `BuildTurn` connect these rules to the board. With no buyable type, typical unit worth is 0; with no own or qualifying enemy city, typical city value is 0. A stake term divided by a nonpositive scale contributes 0.
+`OurUnitWorth`, `ReferenceUnitScales` (in `CvTacticalOperationalValue.cpp`) and `BuildTurn` connect these rules to the board, and the turn log line "Operational loop scales" reports the army scale and typical unit worth. With no reference type, typical unit worth is 0; with no own or qualifying enemy city, typical city value is 0. A stake term divided by a nonpositive scale contributes 0.
 
-**Upgrade and scale example.** A level-3 unit with base worth 400 has worth 480. A ready upgrade to base worth 600 adds 100, making its worth 580 and its current value at half HP 464. If our total unit value is 464 and the mean buyable military type has base worth 250, `Z_U` is `max(464, 3 × 250) = 750`. Two cities worth 40 and 20 have total value 60, mean 30 and `Z_C = max(60, 3 × 30) = 90`.
+**Upgrade and scale example.** A level-3 unit with base worth 400 has worth 480. A ready upgrade to base worth 600 adds 100, making its worth 580 and its current value at half HP 464. If our total unit value is 464 and the mean reference type has base worth 250, `Z_U` is `max(464, 3 × 250) = 750`. Two cities worth 40 and 20 have total value 60, mean 30 and `Z_C = max(60, 3 × 30) = 90`.
 
 ### Ground value
 
@@ -519,7 +519,7 @@ The Reinforce code sits in the same loop files. `EstimateReinforce` scores an of
 
 Native integration consists of the branch at the top of `CvTacticalAI::ProcessDominanceZones`, the target snapshot in `FindTacticalTargets` and its cleanup, the optional executed-row counter in `TacticalAIHelpers::ExecuteUnitAssignments`, friend access in `CvTacticalAI.h` and `CvDangerPlots.h`, and the non-const `CvPlayer::GetDangerPlots` accessor.
 
-The tactical simulator extracts the loop, weights and value source from the DLL. Four host-specific members have DLL definitions here and separate simulator definitions: `TypicalUnitBaseWorth`, `GroundPlotWeight`, `BeginCommand` and `EndCommand`. The simulator also defines its own `SearchAndExecute`, which routes the engagement to its provider with the given flavors, aggression and target distance flag. The DLL reads purchase eligibility and revealed resource types for the first two. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
+The tactical simulator extracts the loop, weights and value source from the DLL. Three host-specific members have DLL definitions here and separate simulator definitions: `GroundPlotWeight`, `BeginCommand` and `EndCommand`. The simulator also defines its own `SearchAndExecute`, which routes the engagement to its provider with the given flavors, aggression and target distance flag. The DLL reads revealed resource types for `GroundPlotWeight`. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
 
 ### Copies of native functions
 
