@@ -2,9 +2,9 @@
 
 The **operational loop** replaces the zone-by-zone combat pass of [military tactics](overview.md) with one command loop per player turn. It is behind the `VOX_TACTICAL_OPERATIONAL_LOOP` mod option, which is off by default, and runs for non-barbarian players. This guide describes its DLL behavior for developers.
 
-Each enemy unit or enemy city target supplies a **battlefield**, a turn-local center with one fight **offer**. An offer holds an estimated priority and a queue state. The loop checks the highest ready offer and, on a pass, executes it as a **command**. A command can end after city fire or run one **engagement**, a tactical search with its retries. Shared units go to the higher-priority fight first. Each offer executes at most once per turn, even when its search finds no action.
+Each enemy unit, enemy city and city of ours supplies a **battlefield**, a turn-local center with one fight **offer**. An offer holds an estimated priority and a queue state. The loop checks the highest ready offer and, on a pass, executes it as a **command**. A command can end after city fire or run one **engagement**, a tactical search with its retries. Shared units go to the higher-priority fight first. Each offer executes at most once per turn, even when its search finds no action.
 
-The current loop runs enemy fights. Own-city fights and Reinforce commands are outside this implementation.
+The current loop runs enemy fights and **own-city fights**, which defend our cities. Reinforce commands are outside this implementation.
 
 ## Turn under the flag
 
@@ -21,21 +21,25 @@ Zone posture routines, zone target extraction and the regular zone reinforcement
 
 `FindTacticalTargets` scores the native targets and merges the naval list. Under the flag it copies that list into the **target snapshot**, `m_OperationalTargets`, immediately before `SortTargetListAndDropUselessTargets` suppresses nearby enemy-unit targets. Native consumers continue to use the filtered list. `CleanUp` clears the snapshot.
 
-`BuildBattlefields` reads the snapshot after the high-priority pass and emergency purchases. Each surviving hostile enemy combat unit or enemy city supplies one battlefield. A unit target is the plot's best defender, as native reads it; duplicate owner/unit IDs and duplicate city plots are removed. A city captured earlier in the turn gets no battlefield. Hostility follows `GroundSide`, which includes barbarians and players at war with us.
+`BuildBattlefields` reads the snapshot after the high-priority pass and emergency purchases. Each surviving hostile enemy combat unit or enemy city supplies one battlefield. A unit target is the plot's best defender, as native reads it; duplicate owner/unit IDs and duplicate city plots are removed. A city captured earlier in the turn gets no enemy battlefield. Hostility follows `GroundSide`, which includes barbarians and players at war with us.
 
-The battlefield stores its build-order ID, center type, target owner and unit or city ID, plot index and target zone ID. It also fixes these facts for the turn:
+`AddOwnCityBattlefield` then adds one battlefield per city of ours, safe cities included; a safe city's offer simply starts inactive. Its zone is the city plot's zone, which is the city's land zone. A city whose plot has no known zone takes its water zone instead, the zone with the city's negative ID. Zones are read without a refresh, since the map cannot be rebuilt mid-turn.
+
+The battlefield stores its build-order ID, center type, target owner and unit or city ID, plot index and zone ID. It also fixes these facts for the turn:
 
 | Fact | Rule |
 | --- | --- |
-| Theater `θ` | `floor.theater` plus the target zone city's value divided by our city scale `Z_C`. The zone city can be ours or an enemy's. A zone without a city gets the floor alone. |
+| Theater `θ` | `floor.theater` plus a city's value divided by our city scale `Z_C`. Enemy fights use their target zone's city, which can be ours or an enemy's; a zone without a city gets the floor alone. Our city's fight uses that city. |
 | Ground `ΔG(t)` | For a unit target, the local ground score with that unit present less the score with it removed, divided by ground base `B`. |
 | Near our city | Native `GetCityDistanceInPlots` is below 4 at build time. For major civilizations this means within 3 plots of our nearest city. Minors use half the plot distance to their capital, rounded down, so their exemption reaches 7 plots. |
 
-The turn's battlefield set stays fixed. A newly revealed enemy can enter danger calculations and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, theater, ground term and near-city flag stay fixed. A dead unit or a city lost by its recorded owner has its open offer dropped.
+The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, theater, ground term and near-city flag stay fixed. A dead unit or a city lost by its recorded owner has its open offer dropped.
+
+A city we capture during the turn becomes an own-city battlefield when the command that took it ends. It uses the city's current value and zone; the turn's weights, scales and other battlefields stay as they were. The captured city's enemy-city offer drops under the rule above.
 
 ## Value and stakes
 
-Priority is **theater × stake**. A **stake** adds prize, ground and exposure terms for a unit fight, or siege, garrison prize and exposure terms for a city fight. `BuildTurn` resolves the player's weights and reference scales once. `EstimateFight` refreshes open fights from current HP, city values, garrisons and threat shares after each command.
+Priority is **theater × stake**. A **stake** adds prize, ground and exposure terms for a unit fight; siege, garrison prize and exposure terms for a city fight; or city pressure and defensive exposure for an own-city fight. `BuildTurn` resolves the player's weights and reference scales once. `EstimateFight` refreshes open fights from current HP, city values, garrisons, strengths and threat shares after each command.
 
 ### Value file
 
@@ -84,8 +88,9 @@ Priority is **theater × stake**. A **stake** adds prize, ground and exposure te
 | --- | --- |
 | Enemy unit | `w_A × prize / Z_U + w_G × ΔG(t) + w_R × E_t / Z_U` |
 | Enemy city | `w_O × S_c × (floor.siege + s_c) + w_A × garrison prize / Z_U + w_R × E_c / Z_U` |
+| Our city | `w_C × S_c × (1 − q) + w_R × E_def / Z_U` |
 
-Here `w_A`, `w_O`, `w_G` and `w_R` are the attrition, occupation, hold-ground and risk weights. City stake `S_c` is city value divided by `Z_C`; `s_c` is its current damage share. An enemy city uses the same city-value scale as our cities. Its garrison uses the unit prize rule.
+Here `w_A`, `w_O`, `w_C`, `w_G` and `w_R` are the attrition, occupation, hold-city, hold-ground and risk weights. City stake `S_c` is city value divided by `Z_C`; `s_c` is its current damage share. An enemy city uses the same city-value scale as our cities. Its garrison uses the unit prize rule. The own-city terms are defined under [own-city stake](#own-city-stake).
 
 **Prize** is `F × (floor.prize + (1 − floor.prize) × s)`. The default floor is 0.6. A full-HP knight worth 700 has prize 420; at 30 of 100 HP its prize is `700 × (0.6 + 0.4 × 0.7) = 616`. Damage raises the priority of pursuing the same target. Our units' current value falls with damage under the separate living-value rule.
 
@@ -96,6 +101,26 @@ For each exposed unit, a threat receives `E(u, danger) × threat damage / whole 
 **Exposure examples.** A full-HP archer worth 400 facing 30 damage exposes `400 × 0.4 × 30 / 100 = 48`. Three such archers expose 144. If a swordsman deals all of it, its exposure term at `Z_U = 4000` is 0.036. If a swordsman deals 25 damage to each and a scout 5, their terms are 0.030 and 0.006. If one archer instead faces 10 enemy damage and 30 from fog and terrain, its exposure is 64 and that enemy receives `64 × 10 / 40 = 16`, one quarter of the exposure. Attributed shares sum to total exposure when all damage is attributed.
 
 **Endangered-unit example.** A full-HP knight worth 700 can kill our 40-HP archer worth 400 and deal 30 damage to our full-HP spearman worth 400. Nothing else threatens them. With neutral weights and `Z_U = 4000`, the knight's prize term is 0.105, the archer's exposure term is `400 × (0.6 + 0.4 × 0.4) / 4000 = 0.076`, and the spearman's is 0.012. The stake is 0.193, giving priority 0.0386 in a cityless zone. A search can attack the knight, retreat the archer or hold the spearman according to its own scoring.
+
+### Own-city stake
+
+An own-city fight weighs how outmatched the city is and what our nearby units stand to lose. Strengths use native combat strength, which is scaled by 100 and already includes the damage modifier; each is then multiplied by its remaining HP share.
+
+| Quantity | Rule |
+| --- | --- |
+| Unit strength | `UnitStrength`: native maximum attack strength, or ranged strength for a ranged unit, both from the quick estimate without adjacency. |
+| Enemy strength against our city | `UnitStrengthAgainstCity`: the enemy's quick attack or ranged strength against the city plot, keeping city and terrain modifiers. |
+| City strength | `CityStrength`: the city's strength value, which counts its garrison. |
+| Local strength `L` | `LocalCityStrength`: the city's strength plus our land combat units within one turn by plain distance (base moves in plots, at least 1), and sea units too at a coastal city. Spent units and army units count; aircraft do not. |
+| Enemy strength `T` | `EnemyCityStrength`: the union of the city's **approach list** and the visible units native danger lists as able to attack the city plot next turn, each counted once. Ranged and siege units count. |
+| Local share `q` | `L / (L + T)`, with `q = 1` when both are 0, so a city with no strength on either side has no pressure. |
+| Defensive exposure `E_def` | The sum of `E(u, danger)` over the fight's endangered recruits, each once, with native danger at the unit's plot. A garrison whose city can fall has danger past its HP, so it counts at its whole current value. |
+
+`BuildThreats` builds the approach lists after every command. Each visible hostile land or sea combat unit, leaving out units hidden from us such as undetected submarines, joins the list of our city nearest to it by path steps (`GetClosestCityByPathLength`) when that path is at most twice its base moves plus its range, or plus 1 for melee. This native cache goes around impassable plots, may embark and ignores move costs and units, so it can miss a knight 2 plots away behind mountains while counting a spearman whose real trip takes longer. Native keeps the cache only for major civs, so a city-state uses plain plot distance to its nearest city instead. A unit that can attack a city directly counts for that city even when the cache assigns it to a nearer one.
+
+`BuildThreats` also lists our **endangered units**: those outside friendly cities with positive attributed threat damage. A city's endangered recruits are available units within 4 plots of it that are on this list, or that stand in a friendly city with positive native danger. Endangered recruits make an own-city fight worth running even when the strength tally misses their attackers.
+
+**Own-city example.** At our capital worth 40 with `Z_C = 90`, `L = 150` and `T = 300` give `q = 1/3` and city pressure `(40 / 90) × (2/3) ≈ 0.296296` at neutral weights. With no endangered recruit, its priority is `0.644444 × 0.296296 ≈ 0.190947`. A safe city with no enemy strength has stake 0 and an inactive offer.
 
 ### Theater and worked priorities
 
@@ -131,10 +156,10 @@ The siege floor gives an undamaged city a stake even when recruitment would make
 
 1. Build the turn's settings, mapped flavors, weights and reference scales; build battlefields and threat maps.
 2. Estimate every fight once. Positive estimates become ready; zero or negative estimates become inactive; invalid targets are dropped.
-3. Select the highest ready estimate, with ties going to enemy cities, then lower plot index, then build order. If no offer is ready, end. If the command cap has been reached, record that stop and end.
+3. Select the highest ready estimate, with ties going to our cities, then enemy cities, then enemy units, then lower plot index, then build order. If no offer is ready, end. If the command cap has been reached, record that stop and end.
 4. Check only that offer's readiness. A failure adds one to its failure count and makes it waiting, or skipped at the failure limit. Resume selection. A pass executes one command at its current estimate.
 5. Mark the offer executed even if it ended before search or found no action. Rebuild threats from the resulting board and retire overlapping fights.
-6. Compare board snapshots, re-estimate every open fight and apply the wake rule to waiting fights. Resume selection.
+6. Compare board snapshots and add an own-city battlefield for each city the command captured. Re-estimate every open fight and apply the wake rule to waiting fights. Resume selection.
 
 The command cap defaults to 64 executed commands. A failed readiness check consumes no command slot. Search retries belong to one command. Every open fight is re-estimated after every command, including distant ones; these estimate passes issue no recruitment or readiness checks. Weights, reference scales, theater and ground stay fixed for the turn.
 
@@ -148,22 +173,26 @@ The command cap defaults to 64 executed commands. A failed readiness check consu
 | Skipped | It reaches `readiness.maxFailures` failures, default 3 | The turn ends. |
 | Retired | An executed unit fight covers it under the overlap rule | The turn ends. |
 | Executed | It runs as a command | The turn ends. |
-| Dropped | Re-estimation finds the target unit gone or its city lost by its recorded owner | The turn ends. |
+| Dropped | Re-estimation finds the target unit gone, or its city lost by its recorded owner or no longer ours | The turn ends. |
 
 A waiting fight keeps its refreshed estimate and cumulative failure count. Waking it preserves that count. The readiness result only passes or fails the offer; its estimate is the priority it executes at. The loop applies no retry discount to that estimate.
 
 ## Readiness checks
 
-`CheckFight` uses native recruitment and expected damage without issuing orders. For a unit fight, a living best defender must remain on the target plot. An eligible city strike passes immediately. Otherwise both unit and city fights require `FindUnitsWithinStrikingDistance` to find recruits and `ComputeTotalExpectedDamage` to return a positive total. A city at 1 HP or less also needs a capture-capable recruit.
+`CheckFight` issues no orders. For enemy fights it uses native recruitment and expected damage. For a unit fight, a living best defender must remain on the target plot. An eligible city strike passes immediately. Otherwise both unit and city fights require `FindUnitsWithinStrikingDistance` to find recruits and `ComputeTotalExpectedDamage` to return a positive total. A city at 1 HP or less also needs a capture-capable recruit.
+
+An own-city fight has no offensive damage check. It gathers its [recruits](#city-defense) and passes when one is endangered, or when it has a defender and a visible enemy combat unit stands within 5 plots, the reach of the search's geometry. A high estimate can come from enemies two turns away with nothing in the search area to act on; waiting then leaves the recruits free for other commands.
 
 Each check records `passed`, or the first failed condition in this order:
 
 | Result | Condition |
 | --- | --- |
-| Target gone | The plot is missing, or a unit target's plot has no living best defender, for example after the target died or left. |
+| Target gone | The plot is missing, a unit target's plot has no living best defender, for example after the target died or left, or our city's plot is no longer ours. |
 | No recruits | Native recruitment finds no eligible unit of ours that can still act within striking distance. |
 | No damage | The recruited units have no positive total expected damage. |
 | No capturer | A city at 1 HP or less has no recruited combat unit that is melee, has moves and an attack left, and has no capture prohibition. |
+| No defenders | Our city has no defender and no endangered recruit. |
+| No nearby enemy | Our city has defenders but no endangered recruit, and no visible enemy combat unit within 5 plots. |
 | Passed | The applicable checks pass, including the immediate city-strike pass for a unit fight. |
 
 Native recruitment reads the current tactical roster and its eligibility rules. **Available** means the unit passes `canUseNow`: moves left, unprocessed and not dying. Recruitment can include ranged units that can reach a firing position but only shoot next turn, and nearby units within 2 plots even when blocked. A pass can therefore lead to positioning. Support recruits such as generals contribute no damage. Endangered units added only during execution cannot make readiness pass; an endangered unit already in offensive recruitment contributes normally.
@@ -176,7 +205,7 @@ City fights use this damage check regardless of zone posture, native zone domina
 
 ## Execution
 
-`ExecuteFight` follows the native attack path with endangered recruits and the loop's search flavors. It first sets the **move label** that native records on each unit the fight finishes, so tactical move and kill statistics read as they do in native rather than carrying over the garrison pass's label. The label is the one native's routine for the battlefield zone's posture sets, for example `AI_TACTICAL_STEAMROLL` in a Steamroll zone. A zone with no posture falls back to `AI_TACTICAL_SURGICAL_STRIKE` for a city fight and `AI_TACTICAL_ATTRITION` for a unit fight.
+`ExecuteFight` follows the native attack path with endangered recruits and the loop's search flavors. It first sets the **move label** that native records on each unit the fight finishes, so tactical move and kill statistics read as they do in native rather than carrying over the garrison pass's label. The label is the one native's routine for the battlefield zone's posture sets, for example `AI_TACTICAL_STEAMROLL` in a Steamroll zone. A zone with no posture falls back to `AI_TACTICAL_SURGICAL_STRIKE` for a city fight, `AI_TACTICAL_HEDGEHOG` for an own-city fight and `AI_TACTICAL_ATTRITION` for a unit fight. An own-city fight then continues in [city defense](#city-defense); enemy fights take these steps:
 
 1. **City strike**, for a unit target. Eligible cities fire first. A kill ends the command.
 2. **Offensive recruitment.** Re-run native recruitment and expected damage against the surviving target. With no recruit or no expected damage, end the command after city fire.
@@ -187,6 +216,18 @@ City fights use this damage check regardless of zone posture, native zone domina
 7. **City follow-up.** After reaching the attack path for a city, delete its focus area if captured, then find embarked recruits within 4 plots and run the native landing operation when any are found.
 
 A **held garrison** is a garrison the high-priority pass left unprocessed. Offensive recruitment can include it and search can move it; the preliminary spotter move excludes it.
+
+### City defense
+
+`ExecuteCityDefense` runs an own-city fight as one engagement. `GatherCityRecruits` reads the tactical roster with native's eligibility rule, `canUseForTacticalAI`, so operation and army units stay out. It sorts the eligible units into two groups:
+
+| Recruit | Rule |
+| --- | --- |
+| Endangered | A non-air unit within 4 plots of the city that is on the turn's endangered list, or stands in a friendly city with positive native danger. |
+| Defender | A land combat unit, or a sea one at a coastal city, within one turn of moves by plain distance, including the held garrison on the city plot. Units covering a friendly civilian are left out, as native recruitment leaves them out. |
+| Aircraft | Under air search, an aircraft whose range reaches the city from its base or from a plot its carrier can reach this turn, plus that carrier when it is available. Defenders need no ability to attack the city. |
+
+All recruits join the search, and the endangered ones are recorded for [dispositions](#search-dispositions). The engagement uses the own-city kind row, no counterpart (native gives no civ modifier in our own zone) and native's `bTargetDistanceRelevant` set to false in both the search and the geometry gathering. With that flag off, the search scores no penalty for ending farther from the city, so a healthy spearman can hold while a wounded archer retreats. Enemy fights keep it on. There is no city fire, spotter move, separate air attack or capture follow-up; native high-priority fire, enemy-unit commands and the end-of-turn review keep those strikes.
 
 ### Flavors and aggression
 
@@ -216,7 +257,7 @@ Vox Deorum custom flavors enter these readings, so strategists steer the mapped 
 3. Add the command's kind row, clamp to 0 to 100 and round once.
 4. Choose the **representative zone**, the zone with the most plots; ties go to the lower zone ID.
 
-RISK always counts as set for danger scoring. With mapped RISK 50 and no modifiers, a unit fight covering 60% Hedgehog and 40% Steamroll plots gets `50 + 0.6 × (−15) + 0.4 × 10 = 45`. A city fight over the same plots gets 55. A unit fight wholly in a Withdraw zone gets 20 and can still run. Posture supplies flavor offsets while readiness determines whether the fight can execute.
+RISK always counts as set for danger scoring. With mapped RISK 50 and no modifiers, a unit fight covering 60% Hedgehog and 40% Steamroll plots gets `50 + 0.6 × (−15) + 0.4 × 10 = 45`. A city fight over the same plots gets 55. A unit fight wholly in a Withdraw zone gets 20 and can still run. An own-city defense wholly in Hedgehog plots gets 35 and searches at Low aggression. Posture supplies flavor offsets while readiness determines whether the fight can execute.
 
 #### Aggression from RISK
 
@@ -231,7 +272,7 @@ RISK always counts as set for danger scoring. With mapped RISK 50 and no modifie
 
 ### Search dispositions
 
-Each endangered recruit receives a **disposition** from the rows counted as run across search attempts:
+Each endangered recruit of an enemy or own-city fight receives a **disposition** from the rows counted as run across search attempts. `MarkDispositions` applies the same rule to both:
 
 | Disposition | Rule |
 | --- | --- |
@@ -252,7 +293,7 @@ These offers are exempt:
 
 - A fight whose target has positive threat damage against our units outside friendly cities and armies. Its own search can recruit those endangered units. Spent units still sustain this exemption.
 - A fight marked near our city at build time, using the [native city-distance rule](#battlefields).
-- Every city fight. City commands also retire no unit fights.
+- Every enemy-city and own-city fight. These commands also retire no unit fights.
 
 The loop rebuilds threats after execution and before retirement, so a unit moved into danger by the command can protect its attacker's offer. Ready, inactive and waiting offers can be retired; executed, retired, skipped and dropped offers are left alone. Retirement requires the search to have been called with a nonempty group, regardless of whether search found or completed a plan. Commands ending after city fire, visibility failure or greedy air retire nothing.
 
@@ -266,11 +307,12 @@ The loop rebuilds threats after execution and before retirement, so a unit moved
 
 | Change | Distance test |
 | --- | --- |
-| A visible enemy unit disappears, moves or becomes visible | Its old or new plot is within the turn's largest land/sea striking-distance scan of the target. |
-| A city battlefield changes owner | Its plot is within that same scan. |
-| A unit of ours arrives at a new plot and remains available | It is within its own striking distance of the target. Aircraft and port-changing ships pass this distance test automatically. |
+| A visible enemy unit disappears, moves or becomes visible | Its old or new plot is within the turn's largest land/sea striking-distance scan of the target, or within 5 plots of our city. |
+| A city battlefield changes owner | Its plot is within that same reach. |
+| A unit of ours arrives at a new plot and remains available | It is within its own striking distance of the target, or within its one turn of moves of our city. Aircraft and port-changing ships pass this distance test automatically. |
+| Our city's re-estimate finds an endangered recruit | Always wakes that own-city fight. |
 
-The scan is the largest `baseMoves(false) × 4` among our living land and sea units at turn build. Our moved unit's distance test uses its own `baseMoves(false) × 4`. These are distance tests; waking returns a positive-estimate fight to ready so its full readiness check can run again.
+The scan is the largest `baseMoves(false) × 4` among our living land and sea units at turn build. Our moved unit's distance test uses its own `baseMoves(false) × 4`, or its base moves, at least 1, for our city. These are distance tests; waking returns a positive-estimate fight to ready so its full readiness check can run again.
 
 Damage to an enemy or city still standing, and our units merely spent, damaged or lost, do not wake fights. Enemy disappearance from visibility also counts as a snapshot change. A helpful change leaves the offer waiting if its refreshed estimate is nonpositive. Other commands add no failures while a fight waits.
 
@@ -293,14 +335,14 @@ Each `SOperationalCommandRecord` contains:
 | --- | --- |
 | `iCommand` | Zero-based command position in this turn. |
 | `iBattlefield`, `iPlotIndex` | Battlefield ID and target plot at execution. |
-| `eKind`, `eOwner` | Unit-fight or city-fight kind and target owner. |
+| `eKind`, `eOwner` | Unit-fight, city-fight or own-city-fight kind, and the target's owner, which is us for our city. |
 | `fEstimate` | The command's single priority field: the estimate it ran at. Readiness supplies a pass/fail result. |
 | `iFailuresBefore` | Cumulative readiness failures before execution. |
 | `bSearchRan` | Execution called the engagement search with a nonempty group. |
 | `vRetired` | IDs of fights this command retired. |
 | `vEndangered` | Endangered recruit IDs paired with a boolean: true for placed, false for free. |
 
-`SOperationalStake` keeps the weighted and scaled prize, ground, exposure, siege and garrison-prize components and their sum on the battlefield. `SOperationalTurn` holds mapped flavors, resolved weights, fixed scales, threat maps and battlefields during execution. The local `SOperationalEngagementReport` holds zone plot counts, representative zone, final flavors, aggression and overall success. Each attempt holds its planned rows, rows counted as run and completion status. `ExecuteFight` uses the attempt report to derive the command's dispositions.
+`SOperationalStake` keeps the weighted and scaled prize, ground, exposure, siege, garrison-prize and city-pressure components and their sum on the battlefield. An own-city battlefield also keeps its last `L`, `T` and whether it had an endangered recruit. `SOperationalTurn` holds mapped flavors, resolved weights, fixed scales, threat maps, endangered units, approach lists and battlefields during execution. The local `SOperationalEngagementReport` holds zone plot counts, representative zone, final flavors, aggression and overall success. Each attempt holds its planned rows, rows counted as run and completion status. `ExecuteFight` uses the attempt report to derive the command's dispositions.
 
 ## Settings
 
@@ -335,8 +377,9 @@ Offsets are flavor points in the order RISK / OCCUPATION / ATTRITION / HOLD_CITY
 | --- | --- |
 | Unit fight | 0/0/0/0/0 |
 | City fight | +10/+15/-25/-5/-5 |
+| Own-city fight | 0/0/0/0/0 |
 
-The unit-fight rows follow native's posture rows, with Hedgehog RISK lowered from −10 to −15. The city row is derived from native CityAssault minus the mean of its assault posture rows, rounded to 5. A Withdraw posture still supplies its row when a fight covers that zone. The loop has no separate Withdraw command kind or `WithdrawUnitToward` helper.
+The own-city row adds nothing, so a defense takes its zones' posture rows alone. The unit-fight rows follow native's posture rows, with Hedgehog RISK lowered from −10 to −15. The city row is derived from native CityAssault minus the mean of its assault posture rows, rounded to 5. A Withdraw posture still supplies its row when a fight covers that zone. The loop has no separate Withdraw command kind or `WithdrawUnitToward` helper.
 
 ### Weights file
 
@@ -346,7 +389,7 @@ The unit-fight rows follow native's posture rows, with Hedgehog RISK lowered fro
 | --- | --- | --- |
 | `weight.attrition` | 1 | Increases with ATTRITION; scales target and garrison prizes. |
 | `weight.occupation` | 1 | Increases with OCCUPATION; scales city siege stake. |
-| `weight.holdCity` | 1 | Increases with HOLD_CITY; retained in the table. |
+| `weight.holdCity` | 1 | Increases with HOLD_CITY; scales own-city pressure. |
 | `weight.holdGround` | 1 | Increases with HOLD_GROUND; scales unit-target ground. |
 | `weight.risk` | 1 | Decreases with RISK; scales exposure. |
 | `slope.RISK`, `slope.OCCUPATION`, `slope.ATTRITION`, `slope.HOLD_CITY`, `slope.HOLD_GROUND` | 1 each | Exponent slope for each flavor's weight. |
@@ -357,7 +400,7 @@ The unit-fight rows follow native's posture rows, with Hedgehog RISK lowered fro
 | `point.safeBar` | 2/3 | Retained table constant. |
 | `point.capitalPremium` | 1 | Retained table constant. |
 
-Enemy-fight stakes use attrition, occupation, hold-ground and risk weights. `weight.holdCity`, `point.safeBar` and `point.capitalPremium` have no consumer in those stakes. The removed `gate.retryFactor` has no table row; failed fights wait at their current estimate.
+Enemy-fight stakes use attrition, occupation, hold-ground and risk weights; own-city stakes use hold-city and risk. `point.safeBar` and `point.capitalPremium` have no consumer. The removed `gate.retryFactor` has no table row; failed fights wait at their current estimate.
 
 The weight curve is `base × 2^(slope × (flavor − 50) / 50)`, reversed to `50 − flavor` for RISK. Flavor 50 returns the base exactly. With default slope, a 50-point increase doubles an ordinary weight and halves the risk weight. Multiplying all stake weights by the same positive factor preserves ordering.
 
@@ -382,14 +425,14 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 
 | Source | Owns |
 | --- | --- |
-| `CvTacticalOperationalLoop.h` and `.cpp` | Settings, mapped flavors, posture and kind rows, geographic blend, aggression, turn scales, battlefields, threats, offers, command execution and minimal records. |
+| `CvTacticalOperationalLoop.h` and `.cpp` | Settings, mapped flavors, posture and kind rows, geographic blend, aggression, turn scales, battlefields, threats, own-city strengths and recruits, offers, command execution and minimal records. |
 | `CvTacticalOperationalWeights.h` and `.cpp` | Named weight and constant tables and `ResolveOperationalWeights`. |
 | `CvTacticalOperationalValue.h` and `.cpp` | Shared unit, city, exposure and ground values, reference scales, upgrade premium and flavor weight curve. |
 | `CvTacticalSearchShared.h` | Declarations exposing the native search globals used by the copies. |
 
 Native integration consists of the branch at the top of `CvTacticalAI::ProcessDominanceZones`, the target snapshot in `FindTacticalTargets` and its cleanup, the optional executed-row counter in `TacticalAIHelpers::ExecuteUnitAssignments`, friend access in `CvTacticalAI.h` and `CvDangerPlots.h`, and the non-const `CvPlayer::GetDangerPlots` accessor.
 
-The tactical simulator extracts the loop, weights and value source from the DLL. Four host-specific members have DLL definitions here and separate simulator definitions: `TypicalUnitBaseWorth`, `GroundPlotWeight`, `BeginCommand` and `EndCommand`. The DLL reads purchase eligibility and revealed resource types for the first two. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
+The tactical simulator extracts the loop, weights and value source from the DLL. Four host-specific members have DLL definitions here and separate simulator definitions: `TypicalUnitBaseWorth`, `GroundPlotWeight`, `BeginCommand` and `EndCommand`. The simulator also defines its own `SearchAndExecute`, which routes the engagement to its provider with the given flavors, aggression and target distance flag. The DLL reads purchase eligibility and revealed resource types for the first two. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
 
 ### Copies of native functions
 
@@ -398,9 +441,9 @@ Each copy's source comment names its native original so a Vox Populi update can 
 | Copy | Native original | Change |
 | --- | --- | --- |
 | `ProcessDominanceZones` | `CvTacticalAI::ProcessDominanceZones` | The turn order described above. |
-| `ExecuteEngagement` and `SearchAndExecute` | `TacticalAIHelpers::FindAndExecuteBestUnitAssignments` | Gather geometry, blend flavors and derive aggression before calling native `FindBestUnitAssignments`. Keep flavors across up to four attempts and report rows counted as run. |
-| `GatherSearchPlotZones` | Plot gathering in `FindBestUnitAssignments` | Count geometry by zone, leaving out remote air bases and zone IDs 0 and −1. |
-| `ExecuteFight` | `ExecuteDestroyEnemyUnits`, `ExecuteAttackWithUnits`, and the capture follow-up of `ExecuteCaptureCityMoves` | Add endangered recruits, exclude held garrisons from spotting and use the loop's engagement flavors. City fights use the shared offensive readiness rules. |
+| `ExecuteEngagement` and `SearchAndExecute` | `TacticalAIHelpers::FindAndExecuteBestUnitAssignments` | Gather geometry, blend flavors and derive aggression before calling native `FindBestUnitAssignments`. Pass the caller's target distance flag. Keep flavors across up to four attempts and report rows counted as run. |
+| `GatherSearchPlotZones` | Plot gathering in `FindBestUnitAssignments` | Count geometry by zone, leaving out remote air bases and zone IDs 0 and −1. Take the caller's target distance flag. |
+| `ExecuteFight` | `ExecuteDestroyEnemyUnits`, `ExecuteAttackWithUnits`, and the capture follow-up of `ExecuteCaptureCityMoves` | Add endangered recruits, exclude held garrisons from spotting and use the loop's engagement flavors. City fights use the shared offensive readiness rules. Own-city fights branch to `ExecuteCityDefense` after the move label. |
 | `RetiresFight` | Suppression geometry in `SortTargetListAndDropUselessTargets` | Apply distance and zone compatibility after execution, with exposure and near-city exemptions. |
 | `GetDangerByThreat` | Unit overload of `CvDangerPlotContents::GetDanger` | Preserve the danger total and list each enemy unit's and city's damage contribution. |
 | `PositionUnitsAroundTarget` | `CvTacticalAI::PositionUnitsAroundTarget` | Currently uncalled support copy with supplied flavors and aggression, held-garrison exclusions and safe-embark path flags. |
