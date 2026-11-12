@@ -67,14 +67,16 @@ Fight priority is **theater × stake**. A **stake** adds prize, ground and expos
 
 `GroundWeight` starts at 1 and adds plot defense divided by 100. A city plot has defense 100; other plots use terrain and feature defense plus the nonnegative defense of an unpillaged improvement. A revealed strategic or luxury resource adds 1. Ocean subtracts 0.25; coast and lakes subtract 0.2. A city plot or a plot in its effective owning city's work range also adds 0.1 for an improvement, or 0.25 for a great person improvement, and 0.15 for a revealed bonus resource. The improvement's work value applies even when pillaged.
 
-`AddGroundPlot` scores occupation and blockade:
+`GroundStake` gives each plot the most it can move the ground score: the full weight for our plot and for a hostile city, half the weight above 1 (floored at 0) for other hostile land, and 0 for everything else. The floor keeps hostile water and plain hostile land at 0, since water lowers the weight below 1. `AddGroundPlot` scores occupation and blockade with that stake:
 
 | Plot | Ground score |
 | --- | --- |
-| Our plot occupied by a hostile holder | Its full weight is lost. |
-| Our plot blockaded by a hostile neighbor, with no friendly or neutral holder on the plot | Half its weight is lost. |
-| Hostile land without a city, held by our side | Credit half its weight above 1, floored at 0. |
-| The same hostile land blockaded by our side, with no hostile or neutral holder on it | Half that credit. |
+| Our plot or city occupied by a hostile holder | Its stake is lost. |
+| Our plot blockaded by a hostile neighbor, with no friendly or neutral holder on the plot | Half its stake is lost. |
+| Hostile land or city held by our side | Credit its stake. |
+| Hostile land blockaded by our side, with no hostile or neutral holder on it | Credit half its stake. |
+
+A city occupies its own plot, so a hostile city earns credit only after our side takes it. `GroundAround` reads live owners, so it never sees that case; the simulator's grade freezes owners when watching starts and credits a captured city its full weight.
 
 `GroundSide` treats teammates, master/vassal teams and their allied minors as our side, with hostility taking precedence. `PlotPresence` counts cities and living military holders. Aircraft and embarked units supply no presence. A military unit blockades from a neighboring plot only on the same landmass, in its native domain and outside a city. Cities and garrisons supply no blockade.
 
