@@ -219,7 +219,7 @@ A **held garrison** is a garrison the high-priority pass left unprocessed. Offen
 
 ### City defense
 
-`ExecuteCityDefense` runs an own-city fight as one engagement. `GatherCityRecruits` reads the tactical roster with native's eligibility rule, `canUseForTacticalAI`, so operation and army units stay out. It sorts the eligible units into two groups:
+`ExecuteCityDefense` runs an own-city fight as one engagement. Its recruits come from the tactical roster under native's eligibility rule, `canUseForTacticalAI`, so operation and army units stay out. `GatherCityEndangered` collects the endangered recruits, and `GatherCityDefenders` collects the rest, skipping any unit already endangered:
 
 | Recruit | Rule |
 | --- | --- |
