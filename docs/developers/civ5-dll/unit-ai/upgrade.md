@@ -22,7 +22,9 @@ flowchart TD
     F --> M
     M -->|yes| A
     M -->|no| Q{Deferred candidate exists?}
-    Q -->|yes| W[[Replace unit-upgrade savings request]]
+    Q -->|yes| C2{Price above zero?}
+    C2 -->|yes| W[[Replace unit-upgrade savings request]]
+    C2 -->|no| E
     Q -->|no| E[[End pass; an existing request can remain]]
 ```
 
@@ -39,7 +41,7 @@ The shared territory rule also accepts applicable vassal or city-state territory
 
 Homeland ranks lower-power unit types first. Immediate readiness and safe danger give the largest boost; owner territory gives a smaller fallback boost. Air and sea units double their score before experience adds the final bonus. The stable descending order determines both upgrade order and the first deferred candidate.
 
-Every completed action spends gold before the next candidate is tested. When candidates remain, Homeland cancels the current `PURCHASE_TYPE_UNIT_UPGRADE` request and replaces it with the first deferred candidate's price. Its priority is 500 plus 100 per military-training flavor point, with that flavor counted fifty-fold at war. Any positive wartime flavor makes this the highest [savings request](acquisition.md#savings-and-investment); a zero flavor leaves it tied with the ordinary unit category. When no candidate is deferred, the current source cancels only if no unit-upgrade request is recorded. An existing request can therefore remain.
+Every completed paid action spends gold before the next candidate is tested. When the first deferred candidate has a positive price, Homeland cancels the current `PURCHASE_TYPE_UNIT_UPGRADE` request and replaces it with that price. Its priority is 500 plus 100 per military-training flavor point, with that flavor counted fifty-fold at war. Any positive wartime flavor makes this the highest [savings request](acquisition.md#savings-and-investment); a zero flavor leaves it tied with the ordinary unit category. A deferred free upgrade leaves an existing request unchanged. When no candidate is deferred, the current source cancels only if no unit-upgrade request is recorded. An existing request can therefore remain.
 
 ## Replacement state
 
@@ -66,7 +68,7 @@ flowchart LR
 | Army membership | Homeland removes the old unit from its formation slot before upgrade and restores the replacement when the army still exists. [Membership and release](operations/organization.md#membership-and-release) covers the mechanics. |
 | Turn ownership | Homeland processes the old unit ID and marks the replacement `TurnProcessed`, stopping another controller from claiming it that turn. |
 
-`CvUnit::upgradePrice` accounts for base cost, positive production difference, era, handicap, AI and player modifiers, discounts, exponent, and display rounding.
+`CvUnit::upgradePrice` returns zero for a 100% promotion discount, allowing an upgrade with zero gold. Other eligibility, resource, territory, and supply rules still apply. Paid prices account for base cost, positive production difference, era, handicap, AI and player modifiers, discounts, exponent, and display rounding, with a minimum of one gold.
 
 ## Caller-specific policies
 

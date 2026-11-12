@@ -55,7 +55,7 @@ Use plain, natural language in documentation, comments, commit messages, release
 - Winston logger only: never use `console.log/error/warn` in production code (it is fine in tests).
 - camelCase for exported constants (for example, `export const apiKeyFields`).
 - Give every function a comment describing its purpose.
-- Use the `// Vox Deorum:` prefix for Vox Populi/Community Patch modifications outside CvConnectionService.
+- Use the `// Vox Deorum:` prefix for Vox Populi/Community Patch modifications outside CvConnectionService, except for backported code.
 
 ## Documentation Rules
 
