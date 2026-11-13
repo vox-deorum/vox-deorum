@@ -19,7 +19,7 @@ The spec deliberately allows the newspaper to teach the player something new. It
 | City plot ever revealed | Level 1 | No effect | Selected tile events propagate at level 1. |
 | Plot currently visible | Still uses the revealed-city branch | No effect | Plot-based event analysis can grant level 2. |
 | Spy in a major civilization's city | Level 2 only for a non-diplomat with `EstablishedSurveillance` | No general level upgrade | No dedicated spy-source branch. |
-| Diplomat in a foreign city | Excluded from the spy upgrade | Intended field gates use a separate diplomat-point map | No dedicated diplomat-source branch. |
+| Diplomat in a foreign city | Excluded from the spy upgrade | Intended field gates use a diplomat-point map that the current collector cannot populate, as explained below | No dedicated diplomat-source branch. |
 | Trade route | No dedicated upgrade | Own route records are detailed fields | No dedicated trade-source branch. |
 
 Sources: `mcp-server/lua/get-city-information.lua`, `get-player-summary.lua`, and `event-visibility.lua`. The city script also requires the viewing player to be alive. The matrix describes these collectors; it is not a complete description of every visibility mechanic in the game.
@@ -90,6 +90,8 @@ The current snapshot keys are formatted names, with no structured route ID or en
 ## Spies, diplomats, and strength
 
 The engine binding `CvLuaPlayer::lGetEspionageSpies()` exposes agent ID, coordinates, rank key, state, stored/max network points, network generation, diplomat status, `EstablishedSurveillance`, and `RevealCityScreen` when a city exists. The summary keeps only role, a location string, state, network, and network per turn. Localized rank and agent ID survive inside the dictionary key, rather than as structured fields.
+
+`AgentID` is the player's underlying spy-vector index, not a global person identifier. The binding preserves that index even when it skips terminated entries in its returned Lua list, so the Lua array position must not be used as identity. New observation records should scope agent identity to the campaign, timeline, and player and retain lifecycle changes as well as the index.
 
 There is also a semantic trap. In `CvEspionageClasses.cpp`, `HasEstablishedSurveillance()` checks specific states. Under VP, being in `GATHERING_INTEL` or `SCHMOOZE` alone does not satisfy it. `CvCityEspionage::GetRevealCityScreen()` is a separate permission, and the city collector does not use it. A report must not assume that every spy already gathering intelligence gets the collector's level-2 city flag.
 

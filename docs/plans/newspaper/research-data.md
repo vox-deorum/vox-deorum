@@ -28,7 +28,7 @@ In `f07b2f21-2d81-4eee-a3f5-d6d850081a25.db`, player 0 is France. Turns 200 to 3
 | 275 | 91 | 72.39 | 146.88 | 49.3% |
 | 300 | 103 | 51.43 | 109.91 | 46.8% |
 
-The denominator sums positive `FromGold` values in France's outgoing route map. These selected cutoffs have foreign gold-producing routes; the general calculation must explicitly exclude domestic routes. This measures the distribution of route gold, without establishing a share of total national income or explaining why a route changed. It uses the final stored summary within each numbered turn, which is a replay convention rather than proof of a shared completed-turn snapshot.
+The denominator sums positive `FromGold` values in France's outgoing route map. At all five selected cutoffs, every route with positive `FromGold` has a foreign destination, so domestic routes contribute zero to this table. The general calculation should explicitly filter for foreign destinations. This measures the distribution of route gold, without establishing a share of total national income or explaining why a route changed. It uses the final stored summary within each numbered turn, which is a replay convention rather than proof of a shared completed-turn snapshot.
 
 The same game has Zulu summaries visible to France at level 1 across these cutoffs. The final stored Zulu culture rate rises from 174 at turn 200 to 707 at turn 300, and tourism from 98.25 to 345.75. These support an independent foreign-development series. A France-visible capture event at turn 221 records Innsbruck changing from Austria to Songhai. It could seed a recovery series after city identity and lifecycle are reconciled.
 
@@ -83,7 +83,7 @@ The collector stores `city:GetID()` as `Key`. In this VP tree, `TContainer.h` al
 
 For a series following a place, link the old and new objects using capture evidence and coordinates. Coordinates alone also need a founding episode to distinguish a rebuilt settlement after razing. City names can change and must remain display labels.
 
-The collector stops returning razed cities and cities of dead players, but the store does not add tombstones or clear their latest rows. In the Rome recording above, `CityInformations` has 173 rows marked latest while latest player summaries total 104 cities. These counts come from different surviving histories, so they are not a synchronized discrepancy measurement; they demonstrate why latest city rows cannot be assumed to represent the current roster. Historical membership requires founding, capture, and removal evidence or recorded collection membership.
+The collector stops returning razed cities and cities of dead players, but the store does not add tombstones or clear their latest rows. In `05af8e1f-0a9b-478c-8f44-71e59656c406.db`, where player 0 is Rome, `CityInformations` has 173 rows marked latest while latest player summaries total 104 cities. These counts come from different surviving histories, so they are not a synchronized discrepancy measurement; they demonstrate why latest city rows cannot be assumed to represent the current roster. Historical membership requires founding, capture, and removal evidence or recorded collection membership.
 
 City rows also lack a numeric owner ID. Majors use civilization display names; all city-states share `Owner = "City-States"`. Exact city-state identity requires other evidence. New collection should retain stable player IDs alongside display names.
 

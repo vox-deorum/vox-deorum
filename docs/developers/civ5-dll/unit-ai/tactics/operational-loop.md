@@ -137,7 +137,7 @@ Two filters read the local set:
 | Filter | Keeps | Feeds |
 | --- | --- | --- |
 | **Strength filter** | Land and sea units, including spent units and army members. Aircraft are left out. | `L` (local friendly strength) in the [own-city](#own-city-stake) and [Reinforce](#strength-tallies) tallies. |
-| **Damage filter** | Units outside armies that can act now and can still attack, including aircraft. | [Local damage](#city-unit-and-fall-share) at an enemy city, and its local capturer test. |
+| **Damage filter** | Units on the tactical roster that can still attack, including aircraft, and that pass the recruitment filters of `FindUnitsWithinStrikingDistance` needing no pathfinding: usable by the tactical AI now, not covering a civilian and not a fighter kept for interception. At a city, `CanStrikeCity` also drops units barred from capturing and ranged units whose expected damage misses native's minimum. Readiness can therefore recruit every unit the estimate counts. | [Local damage](#city-unit-and-fall-share) at an enemy city, and its local capturer test. |
 
 A unit in those domains beyond its strike reach is a Reinforce candidate, so every unit counts as local or incoming and never as both. [City defense](#city-defense) recruits its defenders by the same strike reach, so a unit near our city always has one of the two offers open to it.
 
@@ -181,10 +181,10 @@ The defense fall share subtracts no heal and asks for no capturer. Native danger
 
 - **Position.** Each unit attacks from its current plot, so the estimate assumes every counted unit reaches a firing position. Ranged units and aircraft count their ranged damage.
 - **Order.** Units are simulated in ascending unit ID. Each simulation starts from the city and garrison damage accumulated by the earlier attackers, following `ComputeTotalExpectedDamage`.
-- **Suicide test.** An attack is left out when it fails the test in `ComputeTotalExpectedDamage`: the attacker would take more damage than it deals to the city and garrison combined, with a looser limit for an attacker that stays above half health. The estimate and the [readiness check](#readiness-checks) then count the same attacks.
+- **Suicide test.** An attack is left out when it fails the test in `ComputeTotalExpectedDamage`: the attacker would take more damage than it deals to the city and garrison combined, with a looser limit for an attacker that stays above half health. The estimate and the [readiness check](#readiness-checks) then count the same attacks. A rejected attack leaves the simulated garrison untouched; native lets it still wound or kill the garrison.
 - **Totals.** Sum the returned city damage into `D_c` and the separate `iGarrisonDamage` output into `D_g`. The helper has already deducted absorption from its returned city damage, so `D_c` enters the attack fall share directly.
 
-Once a garrison is predicted to die, later hits use its replacement, if any, so it stops absorbing damage. `D_g` and the garrison prize refer to the garrison present at the start of the estimate; replacement defenders affect only the later city damage. Re-estimation after a real command reads the city's current garrison again.
+Once a garrison is predicted to die, later hits use its replacement, if any, so it stops absorbing damage. A defender already predicted to die never returns as a replacement. `D_g` and the garrison prize refer to the garrison present at the start of the estimate; replacement defenders affect only the later city damage. Re-estimation after a real command reads the city's current garrison again.
 
 The full attack fall share also requires a unit in the damage filter that passes `CanCapture`: a melee combat unit with moves and an attack left, and no capture prohibition. This uses the same distance approximation as local damage; search determines whether capture can actually be executed. Without such an attacker, useful city damage is capped at `R − 1`, because bombardment leaves the city at 1 HP and it can still heal.
 
@@ -361,7 +361,7 @@ The remaining candidate filters follow native behavior:
 At an enemy city, selection takes two more steps after the strength need is met:
 
 1. **Role unit.** If neither a local nor a selected unit can capture, the nearest remaining capturer joins as the role unit (the extra unit needed for capture). Its strength divided by join turns is **role help**. If no capturer is available, the selection records a missing capture role.
-2. **Damage extension.** Strength alone can pick units that add nothing to a siege, such as melee units that fail the suicide test. When the fight's fall share is below 1 and the selection so far raises neither [projected share](#reinforce-priority), `SelectReinforcement` walks the remaining candidates in the same order and adds each one whose simulated attack damages the city or its garrison. It stops as soon as a projected share rises. If the candidates run out first, the added units are dropped and stay free.
+2. **Damage extension.** Strength alone can pick units that add nothing to a siege, such as melee units that fail the suicide test. When the base fall share is below 1 and the selection so far raises neither [projected share](#reinforce-priority) above its base, `EstimateReinforce` walks the remaining candidates in the same order and adds each one that passes `CanStrikeCity` and whose simulated attack damages the city or its garrison. It stops as soon as a projected share rises. If the candidates run out first, the added units are dropped and stay free.
 
 Units added by the extension are selected units in every later tally: help, arrival ratio, readiness and marching. The extension also runs when the need is 0 and nothing was selected.
 
@@ -390,11 +390,13 @@ Priority depends on the destination. `θ` is the theater multiplier, and the wei
 
 At **our city**, border, parity and odds checks do not apply.
 
-At an **enemy city**, Reinforce is worth the fight it creates. `f_att` and `f_g` are the fight's current [fall share](#city-unit-and-fall-share) and [garrison damage share](#garrison-damage-share). `f_att⁺` and `f_g⁺` are the **projected shares**: the same two shares once the selected units have joined. `EstimateReinforce` computes them by continuing the fight's local damage simulation:
+At an **enemy city**, Reinforce is worth the fight it creates. `f_att⁺` and `f_g⁺` are the **projected shares**: the [fall share](#city-unit-and-fall-share) and [garrison damage share](#garrison-damage-share) once the selected units have joined. `EstimateReinforce` computes them by continuing the fight's local damage simulation:
 
-1. Simulate the selected units, then the role unit, in selection order. Each attacks from its current plot under the local damage rules.
+1. Simulate the selected units, then the role unit, in selection order. Each attacks from its current plot under the local damage rules. A unit that fails `CanStrikeCity` adds no damage, though it still counts toward strength.
 2. Divide each unit's city and garrison damage by its join turns, the discount that help uses, and add the results to `D_c` and `D_g`.
-3. Apply the fight's share rules to the new totals, with the same remaining health, expected heal and garrison. A local capturer, a selected capturer or the role unit satisfies the capture requirement.
+3. Apply the fight's share rules to the new totals, with the same remaining health, expected heal and garrison. Any local capturer, spent or not, a selected capturer or the role unit satisfies the capture requirement, because the march arrives after this turn.
+
+`f_att` and `f_g` here are the **base shares**: the fight's local damage alone under that same capture rule. They equal the fight's own shares unless a spent local capturer would complete a lethal siege. The march then earns nothing for a capture its damage does not enable.
 
 The share difference replaces gain at an enemy city, because it measures the benefit directly in damage. Gain is still recorded. Odds keep their role as the discount for arriving too weak. Exposure stays with the fight. The difference has three useful properties:
 
@@ -644,7 +646,7 @@ Supporting structures hold the values used during execution:
 | Structure | Content |
 | --- | --- |
 | `SOperationalStake` (fight score components) | Weighted and scaled prize, ground, exposure, city-progress and garrison terms, plus their sum, and the fall share and garrison damage share behind the city terms. |
-| `SOperationalReinforce` (reinforcement selection and score) | Strength tallies, selected units, help, gain, arrival ratio, odds, projected shares at an enemy city, counted enemies, rejections and check flag. |
+| `SOperationalReinforce` (reinforcement selection and score) | Strength tallies, selected units, help, gain, arrival ratio, odds, base and projected shares at an enemy city, counted enemies, rejections and check flag. |
 | Own-city battlefield | Last `L` (local friendly strength), `T` (enemy strength) and whether an endangered recruit was present. |
 | `SOperationalTurn` (working turn state) | Mapped preferences, resolved weights, fixed scales, threat maps, endangered units, approach lists and battlefields. |
 | `SOperationalEngagementReport` (search execution report) | Zone plot counts, representative zone (the zone contributing the most search plots), final preferences, aggression RISK (the score choosing search aggression), resolved aggression level and overall success. |
@@ -743,7 +745,9 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | `CvTacticalOperationalValue.h` and `.cpp` | Shared unit, city, exposure and ground values, reference scales, upgrade premium and flavor weight curve. |
 | `CvTacticalSearchShared.h` | Declarations exposing the native search globals used by the copies. |
 
-`EstimateBattlefield` gathers the local set and calls `EstimateFight` and `EstimateReinforce` for one battlefield. The Reinforce code sits in the same loop files. `EstimateReinforce` scores an offer, `GatherReinforceCandidates` applies the filters, `SelectReinforcement` fills the selection, `CheckReinforce` runs the reach checks, `ExecuteReinforce` marches the group and `RetiresReinforce` applies the overlap rule. `TravelTurns`, `LocalStrength`, `EnemyCenterStrength`, `IsCapturer`, `CanMarch` and `MarchFlags` are helpers. `SOperationalCandidate` and `SOperationalReinforce` hold a candidate and a battlefield's Reinforce.
+`EstimateBattlefield` calls `GatherLocalSet`, which applies `StrikeReach` and `CanStrikeCity` and fills an `SOperationalLocalSet` with both filters, then calls `EstimateFight` and `EstimateReinforce` for one battlefield. At an enemy city, `StartCityDamage` and `SimulateCityAttack` run the local damage simulation in an `SOperationalCityDamage`, `ExpectedCityHeal` supplies the heal, and the pure functions `AttackFallShare` and `GarrisonShare` turn the totals into shares. `LocalStrength` and `LocalCityStrength` read the strength filter.
+
+The Reinforce code sits in the same loop files. `EstimateReinforce` scores an offer, `GatherReinforceCandidates` applies the filters, `SelectReinforcement` fills the selection, `ProjectCityShares` projects the shares at an enemy city and runs the damage extension, `ScoreReinforcement` computes gain, arrival ratio and odds for a selection, `CheckReinforce` runs the reach checks, `ExecuteReinforce` marches the group and `RetiresReinforce` applies the overlap rule. `TravelTurns`, `EnemyCenterStrength`, `IsCapturer`, `CanMarch` and `MarchFlags` are helpers. `SOperationalCandidate` and `SOperationalReinforce` hold a candidate and a battlefield's Reinforce.
 
 Native integration consists of the branch at the top of `CvTacticalAI::ProcessDominanceZones`, the target snapshot in `FindTacticalTargets` and its cleanup, the optional executed-row counter in `TacticalAIHelpers::ExecuteUnitAssignments`, the optional garrison-damage output of `CvTacticalAI::ComputeTotalExpectedDamage` (the garrison damage of every counted attack, kept across a garrison's death), friend access in `CvTacticalAI.h` and `CvDangerPlots.h`, and the non-const `CvPlayer::GetDangerPlots` accessor.
 
@@ -760,7 +764,8 @@ Each copy's source comment names its native original so a Vox Populi update can 
 | `GatherSearchPlotZones` | Plot gathering in `FindBestUnitAssignments` | Count geometry by zone, leaving out remote air bases and zone IDs 0 and −1. Take the caller's target distance flag. |
 | `ExecuteFight` | `ExecuteDestroyEnemyUnits`, `ExecuteAttackWithUnits`, and the capture follow-up of `ExecuteCaptureCityMoves` | Add endangered recruits, exclude held garrisons from spotting and use the loop's engagement flavors. City fights use the shared offensive readiness rules. Own-city fights branch to `ExecuteCityDefense` after the move label. |
 | `RetiresFight` | Suppression geometry in `SortTargetListAndDropUselessTargets` | Apply distance and zone compatibility after execution, with exposure and near-city exemptions. |
-| Expected city heal | City heal in `CvCity::doTurn` | Estimate the heal without applying it, assume the city took damage this turn (no tripling), and ignore whether it is currently damaged. |
+| `ExpectedCityHeal` | City heal in `CvCity::doTurn` | Estimate the heal without applying it, assume the city took damage this turn (no tripling), and ignore whether it is currently damaged. |
+| `SimulateCityAttack` | City case of `CvTacticalAI::ComputeTotalExpectedDamage`, for one attacker | Use the quick estimate, keep the counted totals in the loop's simulation, count hits on a replacement garrison as city damage only, and skip native's expected-damage bookkeeping on the move list. A suicidal attack changes no garrison state, and a defender predicted to die is not met again. |
 | `GetDangerByThreat` | Unit overload of `CvDangerPlotContents::GetDanger` | Preserve the danger total and list each enemy unit's and city's damage contribution. |
 | `GatherReinforceCandidates` | Candidate filters in `CvTacticalAI::PlotReinforcementMoves` | Per battlefield instead of per zone, plain-distance bounds at estimate time, no two-unit minimum, enemy-center dominance gates only, and civilian-cover units left out without native's skip and processing. |
 | `CanMarch` and `MarchFlags` | Far-out path flags and danger limit in `CvTacticalAI::PositionUnitsAroundTarget` | Safe embark for land units in place of native's two no-embark rules; first-stop danger at half remaining HP (hit points) for attacking non-siege units, otherwise 0. |

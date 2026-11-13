@@ -12,7 +12,7 @@ Write about named places and people. Give each story one clear development and a
 
 One lead story anchors the issue. A small number of shorter pieces adds variety across places and subjects. Make the headline, opening account, and relevant destination easy to find at a glance.
 
-Use type size, spacing, and a few editorial rules to distinguish levels of importance. Leave generous space between stories. Every visible interface element must earn its place. Remove redundant section labels, tags, explanatory captions, status text, and repeated instructions. Combine related actions into a quiet row. The publication should occupy most of the reading surface, with little surrounding interface.
+Use type size, spacing, and a few editorial rules to distinguish levels of importance. Leave generous space between stories. Every visible element must earn its place. Keep the reading surface to a masthead, stories, inline links, and quiet vote icons. Remove redundant section labels, tags, captions, instructions, action bars, and footer metadata such as civilization, turn ranges, or page numbers. The publication should occupy most of the reading surface, with little surrounding interface.
 
 An issue should feel like a brief pause within a game. Keep the overview short enough to skim, and reveal deeper context when the player chooses to read further. Quiet periods can produce shorter editions.
 
@@ -20,7 +20,9 @@ An issue should feel like a brief pause within a game. Keep the overview short e
 
 Express identity through material, typography, composition, imagery, and editorial voice. An early written account can use broad passages and a scribe's cadence; a printed gazette can use columns and correspondence; a contemporary publication can use concise connected dispatches.
 
-Let artwork carry more of the atmosphere so prose and interface can stay sparse. Use decorative graphical elements grounded in the era's visual language: carved reliefs and seals, woodcuts and printer's ornaments, engraved scenes and cartographic borders, or contemporary editorial graphics. Give a strong illustration room to establish a place and tell part of the story. Small motifs can connect the masthead and articles into one publication.
+Build character into the newspaper itself through masthead lettering, ornamental rules, borders, seals, paper edges, and restrained textures. Draw on the era's visual language: carved reliefs, printer's ornaments, engraved flourishes, or contemporary editorial geometry. These details should frame the reading surface without becoming separate content blocks.
+
+Use an illustration only when it adds something meaningful to the issue. A single shared image may establish the atmosphere; individual stories do not each need a figure. Let typography and the publication's own decoration carry the remaining identity.
 
 Keep decoration purposeful and readable. Favor a few confident graphical elements over many small embellishments. Suggest clay, paper, or a digital surface without letting texture compete with text. Artwork should create character and breathing room while preserving the headline and destination's prominence.
 
@@ -28,15 +30,15 @@ Different civilizations can share a medium while retaining their own character. 
 
 ## Lead the reader back into the world
 
-A story should offer a clear route to its subject: visit a city, focus a location on the map, inspect a trading relationship, or open the relevant game screen. Name the destination in the action, such as **Visit Akkad** or **Open cultural relations**.
+A story should offer a clear route to its subject: a city, a location on the map, a trading relationship, or a relevant game screen. Link the named subject directly within the headline or prose, such as **Akkad** or **Bristol's harbour**. Use familiar, visibly identifiable text links instead of standalone visit buttons or destination rows.
 
-Keep the main destination prominent enough to discover without competing with the headline. Supporting links belong with their context. Returning to the newspaper should preserve the player's reading position. If a historical destination is no longer available, explain that briefly while keeping the article readable.
+Keep links within their narrative context, with a clear focus state and a destination-specific accessible name. Returning to the newspaper should preserve the player's reading position. If a historical destination is no longer available, explain that briefly while keeping the article readable.
 
 ## Keep context within reach
 
 Story series provide continuity across issues. A short reference to an earlier installment can explain why today's development matters. Let the reader follow that history without repeating it throughout the front page.
 
-Make the subject and reporting period clear without repeating metadata on every story. Keep tags and source context inside supporting views when possible. Reveal supporting observations through a compact disclosure. Distinguish reported changes from interpretation through the prose. Evidence should answer a reader's question about the account.
+Include essential context in the account itself. Do not add notes sections or per-story context disclosures. Link an earlier installment within the prose only when that history helps explain the development. Distinguish reported changes from interpretation through the writing, and leave detailed evidence to the linked game view. Use a single quiet date near the masthead if the issue needs one.
 
 ## Make feedback quiet and reversible
 
