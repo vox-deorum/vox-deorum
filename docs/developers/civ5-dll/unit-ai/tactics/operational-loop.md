@@ -404,7 +404,7 @@ Damage to an enemy or city still standing, and our units merely spent, damaged o
 
 ## Records
 
-`RunCommandLoop` can fill an `SOperationalTurnRecord`. When no record is supplied and both game logging and AI logging are enabled, it writes tactical messages for checks, executed commands and a command-cap stop. Each check message names its result. Command messages identify the command, battlefield and plot, whether search ran and how many fights and Reinforce offers were retired. Captured search requests also carry the command's purpose: `OperationalUnitFight`, `OperationalCityFight`, `OperationalOwnCityFight` or `Reinforce`. Every retry retains that purpose. These labels describe the engagement; its flavors still come from the geographic blend and kind row.
+`RunCommandLoop` can fill an `SOperationalTurnRecord`. When no record is supplied and both game logging and AI logging are enabled, it writes tactical messages for checks, executed commands and a command-cap stop. Each check message names its result. Command messages identify the command, battlefield and plot, whether search ran and how many fights and Reinforce offers were retired. Captured search requests carry `CityAttack` for enemy-city fights, `CityDefense` for own-city fights, or `Reinforce`. Unit battles carry `BattleFriendly`, `BattleNeutral`, or `BattleEnemy` according to the target zone's territory type. Friendly includes our team's zones; neutral includes unowned areas and zones belonging to players outside our team who are not at war with us. Every retry retains that purpose. Flavors still come from the geographic blend and kind row.
 
 | Turn field | Content |
 | --- | --- |
