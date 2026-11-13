@@ -11,7 +11,7 @@ The checked-in VP sources are the authority for this draft:
 - `civ5-dll/(2) Vox Populi/Database Changes/Tech/NewTechs.xml` adds Corporations in Modern.
 - `civ5-dll/(2) Vox Populi/Database Changes/Text/en_US/Tech/TechTextChanges.sql` describes VP's technology changes, including Radio's Broadcast Tower. Final unlock checks should use the loaded game database and active game options rather than tooltip prose alone.
 
-Useful prerequisite details: Radio requires Electricity and Corporations; Computers requires Refrigeration and Atomic Theory; Telecommunications requires Electronics and Computers; Internet requires Telecommunications and Satellites. Steam Power and Railroad precede Industrialization. The tree branches, so publication progression needs explicit eligibility rather than simply assuming that every earlier newspaper stage occurred.
+Useful prerequisite details: Radio requires Electricity and Corporations; Computers requires Refrigeration and Atomic Theory; Telecommunications requires Electronics and Computers; Internet requires Telecommunications and Satellites. Steam Power and Railroad precede Industrialization. The tree branches, so a civilization can reach a later medium without the earlier ones. Variant weights keyed to individual technologies handle this.
 
 Internal identifiers include `TECH_PRINTING_PRESS`, `TECH_RADIO`, `TECH_COMPUTERS`, `TECH_TELECOM`, and `TECH_INTERNET`. VP uses internal era names `ERA_POSTMODERN` and `ERA_FUTURE` for Atomic and Information in relevant data. Player-facing text should use localized names.
 
@@ -34,20 +34,22 @@ Foreign reporting needs a field-level evidence contract. For example, `get-citie
 
 ## 3. Technical direction already requested
 
-- Develop and evaluate against existing MCP recordings first. Advance the reporting cutoff through a recorded game and retain issues, series history, editorial choices, and player feedback between checks.
-- Algorithms detect tagged triggers and match templates. Templates supply conditional scripts and authored combinations for merged items.
-- An LLM or heuristic editor manages series: starting, continuing, fading, closing, and revisiting them. It also selects short pieces and combines template angles into coherent items. The LLM can propose additional combinations and ad hoc templates.
-- Both modes share publication history and support the complete editorial loop. Scripted and composite variants provide the non-LLM writing path, with general comparison and update scripts for continuing series introduced by an LLM.
-- Item votes guide selection through series, templates, and tags. Explicit topic controls provide stronger preferences.
+- Develop and evaluate against recordings first, meaning the per-game knowledge stores the MCP server already keeps. Advance the reporting cutoff through a recorded game and retain issues, series history, editorial choices, and player feedback between checks.
+- Algorithms detect tagged triggers and match templates. Templates supply variants and authored combinations for merged items. Triggers, templates, and variants share one set of conditions (researched technology, adopted policy, civilization, era, and similar). A variant has conditions for eligibility and a weight made of a base value plus conditional adjustments.
+- Every item has an importance value and one or more series keys. Items sharing a key form a series, whose importance grows with each item, fades with time, and adds to the selection weight of later items with that key.
+- An LLM or heuristic editor selects items by weight and combines template angles into coherent items. The LLM can propose additional combinations and ad hoc templates.
+- Both modes share publication history and support the complete editorial loop. Authored variants are the non-LLM writing path, and shared series keys let either mode continue the other's series.
+- Item votes adjust series and tag weights. Topic controls come later.
+- Foreign coverage may use what the civilization accesses directly, what trade routes bring from the partner (usually the destination city), and what spies or diplomats report at their strength. Section 2's visibility notes are input for that later design.
 - After offline evaluation, connect the editorial loop to a background worker for live games and build the in-game reader. The game save owns the archive and editorial memory; MCP holds a queryable copy.
 
 ## 4. Questions for the implementation plan
 
 Resolve these after the product spec and initial series examples are agreed. Begin with recording coverage and offline evaluation; live scheduling, game-save integration, and the in-game interface follow.
 
-1. **Recording coverage:** identify suitable existing MCP recordings, their format, civilization perspective, and observation coverage. Choose segments showing domestic and foreign developments over enough turns to evaluate series. Inventory required fields, numerical definitions, visibility, and game-option dependencies for the selected triggers.
+1. **Recording coverage:** identify suitable existing per-game knowledge stores, their civilization perspective, and observation coverage. Choose segments showing domestic and foreign developments over enough turns to evaluate series. Inventory required fields, numerical definitions, visibility, and game-option dependencies for the selected triggers.
 2. **Offline replay:** expose only observations available by each reporting cutoff, distinguishing unchanged stored values from missing observations. Choose a readable output format, a simple vote-entry workflow, and resumable editorial history. Compare editors from the same starting point with separate output histories.
-3. **Editorial state:** define series identity and lifecycle, trigger identity, template combinations, repetition, and evidence summaries. Preserve continuity across different templates and editor modes. Record a shared installment once when series intersect, with links from the relevant histories. Choose simple preference rules for editable votes on individual and merged items.
+3. **Editorial state:** define how series keys are formed, how importance accumulates and fades, trigger identity, template combinations, repetition, and evidence summaries. Choose the shared condition vocabulary and the configuration format for conditions and variant weights. Record an item with several keys once, with links from each series history. Choose simple rules for how editable votes adjust series and tag weights.
 4. **Editor contract:** define the evidence, series history, preferences, and candidate angles supplied to each editor. Include eligible triggers with no authored template. Specify how series decisions, generated angles, and merged items are recorded and checked; bound model work and provide heuristic fallback.
 5. **Live integration:** choose a completed-turn boundary suitable for human play, publication commit timing, and handling of drafts that finish late. Prototype game-save persistence, including autosaves, and reconcile observations with loaded timelines. Verify recovery after loss of the MCP copy and exclusion of alternate histories at the same turn. A game ID plus turn alone is insufficient to distinguish branches.
 6. **Reading experience:** begin with local issue and series browsing and feedback. Later decide unread indicators, seat handling, historical rendering, and navigation under VP + EUI. Choose an initial language policy for authored variants and generated prose, with localized names and explicit fallback behavior.
