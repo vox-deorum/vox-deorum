@@ -14,9 +14,9 @@ Checked on **2026-11-13**, after fetching both DLL remotes:
 | Shared upstream ancestor, VP 5.2.7 | `76a576152f00a8780ced6c6721d3cd46c51d151b` | Identify changes introduced on the VD side. |
 | Refreshed `upstream/master` | `16596561fcd3779ad4d933cb87a56b69877751b2` | Check whether each change is still missing upstream. |
 
-The fresh export is `temp/upstream-review/candidates-2026-11-13/`, with **146 file entries** and a clean DLL working tree. Its manifest and individual patches record the ancestor-to-VD inventory. Direct comparisons with refreshed upstream source and GitHub PR metadata establish current disposition. Upstream has substantial changes absent from the 5.2 branch, including a new worker planner; those absences must never be extracted as reversions.
+The export at `temp/upstream-review/candidates-2026-11-13/` records **146 file entries** from the shared ancestor to the VD source commit above. Its manifest and patches provide extraction references. The candidates below exclude merged fixes; remaining differences in those areas support surviving VD features. Direct comparisons with upstream source and GitHub PR metadata establish current disposition. Upstream has substantial changes absent from the 5.2 branch, including a new worker planner; those absences must never be extracted as reversions.
 
-PR states below are a snapshot of the upstream PR list and `CIVITAS-John` submissions on that date. Local `pr/*` branches alone do not establish submission. Paths are relative to `civ5-dll/`; **core** means `CvGameCoreDLL_Expansion2/`, and **Lua** means its `Lua/` directory. Patch numbers belong to this fresh export only.
+PR states below are a snapshot of the upstream PR list and `CIVITAS-John` submissions on that date. Local `pr/*` branches alone do not establish submission. Paths are relative to `civ5-dll/`; **core** means `CvGameCoreDLL_Expansion2/`, and **Lua** means its `Lua/` directory. Patch numbers belong to this export only.
 
 ## Existing submissions to finish first
 
@@ -25,11 +25,11 @@ Continue the existing PR for each item. Recheck its current patch and review dis
 | Open PR | Behavior and source | Follow-up |
 | --- | --- | --- |
 | [#13392](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13392) | Election influence-loss events without a spy, observer unit flags during combat, and named cooperative-war partners. `CvMinorCivAI.cpp`, `UnitFlagManager.lua`, `CvLuaPlayer.cpp`, `CoreNewUIText.xml`. | Keep the no-spy event behind `MOD_EVENTS_ESPIONAGE`, preserve ordinary player animations, and keep localization arguments together. This PR does **not** contain the incoming-route countdown fix. |
-| [#13393](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13393) | Tactical simulation work reduction: safe-plot early exit, fewer copies, line-of-sight reuse, compact attack results, and best-position selection. `CvTacticalAI.cpp` and `.h`. | Prefer [#13517](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13517) for the safe-plot shortcut and remove that hunk here. Its guards preserve Lua-hook calls, network checks, and the unsigned-short count's overflow behavior. Require decision parity for the other hunks. |
-| [#13424](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13424) | Dominance-zone caches and tactical movement-cache reuse. `CvTacticalAnalysisMap.cpp`, `CvTacticalAI.cpp`, `CvAStarNode.h`. | Coordinate the zone half with [#13519](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13519), and the movement-cache half with #13393/#13517/#13483. Require equal zone IDs, strengths, and unit choices plus representative timings before promoting either half. |
+| [#13393](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13393) | Tactical simulation work reduction: safe-plot early exit, fewer copies, line-of-sight reuse, compact attack results, and best-position selection. `CvTacticalAI.cpp` and `.h`. | Prefer [#13517](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13517) for the safe-plot shortcut and remove both safe-plot hunks here, covering tactical and support root pruning. Its guards preserve Lua-hook calls, network checks, and the unsigned-short count's overflow behavior. Require decision parity for the other hunks. |
+| [#13424](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13424) | Dominance-zone caches and tactical movement-cache reuse. `CvTacticalAnalysisMap.cpp`, `CvTacticalAI.cpp`, `CvAStarNode.h`. | Coordinate the zone half with [#13519](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13519), and the movement-cache half with #13393/#13517/#13483. Require zone-ID and strength parity for the first half, unit-move and ranged-attack-plot parity for the second, and representative timings for each. |
 | [#13473](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13473) | Continue after an unexpected ranged kill when no later assignment depends on the target plot. `LaterRowsDependOnPlot`, `ExecuteUnitAssignments`. | Cover later attacks and moves onto that plot, planned kills that fail, and unchanged melee handling. |
 | [#13483](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13483) | Threatened garrisons participate in search, with deferred holding and falling-city checks. `CvTacticalAI.cpp` and `.h`. | Resolve the reported tradeoff: more enemy losses and less ground lost, but more own-city damage and cities lost, no detectable overall grade gain, and no significant own-unit-loss change. Coordinate its root danger pass with #13393/#13517/#13424. |
-| [#13485](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13485) | Reuse exploration snapshots and avoid repeated copying. `CvEconomicAI`, `CvHomelandAI`, `CvUnit`. | Preserve refresh points after movement and ruins, target order, and selected exploration missions. |
+| [#13485](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13485) | Reuse exploration snapshots and avoid repeated copying. `CvEconomicAI`, `CvHomelandAI`, `CvUnit`. | Preserve the rebuild after a failed upgrade-home move, target order, and selected missions. Verify snapshot freshness when movement or ruin collection changes the board. |
 | [#13487](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13487) | Bound homeland path searches while choosing units. `CvHomelandAI`, `CvUnit`. | Preserve selection and tie order, reachability limits, and unreachable-target behavior. |
 | [#13559](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13559) | Estimate combat using planned neighbor positions: flanking, formation and aura modifiers, and blockade handling. `CvUnit`, `CvPlot`, `CvTacticalAI`. | Review cache identity and invalidation, planned deaths and movement, and measured cost. Keep attack-neighborhood infrastructure separate from the larger air and flavor features. |
 
@@ -131,24 +131,6 @@ Hold the `PlayerDoneTurn` extra argument until its meaning is agreed: VD scans f
 
 Hold generalized deal enactment until an upstream scenario consumer justifies an explicit API. VD's human-to-human overrides span item legality, valuation-cache identity, finalization, and Lua bindings. Normal valuation queries can be extracted earlier. **Source:** core `CvDealAI`, `CvDealClasses`; Lua `CvLuaDeal`, `CvLuaPlayer`; EUI `TradeLogic.lua`, patches `0036`–`0039`, `0104`–`0105`, `0108`, `0009`.
 
-## Already upstream
-
-These changes can still appear in the 5.2-based export. Refreshed upstream already contains them.
-
-| Behavior | Upstream evidence |
-| --- | --- |
-| Include prior attacker, defender, and city damage in `AttackKey::operator==` | Commit [`2bc6d34a1`](https://github.com/LoneGazebo/Community-Patch-DLL/commit/2bc6d34a1). |
-| War-duration tooltip opponent and defeated-leader popups during autoplay | Merged [#13360](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13360). |
-| Trait combat-bonus initialization and related optimization | Merged [#13391](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13391). |
-| Equal-cost pathfinding determinism and per-search danger memoization | Merged [#13361](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13361) and [#13408](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13408). |
-| Pathfinder node cleanup and redundant-work removal | Merged [#13423](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13423). #13422 closed unmerged; use the successor's provenance. |
-| Tactical scratch-state reclamation and support checkpoints through bookkeeping | Merged [#13421](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13421) and [#13366](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13366). |
-| Air-attack damage and quick-estimate parameter correction | Merged [#13468](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13468). Broader coordinated air search remains separate. |
-| Wrapped-map army contact selection and global distance undercount | Merged [#13534](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13534) and [#13495](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13495). |
-| Duplicate splash kill rewards and pillage-heal HP calculation | Merged [#13542](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13542) and [#13551](https://github.com/LoneGazebo/Community-Patch-DLL/pull/13551). |
-| Clamp hypothetical unit-maintenance cost before its power calculation | Present in current upstream `CvTreasury::CalculateUnitCost`. |
-| Declaration-of-friendship `break`, tactical attack-strength width, and homeland opportunity-attack log name | Present in current upstream source. Keep unrelated deal checks and logging edits out of these completed fixes. |
-
 ## Extraction order and verification
 
 1. Resolve review and overlap in existing submissions: #13393/#13517/#13424/#13483 share root-pruning functions, and #13424/#13519 share zone calculations. Refresh their diffs before any new port.
@@ -159,7 +141,7 @@ These changes can still appear in the 5.2-based export. Refreshed upstream alrea
 
 For C++ extractions, build the upstream checkout with `python build_vp_clang_sdk.py --config debug` using the workflow's process-local PATH setup. Check supported compiler paths when available and report missing tooling. Use `git diff --check` and inspect changed files for IPC, capture, and save-layout residue. Lua and localization changes need the relevant in-game reproduction; queries need repeated-call checks for unchanged RNG, forced choices, and game state. Performance claims need representative timings and decision parity; intentional behavior changes need gameplay comparisons.
 
-This plan was verified through source, history, exported diffs, and live PR metadata. No extracted patch was built or tested in-game during this inventory refresh.
+The candidate inventory was verified through source, history, exported diffs, and live PR metadata. Individual extractions still need the build and runtime checks described above.
 
 ## Out of scope
 
