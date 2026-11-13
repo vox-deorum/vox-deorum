@@ -20,7 +20,7 @@ Success means the player can skim an issue, understand more of the world, and fi
 
 Each civilization has its own publication, with a consistent identity and an archive. A discreet unread indicator announces a new issue. The player can open it when convenient.
 
-A typical issue contains a lead story, updates from selected series, and a few short standalone pieces, around 200 to 400 words altogether. Early formats can be much shorter. The front page gives a quick overview; expanding an item reveals supporting facts, earlier installments, and links to relevant game screens.
+A typical issue contains a lead story, updates from selected series, and a few short standalone pieces, around 200 to 400 words altogether. Early editions can be much shorter. The front page gives a quick overview; expanding an item reveals supporting facts, earlier installments, and links to relevant game screens.
 
 Every item shows its subject, reporting period, and tags. The reader can browse the archive by date, civilization, city, or tag. Tags can also support sections such as **International News**, **Cultural News**, and **Commerce**.
 
@@ -51,25 +51,26 @@ The player can adjust frequency and LLM use. Generation happens in the backgroun
 | Concept | Role |
 | --- | --- |
 | News trigger | An observed event or comparison that makes a development worth considering. |
-| Condition | A requirement about the receiving civilization or the game, such as a researched technology, an adopted policy, or being one of certain civilizations. Triggers, templates, and variants all use the same conditions. |
+| Condition | A requirement about the receiving civilization or the game, such as a researched technology, an adopted policy, or being one of certain civilizations. Triggers, templates, variants, and visual designs all use the same conditions. |
 | News template | A reusable story angle, with required triggers, conditions, tags, and weighted variants. |
 | Variant | One way to tell a template's story, with its own conditions and weight. |
+| Visual design | The presentation of an issue, including its layout, typography, imagery, and reading style. Each design has its own conditions and weight. |
 | News item | A published piece built from one or more templates, or an ad hoc angle. It carries an importance value and one or more series keys. |
 | Series key | A label for the subject an item covers, such as a trade partner, a city, or a neighbor's culture. |
 | Story series | All items that share a series key. Its importance grows with each new item and fades with time. |
 | Short piece | A brief item, often the first under its series key, that adds variety between longer installments. |
-| Issue | The editor's selection of new stories, series updates, and short pieces for one reporting period. |
+| Issue | The editor's selection of new stories, series updates, and short pieces for one reporting period, presented in a chosen visual design. |
 
-**Conditions** are one shared vocabulary. A trigger, a template, or a variant can each list conditions, and it is available only while all of them hold. Examples:
+**Conditions** are one shared vocabulary. A trigger, a template, a variant, or a visual design can each list conditions, and it is available only while all of them hold. Examples:
 
 - has researched a technology, or has yet to research it
 - has adopted a policy or opened a policy branch
 - is one of a named set of civilizations
 - is in a given era, or follows a given religion or ideology
 
-Because all three levels use the same conditions, a requirement sits wherever it is most natural. A trigger about ideological pressure requires an ideology. A template about press barons requires Printing Press. A variant written in a civilization's own voice requires that civilization.
+Because every level uses the same conditions, a requirement sits wherever it is most natural. A trigger about ideological pressure requires an ideology. A template about press barons requires Printing Press. A variant written in a civilization's own voice requires that civilization. A visual design for bamboo slips requires Writing and an early era.
 
-The editorial loop is **observe developments → match story angles → weigh candidates and their series → assemble an issue → learn from feedback**.
+The editorial loop is **observe developments → match story angles → weigh candidates and their series → choose a visual design → assemble an issue → learn from feedback**.
 
 ### 3.2 The life of a story series
 
@@ -131,7 +132,7 @@ A variant is configured in two parts:
 | Conditions | Decide whether the variant is eligible at all. | Requires Printing Press; only for Venice and Portugal. |
 | Weight | A base value plus adjustments, each tied to a condition, that decide how likely an eligible variant is. | Base 10; 100 before Writing; 0 after Printing Press; 50 more for civilizations following Tradition. |
 
-Weight adjustments use the same shared conditions, and can also respond to the story itself: available evidence, the size or direction of the change, and earlier coverage. The editor chooses among eligible variants in proportion to their weights, so formats overlap during transitions and the wording stays varied. The same editorial idea can sound very different before Writing and after the Internet, or in two different civilizations.
+Weight adjustments use the same shared conditions, and can also respond to the story itself: available evidence, the size or direction of the change, and earlier coverage. The editor chooses among eligible variants in proportion to their weights, so wording styles overlap during transitions and the prose stays varied. The same editorial idea can sound very different before Writing and after the Internet, or in two different civilizations.
 
 Authored variants are written ahead of time, often with LLM help, while the LLM editor writes new ones during play. Both are the same kind of content produced at different moments, so the catalogue can grow freely.
 
@@ -139,7 +140,24 @@ For example, a template about uneven prosperity combines improving national happ
 
 Template matching also gives events context. A peace agreement and subsequent recovery in affected cities can support a story about the peace dividend. A change in a trading partner's relationships can combine with trade concentration to explain a developing dependency.
 
-### 3.5 Merging templates into a story
+### 3.5 Visual designs
+
+A **visual design** decides how an issue looks and reads: page shape, typography, ornament, imagery, and interaction style. Story variants choose the wording of an item, while the visual design presents the whole issue. The text, series, evidence, tags, votes, and archive browsing remain available under every design, and votes and supporting links stay easy to find.
+
+A design uses the same configuration rules as a variant:
+
+| Part | Purpose | Example |
+| --- | --- | --- |
+| Conditions | Decide whether the design is eligible at all. | Requires Writing; only for China. |
+| Weight | A base value plus adjustments, each tied to a condition, that decide how likely an eligible design is. | Base 10; 100 in the Classical and Medieval eras; 0 after Printing Press. |
+
+The editor chooses one design per issue from the eligible designs with positive weight, in proportion to their weights. A zero weight removes a design from consideration even when its conditions hold. Several designs can coexist in one era, and different civilizations can use different designs at the same time. As research and circumstances change, weights shift and a publication can move to another design.
+
+Visual design directions under exploration include Babylonian clay tablets, Chinese bamboo slips, a Venetian gazette, an industrial British broadsheet, a Japanese Twitter-style feed, and a Korean TikTok-style feed. The [prototype gallery](prototypes/index.html) explores these directions with fictional campaign snapshots. Open it locally in a browser to switch designs, expand lead-story evidence, and try temporary feedback votes.
+
+Visual design and editorial selection are separate choices. The editor picks stories from the same triggers, templates, series, and votes, then presents the issue in the chosen design. Published issues keep their selected design in the archive, so an old edition still looks the way it did when it was published, while later editions can adopt a new design without breaking series or reading history.
+
+### 3.6 Merging templates into a story
 
 Several matched templates may explain a development better together. The editor can merge their angles into one item with a shared question, supporting facts, and relevant tags.
 
@@ -149,7 +167,7 @@ Merging works when the subjects, time periods, and evidence support a useful con
 
 A merged item keeps the series keys of its contributing templates, so it advances each of those series at once. One series may also use different templates over its lifetime, since only the key connects its items.
 
-### 3.6 Tags and news sections
+### 3.7 Tags and news sections
 
 Triggers and templates both have tags. Trigger tags describe the underlying developments; template tags describe the editorial angle. A published item retains the tags relevant to its final story.
 
@@ -157,16 +175,16 @@ Start with a small shared vocabulary: domestic, international, cities, economy, 
 
 Tags serve three purposes: organizing the reader's view, keeping an issue varied, and applying player preferences. A story appearing in several sections still occupies one place in the issue and receives one vote.
 
-### 3.7 The editor: LLM or heuristics
+### 3.8 The editor: LLM or heuristics
 
-The editor assembles each issue. It chooses which candidate items to publish, which template angles to merge, and how to balance installments with short pieces. Both editorial modes receive the same observed triggers, matched templates, series history, and player feedback.
+The editor assembles each issue. It chooses which candidate items to publish, which template angles to merge, how to balance installments with short pieces, and which visual design presents the issue. Both editorial modes receive the same observed triggers, matched templates, series history, player feedback, and eligible visual designs.
 
 Each candidate has a **selection weight**: its own importance, plus the importance of its series, adjusted by novelty, variety within the issue, and votes.
 
 | Mode | Editorial choices | Writing |
 | --- | --- | --- |
 | Heuristic editor | Fills the issue with the highest-weighted candidates. Recognizes authored template combinations. | Picks among authored variants by weight, including composite variants. |
-| LLM editor | Takes the weights as guidance, interprets developments in the context of existing series, connects angles, and assembles an issue. Can propose ad hoc templates from the supplied triggers. | Can use authored variants or write new ones suited to the story and medium. |
+| LLM editor | Takes the weights as guidance, interprets developments in the context of existing series, connects angles, and assembles an issue. Can propose ad hoc templates from the supplied triggers. | Can use authored variants or write new ones suited to the story and visual design. |
 
 The LLM has substantial editorial freedom within the available evidence, and the facts it reports come from the supplied triggers. Algorithms supply factual comparisons and keep the issue to its intended size. The heuristic editor provides the complete experience when LLMs are disabled or unavailable.
 
@@ -211,22 +229,24 @@ Use era-appropriate language, local character, and restrained humor. Facts come 
 
 ## 5. Evolution with technology
 
-The publication's format and template variants evolve with the receiving civilization's research. The milestones below follow the checked-in VP tree; the media are proposed feature design. Writing is Classical in VP. Mass media is represented here through Radio.
+The publication's visual design and template variants evolve with the receiving civilization's research. The milestones below follow the checked-in VP tree; the media are proposed feature design. Writing is Classical in VP. Mass media is represented here through Radio.
 
 | Milestone | VP era | Presentation and editorial character |
 | --- | --- | --- |
 | Before Writing | Ancient / early Classical | Oral accounts: brief reports about settlements, encounters, and changes in local life. The archive presents them as remembered accounts. |
-| Writing | Classical | Court chronicles or civic tablets: named places, recorded developments, and short comparisons. |
+| Writing | Classical | Court chronicles, clay tablets, or bamboo slips: named places, recorded developments, and short comparisons. |
 | Education | Medieval | Scholarly chronicles: correspondence, regional comparisons, and longer follow-ups. |
 | Printing Press | Renaissance | Gazettes and broadsheets: recognizable news sections, merchant reports, and coverage of the known world. |
 | Industrialization | Industrial | Mass-circulation papers: provincial reporting, industrial change, and statistical sidebars. |
 | Radio | Modern | Broadcast bulletins: concise summaries, a national voice, and prominent international and cultural coverage. |
 | Computers | Atomic | A data desk: clearer trends, longer comparisons, and supporting charts. |
-| Internet | Information | Digital editions: connected domestic and international coverage, linked story histories, and easy exploration of comparisons. |
+| Internet | Information | Digital editions: connected domestic and international coverage, linked story histories, and easy exploration of comparisons. Feed designs can range from short posts to portrait story cards with prominent captions. |
 
-These stages guide presentation and variant weights. Each milestone shifts weight toward its medium, so older formats thin out gradually and research that skips a stage needs no special handling. Evidence access, feedback, and archive browsing are available throughout. A late-era start uses the appropriate format immediately.
+The table describes the prevailing media. Several visual designs can be eligible at the same time. Clay tablets and bamboo slips can coexist in an early written era, and an Information-era civilization can receive a Twitter-style short-post feed or a TikTok-style portrait feed. The latter can present illustrated text cards; moving images and audio remain later possibilities.
 
-Other technologies and institutions supply subjects and variant conditions: trade and banking, navigation and overseas contact, railways, corporations, archaeology, Great Works, and international institutions. The same template can gain new angles as those systems become relevant.
+These stages guide visual design and variant weights. Each milestone raises the weight of designs for its medium, so older designs thin out gradually and research that skips a stage needs no special handling. Evidence access, feedback, and archive browsing are available throughout. A late-era start uses the appropriate designs immediately.
+
+Other technologies and institutions supply subjects, variant conditions, and visual design conditions: trade and banking, navigation and overseas contact, railways, corporations, archaeology, Great Works, and international institutions. The same template can gain new angles as those systems become relevant.
 
 ## 6. Knowledge and memory
 
@@ -238,7 +258,7 @@ The publication reports what its civilization could plausibly learn by the repor
 
 Older intelligence carries its date. Comparisons use compatible measures and enough history to support the claim.
 
-In the game-integrated version, the save holds the published archive and editorial memory: article text, tags, evidence summaries, contributing templates, series keys and importance, and votes. MCP keeps a queryable copy for future generation. The offline version preserves the same publication history alongside its replay outputs.
+In the game-integrated version, the save holds the published archive and editorial memory: article text, tags, evidence summaries, contributing templates, series keys and importance, votes, and the selected visual design for each issue. MCP keeps a queryable copy for future generation. The offline version preserves the same publication history, including each issue's visual design, alongside its replay outputs.
 
 Loading restores that campaign's publication history and preferences. Generation resumes from observations belonging to the loaded timeline. If historical evidence is unavailable, new comparisons build from the observations that remain valid. Old editions stay readable from the save.
 
@@ -252,7 +272,7 @@ The first deliverable is a readable sequence of issues and a series history prod
 
 Start with domestic city contrasts, trade relationships, and independent developments among known foreign civilizations. Demonstrate a series starting, continuing, fading, and returning; a merged-template installment; and useful short pieces. Run both heuristic and LLM editors on the same recording segments to compare their coverage and continuity.
 
-Recordings also let us try different publication intervals, variant weights, and feedback choices before building the game UI. Coverage depends on the fields and observation history each recording contains.
+Recordings also let us try different publication intervals, variant and visual design weights, and feedback choices before building the game UI. Coverage depends on the fields and observation history each recording contains.
 
 After the offline experience is useful, connect the same editorial loop to live play, game-save persistence, and the in-game reader. Artwork, audio, elaborate charts, and special editions can follow.
 
@@ -264,6 +284,7 @@ Evaluate the experience with these questions:
 - Does merging templates reveal a useful connection in one coherent item?
 - Do short pieces add worthwhile variety around the series?
 - Do the same triggers support convincing early and late variants?
+- Do multiple visual designs coexist convincingly, and does each published issue keep its design while the same stories, votes, and archive stay readable?
 - Do votes gradually change coverage while preserving variety?
 - Can tags support useful sections and archive searches?
 - Can both editors sustain useful series, and where do their choices differ?
@@ -278,8 +299,9 @@ Evaluate the experience with these questions:
 | Publication frequency | Check every five Standard-speed turns; adjust to the amount of useful news. |
 | Reading length | Three to six items in 200 to 400 words, with expandable evidence. |
 | Series | Items share series keys; series importance grows with each item, fades with time, and raises the weight of follow-ups. |
-| Conditions | One shared vocabulary (technology, policy, civilization, era, and similar) used by triggers, templates, and variants. |
+| Conditions | One shared vocabulary (technology, policy, civilization, era, and similar) used by triggers, templates, variants, and visual designs. |
 | Variants | Eligible by conditions, weighted by a base value plus conditional adjustments, and chosen in proportion to weight. |
+| Visual designs | Eligible by the same conditions, weighted by a base value plus conditional adjustments, and chosen per issue in proportion to weight; several designs can coexist in an era. |
 | Feedback scope | Item votes that adjust series and tag weights for the receiving civilization's campaign. Topic controls come later. |
 | Foreign knowledge | Direct access, trade routes, and spies or diplomats. |
 | Editorial approach | LLM or heuristic selection by weight, with template combinations. |
@@ -287,4 +309,4 @@ Evaluate the experience with these questions:
 | Development sequence | Recorded games first, then live integration and the game UI. |
 | Template catalogue | Begin with a small set spanning domestic life, relationships, and independent foreign developments. |
 
-Next, choose recording segments and sketch representative series, short pieces, and template combinations. Use those examples to refine the editorial experience before choosing data structures, live scheduling, save integration, and UI details.
+Next, choose recording segments and sketch representative series, short pieces, template combinations, and visual designs. Use those examples to refine the editorial experience before choosing data structures, live scheduling, save integration, and UI details.
