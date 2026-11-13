@@ -404,7 +404,7 @@ Damage to an enemy or city still standing, and our units merely spent, damaged o
 
 ## Records
 
-`RunCommandLoop` can fill an `SOperationalTurnRecord`. When no record is supplied and both game logging and AI logging are enabled, it writes tactical messages for checks, executed commands and a command-cap stop. Each check message names its result. Command messages identify the command, battlefield and plot, whether search ran and how many fights and Reinforce offers were retired.
+`RunCommandLoop` can fill an `SOperationalTurnRecord`. When no record is supplied and both game logging and AI logging are enabled, it writes tactical messages for checks, executed commands and a command-cap stop. Each check message names its result. Command messages identify the command, battlefield and plot, whether search ran and how many fights and Reinforce offers were retired. Captured search requests also carry the command's purpose: `OperationalUnitFight`, `OperationalCityFight`, `OperationalOwnCityFight` or `Reinforce`. Every retry retains that purpose. These labels describe the engagement; its flavors still come from the geographic blend and kind row.
 
 | Turn field | Content |
 | --- | --- |
