@@ -214,7 +214,7 @@ A failing unit joins the turn's rejections, and the selection is made and scored
 
 ### Marching execution
 
-`ExecuteReinforce` uses the move label `AI_TACTICAL_REINFORCE`. The group is the checked selection still usable now. It calls `PositionUnitsAroundTarget`, which makes the spotter move without held garrisons, then runs one search through `ExecuteEngagement` over the units still usable. Geometry, the geographic blend with the Reinforce kind row and aggression from RISK therefore follow the spotter move. The target distance stays relevant, and the counterpart is the target's owner, or none at our city. Far-out units then take path moves through `CanMarch` and `MarchFlags`, and army members take the safety round.
+`ExecuteReinforce` uses the move label `AI_TACTICAL_REINFORCE`. The group is the checked selection still usable now. It calls `PositionUnitsAroundTarget`, which makes the spotter move without held garrisons, then runs one search through `ExecuteEngagement` over the units still usable. Geometry, the geographic search blend with the Reinforce kind row, and separate posture-based aggression therefore follow the spotter move. The target distance stays relevant, and the counterpart is the target's owner, or none at our city. Far-out units then take path moves through `CanMarch` and `MarchFlags`, and army members take the safety round.
 
 The command record keeps the selection, whether the search ran, and whether a selected unit moved, meaning it changed plot or died.
 
@@ -279,7 +279,7 @@ Each check records `passed`, or the first failed condition in this order. The Re
 
 Native recruitment reads the current tactical roster and its eligibility rules. **Available** means the unit passes `canUseNow`: moves left, unprocessed and not dying. Recruitment can include ranged units that can reach a firing position but only shoot next turn, and nearby units within 2 plots even when blocked. A pass can therefore lead to positioning. Support recruits such as generals contribute no damage. Endangered units added only during execution cannot make readiness pass; an endangered unit already in offensive recruitment contributes normally.
 
-City fights use this damage check regardless of zone posture, native zone dominance or the native 13-turn siege-viability check. Their search aggression comes from RISK. The capture-role test applies to the offensive recruits before endangered additions.
+City fights use this damage check regardless of zone posture, native zone dominance or the native 13-turn siege-viability check. Their search aggression uses the separate posture-based risk blend. The capture-role test applies to the offensive recruits before endangered additions.
 
 **City-strike-only command.** A spearman stands within bombard range of our city and no unit can join. Readiness passes because the city can strike. The command fires, then ends when recruitment fails or expected damage is 0. A city-fire kill also ends the command. Both consume one command slot and retire no overlapping offers.
 
@@ -332,18 +332,22 @@ Vox Deorum custom flavors enter these readings, so strategists steer the mapped 
 
 `GatherSearchPlotZones` gathers the search geometry for the available candidates before the participant cap: visible plots around the target, extra room around enemies and the surroundings of accepted non-air units. Remote aircraft bases add no plots. Zone IDs 0 and −1 are omitted from the blend.
 
-`BlendEngagementFlavors` resolves flavors in this order:
+`BlendEngagementFlavors` retains the mapped search vector and resolves it in this order:
 
 1. In each contributing zone, apply native civ, operation and zone modifiers to the mapped flavors, without search-intent defaults, then add that zone's posture row.
 2. Average these vectors by their plot counts. With no contributing zone, start with the mapped flavors.
 3. Add the command's kind row, clamp to 0 to 100 and round once.
 4. Choose the **representative zone**, the zone with the most plots; ties go to the lower zone ID.
 
+The function also returns a separate integer aggression RISK. Each valid positive-plot zone starts at neutral 50, receives the same tactical modifiers using the game's flavor-scale conversion, then its posture RISK offset. These values are averaged by the same plot counts, including None and Withdraw zones, and the kind RISK offset is added before a single clamp and round. If there are no valid zones, aggression RISK is 50 plus the kind offset. Mapped, leader and custom RISK continue to steer search preferences and priority, but do not directly set aggression.
+
 RISK always counts as set for danger scoring. With mapped RISK 50 and no modifiers, a unit fight covering 60% Hedgehog and 40% Steamroll plots gets `50 + 0.6 × (−15) + 0.4 × 10 = 45`. A city fight over the same plots gets 55. A unit fight wholly in a Withdraw zone gets 20 and can still run. An own-city defense wholly in Hedgehog plots gets 35 and searches at Low aggression. Posture supplies flavor offsets while readiness determines whether the fight can execute.
 
 #### Aggression from RISK
 
-`AggressionFromRisk` maps blended RISK to the search's aggression level. Retries keep the engagement's resolved flavors and aggression.
+`AggressionFromRisk` maps the separate aggression RISK to the search's aggression level. Defaults remain Medium at 40, High at 60 and Braveheart at 90; values below 40 are Low. Retries keep the resolved level and original search flavors.
+
+With default rows and no modifiers, single-zone unit fights resolve to Low for Attrition and Hedgehog, Medium for Exploit Flanks and Counterattack, and High for Steamroll. City fights and Reinforce still receive their kind offsets. Native city assaults choose aggression by melee count, and native positioning searches always use Low. The loop uses the same posture and kind calculation for these searches.
 
 | RISK with default thresholds | Level |
 | --- | --- |
@@ -429,7 +433,7 @@ Each `SOperationalCommandRecord` contains:
 | `bMoved` | Reinforce: a selected unit changed plot or died. |
 | `vRetiredReinforce` | Battlefield IDs whose Reinforce this command retired. |
 
-`SOperationalStake` keeps the weighted and scaled prize, ground, exposure, siege, garrison-prize and city-pressure components and their sum on the battlefield. A battlefield's `SOperationalReinforce` keeps its strength tallies, selected units, help, gain, arrival ratio, odds, counted enemies, rejections and check flag. An own-city battlefield also keeps its last `L`, `T` and whether it had an endangered recruit. `SOperationalTurn` holds mapped flavors, resolved weights, fixed scales, threat maps, endangered units, approach lists and battlefields during execution. The local `SOperationalEngagementReport` holds zone plot counts, representative zone, final flavors, aggression and overall success. Each attempt holds its planned rows, rows counted as run and completion status. `ExecuteFight` uses the attempt report to derive the command's dispositions.
+`SOperationalStake` keeps the weighted and scaled prize, ground, exposure, siege, garrison-prize and city-pressure components and their sum on the battlefield. A battlefield's `SOperationalReinforce` keeps its strength tallies, selected units, help, gain, arrival ratio, odds, counted enemies, rejections and check flag. An own-city battlefield also keeps its last `L`, `T` and whether it had an endangered recruit. `SOperationalTurn` holds mapped flavors, resolved weights, fixed scales, threat maps, endangered units, approach lists and battlefields during execution. The local `SOperationalEngagementReport` holds zone plot counts, representative zone, final flavors, the aggression RISK and the level resolved from it, and overall success. Each attempt holds its planned rows, rows counted as run and completion status. `ExecuteFight` uses the attempt report to derive the command's dispositions.
 
 ## Settings
 
@@ -512,7 +516,7 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 
 | Source | Owns |
 | --- | --- |
-| `CvTacticalOperationalLoop.h` and `.cpp` | Settings, mapped flavors, posture and kind rows, geographic blend, aggression, turn scales, battlefields, threats, own-city strengths and recruits, Reinforce tallies and selection, offers, command execution and minimal records. |
+| `CvTacticalOperationalLoop.h` and `.cpp` | Settings, mapped flavors, posture and kind rows, geographic search blend, separate aggression RISK, turn scales, battlefields, threats, own-city strengths and recruits, Reinforce tallies and selection, offers, command execution and minimal records. |
 | `CvTacticalOperationalWeights.h` and `.cpp` | Named weight and constant tables and `ResolveOperationalWeights`. |
 | `CvTacticalOperationalValue.h` and `.cpp` | Shared unit, city, exposure and ground values, reference scales, upgrade premium and flavor weight curve. |
 | `CvTacticalSearchShared.h` | Declarations exposing the native search globals used by the copies. |
