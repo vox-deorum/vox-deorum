@@ -5,7 +5,12 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "rimraf dist && node ../node_modules/typescript/bin/tsc && cd ui && npm run build",
+    "build": "rimraf dist && node ../node_modules/typescript/bin/tsc && npm run build:newspaper && cd ui && npm run build",
+    "type-check:newspaper": "tsc --noEmit -p tsconfig.newspaper.json",
+    "build:newspaper": "npm run type-check:newspaper && vite build --config newspaper-reader/vite.config.ts",
+    "newspaper": "npm run build:newspaper && tsx src/newspaper/console.ts",
+    "newspaper:dist": "node dist/newspaper/console.js",
+    "acquire:texconv": "node ../scripts/utilities/acquire-texconv.mjs",
     "dev": "tsx watch --import ./src/instrumentation.ts src/index.ts",
     "start": "npm run build && npm run start:dist --",
     "start:dist": "node --inspect=0 --import ./dist/instrumentation.js --experimental-loader=@opentelemetry/instrumentation/hook.mjs dist/index.js",

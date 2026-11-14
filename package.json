@@ -74,6 +74,7 @@
     "p-queue": "^9.0.0",
     "papaparse": "^5.5.3",
     "patch-package": "^8.0.1",
+    "playwright-core": "1.65.1",
     "pluralize-esm": "^9.0.5",
     "seedrandom": "^3.0.5",
     "tiktoken": "^1.0.22",

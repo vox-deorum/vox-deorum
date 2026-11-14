@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "issueId": "victorian-analysis-225",
+  "campaignId": "fixture-campaign",
+  "timelineId": "fixture-timeline-main",
+  "receiver": {
+    "playerId": 0,
+    "civilizationId": "CIVILIZATION_ENGLAND",
+    "label": "England"
+  },
+  "cutoff": {
+    "turn": 225,
+    "label": "Turn 225"
+  },
+  "publication": {
+    "title": "The Empire Chronicle",
+    "designId": "victorian",
+    "designVersion": "1.0.0",
+    "ornamentAssetId": "victorian-ornament"
+  },
+  "pages": [
+    {
+      "id": "front",
+      "label": "Headlines",
+      "layout": "analysis",
+      "itemIds": ["dependence", "york"]
+    },
+    {
+      "id": "commerce",
+      "label": "Commerce",
+      "layout": "ordinary",
+      "itemIds": ["dependence", "york"]
+    }
+  ],
+  "items": [
+    {
+      "id": "dependence",
+      "tags": ["economy", "foreign"],
+      "seriesKeys": ["trade-relationship:england:netherlands"],
+      "headline": [
+        { "type": "text", "text": "How Bristol came to depend on one partner" }
+      ],
+      "deck": [
+        { "type": "text", "text": "A larger share of trade can conceal a narrower choice." }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "Bristol",
+            "target": { "type": "city", "cityId": "CITY_BRISTOL" }
+          },
+          { "type": "text", "text": "'s harbour has prospered, but the balance of its trade has changed. The largest partner supplied 38% of foreign trade income on turn 211 and 54% on turn 225." }
+        ],
+        [
+          { "type": "text", "text": "The intermediate return is missing. These records show a higher share at the end of the period; they do not show whether dependence grew steadily." }
+        ],
+        [
+          { "type": "text", "text": "Inspect the " },
+          {
+            "type": "link",
+            "text": "trade routes",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "CIVILIZATION_NETHERLANDS",
+              "direction": "both"
+            }
+          },
+          { "type": "text", "text": " before adding another convoy. A second partner could spread the risk if the present relationship becomes strained." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "Trade returns record a 38% share on turn 211 and 54% on turn 225. No observation survives for turn 218, so the path between the two returns is unknown."
+        }
+      ],
+      "assetId": "victorian-harbour",
+      "assetAlt": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour.",
+      "evidence": {
+        "title": "The harbour returns",
+        "description": "Largest partner's share of foreign trade income (%)",
+        "columns": ["Observation", "Share"],
+        "rows": [
+          { "label": "Turn 211", "values": ["38%"] },
+          { "label": "Turn 218", "values": ["No record"], "missing": true },
+          { "label": "Turn 225", "values": ["54%"] }
+        ],
+        "note": "No observation exists for turn 218."
+      }
+    },
+    {
+      "id": "york",
+      "tags": ["domestic", "economy"],
+      "seriesKeys": ["city:york-recovery"],
+      "headline": [
+        { "type": "text", "text": "York grows again" }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "York",
+            "target": { "type": "city", "cityId": "CITY_YORK" }
+          },
+          { "type": "text", "text": "'s workshops have reopened and its population is growing. Food supplies remain tight. Inspect the city's needs before assigning more workers." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "The latest city observation shows reopened workshops and population growth. The food surplus remains small; no further improvement is assumed."
+        }
+      ]
+    }
+  ]
+}

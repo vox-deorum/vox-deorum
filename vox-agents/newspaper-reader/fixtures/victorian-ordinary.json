@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "issueId": "victorian-ordinary-225",
+  "campaignId": "fixture-campaign",
+  "timelineId": "fixture-timeline-main",
+  "receiver": {
+    "playerId": 0,
+    "civilizationId": "CIVILIZATION_ENGLAND",
+    "label": "England"
+  },
+  "cutoff": {
+    "turn": 225,
+    "label": "Turn 225"
+  },
+  "publication": {
+    "title": "The Empire Chronicle",
+    "designId": "victorian",
+    "designVersion": "1.0.0",
+    "ornamentAssetId": "victorian-ornament"
+  },
+  "pages": [
+    {
+      "id": "headlines",
+      "label": "Headlines",
+      "layout": "ordinary",
+      "itemIds": ["trade", "paris", "york"]
+    },
+    {
+      "id": "commerce",
+      "label": "Commerce",
+      "layout": "ordinary",
+      "itemIds": ["trade", "york"]
+    }
+  ],
+  "items": [
+    {
+      "id": "trade",
+      "tags": ["economy", "foreign"],
+      "seriesKeys": ["trade-relationship:england:netherlands"],
+      "headline": [
+        { "type": "text", "text": "Bristol prospers as trade concentrates" }
+      ],
+      "body": [
+        [
+          { "type": "text", "text": "Harbour traffic is growing in " },
+          { "type": "link", "text": "Bristol", "target": { "type": "city", "cityId": "CITY_BRISTOL" } },
+          { "type": "text", "text": ". One foreign partner now supplies more than half our overseas trade income. Merchants welcome the returns, though a quarrel abroad could interrupt them." }
+        ],
+        [
+          { "type": "text", "text": "The " },
+          {
+            "type": "link",
+            "text": "harbour returns for the largest overseas trading partner",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "CIVILIZATION_NETHERLANDS",
+              "direction": "both"
+            }
+          },
+          { "type": "text", "text": " show where another partner might reduce this dependence." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "The largest partner supplied 38% of foreign trade income on turn 211 and 54% on turn 225. No observation survives for turn 218. The higher final share does not establish a steady rise."
+        }
+      ],
+      "assetId": "victorian-harbour",
+      "assetAlt": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour.",
+      "history": {
+        "label": "Earlier report on Atlantic trade",
+        "target": {
+          "type": "article",
+          "issueId": "victorian-ordinary-211",
+          "itemId": "trade"
+        },
+        "body": [
+          [
+            {
+              "type": "text",
+              "text": "On turn 211, the largest partner supplied 38% of overseas trade income. The harbour was prospering, with returns spread more widely among its partners."
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "paris",
+      "tags": ["foreign", "culture"],
+      "seriesKeys": ["civilization:paris-culture"],
+      "headline": [
+        { "type": "text", "text": "Paris draws a wider audience" }
+      ],
+      "body": [
+        [
+          { "type": "text", "text": "Visitors returning from " },
+          { "type": "link", "text": "Paris", "target": { "type": "civilization", "civilizationId": "CIVILIZATION_FRANCE" } },
+          { "type": "text", "text": " describe galleries drawing larger crowds. Its cultural influence has grown during the past five turns. The " },
+          { "type": "link", "text": "cultural overview", "target": { "type": "screen", "screen": "culture" } },
+          { "type": "text", "text": " shows the wider balance." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "Reports from returning visitors and comparable cultural observations show greater influence over five turns. The reports do not establish which venue caused the change."
+        }
+      ]
+    },
+    {
+      "id": "york",
+      "tags": ["domestic", "economy"],
+      "seriesKeys": ["city:york-recovery"],
+      "headline": [
+        { "type": "text", "text": "York grows again" }
+      ],
+      "body": [
+        [
+          { "type": "link", "text": "York", "target": { "type": "city", "cityId": "CITY_YORK" } },
+          { "type": "text", "text": "'s workshops have reopened and its population is growing. Food supplies remain tight. Inspect the city's needs before assigning more workers." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "The latest city observation shows reopened workshops and population growth. The food surplus remains small; no further improvement is assumed."
+        }
+      ]
+    }
+  ]
+}

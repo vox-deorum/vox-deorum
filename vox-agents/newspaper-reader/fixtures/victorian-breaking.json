@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "issueId": "victorian-breaking-230",
+  "campaignId": "fixture-campaign",
+  "timelineId": "fixture-timeline-main",
+  "receiver": {
+    "playerId": 0,
+    "civilizationId": "CIVILIZATION_ENGLAND",
+    "label": "England"
+  },
+  "cutoff": {
+    "turn": 230,
+    "label": "Turn 230"
+  },
+  "publication": {
+    "title": "The Empire Chronicle",
+    "designId": "victorian",
+    "designVersion": "1.0.0",
+    "ornamentAssetId": "victorian-ornament"
+  },
+  "pages": [
+    {
+      "id": "front",
+      "label": "Headlines",
+      "layout": "breaking",
+      "itemIds": ["war", "york"]
+    },
+    {
+      "id": "military",
+      "label": "Military",
+      "layout": "ordinary",
+      "itemIds": ["war", "york"]
+    }
+  ],
+  "items": [
+    {
+      "id": "war",
+      "tags": ["military", "foreign"],
+      "seriesKeys": ["war:france", "trade-relationship:england:france"],
+      "headline": [
+        { "type": "text", "text": "France declares war" }
+      ],
+      "deck": [
+        { "type": "text", "text": "The Channel ports prepare for an uncertain week." }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "France",
+            "target": { "type": "civilization", "civilizationId": "CIVILIZATION_FRANCE" }
+          },
+          { "type": "text", "text": " declared war on us on turn 230. " },
+          {
+            "type": "link",
+            "text": "Bristol",
+            "target": { "type": "city", "cityId": "CITY_BRISTOL" }
+          },
+          { "type": "text", "text": " now faces a hostile power across the Channel. No attack has been reported in the harbour." }
+        ],
+        [
+          { "type": "text", "text": "Review Bristol's defenses and the " },
+          {
+            "type": "link",
+            "text": "French frontier",
+            "target": { "type": "screen", "screen": "military" }
+          },
+          { "type": "text", "text": " before ending the next turn. Our " },
+          {
+            "type": "link",
+            "text": "trade routes with France",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "CIVILIZATION_FRANCE",
+              "direction": "both"
+            }
+          },
+          { "type": "text", "text": " also deserve attention: the partner supplying most overseas income has entered the war." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "A declaration of war from France was recorded on turn 230. The latest harbour observation contains no attack report. Earlier trade returns identify France as the largest partner."
+        }
+      ],
+      "assetId": "victorian-harbour",
+      "assetAlt": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour.",
+      "history": {
+        "label": "Earlier report on Atlantic trade",
+        "target": {
+          "type": "article",
+          "issueId": "victorian-breaking-211",
+          "itemId": "trade"
+        },
+        "body": [
+          [
+            {
+              "type": "text",
+              "text": "On turn 211, the largest partner supplied 38% of overseas trade income. The harbour was prospering, with returns spread more widely among its partners."
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "york",
+      "tags": ["domestic"],
+      "seriesKeys": ["city:york-recovery"],
+      "headline": [
+        { "type": "text", "text": "From York" }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "York",
+            "target": { "type": "city", "cityId": "CITY_YORK" }
+          },
+          { "type": "text", "text": "'s workshops remain open. No new disruption is recorded there." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "The latest observation of York shows its workshops open. No new disruption is recorded."
+        }
+      ]
+    }
+  ]
+}

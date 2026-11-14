@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Newspaper reader fixtures | Vox Deorum</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/assets/fonts.css" />
+  </head>
+  <body>
+    <div class="host-shell">
+      <header class="host-toolbar">
+        <div class="host-brand">
+          <h1>Newspaper reader</h1>
+          <p>Fixture issues for the shared Victorian and modern renderer.</p>
+        </div>
+        <div class="host-controls">
+          <label for="fixture-select">Fixture</label>
+          <select id="fixture-select"></select>
+          <button id="archive-button" type="button">Archive</button>
+          <button id="reset-button" type="button">Reset reading state</button>
+        </div>
+      </header>
+      <main class="host-main">
+        <div id="reader-root"></div>
+        <aside class="host-inspector" aria-label="Reader inspector">
+          <section>
+            <h2>Last action</h2>
+            <pre id="action-log">No actions yet.</pre>
+          </section>
+          <section>
+            <h2>Reader state</h2>
+            <pre id="state-view">No state.</pre>
+          </section>
+          <section>
+            <h2>Issue</h2>
+            <pre id="issue-view">No issue mounted.</pre>
+          </section>
+          <section>
+            <h2>Page items</h2>
+            <div id="page-items"></div>
+          </section>
+          <section>
+            <h2>Detail</h2>
+            <div id="detail-view"></div>
+          </section>
+        </aside>
+      </main>
+    </div>
+    <dialog id="archive-dialog" aria-labelledby="archive-title">
+      <div class="archive-top">
+        <h2 id="archive-title">Archive</h2>
+        <button id="archive-close" type="button">Close</button>
+      </div>
+      <p>The archive is a fixture stub. Choose an edition to open it in the reader.</p>
+      <div id="archive-list"></div>
+    </dialog>
+    <noscript>This fixture host needs JavaScript enabled.</noscript>
+    <script type="module" src="/src/host.ts"></script>
+  </body>
+</html>

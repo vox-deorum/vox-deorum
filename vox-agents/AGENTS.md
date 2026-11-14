@@ -62,6 +62,10 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - `npm run archivist -- -a <archive-path> -o <output.duckdb> [-n <limit>] [-m <model>]`: Archivist batch pipeline (archivist/console.ts)
 - Each workflow has a dedicated entry point with shared instrumentation (loaded via `--import`)
 
+### Newspaper Renderer
+
+`src/newspaper/` groups shared browser-safe presentation modules under `ui/`, publication contracts under `contracts/`, rendering under `renderer/`, bundle caching under `cache/`, and Node host code under `host/`. Keep shared contracts and UI modules free of Node and DOM imports. Contract validation uses the UI asset registry and layout defaults; UI modules import only contract types. `console.ts` remains the top-level command entry point. `newspaper-reader/src/` owns the plain DOM reader and stays separate from the shared presentation code; its assets and developer fixtures stay under `newspaper-reader/`, and it builds independently to `dist-newspaper/`. Tests under `tests/mock/newspaper/` are grouped by the boundary they exercise, with reader state covered alongside contracts. See [the newspaper docs](../docs/developers/vox-agents/newspaper/overview.md).
+
 ## Build
 
 - `npm run dev`: Development with hot reload (tsx)

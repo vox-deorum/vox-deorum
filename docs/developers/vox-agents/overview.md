@@ -30,6 +30,7 @@ Vox Agents never talks to the game directly. It is an MCP client of the [MCP ser
 | [workspace/](workspace/) | The optional per-seat file workspace: the `bash` tool, its folders, and the record and note store. |
 | [agents/](agents/) | Each agent family. Strategists have their own subfolder. |
 | [platform/](platform/) | The web dashboard, tracing and logs, and video capture. |
+| [newspaper/](newspaper/overview.md) | The implemented renderer proof and planned replay, editorial, evaluation, and live integration stages. |
 
 Suggested reading order:
 
@@ -50,6 +51,7 @@ Suggested reading order:
 | `src/utils/models/` | Model registry, providers, and middleware. |
 | `src/utils/workspace/` | The per-seat file workspace. |
 | `src/web/` and `ui/` | The dashboard backend and the Vue app. |
+| `src/newspaper/` and `newspaper-reader/` | Newspaper contracts, local export/cache host, and the shared browser renderer. |
 | `prompts/` | System prompt templates. |
 | `configs/` | Session configurations. |
 

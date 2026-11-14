@@ -1,0 +1,110 @@
+/*
+ * Bundled newspaper fonts.
+ *
+ * Paths stay relative to this file so the reader works from any served
+ * subpath. Every face is covered by an OFL license in ./licenses/.
+ */
+
+@font-face {
+  font-family: "UnifrakturMaguntia";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/unifrakturmaguntia-normal-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Bodoni Moda";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/bodoni-moda-normal-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Bodoni Moda";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/bodoni-moda-normal-700.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Bodoni Moda";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 900;
+  src: url("./fonts/bodoni-moda-normal-900.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Bodoni Moda";
+  font-display: swap;
+  font-style: italic;
+  font-weight: 400;
+  src: url("./fonts/bodoni-moda-italic-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Libre Caslon Text";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/libre-caslon-text-normal-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Libre Caslon Text";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/libre-caslon-text-normal-700.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Libre Caslon Text";
+  font-display: swap;
+  font-style: italic;
+  font-weight: 400;
+  src: url("./fonts/libre-caslon-text-italic-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/inter-normal-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+  src: url("./fonts/inter-normal-500.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+  src: url("./fonts/inter-normal-600.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/inter-normal-700.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+  src: url("./fonts/inter-normal-800.ttf") format("truetype");
+}

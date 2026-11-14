@@ -3,7 +3,7 @@
  * Provides REST API and SSE endpoints for telemetry, logs, sessions, and agent chat
  */
 
-import express, { NextFunction, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,7 +20,7 @@ import sessionRoutes from './routes/session.js';
 import { createDebugRoutes } from './routes/debug.js';
 import { processManager } from '../infra/process-manager.js';
 import type { HealthStatus, ErrorResponse } from '../types/index.js';
-import { isAllowedDashboardRequest, isAllowedLoopbackOrigin } from './origin.js';
+import { allowLoopbackCorsOrigin, requireLoopbackRequest } from './loopback.js';
 import { reloadRootPrompts } from '../utils/prompts/prompt-files.js';
 
 // Get __dirname in ESM
@@ -38,23 +38,6 @@ const webLogger = createLogger('WebUI', 'webui');    // Web UI logger with sourc
 let activeServer: ReturnType<typeof app.listen> | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let activePort: number | null = null;
-
-/** Resolves the browser-origin CORS policy using the middleware callback contract. */
-function allowLoopbackCorsOrigin(
-  origin: string | undefined,
-  callback: (error: Error | null, allowed?: boolean) => void,
-): void {
-  callback(null, isAllowedLoopbackOrigin(origin));
-}
-
-/** Rejects browser and Host-header requests that do not identify the loopback dashboard. */
-function requireAllowedDashboardRequest(req: Request, res: Response<ErrorResponse>, next: NextFunction): void {
-  if (!isAllowedDashboardRequest(req.hostname, req.get('origin'))) {
-    sendError(res, 403, 'This request is not allowed to access the local dashboard.');
-    return;
-  }
-  next();
-}
 
 /** Returns a loopback hostname suitable for the local shutdown URL. */
 function getShutdownHost(host: string): string {
@@ -110,7 +93,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Protect every API and shutdown route from cross-origin and DNS-rebinding requests.
-app.use(['/api', '/shutdown'], requireAllowedDashboardRequest);
+app.use(['/api', '/shutdown'], requireLoopbackRequest);
 
 // Serve static files from dist-ui directory (production build)
 const staticPath = path.join(__dirname, '../../dist-ui');

@@ -56,10 +56,13 @@ Source: "..\version.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\bridge-service\*"; DestDir: "{app}\bridge-service"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,node_modules\*,\data\*,\tests\*,\logs\*,docs\*,\telemetry\*"
 Source: "..\mcp-server\*"; DestDir: "{app}\mcp-server"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,node_modules\*,\data\*,\tests\*,\archive\*,\logs\*,docs\*,\telemetry\*"
 Source: "..\mcp-server\docs\strategies\*"; DestDir: "{app}\mcp-server\docs\strategies"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,\ui\*,node_modules\*,\data\*,\tests\*,logs\*,docs\*,\telemetry\*,.env"
+; The compiled reader (dist-newspaper) and vendored converter (vendor) stay at runtime.
+; Reader source, its separate TypeScript config, and fixture-only assets are development files.
+Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,\ui\*,node_modules\*,\data\*,\tests\*,logs\*,docs\*,\telemetry\*,.env,newspaper-reader\*,tsconfig.newspaper.json,dist-newspaper\fixtures\*"
 
 ; Civ5 mod files
-Source: "..\civ5-mod\*"; DestDir: "{app}\civ5-mod"; Flags: ignoreversion recursesubdirs createallsubdirs
+; The newspaper fixture Lua file is generated for local proofing and is never packaged.
+Source: "..\civ5-mod\*"; DestDir: "{app}\civ5-mod"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "UI\VoxDeorumNewspaperFixture.lua*"
 Source: "..\civ5-dll\(1) Community Patch\*"; DestDir: "{app}\civ5-dll\(1) Community Patch"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "CvGameCore_Expansion2.*"
 Source: "..\civ5-dll\(2) Vox Populi\*"; DestDir: "{app}\civ5-dll\(2) Vox Populi"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\civ5-dll\(3a) VP - EUI Compatibility Files\*"; DestDir: "{app}\civ5-dll\(3a) VP - EUI Compatibility Files"; Flags: ignoreversion recursesubdirs createallsubdirs

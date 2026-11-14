@@ -16,7 +16,7 @@ set "PROJECT_ROOT=%~dp0..\.."
 
 :: Step 1: Download portable Node.js if missing or not the pinned version
 set "NODE_VERSION=22.23.3"
-echo [1/6] Checking for portable Node.js...
+echo [1/7] Checking for portable Node.js...
 set "BUNDLED_NODE_VERSION="
 if exist "%PROJECT_ROOT%\node\node.exe" (
     for /f "tokens=*" %%v in ('"%PROJECT_ROOT%\node\node.exe" --version 2^>nul') do set "BUNDLED_NODE_VERSION=%%v"
@@ -60,7 +60,7 @@ if not "!BUNDLED_NODE_VERSION!"=="v%NODE_VERSION%" (
 
 :: Step 2: Install ALL npm dependencies (including dev) for compilation
 echo.
-echo [2/6] Installing all dependencies...
+echo [2/7] Installing all dependencies...
 set "PATH=%PROJECT_ROOT%\node;%PATH%"
 
 :: Install all dependencies using workspaces from root package.json
@@ -89,9 +89,19 @@ if exist "%PROJECT_ROOT%\package.json" (
     popd
 )
 
-:: Step 3: Build all TypeScript projects
+:: Step 3: Acquire the pinned DDS converter
 echo.
-echo [3/6] Building TypeScript projects...
+echo [3/7] Acquiring pinned DDS converter...
+"%PROJECT_ROOT%\node\node.exe" "%PROJECT_ROOT%\scripts\utilities\acquire-texconv.mjs"
+if !errorlevel! neq 0 (
+    echo   [ERROR] DDS converter acquisition failed
+    exit /b 1
+)
+echo   [OK] DDS converter ready
+
+:: Step 4: Build all TypeScript projects
+echo.
+echo [4/7] Building TypeScript projects...
 pushd "%PROJECT_ROOT%"
 call npm run build:all
 if !errorlevel! neq 0 (
@@ -108,9 +118,9 @@ call npm prune --omit=dev
 echo   [OK] Production dependencies ready
 popd
 
-:: Step 4: Download pre-built DLLs if needed
+:: Step 5: Download pre-built DLLs if needed
 echo.
-echo [4/6] Checking pre-built DLLs...
+echo [5/7] Checking pre-built DLLs...
 if not exist "%PROJECT_ROOT%\scripts\release\CvGameCore_Expansion2.dll" (
     echo   Downloading pre-built DLLs...
     call "%PROJECT_ROOT%\scripts\install\download-dll.cmd"
@@ -124,18 +134,18 @@ if not exist "%PROJECT_ROOT%\scripts\release\CvGameCore_Expansion2.dll" (
     echo   [OK] Pre-built DLLs found
 )
 
-:: Step 5: Create dist directory
+:: Step 6: Create dist directory
 :: Inno Setup resolves OutputDir relative to installer.iss, so the installer lands in scripts\dist
 echo.
-echo [5/6] Preparing output directory...
+echo [6/7] Preparing output directory...
 if not exist "%PROJECT_ROOT%\scripts\dist" (
     mkdir "%PROJECT_ROOT%\scripts\dist"
 )
 echo   [OK] Output directory ready
 
-:: Step 6: Check for Inno Setup and build installer
+:: Step 7: Check for Inno Setup and build installer
 echo.
-echo [6/6] Building installer...
+echo [7/7] Building installer...
 
 :: Common Inno Setup locations
 set "ISCC="

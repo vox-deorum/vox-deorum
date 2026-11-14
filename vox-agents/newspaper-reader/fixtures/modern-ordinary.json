@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "issueId": "modern-ordinary-225",
+  "campaignId": "fixture-campaign",
+  "timelineId": "fixture-timeline-main",
+  "receiver": {
+    "playerId": 0,
+    "civilizationId": "CIVILIZATION_ENGLAND",
+    "label": "England"
+  },
+  "cutoff": {
+    "turn": 225,
+    "label": "Turn 225"
+  },
+  "publication": {
+    "title": "Your world.",
+    "designId": "modern",
+    "designVersion": "1.0.0"
+  },
+  "pages": [
+    {
+      "id": "headlines",
+      "label": "Headlines",
+      "layout": "ordinary",
+      "itemIds": ["trade", "paris", "york"]
+    },
+    {
+      "id": "economy",
+      "label": "Economy",
+      "layout": "ordinary",
+      "itemIds": ["trade", "york"]
+    }
+  ],
+  "items": [
+    {
+      "id": "trade",
+      "tags": ["economy", "foreign"],
+      "seriesKeys": ["trade-relationship:england:netherlands"],
+      "headline": [
+        { "type": "text", "text": "Trade grows. So does our dependence." }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "Bristol",
+            "target": { "type": "city", "cityId": "CITY_BRISTOL" }
+          },
+          { "type": "text", "text": "'s port is booming. One partner now brings in " },
+          { "type": "strong", "text": "54%" },
+          { "type": "text", "text": " of foreign trade income, up from 38% at the earlier observation. Review the " },
+          {
+            "type": "link",
+            "text": "trade routes",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "CIVILIZATION_NETHERLANDS",
+              "direction": "both"
+            }
+          },
+          { "type": "text", "text": " to see where another partner could spread the risk." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "The largest partner supplied 38% of foreign trade income on turn 211 and 54% on turn 225. No observation survives for turn 218."
+        }
+      ],
+      "assetId": "modern-port",
+      "assetAlt": "Container cranes and a cargo ship at blue hour.",
+      "avatar": { "letter": "B", "tone": "slate" },
+      "history": {
+        "label": "Earlier report on Atlantic trade",
+        "target": {
+          "type": "article",
+          "issueId": "modern-ordinary-211",
+          "itemId": "trade"
+        },
+        "body": [
+          [
+            {
+              "type": "text",
+              "text": "On turn 211, the largest partner supplied 38% of overseas trade income. The port was prospering, with returns spread more widely among its partners."
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "paris",
+      "tags": ["foreign", "culture"],
+      "seriesKeys": ["civilization:paris-culture"],
+      "headline": [
+        { "type": "text", "text": "Culture travels." }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "Paris",
+            "target": { "type": "civilization", "civilizationId": "CIVILIZATION_FRANCE" }
+          },
+          { "type": "text", "text": " is drawing a bigger audience abroad. Returning visitors report new cultural venues and growing influence. The " },
+          {
+            "type": "link",
+            "text": "cultural overview",
+            "target": { "type": "screen", "screen": "culture" }
+          },
+          { "type": "text", "text": " shows the wider balance." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "Reports from returning visitors and comparable cultural observations show greater influence over five turns. The reports do not establish which venue caused the change."
+        }
+      ],
+      "avatar": { "letter": "P", "tone": "rose" }
+    },
+    {
+      "id": "york",
+      "tags": ["domestic", "economy"],
+      "seriesKeys": ["city:york-recovery"],
+      "headline": [
+        { "type": "text", "text": "A city gets back to work." }
+      ],
+      "body": [
+        [
+          {
+            "type": "link",
+            "text": "York",
+            "target": { "type": "city", "cityId": "CITY_YORK" }
+          },
+          { "type": "text", "text": "'s workshops have reopened and its population is growing. Food supplies remain tight. Inspect the city's needs before assigning more workers." }
+        ]
+      ],
+      "record": [
+        {
+          "type": "text",
+          "text": "The latest city observation shows reopened workshops and population growth. The food surplus remains small; no further improvement is assumed."
+        }
+      ],
+      "avatar": { "letter": "Y", "tone": "sage" }
+    }
+  ]
+}

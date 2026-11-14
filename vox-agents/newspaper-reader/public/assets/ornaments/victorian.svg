@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 70" fill="none" stroke="#211f1b" stroke-width="1.3">
+  <defs>
+    <g id="scroll">
+      <path d="M-16 35C-48 4-100 8-99 30c1 20 36 22 36 4 0-12-20-13-20-2M-29 35c-43 30-94 18-122 0s-54-19-60-4c-5 13 14 21 22 9M-111 35c-35-25-75-23-87-11M-150 35h-170m-20 0h-85"/>
+      <path d="M-23 33C-43 9-57 10-65 15c19-1 27 10 42 18M-47 45c-18 15-40 14-51 9 20 0 34-5 51-9M-125 30c-18-18-35-20-45-15 20 0 31 11 45 15" fill="#211f1b"/>
+      <path d="M-225 31h-95m-20 0h-85M-225 39h-95m-20 0h-85" stroke-width=".5"/>
+      <path d="m-335 35 5-5 5 5-5 5z" fill="#211f1b"/>
+    </g>
+  </defs>
+  <g transform="translate(450)">
+    <use href="#scroll"/><use href="#scroll" transform="scale(-1 1)"/>
+    <path d="M0 12c-12 14-12 30 0 46 12-16 12-32 0-46Z"/>
+    <path d="m0 25 6 10-6 10-6-10z" fill="#211f1b"/>
+    <path d="M-15 35h-10m40 0h10M0 3v4m0 56v4"/>
+  </g>
+</svg>

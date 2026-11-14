@@ -1,6 +1,7 @@
 """Update MD5 hashes in VoxDeorum.modinfo to match actual file contents."""
 
 import hashlib
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -14,13 +15,26 @@ def md5_of(path: Path) -> str:
 
 
 def main() -> None:
-    text = MODINFO.read_text(encoding="utf-8")
+    """Refresh hashes and optionally register a generated fixture in a deployed mod."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mod-root", type=Path, default=MODINFO.parent)
+    parser.add_argument("--newspaper-fixture", action="store_true")
+    args = parser.parse_args()
+    modinfo = args.mod_root / "VoxDeorum.modinfo"
+    text = modinfo.read_text(encoding="utf-8")
+    original = text
+    if args.newspaper_fixture:
+        fixture = args.mod_root / "UI" / "VoxDeorumNewspaperFixture.lua"
+        if not fixture.is_file():
+            raise FileNotFoundError(fixture)
+        if "UI/VoxDeorumNewspaperFixture.lua</File>" not in text:
+            text = text.replace("</Files>", '  <File md5="" import="1">UI/VoxDeorumNewspaperFixture.lua</File>\n  </Files>')
     updated = 0
 
     def replace_match(m: re.Match) -> str:
         nonlocal updated
         rel_path = m.group(4)
-        file_path = MODINFO.parent / rel_path
+        file_path = args.mod_root / rel_path
         if not file_path.exists():
             print(f"  MISSING: {rel_path}")
             return m.group(0)
@@ -33,8 +47,8 @@ def main() -> None:
 
     new_text = FILE_RE.sub(replace_match, text)
 
-    if updated:
-        MODINFO.write_text(new_text, encoding="utf-8")
+    if updated or new_text != original:
+        modinfo.write_text(new_text, encoding="utf-8")
         print(f"Updated {updated} hash(es).")
     else:
         print("All hashes up to date.")

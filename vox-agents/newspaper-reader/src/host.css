@@ -1,0 +1,225 @@
+/*
+ * Browser host around the shared newspaper reader.
+ *
+ * The host supplies fixture controls and an inspector. Publication styles live
+ * in reader.css and never depend on these host rules.
+ */
+
+body {
+  margin: 0;
+  color: #1d2730;
+  background: #e8edf1;
+  font: 14px/1.5 "Inter", Arial, sans-serif;
+}
+
+.host-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.host-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #cdd7df;
+  background: #ffffff;
+}
+
+.host-brand h1 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.host-brand p {
+  margin: 2px 0 0;
+  color: #5c6b78;
+  font-size: 12px;
+}
+
+.host-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.host-controls label {
+  color: #5c6b78;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.host-controls select,
+.host-controls button,
+.host-archive-entry,
+#archive-close {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #b8c5d0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.host-controls select {
+  min-width: 190px;
+}
+
+.host-controls button:hover,
+.host-archive-entry:hover,
+#archive-close:hover {
+  background: #eef3f7;
+}
+
+.host-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#reader-root {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.host-inspector {
+  display: flex;
+  flex: 0 0 360px;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid #cdd7df;
+  background: #cdd7df;
+}
+
+.host-inspector section {
+  padding: 16px 18px;
+  background: #ffffff;
+}
+
+.host-inspector h2 {
+  margin: 0 0 8px;
+  color: #41515e;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.host-inspector pre {
+  margin: 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #2f3f4c;
+  font: 12px/1.55 "SFMono-Regular", Consolas, monospace;
+}
+
+#page-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#page-items details {
+  padding: 8px 10px;
+  border: 1px solid #dde5eb;
+  border-radius: 6px;
+}
+
+#page-items summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#page-items p {
+  margin: 6px 0 0;
+  color: #5c6b78;
+  font-size: 12px;
+}
+
+#detail-view h2 {
+  margin: 0 0 6px;
+  color: #1d2730;
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+#detail-view h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+}
+
+#detail-view p {
+  margin: 0;
+  color: #41515e;
+}
+
+#archive-dialog {
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid #b8c5d0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1d2730;
+  box-shadow: 0 24px 70px rgb(20 35 48 / 30%);
+}
+
+#archive-dialog::backdrop {
+  background: rgb(18 30 40 / 55%);
+}
+
+.archive-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.archive-top h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+#archive-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.host-archive-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+
+.host-archive-entry span {
+  color: #5c6b78;
+  font-size: 12px;
+}
+
+@media (max-width: 1500px) {
+  .host-main {
+    flex-direction: column;
+  }
+
+  .host-inspector {
+    flex: 0 0 auto;
+    max-height: 44vh;
+    border-top: 1px solid #cdd7df;
+    border-left: 0;
+  }
+}

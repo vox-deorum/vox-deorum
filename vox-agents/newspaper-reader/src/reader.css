@@ -1,0 +1,766 @@
+/*
+ * Shared newspaper reader styles.
+ *
+ * The same rules serve the browser host and the export page. Publication width,
+ * paper padding, and scrollbar gutter come from CSS custom properties set by
+ * mountReader, so both modes keep identical content geometry.
+ */
+
+.vd-newspaper,
+.vd-newspaper * {
+  box-sizing: border-box;
+}
+
+.vd-newspaper {
+  --vd-paper: #f6f2e8;
+  --vd-ink: #211f1b;
+  --vd-accent: #6b3024;
+  --vd-rule: #8e8a7f;
+  --vd-page-background: #d5d2c9;
+  --vd-font-display: "Bodoni Moda", Georgia, serif;
+  --vd-font-body: "Libre Caslon Text", Georgia, serif;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  overflow-x: auto;
+  color: var(--vd-ink);
+  background: var(--vd-page-background);
+  font: 400 16px/1.5 var(--vd-font-body);
+}
+
+.vd-newspaper[data-design="victorian"] {
+  --vd-paper: #f6f2e8;
+  --vd-ink: #211f1b;
+  --vd-accent: #6b3024;
+  --vd-rule: #8e8a7f;
+  --vd-page-background: #d5d2c9;
+  --vd-font-display: "Bodoni Moda", Georgia, serif;
+  --vd-font-body: "Libre Caslon Text", Georgia, serif;
+}
+
+.vd-newspaper[data-design="modern"] {
+  --vd-paper: #ffffff;
+  --vd-ink: #17212b;
+  --vd-accent: #0969ac;
+  --vd-rule: #dce4e9;
+  --vd-page-background: #eff3f6;
+  --vd-font-display: "Inter", Arial, sans-serif;
+  --vd-font-body: "Inter", Arial, sans-serif;
+}
+
+.vd-publication {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: var(--vd-region-width);
+  min-height: calc(100vh - 48px);
+  background: var(--vd-paper);
+  box-shadow: 0 12px 50px rgb(48 41 25 / 9%);
+}
+
+/* Header */
+
+.vd-header {
+  padding: 24px calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter)) 30px
+    var(--vd-paper-padding);
+  background: var(--vd-paper);
+}
+
+.vd-masthead {
+  position: relative;
+  padding: 6px 25px 23px;
+  text-align: center;
+}
+
+.vd-title {
+  margin: 0;
+  color: var(--vd-ink);
+  font-family: var(--vd-font-display);
+  font-size: calc(76px * var(--vd-text-scale));
+  font-weight: 400;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.vd-newspaper[data-design="victorian"] .vd-title {
+  font-family: "UnifrakturMaguntia", "Bodoni Moda", Georgia, serif;
+}
+
+.vd-ornament {
+  display: block;
+  width: 84%;
+  max-width: 100%;
+  height: auto;
+  margin: 8px auto 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Tabs keep identical label metrics in both selection states. */
+
+.vd-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--vd-ink);
+}
+
+.vd-tab {
+  position: relative;
+  flex: 0 0 auto;
+  max-width: 100%;
+  padding: 13px 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 400 calc(15px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.vd-tab[aria-selected="true"] {
+  color: var(--vd-accent);
+}
+
+.vd-tab[aria-selected="true"]::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: currentColor;
+  content: "";
+}
+
+.vd-tab:hover {
+  color: var(--vd-accent);
+}
+
+.vd-newspaper button,
+.vd-newspaper a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vd-newspaper button:focus-visible,
+.vd-newspaper a:focus-visible,
+.vd-newspaper [tabindex]:focus-visible {
+  outline: 3px solid var(--vd-accent);
+  outline-offset: 5px;
+}
+
+/* Pages */
+
+.vd-page-viewport {
+  position: relative;
+  min-height: 0;
+  height: max(360px, calc(var(--vd-viewport-height) - 330px));
+}
+
+.vd-page {
+  position: absolute;
+  inset: 0;
+  width: var(--vd-region-width);
+  padding: 32px var(--vd-paper-padding);
+  overflow-x: hidden;
+  overflow-y: scroll;
+  background: var(--vd-paper);
+  scrollbar-gutter: stable;
+}
+
+.vd-page[hidden] {
+  display: none;
+}
+
+.vd-page::-webkit-scrollbar {
+  width: var(--vd-scrollbar-gutter);
+}
+
+.vd-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vd-page::-webkit-scrollbar-thumb {
+  border: 4px solid transparent;
+  border-radius: 999px;
+  background: var(--vd-rule);
+  background-clip: padding-box;
+}
+
+.vd-page-content {
+  min-height: 100%;
+}
+
+/* Stories */
+
+.vd-story {
+  min-width: 0;
+}
+
+.vd-headline {
+  margin: 0 0 22px;
+  font-family: var(--vd-font-display);
+  font-size: calc(33px * var(--vd-text-scale));
+  font-weight: 700;
+  line-height: 1.07;
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.vd-headline a,
+.vd-deck a,
+.vd-prose a {
+  color: var(--vd-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.17em;
+}
+
+.vd-headline a:hover,
+.vd-deck a:hover,
+.vd-prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.vd-deck {
+  margin: -5px 0 25px;
+  font: italic calc(28px * var(--vd-text-scale)) / 1.25 var(--vd-font-display);
+}
+
+.vd-prose {
+  font-size: calc(18px * var(--vd-text-scale));
+  line-height: 1.65;
+}
+
+.vd-prose p {
+  margin: 0 0 1em;
+}
+
+.vd-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.vd-story-art {
+  margin: 25px 0 20px;
+}
+
+.vd-story-art img {
+  display: block;
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+}
+
+.vd-story-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.vd-story-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+}
+
+.vd-text-link {
+  padding: 8px 0;
+  color: var(--vd-accent);
+  font: italic calc(14px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.vd-votes {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.vd-vote {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vd-vote-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.vd-vote:hover {
+  background: rgb(0 0 0 / 3%);
+}
+
+.vd-vote[aria-pressed="true"] {
+  border-color: currentColor;
+  background: rgb(0 0 0 / 2%);
+  color: var(--vd-accent);
+}
+
+.vd-end-rule {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+  color: var(--vd-rule);
+}
+
+.vd-end-rule::before,
+.vd-end-rule::after {
+  flex: 1;
+  height: 1px;
+  background: var(--vd-rule);
+  content: "";
+}
+
+.vd-end-rule:has(.vd-end-ornament)::before,
+.vd-end-rule:has(.vd-end-ornament)::after {
+  display: none;
+}
+
+.vd-end-ornament {
+  display: block;
+  width: min(450px, 100%);
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Ordinary layouts */
+
+.vd-storylist[data-layout="ordinary"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 0 34px;
+}
+
+.vd-storylist[data-layout="ordinary"] .vd-story--lead {
+  grid-row: span 2;
+  padding-right: 34px;
+  border-right: 1px solid var(--vd-rule);
+}
+
+.vd-storylist[data-layout="ordinary"] .vd-story--brief + .vd-story--brief {
+  margin-top: 25px;
+  padding-top: 25px;
+  border-top: 1px solid var(--vd-rule);
+}
+
+.vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
+  font-size: calc(50px * var(--vd-text-scale));
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
+  float: left;
+  margin: 6px 7px 0 0;
+  font: 700 calc(66px * var(--vd-text-scale)) / 0.9 var(--vd-font-display);
+}
+
+/* Breaking layout */
+
+.vd-storylist[data-layout="breaking"] {
+  display: block;
+}
+
+.vd-storylist[data-layout="breaking"] .vd-story--lead {
+  border: 0;
+  padding: 0;
+}
+
+.vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+  font-size: calc(96px * var(--vd-text-scale));
+  font-weight: 900;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--vd-ink);
+  font-size: calc(32px * var(--vd-text-scale));
+  text-align: center;
+}
+
+.vd-breaking-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.vd-breaking-columns .vd-story-art {
+  margin: 0;
+}
+
+.vd-breaking-columns .vd-story-art img {
+  height: 350px;
+}
+
+.vd-storylist[data-layout="breaking"] .vd-story--brief {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--vd-ink);
+}
+
+.vd-storylist[data-layout="breaking"] .vd-story--brief .vd-headline {
+  font-size: calc(30px * var(--vd-text-scale));
+}
+
+/* Analysis layout */
+
+.vd-storylist[data-layout="analysis"] {
+  display: block;
+}
+
+.vd-storylist[data-layout="analysis"] .vd-story--lead {
+  border: 0;
+  padding: 0;
+}
+
+.vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+  max-width: 1050px;
+  font-size: calc(56px * var(--vd-text-scale));
+  letter-spacing: -0.025em;
+}
+
+.vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--vd-ink);
+}
+
+.vd-analysis-columns {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 36px;
+}
+
+.vd-evidence {
+  padding-left: 30px;
+  border-left: 1px solid var(--vd-rule);
+}
+
+.vd-evidence table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vd-evidence caption {
+  margin-bottom: 15px;
+  font-size: calc(15px * var(--vd-text-scale));
+  line-height: 1.5;
+  text-align: left;
+}
+
+.vd-evidence caption strong {
+  display: block;
+  margin-bottom: 6px;
+  font: 700 calc(29px * var(--vd-text-scale)) / 1.2 var(--vd-font-display);
+}
+
+.vd-evidence-description {
+  display: block;
+}
+
+.vd-evidence th,
+.vd-evidence td {
+  padding: 13px 6px;
+  border-bottom: 1px solid var(--vd-rule);
+  text-align: left;
+}
+
+.vd-evidence thead th {
+  font-size: calc(12px * var(--vd-text-scale));
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vd-evidence tbody th {
+  font-size: calc(16px * var(--vd-text-scale));
+  font-weight: 400;
+}
+
+.vd-evidence td {
+  font: 400 calc(38px * var(--vd-text-scale)) / 1 var(--vd-font-display);
+  text-align: right;
+}
+
+.vd-evidence .vd-missing td {
+  font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+}
+
+.vd-evidence-note {
+  margin: 12px 0 0;
+  font: italic calc(12px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+}
+
+.vd-evidence .vd-story-art {
+  margin: 18px 0 0;
+}
+
+.vd-evidence .vd-story-art img {
+  height: 150px;
+}
+
+.vd-storylist[data-layout="analysis"] .vd-story--brief {
+  max-width: 720px;
+  margin-top: 32px;
+  padding-top: 25px;
+  border-top: 1px solid var(--vd-rule);
+}
+
+/* Modern feed */
+
+.vd-newspaper[data-design="modern"] .vd-publication {
+  outline: 1px solid var(--vd-rule);
+  outline-offset: -1px;
+  box-shadow: none;
+}
+
+.vd-newspaper[data-design="modern"] .vd-header {
+  padding-top: 24px;
+  padding-bottom: 0;
+}
+
+.vd-newspaper[data-design="modern"] .vd-masthead {
+  padding: 0 2px 22px;
+  text-align: left;
+}
+
+.vd-newspaper[data-design="modern"] .vd-title {
+  font: 800 calc(39px * var(--vd-text-scale)) / 1.1 var(--vd-font-display);
+  letter-spacing: -0.05em;
+}
+
+.vd-newspaper[data-design="modern"] .vd-tabs {
+  justify-content: space-around;
+  gap: 8px;
+  margin-bottom: 0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.vd-newspaper[data-design="modern"] .vd-tab {
+  padding: 18px 14px;
+  font: 500 calc(15px * var(--vd-text-scale)) / 1.4 var(--vd-font-display);
+}
+
+.vd-newspaper[data-design="modern"] .vd-tab[aria-selected="true"] {
+  color: var(--vd-ink);
+}
+
+.vd-newspaper[data-design="modern"] .vd-tab[aria-selected="true"]::after {
+  height: 4px;
+  border-radius: 4px;
+  background: #198bd0;
+}
+
+.vd-newspaper[data-design="modern"] .vd-page {
+  padding-top: 0;
+}
+
+.vd-newspaper[data-design="modern"] .vd-storylist {
+  display: block;
+}
+
+.vd-newspaper[data-design="modern"] .vd-story,
+.vd-newspaper[data-design="modern"] .vd-story--lead,
+.vd-newspaper[data-design="modern"] .vd-story--brief + .vd-story--brief {
+  display: grid;
+  grid-row: auto;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 18px;
+  max-width: none;
+  margin: 0;
+  padding: 26px 0;
+  border: 0;
+  border-bottom: 1px solid var(--vd-rule);
+}
+
+.vd-newspaper[data-design="modern"] .vd-story-content {
+  min-width: 0;
+}
+
+.vd-newspaper[data-design="modern"] .vd-headline {
+  margin-bottom: 12px;
+  font: 700 calc(25px * var(--vd-text-scale)) / 1.16 var(--vd-font-display);
+  letter-spacing: -0.045em;
+  text-wrap: initial;
+}
+
+.vd-newspaper[data-design="modern"] .vd-story--brief .vd-headline {
+  font-size: calc(20px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
+  font: 700 calc(25px * var(--vd-text-scale)) / 1.16 var(--vd-font-display);
+  letter-spacing: -0.045em;
+}
+
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
+  float: none;
+  margin: 0;
+  font: inherit;
+}
+
+.vd-newspaper[data-design="modern"] .vd-deck {
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--vd-rule);
+  font: 400 calc(16px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  text-align: left;
+}
+
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline,
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+  font: 800 calc(32px * var(--vd-text-scale)) / 1.15 var(--vd-font-display);
+  letter-spacing: -0.04em;
+  text-align: left;
+  text-transform: none;
+}
+
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck,
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
+  padding-bottom: 14px;
+  font: 400 calc(16px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  text-align: left;
+}
+
+.vd-newspaper[data-design="modern"] .vd-prose {
+  font-size: calc(17px * var(--vd-text-scale));
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+}
+
+.vd-newspaper[data-design="modern"] .vd-prose a {
+  font-weight: 600;
+}
+
+.vd-newspaper[data-design="modern"] .vd-story-art {
+  margin: 20px 0 0;
+}
+
+.vd-newspaper[data-design="modern"] .vd-story-art img {
+  height: 235px;
+  border-radius: 13px;
+}
+
+.vd-newspaper[data-design="modern"] .vd-story-footer {
+  margin-top: 14px;
+}
+
+.vd-newspaper[data-design="modern"] .vd-text-link {
+  font: 400 calc(12px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+}
+
+.vd-newspaper[data-design="modern"] .vd-votes {
+  margin-left: auto;
+}
+
+.vd-newspaper[data-design="modern"] .vd-end-rule {
+  display: none;
+}
+
+.vd-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  place-items: center;
+  font: 700 calc(17px * var(--vd-text-scale)) / 1 var(--vd-font-display);
+}
+
+.vd-avatar--slate {
+  color: #ffffff;
+  background: #2b5267;
+}
+
+.vd-avatar--rose {
+  color: #6d4055;
+  background: #f1dce5;
+}
+
+.vd-avatar--sage {
+  color: #315748;
+  background: #daebe1;
+}
+
+/* Export mode expands the section for full-page strips without a viewport. */
+
+.vd-newspaper[data-mode="export"] {
+  display: block;
+  /* Keep capture padding outside the measured regions at the document edge. */
+  padding: 0 4px 4px 0;
+  overflow: visible;
+  background: var(--vd-paper);
+}
+
+.vd-newspaper[data-mode="export"] .vd-publication {
+  min-height: 0;
+  box-shadow: none;
+}
+
+.vd-newspaper[data-mode="export"] .vd-page-viewport {
+  height: auto;
+}
+
+.vd-newspaper[data-mode="export"] .vd-page {
+  position: static;
+  width: var(--vd-region-width);
+  height: auto;
+  padding-right: calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter));
+  overflow: visible;
+  scrollbar-gutter: auto;
+}
+
+.vd-newspaper[data-mode="export"] * {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Tabs stay neutral so Lua can draw the selected state locally. */
+
+.vd-newspaper[data-mode="export"] .vd-tab,
+.vd-newspaper[data-mode="export"] .vd-tab[aria-selected="true"] {
+  color: inherit;
+}
+
+.vd-newspaper[data-mode="export"] .vd-tab[aria-selected="true"]::after {
+  display: none;
+}
+
+/* Vote slots keep their size while Lua supplies the icons. */
+
+.vd-newspaper[data-mode="export"] .vd-vote {
+  pointer-events: none;
+}
+
+.vd-newspaper[data-mode="export"] .vd-vote-icon {
+  visibility: hidden;
+}
+
+.vd-newspaper[data-mode="export"] .vd-vote[aria-pressed="true"] {
+  border-color: transparent;
+  background: none;
+  color: inherit;
+}

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vox Deorum newspaper reader.
+
+  The same-named VoxDeorumNewspaper.lua auto-binds to this context. The context
+  starts hidden and is shown directly with ContextPtr:SetHide(false). It does not
+  enter UIManager's popup queue, so ordinary Civ and VP popups keep working while
+  the reader is closed and are not left behind a hidden modal context.
+
+  The reader owns one native window: a separate masthead/tab header, a clipped
+  native ScrollPanel for the page content, page navigation in the footer, and a
+  text detail overlay for linked articles. Render bundle images live in the
+  scroll panel; transparent hit controls are added once per action rectangle in
+  page coordinates, independent of the image strip that contains the pixels.
+  The Lua also builds a native text fallback in the same content grid when the
+  narrow texture availability check is missing or an asset cannot be verified.
+
+  All dynamic sizes, image placement, tab underlines, and action rectangles come
+  from the Lua. XML values are design baselines that the runtime overrides.
+-->
+<Context Font="TwCenMT16" FontStyle="Base" Color="Beige" Color1="Black">
+
+	<!-- ===== One render bundle image strip ===== -->
+	<!-- Lua sizes the control in CSS units and crops the texture region in raster
+	     pixels, keeping DDS block padding outside the visible strip. -->
+	<Instance Name="ImageInstance">
+		<Image ID="Image" Anchor="L,T" Offset="0,0" Size="100,100"/>
+	</Instance>
+
+	<!-- ===== One transparent page action hit region ===== -->
+	<!-- The bundle supplies one rectangle per action, so a link or vote that
+	     crosses a strip seam still gets a single control. The image below shows
+	     the artwork; this button only supplies the hit area and hover feedback.
+	     The button has no texture, so the rendered link below stays visible. -->
+	<Instance Name="PageHitInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="100,24" Color="255,255,255,0">
+			<Button ID="Button" Anchor="L,T" Offset="0,0" Size="100,24" StateOffsetIncrement="0,0" NoStateChange="1">
+				<ShowOnMouseOver>
+					<AlphaAnim ID="HoverAnim" Anchor="L,T" Size="100,24" Offset="0,0" Pause="0" Cycle="Bounce" Speed="1" AlphaStart="0" AlphaEnd="1">
+						<Box ID="HoverHL" Anchor="L,T" Size="100,24" Offset="0,0" Color="204,170,90,45"/>
+					</AlphaAnim>
+				</ShowOnMouseOver>
+				<Box ID="SelectedHL" Anchor="L,T" Hidden="1" Size="100,24" Offset="0,0" Color="76,175,80,55"/>
+			</Button>
+		</Box>
+	</Instance>
+
+	<!-- ===== One transparent header action hit region ===== -->
+	<!-- Header tab labels are baked into the masthead image in a neutral state.
+	     The selected tab is shown by a separate Lua underline, so tab metrics do
+	     not change when the active page changes. -->
+	<Instance Name="HeaderHitInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="100,24" Color="255,255,255,0">
+			<Button ID="Button" Anchor="L,T" Offset="0,0" Size="100,24" StateOffsetIncrement="0,0" NoStateChange="1">
+				<ShowOnMouseOver>
+					<AlphaAnim ID="HoverAnim" Anchor="L,T" Size="100,24" Offset="0,0" Pause="0" Cycle="Bounce" Speed="1" AlphaStart="0" AlphaEnd="1">
+						<Box ID="HoverHL" Anchor="L,T" Size="100,24" Offset="0,0" Color="204,170,90,45"/>
+					</AlphaAnim>
+				</ShowOnMouseOver>
+			</Button>
+		</Box>
+	</Instance>
+
+	<!-- ===== Native tab button used by the text fallback ===== -->
+	<Instance Name="TabButtonInstance">
+		<GridButton ID="Button" Anchor="L,T" Offset="0,0" Size="150,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label ID="Label" Anchor="C,C" Offset="0,0" TruncateWidth="136" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			<Box ID="Underline" Anchor="L,B" Hidden="1" Offset="0,0" Size="150,2" Color="204,170,90,220"/>
+		</GridButton>
+	</Instance>
+
+	<!-- ===== One wrapped text block ===== -->
+	<Instance Name="TextInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="600,24" Color="255,255,255,0">
+			<Label ID="Text" Anchor="L,T" Offset="0,0" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha"/>
+		</Box>
+	</Instance>
+
+	<!-- ===== One heavy headline block ===== -->
+	<Instance Name="HeadlineInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="600,30" Color="255,255,255,0">
+			<Label ID="Text" Anchor="L,T" Offset="0,0" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+		</Box>
+	</Instance>
+
+	<!-- ===== One italic deck block ===== -->
+	<Instance Name="DeckInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="600,24" Color="255,255,255,0">
+			<Label ID="Text" Anchor="L,T" Offset="0,0" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT16" ColorSet="Beige_Black_Alpha" FontStyle="Italic"/>
+		</Box>
+	</Instance>
+
+	<!-- ===== One typed link button in the text fallback ===== -->
+	<Instance Name="LinkButtonInstance">
+		<GridButton ID="Button" Anchor="L,T" Offset="0,0" Size="180,24" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label ID="Label" Anchor="C,C" Offset="0,0" TruncateWidth="164" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+		</GridButton>
+	</Instance>
+
+	<!-- ===== One native vote button in the text fallback ===== -->
+	<Instance Name="VoteButtonInstance">
+		<GridButton ID="Button" Anchor="L,T" Offset="0,0" Size="100,24" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Box ID="SelectedHL" Anchor="L,T" Hidden="1" Offset="0,0" Size="100,24" Color="76,175,80,70"/>
+			<Label ID="Label" Anchor="C,C" Offset="0,0" TruncateWidth="88" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+		</GridButton>
+	</Instance>
+
+	<!-- ===== Thin separator ===== -->
+	<Instance Name="RuleInstance">
+		<Box ID="Box" Anchor="L,T" Offset="0,0" Size="100,1" Color="204,170,90,120"/>
+	</Instance>
+
+	<!-- ===== Dim backdrop, toggled with the window ===== -->
+	<Box ID="DialogDim" Hidden="1" Style="BGBlock_ClearTopBar"/>
+
+	<!-- ===== Reader window ===== -->
+	<Grid Hidden="1" Size="1000,720" ID="NewspaperGrid" Anchor="C,C" Offset="0,0" Padding="0,0" Style="Grid9DetailFive140" ConsumeMouse="1">
+		<Box Style="MenuLeftSideTreatment"/>
+		<Box Style="MenuRightSideTreatment"/>
+		<Label Style="MenuTitleCaption" TruncateWidth="700" String="" ID="TitleLabel"/>
+		<GridButton ID="CloseButton" Anchor="R,T" Offset="20,16" Size="92,28" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="CloseLabel"/>
+		</GridButton>
+
+		<!-- Masthead and section tabs. The image is captured in the render bundle;
+		     the native title and tab buttons replace it in the text fallback. -->
+		<Grid ID="HeaderImage" Anchor="L,T" Offset="30,52" Size="900,96" Color="255,255,255,0" Hidden="1"/>
+		<Label ID="HeaderTitle" Anchor="L,T" Offset="30,58" WrapWidth="900" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" Hidden="1"/>
+		<Stack ID="HeaderTabs" Anchor="L,T" Offset="30,120" StackGrowth="Right" Padding="4" Hidden="1"/>
+		<Grid ID="HeaderOverlay" Anchor="L,T" Offset="30,52" Size="900,96" Color="255,255,255,0"/>
+
+		<!-- Page content. The Grid is the page coordinate space: image strips and
+		     action hit controls are positioned independently inside it. The extra
+		     width in the ScrollPanel holds the native scrollbar beside the page. -->
+		<ScrollPanel ID="PageScroll" Anchor="L,T" Offset="30,156" Size="930,500" Vertical="1" AutoScrollBar="1">
+			<Grid ID="PageContent" Anchor="L,T" Offset="0,0" Size="900,0"/>
+			<ScrollBar ID="PageBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
+			<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
+			<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
+		</ScrollPanel>
+
+		<!-- Status, page navigation, and the selected page title. -->
+		<Box ID="Footer" Anchor="L,B" Offset="0,0" Size="1000,64" Color="255,255,255,0">
+			<Box Anchor="L,T" Offset="30,0" Size="940,1" Color="204,170,90,150"/>
+			<Label ID="StatusLabel" Anchor="L,T" Offset="30,8" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+			<GridButton ID="PrevButton" Anchor="L,B" Offset="30,8" Size="100,24" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="PrevLabel"/>
+			</GridButton>
+			<Label ID="PageLabel" Anchor="C,B" Offset="0,12" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+			<GridButton ID="NextButton" Anchor="R,B" Offset="30,8" Size="100,24" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="NextLabel"/>
+			</GridButton>
+		</Box>
+
+		<!-- Linked article detail. This is a local overlay, not a queued popup, so
+		     closing it returns to the same page and scroll position. -->
+		<Box ID="DetailOverlay" Hidden="1" Anchor="C,C" Offset="0,0" Size="1000,720" Color="0,0,0,230" ConsumeMouse="1">
+			<Label ID="DetailTitle" Anchor="L,T" Offset="40,24" WrapWidth="800" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
+			<GridButton ID="DetailCloseButton" Anchor="R,T" Offset="30,20" Size="92,28" Style="SmallButton" StateOffsetIncrement="0,0">
+				<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="DetailCloseLabel"/>
+			</GridButton>
+			<ScrollPanel ID="DetailScroll" Anchor="L,T" Offset="40,64" Size="920,600" Vertical="1" AutoScrollBar="1">
+				<Grid ID="DetailContent" Anchor="L,T" Offset="0,0" Size="890,0"/>
+				<ScrollBar ID="DetailBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="520"/>
+				<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
+				<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
+			</ScrollPanel>
+		</Box>
+	</Grid>
+</Context>
