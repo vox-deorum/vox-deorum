@@ -1,6 +1,6 @@
 # Newspaper research: visibility and foreign reporting
 
-Part three of [the newspaper research](research.md), based on [the feature specification](spec.md). Repository paths below are relative to the repository root.
+Part three of [the newspaper research](research.md), based on [the feature specification](../spec.md). Repository paths below are relative to the repository root.
 
 ## Finding
 

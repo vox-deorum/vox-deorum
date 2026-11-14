@@ -77,7 +77,7 @@ The RISK [military tactical flavor](../flavors/scoring.md#risk-thresholds) can a
 A position completes when all starting enemies are dead or all units have exhausted their options. It then has to pass two checks:
 
 1. **Safety:** final positions permit limited casualties, with one allowance per enemy killed and a bias toward protecting experienced units.
-2. **Progress:** without a kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. Ties consider movement toward the target, attacks in place, and healing.
+2. **Progress:** without a kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. With enemies present, ties also accept movement toward the target, attacks in place, pillage that restores HP, or ordinary healing by multiple units or all available units. Pillage healing cannot outweigh a net loss in formation progress. Without enemies, movement toward the target or ordinary healing counts as progress.
 
 Final safety does not become more permissive from Low through High. Every level checks adjacent-enemy death traps and the edge of known visibility. The visibility-edge check skips cities, allowing a lone siege unit to capture a city there. Braveheart bypasses the remaining extreme-danger block. Frontline land cities and friendly citadels also have specific exemptions, but a city projected to fall even with its garrison loses its frontline bonus and related exemptions.
 

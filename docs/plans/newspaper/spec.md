@@ -1,6 +1,6 @@
 ﻿# Newspaper: feature specification
 
-**Status:** conceptual draft for developers and designers. This document defines the intended experience. [Newspaper research](research.md) covers technology references, available data, and questions for technical design. The [newspaper design principles](design-principles.md) cover layout, visual identity, and interaction details.
+**Status:** conceptual draft for developers and designers. This document defines the intended experience. [Newspaper research](research/research.md) covers technology references, available data, and questions for technical design. The [newspaper design principles](design-principles.md) cover layout, visual identity, and interaction details. The [implementation roadmap](implementation.md) divides the work into five plans, beginning with a shared renderer for the browser and game readers.
 
 ## 1. Goal
 
@@ -37,6 +37,8 @@ An **issue** is divided into **pages**. Each page is one section tab, such as **
 An item is narrative text with inline links to the places, civilizations, trade relationships, game screens, and earlier reports it mentions, followed by vote controls. Items show no tags, sources, observation periods, or other metadata. Dates and attribution appear in the prose when they help explain the story.
 
 The **archive** belongs to the surrounding game UI and uses one standard interface style for every publication. The player browses past issues by date, page, civilization, or city, and opens an issue in its original design. Links to earlier reports open the archive at that report.
+
+The offline browser reader supplies the shared publication layout. The game reader displays rendered images with local controls for scrolling, links, pages, and votes. Text selection and browser accessibility remain browser features; the game reader follows Civ V's native interaction conventions.
 
 ### 2.2 Giving feedback
 
@@ -406,6 +408,7 @@ The technical design will define each source's facts and periods. Both editors r
 | Offline replay | Preserves the same publication history alongside replay outputs. |
 | Load a campaign | Restore publication history and preferences from the save, truncate MCP's copy to the loaded timeline, and resume generation from that timeline's observations. Small mismatches between the two copies are acceptable. |
 | Missing historical evidence | Build new comparisons from observations that remain valid. |
+| Rendered images | Keep a bounded local cache separate from the authoritative text and presentation choices. If images are missing and rendering is unavailable, show a basic text view from the save; restore the chosen design when rendering becomes available. |
 
 The newspaper works for a human civilization independently of an LLM strategist. Its initial role is to inform and entertain. Propaganda, censorship, press ownership, and happiness effects require separate design work.
 
@@ -413,10 +416,13 @@ The newspaper works for a human civilization independently of an LLM strategist.
 
 ### 7.1 Development sequence
 
-Use the MCP server's existing per-game knowledge stores as **recordings** for this feature. The offline replay will reconstruct one civilization's observations at successive reporting cutoffs, a few turns apart. Each check must expose only evidence available by that point and the editor's publication history. [Replay data research](research-data.md) covers the stored histories and reconstruction gaps.
+First prove the shared renderer with fixture issues in the browser and game. This establishes image quality, interaction, and installation cost before building the editorial loop.
+
+Use the MCP server's existing per-game knowledge stores as **recordings** for editorial development. The offline replay will reconstruct one civilization's observations at successive reporting cutoffs, a few turns apart. Each check must expose only evidence available by that point and the editor's publication history. [Replay data research](research/research-data.md) covers the stored histories and reconstruction gaps.
 
 ```mermaid
 flowchart TD
+    R[Prove shared renderer with fixtures] --> A
     A[Choose recording segments] --> B[Replay and generate issues]
     B --> C[Read, vote, and continue replay]
     C --> D[Compare both editors and tune coverage]
@@ -427,6 +433,7 @@ flowchart TD
 
 | Stage | Deliverable or activity |
 | --- | --- |
+| Renderer foundation | One fixture issue works in the browser and through game textures, with aligned links, local controls, and measured installation/runtime cost. |
 | First offline deliverable | Readable issues and series history, with a simple local workflow to read, vote, and continue replay. Save editorial choices, evidence, and seeds so decisions can be inspected. |
 | Initial coverage | Domestic city contrasts, trade relationships, and independent developments among known foreign civilizations. |
 | Required examples | A series starting, continuing, fading, and returning; a merged-template installment; useful short pieces. |
@@ -458,7 +465,7 @@ These need answers in the technical design or the next round of examples.
 | --- | --- |
 | Series key grammar | Subject types plus stable IDs; behavior on city capture, renaming, and route changes. |
 | Configuration schema | One JSON format for triggers, templates, variants, conditions, designs, layouts, pages, and tuning values. |
-| Foreign reporting fields | Which facts each source grants and for which period. See [visibility research](research-visibility.md). |
+| Foreign reporting fields | Which facts each source grants and for which period. See [visibility research](research/research-visibility.md). |
 | Initial template catalogue | A small set spanning domestic city contrasts, trade relationships, and independent foreign developments. |
 | Tuning values | Trigger thresholds, fade factor, vote effects and tag distinctiveness, design stickiness share, and page minimums. |
 | Archive size | How much text, evidence, and editorial memory a late-campaign save can hold. |
@@ -466,7 +473,4 @@ These need answers in the technical design or the next round of examples.
 
 **Next steps:**
 
-1. Choose recording segments.
-2. Sketch representative series, short pieces, template combinations, page definitions, and visual designs.
-3. Refine the editorial experience using those examples.
-4. Choose data structures, the configuration schema, live scheduling, save integration, and UI details.
+Review the [implementation roadmap](implementation.md), then build the shared renderer proof. Continue through replay evidence, the heuristic newspaper, offline evaluation with both editors, and live publication with save persistence.

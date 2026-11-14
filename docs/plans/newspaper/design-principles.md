@@ -1,6 +1,6 @@
 # Newspaper design principles
 
-This guide helps designers and developers shape the proposed newspaper's layout, visual identity, and interactions. It builds on [the feature specification](spec.md).
+This guide helps designers and developers shape the proposed newspaper's layout, visual identity, and interactions. It builds on [the feature specification](spec.md). The [implementation roadmap](implementation.md) uses one HTML/CSS renderer for the browser reader and the images displayed in the game.
 
 ## Make each issue easy to skim
 
@@ -38,7 +38,7 @@ The [HTML prototypes](prototypes/html/index.html) explore five directions:
 | Victorian | UnifrakturMaguntia masthead, high-contrast Bodoni Moda headlines, compact Libre Caslon Text paragraphs, engraved illustrations, and strong column rules. |
 | Modern Twitter | Inter throughout, bold compact headlines, short paragraphs, circular avatars, and a single photographic feed. |
 
-Bundle fonts with the prototypes for offline viewing. Use local fallback stacks, preserve font licenses, and check narrow screens after the intended faces load. Keep reading text selectable, scalable HTML.
+Bundle the fonts each design uses for offline viewing, preserve their licenses, and check narrow screens after the intended faces load. Keep browser text selectable and scalable. For the game reader, render at the chosen reading width and text size and check small text after DDS conversion. New width or text-size settings require a new layout render.
 
 ### Illustration and ornament
 
@@ -51,7 +51,7 @@ Use local SVG ornaments for historical editions so they stay crisp at every size
 - **Heian Kyoto:** asymmetric flowering branches.
 - **Victorian:** engraved scrollwork.
 
-Repeat the motif in the masthead and closing rule, including breaking and analysis layouts. Keep ornaments clear of text and controls, scale them to the available width, and hide purely decorative images from assistive technology. Keep the Modern Twitter feed plain, without these ornaments.
+Repeat the motif in the masthead and closing rule, including breaking and analysis layouts. Keep ornaments clear of text and controls, scale them to the available width, and hide purely decorative images from assistive technology in the browser reader. Keep the Modern Twitter feed plain, without these ornaments.
 
 ## Match the layout to the moment
 
@@ -85,6 +85,6 @@ Give each icon an accessible name and tooltip, without visible counters. Show th
 
 Use legible body text, strong contrast, comfortable line lengths, and clear paragraph spacing. Let long names and translated text wrap naturally, and adapt columns to the available space.
 
-Provide a meaningful reading order, visible keyboard focus, and controls that work without a pointer. Move focus into secondary views, such as the archive, when they open; return it to the originating control when they close. Make the newspaper easy to dismiss and resume.
+In the browser reader, provide a meaningful reading order, visible keyboard focus, and controls that work without a pointer. Move focus into secondary views, such as the archive, when they open; return it to the originating control when they close. The game reader follows native Civ V interaction conventions, with clear control states and easy dismissal and resumption. Browser text selection and accessibility parity are not required in the game.
 
 Use motion only to explain an interaction. Keep the reading surface calm and stable so the player can return to play at their own pace.

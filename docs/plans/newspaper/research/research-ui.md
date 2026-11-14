@@ -1,10 +1,10 @@
 # Newspaper research: UI and runtime images
 
-Part one of [the newspaper research](research.md), based on [the feature specification](spec.md). Repository paths below are relative to the repository root.
+Part one of [the newspaper research](research.md), based on [the feature specification](../spec.md). Repository paths below are relative to the repository root. The [renderer plan](../implementation/01-renderer.md) uses HTML/CSS image export for publication layout and native controls for game interaction.
 
 ## What the existing UI can do
 
-The newspaper fits the existing VP + EUI Lua/XML interface. Vox Deorum already has custom panels with dynamically populated text, repeated rows, scrolling, callbacks, and asynchronous backend responses. An issue can use a native text layout with optional illustrations and evidence charts.
+The newspaper fits the existing VP + EUI Lua/XML interface. Vox Deorum already has custom panels with dynamically populated text, repeated rows, scrolling, callbacks, and asynchronous backend responses. These primitives can host rendered publication images and action overlays, the surrounding archive, and a basic text view when cached images are unavailable.
 
 `civ5-mod/VoxDeorum.modinfo` registers XML-backed screens as `InGameUIAddin` entry points and imports their Lua/XML into the VFS. A dedicated newspaper context can follow that pattern. Use existing game fonts and EUI styles for the first layout; runtime font loading is not established by this research.
 
@@ -23,7 +23,7 @@ Columns, page breaks, expansion, archive pagination, and small-screen behavior s
 
 ## Can we dynamically render a new image inside the game?
 
-**Yes. In the tested VP + EUI DX11 session, a DDS generated after startup loaded by absolute path, including from outside the mod folder.** The file needed no manifest entry or restart. The [runtime texture findings](../../developers/civ5-mod/runtime-texture-experiment.md) record the observed behavior, implementation implications, and untested cases.
+**Yes. In the tested VP + EUI DX11 session, a DDS generated after startup loaded by absolute path, including from outside the mod folder.** The file needed no manifest entry or restart. The [runtime texture findings](../../../developers/civ5-mod/runtime-texture-experiment.md) record the observed behavior, implementation implications, and untested cases.
 
 `civ5-mod/UI/LeaderHeadRoot.lua` sets its background with `Controls.BackupTexture:SetTexture()` or `SetTextureAndResize()`, and calls `UnloadTexture()` when leaving the screen. `VoxDeorumHumanPanel.lua` calls `SetTexture()` and sets texture offsets. EUI's `EUI_core_library.lua` uses these operations for atlases.
 
@@ -48,7 +48,7 @@ Generated illustrations have a demonstrated delivery path. A prototype can retai
 
 Before treating this as a supported newspaper feature, test reopening old illustrations, save reloads, game restarts, missing-file fallback, image volume and memory use, other dimensions and encodings, and other supported renderers. Save portability needs a way to retain or restore image files on another machine. The exact VP build was not recorded for this DX11 experiment.
 
-The initial reader can proceed with native text and packaged art. Native charts remain a feasible later extension, and generated illustrations can build on this file-loading route when required by the feature scope.
+The proposed reader uses this file-loading route for the publication's rendered text and art. The first implementation stage must verify larger textures, small-text quality, scrolling, and interaction alignment. Native text provides a missing-cache view. Charts and generated illustrations remain later extensions.
 
 ## Communication with the background service
 

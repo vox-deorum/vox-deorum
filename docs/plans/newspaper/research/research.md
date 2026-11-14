@@ -1,6 +1,6 @@
 # Newspaper research
 
-Research supporting [the feature specification](spec.md), checked against the repository and local recordings on 13 November 2026. The findings are split into three parts. Each distinguishes existing behavior, proposed newspaper behavior, and questions that need a prototype.
+Research supporting [the feature specification](../spec.md), checked against the repository and local recordings on 13 November 2026. The findings are split into three parts. Each distinguishes existing behavior, proposed newspaper behavior, and questions that need a prototype. The [implementation roadmap](../implementation.md) defines the proposed build order and rendering stack.
 
 | Part | Main finding |
 | --- | --- |
@@ -10,6 +10,6 @@ Research supporting [the feature specification](spec.md), checked against the re
 
 The strongest starting material is domestic city comparisons, the receiving civilization's trade relationships, and cultural or diplomatic developments among civilizations it has met. A sampled French campaign contains a useful trade series: Morocco's share of France's positive outgoing-route gold rises from about 70% at turn 225 to 83% at turn 250, then falls to 49% at turn 275. This is a share of route income, with the calculation and limitations explained in the data research.
 
-The next design should settle the reporting cutoff and permitted evidence before choosing triggers. Offline replay needs to preserve articles, series, votes, preferences, and each issue's chosen presentation. The [offline evaluation checklist](research-data.md) identifies the remaining demonstrations, including a series returning after fading, a merged installment, continuity across editor modes, and generation failure. Live scheduling, save restoration, and the in-game reader follow that evaluation, as specified in the feature document.
+The implementation starts with a fixture-based shared-renderer proof in the browser and game, then settles the reporting cutoff and permitted evidence before choosing triggers. Offline replay needs to preserve articles, series, votes, preferences, and each issue's chosen presentation. The [offline evaluation checklist](research-data.md) identifies the remaining demonstrations, including a series returning after fading, a merged installment, continuity across editor modes, and generation failure. Live scheduling, save restoration, and completion of the in-game reader follow that evaluation.
 
-The [runtime texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md) verifies local DDS loading during play. The newspaper, save restoration, and foreign reporting still require implementation and in-game validation.
+The [runtime texture experiment](../../../developers/civ5-mod/runtime-texture-experiment.md) verifies local DDS loading during play. The newspaper, save restoration, and foreign reporting still require implementation and in-game validation.

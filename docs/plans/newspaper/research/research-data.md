@@ -1,6 +1,6 @@
 # Newspaper research: MCP stored data and recorded games
 
-Part two of [the newspaper research](research.md), based on [the feature specification](spec.md). Repository paths below are relative to the repository root. Local measurements were taken through read-only SQLite connections on 13 November 2026.
+Part two of [the newspaper research](research.md), based on [the feature specification](../spec.md). Repository paths below are relative to the repository root. Local measurements were taken through read-only SQLite connections on 13 November 2026.
 
 ## Findings from actual recordings
 

@@ -412,16 +412,16 @@ At any **enemy center**, priority is 0 if any of these conditions holds:
 
 These reinforcement gates leave the fight offer unchanged.
 
-**Selection example.** Our town has `L` (local friendly strength) = 100 and `T` (enemy strength) = 150. At the default desired strength ratio of 2, need (additional strength required) is `2 × 150 − 100 = 200`:
+**Selection example.** Our town has `L` (local friendly strength) = 100 and `T` (enemy strength) = 150. At the default desired strength ratio of 1, need (additional strength required) is `150 − 100 = 50`:
 
 | Candidate | Strength | Travel turns | Join turns | Help | Selected |
 | --- | --- | --- | --- | --- | --- |
 | Spearman | 100 | 2 | 1 | 100 | Yes |
-| Horseman | 50 | 2 | 1 | 50 | Yes |
-| Knight | 100 | 3 | 2 | 50 | Yes, full strength reaches 250 |
+| Horseman | 50 | 2 | 1 | 50 | No |
+| Knight | 100 | 3 | 2 | 50 | No |
 | Second knight | 100 | 3 | 2 | 50 | No |
 
-Selected help (strength discounted by join turns) is 200, gain (the normalized reinforcement benefit) is `200 / 450 ≈ 0.444444`, and the second knight stays free. With the sample town value 15, `Z_C` (city scale) = 90 and `C` (city unit) = 0.3, priority is `(0.2 + 15 / 90) × 0.3 × 0.444444 ≈ 0.048889`.
+Selected help (strength discounted by join turns) is 100, gain (the normalized reinforcement benefit) is `50 / 300 ≈ 0.166667`, and the other units stay free. With the sample town value 15, `Z_C` (city scale) = 90 and `C` (city unit) = 0.3, priority is `(0.2 + 15 / 90) × 0.3 × 0.166667 ≈ 0.018333`.
 
 **Enemy-city example.** Take the large enemy city from the [worked priorities](#theater-and-worked-priorities): theater 0.7, `C` (city unit) = 0.3, 250 HP (hit points) at full health, expected heal 20, no garrison and 50 local damage, so `f_att` is 0.12. Two selected units each simulate 40 city damage, and odds are 1 at neutral weights:
 
@@ -706,7 +706,7 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 | `city.units` | 3 | Size of a city fight in typical units; sets `C` (city unit). |
 | `floor.prize` | 0.6 | Share of unit worth in a target's prize at full health. |
 | `readiness.maxFailures` | 3 | Truncated to an integer and floored at 1 for the failure limit. |
-| `reinforce.strengthRatio` | 2 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`. Gain caps at `r / (1 + r)`, and odds are `min(1, arrival ratio / r)`, where arrival ratio is combined local and incoming strength divided by enemy strength. |
+| `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`. Gain caps at `r / (1 + r)`, and odds are `min(1, arrival ratio / r)`, where arrival ratio is combined local and incoming strength divided by enemy strength. |
 
 Enemy-fight stakes use attrition, occupation, hold-ground and risk weights; own-city stakes use hold-city and risk. Reinforcement uses the strength ratio, and the simulator's settings template rejects values of 0 or below. Simulator overrides must use the supported table names.
 
