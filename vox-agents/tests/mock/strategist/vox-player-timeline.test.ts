@@ -34,6 +34,7 @@ import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js
 import { turnEventWindow, type StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import type { PlayerConfig } from '../../../src/types/config.js';
 import type { VoxRunOptions } from '../../../src/agents/runtime/vox-run.js';
+import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 
 /** What the strategist saw when it ran on a turn. */
 interface Decision {
@@ -89,7 +90,8 @@ function makeSeat(options: { gameID: string; initialTurn: number; files?: boolea
     humanDecisionBus: new HumanDecisionBus(),
   });
 
-  const callTool = vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
+  const callTool = vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) =>
+    (name === 'get-game-settings' ? makeStrategistParameters().metadata : {}) as never);
 
   // Per-turn side effects run while the strategist decides on that turn.
   const duringDecision = new Map<number, () => void | Promise<void>>();

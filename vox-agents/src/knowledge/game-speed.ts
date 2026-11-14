@@ -44,6 +44,8 @@ export function getOffsetedTurn(
  * @returns The game speed multiplier, or 1.0 if metadata is missing
  */
 export function getGameSpeedMultiplier(parameters: StrategistParameters): number {
+  const multiplier = parameters.metadata?.GameSpeedMultiplier;
+  if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) return multiplier;
   if (!parameters.metadata?.GameSpeed) return 1.0;
   const gameSpeed = parameters.metadata.GameSpeed;
   return gameSpeedMultipliers[gameSpeed] ?? 1.0;

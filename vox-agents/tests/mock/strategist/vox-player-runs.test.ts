@@ -34,6 +34,7 @@ import { spanProcessor, sqliteExporter } from '../../../src/instrumentation.js';
 import type { PlayerConfig } from '../../../src/types/config.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import type { VoxRunOptions } from '../../../src/agents/runtime/vox-run.js';
+import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 
 const playerConfig: PlayerConfig = { strategist: 'simple-strategist', llms: {} } as PlayerConfig;
 
@@ -60,7 +61,8 @@ describe('VoxPlayer per-turn root runs', () => {
 
     // All MCP tool calls (pause/resume/set-metadata/keep-status-quo + the six report fetches)
     // resolve to a non-error stand-in so the real ensureGameState/refreshGameState path succeeds.
-    vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
+    vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) =>
+      (name === 'get-game-settings' ? makeStrategistParameters().metadata : {}) as never);
     // Stub the strategist execution itself — we only care about the surrounding run wiring.
     const decisionMarkers: Array<unknown> = [];
     const execute = vi.spyOn(player.context, 'execute').mockImplementation(async () => {
@@ -113,7 +115,8 @@ describe('VoxPlayer per-turn root runs', () => {
       initialTurn: 0,
       humanDecisionBus: new HumanDecisionBus(),
     });
-    vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
+    vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) =>
+      (name === 'get-game-settings' ? makeStrategistParameters().metadata : {}) as never);
     vi.spyOn(player.context, 'execute').mockImplementation(async () => {
       player.abort();
     });
@@ -136,6 +139,7 @@ describe('VoxPlayer per-turn root runs', () => {
     });
     let eventFetches = 0;
     vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) => {
+      if (name === 'get-game-settings') return makeStrategistParameters().metadata as never;
       if (name === 'get-events') {
         eventFetches++;
         return (eventFetches === 1 ? { '1': [{ Type: 'DeclareWar' }] } : {}) as never;
@@ -189,7 +193,8 @@ describe('VoxPlayer strategist triage', () => {
       initialTurn: 0,
       humanDecisionBus: new HumanDecisionBus(),
     });
-    const callTool = vi.spyOn(player.context, 'callTool').mockResolvedValue({} as never);
+    const callTool = vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) =>
+      (name === 'get-game-settings' ? makeStrategistParameters().metadata : {}) as never);
     const execute = vi.spyOn(player.context, 'execute').mockResolvedValue(undefined);
     let turnsRun = 0;
     const realWithRun = player.context.withRun.bind(player.context);
@@ -252,7 +257,8 @@ describe('VoxPlayer session pause gate', () => {
     const results = [...pauseResults];
     const pauseCalls = () => callTool.mock.calls.filter((c) => c[0] === 'pause-game').length;
     const callTool = vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) =>
-      (name === 'pause-game' ? (results.length > 0 ? results.shift() : true) : {}) as never);
+      (name === 'pause-game' ? (results.length > 0 ? results.shift() : true) :
+        name === 'get-game-settings' ? makeStrategistParameters().metadata : {}) as never);
     vi.spyOn(player.context, 'execute').mockResolvedValue(undefined);
 
     const turnsRun: Array<number | undefined> = [];
@@ -326,6 +332,7 @@ describe('VoxPlayer refresh failure pause', () => {
     let turnIndex = 0;
     let inTurn = false;
     vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) => {
+      if (name === 'get-game-settings') return makeStrategistParameters().metadata as never;
       if (name === 'get-victory-progress') {
         inTurn = true;
         const outcome = outcomes[turnIndex];

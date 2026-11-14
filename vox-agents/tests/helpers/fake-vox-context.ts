@@ -342,7 +342,7 @@ export function makeStrategistParameters(
     gameStates: {},
     mode: 'Flavor',
     metadata: {
-      YouAre: { Name: 'Rome', Leader: 'Caesar' },
+      YouAre: { Name: 'Rome', Leader: 'Caesar', PlayerID: overrides.playerID ?? 1 },
     } as StrategistParameters['metadata'],
     ...overrides,
   } as StrategistParameters;

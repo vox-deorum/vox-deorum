@@ -55,7 +55,7 @@ function liveParams(overrides: Record<string, unknown> = {}) {
   return {
     playerID: 3,
     turn: 5,
-    metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck' } },
+    metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck', PlayerID: 3 } },
     gameStates: {
       5: {
         turn: 5,

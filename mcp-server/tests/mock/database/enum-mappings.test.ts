@@ -40,7 +40,7 @@ describe('enum mappings checked against the live game', () => {
   let sqlite: Database.Database;
   let enumDatabase: Kysely<any>;
   let textDatabase: Kysely<any>;
-  let previous: { mainDb: unknown; localizationDb: unknown };
+  let previous: { mainDb: unknown; localizationDb: unknown; language: unknown; requestedLanguage: unknown; generation: unknown };
   let previousMappings: Record<string, Record<number, string>>;
   let gameChecksums: Record<string, TableChecksum>;
 
@@ -59,9 +59,9 @@ describe('enum mappings checked against the live game', () => {
     `);
     textDatabase = new Kysely({ dialect: new SqliteDialect({ database: text }) });
 
-    previous = { mainDb: (gameDatabase as any).mainDb, localizationDb: (gameDatabase as any).localizationDb };
+    previous = { mainDb: (gameDatabase as any).mainDb, localizationDb: (gameDatabase as any).localizationDb, language: (gameDatabase as any).language, requestedLanguage: (gameDatabase as any).requestedLanguage, generation: (gameDatabase as any).generation };
     Object.assign(gameDatabase, { mainDb: enumDatabase, localizationDb: textDatabase });
-    vi.spyOn(gameDatabase, 'localizeObject').mockImplementation(async value => value);
+    gameDatabase.setLanguage('auto');
 
     // The live game reports the same rows the fixture database holds
     gameChecksums = Object.fromEntries(enumMappingTables.map(([table]) =>
@@ -116,4 +116,43 @@ describe('enum mappings checked against the live game', () => {
     await textDatabase.updateTable('LocalizedText').set({ Text: 'Legalism' }).execute();
     await expect(gameDatabase.initializeMappings(gameChecksums)).rejects.toBeInstanceOf(MappingMismatchError);
   });
+  it.each([['ko_KR', '\uc704\ub300\ud55c \uacfc\ud559\uc790'], ['zh_CN', '\u5927\u79d1\u5b66\u5bb6']])('publishes verified %s language, mappings, and generation together', async (language, scientist) => {
+    sqlite.exec("UPDATE Units SET Description = 'TXT_KEY_SCIENTIST'");
+    await textDatabase.insertInto('LocalizedText').values([
+      { Language: 'en_US', Tag: 'TXT_KEY_SCIENTIST', Text: 'Great Scientist' },
+      { Language: language, Tag: 'TXT_KEY_SCIENTIST', Text: scientist },
+    ]).execute();
+    const generation = gameDatabase.getGeneration();
+    const localize = vi.spyOn(gameDatabase, 'localizeObject');
+    await gameDatabase.reloadMappings(gameChecksums, language);
+    expect(localize).toHaveBeenCalledWith(expect.anything(), language);
+    expect(gameDatabase.getLanguage()).toBe(language);
+    expect(gameDatabase.getGeneration()).toBe(generation + 1);
+    await store.storeGameEvent(1, 'GreatPersonExpended', { PlayerID: 1, GreatPersonType: 5 });
+    client = await connectToolClient(createGetEventsTool());
+    expect((await client.call({ Type: 'GreatPersonExpended', Original: true })).events[0].GreatPersonType).toBe(scientist);
+    gameChecksums.Units.Checksum++;
+    await expect(gameDatabase.initializeMappings(gameChecksums, 'en_US')).rejects.toBeInstanceOf(MappingMismatchError);
+    expect(gameDatabase.getLanguage()).toBe(language);
+    expect(gameDatabase.getGeneration()).toBe(generation + 1);
+    gameChecksums.Units.Checksum--;
+    await gameDatabase.reloadMappings(gameChecksums, 'en_US');
+    expect(gameDatabase.getLanguage()).toBe('en_US');
+    expect(enumMappings.UnitType[5]).toBe('Great Scientist');
+  });
+
+  it('uses English when successful checksum acquisition has no usable locale', async () => {
+    await gameDatabase.reloadMappings(gameChecksums, 'ko_KR');
+    await gameDatabase.reloadMappings(gameChecksums);
+    expect(gameDatabase.getLanguage()).toBe('en_US');
+  });
+
+  it('retains an explicit language override with missing or different game locale', async () => {
+    gameDatabase.setLanguage('zh_CN');
+    await gameDatabase.reloadMappings(gameChecksums, 'ko_KR');
+    expect(gameDatabase.getLanguage()).toBe('zh_CN');
+    await gameDatabase.reloadMappings(gameChecksums);
+    expect(gameDatabase.getLanguage()).toBe('zh_CN');
+  });
+
 });

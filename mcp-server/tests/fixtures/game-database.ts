@@ -4,7 +4,7 @@ import { Kysely, SqliteDialect } from 'kysely';
 import type { DatabaseManager } from '../../src/database/manager.js';
 
 /** Install real SQLite databases without requiring an installed Civilization V cache. */
-export async function configureGameDatabase(manager: DatabaseManager): Promise<() => Promise<void>> {
+export async function configureGameDatabase(manager: DatabaseManager, language = 'en_US'): Promise<() => Promise<void>> {
   const rules = new Database(':memory:');
   rules.exec(`
     CREATE TABLE Eras (Type TEXT);
@@ -87,11 +87,33 @@ export async function configureGameDatabase(manager: DatabaseManager): Promise<(
     INSERT INTO LocalizedText VALUES ('en_US', 'TXT_KEY_TECH_AGRICULTURE_TITLE', 'Agriculture'),
       ('en_US', 'TXT_KEY_FIXTURE_EMPTY', ''), ('en_US', 'TXT_KEY_FIXTURE_RESEARCH', 'Research support');
   `);
+  // Use real text keys while retaining all English values expected by existing suites.
+  const translatedNames: Record<string, [string, string]> = {
+    Rome: ['\u7f57\u9a6c', '\ub85c\ub9c8'], Agriculture: ['\u519c\u4e1a', '\ub18d\uc5c5'],
+    Library: ['\u56fe\u4e66\u9986', '\ub3c4\uc11c\uad00'], University: ['\u5927\u5b66', '\ub300\ud559'],
+    Augustus: ['\u5965\u53e4\u65af\u90fd', '\uc544\uc6b0\uad6c\uc2a4\ud22c\uc2a4'],
+    'Glory of Rome': ['\u7f57\u9a6c\u8363\u8000', '\ub85c\ub9c8\uc758 \uc601\uad11'],
+  };
+  const insertText = translations.prepare('INSERT INTO LocalizedText VALUES (?, ?, ?)');
+  for (const [name, [chinese, korean]] of Object.entries(translatedNames)) {
+    const key = `TXT_KEY_FIXTURE_${name.replaceAll(' ', '_').toUpperCase()}`;
+    insertText.run('en_US', key, name);
+    insertText.run('zh_CN', key, chinese);
+    insertText.run('ko_KR', key, korean);
+    for (const { name: table } of rules.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]) {
+      const columns = rules.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+      for (const { name: column } of columns.filter(column => ['Description', 'ShortDescription'].includes(column.name))) {
+        rules.prepare(`UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`).run(key, name);
+      }
+    }
+  }
+  insertText.run('zh_CN', 'TXT_KEY_TECH_AGRICULTURE_TITLE', translatedNames.Agriculture[0]);
+  insertText.run('ko_KR', 'TXT_KEY_TECH_AGRICULTURE_TITLE', translatedNames.Agriculture[1]);
   Object.assign(manager, {
     mainDb: new Kysely({ dialect: new SqliteDialect({ database: rules }) }),
     localizationDb: new Kysely({ dialect: new SqliteDialect({ database: translations }) }),
     initialized: true
   });
-  manager.setLanguage('en_US');
+  manager.setLanguage(language);
   return async () => { await manager.close(); };
 }

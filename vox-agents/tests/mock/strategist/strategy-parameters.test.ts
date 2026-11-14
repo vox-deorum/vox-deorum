@@ -13,6 +13,7 @@ import { VoxContext } from "../../../src/agents/runtime/vox-context.js";
 import type { StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
 import {
   refreshGameState,
+  ensureGameMetadata,
   ensureGameState,
   getGameState,
   getRecentGameState,
@@ -25,6 +26,7 @@ import {
   makeGameState,
   type FakeVoxContext,
 } from "../../helpers/fake-vox-context.js";
+import { deferred } from "../../helpers/deferred.js";
 
 /** Register all six per-turn report tools with minimal non-error results. */
 function registerReportTools(ctx: FakeVoxContext): void {
@@ -76,26 +78,26 @@ describe("strategy-parameters", () => {
 
     it("does NOT call get-game-settings when metadata is already present", async () => {
       registerReportTools(ctx);
-      ctx.respondWith("get-game-settings", { YouAre: { Name: "Egypt", Leader: "Cleopatra" } });
+      ctx.respondWith("get-game-settings", { YouAre: { Name: "Egypt", Leader: "Cleopatra", PlayerID: 1 } });
       const params = makeStrategistParameters({ turn: 5 }); // builder presets metadata
 
       await refreshGameState(ctx.asContext(), params);
 
       expect(ctx.calls("get-game-settings")).toHaveLength(0);
       // Preset metadata is untouched.
-      expect(params.metadata?.YouAre).toEqual({ Name: "Rome", Leader: "Caesar" });
+      expect(params.metadata?.YouAre).toEqual({ Name: "Rome", Leader: "Caesar", PlayerID: 1 });
     });
 
     it("fetches game metadata via get-game-settings when unset", async () => {
       registerReportTools(ctx);
-      ctx.respondWith("get-game-settings", { YouAre: { Name: "Egypt", Leader: "Cleopatra" } });
+      ctx.respondWith("get-game-settings", { YouAre: { Name: "Egypt", Leader: "Cleopatra", PlayerID: 1 } });
       const params = makeStrategistParameters({ turn: 5, metadata: undefined });
 
       await refreshGameState(ctx.asContext(), params);
 
       expect(ctx.calls("get-game-settings")).toHaveLength(1);
       expect(ctx.calls("get-game-settings")[0].args).toEqual({ PlayerID: 1 });
-      expect(params.metadata?.YouAre).toEqual({ Name: "Egypt", Leader: "Cleopatra" });
+      expect(params.metadata?.YouAre).toEqual({ Name: "Egypt", Leader: "Cleopatra", PlayerID: 1 });
     });
 
     describe("error handling", () => {
@@ -290,6 +292,23 @@ describe("strategy-parameters", () => {
   });
 
   describe("ensureGameState", () => {
+    it("should repair missing identity while preserving the cached snapshot and its briefings", async () => {
+      const cached = makeGameState(5, { reports: { briefing: "previous analysis" } });
+      const params = makeStrategistParameters({
+        metadata: { GameSpeed: "보통" } as StrategistParametersMetadata,
+        gameStates: { 5: cached },
+      });
+      const recovered = { GameSpeed: "보통", YouAre: { Name: "한국", Leader: "세종", PlayerID: 1 } };
+      ctx.respondWith("get-game-settings", recovered);
+
+      expect(await ensureGameState(ctx.asContext(), params)).toBe(cached);
+      expect(params.metadata).toBe(recovered);
+      expect(cached.reports.briefing).toBe("previous analysis");
+      expect(ctx.calls().map(call => call.name)).toEqual(["get-game-settings"]);
+      await ensureGameState(ctx.asContext(), params);
+      expect(ctx.calls("get-game-settings")).toHaveLength(1);
+    });
+
     it("returns the cached state without making any tool calls", async () => {
       registerReportTools(ctx);
       const cached = makeGameState(5, { reports: { brief: "x" } });
@@ -432,7 +451,7 @@ describe("strategy-parameters", () => {
       const params = makeStrategistParameters({
         turn: 5,
         metadata: {
-          YouAre: { Name: "Rome", Leader: "Caesar" },
+          YouAre: { Name: "Rome", Leader: "Caesar", PlayerID: 1 },
           Difficulty: "Prince",
         } as StrategistParametersMetadata,
         gameStates: {
@@ -473,12 +492,135 @@ describe("strategy-parameters", () => {
   });
 });
 
+describe("ensureGameMetadata", () => {
+  it.each([
+    undefined,
+    { isError: true, content: [{ type: "text", text: "settings unavailable" }] },
+    { Success: false, message: "settings unavailable" },
+    { YouAre: { Name: "Rome", Leader: "Caesar", PlayerID: 2 } },
+    { YouAre: { Name: "Rome", PlayerID: 1 } },
+    { YouAre: { Name: 1, Leader: "Caesar", PlayerID: 1 } },
+  ])("should recover unusable cached settings by fetching once (%j)", async (metadata) => {
+    const ctx = createFakeVoxContext();
+    const valid = makeStrategistParameters().metadata;
+    ctx.respondWith("get-game-settings", valid);
+    const params = makeStrategistParameters({ metadata: metadata as StrategistParametersMetadata });
+
+    expect(await ensureGameMetadata(ctx.asContext(), params)).toBe(valid);
+    expect(params.metadata).toBe(valid);
+    expect(ctx.calls("get-game-settings")).toHaveLength(1);
+  });
+
+  it.each([
+    undefined,
+    { isError: true, content: [{ type: "text", text: "settings unavailable" }] },
+    { Success: false, message: "settings unavailable" },
+    { GameSpeed: "Standard" },
+    { YouAre: { Name: "Rome", Leader: "Caesar", PlayerID: 2 } },
+  ])("should reject unusable fetched settings without retaining them (%j)", async (metadata) => {
+    const ctx = createFakeVoxContext();
+    ctx.respondWith("get-game-settings", metadata);
+    const params = makeStrategistParameters({ metadata: undefined, gameStates: { 5: makeGameState(5) } });
+
+    await expect(ensureGameState(ctx.asContext(), params)).rejects.toThrow();
+    expect(params.metadata).toBeUndefined();
+    expect(ctx.calls("get-game-settings")).toHaveLength(1);
+
+    const valid = makeStrategistParameters().metadata;
+    ctx.respondWith("get-game-settings", valid);
+    await ensureGameState(ctx.asContext(), params);
+    expect(params.metadata).toBe(valid);
+  });
+
+  it("should report failed settings before attempting any per-turn reports", async () => {
+    const ctx = createFakeVoxContext();
+    ctx.respondWith("get-game-settings", { isError: true, content: [{ type: "text", text: "bridge disconnected" }] });
+    const params = makeStrategistParameters({ metadata: undefined });
+
+    await expect(refreshGameState(ctx.asContext(), params)).rejects.toThrow("bridge disconnected");
+    expect(ctx.calls().map(call => call.name)).toEqual(["get-game-settings"]);
+    expect(params.gameStates).toEqual({});
+    expect(params.metadata).toBeUndefined();
+  });
+
+  it.each([
+    { path: "refresh", load: refreshGameState },
+    { path: "cached-state repair", load: ensureGameState },
+  ])("should preserve server identity diagnostics during $path without retaining failed metadata", async ({ load }) => {
+    const ctx = createFakeVoxContext();
+    const error = { Code: "IDENTITY_UNAVAILABLE", Message: "Player identity is unavailable" };
+    ctx.respondWith("get-game-settings", { Success: false, Error: error });
+    const cached = makeGameState(5, { reports: { briefing: "retained analysis" } });
+    const params = makeStrategistParameters({ metadata: undefined, gameStates: { 5: cached } });
+
+    const request = load(ctx.asContext(), params);
+
+    await expect(request).rejects.toThrow(error.Message);
+    await expect(request).rejects.toThrow(error.Code);
+    expect(params.metadata).toBeUndefined();
+    expect(params.gameStates[5]).toBe(cached);
+    expect(cached.reports.briefing).toBe("retained analysis");
+    expect(ctx.calls().map(call => call.name)).toEqual(["get-game-settings"]);
+  });
+
+  it("should retain general settings without identity for player -1 and reuse them", async () => {
+    const ctx = createFakeVoxContext();
+    const general = { GameSpeed: "Standard" };
+    ctx.respondWith("get-game-settings", general);
+    const params = makeStrategistParameters({ playerID: -1, metadata: undefined });
+
+    expect(await ensureGameMetadata(ctx.asContext(), params)).toBe(general);
+    expect(await ensureGameMetadata(ctx.asContext(), params)).toBe(general);
+    expect(ctx.calls("get-game-settings")).toHaveLength(1);
+    expect(ctx.calls("get-game-settings")[0].args).toEqual({ PlayerID: -1 });
+  });
+
+  it("should not retain metadata when a cached-state repair is cancelled in flight", async () => {
+    const context = new VoxContext<StrategistParameters>({}, `metadata-cancel-${Math.random()}`);
+    const gate = deferred<NonNullable<StrategistParameters["metadata"]>>();
+    vi.spyOn(context, "callTool").mockImplementation(async () => await gate.promise as never);
+    const params = makeStrategistParameters({ metadata: undefined, gameStates: { 5: makeGameState(5) } });
+    context.setBaseParameters(params);
+
+    const repair = context.withRun({}, run => ensureGameState(context, run.parameters));
+    context.abort();
+    gate.resolve(makeStrategistParameters().metadata!);
+
+    await expect(repair).rejects.toThrow();
+    expect(params.metadata).toBeUndefined();
+    expect(params.gameStates[5].reports).toEqual({});
+  });
+});
+
 /** Local alias so metadata-shaped overrides cast cleanly without importing source types. */
 type StrategistParametersMetadata = NonNullable<
   ReturnType<typeof makeStrategistParameters>["metadata"]
 >;
 
 describe("refreshGameState cancellation", () => {
+  it("should defer metadata publication until all reports arrive and preserve cancellation", async () => {
+    const context = new VoxContext<StrategistParameters>({}, `snapshot-cancel-${Math.random()}`);
+    const reportsStarted = deferred();
+    const reports = deferred<Record<string, unknown>>();
+    vi.spyOn(context, "callTool").mockImplementation(async (name: string) => {
+      if (name === "get-game-settings") return makeStrategistParameters().metadata as never;
+      reportsStarted.resolve();
+      return await reports.promise as never;
+    });
+    const params = makeStrategistParameters({ metadata: undefined });
+    context.setBaseParameters(params);
+    const refresh = context.withRun({}, run => refreshGameState(context, run.parameters));
+    await reportsStarted.promise;
+
+    expect(params.metadata).toBeUndefined();
+    context.abort();
+    reports.resolve({});
+
+    await expect(refresh).rejects.toThrow();
+    expect(params.metadata).toBeUndefined();
+    expect(params.gameStates).toEqual({});
+  });
+
   /**
    * A real context whose tool calls wait on a gate, so a test can reset the timeline (abort every
    * run) while an old chat's MCP results are still in flight. `players` names the snapshot.
@@ -531,7 +673,7 @@ describe("refreshGameState cancellation", () => {
   });
 
   it("should not publish delayed metadata from a cancelled refresh", async () => {
-    const { context, release } = heldContext("stale", { YouAre: { Name: "Egypt", Leader: "Cleopatra" } } as never);
+    const { context, release } = heldContext("stale", { YouAre: { Name: "Egypt", Leader: "Cleopatra", PlayerID: 1 } } as never);
     const params = makeStrategistParameters({ turn: 5, metadata: undefined });
     context.setBaseParameters(params);
 
@@ -544,13 +686,13 @@ describe("refreshGameState cancellation", () => {
   });
 
   it("should still publish a refresh made outside any run", async () => {
-    const { context, release } = heldContext("outside", { YouAre: { Name: "Egypt", Leader: "Cleopatra" } } as never);
+    const { context, release } = heldContext("outside", { YouAre: { Name: "Egypt", Leader: "Cleopatra", PlayerID: 1 } } as never);
     const params = makeStrategistParameters({ turn: 5, metadata: undefined });
     release();
 
     const state = await refreshGameState(context, params);
 
     expect(params.gameStates[5]).toBe(state);
-    expect(params.metadata?.YouAre).toEqual({ Name: "Egypt", Leader: "Cleopatra" });
+    expect(params.metadata?.YouAre).toEqual({ Name: "Egypt", Leader: "Cleopatra", PlayerID: 1 });
   });
 });

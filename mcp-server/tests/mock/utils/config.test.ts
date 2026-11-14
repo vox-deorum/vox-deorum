@@ -73,4 +73,33 @@ describe('loadConfig', () => {
       expect(loadConfig().transport.port).toBe(4000);
     });
   });
+  describe('database language', () => {
+    let directory: string;
+    const originalLanguage = process.env.DB_LANGUAGE;
+
+    beforeEach(() => {
+      directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-language-config-'));
+      vi.spyOn(process, 'cwd').mockReturnValue(directory);
+      delete process.env.DB_LANGUAGE;
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      if (originalLanguage === undefined) delete process.env.DB_LANGUAGE;
+      else process.env.DB_LANGUAGE = originalLanguage;
+      fs.rmSync(directory, { recursive: true, force: true });
+    });
+
+    it('follows the game automatically by default', () => {
+      expect(loadConfig().database?.language).toBe('auto');
+    });
+
+    it('preserves an explicit file language and environment override', () => {
+      fs.writeFileSync(path.join(directory, 'config.json'), JSON.stringify({ database: { language: 'ko_KR' } }));
+      expect(loadConfig().database?.language).toBe('ko_KR');
+      process.env.DB_LANGUAGE = 'zh_CN';
+      expect(loadConfig().database?.language).toBe('zh_CN');
+    });
+  });
+
 });

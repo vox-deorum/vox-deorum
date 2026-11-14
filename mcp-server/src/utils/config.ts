@@ -88,7 +88,7 @@ const defaultConfig: MCPServerConfig = {
     }
   },
   database: {
-    language: 'en_US',
+    language: 'auto',
     documentsPath: undefined // Will be auto-detected if not specified
   },
   logging: {

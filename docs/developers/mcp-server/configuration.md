@@ -20,7 +20,7 @@ A `config.json` looks like this:
     "endpoint": { "host": "127.0.0.1", "port": 5000 },
     "eventPipe": { "enabled": false, "name": "vox-deorum-events" }
   },
-  "database": { "language": "en_US" },
+  "database": { "language": "auto" },
   "logging": { "level": "info" }
 }
 ```
@@ -41,7 +41,7 @@ A `config.json` looks like this:
 | `bridgeService.endpoint.port` | `5000` | `BRIDGE_SERVICE_PORT` | Bridge port, used to derive `bridge.url`. Must match the bridge's own `rest.port` in [bridge-service/configuration.md](../bridge-service/configuration.md). |
 | `bridgeService.eventPipe.enabled` | `false` | `EVENTPIPE_ENABLED` | Whether to try the named-pipe event feed before falling back to SSE. Must agree with the bridge's own `eventpipe.enabled`. |
 | `bridgeService.eventPipe.name` | `vox-deorum-events` | `EVENTPIPE_NAME` | Event-pipe identifier. Must match the bridge's `eventpipe.name`. |
-| `database.language` | `en_US` | `DB_LANGUAGE` | Language for `TXT_KEY_*` lookups against the localization database. Also changeable at runtime. |
+| `database.language` | `auto` | `DB_LANGUAGE` | Language for database text lookups. `auto` follows the game's locale on each verified connection, using `en_US` before a game connects or when its locale is unavailable. An explicit language code overrides automatic selection. See [localization](database.md#localization-and-txt_key-resolution). |
 | `database.documentsPath` | auto-detected | `DB_DOCUMENTS_PATH` | Documents folder holding the game's cache. See below. |
 | `logging.level` | `info` | `LOG_LEVEL` | One of `error`, `warn`, `info`, `debug`. |
 | `server.name` | `vox-deorum-mcp-server` | `MCP_SERVER_NAME` | Server identity reported over MCP and on `/health`. |

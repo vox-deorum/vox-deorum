@@ -58,7 +58,7 @@ function thread(partial: Partial<EnvoyThread> = {}): EnvoyThread {
   };
 }
 
-const params = { playerID: 3, turn: 5, metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck' } }, gameStates: {} };
+const params = { playerID: 3, turn: 5, metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck', PlayerID: 3 } }, gameStates: {} };
 
 describe('Diplomat tool set', () => {
   it('includes send-message, close-conversation, and the negotiator handoff alongside briefing/events/analyst', () => {

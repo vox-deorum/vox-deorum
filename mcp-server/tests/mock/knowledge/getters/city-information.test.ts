@@ -10,6 +10,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { configureGameDatabase } from '../../../fixtures/game-database.js';
+import { gameDatabase } from '../../../../src/server.js';
 import { setupStore } from '../../helpers.js';
 import { LuaFunction } from '../../../../src/bridge/lua-function.js';
 import { getCityInformations } from '../../../../src/knowledge/getters/city-information.js';
@@ -98,4 +100,22 @@ describe('getCityInformations', () => {
     expect(history.map((h) => h.Version)).toEqual([2, 1]);
     expect(history.find((h) => h.Version === 2)!.Population).toBe(6);
   });
+  it('keeps Chinese and Korean buildings after each verified generation change', async () => {
+    const cleanup = await configureGameDatabase(gameDatabase, 'en_US');
+    let generation = gameDatabase.getGeneration();
+    vi.spyOn(gameDatabase, 'getGeneration').mockImplementation(() => generation);
+    try {
+      mockLua([city(10, { ImportantBuildings: ['Library'] })]);
+      expect((await getCityInformations())[0].ImportantBuildings).toEqual(['Library']);
+      for (const [language, library] of [['zh_CN', '\u56fe\u4e66\u9986'], ['ko_KR', '\ub3c4\uc11c\uad00']]) {
+        gameDatabase.setLanguage(language);
+        generation++;
+        mockLua([city(10, { ImportantBuildings: [library] })]);
+        expect((await getCityInformations())[0].ImportantBuildings).toEqual([library]);
+      }
+    } finally {
+      await cleanup();
+    }
+  });
+
 });

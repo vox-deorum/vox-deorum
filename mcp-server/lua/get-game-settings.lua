@@ -56,4 +56,27 @@ local metadata = {
     VictoryTypes = victoryTypes
 }
 
+-- Training cost provides a stable speed multiplier independently of localized speed names.
+local speedInfo = GameInfo.GameSpeeds[gameSpeedID]
+if speedInfo and type(speedInfo.TrainPercent) == "number" and speedInfo.TrainPercent > 0 then
+    metadata.GameSpeedMultiplier = speedInfo.TrainPercent / 100
+end
+
+-- Read the live player's display identity, including custom names and multiplayer nicknames.
+if playerID and playerID >= 0 then
+    local success, identity = pcall(function()
+        local player = Players[playerID]
+        if not player then return nil end
+        local civilization = GameInfo.Civilizations[player:GetCivilizationType()]
+        if not civilization then return nil end
+        return {
+            Name = player:GetCivilizationShortDescription(),
+            Leader = player:GetName(),
+            PlayerID = playerID,
+            Type = civilization.Type
+        }
+    end)
+    if success then metadata.YouAre = identity end
+end
+
 return metadata

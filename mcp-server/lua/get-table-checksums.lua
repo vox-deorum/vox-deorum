@@ -26,4 +26,12 @@ for tableName in string.gmatch(tableNames, "[^,]+") do
   results[tableName] = { Count = #rows, Checksum = checksum }
 end
 
-return results
+-- Read the locale independently so an unavailable locale never blocks table verification.
+local language
+if Locale and Locale.GetCurrentLanguage then
+  local success, current = pcall(Locale.GetCurrentLanguage)
+  if success and type(current) == "table" and type(current.Type) == "string" then
+    language = current.Type
+  end
+end
+return { language = language, tables = results }

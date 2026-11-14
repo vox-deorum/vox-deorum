@@ -45,7 +45,7 @@ export function recordableState(turn: number): GameState {
 
 /** Parameters for the records writer. */
 export function recordParameters(): StrategistParameters {
-  return { playerID: 0, gameID: 'g1', turn: 1, workingMemory: {}, gameStates: {}, metadata: { YouAre: { Name: 'Rome', Leader: 'Caesar' } } } as unknown as StrategistParameters;
+  return { playerID: 0, gameID: 'g1', turn: 1, workingMemory: {}, gameStates: {}, metadata: { YouAre: { Name: 'Rome', Leader: 'Caesar', PlayerID: 0 } } } as unknown as StrategistParameters;
 }
 
 /**

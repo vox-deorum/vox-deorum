@@ -7,10 +7,13 @@ import { LuaFunctionTool } from "../abstract/lua-function.js";
 import * as z from "zod";
 import { knowledgeManager } from "../../server.js";
 import path from "node:path";
+import { createLogger } from "../../utils/logger.js";
 import { CivilizationSummarySchema } from "../databases/get-civilization.js";
 import { getTool } from "../index.js";
 import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
+
+const logger = createLogger("GetGameSettings");
 
 /**
  * Schema for static game metadata
@@ -21,6 +24,7 @@ const MetadataSchema = z.object({
     PermanentTeammates: z.array(z.string()).optional()
   }).optional(),
   GameSpeed: z.string(),
+  GameSpeedMultiplier: z.number().optional().describe("Game speed training cost multiplier"),
   MapType: z.string(),
   MapSize: z.string(),
   Difficulty: z.string(),
@@ -83,7 +87,17 @@ class GetGameSettingsTool extends LuaFunctionTool<GameMetadata> {
    */
   async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
     const result = await this.call(args.PlayerID ?? -1);
-    const metadata = result.Result as z.infer<typeof this.resultSchema>;
+    if (!result.Success) return result;
+    if (!result.Result) {
+      return { Success: false, Error: { Code: 'SETTINGS_UNAVAILABLE', Message: 'Game settings are unavailable' } };
+    }
+    const metadata = result.Result;
+    if (args.PlayerID !== undefined && args.PlayerID >= 0 && (
+      !metadata.YouAre || metadata.YouAre.PlayerID !== args.PlayerID ||
+      typeof metadata.YouAre.Name !== 'string' || typeof metadata.YouAre.Leader !== 'string'
+    )) {
+      return { Success: false, Error: { Code: 'IDENTITY_UNAVAILABLE', Message: 'Player identity is unavailable' } };
+    }
     const store = knowledgeManager.getStore();
 
     // Strip MapType to just filename without extension/path using Node.js path module
@@ -100,21 +114,27 @@ class GetGameSettingsTool extends LuaFunctionTool<GameMetadata> {
       store.setMetadata('victoryTypes', metadata.VictoryTypes.join(', '))
     ]);
 
-    if (args.PlayerID !== undefined) {
-      const summaries = await readPublicKnowledgeBatch("PlayerInformations", getPlayerInformations);
-      const summary = summaries.find(summary => summary.Key == args.PlayerID);
-      if (summary) {
-        const civilization = (await getTool("getCivilization")?.getSummaries())?.find(current => current.Name == summary.Civilization);
-        if (civilization) {
-          metadata.YouAre = JSON.parse(JSON.stringify(civilization));
-          metadata.YouAre!.PlayerID = args.PlayerID;
-          delete metadata.YouAre!.Type;
-          // Players sharing our team (fixed at game start)
+    if (metadata.YouAre) {
+      const identity = metadata.YouAre;
+      try {
+        const civilization = (await getTool("getCivilization")?.getSummaries())?.find(current => current.Type === identity.Type);
+        if (civilization?.Uniques) identity.Uniques = [...civilization.Uniques];
+      } catch (error) {
+        logger.warn('Could not enrich player identity with civilization uniques', { error: error instanceof Error ? error.message : error });
+      }
+      delete identity.Type;
+      try {
+        // Teammates are optional; an empty cache can recover after startup collection failed.
+        const summaries = await readPublicKnowledgeBatch("PlayerInformations", getPlayerInformations);
+        const summary = summaries.find(summary => summary.Key === args.PlayerID);
+        if (summary) {
           const teammates = summaries
             .filter(other => other.Key !== summary.Key && other.TeamID === summary.TeamID && other.IsMajor === 1)
             .map(other => `Player ${other.Key}: ${other.Civilization} (${other.Leader})`);
-          if (teammates.length > 0) metadata.YouAre!.PermanentTeammates = teammates;
+          if (teammates.length > 0) identity.PermanentTeammates = teammates;
         }
+      } catch (error) {
+        logger.warn('Could not read permanent teammates', { error: error instanceof Error ? error.message : error });
       }
     }
 

@@ -57,6 +57,12 @@ Vox Deorum launches the DirectX 11 build of Civilization V by default, which is 
 
 The usual cause is a paused game, which holds the AI's requests. Check for a pause menu or blocking pop-up, then resume. Still stuck: check the console window for errors, confirm your credential works (the AI needs a working model to make decisions), and allow time for larger models to think.
 
+## Game names appear in the wrong language
+
+Vox Deorum follows Civilization V's language for game names such as civilizations, leaders, technologies, and buildings. If names remain English in a non-English game, an older configuration may still force English. Change `database.language` from `en_US` to `auto` in the MCP server's `config.json`, and remove or change any `DB_LANGUAGE=en_US` environment setting, which takes precedence. Restart Vox Deorum after changing configuration. See the [MCP configuration reference](../developers/mcp-server/configuration.md) for where these settings are read.
+
+Translations come from the installed game and mods. Missing translations fall back to English, then to a text key if English is also missing.
+
 ## The AI stops responding partway through a game
 
 Here the game has crashed or Vox Deorum has lost its connection. After a brief disconnect it reconnects and retries by itself. After a crash it relaunches Civilization V with the most recent save, up to three times. Step in when Vox Deorum gives up after those attempts, or when the game is set up to wait for you.

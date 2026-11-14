@@ -8,7 +8,7 @@
 import { ModelMessage } from "ai";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../agents/runtime/vox-context.js";
-import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
+import { ensureGameMetadata, getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { renderSection } from "../knowledge/sections.js";
 import { getOffsetedTurn } from "../knowledge/game-speed.js";
 import { getLastBriefingState } from "./briefing-utils.js";
@@ -42,7 +42,8 @@ export class SimpleBriefer extends Briefer {
   /**
    * Gets the initial messages for the conversation
    */
-  public async getInitialMessages(parameters: StrategistParameters, input: string, _context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
+  public async getInitialMessages(parameters: StrategistParameters, input: string, context: VoxContext<StrategistParameters>): Promise<ModelMessage[]> {
+    await ensureGameMetadata(context, parameters);
     const state = getRecentGameState(parameters)!;
     const { YouAre, ...SituationData } = parameters.metadata || {};
     // Return the messages

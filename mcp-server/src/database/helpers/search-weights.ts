@@ -32,6 +32,8 @@ export function weightedFuzzySearch(
   fieldWeights: Record<string, number>,
   threshold: number
 ): Record<string, unknown>[] {
+  const normalizedKeyword = keyword.toLowerCase();
+
   // Calculate total weight for normalization
   const totalWeight = Object.values(fieldWeights).reduce((sum, weight) => sum + weight, 0);
 
@@ -57,8 +59,10 @@ export function weightedFuzzySearch(
       }
     }
 
-    // Normalize by total weight
-    const normalizedScore = weightedScore / totalWeight;
+    // A complete name or stable type identifies an item even when secondary fields are sparse.
+    const exactIdentity = (typeof item.Name === 'string' && item.Name.toLowerCase() === normalizedKeyword)
+      || (typeof item.Type === 'string' && item.Type.toLowerCase() === normalizedKeyword);
+    const normalizedScore = exactIdentity ? 1 : weightedScore / totalWeight;
 
     return {
       item,

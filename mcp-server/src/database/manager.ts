@@ -85,6 +85,7 @@ export const enumMappingTables: ReadonlyArray<readonly [tableName: string, mappe
 export class DatabaseManager {
   private mainDb?: Kysely<MainDB>;
   private localizationDb?: Kysely<LocalizationDB>;
+  private requestedLanguage: string;
   private language: string;
   private initialized = false;
   // Bumped whenever the mappings are rebuilt for a verified game, so caches of database reads know to refresh
@@ -94,7 +95,8 @@ export class DatabaseManager {
    * Create a new DatabaseManager instance
    */
   constructor() {
-    this.language = config.database?.language ?? 'en_US';
+    this.requestedLanguage = config.database?.language ?? 'auto';
+    this.language = this.requestedLanguage === 'auto' ? 'en_US' : this.requestedLanguage;
   }
 
   /**
@@ -177,7 +179,7 @@ export class DatabaseManager {
   /**
    * Get localized text for a given key
    */
-  public async localize(key: string): Promise<string> {
+  public async localize(key: string, language: string = this.language): Promise<string> {
     if (!this.localizationDb) {
       throw new Error('Localization database not initialized. Call initialize() first.');
     }
@@ -186,11 +188,12 @@ export class DatabaseManager {
       const result = await this.localizationDb
         .selectFrom('LocalizedText')
         .select('Text')
-        .where('Language', '=', this.language)
+        .where('Language', '=', language)
         .where('Tag', '=', key)
         .executeTakeFirst();
       
-      return result?.Text ?? key; // Return key if no translation found; empty text stays empty
+      if (result?.Text != null) return result.Text;
+      return language === 'en_US' ? key : await this.localize(key, 'en_US');
     } catch (error) {
       logger.error('Localization lookup failed:', error);
       return key; // Return key as fallback
@@ -200,14 +203,14 @@ export class DatabaseManager {
   /**
    * Convert TXT_KEY_* strings in results to localized text
    */
-  public async localizeObject<T extends Record<any, any>>(result: T): Promise<T> {
-    return (await this.localizeObjects([result]))[0];
+  public async localizeObject<T extends Record<any, any>>(result: T, language: string = this.language): Promise<T> {
+    return (await this.localizeObjects([result], 0, language))[0];
   }
 
   /**
    * Convert TXT_KEY_* strings in results to localized text
    */
-  public async localizeObjects<T extends Record<any, any>[]>(results: T, depth: number = 0): Promise<T> {
+  public async localizeObjects<T extends Record<any, any>[]>(results: T, depth: number = 0, language: string = this.language): Promise<T> {
     if (!this.localizationDb) {
       throw new Error('Localization database not initialized. Call initialize() first.');
     }
@@ -258,7 +261,7 @@ export class DatabaseManager {
       const localizations = await this.localizationDb
         .selectFrom('LocalizedText')
         .select(['Tag', 'Text'])
-        .where('Language', '=', this.language)
+        .where('Language', '=', language)
         .where('Tag', 'in', Array.from(txtKeys).map(k => 
           k.startsWith("TXT_KEY_") ? k : `TXT_KEY_${k}`
         ))
@@ -267,9 +270,17 @@ export class DatabaseManager {
       // Build localization map with fallbacks
       // An empty text (Vox Populi leaves some help keys empty) localizes to an empty string
       localizations.forEach(({ Tag, Text }) => {
-        if (!Tag || Text == null || (Text === '' && localizationMap.get(Tag))) return;
+        if (!Tag || Text == null || localizationMap.has(Tag)) return;
         localizationMap.set(Tag, stripTags(Text) ?? '');
       });
+      const unresolved = [...txtKeys].filter(key => !localizationMap.has(key));
+      if (language !== 'en_US' && unresolved.length > 0) {
+        const english = await this.localizationDb.selectFrom('LocalizedText').select(['Tag', 'Text'])
+          .where('Language', '=', 'en_US').where('Tag', 'in', unresolved).execute();
+        for (const { Tag, Text } of english) {
+          if (Tag && Text != null && !localizationMap.has(Tag)) localizationMap.set(Tag, stripTags(Text) ?? '');
+        }
+      }
     } catch (error) {
       logger.error('Batch localization lookup failed:', error);
       return results;
@@ -313,7 +324,7 @@ export class DatabaseManager {
       logger.warn('Maximum localization recursion depth reached', results);
       return results;
     }
-    return await this.localizeObjects(results, depth + 1);
+    return await this.localizeObjects(results, depth + 1, language);
   }
 
   /**
@@ -327,10 +338,11 @@ export class DatabaseManager {
   }
 
   /**
-   * Set the language for localization
+   * Select the requested startup/test language, using English until auto is verified
    */
   public setLanguage(language: string): void {
-    this.language = language;
+    this.requestedLanguage = language;
+    this.language = language === 'auto' ? 'en_US' : language;
     logger.info(`Language set to: ${language}`);
   }
 
@@ -374,15 +386,23 @@ export class DatabaseManager {
    * When it still fails, the mapped tables are cleared, so nothing translates names with IDs from the wrong game.
    * @throws MappingMismatchError if the cache databases do not match the live game
    */
-  async reloadMappings(gameChecksums: Record<string, TableChecksum>): Promise<void> {
+  async reloadMappings(gameChecksums: Record<string, TableChecksum>, gameLanguage?: string): Promise<void> {
+    const reportedLanguage = typeof gameLanguage === 'string' && gameLanguage.trim() && gameLanguage !== 'auto'
+      ? gameLanguage : undefined;
+    const language = this.requestedLanguage === 'auto' ? reportedLanguage ?? 'en_US' : this.requestedLanguage;
+    if (this.requestedLanguage === 'auto' && !reportedLanguage) {
+      logger.error('Game locale unavailable; using English database translations');
+    } else if (reportedLanguage && language !== reportedLanguage) {
+      logger.warn('Configured database language differs from game locale', { language, gameLanguage: reportedLanguage });
+    }
     try {
       try {
-        await this.initializeMappings(gameChecksums);
+        await this.initializeMappings(gameChecksums, language);
       } catch (error) {
         if (!(error instanceof MappingMismatchError)) throw error;
         logger.warn('Game database does not match the live game, reopening the files to check again');
         await this.openConnections();
-        await this.initializeMappings(gameChecksums);
+        await this.initializeMappings(gameChecksums, language);
       }
     } catch (error) {
       for (const [, mappedName] of enumMappingTables) delete enumMappings[mappedName];
@@ -396,7 +416,8 @@ export class DatabaseManager {
    * enumMappings is only replaced when every check passes, so a mismatch leaves the previous mappings in place.
    * @throws MappingMismatchError if a table or the Vox Populi text does not match the live game
    */
-  async initializeMappings(gameChecksums: Record<string, TableChecksum>): Promise<void> {
+  async initializeMappings(gameChecksums: Record<string, TableChecksum>, language: string = this.language): Promise<void> {
+    if (language === 'auto') language = 'en_US';
     const mappings: Record<string, Record<number, string>> = {};
     const mismatches: string[] = [];
 
@@ -408,7 +429,7 @@ export class DatabaseManager {
         mismatches.push(`${tableName} (database ${local.Count} rows, game ${game?.Count ?? 'none'})`);
         continue;
       }
-      mappings[mappedName] = await this.buildEnumMapping(rows);
+      mappings[mappedName] = await this.buildEnumMapping(rows, language);
     }
 
     if (mismatches.length > 0) {
@@ -429,6 +450,7 @@ export class DatabaseManager {
     // GreatPersonExpended sends the expended unit's type under this name
     mappings["GreatPersonType"] = mappings["UnitType"];
     Object.assign(enumMappings, mappings);
+    this.language = language;
     this.generation++;
     logger.info(`Enum mappings verified against live game (${enumMappingTables.length} tables)`);
   }
@@ -444,7 +466,7 @@ export class DatabaseManager {
   /**
    * Turn a table's rows into an ID-to-name mapping, using the localized Description or a readable Type
    */
-  private async buildEnumMapping(rows: Record<string, unknown>[]): Promise<Record<number, string>> {
+  private async buildEnumMapping(rows: Record<string, unknown>[], language: string): Promise<Record<number, string>> {
     const tableMap: Record<number, string> = { "-1": "None" };
     for (const row of rows) {
       if (!('ID' in row)) continue;
@@ -456,7 +478,7 @@ export class DatabaseManager {
         tableMap[id] = changeCase.pascalCase(type.includes('_') ? type.split('_').slice(1).join('_') : type);
       }
     }
-    return await this.localizeObject(tableMap);
+    return await this.localizeObject(tableMap, language);
   }
 
   /**

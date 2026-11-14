@@ -19,11 +19,11 @@ The `DatabaseManager` (`database/manager.ts`) owns both connections, opens them 
 
 ## Localization and TXT_KEY resolution
 
-Raw rows are full of `TXT_KEY_*` references rather than readable text: a unit's name is stored as a tag, not as "Composite Bowman". The manager resolves these automatically.
+Raw rows use **text keys** such as `TXT_KEY_*` to refer to readable names and descriptions. `DatabaseManager` resolves these throughout nested objects, arrays, and larger strings, batching lookups for object results.
 
-Given any result object, it walks the whole structure recursively, through nested objects and arrays, and even through tags embedded inside larger strings. It collects every `TXT_KEY_*` reference, looks them all up in one batched query against the localization database for the configured language, and substitutes the readable text back in.
+The default `database.language` setting is `auto`. At each verified game connection, including reconnects, the server selects the game's reported locale before publishing translated enum mappings. It uses `en_US` before a game connects and when the game cannot report a locale. An explicit `DB_LANGUAGE` or `config.json` language code overrides automatic selection, with the environment variable taking precedence; see [configuration](configuration.md). The server logs a warning when an explicit language differs from the game's locale.
 
-If a key has no translation, the manager falls back to the key itself rather than failing, so a missing string degrades gracefully instead of breaking a query. A key that is present with empty text resolves to an empty string; `localizeObjects` (`database/manager.ts`) does not leave the raw tag in the result. The language defaults to `en_US` and can be changed at runtime.
+Translation lookup uses the selected language first, then English, then the original text key if neither has text. A missing row or null text permits fallback; an intentionally empty translation stays empty. This applies to individual keys, nested values, and embedded text keys.
 
 ## Enum mappings
 
@@ -36,9 +36,9 @@ For each of a long list of tables (improvements, buildings, projects, beliefs, u
 
 A row ID is only meaningful for the exact database the game loaded. A cache file left over from an earlier session or a different mod set shifts the IDs, so a Shrine can read as the Mausoleum of Halicarnassus and a research choice can land on the wrong tech. The mappings are therefore built only once a game is connected, and only after checking them against it:
 
-1. When the DLL connects, `KnowledgeManager` runs `lua/get-table-checksums.lua`. For each mapped table, that script returns a row count and a checksum of the ID and Type of every row, taken in ID order, as the live game sees them in `GameInfo`. Because the order is part of the checksum, two rows that swap IDs are caught.
-2. `reloadMappings` computes the same checksums from the cache database (`tableChecksum` in `database/manager.ts`). It also checks that the localization database has Vox Populi's text, which renames Legalism to Ceremony. If anything differs, the cache may have been rewritten since the files were opened, so it reopens them and checks once more.
-3. If everything matches, the new mappings replace the old ones, and the server switches to the game and announces it to agents, including clients that connect later. Each verified rebuild also bumps a database generation, so summaries that database tools cached from an earlier file (see below) are read again.
+1. When the DLL connects, `KnowledgeManager` runs `lua/get-table-checksums.lua` to read the game's locale and table checksums. For each mapped table, the script returns a row count and a checksum of the ID and Type of every row, taken in ID order, as the live game sees them in `GameInfo`. Because the order is part of the checksum, two rows that swap IDs are caught.
+2. `reloadMappings` computes the same checksums from the cache database (`tableChecksum` in `database/manager.ts`). It also checks the English localization entry that Vox Populi renames from Legalism to Ceremony, independently of the selected output language. If anything differs, the cache may have been rewritten since the files were opened, so it reopens them and checks once more.
+3. If everything matches, the selected language and new mappings become available together, and the server switches to the game and announces it to agents, including clients that connect later. Each verified rebuild also advances the database generation, so database tool summaries and city building caches refresh. A failed rebuild leaves the previous effective language unchanged.
 4. If it still differs, the server clears the mapped tables, so lookups fail rather than translate names with the wrong IDs. It logs an error that names the mismatched tables, the database path and its modification time, closes the previous game's knowledge store, and pauses the game. It sends neither `GameSwitched` nor `DLLConnected`, so agents don't start, and incoming game events are dropped until the DLL reconnects.
 
 If the game can't answer yet, for example because the DLL isn't connected, the server doesn't pause. When the DLL connects, it checks again. Every reconnection rebuilds the mappings, since a reload or a different game may change the tables.

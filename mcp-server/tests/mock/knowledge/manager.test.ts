@@ -13,7 +13,7 @@ import { bridgeManager, gameDatabase } from '../../../src/server.js';
 import { syncGameIdentity } from '../../../src/knowledge/getters/game-identity.js';
 import { KnowledgeManager, extractRenderEventForStorage } from '../../../src/knowledge/manager.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import { MappingMismatchError } from '../../../src/database/manager.js';
+import { enumMappingTables, MappingMismatchError } from '../../../src/database/manager.js';
 import type { LuaResponse } from '../../../src/bridge/manager.js';
 
 vi.mock('../../../src/knowledge/getters/game-identity.js', async importOriginal => {
@@ -187,7 +187,7 @@ describe('enum mapping verification on DLL connection', () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'km-mapping-test-'));
     (manager as any).config.databasePath = tmpDir;
     mockSyncGameIdentity.mockResolvedValue({ gameId: 'mapping-game', turn: 0, activePlayerId: 0 });
-    checksumResponse = { success: true, result: { Units: { Count: 1, Checksum: 1 } } };
+    checksumResponse = { success: true, result: { language: 'ko_KR', tables: Object.fromEntries(enumMappingTables.map(([table]) => [table, { Count: 1, Checksum: 1 }])) } };
     vi.spyOn(LuaFunction.prototype, 'execute').mockImplementation(async function (this: LuaFunction) {
       return this.name === 'getTableChecksums' ? checksumResponse : { success: true, result: true };
     });
@@ -219,7 +219,7 @@ describe('enum mapping verification on DLL connection', () => {
   it('switches to the game once the live checksums match', async () => {
     const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
     await dllStatus(true);
-    expect(reload).toHaveBeenCalledWith(checksumResponse.result);
+    expect(reload).toHaveBeenCalledWith(checksumResponse.result.tables, 'ko_KR');
     expect(manager.getGameId()).toBe('mapping-game');
     expect(pauseGame).not.toHaveBeenCalled();
   });
@@ -269,7 +269,7 @@ describe('enum mapping verification on DLL connection', () => {
     expect(reload).not.toHaveBeenCalled();
     expect(pauseGame).not.toHaveBeenCalled();
 
-    checksumResponse = { success: true, result: { Units: { Count: 1, Checksum: 1 } } };
+    checksumResponse = { success: true, result: { language: 'ko_KR', tables: Object.fromEntries(enumMappingTables.map(([table]) => [table, { Count: 1, Checksum: 1 }])) } };
     await dllStatus(true);
     expect(reload).toHaveBeenCalledOnce();
     expect(manager.getGameId()).toBe('mapping-game');
@@ -285,4 +285,24 @@ describe('enum mapping verification on DLL connection', () => {
     await dllStatus(true);
     expect(reload).toHaveBeenCalledTimes(2);
   });
+  it('accepts checksum success without a locale and resolves a new locale on reconnect', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    delete checksumResponse.result.language;
+    await dllStatus(true);
+    expect(reload).toHaveBeenLastCalledWith(checksumResponse.result.tables, undefined);
+    await dllStatus(false);
+    checksumResponse.result.language = 'en_US';
+    await dllStatus(true);
+    expect(reload).toHaveBeenLastCalledWith(checksumResponse.result.tables, 'en_US');
+  });
+
+  it('retries malformed checksum envelopes without publishing a game', async () => {
+    const reload = vi.spyOn(gameDatabase, 'reloadMappings').mockResolvedValue();
+    checksumResponse = { success: true, result: { language: 'ko_KR', tables: null } };
+    await dllStatus(true);
+    expect(reload).not.toHaveBeenCalled();
+    expect(await manager.isGameVerified()).toBe(false);
+    expect(pauseGame).not.toHaveBeenCalled();
+  });
+
 });

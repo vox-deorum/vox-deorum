@@ -153,7 +153,19 @@ export class KnowledgeManager {
         return false;
       }
 
-      await gameDatabase.reloadMappings(response.result as Record<string, TableChecksum>);
+      const envelope = response.result as { language?: unknown; tables?: unknown } | undefined;
+      if (!envelope || typeof envelope.tables !== 'object' || envelope.tables === null || Array.isArray(envelope.tables)) {
+        logger.warn('Could not read table checksum envelope from the game, retrying on the next connection');
+        this.mappingsReady = undefined;
+        return false;
+      }
+      const tables = envelope.tables as Record<string, TableChecksum>;
+      if (!enumMappingTables.every(([table]) => Number.isFinite(tables[table]?.Count) && Number.isFinite(tables[table]?.Checksum))) {
+        logger.warn('Game returned incomplete table checksums, retrying on the next connection');
+        this.mappingsReady = undefined;
+        return false;
+      }
+      await gameDatabase.reloadMappings(tables, typeof envelope.language === 'string' ? envelope.language : undefined);
       return true;
     } catch (error) {
       logger.error(`Enum mappings do not match the live game, pausing the game: ${error instanceof Error ? error.message : String(error)}`);

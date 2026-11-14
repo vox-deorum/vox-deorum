@@ -117,8 +117,49 @@ function extractErrorText(result: unknown): string {
     }
     if (result.error) return String(result.error);
     if (result.message) return String(result.message);
+    if (isRecord(result.Error) && typeof result.Error.Message === 'string') {
+      const code = typeof result.Error.Code === 'string' ? result.Error.Code : undefined;
+      return code ? `${code}: ${result.Error.Message}` : result.Error.Message;
+    }
   }
   return 'Unknown error';
+}
+
+/** Return whether settings can identify the requested player, or describe a general game. */
+function hasCompleteMetadata(metadata: unknown, playerID: number): metadata is GameMetadata {
+  if (isFailedToolResult(metadata) || !isRecord(metadata)) return false;
+  if (playerID < 0) return true;
+  const identity = metadata.YouAre;
+  return isRecord(identity) && typeof identity.Name === "string" &&
+    typeof identity.Leader === "string" && identity.PlayerID === playerID;
+}
+
+/**
+ * Reuse valid settings or fetch them once, rejecting incomplete identity and failed tool results.
+ * Refreshes defer retention until the whole snapshot is ready so cancelled work publishes nothing.
+ */
+export async function ensureGameMetadata(
+  context: VoxContext<StrategistParameters>,
+  parameters: StrategistParameters,
+  retain: boolean = true
+): Promise<GameMetadata> {
+  const signal = context.activeRoot ? context.currentSignal() : undefined;
+  signal?.throwIfAborted();
+  if (hasCompleteMetadata(parameters.metadata, parameters.playerID)) return parameters.metadata;
+
+  const metadata = await context.callTool<GameMetadata>(
+    "get-game-settings", { PlayerID: parameters.playerID }, parameters
+  );
+  if (isFailedToolResult(metadata)) {
+    throw new Error(`Failed to fetch game settings: ${extractErrorText(metadata)}`);
+  }
+  if (!hasCompleteMetadata(metadata, parameters.playerID)) {
+    throw new Error(`Game settings identity unavailable for player ${parameters.playerID}`);
+  }
+
+  signal?.throwIfAborted();
+  if (retain) parameters.metadata = metadata;
+  return metadata;
 }
 
 /**
@@ -139,8 +180,7 @@ export async function refreshGameState(
   const signal = context.activeRoot ? context.currentSignal() : undefined;
 
   // Get the game metadata as a prerequisite; it is published together with the game state below.
-  const metadata = parameters.metadata ??
-    await context.callTool<GameMetadata>("get-game-settings", { PlayerID: parameters.playerID }, parameters);
+  const metadata = await ensureGameMetadata(context, parameters, false);
 
   // Get the information
   const [players, events, cities, options, victory, military] = await Promise.all([
@@ -277,6 +317,7 @@ export async function ensureGameState(
   // Return the cached state only when it covers the requested event range (see above).
   const cached = parameters.gameStates[parameters.turn];
   if (cached && (cached.eventsAfter === undefined || cached.eventsAfter <= parameters.after)) {
+    await ensureGameMetadata(context, parameters);
     return cached;
   }
 

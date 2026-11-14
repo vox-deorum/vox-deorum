@@ -19,6 +19,9 @@ describe('DatabaseManager localization', () => {
       INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('de_DE', 'TXT_KEY_NESTED_LABEL', 'Deutsche Bezeichnung');
       INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('en_US', 'TXT_KEY_EMPTY_HELP', '');
       INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('de_DE', 'TXT_KEY_EMPTY_HELP', 'Deutscher Text');
+      INSERT INTO LocalizedText (Language, Tag, Text) VALUES ('zh_CN', 'TXT_KEY_NESTED_LABEL', '\u4e2d\u6587\u6807\u7b7e'),
+        ('ko_KR', 'TXT_KEY_NESTED_LABEL', '\ud55c\uad6d\uc5b4 \uc774\ub984'), ('zh_CN', 'TXT_KEY_FILLED', NULL),
+        ('zh_CN', 'TXT_KEY_EMPTY_HELP', ''), ('en_US', 'TXT_KEY_WRAPPER', 'See {TXT_KEY_NESTED_LABEL}');
     `);
     localizationDb = new Kysely<LocalizationDB>({ dialect: new SqliteDialect({ database: sqlite }) });
     manager = new DatabaseManager();
@@ -55,4 +58,26 @@ describe('DatabaseManager localization', () => {
       Rows: [{ Label: 'Deutsche Bezeichnung' }],
     });
   });
+  it.each(['zh_CN', 'ko_KR'])('falls back through English and preserves empty and nested translations for %s', async language => {
+    manager.setLanguage(language);
+    expect(await manager.localize('TXT_KEY_FILLED')).toBe('Filled [NEWLINE]text');
+    expect(await manager.localize('TXT_KEY_EMPTY_HELP')).toBe('');
+    expect(await manager.localize('TXT_KEY_MISSING')).toBe('TXT_KEY_MISSING');
+    const [item] = await manager.localizeObjects([{ Label: 'TXT_KEY_WRAPPER', Nested: { Value: 'TXT_KEY_FILLED' }, Empty: 'TXT_KEY_EMPTY_HELP' }]);
+    expect(item).toEqual({ Label: language === 'zh_CN' ? 'See \u4e2d\u6587\u6807\u7b7e' : 'See \ud55c\uad6d\uc5b4 \uc774\ub984', Nested: { Value: 'Filled \ntext' }, Empty: '' });
+  });
+
+  it('uses English until an automatic language has been verified', () => {
+    manager.setLanguage('ko_KR');
+    manager.setLanguage('auto');
+    expect(manager.getLanguage()).toBe('en_US');
+  });
+
+  it('keeps the captured language through asynchronous fallback and recursive substitutions', async () => {
+    manager.setLanguage('zh_CN');
+    const pending = manager.localizeObjects([{ Label: 'TXT_KEY_WRAPPER' }]);
+    manager.setLanguage('ko_KR');
+    expect(await pending).toEqual([{ Label: 'See \u4e2d\u6587\u6807\u7b7e' }]);
+  });
+
 });

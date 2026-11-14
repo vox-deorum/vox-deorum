@@ -28,9 +28,7 @@ beforeEach(async () => {
 });
 
 /**
- * Build a row whose every weighted field is populated, so an exact Name match clears
- * the 0.6 weighted-search threshold (the score is normalized across the full field
- * weight set, so sparse rows never reach 0.6 even on an exact hit).
+ * Populate secondary weighted fields to exercise fuzzy ranking and keyword fusion.
  */
 function row(name: string, fillKeyword: string, extra: Record<string, unknown> = {}) {
   return {
@@ -67,7 +65,7 @@ afterEach(async () => {
 });
 
 describe('search-database', () => {
-  it('ranks an exact fuzzy match first and clears the 0.6 weighted threshold', async () => {
+  it('ranks an exact name ahead of matches in secondary fields', async () => {
     wireTools({
       getTechnology: fakeTool([
         row('Pottery', 'Pottery'),
@@ -85,6 +83,37 @@ describe('search-database', () => {
     expect(result['Technology: Pottery'].Relevance).toBeGreaterThan(
       result['Technology: Archery'].Relevance
     );
+  });
+
+
+  it.each([
+    ['\u7f57\u9a6c', 'Civilization: \u7f57\u9a6c'],
+    ['\u519c\u4e1a', 'Technology: \u519c\u4e1a'],
+    ['civilization_rOmE', 'Civilization: \u7f57\u9a6c'],
+    ['tech_aGrIcUlTuRe', 'Technology: \u519c\u4e1a'],
+  ])('finds a sparse localized row by exact name or stable type %s', async (keyword, expectedKey) => {
+    wireTools({
+      getCivilization: fakeTool([
+        { Name: '\u7f57\u9a6c', Type: 'CIVILIZATION_ROME', Leader: '\u5965\u53e4\u65af\u90fd', Uniques: [] },
+        { Name: '\u4e2d\u56fd', Type: 'CIVILIZATION_CHINA', Leader: '\u6b66\u5219\u5929' },
+      ]),
+      getTechnology: fakeTool([
+        { Name: '\u519c\u4e1a', Type: 'TECH_AGRICULTURE', Help: '\u8015\u79cd\u7cae\u98df', Cost: 20, Era: 'Ancient' },
+        { Name: '\u91c7\u77ff', Type: 'TECH_MINING', Help: '\u5f00\u91c7\u77ff\u77f3', Cost: 35, Era: 'Ancient' },
+        { Name: '\u519c\u4e1a\u7814\u7a76', Type: 'TECH_AGRICULTURE_RESEARCH' },
+      ]),
+    });
+
+    const result = await client.call({ Keywords: [keyword] });
+    expect(Object.keys(result)).toEqual([expectedKey]);
+  });
+
+  it.each([
+    ['pOtTeRy', { Name: 'Pottery', Type: 'TECH_POTTERY', Help: 'Make ceramics', Cost: 35 }],
+    ['\ub18d\uc5c5', { Name: '\ub18d\uc5c5', Type: 'TECH_AGRICULTURE', Help: '\uc2dd\ub7c9 \uc0dd\uc0b0', Cost: 20 }],
+  ])('finds sparse English and Korean names using whole-field equality for %s', async (keyword, item) => {
+    wireTools({ getTechnology: fakeTool([item, { Name: 'Unrelated', Type: 'TECH_UNRELATED' }]) });
+    expect(Object.keys(await client.call({ Keywords: [keyword] }))).toEqual([`Technology: ${item.Name}`]);
   });
 
   it('fuses across keywords so a row matched by multiple keywords outranks single-keyword hits', async () => {

@@ -572,7 +572,7 @@ describe('getInitialMessages task determination', () => {
     playerID: 3,
     gameID: 'g',
     turn: 5,
-    metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck' } },
+    metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck', PlayerID: 3 } },
     gameStates: { 5: { options: {}, players: {} } },
   } as any;
   const content = (messages: any[]) => messages.map((m) => m.content).join('\n');
@@ -932,7 +932,7 @@ describe('getSystem teammate stance', () => {
   /** Strategist parameters with seats 1 and 3 on the given teams (seat 1 hides its own TeamID). */
   function teamParams(seat3Team: number) {
     return {
-      turn: 5, playerID: 3, metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck' } },
+      turn: 5, playerID: 3, metadata: { YouAre: { Name: 'Germany', Leader: 'Bismarck', PlayerID: 3 } },
       gameStates: { 5: { turn: 5, reports: {}, players: {
         '1': { Civilization: 'Rome', Leader: 'Caesar' },
         '3': { Civilization: 'Germany', Leader: 'Bismarck', ...(seat3Team === 3 ? {} : { TeamID: seat3Team }) },

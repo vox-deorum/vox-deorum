@@ -44,7 +44,7 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `get-players` | Player summary with scores, era, resources, military, and diplomatic opinions | `PlayerID?` (0-21) |
 | `get-opinions` | Diplomatic opinions to/from a player with all alive major civilizations | `PlayerID` (0-21), `RevealAll?` |
 | `get-cities` | City info from a player's perspective with visibility filtering | `PlayerID?` (0-21), `Owner?` |
-| `get-game-settings` | Static game settings (speed, map, difficulty, victory types, etc.). With `PlayerID`, `YouAre` describes that player's civilization, including `PermanentTeammates` when it shares a team | `PlayerID?` |
+| `get-game-settings` | Static game settings (speed, map, difficulty, victory types, etc.). A nonnegative `PlayerID` also requests that player's `YouAre` identity | `PlayerID?` |
 | `get-metadata` | Read a metadata value by key from the knowledge store | `Key`: string |
 | `get-options` | Available strategic options (techs, policies, strategies/flavors, persona) with current selections | `PlayerID` (0-21), `Mode?`: "Flavor" or "Strategy" |
 | `summarize-units` | Unit overview grouped by civilization and AI type, with military stats | `PlayerID` |
@@ -52,6 +52,10 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `get-victory-progress` | Victory progress for all players, filtered by diplomatic visibility | `PlayerID?` (0-21) |
 
 For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw ID scan before the optional `Role` filter. A filtered page can therefore contain no messages while `hasMore` is `true`.
+
+`get-game-settings` returns general metadata when `PlayerID` is omitted or negative. For a requested player, `YouAre.Name` and `Leader` use the live game's display names, including custom civilization names and multiplayer nicknames, and `YouAre.PlayerID` identifies the player. The civilization's stable `Type` matches optional catalog `Uniques` enrichment and is removed from the returned identity. `PermanentTeammates` comes from cached player information when available. Missing catalog or teammate data preserves the basic identity; an unavailable requested identity returns an explicit tool error.
+
+The optional numeric `GameSpeedMultiplier` is the current game speed's `TrainPercent` divided by 100. Agents use it to scale past-briefing lookback and retain it in recordings for replay. Older metadata without a valid positive multiplier uses the English speed-name lookup, then `1.0`.
 
 ## Action Tools (15)
 

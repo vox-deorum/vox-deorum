@@ -23,6 +23,7 @@ import { bashToolName } from '../../../src/agents/tools/tool-names.js';
 import type { PlayerConfig } from '../../../src/types/config.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import type { ResolvedRunTools, VoxRunOptions } from '../../../src/agents/runtime/vox-run.js';
+import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 
 const playerConfig: PlayerConfig = { strategist: 'simple-strategist', llms: {} } as PlayerConfig;
 
@@ -56,6 +57,7 @@ async function runOverflowingTurns(withBash: boolean) {
 
   let eventFetches = 0;
   vi.spyOn(player.context, 'callTool').mockImplementation(async (name: string) => {
+    if (name === 'get-game-settings') return makeStrategistParameters().metadata as never;
     if (name === 'get-events') return (eventsByFetch[eventFetches++] ?? {}) as never;
     return {} as never;
   });

@@ -9,7 +9,7 @@ import { ModelMessage, Tool } from "ai";
 import { z } from "zod";
 import { Briefer } from "./briefer.js";
 import { VoxContext } from "../agents/runtime/vox-context.js";
-import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
+import { ensureGameMetadata, getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { renderSection } from "../knowledge/sections.js";
 import { createSimpleTool } from "../agents/tools/simple-tools.js";
 import { getOffsetedTurn } from "../knowledge/game-speed.js";
@@ -172,8 +172,9 @@ export class SpecializedBriefer extends Briefer<SpecializedBrieferInput> {
   public async getInitialMessages(
     parameters: StrategistParameters,
     input: SpecializedBrieferInput,
-    _context: VoxContext<StrategistParameters>
+    context: VoxContext<StrategistParameters>
   ): Promise<ModelMessage[]> {
+    await ensureGameMetadata(context, parameters);
     const config = modeConfigs[input.mode];
     const state = getRecentGameState(parameters)!;
     const { YouAre, ...SituationData } = parameters.metadata || {};
